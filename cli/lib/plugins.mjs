@@ -14,6 +14,39 @@ function readJSON(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
 // files were authored (Windows checkouts are often CRLF); adapters then emit canonical LF.
 function readText(p) { return fs.existsSync(p) ? fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n') : ''; }
 
+/**
+ * Chuẩn hoá mảng `published` thô → map {pluginId: '*' | string[fullSkillId]}. Phần tử "plugin"
+ * (không có dấu /) = CẢ plugin (mọi skill); "plugin/skill" = CHỈ skill đó. '*' đè mọi entry lẻ cùng
+ * plugin. Không phải mảng → null. Export để test.
+ * @returns {Object<string,'*'|string[]>|null}
+ */
+export function normalizePublished(raw) {
+  if (!Array.isArray(raw)) return null;
+  const map = {};
+  for (const e of raw) {
+    if (typeof e !== 'string') continue;
+    if (e.includes('/')) {
+      const plug = e.split('/')[0];
+      if (map[plug] === '*') continue;
+      (map[plug] ||= []).push(e);
+    } else {
+      map[e] = '*';
+    }
+  }
+  return map;
+}
+
+/**
+ * Map plugin ĐÃ published (nguồn sự thật cho wizard offer + đóng gói npm): {pluginId: '*'|[fullSkillId]}.
+ * Thiếu file/shape sai → null = "không giới hạn" (mọi plugin/skill trên đĩa đều offer/ship).
+ * @returns {Object<string,'*'|string[]>|null}
+ */
+export function loadPublished() {
+  const p = path.join(PLUGINS_DIR, '_published.json');
+  if (!fs.existsSync(p)) return null;
+  try { return normalizePublished(readJSON(p).published); } catch { return null; }
+}
+
 /** Marketplace identity — used by the claude adapter to assemble a multi-plugin marketplace. */
 export function loadMarketplace() {
   const p = path.join(PLUGINS_DIR, '_marketplace.json');

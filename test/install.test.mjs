@@ -14,9 +14,11 @@ process.env.AIE_INSTALL_ROOT = TMP;
 const { install, uninstall, update, check, linkDisabledForRoot, claudePluginCommands,
   claudePluginRefreshCommands, claudeCliScope, marketplacesToRemove,
   skillCatalog, allSkillsOf, resolveSelection, effectiveSkills, pluginsFromSelection,
-  normFilter, entryMatches } =
+  normFilter, entryMatches, offeredCatalog, publishedPluginIds } =
   await import('../cli/lib/install.mjs');
-const { zipBuffer, coworkSkillIds, pack } = await import('../cli/lib/pack.mjs');
+const { zipBuffer, coworkSkillIds, coworkBuildSet, pack } = await import('../cli/lib/pack.mjs');
+const { wizardReportModel, renderWizardReportMd } = await import('../cli/lib/report.mjs');
+const { normalizePublished } = await import('../cli/lib/plugins.mjs');
 const { parse } = await import('../cli/lib/args.mjs');
 
 let pass = 0;
@@ -121,6 +123,75 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     && allSkillsOf('backend').every((s) => s.startsWith('backend/')),
     'allSkillsOf: trả plugin/skill của đúng plugin');
   ok(allSkillsOf('core').includes('core/principles'), 'allSkillsOf: core gồm principles');
+}
+
+// ── unit: normalizePublished — parse "plugin" (cả plugin) vs "plugin/skill" (skill lẻ) ──
+{
+  const m = normalizePublished(['backend', 'frontend/frontend-init', 'frontend/frontend-implement']);
+  ok(m.backend === '*', 'normalizePublished: "plugin" → cả plugin (*)');
+  ok(Array.isArray(m.frontend) && m.frontend.length === 2 && m.frontend.includes('frontend/frontend-init'),
+    'normalizePublished: "plugin/skill" → mảng skill lẻ');
+  ok(normalizePublished('x') === null, 'normalizePublished: không phải mảng → null');
+  const star = normalizePublished(['frontend/frontend-init', 'frontend']);
+  ok(star.frontend === '*', 'normalizePublished: có "plugin" thì "*" đè entry lẻ cùng plugin');
+}
+
+// ── unit: publishedPluginIds + offeredCatalog (đọc plugins/_published.json) ──
+// offeredCatalog = tập plugin wizard được phép offer (published-only); skillCatalog vẫn đầy đủ để
+// dev cài draft bằng --plugin và để build/cowork/validate không đổi.
+{
+  const pub = publishedPluginIds();
+  ok(pub.includes('backend') && pub.includes('frontend') && pub.includes('engineering'),
+    'publishedPluginIds: gồm backend, frontend, engineering');
+  ok(!pub.includes('data') && !pub.includes('ops'),
+    'publishedPluginIds: KHÔNG gồm plugin chưa publish (data, ops)');
+  const offered = offeredCatalog().plugins.map((p) => p.id);
+  ok(offered[0] === 'core', 'offeredCatalog: core đứng đầu');
+  ok(offered.includes('backend') && offered.includes('frontend') && offered.includes('engineering'),
+    'offeredCatalog: gồm 3 plugin đã publish');
+  ok(!offered.includes('data') && !offered.includes('ops'),
+    'offeredCatalog: ẩn plugin chưa publish khỏi wizard');
+  ok(skillCatalog().plugins.some((p) => p.id === 'data'),
+    'skillCatalog: vẫn liệt kê plugin chưa publish (gate flag cho dev)');
+  // per-skill: publish một phần → chỉ offer skill lẻ trong plugin (map inject để test độc lập file)
+  const partial = offeredCatalog({ backend: '*', frontend: ['frontend/frontend-init'] });
+  const fe = partial.plugins.find((p) => p.id === 'frontend');
+  const bep = partial.plugins.find((p) => p.id === 'backend');
+  ok(fe && fe.skillIds.length === 1 && fe.skillIds[0] === 'frontend/frontend-init',
+    'offeredCatalog per-skill: frontend chỉ offer đúng skill lẻ đã publish');
+  ok(bep && bep.skillIds.length > 1, 'offeredCatalog per-skill: backend "*" vẫn offer mọi skill');
+  ok(!partial.plugins.some((p) => p.id === 'engineering'),
+    'offeredCatalog per-skill: plugin ngoài map → không offer');
+  ok(publishedPluginIds({ frontend: ['frontend/frontend-init'] }).includes('frontend'),
+    'publishedPluginIds per-skill: plugin có skill lẻ vẫn tính published');
+}
+
+// ── unit: wizardReportModel — report "phần nào cài được qua wizard" (offered vs draft) ──
+{
+  const m = wizardReportModel();
+  const offeredIds = m.offered.map((e) => e.id);
+  ok(offeredIds[0] === 'core', 'report: core đứng đầu offered');
+  ok(['backend', 'frontend', 'engineering'].every((id) => offeredIds.includes(id)),
+    'report: offered gồm mọi plugin đã publish');
+  ok(m.draft.some((e) => e.id === 'data') && !offeredIds.includes('data'),
+    'report: data nằm ở draft, KHÔNG ở offered');
+  const be = m.offered.find((e) => e.id === 'backend');
+  ok(be.published === true && be.skills.includes('backend/backend-init'),
+    'report: entry offered có cờ published + danh sách skill');
+  // per-skill: publish một phần → offered.partial + chỉ skill lẻ; plugin ngoài map → draft
+  const mp = wizardReportModel({ published: { frontend: ['frontend/frontend-init'] } });
+  const feR = mp.offered.find((e) => e.id === 'frontend');
+  ok(feR && feR.partial === true && feR.skills.length === 1 && feR.skills[0] === 'frontend/frontend-init',
+    'report per-skill: frontend offered một phần đúng skill lẻ');
+  ok(mp.draft.some((e) => e.id === 'backend'), 'report per-skill: plugin ngoài map → draft');
+  // published=null (chưa cấu hình) → mọi plugin offered, draft rỗng (tương thích ngược)
+  const mAll = wizardReportModel({ published: null });
+  ok(mAll.draft.length === 0 && mAll.offered.some((e) => e.id === 'data'),
+    'report: published=null → offer tất cả (không có draft)');
+  // Markdown render có tiêu đề + tên plugin
+  const md = renderWizardReportMd(m, '2026-01-01T00:00:00.000Z');
+  ok(md.includes('# ') && md.includes('backend') && md.includes('data'),
+    'report: markdown có tiêu đề + liệt kê plugin offered lẫn draft');
 }
 
 // ── unit: resolveSelection (PURE) ────────────────────────────────────────────
@@ -353,9 +424,9 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     'update --plugin backend: chỉ refresh entry chứa backend (claude)');
 
   // lọc không khớp entry nào → noMatch, không build gì
-  const rNo = update({ scope: 'project', pull: false, plugins: 'olap-warehouse' });
+  const rNo = update({ scope: 'project', pull: false, plugins: 'data' });
   ok(rNo.noMatch === true && rNo.entries.length === 0 && rNo.built.length === 0,
-    'update --plugin olap-warehouse: không entry khớp → noMatch, không build');
+    'update --plugin data: không entry khớp → noMatch, không build');
 
   // không filter (mặc định) → cả hai entry
   const rAll = update({ scope: 'project', pull: false });
@@ -496,12 +567,12 @@ try {
   ok(isLink(path.join(TMP, '.cursor/skills/git-workflow')), 'cursor: git-workflow skill-dir là link');
 
   // 3. install codex -> native skills vào .codex/skills/ (core đi kèm)
-  install({ providers: 'codex', plugins: 'olap-warehouse', scope: 'project' });
-  ok(exists('.codex/skills/olap-warehouse-init/SKILL.md'), 'codex: skill-dir vào .codex/skills/');
+  install({ providers: 'codex', plugins: 'data', scope: 'project' });
+  ok(exists('.codex/skills/data-olap-init/SKILL.md'), 'codex: skill-dir vào .codex/skills/');
   ok(exists('.codex/skills/principles/SKILL.md'), 'codex: core principles đi kèm');
   // skill có references -> ship references/ đi kèm SKILL.md (parity) — core git-workflow còn references/
   ok(exists('.codex/skills/git-workflow/references/branch-convention.md'), 'codex: references đi kèm SKILL.md');
-  ok(isLink(path.join(TMP, '.codex/skills/olap-warehouse-init')), 'codex: skill-dir là link (junction/symlink)');
+  ok(isLink(path.join(TMP, '.codex/skills/data-olap-init')), 'codex: skill-dir là link (junction/symlink)');
 
   // 4. check
   const c = check({ scope: 'project' });
@@ -513,7 +584,7 @@ try {
   ok(!exists('.claude/skills/backend-init/SKILL.md'), 'uninstall claude: file đã xóa');
   ok(fs.existsSync(path.join(REPO, 'build/claude/plugins/backend/skills/backend-init/SKILL.md')),
     'uninstall claude: build/ nguồn KHÔNG bị xóa qua link');
-  ok(exists('.codex/skills/olap-warehouse-init/SKILL.md'), 'uninstall claude: KHÔNG đụng codex');
+  ok(exists('.codex/skills/data-olap-init/SKILL.md'), 'uninstall claude: KHÔNG đụng codex');
   ok(exists('.cursor/skills/frontend-init/SKILL.md'), 'uninstall claude: KHÔNG đụng cursor skills');
   ok(check({ scope: 'project' }).installs.length === 2, 'check: còn 2 install');
 
@@ -522,7 +593,7 @@ try {
   ok(!exists('.cursor/rules/frontend-00-principles.mdc'), 'uninstall cursor: rules đã xóa');
   ok(!exists('.cursor/skills/frontend-init/SKILL.md'), 'uninstall cursor: skills đã xóa');
   ok(!exists('.cursor/skills/git-workflow/SKILL.md'), 'uninstall cursor: core skills đã xóa');
-  ok(exists('.codex/skills/olap-warehouse-init/SKILL.md'), 'uninstall cursor: KHÔNG đụng codex');
+  ok(exists('.codex/skills/data-olap-init/SKILL.md'), 'uninstall cursor: KHÔNG đụng codex');
   ok(check({ scope: 'project' }).installs.length === 1, 'check: còn 1 install (codex)');
 
   // 6. uninstall all -> manifest biến mất
@@ -543,9 +614,21 @@ try {
   ok(ids.includes('backend:backend-init') && ids.includes('core:principles'),
     'cowork manifest: gồm backend:backend-init + core:principles');
 
+  // coworkBuildSet: build CHỈ skill trong danh sách cấu hình (không build full claude tree).
+  const sub = coworkBuildSet(['backend:backend-init', 'core:git-workflow']);
+  const subStages = sub.plugins.flatMap((p) => p.stages.map((s) => `${p.id}:${s.id}`));
+  ok(subStages.length === 1 && subStages[0] === 'backend:backend-init',
+    'coworkBuildSet: subset → chỉ giữ stage được liệt kê (bỏ mọi skill ngoài danh sách)');
+  ok(sub.core.stages.length === 1 && sub.core.stages[0].id === 'git-workflow',
+    'coworkBuildSet: core lọc còn đúng git-workflow');
+  ok(sub.plugins.every((p) => p.stages.length > 0),
+    'coworkBuildSet: loại plugin không có stage cowork nào');
+
   const TMP_PK = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-pack-'));
   const r = pack({ outDir: TMP_PK });
   ok(r.packed.some((p) => p.skill === 'backend-init'), 'pack: đóng gói skill backend-init');
+  ok(r.packed.length === ids.length && r.missing.length === 0,
+    'pack: đóng gói ĐÚNG tập cowork (đủ, không thiếu)');
   const zp = path.join(TMP_PK, 'backend-init.zip');
   ok(fs.existsSync(zp) && fs.readFileSync(zp).slice(0, 4).toString('hex') === '504b0304',
     'pack: tạo backend-init.zip hợp lệ (PK)');

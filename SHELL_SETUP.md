@@ -38,7 +38,7 @@ autoload -Uz compinit && compinit
 ```bash
 aip <Tab>                      # install uninstall build check list update pack help
 aip install --provider <Tab>   # all claude cursor codex antigravity
-aip install --plugin <Tab>     # all backend frontend oltp-database olap-warehouse
+aip install --plugin <Tab>     # all backend frontend data engineering ops
 aip install --provider claude --<Tab>   # --plugin --scope --global --yes ...
 ```
 

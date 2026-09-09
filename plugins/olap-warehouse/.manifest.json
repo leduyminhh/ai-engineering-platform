@@ -1,6 +1,0 @@
-{
-  "id": "olap-warehouse",
-  "name": "OLAP Warehouse Cowork→Code",
-  "description": "OLAP = Online Analytical Processing. Workflow Cowork → Code để xây KHO/pipeline PHÂN TÍCH (warehouse, lakehouse, stream). Docs-first, không pipeline bắt buộc: olap-warehouse-init scaffold tài liệu nền (project-knowledge, phân tầng source→transform→sink, data contract). ĐỌC dữ liệu TỪ các nguồn vận hành (gồm chính oltp-database); phục vụ BI/report/dashboard + downstream. KHÁC oltp-database (giao dịch vận hành OLTP, DB dùng chung là sản phẩm) và KHÁC ERD nhúng trong app backend.",
-  "version": "1.1.1"
-}

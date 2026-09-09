@@ -9,7 +9,7 @@
 // Policy publish lấy từ <root>/pack.config.json — nguồn sự thật duy nhất.
 // Khi thiếu file (vd consumer cài package), fallback về DEFAULT_POLICY.
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 // ---- policy mặc định (fallback khi thiếu pack.config.json) ----
@@ -20,19 +20,15 @@ const DEFAULT_POLICY = {
   allowTop: ["adapters", "cli", "core", "plugins", "templates"],
   // file nhất định cấp root trong package (luôn có).
   allowFile: ["package.json", "package-lock.json", "LICENSE", "README.md", "AGENTS.md"],
-  // denylist: pattern regex (string) chặn file dù nằm trong allowlist.
-  // Ngoài test/docs, chỉ publish plugin `backend`: 3 plugin còn lại + config
-  // Cowork (_cowork.json, tham chiếu skill của mọi plugin) bị chặn fail-loud
-  // nếu lọt vào gói. Giữ khớp với deny trong pack.config.json ở root.
+  // denylist: pattern regex (string) chặn file dù nằm trong allowlist. Deny plugin CHƯA publish
+  // KHÔNG liệt kê ở đây nữa mà suy tự động từ plugins/_published.json (loadPolicy). Ở đây chỉ giữ
+  // các deny cố định phi-plugin. Config Cowork (_cowork.json, tham chiếu skill mọi plugin) luôn chặn.
   deny: [
     "\\.test\\.mjs$",
     "^test/",
     "^docs/",
     "^completions/",
     "^SHELL_SETUP\\.md$",
-    "^plugins/frontend/",
-    "^plugins/olap-warehouse/",
-    "^plugins/oltp-database/",
     "^plugins/_cowork\\.json$",
   ],
   // file bắt buộc phải có trong package (gồm bin entry + khai báo).
@@ -45,23 +41,53 @@ function hasArray(obj, key) {
   return obj && Array.isArray(obj[key]);
 }
 
-/** Đọc policy từ <root>/pack.config.json; lỗi/shape sai → DEFAULT_POLICY. */
-export function loadPolicy(root) {
+/**
+ * Danh sách plugin ĐÃ published từ <root>/plugins/_published.json (mức NGUYÊN-PLUGIN cho đóng gói).
+ * Entry "plugin" hoặc "plugin/skill" đều tính plugin đó published (ship cả dir). Thiếu/shape sai → null.
+ */
+function loadPublished(root) {
   try {
-    const raw = readFileSync(resolve(root, CONFIG_NAME), "utf8");
-    const cfg = JSON.parse(raw);
-    if (!hasArray(cfg, "allowTop") || !hasArray(cfg, "allowFile") || !hasArray(cfg, "deny") || !hasArray(cfg, "required")) {
-      return DEFAULT_POLICY;
-    }
-    return {
-      allowTop: cfg.allowTop,
-      allowFile: cfg.allowFile,
-      deny: cfg.deny,
-      required: cfg.required,
-    };
+    const cfg = JSON.parse(readFileSync(resolve(root, "plugins", "_published.json"), "utf8"));
+    if (!Array.isArray(cfg.published)) return null;
+    return [...new Set(cfg.published.filter((e) => typeof e === "string").map((e) => e.split("/")[0]))];
+  } catch { return null; }
+}
+
+/** Tên thư mục plugin trên đĩa (<root>/plugins/<id> có .manifest.json). */
+function pluginDirsOnDisk(root) {
+  const dir = resolve(root, "plugins");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && !e.name.startsWith("_") && existsSync(resolve(dir, e.name, ".manifest.json")))
+    .map((e) => e.name);
+}
+
+/**
+ * Bổ sung policy bằng _published.json (nguồn sự thật): suy deny cho MỌI plugin trên đĩa KHÔNG
+ * published, và gắn policy.published = danh sách plugin published thực sự tồn tại (để classifyFiles
+ * assert chúng có mặt trong gói). _published.json vắng → không giới hạn (published=null).
+ */
+function withPublished(root, base) {
+  const published = loadPublished(root);
+  if (!published) return { ...base, published: null };
+  const set = new Set(published);
+  const onDisk = pluginDirsOnDisk(root);
+  const derivedDeny = onDisk.filter((id) => !set.has(id)).map((id) => `^plugins/${id}/`);
+  return { ...base, deny: [...base.deny, ...derivedDeny], published: onDisk.filter((id) => set.has(id)) };
+}
+
+/** Đọc policy từ <root>/pack.config.json; lỗi/shape sai → DEFAULT_POLICY. Luôn suy thêm từ _published.json. */
+export function loadPolicy(root) {
+  let base;
+  try {
+    const cfg = JSON.parse(readFileSync(resolve(root, CONFIG_NAME), "utf8"));
+    base = (!hasArray(cfg, "allowTop") || !hasArray(cfg, "allowFile") || !hasArray(cfg, "deny") || !hasArray(cfg, "required"))
+      ? DEFAULT_POLICY
+      : { allowTop: cfg.allowTop, allowFile: cfg.allowFile, deny: cfg.deny, required: cfg.required };
   } catch {
-    return DEFAULT_POLICY;
+    base = DEFAULT_POLICY;
   }
+  return withPublished(root, base);
 }
 
 const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
@@ -131,6 +157,14 @@ export function classifyFiles(files, policy = DEFAULT_POLICY) {
   }
   for (const req of policy.required) {
     if (!files.includes(req)) errors.push(`THIẾU: file bắt buộc không có trong package — ${req}`);
+  }
+  // Mỗi plugin đã publish PHẢI có mặt trong gói — bắt lỗi package.json files lệch với _published.json.
+  if (Array.isArray(policy.published)) {
+    for (const id of policy.published) {
+      if (!files.some((f) => f.startsWith(`plugins/${id}/`))) {
+        errors.push(`THIẾU: plugin đã publish không có file trong package — plugins/${id}/`);
+      }
+    }
   }
   return errors;
 }

@@ -34,7 +34,7 @@ build/test/lint rõ ràng.
 - Luôn để con người duyệt diff trước khi commit.
 - Không commit code lệch `code-convention.md` / fail lint.
 
-> Mỗi plugin có thể BỔ SUNG ranh giới an toàn đặc thù lĩnh vực (vd: olap-warehouse cấm
+> Mỗi plugin có thể BỔ SUNG ranh giới an toàn đặc thù lĩnh vực (vd: nhánh data-olap cấm
 > backfill/overwrite partition; frontend cấm tự đổi design tokens toàn cục).
 
 ## Nguồn sự thật khi tài liệu lệch nhau (nền)
@@ -44,11 +44,11 @@ schema/migration thực trong code > tài liệu mô tả; `contract.md` > mock/
 > Mỗi plugin BỔ SUNG thứ tự nguồn-sự-thật đặc thù cho contract/model của lĩnh vực mình.
 
 ## Phối hợp đa-plugin (khi nhiều lĩnh vực dùng chung 1 repo)
-Các plugin (backend / frontend / olap-warehouse) KHÔNG đọc trực tiếp `docs/requests/` của nhau
+Các plugin (backend / frontend / data) KHÔNG đọc trực tiếp `docs/requests/` của nhau
 (đó là tiến trình RIÊNG từng yêu cầu). Tương tác chéo đi qua 2 kênh dùng chung, tường minh:
 
 - **`docs/contracts/` = HANDOFF (hợp đồng đã công bố).** Bên PRODUCER công bố contract ổn định
-  ra đây (backend: response schema/endpoint; olap-warehouse: data contract của dataset đích).
+  ra đây (backend: response schema/endpoint; data (OLAP): data contract của dataset đích).
   Bên CONSUMER (vd frontend) ÁNH XẠ contract của mình TỪ đó. Khi lệch nhau, **contract đã công
   bố của producer là nguồn sự thật** — consumer DỪNG, không tự bịa; đổi contract đã công bố =
   thay đổi có thể phá consumer.

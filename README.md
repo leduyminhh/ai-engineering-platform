@@ -69,16 +69,22 @@ npx ai-engineering-platform install --provider all --plugin all --yes
 
 ## Plugin Catalog
 
-Content is intentionally lean: `core` plus four domain plugins whose skills are
-**standalone, on-demand recipes** (there is no mandatory pipeline).
+Content is intentionally lean: `core`, domain plugins (`backend`, `frontend`, `data`)
+and cross-cutting capability plugins (`engineering`, `ops`); skills are
+**standalone, on-demand recipes** (there is no mandatory pipeline). The published set
+lives in `plugins/_published.json` — each entry is either a whole plugin (`backend`) or
+a single skill (`frontend/frontend-init`); the wizard offers only what is listed, and
+`npm run build` writes `build/wizard-install-report.md`. Plugins with no published skill
+(e.g. `data`, `ops`) stay drafts, installable only via `--plugin`.
 
 | Plugin | Capability | Skills |
 | --- | --- | --- |
 | `core` | Shared baseline every plugin depends on. | `principles`, `git-workflow` |
 | `backend` | Backend (REST API / service) project. | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
-| `frontend` | Frontend (web app / SPA) project. | `frontend-init` |
-| `oltp-database` | OLTP database project. | `oltp-database-init` |
-| `olap-warehouse` | Data pipeline / warehouse project. | `olap-warehouse-init` |
+| `frontend` | Frontend (web app / SPA) project. | `frontend-init`, `frontend-migrate-architecture` |
+| `data` | Data project — OLTP DB (`data-oltp-*`) + OLAP warehouse/pipeline (`data-olap-*`). *(draft, not yet published)* | `data-oltp-init`, `data-olap-init` |
+| `engineering` | Cross-cutting engineering capabilities (quality gate, spec, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-adr` |
+| `ops` | Server maintenance — deploy/release, incident triage, observability. | `ops-deploy-release`, `ops-incident-troubleshooting`, `ops-observability` |
 
 Each `*-init` skill is a **docs-only scaffolder**: it drops the `templates/init`
 tree + `AGENTS.template.md`, asks the domain basics (stack / framework / engine /

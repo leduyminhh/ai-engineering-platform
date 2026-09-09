@@ -26,9 +26,9 @@
     "ops:ops-deploy-release",
     "ops:ops-incident-troubleshooting",
     "ops:ops-observability",
-    "oltp-database:oltp-database-init",
-    "oltp-database:oltp-database-implement",
-    "olap-warehouse:olap-warehouse-init",
-    "olap-warehouse:olap-warehouse-implement"
+    "data:data-oltp-init",
+    "data:data-oltp-implement",
+    "data:data-olap-init",
+    "data:data-olap-implement"
   ]
 }

@@ -69,16 +69,21 @@ npx ai-engineering-platform install --provider all --plugin all --yes
 
 ## Danh mục plugin
 
-Nội dung được giữ gọn: `core` cộng bốn domain plugin, với skill là **recipe độc lập,
-gọi-khi-cần** (KHÔNG có pipeline bắt buộc).
+Nội dung được giữ gọn: `core`, các domain plugin (`backend`, `frontend`, `data`) và
+plugin capability xuyên suốt (`engineering`, `ops`); skill là **recipe độc lập,
+gọi-khi-cần** (KHÔNG có pipeline bắt buộc). Tập publish nằm ở `plugins/_published.json`
+— mỗi phần tử là CẢ plugin (`backend`) hoặc MỘT skill (`frontend/frontend-init`); wizard
+chỉ offer phần được liệt kê, và `npm run build` sinh `build/wizard-install-report.md`.
+Plugin không có skill nào được publish (vd `data`, `ops`) là draft, chỉ cài bằng `--plugin`.
 
 | Plugin | Năng lực | Skill |
 | --- | --- | --- |
 | `core` | Baseline mọi plugin phụ thuộc. | `principles`, `git-workflow` |
 | `backend` | Project backend (REST API / service). | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
-| `frontend` | Project frontend (web app / SPA). | `frontend-init` |
-| `oltp-database` | Project CSDL OLTP. | `oltp-database-init` |
-| `olap-warehouse` | Project data pipeline / warehouse. | `olap-warehouse-init` |
+| `frontend` | Project frontend (web app / SPA). | `frontend-init`, `frontend-migrate-architecture` |
+| `data` | Project dữ liệu — CSDL OLTP (`data-oltp-*`) + kho/pipeline OLAP (`data-olap-*`). *(draft, chưa publish)* | `data-oltp-init`, `data-olap-init` |
+| `engineering` | Capability kỹ thuật xuyên suốt (quality gate, spec, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-adr` |
+| `ops` | Maintain server — deploy/release, xử lý sự cố, observability. | `ops-deploy-release`, `ops-incident-troubleshooting`, `ops-observability` |
 
 Mỗi skill `*-init` là **bộ scaffold TÀI LIỆU**: drop cây `templates/init` +
 `AGENTS.template.md`, hỏi thông tin nền (stack / framework / engine / nguồn), rồi điền

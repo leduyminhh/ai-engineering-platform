@@ -1,14 +1,14 @@
 // Wizard tương tác step-by-step (keypress TUI). Logic step-machine có back, deps injectable để test.
 import * as prompt from './prompt.mjs';
 import { PROVIDERS } from './paths.mjs';
-import { knownPluginIds, check, skillCatalog } from './install.mjs';
+import { knownPluginIds, check, offeredCatalog } from './install.mjs';
 
 const { BACK, CANCEL } = prompt;
 
 const defaultDeps = {
   selectOne: prompt.selectOne, selectMany: prompt.selectMany, confirmStep: prompt.confirmStep,
   selectTree: prompt.selectTree,
-  PROVIDERS, knownPluginIds, check, skillCatalog,
+  PROVIDERS, knownPluginIds, check, offeredCatalog,
 };
 
 /** Chạy danh sách step có back. step = { key, run(state) -> value|BACK|CANCEL }.
@@ -83,8 +83,8 @@ export async function runWizard(action, deps = defaultDeps) {
       }
       return set;
     };
-    // Dựng nhóm cây skill từ catalog nguồn (core đầu; core/principles là con KHOÁ luôn bật).
-    const skillGroups = () => d.skillCatalog().plugins.map((p) => ({
+    // Dựng nhóm cây skill từ catalog ĐƯỢC OFFER (core + plugin đã published; core/principles con KHOÁ).
+    const skillGroups = () => d.offeredCatalog().plugins.map((p) => ({
       plugin: p.id, label: p.id,
       skills: p.skillIds.map((v) => ({ value: v, label: v.split('/')[1], locked: v === 'core/principles' })),
     }));

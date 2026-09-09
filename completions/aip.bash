@@ -8,7 +8,7 @@ _aip_completions() {
 
   local commands="install uninstall build check list update help"
   local providers="all claude cursor codex antigravity"
-  local plugins="all backend frontend oltp-database olap-warehouse"
+  local plugins="all backend frontend data engineering ops"
 
   case "$prev" in
     --provider|--target)

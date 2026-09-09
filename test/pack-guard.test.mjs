@@ -86,3 +86,28 @@ test("pack-guard: describePack báo thiếu file bắt buộc", () => {
   const { missing } = describePack(["package.json", "LICENSE", "README.md"]);
   assert.ok(missing.includes("cli/index.mjs"), "phải nêu thiếu cli/index.mjs");
 });
+
+test("pack-guard: loadPolicy suy denylist plugin chưa publish từ _published.json", () => {
+  const policy = loadPolicy(REPO_ROOT);
+  assert.ok(Array.isArray(policy.published) && policy.published.includes("backend"),
+    "policy.published phải phản ánh _published.json");
+  const files = baseline().concat([
+    "plugins/backend/.manifest.json",
+    "plugins/frontend/.manifest.json",
+    "plugins/engineering/.manifest.json",
+    "plugins/data/skills/data-oltp-init/SKILL.md",
+  ]);
+  const errs = classifyFiles(files, policy);
+  assert.ok(errs.some((e) => e.includes("plugins/data/")), "plugin chưa publish (data) phải bị chặn");
+  assert.ok(!errs.some((e) => e.includes("engineering")), "plugin đã publish (engineering) không bị chặn/thiếu");
+});
+
+test("pack-guard: báo thiếu plugin đã publish khi vắng khỏi package", () => {
+  const policy = loadPolicy(REPO_ROOT);
+  const files = baseline().concat([
+    "plugins/backend/.manifest.json",
+    "plugins/frontend/.manifest.json",
+  ]); // thiếu 'engineering' (đang published)
+  const errs = classifyFiles(files, policy);
+  assert.ok(errs.some((e) => e.includes("engineering")), "phải báo thiếu plugin đã publish 'engineering'");
+});

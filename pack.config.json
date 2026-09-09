@@ -7,9 +7,6 @@
     "^docs/",
     "^completions/",
     "^SHELL_SETUP\\.md$",
-    "^plugins/frontend/",
-    "^plugins/olap-warehouse/",
-    "^plugins/oltp-database/",
     "^plugins/_cowork\\.json$"
   ],
   "required": ["cli/index.mjs", "cli/build.mjs", "cli/lib/install.mjs", "cli/lib/plugins.mjs"]

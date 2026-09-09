@@ -32,16 +32,20 @@ export function keyToAction(name, { ctrl = false } = {}) {
   }
 }
 
-function renderLines(title, items, { cursor, selected, multi, hint }) {
+function renderLines(title, items, { cursor, selected, multi, hint, window }) {
+  const { start, end } = window || { start: 0, end: items.length };
   const out = [bold(title)];
-  items.forEach((it, i) => {
+  if (start > 0) out.push(dim(`  ↑ còn ${start} mục`));
+  for (let i = start; i < end; i++) {
+    const it = items[i];
     const active = i === cursor;
     const pointer = active ? cyan('>') : ' ';
     const box = multi ? (selected.has(i) ? green('[x]') : dim('[ ]')) + ' ' : '';
     const label = active ? cyan(it.label) : it.label;
     const tail = it.hint ? dim('  — ' + it.hint) : '';
     out.push(`${pointer} ${box}${label}${tail}`);
-  });
+  }
+  if (end < items.length) out.push(dim(`  ↓ còn ${items.length - end} mục`));
   out.push(hint);
   return out;
 }
@@ -58,6 +62,30 @@ function visualRows(text, width) {
   let n = 0;
   for (const line of text.split('\n')) n += Math.max(1, Math.ceil(stripAnsi(line).length / w));
   return n;
+}
+
+/**
+ * Thuần: cửa sổ [start,end) các item để vẽ khi list DÀI HƠN chiều cao terminal — giữ con trỏ
+ * trong tầm nhìn (căn giữa rồi clamp hai biên). capacity ≥ total hoặc ≤ 0 → không cắt (vẽ hết).
+ * Không có cửa sổ thì `draw` nhảy con trỏ lên số dòng vượt màn hình → terminal cuộn, reposition
+ * lệch, frame hỏng ("mất lựa chọn"). Export để test. Giả định mỗi item cao 1 dòng (nhãn ngắn).
+ */
+export function viewport(total, cursor, capacity) {
+  if (capacity <= 0 || capacity >= total) return { start: 0, end: total };
+  let start = cursor - Math.floor(capacity / 2);
+  if (start < 0) start = 0;
+  if (start + capacity > total) start = total - capacity;
+  return { start, end: start + capacity };
+}
+
+/**
+ * Số item (dòng) tối đa được vẽ để VÙNG VẼ LẠI KHÔNG vượt chiều cao terminal (điều kiện để lệnh
+ * nhảy-con-trỏ-lên khi redraw còn đúng). Trừ title + hint + 2 dòng chỉ báo ↑/↓ + 1 dòng đệm.
+ */
+function itemCapacity(title, hintLine, width, termRows) {
+  const rows = termRows > 0 ? termRows : 24;
+  const overhead = visualRows(title, width) + visualRows(hintLine, width) + 3;
+  return Math.max(1, rows - overhead);
 }
 
 /**
@@ -85,7 +113,9 @@ function runSelect(title, items, { multi = false, preselected = [], min = 0 } = 
     const draw = (note = '') => {
       if (last) process.stdout.write(`\x1b[${last}A\x1b[0J`);
       const hintLine = note ? yellow(note) : dim(hint);
-      const { text, rows } = renderFrame(title, items, { cursor, selected, multi, hint: hintLine });
+      const width = process.stdout.columns || 80;
+      const window = viewport(items.length, cursor, itemCapacity(title, hintLine, width, process.stdout.rows));
+      const { text, rows } = renderFrame(title, items, { cursor, selected, multi, hint: hintLine, window }, width);
       process.stdout.write(text + '\n');
       last = rows;
     };
@@ -160,10 +190,13 @@ function lockedValues(groups) {
 }
 
 // Vẽ một dòng cây: header với checkbox 3 trạng thái, skill thụt 2 space (locked = dim).
-function renderTreeLines(title, rows, groups, { cursor, selected, hint }) {
+function renderTreeLines(title, rows, groups, { cursor, selected, hint, window }) {
+  const { start, end } = window || { start: 0, end: rows.length };
   const out = [bold(title)];
   const boxOf = (state) => state === 'full' ? green('[x]') : state === 'partial' ? yellow('[~]') : dim('[ ]');
-  rows.forEach((r, i) => {
+  if (start > 0) out.push(dim(`  ↑ còn ${start} mục`));
+  for (let i = start; i < end; i++) {
+    const r = rows[i];
     const active = i === cursor;
     const pointer = active ? cyan('>') : ' ';
     if (r.type === 'header') {
@@ -176,7 +209,8 @@ function renderTreeLines(title, rows, groups, { cursor, selected, hint }) {
       const label = r.locked ? dim(r.label) : active ? cyan(r.label) : r.label;
       out.push(`${pointer}   ${box} ${label}`);
     }
-  });
+  }
+  if (end < rows.length) out.push(dim(`  ↓ còn ${rows.length - end} mục`));
   out.push(hint);
   return out;
 }
@@ -194,9 +228,11 @@ function runSelectTree(title, groups, { preselected = [], min = 0 } = {}) {
     const draw = (note = '') => {
       if (last) process.stdout.write(`\x1b[${last}A\x1b[0J`);
       const hintLine = note ? yellow(note) : dim(hint);
-      const text = renderTreeLines(title, rows, groups, { cursor, selected, hint: hintLine }).join('\n');
+      const width = process.stdout.columns || 80;
+      const window = viewport(rows.length, cursor, itemCapacity(title, hintLine, width, process.stdout.rows));
+      const text = renderTreeLines(title, rows, groups, { cursor, selected, hint: hintLine, window }).join('\n');
       process.stdout.write(text + '\n');
-      last = visualRows(text, process.stdout.columns || 80);
+      last = visualRows(text, width);
     };
     readline.emitKeypressEvents(process.stdin);
     process.stdin.setRawMode(true);

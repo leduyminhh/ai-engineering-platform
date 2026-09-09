@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, execSync } from 'node:child_process';
-import { REPO_ROOT, loadPlugins, loadCore, loadMarketplace } from './plugins.mjs';
+import { REPO_ROOT, loadPlugins, loadCore, loadMarketplace, loadPublished } from './plugins.mjs';
 import { scopeRoot, manifestPath, PROVIDER_LAYOUT, PROVIDERS } from './paths.mjs';
 import { pack } from './pack.mjs';
 import { BEGIN as MB_BEGIN, END as MB_END, mergeManagedBlock, removeManagedBlock } from './managed-block.mjs';
@@ -297,6 +297,34 @@ export function skillCatalog() {
   }));
   return { plugins };
 }
+/** Plugin id ĐÃ published (có ≥1 skill) CÓ trên đĩa. `_published.json` vắng → mọi plugin. */
+export function publishedPluginIds(published = loadPublished()) {
+  const ids = loadPlugins().map((p) => p.id);
+  if (!published) return ids;
+  return ids.filter((id) => published[id]);
+}
+
+/**
+ * Catalog wizard được phép OFFER: core + skill đã published. Mỗi plugin published theo '*' (mọi skill)
+ * hoặc mảng skill lẻ (chỉ những `plugin/skill` đó). KHÁC skillCatalog (đầy đủ, gate flag/dev).
+ * published vắng (null) → offer tất cả. Nhận map để test.
+ */
+export function offeredCatalog(published = loadPublished()) {
+  const cat = skillCatalog();
+  if (!published) return cat;
+  const plugins = [];
+  for (const p of cat.plugins) {
+    if (p.id === 'core') { plugins.push(p); continue; }
+    const sel = published[p.id];
+    if (!sel) continue;
+    if (sel === '*') { plugins.push(p); continue; }
+    const allow = new Set(sel);
+    const skillIds = p.skillIds.filter((s) => allow.has(s));
+    if (skillIds.length) plugins.push({ ...p, skillIds });
+  }
+  return { plugins };
+}
+
 /** Các `plugin/skill` NGUỒN của một plugin (rỗng nếu plugin không tồn tại). */
 export function allSkillsOf(pluginId) {
   const p = skillCatalog().plugins.find((x) => x.id === pluginId);

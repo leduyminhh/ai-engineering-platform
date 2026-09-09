@@ -1,6 +1,0 @@
-{
-  "id": "oltp-database",
-  "name": "OLTP Database Cowork→Code",
-  "description": "OLTP = Online Transaction Processing. Workflow Cowork → Code cho project sở hữu một cơ sở dữ liệu VẬN HÀNH dùng chung như một SẢN PHẨM. Docs-first, không pipeline bắt buộc: oltp-database-init scaffold tài liệu nền (project-knowledge theo engine, schema-conventions, phân tầng db/). Consumer (app backend, service khác) đọc-ghi trực tiếp qua schema contract công bố. KHÁC olap-warehouse (OLAP — đọc dữ liệu TỪ nguồn, gồm chính oltp-database, để phân tích) và KHÁC ERD nhúng trong một app backend.",
-  "version": "1.1.1"
-}

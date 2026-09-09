@@ -18,7 +18,7 @@ _aip() {
     '1:command:->cmd' \
     '--provider[provider]:provider:(all claude cursor codex antigravity)' \
     '--target[provider]:provider:(all claude cursor codex antigravity)' \
-    '--plugin[plugin]:plugin:(all backend frontend oltp-database olap-warehouse)' \
+    '--plugin[plugin]:plugin:(all backend frontend data engineering ops)' \
     '--scope[scope]:scope:(project global)' \
     '(-g --global)'{-g,--global}'[Scope global]' \
     '(-y --yes)'{-y,--yes}'[Non-interactive]' \

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Test logic wizard + prompt (không cần TTY). Zero-dep. Chạy: node test/wizard.test.mjs
-import { keyToAction, BACK, CANCEL, renderFrame } from '../cli/lib/prompt.mjs';
+import { keyToAction, BACK, CANCEL, renderFrame, viewport } from '../cli/lib/prompt.mjs';
 import { flattenTree, headerState, cascadeToggle } from '../cli/lib/prompt.mjs';
 
 let pass = 0; const fails = [];
@@ -35,6 +35,41 @@ ok(BACK !== CANCEL, 'BACK !== CANCEL');
   // width=20 · title "t"(1) + item "> "+50 = 52 ký tự → ceil(52/20)=3 + hint "h"(1) = 5 dòng visual
   ok(f.rows === 5, `renderFrame: label wrap theo width → đếm đủ visual rows (được ${f.rows}, mong đợi 5)`);
   ok(f.rows > f.text.split('\n').length, 'renderFrame: dòng wrap KHÔNG bị undercount (rows > số dòng logic)');
+}
+
+// viewport: cửa sổ cuộn giữ con trỏ trong tầm nhìn khi list dài hơn terminal
+ok(JSON.stringify(viewport(3, 0, 10)) === JSON.stringify({ start: 0, end: 3 }),
+  'viewport: capacity ≥ total → vẽ toàn bộ (không cắt)');
+{
+  const w = viewport(30, 0, 10);
+  ok(w.start === 0 && w.end === 10, 'viewport: cursor ở đầu → start=0, đúng capacity');
+}
+{
+  const w = viewport(30, 29, 10);
+  ok(w.end === 30 && w.start === 20, 'viewport: cursor ở cuối → end=total (clamp), đúng capacity');
+}
+{
+  const w = viewport(30, 15, 10);
+  ok(w.start <= 15 && 15 < w.end && (w.end - w.start) === 10,
+    'viewport: cursor ở giữa → nằm trong cửa sổ, giữ nguyên capacity');
+}
+{
+  const w = viewport(30, 3, 0); // capacity xấu → không cắt (fallback an toàn)
+  ok(w.start === 0 && w.end === 30, 'viewport: capacity ≤ 0 → không cắt');
+}
+
+// renderFrame với window: chỉ vẽ lát cắt [start,end) + chỉ báo còn mục trên/dưới
+{
+  const items = Array.from({ length: 20 }, (_, i) => ({ label: 'item' + i }));
+  const f = renderFrame('t', items,
+    { cursor: 10, selected: new Set(), multi: false, hint: 'h', window: { start: 6, end: 12 } });
+  const lines = f.text.split('\n');
+  ok(lines.some((l) => l.includes('item6')) && lines.some((l) => l.includes('item11')),
+    'renderFrame window: vẽ item trong [start,end)');
+  ok(!lines.some((l) => l.includes('item0')) && !lines.some((l) => l.includes('item19')),
+    'renderFrame window: KHÔNG vẽ item ngoài cửa sổ');
+  ok(lines.some((l) => l.includes('↑')) && lines.some((l) => l.includes('↓')),
+    'renderFrame window: có chỉ báo còn mục trên/dưới');
 }
 
 // selectTree phần thuần: flattenTree / headerState / cascadeToggle
@@ -97,8 +132,8 @@ function makeDeps({ one = [], many = [], confirm = [], tree = [], catalog = CATA
     selectTree: (_title, groups, opts = {}) => { treeCalls.push({ groups, opts }); return Promise.resolve(t()); },
     _treeCalls: treeCalls,
     PROVIDERS: ['claude', 'cursor', 'codex'], // antigravity pending — không offer trong wizard
-    knownPluginIds: () => ['backend', 'frontend', 'olap-warehouse'],
-    skillCatalog: () => catalog,
+    knownPluginIds: () => ['backend', 'frontend', 'data'],
+    offeredCatalog: () => catalog,
     check: ({ scope }) => ({ installs: installs(scope) }),
   };
 }
@@ -128,6 +163,9 @@ function makeDeps({ one = [], many = [], confirm = [], tree = [], catalog = CATA
   const principles = coreGroup.skills.find((s) => s.value === 'core/principles');
   ok(principles && principles.locked === true, 'install: core/principles là con KHOÁ trong cây');
   ok(call.opts.min === 1, 'install: cây skill min=1');
+  // Cây phải dựng từ offeredCatalog (đã lọc published), KHÔNG phải skillCatalog đầy đủ.
+  ok(JSON.stringify(call.groups.map((g) => g.plugin)) === '["core","backend"]',
+    'install: cây skill chỉ gồm plugin trong offeredCatalog (đã lọc published)');
 }
 
 // install: claude chọn kiểu plugin -> mode='plugin'

@@ -1,8 +1,8 @@
 ---
-name: olap-warehouse-implement
-description: "Recipe hiện thực TRANSFORM/MODEL + PIPELINE cho một DATA WAREHOUSE/LAKEHOUSE project OLAP: từ data-contract (schema đầu ra + grain + SLA) và kiến trúc phân tầng (do olap-warehouse-init tạo trong project-knowledge/) build transform thật trong pipelines/ (source/ingest → transform/model → sink/serving), mô hình hóa dimensional (fact/dim theo grain) hoặc normalized, layer staging → intermediate → mart, transform idempotent/incremental, data-quality test (not-null/unique/accepted-values/referential/freshness/row-count-anomaly) làm cổng trước khi publish dataset, và lineage nguồn→đích (cột/bảng) cho downstream truy vết; giữ DATA CONTRACT đầu ra đã công bố. Dùng skill NÀY khi người dùng muốn \"build pipeline\", \"viết transform\", \"ETL/ELT\", \"data model warehouse\", \"dimensional model\", \"data quality test\", \"lineage\", \"build dataset\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG chạy pipeline lên dữ liệu production khi chưa duyệt. KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã chạy olap-warehouse-init."
-order: 2
-stageNumber: "02"
+name: data-olap-implement
+description: "Recipe hiện thực TRANSFORM/MODEL + PIPELINE cho một DATA WAREHOUSE/LAKEHOUSE project OLAP: từ data-contract (schema đầu ra + grain + SLA) và kiến trúc phân tầng (do data-olap-init tạo trong project-knowledge/) build transform thật trong pipelines/ (source/ingest → transform/model → sink/serving), mô hình hóa dimensional (fact/dim theo grain) hoặc normalized, layer staging → intermediate → mart, transform idempotent/incremental, data-quality test (not-null/unique/accepted-values/referential/freshness/row-count-anomaly) làm cổng trước khi publish dataset, và lineage nguồn→đích (cột/bảng) cho downstream truy vết; giữ DATA CONTRACT đầu ra đã công bố. Dùng skill NÀY khi người dùng muốn \"build pipeline\", \"viết transform\", \"ETL/ELT\", \"data model warehouse\", \"dimensional model\", \"data quality test\", \"lineage\", \"build dataset\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG chạy pipeline lên dữ liệu production khi chưa duyệt. KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã chạy data-olap-init."
+order: 4
+stageNumber: "04"
 title: "OLAP Warehouse Implement — Hiện thực transform/model + pipeline"
 runsIn: execute
 invoke: per-request
@@ -14,20 +14,20 @@ next: null
 
 Recipe hiện thực TRANSFORM/MODEL của một data warehouse/lakehouse OLAP: từ **data-contract**
 (schema đầu ra + grain + SLA/freshness + kỳ vọng chất lượng) và **kiến trúc pipeline phân tầng**
-(nguồn trong `project-knowledge/`, do `olap-warehouse-init` tạo) build transform thật trong
+(nguồn trong `project-knowledge/`, do `data-olap-init` tạo) build transform thật trong
 `pipelines/` (`source/ingest` → `transform/model` → `sink/serving`), kèm **data-quality test** và
 **lineage** nguồn→đích. Skill này KHÔNG nằm trong chuỗi bắt buộc; gọi khi cần trên project đã chạy
-`olap-warehouse-init`. Đây là skill DOCS/hướng dẫn — sản phẩm là transform/model + DQ test của
+`data-olap-init`. Đây là skill DOCS/hướng dẫn — sản phẩm là transform/model + DQ test của
 project đích, KHÔNG sinh code ứng dụng và KHÔNG chạy pipeline lên dữ liệu prod khi chưa duyệt.
 
 ## Tiền đề
-- Project đã có cấu trúc workflow data (đã chạy `olap-warehouse-init`). Nếu chưa, gợi ý khởi tạo
+- Project đã có cấu trúc workflow data (đã chạy `data-olap-init`). Nếu chưa, gợi ý khởi tạo
   trước; KHÔNG tự bịa layout hay data-contract.
 - Mọi bối cảnh nằm trong FILE. Con người giữ 2 chốt: duyệt HÌNH DẠNG mô hình dữ liệu + duyệt
   diff/chạy lên nguồn/đích thật.
 
 ## Ranh giới an toàn (đọc CLAUDE.md của project + `shared/principles.md`)
-- CHỈ ĐỌC từ nguồn vận hành (gồm `oltp-database`) — KHÔNG sở hữu / KHÔNG ghi lại giao dịch vận hành.
+- CHỈ ĐỌC từ nguồn vận hành (gồm nhánh OLTP (`data-oltp-*`)) — KHÔNG sở hữu / KHÔNG ghi lại giao dịch vận hành.
 - KHÔNG tự kết nối / chạy transform lên nguồn hay đích **production** khi chưa duyệt: ưu tiên
   sample/synthetic; nêu kế hoạch, con người duyệt và tự chạy.
 - KHÔNG chạy lệnh phá hủy/ghi đè dữ liệu (DROP/TRUNCATE/overwrite partition, full-refresh trên

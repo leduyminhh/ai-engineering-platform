@@ -1,0 +1,8 @@
+{
+  "_comment": "Nguồn sự thật DUY NHẤT cho phần ĐÃ published: wizard offer gì (offeredCatalog) + đóng gói npm. Mỗi phần tử 'published' là 'plugin' (CẢ plugin, mọi skill) HOẶC 'plugin/skill' (CHỈ skill đó — publish một phần). Wizard chỉ offer skill đã published; đóng gói npm ở mức nguyên-plugin (plugin có >=1 skill published thì ship cả dir + thêm 'plugins/<id>/' vào package.json files; pack-guard suy denylist cho plugin không published). Plugin không có skill nào ở đây là draft: build/validate/cowork vẫn xử lý, dev cài được bằng --plugin, nhưng KHÔNG offer mặc định và KHÔNG ship.",
+  "published": [
+    "backend",
+    "frontend",
+    "engineering"
+  ]
+}

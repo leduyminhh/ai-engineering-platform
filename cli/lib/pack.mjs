@@ -6,14 +6,14 @@
 // ZIP writer ZERO-DEPENDENCY: zlib.deflateRawSync (built-in) + tự dựng header/central-directory + CRC32.
 // Chạy y hệt mọi OS, không cần `zip`/`Compress-Archive`.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { execFileSync } from 'node:child_process';
-import { REPO_ROOT, PLUGINS_DIR, loadPlugins } from './plugins.mjs';
-import { ensureDir } from './write.mjs';
+import { REPO_ROOT, PLUGINS_DIR, loadPlugins, loadCore, loadMarketplace } from './plugins.mjs';
+import { ensureDir, writeFiles, rmrf } from './write.mjs';
+import claudeAdapter from '../../adapters/claude/adapter.mjs';
 
 const COWORK_CONFIG = path.join(PLUGINS_DIR, '_cowork.json');
-const CLAUDE_PLUGINS = path.join(REPO_ROOT, 'build', 'claude', 'plugins');
 
 // ── ZIP writer (zero-dep) ────────────────────────────────────────────────────
 const CRC_TABLE = (() => {
@@ -125,29 +125,45 @@ function collectEntries(dir, prefix) {
   return out;
 }
 
-function ensureClaudeBuilt() {
-  if (!fs.existsSync(CLAUDE_PLUGINS)) {
-    execFileSync('node', ['cli/build.mjs', '--target', 'claude'], { cwd: REPO_ROOT, stdio: 'ignore' });
-  }
+/**
+ * Thuần: tập plugin/core đã LỌC còn đúng các stage nằm trong danh sách cowork `ids` — chỉ những
+ * skill này được adapter claude render (KHÔNG build full cây claude). Bỏ plugin không còn stage nào.
+ * core giữ nguyên (adapter tự phát skill `principles`); stage core (vd git-workflow) lọc theo ids.
+ * Export để test.
+ */
+export function coworkBuildSet(ids = coworkSkillIds()) {
+  const want = new Set(ids);
+  const keep = (p) => ({ ...p, stages: p.stages.filter((s) => want.has(`${p.id}:${s.id}`)) });
+  const plugins = loadPlugins().map(keep).filter((p) => p.stages.length);
+  return { plugins, core: keep(loadCore()) };
 }
 
 /**
- * Đóng gói các skill Cowork (từ build/claude/plugins/<plugin>/skills/<skill>/) thành
- * build/cowork/<skill>.zip. Build claude trước nếu chưa có. Trả { outDir, packed:[{id,skill,zip}], missing:[] }.
+ * Đóng gói skill Cowork thành build/cowork/<skill>.zip. Render CHỈ các skill trong plugins/_cowork.json
+ * qua adapter claude vào THƯ MỤC TẠM (không đụng build/claude, không build full cây). Trả
+ * { outDir, packed:[{id,skill,zip}], missing:[] }.
  * @param {{outDir?:string}} opts
  */
 export function pack({ outDir } = {}) {
-  ensureClaudeBuilt();
+  const ids = coworkSkillIds();
   const out = outDir || path.join(REPO_ROOT, 'build', 'cowork');
   ensureDir(out);
-  const packed = [], missing = [];
-  for (const full of coworkSkillIds()) {
-    const [plugin, skill] = full.includes(':') ? full.split(':') : [null, full];
-    const skillDir = plugin ? path.join(CLAUDE_PLUGINS, plugin, 'skills', skill) : null;
-    if (!skillDir || !fs.existsSync(skillDir)) { missing.push(full); continue; }
-    const zipPath = path.join(out, `${skill}.zip`);
-    fs.writeFileSync(zipPath, zipBuffer(collectEntries(skillDir, skill)));
-    packed.push({ id: full, skill, zip: zipPath });
+  const { plugins, core } = coworkBuildSet(ids);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-cowork-'));
+  try {
+    writeFiles(tmp, claudeAdapter.build(plugins, { outDir: tmp, marketplace: loadMarketplace(), core }));
+    const pluginsRoot = path.join(tmp, 'plugins');
+    const packed = [], missing = [];
+    for (const full of ids) {
+      const [plugin, skill] = full.includes(':') ? full.split(':') : [null, full];
+      const skillDir = plugin ? path.join(pluginsRoot, plugin, 'skills', skill) : null;
+      if (!skillDir || !fs.existsSync(skillDir)) { missing.push(full); continue; }
+      const zipPath = path.join(out, `${skill}.zip`);
+      fs.writeFileSync(zipPath, zipBuffer(collectEntries(skillDir, skill)));
+      packed.push({ id: full, skill, zip: zipPath });
+    }
+    return { outDir: out, packed, missing };
+  } finally {
+    rmrf(tmp);
   }
-  return { outDir: out, packed, missing };
 }

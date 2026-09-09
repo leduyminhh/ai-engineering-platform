@@ -1,0 +1,6 @@
+{
+  "id": "data",
+  "name": "Data (OLTP + OLAP) Cowork→Code",
+  "description": "Workflow Cowork → Code cho project SỞ HỮU DỮ LIỆU, gồm hai nhánh phân biệt: nhánh OLTP (data-oltp-*) dựng một cơ sở dữ liệu VẬN HÀNH dùng chung như SẢN PHẨM (schema contract → migration versioned → áp thật + test toàn vẹn); nhánh OLAP (data-olap-*) xây KHO/pipeline PHÂN TÍCH (data contract → model/lineage → transform + data-quality test). Docs-first, không pipeline bắt buộc: *-init scaffold tài liệu nền, *-implement hiện thực. Chọn nhánh theo bản chất project; OLAP đọc dữ liệu TỪ nguồn vận hành (gồm chính OLTP), KHÁC ERD nhúng trong một app backend.",
+  "version": "1.1.1"
+}

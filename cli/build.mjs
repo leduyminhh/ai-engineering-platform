@@ -18,6 +18,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { loadPlugins, loadMarketplace, loadCore, REPO_ROOT } from './lib/plugins.mjs';
 import { writeFiles, ensureDir, rmrf } from './lib/write.mjs';
+import { writeWizardReport } from './lib/report.mjs';
 
 const ADAPTERS_DIR = path.join(REPO_ROOT, 'adapters');
 const DEFAULT_OUT = path.join(REPO_ROOT, 'build');
@@ -100,6 +101,10 @@ async function main() {
     const n = writeFiles(outDir, files);
     console.log(`[${adapter.name}] ${plugins.length} plugin, ${n} mục -> ${path.relative(REPO_ROOT, outDir) || '.'}`);
   }
+
+  // Report "phần nào cài được qua wizard" (offered vs draft) — nguồn plugins/_published.json.
+  const rep = writeWizardReport(args.out || DEFAULT_OUT);
+  console.log(`[report] cài-qua-wizard: ${rep.model.offered.length} offered · ${rep.model.draft.length} draft -> ${path.relative(REPO_ROOT, rep.md)}`);
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });

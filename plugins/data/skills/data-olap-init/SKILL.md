@@ -1,8 +1,8 @@
 ---
-name: olap-warehouse-init
+name: data-olap-init
 description: "Khởi tạo cấu trúc thư mục nền tảng cho một DATA PIPELINE project (warehouse/lakehouse) theo workflow Cowork→Code: project-knowledge (kiến trúc dữ liệu, nguồn/đích, mô hình hóa, naming, code-convention), docs/requests, docs/decisions/ADR, docs/contracts (data contract đã công bố cho downstream), CLAUDE.md, CONTRIBUTING.md, và layout phân tầng source/ingest → transform/model → sink/serving. Dùng skill NÀY mỗi khi người dùng muốn \"khởi tạo pipeline\", \"tạo cấu trúc thư mục data project\", \"scaffold ETL/warehouse\", \"setup project data mới\", \"tạo bộ tài liệu nền cho pipeline\" — kể cả khi họ không nói chính xác chữ \"skill\". Chỉ chạy MỘT LẦN cho mỗi project."
-order: 1
-stageNumber: "01"
+order: 3
+stageNumber: "03"
 title: "OLAP Warehouse Init — Khởi tạo cấu trúc pipeline project"
 runsIn: plan
 invoke: once

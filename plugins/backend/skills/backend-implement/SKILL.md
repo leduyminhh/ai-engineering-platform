@@ -75,7 +75,7 @@ Theo [references/checklist.md](references/checklist.md):
 
 ## Ranh giới
 
-- Một use-case/aggregate mỗi lần; **KHÔNG chạy DB migration thật** (thuộc `oltp-database` / recipe migration
+- Một use-case/aggregate mỗi lần; **KHÔNG chạy DB migration thật** (thuộc `data` nhánh OLTP / recipe migration
   khác); **KHÔNG externalize config/secret** (thuộc `backend-migrate-vault-consul`); không đụng secret.
 - Defer `code-convention.md` + **blueprint kiến trúc tuyệt đối**; **KHÔNG chép lại cây/naming** của template —
   chỉ TRỎ tới `architecture/<stack>-<kiểu>.template.md` + `ARD.md`.
