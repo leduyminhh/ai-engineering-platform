@@ -141,15 +141,15 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 // dev cài draft bằng --plugin và để build/cowork/validate không đổi.
 {
   const pub = publishedPluginIds();
-  ok(pub.includes('backend') && pub.includes('frontend') && pub.includes('engineering'),
-    'publishedPluginIds: gồm backend, frontend, engineering');
-  ok(!pub.includes('data') && !pub.includes('ops'),
-    'publishedPluginIds: KHÔNG gồm plugin chưa publish (data, ops)');
+  ok(pub.includes('backend') && pub.includes('frontend'),
+    'publishedPluginIds: gồm backend, frontend');
+  ok(!pub.includes('engineering') && !pub.includes('data') && !pub.includes('ops'),
+    'publishedPluginIds: KHÔNG gồm plugin chưa publish (engineering, data, ops)');
   const offered = offeredCatalog().plugins.map((p) => p.id);
   ok(offered[0] === 'core', 'offeredCatalog: core đứng đầu');
-  ok(offered.includes('backend') && offered.includes('frontend') && offered.includes('engineering'),
-    'offeredCatalog: gồm 3 plugin đã publish');
-  ok(!offered.includes('data') && !offered.includes('ops'),
+  ok(offered.includes('backend') && offered.includes('frontend'),
+    'offeredCatalog: gồm 2 plugin đã publish');
+  ok(!offered.includes('engineering') && !offered.includes('data') && !offered.includes('ops'),
     'offeredCatalog: ẩn plugin chưa publish khỏi wizard');
   ok(skillCatalog().plugins.some((p) => p.id === 'data'),
     'skillCatalog: vẫn liệt kê plugin chưa publish (gate flag cho dev)');
@@ -171,10 +171,10 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   const m = wizardReportModel();
   const offeredIds = m.offered.map((e) => e.id);
   ok(offeredIds[0] === 'core', 'report: core đứng đầu offered');
-  ok(['backend', 'frontend', 'engineering'].every((id) => offeredIds.includes(id)),
+  ok(['backend', 'frontend'].every((id) => offeredIds.includes(id)),
     'report: offered gồm mọi plugin đã publish');
-  ok(m.draft.some((e) => e.id === 'data') && !offeredIds.includes('data'),
-    'report: data nằm ở draft, KHÔNG ở offered');
+  ok(m.draft.some((e) => e.id === 'engineering') && m.draft.some((e) => e.id === 'data') && !offeredIds.includes('engineering'),
+    'report: engineering và data nằm ở draft, KHÔNG ở offered');
   const be = m.offered.find((e) => e.id === 'backend');
   ok(be.published === true && be.skills.includes('backend/backend-init'),
     'report: entry offered có cờ published + danh sách skill');

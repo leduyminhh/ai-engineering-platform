@@ -26,7 +26,6 @@
     "adapters/",
     "plugins/backend/",
     "plugins/frontend/",
-    "plugins/engineering/",
     "plugins/_marketplace.json",
     "plugins/_published.json",
     "README.md",

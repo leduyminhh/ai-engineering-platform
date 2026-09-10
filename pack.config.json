@@ -1,6 +1,18 @@
 {
-  "allowTop": ["adapters", "cli", "core", "plugins", "templates"],
-  "allowFile": ["package.json", "package-lock.json", "LICENSE", "README.md", "AGENTS.md"],
+  "allowTop": [
+    "adapters",
+    "cli",
+    "core",
+    "plugins",
+    "templates"
+  ],
+  "allowFile": [
+    "package.json",
+    "package-lock.json",
+    "LICENSE",
+    "README.md",
+    "AGENTS.md"
+  ],
   "deny": [
     "\\.test\\.mjs$",
     "^test/",
@@ -9,5 +21,10 @@
     "^SHELL_SETUP\\.md$",
     "^plugins/_cowork\\.json$"
   ],
-  "required": ["cli/index.mjs", "cli/build.mjs", "cli/lib/install.mjs", "cli/lib/plugins.mjs"]
+  "required": [
+    "cli/index.mjs",
+    "cli/build.mjs",
+    "cli/lib/install.mjs",
+    "cli/lib/plugins.mjs"
+  ]
 }
