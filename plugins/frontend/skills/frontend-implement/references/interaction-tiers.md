@@ -32,9 +32,12 @@ và tương tác nội bộ nhìn thấy được — nhưng **chưa nối dữ 
 
 ## Đặt đúng tầng theo kiến trúc
 
-- **Layered:** component ở `components/` là presentational thuần (chỉ props/callback); state/data do
-  `containers/` + `hooks/` nối sau. Không import `services`/`store` từ presentational.
+- **Feature-Based:** UI thuần ở `features/<domain>/ui` (chỉ props/callback); logic/state ở `hooks/`, gọi
+  API ở `api/`, type/model ở `model/` (bước sau). Không tự fetch/store trong presentational; không
+  cross-import ruột feature khác — mở qua public API `index.ts`.
 - **FSD:** UI thuần ở segment `ui/` của entity/feature; logic/state ở `model/`, gọi API ở `api/` (bước sau).
   Import chỉ xuống, không cross-import cùng layer, qua public API `index.ts`.
+- **Micro-FE:** nội bộ mỗi remote theo FSD (đặt file như FSD ở trên); UI-kit dùng chung ở `packages/ui-kit`.
+  Không import ruột remote khác — cross-remote qua module `expose` + `packages/*`.
 
-Blueprint kiến trúc (`architecture/react-<layered|fsd>.template.md`) là chuẩn cho vị trí file + ranh giới import.
+Blueprint kiến trúc (`architecture/react-<feature-based|fsd|micro-frontend>.template.md`) là chuẩn cho vị trí file + ranh giới import.

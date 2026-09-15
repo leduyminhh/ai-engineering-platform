@@ -1,6 +1,6 @@
 ---
 name: frontend-code-review
-description: "Recipe on-demand: REVIEW một diff/PR/module FRONTEND (React/TypeScript) theo các TRỤC — correctness (state/effect sai, dependency array thiếu/thừa, race giữa request, key list không ổn định, memo/useCallback sai, xử lý loading/error/empty), thiết kế & bám boundary (Layered: presentational không fetch/store; FSD: import chỉ trỏ xuống, không cross-import cùng layer, đi qua public API; server-state ở React Query không copy vào useState), đơn giản hoá & tái dùng (trùng lặp component/logic, over-engineering, prop drilling), a11y (role/label/keyboard/focus/contrast), readability & naming theo code-convention, và test coverage. Phân loại severity (blocker/major/minor/nit) + evidence file:line + đề xuất fix; READ-ONLY mặc định (không tự sửa trừ khi được yêu cầu). Defer security/tool scan sang engineering-quality-gate, tái cấu trúc sang frontend-refactor. Dùng skill NÀY khi người dùng muốn \"review code frontend\", \"review PR React\", \"review component\", \"đánh giá code FE\", \"review diff frontend\", \"review UI code\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
+description: "Recipe on-demand: REVIEW một diff/PR/module FRONTEND (React/TypeScript) theo các TRỤC — correctness (state/effect sai, dependency array thiếu/thừa, race giữa request, key list không ổn định, memo/useCallback sai, xử lý loading/error/empty), thiết kế & bám boundary (Feature-Based: feature tự chứa ui/hooks/api/model, không cross-import ruột feature, qua public API; FSD: import chỉ trỏ xuống, không cross-import cùng layer, đi qua public API; server-state ở React Query không copy vào useState), đơn giản hoá & tái dùng (trùng lặp component/logic, over-engineering, prop drilling), a11y (role/label/keyboard/focus/contrast), readability & naming theo code-convention, và test coverage. Phân loại severity (blocker/major/minor/nit) + evidence file:line + đề xuất fix; READ-ONLY mặc định (không tự sửa trừ khi được yêu cầu). Defer security/tool scan sang engineering-quality-gate, tái cấu trúc sang frontend-refactor. Dùng skill NÀY khi người dùng muốn \"review code frontend\", \"review PR React\", \"review component\", \"đánh giá code FE\", \"review diff frontend\", \"review UI code\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 4
 stageNumber: "04"
 title: "Frontend Code Review — Review diff/PR frontend React/TS theo trục, có evidence (recipe on-demand)"
@@ -25,8 +25,8 @@ skill này **route** sang skill chuyên trách thay vì tự làm — xem bướ
 Nguyên tắc trục (đối xứng với `frontend-implement`/`frontend-testing`): kiến trúc UI tách **presentational**
 khỏi **data/state**, nên phần lớn lỗi thiết kế lộ ra ở **ranh giới tầng** (import ngược chiều, fetch trong
 component thuần, server-state copy vào `useState`) — review bám blueprint kiến trúc đã chọn
-(`architecture/react-<layered|fsd>.template.md`) + `code-convention`/`design-system` của project, KHÔNG áp
-gu cá nhân.
+(`architecture/react-<feature-based|fsd|micro-frontend>.template.md`) + `code-convention`/`design-system`
+của project, KHÔNG áp gu cá nhân.
 
 ## Ranh giới an toàn (CLAUDE.md)
 - **READ-ONLY mặc định.** Không sửa code, không commit, không đổi cấu hình. Chỉ khi người dùng yêu cầu
@@ -35,7 +35,7 @@ gu cá nhân.
   sang module anh em hay cả repo; code ngoài scope chỉ nhắc khi ảnh hưởng trực tiếp tới phần đang review,
   và nêu rõ là ngoài scope.
 - **Bám nguồn sự thật, không áp gu lạ:** đối chiếu **kiến trúc đã chốt** (ADR / `project-knowledge/architecture.md`
-  + blueprint `architecture/react-<layered|fsd>.template.md`), `code-convention` và `design-system` của
+  + blueprint `architecture/react-<feature-based|fsd|micro-frontend>.template.md`), `code-convention` và `design-system` của
   project. Convention/design-system của project thắng sở thích cá nhân; đó là việc của tài liệu tương ứng,
   review chỉ **đối chiếu**.
 - **Phân biệt lỗi CHẮC vs NGHI NGỜ:** finding nói được kịch bản tương tác→hành vi sai (thao tác/props/state
@@ -55,10 +55,11 @@ gu cá nhân.
 ### 0. Nạp context + chốt scope — BẮT BUỘC trước khi review
 - **Chốt scope review:** diff làm việc (`git diff`), một PR, hay một module/thư mục? Dò cách lấy diff thật
   từ project (`git diff <base>...<head>`, `git diff --staged`) — KHÔNG đoán nội dung thay đổi, đọc diff thật.
-- Đọc `project-knowledge/` (`architecture.md` = **kiến trúc UI đã chọn** Layered/FSD, `source-structure.md`,
+- Đọc `project-knowledge/` (`architecture.md` = **kiến trúc UI đã chọn** Feature-Based/FSD/Micro-FE, `source-structure.md`,
   `code-convention.md`, `design-system.md`) để biết **ranh giới tầng, quy ước đặt tên, design-system**.
-  Đối chiếu blueprint [architecture/react-layered.template.md](architecture/react-layered.template.md) hoặc
-  [architecture/react-fsd.template.md](architecture/react-fsd.template.md) cho luật boundary tương ứng.
+  Đối chiếu blueprint [architecture/react-feature-based.template.md](architecture/react-feature-based.template.md),
+  [architecture/react-fsd.template.md](architecture/react-fsd.template.md) hoặc
+  [architecture/react-micro-frontend.template.md](architecture/react-micro-frontend.template.md) cho luật boundary tương ứng.
 - **Dò stack thật** từ chính project (`package.json`): React version, TypeScript, data-fetching (TanStack
   Query?), state lib (Zustand/Redux/Context), component-lib (shadcn/MUI/antd), test (Testing Library/msw),
   ép ranh giới (`eslint-plugin-boundaries`/Steiger?) — để biết luật nào lint đã ép, luật nào phải soát tay.
@@ -71,9 +72,11 @@ gu cá nhân.
 - **Correctness** — state/effect sai, dependency array thiếu/thừa, race giữa các request, `key` list không
   ổn định, `useMemo`/`useCallback` sai (memo hoá vô ích hoặc thiếu khi cần), thiếu xử lý loading/error/empty,
   stale closure.
-- **Thiết kế & bám boundary** — Layered: presentational KHÔNG fetch/store, container mỏng, data chỉ ở
-  `services`; FSD: import **chỉ trỏ xuống**, KHÔNG cross-import cùng layer, đi qua **public API `index.ts`**;
-  server-state ở **React Query**, KHÔNG copy vào `useState`.
+- **Thiết kế & bám boundary** — Feature-Based: feature tự chứa `ui/hooks/api/model`, KHÔNG cross-import
+  ruột feature khác (liên kết qua `shared` hoặc compose ở `pages`), mở ra ngoài qua **public API `index.ts`**;
+  FSD: import **chỉ trỏ xuống** layer, KHÔNG cross-import cùng layer, đi qua **public API `index.ts`**;
+  Micro-FE: mỗi remote nội bộ theo FSD, ranh giới cross-remote qua module `expose` + `packages/*`, KHÔNG
+  import ruột remote khác; server-state ở **React Query**, KHÔNG copy vào `useState`.
 - **Đơn giản hoá & tái dùng** — trùng lặp component/logic, over-engineering (trừu tượng thừa), **prop
   drilling** sâu, đặt logic sai tầng.
 - **A11y** — `role`/`label` (nút/ảnh/icon-only), liên kết label↔input, thao tác **bàn phím** (focusable,
@@ -104,7 +107,7 @@ và **phần chưa soát + residual risk**. Ngôn ngữ đo được.
     `dangerouslySetInnerHTML` với dữ liệu chưa làm sạch, secret/token hardcode, URL/target chưa kiểm) và
     chuyển tiếp.
   - Cần **tái cấu trúc / đổi kiến trúc** vượt một-vài dòng → `frontend-refactor` (skill sắp có) hoặc
-    `frontend-migrate-architecture` khi là đổi kiểu kiến trúc Layered↔FSD.
+    `frontend-migrate-architecture` khi là đổi kiểu kiến trúc (Feature-Based ↔ FSD ↔ Micro-FE).
   - Cần **thêm/sửa test** → `frontend-testing`.
 
 ## Bảng gate

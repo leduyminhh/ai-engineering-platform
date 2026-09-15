@@ -2,7 +2,7 @@
 
 Tài liệu tham chiếu cho `frontend-testing`. Trung tính runner (Vitest/Jest); idiom cụ thể xem
 [react-testing-patterns.md](react-testing-patterns.md). Kiến trúc nền:
-`architecture/react-layered.template.md` và `react-fsd.template.md`.
+`architecture/react-feature-based.template.md`, `react-fsd.template.md` và `react-micro-frontend.template.md`.
 
 ## 1. Test pyramid FE — vì sao đáy rộng
 
@@ -27,18 +27,19 @@ Chống lộn ngược kim tự tháp: mỗi lần định thêm e2e/integration
 
 ## 2. Đặt test đúng tầng theo kiến trúc
 
-### Layered (Presentational/Container + Hooks + Data)
+### Feature-Based (feature tự chứa `ui/hooks/api/model`)
 
 | Tầng kiến trúc | Loại test | Bật mạng? | Trọng tâm chứng minh |
 |---|---|---|---|
-| Presentational (`components/`) | Render + interaction (props) | Không | Hiển thị theo props, các state (loading/empty/error/có dữ liệu), phát callback đúng, a11y cơ bản |
-| Hook (`hooks/`) | Hook test (`renderHook`) | Không / msw nếu bọc React Query | Giá trị trả về, chuyển trạng thái theo hành động, nhánh logic |
+| Presentational (`features/<x>/ui`) | Render + interaction (props) | Không | Hiển thị theo props, các state (loading/empty/error/có dữ liệu), phát callback đúng, a11y cơ bản |
+| Hook (`features/<x>/hooks`) | Hook test (`renderHook`) | Không / msw nếu bọc React Query | Giá trị trả về, chuyển trạng thái theo hành động, nhánh logic |
 | Container / Page (chạm data) | Integration UI + **msw** | Có (msw giả) | Luồng loading→success/error, truyền data xuống presentational, điều hướng/mutation |
-| Data layer (`services/`) | Test hàm map/parse thuần + msw | Có (msw giả) | Map DTO→view model, xử lý lỗi response, header/param request |
+| Data/model (`features/<x>/api` + `model`) | Test hàm map/parse thuần + msw | Có (msw giả) | Map DTO→view model, xử lý lỗi response, header/param request |
+| `shared/ui` | Render + props độc lập | Không | UI-kit dùng lại nhiều nơi, đáng phủ kỹ |
 | Luồng đầu-cuối | e2e (mỏng) | Toàn bộ | Vài kịch bản giá trị cao (ngoài phạm vi recipe) |
 
 Presentational là lá đồ thị phụ thuộc → test **không cần mock mạng** (đúng checklist template
-Layered). Chỉ tầng chạm data mới cần msw.
+Feature-Based). Chỉ tầng chạm data mới cần msw.
 
 ### FSD (app/pages/widgets/features/entities/shared)
 
@@ -47,6 +48,14 @@ Layered). Chỉ tầng chạm data mới cần msw.
 - `shared/ui` → test render + props độc lập, tái dùng nhiều nơi nên đáng phủ kỹ.
 - `widgets` / `pages` → integration UI mỏng, mock mạng qua msw; không cross-import slice cùng layer
   trong test (giữ đúng boundary như code).
+
+### Micro-FE (host + remotes, mỗi remote nội bộ FSD)
+
+- Test **trong từng remote** theo bảng FSD ở trên; remote build/test **độc lập** (suite riêng mỗi app).
+- Không cross-import ruột remote khác trong test — mock ranh giới cross-remote (module `expose`, event bus
+  contract ở `packages/contracts`) như code chạy thật, không với tay vào nội bộ remote khác.
+- `packages/ui-kit` test render + props độc lập; `packages/contracts` test shape/map thuần.
+- Ghép host↔remote đầu-cuối thuộc e2e (mỏng, ngoài phạm vi recipe).
 
 ## 3. Cái gì đáng test (ưu tiên rủi ro)
 

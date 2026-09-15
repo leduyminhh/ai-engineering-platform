@@ -1,6 +1,6 @@
 ---
 name: frontend-refactor
-description: "Recipe on-demand: REFACTOR mã nguồn FRONTEND (React/TypeScript) mà GIỮ NGUYÊN hành vi quan sát được — extract component/custom hook, nâng (lift) hoặc hạ (colocate) state đúng chỗ, bỏ prop drilling bằng context/composition, tách presentational khỏi logic, gom style/token trùng, memoize hợp lý (không lạm dụng), bỏ useEffect thừa, đổi tên, giảm độ phức tạp. TÔN TRỌNG boundary của kiến trúc đã chốt (Layered/FSD) — refactor TRONG ranh giới, không dời ranh giới. Đi qua cổng behavior-preserving: baseline build/test/lint XANH → thiếu test vùng đụng thì viết characterization render/interaction test trước → bước nhỏ, XANH sau mỗi bước → verify + con người duyệt diff. KHÁC với đổi KIỂU kiến trúc (Layered↔FSD) — việc đó dùng frontend-migrate-architecture. Dùng skill NÀY khi người dùng muốn \"refactor frontend\", \"tái cấu trúc React\", \"dọn component\", \"tách component/hook\", \"bỏ prop drilling\", \"giảm trùng lặp UI\", \"đơn giản hoá React\", \"tách logic khỏi JSX\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn React."
+description: "Recipe on-demand: REFACTOR mã nguồn FRONTEND (React/TypeScript) mà GIỮ NGUYÊN hành vi quan sát được — extract component/custom hook, nâng (lift) hoặc hạ (colocate) state đúng chỗ, bỏ prop drilling bằng context/composition, tách presentational khỏi logic, gom style/token trùng, memoize hợp lý (không lạm dụng), bỏ useEffect thừa, đổi tên, giảm độ phức tạp. TÔN TRỌNG boundary của kiến trúc đã chốt (Feature-Based/FSD/Micro-FE) — refactor TRONG ranh giới, không dời ranh giới. Đi qua cổng behavior-preserving: baseline build/test/lint XANH → thiếu test vùng đụng thì viết characterization render/interaction test trước → bước nhỏ, XANH sau mỗi bước → verify + con người duyệt diff. KHÁC với đổi KIỂU kiến trúc (Feature-Based↔FSD↔Micro-FE) — việc đó dùng frontend-migrate-architecture. Dùng skill NÀY khi người dùng muốn \"refactor frontend\", \"tái cấu trúc React\", \"dọn component\", \"tách component/hook\", \"bỏ prop drilling\", \"giảm trùng lặp UI\", \"đơn giản hoá React\", \"tách logic khỏi JSX\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn React."
 order: 5
 stageNumber: "05"
 title: "Frontend Refactor — Tái cấu trúc code React giữ nguyên hành vi (recipe on-demand)"
@@ -26,10 +26,10 @@ presentational khỏi logic (container/hook), gom style/token trùng, memoize h�
 move **giữ nguyên hành vi**. Chỉ nâng độ trừu tượng khi gỡ được **phức tạp thật**, không phải "cho đẹp".
 
 **KHÁC biệt quan trọng — ranh giới với `frontend-migrate-architecture`:** skill này KHÔNG đổi *kiểu*
-kiến trúc (Layered ↔ FSD). Đổi kiểu kiến trúc là việc của `frontend-migrate-architecture`. Ở đây mọi
-move phải **tôn trọng kiểu kiến trúc đã chốt** và chiều phụ thuộc của nó (presentational không biết
-fetch/store; import chỉ trỏ xuống; FSD chỉ qua public API) — refactor *trong* ranh giới, không dời
-ranh giới.
+kiến trúc (Feature-Based ↔ FSD ↔ Micro-FE). Đổi kiểu kiến trúc là việc của `frontend-migrate-architecture`.
+Ở đây mọi move phải **tôn trọng kiểu kiến trúc đã chốt** và chiều phụ thuộc của nó (presentational không biết
+fetch/store; feature không cross-import ruột feature khác; import chỉ trỏ xuống; qua public API) — refactor
+*trong* ranh giới, không dời ranh giới.
 
 ## Ranh giới an toàn (CLAUDE.md)
 - **Giữ hành vi (bất biến cốt lõi).** Refactor KHÔNG đổi trải nghiệm quan sát được: cùng tương tác →
@@ -40,8 +40,8 @@ ranh giới.
   xuất sửa/ổn định trước. Vùng đụng thiếu test → viết characterization render/interaction test khoá
   hành vi TRƯỚC (trỏ `frontend-testing`).
 - **Tôn trọng boundary.** Bám kiến trúc đã chốt (`project-knowledge/architecture.md` + blueprint
-  `architecture/react-<layered|fsd>.template.md`) và chiều phụ thuộc của nó. KHÔNG đổi kiểu kiến trúc —
-  đó là `frontend-migrate-architecture`.
+  `architecture/react-<feature-based|fsd|micro-frontend>.template.md`) và chiều phụ thuộc của nó. KHÔNG đổi
+  kiểu kiến trúc — đó là `frontend-migrate-architecture`.
 - **Bám code-convention + design-system, không áp gu lạ.** Đặt tên/tổ chức theo `code-convention`;
   token/spacing/variant theo `design-system` của project; convention của project thắng sở thích cá nhân.
 - **Không tự mở rộng phạm vi.** Chỉ refactor đúng vùng người dùng nêu; thấy vùng khác cần dọn → đề
@@ -58,10 +58,10 @@ ranh giới.
 
 ### 0. Nạp context — BẮT BUỘC trước khi động code
 - **Chốt scope refactor:** component/hook/module/thư mục nào? Đọc code THẬT trong scope, không đoán.
-- Đọc `project-knowledge/` (`architecture.md` = **kiến trúc đã chốt** Layered/FSD, `source-structure.md`,
+- Đọc `project-knowledge/` (`architecture.md` = **kiến trúc đã chốt** Feature-Based/FSD/Micro-FE, `source-structure.md`,
   `code-convention.md`, `design-system.md`, `tech-stack.yml`) + blueprint
-  `architecture/react-<layered|fsd>.template.md` để biết kiểu kiến trúc, chiều phụ thuộc, quy ước đặt tên
-  và vocabulary tầng/slice.
+  `architecture/react-<feature-based|fsd|micro-frontend>.template.md` để biết kiểu kiến trúc, chiều phụ thuộc,
+  quy ước đặt tên và vocabulary tầng/slice.
 - **Dò stack + lệnh THẬT** từ project (`package.json`): React/TS, bundler (Vite/…), quản state (Context/
   Redux/Zustand), data layer (fetch/axios/React Query), test runner (Vitest/Jest + Testing Library), có
   `eslint-plugin-boundaries`/Steiger không; lệnh build/test/lint (vd `tsc`, `npm run build`, `vitest run`,

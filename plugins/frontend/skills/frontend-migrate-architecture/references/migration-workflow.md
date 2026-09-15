@@ -36,15 +36,15 @@ Không có điểm vào rõ (không màn hình/route ổn định để khoá) �
 ## G3 — Di chuyển theo lô nhỏ, XANH mỗi bước (bước 4)
 
 ### Chia lô an toàn
-- Một lô = **một slice** (FSD) hoặc **một domain × một tầng** (Layered), đủ nhỏ để review diff trong một lần.
+- Một lô = **một slice** (FSD) hoặc **một feature/domain** (Feature-Based), đủ nhỏ để review diff trong một lần.
 - Thứ tự: theo mục D của [detection-heuristic.md](detection-heuristic.md) (lá/`shared` trước → gốc sau).
 - Ưu tiên lô cắt được nhiều vi phạm ranh giới (c) nhất trước.
 
 ### Trong mỗi lô — chỉ 3 loại thao tác được phép
 1. **DỜI file** sang thư mục đích + cập nhật đường dẫn import/alias.
 2. **GOM + public API:** gom file rải rác về slice; thêm `index.ts` re-export phần công khai (FSD).
-3. **TÁCH cơ học không đổi hành vi:** tách phần nối-data ra `container`/`hook`, để presentational nhận qua
-   props (Layered); nội dung JSX/logic giữ NGUYÊN, chỉ đổi nơi ở.
+3. **TÁCH cơ học không đổi hành vi:** tách phần nối-data ra `hook`/container nhẹ, để presentational nhận qua
+   props (Feature-Based/FSD); nội dung JSX/logic giữ NGUYÊN, chỉ đổi nơi ở.
 
 **Cấm trong lô migrate:** đổi JSX render khác đi, đổi điều kiện/logic, đổi shape props theo hướng khác hành
 vi, đổi endpoint/param API, đổi style nhìn thấy. Nếu buộc phải đổi → ghi TODO, làm ở bước tách riêng sau.

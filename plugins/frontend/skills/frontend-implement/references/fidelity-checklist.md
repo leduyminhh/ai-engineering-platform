@@ -6,8 +6,9 @@ trung thực** cho phần không tự verify được (độ khớp thị giác)
 ## Kiểm định tất định (phải xanh)
 
 - [ ] **`tsc`** không lỗi kiểu; props đều typed, không `any` ẩn.
-- [ ] **Lint** xanh, gồm **ranh giới kiến trúc**: `eslint-plugin-boundaries` (Layered) / `steiger` + boundaries
-      (FSD) — không import ngược tầng, không cross-import cùng layer, không import sâu qua public API.
+- [ ] **Lint** xanh, gồm **ranh giới kiến trúc**: `eslint-plugin-boundaries` (Feature-Based) / `steiger` +
+      boundaries (FSD) / federation config + boundaries mỗi app (Micro-FE) — không import ngược tầng, không
+      cross-import ruột feature/cùng layer/remote, không import sâu qua public API.
 - [ ] **Build** (Vite/Next) qua; không import chết, không phá tree-shaking.
 - [ ] Tuân thủ `code-convention.md`: đặt tên, cấu trúc thư mục, format (prettier/eslint style) xanh.
 

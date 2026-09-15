@@ -51,7 +51,7 @@ Ranh giới trong G2:
 - Không đổi contract công khai: props công khai của component tái dùng, ARIA/role, URL/route, số/thứ tự
   request phát ra — đó là hành vi quan sát được.
 - Giữ nguyên `key` trong list (đổi `key` làm remount, mất state) và thứ tự gọi hook (Rules of Hooks).
-- Giữ **kiểu kiến trúc và chiều phụ thuộc** hiện tại (Layered/FSD); cần đổi *kiểu* kiến trúc → DỪNG,
+- Giữ **kiểu kiến trúc và chiều phụ thuộc** hiện tại (Feature-Based/FSD/Micro-FE); cần đổi *kiểu* kiến trúc → DỪNG,
   route `frontend-migrate-architecture`.
 
 ## CỔNG G3 — Verify + con người duyệt

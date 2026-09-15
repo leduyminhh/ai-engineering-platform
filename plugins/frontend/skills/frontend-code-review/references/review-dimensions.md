@@ -2,7 +2,8 @@
 
 Tài liệu tham chiếu cho `frontend-code-review`. Trung tính stack ở phần nguyên tắc; dấu hiệu cụ thể minh
 hoạ bằng React + TypeScript (TanStack Query, Testing Library). Blueprint kiến trúc + luật boundary:
-`architecture/react-layered.template.md` và `architecture/react-fsd.template.md`. Đọc soát phần **trong
+`architecture/react-feature-based.template.md`, `architecture/react-fsd.template.md` và
+`architecture/react-micro-frontend.template.md`. Đọc soát phần **trong
 scope** theo từng trục dưới; mỗi phát hiện phải quy về một `file:line` cụ thể — không có evidence thì không
 dựng finding.
 
@@ -38,13 +39,19 @@ Nơi lỗi hay nấp trong React; đây là trục ưu tiên. Dấu hiệu:
 Đối chiếu blueprint kiến trúc đã chọn. Phần lớn lỗi thiết kế lộ ở **ranh giới tầng** — soát import ở đầu
 file trước.
 
-### Nếu kiến trúc là **Layered** (`react-layered.template.md`)
-- **Presentational thuần:** component trong `components/` **import** `services`/`store`/`hooks`, hoặc gọi
-  `fetch`/`axios`/React Query trực tiếp? → vi phạm (presentational phải props-in/events-out). Nếu project có
-  `eslint-plugin-boundaries` mà lọt, nghi luật chưa bao đủ.
-- **Container mỏng:** container nhồi markup lớn/business rule thay vì chỉ nối hook→presentational; hoặc
-  container gọi thẳng `services` không qua hook (mất chỗ quản server-state).
-- **Data layer cô lập:** `fetch`/`axios`/endpoint xuất hiện **ngoài** `services/`; UI thấy URL/HTTP.
+### Nếu kiến trúc là **Feature-Based** (`react-feature-based.template.md`)
+- **Feature tự chứa:** mã một domain phải nằm gọn trong `features/<domain>/` (`ui/hooks/api/model`); logic
+  domain rò ra `pages`/`shared` là vi phạm (business rule tái dùng đẩy vào `model` của feature).
+- **KHÔNG cross-import ruột feature:** `features/A` **import** file nội bộ của `features/B`
+  (`features/customers/hooks/...`) → vi phạm; liên kết phải hạ phần chung xuống `shared` hoặc **compose ở
+  `pages`**. Nếu project có `eslint-plugin-boundaries` mà lọt, nghi luật chưa bao đủ.
+- **Qua public API:** import **sâu** vào ruột feature (`features/invoices/hooks/useInvoices`) thay vì
+  `@/features/invoices` (public API `index.ts`).
+- **Presentational thuần trong `ui`:** component trong `features/<x>/ui` gọi `fetch`/`axios`/React Query
+  trực tiếp, hoặc giữ store? → vi phạm (presentational phải props-in/events-out; data qua `hooks`/`api`).
+- **HTTP tập trung:** `fetch`/`axios`/endpoint xuất hiện **ngoài** `features/<x>/api` (qua `shared/api`);
+  UI thấy URL/HTTP.
+- **`shared` không mang nghiệp vụ:** `shared` import ngược lên `features`/`pages`, hoặc chứa logic domain.
 - **Server-state = React Query:** copy `data` của React Query vào `useState` rồi tự `useEffect` đồng bộ
   (nguồn sự thật đôi → lệch); tự quản cache/refetch bằng `useEffect` thủ công.
 
@@ -57,10 +64,21 @@ file trước.
   `@/entities/invoice` (public API `index.ts`).
 - **Segment đúng vai:** đặt request trong `ui/`, hoặc component trong `api/`; trộn "danh từ" (entity) và
   "động từ" (feature).
-- **Server-state:** như Layered — React Query ở segment `api`, không copy vào `useState`.
+- **Server-state:** như Feature-Based — React Query ở segment `api`, không copy vào `useState`.
 
-> Khi kiến trúc project **không** khớp hoàn toàn hai blueprint (biến thể riêng), chỉ soát các luật áp dụng
-> được và bám `project-knowledge/architecture.md`; KHÔNG ép Layered/FSD lên project đã chọn kiểu khác.
+### Nếu kiến trúc là **Micro-Frontend** (`react-micro-frontend.template.md`)
+- **Nội bộ remote theo FSD:** cấu trúc trong `apps/<remote>/src` phải bám luật FSD ở trên (layer/slice/
+  segment + public API); soát ruột remote như một app FSD.
+- **KHÔNG cross-import remote:** `apps/invoices` **import** file nội bộ của `apps/customers` → vi phạm;
+  liên kết cross-remote chỉ qua module `expose` (host ghép) hoặc event bus contract ở `packages/contracts`.
+- **`packages/*` không nghiệp vụ chéo:** type/logic riêng của một remote lọt vào `packages/*` (ui-kit/
+  contracts/shared-config) → biến shared thành coupling chéo.
+- **React singleton:** thiếu `singleton: true` cho `react`/`react-dom` trong federation config → nhiều bản
+  React, hook/context vỡ.
+- **Host thuần điều phối:** shell (`apps/host`) ôm nghiệp vụ của remote thay vì chỉ routing/layout/session.
+
+> Khi kiến trúc project **không** khớp hoàn toàn các blueprint (biến thể riêng), chỉ soát các luật áp dụng
+> được và bám `project-knowledge/architecture.md`; KHÔNG ép Feature-Based/FSD/Micro-FE lên project đã chọn kiểu khác.
 
 ## Trục 3 — Đơn giản hoá & tái dùng
 

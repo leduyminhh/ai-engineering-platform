@@ -1,6 +1,6 @@
 ---
 name: frontend-testing
-description: "Recipe on-demand: chiến lược và viết TEST cho một FRONTEND React/TypeScript project BÁM kiến trúc UI đã chọn (Layered/FSD) — render + interaction test bằng Testing Library (query theo role/accessible, dùng userEvent), test custom hook, mock mạng bằng msw (KHÔNG mock fetch thủ công), snapshot có kiểm soát, characterization khi đụng code cũ. Test theo hành vi người dùng, tránh test chi tiết cài đặt/giòn (phụ thuộc timer/thứ tự/DOM nội bộ). Dùng skill NÀY khi người dùng muốn \"test frontend\", \"test React\", \"unit test component\", \"test hook\", \"React Testing Library\", \"mock API msw\", \"test coverage FE\", \"kiểm thử giao diện\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
+description: "Recipe on-demand: chiến lược và viết TEST cho một FRONTEND React/TypeScript project BÁM kiến trúc UI đã chọn (Feature-Based/FSD/Micro-FE) — render + interaction test bằng Testing Library (query theo role/accessible, dùng userEvent), test custom hook, mock mạng bằng msw (KHÔNG mock fetch thủ công), snapshot có kiểm soát, characterization khi đụng code cũ. Test theo hành vi người dùng, tránh test chi tiết cài đặt/giòn (phụ thuộc timer/thứ tự/DOM nội bộ). Dùng skill NÀY khi người dùng muốn \"test frontend\", \"test React\", \"unit test component\", \"test hook\", \"React Testing Library\", \"mock API msw\", \"test coverage FE\", \"kiểm thử giao diện\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 3
 stageNumber: "03"
 title: "Frontend Testing — Chiến lược và viết test React bám kiến trúc (recipe on-demand)"
@@ -14,17 +14,17 @@ next: null
 # Frontend Testing — Chiến lược và viết test React bám kiến trúc (recipe on-demand)
 
 Recipe hướng dẫn agent **chọn loại test, đặt test đúng tầng, và viết test** cho một FRONTEND
-React/TypeScript project sao cho test **bám KIẾN TRÚC UI đã chọn** (Layered / FSD) và
+React/TypeScript project sao cho test **bám KIẾN TRÚC UI đã chọn** (Feature-Based / FSD / Micro-FE) và
 `code-convention` của project. KHÔNG nằm trong chuỗi bắt buộc; gọi khi cần. Đây là **docs-only
 recipe** — hướng dẫn cách agent viết/chạy test, KHÔNG phải bộ test dựng sẵn hay công cụ codegen.
 
 Nguyên tắc trục: kiến trúc phân tầng tách **UI thuần (presentational)** khỏi **state/data layer**,
 nên **test presentational không cần bật mạng** (render + props, nhanh, nhiều), còn tầng chạm dữ
-liệu mới cần **mock mạng bằng msw** — xem `architecture/react-layered.template.md` mục "component
-test được bằng render + props". Test **hành vi người dùng nhìn thấy**, không test chi tiết cài đặt.
+liệu mới cần **mock mạng bằng msw** — xem `architecture/react-feature-based.template.md` mục "Presentational
+trong `ui` ... test được bằng render + props". Test **hành vi người dùng nhìn thấy**, không test chi tiết cài đặt.
 
 ## Ranh giới an toàn (CLAUDE.md)
-- Test bám **kiến trúc UI đã chốt** (`project-knowledge/architecture.md` — Layered hay FSD) +
+- Test bám **kiến trúc UI đã chốt** (`project-knowledge/architecture.md` — Feature-Based / FSD / Micro-FE) +
   `design-system.md` + `code-convention.md` của project; KHÔNG áp phong cách test lạ với repo.
 - **KHÔNG gọi API thật trong test:** chặn tầng mạng ở ranh giới bằng **msw** (mock Service Worker),
   KHÔNG mock `fetch`/`axios` thủ công rải rác và KHÔNG trỏ test vào backend staging/production.
@@ -41,7 +41,7 @@ test được bằng render + props". Test **hành vi người dùng nhìn thấ
 ## Quy trình
 
 ### 0. Nạp context + dò stack, test runner, lệnh test — BẮT BUỘC trước khi viết
-- Đọc `project-knowledge/`: **kiến trúc UI đã chọn** (`architecture.md` — Layered hay FSD),
+- Đọc `project-knowledge/`: **kiến trúc UI đã chọn** (`architecture.md` — Feature-Based / FSD / Micro-FE),
   `design-system.md`, `component-map.md`, `code-convention.md`, `tech-stack.yml` để biết ranh
   giới tầng/slice, quy ước đặt tên và idiom test hiện có.
 - Dò **stack test + lệnh chạy** từ chính project, không đoán:
@@ -58,10 +58,13 @@ test được bằng render + props". Test **hành vi người dùng nhìn thấ
 Xác định **hành vi người dùng cần test + mức rủi ro**, rồi chọn **loại test hẹp nhất chứng minh
 được rủi ro đó** theo test pyramid và ánh xạ tầng-kiến-trúc. Chi tiết + ma trận chọn loại:
 [references/test-strategy.md](references/test-strategy.md).
-- **Layered:** presentational (`components/`) → render + interaction test bằng props, KHÔNG mạng;
-  hook/logic (`hooks/`) → hook test; container/page chạm data → test với **msw** giả response.
+- **Feature-Based:** presentational (`features/<x>/ui`) → render + interaction test bằng props, KHÔNG mạng;
+  hook/logic (`features/<x>/hooks`) → hook test; container/page chạm data → test với **msw** giả response.
+  `shared/ui` test render + props độc lập.
 - **FSD:** test theo slice — `entities`/`features` (UI + logic của slice) là nơi tập trung; UI
   thuần trong slice test render + props; slice chạm data mock mạng qua msw. `shared/ui` test độc lập.
+- **Micro-FE:** test **trong từng remote** theo FSD (như trên) — remote build/test độc lập; không cross-import
+  ruột remote khác trong test (giữ đúng boundary như code). `packages/ui-kit` test render + props độc lập.
 - **e2e (Playwright/Cypress) mỏng:** chỉ vài luồng người dùng giá trị cao đầu-cuối, **ngoài phạm
   vi recipe này**; không dồn e2e cho thứ tầng component/hook phủ được rẻ và ổn định hơn.
 - Ưu tiên **hành vi người dùng** (thấy gì, bấm gì, kết quả gì) hơn chi tiết cài đặt; ưu tiên nhánh

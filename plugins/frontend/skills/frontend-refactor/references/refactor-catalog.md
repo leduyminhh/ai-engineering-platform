@@ -1,7 +1,7 @@
 # Danh mục refactoring frontend (React/TS) — dấu hiệu, move, cách giữ hành vi
 
 Tài liệu tham chiếu cho `frontend-refactor`. Dấu hiệu minh hoạ bằng React 18+ / TypeScript. Kiến trúc
-nền + chiều phụ thuộc + quy tắc đặt tầng/slice: blueprint `architecture/react-<layered|fsd>.template.md`.
+nền + chiều phụ thuộc + quy tắc đặt tầng/slice: blueprint `architecture/react-<feature-based|fsd|micro-frontend>.template.md`.
 Mỗi move dưới đây **giữ nguyên hành vi quan sát được từ phía người dùng**; đổi hành vi/UX là việc riêng
 của `frontend-implement`.
 
@@ -9,8 +9,10 @@ Nguyên tắc chung cho MỌI move:
 - **Tách/dời/đổi tên trước, đổi hành vi sau (bước riêng).** Không trộn dọn component với sửa logic/JSX.
 - **Bước nhỏ, XANH sau mỗi bước** (`tsc` + test + lint + build). Đỏ → revert bước đó.
 - **Đặt đúng tầng/slice.** Trước khi gom/dời, hỏi: chỗ đến có vi phạm chiều phụ thuộc không? (vd không
-  kéo `fetch`/store vào presentational; Layered — phụ thuộc chỉ trỏ xuống; FSD — chỉ import xuống layer
-  thấp hơn, qua public API `index.ts`, không cross-import cùng layer.)
+  kéo `fetch`/store vào presentational; Feature-Based — feature tự chứa, không cross-import ruột feature
+  khác, liên kết qua `shared`/compose ở `pages`, qua public API `index.ts`; FSD — chỉ import xuống layer
+  thấp hơn, qua public API `index.ts`, không cross-import cùng layer; Micro-FE — nội bộ remote theo FSD,
+  cross-remote qua module `expose` + `packages/*`.)
 - **Có công cụ thì dùng.** IDE refactoring (Rename/Extract) an toàn hơn sửa tay; `eslint-plugin-boundaries`/
   Steiger chứng minh boundary còn nguyên sau khi dời.
 

@@ -6,18 +6,18 @@ của backend.
 
 > **KHÔNG chép lại cấu hình vào đây.** Cấu hình gốc (`boundaries/elements`, `element-types`, thứ tự layer)
 > đã có sẵn trong blueprint — dùng làm khởi điểm, chỉnh theo dự án:
-> - Layered → phần "Chiều phụ thuộc" của `architecture/react-layered.template.md`.
+> - Feature-Based → phần "Chiều phụ thuộc" của `architecture/react-feature-based.template.md`.
 > - FSD → phần "Chiều phụ thuộc" của `architecture/react-fsd.template.md`.
+> - Micro-Frontend → phần "federation config" + ranh giới `packages/*` của `architecture/react-micro-frontend.template.md`.
 
-## Layered → `eslint-plugin-boundaries`
+## Feature-Based → `eslint-plugin-boundaries`
 
-- Cài `eslint-plugin-boundaries`, khai `boundaries/elements` theo cây tầng (app/pages/containers/components/
-  hooks/services/store/shared) và luật `boundaries/element-types` "chỉ trỏ xuống" — lấy sketch từ blueprint
-  Layered.
-- Luật cốt lõi phải XANH: `components` (presentational) KHÔNG import `services`/`store`/`hooks`; không có
-  `fetch`/`axios` ngoài `services/`.
-- `eslint-plugin-boundaries` chặn **chiều import**, KHÔNG chặn naming — quy ước tên (`*Page`/`*Container`/
-  `use*`/`*.api`) vẫn giữ bằng review.
+- Cài `eslint-plugin-boundaries`, khai `boundaries/elements` theo cây (app/pages/features/shared) và luật
+  `boundaries/element-types` "chỉ trỏ xuống" — lấy sketch từ blueprint Feature-Based.
+- Luật cốt lõi phải XANH: một `feature` KHÔNG import ruột `feature` khác (**feature↔feature disallow**);
+  liên kết chỉ qua `shared` hoặc compose ở `pages`; import ra ngoài feature đi qua public API `index.ts`.
+- `eslint-plugin-boundaries` chặn **chiều import**, KHÔNG chặn naming — quy ước tên (`*Page`/`use*`/`*.api`)
+  vẫn giữ bằng review.
 
 ## FSD → Steiger + `eslint-plugin-boundaries`
 
@@ -28,6 +28,17 @@ của backend.
   app/pages/widgets/features/entities/shared, lấy sketch từ blueprint FSD.
 - Hai luật cứng phải XANH: (1) chỉ import xuống, không ngược; (2) slice cùng layer KHÔNG import nhau; cộng
   (3) mọi import từ ngoài đi qua public API `index.ts`.
+
+## Micro-Frontend → federation config + boundaries ở tầng `packages/*`
+
+> Micro-FE là **target chỉ-lập-kế-hoạch** (không auto-move in-place). Phần này là ghi chú ranh giới cho lúc
+> HIỆN THỰC kế hoạch phân rã, không phải gate G4 dời-file như hai kiến trúc trên.
+
+- Ranh giới runtime ép bằng **federation config** (host khai `remotes`, remote `expose` module công khai,
+  **React + deps nền là singleton `shared`**), KHÔNG bằng linter dời-file. Lấy sketch từ blueprint Micro-FE.
+- `eslint-plugin-boundaries` áp ở **tầng `packages/*`**: remote KHÔNG import ruột remote khác (chỉ qua module
+  `expose` + `packages/*`); `packages/*` KHÔNG mang nghiệp vụ chéo remote.
+- Bên trong MỖI remote vẫn dùng gate FSD (`steiger` + boundaries) như mục trên.
 
 ## Giới thiệu dần (không vỡ CI giữa chừng)
 
@@ -44,8 +55,10 @@ Migrate lớn thường còn vi phạm tồn dư khi vừa bật rule. Bật the
 
 ## Định nghĩa "XANH" của CỔNG G4
 
-- Layered: `eslint` (gồm `boundaries/element-types`) không còn `error`.
+- Feature-Based: `eslint` (gồm `boundaries/element-types`) không còn `error` — không còn import feature↔feature.
 - FSD: `steiger ./src` sạch **và** `eslint` (gồm boundaries) không còn `error`.
+- Micro-FE (khi đã hiện thực): `eslint` ở `packages/*` không còn `error`; federation build host+remotes chạy
+  được với React singleton (không nhân bản); mỗi remote qua gate FSD riêng.
 - Cấu hình boundary đã được đưa vào lệnh chạy test/CI để **ở lại làm gate thường trực**, không chỉ chạy tay
   một lần.
 

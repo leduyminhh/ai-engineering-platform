@@ -15,10 +15,10 @@ code skeleton** — chỉ blueprint cấu trúc.
 - **Stack:** React 18+ · TypeScript · Vite · **Tailwind CSS + component library** (shadcn/MUI/antd — đọc
   `package.json`/`design-system.md`). Data-fetching: **TanStack Query (React Query)**.
 - **Phạm vi file:** chỉ mô tả **CẤU TRÚC** theo chuẩn FSD. Biến thể đơn giản hơn:
-  [react-layered.template.md](react-layered.template.md).
+  [react-feature-based.template.md](react-feature-based.template.md).
 - **Khi nào dùng:** app **nhiều domain / nhiều team**, cần ranh giới cứng để tránh spaghetti khi lớn dần;
-  muốn tách rõ "thực thể nghiệp vụ" (entities) khỏi "hành động người dùng" (features). Nhỏ/ít domain thì
-  Layered nhẹ hơn.
+  muốn tách rõ "thực thể nghiệp vụ" (entities) khỏi "hành động người dùng" (features). Ít/vừa domain một
+  team thì Feature-Based nhẹ hơn; tách app build/deploy riêng thì Micro-Frontend.
 - **Đối chiếu domain minh hoạ ↔ vai trò:** cây dùng domain `invoices`; cột phải là "chỗ trống" cần thay.
 
 | Vai trò (chỗ trống) | Layer | Ví dụ trong `invoices` |
@@ -174,6 +174,27 @@ Thêm: **chỉ import qua public API** `slice/index.ts`, cấm import sâu (`ent
 | UI-state cục bộ | trong `ui/` component | `useState` |
 | Hạ tầng dùng chung | `shared` | — (không giữ business state) |
 
+## Feature-flags (Optional)
+
+> **Tùy chọn** — chỉ thêm khi cần bật/tắt nhánh tính năng theo môi trường/đối tượng. App không cần cờ thì
+> **bỏ qua toàn bộ mục này**.
+
+- **Nguồn flag:** `shared/config` — đọc từ `env`/remote config, chuẩn hoá thành map `{ [key]: boolean }`. Đây
+  là nơi **duy nhất** biết cờ đến từ đâu; **không** định nghĩa cờ trong segment `api` của entity/feature.
+- **Đọc flag:** hook `useFeatureFlag(key)` ở `shared/lib` — trả `boolean`, giấu nguồn (env/remote) khỏi UI.
+  `entities`/`features` đọc cờ **qua `shared`** (import xuống), không tự dựng cơ chế cờ riêng.
+- **Gate ở đâu:** quyết định bật/tắt đặt ở `pages` (chọn có render page/nhánh feature không) hoặc `widgets`
+  (bật/tắt khối UI ghép). **KHÔNG** rẽ nhánh theo cờ trong `entities|features/<x>/api` — tầng `api` chỉ gọi
+  backend, giữ data layer thuần, dễ test.
+
+Ví dụ ngắn: bật màn hình `/invoices` mới sau cờ `invoices.v2`.
+
+```
+// pages/invoices/ui/InvoiceListPage.tsx  (gate ở page — compose theo cờ)
+useFeatureFlag('invoices.v2')  ->  true  ? <InvoiceTableV2/> : <InvoiceTable/>
+//   useFeatureFlag đọc từ shared/config; page chọn widget/feature nào để compose.
+```
+
 ## Implementation
 
 | Ranh giới | Ở đâu | Quy tắc |
@@ -246,5 +267,9 @@ Scaffold coi là đúng khi:
 
 ## Related
 
-- [react-layered.template.md](react-layered.template.md) — biến thể đơn giản hơn cho SPA nhỏ: 4 tầng
-  Presentational/Container + Hooks + Data, không chia slice/segment.
+- [ARD.md](ARD.md) — bảng chọn kiến trúc (selector) + tín hiệu nâng cấp (Small/Medium → Feature-Based ·
+  Large nhiều team → FSD · tách app build/deploy → Micro-FE).
+- [react-feature-based.template.md](react-feature-based.template.md) — biến thể **đơn giản hơn** cho app
+  nhỏ/vừa một team: nhóm theo domain (`features/<domain>`), không tầng `widgets`/`entities`, nhẹ luật.
+- [react-micro-frontend.template.md](react-micro-frontend.template.md) — biến thể cho **đa team**: tách
+  host + remote (Module Federation), mỗi remote nội bộ có thể theo FSD; chọn khi cần build/deploy độc lập.

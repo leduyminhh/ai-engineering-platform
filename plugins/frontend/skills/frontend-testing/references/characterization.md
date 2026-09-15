@@ -50,6 +50,6 @@ luồng lỗi sai) → GHI LẠI, BÁO cho người quyết, KHÔNG tự "sửa 
 - Với hành vi mà quá trình này lộ ra là **bug thật**, ghi rõ trong báo cáo + để người quyết: sửa
   code (kèm test khẳng định hành vi ĐÚNG mới) hay giữ nguyên. Không âm thầm đổi.
 - Nêu residual risk: state/luồng chưa khóa được, phụ thuộc chưa cô lập được hoàn toàn, phần trực
-  quan (layout/CSS) không nằm trong lưới render-based. [giả định] Với migrate kiến trúc (Layered↔FSD),
+  quan (layout/CSS) không nằm trong lưới render-based. [giả định] Với migrate kiến trúc (Feature-Based↔FSD↔Micro-FE),
   lưới ở tầng người dùng (render + interaction) ít đổi khi di chuyển file/tầng, nên phù hợp làm mốc
   hồi quy xuyên suốt việc dời cấu trúc.

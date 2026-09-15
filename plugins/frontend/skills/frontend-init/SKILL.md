@@ -36,13 +36,15 @@ Nếu project CHƯA có `AGENTS.md`: copy `AGENTS.template.md` (đi kèm skill) 
 có thì giữ nguyên.
 
 ### 2. Hỏi thông tin nền + chọn kiến trúc + điền project-knowledge
-- HỎI **framework** (React / Khác — mặc định React) + domain + **kiểu kiến trúc UI**: **Layered**
-  (Presentational/Container + hooks + data — mặc định, SPA vừa/nhỏ) hoặc **FSD** (Feature-Sliced Design —
-  app nhiều domain/nhiều team). Chọn mức đơn giản nhất đủ dùng.
-- Dùng blueprint tương ứng ship kèm skill ở `architecture/react-<layered|fsd>.template.md` làm chuẩn cấu
-  trúc: điền `project-knowledge/architecture.md` + `source-structure.md` theo cây `src/`, Dependency Rule
-  và ranh giới tầng/slice của template đã chọn; `code-convention.md`, `tech-stack.yml` theo stack (mặc định
-  Tailwind + component-lib). KHÔNG copy skeleton code — chỉ mô tả cấu trúc.
+- HỎI **framework** (React / Khác — mặc định React) + domain + **kiểu kiến trúc UI**. Bộ đích gồm
+  **Feature-Based** (nhóm theo domain, ranh giới mềm — **mặc định**, app nhỏ/vừa một team), **FSD**
+  (Feature-Sliced Design — layer/slice/segment + public API, app lớn/nhiều domain) và **Micro-Frontend**
+  (host + remotes qua Module Federation, deploy độc lập — đa team; mỗi remote nội bộ = FSD). ĐỌC
+  `architecture/ARD.md` (selector) để đánh giá dự án rồi chọn mức đơn giản nhất đủ dùng.
+- Dùng blueprint tương ứng ship kèm skill ở `architecture/react-<feature-based|fsd|micro-frontend>.template.md`
+  làm chuẩn cấu trúc: điền `project-knowledge/architecture.md` + `source-structure.md` theo cây `src/`,
+  Dependency Rule và ranh giới tầng/slice của template đã chọn; `code-convention.md`, `tech-stack.yml` theo
+  stack (mặc định Tailwind + component-lib). KHÔNG copy skeleton code — chỉ mô tả cấu trúc.
 - Ghi ADR cho quyết định lớn (framework, kiểu kiến trúc UI) vào `docs/decisions/`.
 
 ### 3. Tài liệu đặc thù frontend (nhẹ)
