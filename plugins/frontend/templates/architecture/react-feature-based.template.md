@@ -123,6 +123,33 @@ src/
 > shared** (đáy chiều phụ thuộc). Nếu muốn một thư mục `shared/` gói lại cũng được — chỉnh `pattern` trong
 > file lint tương ứng.
 
+### Bảng quy tắc thư mục
+
+Tra cứu nhanh: mỗi thư mục trong cây trên đặt gì / không đặt gì. `<domain>` minh hoạ bằng `invoices`.
+
+| Thư mục | Mục đích | Được đặt gì | KHÔNG đặt gì | Ví dụ |
+|---------|----------|-------------|--------------|-------|
+| `app/` | Tầng khởi tạo + định tuyến (compose feature → màn hình) | Root component, providers (`QueryClientProvider`/`RouterProvider`/`ThemeProvider`), cấu hình router, `routes/` | KHÔNG đặt logic nghiệp vụ tái dùng; không phải nơi triển khai chi tiết feature (chỉ compose) | `app/app.tsx`, `app/provider.tsx`, `app/router.tsx` |
+| `app/routes/` | Khai báo route → màn hình; nơi hợp pháp ghép nhiều feature | File route compose component/hook lấy từ public API (`index.ts`) của một/nhiều feature | KHÔNG import sâu vào ruột feature (`.../api/...`, `.../components/...`); không viết logic nghiệp vụ riêng ở đây | `app/routes/invoices.tsx` ghép `<InvoiceList/>` + `<CreateInvoiceForm/>` từ `@/features/invoices` |
+| `features/<domain>/` | Vertical slice tự chứa một vùng nghiệp vụ | Segment thật sự cần (`api/components/hooks/stores/types/utils/assets`) + `index.ts` (public API) | KHÔNG import ruột feature khác (cross-feature); KHÔNG import từ `app`; không bắt buộc đủ mọi segment | `features/invoices/` |
+| `features/<domain>/api/` | Gọi backend + React Query hook + DTO của feature | Hàm gọi API qua `@/lib/api-client`, hook `useQuery`/`useMutation`, DTO (`*.dto.ts`) | KHÔNG rẽ nhánh feature-flag ở đây (data layer phải thuần); KHÔNG chứa JSX/presentational | `features/invoices/api/get-invoices.ts`, `create-invoice.ts`, `invoice.dto.ts` |
+| `features/<domain>/assets/` (tuỳ) | Ảnh/icon riêng của feature | Asset chỉ dùng trong đúng feature này | KHÔNG đặt asset dùng chung nhiều feature (hạ xuống `assets/` gốc shared) | Icon riêng cho màn hình invoices |
+| `features/<domain>/components/` | Presentational + container nhẹ của feature | Component thuần (props in/events out) + container gọi hook `api` rồi đổ props xuống presentational | KHÔNG gọi `fetch`/`axios` trực tiếp trong component (phải qua `api` + hook); không chứa logic gọi backend | `invoice-list.tsx`, `invoice-list-container.tsx`, `create-invoice-form.tsx` |
+| `features/<domain>/hooks/` | Logic/state cục bộ feature (bọc quanh hook `api` nếu cần) | Custom hook `use*` xử lý state/logic riêng feature | KHÔNG đặt component/JSX; KHÔNG gọi trực tiếp backend (phải qua `api/`, chỉ điều phối/bọc hook đã có) | `features/invoices/hooks/use-invoice-filters.ts` |
+| `features/<domain>/stores/` (tuỳ) | Client-state riêng feature | Store Zustand cho state UI cục bộ feature (bộ lọc, tab đang mở) | KHÔNG chứa server-state/cache API (việc của `api` + React Query); KHÔNG dùng cho state toàn cục (đó là `stores/` gốc) | `features/invoices/stores/invoice-ui.store.ts` |
+| `features/<domain>/types/` | Type/view-model của feature | Kiểu domain (view model) sau khi map từ DTO | KHÔNG đặt DTO backend thô (đó là `api/*.dto.ts`); KHÔNG đặt type dùng chung toàn app (đó là `types/` gốc) | `features/invoices/types/invoice.ts` (`Invoice`) |
+| `features/<domain>/utils/` (tuỳ) | Hàm thuần riêng feature | Hàm map DTO→VM, format domain (map ở đây, không ở component) | KHÔNG gọi API/side-effect; KHÔNG đặt hàm dùng chung nhiều feature (hạ xuống `utils/` gốc) | `features/invoices/utils/to-invoice.ts` |
+| `features/<domain>/index.ts` | Public API — cổng duy nhất feature mở ra ngoài | Re-export component/hook/type công khai cần dùng ngoài feature | KHÔNG export DTO/store nội bộ, hàm map, container; KHÔNG `export *` nguyên cây (phình bundle, phá tree-shaking) | `export { InvoiceList } from './components/invoice-list'; export { useInvoices } from './api/get-invoices';` |
+| `components/` (shared) | UI-kit dùng chung, không mang nghiệp vụ | Wrapper component-lib (shadcn/MUI/antd) + primitive Tailwind tái dùng mọi nơi | KHÔNG biết domain/nghiệp vụ; KHÔNG import `features`/`app` | `components/button.tsx` (wrapper quanh component-lib) |
+| `hooks/` (shared) | Hook tiện ích dùng chung, không gắn domain | Hook kỹ thuật thuần (`useDisclosure`, `useDebounce`, `useFeatureFlag`) | KHÔNG đặt hook mang logic nghiệp vụ riêng một feature (đó là `features/<x>/hooks`); KHÔNG import `features`/`app` | `hooks/use-debounce.ts`, `hooks/use-feature-flag.ts` |
+| `lib/` (shared) | Thư viện cấu hình sẵn cho hạ tầng | `api-client` (baseURL, header auth, interceptor/map lỗi), cấu hình react-query, auth, i18n | KHÔNG đặt logic gọi API theo domain cụ thể (đó là `features/<x>/api`, chỉ tái dùng client này); KHÔNG import `features`/`app` | `lib/api-client.ts` — mọi HTTP đi qua đây |
+| `stores/` (shared, gốc) | Client-state toàn cục của app | Store dùng chung nhiều nơi (theme, sidebar, auth UI) | KHÔNG đặt state riêng một feature (đó là `features/<x>/stores`); KHÔNG đặt server-state/cache API | Store theme/sidebar toàn cục |
+| `config/` (shared) | Cấu hình/hằng số toàn app | Hằng số, env đã export, route path, nguồn feature-flag (chuẩn hoá `{ [key]: boolean }`) | KHÔNG đọc cờ trực tiếp trong component/feature (phải qua `useFeatureFlag` ở `hooks/`); KHÔNG đặt secret chưa export chuẩn hoá | `config/` — nơi duy nhất biết cờ đến từ đâu (env/remote) |
+| `types/` (shared, gốc) | Type dùng chung toàn app | Type/interface không gắn riêng domain, dùng ở nhiều feature/app | KHÔNG đặt view-model riêng một feature (đó là `features/<x>/types`); KHÔNG đặt DTO backend của một feature cụ thể | Kiểu phân trang/response dùng chung |
+| `utils/` (shared, gốc) | Hàm thuần dùng chung toàn app | Helper tổng quát (`format`, `cn`…) không gắn domain | KHÔNG đặt hàm map DTO→VM riêng feature (đó là `features/<x>/utils`); KHÔNG gọi API/side-effect | `utils/cn.ts`, hàm format ngày/tiền tệ chung |
+| `assets/` (shared, gốc) | Ảnh/font tĩnh dùng chung toàn app | Logo, favicon, font, ảnh dùng ở nhiều nơi | KHÔNG đặt asset chỉ dùng riêng một feature (đó là `features/<x>/assets`, tuỳ) | Logo app, font chữ |
+| `testing/` (shared) | Test util + mock dùng chung | msw handlers, render wrapper (bọc provider cho test), fixture chung | KHÔNG đặt test case cụ thể của một feature (đặt cạnh feature đó); KHÔNG đặt mock chỉ dùng riêng một domain | `testing/mocks/handlers.ts`, `testing/render.tsx` |
+
 ### Vai trò & ranh giới (ba tầng)
 
 Ranh giới do `import/no-restricted-paths` ép (React/TS không có compiler cô lập module như Maven). Ba tầng,

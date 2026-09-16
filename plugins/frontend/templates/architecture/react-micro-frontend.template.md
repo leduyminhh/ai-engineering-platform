@@ -119,6 +119,24 @@ root/                                  # monorepo — pnpm/npm workspaces (mỗi
 > là **mặt phơi công khai** (re-export module page-level/widget đã dựng từ các layer FSD). Chi tiết layer/slice/
 > segment: [react-fsd.template.md](react-fsd.template.md) — file này không lặp lại.
 
+### Bảng quy tắc thư mục
+
+Tra cứu nhanh: mỗi thư mục trong cây trên dùng để làm gì, được đặt gì, **không** được đặt gì. Nội bộ một remote
+theo FSD **không lặp lại** ở đây — xem [react-fsd.template.md](react-fsd.template.md).
+
+| Thư mục | Mục đích | Được đặt gì | KHÔNG đặt gì | Ví dụ |
+|---------|----------|-------------|--------------|-------|
+| `apps/host/` | Shell điều phối toàn hệ | Routing gốc, layout khung, auth/session, cấu hình runtime, khai `remotes`, lazy-load + error boundary bao mỗi remote | KHÔNG chứa nghiệp vụ của remote | `apps/host/src/app`, `apps/host/vite.config.ts` (khai `remotes`) |
+| `apps/host/src/app/` | Providers gốc | Provider Theme/Query/Auth, router gốc | KHÔNG đặt logic nghiệp vụ của remote | `ThemeProvider`, `QueryClientProvider` |
+| `apps/host/src/routes/` | Map route → remote | Cấu hình route → lazy-load module remote `expose` | KHÔNG import trực tiếp ruột remote | Route `/invoices/*` → lazy `invoices/InvoicesApp` |
+| `apps/host/src/layout/` | Khung chung | Header/nav/sidebar/footer dùng chung toàn hệ | KHÔNG đặt nghiệp vụ riêng của remote | Header, Sidebar, Footer |
+| `apps/host/src/session/` | Auth/session | Auth/session; bơm runtime config + user xuống remote qua context/props | KHÔNG để remote tự fetch session/flag global | `AuthProvider`, bơm user/runtime config |
+| `apps/<remote>/` (vd `apps/invoices`, `apps/customers`) | Miền tự chủ, build/deploy độc lập | Nội bộ tổ chức theo **FSD** (app/pages/widgets/features/entities/shared) — chi tiết: [react-fsd.template.md](react-fsd.template.md); phơi **tối thiểu** qua `expose` | KHÔNG import ruột remote khác — chỉ qua `expose`/`packages/contracts` (event bus) | `apps/invoices`, `apps/customers` |
+| `apps/<remote>/src/expose/` | Điểm phơi module công khai | Re-export module page-level (`InvoicesApp`) / widget nhúng (`InvoiceWidget`) dựng từ layer FSD | KHÔNG phơi ruột remote (chi tiết nội bộ FSD) | `./InvoicesApp`, `./InvoiceWidget` |
+| `packages/ui-kit/` | Design system dùng chung | Wrapper component-lib (shadcn/MUI/antd) + primitive Tailwind | KHÔNG biết nghiệp vụ của remote nào; KHÔNG giữ business state | Button, Card |
+| `packages/contracts/` | Hợp đồng biên host↔remote | Type/DTO ở biên (props host bơm xuống, shape module `expose`) + event bus contract (tên event + payload) | KHÔNG chứa logic nghiệp vụ; KHÔNG import ngược từ `apps/*` | Type props host↔remote, tên/payload event bus |
+| `packages/shared-config/` | Điều phối runtime | Feature-flags runtime, env, route path (hằng số điều phối) | KHÔNG chứa logic nghiệp vụ; remote không tự fetch flag global | `useFeatureFlag` provider, route path constants |
+
 ### Vai trò & ranh giới
 
 - **`apps/host` (shell)** — "danh từ" của cả hệ: routing gốc, layout khung, auth/session, cấu hình runtime,

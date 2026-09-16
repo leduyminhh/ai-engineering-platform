@@ -106,6 +106,29 @@ src/
 > viện trong `lib` có **một vùng tập trung** (date, currency, text…), ghi rõ trong README. Đặt tên segment
 > theo **mục đích**, không theo bản chất: `components`/`hooks`/`types` là tên **xấu** (Steiger cảnh báo).
 
+### Bảng quy tắc thư mục
+
+Tra nhanh từng thư mục/segment xuất hiện trong cây ở trên — đặt gì, cấm gì.
+
+| Thư mục | Mục đích | Được đặt gì | KHÔNG đặt gì | Ví dụ |
+|---|---|---|---|---|
+| `app/` | Khởi tạo toàn app (layer cao nhất, không chia slice) | providers, router config, global store, style toàn cục, entrypoint | Chia slice theo domain; nghiệp vụ của riêng 1 domain | `app/providers/`, `app/routes/`, `app/index.tsx` |
+| `app/providers/` | Khởi tạo context/provider dùng toàn app | `QueryClientProvider`, `RouterProvider`, `ThemeProvider` | Logic nghiệp vụ của 1 domain cụ thể | `app/providers/QueryClientProvider.tsx` |
+| `app/routes/` | Khai báo route → page | Route config trỏ `pages/<slice>` | UI/logic render của page (đặt trong `pages`) | `app/routes/invoices.ts` |
+| `pages/<slice>/` | Một route = một page; ghép widgets/features/entities thành màn hình | `ui` (page component, loading/error boundary), `api` fetch/mutate của trang, `index.ts` | Business logic tái dùng (đẩy xuống feature/entity); cross-import `pages` khác cùng layer | `pages/invoices/ui/InvoiceListPage.tsx` |
+| `widgets/<slice>/` | Khối UI ghép độc lập, tái dùng nhiều page | `ui`, `model` (state riêng widget nếu có), `index.ts` | Widget hoá khối **không** tái dùng, chiếm phần lớn 1 page (để thẳng trong page) | `widgets/invoice-table/` |
+| `features/<slice>/` | Một hành động người dùng mang giá trị = một use case | `ui` (form), `model` (validation/logic), `api` (mutation), `index.ts` | Cross-import feature khác cùng layer; component thuần không gắn use case | `features/create-invoice/` |
+| `entities/<slice>/` | Thực thể nghiệp vụ ("danh từ") | `model` (type/schema), `ui` (card tái dùng), `api` (đọc), `index.ts` | Import thẳng ruột entity khác — phải qua **`@x`** hoặc public API; logic tạo/sửa (đó là feature) | `entities/invoice/` |
+| `shared/` | Nền tảng dùng chung, không domain (layer thấp nhất, không chia slice) | `ui/api/lib/config` (segment trực tiếp) | Import từ `pages/widgets/features/entities`; mang nghiệp vụ domain | `shared/ui/`, `shared/api/` |
+| `ui` (segment — `pages/widgets/features/entities`) | Component + hiển thị | React component, formatter/style hiển thị | request/`fetch`; business logic (đẩy vào `model`) | `entities/invoice/ui/InvoiceCard.tsx` |
+| `model` (segment — `widgets/features/entities`) | Data model, state, business logic + validation | Type/interface, store, selector, validation logic | Component/JSX; gọi API trực tiếp (đặt ở `api`) | `entities/invoice/model/` |
+| `api` (segment — `pages/features/entities`) | Tương tác backend qua React Query | Request fn, `useQuery`/`useMutation`, mapper, kiểu dữ liệu | Component; business logic thuần (đặt ở `model`) | `entities/invoice/api/get-invoices.ts` |
+| `shared/ui/` | UI-kit dùng chung | Wrapper component-lib + primitive Tailwind (Button/Card…) | Business logic domain; gộp nhiều component vào 1 `index.ts` (vỡ tree-shaking) | `shared/ui/button/index.ts` |
+| `shared/api/` | api-client nền tảng | baseURL, header, xử lý lỗi chung | Request cụ thể theo domain (đặt ở `entities\|features/<x>/api`) | `shared/api/api-client.ts` |
+| `shared/lib/` | Helper thuần dùng chung | Mỗi thư viện một vùng tập trung (date, currency, text…), hook tiện ích | Bãi rác `utils/helpers` không rõ vùng | `shared/lib/format-date.ts` |
+| `shared/config/` | Hằng số, cấu hình toàn app | env, route path, nguồn feature flag | Cấu hình riêng 1 domain | `shared/config/env.ts` |
+| `index.ts` (public API mỗi slice) | Cổng public API của slice | Re-export tường minh phần công khai (component/hook/type) | `export *` (wildcard); đặt `index.ts` ở cấp layer | `pages/invoices/index.ts`, `entities/invoice/index.ts` |
+
 ### Vai trò & ranh giới từng layer
 
 Bộ layer **chính thức (spec v2.1)** gồm 7 tầng, từ nhiều trách nhiệm/phụ thuộc nhất đến ít nhất:
