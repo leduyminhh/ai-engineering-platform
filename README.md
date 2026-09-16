@@ -39,16 +39,55 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 
 ## Install from npm
 
-End users do not need to clone the repo. Once the package is published to the npm registry:
+End users do not need to clone the repo — the `ai-engineering-platform` package is published
+to the npm registry, and both `aip` and `ai-engineering-platform` bins point to the same CLI.
+
+**1. Check Node.js** — **v20 or newer** is required:
 
 ```bash
-npm install -g ai-engineering-platform   # global install, `aip` on PATH
-aip --help
-cd /path/to/project
-aip install --provider all --plugin all --yes
+node --version
 ```
 
-Run once without a global install:
+**2. Install globally** (once per machine; npm puts the bin on PATH):
+
+```bash
+npm install -g ai-engineering-platform
+```
+
+**3. Verify the install**:
+
+```bash
+aip --help        # prints the CLI guide
+aip check         # lists installed capabilities (empty initially)
+```
+
+**4. Install capabilities into a project** — from inside the target project, run the
+wizard or a direct command:
+
+```bash
+cd /path/to/project
+aip                                   # interactive wizard (install/uninstall/build/check menu)
+# or non-interactive:
+aip install --provider all --plugin all --yes
+aip install --provider claude --plugin backend --yes
+```
+
+**5. Review the result** in the project with `aip check` — it lists each skill and written
+file (e.g. `.claude/skills/…`, `.cursor/rules/…`, baseline block in `CLAUDE.md` / `AGENTS.md`).
+
+To update the package later:
+
+```bash
+npm update -g ai-engineering-platform
+```
+
+> `aip update` is for installations from a cloned repo (git pull → rebuild → reinstall); for
+> the npm install use `npm update -g` above. To remove the tool:
+> `npm uninstall -g ai-engineering-platform`; to remove capabilities from a project, run
+> `aip uninstall --yes` inside it.
+
+Run once without a global install — `npx` pulls the package into the npm cache and does not
+add a bin to PATH:
 
 ```bash
 npx ai-engineering-platform install --provider all --plugin all --yes

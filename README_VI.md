@@ -39,16 +39,52 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 
 ## Cài từ npm
 
-Người dùng cuối không cần clone repo. Sau khi gói đã phát hành lên npm registry:
+Người dùng cuối không cần clone repo — gói `ai-engineering-platform` phát hành trên npm
+registry, hai bin `aip` và `ai-engineering-platform` trỏ cùng một CLI.
+
+**1. Kiểm tra Node.js** — cần **v20 trở lên**:
 
 ```bash
-npm install -g ai-engineering-platform   # cài global, `aip` sẵn trên PATH
-aip --help
-cd /duong-dan/project
-aip install --provider all --plugin all --yes
+node --version
 ```
 
-Chạy một lần không cài global:
+**2. Cài global** (một lần mỗi máy; npm đặt bin vào PATH):
+
+```bash
+npm install -g ai-engineering-platform
+```
+
+**3. Xác minh cài đặt**:
+
+```bash
+aip --help        # in hướng dẫn CLI
+aip check         # liệt kê năng lực đã cài (rỗng lúc đầu)
+```
+
+**4. Cài năng lực vào project** — đứng trong project đích, chạy wizard hoặc lệnh trực tiếp:
+
+```bash
+cd /duong-dan/project
+aip                                   # wizard tương tác (menu install/uninstall/build/check)
+# hoặc non-interactive:
+aip install --provider all --plugin all --yes
+aip install --provider claude --plugin backend --yes
+```
+
+**5. Kiểm tra kết quả** trong project: `aip check` liệt kê từng skill và file đã ghi
+(ví dụ `.claude/skills/…`, `.cursor/rules/…`, khối baseline trong `CLAUDE.md` / `AGENTS.md`).
+
+Sau này cập nhật gói:
+
+```bash
+npm update -g ai-engineering-platform
+```
+
+> `aip update` dành cho bản cài từ clone repo (git pull → rebuild → cài lại); với bản npm
+> hãy dùng `npm update -g` như trên. Gỡ công cụ: `npm uninstall -g ai-engineering-platform`;
+> gỡ năng lực khỏi project: `aip uninstall --yes` trong project đó.
+
+Chạy một lần, không cài global — `npx` tải gói về npm cache và không thêm bin vào PATH:
 
 ```bash
 npx ai-engineering-platform install --provider all --plugin all --yes
