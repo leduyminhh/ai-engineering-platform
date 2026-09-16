@@ -1,6 +1,6 @@
 {
   "name": "ai-engineering-platform",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "AI IDE plugin platform with generated adapters for AI engineering agents.",
   "type": "module",
   "bin": {
@@ -26,7 +26,6 @@
     "adapters/",
     "plugins/backend/",
     "plugins/frontend/",
-    "plugins/engineering/",
     "plugins/_marketplace.json",
     "plugins/_published.json",
     "README.md",

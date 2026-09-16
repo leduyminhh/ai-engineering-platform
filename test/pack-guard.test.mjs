@@ -99,15 +99,14 @@ test("pack-guard: loadPolicy suy denylist plugin chưa publish từ _published.j
   ]);
   const errs = classifyFiles(files, policy);
   assert.ok(errs.some((e) => e.includes("plugins/data/")), "plugin chưa publish (data) phải bị chặn");
-  assert.ok(!errs.some((e) => e.includes("engineering")), "plugin đã publish (engineering) không bị chặn/thiếu");
+  assert.ok(errs.some((e) => e.includes("plugins/engineering/")), "plugin chưa publish (engineering) phải bị chặn");
 });
 
 test("pack-guard: báo thiếu plugin đã publish khi vắng khỏi package", () => {
   const policy = loadPolicy(REPO_ROOT);
   const files = baseline().concat([
     "plugins/backend/.manifest.json",
-    "plugins/frontend/.manifest.json",
-  ]); // thiếu 'engineering' (đang published)
+  ]); // thiếu 'frontend' (đang published)
   const errs = classifyFiles(files, policy);
-  assert.ok(errs.some((e) => e.includes("engineering")), "phải báo thiếu plugin đã publish 'engineering'");
+  assert.ok(errs.some((e) => e.includes("frontend")), "phải báo thiếu plugin đã publish 'frontend'");
 });
