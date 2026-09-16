@@ -46,7 +46,10 @@ Thay vì gom theo *loại kỹ thuật* toàn cục (`components/`, `hooks/`, `s
 **theo vùng nghiệp vụ** (`features/invoices`, `features/customers`): mỗi feature tự chứa UI + hook + gọi API
 của chính nó. Đổi/xoá một domain gói gọn trong một thư mục; đây là bậc đơn giản nhất của "kiến trúc theo
 tính năng" — **Feature-Based**. Ranh giới mềm: chưa tách "thực thể" khỏi "hành động", chưa ép public API
-cứng, chỉ cấm cross-import ruột feature bằng lint.
+cứng, chỉ cấm cross-import ruột feature bằng lint. Chuẩn tham chiếu là **bulletproof-react**: `src/` phẳng
+(top-level `app`, `features`, `components`, `hooks`, `lib`, `stores`, `config`… — dùng chung KHÔNG gói trong
+`shared/`), và **unidirectional codebase** `shared → features → app` ép bằng `import/no-restricted-paths`
+(chi tiết: [react-feature-based.template.md](react-feature-based.template.md)).
 
 ### FSD methodology — Feature-Sliced Design
 
@@ -60,7 +63,9 @@ Phương pháp chuẩn cho app lớn, áp **3 trục** phân rã:
   `lib` (helper), `config` (hằng số).
 
 Tách rõ **entities** (danh từ nghiệp vụ — invoice *là gì*) khỏi **features** (động từ — *tạo* invoice). Mọi
-truy cập qua **public API `index.ts`** của slice (cấm import sâu). Ép bằng `steiger` + `eslint-plugin-boundaries`.
+truy cập qua **public API `index.ts`** của slice (cấm import sâu; cấm `export *`). Liên kết entity↔entity đi
+qua quy ước **cross-import `@x`** (`entities/<a>/@x/<b>`), không import thẳng ruột nhau. Layer `processes` đã
+**deprecated** ở spec hiện hành. Ép bằng `steiger` (linter FSD chính thức) + `eslint-plugin-boundaries`.
 
 ### Micro-frontend / Module Federation
 
@@ -69,6 +74,9 @@ auth/session) nạp các **remote** tại runtime qua **Module Federation**. M�
 host khai `remotes`. Điểm cốt tử: **React (và các deps nền) là singleton chia sẻ** — tránh nhân bản nhiều bản
 React gây vỡ hook/context. Contract & UI-kit chia sẻ đặt ở `packages/*`. Mỗi remote **nội bộ tổ chức theo
 FSD**; ranh giới cross-app: remote **không** import nội bộ remote khác, chỉ qua module `expose` + `packages/*`.
+Module Federation chỉ là **một** trong phổ tích hợp (build-time npm package · server-side composition · web
+components · import maps · run-time Module Federation) — bảng so sánh + lý do chọn run-time MF ở
+[references/integration-patterns.md](references/integration-patterns.md).
 
 ## 3. So sánh 3 kiến trúc
 
@@ -80,6 +88,7 @@ FSD**; ranh giới cross-app: remote **không** import nội bộ remote khác, 
 | Khi nào mạnh nhất | App một team, ít–vừa domain, muốn đơn giản-đủ-dùng | App lớn, nhiều domain, một–vài team cùng repo, cần chống spaghetti | Nhiều team tự chủ, mỗi mảng release theo nhịp riêng |
 | Rủi ro dễ mắc | Feature phình / cross-import lén khi thiếu lint; chưa tách entity vs feature | Over-engineer khi app còn nhỏ; nhầm entity ↔ feature; import sâu bỏ public API | Nhân bản React/deps; version lệch giữa remote; hạ tầng federation phức tạp |
 | Quy mô phù hợp | Nhỏ / vừa | Lớn | Rất lớn, đa team |
+| Chuẩn tham chiếu | bulletproof-react | feature-sliced.design (+ Steiger) | Module Federation / micro-frontends.org |
 
 **Điểm chung cả ba:** phụ thuộc chỉ trỏ xuống · giao tiếp qua public API/module expose · không cross-import
 ngang hàng · server-state ở React Query, không ở `useState` · ranh giới ép bằng lint (không có compiler cô
@@ -138,6 +147,14 @@ Quy ước chung mọi kiến trúc:
   [react-feature-based.template.md](react-feature-based.template.md) ·
   [react-fsd.template.md](react-fsd.template.md) ·
   [react-micro-frontend.template.md](react-micro-frontend.template.md).
+- **Artifact ép ranh giới copy-paste được** (`references/`): Feature-Based →
+  [eslint-boundaries.feature-based.jsonc](references/eslint-boundaries.feature-based.jsonc) +
+  [feature-public-api.md](references/feature-public-api.md); FSD →
+  [steiger.config.js](references/steiger.config.js) +
+  [eslint-boundaries.fsd.jsonc](references/eslint-boundaries.fsd.jsonc); Micro-FE →
+  [module-federation.host.vite.ts](references/module-federation.host.vite.ts) +
+  [module-federation.remote.vite.ts](references/module-federation.remote.vite.ts) +
+  [integration-patterns.md](references/integration-patterns.md).
 
 ## 6. Checklist review PR
 
@@ -206,8 +223,21 @@ Hợp đồng sinh (mọi kiến trúc):
 
 Đây là bản minh hoạ *structure*, KHÔNG phải nghiệp vụ thật của dự án — bổ sung/thay ở giai đoạn implement.
 
----
+## 8. Nguồn tham chiếu
 
-*Nguồn: Feature-Sliced Design (phương pháp chuẩn: layer/slice/segment, public API) · Module Federation
-(host + remotes, shared singleton) · TanStack Query (server-state) · `eslint-plugin-boundaries` / `steiger`
-(fitness function ranh giới, tương đương ArchUnit/import-linter của backend).*
+Chuẩn pattern mỗi kiến trúc bám theo (URL canonical):
+
+- **Feature-Based** — bulletproof-react (Alan Alickovic): <https://github.com/alan2207/bulletproof-react>
+  (project-structure, unidirectional codebase, `import/no-restricted-paths`).
+- **FSD** — Feature-Sliced Design: <https://feature-sliced.design> (layer/slice/segment, public API, cross-import
+  `@x`); Steiger (linter chính thức): <https://github.com/feature-sliced/steiger>.
+- **Micro-Frontend** — Michael Geers: <https://micro-frontends.org>; Cam Jackson (Martin Fowler):
+  <https://martinfowler.com/articles/micro-frontends.html>; Module Federation: <https://module-federation.io>.
+  Package đã xác minh trên npm (2026-09-15): `@module-federation/vite`@1.21.6, `@module-federation/enhanced`@2.9.0,
+  `@originjs/vite-plugin-federation`@1.4.1.
+- **Chung** — TanStack Query (server-state): <https://tanstack.com/query>; `eslint-plugin-boundaries` /
+  `steiger` là **fitness function** ranh giới (tương đương ArchUnit/import-linter của backend).
+
+> Grounding: bulletproof-react và feature-sliced.design được fetch trực tiếp (raw docs) khi soạn; tên/version
+> package Micro-FE xác minh qua npm registry. Trang docs của micro-frontends.org / martinfowler / module-federation.io
+> là URL canonical (nội dung khái niệm ổn định); shape API cụ thể còn [Unverified] — đối chiếu docs khi cài.

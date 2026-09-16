@@ -1,0 +1,114 @@
+// eslint-boundaries.feature-based.jsonc
+// Import-boundary rules for a React Feature-Based codebase (bulletproof-react style).
+// Ràng buộc ranh giới import cho codebase React Feature-Based (theo bulletproof-react).
+//
+// Enforces two rules / Ép hai luật:
+//   1. No cross-feature imports — features/A must not import features/B.
+//      Cấm import chéo feature  — features/A không được import ruột features/B.
+//   2. Unidirectional codebase  — imports flow shared -> features -> app, never the reverse.
+//      Codebase một chiều       — import chảy shared -> features -> app, không đi ngược.
+//
+// Tiers / Các tầng (dùng cho luật một chiều):
+//   shared  = src/components, src/hooks, src/lib, src/stores, src/config, src/types,
+//             src/utils, src/assets, src/testing   (hạ tầng + UI-kit, KHÔNG biết domain)
+//   features= src/features/*                       (vertical slice theo domain)
+//   app     = src/app/*  (gồm app/routes = "pages") (compose feature thành màn hình)
+//
+// Public API / Cổng công khai: import một feature CHỈ qua thư mục gốc `@/features/<x>`
+// (resolve về features/<x>/index.ts). Import sâu (features/<x>/api/...) bị chặn bởi
+// phạm vi `except` của luật (1) + review. Xem references/feature-public-api.md.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// VARIANT A (RECOMMENDED / KHUYẾN NGHỊ): eslint-plugin-import
+//   npm i -D eslint-plugin-import
+// Copy khối "rules" vào .eslintrc.cjs (legacy) hoặc block tương đương của flat config.
+// `except` là ĐƯỜNG DẪN TƯƠNG ĐỐI so với `from`: from "./src/features" + except
+// ["./invoices"]  =>  cho phép features/invoices tự import chính nó.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  "rules": {
+    "import/no-restricted-paths": [
+      "error",
+      {
+        "zones": [
+          // (1) Cross-feature isolation — ADD ONE ENTRY PER FEATURE. / Mỗi feature một dòng.
+          //     target = feature bị chặn (bên import); from = mọi feature; except = chính nó.
+          { "target": "./src/features/invoices",  "from": "./src/features", "except": ["./invoices"] },
+          { "target": "./src/features/customers", "from": "./src/features", "except": ["./customers"] },
+          { "target": "./src/features/auth",      "from": "./src/features", "except": ["./auth"] },
+          // ... thêm mỗi feature mới một dòng tương tự.
+
+          // (2a) `features` must not import from the app tier. / features không import lên app.
+          //      target = features (bên import); from = app (nguồn bị cấm).
+          { "target": "./src/features", "from": "./src/app" },
+
+          // (2b) `shared` tier is the bottom: must not import features/app. / shared không import lên.
+          //      target = các module shared (bên import); from = features + app (nguồn bị cấm).
+          {
+            "target": [
+              "./src/components",
+              "./src/hooks",
+              "./src/lib",
+              "./src/stores",
+              "./src/config",
+              "./src/types",
+              "./src/utils"
+            ],
+            "from": ["./src/features", "./src/app"]
+          }
+        ]
+      }
+    ]
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VARIANT B (EQUIVALENT / TƯƠNG ĐƯƠNG): eslint-plugin-boundaries
+//   npm i -D eslint-plugin-boundaries
+// Rule-based thay cho path-based. Cùng ý nghĩa: chiều import + cấm cross-feature.
+// Dùng khi muốn khai báo tầng một lần trong `settings` rồi ép bằng element-types.
+// (Đặt trong CÙNG eslintrc — chọn A HOẶC B, không cần cả hai.)
+// ─────────────────────────────────────────────────────────────────────────────
+// {
+//   "settings": {
+//     "boundaries/elements": [
+//       { "type": "app",     "pattern": "src/app/*" },
+//       { "type": "feature", "pattern": "src/features/*", "capture": ["domain"] },
+//       { "type": "shared",  "pattern": "src/(components|hooks|lib|stores|config|types|utils|assets|testing)/*" }
+//     ]
+//   },
+//   "rules": {
+//     // Chiều import: app -> feature -> shared (không ngược). feature CHỈ allow shared
+//     // (không có "feature") => một feature không import feature khác.
+//     "boundaries/element-types": ["error", {
+//       "default": "disallow",
+//       "rules": [
+//         { "from": "app",     "allow": ["feature", "shared"] },
+//         { "from": "feature", "allow": ["shared"] },
+//         { "from": "shared",  "allow": ["shared"] }
+//       ]
+//     }],
+//     // Ép mọi import vào feature đi qua public API (index.ts) — cấm import sâu segment.
+//     "boundaries/entry-point": ["error", {
+//       "default": "disallow",
+//       "rules": [
+//         { "target": ["feature"], "allow": "index.ts" }
+//       ]
+//     }]
+//   }
+// }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OPTIONAL / TUỲ CHỌN — naming + absolute imports (bulletproof-react project-standards).
+// ─────────────────────────────────────────────────────────────────────────────
+// {
+//   "rules": {
+//     // kebab-case cho file & folder trong src. / npm i -D eslint-plugin-check-file
+//     "check-file/filename-naming-convention": ["error",
+//       { "**/*.{ts,tsx}": "KEBAB_CASE" }, { "ignoreMiddleExtensions": true }],
+//     "check-file/folder-naming-convention": ["error",
+//       { "src/**/!(__tests__)": "KEBAB_CASE" }]
+//   }
+// }
+// Absolute imports — tsconfig.json: { "compilerOptions": { "baseUrl": ".",
+//   "paths": { "@/*": ["./src/*"] } } }  => import "@/features/invoices".

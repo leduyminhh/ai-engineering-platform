@@ -1,0 +1,42 @@
+// eslint-boundaries.fsd.jsonc — BỔ TRỢ cho Steiger.
+//
+// Steiger là linter FSD chính (hiểu public API, cross-import @x, segment). eslint-plugin-boundaries
+// chỉ ép LUẬT LAYER "chỉ import xuống" ngay trong luồng ESLint sẵn có của dự án — chạy CẢ HAI trong CI.
+//
+// Cài:  npm i -D eslint-plugin-boundaries
+// Dùng: merge khối "plugins"/"settings"/"rules" dưới đây vào eslint config của bạn
+//       (flat `eslint.config.js` hoặc `.eslintrc`). Cần alias `@/<layer>/<slice>` khớp "pattern".
+//
+// Nguồn luật: https://feature-sliced.design/docs/reference/layers (import rule on layers)
+{
+  "plugins": ["boundaries"],
+  "settings": {
+    // Mỗi "element" = một LAYER FSD, nhận diện theo đường dẫn. Thứ tự = cao -> thấp.
+    "boundaries/elements": [
+      { "type": "app",      "pattern": "src/app/*" },
+      { "type": "pages",    "pattern": "src/pages/*" },
+      { "type": "widgets",  "pattern": "src/widgets/*" },
+      { "type": "features", "pattern": "src/features/*" },
+      { "type": "entities", "pattern": "src/entities/*" },
+      { "type": "shared",   "pattern": "src/shared/*" }
+    ]
+  },
+  "rules": {
+    // "default": "disallow" -> chỉ những chiều liệt kê mới hợp lệ = ÉP import đi XUỐNG.
+    // Mỗi layer allow chính nó (import cùng slice) + mọi layer THẤP hơn.
+    "boundaries/element-types": ["error", {
+      "default": "disallow",
+      "rules": [
+        { "from": "app",      "allow": ["app", "pages", "widgets", "features", "entities", "shared"] },
+        { "from": "pages",    "allow": ["pages", "widgets", "features", "entities", "shared"] },
+        { "from": "widgets",  "allow": ["widgets", "features", "entities", "shared"] },
+        { "from": "features", "allow": ["features", "entities", "shared"] },
+        // entities KHÔNG allow "entities" ở cấp layer: chặn cross-import slice cùng layer.
+        // Ngoại lệ HỢP LỆ entity<->entity qua ký hiệu @x (entities/a/@x/b) do Steiger/forbidden-imports
+        // quản; nếu boundaries chặn nhầm import @x, thêm allow-list riêng cho đường dẫn "**/@x/**".
+        { "from": "entities", "allow": ["shared"] },
+        { "from": "shared",   "allow": ["shared"] }
+      ]
+    }]
+  }
+}

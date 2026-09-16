@@ -63,6 +63,26 @@ host điều phối, không nhét nghiệp vụ của remote vào shell. Ép b�
 
 ## Architecture
 
+### Các kiểu tích hợp & lựa chọn của template
+
+Có nhiều thời điểm/cơ chế ghép micro-frontend; chọn sai là gốc của "distributed monolith". Bảng dưới đúc từ
+literature (micro-frontends.org, Cam Jackson trên martinfowler.com) — chi tiết & bẫy version:
+[references/integration-patterns.md](references/integration-patterns.md).
+
+| Kiểu tích hợp | Ghép ở đâu | Deploy độc lập? | Ưu / Nhược ngắn | Khi nào dùng |
+|---------------|-----------|-----------------|-----------------|--------------|
+| Build-time (npm package) | Lúc build host | Không thật sự | +Đơn giản, type-safe · −Đổi remote phải build+deploy lại host | Chia sẻ **lib/UI-kit** versioned, không để tách vòng đời app |
+| Server-side composition | Tầng server | Có | +TTFB/SEO tốt · −Cần hạ tầng ghép server, tương tác client phức tạp | App SSR/SEO nặng, nội dung là chính |
+| Run-time — iframe | Trình duyệt | Có | +Cô lập mạnh nhất · −UX/routing/a11y kém | Sandbox cứng cho mã không tin cậy |
+| **Run-time — Module Federation (JS)** | Trình duyệt | **Có** | +Shared singleton, lazy-load, chia sẻ context · −Phải quản version (bẫy nhiều React) | **Đa team, deploy độc lập** — lựa chọn ở đây |
+| Run-time — Web Components | Trình duyệt | Có | +Chuẩn nền tảng, cô lập style qua Shadow DOM · −Ghép framework-agnostic thêm chi phí | Nhiều framework cùng tồn tại |
+| Import maps | Trình duyệt | Có | +Chuẩn trình duyệt map tên→URL · −Chưa dàn xếp shared/singleton như MF | Nạp module theo tên chuẩn, tự quản chia sẻ deps |
+
+**Template chọn run-time Module Federation** vì: (1) **deploy độc lập thật** — đổi một remote chỉ deploy lại
+remote đó; (2) **shared + singleton** giữ một bản React khi ghép nhiều app trong một runtime; (3) **lazy-load
++ error boundary** cho host điều phối và cô lập lỗi remote. Đánh đổi: ranh giới cô lập là **quy ước + cấu hình
+federation + lint** (không cứng như iframe), và phải chủ động quản dải version shared deps.
+
 ### Cây thư mục
 
 Monorepo (pnpm/npm workspaces) minh hoạ `host` + remotes `invoices`, `customers`. Ở lá chỉ nêu file/thư mục
@@ -101,9 +121,13 @@ root/                                  # monorepo — pnpm/npm workspaces (mỗi
 
 ### Vai trò & ranh giới
 
-- **`apps/host` (shell)** — "danh từ" của cả hệ: routing gốc, layout khung, auth/session, cấu hình runtime.
-  Host **khai `remotes`**, lazy-load module `expose` của remote và gắn vào route/layout; **bơm** runtime config
-  + user xuống remote qua context/props. Host **không** chứa logic nghiệp vụ của remote.
+- **`apps/host` (shell)** — "danh từ" của cả hệ: routing gốc, layout khung, auth/session, cấu hình runtime,
+  **error boundary** bao mỗi remote. Host **khai `remotes`**, **lazy-load** module `expose` của remote (nạp
+  `remoteEntry` theo route) và gắn vào route/layout; **bơm** runtime config + user xuống remote qua context/
+  props. Host **không** chứa logic nghiệp vụ của remote.
+  - **Lazy-load + fallback:** host bọc mỗi remote trong `Suspense` (fallback loading) và **error boundary** —
+    remote lỗi (remoteEntry 404/nạp fail/crash) hiển thị fallback cục bộ, **không kéo sập shell** hay remote
+    khác. Đây là cơ chế cô lập lỗi runtime bù cho việc federation không cô lập cứng như iframe.
 - **`apps/<remote>`** — một miền tự chủ, **nội bộ FSD**, build/deploy độc lập. Phơi **tối thiểu** ra ngoài qua
   `expose`: thường một module page-level (`./InvoicesApp` — remote tự quản route con của mình) và/hoặc widget
   nhúng (`./InvoiceWidget`). Ngoài các module `expose` này, ruột remote là **riêng tư**.
@@ -138,6 +162,37 @@ Bốn luật, ép bằng federation config + import-boundary lint (vi phạm = *
 > **không đổi** — chỉ đổi cách chia sẻ mã dùng chung (workspace ↔ published package). Chọn poly-repo khi team
 > muốn tách hẳn CI/ownership; monorepo khi muốn đồng bộ dễ.
 
+### Shared dependencies + singleton
+
+Deps nền được khai `shared` để host + mọi remote **dùng chung một instance** thay vì mỗi app bundle một bản.
+Với React, đây là điều kiện đúng-sai chứ không phải tối ưu:
+
+- **`singleton: true` cho `react` + `react-dom`** (và router/query client nếu chia sẻ context). React giữ
+  hooks/context ở module-level state — **hai bản React** = "invalid hook call", context không xuyên ranh giới.
+- **Chiến lược version:** khai `requiredVersion`/dải version cho mỗi shared dep; giữ host + remote **cùng dải**.
+  Lệch **minor** thường dùng chung an toàn; lệch **major** có thể buộc nạp hai bản (nặng, dễ lỗi) — nâng cấp
+  deps nền là việc **điều phối cả hệ**, lên kế hoạch chung, đồng bộ qua workspace (monorepo) hoặc pin (poly-repo).
+- **Chốt danh sách singleton sớm** và giữ ngắn — chỉ chia sẻ khi thực sự cần một instance chung; chia sẻ bừa
+  làm tăng coupling version giữa các team.
+
+Cấu hình mẫu: [references/module-federation.host.vite.ts](references/module-federation.host.vite.ts) ·
+[references/module-federation.remote.vite.ts](references/module-federation.remote.vite.ts).
+
+### Giao tiếp cross-MFE
+
+Giữ ghép **lỏng lẻo** — remote không biết ruột remote khác. Ba kênh, theo thứ tự ưu tiên:
+
+1. **Props/context host bơm xuống:** kênh chính cho shell → remote (user/session/runtime-config). Host là chủ
+   sở hữu, truyền xuống theo hợp đồng type ở `packages/contracts`.
+2. **Custom events / event bus contract:** khi hai remote cần biết nhau, trao đổi qua **CustomEvent** hoặc một
+   event bus mỏng, với **tên event + payload định nghĩa ở `packages/contracts`**. Giao tiếp gián tiếp, không
+   app nào import ruột app kia.
+3. **Module `expose` (host ghép):** nếu remote A cần UI của remote B, host ghép `B/BApp` ở route/slot khác —
+   không phải A tự nạp remoteEntry của B.
+
+**Cấm:** remote import ruột remote khác, remote nạp remoteEntry chéo, hay chia sẻ store trực tiếp xuyên remote
+— đó là coupling ngầm còn tệ hơn monolith.
+
 ### Ranh giới state
 
 | Loại state | Ở đâu | Ghi chú |
@@ -171,7 +226,9 @@ Bốn luật, ép bằng federation config + import-boundary lint (vi phạm = *
 ## Implementation
 
 Sketch federation config **ngắn** (minh hoạ vai trò — chốt cú pháp/tuỳ chọn theo package + version khi triển
-khai):
+khai). Cấu hình mẫu đầy đủ (có comment) ở artifact đi kèm:
+[references/module-federation.host.vite.ts](references/module-federation.host.vite.ts) và
+[references/module-federation.remote.vite.ts](references/module-federation.remote.vite.ts).
 
 ```ts
 // apps/host/vite.config.ts — HOST khai remotes + shared singleton
@@ -225,6 +282,8 @@ federation({
   hợp đồng thay vì import trực tiếp hay chia sẻ store.
 - Chốt **danh sách shared singleton** sớm (React, router, query client nếu dùng chung) và đồng bộ version qua
   workspace; một upgrade major deps nền là việc **điều phối cả hệ**, lên kế hoạch.
+- **Design system dùng chung qua `packages/ui-kit`:** một nguồn primitive/token cho host + mọi remote để UI
+  liền mạch và giảm va style (federation không cô lập CSS tự động — dựa vào design system + quy ước đặt tên).
 - Poly-repo: publish `packages/*` versioned, mọi app pin version; nâng cấp có changelog để remote khác theo kịp.
 
 ## Anti-patterns
@@ -273,6 +332,15 @@ Scaffold coi là đúng khi:
 - Module Federation — cơ chế ghép runtime (host `remotes` / remote `exposes` / `shared` singleton). Trên Vite:
   `@module-federation/vite` (chính chủ), `@originjs/vite-plugin-federation` (biến thể cũ); nhánh Rspack/webpack
   `@module-federation/enhanced`. **[chốt version khi triển khai]** — mô tả theo vai trò để không lệ thuộc version.
+- **Artifact đi kèm** (thư mục `references/`): so sánh các kiểu tích hợp + bẫy version →
+  [references/integration-patterns.md](references/integration-patterns.md); cấu hình Vite mẫu →
+  [references/module-federation.host.vite.ts](references/module-federation.host.vite.ts),
+  [references/module-federation.remote.vite.ts](references/module-federation.remote.vite.ts).
+- **Nguồn (URL canonical):** Micro Frontends — Michael Geers <https://micro-frontends.org/>; "Micro Frontends"
+  — Cam Jackson <https://martinfowler.com/articles/micro-frontends.html>; Module Federation
+  <https://module-federation.io/>. Package đã xác minh trên npm (2026-09-15): `@module-federation/vite`@1.21.6,
+  `@module-federation/enhanced`@2.9.0 (Rspack/webpack), `@originjs/vite-plugin-federation`@1.4.1 (biến thể cũ);
+  shape export/API còn [Unverified] — đối chiếu docs, chốt version theo release thực tế khi cài.
 - Cấu trúc bên trong một remote: [react-fsd.template.md](react-fsd.template.md).
 
 ## Related

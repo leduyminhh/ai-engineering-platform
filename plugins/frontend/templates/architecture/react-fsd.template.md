@@ -96,25 +96,43 @@ src/
     └── config/                       #   hằng số, env, route path
 ```
 
-> **Segment trong slice:** `ui` = component; `model` = store/type/business logic; `api` = request +
-> React Query của slice; `lib` = helper nội bộ; `config` = hằng số. `index.ts` **chỉ** re-export phần
-> công khai — phần còn lại là nội bộ slice.
+> **Segment trong slice** (nhóm theo *bản chất kỹ thuật*, tên chuẩn hoá): `ui` = component +
+> formatter/style hiển thị; `model` = data model (schema, interface, store, business logic + validation);
+> `api` = tương tác backend (request fn, kiểu dữ liệu, mapper); `lib` = thư viện nội bộ slice; `config` =
+> config + feature flag. `index.ts` **chỉ** re-export phần công khai — phần còn lại là nội bộ slice.
+
+> **Cái gì KHÔNG đặt ở đâu:** không để request/`fetch` trong `ui`; không để component trong `api`; không
+> để business logic trong `ui` (đẩy vào `model`). `lib` **không phải** bãi rác `utils/helpers` — mỗi thư
+> viện trong `lib` có **một vùng tập trung** (date, currency, text…), ghi rõ trong README. Đặt tên segment
+> theo **mục đích**, không theo bản chất: `components`/`hooks`/`types` là tên **xấu** (Steiger cảnh báo).
 
 ### Vai trò & ranh giới từng layer
 
-Từ cao xuống thấp; mỗi layer chỉ dùng layer **dưới** nó:
+Bộ layer **chính thức (spec v2.1)** gồm 7 tầng, từ nhiều trách nhiệm/phụ thuộc nhất đến ít nhất:
+`app > processes (DEPRECATED) > pages > widgets > features > entities > shared`. **`processes` đã bị bỏ** —
+đưa nội dung của nó về `features`/`app`. Không bắt buộc dùng đủ layer: **chỉ thêm khi mang lại giá trị**;
+tối thiểu hầu hết app có `shared`, `pages`, `app`. Mỗi layer chỉ dùng layer **dưới** nó:
 
-- **`app`** — khởi tạo: providers (QueryClient/Router/Theme), style toàn cục, router. Không nghiệp vụ.
-- **`pages`** — một route = một page; **compose** widgets/features/entities thành màn hình. Không chứa
-  logic nghiệp vụ tái dùng (đẩy xuống feature/entity).
-- **`widgets`** — khối UI ghép lớn, tái dùng nhiều page (bảng, sidebar, header). Ghép nhiều
-  entity/feature nhưng **không** là một use case đơn.
-- **`features`** — **một hành động người dùng mang giá trị** (create-invoice, pay-invoice): UI + logic +
-  mutation của use case đó. Đây là nơi "làm gì đó" với entity.
-- **`entities`** — **thực thể nghiệp vụ** (invoice, customer): kiểu domain (`model`), biểu diễn UI
-  (`ui/InvoiceCard`), API đọc (`api`). "Danh từ" nghiệp vụ, tái dùng bởi feature/widget/page.
-- **`shared`** — hạ tầng & UI-kit không mang nghiệp vụ: `api-client`, primitive Tailwind/wrapper
-  component-lib, helper, config. **Không** biết gì về domain, không import layer trên.
+- **`app`** — mọi việc phạm vi toàn app (kỹ thuật: providers/context; nghiệp vụ: analytics): router config,
+  global store, style toàn cục, entrypoint. **Không có slice** — chứa **segment trực tiếp**. Không nghiệp vụ domain.
+- **`pages`** — một route = một page (`ui` gồm loading/error boundary; `api` fetch/mutate của trang).
+  **Compose** widgets/features/entities thành màn hình. Khối UI **không tái dùng** cứ để **thẳng trong page**;
+  page hiếm khi cần data model riêng. Đẩy logic nghiệp vụ tái dùng xuống feature/entity.
+- **`widgets`** — **khối UI lớn, tự chủ**, đáng làm widget khi **tái dùng qua nhiều page** *hoặc* khi một
+  page có nhiều khối lớn độc lập. Nếu khối chiếm phần lớn nội dung một page và **không** tái dùng → **không**
+  phải widget, để thẳng trong page. (Router lồng kiểu Remix: widget có thể chứa cả block router + layout.)
+- **`features`** — **một hành động người dùng mang giá trị** (create-invoice, pay-invoice): UI (form) + logic/
+  validation (`model`) + mutation (`api`) + feature flag (`config`). **Không phải mọi thứ đều là feature** —
+  dấu hiệu tốt để tách feature là **được tái dùng ở nhiều page**; quá nhiều feature làm chìm cái quan trọng.
+- **`entities`** — **thực thể nghiệp vụ** (invoice, customer): data model + schema validation (`model`),
+  API đọc (`api`), biểu diễn UI tái dùng (`ui/InvoiceCard`, gắn logic khác nhau qua props/slot). "Danh từ"
+  nghiệp vụ. Quan hệ entity↔entity → dùng **cross-import `@x`** (xem dưới).
+- **`shared`** — nền tảng, kết nối thế giới ngoài (backend, thư viện, môi trường) + UI-kit. **Không có slice**
+  — chứa **segment trực tiếp**. **Không** biết domain, không import layer trên.
+
+> **Ngoại lệ App & Shared:** hai layer này vừa là *layer* vừa là *slice* — không chia slice mà chứa
+> **segment trực tiếp**, và **các segment trong đó import tự do lẫn nhau** (vì Shared không có domain, App gộp
+> mọi domain). Mọi layer còn lại chia thành slice theo domain và **tuân luật import layer**.
 
 ### Chiều phụ thuộc
 
@@ -127,42 +145,59 @@ Hai luật, ép bằng công cụ (vi phạm = **fail lint**):
 
 Thêm: **chỉ import qua public API** `slice/index.ts`, cấm import sâu (`entities/invoice/model/x`).
 
-Ép bằng **Steiger** (linter FSD chính thức, hiểu layer/slice/segment + public API) và/hoặc
-`eslint-plugin-boundaries`:
+Ép bằng **Steiger** (linter FSD chính thức, hiểu layer/slice/segment + public API + `@x`) là **chính**,
+`eslint-plugin-boundaries` **bổ trợ** cho riêng luật layer trong luồng ESLint sẵn có:
 
-```jsonc
-// .eslintrc — sketch KHỞI ĐIỂM, chỉnh theo dự án (kèm chạy: npx steiger ./src)
-{
-  "settings": {
-    "boundaries/elements": [
-      { "type": "app",      "pattern": "src/app/*" },
-      { "type": "pages",    "pattern": "src/pages/*" },
-      { "type": "widgets",  "pattern": "src/widgets/*" },
-      { "type": "features", "pattern": "src/features/*" },
-      { "type": "entities", "pattern": "src/entities/*" },
-      { "type": "shared",   "pattern": "src/shared/*" }
-    ]
-  },
-  "rules": {
-    "boundaries/element-types": ["error", {
-      "default": "disallow",
-      "rules": [
-        { "from": "app",      "allow": ["pages", "widgets", "features", "entities", "shared"] },
-        { "from": "pages",    "allow": ["widgets", "features", "entities", "shared"] },
-        { "from": "widgets",  "allow": ["features", "entities", "shared"] },
-        { "from": "features", "allow": ["entities", "shared"] },
-        { "from": "entities", "allow": ["shared"] },
-        { "from": "shared",   "allow": ["shared"] }
-      ]
-    }],
-    // cấm slice cùng layer import nhau (external-of self-layer, trừ shared)
-    "boundaries/no-private": ["error", { "allowUncles": false }]
-  }
-}
+- **Steiger** — cấu hình copy-paste sẵn ở [`references/steiger.config.js`](references/steiger.config.js).
+  Cài `npm i -D steiger @feature-sliced/steiger-plugin`, chạy `npx steiger ./src` (watch: `--watch`). Bộ
+  `recommended` bật `fsd/forbidden-imports`, `fsd/public-api`, `fsd/no-public-api-sidestep`,
+  `fsd/no-segmentless-slices`, `fsd/no-segments-on-sliced-layers`, `fsd/segments-by-purpose`,
+  `fsd/no-processes`, `fsd/insignificant-slice`, `fsd/excessive-slicing`…
+- **eslint-plugin-boundaries** — cấu hình ở [`references/eslint-boundaries.fsd.jsonc`](references/eslint-boundaries.fsd.jsonc)
+  (merge vào eslint config). Chỉ ép "import đi xuống" ở cấp layer; nuance `@x`/public-API để Steiger lo.
+
+### Cross-import `@x` (entity ↔ entity)
+
+Mặc định slice cùng layer **không** biết nhau. Nhưng thực thể ngoài đời thường tham chiếu nhau (một
+`Artist` có nhiều `Song`) — nên **phản ánh quan hệ đó** thay vì né tránh. FSD cho một loại public API riêng
+gọi là **ký hiệu `@x`** (chỉ khuyến nghị ở **layer `entities`**, và giữ **tối thiểu**):
+
+- Entity `A` mở một public API **riêng cho** entity `B` tại `entities/a/@x/b.ts`; `index.ts` vẫn là public
+  API thường. Code trong `entities/b/` import qua đường `entities/a/@x/b` (đọc là "A crossed with B").
+- Vì sao lộ liễu vậy: hai entity liên kết **phải refactor cùng nhau**, nên làm mối nối **không thể bỏ sót**.
+
+```
+entities/
+├── artist/
+│   ├── @x/song.ts          // public API riêng cho entities/song:  export type { Artist } from '../model/artist'
+│   ├── model/artist.ts
+│   └── index.ts            // public API thường của artist
+└── song/
+    └── model/song.ts       // import type { Artist } from 'entities/artist/@x/song'
 ```
 
-> **Steiger** hiểu FSD sâu hơn (public-API, cross-import cùng layer, segment) — nên chạy `steiger` là
-> chính, `eslint-plugin-boundaries` bổ trợ cho luật layer. Cấu hình trên là khởi điểm, chỉnh theo dự án.
+> `@x` **không** phải cửa hậu để cross-import bừa. Chỉ dùng cho quan hệ dữ liệu entity↔entity; hành vi
+> nghiệp vụ nối chúng vẫn nên đặt ở layer trên (`features`/`pages`). Vi phạm `@x` = **fail** `fsd/forbidden-imports`.
+
+### Public API & insulation
+
+`index.ts` là **hợp đồng + cổng** của slice: chỉ những gì re-export mới ra ngoài; phần còn lại là nội bộ,
+đổi tự do khi refactor. Ba mục tiêu của một public API tốt:
+
+1. **Bảo vệ** phần còn lại của app khỏi thay đổi cấu trúc nội bộ slice (đổi/di chuyển file bên trong).
+2. Thay đổi **phá vỡ kỳ vọng** (đổi hành vi) thì **phải** thể hiện ở public API.
+3. **Chỉ** lộ phần cần thiết.
+
+- **Cấm `export *` (wildcard):** làm mất khả năng đọc ra "interface" của slice và **vô tình lộ nội bộ**,
+  khiến người khác lỡ phụ thuộc vào chi tiết cài đặt → khó refactor. Liệt kê từng export tường minh.
+- **Khi nào cần / không cần:** **mọi slice** phải có public API; ở layer không-slice (`shared`, `app`) thì
+  **segment** đóng vai public API. **Cấm `index.ts` ở cấp layer** (`fsd/no-layer-public-api`).
+- **`shared/ui`, `shared/lib`:** là tập hợp thứ rời rạc → một `index.ts` gộp dễ **vỡ tree-shaking** (kéo cả
+  thư viện nặng vào mọi page). Nên cho **mỗi component/lib một `index.ts` riêng**, import `@/shared/ui/button`.
+- **Môi trường khác nhau (Next.js):** khi module trong cùng slice chạy ở server vs client, tách public API
+  theo runtime (ví dụ `index.ts` server / client riêng) để không phá ranh giới môi trường khi bundle.
+- **Tránh circular import:** trong **cùng slice** dùng import **tương đối** (đường dẫn đầy đủ, không qua
+  `../index`); **khác slice** dùng import **tuyệt đối** (alias `@/...`).
 
 ### Ranh giới state
 
@@ -202,16 +237,21 @@ useFeatureFlag('invoices.v2')  ->  true  ? <InvoiceTableV2/> : <InvoiceTable/>
 | Public API slice | `<slice>/index.ts` | Chỉ re-export component/hook/type công khai; giấu segment nội bộ. Mọi import từ ngoài dùng `@/entities/invoice`, không `.../model/...`. |
 | Đọc entity | `entities/invoice/api/get-invoices.ts` | `useQuery` + `api-client` của `shared/api`; entity sở hữu server-state đọc của chính nó. |
 | Hành động | `features/create-invoice/api` + `model` | `useMutation` + validation; feature import entity (xuống), không import feature khác (ngang). |
+| Cross-import entity | `entities/artist/@x/song.ts` | Public API riêng cho entity khác; `entities/song` import `entities/artist/@x/song`. Chỉ ở `entities`, tối thiểu. |
 | Ghép màn hình | `pages/<route>/ui` | Page compose widget/feature/entity; không nhồi logic tái dùng (đẩy xuống). |
 
 ## Standards
 
 - **Luật layer:** chỉ import xuống; `entities` không import `features`; `shared` không import gì ở trên.
-- **Không cross-import cùng layer:** slice độc lập; liên kết qua layer dưới hoặc ghép ở trên.
-- **Public API bắt buộc:** mỗi slice có `index.ts`; ngoài slice chỉ dùng public API, cấm import sâu.
-- **Segment chuẩn:** `ui/model/api/lib/config`; không đặt request trong `ui`, không đặt component trong
-  `api`.
-- **Entity vs Feature:** entity = danh từ (invoice là gì); feature = động từ (tạo invoice). Đặt đúng chỗ.
+  `processes` **đã deprecated** — không tạo mới, dồn về `features`/`app`.
+- **Không cross-import cùng layer:** slice độc lập; liên kết qua layer dưới hoặc ghép ở trên. Ngoại lệ duy
+  nhất: entity↔entity qua **`@x`** (`entities/a/@x/b`), giữ tối thiểu.
+- **Public API bắt buộc:** mỗi slice có `index.ts` (liệt kê export tường minh, **không `export *`**); ngoài
+  slice chỉ dùng public API, cấm import sâu; **không** đặt `index.ts` ở cấp layer.
+- **Segment chuẩn:** `ui/model/api/lib/config` (tên theo **mục đích**); không đặt request trong `ui`, không
+  đặt component trong `api`; `lib` không phải bãi rác helpers.
+- **Entity vs Feature vs Widget:** entity = danh từ (invoice là gì); feature = động từ, một use case tái
+  dùng (tạo invoice); widget = khối UI ghép tái dùng nhiều page. Đặt đúng chỗ.
 - **Đặt tên:** slice/segment kebab-case (`create-invoice`, `invoice-table`), component PascalCase; alias
   `@/<layer>/<slice>`.
 - **Styling:** Tailwind + tái dùng `shared/ui` (wrapper component-lib) trước khi tự dựng.
@@ -227,12 +267,17 @@ useFeatureFlag('invoices.v2')  ->  true  ? <InvoiceTableV2/> : <InvoiceTable/>
 
 ## Anti-patterns
 
-- `features/A` import `features/B`, hoặc `entities/X` import `entities/Y` (cross-import cùng layer).
+- `features/A` import `features/B`, hoặc `entities/X` import `entities/Y` **trực tiếp** (cross-import cùng layer).
+- Entity↔entity nối nhau **không** qua `@x` (import thẳng `entities/artist/model/...` từ `entities/song`).
 - Import ngược layer (`entities` import `features`, `shared` import `entities`).
 - Import sâu vào segment nội bộ (`entities/invoice/model/store`) thay vì public API.
+- `export *` (wildcard) trong `index.ts` — lộ nội bộ, mất khả năng đọc interface của slice.
+- Lạm dụng `widgets`: biến khối UI **không tái dùng, chiếm phần lớn một page** thành widget thay vì để thẳng trong page.
+- Slice quá to / quá nhiều feature vụn: chôn cái quan trọng (Steiger cảnh báo `excessive-slicing`, `insignificant-slice`).
 - Nhét business logic tái dùng vào `pages` thay vì đẩy xuống feature/entity.
 - Gọi HTTP rải rác trong `ui` thay vì `api` segment qua `shared/api`.
 - Trộn "danh từ" và "động từ": đặt logic tạo/sửa vào `entities` hoặc để component thuần trong `features`.
+- Đặt segment thẳng vào layer có slice (`features/ui/...` thiếu tên slice) hoặc tên segment theo bản chất (`components/`, `hooks/`).
 - Bỏ `index.ts`, để ngoài import tuỳ tiện vào ruột slice (mất ranh giới).
 
 ## Examples
@@ -250,10 +295,12 @@ Luồng màn hình `/invoices` (danh sách + nút tạo):
 
 Scaffold coi là đúng khi:
 
-- [ ] `steiger ./src` + `eslint-plugin-boundaries` xanh (không cross-import cùng layer, không import ngược).
-- [ ] Mỗi slice có `index.ts`; ngoài slice chỉ import qua public API.
-- [ ] Layer đúng thứ tự `app>pages>widgets>features>entities>shared`; `shared` không biết domain.
-- [ ] Entity = danh từ (model+card+đọc); feature = một use case (ui+model+mutation).
+- [ ] `npx steiger ./src` + `eslint-plugin-boundaries` xanh (không cross-import cùng layer, không import ngược).
+- [ ] Mỗi slice có `index.ts` (không `export *`); ngoài slice chỉ import qua public API; không `index.ts` cấp layer.
+- [ ] Layer đúng thứ tự `app>pages>widgets>features>entities>shared`; không dùng `processes`; `shared`/`app` chứa segment trực tiếp, `shared` không biết domain.
+- [ ] Entity = danh từ (model+card+đọc); feature = một use case (ui+model+mutation); widget chỉ khi tái dùng nhiều page.
+- [ ] Quan hệ entity↔entity đi qua `@x` (`entities/a/@x/b`), không import thẳng ruột entity khác.
+- [ ] Segment đặt tên theo mục đích (`ui/model/api/lib/config`), không `components/hooks/types`.
 - [ ] Server-state qua React Query ở `api` segment; không `useState` giữ cache API.
 - [ ] `tsc` + `eslint` xanh; xoá một feature không vỡ feature/entity khác.
 
@@ -261,9 +308,14 @@ Scaffold coi là đúng khi:
 
 - Ghi **lựa chọn kiến trúc này thành ADR** (Nygard) ở `docs/decisions/` — vì sao FSD, phương án cân nhắc,
   hệ quả.
-- Feature-Sliced Design — phương pháp chuẩn (layer/slice/segment, public API). Steiger — linter chính thức
-  kiểm luật FSD; `eslint-plugin-boundaries` bổ trợ luật layer. Cấu hình trong file là khởi điểm.
-- TanStack Query — server-state ở segment `api` của entity/feature.
+- **Feature-Sliced Design** (chuẩn chính thức, v2.1):
+  - Layers — <https://feature-sliced.design/docs/reference/layers> (7 layer, `processes` deprecated, ngoại lệ App/Shared).
+  - Slices & segments — <https://feature-sliced.design/docs/reference/slices-segments> (segment `ui/api/model/lib/config`, zero-coupling/high-cohesion).
+  - Public API — <https://feature-sliced.design/docs/reference/public-api> (index.ts, insulation, **`@x` cross-import**, tree-shaking `shared/ui`).
+- **Steiger** — linter FSD chính thức: <https://github.com/feature-sliced/steiger>. Cấu hình:
+  [`references/steiger.config.js`](references/steiger.config.js). Bổ trợ luật layer:
+  [`references/eslint-boundaries.fsd.jsonc`](references/eslint-boundaries.fsd.jsonc) (`eslint-plugin-boundaries`).
+- **TanStack Query** — server-state ở segment `api` của entity/feature: <https://tanstack.com/query>.
 
 ## Related
 
