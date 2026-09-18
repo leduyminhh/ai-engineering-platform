@@ -14,6 +14,18 @@ title Tiêu đề ngắn, mô tả rõ
 Với cú pháp không-UML dùng start tag chuyên biệt, dùng đúng cặp mở/đóng: `@startjson`/`@endjson`,
 `@startyaml`, `@startmindmap`, `@startgantt`, `@startsalt`, `@startwbs`…
 
+Ví dụ sequence diagram tối giản (đúng luật: title ngắn, ít notation, nhãn theo domain):
+
+```plantuml
+@startuml
+title Đăng nhập — kiểm tra token
+Client -> API: POST /login
+API -> AuthService: xác thực credential
+AuthService --> API: token
+API --> Client: 200 + token
+@enduml
+```
+
 ## Đặt tên file khi lưu (protected path)
 
 `docs/` được bảo vệ — chỉ ghi sau khi người dùng **xác nhận**.

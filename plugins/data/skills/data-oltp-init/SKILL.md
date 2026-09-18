@@ -52,3 +52,6 @@ có thì giữ nguyên.
    mỗi quyết định tạo ADR mới đánh số tiếp.
 3. Hỏi người dùng domain + mô hình dữ liệu để điền `project-knowledge/`.
 4. KHÔNG viết code thực thi — mới chỉ scaffold.
+
+## Ghi chú
+- Muốn viết schema/migration/seed thật cho database này → recipe on-demand `data-oltp-implement`.

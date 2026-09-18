@@ -51,3 +51,6 @@ có thì giữ nguyên.
    mỗi quyết định tạo ADR mới đánh số tiếp.
 3. Hỏi người dùng domain + nguồn/đích dữ liệu để điền `project-knowledge/`.
 4. KHÔNG viết code thực thi — mới chỉ scaffold.
+
+## Ghi chú
+- Muốn build pipeline/transform thật cho warehouse này → recipe on-demand `data-olap-implement`.
