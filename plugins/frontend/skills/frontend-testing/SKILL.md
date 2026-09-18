@@ -121,6 +121,7 @@ không chạy theo con số phần trăm tổng.
 
 ## Sau khi xong
 Tóm tắt: test đã thêm (số + tầng), lệnh chạy + kết quả THẬT, nhánh/state đã phủ, **khoảng trống +
-residual risk** còn lại. Con người **duyệt diff** trước khi commit; tự push nhánh + mở PR. Nếu gặp
+residual risk** còn lại. Con người **duyệt diff** trước khi commit; **người dùng** tự push nhánh
++ mở PR. Nếu gặp
 ràng buộc mâu thuẫn (runner ngoài Vitest/Jest chưa có idiom trong references, thiếu msw, hoặc không
 có điểm vào rõ để characterization), DỪNG và BÁO thay vì tự đi chệch.

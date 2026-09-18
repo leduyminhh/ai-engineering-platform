@@ -11,9 +11,11 @@ INVARIANT chung mọi kiến trúc — **Dependency Rule**: tầng trên gọi t
 nghiệp vụ (domain) không biết hạ tầng (framework/DB/giao thức). Code dùng chung ở `src/shared/`; module
 chỉ giao tiếp qua API công khai hoặc shared (no reach-in). Layered thường = `api/`→`service/`→`repository/`.
 
-## Pipeline backend (thứ tự bắt buộc)
-**Contract** (REST API + mock) → **ERD/Repository** → **Implement đầy đủ**.
-Chốt giao diện API trước, rồi mô hình dữ liệu, rồi mới nối nghiệp vụ thật.
+## Trình tự khuyến nghị khi làm đầy đủ (không phải pipeline bắt buộc)
+Khi làm một use-case đầy đủ từ đầu, thứ tự hợp lý là: **Contract** (REST API + mock, skill
+`backend-api-contract`) → **data model/repository** → **Implement đầy đủ** (skill `backend-implement`).
+Đây là 2 skill độc lập (`pipeline: false`), gọi khi cần, không phải chuỗi ép buộc — chốt giao diện
+API trước giúp tránh phải đổi lại nghiệp vụ đã viết khi hình dạng dữ liệu thay đổi.
 
 Contract của backend là **REST API contract**: chốt trước endpoint (method + path), request/response
 schema theo từng mã trạng thái, mã lỗi + điều kiện, quy tắc validate; kèm mock data khớp contract

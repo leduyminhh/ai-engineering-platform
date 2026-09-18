@@ -16,8 +16,8 @@ next: null
 Recipe hướng dẫn agent **refactor mã nguồn BACKEND** (Java/Spring, Python) — cải thiện cấu trúc bên
 trong (đọc-hiểu, tái dùng, giảm trùng lặp, giảm phức tạp) **mà KHÔNG đổi hành vi nghiệp vụ quan sát
 được**. Đây là **docs-only recipe** — hướng dẫn cách agent làm việc, KHÔNG phải công cụ codegen hay
-lint dựng sẵn. KHÔNG nằm trong chuỗi bắt buộc `init → implement → testing`; gọi khi cần trên project
-đã có mã nguồn.
+lint dựng sẵn. KHÔNG phụ thuộc skill nào khác; gọi độc lập trên project đã có mã nguồn (đã hoặc
+chưa chạy `backend-init`/`backend-implement`).
 
 Định nghĩa refactor ở skill này: các move quen thuộc — extract method/class, gom trùng lặp về
 shared/util **đúng tầng**, thay điều kiện phức tạp bằng guard clause/polymorphism, tách god class,
