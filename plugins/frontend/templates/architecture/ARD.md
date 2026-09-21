@@ -202,8 +202,8 @@ Hợp đồng sinh (mọi kiến trúc):
   trang/route → phần nối dữ liệu (container/hook) → gọi API + React Query (tầng/segment `api`) →
   presentational thuần → public API của đơn vị. Đặt file theo **đúng cây thư mục** của template đã chọn, không
   bỏ tầng, không gộp tầng.
-  - *Feature-Based:* một `features/<domain>` với `ui` (presentational + form) + `api` (`useQuery`/`useMutation`)
-    + `model` (type/logic) + `index.ts`; trang ở `pages` compose feature đó.
+  - *Feature-Based:* một `features/<domain>` với `components` (presentational + form) + `api` (`useQuery`/`useMutation`)
+    + `types` (type/view-model) + `index.ts`; route ở `app/routes` compose feature đó.
   - *FSD:* một slice `entities/<x>` (model + card + `api` đọc) + một `features/<hành-động>` (form + `api`
     mutation) + `pages/<route>` compose; mỗi slice có `index.ts` (public API).
   - *Micro-Frontend:* một `apps/<remote>` (nội bộ FSD, `expose` một trang/route) + `apps/host` khai `remotes`

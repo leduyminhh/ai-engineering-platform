@@ -32,8 +32,8 @@ và tương tác nội bộ nhìn thấy được — nhưng **chưa nối dữ 
 
 ## Đặt đúng tầng theo kiến trúc
 
-- **Feature-Based:** UI thuần ở `features/<domain>/ui` (chỉ props/callback); logic/state ở `hooks/`, gọi
-  API ở `api/`, type/model ở `model/` (bước sau). Không tự fetch/store trong presentational; không
+- **Feature-Based:** UI thuần ở `features/<domain>/components` (chỉ props/callback); logic/state ở `hooks/`,
+  gọi API ở `api/`, type/view-model ở `types/` (bước sau). Không tự fetch/store trong presentational; không
   cross-import ruột feature khác — mở qua public API `index.ts`.
 - **FSD:** UI thuần ở segment `ui/` của entity/feature; logic/state ở `model/`, gọi API ở `api/` (bước sau).
   Import chỉ xuống, không cross-import cùng layer, qua public API `index.ts`.

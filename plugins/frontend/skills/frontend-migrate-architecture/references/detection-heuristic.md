@@ -30,16 +30,17 @@ code, BÁO trước khi tiếp.
 
 | Loại phần tử hiện tại | Slice/segment đích | Ghi chú |
 |---|---|---|
-| Component thuần (props in / render) | `features/<domain>/ui/` (presentational) | Bỏ mọi `fetch`/store khỏi component khi dời |
-| Component "thông minh" nối data vào UI | `features/<domain>/ui/` (container nhẹ) + `hooks/` | Tách phần nối data ra hook; markup ở presentational |
-| Hook logic/state tái dùng, bọc React Query | `features/<domain>/hooks/` | Logic/state của feature |
-| Gọi API / `fetch` / `axios` / client HTTP | `features/<domain>/api/*.api.ts` + `shared/api` (client base) | Nơi biết HTTP/endpoint của feature |
-| Kiểu DTO / view-model / business rule | `features/<domain>/model/*.ts` | Type/view-model của feature, không rò vào presentational |
-| Component gắn với route | `pages/<domain>/*Page.tsx` | Mỏng — compose feature |
-| Client-state toàn cục (theme, sidebar) | `shared` (store dùng chung) hoặc trong feature | KHÔNG cache server-state ở đây |
-| Util thuần / lib config / type chung | `shared/{ui,api,lib,config}` | Không mang nghiệp vụ, không import feature |
+| Component thuần (props in / render) | `features/<domain>/components/` (presentational) | Tên đúng là `components/` — KHÔNG phải `ui/` (đó là quy ước FSD, xem B.2) |
+| Component "thông minh" nối data vào UI | `features/<domain>/components/*-container.tsx` | Container nhẹ CÙNG thư mục `components/`: gọi hook `api`, đổ props xuống presentational |
+| Hook logic/state tái dùng, bọc React Query | `features/<domain>/hooks/` | Logic/state cục bộ feature |
+| Gọi API / `fetch` / `axios` / client HTTP + DTO | `features/<domain>/api/` (vd `get-invoices.ts`, `invoice.dto.ts`) qua `lib/api-client.ts` | KHÔNG có thư mục `shared/api` — client base nằm ở `lib/api-client.ts` (flat root, xem hàng cuối) |
+| Kiểu DTO đã map / view-model | `features/<domain>/types/` | Tên đúng là `types/` — KHÔNG phải `model/` (đó là quy ước FSD) |
+| Hàm map DTO→view-model / format riêng feature | `features/<domain>/utils/` (tuỳ) | Map ở đây, không map trong component |
+| Client-state riêng feature (bộ lọc, tab đang mở) | `features/<domain>/stores/` (tuỳ) | KHÔNG chứa server-state/cache API |
+| Component gắn với route | `app/routes/<domain>.tsx` | Feature-Based **KHÔNG có** thư mục `pages/` (đó là FSD) — tầng `app/routes` là nơi HỢP PHÁP ghép nhiều feature |
+| Hạ tầng/UI-kit/state dùng chung (không mang nghiệp vụ) | phẳng ở gốc `src/`: `components/`, `hooks/`, `lib/`, `stores/`, `config/`, `types/`, `utils/`, `assets/`, `testing/` | KHÔNG có thư mục `shared/` bọc ngoài (bulletproof-react đặt phẳng dưới `src/`) — xem "Bảng quy tắc thư mục" trong template để chọn đúng thư mục con |
 
-> Mỗi `feature` mở ra ngoài qua public API `index.ts`; `feature` KHÔNG import ruột `feature` khác.
+> Mỗi `feature` mở ra ngoài qua public API `index.ts`; `feature` KHÔNG import ruột `feature` khác; import một chiều `shared → features → app`.
 
 ### B.2 Đích = FSD (react-fsd.template.md)
 
@@ -87,8 +88,9 @@ TRƯỚC, rồi mới tách ra app riêng theo bản đồ này.
 
 ## D. Thứ tự thực thi gợi ý (bước 4)
 
-- **Feature-Based:** `shared` trước → từng `features/<domain>` (dời `ui`/`hooks`/`api`/`model` của feature,
-  dựng public API `index.ts`) → `pages` compose sau. Tách `fetch` khỏi presentational sớm để cắt vi phạm (c).
+- **Feature-Based:** phần dùng chung phẳng ở gốc `src/` trước → từng `features/<domain>` (dời
+  `components`/`hooks`/`api`/`types` của feature, dựng public API `index.ts`) → `app/routes` compose sau.
+  Tách `fetch` khỏi presentational sớm để cắt vi phạm (c).
 - **FSD:** dưới lên: `shared` → `entities` → `features` → `widgets` → `pages`. Dựng public API `index.ts`
   cho slice trước khi để nơi khác import qua nó.
 - **Micro-FE:** không áp thứ tự dời-file — theo bản đồ phân rã B.3 (đưa từng remote về FSD sạch trong monolith

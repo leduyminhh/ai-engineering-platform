@@ -27,15 +27,15 @@ Chống lộn ngược kim tự tháp: mỗi lần định thêm e2e/integration
 
 ## 2. Đặt test đúng tầng theo kiến trúc
 
-### Feature-Based (feature tự chứa `ui/hooks/api/model`)
+### Feature-Based (feature tự chứa `components/hooks/api/types`)
 
 | Tầng kiến trúc | Loại test | Bật mạng? | Trọng tâm chứng minh |
 |---|---|---|---|
-| Presentational (`features/<x>/ui`) | Render + interaction (props) | Không | Hiển thị theo props, các state (loading/empty/error/có dữ liệu), phát callback đúng, a11y cơ bản |
+| Presentational (`features/<x>/components`) | Render + interaction (props) | Không | Hiển thị theo props, các state (loading/empty/error/có dữ liệu), phát callback đúng, a11y cơ bản |
 | Hook (`features/<x>/hooks`) | Hook test (`renderHook`) | Không / msw nếu bọc React Query | Giá trị trả về, chuyển trạng thái theo hành động, nhánh logic |
-| Container / Page (chạm data) | Integration UI + **msw** | Có (msw giả) | Luồng loading→success/error, truyền data xuống presentational, điều hướng/mutation |
-| Data/model (`features/<x>/api` + `model`) | Test hàm map/parse thuần + msw | Có (msw giả) | Map DTO→view model, xử lý lỗi response, header/param request |
-| `shared/ui` | Render + props độc lập | Không | UI-kit dùng lại nhiều nơi, đáng phủ kỹ |
+| Container (chạm data, trong `components/`) | Integration UI + **msw** | Có (msw giả) | Luồng loading→success/error, truyền data xuống presentational, điều hướng/mutation |
+| Data/mapping (`features/<x>/api` + `types`/`utils`) | Test hàm map/parse thuần + msw | Có (msw giả) | Map DTO→view model, xử lý lỗi response, header/param request |
+| `components/` (phẳng gốc `src/`, dùng chung) | Render + props độc lập | Không | UI-kit dùng lại nhiều nơi, đáng phủ kỹ |
 | Luồng đầu-cuối | e2e (mỏng) | Toàn bộ | Vài kịch bản giá trị cao (ngoài phạm vi recipe) |
 
 Presentational là lá đồ thị phụ thuộc → test **không cần mock mạng** (đúng checklist template

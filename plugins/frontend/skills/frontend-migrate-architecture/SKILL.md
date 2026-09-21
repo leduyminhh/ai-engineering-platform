@@ -99,9 +99,9 @@ Test ở lại repo làm tài sản.
 
 ### 4. Di chuyển theo lô nhỏ, XANH mỗi bước — CỔNG G3 (vòng lặp chính)
 Chiến lược: **incremental, XANH sau mỗi bước, dời trước — đổi hành vi sau (nếu cần) là bước tách riêng.**
-Thứ tự an toàn mặc định: **lá trước → gốc sau** (Feature-Based: `shared` → `features/<domain>` (ui/hooks/api/
-model từng feature) → `pages`; FSD: `shared` → `entities` → `features` → `widgets` → `pages`). Mỗi lô là một
-slice/nhóm component; MỖI lô:
+Thứ tự an toàn mặc định: **lá trước → gốc sau** (Feature-Based: nhóm dùng chung phẳng gốc `src/` →
+`features/<domain>` (components/hooks/api/types từng feature) → `app/routes`; FSD: `shared` → `entities` →
+`features` → `widgets` → `pages`). Mỗi lô là một slice/nhóm component; MỖI lô:
 1. Tóm tắt ngắn + file dự kiến đụng tới.
 2. Dời/gom + cập nhật import/alias; nơi cần: thêm public API `index.ts` (FSD) và cho barrel re-export cũ/mới
    cùng tồn tại TẠM để giữ XANH. KHÔNG đổi logic/JSX/hành vi.
@@ -113,8 +113,8 @@ slice/nhóm component; MỖI lô:
 Sau khi dời xong, bật CÔNG CỤ kiểm ranh giới import để chứng minh kiến trúc đích THỰC SỰ thành hình (không
 chỉ "đúng thư mục"):
 - **Feature-Based:** cấu hình `eslint-plugin-boundaries` theo blueprint — `feature` KHÔNG import ruột
-  `feature` khác (feature↔feature disallow); liên kết qua `shared` hoặc compose ở `pages`; phụ thuộc chỉ
-  trỏ xuống.
+  `feature` khác (feature↔feature disallow); liên kết qua nhóm dùng chung (phẳng gốc `src/`) hoặc compose ở
+  `app/routes`; phụ thuộc chỉ trỏ xuống.
 - **FSD:** chạy `steiger ./src` (linter FSD) + `eslint-plugin-boundaries` — chỉ import xuống, không
   cross-import cùng layer, chỉ qua public API `index.ts`.
 Giới thiệu dần (cảnh báo → lỗi) để không vỡ CI giữa chừng; TRỎ cấu hình gốc trong blueprint thay vì lặp lại.
