@@ -1253,6 +1253,8 @@ và thêm `pulled: deps.pulled` vào object `results.push({ provider, plugins: e
 
 Áp "Quy tắc viết chung" ở Task 8.
 
+**Ràng buộc forward-reference (phát hiện ở Task 8, áp dụng từ đây):** `workflow-docs` (WF12) CHƯA tồn tại tới Task 12. `validate.mjs` ép mọi id trong cột "Nối tiếp" của registry phải là workflow ĐÃ CÓ THẬT trên đĩa. Vì vậy ở task này, mọi chỗ hướng dẫn "nối tiếp `workflow-docs`" (WF03, WF06) → ghi `—` (chưa nối) thay vì `workflow-docs`. Task 12 sẽ có bước riêng khôi phục lại các nối tiếp này. WF10 vẫn nối tiếp `workflow-bugfix` bình thường (WF02 đã có từ Task 8).
+
 **WF03** `name: workflow-refactor`, `order: 3`, `tier: 1`, `risk: medium`,
 `agents: "backend-test-writer,frontend-test-writer,backend-reviewer,frontend-reviewer,engineering-spec-analyst,engineering-quality-auditor"`,
 `requires: "backend/backend-refactor,frontend/frontend-refactor,backend/backend-migrate-architecture,frontend/frontend-migrate-architecture,core/git-workflow"`,
@@ -1327,6 +1329,8 @@ Thứ tự ưu tiên sau task này: `workflow-incident` > `workflow-security-rev
 ### Task 11: WF05 testing, WF07 db-change, WF08 api, WF11 release (Tier 2)
 
 **Files:** Create `workflows/{testing,db-change,api,release}/WORKFLOW.md`; Modify orchestrator.
+
+**Ràng buộc forward-reference (như Task 10):** `workflow-docs` chưa tồn tại tới Task 12. Ghi `—` thay vì `workflow-docs` ở cột "Nối tiếp" cho WF07 và WF08 (dòng "Registry thêm 4 dòng" bên dưới nêu `db-change workflow-docs` / `api workflow-docs` — bỏ qua phần đó, dùng `—`). Task 12 khôi phục lại.
 
 **WF05** `name: workflow-testing`, `order: 5`, `tier: 2`, `risk: low`, `agents: "backend-test-writer,frontend-test-writer"`, `requires: "core/git-workflow"`, trigger: "viết test", "tăng coverage", "test strategy", "kiểm thử".
 
@@ -1412,7 +1416,18 @@ Ràng buộc: không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`.
 
 Registry thêm 2 dòng (nối tiếp —). Thứ tự ưu tiên cuối: `workflow-incident` > `workflow-security-review` > `workflow-bugfix` > `workflow-db-change` > `workflow-api` > `workflow-feature` > `workflow-refactor` > `workflow-performance` > `workflow-testing` > `workflow-code-review` > `workflow-release` > `workflow-docs`.
 
-- [ ] **Step 1: Viết 2 file + cập nhật orchestrator.**
+**Khôi phục forward-reference (bắt buộc, vì Task 8/10/11 đã tạm ghi `—` do `workflow-docs` chưa tồn tại lúc đó):** `workflow-docs` (WF12) giờ đã có. Sửa lại cột "Nối tiếp" trong registry của orchestrator (`workflows/orchestrator/WORKFLOW.md`) cho đúng 7 dòng sau, thêm `workflow-docs` vào:
+- `workflow-feature` (WF01)
+- `workflow-bugfix` (WF02)
+- `workflow-refactor` (WF03)
+- `workflow-security-review` (WF06)
+- `workflow-db-change` (WF07)
+- `workflow-api` (WF08)
+- `workflow-incident` (WF10) — đã có `workflow-bugfix`, thêm `workflow-docs` vào cùng ô (`workflow-bugfix`, `workflow-docs`)
+
+Các workflow khác (WF04, WF05, WF09, WF11, WF12) giữ nguyên `—` như đã định.
+
+- [ ] **Step 1: Viết 2 file + cập nhật orchestrator** (thêm 2 dòng registry mới + khôi phục 7 nối tiếp `workflow-docs` đã tạm bỏ ở Task 8/10/11, xem "Khôi phục forward-reference" ở trên).
 - [ ] **Step 2:** `node test/validate.mjs --build` → `0 fail`; xác nhận `loadWorkflows().stages.length === 13`:
 
 Run: `node -e "import('./cli/lib/plugins.mjs').then(m=>console.log(m.loadWorkflows().stages.length))"`
