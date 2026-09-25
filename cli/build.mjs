@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadPlugins, loadMarketplace, loadCore, REPO_ROOT } from './lib/plugins.mjs';
+import { loadPlugins, loadMarketplace, loadCore, loadWorkflows, REPO_ROOT } from './lib/plugins.mjs';
 import { writeFiles, ensureDir, rmrf } from './lib/write.mjs';
 import { writeWizardReport } from './lib/report.mjs';
 
@@ -62,6 +62,7 @@ async function main() {
   let plugins = loadPlugins();
   const marketplace = loadMarketplace();
   const core = loadCore();
+  const workflows = loadWorkflows();
 
   if (args.plugin) {
     plugins = plugins.filter((p) => p.id === args.plugin);
@@ -76,6 +77,10 @@ async function main() {
     for (const a of adapters) console.log(`  ${a.name.padEnd(14)} ${a.describe || ''}`);
     console.log('\nCore (dùng chung, mọi plugin phụ thuộc — core/principles/ + core/skills/):');
     console.log(`  ${core.id.padEnd(14)} v${core.version} — ${core.name} (${core.stages.length} skill dùng chung)`);
+    if (workflows) {
+      console.log('\nWorkflows (cấp repo — workflows/<slug>/WORKFLOW.md):');
+      console.log(`  ${workflows.id.padEnd(14)} v${workflows.version} — ${workflows.stages.length} workflow/orchestrator`);
+    }
     console.log('\nPlugin (auto-discovered từ plugins/*/.manifest.json):');
     for (const p of plugins) console.log(`  ${p.id.padEnd(14)} ${String(p.stages.length).padStart(2)} stage — ${p.name}`);
     if (!args.target) console.log('\nDùng: node cli/build.mjs --target <name|all> [--plugin id] [--out dir]');
@@ -97,7 +102,7 @@ async function main() {
       : path.join(DEFAULT_OUT, adapter.name);
     rmrf(outDir);
     ensureDir(outDir);
-    const files = await adapter.build(plugins, { outDir, marketplace, core });
+    const files = await adapter.build(plugins, { outDir, marketplace, core, workflows });
     const n = writeFiles(outDir, files);
     console.log(`[${adapter.name}] ${plugins.length} plugin, ${n} mục -> ${path.relative(REPO_ROOT, outDir) || '.'}`);
   }

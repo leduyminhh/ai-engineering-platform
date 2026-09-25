@@ -11,6 +11,7 @@
 // nên khi /plugin install <id> thì Claude Code tự cài kèm core (lấy đúng logic nền tảng).
 // Mỗi giai đoạn = 1 skill (auto-discover trong skills/), gọi theo namespace /<plugin-id>:<skill>.
 import { skillFiles, frontmatter } from '../_shared/lib.mjs';
+import { claudeAgentMd, workflowPreamble } from '../_shared/agents.mjs';
 
 function pluginJson(p, { dependencies, author } = {}) {
   const obj = {
@@ -84,13 +85,32 @@ function pluginPrinciplesFiles(p) {
   return [{ path: `plugins/${p.id}/skills/${name}/SKILL.md`, content: skill }];
 }
 
+// Plugin `workflows` gọi xuyên nhiều plugin; Claude chỉ resolve dependency có trong marketplace
+// nên bỏ plugin vắng mặt (build lọc --plugin).
+function workflowFiles(wfs, plugins, author) {
+  const agentsById = new Map(plugins.flatMap((p) => p.agents || []).map((a) => [a.id, a]));
+  const present = new Set(plugins.map((p) => p.id));
+  const deps = new Set();
+  for (const wf of wfs.stages) {
+    for (const r of wf.requires) deps.add(r.split('/')[0]);
+    for (const id of wf.agents) { const a = agentsById.get(id); if (a) deps.add(a.plugin); }
+  }
+  const dependencies = ['core', ...[...deps].filter((d) => d !== 'core' && present.has(d)).sort()];
+  const files = [{ path: 'plugins/workflows/.claude-plugin/plugin.json', content: pluginJson(wfs, { dependencies, author }) }];
+  for (const wf of wfs.stages) {
+    files.push(...skillFiles(wf, 'plugins/workflows/skills', workflowPreamble(wf, agentsById, 'claude')));
+  }
+  return files;
+}
+
 export default {
   name: 'claude',
   describe: 'Claude Code marketplace — core (dependency) + plugins/<id>/ (mỗi plugin có skills/)',
-  build(plugins, { marketplace, core }) {
+  build(plugins, { marketplace, core, workflows }) {
     const author = marketplace.owner; // attribution dùng chung cho mọi plugin.json (= owner marketplace)
-    // marketplace liệt kê core TRƯỚC rồi tới các domain plugin
-    const entries = [core, ...plugins];
+    const wfs = workflows && workflows.stages.length ? workflows : null;
+    // marketplace liệt kê core TRƯỚC rồi tới các domain plugin (+ workflows nếu có)
+    const entries = [core, ...plugins, ...(wfs ? [wfs] : [])];
     const files = [
       { path: '.claude-plugin/marketplace.json', content: marketplaceJson(entries, marketplace) },
       ...coreFiles(core, { author }),
@@ -117,7 +137,11 @@ export default {
       for (const stage of p.stages) {
         files.push(...skillFiles(stage, `plugins/${p.id}/skills`, principlesNote));
       }
+      for (const a of p.agents || []) {
+        files.push({ path: `plugins/${p.id}/agents/${a.id}.md`, content: claudeAgentMd(a) });
+      }
     }
+    if (wfs) files.push(...workflowFiles(wfs, plugins, author));
     return files;
   },
 };

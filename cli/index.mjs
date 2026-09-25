@@ -44,6 +44,7 @@ function reportInstall(r) {
       : `${x.copied} copy`;
     const skills = (x.skills && x.skills.length) ? ` + skills: ${x.skills.join(', ')}` : '';
     console.log(`  - ${x.provider}: ${x.plugins.join(', ')} (+core)${skills} → ${mode}`);
+    for (const p of (x.pulled || [])) console.log(`    · ${p.from} kéo theo: ${p.added.join(', ')}`);
   }
   if (r.results.some((x) => x.mode === 'plugin')) {
     console.log(`  ⚠ Claude (plugin): mở/khởi động lại Claude Code rồi chạy /reload-plugins để nạp skills vừa cài.`);

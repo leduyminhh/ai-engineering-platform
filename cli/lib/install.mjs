@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, execSync } from 'node:child_process';
-import { REPO_ROOT, loadPlugins, loadCore, loadMarketplace, loadPublished } from './plugins.mjs';
+import { REPO_ROOT, loadPlugins, loadCore, loadMarketplace, loadPublished, loadWorkflows } from './plugins.mjs';
+import { expandWorkflowDeps, missingDeps, WORKFLOW_PROVIDERS } from './workflows.mjs';
 import { scopeRoot, manifestPath, PROVIDER_LAYOUT, PROVIDERS } from './paths.mjs';
 import { pack } from './pack.mjs';
 import { BEGIN as MB_BEGIN, END as MB_END, mergeManagedBlock, removeManagedBlock } from './managed-block.mjs';
@@ -284,11 +285,31 @@ function uninstallClaudePlugin(entry, { removeMarketplace = true } = {}) {
 // ── plugin resolution ────────────────────────────────────────────────────────
 export function knownPluginIds() { return loadPlugins().map((p) => p.id); }
 
-/** Danh mục skill NGUỒN theo plugin (core đầu tiên). KHÔNG gồm generated <id>-principles.
- *  core mang thêm baseline `core/principles` (adapter sinh từ core.principles, không có trong loadSkills). */
+function workflowsModel() {
+  const wf = loadWorkflows();
+  return { workflows: wf ? wf.stages : [], agents: loadPlugins().flatMap((p) => p.agents) };
+}
+function catalogIds() { return new Set(skillCatalog().plugins.flatMap((p) => p.skillIds)); }
+
+/** Provider chưa có đích cho workflow: bỏ workflow khỏi lựa chọn để không kéo closure vô ích. */
+export function stripUnsupportedWorkflows(provider, entry) {
+  if (WORKFLOW_PROVIDERS.includes(provider)) return entry;
+  const plugins = (entry.plugins || []).filter((p) => p !== 'workflows');
+  const skills = (entry.skills || []).filter((s) => !s.startsWith('workflows/'));
+  if (plugins.length !== (entry.plugins || []).length || skills.length !== (entry.skills || []).length) {
+    console.warn(`[aip] ${provider} chưa hỗ trợ workflow — bỏ qua phần workflows.`);
+  }
+  return { ...entry, plugins, skills };
+}
+
+/** Danh mục skill NGUỒN theo plugin (core đầu tiên, workflows ngay sau nếu có stage). KHÔNG gồm
+ *  generated <id>-principles. core mang thêm baseline `core/principles` (adapter sinh từ core.principles,
+ *  không có trong loadSkills). */
 export function skillCatalog() {
   const core = loadCore();
-  const plugins = [core, ...loadPlugins()].map((p) => ({
+  const wf = loadWorkflows();
+  const groups = [core, ...(wf && wf.stages.length ? [wf] : []), ...loadPlugins()];
+  const plugins = groups.map((p) => ({
     id: p.id,
     skillIds: [
       ...(p.id === 'core' ? ['core/principles'] : []),
@@ -313,14 +334,26 @@ export function offeredCatalog(published = loadPublished()) {
   const cat = skillCatalog();
   if (!published) return cat;
   const plugins = [];
+  let wfGroup = null;
   for (const p of cat.plugins) {
     if (p.id === 'core') { plugins.push(p); continue; }
+    if (p.id === 'workflows') { wfGroup = p; continue; }
     const sel = published[p.id];
     if (!sel) continue;
     if (sel === '*') { plugins.push(p); continue; }
     const allow = new Set(sel);
     const skillIds = p.skillIds.filter((s) => allow.has(s));
     if (skillIds.length) plugins.push({ ...p, skillIds });
+  }
+  // workflows chưa có trong _published.json (giai đoạn này) — offer từng workflow riêng khi closure
+  // (requires + skill của agent) nằm gọn trong tập skill ĐÃ ĐƯỢC OFFER, tránh mời workflow trỏ tới
+  // skill người dùng không thấy trong wizard.
+  if (wfGroup) {
+    const offered = new Set(plugins.flatMap((x) => x.skillIds));
+    const model = workflowsModel();
+    const skillIds = wfGroup.skillIds.filter((sid) =>
+      [...expandWorkflowDeps(new Set([sid]), model).required].every((s) => offered.has(s)));
+    if (skillIds.length) plugins.splice(1, 0, { ...wfGroup, skillIds });
   }
   return { plugins };
 }
@@ -387,17 +420,21 @@ export function pluginsFromSelection({ plugins = [], skills = [] } = {}) {
 
 /** Tập `plugin/skill` để LỌC đặt file: core/principles ép bật; khối mở rộng theo kit HIỆN TẠI;
  *  skill lẻ cố định; MỌI plugin active kèm generated `<id>-principles` (baseline, không có trong loadSkills). */
-export function effectiveSkills(entry) {
-  const out = new Set(['core/principles']);
+export function effectiveSkills(entry, { withDeps = true } = {}) {
+  let out = new Set(['core/principles']);
   const plugins = entry.plugins || [];
   const skills = entry.skills || [];
   for (const p of plugins) for (const sid of allSkillsOf(p)) out.add(sid);
   for (const sid of skills) out.add(sid);
+  // workflow đã chọn kéo theo closure (requires + skill của agent) — tắt khi chỉ cần tính
+  // "phần giữ lại" (vd uninstall), tránh coi skill kéo theo là lựa chọn tường minh.
+  if (withDeps) out = expandWorkflowDeps(out, workflowsModel()).skills;
   // plugin active (có ≥1 skill hiệu lực HOẶC là khối) → kèm generated <id>-principles
   const activePlugins = new Set(plugins);
   for (const sid of out) activePlugins.add(sid.split('/')[0]);
   for (const pid of activePlugins) {
-    if (pid === 'core') continue; // core baseline là 'principles' (đã ép ở trên)
+    // workflows không có principles riêng (adapter không sinh `workflows-principles`).
+    if (pid === 'core' || pid === 'workflows') continue;
     out.add(`${pid}/${pid}-principles`);
   }
   return out;
@@ -455,6 +492,9 @@ function installOne(provider, effSetArg, scope) {
   const ctx = { files: [], links: [], useLink: USE_LINK, warned: false, root };
   const effSet = new Set(effSetArg); // LỌC thuần: chỉ đặt skill-dir có id trong tập (không tự ép core)
   const pluginActive = (id) => { for (const s of effSet) if (s.startsWith(`${id}/`)) return true; return false; };
+  const agentSkills = new Map(loadPlugins().flatMap((p) => p.agents).map((a) => [a.id, a.skills]));
+  // Agent chỉ hữu ích khi mọi skill nó gói đã có mặt, tránh agent trỏ tới skill chưa cài.
+  const agentActive = (id) => { const s = agentSkills.get(id); return !!s && s.every((x) => effSet.has(x)); };
 
   if (layout.kind === 'claude') {
     const claudeRoot = path.join(root, '.claude');
@@ -467,6 +507,14 @@ function installOne(provider, effSetArg, scope) {
         if (!comp.isDirectory() || comp.name === '.claude-plugin') continue; // bỏ manifest plugin
         const srcComp = path.join(pdir, comp.name);
         const destComp = path.join(claudeRoot, comp.name);
+        if (comp.name === 'agents') {
+          for (const f of fs.readdirSync(srcComp)) {
+            if (!f.endsWith('.md') || !agentActive(path.basename(f, '.md'))) continue;
+            fs.mkdirSync(destComp, { recursive: true });
+            placeEntry(path.join(srcComp, f), path.join(destComp, f), ctx);
+          }
+          continue;
+        }
         for (const skill of fs.readdirSync(srcComp, { withFileTypes: true })) { // comp='skills' → từng skill-dir
           if (!skill.isDirectory()) continue;
           if (!effSet.has(`${id}/${skill.name}`)) continue;
@@ -482,6 +530,13 @@ function installOne(provider, effSetArg, scope) {
     // Codex nạp native skills từ <root>/.codex/skills/<skill-id>/ (global -g → ~/.codex/skills/).
     const skillsRoot = path.join(root, '.codex', 'skills');
     for (const id of fs.readdirSync(pbuild)) {
+      const adir = path.join(pbuild, id, 'agents');
+      if (fs.existsSync(adir)) {
+        for (const f of fs.readdirSync(adir)) {
+          if (!f.endsWith('.toml') || !agentActive(path.basename(f, '.toml'))) continue;
+          placeEntry(path.join(adir, f), path.join(root, '.codex', 'agents', f), ctx);
+        }
+      }
       const sdir = path.join(pbuild, id, 'skills');
       if (!fs.existsSync(sdir) || !fs.statSync(sdir).isDirectory()) continue;
       for (const skill of fs.readdirSync(sdir, { withFileTypes: true })) {
@@ -594,7 +649,11 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     const covered = new Set();
     for (const id of effPlugins) for (const s of allSkillsOf(id)) covered.add(s);
     const skillsFinal = effSkills.filter((s) => !covered.has(s));
-    const entry = { provider, plugins: effPlugins, skills: skillsFinal, scope };
+    const entry = stripUnsupportedWorkflows(provider, { provider, plugins: effPlugins, skills: skillsFinal, scope });
+    const deps = expandWorkflowDeps(effectiveSkills(entry, { withDeps: false }), workflowsModel());
+    const miss = missingDeps(deps.required, catalogIds());
+    // Ném TRƯỚC khi gỡ bản cũ để lỗi không để lại bản cài dở.
+    if (miss.length) throw new Error(`Workflow cần skill không có trong bản cài nguồn: ${miss.join(', ')}`);
     uninstallEntries(m, root, (e) => e.provider === provider); // gỡ bản cũ cùng (provider,scope) rồi cài lại UNION
     const effSet = effectiveSkills(entry);
     const { files, links } = installOne(provider, effSet, scope);
@@ -602,7 +661,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     const relF = rel(files), relL = rel(links);
     const managed = applyManagedBlock(root, instructionFiles(provider, scope));
     m.installs.push({ ...entry, files: relF, links: relL, managed, installedAt: new Date().toISOString() });
-    results.push({ provider, plugins: effPlugins, skills: skillsFinal, linked: relL.length, copied: relF.length, count: relF.length + relL.length });
+    results.push({ provider, plugins: entry.plugins, skills: entry.skills, linked: relL.length, copied: relF.length, count: relF.length + relL.length, pulled: deps.pulled });
   }
   writeManifest(scope, m);
   // Cài claude → đóng gói sẵn skill cho Cowork (Cowork không đọc kho plugin local; phải upload .zip).
@@ -712,7 +771,7 @@ export function check({ scope = 'project' } = {}) {
       return {
         provider: e.provider,
         plugins: e.plugins,
-        skills: [...effectiveSkills(e)],
+        skills: [...effectiveSkills(e, { withDeps: false })],
         files: all.length,
         present: all.filter((rel) => fs.existsSync(path.join(root, rel))).length,
         installedAt: e.installedAt,

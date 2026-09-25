@@ -114,7 +114,7 @@ and cross-cutting capability plugins (`engineering`, `ops`); skills are
 lives in `plugins/_published.json` — each entry is either a whole plugin (`backend`) or
 a single skill (`frontend/frontend-init`); the wizard offers only what is listed, and
 `npm run build` writes `build/wizard-install-report.md`. Plugins with no published skill
-(e.g. `data`, `ops`) stay drafts, installable only via `--plugin`.
+(e.g. `data`) stay drafts, installable only via `--plugin`.
 
 | Plugin | Capability | Skills |
 | --- | --- | --- |
@@ -131,6 +131,121 @@ sources), and fills `project-knowledge/`. The two backend `migrate-*` recipes
 restructure an existing codebase (architecture; or config → Vault/Consul).
 
 Invoke a skill in Claude Code as `/<plugin>:<skill>` (e.g. `/backend:backend-init`).
+
+## Agents & Workflows
+
+On top of skills, the platform projects **agents** (subagents that carry one role and
+package one or more skills) and **workflows** (multi-step recipes that dispatch agents
+in sequence, with human checkpoints), plus a **`workflow-orchestrator`** that classifies
+a free-form request into the right workflow. Agents live at `plugins/<id>/agents/<agent-id>.md`;
+workflows live at the repo-level `workflows/<slug>/WORKFLOW.md`, separate from the plugin
+tree because a workflow calls across plugins. Full design: `docs/superpowers/specs/2026-09-25-agents-workflows-design.md`.
+
+An agent never commits, pushes, or opens a PR, and never dispatches another agent — only a
+workflow (running in the main session) orchestrates and calls `core:git-workflow` after a
+checkpoint. Every agent report is structured (result, `file:line`, residual risk); a claim
+of "ran / passed" always carries evidence, or `not_run` + reason.
+
+### Agents (11)
+
+`mode` is provider-neutral: Claude maps `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
+and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mode: "read-only"` and
+`write` → `"workspace-write"`.
+
+| Agent id | Plugin | Mode | Skills packaged | Used in |
+| --- | --- | --- | --- | --- |
+| `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01, WF07, WF08 |
+| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF03, WF05, WF08 |
+| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (drift check) | WF01–WF04, WF07–WF09 |
+| `frontend-implementer` | frontend | write | frontend-implement | WF01, WF08 |
+| `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05 |
+| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04 |
+| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (audit mode) | WF01–WF04, WF06, WF11 |
+| `engineering-spec-analyst` | engineering | write (`docs/` only) | engineering-spec-writing, engineering-adr, engineering-diagram | WF01, WF03, WF10, WF12 |
+| `engineering-release-scribe` | engineering | write (`docs/`, `CHANGELOG.md` only) | engineering-release-notes | WF11 |
+| `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | WF10 |
+| `ops-release-engineer` | ops | read-only | ops-deploy-release, ops-observability | WF11 |
+
+There is no separate Security agent: `engineering-quality-gate` already covers source-first
+quality **and** security review (OWASP/ASVS/CWE, SCA, secrets); a split would only duplicate it.
+
+### Workflows (12) + orchestrator
+
+Id is `workflow-<slug>`, sourced from `workflows/<slug>/WORKFLOW.md`. `tier` sets how deep the
+content goes (1 = heavy gates/DoD, 2 = full template but lean, 3 = lean); `risk` drives the
+orchestrator's confirmation strictness.
+
+| Code | id | Tier | Risk | Replaces (old plan) | Agents |
+| --- | --- | --- | --- | --- | --- |
+| WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, BE/FE test-writer, BE/FE reviewer, quality-auditor |
+| WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE reviewer, quality-auditor |
+| WF03 | `workflow-refactor` | 1 | medium | W4a+W4b+W6 | BE/FE test-writer, BE/FE reviewer, spec-analyst, quality-auditor |
+| WF04 | `workflow-code-review` | 1 | low | W5 | BE/FE reviewer, quality-auditor |
+| WF05 | `workflow-testing` | 2 | low | new | BE/FE test-writer |
+| WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor |
+| WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-reviewer |
+| WF08 | `workflow-api` | 2 | medium | new (split from the W1 contract step) | backend-implementer, backend-test-writer, backend-reviewer, frontend-implementer |
+| WF09 | `workflow-performance` | 3 | medium | W16 | backend-reviewer |
+| WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
+| WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer |
+| WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |
+| — | `workflow-orchestrator` | — | — | new | none (runs in the main session) |
+
+**Invoking:**
+
+- Claude Code: `/workflow-orchestrator <your request>` to auto-classify against the registry, or
+  call a workflow directly with `/workflow-<slug>` (e.g. `/workflow-bugfix`); list/inspect
+  subagents with `/agents`.
+- Codex: invoke the skill `workflow-<slug>` — workflows project as native Codex skills, same
+  mechanism as any other skill.
+
+**Installing** (workflows go through the existing selection mechanism, no new CLI flag):
+
+```bash
+aip install --provider claude --plugin workflows
+aip install --provider claude --skill workflows/workflow-feature,workflows/workflow-bugfix
+aip install --provider codex -g --skill workflows/workflow-code-review
+aip install --provider claude --as-plugin --plugin workflows
+aip uninstall --skill workflows/workflow-feature
+```
+
+Installing a workflow pulls in its dependency closure (`requires` + the skills of every agent
+it lists) automatically, printed as `[aip] workflow-feature pulls in: backend/backend-implement, …`;
+uninstalling drops what no other remaining workflow still needs.
+
+### Roadmap
+
+Tracked as open gaps in the design spec (`docs/superpowers/specs/2026-09-25-agents-workflows-design.md` §9) — not yet built.
+
+**Skill gaps** (a step a workflow currently runs inline from the main session, not yet extracted into a reusable skill):
+
+| # | Skill | Plugin | Benefits |
+| --- | --- | --- | --- |
+| G1 | `frontend-data-integration` (wire UI to the API contract) | frontend | WF01, WF08 |
+| G2 | `backend-migrate-db` (Flyway ↔ Liquibase) | backend | WF07 |
+| G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
+| G4 | `engineering-bugfix` (reproduce → evidence → failing test → root cause → minimal fix) | engineering | WF02 |
+| G5 | `frontend-e2e-testing` (Playwright) | frontend | WF05 |
+| G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
+| G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
+| G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
+| G9 | `engineering-task-breakdown` | engineering | WF01 |
+| G10 | `backend-performance-testing` (k6/JMeter/Gatling) | backend | WF09 |
+| G11 | `engineering-docs-sync` | engineering | WF12 |
+
+**Future workflows:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),
+`workflow-onboarding` (G7), `workflow-tech-debt-review` (G8).
+
+**Provider / platform (P1–P7):**
+
+| # | Item | Note |
+| --- | --- | --- |
+| P1 | Agents/workflows for Cursor, Antigravity | Antigravity might project to native `.agent/workflows/`, Cursor to `.cursor/commands/` [Unverified] |
+| P2 | Native Claude workflow `.js` | Deterministic fan-out (e.g. multi-module WF04); costs tokens, user opt-in |
+| P3 | Hooks (e.g. pre-commit calling quality-auditor) | Hooks in a plugin subagent are ignored by Claude; must live in project `settings.json` |
+| P4 | `[agents]` in `.codex/config.toml` | Persistent config, needs explicit user confirmation |
+| P6 | Workflows for Cowork | Cowork has no subagents; only add if a sequential fallback exists |
+| P7 | Rules layer (coding/git/security/architecture/production) | Separate spec. Rules are currently spread across `core/principles`, `shared/principles.md`, `AGENTS.md`, `git-workflow`, `code-convention.md`; a Production (deploy/incident) rule set is still missing |
 
 ## CLI
 

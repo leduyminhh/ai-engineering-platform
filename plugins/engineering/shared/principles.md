@@ -17,6 +17,12 @@ docs-only** — hướng dẫn cách agent hành động, KHÔNG sinh code chạ
 - **Không** nhập/in/log token/secret; token đi qua **biến môi trường**, chỉ nêu tên biến; mask giá
   trị secret trong mọi output; không đọc/sửa ngoài scope người dùng nêu.
 
+## Agent & workflow
+Agent (subagent gói skill) **không** commit/push/tạo PR, và **không** gọi agent khác — chỉ workflow ở
+session chính điều phối và gọi `core:git-workflow` sau checkpoint người duyệt. Mọi khẳng định "đã chạy /
+đã pass" phải kèm evidence (`file:line`, exit code, command); thiếu evidence thì ghi `not_run` + lý do,
+KHÔNG được báo hoàn thành.
+
 ## Ngôn ngữ đo được
 Mọi kết luận dùng ngôn ngữ **đo được** (đếm được, có `file:line`/CVE/CVSS/tiêu chí kiểm được) và
 LUÔN nêu **residual risk**. KHÔNG tuyên bố "chặn / đảm bảo / loại bỏ / sửa triệt để" — findings/spec/

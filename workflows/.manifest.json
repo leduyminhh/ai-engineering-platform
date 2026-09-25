@@ -1,0 +1,6 @@
+{
+  "id": "workflows",
+  "name": "Engineering Workflows",
+  "description": "Bộ 12 workflow kỹ thuật (feature, bugfix, refactor, code review, testing, security review, db change, API, performance, incident, release, docs) + orchestrator chọn workflow theo yêu cầu. Workflow điều phối agent/skill của nhiều plugin qua các bước có gate, evidence và checkpoint người duyệt.",
+  "version": "1.0.0"
+}

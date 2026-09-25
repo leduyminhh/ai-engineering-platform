@@ -14,7 +14,7 @@ process.env.AIE_INSTALL_ROOT = TMP;
 const { install, uninstall, update, check, linkDisabledForRoot, claudePluginCommands,
   claudePluginRefreshCommands, claudeCliScope, marketplacesToRemove,
   skillCatalog, allSkillsOf, resolveSelection, effectiveSkills, pluginsFromSelection,
-  normFilter, entryMatches, offeredCatalog, publishedPluginIds } =
+  normFilter, entryMatches, offeredCatalog, publishedPluginIds, stripUnsupportedWorkflows } =
   await import('../cli/lib/install.mjs');
 const { zipBuffer, coworkSkillIds, coworkBuildSet, pack } = await import('../cli/lib/pack.mjs');
 const { wizardReportModel, renderWizardReportMd } = await import('../cli/lib/report.mjs');
@@ -143,14 +143,17 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   const pub = publishedPluginIds();
   ok(pub.includes('backend') && pub.includes('frontend'),
     'publishedPluginIds: gồm backend, frontend');
-  ok(!pub.includes('engineering') && !pub.includes('data') && !pub.includes('ops'),
-    'publishedPluginIds: KHÔNG gồm plugin chưa publish (engineering, data, ops)');
+  ok(pub.includes('engineering') && pub.includes('ops'), 'publishedPluginIds: gồm engineering, ops');
+  ok(!pub.includes('data'), 'publishedPluginIds: KHÔNG gồm data (draft)');
   const offered = offeredCatalog().plugins.map((p) => p.id);
-  ok(offered[0] === 'core', 'offeredCatalog: core đứng đầu');
+  ok(offered[0] === 'core' && offered[1] === 'workflows', 'offeredCatalog: core rồi workflows');
   ok(offered.includes('backend') && offered.includes('frontend'),
     'offeredCatalog: gồm 2 plugin đã publish');
-  ok(!offered.includes('engineering') && !offered.includes('data') && !offered.includes('ops'),
-    'offeredCatalog: ẩn plugin chưa publish khỏi wizard');
+  ok(offered.includes('engineering') && offered.includes('ops') && !offered.includes('data'),
+    'offeredCatalog: offer engineering/ops, ẩn data');
+  ok(offeredCatalog().plugins[1].skillIds.length === 13, 'offeredCatalog: đủ 12 workflow + orchestrator');
+  ok(offeredCatalog({ backend: '*', frontend: '*' }).plugins.find((p) => p.id === 'workflows')
+    .skillIds.every((s) => !s.endsWith('/workflow-feature')), 'offeredCatalog: ẩn workflow có closure chưa được offer');
   ok(skillCatalog().plugins.some((p) => p.id === 'data'),
     'skillCatalog: vẫn liệt kê plugin chưa publish (gate flag cho dev)');
   // per-skill: publish một phần → chỉ offer skill lẻ trong plugin (map inject để test độc lập file)
@@ -173,8 +176,9 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   ok(offeredIds[0] === 'core', 'report: core đứng đầu offered');
   ok(['backend', 'frontend'].every((id) => offeredIds.includes(id)),
     'report: offered gồm mọi plugin đã publish');
-  ok(m.draft.some((e) => e.id === 'engineering') && !offeredIds.includes('engineering'),
-    'report: engineering nằm ở draft, KHÔNG ở offered');
+  ok(offeredIds.includes('engineering') && offeredIds.includes('ops') && !m.draft.some((e) => e.id === 'engineering'),
+    'report: engineering + ops đã publish → nằm ở offered');
+  ok(offeredIds.includes('workflows'), 'report: offered có nhóm workflows');
   ok(m.draft.some((e) => e.id === 'data') && !offeredIds.includes('data'),
     'report: data nằm ở draft, KHÔNG ở offered');
   const be = m.offered.find((e) => e.id === 'backend');
@@ -604,6 +608,68 @@ try {
   ok(check({ scope: 'project' }).installs.length === 0, 'check: trống');
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });
+}
+
+// ── workflows: catalog + closure + agent + provider chưa hỗ trợ ────────────────
+{
+  const cat = skillCatalog();
+  ok(cat.plugins[1].id === 'workflows', 'skillCatalog: workflows đứng sau core');
+  ok(cat.plugins[1].skillIds.includes('workflows/workflow-feature'), 'skillCatalog: có workflows/workflow-feature');
+  const eff = effectiveSkills({ plugins: [], skills: ['workflows/workflow-feature'] });
+  ok(eff.has('backend/backend-implement') && eff.has('engineering/engineering-quality-gate'),
+    'effective: workflow kéo skill của agent (closure)');
+  ok(!eff.has('workflows/workflows-principles'), 'effective: không sinh workflows-principles');
+  ok(!effectiveSkills({ plugins: [], skills: ['workflows/workflow-feature'] }, { withDeps: false }).has('backend/backend-implement'),
+    'effective withDeps=false: không kéo closure');
+  const stripped = stripUnsupportedWorkflows('cursor', { provider: 'cursor', plugins: ['workflows', 'backend'], skills: ['workflows/workflow-bugfix'] });
+  ok(!stripped.plugins.includes('workflows') && stripped.skills.length === 0 && stripped.plugins.includes('backend'),
+    'stripUnsupportedWorkflows: cursor bỏ workflows, giữ plugin khác');
+
+  const TMP_W = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wf-'));
+  process.env.AIE_INSTALL_ROOT = TMP_W;
+  const a = parse(['install', '--provider', 'claude', '--skill', 'workflows/workflow-feature']);
+  const plugins = (a.skill.length && !a.pluginExplicit) ? [] : a.plugin;
+  const r = install({ providers: a.provider, plugins, skills: a.skill, scope: 'project', mode: a.mode });
+  const E = (rel) => fs.existsSync(path.join(TMP_W, rel));
+  ok(E('.claude/skills/workflow-feature/SKILL.md'), 'cài workflow: SKILL.md của workflow');
+  ok(E('.claude/skills/backend-implement/SKILL.md') && E('.claude/skills/frontend-code-review/SKILL.md'),
+    'cài workflow: skill kéo theo được đặt');
+  ok(E('.claude/agents/backend-implementer.md') && E('.claude/agents/engineering-quality-auditor.md'),
+    'cài workflow: agent trong frontmatter agents được đặt');
+  ok(!E('.claude/agents/ops-incident-investigator.md'), 'cài workflow: agent không liên quan KHÔNG đặt');
+  ok(r.results[0].pulled.some((p) => p.from === 'workflow-feature'), 'cài workflow: result có danh sách kéo theo');
+  const u = parse(['uninstall', '--provider', 'claude', '--skill', 'workflows/workflow-feature']);
+  uninstall({ providers: u.provider, plugins: u.pluginExplicit ? u.plugin : [], skills: u.skill, scope: 'project' });
+  ok(!E('.claude/skills/workflow-feature') && !E('.claude/skills/backend-implement') && !E('.claude/agents/backend-implementer.md'),
+    'gỡ workflow: gỡ luôn phần kéo theo + agent');
+  fs.rmSync(TMP_W, { recursive: true, force: true });
+
+  const TMP_X = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wfx-'));
+  process.env.AIE_INSTALL_ROOT = TMP_X;
+  install({ providers: 'codex', skills: ['workflows/workflow-bugfix'], scope: 'project' });
+  ok(fs.existsSync(path.join(TMP_X, '.codex/skills/workflow-bugfix/SKILL.md')), 'codex: cài workflow skill');
+  ok(fs.existsSync(path.join(TMP_X, '.codex/agents/backend-test-writer.toml')), 'codex: đặt agent .toml');
+  fs.rmSync(TMP_X, { recursive: true, force: true });
+  process.env.AIE_INSTALL_ROOT = TMP;
+}
+
+// ── regression: results.push() phải dùng SELECTION ĐÃ STRIP (entry), khớp với manifest ───────
+// Trước fix: results.push dùng effPlugins/skillsFinal (TRƯỚC khi stripUnsupportedWorkflows lọc)
+// → với provider chưa hỗ trợ workflow (cursor/antigravity), dòng tóm tắt CLI (reportInstall) vẫn
+// liệt kê workflows như đã cài dù manifest đã strip — mâu thuẫn với cảnh báo "chưa hỗ trợ workflow".
+{
+  const TMP_RS = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wf-strip-'));
+  process.env.AIE_INSTALL_ROOT = TMP_RS;
+  const r = install({ providers: 'cursor', skills: ['workflows/workflow-feature'], scope: 'project' });
+  const res = r.results[0];
+  ok(!res.plugins.includes('workflows') && !res.skills.includes('workflows/workflow-feature'),
+    'results (cursor, chưa hỗ trợ workflow): plugins/skills KHÔNG chứa workflows (đã strip)');
+  const mf = JSON.parse(fs.readFileSync(path.join(TMP_RS, '.ai-engineering/manifest.json'), 'utf8'));
+  const ce = mf.installs.find((e) => e.provider === 'cursor');
+  ok(JSON.stringify(res.plugins) === JSON.stringify(ce.plugins) && JSON.stringify(res.skills) === JSON.stringify(ce.skills),
+    'results khớp ĐÚNG với manifest entry (cùng selection đã strip, không lệch)');
+  fs.rmSync(TMP_RS, { recursive: true, force: true });
+  process.env.AIE_INSTALL_ROOT = TMP;
 }
 
 // ── pack Cowork: manifest _cowork.json + ZIP writer zero-dep ─────────────────

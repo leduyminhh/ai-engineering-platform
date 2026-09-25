@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **11 agents** — subagents packaging existing skills, projected per provider
+  (`plugins/<id>/agents/<agent-id>.md` → `build/claude/plugins/<id>/agents/<agent>.md` +
+  `build/codex/<id>/agents/<agent>.toml`): `backend-implementer`, `backend-test-writer`,
+  `backend-reviewer`, `frontend-implementer`, `frontend-test-writer`, `frontend-reviewer`,
+  `engineering-quality-auditor`, `engineering-spec-analyst`, `engineering-release-scribe`,
+  `ops-incident-investigator`, `ops-release-engineer`.
+- **12 workflows + `workflow-orchestrator`** — multi-step recipes at the repo-level
+  `workflows/<slug>/WORKFLOW.md` that dispatch agents in sequence with human checkpoints
+  (`workflow-feature`, `workflow-bugfix`, `workflow-refactor`, `workflow-code-review`,
+  `workflow-testing`, `workflow-security-review`, `workflow-db-change`, `workflow-api`,
+  `workflow-performance`, `workflow-incident`, `workflow-release`, `workflow-docs`), plus
+  `workflow-orchestrator` to classify a free-form request into one of the above.
+- **`templates/workflows/workflow.template.md`** — the 7-heading + step-contract template
+  every workflow and the orchestrator are authored from.
+- **`cli/lib/plugins.mjs`** — `loadAgents()` and `loadWorkflows()` loaders; `loadPlugins()`
+  now attaches `agents[]`.
+- **Installer dependency closure** — installing a workflow (`--plugin workflows` /
+  `--skill workflows/<id>`) pulls in its `requires` plus the skills of every agent it lists,
+  recursively, deduped; uninstalling drops what no other remaining workflow still needs.
+
+### Changed
+
+- **Publish set** — `plugins/_published.json` now includes `engineering` and `ops` (previously
+  draft-only); `data` stays draft. `package.json` `files`, `pack.config.json` `allowTop`, and
+  the npm-publish tarball now include `workflows/`, `plugins/engineering/`, `plugins/ops/`.
+
 ## [1.1.1] - 2026-09-03
 
 Re-platform to the zero-dependency `aip` engine. **Breaking change** — there is no

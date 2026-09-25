@@ -1,5 +1,5 @@
 {
-  "allowTop": ["adapters", "cli", "core", "plugins", "templates"],
+  "allowTop": ["adapters", "cli", "core", "plugins", "templates", "workflows"],
   "allowFile": ["package.json", "package-lock.json", "LICENSE", "README.md", "AGENTS.md"],
   "deny": [
     "\\.test\\.mjs$",

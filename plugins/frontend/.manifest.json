@@ -2,5 +2,5 @@
   "id": "frontend",
   "name": "Frontend Cowork→Code",
   "description": "Workflow frontend (web app/SPA) Cowork → Code, docs-first, không pipeline bắt buộc: frontend-init scaffold tài liệu nền (project-knowledge, ADR, design-system/tokens, component-map) và offer template kiến trúc UI chi tiết — Layered (Presentational/Container + hooks + data) hoặc Feature-Sliced Design (FSD) — kèm cây src, Dependency Rule và cơ chế ép ranh giới bằng eslint-plugin-boundaries/Steiger. Styling mặc định Tailwind + component library. CHỈ scaffold tài liệu, KHÔNG sinh code skeleton.",
-  "version": "1.1.1"
+  "version": "1.2.0"
 }

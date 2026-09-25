@@ -9,7 +9,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { loadPlugins, loadCore, loadMarketplace, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
+import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
+import { checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS } from '../cli/lib/workflows.mjs';
+import claudeAdapter from '../adapters/claude/adapter.mjs';
+import codexAdapter from '../adapters/codex/adapter.mjs';
+import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 
 let pass = 0;
 const fails = [];
@@ -30,6 +34,128 @@ function listFilesRec(dir, baseDir = dir) {
   return out;
 }
 const hasFiles = (dir) => listFilesRec(dir).length > 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 0. UNIT: loader agent + workflows
+// ─────────────────────────────────────────────────────────────────────────────
+ok(JSON.stringify(splitList(' a, b ,,c ')) === '["a","b","c"]', 'splitList: tách phẩy + trim + bỏ rỗng');
+ok(Array.isArray(splitList(undefined)) && splitList(undefined).length === 0, 'splitList: không phải chuỗi → []');
+ok(loadPlugins().every((p) => Array.isArray(p.agents)), 'loadPlugins: mỗi plugin có mảng agents');
+ok(Array.isArray(loadCore().agents) && loadCore().agents.length === 0, 'loadCore: agents = []');
+{
+  const wf = loadWorkflows();
+  ok(!!wf && wf.id === 'workflows', 'loadWorkflows: đọc workflows/.manifest.json (id = workflows)');
+  ok(!!wf && Array.isArray(wf.stages), 'loadWorkflows: có mảng stages');
+}
+
+// 0b. UNIT: helper workflow (khung body, step, registry, closure)
+{
+  const tpl = fs.readFileSync(path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n');
+  const tplErrs = checkWorkflowBody(tpl);
+  ok(tplErrs.length === 0, `template workflow PASS checkWorkflowBody${tplErrs.length ? ' — ' + tplErrs.join('; ') : ''}`);
+
+  const step = (n, fields, tail = '') => `### Bước ${n} — Tên${tail}\n` + fields.map((f) => `- **${f}:** x`).join('\n') + '\n';
+  const ALL = ['Thực hiện', 'Đầu vào', 'Hành động', 'Ràng buộc', 'Đầu ra', 'Gate', 'Khi fail', 'Evidence'];
+  const frame = (steps, result = 'workflow_result:') => [
+    '## Mục tiêu & đầu vào', 'x', '## Điều kiện tiên quyết', 'x', '## Các bước', steps,
+    '## Checkpoint', 'x', '## Xử lý lỗi & rollback', 'x', '## Definition of Done', 'x', '## Report cuối', result,
+  ].join('\n');
+  ok(checkWorkflowBody(frame(step(1, ALL, ' ⏸'))).length === 0, 'checkWorkflowBody: khung đủ → hợp lệ');
+  ok(checkWorkflowBody(frame(step(1, ALL.filter((f) => f !== 'Gate'), ' ⏸'))).some((e) => e.includes('"Gate"')),
+    'checkWorkflowBody: thiếu trường Gate → báo lỗi');
+  ok(checkWorkflowBody(frame(step(1, ALL, ' ⏸') + step(3, ALL))).some((e) => e.includes('liên tục')),
+    'checkWorkflowBody: đánh số nhảy → báo lỗi');
+  ok(checkWorkflowBody(frame(step(1, ALL))).some((e) => e.includes('⏸')), 'checkWorkflowBody: không có ⏸ → báo lỗi');
+  ok(checkWorkflowBody(frame(step(1, ALL, ' ⏸')).replace('## Checkpoint', '## X')).some((e) => e.includes('Checkpoint')),
+    'checkWorkflowBody: thiếu heading → báo lỗi');
+  ok(checkWorkflowBody(frame(step(1, ALL, ' ⏸')), { kind: 'orchestrator' }).some((e) => e.includes('orchestrator_result')),
+    'checkWorkflowBody: orchestrator đòi orchestrator_result');
+
+  const refs = stepRefs(frame(
+    '### Bước 1 — A ⏸\n- **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer`\n' +
+    '### Bước 2 — B\n- **Thực hiện:** skill `backend-refactor` | skill `core/git-workflow`\n'));
+  ok(JSON.stringify(refs[0].agents) === '["backend-reviewer","frontend-reviewer"]', 'stepRefs: bắt agent song song');
+  ok(JSON.stringify(refs[1].skills) === '["backend-refactor","core/git-workflow"]', 'stepRefs: bắt skill trần + đầy đủ');
+
+  const reg = parseRegistry([
+    '## Registry', '| id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |', '|---|---|---|---|---|',
+    '| `workflow-incident` | prod down | critical | `workflow-bugfix`, `workflow-docs` | x |',
+    '| `workflow-docs` | readme | low | — | x |',
+    '**Thứ tự ưu tiên:** `workflow-incident` > `workflow-docs`', '## Khác',
+  ].join('\n'));
+  ok(reg.rows.length === 2 && reg.rows[0].risk === 'critical', 'parseRegistry: đọc dòng + risk');
+  ok(JSON.stringify(reg.rows[0].next) === '["workflow-bugfix","workflow-docs"]' && reg.rows[1].next.length === 0,
+    'parseRegistry: đọc cột Nối tiếp ("—" = rỗng)');
+  ok(JSON.stringify(reg.priority) === '["workflow-incident","workflow-docs"]', 'parseRegistry: đọc thứ tự ưu tiên');
+
+  const model = {
+    workflows: [{ id: 'workflow-x', requires: ['core/git-workflow'], agents: ['be-rev'] }],
+    agents: [{ id: 'be-rev', skills: ['backend/backend-code-review'] }],
+  };
+  const dep = expandWorkflowDeps(new Set(['workflows/workflow-x']), model);
+  ok(dep.skills.has('core/git-workflow') && dep.skills.has('backend/backend-code-review'),
+    'expandWorkflowDeps: kéo requires + skill của agent');
+  ok(dep.pulled.length === 1 && dep.pulled[0].from === 'workflow-x', 'expandWorkflowDeps: ghi nguồn kéo theo');
+  ok(expandWorkflowDeps(new Set(['backend/backend-init']), model).pulled.length === 0,
+    'expandWorkflowDeps: không có workflow → giữ nguyên');
+  ok(JSON.stringify(missingDeps(dep.required, new Set(['core/git-workflow']))) === '["backend/backend-code-review"]',
+    'missingDeps: nêu skill không có trong catalog');
+  ok(RISKS.join(',') === 'low,medium,high,critical', 'RISKS: 4 mức');
+}
+
+// 0c. UNIT: adapter với fixture (thuần — không đọc plugin thật)
+const fxAgent = { id: 'fx-reviewer', plugin: 'fx', description: 'Agent fixture để test adapter', mode: 'read-only',
+  skills: ['fx/fx-review'], model: null, effort: 'high', color: null, body: '## Vai trò\nx\n', file: '' };
+const fxPlugin = { id: 'fx', name: 'Fixture', description: 'Plugin fixture', version: '1.0.0',
+  shared: { principles: '' }, stages: [], agents: [fxAgent] };
+const fxWorkflows = { id: 'workflows', name: 'Workflows', description: 'Bộ workflow fixture', version: '1.0.0',
+  shared: { principles: '' }, agents: [], stages: [{ id: 'workflow-demo', description: 'Workflow fixture để test',
+    body: '# Demo\n', agents: ['fx-reviewer'], requires: ['core/git-workflow'],
+    assets: [], fileAssets: [], dirAssets: [], assetsDir: '' }] };
+const fxCore = { ...loadCore(), stages: [] };
+const fxMk = { name: 'fx-mkt', owner: { name: 'fx' }, description: '' };
+const byPath = (files) => new Map(files.map((f) => [f.path, f]));
+{
+  const out = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore, workflows: fxWorkflows }));
+  const agentMd = (out.get('plugins/fx/agents/fx-reviewer.md') || {}).content || '';
+  ok(agentMd.includes('name: fx-reviewer') && agentMd.includes('disallowedTools: Edit, Write, NotebookEdit, Agent'),
+    'claude agent: frontmatter name + disallowedTools read-only');
+  ok(agentMd.includes('effort: high') && agentMd.includes('`fx:fx-review`'), 'claude agent: effort + pointer skill dạng plugin');
+  const pj = JSON.parse((out.get('plugins/workflows/.claude-plugin/plugin.json') || { content: '{}' }).content);
+  ok(JSON.stringify(pj.dependencies) === '["core","fx"]', 'claude workflows: dependencies = core + plugin của agent/requires');
+  const wfMd = (out.get('plugins/workflows/skills/workflow-demo/SKILL.md') || {}).content || '';
+  ok(wfMd.includes('name: workflow-demo') && wfMd.includes('`fx:fx-reviewer`') && wfMd.includes('`core:git-workflow`'),
+    'claude workflows: SKILL.md + preamble dispatch 2 dạng tên');
+  const mk = JSON.parse(out.get('.claude-plugin/marketplace.json').content);
+  ok(mk.plugins.some((x) => x.name === 'workflows'), 'claude marketplace: có entry workflows');
+  const noWf = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore }));
+  ok(![...noWf.keys()].some((k) => k.startsWith('plugins/workflows/')), 'claude: không truyền workflows → không sinh plugin workflows');
+}
+{
+  ok(tomlBasic('a"b\\c\nd') === '"a\\"b\\\\c\\nd"', 'tomlBasic: escape " \\ và newline');
+  {
+    const out = tomlMultiline('x"""y\\z');
+    ok(out.startsWith('"""\n'), 'tomlMultiline: mở bằng """ + newline');
+    ok(out.endsWith('"""'), 'tomlMultiline: đóng bằng """');
+    const body = out.slice(4, -3);
+    ok(!/(^|[^\\])"""/.test(body), 'tomlMultiline: không còn chuỗi """ chưa escape ở giữa nội dung');
+  }
+  {
+    // Regression: content kết thúc bằng dấu " sát ngay dấu đóng """ (thuật toán cũ tạo 4 dấu " liên tiếp → lỗi cú pháp TOML).
+    const out = tomlMultiline('Hello"');
+    ok(out.startsWith('"""\n') && out.endsWith('"""'), 'tomlMultiline: content kết thúc bằng " vẫn mở/đóng đúng');
+    ok(out.slice(4, -3).endsWith('\\"'), 'tomlMultiline: dấu " cuối content được escape (không tạo 4 dấu " liên tiếp trước """ đóng)');
+  }
+  const out = byPath(codexAdapter.build([fxPlugin], { core: fxCore, workflows: fxWorkflows }));
+  const toml = (out.get('fx/agents/fx-reviewer.toml') || {}).content || '';
+  ok(toml.includes('sandbox_mode = "read-only"') && toml.includes('model_reasoning_effort = "high"'),
+    'codex agent: sandbox_mode + effort');
+  ok(toml.includes('developer_instructions = """') && toml.includes('`fx-review`'), 'codex agent: developer_instructions + pointer skill');
+  ok(!toml.includes('model ='), 'codex agent: KHÔNG map model');
+  ok(toml.includes('name = "fx_reviewer"'), 'codex agent: name đổi `-` → `_` (convention tài liệu subagents)');
+  const wfMd = (out.get('workflows/skills/workflow-demo/SKILL.md') || {}).content || '';
+  ok(wfMd.includes('name: workflow-demo') && wfMd.includes('Cách dispatch trên Codex'), 'codex workflows: SKILL.md + preamble Codex');
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. CORE
@@ -136,6 +262,88 @@ for (const p of plugins) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 2b. SOURCE: agents (plugins/<id>/agents/*.md)
+// ─────────────────────────────────────────────────────────────────────────────
+const catalogSkillIds = new Set([
+  'core/principles', ...core.stages.map((s) => `core/${s.id}`),
+  ...plugins.flatMap((p) => p.stages.map((s) => `${p.id}/${s.id}`)),
+]);
+const allAgents = plugins.flatMap((p) => p.agents);
+const MODES = ['read-only', 'write'];
+const MODELS = ['sonnet', 'opus', 'haiku', 'fable', 'inherit'];
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+const AGENT_HEADINGS = ['Vai trò', 'Phạm vi', 'Quy trình', 'Report trả về'];
+ok(new Set(allAgents.map((a) => a.id)).size === allAgents.length, 'agents: id duy nhất toàn cục');
+for (const a of allAgents) {
+  ok(path.basename(a.file, '.md') === a.id, `agent ${a.id}: name == tên file`);
+  ok(a.id.startsWith(`${a.plugin}-`) && !a.id.includes(':'), `agent ${a.id}: prefix "${a.plugin}-", không chứa ":"`);
+  ok(a.description.length > 10, `agent ${a.id}: có description`);
+  ok(MODES.includes(a.mode), `agent ${a.id}: mode ∈ {read-only, write} (=${a.mode})`);
+  ok(a.skills.length > 0, `agent ${a.id}: skills không rỗng`);
+  for (const s of a.skills) ok(catalogSkillIds.has(s), `agent ${a.id}: skill "${s}" tồn tại`);
+  if (a.model) ok(MODELS.includes(a.model), `agent ${a.id}: model hợp lệ (=${a.model})`);
+  if (a.effort) ok(EFFORTS.includes(a.effort), `agent ${a.id}: effort hợp lệ (=${a.effort})`);
+  for (const h of AGENT_HEADINGS) ok(a.body.includes(`## ${h}`), `agent ${a.id}: có heading "## ${h}"`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2c. SOURCE: workflows/ (bộ workflow + orchestrator cấp repo)
+// ─────────────────────────────────────────────────────────────────────────────
+const workflows = loadWorkflows();
+ok(!!workflows, 'workflows/.manifest.json tồn tại');
+if (workflows) {
+  for (const f of ['id', 'name', 'description', 'version']) ok(!!workflows.manifest[f], `workflows: .manifest.json có "${f}"`);
+  const agentById = new Map(allAgents.map((a) => [a.id, a]));
+  const byBare = new Map([...catalogSkillIds].map((s) => [s.split('/')[1], s]));
+  const wfs = workflows.stages.filter((s) => s.kind === 'workflow');
+  const orch = workflows.stages.filter((s) => s.kind === 'orchestrator');
+  const orders = workflows.stages.map((s) => s.order);
+  ok(new Set(orders).size === orders.length, 'workflows: order không trùng');
+  if (workflows.stages.length) ok(orch.length === 1, 'workflows: đúng 1 orchestrator');
+  for (const s of workflows.stages) {
+    ok(s.id === `workflow-${s.slug}`, `${s.id}: name == "workflow-<thư mục>"`);
+    ok(['workflow', 'orchestrator'].includes(s.kind), `${s.id}: kind ∈ {workflow, orchestrator}`);
+    ok(s.description.length > 10, `${s.id}: có description`);
+    ok(RUN_IN.includes(s.runsIn) && INVOKE_IN.includes(s.invoke), `${s.id}: runsIn/invoke hợp lệ`);
+    ok(s.pipeline === false && s.next === null, `${s.id}: pipeline=false, next=null`);
+    for (const aid of s.agents) ok(agentById.has(aid), `${s.id}: agent "${aid}" tồn tại`);
+    for (const r of s.requires) ok(catalogSkillIds.has(r), `${s.id}: requires "${r}" là skill plugin/core có thật`);
+    const errs = checkWorkflowBody(s.body, { kind: s.kind });
+    ok(errs.length === 0, `${s.id}: khung body hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
+    const allowed = new Set([...s.requires, ...s.agents.flatMap((aid) => (agentById.get(aid) || { skills: [] }).skills)]);
+    for (const st of stepRefs(s.body)) {
+      for (const aid of st.agents) ok(s.agents.includes(aid), `${s.id} bước ${st.n}: agent "${aid}" có trong frontmatter agents`);
+      for (const sk of st.skills) {
+        const full = sk.includes('/') ? sk : byBare.get(sk);
+        ok(!!full && allowed.has(full), `${s.id} bước ${st.n}: skill "${sk}" có trong requires hoặc skill của agent`);
+      }
+    }
+    if (s.kind === 'workflow') {
+      ok([1, 2, 3].includes(s.tier), `${s.id}: tier ∈ {1,2,3}`);
+      ok(RISKS.includes(s.risk), `${s.id}: risk ∈ {${RISKS.join(', ')}}`);
+      ok(s.order > 0, `${s.id}: order > 0`);
+    } else {
+      ok(s.order === 0, `${s.id}: orchestrator order = 0`);
+    }
+  }
+  for (const o of orch) {
+    const { rows, priority } = parseRegistry(o.body);
+    const reg = new Set(rows.map((r) => r.id));
+    const ids = new Set(wfs.map((w) => w.id));
+    ok(reg.size === rows.length, `${o.id}: registry không trùng id`);
+    for (const id of ids) ok(reg.has(id), `${o.id}: registry có ${id}`);
+    for (const id of reg) ok(ids.has(id), `${o.id}: registry "${id}" trỏ tới workflow có thật`);
+    for (const r of rows) {
+      const w = wfs.find((x) => x.id === r.id);
+      if (w) ok(r.risk === w.risk, `${o.id}: risk của ${r.id} khớp frontmatter (${r.risk} vs ${w.risk})`);
+      for (const n of r.next) ok(ids.has(n), `${o.id}: nối tiếp "${n}" của ${r.id} tồn tại`);
+    }
+    ok(priority.length === ids.size && [...ids].every((id) => priority.includes(id)),
+      `${o.id}: thứ tự ưu tiên liệt kê đủ ${ids.size} workflow`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 3. BUILD OUTPUT (Claude) — chuẩn hóa ở tầng adapter
 // ─────────────────────────────────────────────────────────────────────────────
 const BUILD = path.join(REPO_ROOT, 'build');
@@ -148,7 +356,9 @@ if (fs.existsSync(claudeDir)) {
   const mkName = loadMarketplace().name;
   ok(mk.name === mkName, `build: marketplace.json name khớp nguồn ("${mkName}")`);
   ok(mk.plugins.some((x) => x.name === 'core'), 'build: marketplace liệt kê core');
-  ok(mk.plugins.length === plugins.length + 1, `build: marketplace có ${plugins.length}+1 (core) entry`);
+  const wfBuilt = !!(workflows && workflows.stages.length);
+  ok(mk.plugins.length === plugins.length + 1 + (wfBuilt ? 1 : 0),
+    `build: marketplace có ${plugins.length}+1 (core)${wfBuilt ? '+1 (workflows)' : ''} entry`);
 
   // core plugin
   ok(fs.existsSync(path.join(claudeDir, 'plugins/core/.claude-plugin/plugin.json')), 'build: core plugin.json');
@@ -203,6 +413,25 @@ if (fs.existsSync(claudeDir)) {
         ok(content.includes('`git-workflow`') && content.includes('core:git-workflow'),
           `build claude ${s.id}: pointer git-workflow (phẳng + core:git-workflow)`);
       }
+    }
+  }
+
+  for (const a of allAgents) {
+    const f = path.join(claudeDir, 'plugins', a.plugin, 'agents', `${a.id}.md`);
+    ok(fs.existsSync(f), `build claude agent ${a.id}: có file`);
+    const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+    ok(c.includes(`name: ${a.id}`) && c.includes('disallowedTools:') && c.includes('Agent'),
+      `build claude agent ${a.id}: name + chặn tool Agent`);
+  }
+  if (wfBuilt) {
+    const pj = JSON.parse(fs.readFileSync(path.join(claudeDir, 'plugins/workflows/.claude-plugin/plugin.json'), 'utf8'));
+    ok(pj.dependencies[0] === 'core', 'build claude workflows: depends on core');
+    for (const s of workflows.stages) {
+      const f = path.join(claudeDir, 'plugins/workflows/skills', s.id, 'SKILL.md');
+      const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+      const fm = (c.match(/^---\n([\s\S]*?)\n---/) || ['', ''])[1];
+      ok(fm.includes(`name: ${s.id}`) && !/^(kind|tier|risk):/m.test(fm), `build claude ${s.id}: frontmatter chuẩn (strip metadata)`);
+      ok(c.includes('core:principles'), `build claude ${s.id}: pointer principles`);
     }
   }
 } else {
@@ -384,6 +613,15 @@ if (fs.existsSync(BUILD)) {
       const content = fs.readFileSync(out, 'utf8');
       ok(content.includes('`git-workflow`'),
         `build codex ${sample.id}: pointer git-workflow`);
+    }
+    for (const a of allAgents) {
+      const f = path.join(codexDir, a.plugin, 'agents', `${a.id}.toml`);
+      const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+      ok(/^name = ".+"$/m.test(c) && /^description = /m.test(c) && c.includes('developer_instructions = """')
+        && /^sandbox_mode = "(read-only|workspace-write)"$/m.test(c), `build codex agent ${a.id}: đủ trường`);
+    }
+    if (workflows) for (const s of workflows.stages) {
+      ok(fs.existsSync(path.join(codexDir, 'workflows', 'skills', s.id, 'SKILL.md')), `build codex ${s.id}: có SKILL.md`);
     }
   }
 }
