@@ -11,6 +11,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
 import { checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS } from '../cli/lib/workflows.mjs';
+import claudeAdapter from '../adapters/claude/adapter.mjs';
 
 let pass = 0;
 const fails = [];
@@ -98,6 +99,35 @@ ok(Array.isArray(loadCore().agents) && loadCore().agents.length === 0, 'loadCore
   ok(JSON.stringify(missingDeps(dep.required, new Set(['core/git-workflow']))) === '["backend/backend-code-review"]',
     'missingDeps: nêu skill không có trong catalog');
   ok(RISKS.join(',') === 'low,medium,high,critical', 'RISKS: 4 mức');
+}
+
+// 0c. UNIT: adapter với fixture (thuần — không đọc plugin thật)
+const fxAgent = { id: 'fx-reviewer', plugin: 'fx', description: 'Agent fixture để test adapter', mode: 'read-only',
+  skills: ['fx/fx-review'], model: null, effort: 'high', color: null, body: '## Vai trò\nx\n', file: '' };
+const fxPlugin = { id: 'fx', name: 'Fixture', description: 'Plugin fixture', version: '1.0.0',
+  shared: { principles: '' }, stages: [], agents: [fxAgent] };
+const fxWorkflows = { id: 'workflows', name: 'Workflows', description: 'Bộ workflow fixture', version: '1.0.0',
+  shared: { principles: '' }, agents: [], stages: [{ id: 'workflow-demo', description: 'Workflow fixture để test',
+    body: '# Demo\n', agents: ['fx-reviewer'], requires: ['core/git-workflow'],
+    assets: [], fileAssets: [], dirAssets: [], assetsDir: '' }] };
+const fxCore = { ...loadCore(), stages: [] };
+const fxMk = { name: 'fx-mkt', owner: { name: 'fx' }, description: '' };
+const byPath = (files) => new Map(files.map((f) => [f.path, f]));
+{
+  const out = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore, workflows: fxWorkflows }));
+  const agentMd = (out.get('plugins/fx/agents/fx-reviewer.md') || {}).content || '';
+  ok(agentMd.includes('name: fx-reviewer') && agentMd.includes('disallowedTools: Edit, Write, NotebookEdit, Agent'),
+    'claude agent: frontmatter name + disallowedTools read-only');
+  ok(agentMd.includes('effort: high') && agentMd.includes('`fx:fx-review`'), 'claude agent: effort + pointer skill dạng plugin');
+  const pj = JSON.parse((out.get('plugins/workflows/.claude-plugin/plugin.json') || { content: '{}' }).content);
+  ok(JSON.stringify(pj.dependencies) === '["core","fx"]', 'claude workflows: dependencies = core + plugin của agent/requires');
+  const wfMd = (out.get('plugins/workflows/skills/workflow-demo/SKILL.md') || {}).content || '';
+  ok(wfMd.includes('name: workflow-demo') && wfMd.includes('`fx:fx-reviewer`') && wfMd.includes('`core:git-workflow`'),
+    'claude workflows: SKILL.md + preamble dispatch 2 dạng tên');
+  const mk = JSON.parse(out.get('.claude-plugin/marketplace.json').content);
+  ok(mk.plugins.some((x) => x.name === 'workflows'), 'claude marketplace: có entry workflows');
+  const noWf = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore }));
+  ok(![...noWf.keys()].some((k) => k.startsWith('plugins/workflows/')), 'claude: không truyền workflows → không sinh plugin workflows');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -299,7 +329,9 @@ if (fs.existsSync(claudeDir)) {
   const mkName = loadMarketplace().name;
   ok(mk.name === mkName, `build: marketplace.json name khớp nguồn ("${mkName}")`);
   ok(mk.plugins.some((x) => x.name === 'core'), 'build: marketplace liệt kê core');
-  ok(mk.plugins.length === plugins.length + 1, `build: marketplace có ${plugins.length}+1 (core) entry`);
+  const wfBuilt = !!(workflows && workflows.stages.length);
+  ok(mk.plugins.length === plugins.length + 1 + (wfBuilt ? 1 : 0),
+    `build: marketplace có ${plugins.length}+1 (core)${wfBuilt ? '+1 (workflows)' : ''} entry`);
 
   // core plugin
   ok(fs.existsSync(path.join(claudeDir, 'plugins/core/.claude-plugin/plugin.json')), 'build: core plugin.json');
@@ -354,6 +386,25 @@ if (fs.existsSync(claudeDir)) {
         ok(content.includes('`git-workflow`') && content.includes('core:git-workflow'),
           `build claude ${s.id}: pointer git-workflow (phẳng + core:git-workflow)`);
       }
+    }
+  }
+
+  for (const a of allAgents) {
+    const f = path.join(claudeDir, 'plugins', a.plugin, 'agents', `${a.id}.md`);
+    ok(fs.existsSync(f), `build claude agent ${a.id}: có file`);
+    const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+    ok(c.includes(`name: ${a.id}`) && c.includes('disallowedTools:') && c.includes('Agent'),
+      `build claude agent ${a.id}: name + chặn tool Agent`);
+  }
+  if (wfBuilt) {
+    const pj = JSON.parse(fs.readFileSync(path.join(claudeDir, 'plugins/workflows/.claude-plugin/plugin.json'), 'utf8'));
+    ok(pj.dependencies[0] === 'core', 'build claude workflows: depends on core');
+    for (const s of workflows.stages) {
+      const f = path.join(claudeDir, 'plugins/workflows/skills', s.id, 'SKILL.md');
+      const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+      const fm = (c.match(/^---\n([\s\S]*?)\n---/) || ['', ''])[1];
+      ok(fm.includes(`name: ${s.id}`) && !/^(kind|tier|risk):/m.test(fm), `build claude ${s.id}: frontmatter chuẩn (strip metadata)`);
+      ok(c.includes('core:principles'), `build claude ${s.id}: pointer principles`);
     }
   }
 } else {
