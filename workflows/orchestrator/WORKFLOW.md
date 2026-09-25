@@ -42,8 +42,12 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 | `workflow-code-review` | "PR #", "review", "diff" | low | — | Cần sửa code → feature/bugfix |
 | `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | — | Chỉ cần quality gate trước release → release |
 | `workflow-incident` | "prod down", "sự cố", "alert", "incident" | critical | `workflow-bugfix` | Lỗi tái hiện được ở local, production vẫn ổn → bugfix |
+| `workflow-testing` | "viết test", "tăng coverage", "test strategy", "kiểm thử" | low | — | Failure là lỗi code cần sửa → bugfix |
+| `workflow-db-change` | "đổi schema", "migration", "thêm cột/bảng", "đổi index" | high | — | Không đổi schema, chỉ đổi query/logic → feature/bugfix |
+| `workflow-api` | "làm API", "thêm endpoint", "OpenAPI", "contract-first" | medium | — | Không cần contract mới, chỉ sửa logic nội bộ → feature/bugfix |
+| `workflow-release` | "release", "phát hành", "chuẩn bị deploy", "ra version" | high | — | Chưa sẵn sàng phát hành, cần sửa lỗi/tính năng trước → feature/bugfix |
 
-**Thứ tự ưu tiên:** `workflow-incident` > `workflow-security-review` > `workflow-bugfix` > `workflow-feature` > `workflow-refactor` > `workflow-code-review`
+**Thứ tự ưu tiên:** `workflow-incident` > `workflow-security-review` > `workflow-bugfix` > `workflow-db-change` > `workflow-api` > `workflow-feature` > `workflow-refactor` > `workflow-testing` > `workflow-code-review` > `workflow-release`
 
 ## Các bước
 
