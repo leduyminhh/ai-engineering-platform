@@ -145,7 +145,7 @@ Trả về đúng khối sau; mục nào không chạy được ghi `status: not
 ```yaml
 workflow_result:
   workflow: workflow-code-review
-  status: completed        # completed | failed | blocked
+  status: completed        # completed | failed | blocked — "completed" = đã có verdict, KHÔNG nghĩa là code sạch blocker
   summary: "<1–3 câu, kèm verdict approve | request-changes>"
   changes: { added: [], modified: [], deleted: [] }
   validation:

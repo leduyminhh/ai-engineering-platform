@@ -98,8 +98,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 5 — Refactor từng bước
 
-- **Thực hiện:** skill `backend-refactor` \| skill `frontend-refactor` \| skill `backend-migrate-architecture`
-  \| skill `frontend-migrate-architecture` (theo chế độ Bước 1 và phía có vùng đụng)
+- **Thực hiện:** skill `backend-refactor` \| skill `frontend-refactor` \| skill `backend-migrate-architecture` \| skill `frontend-migrate-architecture` (theo chế độ Bước 1 và phía có vùng đụng)
 - **Đầu vào:** characterization test từ Bước 4; ADR từ Bước 2 (nếu chế độ `architecture`)
 - **Hành động:** thực hiện từng bước refactor nhỏ (extract method/class, đảo phụ thuộc, di chuyển file theo
   template kiến trúc đích…); chạy lại test + build sau MỖI bước nhỏ trước khi sang bước tiếp theo.

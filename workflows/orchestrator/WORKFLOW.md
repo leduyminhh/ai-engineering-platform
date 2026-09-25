@@ -38,9 +38,9 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 |---|---|---|---|---|
 | `workflow-feature` | "thêm tính năng", "làm feature", "user story", acceptance criteria | medium | — | Chỉ sửa lỗi hành vi đã có → bugfix |
 | `workflow-bugfix` | "lỗi", "bug", stacktrace, "không chạy", "sai kết quả" | medium | — | Hệ thống production đang sập → incident |
-| `workflow-refactor` | "refactor", "tái cấu trúc", "dọn code", "đổi kiến trúc" | medium | — | Đổi hành vi → feature |
-| `workflow-code-review` | "review PR", "review code", "đọc soát diff", "nhận xét PR" | low | — | Cần sửa code → feature/bugfix |
-| `workflow-security-review` | "security review", "review bảo mật", "quét lỗ hổng", "OWASP", "kiểm secret" | high | — | Chỉ cần quality gate trước release → release |
+| `workflow-refactor` | "refactor", "tái cấu trúc", "đổi kiến trúc" | medium | — | Đổi hành vi → feature |
+| `workflow-code-review` | "PR #", "review", "diff" | low | — | Cần sửa code → feature/bugfix |
+| `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | — | Chỉ cần quality gate trước release → release |
 | `workflow-incident` | "prod down", "sự cố", "alert", "incident" | critical | `workflow-bugfix` | Lỗi tái hiện được ở local, production vẫn ổn → bugfix |
 
 **Thứ tự ưu tiên:** `workflow-incident` > `workflow-security-review` > `workflow-bugfix` > `workflow-feature` > `workflow-refactor` > `workflow-code-review`

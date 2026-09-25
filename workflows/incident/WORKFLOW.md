@@ -153,6 +153,7 @@ production.
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Không áp dụng — workflow này không chạy code review; rủi ro production xử lý ở Bước 4 |
 | Cấm: agent tự thực hiện thao tác tác động production (Bước 4) | Từ chối thực hiện, chỉ đề xuất; yêu cầu người dùng tự thực hiện |
+| Người dùng chưa chọn được phương án mitigation (sau Bước 4 ⏸) | Dừng, giữ nguyên hiện trạng, chờ người dùng quyết định; không tự đề xuất mặc định rồi thực hiện thay |
 | Không giả thuyết nào khớp evidence (Bước 3) | Quay lại Bước 2 thu thêm evidence |
 | Metric chưa về bình thường sau mitigation (Bước 5) | Quay lại Bước 4 đề xuất phương án khác |
 | Người dùng không duyệt diff postmortem (sau Bước 7 ⏸) | Không commit, quay lại Bước 6 sửa theo yêu cầu |
