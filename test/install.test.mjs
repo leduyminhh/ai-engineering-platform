@@ -649,6 +649,25 @@ try {
   process.env.AIE_INSTALL_ROOT = TMP;
 }
 
+// ── regression: results.push() phải dùng SELECTION ĐÃ STRIP (entry), khớp với manifest ───────
+// Trước fix: results.push dùng effPlugins/skillsFinal (TRƯỚC khi stripUnsupportedWorkflows lọc)
+// → với provider chưa hỗ trợ workflow (cursor/antigravity), dòng tóm tắt CLI (reportInstall) vẫn
+// liệt kê workflows như đã cài dù manifest đã strip — mâu thuẫn với cảnh báo "chưa hỗ trợ workflow".
+{
+  const TMP_RS = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wf-strip-'));
+  process.env.AIE_INSTALL_ROOT = TMP_RS;
+  const r = install({ providers: 'cursor', skills: ['workflows/workflow-feature'], scope: 'project' });
+  const res = r.results[0];
+  ok(!res.plugins.includes('workflows') && !res.skills.includes('workflows/workflow-feature'),
+    'results (cursor, chưa hỗ trợ workflow): plugins/skills KHÔNG chứa workflows (đã strip)');
+  const mf = JSON.parse(fs.readFileSync(path.join(TMP_RS, '.ai-engineering/manifest.json'), 'utf8'));
+  const ce = mf.installs.find((e) => e.provider === 'cursor');
+  ok(JSON.stringify(res.plugins) === JSON.stringify(ce.plugins) && JSON.stringify(res.skills) === JSON.stringify(ce.skills),
+    'results khớp ĐÚNG với manifest entry (cùng selection đã strip, không lệch)');
+  fs.rmSync(TMP_RS, { recursive: true, force: true });
+  process.env.AIE_INSTALL_ROOT = TMP;
+}
+
 // ── pack Cowork: manifest _cowork.json + ZIP writer zero-dep ─────────────────
 {
   const z = zipBuffer([{ name: 'd/a.txt', data: Buffer.from('hello cowork') }]);

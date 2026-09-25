@@ -661,7 +661,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     const relF = rel(files), relL = rel(links);
     const managed = applyManagedBlock(root, instructionFiles(provider, scope));
     m.installs.push({ ...entry, files: relF, links: relL, managed, installedAt: new Date().toISOString() });
-    results.push({ provider, plugins: effPlugins, skills: skillsFinal, linked: relL.length, copied: relF.length, count: relF.length + relL.length, pulled: deps.pulled });
+    results.push({ provider, plugins: entry.plugins, skills: entry.skills, linked: relL.length, copied: relF.length, count: relF.length + relL.length, pulled: deps.pulled });
   }
   writeManifest(scope, m);
   // Cài claude → đóng gói sẵn skill cho Cowork (Cowork không đọc kho plugin local; phải upload .zip).
