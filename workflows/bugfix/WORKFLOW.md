@@ -106,7 +106,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía đã fix)
 - **Đầu vào:** code fix từ Bước 5
-- **Hành động:** chạy toàn bộ test suite của phía đã fix (không chỉ test mới) để phát hiện regression.
+- **Hành động:** chạy toàn bộ test suite của phía đã fix (không chỉ test mới) để phát hiện regression; và
+  đối chiếu số lượng test trước/sau fix để xác nhận không có test nào bị xoá hoặc nới lỏng điều kiện.
 - **Ràng buộc:** không xoá/nới bất kỳ test nào để toàn bộ test pass.
 - **Đầu ra:** báo cáo toàn bộ test suite pass.
 - **Gate:** toàn bộ test pass.
