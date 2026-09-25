@@ -8,11 +8,17 @@ import { fileURLToPath } from 'node:url';
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const PLUGINS_DIR = path.join(REPO_ROOT, 'plugins');
 export const CORE_DIR = path.join(REPO_ROOT, 'core');
+export const WORKFLOWS_DIR = path.join(REPO_ROOT, 'workflows');
 
 function readJSON(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
 // Normalize CRLF -> LF so the model is line-ending agnostic regardless of how source
 // files were authored (Windows checkouts are often CRLF); adapters then emit canonical LF.
 function readText(p) { return fs.existsSync(p) ? fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n') : ''; }
+
+/** Danh sách trong frontmatter là chuỗi "a, b" vì parser chỉ nhận scalar. */
+export function splitList(v) {
+  return typeof v === 'string' ? v.split(',').map((s) => s.trim()).filter(Boolean) : [];
+}
 
 /**
  * Chuẩn hoá mảng `published` thô → map {pluginId: '*' | string[fullSkillId]}. Phần tử "plugin"
@@ -84,6 +90,7 @@ export function loadCore() {
     version: '1.1.1',
     principles: readCorePrinciples(),
     stages: loadSkills(CORE_DIR),
+    agents: [],
   };
 }
 
@@ -176,6 +183,84 @@ function loadSkills(pluginDir) {
   return stages;
 }
 
+/** Agent ở `agents/<id>.md`; `skills` trần hiểu là skill cùng plugin. */
+function loadAgents(pluginDir, pluginId) {
+  const dir = path.join(pluginDir, 'agents');
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort().map((f) => {
+    const { meta, body } = parseFrontmatter(readText(path.join(dir, f)));
+    return {
+      id: meta.name || path.basename(f, '.md'),
+      plugin: pluginId,
+      description: meta.description || '',
+      mode: meta.mode || '',
+      skills: splitList(meta.skills).map((s) => (s.includes('/') ? s : `${pluginId}/${s}`)),
+      model: meta.model || null,
+      effort: meta.effort || null,
+      color: meta.color || null,
+      body,
+      file: path.join(dir, f),
+    };
+  });
+}
+
+/**
+ * Bộ workflow cấp repo (`workflows/<slug>/WORKFLOW.md`), trả object hình dạng plugin như loadCore()
+ * để adapter/installer dùng lại đường xử lý skill. Thiếu `workflows/.manifest.json` → null.
+ */
+export function loadWorkflows() {
+  const manifestPath = path.join(WORKFLOWS_DIR, '.manifest.json');
+  if (!fs.existsSync(manifestPath)) return null;
+  const manifest = readJSON(manifestPath);
+  const stages = [];
+  for (const e of fs.readdirSync(WORKFLOWS_DIR, { withFileTypes: true })) {
+    if (!e.isDirectory()) continue;
+    const dir = path.join(WORKFLOWS_DIR, e.name);
+    const file = path.join(dir, 'WORKFLOW.md');
+    if (!fs.existsSync(file)) continue;
+    const { meta, body } = parseFrontmatter(readText(file));
+    const entries = fs.readdirSync(dir, { withFileTypes: true })
+      .filter((x) => x.name !== 'WORKFLOW.md' && x.name !== 'README.md');
+    // assetFiles copy `assets` bằng copyDir, nên file lẻ (checklist.md) phải đi đường fileAssets.
+    const assets = entries.filter((x) => x.isDirectory()).map((x) => x.name);
+    const fileAssets = entries.filter((x) => x.isFile()).map((x) => ({ name: x.name, from: path.join(dir, x.name) }));
+    stages.push({
+      id: meta.name || `workflow-${e.name}`,
+      slug: e.name,
+      order: typeof meta.order === 'number' ? meta.order : 0,
+      title: meta.title || '',
+      description: meta.description || '',
+      kind: meta.kind || '',
+      tier: typeof meta.tier === 'number' ? meta.tier : null,
+      risk: meta.risk || '',
+      agents: splitList(meta.agents),
+      requires: splitList(meta.requires),
+      runsIn: meta.runsIn || '',
+      invoke: meta.invoke || '',
+      pipeline: meta.pipeline === false || meta.pipeline === 'false' ? false : true,
+      next: meta.next === undefined ? null : meta.next,
+      body,
+      dir,
+      assetsDir: dir,
+      assets,
+      fileAssets,
+      dirAssets: [],
+    });
+  }
+  stages.sort((a, b) => a.order - b.order);
+  return {
+    id: manifest.id || 'workflows',
+    name: manifest.name || 'Workflows',
+    description: manifest.description || '',
+    version: manifest.version || '0.0.0',
+    manifest,
+    shared: { principles: '' },
+    stages,
+    agents: [],
+    dir: WORKFLOWS_DIR,
+  };
+}
+
 /**
  * Load every plugin under plugins/. A plugin = a directory containing `.manifest.json`.
  * Names starting with "_" are skipped (e.g. plugins/_marketplace.json is config, not a plugin).
@@ -200,6 +285,7 @@ export function loadPlugins() {
       manifest,
       shared: { principles: readText(path.join(dir, 'shared', 'principles.md')) },
       stages: loadSkills(dir),
+      agents: loadAgents(dir, id),
       dir,
     });
   }

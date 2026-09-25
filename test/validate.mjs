@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { loadPlugins, loadCore, loadMarketplace, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
+import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
 
 let pass = 0;
 const fails = [];
@@ -30,6 +30,19 @@ function listFilesRec(dir, baseDir = dir) {
   return out;
 }
 const hasFiles = (dir) => listFilesRec(dir).length > 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 0. UNIT: loader agent + workflows
+// ─────────────────────────────────────────────────────────────────────────────
+ok(JSON.stringify(splitList(' a, b ,,c ')) === '["a","b","c"]', 'splitList: tách phẩy + trim + bỏ rỗng');
+ok(Array.isArray(splitList(undefined)) && splitList(undefined).length === 0, 'splitList: không phải chuỗi → []');
+ok(loadPlugins().every((p) => Array.isArray(p.agents)), 'loadPlugins: mỗi plugin có mảng agents');
+ok(Array.isArray(loadCore().agents) && loadCore().agents.length === 0, 'loadCore: agents = []');
+{
+  const wf = loadWorkflows();
+  ok(!!wf && wf.id === 'workflows', 'loadWorkflows: đọc workflows/.manifest.json (id = workflows)');
+  ok(!!wf && Array.isArray(wf.stages), 'loadWorkflows: có mảng stages');
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. CORE
