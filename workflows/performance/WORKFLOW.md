@@ -6,7 +6,7 @@ title: "Performance — profile, tối ưu, benchmark trước/sau"
 kind: workflow
 tier: 3
 risk: medium
-agents: "backend-reviewer"
+agents: "backend-reviewer,frontend-reviewer"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -25,7 +25,7 @@ next: null
 
 ## Điều kiện tiên quyết
 
-- Skill/agent đã cài: `backend-reviewer`, skill `core/git-workflow`.
+- Skill/agent đã cài: `backend-reviewer`, `frontend-reviewer`, skill `core/git-workflow`.
 - Artifact phải có sẵn: không bắt buộc, ngoài mô tả vấn đề của người dùng.
 - Baseline: build/test hiện tại của vùng đụng đang XANH trước khi tối ưu.
 
@@ -93,9 +93,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 6 — Review
 
-- **Thực hiện:** agent `backend-reviewer`
+- **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` (chỉ phía có đụng)
 - **Đầu vào:** code đã tối ưu + số đo từ Bước 5
-- **Hành động:** review thay đổi theo trục correctness/performance, trả finding.
+- **Hành động:** review thay đổi theo trục correctness/performance của phía tương ứng, trả finding.
 - **Ràng buộc:** chỉ đọc, không tự sửa code.
 - **Đầu ra:** danh sách finding.
 - **Gate:** 0 finding blocker.

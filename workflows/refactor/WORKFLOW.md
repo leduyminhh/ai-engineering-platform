@@ -59,7 +59,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** agent `engineering-spec-analyst` (chỉ chế độ `architecture`; chế độ `code` ghi "N/A")
 - **Đầu vào:** chế độ + phạm vi từ Bước 1
 - **Hành động:** nếu chế độ `architecture`, viết ADR mô tả kiến trúc đích + lý do đổi + rủi ro; trình cho
-  người dùng chấp nhận trước khi baseline. Chế độ `code` bỏ qua, ghi rõ "N/A" trong report.
+  người dùng chấp nhận trước khi baseline. Chế độ `code` bỏ qua, ghi rõ "N/A" trong report và đi tiếp Bước 3
+  không dừng checkpoint.
 - **Ràng buộc:** không tự chọn kiến trúc đích khi chưa hỏi người dùng; không bắt đầu di chuyển file khi ADR
   chưa được chấp nhận.
 - **Đầu ra:** ADR đã ghi (chế độ `architecture`), hoặc dòng "N/A" (chế độ `code`).
@@ -153,7 +154,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
-| 2 | ADR kiến trúc đích + rủi ro (chế độ `architecture`) | Người dùng chấp nhận ADR |
+| 2 | ADR kiến trúc đích + rủi ro (chỉ chế độ `architecture`; chế độ `code` không dừng) | Người dùng chấp nhận ADR |
 | 8 | Diff refactor hoàn chỉnh từng lô (code + test) | Người dùng duyệt diff từng lô |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.

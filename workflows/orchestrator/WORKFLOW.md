@@ -59,8 +59,9 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả yêu cầu của người dùng
-- **Hành động:** so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; nếu khớp nhiều dòng, áp dụng
-  **Thứ tự ưu tiên** để rút về tối đa 2 ứng viên.
+- **Hành động:** so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; loại dòng mà yêu cầu rơi vào cột
+  `Không dùng khi` (chuyển sang workflow cột đó chỉ tới); nếu vẫn khớp nhiều dòng, áp dụng **Thứ tự ưu tiên**
+  để rút về tối đa 2 ứng viên.
 - **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry; không đoán khi tín hiệu quá yếu — nêu rõ vì
   sao chọn.
 - **Đầu ra:** 1 workflow đã chọn, hoặc tối đa 2 ứng viên kèm lý do.
@@ -95,16 +96,18 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 - **Khi fail:** người dùng từ chối hoặc còn mơ hồ → quay lại Bước 1 với thông tin bổ sung.
 - **Evidence:** câu trả lời xác nhận của người dùng (trích dẫn nguyên văn trong report).
 
-### Bước 4 — Chạy
+### Bước 4 — Chạy ⏸
 
 - **Thực hiện:** session chính
 - **Đầu vào:** workflow (và chuỗi nối tiếp) đã được xác nhận ở Bước 3
-- **Hành động:** gọi skill của workflow đã chọn; nếu có chuỗi nối tiếp, chạy tuần tự tối đa 3 workflow, chèn
-  checkpoint ⏸ của chính workflow đó giữa mỗi lượt.
+- **Hành động:** gọi skill của workflow đã chọn; nếu có chuỗi nối tiếp, chạy tuần tự tối đa 3 workflow; sau
+  mỗi workflow (trừ workflow cuối) dừng, trình `workflow_result` vừa xong và hỏi người dùng có chạy workflow kế
+  tiếp không.
 - **Ràng buộc:** không chạy song song nhiều workflow; không tự nối thêm workflow ngoài chuỗi đã xác nhận;
   không gọi lồng orchestrator.
 - **Đầu ra:** một `workflow_result` cho mỗi workflow đã chạy trong chuỗi.
-- **Gate:** mỗi workflow trong chuỗi trả về `workflow_result` hợp lệ (có `status`).
+- **Gate:** mỗi workflow đã chạy trả về `workflow_result` hợp lệ (có `status`); người dùng xác nhận trước mỗi
+  workflow kế tiếp trong chuỗi.
 - **Khi fail:** một workflow trong chuỗi `blocked`/`failed` → dừng chuỗi tại đó, không chạy tiếp workflow sau.
 - **Evidence:** khối `workflow_result` của từng workflow đã chạy.
 
@@ -125,6 +128,7 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
 | 3 | Workflow được chọn, lý do, risk, chuỗi nối tiếp dự kiến | Người dùng xác nhận rõ ràng (bằng lời với risk high/critical) |
+| 4 | `workflow_result` của workflow vừa xong + workflow kế tiếp trong chuỗi | Người dùng xác nhận chạy tiếp (không có chuỗi → không dừng) |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối của workflow con; orchestrator không tự
 commit.
@@ -139,6 +143,7 @@ commit.
 | Finding `blocker` (trong workflow con) | Workflow con dừng `blocked`; orchestrator dừng chain tại đó |
 | Không tín hiệu nào khớp Registry | Dừng, hỏi người dùng mô tả lại việc cần làm |
 | Workflow chưa cài | In lệnh `aip install`, dừng `blocked`, không tự cài |
+| Người dùng không muốn chạy workflow kế tiếp (sau Bước 4 ⏸) | Dừng chuỗi, tổng hợp các `workflow_result` đã có ở Bước 5 |
 
 - **Điều kiện dừng:** không tín hiệu nào khớp; workflow chưa cài; người dùng không xác nhận ở Bước 3; một
   workflow trong chain trả `blocked`/`failed`.

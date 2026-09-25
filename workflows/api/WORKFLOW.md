@@ -95,24 +95,35 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** type/client không khớp contract → sửa lại theo đúng contract, không sửa contract để hợp FE.
 - **Evidence:** đường dẫn file type/client, hoặc dòng "bỏ qua" trong report bước.
 
-### Bước 6 — Docs & commit ⏸
+### Bước 6 — Docs
+
+- **Thực hiện:** session chính
+- **Đầu vào:** contract + code + test đã qua Bước 1–5
+- **Hành động:** cập nhật docs API bị ảnh hưởng (README/API docs/ví dụ request-response) theo contract đã chốt.
+- **Ràng buộc:** docs phải khớp contract; không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`.
+- **Đầu ra:** docs API cập nhật, hoặc ghi rõ "không ảnh hưởng".
+- **Gate:** docs API bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng".
+- **Khi fail:** không xác định được docs nào bị ảnh hưởng → hỏi lại người dùng.
+- **Evidence:** danh sách file docs đã cập nhật, hoặc dòng "không ảnh hưởng".
+
+### Bước 7 — Commit ⏸
 
 - **Thực hiện:** skill `git-workflow`
-- **Đầu vào:** contract + code + test đã qua Bước 1–5
-- **Hành động:** cập nhật docs API bị ảnh hưởng; đề xuất commit message Conventional Commits (header EN, body
-  VI); trình diff cho người dùng duyệt.
-- **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff.
-- **Đầu ra:** docs API cập nhật + commit đã tạo (sau khi người dùng duyệt).
-- **Gate:** docs API cập nhật; người dùng duyệt diff.
+- **Đầu vào:** contract + code + test + docs đã qua Bước 1–6
+- **Hành động:** đề xuất commit message Conventional Commits (header EN, body VI); trình diff cho người dùng
+  duyệt.
+- **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
+- **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
+- **Gate:** người dùng duyệt diff.
 - **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước tương ứng, không commit tạm.
-- **Evidence:** danh sách docs đã cập nhật + hash commit + message.
+- **Evidence:** hash commit + message.
 
 ## Checkpoint
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
 | 1 | OpenAPI 3.1 (mới/đổi) + versioning/deprecation nếu breaking | Người dùng xác nhận contract |
-| 6 | Docs API + diff code/test | Người dùng duyệt diff |
+| 7 | Docs API + diff code/test | Người dùng duyệt diff |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
 
@@ -126,7 +137,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Người dùng không xác nhận contract (sau Bước 1 ⏸) | Sửa lại theo góp ý, trình lại, không code trước |
 | Phát hiện drift contract↔code (Bước 4) | Quay lại Bước 2 sửa code hoặc Bước 1 sửa contract |
-| Người dùng không duyệt diff (sau Bước 6 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+| Người dùng không duyệt diff (sau Bước 7 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 
 - **Điều kiện dừng:** người dùng không xác nhận contract sau nhiều vòng; drift contract↔code không sửa được;
   finding `blocker` không sửa được; người dùng không duyệt diff.
@@ -140,7 +151,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] Integration + contract test pass — evidence: Bước 3
 - [ ] 0 drift contract↔code — evidence: Bước 4
 - [ ] FE client khớp contract hoặc ghi "bỏ qua" — evidence: Bước 5
-- [ ] Docs API cập nhật, người dùng đã duyệt diff và commit đã tạo — evidence: Bước 6
+- [ ] Docs API cập nhật hoặc ghi "không ảnh hưởng" — evidence: Bước 6
+- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed`
 - [ ] 0 finding `blocker`
 

@@ -130,7 +130,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu; không commit
   thay đổi code (chỉ tài liệu) trong workflow này.
 - **Đầu ra:** commit tài liệu postmortem đã tạo (sau khi người dùng duyệt).
-- **Gate:** người dùng duyệt diff; `next_actions` gợi ý `workflow-bugfix`.
+- **Gate:** người dùng duyệt diff; prevention cần sửa code thì `next_actions` gợi ý `workflow-bugfix`.
 - **Khi fail:** người dùng yêu cầu sửa thêm nội dung postmortem → quay lại Bước 6, không commit tạm.
 - **Evidence:** hash commit + message.
 
@@ -196,7 +196,7 @@ workflow_result:
   findings: []             # severity, category, location, evidence, impact, recommendation, confidence
   remaining_risks: []
   docs_updated: []
-  next_actions: ["workflow-bugfix"]
+  next_actions: ["workflow-bugfix"]  # chỉ khi prevention cần sửa code
   incident:
     summary: "<1–3 câu>"
     timeline: []            # {time, event}

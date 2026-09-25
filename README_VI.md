@@ -155,7 +155,7 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01–WF04, WF07–WF09 |
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05 |
-| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04 |
+| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04, WF09 |
 | `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF11 |
 | `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram | WF01, WF03, WF10, WF12 |
 | `engineering-release-scribe` | engineering | write (chỉ `docs/`, `CHANGELOG.md`) | engineering-release-notes | WF11 |
@@ -181,7 +181,7 @@ xác nhận bắt buộc của orchestrator.
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor |
 | WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-reviewer |
 | WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract của W1) | backend-implementer, backend-test-writer, backend-reviewer |
-| WF09 | `workflow-performance` | 3 | medium | W16 | backend-reviewer |
+| WF09 | `workflow-performance` | 3 | medium | W16 | backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer |
 | WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |
