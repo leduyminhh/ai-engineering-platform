@@ -56,7 +56,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** gom commit trong phạm vi thành release notes/CHANGELOG theo type/scope; trình cho người
   dùng xác nhận nội dung đúng phạm vi.
 - **Ràng buộc:** không đưa commit ngoài phạm vi release vào notes.
-- **Đầu ra:** release notes/CHANGENLOG đã xác nhận.
+- **Đầu ra:** release notes/CHANGELOG đã xác nhận.
 - **Gate:** notes/CHANGELOG từ git log đúng phạm vi.
 - **Khi fail:** người dùng chỉ ra thiếu/thừa mục → sửa lại theo git log, trình lại.
 - **Evidence:** đường dẫn/nội dung release notes + xác nhận của người dùng.

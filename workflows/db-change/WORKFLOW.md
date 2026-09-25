@@ -129,6 +129,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Một lượt migrate up/rollback/up thất bại (Bước 5) | Quay lại Bước 3 sửa migration, chạy lại cả chuỗi từ đầu |
 | Người dùng không duyệt diff (sau Bước 6 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 | Thay đổi phá huỷ dữ liệu chưa được xác nhận | Cấm thực hiện; quay lại Bước 2 xin xác nhận rõ ràng |
+| Yêu cầu chạy migration trên production | Cấm thực hiện; chỉ chạy trên DB test |
 
 - **Điều kiện dừng:** người dùng không xác nhận thiết kế migration sau nhiều vòng; chuỗi migrate up/rollback/up
   liên tục thất bại; finding `blocker` không sửa được; người dùng không duyệt diff; yêu cầu chạy migration
