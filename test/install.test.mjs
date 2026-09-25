@@ -143,14 +143,17 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   const pub = publishedPluginIds();
   ok(pub.includes('backend') && pub.includes('frontend'),
     'publishedPluginIds: gồm backend, frontend');
-  ok(!pub.includes('engineering') && !pub.includes('data') && !pub.includes('ops'),
-    'publishedPluginIds: KHÔNG gồm plugin chưa publish (engineering, data, ops)');
+  ok(pub.includes('engineering') && pub.includes('ops'), 'publishedPluginIds: gồm engineering, ops');
+  ok(!pub.includes('data'), 'publishedPluginIds: KHÔNG gồm data (draft)');
   const offered = offeredCatalog().plugins.map((p) => p.id);
-  ok(offered[0] === 'core', 'offeredCatalog: core đứng đầu');
+  ok(offered[0] === 'core' && offered[1] === 'workflows', 'offeredCatalog: core rồi workflows');
   ok(offered.includes('backend') && offered.includes('frontend'),
     'offeredCatalog: gồm 2 plugin đã publish');
-  ok(!offered.includes('engineering') && !offered.includes('data') && !offered.includes('ops'),
-    'offeredCatalog: ẩn plugin chưa publish khỏi wizard');
+  ok(offered.includes('engineering') && offered.includes('ops') && !offered.includes('data'),
+    'offeredCatalog: offer engineering/ops, ẩn data');
+  ok(offeredCatalog().plugins[1].skillIds.length === 13, 'offeredCatalog: đủ 12 workflow + orchestrator');
+  ok(offeredCatalog({ backend: '*', frontend: '*' }).plugins.find((p) => p.id === 'workflows')
+    .skillIds.every((s) => !s.endsWith('/workflow-feature')), 'offeredCatalog: ẩn workflow có closure chưa được offer');
   ok(skillCatalog().plugins.some((p) => p.id === 'data'),
     'skillCatalog: vẫn liệt kê plugin chưa publish (gate flag cho dev)');
   // per-skill: publish một phần → chỉ offer skill lẻ trong plugin (map inject để test độc lập file)
@@ -173,8 +176,9 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   ok(offeredIds[0] === 'core', 'report: core đứng đầu offered');
   ok(['backend', 'frontend'].every((id) => offeredIds.includes(id)),
     'report: offered gồm mọi plugin đã publish');
-  ok(m.draft.some((e) => e.id === 'engineering') && !offeredIds.includes('engineering'),
-    'report: engineering nằm ở draft, KHÔNG ở offered');
+  ok(offeredIds.includes('engineering') && offeredIds.includes('ops') && !m.draft.some((e) => e.id === 'engineering'),
+    'report: engineering + ops đã publish → nằm ở offered');
+  ok(offeredIds.includes('workflows'), 'report: offered có nhóm workflows');
   ok(m.draft.some((e) => e.id === 'data') && !offeredIds.includes('data'),
     'report: data nằm ở draft, KHÔNG ở offered');
   const be = m.offered.find((e) => e.id === 'backend');
