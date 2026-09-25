@@ -205,6 +205,88 @@ for (const p of plugins) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 2b. SOURCE: agents (plugins/<id>/agents/*.md)
+// ─────────────────────────────────────────────────────────────────────────────
+const catalogSkillIds = new Set([
+  'core/principles', ...core.stages.map((s) => `core/${s.id}`),
+  ...plugins.flatMap((p) => p.stages.map((s) => `${p.id}/${s.id}`)),
+]);
+const allAgents = plugins.flatMap((p) => p.agents);
+const MODES = ['read-only', 'write'];
+const MODELS = ['sonnet', 'opus', 'haiku', 'fable', 'inherit'];
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+const AGENT_HEADINGS = ['Vai trò', 'Phạm vi', 'Quy trình', 'Report trả về'];
+ok(new Set(allAgents.map((a) => a.id)).size === allAgents.length, 'agents: id duy nhất toàn cục');
+for (const a of allAgents) {
+  ok(path.basename(a.file, '.md') === a.id, `agent ${a.id}: name == tên file`);
+  ok(a.id.startsWith(`${a.plugin}-`) && !a.id.includes(':'), `agent ${a.id}: prefix "${a.plugin}-", không chứa ":"`);
+  ok(a.description.length > 10, `agent ${a.id}: có description`);
+  ok(MODES.includes(a.mode), `agent ${a.id}: mode ∈ {read-only, write} (=${a.mode})`);
+  ok(a.skills.length > 0, `agent ${a.id}: skills không rỗng`);
+  for (const s of a.skills) ok(catalogSkillIds.has(s), `agent ${a.id}: skill "${s}" tồn tại`);
+  if (a.model) ok(MODELS.includes(a.model), `agent ${a.id}: model hợp lệ (=${a.model})`);
+  if (a.effort) ok(EFFORTS.includes(a.effort), `agent ${a.id}: effort hợp lệ (=${a.effort})`);
+  for (const h of AGENT_HEADINGS) ok(a.body.includes(`## ${h}`), `agent ${a.id}: có heading "## ${h}"`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2c. SOURCE: workflows/ (bộ workflow + orchestrator cấp repo)
+// ─────────────────────────────────────────────────────────────────────────────
+const workflows = loadWorkflows();
+ok(!!workflows, 'workflows/.manifest.json tồn tại');
+if (workflows) {
+  for (const f of ['id', 'name', 'description', 'version']) ok(!!workflows.manifest[f], `workflows: .manifest.json có "${f}"`);
+  const agentById = new Map(allAgents.map((a) => [a.id, a]));
+  const byBare = new Map([...catalogSkillIds].map((s) => [s.split('/')[1], s]));
+  const wfs = workflows.stages.filter((s) => s.kind === 'workflow');
+  const orch = workflows.stages.filter((s) => s.kind === 'orchestrator');
+  const orders = workflows.stages.map((s) => s.order);
+  ok(new Set(orders).size === orders.length, 'workflows: order không trùng');
+  if (workflows.stages.length) ok(orch.length === 1, 'workflows: đúng 1 orchestrator');
+  for (const s of workflows.stages) {
+    ok(s.id === `workflow-${s.slug}`, `${s.id}: name == "workflow-<thư mục>"`);
+    ok(['workflow', 'orchestrator'].includes(s.kind), `${s.id}: kind ∈ {workflow, orchestrator}`);
+    ok(s.description.length > 10, `${s.id}: có description`);
+    ok(RUN_IN.includes(s.runsIn) && INVOKE_IN.includes(s.invoke), `${s.id}: runsIn/invoke hợp lệ`);
+    ok(s.pipeline === false && s.next === null, `${s.id}: pipeline=false, next=null`);
+    for (const aid of s.agents) ok(agentById.has(aid), `${s.id}: agent "${aid}" tồn tại`);
+    for (const r of s.requires) ok(catalogSkillIds.has(r), `${s.id}: requires "${r}" là skill plugin/core có thật`);
+    const errs = checkWorkflowBody(s.body, { kind: s.kind });
+    ok(errs.length === 0, `${s.id}: khung body hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
+    const allowed = new Set([...s.requires, ...s.agents.flatMap((aid) => (agentById.get(aid) || { skills: [] }).skills)]);
+    for (const st of stepRefs(s.body)) {
+      for (const aid of st.agents) ok(s.agents.includes(aid), `${s.id} bước ${st.n}: agent "${aid}" có trong frontmatter agents`);
+      for (const sk of st.skills) {
+        const full = sk.includes('/') ? sk : byBare.get(sk);
+        ok(!!full && allowed.has(full), `${s.id} bước ${st.n}: skill "${sk}" có trong requires hoặc skill của agent`);
+      }
+    }
+    if (s.kind === 'workflow') {
+      ok([1, 2, 3].includes(s.tier), `${s.id}: tier ∈ {1,2,3}`);
+      ok(RISKS.includes(s.risk), `${s.id}: risk ∈ {${RISKS.join(', ')}}`);
+      ok(s.order > 0, `${s.id}: order > 0`);
+    } else {
+      ok(s.order === 0, `${s.id}: orchestrator order = 0`);
+    }
+  }
+  for (const o of orch) {
+    const { rows, priority } = parseRegistry(o.body);
+    const reg = new Set(rows.map((r) => r.id));
+    const ids = new Set(wfs.map((w) => w.id));
+    ok(reg.size === rows.length, `${o.id}: registry không trùng id`);
+    for (const id of ids) ok(reg.has(id), `${o.id}: registry có ${id}`);
+    for (const id of reg) ok(ids.has(id), `${o.id}: registry "${id}" trỏ tới workflow có thật`);
+    for (const r of rows) {
+      const w = wfs.find((x) => x.id === r.id);
+      if (w) ok(r.risk === w.risk, `${o.id}: risk của ${r.id} khớp frontmatter (${r.risk} vs ${w.risk})`);
+      for (const n of r.next) ok(ids.has(n), `${o.id}: nối tiếp "${n}" của ${r.id} tồn tại`);
+    }
+    ok(priority.length === ids.size && [...ids].every((id) => priority.includes(id)),
+      `${o.id}: thứ tự ưu tiên liệt kê đủ ${ids.size} workflow`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 3. BUILD OUTPUT (Claude) — chuẩn hóa ở tầng adapter
 // ─────────────────────────────────────────────────────────────────────────────
 const BUILD = path.join(REPO_ROOT, 'build');
