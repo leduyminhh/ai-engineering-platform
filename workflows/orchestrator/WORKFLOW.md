@@ -36,18 +36,20 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 
 | id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |
 |---|---|---|---|---|
-| `workflow-feature` | "thêm tính năng", "làm feature", "user story", acceptance criteria | medium | — | Chỉ sửa lỗi hành vi đã có → bugfix |
-| `workflow-bugfix` | "lỗi", "bug", stacktrace, "không chạy", "sai kết quả" | medium | — | Hệ thống production đang sập → incident |
-| `workflow-refactor` | "refactor", "tái cấu trúc", "đổi kiến trúc" | medium | — | Đổi hành vi → feature |
+| `workflow-feature` | "thêm tính năng", "làm feature", "user story", acceptance criteria | medium | `workflow-docs` | Chỉ sửa lỗi hành vi đã có → bugfix |
+| `workflow-bugfix` | "lỗi", "bug", stacktrace, "không chạy", "sai kết quả" | medium | `workflow-docs` | Hệ thống production đang sập → incident |
+| `workflow-refactor` | "refactor", "tái cấu trúc", "đổi kiến trúc" | medium | `workflow-docs` | Đổi hành vi → feature |
 | `workflow-code-review` | "PR #", "review", "diff" | low | — | Cần sửa code → feature/bugfix |
-| `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | — | Chỉ cần quality gate trước release → release |
-| `workflow-incident` | "prod down", "sự cố", "alert", "incident" | critical | `workflow-bugfix` | Lỗi tái hiện được ở local, production vẫn ổn → bugfix |
+| `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | `workflow-docs` | Chỉ cần quality gate trước release → release |
+| `workflow-incident` | "prod down", "sự cố", "alert", "incident" | critical | `workflow-bugfix`, `workflow-docs` | Lỗi tái hiện được ở local, production vẫn ổn → bugfix |
 | `workflow-testing` | "viết test", "tăng coverage", "test strategy", "kiểm thử" | low | — | Failure là lỗi code cần sửa → bugfix |
-| `workflow-db-change` | "đổi schema", "migration", "thêm cột/bảng", "đổi index" | high | — | Không đổi schema, chỉ đổi query/logic → feature/bugfix |
-| `workflow-api` | "làm API", "thêm endpoint", "OpenAPI", "contract-first" | medium | — | Không cần contract mới, chỉ sửa logic nội bộ → feature/bugfix |
+| `workflow-db-change` | "đổi schema", "migration", "thêm cột/bảng", "đổi index" | high | `workflow-docs` | Không đổi schema, chỉ đổi query/logic → feature/bugfix |
+| `workflow-api` | "làm API", "thêm endpoint", "OpenAPI", "contract-first" | medium | `workflow-docs` | Không cần contract mới, chỉ sửa logic nội bộ → feature/bugfix |
 | `workflow-release` | "release", "phát hành", "chuẩn bị deploy", "ra version" | high | — | Chưa sẵn sàng phát hành, cần sửa lỗi/tính năng trước → feature/bugfix |
+| `workflow-performance` | "chậm", "tối ưu hiệu năng", "performance", "latency" | medium | — | Chậm do lỗi logic rõ ràng, không phải hiệu năng → bugfix |
+| `workflow-docs` | "cập nhật tài liệu", "sync docs", "README lỗi thời", "viết runbook" | low | — | Cần đổi hành vi/code, không chỉ tài liệu → feature/bugfix |
 
-**Thứ tự ưu tiên:** `workflow-incident` > `workflow-security-review` > `workflow-bugfix` > `workflow-db-change` > `workflow-api` > `workflow-feature` > `workflow-refactor` > `workflow-testing` > `workflow-code-review` > `workflow-release`
+**Thứ tự ưu tiên:** `workflow-incident` > `workflow-security-review` > `workflow-bugfix` > `workflow-db-change` > `workflow-api` > `workflow-feature` > `workflow-refactor` > `workflow-performance` > `workflow-testing` > `workflow-code-review` > `workflow-release` > `workflow-docs`
 
 ## Các bước
 
