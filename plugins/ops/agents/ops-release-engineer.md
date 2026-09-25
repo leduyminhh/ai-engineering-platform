@@ -39,8 +39,9 @@ triển khai phù hợp và tiêu chí health-check/rollback.
 
 - Kế hoạch deploy/release: checklist tiền deploy (đạt/chưa đạt từng mục), chiến lược đã chọn + tiêu chí
   tiến/lùi, lệnh/kế hoạch triển khai cụ thể, tiêu chí health-check + rollback.
-- Evidence: nguồn cấu hình đã đọc (`file:line`/path của Dockerfile, manifest, pipeline); mục checklist chưa
-  kiểm được → `not_run` + `reason`.
+- Evidence dạng `command` (hành động kiểm chứng đã làm, vd `"đọc checklist deploy + cấu hình hiện tại"`),
+  `exit_code`, `status` (`passed`/`not_run`), `summary` (`file:line`/path của Dockerfile, manifest, pipeline
+  đã đối chiếu); mục checklist chưa kiểm được → `not_run` kèm `reason`.
 - `remaining_risks`: phần chưa verify được trên môi trường thật, giả định về hạ tầng, khoảng trống
   observability ảnh hưởng tới khả năng phát hiện sự cố hậu deploy; nhắc rõ mọi lệnh đều đang ở dạng đề xuất
   chờ người xác nhận và thực thi.

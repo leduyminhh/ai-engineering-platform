@@ -40,7 +40,9 @@ vào đúng cấu trúc tài liệu của project, và ghi ADR cho các quyết 
 
 - Danh sách file đã ghi trong `docs/` (`requirement.md`, `plan.md`, ADR, diagram nếu có) kèm tóm tắt nội
   dung mỗi file.
-- Evidence bước verify đã chạy (checklist spec, checklist ADR) dưới dạng `passed`/`not_run` + lý do khi
-  không chạy được (spec/ADR là tài liệu nên evidence chủ yếu là checklist tự đối chiếu, không phải lệnh CLI).
+- Evidence mỗi bước verify theo dạng `command` (hành động kiểm chứng đã làm, vd `"đối chiếu spec với
+  checklist references/checklist.md"`, `"đối chiếu ADR với template engineering-adr"`), `exit_code`,
+  `status` (`passed`/`not_run`), `summary`; `not_run` kèm `reason` (spec/ADR là tài liệu nên "command" là
+  hành động đối chiếu, không phải lệnh CLI).
 - `remaining_risks`: câu hỏi mở, giả định (`[giả định]`) chưa được người dùng xác nhận, ADR còn `Status:
   Proposed` chờ người chốt.

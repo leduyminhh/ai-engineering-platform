@@ -37,7 +37,8 @@ Release scribe: từ lịch sử git của một phạm vi đã chốt (giữa 2
 ## Report trả về
 
 - Nội dung changelog/release notes đã ghi (đường dẫn file, các nhóm đã phân loại kèm số mục mỗi nhóm).
-- Evidence: phạm vi git đã dùng (`git log <range>` hoặc nguồn lịch sử đã gom) — nếu không tự chạy được lệnh
-  git thì ghi `not_run` + lý do (vd lịch sử do `git-workflow` cung cấp sẵn).
+- Evidence dạng `command` (vd `"git log v1.2.0..v1.3.0"` hoặc nguồn lịch sử `git-workflow` đã gom sẵn),
+  `exit_code`, `status` (`passed`/`not_run`), `summary` (số commit, phạm vi, số mục mỗi nhóm); không tự
+  chạy được lệnh git → `not_run` kèm `reason` (vd lịch sử do `git-workflow` cung cấp sẵn, không tự đọc lại).
 - `remaining_risks`: mục không rõ tác động người dùng đưa vào câu hỏi mở, phần `[giả định]` chưa xác nhận,
   nhắc rằng chưa tag/release/push — việc đó thuộc `git-workflow`.

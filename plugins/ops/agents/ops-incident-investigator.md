@@ -37,8 +37,9 @@ Incident investigator: triage một sự cố production được giao, khoanh v
 
 - RCA đầy đủ: triệu chứng, dòng thời gian, nguyên nhân gốc (phân biệt trigger vs root cause), hành động
   khắc phục đề xuất, phòng ngừa.
-- Evidence: nguồn tín hiệu đã đọc (log/metric/trace) với `file:line`/mốc thời gian cụ thể làm bằng chứng;
-  tín hiệu không truy cập được → `not_run` + `reason`.
+- Evidence dạng `command` (hành động quan sát đã làm, vd `"đọc log/metric/trace khung <thời gian>"`),
+  `exit_code`, `status` (`passed`/`not_run`), `summary` (nguồn cụ thể + `file:line`/mốc thời gian làm bằng
+  chứng); tín hiệu không truy cập được → `not_run` kèm `reason`.
 - Danh sách mitigation đề xuất, mỗi mục có mức rủi ro + điều kiện áp dụng, rõ ràng là ĐỀ XUẤT chờ người
   thực thi.
 - `remaining_risks`: phần chưa verify, khả năng tái diễn, khoảng trống observability phát hiện được.
