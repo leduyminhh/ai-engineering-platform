@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
+import { checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS } from '../cli/lib/workflows.mjs';
 
 let pass = 0;
 const fails = [];
@@ -42,6 +43,61 @@ ok(Array.isArray(loadCore().agents) && loadCore().agents.length === 0, 'loadCore
   const wf = loadWorkflows();
   ok(!!wf && wf.id === 'workflows', 'loadWorkflows: đọc workflows/.manifest.json (id = workflows)');
   ok(!!wf && Array.isArray(wf.stages), 'loadWorkflows: có mảng stages');
+}
+
+// 0b. UNIT: helper workflow (khung body, step, registry, closure)
+{
+  const tpl = fs.readFileSync(path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n');
+  const tplErrs = checkWorkflowBody(tpl);
+  ok(tplErrs.length === 0, `template workflow PASS checkWorkflowBody${tplErrs.length ? ' — ' + tplErrs.join('; ') : ''}`);
+
+  const step = (n, fields, tail = '') => `### Bước ${n} — Tên${tail}\n` + fields.map((f) => `- **${f}:** x`).join('\n') + '\n';
+  const ALL = ['Thực hiện', 'Đầu vào', 'Hành động', 'Ràng buộc', 'Đầu ra', 'Gate', 'Khi fail', 'Evidence'];
+  const frame = (steps, result = 'workflow_result:') => [
+    '## Mục tiêu & đầu vào', 'x', '## Điều kiện tiên quyết', 'x', '## Các bước', steps,
+    '## Checkpoint', 'x', '## Xử lý lỗi & rollback', 'x', '## Definition of Done', 'x', '## Report cuối', result,
+  ].join('\n');
+  ok(checkWorkflowBody(frame(step(1, ALL, ' ⏸'))).length === 0, 'checkWorkflowBody: khung đủ → hợp lệ');
+  ok(checkWorkflowBody(frame(step(1, ALL.filter((f) => f !== 'Gate'), ' ⏸'))).some((e) => e.includes('"Gate"')),
+    'checkWorkflowBody: thiếu trường Gate → báo lỗi');
+  ok(checkWorkflowBody(frame(step(1, ALL, ' ⏸') + step(3, ALL))).some((e) => e.includes('liên tục')),
+    'checkWorkflowBody: đánh số nhảy → báo lỗi');
+  ok(checkWorkflowBody(frame(step(1, ALL))).some((e) => e.includes('⏸')), 'checkWorkflowBody: không có ⏸ → báo lỗi');
+  ok(checkWorkflowBody(frame(step(1, ALL, ' ⏸')).replace('## Checkpoint', '## X')).some((e) => e.includes('Checkpoint')),
+    'checkWorkflowBody: thiếu heading → báo lỗi');
+  ok(checkWorkflowBody(frame(step(1, ALL, ' ⏸')), { kind: 'orchestrator' }).some((e) => e.includes('orchestrator_result')),
+    'checkWorkflowBody: orchestrator đòi orchestrator_result');
+
+  const refs = stepRefs(frame(
+    '### Bước 1 — A ⏸\n- **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer`\n' +
+    '### Bước 2 — B\n- **Thực hiện:** skill `backend-refactor` | skill `core/git-workflow`\n'));
+  ok(JSON.stringify(refs[0].agents) === '["backend-reviewer","frontend-reviewer"]', 'stepRefs: bắt agent song song');
+  ok(JSON.stringify(refs[1].skills) === '["backend-refactor","core/git-workflow"]', 'stepRefs: bắt skill trần + đầy đủ');
+
+  const reg = parseRegistry([
+    '## Registry', '| id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |', '|---|---|---|---|---|',
+    '| `workflow-incident` | prod down | critical | `workflow-bugfix`, `workflow-docs` | x |',
+    '| `workflow-docs` | readme | low | — | x |',
+    '**Thứ tự ưu tiên:** `workflow-incident` > `workflow-docs`', '## Khác',
+  ].join('\n'));
+  ok(reg.rows.length === 2 && reg.rows[0].risk === 'critical', 'parseRegistry: đọc dòng + risk');
+  ok(JSON.stringify(reg.rows[0].next) === '["workflow-bugfix","workflow-docs"]' && reg.rows[1].next.length === 0,
+    'parseRegistry: đọc cột Nối tiếp ("—" = rỗng)');
+  ok(JSON.stringify(reg.priority) === '["workflow-incident","workflow-docs"]', 'parseRegistry: đọc thứ tự ưu tiên');
+
+  const model = {
+    workflows: [{ id: 'workflow-x', requires: ['core/git-workflow'], agents: ['be-rev'] }],
+    agents: [{ id: 'be-rev', skills: ['backend/backend-code-review'] }],
+  };
+  const dep = expandWorkflowDeps(new Set(['workflows/workflow-x']), model);
+  ok(dep.skills.has('core/git-workflow') && dep.skills.has('backend/backend-code-review'),
+    'expandWorkflowDeps: kéo requires + skill của agent');
+  ok(dep.pulled.length === 1 && dep.pulled[0].from === 'workflow-x', 'expandWorkflowDeps: ghi nguồn kéo theo');
+  ok(expandWorkflowDeps(new Set(['backend/backend-init']), model).pulled.length === 0,
+    'expandWorkflowDeps: không có workflow → giữ nguyên');
+  ok(JSON.stringify(missingDeps(dep.required, new Set(['core/git-workflow']))) === '["backend/backend-code-review"]',
+    'missingDeps: nêu skill không có trong catalog');
+  ok(RISKS.join(',') === 'low,medium,high,critical', 'RISKS: 4 mức');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
