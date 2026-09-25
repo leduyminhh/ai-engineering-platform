@@ -2,5 +2,5 @@
   "id": "backend",
   "name": "Backend Cowork→Code",
   "description": "Workflow backend Cowork → Code (docs-first, không pipeline bắt buộc): backend-init scaffold cấu trúc thư mục + tài liệu nền (project-knowledge, ADR, data-model/ERD, layout src theo kiến trúc chọn khi init); recipe on-demand backend-migrate-architecture (tái cấu trúc kiến trúc mã nguồn: Onion/Hexagonal/CQRS/layered) và backend-migrate-vault-consul (externalize config/secret sang Vault/Consul).",
-  "version": "1.1.1"
+  "version": "1.2.0"
 }

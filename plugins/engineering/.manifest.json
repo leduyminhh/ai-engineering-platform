@@ -2,5 +2,5 @@
   "id": "engineering",
   "name": "Engineering Practices",
   "description": "Plugin capability xuyên suốt (opt-in, KHÔNG thuộc core): quality-gate (SonarQube chất lượng + Black Duck SCA + review bảo mật source-first ánh xạ OWASP/ASVS/CWE, luồng fix-từ-report), spec-writing (khảo sát yêu cầu + viết feature spec đo được), diagram (chọn đúng loại rồi sinh PlantUML renderable). Gọi khi cần ở bất kỳ giai đoạn nào; không thuộc pipeline bắt buộc; con người duyệt diff/spec/diagram trước khi dùng.",
-  "version": "1.1.1"
+  "version": "1.2.0"
 }

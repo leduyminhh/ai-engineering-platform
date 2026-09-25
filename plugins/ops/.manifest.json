@@ -2,5 +2,5 @@
   "id": "ops",
   "name": "Ops — Maintain Server",
   "description": "Plugin luồng maintain server (opt-in, docs-only): deploy/release an toàn, incident troubleshooting, observability. Gọi khi cần vận hành/triển khai; không thuộc pipeline bắt buộc; read-only + đề xuất mặc định, con người duyệt trước khi tác động production.",
-  "version": "1.1.1"
+  "version": "1.2.0"
 }
