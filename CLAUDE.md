@@ -69,7 +69,7 @@ Every lifecycle command takes a scope: **project** (default, cwd) or **global** 
 ### Adding capability content
 - New skill → add `plugins/<id>/skills/<skill-id>/SKILL.md` (frontmatter: `name`, `description`, `order`, `title`, `runsIn`, `invoke`, `pipeline: false`, `next: null`). It is auto-discovered; run `npm run build` to verify output.
 - New agent → `plugins/<id>/agents/<id>-<slug>.md` (frontmatter `name`, `description`, `mode`, `skills`; body 4 heading).
-- New workflow → copy `templates/workflows/workflow.template.md` thành `workflows/<slug>/WORKFLOW.md`, thêm dòng vào registry của `workflows/orchestrator/WORKFLOW.md`.
+- New workflow → copy `templates/workflows/workflow.template.md` to `workflows/<slug>/WORKFLOW.md`, add a row to the registry in `workflows/orchestrator/WORKFLOW.md`.
 - New provider behavior → edit `adapters/<provider>/adapter.mjs`; keep it a pure `build(plugins, ctx) -> fileEntry[]`.
 - Changes affecting projection should be covered by `test/*.test.mjs` and the `test/validate.mjs` contract.
 
