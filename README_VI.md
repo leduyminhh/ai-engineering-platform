@@ -128,6 +128,121 @@ Mỗi skill `*-init` là **bộ scaffold TÀI LIỆU**: drop cây `templates/ini
 
 Gọi skill trong Claude Code: `/<plugin>:<skill>` (vd `/backend:backend-init`).
 
+## Agent & Workflow
+
+Bên cạnh skill, nền tảng còn chiếu ra **agent** (subagent đảm nhận một vai trò, gói một hoặc
+nhiều skill) và **workflow** (recipe nhiều bước, điều phối agent tuần tự, có checkpoint người
+duyệt), cùng **`workflow-orchestrator`** để phân loại một yêu cầu tự do về đúng workflow. Agent
+nằm ở `plugins/<id>/agents/<agent-id>.md`; workflow nằm ở thư mục cấp repo `workflows/<slug>/WORKFLOW.md`,
+tách khỏi cây plugin vì workflow gọi xuyên nhiều plugin. Thiết kế đầy đủ:
+`docs/superpowers/specs/2026-09-25-agents-workflows-design.md`.
+
+Agent không commit, không push, không tạo PR, và không gọi agent khác — chỉ workflow (chạy ở
+session chính) mới điều phối và gọi `core:git-workflow` sau checkpoint. Mọi báo cáo của agent
+có cấu trúc (kết quả, `file:line`, residual risk); khẳng định "đã chạy / đã pass" luôn kèm
+evidence, hoặc `not_run` + lý do.
+
+### Agent (11)
+
+`mode` trung lập với provider: Claude map `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
+và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mode: "read-only"` và
+`write` → `"workspace-write"`.
+
+| Agent id | Plugin | Mode | Skill gói | Dùng trong |
+| --- | --- | --- | --- | --- |
+| `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01, WF07, WF08 |
+| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF03, WF05, WF08 |
+| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01–WF04, WF07–WF09 |
+| `frontend-implementer` | frontend | write | frontend-implement | WF01, WF08 |
+| `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05 |
+| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04 |
+| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF11 |
+| `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram | WF01, WF03, WF10, WF12 |
+| `engineering-release-scribe` | engineering | write (chỉ `docs/`, `CHANGELOG.md`) | engineering-release-notes | WF11 |
+| `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | WF10 |
+| `ops-release-engineer` | ops | read-only | ops-deploy-release, ops-observability | WF11 |
+
+Không có agent Security riêng: `engineering-quality-gate` đã phủ cả quality lẫn security review
+source-first (OWASP/ASVS/CWE, SCA, secrets); tách ra chỉ trùng lặp.
+
+### Workflow (12) + orchestrator
+
+Id dạng `workflow-<slug>`, nguồn ở `workflows/<slug>/WORKFLOW.md`. `tier` quyết định độ sâu nội
+dung (1 = nhiều gate/DoD chặt, 2 = đủ template nhưng gọn, 3 = gọn); `risk` quyết định mức độ
+xác nhận bắt buộc của orchestrator.
+
+| Mã | Id | Tier | Risk | Thay cho (plan cũ) | Agent |
+| --- | --- | --- | --- | --- | --- |
+| WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, BE/FE test-writer, BE/FE reviewer, quality-auditor |
+| WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE reviewer, quality-auditor |
+| WF03 | `workflow-refactor` | 1 | medium | W4a+W4b+W6 | BE/FE test-writer, BE/FE reviewer, spec-analyst, quality-auditor |
+| WF04 | `workflow-code-review` | 1 | low | W5 | BE/FE reviewer, quality-auditor |
+| WF05 | `workflow-testing` | 2 | low | mới | BE/FE test-writer |
+| WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor |
+| WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-reviewer |
+| WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract của W1) | backend-implementer, backend-test-writer, backend-reviewer, frontend-implementer |
+| WF09 | `workflow-performance` | 3 | medium | W16 | backend-reviewer |
+| WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
+| WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer |
+| WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |
+| — | `workflow-orchestrator` | — | — | mới | không (chạy ở session chính) |
+
+**Cách gọi:**
+
+- Claude Code: `/workflow-orchestrator <yêu cầu>` để tự phân loại theo registry, hoặc gọi thẳng
+  một workflow bằng `/workflow-<slug>` (vd `/workflow-bugfix`); xem/liệt kê subagent bằng
+  `/agents`.
+- Codex: gọi skill `workflow-<slug>` — workflow chiếu ra như skill native của Codex, cùng cơ
+  chế với mọi skill khác.
+
+**Cài đặt** (workflow đi qua cơ chế chọn có sẵn, không thêm flag CLI):
+
+```bash
+aip install --provider claude --plugin workflows
+aip install --provider claude --skill workflows/workflow-feature,workflows/workflow-bugfix
+aip install --provider codex -g --skill workflows/workflow-code-review
+aip install --provider claude --as-plugin --plugin workflows
+aip uninstall --skill workflows/workflow-feature
+```
+
+Cài một workflow sẽ tự kéo theo dependency closure (`requires` + skill của mọi agent workflow
+đó liệt kê), in ra dạng `[aip] workflow-feature kéo theo: backend/backend-implement, …`; gỡ
+workflow sẽ bỏ luôn phần không còn workflow nào khác cần tới.
+
+### Roadmap
+
+Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2026-09-25-agents-workflows-design.md` §9) — chưa làm.
+
+**Skill gap** (bước hiện workflow làm thẳng ở session chính, chưa tách thành skill tái dùng):
+
+| # | Skill | Plugin | Hưởng lợi |
+| --- | --- | --- | --- |
+| G1 | `frontend-data-integration` (nối UI với API contract) | frontend | WF01, WF08 |
+| G2 | `backend-migrate-db` (Flyway ↔ Liquibase) | backend | WF07 |
+| G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
+| G4 | `engineering-bugfix` (tái hiện → evidence → failing test → root cause → fix tối thiểu) | engineering | WF02 |
+| G5 | `frontend-e2e-testing` (Playwright) | frontend | WF05 |
+| G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
+| G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
+| G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
+| G9 | `engineering-task-breakdown` | engineering | WF01 |
+| G10 | `backend-performance-testing` (k6/JMeter/Gatling) | backend | WF09 |
+| G11 | `engineering-docs-sync` | engineering | WF12 |
+
+**Workflow tương lai:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),
+`workflow-onboarding` (G7), `workflow-tech-debt-review` (G8).
+
+**Provider / nền tảng (P1–P7):**
+
+| # | Hạng mục | Ghi chú |
+| --- | --- | --- |
+| P1 | Agent/workflow cho Cursor, Antigravity | Antigravity có thể chiếu sang `.agent/workflows/` native, Cursor sang `.cursor/commands/` [Unverified] |
+| P2 | Claude native workflow `.js` | Fan-out tất định (vd WF04 nhiều module); tốn token, người dùng opt-in |
+| P3 | Hooks (vd pre-commit gọi quality-auditor) | Hook trong plugin subagent bị Claude bỏ qua; phải đặt ở `settings.json` project |
+| P4 | `[agents]` trong `.codex/config.toml` | Config bền vững, cần người dùng xác nhận tường minh |
+| P6 | Workflow cho Cowork | Cowork không có subagent; chỉ thêm nếu có fallback tuần tự |
+| P7 | Tầng Rules (coding/git/security/architecture/production) | Spec riêng. Hiện rule nằm rải ở `core/principles`, `shared/principles.md`, `AGENTS.md`, `git-workflow`, `code-convention.md`; còn thiếu rule Production (deploy/incident) |
+
 ## CLI
 
 Mọi lệnh chạy `node cli/index.mjs`.

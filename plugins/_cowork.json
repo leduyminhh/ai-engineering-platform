@@ -1,5 +1,5 @@
 {
-  "_comment": "Danh sách skill đóng gói cho Cowork (build/cowork/<skill>.zip → Customize → Skills → Upload). Thêm skill cho Cowork = thêm 1 dòng '<plugin>:<skill-id>'. Bỏ key 'skills' hoặc để rỗng -> tự suy ra các skill runsIn:plan + core:principles.",
+  "_comment": "Danh sách skill đóng gói cho Cowork (build/cowork/<skill>.zip → Customize → Skills → Upload). Thêm skill cho Cowork = thêm 1 dòng '<plugin>:<skill-id>'. Bỏ key 'skills' hoặc để rỗng -> tự suy ra các skill runsIn:plan + core:principles. KHÔNG đưa agent/workflow (`plugins/<id>/agents/`, `workflows/`) vào đây: Cowork không có cơ chế subagent nên workflow không có gì để dispatch; agent tự nó cũng không phải skill độc lập để zip.",
   "skills": [
     "core:principles",
     "core:git-workflow",
