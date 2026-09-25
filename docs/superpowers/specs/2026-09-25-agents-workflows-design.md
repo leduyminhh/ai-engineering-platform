@@ -59,7 +59,7 @@ Tiêu chí thành công (đo được):
 | `backend-reviewer` | backend | Reviewer | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01–WF04, WF07–WF09 |
 | `frontend-implementer` | frontend | Developer | write | frontend-implement | WF01 |
 | `frontend-test-writer` | frontend | Tester | write | frontend-testing | WF01, WF02, WF03, WF05 |
-| `frontend-reviewer` | frontend | Reviewer | read-only | frontend-code-review | WF01–WF04 |
+| `frontend-reviewer` | frontend | Reviewer | read-only | frontend-code-review | WF01–WF04, WF09 |
 | `engineering-quality-auditor` | engineering | Security/Quality | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF11 |
 | `engineering-spec-analyst` | engineering | Analyst | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram | WF01, WF03, WF10, WF12 |
 | `engineering-release-scribe` | engineering | Release | write (chỉ `docs/`, `CHANGELOG.md`) | engineering-release-notes | WF11 |
@@ -98,7 +98,7 @@ template nhưng gọn; **Tier 3** gọn.
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor |
 | WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-reviewer |
 | WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract W1) | backend-implementer, backend-test-writer, backend-reviewer |
-| WF09 | `workflow-performance` | 3 | medium | W16 | backend-reviewer |
+| WF09 | `workflow-performance` | 3 | medium | W16 | backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer |
 | WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |
@@ -125,7 +125,7 @@ Ký hiệu: `→` tuần tự, `∥` song song, `⏸` checkpoint người duyệ
 | WF06 | Phạm vi + threat theo vùng rủi ro → source review + scan (quality-auditor) → validate findings → kế hoạch remediation ⏸ → sửa (session chính) → re-scan → report | Finding `blocker` chặn `completed`. Mask mọi secret trong report |
 | WF07 | Data model + impact → thiết kế migration forward + rollback + tương thích ngược (expand/contract) ⏸ → implement migration (session chính) + code (backend-implementer) → review query/index (backend-reviewer) → xác nhận DB đích là DB test ⏸ → chạy migration + rollback trên DB test → commit ⏸ | Cấm thay đổi phá huỷ dữ liệu khi chưa xác nhận; không chạy trên production. Migration tool chờ G2 |
 | WF08 | Contract-first OpenAPI (backend-implementer, skill `backend-api-contract`) ⏸ → implement BE → integration + contract test (backend-test-writer) → kiểm drift contract↔code (backend-reviewer) → FE client (session chính chạy codegen sẵn có của project, tuỳ chọn — `frontend-implement` không nối API, Gap G1) → docs → commit ⏸ | Breaking change phải có versioning/deprecation |
-| WF09 | Định nghĩa metric + mục tiêu → baseline → profile → giả thuyết ⏸ → tối ưu → benchmark + so sánh trước/sau → regression test → review (backend-reviewer) | Không có số đo trước/sau trên cùng điều kiện → không được `completed`. Tool đo chờ G10 |
+| WF09 | Định nghĩa metric + mục tiêu → baseline → profile → giả thuyết ⏸ → tối ưu → benchmark + so sánh trước/sau → regression test → review (backend-reviewer ∥ frontend-reviewer, chỉ phía có đụng) | Không có số đo trước/sau trên cùng điều kiện → không được `completed`. Tool đo chờ G10 |
 | WF10 | Triage + blast radius (investigator) → evidence (log/metric/trace/deploy/infra/DB) → giả thuyết + kiểm chứng → **đề xuất** mitigation ⏸ → xác minh phục hồi → RCA + postmortem (spec-analyst) → nối tiếp WF02 | Agent chỉ đọc; mitigation do người thực hiện hoặc xác nhận. Output có `incident` block (summary, timeline, impact, root_cause, mitigation, prevention) |
 | WF11 | Gate (quality-auditor) ⏸ → release notes (release-scribe) ⏸ → commit release CHANGELOG + version bump qua `git-workflow` ⏸ → deploy checklist + điều kiện rollback (release-engineer) → người dùng deploy ⏸ → hậu kiểm health/observability (release-engineer) → đề xuất tag trên commit release qua `git-workflow` ⏸ | Tag/push chỉ đề xuất lệnh, chờ xác nhận. CI chờ G6 |
 | WF12 | Diff → phát hiện tài liệu bị ảnh hưởng (README, API docs, ADR, runbook, `project-knowledge/`, `AGENTS.md`) → cập nhật (spec-analyst cho ADR/diagram; session chính cho phần còn lại) → kiểm link/ví dụ → commit ⏸ | Không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`. Docs-sync sâu chờ G11 |
@@ -147,7 +147,8 @@ không sửa code. Dùng cùng template 7 heading.
 
 **Các bước:**
 
-1. **Phân loại**: so yêu cầu với cột `Tín hiệu` → 1 workflow, hoặc tối đa 2 ứng viên. Trùng nhiều workflow thì
+1. **Phân loại**: so yêu cầu với cột `Tín hiệu`, loại dòng rơi vào cột `Không dùng khi` → 1 workflow, hoặc tối đa
+   2 ứng viên. Trùng nhiều workflow thì
    ưu tiên: incident > security-review > bugfix > db-change > api > feature > refactor > performance > testing >
    code-review > release > docs.
 2. **Kiểm cài**: workflow chưa cài → in lệnh `aip install …`, dừng. Không tự cài.

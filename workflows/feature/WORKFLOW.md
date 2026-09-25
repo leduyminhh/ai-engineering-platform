@@ -101,7 +101,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   lập được).
 - **Ràng buộc:** chỉ đọc, không tự sửa code; mọi finding phải có `file:line` + evidence quan sát được.
 - **Đầu ra:** danh sách finding theo severity (schema §5.1).
-- **Gate:** 0 finding `blocker`; finding `major` đã sửa hoặc được người dùng chấp nhận.
+- **Gate:** 0 finding `blocker`; finding `major` đã sửa, hoặc ghi vào `remaining_risks` để người dùng quyết ở
+  checkpoint Bước 7.
 - **Khi fail:** còn finding `blocker` → quay lại Bước 3/4 sửa, review lại phần đã sửa.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence) + số finding còn lại sau
   khi sửa.
@@ -136,7 +137,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 |---|---|---|
 | 1 | Acceptance criteria + phạm vi BE/FE/fullstack | Người dùng xác nhận acceptance criteria đúng ý |
 | 2 | Contract OpenAPI (nếu có) hoặc ghi chú "không có API"; ADR (nếu có) | Người dùng xác nhận contract/ADR, hoặc đồng ý không cần |
-| 7 | Diff đầy đủ (code + test + docs) | Người dùng duyệt diff |
+| 7 | Diff đầy đủ (code + test + docs) + finding `major` còn lại trong `remaining_risks` | Người dùng duyệt diff và chấp nhận các `major` còn lại |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
 

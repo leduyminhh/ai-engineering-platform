@@ -95,9 +95,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** finding đã validate từ Bước 4
-- **Hành động:** gom finding theo severity, dedupe finding trùng theo cùng `file:line`; đưa ra verdict
-  `approve` hoặc `request-changes` dựa trên số finding `blocker`/`major` còn lại.
-- **Ràng buộc:** verdict `approve` chỉ khi 0 finding `blocker`; không tự sửa code để "cho qua" verdict.
+- **Hành động:** gom finding theo severity, dedupe finding trùng theo cùng `file:line`; đưa ra verdict:
+  `approve` khi 0 finding `blocker` và 0 finding `major`; `request-changes` khi còn ≥1 `blocker` hoặc `major`
+  (`minor`/`nit` không chặn approve).
+- **Ràng buộc:** không đổi quy tắc verdict ở trên; không tự sửa code để "cho qua" verdict.
 - **Đầu ra:** report theo severity (dedupe) + verdict `approve` \| `request-changes`.
 - **Gate:** report theo severity, dedupe theo `file:line`, verdict `approve` \| `request-changes`.
 - **Khi fail:** người dùng không đồng ý verdict → quay lại Bước 3/4 review/validate lại phần người dùng chỉ
