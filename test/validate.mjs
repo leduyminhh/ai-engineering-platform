@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
-import { checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS } from '../cli/lib/workflows.mjs';
+import { checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS } from '../cli/lib/workflows.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
@@ -318,6 +318,17 @@ if (workflows) {
         ok(!!full && allowed.has(full), `${s.id} bước ${st.n}: skill "${sk}" có trong requires hoặc skill của agent`);
       }
     }
+    // Agent không được gọi agent khác, nên agent nêu trong Hành động phải do chính bước đó dispatch.
+    const agentsByStep = new Map(stepRefs(s.body).map((r) => [r.n, r.agents]));
+    for (const st of parseSteps(s.body)) {
+      const act = (st.body.split('**Hành động:**')[1] || '').split('\n- **')[0];
+      for (const a of allAgents) {
+        if (act.includes(a.id)) ok((agentsByStep.get(st.n) || []).includes(a.id),
+          `${s.id} bước ${st.n}: agent "${a.id}" nêu trong Hành động phải có trong Thực hiện`);
+      }
+    }
+    ok(!s.body.includes('skills/workflows/'),
+      `${s.id}: không nêu đường dẫn "skills/workflows/" (workflow cài phẳng thành skills/workflow-<slug>/)`);
     if (s.kind === 'workflow') {
       ok([1, 2, 3].includes(s.tier), `${s.id}: tier ∈ {1,2,3}`);
       ok(RISKS.includes(s.risk), `${s.id}: risk ∈ {${RISKS.join(', ')}}`);

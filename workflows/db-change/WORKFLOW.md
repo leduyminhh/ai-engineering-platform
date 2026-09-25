@@ -83,23 +83,36 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** còn finding `blocker` → quay lại Bước 3 sửa, review lại phần đã sửa.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence).
 
-### Bước 5 — Chạy thử trên DB test
+### Bước 5 — Xác nhận DB đích ⏸
 
 - **Thực hiện:** session chính
 - **Đầu vào:** migration đã qua review từ Bước 4
+- **Hành động:** đọc cấu hình kết nối mà migration tool sẽ dùng (profile/biến môi trường, host, tên database);
+  trình cho người dùng target đó, đã mask mọi credential.
+- **Ràng buộc:** không đọc/in giá trị secret, chỉ nêu tên biến và host/tên database; không chạy lệnh migration
+  nào ở bước này.
+- **Đầu ra:** target DB đã được người dùng xác nhận là DB test.
+- **Gate:** người dùng xác nhận rõ ràng target là DB test, không phải production.
+- **Khi fail:** target trỏ production hoặc người dùng không chắc → dừng, không chạy migration.
+- **Evidence:** tên profile/biến môi trường + host + tên database (đã mask) + xác nhận của người dùng.
+
+### Bước 6 — Chạy thử trên DB test
+
+- **Thực hiện:** session chính
+- **Đầu vào:** migration đã qua review từ Bước 4 + target DB đã xác nhận ở Bước 5
 - **Hành động:** chạy migrate up → rollback → migrate up lại trên DB test; xác nhận cả 3 lượt chạy thành công.
-- **Ràng buộc:** cấm chạy trên DB production; cấm thay đổi phá huỷ dữ liệu khi chưa được người dùng xác nhận
-  ở Bước 2.
+- **Ràng buộc:** chỉ chạy trên đúng target đã xác nhận ở Bước 5 (cấu hình kết nối đổi → quay lại Bước 5);
+  cấm chạy trên DB production; cấm thay đổi phá huỷ dữ liệu khi chưa được người dùng xác nhận ở Bước 2.
 - **Đầu ra:** kết quả migrate up → rollback → migrate up trên DB test.
 - **Gate:** migrate up → rollback → migrate up thành công, có evidence lệnh.
 - **Khi fail:** một lượt trong chuỗi up/rollback/up thất bại → quay lại Bước 3 sửa migration, chạy lại cả
   chuỗi từ đầu.
 - **Evidence:** lệnh migrate up/rollback/up + exit code từng lượt.
 
-### Bước 6 — Commit ⏸
+### Bước 7 — Commit ⏸
 
 - **Thực hiện:** skill `git-workflow`
-- **Đầu vào:** migration + code đã qua Bước 1–5
+- **Đầu vào:** migration + code đã qua Bước 1–6
 - **Hành động:** đề xuất commit message Conventional Commits (header EN, body VI); trình diff cho người dùng
   duyệt.
 - **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
@@ -113,7 +126,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
 | 2 | Thiết kế migration forward + rollback + tương thích ngược | Người dùng xác nhận thiết kế |
-| 6 | Diff migration + code | Người dùng duyệt diff |
+| 5 | Target DB (profile, host, tên database — đã mask) | Người dùng xác nhận rõ ràng target là DB test |
+| 7 | Diff migration + code | Người dùng duyệt diff |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
 
@@ -126,8 +140,9 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Người dùng không xác nhận thiết kế migration (sau Bước 2 ⏸) | Quay lại Bước 1 làm rõ impact/ràng buộc |
-| Một lượt migrate up/rollback/up thất bại (Bước 5) | Quay lại Bước 3 sửa migration, chạy lại cả chuỗi từ đầu |
-| Người dùng không duyệt diff (sau Bước 6 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+| Target DB trỏ production hoặc chưa được xác nhận (sau Bước 5 ⏸) | Dừng, không chạy migration |
+| Một lượt migrate up/rollback/up thất bại (Bước 6) | Quay lại Bước 3 sửa migration, chạy lại cả chuỗi từ đầu |
+| Người dùng không duyệt diff (sau Bước 7 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 | Thay đổi phá huỷ dữ liệu chưa được xác nhận | Cấm thực hiện; quay lại Bước 2 xin xác nhận rõ ràng |
 | Yêu cầu chạy migration trên production | Cấm thực hiện; chỉ chạy trên DB test |
 
@@ -143,8 +158,9 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] Thiết kế migration forward + rollback + tương thích ngược đã xác nhận — evidence: Bước 2
 - [ ] Build xanh sau implement — evidence: Bước 3
 - [ ] 0 finding blocker ở review query/index — evidence: Bước 4
-- [ ] Migrate up → rollback → migrate up thành công trên DB test — evidence: Bước 5
-- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 6
+- [ ] Target DB đã được người dùng xác nhận là DB test — evidence: Bước 5
+- [ ] Migrate up → rollback → migrate up thành công trên DB test — evidence: Bước 6
+- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed`
 - [ ] 0 finding `blocker`
 

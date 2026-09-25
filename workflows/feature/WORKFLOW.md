@@ -54,15 +54,15 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 2 — Thiết kế & contract ⏸
 
-- **Thực hiện:** agent `backend-implementer` (skill `backend-api-contract`, chỉ khi phạm vi có API)
+- **Thực hiện:** agent `backend-implementer` (skill `backend-api-contract`, chỉ khi phạm vi có API) ∥ agent `engineering-spec-analyst` (ADR, chỉ khi ảnh hưởng kiến trúc)
 - **Đầu vào:** `requirement.md` từ Bước 1
-- **Hành động:** nếu feature có endpoint mới/đổi endpoint cũ, chốt/đồng bộ OpenAPI contract trong
-  `docs/contracts/`; nếu ảnh hưởng kiến trúc, đề xuất ADR qua `engineering-spec-analyst`.
+- **Hành động:** nếu feature có endpoint mới/đổi endpoint cũ, `backend-implementer` chốt/đồng bộ OpenAPI
+  contract trong `docs/contracts/`; nếu ảnh hưởng kiến trúc, `engineering-spec-analyst` viết ADR đề xuất.
 - **Ràng buộc:** không code implementation ở bước này; không đổi kiểu kiến trúc đã chốt.
-- **Đầu ra:** contract OpenAPI cập nhật, hoặc ghi rõ "không có API" trong report bước.
-- **Gate:** contract OpenAPI hợp lệ, hoặc ghi rõ "không có API".
+- **Đầu ra:** contract OpenAPI cập nhật (hoặc ghi rõ "không có API"); ADR đề xuất nếu ảnh hưởng kiến trúc.
+- **Gate:** contract OpenAPI hợp lệ, hoặc ghi rõ "không có API"; có ảnh hưởng kiến trúc thì ADR đã viết.
 - **Khi fail:** contract xung đột với hệ thống hiện có → dừng, hỏi lại người dùng cách xử lý breaking change.
-- **Evidence:** đường dẫn file contract đã cập nhật, hoặc dòng ghi chú "không có API" trong report.
+- **Evidence:** đường dẫn file contract (hoặc dòng "không có API") + đường dẫn ADR nếu có.
 
 ### Bước 3 — Implement
 
@@ -135,7 +135,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
 | 1 | Acceptance criteria + phạm vi BE/FE/fullstack | Người dùng xác nhận acceptance criteria đúng ý |
-| 2 | Contract OpenAPI (nếu có) hoặc ghi chú "không có API" | Người dùng xác nhận contract, hoặc đồng ý không cần contract |
+| 2 | Contract OpenAPI (nếu có) hoặc ghi chú "không có API"; ADR (nếu có) | Người dùng xác nhận contract/ADR, hoặc đồng ý không cần |
 | 7 | Diff đầy đủ (code + test + docs) | Người dùng duyệt diff |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
