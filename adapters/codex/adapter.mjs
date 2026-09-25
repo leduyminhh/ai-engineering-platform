@@ -13,6 +13,7 @@
 // được vào 1 file gốc). Codex KHÔNG auto-load skill khác khi gọi 1 skill, nên chèn pointer
 // nhắc đọc nguyên tắc nền tảng trước (giống claude).
 import { skillFiles, frontmatter } from '../_shared/lib.mjs';
+import { codexAgentToml, workflowPreamble } from '../_shared/agents.mjs';
 
 // CORE = skill "principles" (nguyên tắc nền tảng) + các SKILL DÙNG CHUNG từ core/skills/
 // (vd git-workflow) — install kind 'codex' luôn kèm core nên các skill này đi theo.
@@ -49,7 +50,7 @@ function pluginPrinciplesSkill(p) {
 export default {
   name: 'codex',
   describe: 'OpenAI Codex — build/codex/<id>/skills/<skill>/SKILL.md (native skills → ~/.codex/skills/)',
-  build(plugins, { core }) {
+  build(plugins, { core, workflows }) {
     const files = [...coreSkill(core)];
     for (const p of plugins) {
       files.push(...pluginPrinciplesSkill(p));
@@ -59,6 +60,13 @@ export default {
         `> Khi commit/push/tạo branch/PR: gọi skill \`git-workflow\`.`;
       for (const stage of p.stages) {
         files.push(...skillFiles(stage, `${p.id}/skills`, note));
+      }
+      for (const a of p.agents || []) files.push({ path: `${p.id}/agents/${a.id}.toml`, content: codexAgentToml(a) });
+    }
+    if (workflows && workflows.stages.length) {
+      const agentsById = new Map(plugins.flatMap((p) => p.agents || []).map((a) => [a.id, a]));
+      for (const wf of workflows.stages) {
+        files.push(...skillFiles(wf, 'workflows/skills', workflowPreamble(wf, agentsById, 'codex')));
       }
     }
     return files;

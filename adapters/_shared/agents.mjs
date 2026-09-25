@@ -47,5 +47,37 @@ export function workflowPreamble(wf, agentsById, provider) {
   return L.join('\n');
 }
 
-/** Tên agent phía Codex; Task 6 chốt có đổi `-` → `_` hay không. */
-export function codexAgentName(id) { return id; }
+/**
+ * Tên agent phía Codex. Tài liệu chính thức (learn.chatgpt.com/docs/agent-configuration/subagents)
+ * cho phép filename giữ `-` (vd `.codex/agents/pr-explorer.toml`) nhưng MỌI ví dụ trường `name`
+ * trong file lại dùng snake_case (`pr_explorer`, `docs_researcher`, `code_mapper`, `ui_fixer`, …) —
+ * không có ví dụ nào giữ `-` trong `name`. Không thể tự spawn agent để xác thực runtime (CLI cài
+ * sẵn không có subcommand liệt kê/validate custom agent), nên đây là suy luận theo convention tài
+ * liệu, chưa phải bằng chứng runtime trực tiếp.
+ */
+export function codexAgentName(id) { return id.replace(/-/g, '_'); }
+
+export function tomlBasic(s) {
+  return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + '"';
+}
+
+// Multi-line basic string của TOML vẫn xử lý escape `\`, và `"""` trong nội dung sẽ đóng chuỗi sớm.
+export function tomlMultiline(s) {
+  return '"""\n' + String(s).replace(/\\/g, '\\\\').replace(/"""/g, '""\\"') + '"""';
+}
+
+const CODEX_SANDBOX = { 'read-only': 'read-only', write: 'workspace-write' };
+// [Unverified] Codex chỉ nhận low/medium/high cho model_reasoning_effort; mức khác bỏ qua thay vì ghi sai.
+const CODEX_EFFORT = new Set(['low', 'medium', 'high']);
+
+export function codexAgentToml(agent) {
+  const lines = [
+    `name = ${tomlBasic(codexAgentName(agent.id))}`,
+    `description = ${tomlBasic(agent.description)}`,
+    `sandbox_mode = ${tomlBasic(CODEX_SANDBOX[agent.mode])}`,
+  ];
+  if (agent.effort && CODEX_EFFORT.has(agent.effort)) lines.push(`model_reasoning_effort = ${tomlBasic(agent.effort)}`);
+  const note = `> Dùng skill: ${agent.skills.map((s) => `\`${s.split('/')[1]}\``).join(', ')}. Đọc trước skill \`principles\`.`;
+  lines.push(`developer_instructions = ${tomlMultiline(`${note}\n\n${agent.body.replace(/^\n+/, '')}`)}`);
+  return lines.join('\n') + '\n';
+}

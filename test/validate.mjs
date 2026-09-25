@@ -12,6 +12,8 @@ import { execFileSync } from 'node:child_process';
 import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
 import { checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS } from '../cli/lib/workflows.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
+import codexAdapter from '../adapters/codex/adapter.mjs';
+import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 
 let pass = 0;
 const fails = [];
@@ -128,6 +130,19 @@ const byPath = (files) => new Map(files.map((f) => [f.path, f]));
   ok(mk.plugins.some((x) => x.name === 'workflows'), 'claude marketplace: có entry workflows');
   const noWf = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore }));
   ok(![...noWf.keys()].some((k) => k.startsWith('plugins/workflows/')), 'claude: không truyền workflows → không sinh plugin workflows');
+}
+{
+  ok(tomlBasic('a"b\\c\nd') === '"a\\"b\\\\c\\nd"', 'tomlBasic: escape " \\ và newline');
+  ok(tomlMultiline('x"""y\\z') === '"""\nx""\\"y\\\\z"""', 'tomlMultiline: tách """ và escape \\');
+  const out = byPath(codexAdapter.build([fxPlugin], { core: fxCore, workflows: fxWorkflows }));
+  const toml = (out.get('fx/agents/fx-reviewer.toml') || {}).content || '';
+  ok(toml.includes('sandbox_mode = "read-only"') && toml.includes('model_reasoning_effort = "high"'),
+    'codex agent: sandbox_mode + effort');
+  ok(toml.includes('developer_instructions = """') && toml.includes('`fx-review`'), 'codex agent: developer_instructions + pointer skill');
+  ok(!toml.includes('model ='), 'codex agent: KHÔNG map model');
+  ok(toml.includes('name = "fx_reviewer"'), 'codex agent: name đổi `-` → `_` (convention tài liệu subagents)');
+  const wfMd = (out.get('workflows/skills/workflow-demo/SKILL.md') || {}).content || '';
+  ok(wfMd.includes('name: workflow-demo') && wfMd.includes('Cách dispatch trên Codex'), 'codex workflows: SKILL.md + preamble Codex');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -586,6 +601,15 @@ if (fs.existsSync(BUILD)) {
       const content = fs.readFileSync(out, 'utf8');
       ok(content.includes('`git-workflow`'),
         `build codex ${sample.id}: pointer git-workflow`);
+    }
+    for (const a of allAgents) {
+      const f = path.join(codexDir, a.plugin, 'agents', `${a.id}.toml`);
+      const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+      ok(/^name = ".+"$/m.test(c) && /^description = /m.test(c) && c.includes('developer_instructions = """')
+        && /^sandbox_mode = "(read-only|workspace-write)"$/m.test(c), `build codex agent ${a.id}: đủ trường`);
+    }
+    if (workflows) for (const s of workflows.stages) {
+      ok(fs.existsSync(path.join(codexDir, 'workflows', 'skills', s.id, 'SKILL.md')), `build codex ${s.id}: có SKILL.md`);
     }
   }
 }
