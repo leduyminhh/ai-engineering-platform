@@ -50,7 +50,7 @@ tương tác nhìn thấy) TRƯỚC khi sinh code. Cách rút cho từng dạng:
 
 ### 3. Sinh component ĐÚNG kiến trúc
 - **Đặt file đúng tầng/slice** theo kiến trúc đã chọn và **tôn trọng import boundary** (Feature-Based:
-  presentational ở `features/<x>/ui` không tự fetch/store, feature không cross-import ruột feature khác,
+  presentational ở `features/<x>/components` không tự fetch/store, feature không cross-import ruột feature khác,
   mở qua public API `index.ts`; FSD: chỉ import xuống layer, không cross-import cùng layer, qua public API;
   Micro-FE: nội bộ remote theo FSD, không import ruột remote khác — qua module `expose` + `packages/*`).
   Blueprint ở `architecture/…` là chuẩn.

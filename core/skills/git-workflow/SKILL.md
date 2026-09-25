@@ -16,7 +16,8 @@ next: null
 gom thay đổi thành các commit sạch, sinh commit message (header tiếng Anh, body tiếng
 Việt CÓ DẤU UTF-8), push an toàn và chuẩn bị PR. Hỗ trợ thêm việc gom lịch sử git
 (giữa commit, tag, branch, khoảng thời gian) làm nguồn cho changelog/release notes —
-phần VIẾT changelog/release notes cuối cùng giao cho skill `release-notes` khi có.
+phần VIẾT changelog/release notes cuối cùng giao cho skill `engineering-release-notes`
+khi được cài.
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần ở bất kỳ
 giai đoạn nào có thao tác git (init commit scaffold, implement commit từng task,
@@ -66,15 +67,18 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
    Nếu chưa có: nạp [references/commit-convention.md](references/commit-convention.md)
    và sinh title + body theo quy ước đó (kèm template/ví dụ khi cần — xem Bản đồ tài liệu).
 6. Ghi toàn bộ message vào file tạm UTF-8, chạy
-   `scripts/test-commit-message-encoding.ps1 -MessageFile <file>`, rồi commit bằng
-   `git commit -F <file>` (KHÔNG truyền tiếng Việt qua tham số shell). Nếu check fail:
-   sửa xử lý UTF-8, không được bỏ dấu tiếng Việt để lách.
-7. Chạy verification liên quan khi khả thi.
-8. Sau khi commit: kiểm tra `git log -1 --format=%B` còn đọc được tiếng Việt; amend ngay
-   nếu encoding hỏng.
-9. Push branch hiện tại (dùng tracking khi cần) sau khi commit thành công và đã biết
-   branch đích.
-10. Khi người dùng muốn publish hoặc luồng tự nhiên tới PR: dùng Pull Request Notes
+   `scripts/test-commit-message-encoding.ps1 -MessageFile <file>`, kiểm tra pass.
+7. **DỪNG cho người dùng duyệt diff:** trình bày `git status --short` (file đã stage) +
+   toàn bộ nội dung commit message, chờ người dùng xác nhận TRƯỚC khi chạy lệnh commit.
+8. Sau khi xác nhận: commit bằng `git commit -F <file>` (KHÔNG truyền tiếng Việt qua tham
+   số shell). Check ở bước 6 fail: sửa xử lý UTF-8, không được bỏ dấu tiếng Việt để lách.
+9. Chạy verification liên quan khi khả thi.
+10. Sau khi commit: kiểm tra `git log -1 --format=%B` còn đọc được tiếng Việt. Encoding
+    hỏng và commit **CHƯA push** → amend ngay để sửa. Đã push rồi → KHÔNG amend (viết đè
+    lịch sử đã chia sẻ); tạo commit sửa mới thay thế.
+11. Push branch hiện tại (dùng tracking khi cần) sau khi commit thành công và đã biết
+    branch đích.
+12. Khi người dùng muốn publish hoặc luồng tự nhiên tới PR: dùng Pull Request Notes
     Template trong [references/commit-templates.md](references/commit-templates.md),
     ghi rõ migration, testing, risk, notes.
 
@@ -90,9 +94,9 @@ tuần/tháng từ commit, changelog thân thiện người dùng.
    N ngày gần nhất, hoặc từ nhóm commit trước.
 2. Đọc lịch sử commit của phạm vi đó; giữ lại tag, hash, PR, ticket để truy vết.
 3. Giao phần phân loại, lọc theo đối tượng đọc, xử lý breaking change và VIẾT nội dung
-   cuối cho skill `release-notes` khi có. Nếu không có: tạo bản tóm tắt tối thiểu theo
-   nhóm (New Features / Improvements / Fixes / Breaking Changes / Security), lọc bớt
-   churn nội bộ, và NÓI RÕ rằng skill release-notes chưa được cài.
+   cuối cho skill `engineering-release-notes` khi được cài. Nếu không có: tạo bản tóm tắt
+   tối thiểu theo nhóm (New Features / Improvements / Fixes / Breaking Changes / Security),
+   lọc bớt churn nội bộ, và NÓI RÕ rằng skill `engineering-release-notes` chưa được cài.
 4. Với release notes hướng người dùng: viết lại commit khô khan thành ngôn ngữ kết quả,
    không lặp nguyên văn subject.
 

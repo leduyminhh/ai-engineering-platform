@@ -4,21 +4,26 @@
 > ranh giới an toàn nền, nguồn sự thật nền). Chỉ mô tả phần ĐẶC THÙ frontend.
 
 ## Phân tầng mã nguồn frontend
-Mỗi feature tự chứa trong `src/`: `components/` (presentational/view, nhận props vào → phát events
-ra) → `containers/` + `state/` (gắn state, data-fetching) → `api/` (data layer, ánh xạ data contract).
-View KHÔNG tự gọi API trực tiếp mà qua state/data layer. UI primitives/code chung ở `src/shared/`.
-Cây component, design tokens, ui-contract, state-model đều externalize ra file.
+Mỗi project chọn MỘT kiểu kiến trúc UI khi `frontend-init`: **Feature-Based** (nhóm theo domain,
+ranh giới mềm — mặc định, app nhỏ/vừa một team), **FSD** (Feature-Sliced Design — layer/slice/segment
++ public API, app lớn/nhiều domain), hoặc **Micro-Frontend** (host + remotes qua Module Federation,
+đa team; mỗi remote nội bộ = FSD). Kiểu đã chọn + Dependency Rule/ranh giới tầng-slice của nó là
+**NGUỒN SỰ THẬT layout**, mô tả ở `project-knowledge/architecture.md` + `source-structure.md` (chọn
+theo `architecture/ARD.md`), mọi skill downstream đọc từ đó, KHÔNG hardcode tên tầng. Bất biến chung
+mọi kiểu: view/UI thuần KHÔNG tự gọi API trực tiếp mà qua state/data layer; UI primitives/code chung
+ở `src/shared/`. Cây component, design tokens, ui-contract, state-model đều externalize ra file.
 
-## Skeleton khởi tạo (framework hỗ trợ)
-`frontend-init` CÓ THỂ ship một **skeleton hạ tầng-only chạy được** cho framework hỗ trợ
-(React): app bootstrap + api client (đọc base URL từ env) + feature `health` mẫu + 1 test
-xanh. Skeleton KHÔNG khóa router/state-lib/styling — các lựa chọn đó vẫn do team chốt; skeleton
-chỉ dùng mặc định tối giản (useState + fetch + CSS Modules) làm điểm khởi đầu thay được.
+## Khởi tạo (`frontend-init`)
+`frontend-init` là scaffold **CHỈ TÀI LIỆU** (project-knowledge, ADR, contracts, layout thư mục mô
+tả) — KHÔNG sinh code skeleton, KHÔNG viết code thực thi. Module nghiệp vụ/skeleton chạy được do các
+skill khác (`frontend-implement`...) sinh khi có yêu cầu cụ thể.
 
-## Pipeline frontend (thứ tự bắt buộc)
-**UI/Component Contract** (props/events/slots + đầy đủ trạng thái UI + data contract + UI mock/fixtures)
-→ **State Model** (store/query keys/selectors + data-fetching mapping) → **Implement đầy đủ**
-(code component theo từng trạng thái + nối API thật thay mock).
+## Các mối quan tâm khi implement (không phải chuỗi skill bắt buộc)
+Khi hiện thực một UI/feature đầy đủ, `frontend-implement` xử lý tuần tự trong CHÍNH skill đó (không
+phải các skill riêng, không bắt buộc theo pipeline): chốt **UI/Component Contract** (props/events/slots
++ đầy đủ trạng thái UI + data contract + UI mock/fixtures) → **State Model** (store/query keys/selectors
++ data-fetching mapping) → **Implement đầy đủ** (code component theo từng trạng thái + nối API thật
+thay mock).
 
 Contract của frontend là **HỢP ĐỒNG GIAO DIỆN component**: chốt trước public API (props vào,
 events/callbacks ra, slots/children), đầy đủ trạng thái UI (loading/empty/error/success/disabled)

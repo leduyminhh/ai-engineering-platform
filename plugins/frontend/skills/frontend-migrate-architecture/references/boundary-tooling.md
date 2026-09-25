@@ -12,10 +12,12 @@ của backend.
 
 ## Feature-Based → `eslint-plugin-boundaries`
 
-- Cài `eslint-plugin-boundaries`, khai `boundaries/elements` theo cây (app/pages/features/shared) và luật
-  `boundaries/element-types` "chỉ trỏ xuống" — lấy sketch từ blueprint Feature-Based.
+- Cài `eslint-plugin-boundaries`, khai `boundaries/elements` theo cây (`app`, `features`, và nhóm dùng chung
+  phẳng gốc `src/`: `components/hooks/lib/stores/config/types/utils` — KHÔNG có `pages`, KHÔNG có `shared/`
+  bọc ngoài) và luật `boundaries/element-types` "chỉ trỏ xuống" — lấy sketch từ blueprint Feature-Based.
 - Luật cốt lõi phải XANH: một `feature` KHÔNG import ruột `feature` khác (**feature↔feature disallow**);
-  liên kết chỉ qua `shared` hoặc compose ở `pages`; import ra ngoài feature đi qua public API `index.ts`.
+  liên kết chỉ qua nhóm dùng chung hoặc compose ở `app/routes`; import ra ngoài feature đi qua public API
+  `index.ts`.
 - `eslint-plugin-boundaries` chặn **chiều import**, KHÔNG chặn naming — quy ước tên (`*Page`/`use*`/`*.api`)
   vẫn giữ bằng review.
 

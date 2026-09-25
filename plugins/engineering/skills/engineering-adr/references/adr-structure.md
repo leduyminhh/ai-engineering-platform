@@ -59,6 +59,33 @@ theo mô hình **Nygard** (Michael Nygard, 2011): Title / Status / Context / Dec
   drift.
 - Khi ADR và contract/spec lệch nhau: nêu rõ là điểm cần con người chốt, không tự sửa contract/spec.
 
+## Ví dụ rút gọn
+
+```markdown
+# ADR-0007: Chọn Redis cho cache session
+
+Status: Proposed
+Date: 2026-09-18
+
+## Context
+Session hiện lưu in-memory trên từng instance app → mất session khi scale ngang hoặc
+restart. Cần kho session dùng chung, đọc/ghi nhanh (<10ms p99).
+
+## Các lựa chọn đã cân nhắc
+1. **Redis (managed)** — nhanh, TTL sẵn, đã có hạ tầng team quen. Nhược: thêm 1 dependency vận hành.
+2. **DB quan hệ hiện có (bảng session)** — không thêm hạ tầng mới. Nhược: chậm hơn, tăng tải DB chính,
+   phải tự dọn TTL.
+
+## Decision
+Chúng ta sẽ dùng Redis (managed) cho session cache, vì đáp ứng ngưỡng latency và có TTL
+built-in, giảm code dọn dẹp thủ công so với phương án 2.
+
+## Consequences
++ Session sống sót qua restart/scale ngang; giảm tải DB chính.
+− Thêm một điểm lỗi hạ tầng (Redis down → fallback cần thiết kế riêng, CHƯA có ở ADR này).
+Residual risk: chưa có kế hoạch fallback khi Redis down — cần ADR/task riêng trước khi lên prod.
+```
+
 ## Checklist (Definition of Done cho ADR)
 
 - [ ] Đặt đúng `docs/decisions/<số kế tiếp>-<slug>.md`; số **nối tiếp** đúng convention (4 chữ số, +1).

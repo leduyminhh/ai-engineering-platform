@@ -14,8 +14,8 @@ next: null
 
 Recipe hiện thực việc externalize cấu hình: đưa cấu hình THƯỜNG lên Consul (KV) và
 SECRETS vào Vault (KV v2), thay cho việc set toàn bộ qua `.env` / file cấu hình phẳng.
-Skill này KHÔNG nằm trong chuỗi bắt buộc `init → analysis → contract → erd → implement`;
-gọi khi cần trên project đã chạy `backend-init`.
+Skill này KHÔNG phụ thuộc skill nào khác; gọi độc lập trên project đã có mã nguồn (khuyến
+nghị đã chạy `backend-init` trước để có cấu trúc workflow, nhưng không bắt buộc).
 
 ## Tiền đề
 - Project đã có cấu trúc workflow (đã chạy `backend-init`). Nếu chưa, gợi ý khởi tạo trước.

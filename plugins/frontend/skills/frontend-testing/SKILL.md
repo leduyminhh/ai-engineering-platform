@@ -58,9 +58,9 @@ trong `ui` ... test được bằng render + props". Test **hành vi người d�
 Xác định **hành vi người dùng cần test + mức rủi ro**, rồi chọn **loại test hẹp nhất chứng minh
 được rủi ro đó** theo test pyramid và ánh xạ tầng-kiến-trúc. Chi tiết + ma trận chọn loại:
 [references/test-strategy.md](references/test-strategy.md).
-- **Feature-Based:** presentational (`features/<x>/ui`) → render + interaction test bằng props, KHÔNG mạng;
-  hook/logic (`features/<x>/hooks`) → hook test; container/page chạm data → test với **msw** giả response.
-  `shared/ui` test render + props độc lập.
+- **Feature-Based:** presentational (`features/<x>/components`) → render + interaction test bằng props,
+  KHÔNG mạng; hook/logic (`features/<x>/hooks`) → hook test; container chạm data → test với **msw** giả
+  response. `components/` (phẳng gốc `src/`, dùng chung) test render + props độc lập.
 - **FSD:** test theo slice — `entities`/`features` (UI + logic của slice) là nơi tập trung; UI
   thuần trong slice test render + props; slice chạm data mock mạng qua msw. `shared/ui` test độc lập.
 - **Micro-FE:** test **trong từng remote** theo FSD (như trên) — remote build/test độc lập; không cross-import
@@ -121,6 +121,7 @@ không chạy theo con số phần trăm tổng.
 
 ## Sau khi xong
 Tóm tắt: test đã thêm (số + tầng), lệnh chạy + kết quả THẬT, nhánh/state đã phủ, **khoảng trống +
-residual risk** còn lại. Con người **duyệt diff** trước khi commit; tự push nhánh + mở PR. Nếu gặp
+residual risk** còn lại. Con người **duyệt diff** trước khi commit; **người dùng** tự push nhánh
++ mở PR. Nếu gặp
 ràng buộc mâu thuẫn (runner ngoài Vitest/Jest chưa có idiom trong references, thiếu msw, hoặc không
 có điểm vào rõ để characterization), DỪNG và BÁO thay vì tự đi chệch.

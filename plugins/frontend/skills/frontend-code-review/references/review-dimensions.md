@@ -40,18 +40,22 @@ Nơi lỗi hay nấp trong React; đây là trục ưu tiên. Dấu hiệu:
 file trước.
 
 ### Nếu kiến trúc là **Feature-Based** (`react-feature-based.template.md`)
-- **Feature tự chứa:** mã một domain phải nằm gọn trong `features/<domain>/` (`ui/hooks/api/model`); logic
-  domain rò ra `pages`/`shared` là vi phạm (business rule tái dùng đẩy vào `model` của feature).
+- **Feature tự chứa:** mã một domain phải nằm gọn trong `features/<domain>/` (`components/hooks/api/types`);
+  logic domain rò ra `app/routes`/nhóm dùng chung là vi phạm (business rule tái dùng đẩy vào `types`/`utils`
+  của feature).
 - **KHÔNG cross-import ruột feature:** `features/A` **import** file nội bộ của `features/B`
-  (`features/customers/hooks/...`) → vi phạm; liên kết phải hạ phần chung xuống `shared` hoặc **compose ở
-  `pages`**. Nếu project có `eslint-plugin-boundaries` mà lọt, nghi luật chưa bao đủ.
+  (`features/customers/hooks/...`) → vi phạm; liên kết phải hạ phần chung xuống nhóm dùng chung (phẳng gốc
+  `src/`) hoặc **compose ở `app/routes`**. Nếu project có `eslint-plugin-boundaries` mà lọt, nghi luật chưa
+  bao đủ.
 - **Qua public API:** import **sâu** vào ruột feature (`features/invoices/hooks/useInvoices`) thay vì
   `@/features/invoices` (public API `index.ts`).
-- **Presentational thuần trong `ui`:** component trong `features/<x>/ui` gọi `fetch`/`axios`/React Query
-  trực tiếp, hoặc giữ store? → vi phạm (presentational phải props-in/events-out; data qua `hooks`/`api`).
-- **HTTP tập trung:** `fetch`/`axios`/endpoint xuất hiện **ngoài** `features/<x>/api` (qua `shared/api`);
-  UI thấy URL/HTTP.
-- **`shared` không mang nghiệp vụ:** `shared` import ngược lên `features`/`pages`, hoặc chứa logic domain.
+- **Presentational thuần trong `components`:** component trong `features/<x>/components` gọi
+  `fetch`/`axios`/React Query trực tiếp, hoặc giữ store? → vi phạm (presentational phải props-in/events-out;
+  data qua `hooks`/`api`).
+- **HTTP tập trung:** `fetch`/`axios`/endpoint xuất hiện **ngoài** `features/<x>/api` (qua
+  `lib/api-client.ts`); UI thấy URL/HTTP.
+- **Nhóm dùng chung không mang nghiệp vụ:** `components/hooks/lib/stores/config/types/utils` (phẳng gốc
+  `src/`) import ngược lên `features`/`app`, hoặc chứa logic domain.
 - **Server-state = React Query:** copy `data` của React Query vào `useState` rồi tự `useEffect` đồng bộ
   (nguồn sự thật đôi → lệch); tự quản cache/refetch bằng `useEffect` thủ công.
 

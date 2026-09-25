@@ -15,8 +15,8 @@ next: null
 
 Recipe tái tổ chức mã nguồn của một BACKEND project ĐÃ TỒN TẠI sang một kiểu kiến trúc
 đích trong bộ chuẩn — GIỮ NGUYÊN hành vi nghiệp vụ, chỉ đổi cách phân tầng/ranh giới phụ
-thuộc. KHÔNG nằm trong chuỗi bắt buộc `init → analysis → contract → erd → implement`; gọi
-khi cần. KHÔNG tách microservice, KHÔNG đổi logic nghiệp vụ.
+thuộc. KHÔNG phụ thuộc skill nào khác; gọi độc lập trên project đã có mã nguồn (đã hoặc
+chưa chạy `backend-init`). KHÔNG tách microservice, KHÔNG đổi logic nghiệp vụ.
 
 ## Tiền đề
 - Project có mã nguồn thật + VCS sạch có kiểm soát. **Baseline build + full test phải XANH

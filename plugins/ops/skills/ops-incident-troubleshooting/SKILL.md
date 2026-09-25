@@ -77,7 +77,9 @@ kết luận nguyên nhân từ một tín hiệu đơn lẻ chưa kiểm chứn
    Nêu phương án **giảm thiểu** khả dĩ: **rollback deploy nghi ngờ**, **scale** tài nguyên, bật/tắt
    **feature flag**, **circuit breaker** cho dependency lỗi. Mỗi phương án nêu **rủi ro + điều kiện áp dụng
    + cách kiểm tra sau khi áp**. **KHÔNG tự thực thi trên prod** — trình bày lệnh/kế hoạch, chờ người xác
-   nhận (chi tiết ranh giới: [references/triage-workflow.md](references/triage-workflow.md)).
+   nhận (chi tiết ranh giới: [references/triage-workflow.md](references/triage-workflow.md)). Khi người
+   dùng cần THỰC THI rollback theo một chiến lược cụ thể (rolling/blue-green/canary) → route sang
+   `ops-deploy-release` (skill này chỉ dừng ở mức đề xuất, không đi sâu cách rollback).
 
 5. **RCA + hành động khắc phục.**
    Theo [references/rca-template.md](references/rca-template.md): **nguyên nhân gốc** (phân biệt trigger vs

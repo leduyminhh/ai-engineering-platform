@@ -38,3 +38,9 @@ và idiom của stack, để một người đọc **suy ra được phạm vi +
 Mỗi điểm lệch: **path/`file:line`** · **rule nguồn** (trích ngắn quy tắc trong `code-convention.md`) ·
 **hiện tại → đề xuất**. Mục `code-convention.md` **không quy định rõ** → đánh dấu **[giả định]** và **hỏi**,
 KHÔNG tự phán là lệch. KHÔNG tự đổi quy ước đặt tên (đổi là ADR → `engineering-adr`).
+
+Ví dụ một finding thật:
+
+| path:line | rule nguồn | hiện tại → đề xuất |
+|---|---|---|
+| `src/service/utils2.py:1` | `code-convention.md` §2: "tên module suy ra được domain + trách nhiệm" | `utils2` (mơ hồ, không rõ chứa gì) → `payment_formatting` (đúng nội dung: hàm format số tiền/currency) |

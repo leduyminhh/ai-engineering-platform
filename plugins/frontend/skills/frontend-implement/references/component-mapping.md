@@ -6,9 +6,11 @@ không có. Dò lib thật từ `package.json` + `design-system.md`; bảng dư�
 ## Thứ tự ưu tiên
 
 1. Có trong **component-lib** của project → dùng đúng component + variant của lib (đừng dựng lại).
-2. Có **wrapper/primitive dùng chung** của project (vd `shared/ui`, `packages/ui-kit`) → dùng nó.
+2. Có **wrapper/primitive dùng chung** của project (vd `components/` gốc `src/` ở Feature-Based, `shared/ui`
+   ở FSD, `packages/ui-kit` ở Micro-FE) → dùng nó.
 3. Không có → **dựng bằng Tailwind** theo token design-system, đặt ở đúng tầng/slice; nếu có khả năng
-   tái dùng → đặt ở lớp UI dùng chung (Feature-Based/FSD: `shared/ui`; Micro-FE: `packages/ui-kit`).
+   tái dùng → đặt ở lớp UI dùng chung (Feature-Based: `components/` phẳng gốc `src/`; FSD: `shared/ui`;
+   Micro-FE: `packages/ui-kit`).
 
 ## Bảng map phần tử → component (theo lib)
 

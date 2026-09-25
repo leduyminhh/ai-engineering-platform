@@ -1,6 +1,6 @@
 ---
 name: frontend-code-review
-description: "Recipe on-demand: REVIEW một diff/PR/module FRONTEND (React/TypeScript) theo các TRỤC — correctness (state/effect sai, dependency array thiếu/thừa, race giữa request, key list không ổn định, memo/useCallback sai, xử lý loading/error/empty), thiết kế & bám boundary (Feature-Based: feature tự chứa ui/hooks/api/model, không cross-import ruột feature, qua public API; FSD: import chỉ trỏ xuống, không cross-import cùng layer, đi qua public API; server-state ở React Query không copy vào useState), đơn giản hoá & tái dùng (trùng lặp component/logic, over-engineering, prop drilling), a11y (role/label/keyboard/focus/contrast), readability & naming theo code-convention, và test coverage. Phân loại severity (blocker/major/minor/nit) + evidence file:line + đề xuất fix; READ-ONLY mặc định (không tự sửa trừ khi được yêu cầu). Defer security/tool scan sang engineering-quality-gate, tái cấu trúc sang frontend-refactor. Dùng skill NÀY khi người dùng muốn \"review code frontend\", \"review PR React\", \"review component\", \"đánh giá code FE\", \"review diff frontend\", \"review UI code\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
+description: "Recipe on-demand: REVIEW một diff/PR/module FRONTEND (React/TypeScript) theo các TRỤC — correctness (state/effect sai, dependency array thiếu/thừa, race giữa request, key list không ổn định, memo/useCallback sai, xử lý loading/error/empty), thiết kế & bám boundary (Feature-Based: feature tự chứa components/hooks/api/types, không cross-import ruột feature, qua public API; FSD: import chỉ trỏ xuống, không cross-import cùng layer, đi qua public API; server-state ở React Query không copy vào useState), đơn giản hoá & tái dùng (trùng lặp component/logic, over-engineering, prop drilling), a11y (role/label/keyboard/focus/contrast), readability & naming theo code-convention, và test coverage. Phân loại severity (blocker/major/minor/nit) + evidence file:line + đề xuất fix; READ-ONLY mặc định (không tự sửa trừ khi được yêu cầu). Defer security/tool scan sang engineering-quality-gate, tái cấu trúc sang frontend-refactor. Dùng skill NÀY khi người dùng muốn \"review code frontend\", \"review PR React\", \"review component\", \"đánh giá code FE\", \"review diff frontend\", \"review UI code\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 4
 stageNumber: "04"
 title: "Frontend Code Review — Review diff/PR frontend React/TS theo trục, có evidence (recipe on-demand)"
@@ -72,8 +72,9 @@ của project, KHÔNG áp gu cá nhân.
 - **Correctness** — state/effect sai, dependency array thiếu/thừa, race giữa các request, `key` list không
   ổn định, `useMemo`/`useCallback` sai (memo hoá vô ích hoặc thiếu khi cần), thiếu xử lý loading/error/empty,
   stale closure.
-- **Thiết kế & bám boundary** — Feature-Based: feature tự chứa `ui/hooks/api/model`, KHÔNG cross-import
-  ruột feature khác (liên kết qua `shared` hoặc compose ở `pages`), mở ra ngoài qua **public API `index.ts`**;
+- **Thiết kế & bám boundary** — Feature-Based: feature tự chứa `components/hooks/api/types`, KHÔNG cross-import
+  ruột feature khác (liên kết qua nhóm dùng chung phẳng gốc `src/` hoặc compose ở `app/routes`), mở ra ngoài
+  qua **public API `index.ts`**;
   FSD: import **chỉ trỏ xuống** layer, KHÔNG cross-import cùng layer, đi qua **public API `index.ts`**;
   Micro-FE: mỗi remote nội bộ theo FSD, ranh giới cross-remote qua module `expose` + `packages/*`, KHÔNG
   import ruột remote khác; server-state ở **React Query**, KHÔNG copy vào `useState`.

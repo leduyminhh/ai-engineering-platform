@@ -10,7 +10,8 @@ Nguyên tắc chung cho MỌI move:
 - **Bước nhỏ, XANH sau mỗi bước** (`tsc` + test + lint + build). Đỏ → revert bước đó.
 - **Đặt đúng tầng/slice.** Trước khi gom/dời, hỏi: chỗ đến có vi phạm chiều phụ thuộc không? (vd không
   kéo `fetch`/store vào presentational; Feature-Based — feature tự chứa, không cross-import ruột feature
-  khác, liên kết qua `shared`/compose ở `pages`, qua public API `index.ts`; FSD — chỉ import xuống layer
+  khác, liên kết qua nhóm dùng chung (phẳng gốc `src/`)/compose ở `app/routes`, qua public API `index.ts`;
+  FSD — chỉ import xuống layer
   thấp hơn, qua public API `index.ts`, không cross-import cùng layer; Micro-FE — nội bộ remote theo FSD,
   cross-remote qua module `expose` + `packages/*`.)
 - **Có công cụ thì dùng.** IDE refactoring (Rename/Extract) an toàn hơn sửa tay; `eslint-plugin-boundaries`/
@@ -68,7 +69,8 @@ Nguyên tắc chung cho MỌI move:
 - **Dấu hiệu:** hai-ba component gần giống nhau (khác vài prop); className/inline-style lặp ở nhiều nơi;
   giá trị màu/spacing "trần" thay vì token của design-system.
 - **Move:** gộp component gần giống bằng props/variant (hoặc composition) — về **nơi đúng tầng/slice**
-  (UI dùng chung → `components`/`shared/ui`); gom style trùng về class/util/variant dùng chung; thay
+  (UI dùng chung → `components/` phẳng gốc `src/` ở Feature-Based, `shared/ui` ở FSD); gom style trùng về
+  class/util/variant dùng chung; thay
   literal màu/spacing bằng **token design-system** của project.
 - **Rủi ro / giữ hành vi:** hai component "giống" nhưng khác tinh vi (trạng thái, a11y, edge case) — đọc
   kỹ trước khi gộp; gộp nhầm là đổi UI. Trùng lặp *tình cờ* (giống hiện tại nhưng lý do đổi khác nhau) thì
