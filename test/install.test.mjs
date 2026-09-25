@@ -14,7 +14,7 @@ process.env.AIE_INSTALL_ROOT = TMP;
 const { install, uninstall, update, check, linkDisabledForRoot, claudePluginCommands,
   claudePluginRefreshCommands, claudeCliScope, marketplacesToRemove,
   skillCatalog, allSkillsOf, resolveSelection, effectiveSkills, pluginsFromSelection,
-  normFilter, entryMatches, offeredCatalog, publishedPluginIds } =
+  normFilter, entryMatches, offeredCatalog, publishedPluginIds, stripUnsupportedWorkflows } =
   await import('../cli/lib/install.mjs');
 const { zipBuffer, coworkSkillIds, coworkBuildSet, pack } = await import('../cli/lib/pack.mjs');
 const { wizardReportModel, renderWizardReportMd } = await import('../cli/lib/report.mjs');
@@ -604,6 +604,49 @@ try {
   ok(check({ scope: 'project' }).installs.length === 0, 'check: trống');
 } finally {
   fs.rmSync(TMP, { recursive: true, force: true });
+}
+
+// ── workflows: catalog + closure + agent + provider chưa hỗ trợ ────────────────
+{
+  const cat = skillCatalog();
+  ok(cat.plugins[1].id === 'workflows', 'skillCatalog: workflows đứng sau core');
+  ok(cat.plugins[1].skillIds.includes('workflows/workflow-feature'), 'skillCatalog: có workflows/workflow-feature');
+  const eff = effectiveSkills({ plugins: [], skills: ['workflows/workflow-feature'] });
+  ok(eff.has('backend/backend-implement') && eff.has('engineering/engineering-quality-gate'),
+    'effective: workflow kéo skill của agent (closure)');
+  ok(!eff.has('workflows/workflows-principles'), 'effective: không sinh workflows-principles');
+  ok(!effectiveSkills({ plugins: [], skills: ['workflows/workflow-feature'] }, { withDeps: false }).has('backend/backend-implement'),
+    'effective withDeps=false: không kéo closure');
+  const stripped = stripUnsupportedWorkflows('cursor', { provider: 'cursor', plugins: ['workflows', 'backend'], skills: ['workflows/workflow-bugfix'] });
+  ok(!stripped.plugins.includes('workflows') && stripped.skills.length === 0 && stripped.plugins.includes('backend'),
+    'stripUnsupportedWorkflows: cursor bỏ workflows, giữ plugin khác');
+
+  const TMP_W = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wf-'));
+  process.env.AIE_INSTALL_ROOT = TMP_W;
+  const a = parse(['install', '--provider', 'claude', '--skill', 'workflows/workflow-feature']);
+  const plugins = (a.skill.length && !a.pluginExplicit) ? [] : a.plugin;
+  const r = install({ providers: a.provider, plugins, skills: a.skill, scope: 'project', mode: a.mode });
+  const E = (rel) => fs.existsSync(path.join(TMP_W, rel));
+  ok(E('.claude/skills/workflow-feature/SKILL.md'), 'cài workflow: SKILL.md của workflow');
+  ok(E('.claude/skills/backend-implement/SKILL.md') && E('.claude/skills/frontend-code-review/SKILL.md'),
+    'cài workflow: skill kéo theo được đặt');
+  ok(E('.claude/agents/backend-implementer.md') && E('.claude/agents/engineering-quality-auditor.md'),
+    'cài workflow: agent trong frontmatter agents được đặt');
+  ok(!E('.claude/agents/ops-incident-investigator.md'), 'cài workflow: agent không liên quan KHÔNG đặt');
+  ok(r.results[0].pulled.some((p) => p.from === 'workflow-feature'), 'cài workflow: result có danh sách kéo theo');
+  const u = parse(['uninstall', '--provider', 'claude', '--skill', 'workflows/workflow-feature']);
+  uninstall({ providers: u.provider, plugins: u.pluginExplicit ? u.plugin : [], skills: u.skill, scope: 'project' });
+  ok(!E('.claude/skills/workflow-feature') && !E('.claude/skills/backend-implement') && !E('.claude/agents/backend-implementer.md'),
+    'gỡ workflow: gỡ luôn phần kéo theo + agent');
+  fs.rmSync(TMP_W, { recursive: true, force: true });
+
+  const TMP_X = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wfx-'));
+  process.env.AIE_INSTALL_ROOT = TMP_X;
+  install({ providers: 'codex', skills: ['workflows/workflow-bugfix'], scope: 'project' });
+  ok(fs.existsSync(path.join(TMP_X, '.codex/skills/workflow-bugfix/SKILL.md')), 'codex: cài workflow skill');
+  ok(fs.existsSync(path.join(TMP_X, '.codex/agents/backend-test-writer.toml')), 'codex: đặt agent .toml');
+  fs.rmSync(TMP_X, { recursive: true, force: true });
+  process.env.AIE_INSTALL_ROOT = TMP;
 }
 
 // ── pack Cowork: manifest _cowork.json + ZIP writer zero-dep ─────────────────

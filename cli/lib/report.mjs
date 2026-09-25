@@ -3,7 +3,7 @@
 // Bám semantics của skillCatalog: core mang thêm 'core/principles'; KHÔNG liệt kê generated '<plugin>-principles'.
 import fs from 'node:fs';
 import path from 'node:path';
-import { loadPlugins, loadCore, loadPublished, REPO_ROOT } from './plugins.mjs';
+import { loadPlugins, loadCore, loadPublished, loadWorkflows, REPO_ROOT } from './plugins.mjs';
 import { ensureDir } from './write.mjs';
 
 const skillsOf = (p, isCore) => [
@@ -17,8 +17,12 @@ const skillsOf = (p, isCore) => [
  * (chỉ cài bằng --plugin). published=null → offer tất cả. `published` là map {id:'*'|[fullId]}.
  * Export để test.
  */
-export function wizardReportModel({ plugins = loadPlugins(), core = loadCore(), published = loadPublished() } = {}) {
+export function wizardReportModel({ plugins = loadPlugins(), core = loadCore(), published = loadPublished(),
+  workflows = loadWorkflows() } = {}) {
   const offered = [{ id: 'core', name: core.name, published: true, skills: skillsOf(core, true) }];
+  if (workflows && workflows.stages.length) {
+    offered.push({ id: 'workflows', name: workflows.name, published: true, skills: workflows.stages.map((s) => `workflows/${s.id}`) });
+  }
   const draft = [];
   for (const p of plugins) {
     const all = skillsOf(p, false);
