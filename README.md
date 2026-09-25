@@ -114,7 +114,7 @@ and cross-cutting capability plugins (`engineering`, `ops`); skills are
 lives in `plugins/_published.json` — each entry is either a whole plugin (`backend`) or
 a single skill (`frontend/frontend-init`); the wizard offers only what is listed, and
 `npm run build` writes `build/wizard-install-report.md`. Plugins with no published skill
-(e.g. `data`, `ops`) stay drafts, installable only via `--plugin`.
+(e.g. `data`) stay drafts, installable only via `--plugin`.
 
 | Plugin | Capability | Skills |
 | --- | --- | --- |
