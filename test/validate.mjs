@@ -133,7 +133,19 @@ const byPath = (files) => new Map(files.map((f) => [f.path, f]));
 }
 {
   ok(tomlBasic('a"b\\c\nd') === '"a\\"b\\\\c\\nd"', 'tomlBasic: escape " \\ và newline');
-  ok(tomlMultiline('x"""y\\z') === '"""\nx""\\"y\\\\z"""', 'tomlMultiline: tách """ và escape \\');
+  {
+    const out = tomlMultiline('x"""y\\z');
+    ok(out.startsWith('"""\n'), 'tomlMultiline: mở bằng """ + newline');
+    ok(out.endsWith('"""'), 'tomlMultiline: đóng bằng """');
+    const body = out.slice(4, -3);
+    ok(!/(^|[^\\])"""/.test(body), 'tomlMultiline: không còn chuỗi """ chưa escape ở giữa nội dung');
+  }
+  {
+    // Regression: content kết thúc bằng dấu " sát ngay dấu đóng """ (thuật toán cũ tạo 4 dấu " liên tiếp → lỗi cú pháp TOML).
+    const out = tomlMultiline('Hello"');
+    ok(out.startsWith('"""\n') && out.endsWith('"""'), 'tomlMultiline: content kết thúc bằng " vẫn mở/đóng đúng');
+    ok(out.slice(4, -3).endsWith('\\"'), 'tomlMultiline: dấu " cuối content được escape (không tạo 4 dấu " liên tiếp trước """ đóng)');
+  }
   const out = byPath(codexAdapter.build([fxPlugin], { core: fxCore, workflows: fxWorkflows }));
   const toml = (out.get('fx/agents/fx-reviewer.toml') || {}).content || '';
   ok(toml.includes('sandbox_mode = "read-only"') && toml.includes('model_reasoning_effort = "high"'),

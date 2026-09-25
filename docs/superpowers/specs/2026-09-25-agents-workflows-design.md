@@ -303,8 +303,11 @@ Nguồn đối chiếu (đọc ngày 2026-09-25):
   `name` không chứa `:`.
 - Codex: `learn.chatgpt.com/docs/agent-configuration/subagents`. Agent project ở `.codex/agents/`, cá nhân ở
   `~/.codex/agents/`.
-- [Unverified] Codex có nhận `-` trong `name` hay không (ví dụ tài liệu dùng snake_case). Nếu không → adapter đổi
-  `-` → `_`, preamble nêu tên đã đổi.
+- [Inference] Codex CÓ THỂ không nhận `-` trong `name` (CLI `codex` có sẵn nhưng không có subcommand
+  validate/liệt kê custom agent để xác thực trực tiếp; tài liệu chính thức — `learn.chatgpt.com/docs/agent-configuration/subagents`
+  — cho 6/6 ví dụ agent dùng snake_case ở trường `name`, dù filename `.toml` vẫn giữ `-`). Đã chốt: adapter
+  đổi `name` sang `id.replace(/-/g, '_')`, filename `.toml` vẫn giữ nguyên `id` gốc (có `-`). Preamble dispatch
+  Codex nêu tên đã đổi. Cần xác thực lại khi có phiên Codex thật (có auth).
 - `model` **không** map sang Codex.
 
 ### 7.4 Install
