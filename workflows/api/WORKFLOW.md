@@ -6,7 +6,7 @@ title: "API — contract-first, implement, kiểm drift"
 kind: workflow
 tier: 2
 risk: medium
-agents: "backend-implementer,backend-test-writer,backend-reviewer,frontend-implementer"
+agents: "backend-implementer,backend-test-writer,backend-reviewer"
 requires: "backend/backend-api-contract,core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -25,7 +25,7 @@ next: null
 
 ## Điều kiện tiên quyết
 
-- Skill/agent đã cài: `backend-implementer`, `backend-test-writer`, `backend-reviewer`, `frontend-implementer`,
+- Skill/agent đã cài: `backend-implementer`, `backend-test-writer`, `backend-reviewer`,
   skill `backend/backend-api-contract`, `core/git-workflow`.
 - Artifact phải có sẵn: `docs/contracts/` của project (nếu đã có API khác) để giữ nhất quán versioning.
 - Baseline: build/test hiện tại của backend đang XANH trước khi thêm endpoint.
@@ -83,11 +83,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 5 — FE client (tuỳ chọn)
 
-- **Thực hiện:** agent `frontend-implementer`
+- **Thực hiện:** session chính
 - **Đầu vào:** contract đã qua kiểm drift từ Bước 4
-- **Hành động:** sinh/cập nhật type và client gọi API từ contract, nếu người dùng yêu cầu nối FE; nếu không,
-  ghi rõ "bỏ qua".
-- **Ràng buộc:** không tự đổi contract để hợp với FE — lệch thì quay lại Bước 1.
+- **Hành động:** nếu người dùng yêu cầu nối FE và project đã có công cụ sinh code từ OpenAPI, chạy công cụ đó
+  để sinh/cập nhật type và client; nếu không, ghi rõ "bỏ qua".
+- **Ràng buộc:** không tự đổi contract để hợp với FE — lệch thì quay lại Bước 1; không giao cho
+  `frontend-implement` (skill đó không nối API); không tự thêm công cụ codegen mới hay viết tay lớp gọi API
+  trong component (chưa có skill nối data — Gap G1).
 - **Đầu ra:** type/client FE khớp contract, hoặc dòng "bỏ qua".
 - **Gate:** type/client khớp contract, hoặc ghi "bỏ qua".
 - **Khi fail:** type/client không khớp contract → sửa lại theo đúng contract, không sửa contract để hợp FE.

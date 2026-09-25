@@ -157,7 +157,7 @@ and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mo
 | `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01, WF07, WF08 |
 | `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF03, WF05, WF08 |
 | `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (drift check) | WF01–WF04, WF07–WF09 |
-| `frontend-implementer` | frontend | write | frontend-implement | WF01, WF08 |
+| `frontend-implementer` | frontend | write | frontend-implement | WF01 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05 |
 | `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04 |
 | `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (audit mode) | WF01–WF04, WF06, WF11 |
@@ -184,7 +184,7 @@ orchestrator's confirmation strictness.
 | WF05 | `workflow-testing` | 2 | low | new | BE/FE test-writer |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor |
 | WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-reviewer |
-| WF08 | `workflow-api` | 2 | medium | new (split from the W1 contract step) | backend-implementer, backend-test-writer, backend-reviewer, frontend-implementer |
+| WF08 | `workflow-api` | 2 | medium | new (split from the W1 contract step) | backend-implementer, backend-test-writer, backend-reviewer |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer |

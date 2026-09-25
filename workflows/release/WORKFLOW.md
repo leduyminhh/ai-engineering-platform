@@ -1,6 +1,6 @@
 ---
 name: workflow-release
-description: "Workflow điều phối chuẩn bị release: chạy quality gate, sinh release notes/CHANGELOG từ git log, lập deploy checklist kèm điều kiện rollback, hậu kiểm sau deploy, rồi chỉ đề xuất lệnh tag/push chờ xác nhận. Dùng workflow NÀY khi người dùng muốn \"release\", \"phát hành\", \"chuẩn bị deploy\", \"ra version\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối chuẩn bị release: chạy quality gate, sinh release notes/CHANGELOG từ git log, commit release (CHANGELOG + version bump), lập deploy checklist kèm điều kiện rollback, để người dùng deploy, hậu kiểm sau deploy, rồi chỉ đề xuất lệnh tag/push trên commit release chờ xác nhận. Dùng workflow NÀY khi người dùng muốn \"release\", \"phát hành\", \"chuẩn bị deploy\", \"ra version\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
 order: 11
 title: "Release — quality gate, release notes, deploy checklist"
 kind: workflow
@@ -18,8 +18,9 @@ next: null
 
 ## Mục tiêu & đầu vào
 
-- **Mục tiêu:** xác nhận chất lượng đủ điều kiện release, có release notes đúng phạm vi, deploy checklist
-  kèm điều kiện rollback, hậu kiểm sau deploy, và chỉ đề xuất lệnh tag/push chờ người dùng xác nhận.
+- **Mục tiêu:** xác nhận chất lượng đủ điều kiện release, có release notes đúng phạm vi, commit release
+  (CHANGELOG + version bump), deploy checklist kèm điều kiện rollback, người dùng deploy, hậu kiểm sau deploy,
+  và chỉ đề xuất lệnh tag/push trên commit release, chờ người dùng xác nhận.
 - **Đầu vào bắt buộc:** phạm vi release (tag/version dự kiến, khoảng commit hoặc branch).
 - **Đầu vào tuỳ chọn:** CHANGELOG hiện có, deploy checklist mẫu của project.
 
@@ -61,10 +62,23 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** người dùng chỉ ra thiếu/thừa mục → sửa lại theo git log, trình lại.
 - **Evidence:** đường dẫn/nội dung release notes + xác nhận của người dùng.
 
-### Bước 3 — Deploy checklist
+### Bước 3 — Version bump & commit release ⏸
+
+- **Thực hiện:** skill `git-workflow`
+- **Đầu vào:** release notes/CHANGELOG đã xác nhận từ Bước 2 + version dự kiến
+- **Hành động:** bump version theo quy ước của project (vd `package.json`, `pom.xml`) đúng version dự kiến;
+  gom CHANGELOG + version bump vào một commit release; trình diff cho người dùng duyệt.
+- **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu; không đưa
+  thay đổi code vào commit release.
+- **Đầu ra:** commit release chứa CHANGELOG + version bump (sau khi người dùng duyệt).
+- **Gate:** commit release đã tạo, chứa CHANGELOG + version bump khớp version dự kiến.
+- **Khi fail:** người dùng yêu cầu sửa notes/version → quay lại Bước 2 hoặc sửa version, không commit tạm.
+- **Evidence:** hash commit release + `git show --stat` liệt kê CHANGELOG và file version.
+
+### Bước 4 — Deploy checklist
 
 - **Thực hiện:** agent `ops-release-engineer`
-- **Đầu vào:** release notes đã xác nhận từ Bước 2
+- **Đầu vào:** commit release từ Bước 3
 - **Hành động:** lập checklist các bước deploy theo quy trình project; ghi rõ điều kiện rollback (khi nào
   cần rollback, cách rollback).
 - **Ràng buộc:** không tự thực hiện deploy — chỉ lập checklist.
@@ -73,23 +87,38 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** thiếu bước quan trọng trong quy trình project → bổ sung, ghi rõ lý do.
 - **Evidence:** deploy checklist trong report bước.
 
-### Bước 4 — Hậu kiểm
+### Bước 5 — Deploy ⏸
+
+- **Thực hiện:** session chính
+- **Đầu vào:** deploy checklist + điều kiện rollback từ Bước 4
+- **Hành động:** trình checklist cho người dùng; người dùng tự deploy commit release theo checklist rồi báo
+  đã deploy, hoặc chủ động hoãn deploy.
+- **Ràng buộc:** không agent nào tự deploy hay chạy lệnh tác động môi trường; chỉ đi tiếp khi người dùng báo
+  rõ đã deploy hoặc đã hoãn.
+- **Đầu ra:** xác nhận của người dùng: đã deploy (kèm thời điểm, môi trường) hoặc hoãn deploy.
+- **Gate:** người dùng xác nhận đã deploy commit release, hoặc xác nhận hoãn.
+- **Khi fail:** deploy lỗi giữa chừng → dừng, áp điều kiện rollback của Bước 4 (người dùng thực hiện), đề
+  xuất `workflow-incident` nếu production bị ảnh hưởng.
+- **Evidence:** xác nhận của người dùng + thời điểm và môi trường deploy (hoặc lý do hoãn).
+
+### Bước 6 — Hậu kiểm
 
 - **Thực hiện:** agent `ops-release-engineer`
-- **Đầu vào:** deploy checklist từ Bước 3
-- **Hành động:** nếu đã deploy, kiểm health/observability (log lỗi, metric, alert) sau deploy; nếu chưa
-  deploy, ghi `not_run` kèm lý do.
+- **Đầu vào:** xác nhận deploy từ Bước 5
+- **Hành động:** nếu đã deploy, kiểm health/observability (log lỗi, metric, alert) sau deploy; nếu người dùng
+  hoãn deploy ở Bước 5, ghi `not_run` kèm lý do.
 - **Ràng buộc:** không tự deploy để hậu kiểm — chỉ kiểm khi deploy đã xảy ra.
 - **Đầu ra:** kết quả hậu kiểm, hoặc `not_run` có lý do.
-- **Gate:** health/observability bình thường sau deploy, hoặc `not_run` nếu chưa deploy.
+- **Gate:** health/observability bình thường sau deploy, hoặc `not_run` nếu đã hoãn deploy.
 - **Khi fail:** health/observability bất thường sau deploy → dừng, đề xuất `workflow-incident`.
 - **Evidence:** log/metric hậu kiểm, hoặc lý do `not_run`.
 
-### Bước 5 — Tag ⏸
+### Bước 7 — Tag ⏸
 
 - **Thực hiện:** skill `git-workflow`
-- **Đầu vào:** deploy checklist + hậu kiểm từ Bước 3–4
-- **Hành động:** chỉ đề xuất lệnh tag/push cho phạm vi release; chờ người dùng xác nhận trước khi chạy.
+- **Đầu vào:** commit release (Bước 3) + kết quả hậu kiểm (Bước 6)
+- **Hành động:** chỉ đề xuất lệnh tag/push trỏ vào đúng commit release của Bước 3; chờ người dùng xác nhận
+  trước khi chạy.
 - **Ràng buộc:** không tự chạy lệnh tag/push khi chưa được xác nhận; không push trừ khi được yêu cầu.
 - **Đầu ra:** lệnh tag/push đề xuất, đã chạy (sau khi người dùng xác nhận) hoặc còn chờ.
 - **Gate:** chỉ đề xuất lệnh tag/push, chờ xác nhận.
@@ -102,7 +131,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 |---|---|---|
 | 1 | Danh sách finding quality gate | Người dùng xác nhận 0 blocker |
 | 2 | Release notes/CHANGELOG | Người dùng xác nhận đúng phạm vi |
-| 5 | Lệnh tag/push đề xuất | Người dùng xác nhận rõ ràng trước khi chạy |
+| 3 | Diff commit release (CHANGELOG + version bump) | Người dùng duyệt diff |
+| 5 | Deploy checklist + điều kiện rollback | Người dùng báo đã deploy, hoặc hoãn deploy |
+| 7 | Lệnh tag/push đề xuất trên commit release | Người dùng xác nhận rõ ràng trước khi chạy |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
 
@@ -115,21 +146,26 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` (sau Bước 1 ⏸) | Dừng, đề xuất `workflow-bugfix`/`workflow-security-review`, không tự sửa |
 | Người dùng không xác nhận release notes (sau Bước 2 ⏸) | Sửa lại theo git log, trình lại |
-| Health/observability bất thường sau deploy (Bước 4) | Dừng, đề xuất `workflow-incident` |
-| Người dùng không xác nhận lệnh tag/push (sau Bước 5 ⏸) | Giữ nguyên đề xuất, không tự chạy |
+| Người dùng không duyệt commit release (sau Bước 3 ⏸) | Không commit, quay lại Bước 2 hoặc sửa version |
+| Deploy lỗi giữa chừng (sau Bước 5 ⏸) | Dừng, người dùng áp điều kiện rollback của Bước 4; đề xuất `workflow-incident` nếu production bị ảnh hưởng |
+| Health/observability bất thường sau deploy (Bước 6) | Dừng, đề xuất `workflow-incident` |
+| Người dùng không xác nhận lệnh tag/push (sau Bước 7 ⏸) | Giữ nguyên đề xuất, không tự chạy |
 
-- **Điều kiện dừng:** finding `blocker` chưa xử lý; release notes sai phạm vi chưa sửa được; health/observability
-  bất thường sau deploy; người dùng không xác nhận tag/push.
-- **Rollback:** rollback deploy theo điều kiện đã ghi ở Bước 3 (thuộc trách nhiệm người vận hành); workflow
-  không tự chạy tag/push nên không có gì để rollback ở tầng git trước khi người dùng xác nhận.
+- **Điều kiện dừng:** finding `blocker` chưa xử lý; release notes sai phạm vi chưa sửa được; người dùng không
+  duyệt commit release; deploy lỗi; health/observability bất thường sau deploy; người dùng không xác nhận tag/push.
+- **Rollback:** rollback deploy theo điều kiện đã ghi ở Bước 4 (người vận hành thực hiện); commit release
+  chưa push có thể bỏ bằng thao tác git thủ công của người dùng (workflow không tự `reset --hard`); workflow
+  không tự chạy tag/push nên không có gì để rollback ở tầng tag trước khi người dùng xác nhận.
 
 ## Definition of Done
 
 - [ ] Quality gate 0 blocker — evidence: Bước 1
 - [ ] Release notes/CHANGELOG đúng phạm vi đã xác nhận — evidence: Bước 2
-- [ ] Deploy checklist + điều kiện rollback — evidence: Bước 3
-- [ ] Hậu kiểm bình thường hoặc `not_run` có lý do — evidence: Bước 4
-- [ ] Lệnh tag/push đã đề xuất, chờ hoặc đã có xác nhận — evidence: Bước 5
+- [ ] Commit release chứa CHANGELOG + version bump đã được duyệt — evidence: Bước 3
+- [ ] Deploy checklist + điều kiện rollback — evidence: Bước 4
+- [ ] Người dùng đã deploy hoặc xác nhận hoãn — evidence: Bước 5
+- [ ] Hậu kiểm bình thường hoặc `not_run` có lý do — evidence: Bước 6
+- [ ] Lệnh tag/push trên commit release đã đề xuất, chờ hoặc đã có xác nhận — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed`
 - [ ] 0 finding `blocker`
 

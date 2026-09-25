@@ -24,8 +24,7 @@ next: null
 ## Điều kiện tiên quyết
 
 - Skill/agent đã cài: không cần agent riêng (orchestrator chỉ chạy ở session chính); workflow được chọn ở
-  bước "Chạy" phải đã cài (`.claude/skills/workflows/<id>` hoặc tương đương Codex) — bước "Kiểm cài" tự xác
-  minh việc này.
+  bước "Chạy" phải đã cài — bước "Kiểm cài" tự xác minh việc này.
 - Artifact phải có sẵn: không có, ngoài chính yêu cầu của người dùng.
 - Baseline: không yêu cầu build/test xanh trước — đó là điều kiện của workflow con được chọn, không phải của
   orchestrator.
@@ -73,7 +72,10 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 
 - **Thực hiện:** session chính
 - **Đầu vào:** workflow đã chọn ở Bước 1
-- **Hành động:** kiểm workflow đã chọn có sẵn trong bộ skill đã cài của provider hiện tại hay chưa.
+- **Hành động:** kiểm workflow đã chọn có trong danh sách skill khả dụng của session hiện tại (skill tên
+  `workflow-<slug>`, hoặc `workflows:workflow-<slug>` khi cài dạng plugin Claude); nếu cần đối chiếu file, cài
+  phẳng nằm ở `.claude/skills/workflow-<slug>/` (Claude) hoặc `.codex/skills/workflow-<slug>/` (Codex), ở gốc
+  project hoặc thư mục home khi cài global.
 - **Ràng buộc:** không tự cài workflow thay người dùng.
 - **Đầu ra:** xác nhận đã cài, hoặc lệnh cài đề xuất.
 - **Gate:** workflow đã cài; chưa cài → in `aip install --skill workflows/<id>` và dừng `blocked`.
