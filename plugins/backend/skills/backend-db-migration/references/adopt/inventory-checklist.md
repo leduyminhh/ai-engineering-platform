@@ -29,12 +29,12 @@ ls src/main/resources/db 2>/dev/null; ls src/main/resources/*.sql 2>/dev/null
 grep -nE "flyway|liquibase" pom.xml build.gradle* 2>/dev/null
 
 # Số bảng và object engine-specific trong DDL sẵn có
-grep -rliE "create table" --include=*.sql . | wc -l
+grep -rhoiE "create table" --include=*.sql . | wc -l
 grep -rnEi "partition by|create trigger|create (or replace )?function|jsonb|\\$\\$" --include=*.sql .
 grep -rnEi "create (unique )?index .* where " --include=*.sql .
 
 # Số entity (khi không có DDL)
-grep -rln "@Entity" src/main/java | wc -l
+grep -rlw "@Entity" src/main/java | wc -l
 ```
 
 Version thật của Spring Boot/Flyway/Liquibase lấy theo BOM mà project kế thừa (parent `pom.xml`), không theo tài liệu
