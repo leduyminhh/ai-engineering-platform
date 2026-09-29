@@ -14,6 +14,9 @@ R__<ten_object>.sql                          repeatable — chạy lại khi che
   Không dùng `repair` để "cho qua" lỗi checksum.
 - **Forward-only:** không viết undo `U__`. Hoàn tác = migration bù mới, theo pattern ở
   `references/change/change-patterns.md` của skill.
-- Mỗi migration đổi cấu trúc đặt `SET LOCAL lock_timeout = '5s';` ở đầu file.
+- Mỗi migration đổi cấu trúc đặt `lock_timeout` ở đầu file, theo cách file chạy:
+  - chạy trong transaction (mặc định): `SET LOCAL lock_timeout = '5s';`
+  - có `.conf` chứa `executeInTransaction=false`: `SET lock_timeout = '5s';` … rồi `RESET lock_timeout;` cuối file
+    (`SET LOCAL` ngoài transaction không có tác dụng; `SET` thường có hiệu lực cả session).
 - `CREATE INDEX CONCURRENTLY` cần file `.conf` cùng tên chứa `executeInTransaction=false`.
 - Một migration = một pha (expand | migrate data | contract); pha contract ở PR sau.

@@ -699,6 +699,11 @@ if (fs.existsSync(BUILD)) {
     'backend-db-migration: tên file flyway đúng V<14 số>__ / R__');
   ok(fw.filter((f) => f.endsWith('.conf')).every((c) => fw.includes(c.replace(/\.conf$/, '.tpl'))),
     'backend-db-migration: mỗi .conf có migration mẫu cùng tên');
+  const fwRoot = 'spring-boot/flyway/db/migration/';
+  ok(fw.every((f) => (baseName(f).startsWith('R__')
+    ? f.startsWith(`${fwRoot}repeatable/`)
+    : f.startsWith(`${fwRoot}baseline/`) || f.startsWith(`${fwRoot}versioned/`))),
+    'backend-db-migration: file flyway đúng thư mục baseline/versioned/repeatable');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ spring:
     baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
     baseline-version: ${FLYWAY_BASELINE_VERSION:0}
     validate-on-migrate: true
-    validate-migration-naming: true   # bắt lỗi tên file sai NGAY (chính là B4 ở be-iam)
+    validate-migration-naming: true   # bắt lỗi tên file sai NGAY
     clean-disabled: true
     out-of-order: false
     table: flyway_schema_history
