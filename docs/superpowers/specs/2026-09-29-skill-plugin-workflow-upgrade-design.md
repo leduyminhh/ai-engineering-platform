@@ -402,36 +402,83 @@ qua wizard nhưng trỏ tới skill chưa cài.
 | E4 Ổn định | `npx playwright test --repeat-each=3` xanh | Flaky → sửa test (không nới assertion), chạy lại |
 | E5 Bug thật | Test đỏ do hành vi sai → giữ nguyên đỏ, báo cáo, **không sửa code** | — |
 
-### 7.3 `frontend-data-integration` (G1)
+### 7.3 `frontend-data-integration` (G1) — thiết kế đã duyệt 2026-09-29
 
 #### 7.3.1 Phạm vi
 
 - **Làm:** nối component đã dựng (bởi `frontend-implement`) với API **theo contract OpenAPI** ở `docs/contracts/`:
-  sinh type/client từ contract, tạo data hook, xử lý đủ 4 trạng thái loading/error/empty/success, map DTO sang
-  view model ở biên, viết test bằng msw.
+  dùng type sinh từ contract, tạo data hook, xử lý đủ 4 trạng thái loading/error/empty/success, map DTO sang
+  view model ở biên, viết test bằng msw (qua `frontend-testing`).
 - **Không làm:** đổi contract (lệch → DỪNG, báo drift, chuyển `backend-api-contract`); quyết định lưu token hay
-  auth (→ ADR/security); thêm global store khi chưa hỏi.
+  auth (→ ADR/security); thêm global store khi chưa hỏi; e2e (thuộc `frontend-e2e-testing`).
 
-#### 7.3.2 Đặt code theo kiến trúc
+#### 7.3.2 Quyết định đã chốt
 
-| Kiến trúc | Vị trí data layer |
-|---|---|
-| Feature-Based | `src/features/<feature>/api/` (client + hook), export qua `index.ts` |
-| FSD | `src/entities/<entity>/api/` cho CRUD thực thể; `src/shared/api/` cho client gốc |
-| Micro-FE | Trong từng remote theo FSD; type sinh từ contract đặt trong **remote sở hữu miền** đó. `packages/contracts` chỉ chứa type ở biên host↔remote + event bus (template Micro-FE), không chứa DTO backend |
+| # | Câu hỏi | Chốt |
+|---|---|---|
+| N1 | Publish thế nào | **Draft tới khi pilot**, cùng cách với M4: `_published.json` đổi `"frontend"` thành 6 mục `frontend/<skill>` hiện có, không có skill mới. Agent mới `frontend-data-integrator` tạo ngay được: installer chỉ đặt agent khi mọi skill của nó đã được chọn (`cli/lib/install.mjs:496-497`), nên agent không lộ ra khi skill còn draft. **Không** thêm agent vào workflow trước pha publish: installer ẩn workflow có closure chưa được offer (`install.mjs:349`) |
+| N2 | Type sinh từ contract đặt ở đâu | Ở tầng shared: `lib/api/generated/` (Feature-Based), `shared/api/generated/` (FSD, và trong remote của Micro-FE). Mỗi `*.dto.ts` của feature chỉ là type alias chọn từ schema đã sinh (vd `components['schemas']['Invoice']`), không viết tay lại. Giữ tên `*.dto.ts` và chiều import `shared → features` của template |
+| N3 | Công cụ khi project chưa có codegen | Đề xuất `openapi-typescript` (chỉ sinh type) cùng `api-client` và hook TanStack Query viết mỏng theo template. Chỉ **đề xuất và hỏi** ở cổng I2, không tự cài. Hành vi công cụ gắn `[Unverified]` cho tới khi đối chiếu tài liệu |
+| N4 | Nối ở đâu | Ở **container/page**, không sửa presentational: Feature-Based tạo/sửa `*-container.tsx`; FSD tạo/sửa `ui` của widget hoặc page. Container gọi hook rồi đổ `props` xuống; chỗ `TODO` do `frontend-implement` để lại được thay bằng props thật. Presentational vẫn test được chỉ bằng render + props |
+| N5 | Auth | Chỉ **map lỗi 401** thành trạng thái UI hoặc lỗi hook trả ra; không quyết định nơi lưu token, không viết luồng refresh |
+| N6 | Tích hợp workflow | Để pha publish (§9 P1c): `workflow-api` (WF4), `workflow-feature` (WF5) |
 
-`[Inference]` Bảng này dựa trên template kiến trúc hiện có trong `plugins/frontend/templates/architecture/*.template.md`;
-lúc viết reference phải đối chiếu lại từng template.
+#### 7.3.3 Cấu trúc
 
-#### 7.3.3 Cổng
+```
+plugins/frontend/skills/frontend-data-integration/     order: 7, pipeline: false, sharedAssets: templates/architecture
+├── SKILL.md                              # tiền đề + cổng I1–I5 + ranh giới an toàn + report
+└── references/
+    ├── contract-and-codegen.md           # contract → type/client; dò codegen sẵn có; N2, N3
+    ├── data-layer-by-architecture.md     # đặt file theo Feature-Based / FSD / Micro-FE (bảng 7.3.4)
+    └── states-and-errors.md              # 4 trạng thái; map lỗi 401/4xx/5xx; N5
+plugins/frontend/agents/frontend-data-integrator.md   # §8.3
+```
+
+Path tương đối trong `references/` không được trùng với skill khác cùng plugin (`test/validate.mjs`, mục hygiene).
+
+#### 7.3.4 Đặt code theo kiến trúc
+
+| Kiến trúc | Client gốc | Type sinh (N2) | Đọc (query) | Ghi (mutation) | Map DTO → view model | Nối UI (N4) |
+|---|---|---|---|---|---|---|
+| Feature-Based | `lib/api-client.ts` | `lib/api/generated/` | `features/<x>/api/` | `features/<x>/api/` | `features/<x>/utils/to-*.ts` | `features/<x>/components/*-container.tsx` |
+| FSD | `shared/api/` | `shared/api/generated/` | `entities/<x>/api/` | `features/<x>/api/` | segment `api` của slice | `ui` của `widgets/<x>` hoặc `pages/<x>` |
+| Micro-FE | trong remote (theo FSD) | trong remote, `shared/api/generated/` | như FSD | như FSD | như FSD | như FSD |
+
+Micro-FE: type sinh từ contract nằm trong **remote sở hữu miền**; `packages/contracts` chỉ chứa type ở biên
+host↔remote + event bus, không chứa DTO backend. Bảng này lấy từ `plugins/frontend/templates/architecture/*.template.md`
+(Feature-Based: cây `features/<x>/api`, `lib/api-client.ts`, `utils/to-invoice.ts`; FSD: bảng "Ranh giới state" và
+"Implementation" — đọc ở `entities/<x>/api`, ghi ở `features/<x>/api`, client ở `shared/api`). Spec bản đầu ghi entity
+lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay thế.
+
+#### 7.3.5 Cổng
 
 | Cổng | Nội dung | Đỏ khi → hành động |
 |---|---|---|
-| I1 Contract | Contract có trong `docs/contracts/`, đã qua drift-check | Chưa có hoặc đang drift → DỪNG, đề xuất `workflow-api` |
-| I2 Công cụ ⏸ | Dò codegen (openapi-typescript/orval/openapi-generator) và thư viện data (TanStack Query/SWR/RTK Query) **đã có** thì dùng lại | Chưa có → đề xuất + hỏi; thư viện mới → ADR |
-| I3 Không viết tay | Type/client sinh từ contract; component không gọi `fetch`/`axios` trực tiếp | Vi phạm → sửa |
-| I4 Trạng thái | Mỗi màn hình có đủ loading/error/empty/success; map lỗi 401/4xx/5xx | Thiếu → bổ sung |
+| I1 Contract | Contract có trong `docs/contracts/`, đã qua drift-check | Chưa có hoặc đang drift → DỪNG, đề xuất `workflow-api` / `backend-api-contract` |
+| I2 Công cụ ⏸ | Dò codegen (openapi-typescript/orval/openapi-generator) và thư viện data (TanStack Query/SWR/RTK Query) **đã có** thì dùng lại | Chưa có → đề xuất (N3) + hỏi; thư viện data mới → ADR |
+| I3 Không viết tay | Type/client sinh từ contract (N2); component không gọi `fetch`/`axios` trực tiếp | Vi phạm → sửa |
+| I4 Trạng thái | Mỗi màn hình có đủ loading/error/empty/success; map lỗi 401/4xx/5xx (N5) | Thiếu → bổ sung |
 | I5 Xanh | `tsc --noEmit`, lint (gồm boundary), build; test msw (qua `frontend-testing`) | Đỏ → sửa |
+
+#### 7.3.6 Kiểm chứng của kit
+
+| Bước | Chứng minh |
+|---|---|
+| `npm run validate` | Frontmatter đúng, `order: 7` không trùng, mọi link `references/` trong `SKILL.md` có file thật, agent có đủ 4 heading và `skills` trỏ đúng skill, `SKILL.md` chứa đủ cổng I1–I5 |
+| Assert manifest | Description manifest `frontend` liệt kê skill mới (assert mục 10 đã đòi mọi skill có tên trong description) |
+| `install.test.mjs` | Skill có trong `skillCatalog`, **không** có trong `offeredCatalog`; wizard vẫn offer đúng 6 skill frontend cũ |
+| Sandbox `AIE_INSTALL_ROOT` | `aip install --skill frontend/frontend-data-integration` cài được; agent `frontend-data-integrator` chỉ xuất hiện khi skill được cài |
+| Không có | Chạy trên project React thật — việc của pilot. Không tuyên bố skill "đã chạy được" |
+
+#### 7.3.7 Các pha thực thi
+
+| Pha | Nội dung | Điều kiện xong |
+|---|---|---|
+| DI-P1 | `SKILL.md` + gate draft (`_published.json` 6 mục lẻ) + manifest `1.3.0` + assert draft ở `install.test.mjs` | `npm test` xanh; wizard không offer skill mới |
+| DI-P2 | 3 file `references/` (đối chiếu template và tài liệu công cụ trước khi viết) | Link hợp lệ; nhận định công cụ có nguồn hoặc nhãn `[Unverified]` |
+| DI-P3 | Agent `frontend-data-integrator` (§8.3) + assert agent | Agent qua contract `validate.mjs`; không lộ khi skill chưa cài |
+| **Pha publish** (sau pilot, §9 P1c) | Thêm `frontend/frontend-data-integration` vào `_published.json`; WF4, WF5; sửa `principles.md:14,41` (`state-model` treo) và thêm pointer từ `frontend-implement` sang skill này | Pilot có evidence chạy thật |
 
 ---
 
@@ -448,7 +495,7 @@ lúc viết reference phải đối chiếu lại từng template.
 | frontend-test-writer | frontend | write | frontend-testing | … | — |
 | frontend-reviewer | frontend | read-only | frontend-code-review | … | — |
 | **frontend-e2e-test-writer** | frontend | write | frontend-e2e-testing | feature, testing, release (smoke) | **mới** |
-| **frontend-data-integrator** | frontend | write | frontend-data-integration | feature, api | **mới** |
+| **frontend-data-integrator** | frontend | write | frontend-data-integration | feature, api (nối ở pha publish §7.3.7) | **mới** (draft, N1) |
 | engineering-spec-analyst | engineering | write | spec-writing, adr, diagram | … | sửa D11 |
 | engineering-quality-auditor | engineering | read-only | quality-gate, convention-enforce | …, **api** | + workflow |
 | engineering-release-scribe | engineering | write | release-notes | release | — |
@@ -495,7 +542,7 @@ Viết và ổn định e2e test cho các luồng đã được duyệt, làm l�
 ```markdown
 ---
 name: frontend-data-integrator
-description: "Agent nối UI React đã dựng với API THẬT theo contract OpenAPI (skill frontend-data-integration): sinh type/client từ docs/contracts bằng codegen sẵn có của project, tạo data hook đúng tầng kiến trúc (Feature-Based/FSD/Micro-FE), xử lý loading/error/empty/success, map DTO→view model ở biên. Không đổi contract; lệch contract thì dừng và báo drift. tsc/lint/build phải xanh trước khi trả. Dùng khi workflow cần nối data cho màn hình đã có."
+description: "Agent nối UI React đã dựng với API THẬT theo contract OpenAPI (skill frontend-data-integration): dùng type sinh từ docs/contracts bằng codegen sẵn có của project, tạo data hook đúng tầng kiến trúc (Feature-Based/FSD/Micro-FE), nối ở container/page (không sửa presentational), xử lý loading/error/empty/success, map DTO→view model ở biên. Không đổi contract; lệch contract thì dừng và báo drift. tsc/lint/build phải xanh trước khi trả. Dùng khi workflow cần nối data cho màn hình đã có."
 mode: write
 skills: "frontend-data-integration"
 ---
@@ -504,22 +551,23 @@ skills: "frontend-data-integration"
 Hiện thực tầng data cho component đã có, bám contract làm nguồn sự thật FE↔BE.
 
 ## Phạm vi
-- Được: sinh/cập nhật type + client từ contract; tạo/sửa data hook và tầng `api/` đúng vị trí kiến trúc; sửa
-  component đã giao để nhận data qua hook; chạy tsc/lint/build/test.
-- Không được: sửa `docs/contracts/`; viết tay type trùng với contract; gọi `fetch`/`axios` trong component; thêm
-  thư viện data hoặc global store khi chưa hỏi; quyết định lưu token/auth; sửa file ngoài feature được giao;
-  gọi agent khác; commit.
+- Được: dùng/cập nhật type sinh từ contract bằng codegen sẵn có; tạo/sửa data hook và tầng `api/` đúng vị trí
+  kiến trúc; tạo/sửa container hoặc page để gọi hook rồi đổ `props` xuống, thay chỗ `TODO` bằng props thật; chạy
+  tsc/lint/build/test.
+- Không được: sửa `docs/contracts/`; viết tay type trùng với contract; gọi `fetch`/`axios` trong component; sửa
+  presentational ngoài việc thay `TODO` bằng props đã có sẵn kiểu; thêm thư viện data, codegen hoặc global store
+  khi chưa hỏi; quyết định lưu token/auth; sửa file ngoài feature được giao; gọi agent khác; commit.
 
 ## Quy trình
 1. Đọc skill `frontend-data-integration`, `project-knowledge/architecture.md`, contract liên quan.
 2. Kiểm I1 (contract có và không drift) → không đạt thì dừng, báo.
-3. Dò codegen và thư viện data sẵn có (I2); chưa có → dừng, đề xuất.
-4. Sinh type/client; viết hook; nối component; đủ 4 trạng thái (I3, I4).
+3. Dò codegen và thư viện data sẵn có (I2); chưa có → dừng, đề xuất, chờ người dùng chọn.
+4. Dùng type sinh từ contract; viết hook đúng tầng; nối ở container/page; đủ 4 trạng thái (I3, I4).
 5. Chạy `tsc --noEmit`, lint, build (I5); ghi lệnh + kết quả thật.
 
 ## Report trả về
-- File đã thêm/sửa theo tầng; endpoint ↔ hook ↔ component.
-- Evidence theo contract; phần không chạy được → `not_run` + `reason`.
+- File đã thêm/sửa theo tầng; endpoint ↔ hook ↔ container.
+- Evidence theo contract đầu ra trong `core:principles`; phần không chạy được → `not_run` + `reason`.
 - `remaining_risks`: endpoint chưa nối, trạng thái chưa có test msw, giả định về xử lý lỗi/auth.
 ```
 
@@ -548,8 +596,9 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | Pha | Nội dung | Mục |
 |---|---|---|
 | **P0 — Sửa lỗi nội dung** | D1, D2, D3, D4, D5, D6, D11; PL1 (ship §5.1), PL2 (manifest) | S1–S3, WF1, WF2, A1, A2 |
-| **P1 — Năng lực mới** | ADR phân ranh `backend-db-migration` ↔ `data-oltp-implement` (Q5); `backend-db-migration` theo §7.1.10 (M-P1–M-P9, draft); 2 skill + 2 agent frontend theo §7.2–§7.3; S4, S7 | §7, §8 |
+| **P1 — Năng lực mới** | ADR phân ranh `backend-db-migration` ↔ `data-oltp-implement` (Q5); `backend-db-migration` theo §7.1.10 (M-P1–M-P9, draft); `frontend-data-integration` theo §7.3.7 (DI-P1–DI-P3, draft); `frontend-e2e-testing` theo §7.2; 2 agent frontend theo §8.2–§8.3; S4, S7 | §7, §8 |
 | **P1b — Publish db-migration** (sau pilot, Q6) | Pha publish của §7.1.10: `_published.json`, thêm skill vào `backend-implementer`, S8; WF3 đi cùng | §7.1.10, WF3 |
+| **P1c — Publish frontend-data-integration** (sau pilot, Q7) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 |
 | **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 |
 | **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — |
 
@@ -579,6 +628,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | Q4 | Skill frontend mới publish ngay (cả plugin) hay publish từng phần sau smoke? | Từng phần (`frontend/<skill>`) — cùng nguyên tắc với M4. Lưu ý P-d: chỉ gate được wizard |
 | Q5 | Plugin `data`: giữ draft hay publish nhánh OLTP để tránh trùng với `backend-db-migration`? | Giữ draft; quy tắc phân ranh (inference) đã viết ở §7.1.3, nhưng **chưa phải ADR chính thức** — vẫn cần chốt trước P1 |
 | Q6 | Pilot `backend-db-migration` trên project Spring nào? | Chưa chốt. G2 từng nêu `be-directive-mgt` (đã hoãn ở G2 Q2) |
+| Q7 | Pilot `frontend-data-integration` trên project React nào (cần contract OpenAPI thật ở `docs/contracts/`)? | Chưa chốt |
 
 ## 12. Rủi ro còn lại
 
@@ -588,5 +638,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
   của Flyway) phải kiểm lại tài liệu công cụ trước khi viết vào reference (M-P3).
 - Trước khi WF3 xong, `workflow-db-change` Bước 6 vẫn đòi "up → rollback → up", không làm được với Flyway
   forward-only (M3). Skill ở dạng draft nên chưa có người dùng qua wizard gặp mâu thuẫn này.
+- `[Unverified]` `openapi-typescript` (N3) và hành vi codegen: chưa đối chiếu tài liệu, chưa chạy trên project thật; phải kiểm trước khi viết `contract-and-codegen.md` (DI-P2).
+- `[Inference]` Nối ở container/page (N4) giả định `frontend-implement` để lại chỗ trống bằng `props` + `TODO`; project dựng UI bằng cách khác có thể cần điều chỉnh.
 - Thêm 2 agent và các bước song song làm tăng token cho mỗi lần chạy workflow.
 - Điểm số là đánh giá có lập luận, không phải đo lường; Codex có thể chấm khác trên cùng bằng chứng.
