@@ -20,7 +20,8 @@ changeSet.author = <tên thật hoặc email>
 - **Bất biến:** changeSet đã có trên base branch không được sửa (trừ changeSet `runOnChange`). Không dùng
   `clearCheckSums` để "cho qua".
 - Mỗi migration đổi cấu trúc đặt `lock_timeout` ở đầu file SQL — cả file `.sql` lẫn `.rollback.sql` — theo cách
-  changeSet chạy:
+  changeSet chạy (`[Unverified]` tài liệu Liquibase đã dẫn không nêu block `rollback` chạy cùng chế độ transaction
+  với changeSet của nó; xác nhận khi pilot):
   - chạy trong transaction (mặc định): `SET LOCAL lock_timeout = '5s';`
   - changeSet có `runInTransaction: false` (vd `CREATE INDEX CONCURRENTLY`): `SET lock_timeout = '5s';` … rồi
     `RESET lock_timeout;` cuối file (`SET LOCAL` ngoài transaction không có tác dụng; `SET` thường có hiệu lực cả

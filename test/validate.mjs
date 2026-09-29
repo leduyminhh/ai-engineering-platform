@@ -726,6 +726,12 @@ if (fs.existsSync(BUILD)) {
   const lbConv = sbFiles.includes('spring-boot/liquibase/CONVENTIONS.md') ? sbRead('spring-boot/liquibase/CONVENTIONS.md') : '';
   ok(lbConv.includes('SET LOCAL lock_timeout') && lbConv.includes('RESET lock_timeout'),
     'backend-db-migration: CONVENTIONS liquibase tách luật lock_timeout trong/ngoài transaction');
+  ok(dbmFiles.includes('README.md') && !dbmFiles.includes('spring-boot/README.md'),
+    'backend-db-migration: README ở gốc references/, không ở spring-boot/ (trùng path với vault-consul)');
+  ok(skillMd.includes('(references/README.md)'), 'backend-db-migration: SKILL.md link tới references/README.md');
+  const readme = dbmFiles.includes('README.md') ? dbmRead('README.md') : '';
+  ok(sbFiles.every((f) => readme.includes(f.replace(/^spring-boot\//, ''))),
+    'backend-db-migration: README liệt kê mọi file template spring-boot/');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
