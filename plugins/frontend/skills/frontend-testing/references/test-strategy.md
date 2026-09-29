@@ -27,6 +27,9 @@ Chống lộn ngược kim tự tháp: mỗi lần định thêm e2e/integration
 
 ## 2. Đặt test đúng tầng theo kiến trúc
 
+Vị trí file (colocate, thư mục util test dùng chung, handler msw theo domain, `e2e/`) chốt ở mục
+"Test — vị trí file" của từng template; package + file setup ở `architecture/references/testing-toolchain.md`.
+
 ### Feature-Based (feature tự chứa `components/hooks/api/types`)
 
 | Tầng kiến trúc | Loại test | Bật mạng? | Trọng tâm chứng minh |
@@ -51,7 +54,8 @@ Feature-Based). Chỉ tầng chạm data mới cần msw.
 
 ### Micro-FE (host + remotes, mỗi remote nội bộ FSD)
 
-- Test **trong từng remote** theo bảng FSD ở trên; remote build/test **độc lập** (suite riêng mỗi app).
+- Test **trong từng remote** theo bảng FSD ở trên; remote build/test **độc lập** (suite riêng mỗi app),
+  bọc host context giả từ `packages/testing` thay vì import `apps/host`.
 - Không cross-import ruột remote khác trong test — mock ranh giới cross-remote (module `expose`, event bus
   contract ở `packages/contracts`) như code chạy thật, không với tay vào nội bộ remote khác.
 - `packages/ui-kit` test render + props độc lập; `packages/contracts` test shape/map thuần.

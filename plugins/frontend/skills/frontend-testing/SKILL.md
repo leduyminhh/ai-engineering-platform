@@ -72,7 +72,8 @@ Xác định **hành vi người dùng cần test + mức rủi ro**, rồi ch�
 
 ### 2. Viết test theo tầng (patterns)
 Đặt file test đúng cấu trúc `code-convention` của project (colocate cạnh component `*.test.tsx`
-hay thư mục `__tests__` — theo repo, không tự bịa). Idiom cụ thể + ví dụ:
+hay thư mục `__tests__` — theo repo, không tự bịa). Repo chưa có quy ước → theo mục "Test — vị trí file"
+của template kiến trúc + `architecture/references/testing-toolchain.md`. Idiom cụ thể + ví dụ:
 [references/react-testing-patterns.md](references/react-testing-patterns.md).
 - **Presentational (render + interaction):** render với props, **query theo role/label/text hiển
   thị** (`getByRole`, `getByLabelText`) — a11y-first, tránh `data-testid` trừ khi không có lựa chọn

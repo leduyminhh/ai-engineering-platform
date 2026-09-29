@@ -85,10 +85,12 @@ src/
 │       ├── api/                      #   GỌI BACKEND + React Query hook + DTO của feature
 │       │   ├── get-invoices.ts       #     useQuery(getInvoices) -> qua @/lib/api-client
 │       │   ├── create-invoice.ts     #     useMutation(createInvoice)
-│       │   └── invoice.dto.ts        #     InvoiceDto (kiểu backend, nội bộ feature)
+│       │   ├── invoice.dto.ts        #     InvoiceDto (kiểu backend, nội bộ feature)
+│       │   └── invoices.handlers.ts  #     msw handler endpoint của feature — CHỈ test dùng
 │       ├── assets/                   #   (tuỳ) ảnh/icon riêng feature
 │       ├── components/               #   PRESENTATIONAL + container nhẹ của feature
 │       │   ├── invoice-list.tsx      #     UI thuần: props in / events out (Tailwind + component-lib)
+│       │   ├── invoice-list.test.tsx #     test COLOCATE cạnh component (render + props)
 │       │   ├── invoice-list-container.tsx  #  container: gọi hook api -> đổ props xuống presentational
 │       │   └── create-invoice-form.tsx     #  (+ invoice-row.tsx …)
 │       ├── hooks/                    #   LOGIC/STATE cục bộ feature (bọc quanh api hook nếu cần)
@@ -110,7 +112,10 @@ src/
 ├── types/                            # SHARED · type dùng chung toàn app
 ├── utils/                            # SHARED · hàm thuần dùng chung (format, cn…)
 ├── assets/                           # SHARED · ảnh/font tĩnh toàn app
-└── testing/                          # SHARED · test util + mock (msw handlers, render wrapper)
+└── testing/                          # SHARED · test util dùng chung — KHÔNG biết domain
+    ├── setup-tests.ts                #   jest-dom + vòng đời msw server (vitest setupFiles)
+    ├── render.tsx                    #   renderWithProviders: bọc QueryClient/Router cho test
+    └── mocks/server.ts               #   setupServer() rỗng; handler domain nằm ở features/<x>/api
 ```
 
 > **Bên trong feature:** `api` = request + React Query hook + DTO; `components` = presentational + container
@@ -148,7 +153,7 @@ Tra cứu nhanh: mỗi thư mục trong cây trên đặt gì / không đặt g�
 | `types/` (shared, gốc) | Type dùng chung toàn app | Type/interface không gắn riêng domain, dùng ở nhiều feature/app | KHÔNG đặt view-model riêng một feature (đó là `features/<x>/types`); KHÔNG đặt DTO backend của một feature cụ thể | Kiểu phân trang/response dùng chung |
 | `utils/` (shared, gốc) | Hàm thuần dùng chung toàn app | Helper tổng quát (`format`, `cn`…) không gắn domain | KHÔNG đặt hàm map DTO→VM riêng feature (đó là `features/<x>/utils`); KHÔNG gọi API/side-effect | `utils/cn.ts`, hàm format ngày/tiền tệ chung |
 | `assets/` (shared, gốc) | Ảnh/font tĩnh dùng chung toàn app | Logo, favicon, font, ảnh dùng ở nhiều nơi | KHÔNG đặt asset chỉ dùng riêng một feature (đó là `features/<x>/assets`, tuỳ) | Logo app, font chữ |
-| `testing/` (shared) | Test util + mock dùng chung | msw handlers, render wrapper (bọc provider cho test), fixture chung | KHÔNG đặt test case cụ thể của một feature (đặt cạnh feature đó); KHÔNG đặt mock chỉ dùng riêng một domain | `testing/mocks/handlers.ts`, `testing/render.tsx` |
+| `testing/` (shared) | Test util dùng chung | `setup-tests.ts`, `render.tsx` (bọc provider), `mocks/server.ts` (msw server rỗng), handler/fixture **không** gắn domain | KHÔNG đặt test case của một feature (colocate cạnh file trong feature); KHÔNG đặt handler/fixture riêng một domain (đặt ở `features/<x>/api`); code production KHÔNG import | `testing/render.tsx`, `testing/mocks/server.ts` |
 
 ### Vai trò & ranh giới (ba tầng)
 
@@ -200,6 +205,25 @@ từ `features` và `shared`."* Thêm luật cô lập: **`features/A` không im
 | Client-state riêng feature (bộ lọc, tab đang mở của feature) | `features/<x>/stores` hoặc `hooks` | Zustand / `useReducer` |
 | Client-state toàn cục (theme, sidebar, auth UI) | `stores/` (gốc, dùng chung) | Zustand/Context |
 | UI-state cục bộ (input, mở/đóng menu) | trong `features/<x>/components` | `useState`/`useReducer` |
+
+### Test — vị trí file
+
+Package, script, nội dung file setup: [references/testing-toolchain.md](references/testing-toolchain.md).
+
+| Loại test | Đặt ở đâu | Ví dụ |
+|---|---|---|
+| Presentational / container | Colocate cạnh component trong `features/<x>/components/` | `invoice-list.test.tsx` |
+| Hook | Colocate cạnh hook trong `features/<x>/hooks/` | `use-invoice-filters.test.ts` |
+| Map/parse thuần | Colocate trong `features/<x>/utils/` | `to-invoice.test.ts` |
+| msw handler của domain | `features/<x>/api/<x>.handlers.ts` — chỉ test import | `invoices.handlers.ts` |
+| UI-kit / hook dùng chung | Colocate trong `components/`, `hooks/` gốc | `button.test.tsx` |
+| Ghép nhiều feature (route) | Colocate trong `app/routes/` | `invoices.test.tsx` |
+| Util test dùng chung | `src/testing/` | `render.tsx`, `mocks/server.ts` |
+| e2e (tuỳ chọn) | `e2e/` ở gốc project, ngoài `src/` | `e2e/invoices.spec.ts` |
+
+- Test trong `features/A` **không** import handler/ruột của `features/B`; test ở `app/routes` cần dữ liệu nhiều
+  feature thì khai handler tại chỗ bằng `server.use(...)` với type lấy qua public API `index.ts`.
+- `testing/` thuộc tầng shared nên **không** import `features`/`app` — luật lint hiện có đã ép điều này.
 
 ## Feature-flags (Optional)
 
@@ -308,6 +332,8 @@ Scaffold coi là đúng khi:
       `features`/`app`.
 - [ ] (Nếu dùng flag) nguồn ở `config/`, đọc qua `useFeatureFlag` (`hooks/`), gate ở `app/routes`/
       `components`, không rẽ nhánh cờ trong `api`.
+- [ ] Test colocate cạnh file; `src/testing/` chỉ chứa util không gắn domain; handler domain ở `features/<x>/api`;
+      `npm test` xanh.
 - [ ] `tsc` + `eslint` xanh; xoá một feature không vỡ feature khác.
 
 ## References
@@ -325,6 +351,8 @@ Scaffold coi là đúng khi:
     `import/no-restricted-paths` ép cross-feature + một chiều; kèm biến thể `eslint-plugin-boundaries`.
   - [references/feature-public-api.md](references/feature-public-api.md) — quy ước public API `index.ts` +
     trade-off barrel-file vs tree-shaking (theo bulletproof-react).
+  - [references/testing-toolchain.md](references/testing-toolchain.md) — package test chuẩn, script, file
+    setup (`setup-tests.ts`, `mocks/server.ts`, `render.tsx`).
 - `import/no-restricted-paths` (eslint-plugin-import) — ép chiều import + cô lập feature (fitness function;
   tương đương ArchUnit/import-linter của backend). Cấu hình trong references/ là khởi điểm, chỉnh theo dự án.
 - TanStack Query — quản server-state (cache/refetch/mutation) ở `features/<x>/api` thay cho `useEffect` thủ công.

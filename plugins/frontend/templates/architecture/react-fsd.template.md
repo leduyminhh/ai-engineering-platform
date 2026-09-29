@@ -86,14 +86,21 @@ src/
 │   └── invoice/
 │       ├── model/                    #   Invoice type, selector/store nếu cần
 │       ├── ui/InvoiceCard.tsx        #   biểu diễn 1 invoice (tái dùng ở nhiều feature/widget)
+│       ├── ui/InvoiceCard.test.tsx   #   test COLOCATE cạnh component, cùng segment
 │       ├── api/get-invoices.ts       #   useQuery(getInvoices) — server-state của entity
+│       ├── api/invoice.handlers.ts   #   msw handler endpoint của entity — CHỈ test trong slice dùng
 │       └── index.ts
 │
 └── shared/                           # DÙNG CHUNG, KHÔNG mang nghiệp vụ — không import layer trên
     ├── ui/                           #   UI-kit: wrapper component-lib + primitive Tailwind (Button/Card…)
     ├── api/                          #   api-client base (baseURL, header, lỗi)
     ├── lib/                          #   helper thuần (format, hooks tiện ích)
-    └── config/                       #   hằng số, env, route path
+    ├── config/                       #   hằng số, env, route path
+    └── testing/                      #   util test dùng chung — KHÔNG biết domain, code production KHÔNG import
+        ├── setup-tests.ts            #     jest-dom + vòng đời msw server (vitest setupFiles)
+        ├── render.tsx                #     renderWithProviders — tự dựng provider, KHÔNG import app/providers
+        ├── mocks/server.ts           #     setupServer() rỗng; handler domain nằm trong slice
+        └── index.ts                  #     public API của segment (render, server)
 ```
 
 > **Segment trong slice** (nhóm theo *bản chất kỹ thuật*, tên chuẩn hoá): `ui` = component +
@@ -127,6 +134,7 @@ Tra nhanh từng thư mục/segment xuất hiện trong cây ở trên — đặ
 | `shared/api/` | api-client nền tảng | baseURL, header, xử lý lỗi chung | Request cụ thể theo domain (đặt ở `entities\|features/<x>/api`) | `shared/api/api-client.ts` |
 | `shared/lib/` | Helper thuần dùng chung | Mỗi thư viện một vùng tập trung (date, currency, text…), hook tiện ích | Bãi rác `utils/helpers` không rõ vùng | `shared/lib/format-date.ts` |
 | `shared/config/` | Hằng số, cấu hình toàn app | env, route path, nguồn feature flag | Cấu hình riêng 1 domain | `shared/config/env.ts` |
+| `shared/testing/` | Util test dùng chung (segment của Shared) | `setup-tests.ts`, `render.tsx` (tự dựng provider từ thư viện), `mocks/server.ts` (msw server rỗng), `index.ts` | Handler/fixture của 1 domain (đặt trong slice); import `app/providers` hay layer trên; được import từ code production | `shared/testing/render.tsx` |
 | `index.ts` (public API mỗi slice) | Cổng public API của slice | Re-export tường minh phần công khai (component/hook/type) | `export *` (wildcard); đặt `index.ts` ở cấp layer | `pages/invoices/index.ts`, `entities/invoice/index.ts` |
 
 ### Vai trò & ranh giới từng layer
@@ -232,6 +240,29 @@ entities/
 | UI-state cục bộ | trong `ui/` component | `useState` |
 | Hạ tầng dùng chung | `shared` | — (không giữ business state) |
 
+### Test — vị trí file
+
+Package, script, nội dung file setup: [references/testing-toolchain.md](references/testing-toolchain.md).
+Test tuân **cùng luật import** như code: chỉ import xuống, không cross-import slice cùng layer, ngoài slice
+chỉ qua public API.
+
+| Loại test | Đặt ở đâu | Ví dụ |
+|---|---|---|
+| UI của slice | Colocate cạnh component trong segment `ui` | `entities/invoice/ui/InvoiceCard.test.tsx` |
+| Logic/validation | Colocate trong segment `model` | `features/create-invoice/model/validate.test.ts` |
+| Tầng chạm data của slice | Colocate trong segment `api` (msw) | `entities/invoice/api/get-invoices.test.ts` |
+| msw handler của domain | Segment `api` của slice sở hữu endpoint | `entities/invoice/api/invoice.handlers.ts` |
+| Widget / page (integration mỏng) | Colocate trong `widgets/<x>/ui`, `pages/<x>/ui` | `pages/invoices/ui/InvoiceListPage.test.tsx` |
+| UI-kit / helper dùng chung | Colocate trong `shared/ui/<x>`, `shared/lib` | `shared/ui/button/Button.test.tsx` |
+| Util test dùng chung | `shared/testing/` (import `@/shared/testing`) | `render.tsx`, `mocks/server.ts` |
+| e2e (tuỳ chọn) | `e2e/` ở gốc project, ngoài `src/` | `e2e/invoices.spec.ts` |
+
+- Test ở `widgets`/`pages` cần dữ liệu entity → khai handler tại chỗ bằng `server.use(...)`, body typed theo type
+  public của `entities/<x>`; **không** import sâu `entities/<x>/api/*.handlers.ts` (vi phạm public API).
+- **Không** re-export handler/mock qua `index.ts` của slice — kéo `msw` vào đồ thị import của code production.
+- `shared/testing` là segment nên cần `index.ts` như `shared/ui`; `setup-tests.ts` chỉ được tham chiếu từ
+  `setupFiles`, không export.
+
 ## Feature-flags (Optional)
 
 > **Tùy chọn** — chỉ thêm khi cần bật/tắt nhánh tính năng theo môi trường/đối tượng. App không cần cờ thì
@@ -325,6 +356,8 @@ Scaffold coi là đúng khi:
 - [ ] Quan hệ entity↔entity đi qua `@x` (`entities/a/@x/b`), không import thẳng ruột entity khác.
 - [ ] Segment đặt tên theo mục đích (`ui/model/api/lib/config`), không `components/hooks/types`.
 - [ ] Server-state qua React Query ở `api` segment; không `useState` giữ cache API.
+- [ ] Test colocate cạnh file trong đúng segment, tuân luật import FSD; `shared/testing` không biết domain,
+      không import layer trên; handler domain nằm trong slice, không re-export qua `index.ts`; `npm test` xanh.
 - [ ] `tsc` + `eslint` xanh; xoá một feature không vỡ feature/entity khác.
 
 ## References
@@ -339,6 +372,7 @@ Scaffold coi là đúng khi:
   [`references/steiger.config.js`](references/steiger.config.js). Bổ trợ luật layer:
   [`references/eslint-boundaries.fsd.jsonc`](references/eslint-boundaries.fsd.jsonc) (`eslint-plugin-boundaries`).
 - **TanStack Query** — server-state ở segment `api` của entity/feature: <https://tanstack.com/query>.
+- **Toolchain test** (package, script, file setup): [`references/testing-toolchain.md`](references/testing-toolchain.md).
 
 ## Related
 

@@ -33,6 +33,7 @@ code skeleton** — chỉ blueprint cấu trúc + sketch federation config ngắ
 | Design system / UI-kit dùng chung | `packages/ui-kit` | `packages/ui-kit` |
 | Hợp đồng type/DTO + event bus | `packages/contracts` | `packages/contracts` |
 | Feature-flags runtime + env + route | `packages/shared-config` | `packages/shared-config` |
+| Util test dùng chung (chỉ devDependency) | `packages/testing` | `packages/testing` |
 
 ## Problem
 
@@ -97,11 +98,13 @@ root/                                  # monorepo — pnpm/npm workspaces (mỗi
 │   │   │   ├── routes/                #   map route -> lazy-load module remote (expose)
 │   │   │   ├── layout/                #   khung chung: header/nav/sidebar/footer
 │   │   │   ├── session/               #   auth/session; bơm runtime config + user xuống remote
+│   │   │   ├── testing/               #   setup-tests + stub module remote (alias thay remoteEntry khi test)
 │   │   │   └── remotes.d.ts           #   khai kiểu module remote (typed federation)
 │   │   └── vite.config.ts             #   federation: khai `remotes` (invoices, customers) + `shared`
 │   │
 │   ├── invoices/                      # REMOTE: nội bộ theo FSD -> react-fsd.template.md (KHÔNG lặp ở đây)
 │   │   ├── src/                       #   app/pages/widgets/features/entities/shared (theo FSD)
+│   │   │   ├── shared/testing/        #   util test của remote (theo FSD) — dựng trên packages/testing
 │   │   │   └── expose/                #   điểm phơi: InvoicesApp (page-level), InvoiceWidget (nhúng)
 │   │   └── vite.config.ts             #   federation: `exposes` (./InvoicesApp, ./InvoiceWidget) + `shared`
 │   │
@@ -109,10 +112,13 @@ root/                                  # monorepo — pnpm/npm workspaces (mỗi
 │       ├── src/                       #   nội bộ FSD; expose ./CustomersApp
 │       └── vite.config.ts             #   federation: `exposes` + `shared`
 │
-└── packages/                          # DÙNG CHUNG — KHÔNG mang nghiệp vụ chéo remote
-    ├── ui-kit/                        #   design system: wrapper component-lib + primitive (Button/Card…)
-    ├── contracts/                     #   type/DTO chia sẻ host↔remote + event bus contract (tên/payload event)
-    └── shared-config/                 #   feature-flags runtime + env + route path (hằng số điều phối)
+├── packages/                          # DÙNG CHUNG — KHÔNG mang nghiệp vụ chéo remote
+│   ├── ui-kit/                        #   design system: wrapper component-lib + primitive (Button/Card…)
+│   ├── contracts/                     #   type/DTO chia sẻ host↔remote + event bus contract (tên/payload event)
+│   ├── shared-config/                 #   feature-flags runtime + env + route path (hằng số điều phối)
+│   └── testing/                       #   util test dùng chung: giả host context, event bus giả, msw server — CHỈ devDependency
+│
+└── e2e/                               # (tuỳ chọn) e2e ghép host + remote — ngoài mọi app
 ```
 
 > **Bên trong một remote = FSD.** `apps/<remote>/src` tổ chức theo layer/slice/segment của FSD; `expose/` chỉ
@@ -136,6 +142,9 @@ theo FSD **không lặp lại** ở đây — xem [react-fsd.template.md](react-
 | `packages/ui-kit/` | Design system dùng chung | Wrapper component-lib (shadcn/MUI/antd) + primitive Tailwind | KHÔNG biết nghiệp vụ của remote nào; KHÔNG giữ business state | Button, Card |
 | `packages/contracts/` | Hợp đồng biên host↔remote | Type/DTO ở biên (props host bơm xuống, shape module `expose`) + event bus contract (tên event + payload) | KHÔNG chứa logic nghiệp vụ; KHÔNG import ngược từ `apps/*` | Type props host↔remote, tên/payload event bus |
 | `packages/shared-config/` | Điều phối runtime | Feature-flags runtime, env, route path (hằng số điều phối) | KHÔNG chứa logic nghiệp vụ; remote không tự fetch flag global | `useFeatureFlag` provider, route path constants |
+| `packages/testing/` | Util test dùng chung cả hệ | Render bọc **host context giả** (user/session/runtime config/flag theo type `packages/contracts`), event bus giả, factory msw server | Handler/fixture nghiệp vụ của một remote; import `apps/*`; khai ở `dependencies` (chỉ `devDependencies`) | `renderInHostContext`, `createTestEventBus` |
+| `apps/host/src/testing/` | Util test của host | `setup-tests.ts`, stub module remote (thay `remoteEntry` khi test) | Ruột thật của remote; gọi `remoteEntry` thật trong unit/integration test | `remotes/invoices-app.stub.tsx` |
+| `e2e/` (gốc monorepo, tuỳ chọn) | e2e ghép host + remote chạy thật | Kịch bản Playwright đầu-cuối vài luồng giá trị cao | Test đơn vị/component (thuộc từng app) | `e2e/invoices.spec.ts` |
 
 ### Vai trò & ranh giới
 
@@ -222,6 +231,29 @@ Giữ ghép **lỏng lẻo** — remote không biết ruột remote khác. Ba k�
 | Giao tiếp gián tiếp giữa remote | `packages/contracts` (event bus contract) | Trao đổi qua event có hợp đồng, **không** chia sẻ store trực tiếp |
 | UI-kit primitive | `packages/ui-kit` | Không giữ business state |
 
+### Test — vị trí file
+
+Package, script, nội dung file setup: [references/testing-toolchain.md](references/testing-toolchain.md).
+Mỗi app/package có **suite + script `test` riêng** để build/test độc lập như deploy.
+
+| Đơn vị | Test đặt ở đâu | Util test | Chứng minh gì |
+|---|---|---|---|
+| `apps/<remote>` | Colocate trong `src` theo **FSD** (xem mục "Test — vị trí file" của [react-fsd.template.md](react-fsd.template.md)) | `src/shared/testing` (dựng trên `packages/testing`) | Hành vi miền; module `expose` render đúng khi nhận props/context theo contract |
+| `apps/host` | Colocate cạnh `routes/`, `layout/`, `session/` | `src/testing` + stub module remote | Route → remote đúng, fallback `Suspense`/error boundary khi remote lỗi, bơm context xuống |
+| `packages/ui-kit` | Colocate cạnh component | `packages/testing` | Render + props, a11y |
+| `packages/contracts` | Colocate cạnh type guard/mapper | — | Shape payload/event, hàm map thuần |
+| `packages/shared-config` | Colocate cạnh provider/hook | `packages/testing` | Đọc flag/env, fallback cục bộ |
+| Ghép host ↔ remote | `e2e/` ở gốc monorepo | `@playwright/test` | Vài luồng đầu-cuối (ngoài phạm vi recipe `frontend-testing`) |
+
+- **Test remote chạy không cần host:** bọc bằng host context giả từ `packages/testing` (cùng type
+  `packages/contracts`), không import code `apps/host`.
+- **Test host không nạp `remoteEntry` thật:** alias module remote (`invoices/InvoicesApp`) sang stub trong
+  `apps/host/src/testing/remotes/` qua `resolve.alias` của config test. [giả định] Cú pháp alias theo phiên bản
+  Vite/Vitest khi cài — chốt lúc triển khai.
+- **Giao tiếp cross-remote trong test** đi qua event bus giả (`packages/testing`) theo contract; test remote A
+  **không** import ruột remote B.
+- `packages/testing` chỉ nằm ở `devDependencies`; module `expose` và code production không import nó.
+
 ## Feature-flags (Optional)
 
 > **Tùy chọn** — không bắt buộc trong scaffold. Thêm khi cần bật/tắt remote/feature theo môi trường hoặc theo
@@ -285,7 +317,7 @@ federation({
   event bus contract ở `packages/contracts`.
 - **React singleton:** `react`/`react-dom` (và deps nền chia sẻ) khai `singleton: true`; đồng bộ dải version.
 - **`packages/*` không nghiệp vụ chéo:** `ui-kit` (trình bày), `contracts` (hợp đồng), `shared-config` (điều
-  phối) — không gói nào chứa nghiệp vụ riêng của một remote.
+  phối), `testing` (util test, chỉ devDependency) — không gói nào chứa nghiệp vụ riêng của một remote.
 - **Runtime config, không hardcode:** URL `remoteEntry`, base-url, flag đọc từ env/`shared-config`, host bơm xuống.
 - **Đặt tên:** app/package kebab-case (`apps/invoices`, `packages/ui-kit`); module `expose` PascalCase
   (`./InvoicesApp`).
@@ -342,6 +374,8 @@ Scaffold coi là đúng khi:
 - [ ] URL `remoteEntry`/base-url/flag đọc từ env/`shared-config` (không hardcode); host bơm runtime config xuống.
 - [ ] Feature-flags (nếu dùng) là runtime host cung cấp, có fallback cục bộ mỗi remote — tắt feature **không**
       cần redeploy remote.
+- [ ] Mỗi app/package có script `test` riêng và chạy xanh độc lập; remote test với host context giả từ
+      `packages/testing`; host test với stub module remote; `packages/testing` chỉ là devDependency.
 
 ## References
 
@@ -360,6 +394,7 @@ Scaffold coi là đúng khi:
   `@module-federation/enhanced`@2.9.0 (Rspack/webpack), `@originjs/vite-plugin-federation`@1.4.1 (biến thể cũ);
   shape export/API còn [Unverified] — đối chiếu docs, chốt version theo release thực tế khi cài.
 - Cấu trúc bên trong một remote: [react-fsd.template.md](react-fsd.template.md).
+- Toolchain test (package, script, file setup): [references/testing-toolchain.md](references/testing-toolchain.md).
 
 ## Related
 

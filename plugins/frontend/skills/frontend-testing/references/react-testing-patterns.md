@@ -50,7 +50,8 @@ THẬT của project (bước 0), không áp mặc định của tài liệu nà
   - `afterEach(() => server.resetHandlers())` — không rò handler override giữa các test (tránh phụ
     thuộc thứ tự).
   - `afterAll(() => server.close())`.
-- Handler đặt theo endpoint thật của `services/` (đọc `*.api.ts`): trả body giả sát DTO. Ghi đè
+- Handler đặt theo endpoint thật của tầng `api` của domain (`<x>.handlers.ts` cạnh file gọi API): trả body
+  giả sát DTO; server dùng chung (`mocks/server.ts`) để rỗng. Ghi đè
   cho từng case bằng `server.use(...)` trong test (ví dụ giả lỗi 500, mạng chậm, body rỗng).
 - Vì sao msw thay cho mock `fetch`/`axios` tay: chặn ở **ranh giới mạng** nên test đi qua đúng code
   data layer (api-client, parse, map lỗi) thay vì thay thế nó; một bộ handler dùng lại được cho cả
@@ -76,7 +77,8 @@ THẬT của project (bước 0), không áp mặc định của tài liệu nà
 ## 6. Colocate + đặt tên
 
 - Đặt file test theo `code-convention` của project: colocate `Component.test.tsx` cạnh component,
-  hoặc thư mục `__tests__/` — **theo repo**, không tự bịa cây mới.
+  hoặc thư mục `__tests__/` — **theo repo**, không tự bịa cây mới. Repo chưa có quy ước → mặc định colocate
+  theo mục "Test — vị trí file" của template kiến trúc (`src/testing` · `src/shared/testing` · `packages/testing`).
 - Mô tả `describe`/`it` viết **tiếng Việt có dấu**, mô tả **hành vi** ("hiển thị thông báo rỗng khi
   danh sách trống"), không mô tả cài đặt ("gọi setState").
 - Tái dùng render helper / factory / msw handler đã có trong repo; không nhân bản setup provider ở
