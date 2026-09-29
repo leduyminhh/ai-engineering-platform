@@ -1,0 +1,15 @@
+spring:
+  config:
+    activate:
+      on-profile: flyway
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # MẶC ĐỊNH false để DB rỗng chạy V0; chỉ bật true (version 0) ở môi trường schema đã có sẵn để bỏ qua V0.
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-version: ${FLYWAY_BASELINE_VERSION:0}
+    validate-on-migrate: true
+    validate-migration-naming: true   # bắt lỗi tên file sai NGAY
+    clean-disabled: true
+    out-of-order: false
+    table: flyway_schema_history

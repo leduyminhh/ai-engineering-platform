@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260101140000-vi-du-function
+      author: ten.that@example.com
+      # runOnChange: sửa thân hàm thì changeSet chạy lại thay vì báo lỗi checksum (D5 của G2).
+      runOnChange: true
+      changes:
+        - sqlFile:
+            path: sql/20260101140000-vi-du-function.sql
+            relativeToChangelogFile: true
+            # Thân hàm trong $$ … $$ chứa ';', tách câu sẽ cắt hỏng hàm.
+            splitStatements: false
+      rollback:
+        - sqlFile:
+            path: sql/20260101140000-vi-du-function.rollback.sql
+            relativeToChangelogFile: true

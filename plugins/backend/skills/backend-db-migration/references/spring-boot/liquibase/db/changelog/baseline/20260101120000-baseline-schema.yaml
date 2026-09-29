@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260101120000-baseline-schema
+      author: ten.that@example.com
+      changes:
+        - sqlFile:
+            path: sql/20260101120000-baseline-schema.sql
+            relativeToChangelogFile: true
+      rollback:
+        - sqlFile:
+            path: sql/20260101120000-baseline-schema.rollback.sql
+            relativeToChangelogFile: true
