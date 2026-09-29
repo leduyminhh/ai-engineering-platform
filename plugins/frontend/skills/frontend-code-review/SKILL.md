@@ -41,8 +41,8 @@ của project, KHÔNG áp gu cá nhân.
 - **Phân biệt lỗi CHẮC vs NGHI NGỜ:** finding nói được kịch bản tương tác→hành vi sai (thao tác/props/state
   → UI/hậu quả) là **proven**; finding "có mùi / có thể" là **suspected** — phải ghi rõ nhãn, KHÔNG thổi
   suspected thành blocker.
-- **Không tự ý mở rộng thành refactor.** Thấy cần tái cấu trúc → **đề xuất + route** sang `frontend-refactor`
-  (skill sắp có), không tự viết lại trong lượt review.
+- **Không tự ý mở rộng thành refactor.** Thấy cần tái cấu trúc → **đề xuất + route** sang `frontend-refactor`,
+  không tự viết lại trong lượt review.
 - **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — bảng finding, tóm tắt, đề xuất fix — viết
   **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo cáo bằng thứ đếm được (số finding theo severity, `file:line` cụ thể, kịch bản
@@ -107,7 +107,7 @@ và **phần chưa soát + residual risk**. Ngôn ngữ đo được.
     `engineering-quality-gate`. Skill này KHÔNG tự làm security scan; chỉ nhắc khi thấy dấu hiệu (vd
     `dangerouslySetInnerHTML` với dữ liệu chưa làm sạch, secret/token hardcode, URL/target chưa kiểm) và
     chuyển tiếp.
-  - Cần **tái cấu trúc / đổi kiến trúc** vượt một-vài dòng → `frontend-refactor` (skill sắp có) hoặc
+  - Cần **tái cấu trúc / đổi kiến trúc** vượt một-vài dòng → `frontend-refactor` hoặc
     `frontend-migrate-architecture` khi là đổi kiểu kiến trúc (Feature-Based ↔ FSD ↔ Micro-FE).
   - Cần **thêm/sửa test** → `frontend-testing`.
 

@@ -763,6 +763,30 @@ if (fs.existsSync(BUILD)) {
   ok(stale.length === 0, `không còn pointer tới "schema §5.1" của spec không ship (=${stale.join(', ')})`);
 }
 
+// 10. SOURCE: sửa lỗi nội dung skill/manifest (P0 S1–S3, PL2)
+{
+  const readSrc = (rel) => fs.readFileSync(path.join(PLUGINS_DIR, rel), 'utf8');
+  ok(!readSrc('backend/skills/backend-code-review/SKILL.md').includes('sắp có'),
+    'P0 S1: backend-code-review không còn "sắp có" (backend-refactor đã tồn tại)');
+  ok(!readSrc('frontend/skills/frontend-code-review/SKILL.md').includes('sắp có'),
+    'P0 S1: frontend-code-review không còn "sắp có" (frontend-refactor đã tồn tại)');
+  // Mâu thuẫn với ranh giới "KHÔNG nối data/API/route" của chính frontend-implement.
+  ok(!readSrc('frontend/shared/principles.md').includes('nối API thật'),
+    'P0 S2: frontend principles không còn "nối API thật" (mâu thuẫn ranh giới frontend-implement)');
+  ok(!readSrc('backend/skills/backend-init/SKILL.md').includes('Node-TypeScript'),
+    'P0 S3: backend-init không còn lựa chọn stack Node-TypeScript (chưa có template)');
+  // Manifest description là nơi người dùng phát hiện skill; skill mới thêm mà quên cập nhật thì bị "ẩn".
+  for (const id of ['backend', 'frontend', 'engineering']) {
+    const desc = JSON.parse(readSrc(`${id}/.manifest.json`)).description;
+    const skillsDir = path.join(PLUGINS_DIR, id, 'skills');
+    const missing = fs.readdirSync(skillsDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && !desc.includes(e.name)).map((e) => e.name);
+    ok(missing.length === 0, `P0 PL2: manifest ${id} nêu đủ skill trong description (thiếu: ${missing.join(', ')})`);
+  }
+  ok(!JSON.parse(readSrc('frontend/.manifest.json')).description.includes('Layered'),
+    'P0 D4: manifest frontend không còn "Layered" (kiểu kiến trúc đã đổi sang Feature-Based)');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {

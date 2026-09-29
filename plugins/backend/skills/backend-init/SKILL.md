@@ -36,9 +36,10 @@ Nếu project CHƯA có `AGENTS.md`: copy `AGENTS.template.md` (đi kèm skill) 
 có thì giữ nguyên.
 
 ### 2. Hỏi thông tin nền + điền project-knowledge
-- HỎI **stack** (Python / Java / Node-TypeScript / Khác — mặc định Python) và **kiểu kiến
+- HỎI **stack** (Python / Java / Khác — mặc định Python) và **kiểu kiến
   trúc** muốn hướng tới (Layered đơn giản / Onion+DDD / Hexagonal+DDD / Hexagonal+CQRS). Chọn
-  mức đơn giản nhất đủ dùng.
+  mức đơn giản nhất đủ dùng. Chọn **Khác** → chưa có template kiến trúc cho stack đó: chỉ scaffold
+  tài liệu nền và HỎI người dùng trước khi mô tả layout `src/`.
 - Điền `project-knowledge/*` bằng PROSE theo lựa chọn: `architecture.md` + `source-structure.md`
   mô tả phân tầng đã chọn và Dependency Rule (tầng trên gọi tầng dưới; domain không biết hạ
   tầng); `code-convention.md`, `tech-stack.yml` theo stack. KHÔNG copy skeleton code.
