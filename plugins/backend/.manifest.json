@@ -1,6 +1,6 @@
 {
   "id": "backend",
   "name": "Backend Cowork→Code",
-  "description": "Workflow backend Cowork → Code (docs-first, không pipeline bắt buộc): backend-init scaffold cấu trúc thư mục + tài liệu nền (project-knowledge, ADR, data-model/ERD, layout src theo kiến trúc chọn khi init); recipe on-demand backend-migrate-architecture (tái cấu trúc kiến trúc mã nguồn: Onion/Hexagonal/CQRS/layered) và backend-migrate-vault-consul (externalize config/secret sang Vault/Consul).",
-  "version": "1.2.0"
+  "description": "Workflow backend Cowork → Code (docs-first, không pipeline bắt buộc): backend-init scaffold cấu trúc thư mục + tài liệu nền (project-knowledge, ADR, data-model/ERD, layout src theo kiến trúc chọn khi init); recipe on-demand: backend-implement (vertical slice theo kiến trúc), backend-testing (test theo tầng), backend-code-review (review diff/PR), backend-refactor (giữ nguyên hành vi), backend-migrate-architecture (Onion/Hexagonal/CQRS/layered), backend-migrate-vault-consul (config/secret sang Vault/Consul), backend-api-contract (OpenAPI-first, kiểm drift); backend-db-migration (DRAFT — áp Flyway/Liquibase, thay đổi schema expand/contract).",
+  "version": "1.3.0"
 }

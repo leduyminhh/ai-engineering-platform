@@ -169,6 +169,17 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     'publishedPluginIds per-skill: plugin có skill lẻ vẫn tính published');
 }
 
+// backend-db-migration là DRAFT (spec 2026-09-29 §7.1.1 M4): có trên đĩa nhưng wizard không offer.
+{
+  const beAll = skillCatalog().plugins.find((p) => p.id === 'backend');
+  ok(beAll && beAll.skillIds.includes('backend/backend-db-migration'),
+    'skillCatalog: có backend/backend-db-migration (draft vẫn cài được bằng --skill)');
+  const beOff = offeredCatalog().plugins.find((p) => p.id === 'backend');
+  ok(beOff && !beOff.skillIds.includes('backend/backend-db-migration'),
+    'offeredCatalog: KHÔNG offer backend-db-migration (draft)');
+  ok(beOff && beOff.skillIds.length === 8, 'offeredCatalog: vẫn offer đủ 8 skill backend đã publish');
+}
+
 // ── unit: wizardReportModel — report "phần nào cài được qua wizard" (offered vs draft) ──
 {
   const m = wizardReportModel();
