@@ -732,6 +732,10 @@ if (fs.existsSync(BUILD)) {
   const readme = dbmFiles.includes('README.md') ? dbmRead('README.md') : '';
   ok(sbFiles.every((f) => readme.includes(f.replace(/^spring-boot\//, ''))),
     'backend-db-migration: README liệt kê mọi file template spring-boot/');
+  // Job chỉ chạy update: thiếu precondition MARK_RAN thì baseline chạy DDL trên DB đã có schema.
+  ok(readme.includes('MARK_RAN') && readme.includes('changelog-sync'),
+    'backend-db-migration: README có đường adopt Liquibase cho DB đã có dữ liệu (MARK_RAN + changelog-sync)');
+  ok(readme.includes('bỏ đuôi `.tpl`'), 'backend-db-migration: README nêu quy tắc bỏ đuôi .tpl khi copy template');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

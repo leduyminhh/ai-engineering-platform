@@ -1593,10 +1593,12 @@ sb="<scratchpad>/dbm-install"
 mkdir -p "$sb"
 AIE_INSTALL_ROOT="$sb" node cli/index.mjs install --provider claude --skill backend/backend-db-migration --yes
 AIE_INSTALL_ROOT="$sb" node cli/index.mjs check
-find "$sb" -path "*backend-db-migration*" -name SKILL.md
+find -L "$sb" -path "*backend-db-migration*" -name SKILL.md
 ```
 
 Expected: install exit 0; `check` liệt kê entry có `backend/backend-db-migration`; `find` in ra 1 đường dẫn `SKILL.md`.
+
+Install tạo junction/symlink trỏ vào `build/`; `find` mặc định không đi theo link nên phải có `-L`.
 
 Dọn (không dùng `rm -rf` — sandbox có junction):
 `node -e "require('fs').rmSync(process.argv[1],{recursive:true,force:true})" "<scratchpad>/dbm-install"`

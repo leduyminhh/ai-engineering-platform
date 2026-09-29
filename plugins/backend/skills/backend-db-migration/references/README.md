@@ -14,7 +14,9 @@ java -jar <app>-db-migration.jar --spring.profiles.active=migration,flyway
 java -jar <app>-db-migration.jar --spring.profiles.active=migration,liquibase
 ```
 
-Exit code khác 0 khi migration fail (`SpringApplication.exit` + `System.exit`), để CI/CD dừng deploy.
+`[Inference]` Khi migration fail, job thoát với exit code khác 0 để CI/CD dừng deploy: `run(args)` ném exception trước
+khi tới `SpringApplication.exit`, nên exit code đến từ exception không bắt được ở `main`, không từ
+`SpringApplication.exit` + `System.exit` (hai lệnh này chỉ trả exit code khi job chạy xong). Xác nhận khi pilot.
 
 ## Ma trận file
 
@@ -72,10 +74,47 @@ cùng lúc; xác nhận trên Flyway của project khi pilot.
 
 ## Liquibase với DB đã có dữ liệu
 
-- KHÔNG để changeSet baseline chạy DDL trên DB đã có schema đó: DDL sẽ đụng object đã tồn tại.
-- Với mỗi DB như vậy, đánh dấu changeSet baseline là **đã áp dụng** đúng một lần, không chạy SQL của nó — vd lệnh
-  Liquibase `changelog-sync`. `[Unverified]` Tên lệnh / Maven goal chính xác tuỳ version Liquibase; đối chiếu tài
-  liệu Liquibase đúng version project dùng trước khi chạy.
+`[Inference]` Job của kit (`--spring.profiles.active=migration,liquibase`) chỉ chạy Liquibase `update` khi khởi động,
+nên changeSet baseline sẽ chạy DDL trên DB đã có schema nếu không chặn; DDL tạo object đã tồn tại sẽ fail hoặc làm
+lệch schema.
+
+**Đường chính (chạy được trong job):** khi adopt DB đã có dữ liệu, thêm `preConditions` vào changeSet baseline
+(`baseline/<timestamp>-baseline-schema.yaml`) để bỏ qua DDL nếu schema đã có. `onFail: MARK_RAN` = "bỏ qua changeSet
+nhưng đánh dấu đã chạy, rồi chạy tiếp changelog"
+([Liquibase — What are preconditions?](https://docs.liquibase.com/concepts/changelogs/preconditions.html)):
+
+```yaml
+  - changeSet:
+      id: <timestamp>-baseline-schema
+      author: <tên thật hoặc email>
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: <bang_then_chot>
+                schemaName: public
+      # changes + rollback giữ nguyên như template
+```
+
+- `[Inference]` Điều kiện là `not tableExists`: DB rỗng → điều kiện đúng → chạy DDL baseline; DB đã có bảng →
+  điều kiện sai → `MARK_RAN`, không chạy DDL. Một changeSet dùng được cho cả hai loại DB.
+- `<bang_then_chot>` là một bảng chắc chắn có trong schema thật (vd bảng lõi được tạo sớm nhất). `[Inference]`
+  Precondition chỉ kiểm một bảng: DB có schema dở dang (có bảng đó nhưng thiếu bảng khác) vẫn bị `MARK_RAN` → đối
+  chiếu schema với baseline trước khi chạy.
+- `[Unverified]` Cú pháp YAML trên theo ví dụ ở trang tài liệu dẫn trên (bản Liquibase Secure 5.1); đối chiếu với
+  tài liệu đúng version Liquibase mà BOM của project pin.
+
+**Đường thay thế (ngoài job, không có trong kit):** lệnh `changelog-sync` của Liquibase CLI / Maven plugin "đánh dấu
+mọi thay đổi chưa deploy trong changelog là đã chạy"
+([Liquibase — changelog-sync](https://docs.liquibase.com/commands/utility/changelog-sync.html)).
+
+- **Cảnh báo:** chỉ chạy khi master changelog **chỉ còn** changeSet baseline. Nếu đã có changeSet thật chưa chạy,
+  `changelog-sync` đánh dấu luôn chúng là đã chạy mà không thực thi SQL → schema thiếu thay đổi mà không báo lỗi.
+- Kit không kèm `liquibase-maven-plugin` hay Liquibase CLI. `[Unverified]` Cú pháp lệnh / tên Maven goal chính xác
+  tuỳ version Liquibase; đối chiếu tài liệu đúng version trước khi chạy.
+
+Với cả hai đường:
+
 - Xác nhận DB đích theo `references/change/verify-cycle.md` (mục "Xác nhận DB đích — làm TRƯỚC mọi lệnh") trước khi
   chạy bất kỳ lệnh nào.
 
@@ -84,9 +123,12 @@ cùng lúc; xác nhận trên Flyway của project khi pilot.
 `flyway-database-postgresql` không khai `<version>` để BOM pin. `[Unverified]` Nếu BOM của project không quản version
 artifact này, Maven báo thiếu version → hỏi người dùng, ghi ADR trước khi thêm version tay.
 
-- Artifact `flyway-database-postgresql` chỉ có từ **Flyway 10**; Flyway cũ hơn không có artifact này. `[Unverified]`
-  Spec G2 §8.1 gắn Flyway 10+ với Spring Boot ≥ 3.3 — mốc Boot chính xác chưa đối chiếu tài liệu gốc; kiểm version
-  Flyway mà BOM của project pin.
-- Parent của module phải **hoặc** kế thừa `spring-boot-starter-parent`, **hoặc** import BOM Spring Boot và bind goal
-  `repackage` của `spring-boot-maven-plugin` (`module-pom.xml.tpl` chỉ khai plugin, không khai `<executions>`); nếu
-  không, version dependency không resolve được hoặc jar không đóng gói để chạy bằng `java -jar`.
+- `[Unverified]` Artifact `flyway-database-postgresql` chỉ có từ **Flyway 10** (Flyway cũ hơn không có artifact này),
+  và Flyway 10+ đi cùng Spring Boot ≥ 3.3 — chưa đối chiếu tài liệu gốc; kiểm version Flyway mà BOM của project pin.
+- Parent của module phải **hoặc** kế thừa `spring-boot-starter-parent` (parent này có sẵn execution goal `repackage`),
+  **hoặc** import BOM Spring Boot (`<scope>import</scope>`). Import BOM chỉ mang dependency management, **không** mang
+  plugin management ([Spring Boot Maven Plugin — Using the Plugin](https://docs.spring.io/spring-boot/maven-plugin/using.html)),
+  nên với parent kiểu này phải tự khai `<version>` cho `spring-boot-maven-plugin` và execution goal `repackage`
+  (`module-pom.xml.tpl` chỉ khai plugin, không khai version hay `<executions>`).
+- `[Inference]` Thiếu các điều trên thì version dependency/plugin không resolve được hoặc jar không được đóng gói để
+  chạy bằng `java -jar`.
