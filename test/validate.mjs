@@ -637,6 +637,22 @@ if (fs.existsSync(BUILD)) {
   }
 }
 
+// 8. SOURCE: backend-db-migration — hợp đồng references/ (spec 2026-09-29 §7.1, G2 §5–§7)
+{
+  const dbmRef = path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-db-migration', 'references');
+  const dbmFiles = listFilesRec(dbmRef);
+  const dbmRead = (rel) => fs.readFileSync(path.join(dbmRef, rel), 'utf8');
+  const skillMd = fs.readFileSync(path.join(dbmRef, '..', 'SKILL.md'), 'utf8');
+  for (const f of ['adopt/inventory-checklist.md', 'adopt/tool-comparison-rubric.md']) {
+    ok(dbmFiles.includes(f), `backend-db-migration: có references/${f}`);
+    ok(skillMd.includes(`(references/${f})`), `backend-db-migration: SKILL.md link tới references/${f}`);
+  }
+  const rubric = dbmFiles.includes('adopt/tool-comparison-rubric.md') ? dbmRead('adopt/tool-comparison-rubric.md') : '';
+  ok(['T1', 'T2', 'T3', 'T4', 'T5', 'T6'].every((t) => rubric.includes(`| ${t} |`)),
+    'backend-db-migration: rubric đủ 6 tiêu chí T1–T6');
+  ok(rubric.includes('Bằng chứng'), 'backend-db-migration: rubric bắt buộc cột Bằng chứng');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
