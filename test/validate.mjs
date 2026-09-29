@@ -689,6 +689,16 @@ if (fs.existsSync(BUILD)) {
   ok(pom.includes('<artifactId>flyway-core</artifactId>') && pom.includes('<artifactId>liquibase-core</artifactId>')
     && !/<artifactId>(flyway-core|flyway-database-postgresql|liquibase-core)<\/artifactId>\s*<version>/.test(pom),
     'backend-db-migration: pom có cả hai khối công cụ, không ghim version (để BOM pin)');
+  const fw = sbFiles.filter((f) => f.startsWith('spring-boot/flyway/db/migration/'));
+  const baseName = (f) => f.split('/').pop();
+  ok(sbFiles.includes('spring-boot/flyway/application-flyway.yml') && sbFiles.includes('spring-boot/flyway/CONVENTIONS.md'),
+    'backend-db-migration: có flyway/application-flyway.yml + CONVENTIONS.md');
+  ok(fw.length === 5, `backend-db-migration: layout mẫu flyway đủ 5 file (=${fw.length})`);
+  // B4 của G2: sai separator thì Flyway bỏ qua migration mà không báo.
+  ok(fw.every((f) => /^(V\d{14}__[a-z0-9_]+\.sql\.(tpl|conf)|R__[a-z0-9_]+\.sql\.tpl)$/.test(baseName(f))),
+    'backend-db-migration: tên file flyway đúng V<14 số>__ / R__');
+  ok(fw.filter((f) => f.endsWith('.conf')).every((c) => fw.includes(c.replace(/\.conf$/, '.tpl'))),
+    'backend-db-migration: mỗi .conf có migration mẫu cùng tên');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
