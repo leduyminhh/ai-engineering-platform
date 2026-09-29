@@ -654,6 +654,16 @@ if (fs.existsSync(BUILD)) {
   ok(['T1', 'T2', 'T3', 'T4', 'T5', 'T6'].every((t) => rubric.includes(`| ${t} |`)),
     'backend-db-migration: rubric đủ 6 tiêu chí T1–T6');
   ok(/\|\s*Bằng chứng\s*\|/.test(rubric), 'backend-db-migration: rubric bắt buộc cột Bằng chứng');
+  for (const f of ['change/change-patterns.md', 'change/lock-risk-postgres.md', 'change/verify-cycle.md']) {
+    ok(dbmFiles.includes(f), `backend-db-migration: có references/${f}`);
+    ok(skillMd.includes(`(references/${f})`), `backend-db-migration: SKILL.md link tới references/${f}`);
+  }
+  const cycle = dbmFiles.includes('change/verify-cycle.md') ? dbmRead('change/verify-cycle.md') : '';
+  ok(['## Flyway', '## Liquibase', '## Alembic'].every((h) => cycle.includes(h)),
+    'backend-db-migration: verify-cycle có đủ Flyway / Liquibase / Alembic');
+  ok(cycle.includes('forward-only'), 'backend-db-migration: verify-cycle nêu Flyway forward-only (M3)');
+  const lock = dbmFiles.includes('change/lock-risk-postgres.md') ? dbmRead('change/lock-risk-postgres.md') : '';
+  ok(lock.includes('| Nguồn |'), 'backend-db-migration: bảng rủi ro khoá có cột Nguồn');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
