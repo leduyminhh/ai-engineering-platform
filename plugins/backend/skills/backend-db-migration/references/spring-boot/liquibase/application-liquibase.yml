@@ -9,4 +9,4 @@ spring:
     default-schema: ${LIQUIBASE_SCHEMA:public}
     database-change-log-table: DATABASECHANGELOG
     database-change-log-lock-table: DATABASECHANGELOGLOCK
-    test-rollback-on-update: false   # bật true ở môi trường staging để kiểm block rollback
+    test-rollback-on-update: false   # chỉ bật true trên DB test đã xác nhận (references/change/verify-cycle.md)

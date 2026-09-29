@@ -8,7 +8,7 @@ databaseChangeLog:
         - sqlFile:
             path: sql/20260101140000-vi-du-function.sql
             relativeToChangelogFile: true
-            # Thân hàm PL/pgSQL chứa ';' bên trong $$ … $$, tách câu sẽ cắt hỏng hàm.
+            # Thân hàm trong $$ … $$ chứa ';', tách câu sẽ cắt hỏng hàm.
             splitStatements: false
       rollback:
         - sqlFile:

@@ -13,11 +13,14 @@ changeSet.author = <tên thật hoặc email>
   master theo đúng thứ tự thời gian.
 - **Mỗi changeSet có block `rollback`**; rollback kiểm được bằng chu trình ở `references/change/verify-cycle.md`.
 - Repeatable = `runOnChange: true` trên changeSet (Liquibase không có thư mục/khái niệm repeatable riêng).
-- File SQL chứa `$$` (PL/pgSQL) đặt `splitStatements: false`.
-- `CREATE INDEX CONCURRENTLY` đặt `runInTransaction: false` trên changeSet đó.
+- File SQL có thân hàm trong `$$ … $$` đặt `splitStatements: false`.
+- `CREATE INDEX CONCURRENTLY` đặt `runInTransaction: false` trên changeSet đó; changeSet không-transaction chỉ chứa
+  **một lệnh DDL** (`references/change/change-patterns.md`, mục "Thêm index"). `[Inference]` `SET lock_timeout` /
+  `RESET lock_timeout` là lệnh cấp session, không để lại trạng thái schema, nên được đi kèm lệnh DDL đó.
 - **Bất biến:** changeSet đã có trên base branch không được sửa (trừ changeSet `runOnChange`). Không dùng
   `clearCheckSums` để "cho qua".
-- Mỗi migration đổi cấu trúc đặt `lock_timeout` ở đầu file SQL, theo cách changeSet chạy:
+- Mỗi migration đổi cấu trúc đặt `lock_timeout` ở đầu file SQL — cả file `.sql` lẫn `.rollback.sql` — theo cách
+  changeSet chạy:
   - chạy trong transaction (mặc định): `SET LOCAL lock_timeout = '5s';`
   - changeSet có `runInTransaction: false` (vd `CREATE INDEX CONCURRENTLY`): `SET lock_timeout = '5s';` … rồi
     `RESET lock_timeout;` cuối file (`SET LOCAL` ngoài transaction không có tác dụng; `SET` thường có hiệu lực cả

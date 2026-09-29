@@ -722,6 +722,10 @@ if (fs.existsSync(BUILD)) {
     const p = path.posix.join(path.posix.dirname(f), m[1]);
     return lb.includes(p) || lb.includes(p + '.tpl');
   })), 'backend-db-migration: sqlFile trong changeSet trỏ tới file có thật');
+  // SET LOCAL không có tác dụng trong changeSet runInTransaction: false; luật phải tách hai trường hợp.
+  const lbConv = sbFiles.includes('spring-boot/liquibase/CONVENTIONS.md') ? sbRead('spring-boot/liquibase/CONVENTIONS.md') : '';
+  ok(lbConv.includes('SET LOCAL lock_timeout') && lbConv.includes('RESET lock_timeout'),
+    'backend-db-migration: CONVENTIONS liquibase tách luật lock_timeout trong/ngoài transaction');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

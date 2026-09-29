@@ -88,7 +88,7 @@ kèm truy vấn đếm dòng vượt giới hạn kiểu mới trước khi ch�
 ## Thêm index
 
 ```sql
--- file chạy NGOÀI transaction (cách cấu hình: đoạn dưới)
+-- file chạy NGOÀI transaction, chỉ một lệnh DDL; SET/RESET là lệnh session (cách cấu hình: đoạn dưới)
 SET lock_timeout = '5s';
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invoice_customer_id ON invoice (customer_id);
 -- SET ngoài transaction có hiệu lực cả session; không reset thì lọt sang migration sau trên cùng connection.
@@ -103,8 +103,9 @@ Chạy ngoài transaction:
   [Migration transaction handling](https://documentation.red-gate.com/fd/migration-transaction-handling-273973399.html)).
 - Liquibase: `runInTransaction: false` trên changeSet
   ([Liquibase — runInTransaction](https://docs.liquibase.com/reference-guide/changelog-attributes/runintransaction));
-  changeSet đó chỉ chứa một lệnh, vì lỗi giữa chừng ở changeSet nhiều lệnh để `DATABASECHANGELOG` ở trạng thái sai
-  (cùng trang).
+  changeSet đó chỉ chứa **một lệnh DDL**, vì lỗi giữa chừng ở changeSet nhiều lệnh để `DATABASECHANGELOG` ở trạng
+  thái sai (cùng trang). `[Inference]` `SET lock_timeout` / `RESET lock_timeout` là lệnh cấp session, không để lại
+  trạng thái schema, nên đi kèm lệnh DDL đó như ví dụ trên không phá ràng buộc này.
 
 Fail giữa chừng để lại index `INVALID`: `DROP INDEX CONCURRENTLY IF EXISTS idx_invoice_customer_id;` rồi chạy lại.
 Trước khi chạy lại, kiểm `flyway_schema_history` (hoặc `DATABASECHANGELOG`): có dòng thất bại → DỪNG, báo người dùng,
