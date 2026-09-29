@@ -668,6 +668,27 @@ if (fs.existsSync(BUILD)) {
   ok(lockRows.some((l) => l.includes('https://')), 'backend-db-migration: bảng rủi ro khoá có link nguồn https://');
   ok(!lockRows.some((l) => /\|\s*[LFQ]\d+(,\s*[LFQ]\d+)*\s*\|/.test(l)),
     'backend-db-migration: bảng rủi ro khoá không dùng mã nguồn viết tắt (L1/F1/Q1)');
+  const sbFiles = dbmFiles.filter((f) => f.startsWith('spring-boot/'));
+  const sbRead = (rel) => dbmRead(rel);
+  for (const f of ['module-pom.xml.tpl', 'DbMigrationApplication.java.tpl', 'application-migration.yml',
+    'env.example', 'new-migration.sh']) {
+    ok(sbFiles.includes(`spring-boot/common/${f}`), `backend-db-migration: có spring-boot/common/${f}`);
+  }
+  // B2 của G2: env.example thừa/thiếu key so với yml là lỗi im lặng lúc chạy job.
+  const ymlVars = new Set(sbFiles.filter((f) => f.endsWith('.yml'))
+    .flatMap((f) => [...sbRead(f).matchAll(/\$\{([A-Z0-9_]+)(?::[^}]*)?\}/g)].map((m) => m[1])));
+  const envKeys = new Set(sbFiles.includes('spring-boot/common/env.example')
+    ? [...sbRead('spring-boot/common/env.example').matchAll(/^([A-Z0-9_]+)=/gm)].map((m) => m[1]) : []);
+  ok(ymlVars.size > 0 && [...ymlVars].every((v) => envKeys.has(v)) && [...envKeys].every((k) => ymlVars.has(k)),
+    `backend-db-migration: env.example khớp đúng biến yml (yml=${[...ymlVars].sort()} env=${[...envKeys].sort()})`);
+  // D1–D3, B1 của G2: bean tự viết vô hiệu autoconfig; spring.factories trỏ class không tồn tại.
+  ok(!dbmFiles.some((f) => f.endsWith('spring.factories')), 'backend-db-migration: không ship spring.factories');
+  ok(sbFiles.filter((f) => f.endsWith('.tpl')).every((f) => !sbRead(f).includes('@Configuration')),
+    'backend-db-migration: template không có @Configuration tự viết');
+  const pom = sbFiles.includes('spring-boot/common/module-pom.xml.tpl') ? sbRead('spring-boot/common/module-pom.xml.tpl') : '';
+  ok(pom.includes('<artifactId>flyway-core</artifactId>') && pom.includes('<artifactId>liquibase-core</artifactId>')
+    && !/<artifactId>(flyway-core|flyway-database-postgresql|liquibase-core)<\/artifactId>\s*<version>/.test(pom),
+    'backend-db-migration: pom có cả hai khối công cụ, không ghim version (để BOM pin)');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
