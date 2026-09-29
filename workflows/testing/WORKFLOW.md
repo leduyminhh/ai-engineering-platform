@@ -84,7 +84,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 ### Bước 5 — Coverage
 
 - **Thực hiện:** session chính
-- **Đầu vào:** test đã chạy xanh từ Bước 4
+- **Đầu vào:** test lỗi-test đã xanh từ Bước 4 + danh sách lỗi-code đã chuyển sang `workflow-bugfix`
 - **Hành động:** chạy coverage tool của project cho vùng đụng; ghi lại số liệu, hoặc ghi `not_run` kèm lý do
   nếu project chưa có coverage tool.
 - **Ràng buộc:** không tự thêm coverage tool ngoài yêu cầu.
@@ -119,11 +119,10 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Tình huống | Hành động |
 |---|---|
 | Build fail | Chẩn đoán → sửa → build lại |
-| Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
+| Test fail | Phân loại failure: lỗi test (test sai) → sửa test, chạy lại; lỗi code → dừng, đề xuất `workflow-bugfix`, không sửa code production (Bước 4) |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Người dùng không đồng ý chiến lược (sau Bước 2 ⏸) | Quay lại Bước 1 làm rõ hành vi/rủi ro |
-| Failure là lỗi code, không phải lỗi test (Bước 4) | Dừng, đề xuất `workflow-bugfix`, không tự sửa code |
 | Người dùng không duyệt diff (sau Bước 6 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 
 - **Điều kiện dừng:** không xác định được hành vi cần test sau khi hỏi lại; failure là lỗi code chưa được xử

@@ -34,7 +34,7 @@ vào đúng cấu trúc tài liệu của project, và ghi ADR cho các quyết 
 5. Với mỗi quyết định thiết kế/nghiệp vụ đáng lưu phát sinh trong lúc viết spec: đọc skill `engineering-adr`,
    facilitate 2–4 phương án kèm đánh đổi, ghi ADR vào `docs/decisions/<số kế tiếp>-<slug>.md`, link hai
    chiều với spec.
-6. Chạy checklist Definition of Done của cả hai skill trước khi báo hoàn thành; nêu rõ phần còn thiếu.
+6. Chạy checklist Definition of Done của cả ba skill trước khi báo hoàn thành; nêu rõ phần còn thiếu.
 
 ## Report trả về
 

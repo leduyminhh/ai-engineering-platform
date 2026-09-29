@@ -787,6 +787,24 @@ if (fs.existsSync(BUILD)) {
     'P0 D4: manifest frontend không còn "Layered" (kiểu kiến trúc đã đổi sang Feature-Based)');
 }
 
+// 11. SOURCE: sửa lỗi workflow/agent (P0 WF1, WF2, D11)
+{
+  const readRepo = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
+  const testing = readRepo('workflows', 'testing', 'WORKFLOW.md');
+  // Bước 4 cấm sửa code production; câu phủ định "không sửa code" là hợp lệ nên loại trước khi kiểm.
+  ok(!testing.split('\n').some((l) => l.startsWith('| Test fail |') && l.replaceAll('không sửa code', '').includes('sửa code')),
+    'P0 WF1: workflow-testing không còn dòng "Test fail" bảo "sửa code" (mâu thuẫn Bước 4)');
+  const step5 = testing.split('### Bước 5')[1]?.split('### Bước 6')[0] ?? '';
+  const step5Input = step5.split('\n').find((l) => l.startsWith('- **Đầu vào:**')) ?? '';
+  ok(step5Input !== '' && !step5Input.includes('đã chạy xanh'),
+    'P0 WF1: workflow-testing Bước 5 không đòi "đã chạy xanh" (lỗi code chuyển sang workflow-bugfix nên không xanh toàn bộ)');
+  const docs = readRepo('workflows', 'docs', 'WORKFLOW.md');
+  ok(!docs.includes('| Build fail | Chẩn đoán') && !docs.includes('| Test fail | Phân tích failure'),
+    'P0 WF2: workflow-docs không còn boilerplate Build fail/Test fail (workflow không build/test)');
+  ok(!readRepo('plugins', 'engineering', 'agents', 'engineering-spec-analyst.md').includes('cả hai skill'),
+    'P0 D11: engineering-spec-analyst không còn "cả hai skill" (agent dùng ba skill)');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {

@@ -104,8 +104,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 
 | Tình huống | Hành động |
 |---|---|
-| Build fail | Chẩn đoán → sửa → build lại |
-| Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
+| Build fail | Không áp dụng — workflow chỉ sửa tài liệu, không build |
+| Test fail | Không áp dụng — workflow không chạy test |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Nội dung cần sửa nằm trong managed block của `AGENTS.md`/`CLAUDE.md` (Bước 3) | Dừng, báo người dùng tự sửa qua cơ chế managed-block, không tự đụng vùng đó |
