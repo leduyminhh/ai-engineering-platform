@@ -51,10 +51,13 @@ ALTER TABLE invoice ADD COLUMN status text;
 -- migrate data: backfill theo lô tới khi không còn NULL
 -- contract (PR sau khi code luôn ghi status) — ba migration riêng:
 -- migration riêng 1
+SET LOCAL lock_timeout = '5s';
 ALTER TABLE invoice ADD CONSTRAINT invoice_status_not_null CHECK (status IS NOT NULL) NOT VALID;
 -- migration riêng 2
+SET LOCAL lock_timeout = '5s';
 ALTER TABLE invoice VALIDATE CONSTRAINT invoice_status_not_null;
 -- migration riêng 3
+SET LOCAL lock_timeout = '5s';
 ALTER TABLE invoice ALTER COLUMN status SET NOT NULL;
 ALTER TABLE invoice DROP CONSTRAINT invoice_status_not_null;
 ```
@@ -106,6 +109,12 @@ Chạy ngoài transaction:
   changeSet đó chỉ chứa **một lệnh DDL**, vì lỗi giữa chừng ở changeSet nhiều lệnh để `DATABASECHANGELOG` ở trạng
   thái sai (cùng trang). `[Inference]` `SET lock_timeout` / `RESET lock_timeout` là lệnh cấp session, không để lại
   trạng thái schema, nên đi kèm lệnh DDL đó như ví dụ trên không phá ràng buộc này.
+- Flyway trên PostgreSQL: tài liệu Flyway ghi setting transactional lock "nên đặt `false` cho lệnh như
+  `CREATE INDEX CONCURRENTLY`"
+  ([Flyway — PostgreSQL Transactional Lock Setting](https://documentation.red-gate.com/flyway/reference/configuration/flyway-namespace/flyway-postgresql-namespace/flyway-postgresql-transactional-lock-setting)).
+  `[Unverified]` Giữ mặc định (advisory lock dạng transaction) thì `CREATE INDEX CONCURRENTLY` có thể bị chặn chờ chính
+  lock đó. `[Inference]` Spring: `spring.flyway.postgresql.transactional-lock: false` — kiểm khi pilot
+  (`references/README.md`, mục "Kiểm khi pilot").
 
 Fail giữa chừng để lại index `INVALID`: `DROP INDEX CONCURRENTLY IF EXISTS idx_invoice_customer_id;` rồi chạy lại.
 Trước khi chạy lại, kiểm `flyway_schema_history` (hoặc `DATABASECHANGELOG`): có dòng thất bại → DỪNG, báo người dùng,
@@ -140,9 +149,12 @@ index trước khi xử lý dữ liệu và chạy lại.
 ## Thêm FK
 
 ```sql
+-- migration 1
+SET LOCAL lock_timeout = '5s';
 ALTER TABLE invoice ADD CONSTRAINT fk_invoice_customer
   FOREIGN KEY (customer_id) REFERENCES customer (id) NOT VALID;
--- migration riêng
+-- migration riêng 2
+SET LOCAL lock_timeout = '5s';
 ALTER TABLE invoice VALIDATE CONSTRAINT fk_invoice_customer;
 ```
 

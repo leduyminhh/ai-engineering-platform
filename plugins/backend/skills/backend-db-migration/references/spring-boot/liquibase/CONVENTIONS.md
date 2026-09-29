@@ -13,6 +13,9 @@ changeSet.author = <tên thật hoặc email>
   master theo đúng thứ tự thời gian.
 - **Mỗi changeSet có block `rollback`**; rollback kiểm được bằng chu trình ở `references/change/verify-cycle.md`.
 - Repeatable = `runOnChange: true` trên changeSet (Liquibase không có thư mục/khái niệm repeatable riêng).
+- Include `runOnChange` (repeatable) luôn nằm **cuối** master; include versioned mới chèn **trước** khối repeatable.
+  `[Inference]` Liquibase chạy changeSet theo thứ tự include, nên đặt repeatable cuối để nó chạy sau mọi thay đổi cấu
+  trúc mà nó phụ thuộc (tương tự `R__` của Flyway chạy sau mọi `V`).
 - File SQL có thân hàm trong `$$ … $$` đặt `splitStatements: false`.
 - `CREATE INDEX CONCURRENTLY` đặt `runInTransaction: false` trên changeSet đó; changeSet không-transaction chỉ chứa
   **một lệnh DDL** (`references/change/change-patterns.md`, mục "Thêm index"). `[Inference]` `SET lock_timeout` /

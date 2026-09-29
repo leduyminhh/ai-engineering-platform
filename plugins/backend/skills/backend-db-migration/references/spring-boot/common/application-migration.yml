@@ -8,7 +8,7 @@ spring:
     password: ${DB_P}
     hikari:
       maximum-pool-size: 2          # job ngắn, không cần pool lớn
-      initialization-fail-timeout: 1 # fail-fast: job không có lý do sống khi thiếu DB
+      initialization-fail-timeout: 1 # ý định: job dừng ngay khi không lấy được connection đầu tiên, không chờ DB
   jpa:
     hibernate:
       ddl-auto: none                # job KHÔNG bao giờ được đụng schema qua Hibernate

@@ -11,6 +11,14 @@ DB test ưu tiên DB tạm: dịch vụ trong `docker compose` của project ho�
 Dựng container mới (vd `docker run … postgres:<major version của production>`) là việc của người dùng hoặc cần người
 dùng đồng ý. Không có DB test → ghi `not_run` + lý do, không tự dựng hạ tầng.
 
+## Project không dựng từ kit
+
+Lệnh trong các bảng dưới viết cho job module `<app>-db-migration` của kit. Project chạy migration theo cơ chế khác (nhận
+diện ở C1) vẫn đi đủ các bước (a)/(b)/(c), qua runner của chính project: vd test integration boot app trỏ vào DB test
+(công cụ chạy lúc app khởi động), hoặc goal migrate của Maven/Gradle plugin nếu project đã khai. Ở bước (b), đổi path
+trong lệnh `git archive` thành thư mục migration thật của project (vd `src/main/resources/db/migration`). Không tự thêm
+plugin/CLI mà project chưa dùng — hỏi người dùng trước.
+
 ## Flyway
 
 Flyway dùng theo **forward-only**: không chạy undo. Undo migration (`U__`) là tính năng bản Teams; Flyway Community
@@ -70,4 +78,6 @@ lùi một revision; thay đổi thêm nhiều revision thì downgrade tới rev
 ## Evidence
 
 Mỗi lệnh một mục trong `validation` của report: `command`, `exit_code`, `status`, `summary` (số migration/changeSet đã
-áp, version cuối). Lệnh không chạy được → `status: not_run` + `reason`.
+áp, version cuối). Số migration/changeSet đã áp **đọc từ log của lần chạy** (dòng tổng kết của Flyway/Liquibase), không
+suy từ exit code: exit code 0 mà log cho thấy 0 migration áp ở bước cần áp (vd location sai) → `status: failed`, ghi lý
+do. Lệnh không chạy được → `status: not_run` + `reason`.

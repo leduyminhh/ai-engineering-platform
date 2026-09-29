@@ -28,6 +28,7 @@ if ! [[ "$desc" =~ ^[A-Za-z0-9\ _-]+$ ]]; then
 fi
 
 slug=$(printf '%s' "$desc" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/_/g; s/^_+//; s/_+$//')
+[ -n "$slug" ] || { echo "Mô tả phải có ít nhất một chữ hoặc số: $desc" >&2; exit 2; }
 slug_dash=${slug//_/-}
 flyway_root=src/main/resources/db/migration
 liquibase_root=src/main/resources/db/changelog
@@ -40,7 +41,8 @@ version_taken() {
   fi
 }
 
-version=$(date +%Y%m%d%H%M%S)
+# UTC để version không phụ thuộc múi giờ máy sinh; giờ địa phương có thể cho file sau version nhỏ hơn file trước.
+version=$(date -u +%Y%m%d%H%M%S)
 tries=0
 # Hai người sinh cùng giây sẽ trùng version; tăng dần thay vì ghi đè (B5 của G2).
 while version_taken "$version"; do
@@ -84,11 +86,11 @@ databaseChangeLog:
             relativeToChangelogFile: true
 EOF
 printf -- "-- %s\nSET LOCAL lock_timeout = '5s';\n\n" "$desc" > "$dir/sql/$name.sql"
-printf -- "-- Hoàn tác: %s\n\n" "$desc" > "$dir/sql/$name.rollback.sql"
+printf -- "-- Hoàn tác: %s\nSET LOCAL lock_timeout = '5s';\n\n" "$desc" > "$dir/sql/$name.rollback.sql"
 echo "Đã tạo: $dir/$name.yaml"
 echo "Đã tạo: $dir/sql/$name.sql"
 echo "Đã tạo: $dir/sql/$name.rollback.sql"
-echo "Thêm vào db.changelog-master.yaml:"
+echo "Thêm vào db.changelog-master.yaml (trước các include repeatable):"
 echo "  - include:"
 echo "      file: versioned/$domain/$name.yaml"
 echo "      relativeToChangelogFile: true"

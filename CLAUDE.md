@@ -67,7 +67,7 @@ Every lifecycle command takes a scope: **project** (default, cwd) or **global** 
 `cli/lib/pack-guard.mjs` + `pack.config.json` verify (on `prepack`) that the npm-publish file set stays within an allowlist (fail-loud). This is separate from `cli/lib/pack.mjs`, a zero-dep deterministic ZIP packer that bundles the `_cowork.json` skill set for Anthropic Cowork upload.
 
 ### Adding capability content
-- New skill → add `plugins/<id>/skills/<skill-id>/SKILL.md` (frontmatter: `name`, `description`, `order`, `title`, `runsIn`, `invoke`, `pipeline: false`, `next: null`). It is auto-discovered; run `npm run build` to verify output.
+- New skill → add `plugins/<id>/skills/<skill-id>/SKILL.md` (frontmatter: `name`, `description`, `order`, `title`, `runsIn`, `invoke`, `pipeline: false`, `next: null`). It is auto-discovered; run `npm run build` to verify output. In a plugin published per-skill in `plugins/_published.json` (currently `backend`), the new skill stays draft — not offered by the wizard — until its `<plugin>/<skill>` entry is added there (npm packaging is per-plugin, so its files still ship with the plugin dir).
 - New agent → `plugins/<id>/agents/<id>-<slug>.md` (frontmatter `name`, `description`, `mode`, `skills`; body 4 heading).
 - New workflow → copy `templates/workflows/workflow.template.md` to `workflows/<slug>/WORKFLOW.md`, add a row to the registry in `workflows/orchestrator/WORKFLOW.md`.
 - New provider behavior → edit `adapters/<provider>/adapter.mjs`; keep it a pure `build(plugins, ctx) -> fileEntry[]`.

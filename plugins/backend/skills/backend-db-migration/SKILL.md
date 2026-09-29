@@ -51,7 +51,7 @@ exit code, số migration áp); không dùng "đảm bảo / an toàn tuyệt đ
 | Chưa có công cụ migration (`ddl-auto=update`, DDL chạy tay) | `adopt` |
 | Đã có Flyway / Liquibase / Alembic + yêu cầu đổi schema | `change` |
 | Có `data-oltp-init`, hoặc schema là contract cho nhiều consumer | DỪNG → `data-oltp-implement` |
-| Có cả hai dấu hiệu | DỪNG, hỏi người dùng |
+| Có cả hai dấu hiệu: đã có công cụ migration trong app **và** dấu hiệu schema là contract (có `data-oltp-init` / nhiều consumer) | DỪNG, hỏi người dùng |
 
 ## Chế độ ADOPT — áp công cụ migration
 
@@ -60,7 +60,13 @@ exit code, số migration áp); không dùng "đảm bảo / an toàn tuyệt đ
 
 ### A2. Kiểm kê source
 Theo [references/adopt/inventory-checklist.md](references/adopt/inventory-checklist.md). Xuất **bảng hiện trạng**; hạng
-mục không đọc được ghi "KHÔNG XÁC ĐỊNH ĐƯỢC", không suy đoán.
+mục không đọc được ghi "KHÔNG XÁC ĐỊNH ĐƯỢC", không suy đoán. Ghi **major version Spring Boot** (parent/BOM): khác 3 →
+DỪNG, hỏi người dùng — template viết cho Boot 3 (dependency `flyway-core` / `liquibase-core` theo
+[Spring Boot 3.5 — Database Initialization](https://docs.spring.io/spring-boot/3.5/how-to/data-initialization.html));
+tài liệu Boot 4.1 ghi starter `spring-boot-starter-flyway` / `spring-boot-starter-liquibase`
+([Spring Boot — Database Initialization](https://docs.spring.io/spring-boot/how-to/data-initialization.html)).
+`[Inference]` Boot 4 tách auto-configuration Flyway/Liquibase sang module riêng, nên pom của kit có thể không kích hoạt
+công cụ trên Boot 4.
 
 ### A3. So sánh Flyway ↔ Liquibase
 Theo [references/adopt/tool-comparison-rubric.md](references/adopt/tool-comparison-rubric.md). Mỗi dòng có cột
@@ -76,21 +82,26 @@ vị trí migration, quy ước đặt tên, nguồn sự thật schema mới, c
 
 ### A6. Áp template
 Theo [references/README.md](references/README.md): sinh module `<app>-db-migration` từ `references/spring-boot/common/`
-+ nhánh công cụ đã chọn (nhánh còn lại KHÔNG ship vào project). Baseline sinh **một lần từ schema thật** (file DDL
-sẵn có, hoặc `pg_dump --schema-only` khi người dùng cho phép kết nối). App chính chuyển `ddl-auto: validate`. Cập nhật
++ nhánh công cụ đã chọn (nhánh còn lại KHÔNG ship vào project); chỉ áp khi A2 ghi Spring Boot 3. Baseline sinh **một
+lần từ schema thật** (file DDL sẵn có, hoặc `pg_dump --schema-only --no-owner --no-privileges` khi người dùng cho phép
+kết nối), rồi làm sạch trước khi điền `{{BASELINE_DDL}}`: bỏ phần mở đầu cấu hình session (`SET …`,
+`SELECT pg_catalog.set_config('search_path', …)`) và mọi dòng meta-command psql (bắt đầu bằng `\`) — xem
+[references/README.md](references/README.md), mục "Làm sạch DDL baseline". App chính chuyển `ddl-auto: validate`. Cập nhật
 `project-knowledge/` + CONTRIBUTING + README của project đích. Stack khác Spring Boot: sinh layout trung tính và hỏi
 người dùng trước khi ghi.
 
 ### A7. Verify + báo cáo
-Build module. Boot thử job **chỉ khi người dùng cấp DB test và đồng ý** (cùng thủ tục xác nhận DB đích ở C4). Báo
+Build module. Boot thử job **chỉ khi người dùng cấp DB test và đồng ý** (cùng thủ tục xác nhận DB đích ở C4). Evidence
+gồm exit code **và số migration/changeSet đã áp đọc từ log job** (exit code 0 mà 0 migration áp là chưa verify). Báo
 cáo trung thực: đã verify gì, chưa verify gì, rủi ro còn lại.
 
 ## Chế độ CHANGE — viết một thay đổi schema
 
 ### C1. Nhận diện
 Đọc công cụ + version (theo BOM/manifest), engine + version, thư mục migration, version mới nhất, quy ước đặt tên
-đang dùng. Không nhận diện được công cụ → DỪNG, đề xuất chế độ `adopt`. Engine khác PostgreSQL → DỪNG, hỏi DBA (bảng
-rủi ro khoá chỉ viết cho PostgreSQL).
+đang dùng, và **cơ chế chạy migration**: job module của kit / chạy trong app lúc boot / Maven-Gradle plugin / CLI.
+Không nhận diện được công cụ → DỪNG, đề xuất chế độ `adopt`. Engine khác PostgreSQL → DỪNG, hỏi DBA (bảng rủi ro khoá
+chỉ viết cho PostgreSQL). Project Spring Boot có major version khác 3 → DỪNG, hỏi (lý do như A2).
 
 ### C2. Kế hoạch ⏸
 Mỗi thay đổi → một pattern ở [references/change/change-patterns.md](references/change/change-patterns.md) → các pha
@@ -101,14 +112,15 @@ chưa được xác nhận, hoặc code bản đang chạy vẫn dùng cột/b�
 chờ người dùng duyệt.
 
 ### C3. Viết
-Chỉ thêm file mới (file đã có trên base branch là bất biến); đặt tên theo `CONVENTIONS.md` của công cụ; đặt
-`lock_timeout`; backfill theo lô, tách khỏi migration đổi cấu trúc; Liquibase: mỗi changeSet có `rollback`. Lỡ sửa
-file đã có trên base → huỷ thay đổi đó, viết file mới.
+Chỉ thêm file mới (file đã có trên base branch là bất biến); đặt tên theo quy ước tìm được ở C1 (chỉ dùng
+`CONVENTIONS.md` của kit khi project dựng từ kit); đặt `lock_timeout`; backfill theo lô, tách khỏi migration đổi cấu
+trúc; Liquibase: mỗi changeSet có `rollback`. Lỡ sửa file đã có trên base → huỷ thay đổi đó, viết file mới.
 
 ### C4. Verify ⏸
 Xác nhận DB đích là **DB test** (profile/biến môi trường, host, tên database — đã mask), rồi chạy chu trình theo công cụ
-ở [references/change/verify-cycle.md](references/change/verify-cycle.md). Không có DB test → `not_run` + lý do. Không
-bao giờ chạy trên production.
+ở [references/change/verify-cycle.md](references/change/verify-cycle.md), qua cơ chế chạy đã nhận diện ở C1. Evidence
+gồm exit code **và số migration/changeSet đã áp đọc từ log**. Không có DB test → `not_run` + lý do. Không bao giờ chạy
+trên production.
 
 ### C5. Bàn giao
 Cập nhật `project-knowledge/data-model.md`. Pha contract còn nợ → `next_actions` kèm điều kiện kích hoạt (vd "sau khi

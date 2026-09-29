@@ -662,6 +662,13 @@ if (fs.existsSync(BUILD)) {
   ok(['## Flyway', '## Liquibase', '## Alembic'].every((h) => cycle.includes(h)),
     'backend-db-migration: verify-cycle có đủ Flyway / Liquibase / Alembic');
   ok(cycle.includes('forward-only'), 'backend-db-migration: verify-cycle nêu Flyway forward-only (M3)');
+  // Lệnh chờ ACCESS EXCLUSIVE chặn cả SELECT đến sau; mẫu thiếu lock_timeout sẽ bị chép nguyên vào project.
+  const patterns = dbmFiles.includes('change/change-patterns.md') ? dbmRead('change/change-patterns.md') : '';
+  const sqlSegments = [...patterns.matchAll(/```sql\n([\s\S]*?)```/g)]
+    .flatMap((m) => m[1].split(/^(?=-- migration)/m));
+  ok(sqlSegments.length > 0 && sqlSegments
+    .filter((s) => /ADD CONSTRAINT|SET NOT NULL/.test(s)).every((s) => s.includes('lock_timeout')),
+    'backend-db-migration: mẫu ADD CONSTRAINT/SET NOT NULL có lock_timeout');
   const lock = dbmFiles.includes('change/lock-risk-postgres.md') ? dbmRead('change/lock-risk-postgres.md') : '';
   ok(lock.includes('| Nguồn |'), 'backend-db-migration: bảng rủi ro khoá có cột Nguồn');
   const lockRows = lock.split('\n').filter((l) => l.startsWith('|'));
