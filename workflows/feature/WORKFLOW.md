@@ -100,7 +100,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   gate qua `engineering-quality-auditor`; validate lại từng finding (đọc `file:line`, loại finding không tái
   lập được).
 - **Ràng buộc:** chỉ đọc, không tự sửa code; mọi finding phải có `file:line` + evidence quan sát được.
-- **Đầu ra:** danh sách finding theo severity (schema §5.1).
+- **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`).
 - **Gate:** 0 finding `blocker`; finding `major` đã sửa, hoặc ghi vào `remaining_risks` để người dùng quyết ở
   checkpoint Bước 7.
 - **Khi fail:** còn finding `blocker` → quay lại Bước 3/4 sửa, review lại phần đã sửa.

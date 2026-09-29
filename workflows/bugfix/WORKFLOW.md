@@ -121,7 +121,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** review correctness/kiến trúc của phần fix; chạy quality/security gate; validate lại từng
   finding trước khi báo.
 - **Ràng buộc:** chỉ đọc, không tự sửa code.
-- **Đầu ra:** danh sách finding theo severity (schema §5.1).
+- **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`).
 - **Gate:** 0 finding `blocker`.
 - **Khi fail:** còn finding `blocker` → quay lại Bước 5 sửa, review lại phần đã sửa.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence).

@@ -745,6 +745,24 @@ if (fs.existsSync(BUILD)) {
   ok(readme.includes('bỏ đuôi `.tpl`'), 'backend-db-migration: README nêu quy tắc bỏ đuôi .tpl khi copy template');
 }
 
+// 9. SOURCE: contract đầu ra ở core/principles (P0 PL1)
+{
+  // Spec không được ship; contract chỉ tới được agent ở project đích qua core:principles.
+  const cp = loadCore().principles || '';
+  ok(cp.includes('workflow_result'), 'core.principles: có contract workflow_result');
+  ok(cp.includes('severity: blocker'), 'core.principles: có schema finding (severity: blocker)');
+  ok(cp.includes('status: passed'), 'core.principles: có schema evidence (status: passed)');
+  const stale = [];
+  for (const root of [PLUGINS_DIR, path.join(REPO_ROOT, 'workflows')]) {
+    for (const rel of listFilesRec(root)) {
+      if (!rel.endsWith('.md') || rel.split('/').includes('build')) continue;
+      const txt = fs.readFileSync(path.join(root, rel), 'utf8');
+      if (txt.includes('schema spec §5.1') || txt.includes('schema §5.1')) stale.push(path.basename(root) + '/' + rel);
+    }
+  }
+  ok(stale.length === 0, `không còn pointer tới "schema §5.1" của spec không ship (=${stale.join(', ')})`);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {

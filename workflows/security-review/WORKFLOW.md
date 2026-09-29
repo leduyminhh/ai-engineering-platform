@@ -59,7 +59,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** review code theo từng vùng rủi ro áp dụng (STRIDE/OWASP); quét secret hardcode và dependency
   có CVE đã biết; mask giá trị secret thật trong mọi finding trước khi báo.
 - **Ràng buộc:** không in giá trị secret thật ra report (luôn mask); không tự sửa code ở bước này.
-- **Đầu ra:** danh sách finding theo severity (schema §5.1), secret đã mask.
+- **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`), secret đã mask.
 - **Gate:** report finding theo schema; secret đã mask.
 - **Khi fail:** phát hiện secret nhưng chưa mask được an toàn → dừng, báo người dùng xử lý thủ công secret đó
   trước khi tiếp tục report.

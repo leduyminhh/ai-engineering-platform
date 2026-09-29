@@ -44,7 +44,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** chạy quality gate (scan/lint/security) trên phạm vi release; trình kết quả cho người dùng
   xác nhận trước khi tiếp tục.
 - **Ràng buộc:** chỉ đọc, không tự sửa code.
-- **Đầu ra:** danh sách finding theo severity (schema §5.1).
+- **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`).
 - **Gate:** 0 blocker.
 - **Khi fail:** còn finding `blocker` → dừng, đề xuất `workflow-bugfix`/`workflow-security-review` tuỳ loại
   finding, không tự sửa.

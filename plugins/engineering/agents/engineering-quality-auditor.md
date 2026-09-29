@@ -37,7 +37,7 @@ thủ quy ước đặt tên/cấu trúc của project, cho một scope được
 
 ## Report trả về
 
-- Danh sách finding theo schema spec §5.1 (`severity`, `category`, `location`, `evidence`, `impact`,
+- Danh sách finding theo contract đầu ra trong skill `core:principles` (`severity`, `category`, `location`, `evidence`, `impact`,
   `recommendation`, `confidence`) cho cả quality-gate lẫn convention-enforce, có cột OWASP/ASVS/CWE cho
   finding bảo mật khi ánh xạ được.
 - Evidence lệnh đã chạy (`command`, `exit_code`, `status`, `summary`); không chạy được → `not_run` + `reason`.
