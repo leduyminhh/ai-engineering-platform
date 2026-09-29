@@ -38,8 +38,8 @@ tầng, map rò kiểu ở biên) — review bám `architecture/ARD.md` mục "D
   project thắng sở thích cá nhân; convention là việc của tài liệu convention, review chỉ **đối chiếu**.
 - **Phân biệt lỗi CHẮC vs NGHI NGỜ:** finding nói được kịch bản input→hành vi sai là **proven**; finding
   "có mùi / có thể" là **suspected** — phải ghi rõ nhãn, KHÔNG thổi suspected thành blocker.
-- **Không tự ý mở rộng thành refactor.** Thấy cần tái cấu trúc → **đề xuất + route** sang `backend-refactor`
-  (skill sắp có), không tự viết lại trong lượt review.
+- **Không tự ý mở rộng thành refactor.** Thấy cần tái cấu trúc → **đề xuất + route** sang `backend-refactor`,
+  không tự viết lại trong lượt review.
 - **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — bảng finding, tóm tắt, đề xuất fix — viết
   **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo cáo bằng thứ đếm được (số finding theo severity, `file:line` cụ thể, kịch bản
@@ -93,7 +93,7 @@ và **phần chưa soát + residual risk**. Ngôn ngữ đo được.
   - Cần **quét bảo mật / lỗ hổng phụ thuộc / tool gate (SonarQube, Black Duck, security review)** →
     `engineering-quality-gate`. Skill này KHÔNG tự làm security scan; chỉ nhắc khi thấy dấu hiệu (vd secret
     hardcode, input chưa validate) và chuyển tiếp.
-  - Cần **tái cấu trúc / đổi kiến trúc** vượt một-vài dòng → `backend-refactor` (skill sắp có) hoặc
+  - Cần **tái cấu trúc / đổi kiến trúc** vượt một-vài dòng → `backend-refactor` hoặc
     `backend-migrate-architecture` khi là đổi kiểu kiến trúc.
   - Cần **thêm/sửa test** → `backend-testing`.
 

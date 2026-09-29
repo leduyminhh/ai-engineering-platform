@@ -22,7 +22,7 @@ Reviewer backend: đọc diff hoặc module được giao, tìm lỗi correctnes
 
 ## Report trả về
 
-- Danh sách finding theo schema spec §5.1 (`severity` blocker|major|minor|nit, `category`, `location`,
+- Danh sách finding theo contract đầu ra trong skill `core:principles` (`severity` blocker|major|minor|nit, `category`, `location`,
   `evidence`, `impact`, `recommendation`, `confidence`).
 - Evidence lệnh đã chạy (`command`, `exit_code`, `status`, `summary`); không chạy được → `not_run` + `reason`.
 - `remaining_risks`: phần chưa review được và lý do.

@@ -19,15 +19,16 @@ tả) — KHÔNG sinh code skeleton, KHÔNG viết code thực thi. Module nghi�
 skill khác (`frontend-implement`...) sinh khi có yêu cầu cụ thể.
 
 ## Các mối quan tâm khi implement (không phải chuỗi skill bắt buộc)
-Khi hiện thực một UI/feature đầy đủ, `frontend-implement` xử lý tuần tự trong CHÍNH skill đó (không
+Khi hiện thực một UI từ thiết kế, `frontend-implement` xử lý tuần tự trong CHÍNH skill đó (không
 phải các skill riêng, không bắt buộc theo pipeline): chốt **UI/Component Contract** (props/events/slots
-+ đầy đủ trạng thái UI + data contract + UI mock/fixtures) → **State Model** (store/query keys/selectors
-+ data-fetching mapping) → **Implement đầy đủ** (code component theo từng trạng thái + nối API thật
-thay mock).
++ đầy đủ trạng thái UI + data contract + UI mock/fixtures) → **Implement** (code component theo từng
+trạng thái, ở mức **presentational + tương tác cơ bản**: props typed, state/handler nội bộ, dữ liệu từ
+mock/fixtures). Skill dừng ở đó: **nối API/data/route là bước riêng, nằm NGOÀI phạm vi
+`frontend-implement`** và làm theo contract ở `docs/contracts/`.
 
 Contract của frontend là **HỢP ĐỒNG GIAO DIỆN component**: chốt trước public API (props vào,
 events/callbacks ra, slots/children), đầy đủ trạng thái UI (loading/empty/error/success/disabled)
-và data contract — hình dạng dữ liệu nhận từ API ánh xạ TRỰC TIẾP từ response schema của backend
+và data contract — hình dạng dữ liệu component nhận qua props, khớp với response schema của backend
 contract — rồi mới viết logic. UI mock/fixtures khớp data contract để render component độc lập.
 
 ## Ranh giới an toàn — bổ sung frontend

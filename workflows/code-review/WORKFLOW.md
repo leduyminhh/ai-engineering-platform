@@ -71,7 +71,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** mỗi agent review đúng phía được gán theo trục correctness/thiết kế-kiến trúc/a11y/test
   coverage/quality-security; trích `file:line` cụ thể cho từng finding.
 - **Ràng buộc:** chỉ đọc, không tự sửa code; không review phía không có file đụng.
-- **Đầu ra:** danh sách finding thô theo severity (schema §5.1) từ mỗi agent.
+- **Đầu ra:** danh sách finding thô theo severity (contract đầu ra, `core:principles`) từ mỗi agent.
 - **Gate:** mỗi agent trả finding theo schema.
 - **Khi fail:** một agent không trả finding theo đúng schema (thiếu `file:line`/severity) → yêu cầu agent đó
   bổ sung lại, không tự bịa field thiếu.
