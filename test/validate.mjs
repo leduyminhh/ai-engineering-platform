@@ -704,6 +704,24 @@ if (fs.existsSync(BUILD)) {
     ? f.startsWith(`${fwRoot}repeatable/`)
     : f.startsWith(`${fwRoot}baseline/`) || f.startsWith(`${fwRoot}versioned/`))),
     'backend-db-migration: file flyway đúng thư mục baseline/versioned/repeatable');
+  const lbRoot = 'spring-boot/liquibase/db/changelog/';
+  const lb = sbFiles.filter((f) => f.startsWith(lbRoot));
+  ok(sbFiles.includes('spring-boot/liquibase/application-liquibase.yml') && sbFiles.includes('spring-boot/liquibase/CONVENTIONS.md'),
+    'backend-db-migration: có liquibase/application-liquibase.yml + CONVENTIONS.md');
+  const lbMaster = lb.includes(lbRoot + 'db.changelog-master.yaml') ? sbRead(lbRoot + 'db.changelog-master.yaml') : '';
+  const lbIncludes = [...lbMaster.matchAll(/file:\s*(\S+\.yaml)/g)].map((m) => m[1]);
+  ok(lbIncludes.length === 3 && lbIncludes.every((i) => lb.includes(lbRoot + i)),
+    `backend-db-migration: master include đủ 3 changelog có thật (=${lbIncludes})`);
+  const lbSets = lb.filter((f) => f.endsWith('.yaml') && !f.endsWith('db.changelog-master.yaml'));
+  // D6 của G2: changeSet thiếu rollback thì trả chi phí Liquibase mà mất lợi ích chính.
+  ok(lbSets.length === 3 && lbSets.every((f) => {
+    const c = sbRead(f);
+    return (c.match(/- changeSet:/g) || []).length === (c.match(/^\s+rollback:/gm) || []).length;
+  }), 'backend-db-migration: mỗi changeSet mẫu có rollback');
+  ok(lbSets.every((f) => [...sbRead(f).matchAll(/path:\s*(\S+)/g)].every((m) => {
+    const p = path.posix.join(path.posix.dirname(f), m[1]);
+    return lb.includes(p) || lb.includes(p + '.tpl');
+  })), 'backend-db-migration: sqlFile trong changeSet trỏ tới file có thật');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

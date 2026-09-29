@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260101130000-vi-du-them-cot
+      author: ten.that@example.com
+      changes:
+        - sqlFile:
+            path: sql/20260101130000-vi-du-them-cot.sql
+            relativeToChangelogFile: true
+      rollback:
+        - sqlFile:
+            path: sql/20260101130000-vi-du-them-cot.rollback.sql
+            relativeToChangelogFile: true

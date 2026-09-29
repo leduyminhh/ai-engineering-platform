@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - include:
+      file: baseline/20260101120000-baseline-schema.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: versioned/example/20260101130000-vi-du-them-cot.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: repeatable/20260101140000-vi-du-function.yaml
+      relativeToChangelogFile: true
