@@ -792,8 +792,12 @@ if (fs.existsSync(BUILD)) {
   const readRepo = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
   const testing = readRepo('workflows', 'testing', 'WORKFLOW.md');
   // Bước 4 cấm sửa code production; câu phủ định "không sửa code" là hợp lệ nên loại trước khi kiểm.
-  ok(!testing.split('\n').some((l) => l.startsWith('| Test fail |') && l.replaceAll('không sửa code', '').includes('sửa code')),
-    'P0 WF1: workflow-testing không còn dòng "Test fail" bảo "sửa code" (mâu thuẫn Bước 4)');
+  const testFailRow = testing.split('\n').find((l) => l.startsWith('| Test fail |')) ?? '';
+  ok(testFailRow !== '' && !testFailRow.replaceAll('không sửa code', '').includes('sửa code'),
+    'P0 WF1: workflow-testing có dòng "Test fail" và không bảo "sửa code" (mâu thuẫn Bước 4)');
+  // "sửa test" phải kèm rào chắn chống xoá/nới test để qua; lỗi code phải chuyển sang workflow-bugfix.
+  ok(testFailRow.includes('nới') && testFailRow.includes('workflow-bugfix'),
+    'P0 WF1: dòng "Test fail" giữ rào "không xoá/nới test" và định tuyến lỗi code sang workflow-bugfix');
   const step5 = testing.split('### Bước 5')[1]?.split('### Bước 6')[0] ?? '';
   const step5Input = step5.split('\n').find((l) => l.startsWith('- **Đầu vào:**')) ?? '';
   ok(step5Input !== '' && !step5Input.includes('đã chạy xanh'),

@@ -119,7 +119,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Tình huống | Hành động |
 |---|---|
 | Build fail | Chẩn đoán → sửa → build lại |
-| Test fail | Phân loại failure: lỗi test (test sai) → sửa test, chạy lại; lỗi code → dừng, đề xuất `workflow-bugfix`, không sửa code production (Bước 4) |
+| Test fail | Phân loại failure: lỗi test (test sai) → sửa test (không xoá/nới test để qua), chạy lại; lỗi code → dừng, đề xuất `workflow-bugfix`, không sửa code production (Bước 4) |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Người dùng không đồng ý chiến lược (sau Bước 2 ⏸) | Quay lại Bước 1 làm rõ hành vi/rủi ro |
