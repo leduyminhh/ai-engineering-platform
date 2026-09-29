@@ -20,9 +20,13 @@ An toàn dựa vào expand/contract; hoàn tác = migration bù mới, ghi trong
 
 | Bước | Lệnh (module job `<app>-db-migration`) | Chứng minh |
 |---|---|---|
-| (a) Từ rỗng | DB test rỗng → `java -jar target/<app>-db-migration.jar --spring.profiles.active=migration,flyway` | Toàn bộ migration chạy được từ đầu; `validate-on-migrate: true` kiểm checksum/naming |
+| (a) Từ rỗng | DB test rỗng → `java -jar target/<app>-db-migration.jar --spring.profiles.active=migration,flyway` | Toàn bộ migration chạy được từ đầu; `validate-on-migrate: true` gọi validate khi migrate — fail nếu tên, kiểu hoặc checksum migration lệch với schema history, hoặc có version đã áp mà không còn resolve được (xem nguồn dưới bảng) |
 | (b) Từ bản trước | DB test rỗng → áp migration của base branch (dưới đây) → chạy lệnh (a) | Chỉ migration mới được áp lên schema N-1 |
 | (c) App | Test integration của app (vd `mvn -pl <app-module> verify`) hoặc boot app với `ddl-auto: validate` trỏ cùng DB test | Entity khớp schema mới |
+
+Nguồn `validate-on-migrate`: Spring Boot "Whether to automatically call validate when performing a migration", mặc định
+`true` ([Common Application Properties — Data Migration Properties](https://docs.spring.io/spring-boot/appendix/application-properties/index.html));
+điều kiện fail của validate: [Flyway — Validate](https://documentation.red-gate.com/flyway/reference/commands/validate).
 
 Áp migration của base branch mà không đổi branch làm việc:
 
@@ -57,8 +61,11 @@ theo tài liệu version của project: `update-testing-rollback`, hoặc `updat
 
 ## Alembic
 
-Không có template (M2). Chu trình: `alembic upgrade head` → `alembic downgrade -1` → `alembic upgrade head` trên DB
-test đã xác nhận; mỗi revision mới phải có `downgrade()` chạy được.
+Skill chưa có template Alembic (đợt này chỉ hỗ trợ Java/Spring Boot). Chu trình trên DB test đã xác nhận:
+`alembic upgrade head` → `alembic downgrade <revision ngay trước thay đổi>` → `alembic upgrade head`. `downgrade -1` chỉ
+lùi một revision; thay đổi thêm nhiều revision thì downgrade tới revision của base branch (lấy từ `alembic history` /
+`alembic current` trước khi áp). Mỗi revision mới phải có `downgrade()` chạy được. `[Unverified]` Cú pháp lệnh Alembic
+ở đoạn này chưa đối chiếu với tài liệu Alembic — kiểm theo version Alembic của project trước khi chạy.
 
 ## Evidence
 

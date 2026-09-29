@@ -13,8 +13,11 @@ Mức khoá của từng lệnh: [lock-risk-postgres.md](lock-risk-postgres.md).
 
 ## Backfill theo lô
 
-Flyway/Liquibase bọc cả file migration trong một transaction, nên `UPDATE` cả bảng trong migration là một transaction
-dài giữ khoá dòng. Cách chọn:
+Mặc định Flyway bọc **mỗi migration** trong một transaction
+([Flyway — Migration transaction handling](https://documentation.red-gate.com/fd/migration-transaction-handling-273973399.html)),
+Liquibase bọc **mỗi changeSet**
+([Liquibase — runInTransaction](https://docs.liquibase.com/reference-guide/changelog-attributes/runintransaction)),
+nên `UPDATE` cả bảng trong một migration/changeSet là một transaction dài giữ khoá dòng. Cách chọn:
 
 - Bảng nhỏ (người dùng xác nhận): `UPDATE` một lần trong migration pha migrate data.
 - Bảng lớn: script/job riêng chạy ngoài công cụ migration, mỗi lượt một transaction ngắn, lặp tới khi 0 dòng:
@@ -46,15 +49,22 @@ expand: `ALTER TABLE invoice ADD COLUMN note text;` Không có pha khác.
 -- expand
 ALTER TABLE invoice ADD COLUMN status text;
 -- migrate data: backfill theo lô tới khi không còn NULL
--- contract (migration riêng, PR sau khi code luôn ghi status)
+-- contract (PR sau khi code luôn ghi status) — ba migration riêng:
+-- migration riêng 1
 ALTER TABLE invoice ADD CONSTRAINT invoice_status_not_null CHECK (status IS NOT NULL) NOT VALID;
+-- migration riêng 2
 ALTER TABLE invoice VALIDATE CONSTRAINT invoice_status_not_null;
+-- migration riêng 3
 ALTER TABLE invoice ALTER COLUMN status SET NOT NULL;
 ALTER TABLE invoice DROP CONSTRAINT invoice_status_not_null;
 ```
 
-`VALIDATE` và `SET NOT NULL` nên tách migration để `VALIDATE` (khoá nhẹ) không nằm chung transaction với
-`SET NOT NULL` (khoá `ACCESS EXCLUSIVE`).
+Khoá giữ tới hết transaction
+([Explicit Locking — Table-Level Locks](https://www.postgresql.org/docs/current/explicit-locking.html)), nên mỗi bước
+một migration: `ADD … NOT VALID` chung transaction với `VALIDATE` thì `ACCESS EXCLUSIVE` của `ADD` bị giữ suốt lượt quét
+của `VALIDATE`. `[Inference]` `VALIDATE` chung transaction với `SET NOT NULL` thì `SET NOT NULL` fail do `lock_timeout`
+sẽ rollback cả lượt quét đã làm; tách riêng để chỉ chạy lại migration 3. Migration 3 giữ `ACCESS EXCLUSIVE` ngắn (bỏ
+được quét nhờ CHECK đã hợp lệ, PG ≥ 12).
 
 ## Đổi tên cột
 
@@ -71,24 +81,57 @@ Không dùng `RENAME COLUMN` khi có code đang chạy đọc tên cũ.
 Mặc định làm như **đổi tên cột** (cột mới đúng kiểu + backfill + chuyển đọc + drop cột cũ). Chỉ dùng `ALTER COLUMN TYPE`
 trực tiếp khi đổi binary-coercible theo [lock-risk-postgres.md](lock-risk-postgres.md) và người dùng xác nhận.
 
+**Thu hẹp kiểu** (vd `varchar(255)` → `varchar(50)`, `bigint` → `integer`, `text` → `varchar(n)`) là thao tác phá huỷ:
+giá trị không vừa kiểu mới làm migration fail hoặc phải cắt/chuyển dữ liệu. Chỉ làm sau xác nhận tường minh ở cổng C2,
+kèm truy vấn đếm dòng vượt giới hạn kiểu mới trước khi chạy.
+
 ## Thêm index
 
 ```sql
--- file chạy NGOÀI transaction: Flyway .conf executeInTransaction=false / Liquibase runInTransaction: false
+-- file chạy NGOÀI transaction (cách cấu hình: đoạn dưới)
 SET lock_timeout = '5s';
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invoice_customer_id ON invoice (customer_id);
+-- SET ngoài transaction có hiệu lực cả session; không reset thì lọt sang migration sau trên cùng connection.
+RESET lock_timeout;
 ```
 
+Chạy ngoài transaction:
+
+- Flyway: file script configuration cùng tên migration thêm đuôi `.conf` (vd `V7__idx_invoice_customer_id.sql.conf`)
+  chứa `executeInTransaction=false`
+  ([Flyway — Script Configuration](https://documentation.red-gate.com/fd/script-configuration-277578847.html);
+  [Migration transaction handling](https://documentation.red-gate.com/fd/migration-transaction-handling-273973399.html)).
+- Liquibase: `runInTransaction: false` trên changeSet
+  ([Liquibase — runInTransaction](https://docs.liquibase.com/reference-guide/changelog-attributes/runintransaction));
+  changeSet đó chỉ chứa một lệnh, vì lỗi giữa chừng ở changeSet nhiều lệnh để `DATABASECHANGELOG` ở trạng thái sai
+  (cùng trang).
+
 Fail giữa chừng để lại index `INVALID`: `DROP INDEX CONCURRENTLY IF EXISTS idx_invoice_customer_id;` rồi chạy lại.
+Trước khi chạy lại, kiểm `flyway_schema_history` (hoặc `DATABASECHANGELOG`): có dòng thất bại → DỪNG, báo người dùng,
+không tự `repair`. `[Unverified]` Flyway ghi dòng thất bại cho migration `executeInTransaction=false` trên PostgreSQL —
+tài liệu chỉ nêu việc đánh dấu failed và cần `repair` cho DB không hỗ trợ DDL trong transaction
+([Migration transaction handling](https://documentation.red-gate.com/fd/migration-transaction-handling-273973399.html)).
 
 ## Thêm unique
 
 ```sql
-CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_invoice_number ON invoice (number);   -- ngoài transaction
-ALTER TABLE invoice ADD CONSTRAINT uq_invoice_number UNIQUE USING INDEX uq_invoice_number;  -- migration kế tiếp
+-- migration 1, ngoài transaction (như "Thêm index")
+SET lock_timeout = '5s';
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uq_invoice_number ON invoice (number);
+RESET lock_timeout;
+-- migration 2 (trong transaction): ACCESS EXCLUSIVE ngắn, không build lại index
+SET LOCAL lock_timeout = '5s';
+ALTER TABLE invoice ADD CONSTRAINT uq_invoice_number UNIQUE USING INDEX uq_invoice_number;
 ```
 
-Trước khi tạo: kiểm trùng `SELECT number, count(*) FROM invoice GROUP BY number HAVING count(*) > 1;` — có dòng → DỪNG,
+Đây là cách tài liệu PostgreSQL gợi ý để thêm constraint mà không chặn ghi lâu; index phải là b-tree, không partial,
+không cột biểu thức; không áp cho bảng partitioned
+([ALTER TABLE — Description, ADD table_constraint_using_index](https://www.postgresql.org/docs/current/sql-altertable.html)).
+
+Trước khi tạo: kiểm trùng
+`SELECT number, count(*) FROM invoice WHERE number IS NOT NULL GROUP BY number HAVING count(*) > 1;` (unique index
+mặc định coi các NULL là khác nhau —
+[CREATE INDEX — NULLS DISTINCT](https://www.postgresql.org/docs/current/sql-createindex.html)) — có dòng → DỪNG,
 hỏi người dùng cách xử lý dữ liệu trùng. Build fail ở lượt quét thứ hai thì index `INVALID` **vẫn ép unique** lên ghi mới
 ([CREATE INDEX — Building Indexes Concurrently](https://www.postgresql.org/docs/current/sql-createindex.html)) → drop
 index trước khi xử lý dữ liệu và chạy lại.

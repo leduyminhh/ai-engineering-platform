@@ -664,6 +664,10 @@ if (fs.existsSync(BUILD)) {
   ok(cycle.includes('forward-only'), 'backend-db-migration: verify-cycle nêu Flyway forward-only (M3)');
   const lock = dbmFiles.includes('change/lock-risk-postgres.md') ? dbmRead('change/lock-risk-postgres.md') : '';
   ok(lock.includes('| Nguồn |'), 'backend-db-migration: bảng rủi ro khoá có cột Nguồn');
+  const lockRows = lock.split('\n').filter((l) => l.startsWith('|'));
+  ok(lockRows.some((l) => l.includes('https://')), 'backend-db-migration: bảng rủi ro khoá có link nguồn https://');
+  ok(!lockRows.some((l) => /\|\s*[LFQ]\d+(,\s*[LFQ]\d+)*\s*\|/.test(l)),
+    'backend-db-migration: bảng rủi ro khoá không dùng mã nguồn viết tắt (L1/F1/Q1)');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
