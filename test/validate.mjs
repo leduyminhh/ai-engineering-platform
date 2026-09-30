@@ -962,6 +962,14 @@ if (fs.existsSync(BUILD)) {
     'workflow-security-review Bước 6: regression test qua test-writer');
   ok(secSteps.length === 9 && secStep(7).title.startsWith('Sửa') && secStep(8).title.startsWith('Re-scan') && secStep(9).title.startsWith('Commit'),
     'workflow-security-review: 9 bước, Sửa ở Bước 7, Re-scan ở Bước 8, Commit ở Bước 9');
+
+  const api = wfBody('workflow-api');
+  const apiStep4 = api ? parseSteps(api.body).find((s) => s.n === 4) ?? noStep : noStep;
+  ok(!!api && api.agents.includes('engineering-quality-auditor'), 'workflow-api: agents có engineering-quality-auditor');
+  // D10: DoD đòi 0 blocker nên phải có bước review bảo mật, không chỉ kiểm drift.
+  ok(apiStep4.body.includes('agent `backend-reviewer`') && apiStep4.body.includes('agent `engineering-quality-auditor`')
+    && /authorization/.test(apiStep4.body) && /input validation/.test(apiStep4.body),
+    'workflow-api Bước 4: kiểm drift song song với auditor kiểm authorization + input validation');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
