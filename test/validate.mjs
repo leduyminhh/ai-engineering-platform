@@ -1042,6 +1042,19 @@ if (fs.existsSync(BUILD)) {
     'workflow-orchestrator: mục "Yêu cầu chạy trực tiếp bằng skill" nêu backend-init, frontend-init, backend-migrate-vault-consul');
   ok(/tối đa 3/.test(orch16?.body ?? '') && /thứ tự phụ thuộc/.test(orch16?.body ?? ''),
     'workflow-orchestrator: giữ luật chuỗi tối đa 3 workflow và ghép theo thứ tự phụ thuộc');
+
+  // Sau final review: orchestrator phải nhất quán với đầu ra chuỗi/skill trực tiếp; các workflow khác nêu đủ handoff.
+  const orchStep1 = (orch16 ? parseSteps(orch16.body).find((s) => s.n === 1) : undefined) ?? noStep16;
+  const out1 = (orchStep1.body.split('**Đầu ra:**')[1] ?? '').split('\n- **')[0];
+  const gate1 = (orchStep1.body.split('**Gate:**')[1] ?? '').split('\n- **')[0];
+  ok(/chuỗi/.test(out1) && /skill trực tiếp/.test(out1.replace(/\n/g, ' ')) && /skill trực tiếp/.test(gate1.replace(/\n/g, ' ')),
+    'workflow-orchestrator Bước 1: Đầu ra và Gate nêu chuỗi và mục skill trực tiếp');
+  ok(((orch16?.body ?? '').replace(/\n\s+/g, ' ').match(/không khớp mục skill trực tiếp/g) ?? []).length >= 3,
+    'workflow-orchestrator: Khi fail, bảng lỗi và Điều kiện dừng không coi yêu cầu skill trực tiếp là "không khớp"');
+  ok(crStep(3).body.includes('danh sách file cần kiểm drift') && /kết quả kiểm drift/.test(crStep(3).body),
+    'workflow-code-review Bước 3: Đầu vào và Evidence nêu danh sách/kết quả kiểm drift');
+  ok(((rel?.body ?? '').split('## Điều kiện tiên quyết')[0]).includes('baseline'),
+    'workflow-release: Mục tiêu nêu baseline build/test');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

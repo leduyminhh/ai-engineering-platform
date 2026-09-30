@@ -564,6 +564,6 @@ Header đề xuất: `fix(workflows): allow db-change to api to feature chain an
 
 ## Ngoài plan này
 
-- WF11: Bước baseline chung cho mọi workflow sửa code (buộc đánh số lại nhiều workflow, cần plan riêng); WF12: incident (bước cập nhật stakeholder, thang severity) và performance (chờ G10).
+- WF11: Bước baseline chung cho mọi workflow sửa code (buộc đánh số lại nhiều workflow, cần plan riêng); WF12: incident (bước cập nhật stakeholder, thang severity) và performance (chờ G10). WF11 phải loại trừ hoặc đối chiếu `workflow-release` vì workflow này đã có Bước 1 baseline (tránh baseline thứ hai và đánh số lại lần nữa).
 - Ánh xạ vùng rủi ro `authorization/access control`, `SSRF`, `security misconfiguration` của `workflow-security-review` sang `engineering-quality-gate/references/security-review-areas.md` (hiện 5 vùng): cần plan riêng vì đụng ánh xạ OWASP/ASVS/CWE.
 - Nối workflow phụ thuộc draft (WF3 phần skill, WF4 Bước 5, WF5, WF6): chờ pha publish.

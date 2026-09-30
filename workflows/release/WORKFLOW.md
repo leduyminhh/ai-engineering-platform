@@ -18,9 +18,10 @@ next: null
 
 ## Mục tiêu & đầu vào
 
-- **Mục tiêu:** xác nhận chất lượng đủ điều kiện release, có release notes đúng phạm vi, commit release
-  (CHANGELOG + version bump), deploy checklist kèm điều kiện rollback, người dùng deploy, hậu kiểm sau deploy,
-  và chỉ đề xuất lệnh tag/push trên commit release, chờ người dùng xác nhận.
+- **Mục tiêu:** xác nhận chất lượng đủ điều kiện release (đo baseline build/test trước; kiểm migration chờ
+  chạy khi lập deploy checklist), có release notes đúng phạm vi, commit release (CHANGELOG + version bump),
+  deploy checklist kèm điều kiện rollback, người dùng deploy, hậu kiểm sau deploy, và chỉ đề xuất lệnh tag/push trên
+  commit release, chờ người dùng xác nhận.
 - **Đầu vào bắt buộc:** phạm vi release (tag/version dự kiến, khoảng commit hoặc branch).
 - **Đầu vào tuỳ chọn:** CHANGELOG hiện có, deploy checklist mẫu của project.
 

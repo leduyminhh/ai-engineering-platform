@@ -53,7 +53,7 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 ## Yêu cầu chạy trực tiếp bằng skill
 
 Các việc sau là skill on-demand, không có workflow. Khi yêu cầu khớp, orchestrator không chọn workflow: chỉ nêu
-skill cần gọi và kết thúc (không phải lỗi).
+skill cần gọi và kết thúc (không phải lỗi). Kết thúc tại Bước 1, không cần `orchestrator_result`.
 
 | Tín hiệu | Skill |
 |---|---|
@@ -75,22 +75,26 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
   để rút về tối đa 2 ứng viên. Khi yêu cầu cần nhiều workflow phụ thuộc nhau (vd đổi schema → làm API → làm
   tính năng), đề xuất chuỗi theo thứ tự phụ thuộc thay vì chọn một workflow, tối đa 3 workflow, mỗi mắt nối
   phải có trong cột `Nối tiếp` của workflow đứng trước. Yêu cầu khớp mục "Yêu cầu chạy trực tiếp bằng skill"
-  thì nêu skill cần gọi và dừng.
+  thì nêu skill cần gọi và dừng. Chuỗi đủ 3 workflow thì nhắc người dùng chạy `workflow-docs` riêng sau khi
+  chuỗi xong, không nối thêm.
 - **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry; không đoán khi tín hiệu quá yếu — nêu rõ vì
   sao chọn.
-- **Đầu ra:** 1 workflow đã chọn, hoặc tối đa 2 ứng viên kèm lý do.
-- **Gate:** chọn được 1 workflow hoặc ≤2 ứng viên, có tín hiệu khớp trong Registry.
-- **Khi fail:** không ứng viên nào khớp Registry và cũng không khớp mục skill trực tiếp → hỏi lại người dùng mô tả rõ hơn việc cần làm.
+- **Đầu ra:** 1 workflow đã chọn, hoặc tối đa 2 ứng viên kèm lý do, hoặc một chuỗi tối đa 3 workflow theo thứ
+  tự phụ thuộc, hoặc 1 skill trực tiếp.
+- **Gate:** chọn được 1 workflow, ≤2 ứng viên hoặc một chuỗi ≤3 workflow, có tín hiệu khớp trong Registry;
+  hoặc yêu cầu khớp mục skill trực tiếp.
+- **Khi fail:** không ứng viên nào khớp Registry và cũng không khớp mục skill trực tiếp → hỏi lại người dùng
+  mô tả rõ hơn việc cần làm.
 - **Evidence:** trích dẫn tín hiệu khớp trong yêu cầu + dòng Registry tương ứng.
 
 ### Bước 2 — Kiểm cài
 
 - **Thực hiện:** session chính
-- **Đầu vào:** workflow đã chọn ở Bước 1
-- **Hành động:** kiểm workflow đã chọn có trong danh sách skill khả dụng của session hiện tại (skill tên
-  `workflow-<slug>`, hoặc `workflows:workflow-<slug>` khi cài dạng plugin Claude); nếu cần đối chiếu file, cài
-  phẳng nằm ở `.claude/skills/workflow-<slug>/` (Claude) hoặc `.codex/skills/workflow-<slug>/` (Codex), ở gốc
-  project hoặc thư mục home khi cài global.
+- **Đầu vào:** workflow (hoặc chuỗi workflow đề xuất) đã chọn ở Bước 1
+- **Hành động:** kiểm mọi workflow đã chọn (kể cả các mắt trong chuỗi đề xuất) có trong danh sách skill khả
+  dụng của session hiện tại (skill tên `workflow-<slug>`, hoặc `workflows:workflow-<slug>` khi cài dạng plugin
+  Claude); nếu cần đối chiếu file, cài phẳng nằm ở `.claude/skills/workflow-<slug>/` (Claude) hoặc
+  `.codex/skills/workflow-<slug>/` (Codex), ở gốc project hoặc thư mục home khi cài global.
 - **Ràng buộc:** không tự cài workflow thay người dùng.
 - **Đầu ra:** xác nhận đã cài, hoặc lệnh cài đề xuất.
 - **Gate:** workflow đã cài; chưa cài → in `aip install --skill workflows/<id>` và dừng `blocked`.
@@ -155,12 +159,12 @@ commit.
 | Test fail (trong workflow con) | Như trên — orchestrator không tự sửa, chỉ dừng chain khi cần |
 | Yêu cầu mơ hồ | Dừng ở Bước 1/3, hỏi lại người dùng |
 | Finding `blocker` (trong workflow con) | Workflow con dừng `blocked`; orchestrator dừng chain tại đó |
-| Không tín hiệu nào khớp Registry | Dừng, hỏi người dùng mô tả lại việc cần làm |
+| Không tín hiệu nào khớp Registry và không khớp mục skill trực tiếp | Dừng, hỏi người dùng mô tả lại việc cần làm |
 | Workflow chưa cài | In lệnh `aip install`, dừng `blocked`, không tự cài |
 | Người dùng không muốn chạy workflow kế tiếp (sau Bước 4 ⏸) | Dừng chuỗi, tổng hợp các `workflow_result` đã có ở Bước 5 |
 
-- **Điều kiện dừng:** không tín hiệu nào khớp; workflow chưa cài; người dùng không xác nhận ở Bước 3; một
-  workflow trong chain trả `blocked`/`failed`.
+- **Điều kiện dừng:** không tín hiệu nào khớp Registry và không khớp mục skill trực tiếp; workflow chưa cài;
+  người dùng không xác nhận ở Bước 3; một workflow trong chain trả `blocked`/`failed`.
 - **Rollback:** orchestrator không tự sửa file nên không có gì để rollback ở tầng orchestrator; rollback thay
   đổi (nếu có) thuộc trách nhiệm của workflow con đã chạy.
 

@@ -69,7 +69,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` ∥ agent `engineering-quality-auditor`
   (chỉ vùng có đụng theo Bước 2, gồm nhóm CI/IaC/SQL)
-- **Đầu vào:** diff đầy đủ + bảng phân vùng từ Bước 2
+- **Đầu vào:** diff đầy đủ + bảng phân vùng và danh sách file cần kiểm drift từ Bước 2
 - **Hành động:** mỗi agent review đúng phía được gán theo trục correctness/thiết kế-kiến trúc/a11y/test
   coverage/quality-security; trích `file:line` cụ thể cho từng finding. `engineering-quality-auditor` cũng
   review nhóm `khác` là CI/IaC/SQL (quyền quá rộng, secret, cấu hình không an toàn, migration nguy hiểm);
@@ -81,7 +81,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Gate:** mỗi agent trả finding theo schema.
 - **Khi fail:** một agent không trả finding theo đúng schema (thiếu `file:line`/severity) → yêu cầu agent đó
   bổ sung lại, không tự bịa field thiếu.
-- **Evidence:** danh sách finding thô của từng agent (severity/category/location/evidence/confidence).
+- **Evidence:** danh sách finding thô của từng agent (severity/category/location/evidence/confidence);
+  kết quả kiểm drift nếu có.
 
 ### Bước 4 — Validate findings
 
