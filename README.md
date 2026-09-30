@@ -146,7 +146,7 @@ workflow (running in the main session) orchestrates and calls `core:git-workflow
 checkpoint. Every agent report is structured (result, `file:line`, residual risk); a claim
 of "ran / passed" always carries evidence, or `not_run` + reason.
 
-### Agents (11)
+### Agents (13)
 
 `mode` is provider-neutral: Claude maps `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mode: "read-only"` and

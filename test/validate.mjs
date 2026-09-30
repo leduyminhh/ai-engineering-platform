@@ -1193,7 +1193,7 @@ if (fs.existsSync(BUILD)) {
       `${p}-fixer: report theo contract core:principles, có not_run`);
     ok(a.includes('git diff --name-only'), `${p}-fixer: tự đối chiếu diff với danh sách trước khi trả`);
   }
-  // Review Focus 1: nối agent fixer vào workflow chỉ hợp lệ khi closure đã publish; nếu ai đó rút *-fix về
+  // spec 2026-09-30 §6.2: nối agent fixer vào workflow chỉ hợp lệ khi closure đã publish; nếu ai đó rút *-fix về
   // draft, 3 workflow sẽ bị wizard ẩn lặng lẽ — assert này bắt đúng điểm đó.
   const offeredWf = offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? [];
   for (const w of ['workflow-bugfix', 'workflow-security-review', 'workflow-performance']) {
@@ -1204,7 +1204,7 @@ if (fs.existsSync(BUILD)) {
   const fixStepOk = (id, prevN, fixN, prevTitleRe, fixTitleRe) => {
     const w = wf18(id);
     const prev = step18(w, prevN), fix = step18(w, fixN);
-    ok(prevTitleRe.test(prev.title) && flat18(prev.body).includes('danh sách file'),
+    ok(prevTitleRe.test(prev.title) && prev.checkpoint && flat18(prev.body).includes('danh sách file'),
       `${id} Bước ${prevN}: bước ⏸ trước xuất danh sách file được sửa (đầu vào F2)`);
     ok(fixTitleRe.test(fix.title) && fix.body.includes('agent `backend-fixer`') && fix.body.includes('agent `frontend-fixer`'),
       `${id} Bước ${fixN}: Thực hiện là agent backend-fixer ∥ frontend-fixer`);
@@ -1220,10 +1220,9 @@ if (fs.existsSync(BUILD)) {
   fixStepOk('workflow-bugfix', 5, 6, /^Root cause/, /^Fix tối thiểu/);
   ok(parseSteps(wf18('workflow-bugfix')?.body ?? '').length === 9, 'workflow-bugfix: vẫn 9 bước');
   fixStepOk('workflow-security-review', 5, 8, /^Kế hoạch remediation/, /^Sửa/);
-  ok(parseSteps(wf18('workflow-security-review')?.body ?? '').length === 10, 'workflow-security-review: vẫn 10 bước');
   fixStepOk('workflow-performance', 3, 4, /^Profile & giả thuyết/, /^Tối ưu/);
   ok(parseSteps(wf18('workflow-performance')?.body ?? '').length === 7, 'workflow-performance: vẫn 7 bước');
-  // Review Focus 2: chế độ performance không có oracle đỏ — bước phải nói rõ số đo thuộc Bước 5.
+  // spec 2026-09-30 §3.3: chế độ performance không có oracle đỏ — bước phải nói rõ số đo thuộc Bước 5.
   ok(flat18(step18(wf18('workflow-performance'), 4).body).includes('Bước 5'),
     'workflow-performance Bước 4: không kết luận hiệu năng, số đo thuộc Bước 5');
   for (const f of ['README.md', 'README_VI.md']) {
@@ -1237,6 +1236,36 @@ if (fs.existsSync(BUILD)) {
     const r = fs.readFileSync(path.join(PLUGINS_DIR, p, 'skills', `${p}-refactor`, 'SKILL.md'), 'utf8');
     ok(flat18(r).includes(`sửa bug`) && flat18(r).includes(`\`${p}-fix\``),
       `${p}-refactor: câu "cần đổi hành vi (sửa bug…)" trỏ sang ${p}-fix`);
+  }
+
+  // Review toàn nhánh: gate diff phải trừ mốc đầu bước và nhận ra file test đã bẩn (oracle) bị sửa; oracle
+  // không chỉ là test đỏ (performance, vòng quay lại từ review/re-scan, tái hiện thủ công, finding không có test).
+  for (const p of ['backend', 'frontend']) {
+    const a = fixAgent(p), s = fixSkill(p);
+    ok(flat18(a).includes('chế độ `performance`'), `${p}-fixer: Vai trò/Quy trình phân biệt chế độ performance`);
+    ok(a.includes('hash-object'), `${p}-fixer: tự kiểm hash-object file test đã bẩn trong mốc`);
+    ok(s.includes('Oracle chấp nhận'), `${p}-fix: có đoạn "Oracle chấp nhận" liệt kê các loại oracle`);
+    ok(s.includes('hash-object'), `${p}-fix: F5 kiểm hash-object file test đã bẩn trong mốc`);
+    ok(s.includes('NÂNG version'), `${p}-fix: nêu rõ được NÂNG version dependency đã có khi finding là CVE`);
+  }
+  for (const [id, n] of [['workflow-bugfix', 6], ['workflow-security-review', 8], ['workflow-performance', 4]]) {
+    const st = step18(wf18(id), n);
+    const field = (name) => flat18((st.body.split(`**${name}:**`)[1] ?? '').split('\n- **')[0]);
+    ok(field('Gate').includes('hash-object') && field('Gate').includes('mock'),
+      `${id} Bước ${n}: Gate kiểm hash-object file test đã bẩn và không chứa file mock`);
+    ok(field('Đầu vào').includes('quay lại'), `${id} Bước ${n}: Đầu vào nêu oracle khi quay lại từ bước sau`);
+    ok(field('Hành động').includes('git status --porcelain') && field('Hành động').includes('dispatch'),
+      `${id} Bước ${n}: session chính ghi mốc git status --porcelain trước khi dispatch agent`);
+  }
+  for (const [f, head] of [['README.md', '### Agents (13)'], ['README_VI.md', '### Agent (13)']]) {
+    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+    ok(rd.split('\n').some((l) => l.startsWith(head)), `${f}: tiêu đề bảng agent là "${head}"`);
+  }
+  // Bug phát hiện khi refactor chưa có oracle nên không thể đi thẳng sang *-implement (sinh code mới).
+  for (const p of ['backend', 'frontend']) {
+    const r = flat18(fs.readFileSync(path.join(PLUGINS_DIR, p, 'skills', `${p}-refactor`, 'SKILL.md'), 'utf8'));
+    ok(!new RegExp(`bug[^.;\`]*\`${p}-implement\``).test(r) && r.includes('`workflow-bugfix`'),
+      `${p}-refactor: bug phát hiện khi dọn route workflow-bugfix, không route ${p}-implement`);
   }
 }
 

@@ -34,8 +34,8 @@ fetch/store; feature không cross-import ruột feature khác; import chỉ tr�
 ## Ranh giới an toàn (CLAUDE.md)
 - **Giữ hành vi (bất biến cốt lõi).** Refactor KHÔNG đổi trải nghiệm quan sát được: cùng tương tác →
   cùng UI render + cùng side-effect (request phát ra, điều hướng, message). Cần đổi hành vi (sửa bug,
-  đổi UX, đổi luồng) → đó là bước RIÊNG, tách khỏi refactor: sửa bug theo oracle đỏ gọi `frontend-fix`, dựng
-  UI mới gọi `frontend-implement`; KHÔNG trộn "dọn component" với "đổi logic" trong một bước.
+  đổi UX, đổi luồng) → đó là bước RIÊNG, tách khỏi refactor: sửa bug theo oracle đỏ gọi `frontend-fix`, dựng/đổi
+  UI gọi `frontend-implement`; KHÔNG trộn "dọn component" với "đổi logic" trong một bước.
 - **Baseline phải XANH.** Không refactor trên nền gãy: build/test/lint hiện trạng đỏ → DỪNG, báo, đề
   xuất sửa/ổn định trước. Vùng đụng thiếu test → viết characterization render/interaction test khoá
   hành vi TRƯỚC (trỏ `frontend-testing`).
@@ -88,8 +88,8 @@ component-style (gom về nơi đúng tầng + token design-system), `useEffect`
 ### 3. Áp từng bước nhỏ — GIỮ hành vi, XANH sau mỗi bước — CỔNG G2
 - Mỗi bước là **một** loại thay đổi, phạm vi nhỏ, dễ đọc diff.
 - **Dời/đổi tên/tách trước; đổi hành vi là bước TÁCH RIÊNG.** Trong một bước refactor KHÔNG vừa tách
-  component vừa sửa logic/JSX — nếu phát hiện bug lúc dọn, GHI LẠI và xử ở bước riêng (route
-  `frontend-implement`).
+  component vừa sửa logic/JSX — nếu phát hiện bug lúc dọn, GHI LẠI và xử ở bước riêng (chưa có oracle;
+  chạy `workflow-bugfix` để tái hiện rồi `frontend-fix`).
 - Sau **mỗi** bước: `tsc` ✓ + test (gồm characterization) ✓ + build ✓ + lint (gồm boundary nếu có) ✓.
   Đỏ → sửa hoặc revert **bước đó**, KHÔNG đi tiếp. 1 bước = 1 commit; DỪNG cho người duyệt diff.
 
@@ -111,7 +111,8 @@ component-style (gom về nơi đúng tầng + token design-system), `useEffect`
 
 ## Sau khi xong
 Tóm tắt: các move đã áp (+ `file:line`), kết quả `tsc`/test/lint/build so baseline (số THẬT), phần
-**chưa soát + residual risk**. Refactor giữ hành vi — nếu cần đổi trải nghiệm/nghiệp vụ, route
-`frontend-implement`; cần đổi *kiểu* kiến trúc, route `frontend-migrate-architecture`; cần thêm/sửa
+**chưa soát + residual risk**. Refactor giữ hành vi — đổi hành vi có oracle đỏ, route `frontend-fix`;
+thêm/đổi nghiệp vụ hoặc UI, route `frontend-implement`; cần đổi *kiểu* kiến trúc, route
+`frontend-migrate-architecture`; cần thêm/sửa
 test, route `frontend-testing`. Gặp ràng buộc mâu thuẫn (stack không phải React, hoặc không lập được
 baseline xanh), DỪNG và BÁO thay vì tự đi chệch.

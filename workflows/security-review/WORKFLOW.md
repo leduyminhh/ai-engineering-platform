@@ -104,7 +104,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** không tự quyết định bỏ qua finding `blocker` mà không có xác nhận rõ ràng của người dùng.
 - **Đầu ra:** danh sách finding người dùng chọn sửa + **danh sách file được sửa cho mỗi finding đã chọn** (đầu
   vào cho Bước 8) + danh sách finding được chấp nhận rủi ro (nếu có).
-- **Gate:** người dùng chọn finding cần sửa.
+- **Gate:** người dùng chọn finding cần sửa; có danh sách file được sửa.
 - **Khi fail:** người dùng chưa quyết định được → dừng, chờ người dùng xác nhận, không tự sửa khi chưa có
   quyết định.
 - **Evidence:** danh sách finding người dùng chọn sửa/chấp nhận kèm file được sửa cho mỗi finding, trích dẫn xác
@@ -148,22 +148,28 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 ### Bước 8 — Sửa
 
 - **Thực hiện:** agent `backend-fixer` ∥ agent `frontend-fixer` (chỉ phía có finding cần sửa)
-- **Đầu vào:** oracle = test regression đỏ của Bước 7 + danh sách finding và danh sách file được sửa từ Bước 5
-- **Hành động:** agent sửa đúng finding đã chọn theo skill `backend-fix`/`frontend-fix` (chế độ `security`),
+- **Đầu vào:** oracle = test regression đỏ của Bước 7 + danh sách finding và danh sách file được sửa từ Bước 5.
+  Finding không có test regression (Bước 7 "không áp dụng"): oracle = finding đã validate; gate xanh = Bước 9.
+  Khi quay lại từ Bước 9 (re-scan còn finding): oracle = finding còn lại đã validate (`file:line`); gate xanh =
+  re-scan Bước 9 sạch.
+- **Hành động:** session chính ghi mốc `git status --porcelain` (+ `git hash-object` file test đang bẩn) TRƯỚC khi
+  dispatch agent; agent sửa đúng finding đã chọn theo skill `backend-fix`/`frontend-fix` (chế độ `security`),
   phạm vi tối thiểu trong danh sách file; chạy lại build/test của phạm vi đã sửa, gồm test regression ở Bước 7
-  (phải chuyển từ đỏ sang xanh).
+  (phải chuyển từ đỏ sang xanh). Danh sách file là hợp của hai phía; mỗi agent chỉ đối chiếu phần thuộc phía
+  mình.
 - **Ràng buộc:** không sửa ngoài phạm vi finding đã chọn và danh sách file — cần mở rộng → agent trả `blocked`,
   session chính hỏi người dùng rồi gọi lại; không chỉ che triệu chứng (vd log giảm chi tiết thay vì sửa lỗ hổng
   thật); không xoá hay nới test regression để qua.
 - **Đầu ra:** code đã sửa, build/test xanh, test regression xanh.
 - **Gate:** build/test xanh, gồm test regression; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`),
   file thay đổi hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) ⊆
-  danh sách file của Bước 5 và không chứa file test/fixture/snapshot.
+  danh sách file của Bước 5 và không chứa file test/fixture/snapshot/mock; file test đã bẩn trong mốc (test của
+  Bước 7) không đổi nội dung (`git hash-object` trước/sau).
 - **Khi fail:** agent trả `blocked` → người dùng mở rộng danh sách (ghi bổ sung vào Đầu ra Bước 5) → gọi lại; sửa
   xong vẫn đỏ → chẩn đoán lại, sửa tiếp trong danh sách, không bỏ qua; diff lệch danh sách → revert phần lệch,
   không nhận.
 - **Evidence:** report của agent (lệnh build/test + exit code 0, test regression đã từ đỏ sang xanh) + danh sách
-  file thay đổi hoặc mới trong bước so với trạng thái đầu bước.
+  file thay đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn.
 
 ### Bước 9 — Re-scan
 

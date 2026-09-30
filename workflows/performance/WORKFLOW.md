@@ -67,7 +67,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** không tối ưu khi giả thuyết chưa có evidence.
 - **Đầu ra:** bottleneck + giả thuyết đã xác nhận + **danh sách file/hàm bottleneck được sửa** (đầu vào cho
   Bước 4).
-- **Gate:** bottleneck có evidence.
+- **Gate:** bottleneck có evidence; có danh sách file được sửa.
 - **Khi fail:** người dùng không đồng ý hướng tối ưu → profile lại hoặc thu thêm evidence.
 - **Evidence:** kết quả profile (file:line hoặc số đo) trong report bước + danh sách file được sửa + xác nhận
   của người dùng.
@@ -76,21 +76,25 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-fixer` ∥ agent `frontend-fixer` (chỉ phía có đụng)
 - **Đầu vào:** giả thuyết đã xác nhận + danh sách file/hàm bottleneck từ Bước 3 (không có test đỏ; oracle là giả
-  thuyết có evidence profile)
-- **Hành động:** agent áp thay đổi theo giả thuyết theo skill `backend-fix`/`frontend-fix` (chế độ
+  thuyết có evidence profile). Khi quay lại từ Bước 6 (finding `blocker`): oracle = finding đã xác nhận
+  (`file:line`); gate xanh = review lại.
+- **Hành động:** session chính ghi mốc `git status --porcelain` (+ `git hash-object` file test đang bẩn) TRƯỚC khi
+  dispatch agent; agent áp thay đổi theo giả thuyết theo skill `backend-fix`/`frontend-fix` (chế độ
   `performance`), trong danh sách file; chạy build/test sau mỗi thay đổi. Agent **không kết luận nhanh hơn** —
-  số đo trước/sau thuộc Bước 5.
+  số đo trước/sau thuộc Bước 5. Danh sách file là hợp của hai phía; mỗi agent chỉ đối chiếu phần thuộc phía
+  mình.
 - **Ràng buộc:** không tối ưu ngoài bottleneck đã xác nhận và danh sách file — cần mở rộng → agent trả
   `blocked`, session chính hỏi người dùng rồi gọi lại; không nới test hay skip test để qua.
 - **Đầu ra:** code đã tối ưu, build/test xanh.
 - **Gate:** build/test xanh; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), file thay đổi hoặc
   mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) ⊆ danh sách file của Bước
-  3 và không chứa file test/fixture/snapshot.
+  3 và không chứa file test/fixture/snapshot/mock; file test đã bẩn trong mốc (nếu có) không đổi nội dung
+  (`git hash-object` trước/sau).
 - **Khi fail:** agent trả `blocked` → người dùng mở rộng danh sách (ghi bổ sung vào Đầu ra Bước 3) → gọi lại;
   build/test đỏ → sửa hoặc revert thay đổi, không giữ thay đổi đỏ; diff lệch danh sách → revert phần lệch, không
   nhận.
 - **Evidence:** report của agent (lệnh build/test + exit code) + danh sách file thay đổi hoặc mới trong bước so
-  với trạng thái đầu bước.
+  với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn (nếu có).
 
 ### Bước 5 — Benchmark & so sánh
 

@@ -142,7 +142,7 @@ session chính) mới điều phối và gọi `core:git-workflow` sau checkpoin
 có cấu trúc (kết quả, `file:line`, residual risk); khẳng định "đã chạy / đã pass" luôn kèm
 evidence, hoặc `not_run` + lý do.
 
-### Agent (11)
+### Agent (13)
 
 `mode` trung lập với provider: Claude map `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mode: "read-only"` và

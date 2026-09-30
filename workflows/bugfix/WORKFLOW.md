@@ -100,7 +100,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   evidence hỗ trợ.
 - **Đầu ra:** giải thích root cause, có trích dẫn evidence; **danh sách file/module được sửa** suy từ chuỗi nhân
   quả (đầu vào cho Bước 6), người dùng xác nhận cùng root cause.
-- **Gate:** giải thích nhân quả khớp evidence, người dùng đồng ý.
+- **Gate:** giải thích nhân quả khớp evidence, người dùng đồng ý; có danh sách file được sửa.
 - **Khi fail:** người dùng không đồng ý root cause → quay lại Bước 4 thu thêm evidence hoặc xem lại giả
   thuyết.
 - **Evidence:** đoạn giải thích root cause + trích dẫn evidence tương ứng + danh sách file được sửa + xác nhận
@@ -109,21 +109,28 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 ### Bước 6 — Fix tối thiểu
 
 - **Thực hiện:** agent `backend-fixer` ∥ agent `frontend-fixer` (chỉ phía có lỗi theo Bước 2)
-- **Đầu vào:** oracle = failing test của Bước 3 + root cause và danh sách file được sửa đã xác nhận ở Bước 5
-- **Hành động:** agent sửa đúng nguyên nhân gốc theo skill `backend-fix`/`frontend-fix` (chế độ `bug`), phạm vi
-  thay đổi tối thiểu trong danh sách file; chạy lại failing test của Bước 3 và build/lint của module đụng.
+- **Đầu vào:** oracle = failing test của Bước 3 + root cause và danh sách file được sửa đã xác nhận ở Bước 5.
+  Nếu Bước 3 chỉ tái hiện thủ công: oracle = bước tái hiện + kết quả kỳ vọng đã xác nhận ở Bước 5. Khi quay lại
+  từ Bước 7 (regression đỏ): oracle = test regression mới đỏ. Khi quay lại từ Bước 8 (finding `blocker`): oracle
+  = finding đã xác nhận (`file:line`) do người dùng chốt; gate xanh = reviewer review lại phần đã sửa.
+- **Hành động:** session chính ghi mốc `git status --porcelain` (+ `git hash-object` file test đang bẩn) TRƯỚC khi
+  dispatch agent; agent sửa đúng nguyên nhân gốc theo skill `backend-fix`/`frontend-fix` (chế độ `bug`), phạm vi
+  thay đổi tối thiểu trong danh sách file; chạy lại failing test của Bước 3 và build/lint của module đụng. Danh
+  sách file là hợp của hai phía; mỗi agent chỉ đối chiếu phần thuộc phía mình.
 - **Ràng buộc:** cấm sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh; cấm chỉ sửa triệu chứng (che
   lỗi mà không sửa nguyên nhân); cấm xoá/nới điều kiện test cho qua; không sửa ngoài danh sách file — cần mở
   rộng → agent trả `blocked`, session chính hỏi người dùng rồi gọi lại.
 - **Đầu ra:** code fix + failing test của Bước 3 chuyển xanh + build/lint xanh.
 - **Gate:** failing test chuyển xanh; build/lint xanh; so với trạng thái ghi lại ở đầu bước
   (`git status --porcelain`), file thay đổi hoặc mới trong bước (`git diff --name-only` và
-  `git ls-files --others --exclude-standard`) ⊆ danh sách file của Bước 5 và không chứa file test/fixture/snapshot.
+  `git ls-files --others --exclude-standard`) ⊆ danh sách file của Bước 5 và không chứa file
+  test/fixture/snapshot/mock; file test đã bẩn trong mốc (test của Bước 3 / Bước 7) không đổi nội dung
+  (`git hash-object` trước/sau).
 - **Khi fail:** agent trả `blocked` → người dùng mở rộng danh sách (ghi bổ sung vào Đầu ra Bước 5) → gọi lại; fix
   không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause; diff lệch danh sách
   → revert phần lệch, không nhận.
 - **Evidence:** report của agent (lệnh chạy lại đúng test của Bước 3, exit code đỏ → 0) + danh sách file thay
-  đổi hoặc mới trong bước so với trạng thái đầu bước.
+  đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn.
 
 ### Bước 7 — Regression
 

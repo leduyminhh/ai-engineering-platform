@@ -32,7 +32,7 @@ Dependency Rule của nó — refactor *trong* ranh giới, không dời ranh gi
 ## Ranh giới an toàn (CLAUDE.md)
 - **Giữ hành vi (bất biến cốt lõi).** Refactor KHÔNG đổi nghiệp vụ: cùng input → cùng output +
   side-effect quan sát được. Cần đổi hành vi (sửa bug, đổi quy tắc) → đó là bước RIÊNG, tách khỏi
-  refactor: sửa bug theo oracle đỏ gọi `backend-fix`, thêm nghiệp vụ mới gọi `backend-implement`; KHÔNG trộn
+  refactor: sửa bug theo oracle đỏ gọi `backend-fix`, thêm/đổi nghiệp vụ gọi `backend-implement`; KHÔNG trộn
   "dọn code" với "đổi logic" trong một bước.
 - **Baseline phải XANH.** Không refactor trên nền gãy: build/test/lint hiện trạng đỏ → DỪNG, báo,
   đề xuất sửa/ổn định trước. Vùng đụng thiếu test → viết characterization test khoá hành vi TRƯỚC.
@@ -81,7 +81,8 @@ giữ dữ liệu)… Ưu tiên move gỡ được nhiều phức tạp/trùng l
 ### 3. Áp từng bước nhỏ — GIỮ hành vi, XANH sau mỗi bước — CỔNG G2
 - Mỗi bước là **một** loại thay đổi, phạm vi nhỏ, dễ đọc diff.
 - **Dời/đổi tên/tách trước; đổi hành vi là bước TÁCH RIÊNG.** Trong một bước refactor KHÔNG vừa dời
-  vừa sửa logic — nếu phát hiện bug lúc dọn, GHI LẠI và xử ở bước riêng (route `backend-implement`).
+  vừa sửa logic — nếu phát hiện bug lúc dọn, GHI LẠI và xử ở bước riêng (chưa có oracle; chạy
+  `workflow-bugfix` để tái hiện rồi `backend-fix`).
 - Sau **mỗi** bước: build ✓ + test (gồm characterization) ✓ + lint ✓. Đỏ → sửa hoặc revert **bước
   đó**, KHÔNG đi tiếp. 1 bước = 1 commit; DỪNG cho người duyệt diff.
 
@@ -111,7 +112,8 @@ giữ dữ liệu)… Ưu tiên move gỡ được nhiều phức tạp/trùng l
 
 ## Sau khi xong
 Tóm tắt: các move đã áp (+ `file:line`), pattern đã dùng (nếu có) kèm lý do, kết quả build/test/lint
-so baseline (số THẬT), phần **chưa soát + residual risk**. Refactor giữ hành vi — nếu cần đổi nghiệp
-vụ, route `backend-implement`; cần đổi *kiểu* kiến trúc, route `backend-migrate-architecture`; cần
+so baseline (số THẬT), phần **chưa soát + residual risk**. Refactor giữ hành vi — đổi hành vi có oracle
+đỏ, route `backend-fix`; thêm/đổi nghiệp vụ, route `backend-implement`; cần đổi *kiểu* kiến trúc, route
+`backend-migrate-architecture`; cần
 thêm/sửa test, route `backend-testing`. Gặp ràng buộc mâu thuẫn (stack ngoài Java/Python chưa có
 dấu hiệu trong references, hoặc không lập được baseline xanh), DỪNG và BÁO thay vì tự đi chệch.

@@ -1,7 +1,8 @@
 # Thiết kế: Agent `*-fixer` + skill `*-fix` — khoá phạm vi bước sửa code trong workflow (A4/Q2)
 
 - Ngày: 2026-09-30
-- Trạng thái: **Đề xuất — chờ duyệt**. Chưa thực thi.
+- Trạng thái: **Đã thực thi** trên nhánh `feature/fixer-agent` (2026-09-30), chờ merge; các sửa sau review toàn
+  nhánh ghi ở §8.
 - Phạm vi: đóng mục A4 (§8.5) và Q2 (§11) của spec
   [`2026-09-29-skill-plugin-workflow-upgrade-design.md`](2026-09-29-skill-plugin-workflow-upgrade-design.md)
   — chuyển các bước "sửa code ở session chính" (W-b, §5.2) của `workflow-bugfix`, `workflow-security-review`,
@@ -117,7 +118,7 @@ Description phải ghi rõ ba câu "KHÔNG dùng khi": viết feature mới (→
 | F2 Phạm vi khoanh trước | Bước gọi đưa **danh sách file/module được sửa**; chỉ sửa trong đó | Cần sửa ngoài danh sách → dừng, trả `blocked` + file đề nghị thêm, chờ người dùng |
 | F3 Không đụng test | Không sửa/xoá/nới file test, fixture, snapshot, mock | Test sai thật → báo, để test-writer xử lý |
 | F4 Sửa nguyên nhân | Cấm che triệu chứng (danh sách theo stack, §3.5) | Phát hiện trong tự đối chiếu → gỡ, sửa lại |
-| F5 Xanh trước khi trả | Oracle xanh + build/lint xanh; diff cuối ⊆ danh sách F2 | Không xanh → sửa tiếp trong danh sách; hết cách → `blocked` |
+| F5 Xanh trước khi trả | Oracle xanh (bug/security) / build-test hiện có xanh (performance) + build/lint/test xanh; diff so mốc ⊆ danh sách F2, không đổi file test (kể cả oracle đã bẩn — `git hash-object` trước/sau bằng nhau) | Không xanh → sửa tiếp trong danh sách; hết cách → `blocked` |
 
 ### 3.5 Phần khác nhau giữa 2 skill
 
@@ -227,13 +228,16 @@ test"), "ngoài danh sách", "blocked", "core:principles"; description chứa "o
 - **Thực hiện:** `agent backend-fixer ∥ agent frontend-fixer` (phía …)
 - **Đầu vào:** oracle (failing test Bước 3 / regression test Bước 7 / giả thuyết Bước 3) + danh sách file từ
   bước ⏸ trước.
-- **Hành động:** agent sửa tối thiểu trong danh sách theo skill `*-fix`; chạy lại oracle + build/lint.
+- **Hành động:** session chính ghi mốc `git status --porcelain` (+ `git hash-object` file test đang bẩn) TRƯỚC
+  khi dispatch agent; agent sửa tối thiểu trong danh sách theo skill `*-fix`; chạy lại oracle + build/lint. Danh
+  sách file là hợp của hai phía; mỗi agent chỉ đối chiếu phần thuộc phía mình.
 - **Ràng buộc:** giữ nguyên các câu cấm hiện có (không che triệu chứng, không xoá/nới test); thêm "không sửa
   ngoài danh sách; cần mở rộng → agent trả `blocked`, session chính hỏi người dùng rồi gọi lại".
 - **Đầu ra:** code đã sửa; oracle xanh; build/lint xanh.
 - **Gate:** oracle xanh + build/lint xanh; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), file
   thay đổi hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) **⊆ danh
-  sách** và **không chứa file test/fixture/snapshot**.
+  sách** và **không chứa file test/fixture/snapshot/mock**; file test đã bẩn trong mốc (test của Bước 3 / Bước 7)
+  **không đổi nội dung** (`git hash-object` trước/sau).
 - **Khi fail:** agent `blocked` → người dùng mở rộng danh sách (ghi vào Đầu ra bước ⏸) → gọi lại; oracle vẫn đỏ
   → quay lại bước root cause / kế hoạch / giả thuyết (như hiện tại); diff lệch danh sách → revert phần lệch,
   không nhận.
@@ -329,6 +333,16 @@ hai commit.
   thứ người dùng đã duyệt.
 - Catalog 15 agent, 2 skill mới: tăng token khi cài `--plugin all`; không đổi hành vi skill cũ.
 - Hai skill lặp nội dung khung F1–F5 (§3.5): trôi lệch về sau là rủi ro bảo trì đã biết, giống `*-refactor`.
+- **Mở rộng sau review toàn nhánh (oracle b–c).** Ngoài test đỏ chạy được (a), skill nhận thêm: (b) finding đã
+  validate khi quay lại từ bước review/re-scan, gate xanh = review/re-scan lại; (c) giả thuyết có evidence
+  profile (chế độ `performance`). Các oracle này **yếu hơn test đỏ chạy được**: không có lệnh đỏ → xanh, độ tin
+  phụ thuộc chất lượng review/profile.
+- **Mở rộng sau review toàn nhánh (oracle d–e).** (d) bug chỉ tái hiện thủ công: oracle = bước tái hiện + kết quả
+  kỳ vọng người dùng xác nhận, gate xanh = chạy lại đúng các bước đó; (e) finding bảo mật không có test
+  (secret/dependency/misconfiguration): oracle = finding đã validate (`file:line`/CVE), gate xanh = re-scan
+  Bước 9. Gate **yếu hơn test đỏ chạy được** (thủ công, không lặp lại tự động). Cùng đợt: gate diff trừ mốc đầu
+  bước và kiểm `git hash-object` file test đã bẩn; nâng version dependency đã có được phép khi manifest/lockfile
+  nằm trong danh sách và finding là CVE.
 
 ---
 
