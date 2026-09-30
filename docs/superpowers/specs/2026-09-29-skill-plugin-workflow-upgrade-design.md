@@ -490,7 +490,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 
 ## 8. Plan thiết kế agent
 
-### 8.1 Catalog sau nâng cấp (11 → 13)
+### 8.1 Catalog sau nâng cấp (11 → 15)
 
 | Agent | Plugin | Mode | Skills | Workflow dùng | Thay đổi |
 |---|---|---|---|---|---|
@@ -507,6 +507,8 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 | engineering-release-scribe | engineering | write | release-notes | release | — |
 | ops-incident-investigator | ops | read-only | ops-incident-troubleshooting, ops-observability | incident | — |
 | ops-release-engineer | ops | read-only | ops-deploy-release, ops-observability | release | — |
+| **backend-fixer** | backend | write | backend-fix | bugfix, security-review, performance | **mới** (A4, spec 2026-09-30) |
+| **frontend-fixer** | frontend | write | frontend-fix | bugfix, security-review, performance | **mới** (A4, spec 2026-09-30) |
 
 Cột `skills` lấy từ frontmatter thật trong `plugins/*/agents/*.md`. Cột Mode lấy theo `disallowedTools` của bản cài.
 
@@ -606,7 +608,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | **P1b — Publish db-migration** (sau pilot, Q6) | Pha publish của §7.1.10: `_published.json`, thêm skill vào `backend-implementer`, S8; WF3 đi cùng | §7.1.10, WF3 | ⏳ chờ pilot (Q6) |
 | **P1c — Publish frontend-data-integration** (sau pilot, Q7) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ⏳ chờ pilot (Q7) |
 | **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF7, WF8–WF10 xong; WF3/WF4 một phần; WF5, WF6 chưa |
-| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`; còn A4, G10 |
+| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`; A4 xong (spec 2026-09-30-fixer-agent-design); còn G10 |
 
 Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa làm. Chi tiết từng mục ở §13.
 
@@ -631,7 +633,7 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | # | Câu hỏi | Khuyến nghị / Trạng thái |
 |---|---|---|
 | ~~Q1~~ | ~~`backend-db-migration` gộp với G2 `backend-migrate-db` (2 chế độ) hay tách riêng?~~ | **Đã chốt (2026-09-29): gộp, phương án A.** Các câu hỏi kế thừa đã chốt ở §7.1.1: publish sau pilot (M4), không có ngưỡng bảng lớn mặc định (M6), template Alembic để đợt sau (M2) |
-| Q2 | Bước sửa code ở session chính (W-b) có chuyển sang agent implementer không? | Có, ở P3 |
+| ~~Q2~~ | ~~Bước sửa code ở session chính (W-b) có chuyển sang agent implementer không?~~ | **Đã chốt (2026-09-30): spec `2026-09-30-fixer-agent-design.md`** |
 | Q3 | Môi trường e2e (BE + DB test) do ai cung cấp? | Project tự cung cấp (compose/lệnh); agent chỉ `not_run` khi thiếu |
 | Q4 | Skill frontend mới publish ngay (cả plugin) hay publish từng phần sau smoke? | Từng phần (`frontend/<skill>`) — cùng nguyên tắc với M4. Lưu ý P-d: chỉ gate được wizard |
 | ~~Q5~~ | ~~Plugin `data`: giữ draft hay publish nhánh OLTP để tránh trùng với `backend-db-migration`?~~ | **Đã chốt (2026-09-30, ADR-0001):** mọi năng lực liên quan database thuộc plugin `data`; skill chuyển sang `data-db-migration`; plugin `data` vẫn draft, quy tắc phân ranh §7.1.3 giữ nguyên trong cùng plugin |
@@ -680,6 +682,7 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | WF12 phần incident | `0a22df5` | `f27042d` |
 | Ánh xạ vùng rủi ro security-review ↔ quality-gate | `0a22df5` | `bd1cfb4` |
 | WF11 (Bước 1 Baseline) | `0a22df5` | `1baa5f9`, `aa93f8d`, `9db78d8`, `e4ff661` |
+| A4/Q2: fixer agent | nhánh `feature/fixer-agent` | `d0e17ce`, `8fa1c13`, `875c430`, `b017350`, `534d379`, `6db2c11`, `d7b1e0d`, `fca093e` |
 
 ### 13.2 Còn lại
 
@@ -691,5 +694,4 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | P1c | `frontend/frontend-data-integration` chưa có trong `plugins/_published.json` | Q7 (pilot) |
 | WF3 phần dùng skill | `workflows/db-change/WORKFLOW.md` Bước 3: file migration vẫn ở session chính | P1b |
 | WF4 Bước 5, WF5, WF6 | Chưa workflow nào dùng 2 agent draft; `test/validate.mjs:866`, `:926` assert điều này, phải gỡ khi nối | P1c (WF4/WF5); WF6 cần publish `frontend-e2e-testing` |
-| A4 / Q2 | Bước sửa code vẫn ở session chính (§5.2 W-b, số bước sau đánh số lại) | Quyết định thiết kế |
 | G10 | `workflows/performance/WORKFLOW.md` Bước 3 chưa có công cụ hay chủ sở hữu profiling | Chưa có thiết kế |

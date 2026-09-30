@@ -1226,6 +1226,18 @@ if (fs.existsSync(BUILD)) {
   // Review Focus 2: chế độ performance không có oracle đỏ — bước phải nói rõ số đo thuộc Bước 5.
   ok(flat18(step18(wf18('workflow-performance'), 4).body).includes('Bước 5'),
     'workflow-performance Bước 4: không kết luận hiệu năng, số đo thuộc Bước 5');
+  for (const f of ['README.md', 'README_VI.md']) {
+    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+    const row = (agent) => rd.split('\n').find((l) => l.startsWith(`| \`${agent}\` |`)) ?? '';
+    ok(['WF02', 'WF06', 'WF09'].every((w) => row('backend-fixer').includes(w) && row('frontend-fixer').includes(w)),
+      `${f}: bảng agent có backend-fixer, frontend-fixer dùng ở WF02, WF06, WF09`);
+  }
+  // §3.2: refactor không còn trỏ "sửa bug → *-implement"; đích đúng là *-fix.
+  for (const p of ['backend', 'frontend']) {
+    const r = fs.readFileSync(path.join(PLUGINS_DIR, p, 'skills', `${p}-refactor`, 'SKILL.md'), 'utf8');
+    ok(flat18(r).includes(`sửa bug`) && flat18(r).includes(`\`${p}-fix\``),
+      `${p}-refactor: câu "cần đổi hành vi (sửa bug…)" trỏ sang ${p}-fix`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

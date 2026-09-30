@@ -34,8 +34,8 @@ fetch/store; feature không cross-import ruột feature khác; import chỉ tr�
 ## Ranh giới an toàn (CLAUDE.md)
 - **Giữ hành vi (bất biến cốt lõi).** Refactor KHÔNG đổi trải nghiệm quan sát được: cùng tương tác →
   cùng UI render + cùng side-effect (request phát ra, điều hướng, message). Cần đổi hành vi (sửa bug,
-  đổi UX, đổi luồng) → đó là bước RIÊNG, tách khỏi refactor, gọi `frontend-implement`; KHÔNG trộn "dọn
-  component" với "đổi logic" trong một bước.
+  đổi UX, đổi luồng) → đó là bước RIÊNG, tách khỏi refactor: sửa bug theo oracle đỏ gọi `frontend-fix`, dựng
+  UI mới gọi `frontend-implement`; KHÔNG trộn "dọn component" với "đổi logic" trong một bước.
 - **Baseline phải XANH.** Không refactor trên nền gãy: build/test/lint hiện trạng đỏ → DỪNG, báo, đề
   xuất sửa/ổn định trước. Vùng đụng thiếu test → viết characterization render/interaction test khoá
   hành vi TRƯỚC (trỏ `frontend-testing`).

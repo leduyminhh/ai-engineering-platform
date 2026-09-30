@@ -32,7 +32,8 @@ Dependency Rule của nó — refactor *trong* ranh giới, không dời ranh gi
 ## Ranh giới an toàn (CLAUDE.md)
 - **Giữ hành vi (bất biến cốt lõi).** Refactor KHÔNG đổi nghiệp vụ: cùng input → cùng output +
   side-effect quan sát được. Cần đổi hành vi (sửa bug, đổi quy tắc) → đó là bước RIÊNG, tách khỏi
-  refactor, gọi `backend-implement`; KHÔNG trộn "dọn code" với "đổi logic" trong một bước.
+  refactor: sửa bug theo oracle đỏ gọi `backend-fix`, thêm nghiệp vụ mới gọi `backend-implement`; KHÔNG trộn
+  "dọn code" với "đổi logic" trong một bước.
 - **Baseline phải XANH.** Không refactor trên nền gãy: build/test/lint hiện trạng đỏ → DỪNG, báo,
   đề xuất sửa/ổn định trước. Vùng đụng thiếu test → viết characterization test khoá hành vi TRƯỚC.
 - **Tôn trọng boundary.** Bám kiến trúc đã chốt (`project-knowledge/architecture.md` + blueprint
