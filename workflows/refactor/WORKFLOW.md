@@ -92,10 +92,11 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** không viết test phụ thuộc chi tiết cài đặt sẽ đổi (test theo hành vi/output, không theo cấu
   trúc nội bộ); không sửa code production ở bước này.
 - **Đầu ra:** characterization test mới cho vùng đụng, chạy xanh.
-- **Gate:** vùng đụng có test khoá hành vi, xanh.
+- **Gate:** vùng đụng có test khoá hành vi, xanh; `git diff --name-only` của bước chỉ chứa file test (và
+  fixture/mock của test).
 - **Khi fail:** không viết được test khoá hành vi (hành vi phụ thuộc trạng thái ẩn phức tạp) → hỏi người dùng
   cách quan sát hành vi thay thế, hoặc thu hẹp phạm vi refactor.
-- **Evidence:** lệnh test + exit code 0 + danh sách characterization test mới.
+- **Evidence:** lệnh test + exit code 0 + danh sách characterization test mới; kết quả `git diff --name-only`.
 
 ### Bước 5 — Refactor từng bước
 

@@ -58,10 +58,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** không sửa code production ở bước này; không viết test phụ thuộc thứ tự/thời gian thực/mạng
   thật.
 - **Đầu ra:** failing test đỏ, hoặc log bước tái hiện thủ công.
-- **Gate:** failing test đỏ đúng lý do, hoặc bước tái hiện thủ công có evidence.
+- **Gate:** failing test đỏ đúng lý do, hoặc bước tái hiện thủ công có evidence; `git diff --name-only` của
+  bước chỉ chứa file test (và fixture/mock của test).
 - **Khi fail:** không tái hiện được bug → quay lại Bước 1 làm rõ thêm bối cảnh, hoặc hỏi người dùng bước tái
   hiện chính xác hơn.
-- **Evidence:** lệnh chạy test + output đỏ đúng lý do bug, hoặc log/screenshot bước tái hiện thủ công.
+- **Evidence:** lệnh chạy test + output đỏ đúng lý do bug, hoặc log/screenshot bước tái hiện thủ công; kết quả
+  `git diff --name-only`.
 
 ### Bước 3 — Thu evidence
 
@@ -110,9 +112,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   đối chiếu số lượng test trước/sau fix để xác nhận không có test nào bị xoá hoặc nới lỏng điều kiện.
 - **Ràng buộc:** không xoá/nới bất kỳ test nào để toàn bộ test pass.
 - **Đầu ra:** báo cáo toàn bộ test suite pass.
-- **Gate:** toàn bộ test pass.
+- **Gate:** toàn bộ test pass; `git diff --name-only` của bước chỉ chứa file test (và fixture/mock của test).
 - **Khi fail:** có test khác đỏ do fix gây ra → quay lại Bước 5 điều chỉnh fix, không nới test đang đỏ.
-- **Evidence:** lệnh chạy toàn bộ test suite + exit code 0 + số liệu (`X tests, X passed`).
+- **Evidence:** lệnh chạy toàn bộ test suite + exit code 0 + số liệu (`X tests, X passed`); kết quả
+  `git diff --name-only`.
 
 ### Bước 7 — Review
 

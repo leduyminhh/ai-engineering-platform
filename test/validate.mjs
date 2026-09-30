@@ -1076,6 +1076,17 @@ if (fs.existsSync(BUILD)) {
     'workflow-db-change Bước 6: verify theo công cụ, có nhánh forward-only dùng migration bù');
   ok(/chu trình verify/.test(flat17(dbcVerify.body.split('**Gate:**')[1] ?? '').split('- **')[0]),
     'workflow-db-change Bước 6: Gate nêu chu trình verify theo công cụ');
+
+  // A3: mode write không khoá được theo đường dẫn nên mỗi bước test-writer phải tự chứng minh chỉ đụng file test.
+  for (const w17 of workflows.stages) {
+    for (const st of parseSteps(w17.body)) {
+      const doer = st.body.split('\n').find((l) => l.includes('**Thực hiện:**')) || '';
+      if (!/agent `(backend|frontend)-test-writer`/.test(doer)) continue;
+      const gate = flat17((st.body.split('**Gate:**')[1] ?? '').split('\n- **')[0]);
+      ok(gate.includes('git diff --name-only') && /file test/.test(gate),
+        `${w17.id} bước ${st.n}: Gate kiểm git diff --name-only chỉ chứa file test`);
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -121,11 +121,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** chỉ viết test, không sửa code production; chỉ chạy trên môi trường local/test; test không chứa
   giá trị secret thật và không gọi dịch vụ bên ngoài thật (SSRF dùng server giả cục bộ hoặc mock).
 - **Đầu ra:** danh sách test regression đỏ đúng lý do + danh sách finding "không áp dụng" kèm lý do.
-- **Gate:** mỗi test regression đỏ đúng lý do lỗ hổng, không đỏ vì lỗi của chính test.
+- **Gate:** mỗi test regression đỏ đúng lý do lỗ hổng, không đỏ vì lỗi của chính test; `git diff --name-only`
+  của bước chỉ chứa file test (và fixture/mock của test).
 - **Khi fail:** test xanh trên code chưa sửa (không bắt được lỗ hổng) hoặc đỏ vì lỗi test → sửa test, chạy lại;
   không nới assertion. Test đã viết đúng mà vẫn xanh → nghi finding là false positive, quay lại Bước 3 validate
   lại.
-- **Evidence:** lệnh chạy test + exit code khác 0 + đoạn lỗi giải thích lý do đỏ.
+- **Evidence:** lệnh chạy test + exit code khác 0 + đoạn lỗi giải thích lý do đỏ; kết quả
+  `git diff --name-only`.
 
 ### Bước 7 — Sửa
 

@@ -126,11 +126,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   Testcontainers, là ngoại lệ); không sửa code production — bug thật thì giữ test đỏ và báo; không xoá/nới
   test để qua.
 - **Đầu ra:** integration test cho query/repository bị ảnh hưởng, chạy được.
-- **Gate:** integration test pass.
+- **Gate:** integration test pass; `git diff --name-only` của bước chỉ chứa file test (và fixture/mock của
+  test).
 - **Khi fail:** lỗi do test → sửa test; lỗi do code hoặc migration → quay lại Bước 3 sửa, chạy lại từ Bước 4;
   project không có DB tạm (Docker/Testcontainers) → chạy trên target đã xác nhận ở Bước 5, hoặc hỏi người dùng
   nếu chưa có, không tự dựng hạ tầng.
-- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail.
+- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail; kết quả `git diff --name-only`.
 
 ### Bước 8 — Cập nhật data-model & nợ contract
 
