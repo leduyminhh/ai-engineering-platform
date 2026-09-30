@@ -1139,6 +1139,38 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 18. SOURCE: *-fix skill + *-fixer agent + nối workflow (spec 2026-09-30-fixer-agent-design)
+{
+  const fixSkill = (p) => {
+    const f = path.join(PLUGINS_DIR, p, 'skills', `${p}-fix`, 'SKILL.md');
+    return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+  };
+  const flat18 = (t) => t.replace(/\s+/g, ' ');
+  for (const p of ['backend', 'frontend']) {
+    const s = fixSkill(p);
+    ok(s.length > 0, `${p}-fix: có SKILL.md`);
+    ok(/^order: 9$/m.test(s) && /^pipeline: false$/m.test(s) && /^runsIn: execute$/m.test(s),
+      `${p}-fix: frontmatter order 9, pipeline false, runsIn execute`);
+    // §3.2: ranh giới với implement/refactor phải nằm trong description để trigger đúng skill.
+    ok(/^description: .*oracle/m.test(s) && /^description: .*-implement/m.test(s) && /^description: .*-refactor/m.test(s),
+      `${p}-fix: description nêu oracle và ranh giới với ${p}-implement / ${p}-refactor`);
+    for (const g of ['F1', 'F2', 'F3', 'F4', 'F5']) ok(s.includes(`| ${g} `), `${p}-fix: bảng gate có ${g}`);
+    for (const m of ['`bug`', '`security`', '`performance`']) ok(s.includes(m), `${p}-fix: có chế độ ${m}`);
+    ok(flat18(s).includes('không tự tuyên bố nhanh hơn') && flat18(s).includes('Bước 5'),
+      `${p}-fix: chế độ performance không tự tuyên bố nhanh hơn, số đo thuộc Bước 5 của workflow`);
+    ok(s.includes('blocked') && flat18(s).includes('không tự mở'),
+      `${p}-fix: cần sửa ngoài danh sách → blocked, không tự mở phạm vi`);
+    ok(/không sửa/i.test(s) && s.includes('snapshot'),
+      `${p}-fix: F3 cấm sửa file test/fixture/snapshot`);
+    ok(s.includes('che triệu chứng'), `${p}-fix: F4 có danh sách che triệu chứng`);
+  }
+  ok(fixSkill('backend').includes('@Disabled') && fixSkill('backend').includes('pytest.skip'),
+    'backend-fix: danh sách che triệu chứng theo stack Java/Python');
+  ok(fixSkill('frontend').includes('@ts-ignore') && fixSkill('frontend').includes('eslint-disable') && fixSkill('frontend').includes('tsc --noEmit'),
+    'frontend-fix: danh sách che triệu chứng theo stack TS/React và lệnh tsc --noEmit');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');
