@@ -240,6 +240,11 @@ tên là `frontend-e2e-test-writer` và `frontend-data-integrator`.
 
 ### 7.1 `backend-db-migration` (gộp G2 — phương án A, đã chốt 2026-09-29)
 
+> **Cập nhật 2026-09-30 (ADR-0001, `docs/decisions/0001-database-capabilities-in-data-plugin.md`):** skill này nay
+> thuộc plugin `data` với tên `data-db-migration`. Mọi đường dẫn `plugins/backend/skills/backend-db-migration/…` và
+> tên `backend-db-migration` trong mục 6–9 và 11 đọc là `plugins/data/skills/data-db-migration/…` và
+> `data-db-migration`. Nội dung thiết kế không đổi.
+
 Gộp G2 `backend-migrate-db` (spec `2026-09-07-backend-migrate-db-design.md`, đã duyệt, chưa hiện thực) với năng
 lực "viết một thay đổi schema" thành **một** skill có 2 chế độ. Chế độ `adopt` **giữ nguyên G2**: §3–§8 của spec
 đó là nguồn sự thật cho template Spring Boot. Mục này chỉ ghi phần mới và phần khác so với G2.
@@ -626,7 +631,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | Q2 | Bước sửa code ở session chính (W-b) có chuyển sang agent implementer không? | Có, ở P3 |
 | Q3 | Môi trường e2e (BE + DB test) do ai cung cấp? | Project tự cung cấp (compose/lệnh); agent chỉ `not_run` khi thiếu |
 | Q4 | Skill frontend mới publish ngay (cả plugin) hay publish từng phần sau smoke? | Từng phần (`frontend/<skill>`) — cùng nguyên tắc với M4. Lưu ý P-d: chỉ gate được wizard |
-| Q5 | Plugin `data`: giữ draft hay publish nhánh OLTP để tránh trùng với `backend-db-migration`? | Giữ draft; quy tắc phân ranh (inference) đã viết ở §7.1.3, nhưng **chưa phải ADR chính thức** — vẫn cần chốt trước P1 |
+| ~~Q5~~ | ~~Plugin `data`: giữ draft hay publish nhánh OLTP để tránh trùng với `backend-db-migration`?~~ | **Đã chốt (2026-09-30, ADR-0001):** mọi năng lực liên quan database thuộc plugin `data`; skill chuyển sang `data-db-migration`; plugin `data` vẫn draft, quy tắc phân ranh §7.1.3 giữ nguyên trong cùng plugin |
 | Q6 | Pilot `backend-db-migration` trên project Spring nào? | Chưa chốt. G2 từng nêu `be-directive-mgt` (đã hoãn ở G2 Q2) |
 | Q7 | Pilot `frontend-data-integration` trên project React nào (cần contract OpenAPI thật ở `docs/contracts/`)? | Chưa chốt |
 
