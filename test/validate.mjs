@@ -1174,6 +1174,24 @@ if (fs.existsSync(BUILD)) {
   const cowork18 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
   ok(cowork18.includes('backend:backend-fix') && cowork18.includes('frontend:frontend-fix'),
     '_cowork.json: có backend:backend-fix và frontend:frontend-fix');
+  const fixAgent = (p) => {
+    const f = path.join(PLUGINS_DIR, p, 'agents', `${p}-fixer.md`);
+    return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+  };
+  for (const p of ['backend', 'frontend']) {
+    const a = fixAgent(p);
+    ok(a.length > 0, `${p}-fixer: có agent file`);
+    ok(/^mode: write$/m.test(a) && new RegExp(`^skills: "${p}-fix"$`, 'm').test(a),
+      `${p}-fixer: mode write, skills = ${p}-fix (đúng 1 skill)`);
+    ok(/^description: .*oracle/m.test(a), `${p}-fixer: description nêu oracle`);
+    ok(flat18(a).includes('file test') && flat18(a).includes('ngoài danh sách'),
+      `${p}-fixer: phạm vi cấm sửa file test và cấm sửa ngoài danh sách`);
+    ok(a.includes('blocked') && flat18(a).includes('không tự mở'),
+      `${p}-fixer: cần mở rộng phạm vi → blocked, không tự mở`);
+    ok(a.includes('core:principles') && a.includes('not_run'),
+      `${p}-fixer: report theo contract core:principles, có not_run`);
+    ok(a.includes('git diff --name-only'), `${p}-fixer: tự đối chiếu diff với danh sách trước khi trả`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
