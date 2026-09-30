@@ -995,6 +995,22 @@ if (fs.existsSync(BUILD)) {
   }
 }
 
+// 16. SOURCE: P2 còn lại — S5, S6, WF9, WF8, WF10 (spec 2026-09-29 §3.3, §5.3)
+{
+  const engRead = (rel) => fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'skills', rel), 'utf8');
+  const wf16 = (id) => workflows.stages.find((s) => s.id === id);
+  const noStep16 = { title: '', body: '', checkpoint: false };
+
+  // S5: quality-gate không làm nhiệm vụ kiểm quy ước; chỉ đường sang skill chuyên trách.
+  ok(engRead('engineering-quality-gate/SKILL.md').includes('engineering-convention-enforce'),
+    'S5: engineering-quality-gate trỏ sang engineering-convention-enforce');
+  // S6: thủ tục ghi ADR nằm ở engineering-adr; spec-writing chỉ trỏ sang, không lặp lại thủ tục.
+  const specSkill = engRead('engineering-spec-writing/SKILL.md');
+  const specStep4 = (specSkill.split('4. **Ghi ADR')[1] ?? '').split('5. **Verify')[0];
+  ok(specStep4.includes('engineering-adr') && !specStep4.includes('<số kế tiếp>'),
+    'S6: engineering-spec-writing bước 4 trỏ sang engineering-adr, không còn thủ tục đánh số ADR');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {

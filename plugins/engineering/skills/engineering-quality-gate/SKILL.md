@@ -43,6 +43,8 @@ chất lượng/bảo mật. Con người giữ chốt: **duyệt diff trước 
 - Cần bump version một dependency có lỗ hổng đã có bản vá và xác nhận build/test không vỡ.
 
 KHÔNG dùng skill này để tự cấu hình server/CI, hay gọi web API của SonarQube/Black Duck (ngoài phạm vi).
+Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải chất lượng hay bảo mật) → dùng skill
+`engineering-convention-enforce`.
 
 ## Ranh giới an toàn
 
