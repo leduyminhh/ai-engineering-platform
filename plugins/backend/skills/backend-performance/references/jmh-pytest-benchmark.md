@@ -53,6 +53,8 @@ public class OrderMapperBenchmark {
   dependency JMH là thay đổi tool → **hỏi trước**.
 - Xuất kết quả máy đọc được, ví dụ `java -jar target/benchmarks.jar -rf json -rff bench/out/result.json`
   `[Unverified]`. Báo `Score ± Error` và đơn vị đúng như output.
+- `Mode.AverageTime` không cho percentile. Cần p50/p95/p99 của thời gian mỗi lời gọi → dùng `Mode.SampleTime`
+  `[Unverified]`; ghi mode đã chọn vào bảng điều kiện.
 
 ## pytest-benchmark (Python)
 
@@ -85,4 +87,7 @@ def test_to_dto(benchmark):
 - **Python:** kết quả nhạy với phiên bản interpreter, extension C và GC; ghi phiên bản thật vào bảng điều kiện.
 - Chạy **≥ 3 lần** (với JMH: nhiều fork cũng tính là lặp ở mức JVM, nhưng vẫn báo độ lệch giữa các lần chạy);
   độ lệch vượt ngưỡng → không kết luận (P3).
+- **Thống kê cho P3:** micro-benchmark không có p95 mặc định. Áp đúng công thức độ lệch của
+  `measure-conditions.md` lên **score chính mỗi lần chạy**: JMH → `Score`; pytest-benchmark → `median`. Ngưỡng
+  mặc định 10%, project ghi đè trong bảng điều kiện.
 - Không bịa số mẫu trong báo cáo: chỉ chép từ output thật.

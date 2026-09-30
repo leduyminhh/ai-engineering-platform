@@ -70,9 +70,9 @@ sách file/hàm đề xuất sửa** (đầu vào F2 của `backend-fix`).
 |---|------|---------|--------|--------|
 | P1 | Môi trường | Chỉ chạy trên local/test; host staging/production → từ chối | cả hai | Thiếu môi trường → `not_run` + lý do; không tự dựng hạ tầng |
 | P2 | Điều kiện đo | Bảng điều kiện đo đầy đủ TRƯỚC khi chạy; Bước 5 dùng lại bảng Bước 2 | `measure` | Thiếu mục → dừng, hỏi |
-| P3 | Ổn định | ≥ 3 lần; báo độ lệch; độ lệch p95 giữa các lần > 10% (mặc định, project ghi đè trong bảng điều kiện) → cảnh báo, không kết luận | `measure` | Tăng số lần lặp hoặc cô lập nhiễu |
+| P3 | Ổn định | ≥ 3 lần; báo độ lệch; độ lệch p95 (load test) hoặc score chính (micro-benchmark) giữa các lần > 10% (mặc định, project ghi đè trong bảng điều kiện) → cảnh báo, không kết luận | `measure` | Tăng số lần lặp hoặc cô lập nhiễu |
 | P4 | Evidence | Mọi giả thuyết có evidence đo được; không suy diễn chỉ từ đọc code | `profile` | Profile thêm |
-| P5 | Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo; không sửa `src/` production, không sửa test, không chạy DDL/migration | cả hai | Gỡ thay đổi ngoài phạm vi |
+| P5 | Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo; thêm tool/dependency → hỏi trước; không sửa `src/` production, không sửa test, không chạy DDL/migration | cả hai | Gỡ thay đổi ngoài phạm vi |
 
 ## Sau khi xong
 Báo: bảng điều kiện đo; bảng số (p50/p95/p99, throughput, error rate, độ lệch) + lệnh chạy; hoặc bottleneck +

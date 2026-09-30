@@ -20,11 +20,11 @@ lệch có thể đến từ nhiễu hoặc dữ liệu khác chứ không phả
 | Build | commit SHA / phiên bản artifact, cờ JVM hoặc phiên bản Python | Bước 5 chỉ được khác đúng thay đổi tối ưu |
 | Dữ liệu seed | kích thước (số bản ghi bảng chính), cách tạo (script/lệnh seed) | Seed tái lập được; ghi rõ khác production ở đâu |
 | Endpoint/luồng | method + path hoặc chuỗi request; payload mẫu | Không chứa credential thật; token lấy từ biến môi trường |
-| Mô hình tải | VU hoặc RPS, thời lượng, ramp (stages) | Mô hình mở (RPS) hay đóng (VU) — ghi rõ loại |
-| Warm-up | thời lượng hoặc số request/iteration bỏ khỏi kết quả | JVM cần warm-up cho JIT; Python cần warm cache/pool |
+| Mô hình tải | VU hoặc RPS, thời lượng, think time; lần đo giữ tải hằng định, không ramp | Mô hình mở (RPS) hay đóng (VU) — ghi rõ loại |
+| Warm-up | cách tách (lần chạy warm-up riêng, bỏ kết quả) + thời lượng hoặc số iteration | JVM cần warm-up cho JIT; Python cần warm cache/pool |
 | Số lần lặp | ≥ 3 | Mỗi lần chạy lại từ cùng trạng thái dữ liệu |
 | Công cụ + phiên bản | vd k6, JMH, pytest-benchmark + phiên bản thật (lệnh in version) | Không ghi phiên bản đoán; lấy từ output lệnh |
-| Ngưỡng độ lệch | 10% độ lệch p95 giữa các lần (mặc định) | Project ghi đè tại đây nếu máy nhiễu hơn/ít hơn |
+| Ngưỡng độ lệch | 10% độ lệch giữa các lần (mặc định): p95 cho load test, score chính cho micro-benchmark | Project ghi đè tại đây nếu máy nhiễu hơn/ít hơn |
 
 ## Đọc số: percentile, throughput, error rate
 
@@ -33,17 +33,26 @@ lệch có thể đến từ nhiễu hoặc dữ liệu khác chứ không phả
   lock, GC, pool cạn. Mục tiêu hiệu năng nên đặt trên p95/p99, không đặt trên trung bình.
 - **Vì sao không dùng trung bình:** phân phối latency thường lệch phải (đuôi dài); vài request rất chậm kéo
   trung bình lên, còn nhiều request chậm vừa lại bị che. Trung bình không cho biết đuôi.
-- **Throughput:** số request (hoặc iteration) hoàn tất mỗi giây trong pha đo, không tính warm-up.
-- **Error rate:** tỉ lệ request lỗi (HTTP 5xx, timeout, check fail). Latency thấp đi kèm error rate tăng không
-  phải là cải thiện — luôn báo hai số cùng nhau.
+- **Throughput:** số request (hoặc iteration) hoàn tất mỗi giây trong pha đo, không tính warm-up. Think time
+  (`sleep`) trong mô hình đóng giới hạn throughput → so throughput cần mô hình mở hoặc không có think time.
+- **Error rate:** tỉ lệ request lỗi theo định nghĩa của k6 `http_req_failed`: response ngoài dải 200–399 (cả 4xx
+  lẫn 5xx) cộng lỗi mạng/timeout `[Unverified]` định nghĩa mặc định. Bảng kết quả dùng định nghĩa này; tỉ lệ
+  `check` fail báo riêng. Công cụ khác → ghi định nghĩa lỗi của công cụ đó vào bảng điều kiện. Latency thấp đi
+  kèm error rate tăng không phải là cải thiện — luôn báo hai số cùng nhau.
 
 ## Độ lệch giữa các lần (P3)
 
-Với N lần chạy (N ≥ 3), lấy p95 của từng lần rồi tính:
+Với N lần chạy (N ≥ 3), lấy **thống kê chính** của từng lần rồi tính cùng một công thức:
 
 ```text
-độ lệch p95 = (max(p95) − min(p95)) / median(p95)
+độ lệch = (max(x) − min(x)) / median(x)
 ```
+
+| Loại đo | Thống kê chính `x` mỗi lần chạy |
+|---|---|
+| Load test (k6, …) | p95 latency của lần đo |
+| JMH (`Mode.AverageTime`) | `Score` của lần chạy (không có p95); cần percentile → `Mode.SampleTime` `[Unverified]` |
+| pytest-benchmark | `median` của lần chạy (công cụ báo min/max/mean/median/stddev, không có p95) |
 
 - Độ lệch ≤ ngưỡng (mặc định 10%) → dùng median của các lần làm con số báo cáo, kèm cả dãy số thô.
 - Độ lệch > ngưỡng → **cảnh báo, không kết luận**. Cách giảm nhiễu:

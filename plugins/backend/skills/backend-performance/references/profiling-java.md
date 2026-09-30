@@ -20,10 +20,15 @@ Bật khi khởi động JVM `[Unverified]` cú pháp tham số:
 java -XX:StartFlightRecording=duration=120s,filename=perf/out/app.jfr,settings=profile -jar app.jar
 ```
 
-Hoặc bật trên process đang chạy bằng `jcmd` `[Unverified]`:
+Hoặc bật trên process đang chạy bằng `jcmd` `[Unverified]`. Chọn MỘT trong hai cách; recording có
+`duration=…` tự dừng và tự ghi file khi hết giờ, nên không nối thêm `JFR.dump`/`JFR.stop` cho recording đó:
 
 ```bash
+# (a) recording có hẹn giờ: tự dừng và ghi perf/out/app.jfr sau 120s
 jcmd <pid> JFR.start name=perf settings=profile duration=120s filename=perf/out/app.jfr
+
+# (b) recording không hẹn giờ: tự quyết điểm dừng theo pha đo của tải
+jcmd <pid> JFR.start name=perf settings=profile
 jcmd <pid> JFR.dump name=perf filename=perf/out/app.jfr
 jcmd <pid> JFR.stop name=perf
 ```
