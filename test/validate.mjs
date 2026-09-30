@@ -861,6 +861,24 @@ if (fs.existsSync(BUILD)) {
   ok(diWfMentions.length === 0, `frontend-data-integrator: chưa workflow nào dùng (draft) — đang nhắc ở: ${diWfMentions.join(', ')}`);
 }
 
+// 13. SOURCE: frontend-e2e-testing — hợp đồng skill/references/agent (spec 2026-09-29 §7.2, §8.2)
+{
+  const e2eDir = path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-e2e-testing');
+  const e2eRef = path.join(e2eDir, 'references');
+  const e2eFiles = listFilesRec(e2eRef);
+  const e2eRead = (rel) => fs.readFileSync(path.join(e2eRef, rel), 'utf8');
+  const e2eSkillPath = path.join(e2eDir, 'SKILL.md');
+  const e2eSkillExists = fs.existsSync(e2eSkillPath);
+  ok(e2eSkillExists, 'frontend-e2e-testing: có SKILL.md');
+  const e2eSkill = e2eSkillExists ? fs.readFileSync(e2eSkillPath, 'utf8') : '';
+  ok(/^order: 8$/m.test(e2eSkill) && /^pipeline: false$/m.test(e2eSkill) && /^sharedAssets: templates\/architecture$/m.test(e2eSkill),
+    'frontend-e2e-testing: frontmatter order 8, pipeline false, sharedAssets templates/architecture');
+  ok(['E1', 'E2', 'E3', 'E4', 'E5'].every((g) => e2eSkill.includes(`### ${g}.`)),
+    'frontend-e2e-testing: SKILL.md có đủ cổng E1–E5');
+  ok(['E-r1', 'E-r2', 'E-r3', 'E-r4', 'E-r5', 'E-r6', 'E-r7'].every((r) => e2eSkill.includes(`| ${r} |`)),
+    'frontend-e2e-testing: SKILL.md có đủ quy tắc E-r1–E-r7');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {

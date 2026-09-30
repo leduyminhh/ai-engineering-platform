@@ -191,6 +191,17 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   ok(feOff && feOff.skillIds.length === 6, 'offeredCatalog: vẫn offer đủ 6 skill frontend đã publish');
 }
 
+// frontend-e2e-testing là DRAFT (spec 2026-09-29 §7.2, §9 P1): có trên đĩa nhưng wizard không offer.
+{
+  const feAll = skillCatalog().plugins.find((p) => p.id === 'frontend');
+  ok(feAll && feAll.skillIds.includes('frontend/frontend-e2e-testing'),
+    'skillCatalog: có frontend/frontend-e2e-testing (draft vẫn cài được bằng --skill)');
+  const feOff = offeredCatalog().plugins.find((p) => p.id === 'frontend');
+  ok(feOff && !feOff.skillIds.includes('frontend/frontend-e2e-testing'),
+    'offeredCatalog: KHÔNG offer frontend-e2e-testing (draft)');
+  ok(feOff && feOff.skillIds.length === 6, 'offeredCatalog: vẫn offer đủ 6 skill frontend đã publish (e2e-testing chưa publish)');
+}
+
 // ── unit: wizardReportModel — report "phần nào cài được qua wizard" (offered vs draft) ──
 {
   const m = wizardReportModel();
