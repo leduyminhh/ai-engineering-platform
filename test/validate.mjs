@@ -1199,6 +1199,26 @@ if (fs.existsSync(BUILD)) {
   for (const w of ['workflow-bugfix', 'workflow-security-review', 'workflow-performance']) {
     ok(offeredWf.includes(`workflows/${w}`), `offeredCatalog: vẫn offer workflows/${w} (closure fixer đã publish)`);
   }
+  const wf18 = (id) => workflows.stages.find((s) => s.id === id);
+  const step18 = (wf, n) => (wf ? parseSteps(wf.body).find((s) => s.n === n) : undefined) ?? { title: '', body: '', checkpoint: false };
+  const fixStepOk = (id, prevN, fixN, prevTitleRe, fixTitleRe) => {
+    const w = wf18(id);
+    const prev = step18(w, prevN), fix = step18(w, fixN);
+    ok(prevTitleRe.test(prev.title) && flat18(prev.body).includes('danh sách file'),
+      `${id} Bước ${prevN}: bước ⏸ trước xuất danh sách file được sửa (đầu vào F2)`);
+    ok(fixTitleRe.test(fix.title) && fix.body.includes('agent `backend-fixer`') && fix.body.includes('agent `frontend-fixer`'),
+      `${id} Bước ${fixN}: Thực hiện là agent backend-fixer ∥ frontend-fixer`);
+    ok(!flat18(fix.body).includes('Thực hiện:** session chính'), `${id} Bước ${fixN}: không còn session chính`);
+    ok(fix.body.includes('git status --porcelain') && fix.body.includes('git diff --name-only')
+      && flat18(fix.body).includes('⊆ danh sách') && flat18(fix.body).includes('không chứa file test'),
+      `${id} Bước ${fixN}: Gate so diff với mốc đầu bước, ⊆ danh sách, không chứa file test`);
+    ok(flat18(fix.body).includes('blocked'), `${id} Bước ${fixN}: Khi fail xử lý agent trả blocked`);
+    ok(w && w.agents.includes('backend-fixer') && w.agents.includes('frontend-fixer'),
+      `${id}: frontmatter agents có backend-fixer, frontend-fixer`);
+    ok(flat18(w?.body ?? '').includes('Fixer trả `blocked`'), `${id}: bảng lỗi có hàng Fixer trả blocked`);
+  };
+  fixStepOk('workflow-bugfix', 5, 6, /^Root cause/, /^Fix tối thiểu/);
+  ok(parseSteps(wf18('workflow-bugfix')?.body ?? '').length === 9, 'workflow-bugfix: vẫn 9 bước');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

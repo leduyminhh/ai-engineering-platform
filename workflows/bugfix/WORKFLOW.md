@@ -6,7 +6,7 @@ title: "Bugfix — tái hiện, root cause, fix tối thiểu, regression"
 kind: workflow
 tier: 1
 risk: medium
-agents: "backend-test-writer,frontend-test-writer,backend-reviewer,frontend-reviewer,engineering-quality-auditor"
+agents: "backend-test-writer,frontend-test-writer,backend-fixer,frontend-fixer,backend-reviewer,frontend-reviewer,engineering-quality-auditor"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -25,8 +25,8 @@ next: null
 
 ## Điều kiện tiên quyết
 
-- Skill/agent đã cài: `backend-test-writer`, `frontend-test-writer`, `backend-reviewer`,
-  `frontend-reviewer`, `engineering-quality-auditor`, skill `core/git-workflow`.
+- Skill/agent đã cài: `backend-test-writer`, `frontend-test-writer`, `backend-fixer`, `frontend-fixer`,
+  `backend-reviewer`, `frontend-reviewer`, `engineering-quality-auditor`, skill `core/git-workflow`.
 - Artifact phải có sẵn: không bắt buộc, nhưng có log/stacktrace/bug report giúp thu evidence nhanh hơn.
 - Baseline: xác định được vùng code nghi ngờ (module/service/component); build hiện tại của project XANH
   ngoài phần đang lỗi — được đo và ghi số mốc ở Bước 1.
@@ -98,24 +98,32 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   để xác nhận trước khi fix.
 - **Ràng buộc:** không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
   evidence hỗ trợ.
-- **Đầu ra:** giải thích root cause, có trích dẫn evidence.
+- **Đầu ra:** giải thích root cause, có trích dẫn evidence; **danh sách file/module được sửa** suy từ chuỗi nhân
+  quả (đầu vào cho Bước 6), người dùng xác nhận cùng root cause.
 - **Gate:** giải thích nhân quả khớp evidence, người dùng đồng ý.
 - **Khi fail:** người dùng không đồng ý root cause → quay lại Bước 4 thu thêm evidence hoặc xem lại giả
   thuyết.
-- **Evidence:** đoạn giải thích root cause + trích dẫn evidence tương ứng + xác nhận của người dùng.
+- **Evidence:** đoạn giải thích root cause + trích dẫn evidence tương ứng + danh sách file được sửa + xác nhận
+  của người dùng.
 
 ### Bước 6 — Fix tối thiểu
 
-- **Thực hiện:** session chính
-- **Đầu vào:** root cause đã xác nhận ở Bước 5
-- **Hành động:** sửa đúng nguyên nhân gốc, phạm vi thay đổi tối thiểu cần thiết; chạy lại failing test của
-  Bước 3.
+- **Thực hiện:** agent `backend-fixer` ∥ agent `frontend-fixer` (chỉ phía có lỗi theo Bước 2)
+- **Đầu vào:** oracle = failing test của Bước 3 + root cause và danh sách file được sửa đã xác nhận ở Bước 5
+- **Hành động:** agent sửa đúng nguyên nhân gốc theo skill `backend-fix`/`frontend-fix` (chế độ `bug`), phạm vi
+  thay đổi tối thiểu trong danh sách file; chạy lại failing test của Bước 3 và build/lint của module đụng.
 - **Ràng buộc:** cấm sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh; cấm chỉ sửa triệu chứng (che
-  lỗi mà không sửa nguyên nhân); cấm xoá/nới điều kiện test cho qua.
-- **Đầu ra:** code fix + failing test của Bước 3 chuyển xanh.
-- **Gate:** failing test chuyển xanh.
-- **Khi fail:** fix không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause.
-- **Evidence:** lệnh chạy lại đúng test của Bước 3 + exit code 0.
+  lỗi mà không sửa nguyên nhân); cấm xoá/nới điều kiện test cho qua; không sửa ngoài danh sách file — cần mở
+  rộng → agent trả `blocked`, session chính hỏi người dùng rồi gọi lại.
+- **Đầu ra:** code fix + failing test của Bước 3 chuyển xanh + build/lint xanh.
+- **Gate:** failing test chuyển xanh; build/lint xanh; so với trạng thái ghi lại ở đầu bước
+  (`git status --porcelain`), file thay đổi hoặc mới trong bước (`git diff --name-only` và
+  `git ls-files --others --exclude-standard`) ⊆ danh sách file của Bước 5 và không chứa file test/fixture/snapshot.
+- **Khi fail:** agent trả `blocked` → người dùng mở rộng danh sách (ghi bổ sung vào Đầu ra Bước 5) → gọi lại; fix
+  không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause; diff lệch danh sách
+  → revert phần lệch, không nhận.
+- **Evidence:** report của agent (lệnh chạy lại đúng test của Bước 3, exit code đỏ → 0) + danh sách file thay
+  đổi hoặc mới trong bước so với trạng thái đầu bước.
 
 ### Bước 7 — Regression
 
@@ -177,6 +185,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Cấm: sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh | Từ chối sửa, quay lại Bước 3/4 thu thêm evidence |
 | Cấm: chỉ sửa triệu chứng (che lỗi, không sửa nguyên nhân) | Từ chối, quay lại Bước 5 xác định lại root cause |
 | Cấm: xoá/nới điều kiện test cho qua | Từ chối, quay lại Bước 6 sửa đúng code |
+| Fixer trả `blocked` (Bước 6) | Người dùng mở rộng danh sách file có xác nhận, gọi lại agent; không tự mở phạm vi |
 | Người dùng không đồng ý root cause (sau Bước 5 ⏸) | Quay lại Bước 4 thu thêm evidence hoặc xem lại giả thuyết |
 | Người dùng không duyệt diff (sau Bước 9 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 
