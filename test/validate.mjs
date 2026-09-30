@@ -958,23 +958,23 @@ if (fs.existsSync(BUILD)) {
   ok(!!sec && ['engineering-quality-auditor', 'backend-test-writer', 'frontend-test-writer'].every((a) => sec.agents.includes(a)),
     'workflow-security-review: agents gồm auditor + 2 test-writer (regression test)');
   // D7: vùng rủi ro phải phủ authorization, SSRF và misconfiguration.
-  ok(/authorization/.test(secStep(1).body) && secStep(1).body.includes('SSRF') && /misconfiguration/i.test(secStep(1).body),
-    'workflow-security-review Bước 1: vùng rủi ro có authorization/access control, SSRF, security misconfiguration');
+  ok(/authorization/.test(secStep(2).body) && secStep(2).body.includes('SSRF') && /misconfiguration/i.test(secStep(2).body),
+    'workflow-security-review Bước 2: vùng rủi ro có authorization/access control, SSRF, security misconfiguration');
   // D8: secret lộ phải có bước rotate do người dùng thực hiện, đặt trước bước sửa code.
-  ok(secStep(5).title.includes('Thu hồi secret') && secStep(5).checkpoint && /rotate/.test(secStep(5).body) && /người dùng/.test(secStep(5).body),
-    'workflow-security-review Bước 5: bước Thu hồi secret (rotate) do người dùng thực hiện, có ⏸');
-  ok(/Regression/i.test(secStep(6).title) && secStep(6).body.includes('agent `backend-test-writer`') && secStep(6).body.includes('agent `frontend-test-writer`'),
-    'workflow-security-review Bước 6: regression test qua test-writer');
-  ok(secSteps.length === 9 && secStep(7).title.startsWith('Sửa') && secStep(8).title.startsWith('Re-scan') && secStep(9).title.startsWith('Commit'),
-    'workflow-security-review: 9 bước, Sửa ở Bước 7, Re-scan ở Bước 8, Commit ở Bước 9');
+  ok(secStep(6).title.includes('Thu hồi secret') && secStep(6).checkpoint && /rotate/.test(secStep(6).body) && /người dùng/.test(secStep(6).body),
+    'workflow-security-review Bước 6: bước Thu hồi secret (rotate) do người dùng thực hiện, có ⏸');
+  ok(/Regression/i.test(secStep(7).title) && secStep(7).body.includes('agent `backend-test-writer`') && secStep(7).body.includes('agent `frontend-test-writer`'),
+    'workflow-security-review Bước 7: regression test qua test-writer');
+  ok(secSteps.length === 10 && secStep(8).title.startsWith('Sửa') && secStep(9).title.startsWith('Re-scan') && secStep(10).title.startsWith('Commit'),
+    'workflow-security-review: 10 bước, Sửa ở Bước 8, Re-scan ở Bước 9, Commit ở Bước 10');
 
   const api = wfBody('workflow-api');
-  const apiStep4 = api ? parseSteps(api.body).find((s) => s.n === 4) ?? noStep : noStep;
+  const apiStep4 = api ? parseSteps(api.body).find((s) => s.n === 5) ?? noStep : noStep;
   ok(!!api && api.agents.includes('engineering-quality-auditor'), 'workflow-api: agents có engineering-quality-auditor');
   // D10: DoD đòi 0 blocker nên phải có bước review bảo mật, không chỉ kiểm drift.
   ok(apiStep4.body.includes('agent `backend-reviewer`') && apiStep4.body.includes('agent `engineering-quality-auditor`')
     && /authorization/.test(apiStep4.body) && /input validation/.test(apiStep4.body),
-    'workflow-api Bước 4: kiểm drift song song với auditor kiểm authorization + input validation');
+    'workflow-api Bước 5: kiểm drift song song với auditor kiểm authorization + input validation');
 
   const dbc = wfBody('workflow-db-change');
   const dbcSteps = dbc ? parseSteps(dbc.body) : [];
@@ -987,7 +987,7 @@ if (fs.existsSync(BUILD)) {
     'workflow-db-change Bước 8: cập nhật data-model.md và ghi nợ contract vào next_actions');
   ok(dbcSteps.length === 9 && dbcStep(9).title.startsWith('Commit'), 'workflow-db-change: 9 bước, Commit ở Bước 9');
 
-  ok(secStep(6).body.includes('local/test'), 'workflow-security-review Bước 6: test regression chỉ chạy trên môi trường local/test');
+  ok(secStep(7).body.includes('local/test'), 'workflow-security-review Bước 7: test regression chỉ chạy trên môi trường local/test');
   ok(/ngoại lệ/.test(dbcStep(7).body) && /Docker/.test(dbcStep(7).body),
     'workflow-db-change Bước 7: DB tạm là ngoại lệ, có fallback khi không có Docker/Testcontainers');
   // Bảng agent ở README liệt kê workflow dùng từng agent; phải đi theo frontmatter sau khi sửa D7–D10.
@@ -1114,6 +1114,17 @@ if (fs.existsSync(BUILD)) {
     const s1 = step17(w, 1);
     ok(/^Baseline/.test(s1.title) && flat17(s1.body).includes('session chính') && flat17(w?.body ?? '').includes('Baseline đỏ'),
       `${id}: Bước 1 là Baseline build/test do session chính đo, có hàng lỗi Baseline đỏ`);
+    ok(flat17((w?.body ?? '').split('## Điều kiện tiên quyết')[1]?.split('## Các bước')[0] ?? '').includes('ở Bước 1'),
+      `${id}: tiền điều kiện Baseline nêu được đo ở Bước 1`);
+  }
+
+  // WF11 (phần 2).
+  for (const [id, total] of [['workflow-api', 8], ['workflow-security-review', 10]]) {
+    const w = wf17(id);
+    const s1 = step17(w, 1);
+    ok(/^Baseline/.test(s1.title) && flat17(s1.body).includes('session chính') && flat17(w?.body ?? '').includes('Baseline đỏ'),
+      `${id}: Bước 1 là Baseline build/test do session chính đo, có hàng lỗi Baseline đỏ`);
+    ok((w ? parseSteps(w.body).length : 0) === total, `${id}: ${total} bước sau khi thêm Baseline`);
     ok(flat17((w?.body ?? '').split('## Điều kiện tiên quyết')[1]?.split('## Các bước')[0] ?? '').includes('ở Bước 1'),
       `${id}: tiền điều kiện Baseline nêu được đo ở Bước 1`);
   }
