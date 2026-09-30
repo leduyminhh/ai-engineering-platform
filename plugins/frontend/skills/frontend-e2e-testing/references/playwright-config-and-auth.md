@@ -30,6 +30,7 @@ assertLocalBaseURL(baseURL);
 
 export default defineConfig({
   testDir: './e2e',
+  retries: process.env.CI ? 2 : 1,
   reporter: [['html', { open: 'never' }]],
   use: { baseURL, trace: 'on-first-retry' },
   projects: [
@@ -43,7 +44,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: baseURL,
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
   },
 });
 ```
@@ -71,6 +72,9 @@ export function assertLocalBaseURL(url: string): void {
   }
 }
 ```
+
+Tên dịch vụ docker compose và `host.docker.internal` bị từ chối theo thiết kế; nếu project chạy FE trong container thì
+dùng cổng publish ra `localhost`.
 
 Người dùng đưa staging/production → từ chối, giải thích, đề nghị dựng môi trường local/test (thuộc E1, không tự dựng).
 
@@ -102,7 +106,8 @@ setup('đăng nhập tài khoản test', async ({ page }) => {
 });
 ```
 
-Nhãn `Tên đăng nhập`, `Mật khẩu`, `Đăng nhập` là minh hoạ: đọc form thật của project. Thêm `e2e/.auth/` vào `.gitignore`
+Nhãn `Tên đăng nhập`, `Mật khẩu`, `Đăng nhập` là minh hoạ: đọc form thật của project. Chọn phần tử chỉ xuất hiện một
+lần sau khi đăng nhập thành công (vd. heading của trang chủ), không chọn landmark có thể lặp như `navigation`. Thêm `e2e/.auth/` vào `.gitignore`
 vì file `storageState` chứa cookie phiên. Luồng không cần đăng nhập thì bỏ dự án `setup` và dòng `storageState`.
 
 ## 5. Evidence (E-r6)
@@ -112,6 +117,9 @@ vì file `storageState` chứa cookie phiên. Luồng không cần đăng nhập
 | Trace | `use.trace: 'on-first-retry'` trong config; xem bằng `npx playwright show-trace <đường-dẫn-trace.zip>` |
 | Report HTML | `reporter: [['html', { open: 'never' }]]`; mở bằng `npx playwright show-report` |
 | Chống flaky | `npx playwright test --repeat-each=3` phải xanh trước khi báo hoàn tất |
+
+`on-first-retry` chỉ ghi trace khi có retry (cần `retries` ≥ 1; mặc định của Playwright là 0 khi chạy local, 2 trên CI,
+xem https://playwright.dev/docs/trace-viewer-intro). Nếu project đặt `retries` về 0 thì chạy lượt E5 với `--trace on`.
 
 Trace và report đính kèm vào `result.flows[].trace` khi có test giữ đỏ vì bug thật (cổng E5).
 

@@ -738,7 +738,7 @@ Header đề xuất: `feat(frontend): add frontend-e2e-test-writer agent`
 
 ## Ngoài plan này (pha publish và nối workflow, sau pilot — spec §9 P1c/P2)
 
-- Thêm `frontend/frontend-e2e-testing` vào `plugins/_published.json`; lật assert draft ở `test/install.test.mjs` (khối `frontend-e2e-testing là DRAFT`: đổi `!includes` thành `includes` và `length === 6` thành `7`, cộng với khối data-integration nếu publish cùng lúc).
+- Thêm `frontend/frontend-e2e-testing` vào `plugins/_published.json`; khi publish một trong hai skill (e2e hoặc data-integration), lật assert `!includes` thành `includes` của chính skill đó và cập nhật `length === 6` ở CẢ HAI khối draft trong `test/install.test.mjs` (data-integration và e2e) thành số offered mới (7 nếu publish một skill, 8 nếu publish cả hai).
 - Nối `frontend-e2e-test-writer` vào `workflow-feature`, `workflow-testing`, `workflow-release` (smoke) — spec §8.1; xoá assert `chưa workflow nào dùng` ở khối "13.".
 - Thêm pointer từ `frontend-testing` sang skill này (thay câu "e2e … ngoài phạm vi recipe này" bằng liên kết).
 - Gate A3 (`git diff --name-only` của bước test chỉ chứa file test/e2e) — spec §8.5.

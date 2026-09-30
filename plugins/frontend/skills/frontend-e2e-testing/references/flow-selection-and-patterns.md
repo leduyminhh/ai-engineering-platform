@@ -53,7 +53,8 @@ test('AC-3: tạo hoá đơn mới hiển thị trong danh sách', async ({ page
 ## 4. Ổn định (E4) và bug thật (E5)
 
 1. Chạy `npx playwright test --repeat-each=3`.
-2. Có test đỏ → mở trace (`npx playwright show-trace <trace.zip>`) và phân loại:
+2. Có test đỏ → mở trace (`npx playwright show-trace <trace.zip>`; trace chỉ có khi đã chạy retry, xem mục 5 của
+   [playwright-config-and-auth.md](playwright-config-and-auth.md)) và phân loại:
    - **Lỗi của test** (selector sai, chờ sai, dữ liệu đụng nhau, thứ tự): sửa test, chạy lại từ bước 1.
    - **Hành vi ứng dụng sai** (kết quả không khớp AC): giữ nguyên đỏ đúng lý do, đính trace, ghi vào
      `result.flows[].status: failed_real_bug`. **Không sửa `src/`**, không `skip`, không nới assertion.

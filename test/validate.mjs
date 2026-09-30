@@ -884,6 +884,7 @@ if (fs.existsSync(BUILD)) {
   const e2eCfg = e2eFiles.includes('playwright-config-and-auth.md') ? e2eRead('playwright-config-and-auth.md') : '';
   ok(e2eCfg.includes("trace: 'on-first-retry'") && e2eCfg.includes('storageState') && e2eCfg.includes('E2E_BASE_URL'),
     'frontend-e2e-testing: config mẫu có trace on-first-retry, storageState, baseURL từ biến môi trường');
+  ok(/retries:\s*process\.env\.CI \? 2 : 1/.test(e2eCfg), 'frontend-e2e-testing: config mẫu có retries ≥ 1 để trace on-first-retry được ghi');
   ok(e2eCfg.includes('assertLocalBaseURL') && /staging/.test(e2eCfg) && /production/.test(e2eCfg),
     'frontend-e2e-testing: có hàm chặn host không phải local/test (staging/production)');
   ok(e2eCfg.includes('https://playwright.dev/'),
