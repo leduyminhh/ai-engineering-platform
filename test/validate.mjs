@@ -1009,6 +1009,16 @@ if (fs.existsSync(BUILD)) {
   const specStep4 = (specSkill.split('4. **Ghi ADR')[1] ?? '').split('5. **Verify')[0];
   ok(specStep4.includes('engineering-adr') && !specStep4.includes('<số kế tiếp>'),
     'S6: engineering-spec-writing bước 4 trỏ sang engineering-adr, không còn thủ tục đánh số ADR');
+
+  // WF9: nhóm "khác" từng không có reviewer; diff đụng contract/controller từng không kiểm drift.
+  const cr = wf16('workflow-code-review');
+  const crStep = (n) => (cr ? parseSteps(cr.body).find((s) => s.n === n) ?? noStep16 : noStep16);
+  ok(/CI/.test(crStep(2).body) && /IaC/.test(crStep(2).body) && /SQL/.test(crStep(2).body),
+    'workflow-code-review Bước 2: nhóm "khác" tách CI/IaC/SQL khỏi docs/config thuần');
+  ok(crStep(3).body.includes('agent `engineering-quality-auditor`') && /CI\/IaC\/SQL/.test(crStep(3).body),
+    'workflow-code-review Bước 3: auditor review nhóm CI/IaC/SQL');
+  ok(crStep(3).body.includes('docs/contracts') && /drift/.test(crStep(3).body) && crStep(3).body.includes('agent `backend-reviewer`'),
+    'workflow-code-review Bước 3: diff đụng docs/contracts hoặc controller thì backend-reviewer kiểm drift');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

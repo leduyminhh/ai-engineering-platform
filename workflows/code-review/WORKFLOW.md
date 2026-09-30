@@ -19,8 +19,8 @@ next: null
 ## Mục tiêu & đầu vào
 
 - **Mục tiêu:** review một diff/PR đã có sẵn theo đúng trục (correctness, thiết kế/kiến trúc, a11y, test
-  coverage), trả về danh sách finding đã validate theo severity, và một verdict rõ ràng — không sửa code,
-  không commit.
+  coverage, drift contract khi diff chạm contract/controller; CI/IaC/SQL do auditor soát), trả về danh sách
+  finding đã validate theo severity, và một verdict rõ ràng — không sửa code, không commit.
 - **Đầu vào bắt buộc:** diff/PR cần review (số PR, branch, hoặc patch dán trực tiếp).
 - **Đầu vào tuỳ chọn:** mô tả intent của PR (nếu có sẵn trong PR description), yêu cầu/spec liên quan.
 
@@ -54,24 +54,30 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** danh sách file đổi từ Bước 1
-- **Hành động:** gán mỗi file vào `backend`, `frontend`, hoặc `khác` (docs/config/CI…); đối chiếu với cấu
-  trúc thư mục project để tránh gán sai.
-- **Ràng buộc:** không bỏ sót file nào trong diff; file `khác` vẫn phải liệt kê dù không có reviewer chuyên
-  trách.
-- **Đầu ra:** bảng file → BE/FE/khác.
-- **Gate:** mỗi file gán BE, FE hoặc khác.
+- **Hành động:** gán mỗi file vào `backend`, `frontend`, hoặc `khác`; đối chiếu với cấu trúc thư mục project
+  để tránh gán sai. Nhóm `khác` tách tiếp: file CI/IaC/SQL (pipeline CI, Dockerfile/IaC, migration SQL) và
+  file docs/config thuần. Đánh dấu file chạm `docs/contracts/` hoặc controller/route của backend để Bước 3
+  kiểm drift contract↔code.
+- **Ràng buộc:** không bỏ sót file nào trong diff; file docs/config thuần vẫn phải liệt kê dù không có
+  reviewer chuyên trách.
+- **Đầu ra:** bảng file → BE/FE/khác (CI/IaC/SQL hoặc docs/config) + danh sách file cần kiểm drift.
+- **Gate:** mỗi file gán BE, FE hoặc khác (kèm nhóm con của khác).
 - **Khi fail:** một file không rõ thuộc phía nào → hỏi người dùng, hoặc gán tạm "khác" và ghi rõ lý do.
 - **Evidence:** bảng phân vùng file trong report bước.
 
 ### Bước 3 — Review song song
 
 - **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` ∥ agent `engineering-quality-auditor`
-  (chỉ vùng có đụng theo Bước 2)
+  (chỉ vùng có đụng theo Bước 2, gồm nhóm CI/IaC/SQL)
 - **Đầu vào:** diff đầy đủ + bảng phân vùng từ Bước 2
 - **Hành động:** mỗi agent review đúng phía được gán theo trục correctness/thiết kế-kiến trúc/a11y/test
-  coverage/quality-security; trích `file:line` cụ thể cho từng finding.
-- **Ràng buộc:** chỉ đọc, không tự sửa code; không review phía không có file đụng.
-- **Đầu ra:** danh sách finding thô theo severity (contract đầu ra, `core:principles`) từ mỗi agent.
+  coverage/quality-security; trích `file:line` cụ thể cho từng finding. `engineering-quality-auditor` cũng
+  review nhóm `khác` là CI/IaC/SQL (quyền quá rộng, secret, cấu hình không an toàn, migration nguy hiểm);
+  nhóm docs/config thuần ghi "không cần reviewer". Diff chạm `docs/contracts/` hoặc controller/route thì
+  `backend-reviewer` kiểm thêm drift contract↔code.
+- **Ràng buộc:** chỉ đọc, không tự sửa code; không review phía không có file đụng; không in giá trị secret.
+- **Đầu ra:** danh sách finding thô theo severity (contract đầu ra, `core:principles`) từ mỗi agent, kèm kết
+  quả kiểm drift nếu có.
 - **Gate:** mỗi agent trả finding theo schema.
 - **Khi fail:** một agent không trả finding theo đúng schema (thiếu `file:line`/severity) → yêu cầu agent đó
   bổ sung lại, không tự bịa field thiếu.
