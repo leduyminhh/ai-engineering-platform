@@ -1221,6 +1221,11 @@ if (fs.existsSync(BUILD)) {
   ok(parseSteps(wf18('workflow-bugfix')?.body ?? '').length === 9, 'workflow-bugfix: vẫn 9 bước');
   fixStepOk('workflow-security-review', 5, 8, /^Kế hoạch remediation/, /^Sửa/);
   ok(parseSteps(wf18('workflow-security-review')?.body ?? '').length === 10, 'workflow-security-review: vẫn 10 bước');
+  fixStepOk('workflow-performance', 3, 4, /^Profile & giả thuyết/, /^Tối ưu/);
+  ok(parseSteps(wf18('workflow-performance')?.body ?? '').length === 7, 'workflow-performance: vẫn 7 bước');
+  // Review Focus 2: chế độ performance không có oracle đỏ — bước phải nói rõ số đo thuộc Bước 5.
+  ok(flat18(step18(wf18('workflow-performance'), 4).body).includes('Bước 5'),
+    'workflow-performance Bước 4: không kết luận hiệu năng, số đo thuộc Bước 5');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
