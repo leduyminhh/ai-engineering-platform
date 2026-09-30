@@ -525,3 +525,6 @@ Header đề xuất: `fix(workflows): add measured baseline step to api and secu
 - **A4/Q2:** chuyển bước sửa code ở session chính (bugfix Bước sửa, security-review Bước Sửa, performance tối ưu) sang agent implementer: `frontend-implementer` được thiết kế cho dựng UI từ thiết kế và `backend-implementer` cho vertical slice, chưa rõ có phù hợp sửa lỗi tuỳ ý; cần quyết định thiết kế.
 - **G10:** chủ sở hữu và công cụ profiling cho `workflow-performance`.
 - **Pilot:** Q6 (`data-db-migration` trên project Spring nào), Q7 (`frontend-data-integration` trên project React nào).
+- **`db-change` ngoài WF11:** `db-change` bị loại khỏi WF11 (baseline đo được) có chủ đích (D-2) dù spec ghi "mọi workflow có sửa code".
+- **WF12 performance:** "trục reviewer sau S4" (G10) chưa làm.
+- **Số bước trong spec:** các số bước trong spec (W-b: "bugfix Bước 5, security-review Bước 5, db-change Bước 3") đã lệch sau khi đánh số lại; spec vẫn ở trạng thái "Đề xuất", cần cập nhật khi duyệt.

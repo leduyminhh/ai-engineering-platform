@@ -79,10 +79,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** viết integration test cho endpoint + contract test đối chiếu response thật với schema OpenAPI.
 - **Ràng buộc:** không viết test giòn phụ thuộc dữ liệu ngoài tầm kiểm soát.
 - **Đầu ra:** integration test + contract test, chạy được.
-- **Gate:** integration + contract test pass; `git diff --name-only` của bước chỉ chứa file test (và
-  fixture/mock của test).
+- **Gate:** integration + contract test pass; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`),
+  các file thay đổi hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`)
+  chỉ gồm file test (và fixture/mock của test).
 - **Khi fail:** test fail → phân tích failure → sửa code (không xoá/nới test) → chạy lại.
-- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail; kết quả `git diff --name-only`.
+- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail; danh sách file thay đổi hoặc mới trong bước so
+  với trạng thái đầu bước.
 
 ### Bước 5 — Kiểm drift & bảo mật
 

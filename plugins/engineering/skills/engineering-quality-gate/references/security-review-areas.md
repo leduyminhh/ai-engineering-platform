@@ -5,8 +5,8 @@ OWASP/ASVS/CWE qua [owasp-asvs-cwe-mapping.md](owasp-asvs-cwe-mapping.md) và tr
 
 ## Ánh xạ với vùng rủi ro của `workflow-security-review`
 
-Workflow chia 8 vùng để phân công; file này gom checklist thành 5 vùng. Khi review theo vùng của workflow, nạp
-mục tương ứng dưới đây:
+Workflow chia 8 vùng để xác định phạm vi; file này gom checklist thành 5 vùng. Khi review theo vùng của workflow,
+nạp mục tương ứng dưới đây:
 
 | Vùng của workflow | Mục trong file này |
 |---|---|

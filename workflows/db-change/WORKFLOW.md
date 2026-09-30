@@ -102,9 +102,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** session chính
 - **Đầu vào:** migration đã qua review từ Bước 4 + target DB đã xác nhận ở Bước 5
 - **Hành động:** chạy chu trình verify theo công cụ migration của project trên DB test. Công cụ có rollback
-  (vd Liquibase, Alembic): migrate up → rollback → migrate up lại. Công cụ forward-only (vd Flyway khi dùng theo
-  hướng forward-only): migrate up, rồi áp migration bù đã thiết kế ở Bước 2 (nếu có), và kiểm schema/dữ liệu sau
-  từng lượt. Xác nhận mọi lượt thành công.
+  (vd Liquibase, Alembic): migrate up → rollback → migrate up lại. Công cụ forward-only (vd Flyway khi dùng
+  theo hướng forward-only): migrate up, rồi áp migration bù đã thiết kế ở Bước 2 và kiểm schema/dữ liệu sau
+  từng lượt; nếu Bước 2 chưa thiết kế migration bù cho thay đổi này thì quay lại Bước 2 bổ sung, không tự bịa
+  migration bù. Xác nhận mọi lượt thành công.
 - **Ràng buộc:** chỉ chạy trên đúng target đã xác nhận ở Bước 5 (cấu hình kết nối đổi → quay lại Bước 5);
   cấm chạy trên DB production; cấm thay đổi phá huỷ dữ liệu khi chưa được người dùng xác nhận ở Bước 2; không
   giả lập lượt rollback bằng cách sửa tay schema.
@@ -126,12 +127,14 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   Testcontainers, là ngoại lệ); không sửa code production — bug thật thì giữ test đỏ và báo; không xoá/nới
   test để qua.
 - **Đầu ra:** integration test cho query/repository bị ảnh hưởng, chạy được.
-- **Gate:** integration test pass; `git diff --name-only` của bước chỉ chứa file test (và fixture/mock của
-  test).
+- **Gate:** integration test pass; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file
+  thay đổi hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm
+  file test (và fixture/mock của test).
 - **Khi fail:** lỗi do test → sửa test; lỗi do code hoặc migration → quay lại Bước 3 sửa, chạy lại từ Bước 4;
   project không có DB tạm (Docker/Testcontainers) → chạy trên target đã xác nhận ở Bước 5, hoặc hỏi người dùng
   nếu chưa có, không tự dựng hạ tầng.
-- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail; kết quả `git diff --name-only`.
+- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail; danh sách file thay đổi hoặc mới trong bước so
+  với trạng thái đầu bước.
 
 ### Bước 8 — Cập nhật data-model & nợ contract
 
@@ -189,8 +192,9 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - **Điều kiện dừng:** người dùng không xác nhận thiết kế migration sau nhiều vòng; chu trình verify migration
   liên tục thất bại; finding `blocker` không sửa được; người dùng không duyệt diff; yêu cầu chạy migration
   trên production.
-- **Rollback:** migration đã viết có sẵn script rollback riêng (Bước 2); trước checkpoint commit, chưa có gì
-  để rollback ở tầng git; workflow không tự chạy migration trên production nên không cần rollback ở đó.
+- **Rollback:** migration đã viết có sẵn script rollback riêng, hoặc migration bù với công cụ forward-only
+  (Bước 2); trước checkpoint commit, chưa có gì để rollback ở tầng git; workflow không tự chạy migration trên
+  production nên không cần rollback ở đó.
 
 ## Definition of Done
 

@@ -77,9 +77,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** viết test đúng loại đã chọn cho từng hành vi trong danh sách.
 - **Ràng buộc:** không viết test giòn (phụ thuộc thứ tự/thời gian/mạng thật).
 - **Đầu ra:** test mới, chạy được.
-- **Gate:** test chạy được; `git diff --name-only` của bước chỉ chứa file test (và fixture/mock của test).
+- **Gate:** test chạy được; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi
+  hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test
+  (và fixture/mock của test).
 - **Khi fail:** test không chạy được (lỗi biên dịch/setup) → sửa test, chạy lại.
-- **Evidence:** lệnh chạy test + exit code; kết quả `git diff --name-only`.
+- **Evidence:** lệnh chạy test + exit code; danh sách file thay đổi hoặc mới trong bước so với trạng thái đầu
+  bước.
 
 ### Bước 5 — Chạy & phân tích failure
 
@@ -89,10 +92,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   bug); lỗi code → đề xuất chạy `workflow-bugfix`.
 - **Ràng buộc:** không tự sửa code production để test qua khi failure là lỗi code — chỉ đề xuất `workflow-bugfix`.
 - **Đầu ra:** danh sách failure đã phân loại (nếu có).
-- **Gate:** mọi failure phân loại lỗi test | lỗi code; lỗi code → đề xuất `workflow-bugfix`;
-  `git diff --name-only` của bước chỉ chứa file test (và fixture/mock của test).
+- **Gate:** mọi failure phân loại lỗi test | lỗi code; lỗi code → đề xuất `workflow-bugfix`; so với trạng thái
+  ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only`
+  và `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test).
 - **Khi fail:** không phân loại được nguyên nhân failure → hỏi người dùng thêm ngữ cảnh, không tự đoán.
-- **Evidence:** lệnh chạy test + exit code + danh sách failure đã phân loại; kết quả `git diff --name-only`.
+- **Evidence:** lệnh chạy test + exit code + danh sách failure đã phân loại; danh sách file thay đổi hoặc mới
+  trong bước so với trạng thái đầu bước.
 
 ### Bước 6 — Coverage
 

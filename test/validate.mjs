@@ -796,17 +796,17 @@ if (fs.existsSync(BUILD)) {
 {
   const readRepo = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
   const testing = readRepo('workflows', 'testing', 'WORKFLOW.md');
-  // Bước 4 cấm sửa code production; câu phủ định "không sửa code" là hợp lệ nên loại trước khi kiểm.
+  // Bước 5 cấm sửa code production; câu phủ định "không sửa code" là hợp lệ nên loại trước khi kiểm.
   const testFailRow = testing.split('\n').find((l) => l.startsWith('| Test fail |')) ?? '';
   ok(testFailRow !== '' && !testFailRow.replaceAll('không sửa code', '').includes('sửa code'),
-    'P0 WF1: workflow-testing có dòng "Test fail" và không bảo "sửa code" (mâu thuẫn Bước 4)');
+    'P0 WF1: workflow-testing có dòng "Test fail" và không bảo "sửa code" (mâu thuẫn Bước 5)');
   // "sửa test" phải kèm rào chắn chống xoá/nới test để qua; lỗi code phải chuyển sang workflow-bugfix.
   ok(testFailRow.includes('nới') && testFailRow.includes('workflow-bugfix'),
     'P0 WF1: dòng "Test fail" giữ rào "không xoá/nới test" và định tuyến lỗi code sang workflow-bugfix');
-  const step5 = testing.split('### Bước 5')[1]?.split('### Bước 6')[0] ?? '';
-  const step5Input = step5.split('\n').find((l) => l.startsWith('- **Đầu vào:**')) ?? '';
-  ok(step5Input !== '' && !step5Input.includes('đã chạy xanh'),
-    'P0 WF1: workflow-testing Bước 5 không đòi "đã chạy xanh" (lỗi code chuyển sang workflow-bugfix nên không xanh toàn bộ)');
+  const step6 = testing.split('### Bước 6')[1]?.split('### Bước 7')[0] ?? '';
+  const step6Input = step6.split('\n').find((l) => l.startsWith('- **Đầu vào:**')) ?? '';
+  ok(step6Input !== '' && !step6Input.includes('đã chạy xanh'),
+    'P0 WF1: workflow-testing Bước 6 không đòi "đã chạy xanh" (lỗi code chuyển sang workflow-bugfix nên không xanh toàn bộ)');
   const docs = readRepo('workflows', 'docs', 'WORKFLOW.md');
   ok(!docs.includes('| Build fail | Chẩn đoán') && !docs.includes('| Test fail | Phân tích failure'),
     'P0 WF2: workflow-docs không còn boilerplate Build fail/Test fail (workflow không build/test)');
@@ -1078,15 +1078,19 @@ if (fs.existsSync(BUILD)) {
     'workflow-db-change Bước 6: Gate nêu chu trình verify theo công cụ');
 
   // A3: mode write không khoá được theo đường dẫn nên mỗi bước test-writer phải tự chứng minh chỉ đụng file test.
+  let matched = 0;
   for (const w17 of workflows.stages) {
     for (const st of parseSteps(w17.body)) {
       const doer = st.body.split('\n').find((l) => l.includes('**Thực hiện:**')) || '';
       if (!/agent `(backend|frontend)-test-writer`/.test(doer)) continue;
+      matched += 1;
       const gate = flat17((st.body.split('**Gate:**')[1] ?? '').split('\n- **')[0]);
-      ok(gate.includes('git diff --name-only') && /file test/.test(gate),
-        `${w17.id} bước ${st.n}: Gate kiểm git diff --name-only chỉ chứa file test`);
+      const evidence = flat17((st.body.split('**Evidence:**')[1] ?? '').split('\n- **')[0]);
+      ok(gate.includes('git diff --name-only') && gate.includes('đầu bước') && /file test/.test(gate) && evidence.includes('đầu bước'),
+        `${w17.id} bước ${st.n}: Gate/Evidence kiểm file thay đổi so với đầu bước, chỉ chứa file test`);
     }
   }
+  ok(matched >= 9, 'A3: có ít nhất 9 bước test-writer được kiểm gate');
 
   // WF12: thiếu thang severity mặc định, thiếu bước truyền thông, "đủ thời gian" theo dõi không có ngưỡng.
   const inc17 = wf17('workflow-incident');
@@ -1105,8 +1109,12 @@ if (fs.existsSync(BUILD)) {
   const areas17 = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-quality-gate', 'references', 'security-review-areas.md'), 'utf8');
   ok(/authorization|phân quyền|kiểm quyền/i.test(areas17) && /SSRF/.test(areas17) && /misconfiguration|cấu hình (sai|không an toàn)/i.test(areas17),
     'quality-gate security-review-areas: có key check authorization, SSRF, security misconfiguration');
-  ok(areas17.includes('| authorization/access control |') && areas17.includes('| SSRF |') && areas17.includes('| security misconfiguration |'),
-    'quality-gate security-review-areas: bảng ánh xạ 8 vùng của workflow-security-review sang 5 vùng');
+  ok(areas17.includes('**Security misconfiguration:**'),
+    'quality-gate security-review-areas: có bullet "**Security misconfiguration:**" ở mục Crypto / Secrets');
+  for (const area of ['auth/session', 'authorization/access control', 'input validation', 'SSRF', 'crypto/secrets', 'dependency', 'security misconfiguration', 'logging']) {
+    ok(areas17.includes(`| ${area} |`),
+      `quality-gate security-review-areas: bảng ánh xạ có hàng vùng "${area}" của workflow-security-review`);
+  }
 
   // WF11 (phần 1): baseline từng chỉ là tiền điều kiện không ai đo (W-a).
   for (const id of ['workflow-feature', 'workflow-bugfix', 'workflow-testing']) {

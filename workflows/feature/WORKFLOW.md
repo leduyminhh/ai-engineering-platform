@@ -99,11 +99,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** không sửa code production để "cho test xanh"; không viết test phụ thuộc thứ tự/thời gian
   thực/mạng thật.
 - **Đầu ra:** test mới + báo cáo test pass.
-- **Gate:** mỗi acceptance criterion ≥1 test; test pass; `git diff --name-only` của bước chỉ chứa file test
-  (và fixture/mock của test).
+- **Gate:** mỗi acceptance criterion ≥1 test; test pass; so với trạng thái ghi lại ở đầu bước
+  (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only` và
+  `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test).
 - **Khi fail:** test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test); test đỏ do lỗi viết
   test → sửa test.
-- **Evidence:** lệnh test + exit code 0 + số liệu (`X tests, X passed`); kết quả `git diff --name-only`.
+- **Evidence:** lệnh test + exit code 0 + số liệu (`X tests, X passed`); danh sách file thay đổi hoặc mới
+  trong bước so với trạng thái đầu bước.
 
 ### Bước 6 — Review
 

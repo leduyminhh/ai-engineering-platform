@@ -94,10 +94,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   xuất; người dùng là người thực hiện.
 - **Đầu ra:** phương án mitigation người dùng đã chọn và (báo) đã thực hiện, kèm cửa sổ theo dõi và ngưỡng
   metric đã chốt.
-- **Gate:** người dùng chọn/thực hiện mitigation; không agent nào tác động production.
+- **Gate:** người dùng chọn/thực hiện mitigation; không agent nào tác động production; cửa sổ theo dõi và
+  ngưỡng metric đã chốt.
 - **Khi fail:** người dùng chưa chọn được phương án → dừng, chờ xác nhận, không tự đề xuất mặc định rồi thực
   hiện thay.
-- **Evidence:** phương án mitigation đã chọn + xác nhận của người dùng đã thực hiện.
+- **Evidence:** phương án mitigation đã chọn + xác nhận của người dùng đã thực hiện; cửa sổ theo dõi và ngưỡng
+  đã chốt.
 
 ### Bước 5 — Cập nhật stakeholder ⏸
 
@@ -116,7 +118,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 ### Bước 6 — Xác minh phục hồi
 
 - **Thực hiện:** agent `ops-incident-investigator`
-- **Đầu vào:** mitigation đã thực hiện từ Bước 4
+- **Đầu vào:** mitigation đã thực hiện từ Bước 4, cùng cửa sổ theo dõi và ngưỡng metric đã chốt ở Bước 4
 - **Hành động:** theo dõi metric/health check liên quan sau khi mitigation được thực hiện; đối chiếu theo
   ngưỡng metric và cửa sổ theo dõi đã chốt ở Bước 4 với ngưỡng bình thường trước sự cố (từ Bước 1–2) để xác
   nhận đã phục hồi.
