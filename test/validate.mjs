@@ -843,6 +843,22 @@ if (fs.existsSync(BUILD)) {
     .filter((d) => d !== 'frontend-data-integration')
     .flatMap((d) => listFilesRec(path.join(PLUGINS_DIR, 'frontend', 'skills', d, 'references')));
   ok(diFiles.every((f) => !diOtherRefs.includes(f)), 'frontend-data-integration: tên file references không trùng skill frontend khác');
+  const diAgentPath = path.join(PLUGINS_DIR, 'frontend', 'agents', 'frontend-data-integrator.md');
+  const diAgentExists = fs.existsSync(diAgentPath);
+  ok(diAgentExists, 'frontend-data-integrator: có agent file');
+  const diAgent = diAgentExists ? fs.readFileSync(diAgentPath, 'utf8') : '';
+  ok(/^mode: write$/m.test(diAgent) && /^skills: "frontend-data-integration"$/m.test(diAgent),
+    'frontend-data-integrator: mode write, skills = frontend-data-integration');
+  ok(diAgent.includes('container') && diAgent.includes('docs/contracts/') && diAgent.includes('core:principles'),
+    'frontend-data-integrator: nối ở container/page, không sửa docs/contracts/, trỏ contract đầu ra ở core:principles');
+  // N1: agent chưa được nối vào workflow trước pha publish, vì installer ẩn workflow có closure chưa được offer.
+  // Xoá assert này ở pha publish (spec §9 P1c) khi WF4/WF5 thêm agent.
+  const diWfDir = path.join(REPO_ROOT, 'workflows');
+  const diWfMentions = fs.readdirSync(diWfDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(diWfDir, e.name, 'WORKFLOW.md')))
+    .filter((e) => fs.readFileSync(path.join(diWfDir, e.name, 'WORKFLOW.md'), 'utf8').includes('frontend-data-integrator'))
+    .map((e) => e.name);
+  ok(diWfMentions.length === 0, `frontend-data-integrator: chưa workflow nào dùng (draft) — đang nhắc ở: ${diWfMentions.join(', ')}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
