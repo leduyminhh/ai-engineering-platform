@@ -1439,6 +1439,30 @@ if (fs.existsSync(BUILD)) {
   ok(paScope.includes('not_run'), 'backend-performance-analyst: thiếu môi trường → not_run');
   ok(pa.includes('core:principles') && pa.includes('git diff --name-only'),
     'backend-performance-analyst: report theo core:principles, tự đối chiếu diff');
+  const perfWf = wf20('workflow-performance');
+  const pS1 = step20(perfWf, 1), pS2 = step20(perfWf, 2), pS3 = step20(perfWf, 3), pS5 = step20(perfWf, 5);
+  for (const [n, s, mode] of [[2, pS2, 'measure'], [3, pS3, 'profile'], [5, pS5, 'measure']]) {
+    ok(field20(s.body, 'Thực hiện').includes('agent `backend-performance-analyst`') && field20(s.body, 'Thực hiện').includes(`\`${mode}\``),
+      `workflow-performance Bước ${n}: Thực hiện là backend-performance-analyst chế độ ${mode}`);
+    ok(flat20(s.body).includes('Phía FE: chưa có skill'), `workflow-performance Bước ${n}: có câu chờ cho phía FE`);
+  }
+  ok(field20(pS1.body, 'Đầu ra').includes('điều kiện đo'), 'workflow-performance Bước 1: Đầu ra có điều kiện đo sơ bộ');
+  for (const [n, s] of [[2, pS2], [3, pS3]]) {
+    ok(field20(s.body, 'Gate').includes('`perf/`') && field20(s.body, 'Gate').includes('git diff --name-only'),
+      `workflow-performance Bước ${n}: Gate so diff chỉ perf/ bench/ config tool đo`);
+  }
+  ok(field20(pS2.body, 'Khi fail').includes('blocked'), 'workflow-performance Bước 2: thiếu môi trường → dừng blocked');
+  ok(field20(pS5.body, 'Đầu vào').includes('Bước 2') && field20(pS5.body, 'Ràng buộc').includes('điều kiện'),
+    'workflow-performance Bước 5: dùng lại script + bảng điều kiện Bước 2, không đổi điều kiện');
+  ok(field20(pS5.body, 'Gate').includes('nhiễu'), 'workflow-performance Bước 5: nhiễu vượt P3 → không kết luận');
+  ok(pS3.checkpoint, 'workflow-performance Bước 3: giữ ⏸');
+  ok(perfWf && perfWf.agents.includes('backend-performance-analyst'), 'workflow-performance: frontmatter agents có backend-performance-analyst');
+  ok(parseSteps(perfWf?.body ?? '').length === 7, 'workflow-performance: vẫn 7 bước');
+  ok((offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? []).includes('workflows/workflow-performance'),
+    'offeredCatalog: vẫn offer workflows/workflow-performance (closure analyst đã publish)');
+  const perfErr = flat20(perfWf?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '');
+  ok(perfErr.includes('Môi trường đo thiếu') && perfErr.includes('lệch Bước 2') && perfErr.includes('Nhiễu vượt'),
+    'workflow-performance: bảng lỗi có 3 hàng môi trường thiếu / điều kiện lệch / nhiễu');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
