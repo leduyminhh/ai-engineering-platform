@@ -1270,6 +1270,19 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 19. SOURCE: S7 + publish frontend-data-integration/e2e-testing + WF4/WF5/WF6 (spec 2026-09-29 §3.3, §5.3, §7.2, §7.3.7)
+{
+  const flat19 = (t) => t.replace(/\s+/g, ' ');
+  const wf19 = (id) => workflows.stages.find((s) => s.id === id);
+  const step19 = (wf, n) => (wf ? parseSteps(wf.body).find((s) => s.n === n) : undefined) ?? { title: '', body: '', checkpoint: false };
+  // Lấy riêng một trường của bước để assert không khớp nhầm chữ ở trường khác.
+  const field19 = (body, name) => flat19(body).split(`**${name}:**`)[1]?.split(' - **')[0] ?? '';
+  const ft19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-testing', 'SKILL.md'), 'utf8');
+  ok(flat19(ft19).includes('`frontend-e2e-testing`') && !/e2e[^.]*ngoài phạm vi recipe này\s*;/.test(flat19(ft19)),
+    'frontend-testing (S7): trỏ e2e sang skill frontend-e2e-testing, không còn chỉ ghi "ngoài phạm vi"');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');
