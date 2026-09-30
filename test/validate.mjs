@@ -1019,6 +1019,17 @@ if (fs.existsSync(BUILD)) {
     'workflow-code-review Bước 3: auditor review nhóm CI/IaC/SQL');
   ok(crStep(3).body.includes('docs/contracts') && /drift/.test(crStep(3).body) && crStep(3).body.includes('agent `backend-reviewer`'),
     'workflow-code-review Bước 3: diff đụng docs/contracts hoặc controller thì backend-reviewer kiểm drift');
+
+  // WF8: baseline từng chỉ là tiền điều kiện không ai đo (W-a); migration chờ chạy từng không được kiểm.
+  const rel = wf16('workflow-release');
+  const relSteps = rel ? parseSteps(rel.body) : [];
+  const relStep = (n) => relSteps.find((s) => s.n === n) ?? noStep16;
+  ok(relSteps.length === 8 && /Baseline/.test(relStep(1).title) && relStep(1).body.includes('session chính'),
+    'workflow-release: 8 bước, Bước 1 là Baseline build/test do session chính đo');
+  ok(relStep(2).title.startsWith('Quality gate') && relStep(4).title.startsWith('Version bump') && relStep(8).title.startsWith('Tag'),
+    'workflow-release: Quality gate ở Bước 2, Version bump ở Bước 4, Tag ở Bước 8');
+  ok(relStep(5).body.includes('agent `ops-release-engineer`') && /migration/.test(relStep(5).body) && /thứ tự/.test(relStep(5).body),
+    'workflow-release Bước 5: deploy checklist kiểm migration chờ chạy và thứ tự migration↔deploy');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
