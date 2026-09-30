@@ -1428,6 +1428,17 @@ if (fs.existsSync(BUILD)) {
   ok(cowork20.includes('backend:backend-performance'), '_cowork.json: có backend:backend-performance');
   const beMan20 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', '.manifest.json'), 'utf8'));
   ok(beMan20.version === '1.5.0', 'backend manifest: version 1.5.0');
+  const paPath = path.join(PLUGINS_DIR, 'backend', 'agents', 'backend-performance-analyst.md');
+  const pa = fs.existsSync(paPath) ? fs.readFileSync(paPath, 'utf8') : '';
+  ok(pa.length > 0, 'backend-performance-analyst: có agent file');
+  ok(/^mode: write$/m.test(pa) && /^skills: "backend-performance"$/m.test(pa),
+    'backend-performance-analyst: mode write, skills = backend-performance (đúng 1 skill)');
+  const paScope = flat20(pa.split('## Phạm vi')[1]?.split('## Quy trình')[0] ?? '');
+  ok(paScope.includes('`perf/`') && paScope.includes('`bench/`') && paScope.includes('`src/`') && paScope.includes('staging/production'),
+    'backend-performance-analyst: Phạm vi chỉ ghi perf/ bench/, cấm sửa src/, cấm staging/production');
+  ok(paScope.includes('not_run'), 'backend-performance-analyst: thiếu môi trường → not_run');
+  ok(pa.includes('core:principles') && pa.includes('git diff --name-only'),
+    'backend-performance-analyst: report theo core:principles, tự đối chiếu diff');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
