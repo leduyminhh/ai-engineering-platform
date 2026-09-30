@@ -3,7 +3,7 @@
 - Ngày: 2026-09-29
 - Trạng thái: **Đang thực thi** (cập nhật 2026-09-30). P0 xong; P1 xong (`data-db-migration` vẫn draft);
   P1c xong (publish không chờ pilot, 2026-09-30); P1b chờ pilot (Q6); P2 phần lớn xong (WF3 phần dùng skill
-  chờ P1b); P3 còn G10. Tiến độ và việc còn lại: §13.
+  chờ P1b); P3 xong (G10 phần backend, 2026-09-30); frontend performance còn mở. Tiến độ và việc còn lại: §13.
 - Phạm vi: đánh giá chất lượng 4 plugin `backend`, `frontend`, `engineering`, `workflows`; định hướng nâng cấp
   theo 3 cấp; thiết kế 3 skill + 2 agent mới đã được chủ dự án chốt:
   `backend-db-migration`, agent e2e, agent data-integration. Plugin `ops` **không** được audit; 2 agent `ops`
@@ -609,7 +609,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | **P1b — Publish db-migration** (sau pilot, Q6) | Pha publish của §7.1.10: `_published.json`, thêm skill vào `backend-implementer`, S8; WF3 đi cùng | §7.1.10, WF3 | ⏳ chờ pilot (Q6) |
 | **P1c — Publish frontend-data-integration** (sau pilot, Q7) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ✅ publish không chờ pilot (2026-09-30), nhánh `feature/spec-followups` |
 | **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF4–WF11 xong; WF3 phần dùng skill còn chờ P1b |
-| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); còn G10 |
+| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); G10 backend xong trên nhánh `feature/backend-performance`; frontend performance còn mở |
 
 Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa làm. Chi tiết từng mục ở §13.
 
@@ -686,6 +686,7 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | WF11 (Bước 1 Baseline) | `0a22df5` | `1baa5f9`, `aa93f8d`, `9db78d8`, `e4ff661` |
 | A4/Q2: fixer agent | `909f1b9` | `d0e17ce`, `8fa1c13`, `875c430`, `b017350`, `534d379`, `6db2c11`, `d7b1e0d`, `fca093e`, `938349f`, `528ec4f` |
 | S7, P1c, WF4, WF5, WF6 | nhánh `feature/spec-followups` | `5b314a3`, `0282bc6`, `b5da76a`, `57dab44`, `7c56037`, `cdaa27d` |
+| G10 (backend) | nhánh `feature/backend-performance` | `21ee797`, `c32b42b`, `7b2f8cc`, `c6870ec`, `336c49f`, `71f2cb6` |
 
 ### 13.2 Còn lại
 
@@ -694,5 +695,5 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | S8 | `plugins/backend/skills/backend-implement/SKILL.md:78` trỏ chung "`data` nhánh OLTP / recipe migration" | Nên đi cùng P1b |
 | P1b | `plugins/_published.json` và `package.json` `files` chưa có `data` | Q6 (pilot); rủi ro chéo plugin ở §12 |
 | WF3 phần dùng skill | `workflows/db-change/WORKFLOW.md` Bước 3: file migration vẫn ở session chính | P1b |
-| G10 | `workflows/performance/WORKFLOW.md` Bước 3 chưa có công cụ hay chủ sở hữu profiling | Chưa có thiết kế |
+| Frontend performance (Web Vitals/Lighthouse/React Profiler/bundle) | `workflow-performance` Bước 2/3/5 phía FE chỉ có câu chờ | Chưa có spec (G-Q8 của spec 2026-09-30-backend-performance-design) |
 | e2e smoke ở release | §8.1 ghi "release (smoke)" cho `frontend-e2e-test-writer` nhưng không có hàng WF nào | Chưa có thiết kế |

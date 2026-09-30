@@ -1330,10 +1330,9 @@ if (fs.existsSync(BUILD)) {
   ok(flat19(tS5.body).includes('not_run'), 'workflow-testing Bước 5: e2e thiếu BE/DB test → not_run hợp lệ');
   ok(tst19 && tst19.agents.includes('frontend-e2e-test-writer'), 'workflow-testing: frontmatter agents có frontend-e2e-test-writer');
   ok(parseSteps(tst19?.body ?? '').length === 7, 'workflow-testing: vẫn 7 bước');
-  for (const [f, head] of [['README.md', '### Agents (15)'], ['README_VI.md', '### Agent (15)']]) {
+  for (const f of ['README.md', 'README_VI.md']) {
     const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
     const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
-    ok(rd.split('\n').some((l) => l.trim() === head), `${f}: heading ${head}`);
     ok(['WF01', 'WF08'].every((w) => row('frontend-data-integrator').includes(w)),
       `${f}: bảng agent có frontend-data-integrator dùng ở WF01, WF08`);
     ok(['WF01', 'WF05'].every((w) => row('frontend-e2e-test-writer').includes(w)),
@@ -1463,6 +1462,14 @@ if (fs.existsSync(BUILD)) {
   const perfErr = flat20(perfWf?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '');
   ok(perfErr.includes('Môi trường đo thiếu') && perfErr.includes('lệch Bước 2') && perfErr.includes('Nhiễu vượt'),
     'workflow-performance: bảng lỗi có 3 hàng môi trường thiếu / điều kiện lệch / nhiễu');
+  for (const [f, head] of [['README.md', '### Agents (16)'], ['README_VI.md', '### Agent (16)']]) {
+    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+    const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
+    ok(rd.split('\n').some((l) => l.trim() === head), `${f}: heading ${head}`);
+    ok(row('backend-performance-analyst').includes('WF09'), `${f}: bảng agent có backend-performance-analyst dùng ở WF09`);
+    ok((rd.split('\n').find((l) => l.startsWith('| WF09 |')) ?? '').includes('backend-performance-analyst'), `${f}: WF09 liệt kê backend-performance-analyst`);
+    ok(!/^\| G10 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G10`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
