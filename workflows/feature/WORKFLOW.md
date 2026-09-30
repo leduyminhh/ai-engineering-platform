@@ -80,7 +80,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-implementer` ∥ agent `frontend-implementer` (chỉ phía có đụng theo phạm vi
   Bước 2)
-- **Đầu vào:** `requirement.md` + contract (nếu có) từ Bước 1–3
+- **Đầu vào:** `requirement.md` + contract (nếu có) từ Bước 2–3
 - **Hành động:** sinh vertical slice backend (aggregate/use-case/port/adapter) bám kiến trúc đã chọn; và/hoặc
   sinh component frontend bám kiến trúc UI + design-system; chạy build của từng phía.
 - **Ràng buộc:** chỉ sửa file trong slice/feature được giao; frontend chưa nối API thật (Gap G1) → để trống

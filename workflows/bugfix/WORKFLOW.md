@@ -166,7 +166,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 
 | Tình huống | Hành động |
 |---|---|
-| Baseline đỏ (Bước 1) | Dừng `blocked`, không tiếp tục trên baseline đỏ; đề xuất workflow-bugfix (bugfix: báo người dùng) |
+| Baseline đỏ (Bước 1) | Build đỏ, hoặc test đỏ ngoài vùng bug → dừng `blocked`, báo người dùng; test đỏ trong vùng bug là bình thường và được ghi vào số mốc |
 | Build fail | Chẩn đoán → sửa → build lại |
 | Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
