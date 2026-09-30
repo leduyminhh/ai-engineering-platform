@@ -970,6 +970,17 @@ if (fs.existsSync(BUILD)) {
   ok(apiStep4.body.includes('agent `backend-reviewer`') && apiStep4.body.includes('agent `engineering-quality-auditor`')
     && /authorization/.test(apiStep4.body) && /input validation/.test(apiStep4.body),
     'workflow-api Bước 4: kiểm drift song song với auditor kiểm authorization + input validation');
+
+  const dbc = wfBody('workflow-db-change');
+  const dbcSteps = dbc ? parseSteps(dbc.body) : [];
+  const dbcStep = (n) => dbcSteps.find((s) => s.n === n) ?? noStep;
+  // D9: đổi query/ORM/DTO mà không có bước test thì thay đổi schema không có lưới an toàn.
+  ok(!!dbc && dbc.agents.includes('backend-test-writer'), 'workflow-db-change: agents có backend-test-writer');
+  ok(/^Test/.test(dbcStep(7).title) && dbcStep(7).body.includes('agent `backend-test-writer`') && /Testcontainers/.test(dbcStep(7).body),
+    'workflow-db-change Bước 7: bước Test qua backend-test-writer (integration, Testcontainers)');
+  ok(/data-model\.md/.test(dbcStep(8).body) && /next_actions/.test(dbcStep(8).body),
+    'workflow-db-change Bước 8: cập nhật data-model.md và ghi nợ contract vào next_actions');
+  ok(dbcSteps.length === 9 && dbcStep(9).title.startsWith('Commit'), 'workflow-db-change: 9 bước, Commit ở Bước 9');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -183,7 +183,7 @@ orchestrator's confirmation strictness.
 | WF04 | `workflow-code-review` | 1 | low | W5 | BE/FE reviewer, quality-auditor |
 | WF05 | `workflow-testing` | 2 | low | new | BE/FE test-writer |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer |
-| WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-reviewer |
+| WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-test-writer, backend-reviewer |
 | WF08 | `workflow-api` | 2 | medium | new (split from the W1 contract step) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
