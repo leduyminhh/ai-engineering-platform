@@ -65,8 +65,9 @@ Xác định **hành vi người dùng cần test + mức rủi ro**, rồi ch�
   thuần trong slice test render + props; slice chạm data mock mạng qua msw. `shared/ui` test độc lập.
 - **Micro-FE:** test **trong từng remote** theo FSD (như trên) — remote build/test độc lập; không cross-import
   ruột remote khác trong test (giữ đúng boundary như code). `packages/ui-kit` test render + props độc lập.
-- **e2e (Playwright/Cypress) mỏng:** chỉ vài luồng người dùng giá trị cao đầu-cuối, **ngoài phạm
-  vi recipe này**; không dồn e2e cho thứ tầng component/hook phủ được rẻ và ổn định hơn.
+- **e2e (Playwright) mỏng:** chỉ 3–5 luồng người dùng giá trị cao đầu-cuối — viết bằng skill
+  `frontend-e2e-testing`, không phải recipe này; không dồn e2e cho thứ tầng component/hook phủ được rẻ và
+  ổn định hơn.
 - Ưu tiên **hành vi người dùng** (thấy gì, bấm gì, kết quả gì) hơn chi tiết cài đặt; ưu tiên nhánh
   chính + các state hiển thị (loading / empty / error / có dữ liệu).
 
@@ -118,7 +119,7 @@ không chạy theo con số phần trăm tổng.
 - **Docs-only:** hướng dẫn cách viết/chạy test; không phải bộ test dựng sẵn hay codegen.
 - Test bám **boundary kiến trúc** + `code-convention` + `design-system` của project; không áp idiom lạ.
 - **Mock mạng qua msw**, không gọi API thật, không mock `fetch`/`axios` thủ công rải rác.
-- Ngôn ngữ đo được; con người **duyệt diff** trước khi commit. e2e đầy đủ nằm ngoài phạm vi recipe này.
+- Ngôn ngữ đo được; con người **duyệt diff** trước khi commit. e2e thuộc skill `frontend-e2e-testing`.
 
 ## Sau khi xong
 Tóm tắt: test đã thêm (số + tầng), lệnh chạy + kết quả THẬT, nhánh/state đã phủ, **khoảng trống +

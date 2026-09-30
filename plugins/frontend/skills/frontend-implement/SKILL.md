@@ -56,7 +56,8 @@ tương tác nhìn thấy) TRƯỚC khi sinh code. Cách rút cho từng dạng:
   Blueprint ở `architecture/…` là chuẩn.
 - **Tier tương tác** = presentational + cơ bản: `props` typed (interface/type) + state/handler nội bộ cho
   tương tác nhìn thấy (toggle/tab/form-control). **KHÔNG** fetch/API/route/global-store — chỗ cần dữ liệu
-  để trống bằng `props` + `TODO` rõ ràng. Chi tiết: [references/interaction-tiers.md](references/interaction-tiers.md).
+  để trống bằng `props` + `TODO` rõ ràng. Nối các chỗ đó với API thật là việc của skill
+  `frontend-data-integration` (lượt sau). Chi tiết: [references/interaction-tiers.md](references/interaction-tiers.md).
 - Tuân thủ `code-convention.md` tuyệt đối (đặt tên, cấu trúc, format).
 
 ### 4. Verify (Definition of Done)
@@ -69,6 +70,7 @@ Theo [references/fidelity-checklist.md](references/fidelity-checklist.md):
 ## Ranh giới
 
 - Không nối data/API, không routing, không backend, không sinh test nghiệp vụ (chỉ component + tương tác cơ bản).
+  Nối data/API → `frontend-data-integration`.
 - Defer `code-convention.md` + `design-system.md` của project **tuyệt đối**; không chế design-system riêng.
 - Chỉ chạm plugin `frontend`; blueprint kiến trúc quyết định tầng/slice + boundary.
 
@@ -76,4 +78,5 @@ Theo [references/fidelity-checklist.md](references/fidelity-checklist.md):
 
 - Chưa chạy `frontend-init` → thiếu `project-knowledge/`; đề nghị chạy `frontend-init` trước để có kiến
   trúc + design-system làm chuẩn, rồi mới gọi skill này.
-- Nối dữ liệu/logic thật là bước hiện thực sau, ngoài phạm vi recipe này.
+- Nối dữ liệu/API thật là bước sau, dùng skill `frontend-data-integration` (container/page gọi data hook,
+  đổ `props` vào component này).

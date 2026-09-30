@@ -243,7 +243,7 @@ Mỗi app/package có **suite + script `test` riêng** để build/test độc l
 | `packages/ui-kit` | Colocate cạnh component | `packages/testing` | Render + props, a11y |
 | `packages/contracts` | Colocate cạnh type guard/mapper | — | Shape payload/event, hàm map thuần |
 | `packages/shared-config` | Colocate cạnh provider/hook | `packages/testing` | Đọc flag/env, fallback cục bộ |
-| Ghép host ↔ remote | `e2e/` ở gốc monorepo | `@playwright/test` | Vài luồng đầu-cuối (ngoài phạm vi recipe `frontend-testing`) |
+| Ghép host ↔ remote | `e2e/` ở gốc monorepo | `@playwright/test` | Vài luồng đầu-cuối (ngoài phạm vi recipe `frontend-testing` → skill `frontend-e2e-testing`) |
 
 - **Test remote chạy không cần host:** bọc bằng host context giả từ `packages/testing` (cùng type
   `packages/contracts`), không import code `apps/host`.

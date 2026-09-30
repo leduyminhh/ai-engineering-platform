@@ -142,7 +142,7 @@ session chính) mới điều phối và gọi `core:git-workflow` sau checkpoin
 có cấu trúc (kết quả, `file:line`, residual risk); khẳng định "đã chạy / đã pass" luôn kèm
 evidence, hoặc `not_run` + lý do.
 
-### Agent (13)
+### Agent (15)
 
 `mode` trung lập với provider: Claude map `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mode: "read-only"` và
@@ -155,7 +155,9 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01–WF04, WF07–WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
+| `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01, WF08 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05, WF06 |
+| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF05 |
 | `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
 | `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF08, WF11 |
@@ -175,14 +177,14 @@ xác nhận bắt buộc của orchestrator.
 
 | Mã | Id | Tier | Risk | Thay cho (plan cũ) | Agent |
 | --- | --- | --- | --- | --- | --- |
-| WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, BE/FE test-writer, BE/FE reviewer, quality-auditor |
+| WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, FE data-integrator, BE/FE test-writer, FE e2e-test-writer, BE/FE reviewer, quality-auditor |
 | WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE fixer, BE/FE reviewer, quality-auditor |
 | WF03 | `workflow-refactor` | 1 | medium | W4a+W4b+W6 | BE/FE test-writer, BE/FE reviewer, spec-analyst, quality-auditor |
 | WF04 | `workflow-code-review` | 1 | low | W5 | BE/FE reviewer, quality-auditor |
-| WF05 | `workflow-testing` | 2 | low | mới | BE/FE test-writer |
+| WF05 | `workflow-testing` | 2 | low | mới | BE/FE test-writer, FE e2e-test-writer |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
 | WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-test-writer, backend-reviewer |
-| WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract của W1) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor |
+| WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract của W1) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor, frontend-data-integrator |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer |
@@ -219,11 +221,9 @@ Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2
 
 | # | Skill | Plugin | Hưởng lợi |
 | --- | --- | --- | --- |
-| G1 | `frontend-data-integration` (nối UI với API contract) | frontend | WF01, WF08 |
 | G2 | `backend-migrate-db` (Flyway ↔ Liquibase) | backend | WF07 |
 | G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
 | G4 | `engineering-bugfix` (tái hiện → evidence → failing test → root cause → fix tối thiểu) | engineering | WF02 |
-| G5 | `frontend-e2e-testing` (Playwright) | frontend | WF05 |
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |

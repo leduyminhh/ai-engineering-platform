@@ -1,12 +1,12 @@
 ---
 name: workflow-api
-description: "Workflow điều phối làm API contract-first: chốt OpenAPI 3.1 trước khi code, implement backend theo contract, test integration + contract, kiểm drift contract↔code song song với review authorization/input validation, tuỳ chọn sinh FE client, cập nhật docs rồi commit. Dùng workflow NÀY khi người dùng muốn \"làm API\", \"thêm endpoint\", \"OpenAPI\", \"contract-first\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối làm API contract-first: chốt OpenAPI 3.1 trước khi code, implement backend theo contract, test integration + contract, kiểm drift contract↔code song song với review authorization/input validation, tuỳ chọn nối FE client, cập nhật docs rồi commit. Dùng workflow NÀY khi người dùng muốn \"làm API\", \"thêm endpoint\", \"OpenAPI\", \"contract-first\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
 order: 8
 title: "API — contract-first, implement, kiểm drift"
 kind: workflow
 tier: 2
 risk: medium
-agents: "backend-implementer,backend-test-writer,backend-reviewer,engineering-quality-auditor"
+agents: "backend-implementer,backend-test-writer,backend-reviewer,engineering-quality-auditor,frontend-data-integrator"
 requires: "backend/backend-api-contract,core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -27,7 +27,8 @@ next: null
 ## Điều kiện tiên quyết
 
 - Skill/agent đã cài: `backend-implementer`, `backend-test-writer`, `backend-reviewer`,
-  `engineering-quality-auditor`, skill `backend/backend-api-contract`, `core/git-workflow`.
+  `engineering-quality-auditor`, `frontend-data-integrator` (chỉ khi nối FE ở Bước 6), skill
+  `backend/backend-api-contract`, `core/git-workflow`.
 - Artifact phải có sẵn: `docs/contracts/` của project (nếu đã có API khác) để giữ nhất quán versioning.
 - Baseline: build/test hiện tại của backend đang XANH trước khi thêm endpoint — được đo và ghi số mốc ở Bước 1.
 
@@ -104,17 +105,23 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 6 — FE client (tuỳ chọn)
 
-- **Thực hiện:** session chính
-- **Đầu vào:** contract đã qua kiểm drift từ Bước 5
-- **Hành động:** nếu người dùng yêu cầu nối FE và project đã có công cụ sinh code từ OpenAPI, chạy công cụ đó
-  để sinh/cập nhật type và client; nếu không, ghi rõ "bỏ qua".
-- **Ràng buộc:** không tự đổi contract để hợp với FE — lệch thì quay lại Bước 2; không giao cho
-  `frontend-implement` (skill đó không nối API); không tự thêm công cụ codegen mới hay viết tay lớp gọi API
-  trong component (chưa có skill nối data — Gap G1).
-- **Đầu ra:** type/client FE khớp contract, hoặc dòng "bỏ qua".
-- **Gate:** type/client khớp contract, hoặc ghi "bỏ qua".
-- **Khi fail:** type/client không khớp contract → sửa lại theo đúng contract, không sửa contract để hợp FE.
-- **Evidence:** đường dẫn file type/client, hoặc dòng "bỏ qua" trong report bước.
+- **Thực hiện:** agent `frontend-data-integrator` (chỉ khi người dùng yêu cầu nối FE)
+- **Đầu vào:** contract đã qua kiểm drift từ Bước 5 + màn hình/component FE đã có (do `frontend-implement` dựng,
+  chỗ cần dữ liệu để trống bằng `props` + `TODO`)
+- **Hành động:** agent nối UI với endpoint mới theo skill `frontend-data-integration`: dùng type sinh từ contract
+  bằng codegen sẵn có của project, tạo data hook đúng tầng kiến trúc, nối ở container/page, đủ 4 trạng thái
+  loading/error/empty/success; chạy `tsc --noEmit`, lint, build. Người dùng không yêu cầu nối FE → ghi "bỏ qua".
+  Người dùng muốn nối FE nhưng chưa có màn hình (chưa chạy `frontend-implement`) → ghi "bỏ qua" +
+  `next_actions: workflow-feature`.
+- **Ràng buộc:** không sửa `docs/contracts/` để hợp với FE — lệch contract thì dừng, quay lại Bước 2; chưa có
+  codegen hoặc thư viện data → agent dừng, đề xuất, chờ người dùng chọn (không tự thêm); không viết tay type trùng
+  contract; không gọi `fetch`/`axios` trong component.
+- **Đầu ra:** type/hook/container FE khớp contract, `tsc`/lint/build xanh; hoặc dòng "bỏ qua".
+- **Gate:** type khớp contract, `tsc`/lint/build xanh; hoặc ghi "bỏ qua".
+- **Khi fail:** type/hook không khớp contract → sửa FE theo đúng contract, không sửa contract để hợp FE; thiếu
+  codegen/thư viện data → dừng chờ người dùng chọn.
+- **Evidence:** report của agent (file đã thêm/sửa theo tầng, endpoint ↔ hook ↔ container, lệnh `tsc`/lint/build +
+  exit code), hoặc dòng "bỏ qua" trong report bước.
 
 ### Bước 7 — Docs
 
@@ -160,6 +167,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Người dùng không xác nhận contract (sau Bước 2 ⏸) | Sửa lại theo góp ý, trình lại, không code trước |
 | Phát hiện drift contract↔code (Bước 5) | Quay lại Bước 3 sửa code hoặc Bước 2 sửa contract |
 | Finding `blocker` về authorization/input validation (Bước 5) | Quay lại Bước 3 sửa code, review lại phần đã sửa |
+| Contract lệch khi nối FE (Bước 6) | Dừng, quay lại Bước 2 chỉnh contract; không sửa contract để hợp FE |
 | Người dùng không duyệt diff (sau Bước 8 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 
 - **Điều kiện dừng:** người dùng không xác nhận contract sau nhiều vòng; drift contract↔code không sửa được;
