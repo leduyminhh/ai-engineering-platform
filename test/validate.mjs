@@ -1372,6 +1372,39 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 20. SOURCE: backend-performance skill + agent + workflow-performance Bước 2/3/5 (spec 2026-09-30-backend-performance-design)
+{
+  const flat20 = (t) => t.replace(/\s+/g, ' ');
+  const wf20 = (id) => workflows.stages.find((s) => s.id === id);
+  const step20 = (wf, n) => (wf ? parseSteps(wf.body).find((s) => s.n === n) : undefined) ?? { title: '', body: '', checkpoint: false };
+  // Cắt đúng một trường cột 0 để assert không khớp nhầm chữ của trường khác trong cùng bước.
+  const field20 = (body, name) => {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const lines = body.split('\n');
+    const i = lines.findIndex((l) => new RegExp(`^- \\*\\*${esc}:\\*\\*`).test(l));
+    if (i < 0) return '';
+    let j = lines.findIndex((l, k) => k > i && /^- \*\*/.test(l));
+    if (j < 0) j = lines.length;
+    return flat20(lines.slice(i, j).join('\n'));
+  };
+  const perfDir = path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-performance');
+  const perfSkill = fs.existsSync(path.join(perfDir, 'SKILL.md')) ? fs.readFileSync(path.join(perfDir, 'SKILL.md'), 'utf8') : '';
+  ok(perfSkill.length > 0, 'backend-performance: có SKILL.md');
+  ok(/^order: 10$/m.test(perfSkill) && /^pipeline: false$/m.test(perfSkill) && /^runsIn: execute$/m.test(perfSkill),
+    'backend-performance: frontmatter order 10, pipeline false, runsIn execute');
+  ok(/^description: .*backend-fix/m.test(perfSkill) && /^description: .*backend-testing/m.test(perfSkill),
+    'backend-performance: description nêu ranh giới với backend-fix và backend-testing');
+  for (const g of ['P1', 'P2', 'P3', 'P4', 'P5']) ok(new RegExp(`^\\| ${g} `, 'm').test(perfSkill), `backend-performance: bảng gate có ${g}`);
+  ok(perfSkill.includes('`measure`') && perfSkill.includes('`profile`'), 'backend-performance: có 2 chế độ measure / profile');
+  ok(/^\| P3 [^\n]*10%/m.test(perfSkill), 'backend-performance: P3 có ngưỡng độ lệch mặc định 10%');
+  ok(/^\| P1 [^\n]*staging\/production/m.test(perfSkill) && flat20(perfSkill).includes('not_run'),
+    'backend-performance: P1 từ chối staging/production, thiếu môi trường → not_run');
+  ok(/≥\s?3/.test(perfSkill) && perfSkill.includes('`perf/`') && perfSkill.includes('`bench/`'),
+    'backend-performance: đo ≥3 lần, script ở perf/ và bench/');
+  ok(/^\| P5 [^\n]*`src\/`/m.test(perfSkill), 'backend-performance: P5 cấm sửa src/ production');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');
