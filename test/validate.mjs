@@ -1168,6 +1168,12 @@ if (fs.existsSync(BUILD)) {
     'backend-fix: danh sách che triệu chứng theo stack Java/Python');
   ok(fixSkill('frontend').includes('@ts-ignore') && fixSkill('frontend').includes('eslint-disable') && fixSkill('frontend').includes('tsc --noEmit'),
     'frontend-fix: danh sách che triệu chứng theo stack TS/React và lệnh tsc --noEmit');
+  const pub18 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_published.json'), 'utf8')).published;
+  ok(pub18.includes('backend/backend-fix') && pub18.includes('frontend/frontend-fix'),
+    '_published.json: có backend/backend-fix và frontend/frontend-fix (publish cùng đợt nối workflow, spec F-Q3)');
+  const cowork18 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
+  ok(cowork18.includes('backend:backend-fix') && cowork18.includes('frontend:frontend-fix'),
+    '_cowork.json: có backend:backend-fix và frontend:frontend-fix');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
