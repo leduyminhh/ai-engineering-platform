@@ -19,6 +19,8 @@
     "frontend:frontend-refactor",
     "frontend:frontend-migrate-architecture",
     "frontend:frontend-fix",
+    "frontend:frontend-data-integration",
+    "frontend:frontend-e2e-testing",
     "engineering:engineering-quality-gate",
     "engineering:engineering-spec-writing",
     "engineering:engineering-diagram",

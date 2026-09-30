@@ -1280,6 +1280,22 @@ if (fs.existsSync(BUILD)) {
   const ft19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-testing', 'SKILL.md'), 'utf8');
   ok(flat19(ft19).includes('`frontend-e2e-testing`') && !/e2e[^.]*ngoài phạm vi recipe này\s*;/.test(flat19(ft19)),
     'frontend-testing (S7): trỏ e2e sang skill frontend-e2e-testing, không còn chỉ ghi "ngoài phạm vi"');
+  const pub19 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_published.json'), 'utf8')).published;
+  for (const s of ['frontend/frontend-data-integration', 'frontend/frontend-e2e-testing']) {
+    ok(pub19.includes(s), `_published.json: có ${s} (publish trước khi nối workflow, không chờ pilot)`);
+  }
+  const cowork19 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
+  for (const s of ['frontend:frontend-data-integration', 'frontend:frontend-e2e-testing']) {
+    ok(cowork19.includes(s), `_cowork.json: có ${s}`);
+  }
+  const feMan19 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', '.manifest.json'), 'utf8'));
+  ok(feMan19.version === '1.6.0' && !feMan19.description.includes('DRAFT'),
+    'frontend manifest: version 1.6.0, description không còn nhãn DRAFT');
+  const fePr19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'shared', 'principles.md'), 'utf8');
+  ok(!fePr19.includes('state-model'), 'frontend principles: không còn tham chiếu state-model treo (spec §7.3.7)');
+  const feImpl19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-implement', 'SKILL.md'), 'utf8');
+  ok(flat19(feImpl19).includes('`frontend-data-integration`'),
+    'frontend-implement: trỏ phần nối data/API sang frontend-data-integration');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

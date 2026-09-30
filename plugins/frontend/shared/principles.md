@@ -11,7 +11,8 @@ ranh giới mềm — mặc định, app nhỏ/vừa một team), **FSD** (Featu
 **NGUỒN SỰ THẬT layout**, mô tả ở `project-knowledge/architecture.md` + `source-structure.md` (chọn
 theo `architecture/ARD.md`), mọi skill downstream đọc từ đó, KHÔNG hardcode tên tầng. Bất biến chung
 mọi kiểu: view/UI thuần KHÔNG tự gọi API trực tiếp mà qua state/data layer; UI primitives/code chung
-ở `src/shared/`. Cây component, design tokens, ui-contract, state-model đều externalize ra file.
+ở `src/shared/`. Cây component, design tokens, ui-contract đều externalize ra file; tầng data (type
+sinh từ `docs/contracts/` + data hook) do `frontend-data-integration` sở hữu.
 
 ## Khởi tạo (`frontend-init`)
 `frontend-init` là scaffold **CHỈ TÀI LIỆU** (project-knowledge, ADR, contracts, layout thư mục mô
@@ -38,6 +39,6 @@ contract — rồi mới viết logic. UI mock/fixtures khớp data contract đ�
 - Không commit code fail type-check.
 
 ## Nguồn sự thật — bổ sung frontend
-`ui-contract.md` (component API + states + data contract) > state-model > implement;
+`ui-contract.md` (component API + states + data contract) > implement;
 backend `contract.md` (response schema) > data contract của frontend (lệch thì DỪNG, quay lại analysis);
 `ui-contract.md` > fixtures/mock.
