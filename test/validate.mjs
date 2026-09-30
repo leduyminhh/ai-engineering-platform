@@ -956,8 +956,8 @@ if (fs.existsSync(BUILD)) {
   const sec = wfBody('workflow-security-review');
   const secSteps = sec ? parseSteps(sec.body) : [];
   const secStep = (n) => secSteps.find((s) => s.n === n) ?? noStep;
-  ok(!!sec && ['engineering-quality-auditor', 'backend-test-writer', 'frontend-test-writer'].every((a) => sec.agents.includes(a)),
-    'workflow-security-review: agents gồm auditor + 2 test-writer (regression test)');
+  ok(!!sec && ['engineering-quality-auditor', 'backend-test-writer', 'frontend-test-writer', 'backend-fixer', 'frontend-fixer'].every((a) => sec.agents.includes(a)),
+    'workflow-security-review: agents gồm auditor + 2 test-writer (regression test) + 2 fixer (sửa)');
   // D7: vùng rủi ro phải phủ authorization, SSRF và misconfiguration.
   ok(/authorization/.test(secStep(2).body) && secStep(2).body.includes('SSRF') && /misconfiguration/i.test(secStep(2).body),
     'workflow-security-review Bước 2: vùng rủi ro có authorization/access control, SSRF, security misconfiguration');
@@ -1219,6 +1219,8 @@ if (fs.existsSync(BUILD)) {
   };
   fixStepOk('workflow-bugfix', 5, 6, /^Root cause/, /^Fix tối thiểu/);
   ok(parseSteps(wf18('workflow-bugfix')?.body ?? '').length === 9, 'workflow-bugfix: vẫn 9 bước');
+  fixStepOk('workflow-security-review', 5, 8, /^Kế hoạch remediation/, /^Sửa/);
+  ok(parseSteps(wf18('workflow-security-review')?.body ?? '').length === 10, 'workflow-security-review: vẫn 10 bước');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
