@@ -247,7 +247,7 @@ DoD: dòng "Baseline đo đúng điều kiện — evidence: Bước 2" thêm "(
 
 Khối `// 20.` ở cuối `test/validate.mjs` (helper riêng `flat20`, `wf20`, `step20`, `field20` theo kiểu khối 19):
 - skill: frontmatter (`order: 10`, `pipeline: false`); bảng gate có P1–P5; có 2 chế độ `measure`/`profile`; chứa
-  "staging/production", `not_run`, regex `/≥s?3/` (số lần lặp), `perf/`, `bench/`; ranh giới nêu `backend-fix` và `backend-testing`;
+  "staging/production", `not_run`, regex `/≥\s?3/` (số lần lặp), `perf/`, `bench/`; ranh giới nêu `backend-fix` và `backend-testing`;
   `references/` có đủ 6 file.
 - agent: `mode: write`, `skills` đúng 1; body chứa `perf/`, `bench/`, "staging/production", `not_run`,
   `core:principles`, `src/`.
