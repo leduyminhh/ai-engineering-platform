@@ -1,6 +1,6 @@
 ---
 name: workflow-api
-description: "Workflow điều phối làm API contract-first: chốt OpenAPI 3.1 trước khi code, implement backend theo contract, test integration + contract, kiểm drift contract↔code song song với review authorization/input validation, tuỳ chọn sinh FE client, cập nhật docs rồi commit. Dùng workflow NÀY khi người dùng muốn \"làm API\", \"thêm endpoint\", \"OpenAPI\", \"contract-first\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối làm API contract-first: chốt OpenAPI 3.1 trước khi code, implement backend theo contract, test integration + contract, kiểm drift contract↔code song song với review authorization/input validation, tuỳ chọn nối FE client, cập nhật docs rồi commit. Dùng workflow NÀY khi người dùng muốn \"làm API\", \"thêm endpoint\", \"OpenAPI\", \"contract-first\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
 order: 8
 title: "API — contract-first, implement, kiểm drift"
 kind: workflow
@@ -111,6 +111,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** agent nối UI với endpoint mới theo skill `frontend-data-integration`: dùng type sinh từ contract
   bằng codegen sẵn có của project, tạo data hook đúng tầng kiến trúc, nối ở container/page, đủ 4 trạng thái
   loading/error/empty/success; chạy `tsc --noEmit`, lint, build. Người dùng không yêu cầu nối FE → ghi "bỏ qua".
+  Người dùng muốn nối FE nhưng chưa có màn hình (chưa chạy `frontend-implement`) → ghi "bỏ qua" +
+  `next_actions: workflow-feature`.
 - **Ràng buộc:** không sửa `docs/contracts/` để hợp với FE — lệch contract thì dừng, quay lại Bước 2; chưa có
   codegen hoặc thư viện data → agent dừng, đề xuất, chờ người dùng chọn (không tự thêm); không viết tay type trùng
   contract; không gọi `fetch`/`axios` trong component.

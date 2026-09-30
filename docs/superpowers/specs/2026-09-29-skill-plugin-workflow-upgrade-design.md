@@ -485,7 +485,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 | DI-P1 | `SKILL.md` + gate draft (`_published.json` 6 mục lẻ) + manifest `1.3.0` + assert draft ở `install.test.mjs` | `npm test` xanh; wizard không offer skill mới |
 | DI-P2 | 3 file `references/` (đối chiếu template và tài liệu công cụ trước khi viết) | Link hợp lệ; nhận định công cụ có nguồn hoặc nhãn `[Unverified]` |
 | DI-P3 | Agent `frontend-data-integrator` (§8.3) + assert agent | Agent qua contract `validate.mjs`; không lộ khi skill chưa cài |
-| **Pha publish** (sau pilot, §9 P1c) | Thêm `frontend/frontend-data-integration` vào `_published.json`; WF4, WF5; sửa `principles.md:14,41` (`state-model` treo) và thêm pointer từ `frontend-implement` sang skill này | Pilot có evidence chạy thật |
+| **Pha publish** (sau pilot, §9 P1c) | Thêm `frontend/frontend-data-integration` vào `_published.json`; WF4, WF5; sửa `principles.md:14,41` (`state-model` treo) và thêm pointer từ `frontend-implement` sang skill này | Pilot có evidence chạy thật — miễn pilot (quyết định 2026-09-30, §12) |
 
 ---
 
@@ -501,8 +501,8 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 | frontend-implementer | frontend | write | frontend-implement | feature | — |
 | frontend-test-writer | frontend | write | frontend-testing | … | — |
 | frontend-reviewer | frontend | read-only | frontend-code-review | … | — |
-| **frontend-e2e-test-writer** | frontend | write | frontend-e2e-testing | feature, testing, release (smoke) | **mới** |
-| **frontend-data-integrator** | frontend | write | frontend-data-integration | feature, api (nối ở pha publish §7.3.7) | **mới** (draft, N1) |
+| **frontend-e2e-test-writer** | frontend | write | frontend-e2e-testing | feature, testing, release (smoke) | **mới** — đã publish 2026-09-30 (không chờ pilot); workflow: feature, testing |
+| **frontend-data-integrator** | frontend | write | frontend-data-integration | feature, api | **mới** — đã publish 2026-09-30 (không chờ pilot); workflow: feature, api |
 | engineering-spec-analyst | engineering | write | spec-writing, adr, diagram | … | sửa D11 |
 | engineering-quality-auditor | engineering | read-only | quality-gate, convention-enforce | …, **api** | + workflow |
 | engineering-release-scribe | engineering | write | release-notes | release | — |
@@ -608,8 +608,8 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | **P1 — Năng lực mới** | ~~ADR phân ranh `backend-db-migration` ↔ `data-oltp-implement` (Q5)~~ (xong: ADR-0001, skill nay là `data-db-migration`); `backend-db-migration` theo §7.1.10 (M-P1–M-P9, draft); `frontend-data-integration` theo §7.3.7 (DI-P1–DI-P3, draft); `frontend-e2e-testing` theo §7.2; 2 agent frontend theo §8.2–§8.3; S4, S7 | §7, §8 | ✅ merge `48f90d0`, `a609735`, `482c50b`; S7 xong trên nhánh `feature/spec-followups` |
 | **P1b — Publish db-migration** (sau pilot, Q6) | Pha publish của §7.1.10: `_published.json`, thêm skill vào `backend-implementer`, S8; WF3 đi cùng | §7.1.10, WF3 | ⏳ chờ pilot (Q6) |
 | **P1c — Publish frontend-data-integration** (sau pilot, Q7) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ✅ publish không chờ pilot (2026-09-30), nhánh `feature/spec-followups` |
-| **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF4–WF10 xong; WF3 phần dùng skill còn chờ P1b |
-| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`; A4 xong (spec 2026-09-30-fixer-agent-design); còn G10 |
+| **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF4–WF11 xong; WF3 phần dùng skill còn chờ P1b |
+| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); còn G10 |
 
 Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa làm. Chi tiết từng mục ở §13.
 
@@ -639,7 +639,7 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | Q4 | Skill frontend mới publish ngay (cả plugin) hay publish từng phần sau smoke? | Từng phần (`frontend/<skill>`) — cùng nguyên tắc với M4. Lưu ý P-d: chỉ gate được wizard |
 | ~~Q5~~ | ~~Plugin `data`: giữ draft hay publish nhánh OLTP để tránh trùng với `backend-db-migration`?~~ | **Đã chốt (2026-09-30, ADR-0001):** mọi năng lực liên quan database thuộc plugin `data`; skill chuyển sang `data-db-migration`; plugin `data` vẫn draft, quy tắc phân ranh §7.1.3 giữ nguyên trong cùng plugin |
 | Q6 | Pilot `backend-db-migration` trên project Spring nào? | Chưa chốt. G2 từng nêu `be-directive-mgt` (đã hoãn ở G2 Q2) |
-| Q7 | Pilot `frontend-data-integration` trên project React nào (cần contract OpenAPI thật ở `docs/contracts/`)? | Chưa chốt |
+| Q7 | Pilot `frontend-data-integration` trên project React nào (cần contract OpenAPI thật ở `docs/contracts/`)? | Không chặn publish nữa (publish 2026-09-30); pilot vẫn nên làm để kiểm nội dung |
 
 ## 12. Rủi ro còn lại
 

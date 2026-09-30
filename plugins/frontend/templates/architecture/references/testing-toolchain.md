@@ -15,7 +15,7 @@ tương ứng. Repo đã có runner/quy ước test riêng thì **theo repo**, f
 | Matcher DOM | `@testing-library/jest-dom` | Nạp qua entry `@testing-library/jest-dom/vitest` trong file setup. |
 | Mock mạng | `msw` | `setupServer` từ `msw/node` (chạy trong Node/jsdom, không cần Service Worker). |
 | Coverage | `@vitest/coverage-v8` | Bật bằng `vitest run --coverage`. |
-| e2e (tuỳ chọn) | `@playwright/test` | Chỉ vài luồng đầu-cuối giá trị cao; ngoài phạm vi recipe `frontend-testing`. |
+| e2e (tuỳ chọn) | `@playwright/test` | Chỉ vài luồng đầu-cuối giá trị cao; ngoài phạm vi recipe `frontend-testing` → skill `frontend-e2e-testing`. |
 
 ```bash
 npm i -D vitest jsdom @testing-library/react @testing-library/dom @testing-library/user-event @testing-library/jest-dom msw @vitest/coverage-v8

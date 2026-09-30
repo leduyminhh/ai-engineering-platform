@@ -66,23 +66,29 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** chọn loại test theo policy (feature: unit; API: integration + contract; luồng quan trọng:
   e2e); trình cho người dùng xác nhận trước khi viết test.
 - **Ràng buộc:** không tự chọn e2e cho hành vi không phải luồng quan trọng.
-- **Đầu ra:** loại test đã chọn cho từng hành vi, đã được người dùng xác nhận.
+- **Đầu ra:** loại test đã chọn cho từng hành vi, đã được người dùng xác nhận; hành vi loại e2e kèm lý do không
+  chứng minh được ở tầng thấp (tính là duyệt E2 của skill `frontend-e2e-testing`).
 - **Gate:** loại test theo policy (feature: unit; API: integration + contract; luồng quan trọng: e2e).
 - **Khi fail:** người dùng không đồng ý chiến lược → quay lại Bước 2 làm rõ hành vi/rủi ro.
-- **Evidence:** bảng hành vi → loại test đã xác nhận trong report bước.
+- **Evidence:** bảng hành vi → loại test đã xác nhận trong report bước; với hành vi loại e2e, bảng này kèm lý do
+  không chứng minh được ở tầng thấp và được tính là duyệt E2 của skill `frontend-e2e-testing`.
 
 ### Bước 4 — Viết test
 
 - **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng); hành vi loại "luồng quan trọng: e2e" → agent `frontend-e2e-test-writer`
-- **Đầu vào:** chiến lược đã xác nhận từ Bước 3
+- **Đầu vào:** chiến lược đã xác nhận từ Bước 3 (e2e: bảng Bước 3 là duyệt E2, agent không trình lại)
 - **Hành động:** viết test đúng loại đã chọn cho từng hành vi trong danh sách; e2e viết bằng Playwright theo
   skill `frontend-e2e-testing` (mỗi test map 1 hành vi/AC, selector theo role/label, không sleep cứng).
 - **Ràng buộc:** không viết test giòn (phụ thuộc thứ tự/thời gian/mạng thật).
 - **Đầu ra:** test mới, chạy được.
-- **Gate:** test chạy được; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi
-  hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test
-  (và fixture/mock của test; e2e: thư mục `e2e/` và `playwright.config.*`).
-- **Khi fail:** test không chạy được (lỗi biên dịch/setup) → sửa test, chạy lại.
+- **Gate:** test chạy được, hoặc e2e `not_run` vì thiếu môi trường BE/DB test (hợp lệ, ghi vào
+  `remaining_risks`); so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới
+  trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test (và
+  fixture/mock của test; e2e: thư mục `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục auth/output
+  của Playwright (vd `e2e/.auth/` và thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi
+  người dùng đã duyệt thêm `@playwright/test` (E-r7)).
+- **Khi fail:** test không chạy được (lỗi biên dịch/setup) → sửa test, chạy lại; e2e không chạy vì thiếu BE/DB
+  test → `not_run`, không lặp sửa test.
 - **Evidence:** lệnh chạy test + exit code; danh sách file thay đổi hoặc mới trong bước so với trạng thái đầu
   bước.
 
@@ -93,12 +99,16 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** chạy toàn bộ test mới; với mỗi failure, phân loại lỗi test (test sai) hay lỗi code (code có
   bug); lỗi code → đề xuất chạy `workflow-bugfix`; e2e chạy `npx playwright test --repeat-each=3`, flaky →
   sửa test (không nới assertion); thiếu BE/DB test → `not_run` + lý do.
-- **Ràng buộc:** không tự sửa code production để test qua khi failure là lỗi code — chỉ đề xuất `workflow-bugfix`.
+- **Ràng buộc:** không tự sửa code production để test qua khi failure là lỗi code — chỉ đề xuất `workflow-bugfix`;
+  e2e chỉ chạy trên môi trường local/test — thiếu BE/DB test thì agent trả `not_run` + lý do, không tự dựng hạ
+  tầng.
 - **Đầu ra:** danh sách failure đã phân loại (nếu có).
 - **Gate:** mọi failure phân loại lỗi test | lỗi code; lỗi code → đề xuất `workflow-bugfix`; so với trạng thái
   ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only`
   và `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test; e2e: thư mục
-  `e2e/` và `playwright.config.*`); e2e `not_run` vì thiếu môi trường là hợp lệ (ghi vào `remaining_risks`).
+  `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục auth/output của Playwright (vd `e2e/.auth/` và
+  thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi người dùng đã duyệt thêm
+  `@playwright/test` (E-r7)); e2e `not_run` vì thiếu môi trường là hợp lệ (ghi vào `remaining_risks`).
 - **Khi fail:** không phân loại được nguyên nhân failure → hỏi người dùng thêm ngữ cảnh, không tự đoán.
 - **Evidence:** lệnh chạy test + exit code + danh sách failure đã phân loại; danh sách file thay đổi hoặc mới
   trong bước so với trạng thái đầu bước; e2e: lệnh Playwright + kết quả hoặc `not_run` + lý do.
@@ -106,7 +116,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 ### Bước 6 — Coverage
 
 - **Thực hiện:** session chính
-- **Đầu vào:** test lỗi-test đã xanh từ Bước 5 + danh sách lỗi-code đã chuyển sang `workflow-bugfix`
+- **Đầu vào:** test lỗi-test đã xanh từ Bước 5 (e2e `not_run` có lý do được tính là đã xử lý) + danh sách
+  lỗi-code đã chuyển sang `workflow-bugfix`
 - **Hành động:** chạy coverage tool của project cho vùng đụng; ghi lại số liệu, hoặc ghi `not_run` kèm lý do
   nếu project chưa có coverage tool.
 - **Ràng buộc:** không tự thêm coverage tool ngoài yêu cầu.
@@ -159,11 +170,12 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] Baseline build/test đã đo, số mốc đã ghi — evidence: Bước 1
 - [ ] Danh sách hành vi cần test — evidence: Bước 2
 - [ ] Chiến lược test đã được người dùng xác nhận — evidence: Bước 3
-- [ ] Test mới chạy được — evidence: Bước 4
+- [ ] Test mới chạy được (e2e `not_run` vì thiếu môi trường BE/DB test là hợp lệ, ghi vào `remaining_risks`) —
+  evidence: Bước 4
 - [ ] Mọi failure đã phân loại lỗi test | lỗi code — evidence: Bước 5
 - [ ] Coverage report hoặc `not_run` có lý do — evidence: Bước 6
 - [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 7
-- [ ] Mọi gate có evidence `passed`
+- [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)
 
 ## Report cuối
 

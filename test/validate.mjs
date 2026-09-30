@@ -1340,6 +1340,35 @@ if (fs.existsSync(BUILD)) {
       `${f}: bảng agent có frontend-e2e-test-writer dùng ở WF01, WF05`);
     ok(!/^\| G1 \|/m.test(rd) && !/^\| G5 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G1, G5 (đã có skill)`);
   }
+  // Duyệt E2 của skill e2e phải có chỗ trong workflow, nếu không agent sẽ trình lại hoặc bỏ qua cổng.
+  ok(field19(fS2.body, 'Hành động').includes('e2e'),
+    'workflow-feature Bước 2: Hành động đánh dấu AC cần e2e (bảng luồng → AC → lý do)');
+  ok(field19(fS5.body, 'Đầu vào').includes('E2'),
+    'workflow-feature Bước 5: Đầu vào nhận bảng ứng viên e2e đã duyệt ở Bước 2 (duyệt E2)');
+  const tS3 = step19(tst19, 3);
+  ok(flat19(tS3.body).includes('E2'), 'workflow-testing Bước 3: bảng chiến lược được tính là duyệt E2 của frontend-e2e-testing');
+  ok(field19(tS4.body, 'Gate').includes('not_run'), 'workflow-testing Bước 4: Gate chấp nhận e2e not_run vì thiếu môi trường');
+  ok(field19(tS5.body, 'Ràng buộc').includes('local/test') && field19(tS5.body, 'Ràng buộc').includes('không tự dựng hạ tầng'),
+    'workflow-testing Bước 5: Ràng buộc e2e chỉ chạy local/test, không tự dựng hạ tầng');
+  for (const [name, s] of [['workflow-feature Bước 5', fS5], ['workflow-testing Bước 4', tS4], ['workflow-testing Bước 5', tS5]]) {
+    const g = field19(s.body, 'Gate');
+    ok(g.includes('.gitignore') && g.includes('E-r7'),
+      `${name}: Gate cho phép dòng .gitignore của Playwright và package.json/lockfile chỉ khi đã duyệt (E-r7)`);
+  }
+  for (const [name, w] of [['workflow-feature', feat19], ['workflow-testing', tst19]]) {
+    const b = w?.body ?? '';
+    const i = b.indexOf('## Definition of Done'), j = b.indexOf('## Report');
+    ok(i !== -1 && j > i && flat19(b.slice(i, j)).includes('e2e `not_run`'), `${name}: Definition of Done có ngoại lệ e2e not_run`);
+  }
+  const fS4r = field19(fS4.body, 'Ràng buộc');
+  ok(fS4r.includes('codegen') && fS4r.includes('fetch'),
+    'workflow-feature Bước 4: Ràng buộc integrator (thiếu codegen → dừng chờ chọn; không gọi fetch trong component)');
+  ok(flat19(apiS6.body).includes('next_actions') && flat19(apiS6.body).includes('workflow-feature'),
+    'workflow-api Bước 6: chưa có màn hình → bỏ qua + next_actions: workflow-feature');
+  for (const t of [['references', 'testing-toolchain.md'], ['react-micro-frontend.template.md']]) {
+    const tpl = flat19(fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'templates', 'architecture', ...t), 'utf8'));
+    ok(tpl.includes('`frontend-e2e-testing`'), `frontend template ${t.join('/')}: câu e2e trỏ sang frontend-e2e-testing (S7)`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

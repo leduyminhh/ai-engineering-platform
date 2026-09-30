@@ -58,12 +58,14 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** khảo sát yêu cầu còn thiếu, viết acceptance criteria đo được vào `docs/requests/…`; xác
   định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`. Phạm vi cần đổi schema DB
   (bảng/cột/index/migration) → dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature (chuỗi
-  `db-change → feature`).
+  `db-change → feature`). Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
+  chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do).
 - **Ràng buộc:** chỉ ghi trong `docs/`; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả
   định]`; không phân rã story/task chi tiết.
-- **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` với acceptance criteria + phạm vi BE/FE/fullstack.
+- **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` với acceptance criteria + phạm vi BE/FE/fullstack
+  + bảng ứng viên e2e (nếu có).
 - **Gate:** acceptance criteria đo được; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc đã
-  có xác nhận chạy `workflow-db-change` trước.
+  có xác nhận chạy `workflow-db-change` trước; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e".
 - **Khi fail:** acceptance criteria mơ hồ/không đo được → hỏi lại người dùng, không tự suy diễn tiếp; phạm vi
   có đổi schema → dừng, đề xuất `workflow-db-change`.
 - **Evidence:** đường dẫn `requirement.md` + trích đoạn acceptance criteria.
@@ -86,21 +88,25 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** `requirement.md` + contract (nếu có) từ Bước 2–3
 - **Hành động:** sinh vertical slice backend (aggregate/use-case/port/adapter) bám kiến trúc đã chọn; và/hoặc
   sinh component frontend presentational bám kiến trúc UI + design-system (chỗ cần dữ liệu để trống bằng props +
-  TODO); khi fullstack, `frontend-data-integrator` nối container/page với API theo contract (type sinh từ
-  contract, data hook đúng tầng, đủ 4 trạng thái); chạy build của từng phía.
+  TODO); khi fullstack có contract ở Bước 3, `frontend-data-integrator` nối container/page với API theo contract
+  (type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); chạy build của từng phía.
 - **Ràng buộc:** chỉ sửa file trong slice/feature được giao; không giả lập data ẩn; integrator không sửa
-  `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3.
-- **Đầu ra:** code implementation (backend và/hoặc frontend, gồm tầng data khi fullstack) build xanh.
-- **Gate:** build xanh; khi fullstack: `tsc`/lint/build xanh sau khi nối data.
+  `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator: chưa có codegen/thư viện data → dừng,
+  đề xuất, chờ người dùng chọn; không viết tay type trùng contract; không gọi `fetch`/`axios` trong component.
+- **Đầu ra:** code implementation (backend và/hoặc frontend, gồm tầng data khi fullstack có contract ở Bước 3)
+  build xanh.
+- **Gate:** build xanh; khi fullstack có contract ở Bước 3: type khớp contract, `tsc`/lint/build xanh sau khi nối
+  data.
 - **Khi fail:** build lỗi → chẩn đoán → sửa → build lại; lặp tới khi xanh; contract lệch khi nối data → quay lại
   Bước 3.
 - **Evidence:** lệnh build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0; report của integrator
-  (endpoint ↔ hook ↔ container) khi fullstack.
+  (endpoint ↔ hook ↔ container) khi fullstack có contract ở Bước 3.
 
 ### Bước 5 — Test
 
 - **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (chỉ phía có đụng); AC dạng luồng UI đầu-cuối → thêm agent `frontend-e2e-test-writer`
-- **Đầu vào:** code implementation từ Bước 4 + acceptance criteria từ Bước 2
+- **Đầu vào:** code implementation từ Bước 4 + acceptance criteria từ Bước 2 + bảng ứng viên e2e đã được người
+  dùng duyệt ở Bước 2 (đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
 - **Hành động:** viết unit/integration test cho từng acceptance criterion; chạy toàn bộ test suite của phía
   tương ứng; với AC dạng luồng UI, `frontend-e2e-test-writer` viết e2e Playwright (3–5 luồng, mỗi test map 1 AC)
   và chạy `--repeat-each=3`.
@@ -111,7 +117,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Gate:** mỗi acceptance criterion ≥1 test; test pass (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào
   `remaining_risks`); so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới
   trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test (và
-  fixture/mock của test; e2e: thư mục `e2e/` và `playwright.config.*`).
+  fixture/mock của test; e2e: thư mục `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục auth/output
+  của Playwright (vd `e2e/.auth/` và thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi
+  người dùng đã duyệt thêm `@playwright/test` (E-r7)).
 - **Khi fail:** test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test); test đỏ do lỗi viết
   test → sửa test; e2e flaky → sửa test, không nới assertion.
 - **Evidence:** lệnh test + exit code 0 + số liệu (`X tests, X passed`); e2e: lệnh Playwright + kết quả hoặc
@@ -160,7 +168,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
-| 2 | Acceptance criteria + phạm vi BE/FE/fullstack | Người dùng xác nhận acceptance criteria đúng ý |
+| 2 | Acceptance criteria + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có) | Người dùng xác nhận acceptance criteria đúng ý (và bảng e2e, tính là duyệt E2) |
 | 3 | Contract OpenAPI (nếu có) hoặc ghi chú "không có API"; ADR (nếu có) | Người dùng xác nhận contract/ADR, hoặc đồng ý không cần |
 | 8 | Diff đầy đủ (code + test + docs) + finding `major` còn lại trong `remaining_risks` | Người dùng duyệt diff và chấp nhận các `major` còn lại |
 
@@ -192,10 +200,11 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] Acceptance criteria đo được, có xác nhận người dùng — evidence: Bước 2
 - [ ] Contract OpenAPI hợp lệ hoặc ghi rõ không có API — evidence: Bước 3
 - [ ] Build xanh cho phần backend/frontend có đụng — evidence: Bước 4
-- [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass — evidence: Bước 5
+- [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass (e2e `not_run` vì thiếu môi trường BE/DB test là
+  hợp lệ, ghi vào `remaining_risks`) — evidence: Bước 5
 - [ ] Docs bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng" — evidence: Bước 7
 - [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 8
-- [ ] Mọi gate có evidence `passed`
+- [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)
 - [ ] 0 finding `blocker`
 
 ## Report cuối
