@@ -11,7 +11,7 @@ tiếp cho test: presentational test được **chỉ bằng render + props, kh�
 đáy kim tự tháp rộng ra.
 
 ```
-        e2e (rất ít) — vài luồng người dùng đầu-cuối, đắt + dễ giòn (ngoài phạm vi recipe)
+        e2e (rất ít) — vài luồng người dùng đầu-cuối, đắt + dễ giòn (→ skill frontend-e2e-testing)
      integration UI (ít) — màn hình/feature chạm data, mock mạng bằng msw
   component + hook (nhiều) — presentational render+props, hook logic, không mạng
 ```
@@ -19,8 +19,8 @@ tiếp cho test: presentational test được **chỉ bằng render + props, kh�
 - **Nhiều test component + hook:** nhanh (mili-giây), chạy mỗi lần lưu file, khoanh lỗi sát điểm sai.
 - **Ít integration UI:** chậm hơn (dựng provider + msw handler), chỉ dùng khi hành vi cần chứng
   minh là luồng data (loading → success/error, refetch, điều hướng sau mutation).
-- **Rất ít e2e:** chỉ cho luồng người dùng giá trị cao **không** chứng minh được ở tầng thấp; nằm
-  ngoài phạm vi recipe này.
+- **Rất ít e2e:** chỉ cho luồng người dùng giá trị cao **không** chứng minh được ở tầng thấp; viết
+  bằng skill `frontend-e2e-testing`, không phải recipe này.
 
 Chống lộn ngược kim tự tháp: mỗi lần định thêm e2e/integration, hỏi "rủi ro này có test được rẻ và
 ổn định hơn ở tầng component/hook không?" — nếu có, hạ xuống tầng đó.
@@ -39,7 +39,7 @@ Vị trí file (colocate, thư mục util test dùng chung, handler msw theo dom
 | Container (chạm data, trong `components/`) | Integration UI + **msw** | Có (msw giả) | Luồng loading→success/error, truyền data xuống presentational, điều hướng/mutation |
 | Data/mapping (`features/<x>/api` + `types`/`utils`) | Test hàm map/parse thuần + msw | Có (msw giả) | Map DTO→view model, xử lý lỗi response, header/param request |
 | `components/` (phẳng gốc `src/`, dùng chung) | Render + props độc lập | Không | UI-kit dùng lại nhiều nơi, đáng phủ kỹ |
-| Luồng đầu-cuối | e2e (mỏng) | Toàn bộ | Vài kịch bản giá trị cao (ngoài phạm vi recipe) |
+| Luồng đầu-cuối | e2e (mỏng) | Toàn bộ | Vài kịch bản giá trị cao (skill `frontend-e2e-testing`) |
 
 Presentational là lá đồ thị phụ thuộc → test **không cần mock mạng** (đúng checklist template
 Feature-Based). Chỉ tầng chạm data mới cần msw.
@@ -59,7 +59,7 @@ Feature-Based). Chỉ tầng chạm data mới cần msw.
 - Không cross-import ruột remote khác trong test — mock ranh giới cross-remote (module `expose`, event bus
   contract ở `packages/contracts`) như code chạy thật, không với tay vào nội bộ remote khác.
 - `packages/ui-kit` test render + props độc lập; `packages/contracts` test shape/map thuần.
-- Ghép host↔remote đầu-cuối thuộc e2e (mỏng, ngoài phạm vi recipe).
+- Ghép host↔remote đầu-cuối thuộc e2e (mỏng, skill `frontend-e2e-testing`).
 
 ## 3. Cái gì đáng test (ưu tiên rủi ro)
 

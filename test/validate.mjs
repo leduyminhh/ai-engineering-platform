@@ -1276,10 +1276,22 @@ if (fs.existsSync(BUILD)) {
   const wf19 = (id) => workflows.stages.find((s) => s.id === id);
   const step19 = (wf, n) => (wf ? parseSteps(wf.body).find((s) => s.n === n) : undefined) ?? { title: '', body: '', checkpoint: false };
   // Lấy riêng một trường của bước để assert không khớp nhầm chữ ở trường khác.
-  const field19 = (body, name) => flat19(body).split(`**${name}:**`)[1]?.split(' - **')[0] ?? '';
+  const field19 = (body, name) => {
+    const lines = body.split('\n');
+    const head = new RegExp(`^- \\*\\*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\*\\*`);
+    const i = lines.findIndex((l) => head.test(l));
+    if (i === -1) return '';
+    const j = lines.findIndex((l, k) => k > i && /^- \*\*/.test(l));
+    return flat19(lines.slice(i, j === -1 ? lines.length : j).join('\n'));
+  };
+  const api5do19 = field19(step19(wf19('workflow-api'), 5).body, 'Thực hiện');
+  ok(api5do19.includes('agent `backend-reviewer`') && !api5do19.includes('**Đầu vào:**'),
+    'field19 (sanity): workflow-api Bước 5 "Thực hiện" có agent backend-reviewer và dừng trước trường kế tiếp');
   const ft19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-testing', 'SKILL.md'), 'utf8');
-  ok(flat19(ft19).includes('`frontend-e2e-testing`') && !/e2e[^.]*ngoài phạm vi recipe này\s*;/.test(flat19(ft19)),
-    'frontend-testing (S7): trỏ e2e sang skill frontend-e2e-testing, không còn chỉ ghi "ngoài phạm vi"');
+  const fts19 = fs.readFileSync(
+    path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-testing', 'references', 'test-strategy.md'), 'utf8');
+  ok(flat19(ft19).includes('`frontend-e2e-testing`') && !/ngoài phạm vi recipe/.test(flat19(ft19) + flat19(fts19)),
+    'frontend-testing (S7): SKILL.md trỏ e2e sang frontend-e2e-testing; SKILL.md + references/test-strategy.md hết "ngoài phạm vi recipe"');
   const pub19 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_published.json'), 'utf8')).published;
   for (const s of ['frontend/frontend-data-integration', 'frontend/frontend-e2e-testing']) {
     ok(pub19.includes(s), `_published.json: có ${s} (publish trước khi nối workflow, không chờ pilot)`);
