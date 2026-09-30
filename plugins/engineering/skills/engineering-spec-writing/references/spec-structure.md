@@ -53,9 +53,8 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
 
 ## Link ADR / contract / data-model
 
-- **ADR:** quyết định lớn (chọn phương án, đánh đổi phạm vi, ràng buộc kỹ thuật lớn) → tạo
-  `docs/decisions/<số kế tiếp>-<slug>.md` theo `docs/decisions/_TEMPLATE.md`; trong spec chỉ **link** tới ADR,
-  không lặp toàn bộ lý do.
+- **ADR:** quyết định lớn (chọn phương án, đánh đổi phạm vi, ràng buộc kỹ thuật lớn) → dùng skill
+  `engineering-adr` để ghi ADR vào `docs/decisions/`; trong spec chỉ **link** tới ADR, không lặp toàn bộ lý do.
 - **Contract / data-model:** link tương đối tới file trong `docs/contracts/` (và data-model của project). Spec
   mô tả *điểm chạm* (đọc/ghi cái gì), contract giữ *chi tiết trường/endpoint* — tránh trùng lặp, tránh drift.
 - Khi spec và contract lệch nhau: nêu rõ là câu hỏi mở để con người chốt, không tự sửa contract.

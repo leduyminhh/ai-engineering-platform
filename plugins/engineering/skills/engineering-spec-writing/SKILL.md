@@ -68,8 +68,8 @@ KHÔNG dùng skill này để phân rã story/task chi tiết, sinh code, hay d�
 
 4. **Ghi ADR cho quyết định lớn.**
    Với mỗi quyết định thiết kế/nghiệp vụ đáng lưu (chọn phương án, đánh đổi phạm vi, ràng buộc kỹ thuật lớn):
-   tạo file `docs/decisions/<số kế tiếp>-<slug>.md` theo `docs/decisions/_TEMPLATE.md`; link ngược từ spec và
-   link tới contract/data-model liên quan.
+   dùng skill **`engineering-adr`** (cùng plugin) để làm rõ phương án và ghi ADR vào `docs/decisions/`; spec chỉ
+   link tới ADR đó và tới contract/data-model liên quan, không tự lặp lại thủ tục ghi ADR.
 
 5. **Verify.**
    Chạy checklist [references/checklist.md](references/checklist.md): đủ mục; mỗi requirement truy vết được
