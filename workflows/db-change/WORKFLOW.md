@@ -1,6 +1,6 @@
 ---
 name: workflow-db-change
-description: "Workflow điều phối thay đổi schema database: xác định bảng/cột/index bị ảnh hưởng, thiết kế migration forward + rollback tương thích ngược, implement migration và code, review query/index, chạy thử migrate up/rollback/up trên DB test, viết integration test cho query/repository bị ảnh hưởng, cập nhật data-model.md, rồi commit. Dùng workflow NÀY khi người dùng muốn \"đổi schema\", \"migration\", \"thêm cột/bảng\", \"đổi index\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối thay đổi schema database: xác định bảng/cột/index bị ảnh hưởng, thiết kế migration forward + rollback tương thích ngược, implement migration và code, review query/index, chạy thử chu trình verify theo công cụ (migrate up/rollback/up, hoặc up/migration bù với công cụ forward-only) trên DB test, viết integration test cho query/repository bị ảnh hưởng, cập nhật data-model.md, rồi commit. Dùng workflow NÀY khi người dùng muốn \"đổi schema\", \"migration\", \"thêm cột/bảng\", \"đổi index\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
 order: 7
 title: "DB change — migration schema forward/rollback"
 kind: workflow
@@ -19,7 +19,7 @@ next: null
 ## Mục tiêu & đầu vào
 
 - **Mục tiêu:** thay đổi schema database an toàn — có migration forward + rollback tương thích ngược, code
-  đi kèm đã review, đã chạy thử migrate up → rollback → migrate up thành công trên DB test, có integration
+  đi kèm đã review, đã chạy thử chu trình verify theo công cụ (migrate up → rollback → migrate up, hoặc migrate up → migration bù với công cụ forward-only) thành công trên DB test, có integration
   test cho query/repository bị ảnh hưởng và `data-model.md` được cập nhật.
 - **Đầu vào bắt buộc:** mô tả thay đổi schema (bảng/cột/index cần thêm/sửa/xoá).
 - **Đầu vào tuỳ chọn:** data-model/ERD hiện tại, migration tool đang dùng của project.
@@ -52,7 +52,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** danh sách impact từ Bước 1
-- **Hành động:** thiết kế migration forward + rollback theo chiến lược expand/contract (thêm trước, backfill,
+- **Hành động:** thiết kế migration forward + rollback theo chiến lược expand/contract (công cụ forward-only: "rollback" là một migration bù mới) (thêm trước, backfill,
   rồi mới xoá/đổi ràng buộc cũ ở migration sau); trình cho người dùng xác nhận trước khi implement.
 - **Ràng buộc:** không thiết kế migration xoá dữ liệu ngay trong cùng migration thêm cột/bảng mới.
 - **Đầu ra:** thiết kế migration forward + rollback + tương thích ngược, đã được người dùng xác nhận.
@@ -101,14 +101,20 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** migration đã qua review từ Bước 4 + target DB đã xác nhận ở Bước 5
-- **Hành động:** chạy migrate up → rollback → migrate up lại trên DB test; xác nhận cả 3 lượt chạy thành công.
+- **Hành động:** chạy chu trình verify theo công cụ migration của project trên DB test. Công cụ có rollback
+  (vd Liquibase, Alembic): migrate up → rollback → migrate up lại. Công cụ forward-only (vd Flyway khi dùng
+  theo hướng forward-only): migrate up, rồi áp migration bù đã thiết kế ở Bước 2 và kiểm schema/dữ liệu sau
+  từng lượt; nếu Bước 2 chưa thiết kế migration bù cho thay đổi này thì quay lại Bước 2 bổ sung, không tự bịa
+  migration bù. Xác nhận mọi lượt thành công.
 - **Ràng buộc:** chỉ chạy trên đúng target đã xác nhận ở Bước 5 (cấu hình kết nối đổi → quay lại Bước 5);
-  cấm chạy trên DB production; cấm thay đổi phá huỷ dữ liệu khi chưa được người dùng xác nhận ở Bước 2.
-- **Đầu ra:** kết quả migrate up → rollback → migrate up trên DB test.
-- **Gate:** migrate up → rollback → migrate up thành công, có evidence lệnh.
-- **Khi fail:** một lượt trong chuỗi up/rollback/up thất bại → quay lại Bước 3 sửa migration, chạy lại cả
-  chuỗi từ đầu.
-- **Evidence:** lệnh migrate up/rollback/up + exit code từng lượt.
+  cấm chạy trên DB production; cấm thay đổi phá huỷ dữ liệu khi chưa được người dùng xác nhận ở Bước 2; không
+  giả lập lượt rollback bằng cách sửa tay schema.
+- **Đầu ra:** kết quả chu trình verify theo công cụ trên DB test.
+- **Gate:** chu trình verify theo công cụ thành công (up → rollback → up, hoặc up → migration bù → kiểm schema),
+  có evidence lệnh.
+- **Khi fail:** một lượt trong chu trình verify thất bại → quay lại Bước 3 sửa migration, chạy lại cả chu
+  trình từ đầu.
+- **Evidence:** lệnh từng lượt + exit code từng lượt, ghi rõ công cụ và chế độ (có rollback / forward-only).
 
 ### Bước 7 — Test
 
@@ -121,11 +127,14 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   Testcontainers, là ngoại lệ); không sửa code production — bug thật thì giữ test đỏ và báo; không xoá/nới
   test để qua.
 - **Đầu ra:** integration test cho query/repository bị ảnh hưởng, chạy được.
-- **Gate:** integration test pass.
+- **Gate:** integration test pass; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file
+  thay đổi hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm
+  file test (và fixture/mock của test).
 - **Khi fail:** lỗi do test → sửa test; lỗi do code hoặc migration → quay lại Bước 3 sửa, chạy lại từ Bước 4;
   project không có DB tạm (Docker/Testcontainers) → chạy trên target đã xác nhận ở Bước 5, hoặc hỏi người dùng
   nếu chưa có, không tự dựng hạ tầng.
-- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail.
+- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail; danh sách file thay đổi hoặc mới trong bước so
+  với trạng thái đầu bước.
 
 ### Bước 8 — Cập nhật data-model & nợ contract
 
@@ -174,17 +183,18 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Người dùng không xác nhận thiết kế migration (sau Bước 2 ⏸) | Quay lại Bước 1 làm rõ impact/ràng buộc |
 | Target DB trỏ production hoặc chưa được xác nhận (sau Bước 5 ⏸) | Dừng, không chạy migration |
-| Một lượt migrate up/rollback/up thất bại (Bước 6) | Quay lại Bước 3 sửa migration, chạy lại cả chuỗi từ đầu |
+| Một lượt trong chu trình verify thất bại (Bước 6) | Quay lại Bước 3 sửa migration, chạy lại cả chuỗi từ đầu |
 | Integration test đỏ (Bước 7) | Lỗi test → sửa test; lỗi code/migration → quay lại Bước 3 (không nới test) |
 | Người dùng không duyệt diff (sau Bước 9 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 | Thay đổi phá huỷ dữ liệu chưa được xác nhận | Cấm thực hiện; quay lại Bước 2 xin xác nhận rõ ràng |
 | Yêu cầu chạy migration trên production | Cấm thực hiện; chỉ chạy trên DB test |
 
-- **Điều kiện dừng:** người dùng không xác nhận thiết kế migration sau nhiều vòng; chuỗi migrate up/rollback/up
+- **Điều kiện dừng:** người dùng không xác nhận thiết kế migration sau nhiều vòng; chu trình verify migration
   liên tục thất bại; finding `blocker` không sửa được; người dùng không duyệt diff; yêu cầu chạy migration
   trên production.
-- **Rollback:** migration đã viết có sẵn script rollback riêng (Bước 2); trước checkpoint commit, chưa có gì
-  để rollback ở tầng git; workflow không tự chạy migration trên production nên không cần rollback ở đó.
+- **Rollback:** migration đã viết có sẵn script rollback riêng, hoặc migration bù với công cụ forward-only
+  (Bước 2); trước checkpoint commit, chưa có gì để rollback ở tầng git; workflow không tự chạy migration trên
+  production nên không cần rollback ở đó.
 
 ## Definition of Done
 
@@ -193,7 +203,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] Build xanh sau implement — evidence: Bước 3
 - [ ] 0 finding blocker ở review query/index — evidence: Bước 4
 - [ ] Target DB đã được người dùng xác nhận là DB test — evidence: Bước 5
-- [ ] Migrate up → rollback → migrate up thành công trên DB test — evidence: Bước 6
+- [ ] Chu trình verify theo công cụ thành công trên DB test — evidence: Bước 6
 - [ ] Integration test cho query/repository bị ảnh hưởng pass — evidence: Bước 7
 - [ ] `data-model.md` cập nhật (hoặc "không ảnh hưởng"); nợ contract ghi vào `next_actions` — evidence: Bước 8
 - [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 9

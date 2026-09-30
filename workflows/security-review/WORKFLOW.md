@@ -31,7 +31,7 @@ next: null
 - Artifact phải có sẵn: không bắt buộc, nhưng danh sách dependency (`package.json`/`pom.xml`/…) giúp scan
   dependency nhanh hơn.
 - Baseline: build/test hiện tại của phạm vi review đang XANH trước khi bắt đầu (để phân biệt lỗi bảo mật với
-  lỗi build có sẵn).
+  lỗi build có sẵn) — được đo và ghi số mốc ở Bước 1.
 
 Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.
 
@@ -39,7 +39,19 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 
 Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint người duyệt thì gắn ⏸ cuối tên bước.
 
-### Bước 1 — Phạm vi & threat
+### Bước 1 — Baseline build/test
+
+- **Thực hiện:** session chính
+- **Đầu vào:** phạm vi cần review của người dùng
+- **Hành động:** chạy build và test của phạm vi review theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+  pass/fail) làm baseline cho các bước sau.
+- **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
+- **Gate:** build/test xanh (exit code 0) và số mốc đã ghi, để phân biệt lỗi bảo mật với lỗi build có sẵn.
+- **Khi fail:** đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; lỗi build có sẵn không tính là finding bảo mật.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail.
+
+### Bước 2 — Phạm vi & threat
 
 - **Thực hiện:** session chính
 - **Đầu vào:** phạm vi cần review của người dùng
@@ -54,14 +66,14 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** không xác định được phạm vi rõ ràng → hỏi lại người dùng.
 - **Evidence:** danh sách vùng rủi ro áp dụng trong report bước.
 
-### Bước 2 — Review & scan
+### Bước 3 — Review & scan
 
 - **Thực hiện:** agent `engineering-quality-auditor`
-- **Đầu vào:** danh sách vùng rủi ro từ Bước 1
+- **Đầu vào:** danh sách vùng rủi ro từ Bước 2
 - **Hành động:** review code theo từng vùng rủi ro áp dụng (STRIDE/OWASP), gồm kiểm quyền theo vai trò/chủ sở
   hữu tài nguyên (authorization) và cấu hình mặc định không an toàn; quét secret hardcode và dependency có
   CVE đã biết; mask giá trị secret thật trong mọi finding trước khi báo; đánh dấu finding secret bị lộ để
-  Bước 5 xử lý.
+  Bước 6 xử lý.
 - **Ràng buộc:** không in giá trị secret thật ra report (luôn mask); không tự sửa code ở bước này.
 - **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`), secret đã mask.
 - **Gate:** report finding theo schema; secret đã mask.
@@ -69,10 +81,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   trước khi tiếp tục report.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence), xác nhận secret đã mask.
 
-### Bước 3 — Validate findings
+### Bước 4 — Validate findings
 
 - **Thực hiện:** session chính
-- **Đầu vào:** finding thô từ Bước 2
+- **Đầu vào:** finding thô từ Bước 3
 - **Hành động:** đọc lại `file:line` của từng finding để xác nhận còn đúng trong code thật; loại finding
   không tái lập được hoặc là false positive, ghi lý do loại.
 - **Ràng buộc:** không giữ lại finding không đọc lại được `file:line`; không tự hạ severity để giảm số
@@ -82,10 +94,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** không đọc lại được `file:line` (file không tồn tại/đã đổi) → loại finding đó, ghi rõ lý do.
 - **Evidence:** danh sách finding đã validate trong report bước.
 
-### Bước 4 — Kế hoạch remediation ⏸
+### Bước 5 — Kế hoạch remediation ⏸
 
 - **Thực hiện:** session chính
-- **Đầu vào:** finding đã validate từ Bước 3
+- **Đầu vào:** finding đã validate từ Bước 4
 - **Hành động:** trình toàn bộ finding cho người dùng theo severity; người dùng chọn finding nào sửa ngay,
   finding nào chấp nhận rủi ro (ghi lý do chấp nhận).
 - **Ràng buộc:** không tự quyết định bỏ qua finding `blocker` mà không có xác nhận rõ ràng của người dùng.
@@ -95,10 +107,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   quyết định.
 - **Evidence:** danh sách finding người dùng chọn sửa/chấp nhận, trích dẫn xác nhận của người dùng.
 
-### Bước 5 — Thu hồi secret ⏸
+### Bước 6 — Thu hồi secret ⏸
 
 - **Thực hiện:** session chính
-- **Đầu vào:** finding đã validate từ Bước 3 + danh sách finding người dùng chọn ở Bước 4
+- **Đầu vào:** finding đã validate từ Bước 4 + danh sách finding người dùng chọn ở Bước 5
 - **Hành động:** nếu có finding là secret bị lộ (đã nằm trong code, lịch sử git, log hoặc artifact), yêu cầu
   người dùng tự rotate/thu hồi secret đó tại hệ thống phát hành (cloud, IdP, database, dịch vụ ngoài) rồi xác
   nhận đã làm; coi secret là đã lộ kể cả khi sau này xoá khỏi code. Nếu không có finding secret bị lộ, ghi
@@ -111,28 +123,31 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `remaining_risks`.
 - **Evidence:** trích dẫn xác nhận của người dùng (không kèm giá trị secret), hoặc dòng "không áp dụng".
 
-### Bước 6 — Regression test (đỏ)
+### Bước 7 — Regression test (đỏ)
 
 - **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (chỉ phía có finding cần sửa)
-- **Đầu vào:** danh sách finding cần sửa từ Bước 4
+- **Đầu vào:** danh sách finding cần sửa từ Bước 5
 - **Hành động:** với mỗi finding kiểm được bằng test (authorization, input validation, SSRF, logic), viết test
   tái hiện lỗ hổng và chạy trên code chưa sửa: test phải đỏ đúng lý do lỗ hổng. Finding không kiểm được bằng
   test (secret, dependency, cấu hình) ghi "không áp dụng" kèm lý do.
 - **Ràng buộc:** chỉ viết test, không sửa code production; chỉ chạy trên môi trường local/test; test không chứa
   giá trị secret thật và không gọi dịch vụ bên ngoài thật (SSRF dùng server giả cục bộ hoặc mock).
 - **Đầu ra:** danh sách test regression đỏ đúng lý do + danh sách finding "không áp dụng" kèm lý do.
-- **Gate:** mỗi test regression đỏ đúng lý do lỗ hổng, không đỏ vì lỗi của chính test.
+- **Gate:** mỗi test regression đỏ đúng lý do lỗ hổng, không đỏ vì lỗi của chính test; so với trạng thái ghi
+  lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only` và
+  `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test).
 - **Khi fail:** test xanh trên code chưa sửa (không bắt được lỗ hổng) hoặc đỏ vì lỗi test → sửa test, chạy lại;
-  không nới assertion. Test đã viết đúng mà vẫn xanh → nghi finding là false positive, quay lại Bước 3 validate
+  không nới assertion. Test đã viết đúng mà vẫn xanh → nghi finding là false positive, quay lại Bước 4 validate
   lại.
-- **Evidence:** lệnh chạy test + exit code khác 0 + đoạn lỗi giải thích lý do đỏ.
+- **Evidence:** lệnh chạy test + exit code khác 0 + đoạn lỗi giải thích lý do đỏ; danh sách file thay đổi hoặc
+  mới trong bước so với trạng thái đầu bước.
 
-### Bước 7 — Sửa
+### Bước 8 — Sửa
 
 - **Thực hiện:** session chính
-- **Đầu vào:** danh sách finding cần sửa từ Bước 4 + test regression từ Bước 6
+- **Đầu vào:** danh sách finding cần sửa từ Bước 5 + test regression từ Bước 7
 - **Hành động:** sửa đúng finding đã chọn, phạm vi tối thiểu cần thiết; chạy lại build/test của phạm vi đã
-  sửa, gồm test regression ở Bước 6 (phải chuyển từ đỏ sang xanh).
+  sửa, gồm test regression ở Bước 7 (phải chuyển từ đỏ sang xanh).
 - **Ràng buộc:** không sửa ngoài phạm vi finding đã chọn; không chỉ che triệu chứng (vd log giảm chi tiết
   thay vì sửa lỗ hổng thật); không xoá hay nới test regression để qua.
 - **Đầu ra:** code đã sửa, build/test xanh, test regression xanh.
@@ -140,23 +155,23 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** sửa xong vẫn đỏ → chẩn đoán lại, sửa tiếp, không bỏ qua.
 - **Evidence:** lệnh build/test + exit code 0 (test regression đã từ đỏ sang xanh).
 
-### Bước 8 — Re-scan
+### Bước 9 — Re-scan
 
 - **Thực hiện:** agent `engineering-quality-auditor`
-- **Đầu vào:** code đã sửa từ Bước 7 + danh sách finding đã chọn sửa từ Bước 4
+- **Đầu vào:** code đã sửa từ Bước 8 + danh sách finding đã chọn sửa từ Bước 5
 - **Hành động:** scan lại đúng vùng đã sửa để xác nhận finding đã chọn không còn; kiểm tra không phát sinh
   finding mới trong vùng vừa sửa.
-- **Ràng buộc:** không tự đóng finding khi chưa scan lại xác nhận; finding chấp nhận rủi ro ở Bước 4 giữ
+- **Ràng buộc:** không tự đóng finding khi chưa scan lại xác nhận; finding chấp nhận rủi ro ở Bước 5 giữ
   nguyên trạng thái, không tính là blocker còn lại.
 - **Đầu ra:** báo cáo finding đã sửa không còn xuất hiện; danh sách finding còn lại (nếu có) + trạng thái.
 - **Gate:** finding đã sửa không còn; 0 finding `blocker` hoặc blocker được chấp nhận rõ ràng.
-- **Khi fail:** finding đã sửa vẫn còn xuất hiện → quay lại Bước 7 sửa lại cho đúng.
-- **Evidence:** danh sách finding sau re-scan + đối chiếu với danh sách đã sửa ở Bước 4.
+- **Khi fail:** finding đã sửa vẫn còn xuất hiện → quay lại Bước 8 sửa lại cho đúng.
+- **Evidence:** danh sách finding sau re-scan + đối chiếu với danh sách đã sửa ở Bước 5.
 
-### Bước 9 — Commit ⏸
+### Bước 10 — Commit ⏸
 
 - **Thực hiện:** skill `git-workflow`
-- **Đầu vào:** diff sửa hoàn chỉnh đã qua Bước 1–8
+- **Đầu vào:** diff sửa hoàn chỉnh đã qua Bước 1–9
 - **Hành động:** tóm tắt finding đã sửa + finding được chấp nhận rủi ro (nếu có); đề xuất commit message
   Conventional Commits (header EN, body VI); trình diff cho người dùng duyệt.
 - **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu; không commit
@@ -170,9 +185,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
-| 4 | Toàn bộ finding theo severity | Người dùng chọn finding cần sửa/chấp nhận rủi ro |
-| 5 | Danh sách secret bị lộ (đã mask) và trạng thái rotate | Người dùng xác nhận đã rotate, hoặc không có secret bị lộ |
-| 9 | Diff sửa hoàn chỉnh + test regression | Người dùng duyệt diff |
+| 5 | Toàn bộ finding theo severity | Người dùng chọn finding cần sửa/chấp nhận rủi ro |
+| 6 | Danh sách secret bị lộ (đã mask) và trạng thái rotate | Người dùng xác nhận đã rotate, hoặc không có secret bị lộ |
+| 10 | Diff sửa hoàn chỉnh + test regression | Người dùng duyệt diff |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
 
@@ -180,16 +195,17 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 
 | Tình huống | Hành động |
 |---|---|
+| Baseline đỏ (Bước 1) | Dừng `blocked`, không tiếp tục trên baseline đỏ; đề xuất workflow-bugfix |
 | Build fail | Chẩn đoán → sửa → build lại |
 | Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro rõ ràng |
-| Phát hiện secret chưa mask an toàn (Bước 2) | Dừng, báo người dùng xử lý thủ công secret trước khi tiếp tục |
-| Người dùng chưa quyết định remediation (sau Bước 4 ⏸) | Dừng, chờ xác nhận, không tự sửa |
-| Người dùng chưa rotate secret bị lộ (sau Bước 5 ⏸) | Dừng, coi secret là đã lộ, không đóng finding, ghi vào `remaining_risks` |
-| Test regression không đỏ đúng lý do (Bước 6) | Sửa test, chạy lại; không nới assertion |
-| Finding đã sửa vẫn còn sau re-scan (Bước 8) | Quay lại Bước 7 sửa lại cho đúng |
-| Người dùng không duyệt diff (sau Bước 9 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+| Phát hiện secret chưa mask an toàn (Bước 3) | Dừng, báo người dùng xử lý thủ công secret trước khi tiếp tục |
+| Người dùng chưa quyết định remediation (sau Bước 5 ⏸) | Dừng, chờ xác nhận, không tự sửa |
+| Người dùng chưa rotate secret bị lộ (sau Bước 6 ⏸) | Dừng, coi secret là đã lộ, không đóng finding, ghi vào `remaining_risks` |
+| Test regression không đỏ đúng lý do (Bước 7) | Sửa test, chạy lại; không nới assertion |
+| Finding đã sửa vẫn còn sau re-scan (Bước 9) | Quay lại Bước 8 sửa lại cho đúng |
+| Người dùng không duyệt diff (sau Bước 10 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 
 - **Điều kiện dừng:** phát hiện secret không xử lý được an toàn; người dùng không rotate secret bị lộ; người
   dùng không quyết định được remediation sau nhiều vòng; finding `blocker` không sửa được và người dùng không
@@ -200,15 +216,16 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 
 ## Definition of Done
 
-- [ ] Danh sách vùng rủi ro áp dụng đã xác định — evidence: Bước 1
-- [ ] Finding đã scan theo schema, secret đã mask — evidence: Bước 2
-- [ ] Finding đã validate bằng đọc lại `file:line` — evidence: Bước 3
-- [ ] Người dùng đã chọn finding cần sửa/chấp nhận rủi ro — evidence: Bước 4
-- [ ] Secret bị lộ đã được người dùng rotate, hoặc không áp dụng — evidence: Bước 5
-- [ ] Test regression đỏ đúng lý do trước khi sửa (hoặc "không áp dụng" kèm lý do) — evidence: Bước 6
-- [ ] Build/test xanh sau khi sửa, gồm test regression — evidence: Bước 7
-- [ ] Re-scan xác nhận finding đã sửa không còn — evidence: Bước 8
-- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 9
+- [ ] Baseline build/test đã đo, số mốc đã ghi — evidence: Bước 1
+- [ ] Danh sách vùng rủi ro áp dụng đã xác định — evidence: Bước 2
+- [ ] Finding đã scan theo schema, secret đã mask — evidence: Bước 3
+- [ ] Finding đã validate bằng đọc lại `file:line` — evidence: Bước 4
+- [ ] Người dùng đã chọn finding cần sửa/chấp nhận rủi ro — evidence: Bước 5
+- [ ] Secret bị lộ đã được người dùng rotate, hoặc không áp dụng — evidence: Bước 6
+- [ ] Test regression đỏ đúng lý do trước khi sửa (hoặc "không áp dụng" kèm lý do) — evidence: Bước 7
+- [ ] Build/test xanh sau khi sửa, gồm test regression — evidence: Bước 8
+- [ ] Re-scan xác nhận finding đã sửa không còn — evidence: Bước 9
+- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 10
 - [ ] Mọi gate có evidence `passed`
 - [ ] 0 finding `blocker` (hoặc blocker được người dùng chấp nhận rõ ràng, ghi trong `remaining_risks`)
 
