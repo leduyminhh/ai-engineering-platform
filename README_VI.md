@@ -151,12 +151,12 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | Agent id | Plugin | Mode | Skill gói | Dùng trong |
 | --- | --- | --- | --- | --- |
 | `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01, WF07, WF08 |
-| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF03, WF05, WF08 |
+| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF03, WF05, WF06, WF07, WF08 |
 | `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01–WF04, WF07–WF09 |
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
-| `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05 |
+| `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05, WF06 |
 | `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04, WF09 |
-| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF11 |
+| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF08, WF11 |
 | `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram | WF01, WF03, WF10, WF12 |
 | `engineering-release-scribe` | engineering | write (chỉ `docs/`, `CHANGELOG.md`) | engineering-release-notes | WF11 |
 | `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | WF10 |

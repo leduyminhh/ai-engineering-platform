@@ -19,7 +19,8 @@ next: null
 ## Mục tiêu & đầu vào
 
 - **Mục tiêu:** có endpoint API mới/đổi, contract OpenAPI 3.1 hợp lệ chốt trước khi code, backend implement
-  khớp contract, test integration + contract pass, 0 drift contract↔code, docs cập nhật.
+  khớp contract, test integration + contract pass, 0 drift contract↔code, 0 finding blocker về
+  authorization/input validation, docs cập nhật.
 - **Đầu vào bắt buộc:** mô tả endpoint cần làm (mục đích, request/response, ai gọi).
 - **Đầu vào tuỳ chọn:** contract OpenAPI hiện có (nếu là đổi endpoint đã có), FE có cần nối client hay không.
 

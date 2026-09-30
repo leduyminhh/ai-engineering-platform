@@ -19,7 +19,8 @@ next: null
 ## Mục tiêu & đầu vào
 
 - **Mục tiêu:** thay đổi schema database an toàn — có migration forward + rollback tương thích ngược, code
-  đi kèm đã review, đã chạy thử migrate up → rollback → migrate up thành công trên DB test.
+  đi kèm đã review, đã chạy thử migrate up → rollback → migrate up thành công trên DB test, có integration
+  test cho query/repository bị ảnh hưởng và `data-model.md` được cập nhật.
 - **Đầu vào bắt buộc:** mô tả thay đổi schema (bảng/cột/index cần thêm/sửa/xoá).
 - **Đầu vào tuỳ chọn:** data-model/ERD hiện tại, migration tool đang dùng của project.
 
@@ -116,11 +117,14 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** viết integration test cho repository/query bị ảnh hưởng: đọc/ghi qua schema mới; khi đang ở
   giai đoạn expand, kiểm code cũ vẫn đọc được dữ liệu. Dùng DB tạm (Testcontainers hoặc tương đương của
   project) hoặc đúng target đã xác nhận ở Bước 5; chạy test và ghi kết quả.
-- **Ràng buộc:** không chạy trên DB production hay target chưa xác nhận; không sửa code production — bug thật
-  thì giữ test đỏ và báo; không xoá/nới test để qua.
+- **Ràng buộc:** không chạy trên DB production hay target chưa xác nhận (DB tạm do chính test tự dựng, vd
+  Testcontainers, là ngoại lệ); không sửa code production — bug thật thì giữ test đỏ và báo; không xoá/nới
+  test để qua.
 - **Đầu ra:** integration test cho query/repository bị ảnh hưởng, chạy được.
 - **Gate:** integration test pass.
-- **Khi fail:** lỗi do test → sửa test; lỗi do code hoặc migration → quay lại Bước 3 sửa, chạy lại từ Bước 4.
+- **Khi fail:** lỗi do test → sửa test; lỗi do code hoặc migration → quay lại Bước 3 sửa, chạy lại từ Bước 4;
+  project không có DB tạm (Docker/Testcontainers) → chạy trên target đã xác nhận ở Bước 5, hoặc hỏi người dùng
+  nếu chưa có, không tự dựng hạ tầng.
 - **Evidence:** lệnh chạy test + exit code + số liệu pass/fail.
 
 ### Bước 8 — Cập nhật data-model & nợ contract

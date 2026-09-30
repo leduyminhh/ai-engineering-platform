@@ -19,8 +19,9 @@ next: null
 ## Mục tiêu & đầu vào
 
 - **Mục tiêu:** rà soát bảo mật một phạm vi code theo threat model rõ ràng, phát hiện và validate finding
-  thật (không false positive), remediation được người dùng chọn, sửa xong re-scan xác nhận hết blocker (hoặc
-  blocker được người dùng chấp nhận rõ ràng), sẵn sàng để commit.
+  thật (không false positive), remediation được người dùng chọn, secret bị lộ được người dùng rotate, lỗ hổng
+  có regression test tái hiện trước khi sửa, sửa xong re-scan xác nhận hết blocker (hoặc blocker được người
+  dùng chấp nhận rõ ràng), sẵn sàng để commit.
 - **Đầu vào bắt buộc:** phạm vi cần review (module/service/toàn bộ project).
 - **Đầu vào tuỳ chọn:** báo cáo CVE/dependency đã biết, log sự cố bảo mật trước đó, yêu cầu compliance cụ thể.
 
@@ -117,12 +118,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** với mỗi finding kiểm được bằng test (authorization, input validation, SSRF, logic), viết test
   tái hiện lỗ hổng và chạy trên code chưa sửa: test phải đỏ đúng lý do lỗ hổng. Finding không kiểm được bằng
   test (secret, dependency, cấu hình) ghi "không áp dụng" kèm lý do.
-- **Ràng buộc:** chỉ viết test, không sửa code production; test không chứa giá trị secret thật và không gọi
-  dịch vụ bên ngoài thật (SSRF dùng server giả cục bộ hoặc mock).
+- **Ràng buộc:** chỉ viết test, không sửa code production; chỉ chạy trên môi trường local/test; test không chứa
+  giá trị secret thật và không gọi dịch vụ bên ngoài thật (SSRF dùng server giả cục bộ hoặc mock).
 - **Đầu ra:** danh sách test regression đỏ đúng lý do + danh sách finding "không áp dụng" kèm lý do.
 - **Gate:** mỗi test regression đỏ đúng lý do lỗ hổng, không đỏ vì lỗi của chính test.
 - **Khi fail:** test xanh trên code chưa sửa (không bắt được lỗ hổng) hoặc đỏ vì lỗi test → sửa test, chạy lại;
-  không nới assertion.
+  không nới assertion. Test đã viết đúng mà vẫn xanh → nghi finding là false positive, quay lại Bước 3 validate
+  lại.
 - **Evidence:** lệnh chạy test + exit code khác 0 + đoạn lỗi giải thích lý do đỏ.
 
 ### Bước 7 — Sửa
@@ -229,5 +231,5 @@ workflow_result:
   findings: []             # severity, category, location, evidence, impact, recommendation, confidence
   remaining_risks: []      # finding blocker được chấp nhận rủi ro (nếu có) + lý do
   docs_updated: []
-  next_actions: []
+  next_actions: []         # gồm việc dọn secret khỏi lịch sử git (người dùng quyết định) nếu có secret bị lộ
 ```

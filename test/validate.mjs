@@ -981,6 +981,18 @@ if (fs.existsSync(BUILD)) {
   ok(/data-model\.md/.test(dbcStep(8).body) && /next_actions/.test(dbcStep(8).body),
     'workflow-db-change Bước 8: cập nhật data-model.md và ghi nợ contract vào next_actions');
   ok(dbcSteps.length === 9 && dbcStep(9).title.startsWith('Commit'), 'workflow-db-change: 9 bước, Commit ở Bước 9');
+
+  ok(secStep(6).body.includes('local/test'), 'workflow-security-review Bước 6: test regression chỉ chạy trên môi trường local/test');
+  ok(/ngoại lệ/.test(dbcStep(7).body) && /Docker/.test(dbcStep(7).body),
+    'workflow-db-change Bước 7: DB tạm là ngoại lệ, có fallback khi không có Docker/Testcontainers');
+  // Bảng agent ở README liệt kê workflow dùng từng agent; phải đi theo frontmatter sau khi sửa D7–D10.
+  for (const f of ['README.md', 'README_VI.md']) {
+    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+    const row = (agent) => rd.split('\n').find((l) => l.startsWith(`| \`${agent}\` |`)) ?? '';
+    ok(row('backend-test-writer').includes('WF06') && row('backend-test-writer').includes('WF07')
+      && row('frontend-test-writer').includes('WF06') && row('engineering-quality-auditor').includes('WF08'),
+      `${f}: bảng agent nêu đủ workflow dùng test-writer/auditor sau khi sửa D7–D10`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
