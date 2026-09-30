@@ -809,6 +809,22 @@ if (fs.existsSync(BUILD)) {
     'P0 D11: engineering-spec-analyst không còn "cả hai skill" (agent dùng ba skill)');
 }
 
+// 12. SOURCE: frontend-data-integration — hợp đồng skill/references/agent (spec 2026-09-29 §7.3, §8.3)
+{
+  const diDir = path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-data-integration');
+  const diRef = path.join(diDir, 'references');
+  const diFiles = listFilesRec(diRef);
+  const diRead = (rel) => fs.readFileSync(path.join(diRef, rel), 'utf8');
+  const diSkillPath = path.join(diDir, 'SKILL.md');
+  const diSkillExists = fs.existsSync(diSkillPath);
+  ok(diSkillExists, 'frontend-data-integration: có SKILL.md');
+  const diSkill = diSkillExists ? fs.readFileSync(diSkillPath, 'utf8') : '';
+  ok(/^order: 7$/m.test(diSkill) && /^pipeline: false$/m.test(diSkill) && /^sharedAssets: templates\/architecture$/m.test(diSkill),
+    'frontend-data-integration: frontmatter order 7, pipeline false, sharedAssets templates/architecture');
+  ok(['I1', 'I2', 'I3', 'I4', 'I5'].every((g) => diSkill.includes(`### ${g}.`)),
+    'frontend-data-integration: SKILL.md có đủ cổng I1–I5');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
