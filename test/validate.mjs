@@ -1087,6 +1087,19 @@ if (fs.existsSync(BUILD)) {
         `${w17.id} bước ${st.n}: Gate kiểm git diff --name-only chỉ chứa file test`);
     }
   }
+
+  // WF12: thiếu thang severity mặc định, thiếu bước truyền thông, "đủ thời gian" theo dõi không có ngưỡng.
+  const inc17 = wf17('workflow-incident');
+  const incSteps = inc17 ? parseSteps(inc17.body) : [];
+  ok(incSteps.length === 8 && /Cập nhật stakeholder/.test(step17(inc17, 5).title) && step17(inc17, 5).checkpoint
+    && step17(inc17, 6).title.startsWith('Xác minh phục hồi') && step17(inc17, 8).title.startsWith('Commit'),
+    'workflow-incident: 8 bước, Bước 5 Cập nhật stakeholder ⏸, Xác minh phục hồi ở Bước 6, Commit ở Bước 8');
+  ok(['SEV1', 'SEV2', 'SEV3', 'SEV4'].every((s) => flat17(step17(inc17, 1).body).includes(s)),
+    'workflow-incident Bước 1: có thang severity mặc định SEV1–SEV4 khi project chưa có thang');
+  ok(/cửa sổ theo dõi/.test(flat17(step17(inc17, 4).body)) && /cửa sổ theo dõi/.test(flat17(step17(inc17, 6).body)),
+    'workflow-incident: cửa sổ theo dõi phục hồi do người dùng chốt ở Bước 4 và dùng ở Bước 6');
+  ok(/người dùng tự gửi|người dùng gửi/.test(flat17(step17(inc17, 5).body)) && !/agent `/.test(step17(inc17, 5).body.split('**Thực hiện:**')[1]?.split('\n')[0] ?? ''),
+    'workflow-incident Bước 5: chỉ soạn nội dung, người dùng tự gửi, không agent');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -43,8 +43,11 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `ops-incident-investigator`
 - **Đầu vào:** mô tả sự cố + thời điểm phát hiện của người dùng
-- **Hành động:** xác định mức độ nghiêm trọng (severity) theo thang của project; xác định phạm vi ảnh hưởng
-  (service/khách hàng/khu vực) và thời điểm bắt đầu ước tính dựa trên log/metric.
+- **Hành động:** xác định mức độ nghiêm trọng (severity) theo thang của project; project chưa có thang thì
+  dùng thang mặc định đề xuất, người dùng có thể đổi: SEV1 (mất dịch vụ chính hoặc mất dữ liệu, ảnh hưởng đa
+  số người dùng), SEV2 (suy giảm nghiêm trọng hoặc ảnh hưởng một phần người dùng), SEV3 (ảnh hưởng nhỏ hoặc
+  có cách lách), SEV4 (chưa ảnh hưởng người dùng). Xác định phạm vi ảnh hưởng (service/khách hàng/khu vực) và
+  thời điểm bắt đầu ước tính dựa trên log/metric.
 - **Ràng buộc:** không hạ thấp mức độ nghiêm trọng khi chưa đủ evidence; không suy đoán thời điểm bắt đầu
   nếu không có log/metric hỗ trợ — ghi rõ "chưa xác định" nếu vậy.
 - **Đầu ra:** mức độ nghiêm trọng + phạm vi ảnh hưởng + thời điểm bắt đầu (hoặc "chưa xác định").
@@ -84,32 +87,51 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** session chính
 - **Đầu vào:** giả thuyết đã kiểm chứng từ Bước 3
 - **Hành động:** đề xuất ≥1 phương án mitigation (rollback deploy, scale, tắt feature flag…) kèm rủi ro của
-  từng phương án; trình cho người dùng chọn và tự thực hiện trên production.
+  từng phương án; trình cho người dùng chọn và tự thực hiện trên production. Đề xuất kèm cửa sổ theo dõi
+  phục hồi (khoảng thời gian quan sát sau mitigation) và ngưỡng metric "bình thường" rút từ Bước 1–2, để
+  người dùng chốt cùng phương án.
 - **Ràng buộc:** không agent nào tự thực hiện thao tác tác động production (rollback/scale/restart…) — chỉ đề
   xuất; người dùng là người thực hiện.
-- **Đầu ra:** phương án mitigation người dùng đã chọn và (báo) đã thực hiện.
+- **Đầu ra:** phương án mitigation người dùng đã chọn và (báo) đã thực hiện, kèm cửa sổ theo dõi và ngưỡng
+  metric đã chốt.
 - **Gate:** người dùng chọn/thực hiện mitigation; không agent nào tác động production.
 - **Khi fail:** người dùng chưa chọn được phương án → dừng, chờ xác nhận, không tự đề xuất mặc định rồi thực
   hiện thay.
 - **Evidence:** phương án mitigation đã chọn + xác nhận của người dùng đã thực hiện.
 
-### Bước 5 — Xác minh phục hồi
+### Bước 5 — Cập nhật stakeholder ⏸
+
+- **Thực hiện:** session chính
+- **Đầu vào:** mức độ + phạm vi ảnh hưởng từ Bước 1, phương án mitigation đã chọn từ Bước 4
+- **Hành động:** soạn nội dung cập nhật trạng thái cho stakeholder: mức độ nghiêm trọng, phạm vi ảnh hưởng,
+  trạng thái hiện tại (đang điều tra / đã có mitigation / đang theo dõi), mitigation đang áp dụng, thời điểm
+  cập nhật kế tiếp; trình cho người dùng; người dùng tự gửi qua kênh của họ.
+- **Ràng buộc:** workflow không tự gửi tin nhắn hay thông báo thay người dùng; không đưa giá trị secret,
+  thông tin cá nhân của khách hàng hay suy đoán chưa có evidence vào nội dung.
+- **Đầu ra:** bản nháp cập nhật stakeholder đã được người dùng duyệt (hoặc dòng "không cần cập nhật" kèm lý do).
+- **Gate:** người dùng duyệt nội dung hoặc xác nhận không cần cập nhật.
+- **Khi fail:** người dùng chưa duyệt → dừng, chờ xác nhận, không tự sửa mức độ hay phạm vi trong bản nháp.
+- **Evidence:** bản nháp cập nhật + xác nhận của người dùng (hoặc lý do không cần cập nhật).
+
+### Bước 6 — Xác minh phục hồi
 
 - **Thực hiện:** agent `ops-incident-investigator`
 - **Đầu vào:** mitigation đã thực hiện từ Bước 4
-- **Hành động:** theo dõi metric/health check liên quan sau khi mitigation được thực hiện; đối chiếu với
-  ngưỡng bình thường trước sự cố (từ Bước 1–2) để xác nhận đã phục hồi.
-- **Ràng buộc:** không kết luận phục hồi khi metric mới chỉ cải thiện một phần; theo dõi đủ thời gian để loại
-  trừ giả phục hồi tạm thời.
+- **Hành động:** theo dõi metric/health check liên quan sau khi mitigation được thực hiện; đối chiếu theo
+  ngưỡng metric và cửa sổ theo dõi đã chốt ở Bước 4 với ngưỡng bình thường trước sự cố (từ Bước 1–2) để xác
+  nhận đã phục hồi.
+- **Ràng buộc:** không kết luận phục hồi khi metric mới chỉ cải thiện một phần; theo dõi trong cửa sổ theo dõi
+  đã chốt ở Bước 4 để loại trừ giả phục hồi tạm thời; hết cửa sổ mà metric chưa ổn định thì không kết luận
+  phục hồi.
 - **Đầu ra:** xác nhận metric/health đã về ngưỡng bình thường, kèm số liệu.
 - **Gate:** metric/health về ngưỡng bình thường.
 - **Khi fail:** metric chưa về bình thường sau mitigation → quay lại Bước 4 đề xuất phương án khác.
 - **Evidence:** số liệu metric/health trước và sau mitigation, kèm timestamp xác nhận phục hồi.
 
-### Bước 6 — RCA & postmortem
+### Bước 7 — RCA & postmortem
 
 - **Thực hiện:** agent `engineering-spec-analyst`
-- **Đầu vào:** toàn bộ evidence, giả thuyết đã kiểm chứng, mitigation và xác nhận phục hồi từ Bước 1–5
+- **Đầu vào:** toàn bộ evidence, giả thuyết đã kiểm chứng, mitigation và xác nhận phục hồi từ Bước 1–6
 - **Hành động:** viết postmortem đầy đủ (summary, timeline, impact, root_cause, mitigation, prevention); đề
   xuất hành động phòng ngừa tái diễn cụ thể, có chủ sở hữu/hướng xử lý gợi ý.
 - **Ràng buộc:** root_cause phải khớp giả thuyết đã kiểm chứng ở Bước 3, không suy diễn thêm nguyên nhân
@@ -120,10 +142,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   thấp trong trường đó, không bỏ trống, không bịa.
 - **Evidence:** khối `incident` đầy đủ trong report bước.
 
-### Bước 7 — Commit tài liệu ⏸
+### Bước 8 — Commit tài liệu ⏸
 
 - **Thực hiện:** skill `git-workflow`
-- **Đầu vào:** postmortem hoàn chỉnh từ Bước 6
+- **Đầu vào:** postmortem hoàn chỉnh từ Bước 7
 - **Hành động:** đề xuất commit message Conventional Commits cho tài liệu postmortem (header EN, body VI);
   trình diff tài liệu cho người dùng duyệt; gợi ý `next_actions` chạy `workflow-bugfix` nếu prevention cần
   sửa code.
@@ -131,7 +153,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   thay đổi code (chỉ tài liệu) trong workflow này.
 - **Đầu ra:** commit tài liệu postmortem đã tạo (sau khi người dùng duyệt).
 - **Gate:** người dùng duyệt diff; prevention cần sửa code thì `next_actions` gợi ý `workflow-bugfix`.
-- **Khi fail:** người dùng yêu cầu sửa thêm nội dung postmortem → quay lại Bước 6, không commit tạm.
+- **Khi fail:** người dùng yêu cầu sửa thêm nội dung postmortem → quay lại Bước 7, không commit tạm.
 - **Evidence:** hash commit + message.
 
 ## Checkpoint
@@ -139,7 +161,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
 | 4 | Các phương án mitigation + rủi ro từng phương án | Người dùng chọn và tự thực hiện mitigation trên production |
-| 7 | Diff tài liệu postmortem hoàn chỉnh | Người dùng duyệt diff |
+| 5 | Bản nháp cập nhật stakeholder | Người dùng duyệt nội dung hoặc xác nhận không cần cập nhật |
+| 8 | Diff tài liệu postmortem hoàn chỉnh | Người dùng duyệt diff |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit, không tự tác động
 production.
@@ -148,15 +171,16 @@ production.
 
 | Tình huống | Hành động |
 |---|---|
-| Build fail | Không áp dụng ở giai đoạn triage/mitigation; nếu prevention (Bước 6) cần sửa code, xử lý ở `workflow-bugfix` kế tiếp |
+| Build fail | Không áp dụng ở giai đoạn triage/mitigation; nếu prevention (Bước 7) cần sửa code, xử lý ở `workflow-bugfix` kế tiếp |
 | Test fail | Như trên — workflow này không tự sửa code |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Không áp dụng — workflow này không chạy code review; rủi ro production xử lý ở Bước 4 |
 | Cấm: agent tự thực hiện thao tác tác động production (Bước 4) | Từ chối thực hiện, chỉ đề xuất; yêu cầu người dùng tự thực hiện |
 | Người dùng chưa chọn được phương án mitigation (sau Bước 4 ⏸) | Dừng, giữ nguyên hiện trạng, chờ người dùng quyết định; không tự đề xuất mặc định rồi thực hiện thay |
 | Không giả thuyết nào khớp evidence (Bước 3) | Quay lại Bước 2 thu thêm evidence |
-| Metric chưa về bình thường sau mitigation (Bước 5) | Quay lại Bước 4 đề xuất phương án khác |
-| Người dùng không duyệt diff postmortem (sau Bước 7 ⏸) | Không commit, quay lại Bước 6 sửa theo yêu cầu |
+| Metric chưa về bình thường sau mitigation (Bước 6) | Quay lại Bước 4 đề xuất phương án khác |
+| Người dùng chưa duyệt nội dung cập nhật stakeholder (sau Bước 5 ⏸) | Dừng, chờ xác nhận; không tự gửi và không tự sửa mức độ hay phạm vi trong bản nháp |
+| Người dùng không duyệt diff postmortem (sau Bước 8 ⏸) | Không commit, quay lại Bước 7 sửa theo yêu cầu |
 
 - **Điều kiện dừng:** không xác định được phạm vi ảnh hưởng tối thiểu; không thu được evidence cần thiết;
   không giả thuyết nào khớp evidence sau nhiều vòng; metric không phục hồi sau nhiều phương án mitigation;
@@ -171,9 +195,10 @@ production.
 - [ ] Evidence log/metric/trace/deploy liên quan đã thu thập — evidence: Bước 2
 - [ ] ≥1 giả thuyết được kiểm chứng bằng evidence — evidence: Bước 3
 - [ ] Người dùng đã chọn và thực hiện mitigation — evidence: Bước 4
-- [ ] Metric/health đã xác nhận về ngưỡng bình thường — evidence: Bước 5
-- [ ] Khối `incident` đầy đủ 6 trường — evidence: Bước 6
-- [ ] Người dùng đã duyệt diff và commit tài liệu đã tạo — evidence: Bước 7
+- [ ] Cập nhật stakeholder đã được người dùng duyệt (hoặc xác nhận không cần) — evidence: Bước 5
+- [ ] Metric/health đã xác nhận về ngưỡng bình thường — evidence: Bước 6
+- [ ] Khối `incident` đầy đủ 6 trường — evidence: Bước 7
+- [ ] Người dùng đã duyệt diff và commit tài liệu đã tạo — evidence: Bước 8
 - [ ] Mọi gate có evidence `passed`
 - [ ] Không agent nào tự tác động production trong toàn bộ workflow
 
