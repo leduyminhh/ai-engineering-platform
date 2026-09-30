@@ -901,6 +901,23 @@ if (fs.existsSync(BUILD)) {
     .filter((d) => d !== 'frontend-e2e-testing')
     .flatMap((d) => listFilesRec(path.join(PLUGINS_DIR, 'frontend', 'skills', d, 'references')));
   ok(e2eFiles.every((f) => !e2eOtherRefs.includes(f)), 'frontend-e2e-testing: tên file references không trùng skill frontend khác');
+
+  const e2eAgentPath = path.join(PLUGINS_DIR, 'frontend', 'agents', 'frontend-e2e-test-writer.md');
+  const e2eAgentExists = fs.existsSync(e2eAgentPath);
+  ok(e2eAgentExists, 'frontend-e2e-test-writer: có agent file');
+  const e2eAgent = e2eAgentExists ? fs.readFileSync(e2eAgentPath, 'utf8') : '';
+  ok(/^mode: write$/m.test(e2eAgent) && /^skills: "frontend-e2e-testing"$/m.test(e2eAgent),
+    'frontend-e2e-test-writer: mode write, skills = frontend-e2e-testing');
+  ok(e2eAgent.includes('e2e/') && e2eAgent.includes('staging/production') && e2eAgent.includes('not_run') && e2eAgent.includes('core:principles'),
+    'frontend-e2e-test-writer: chỉ ghi e2e/, cấm staging/production, not_run khi thiếu môi trường, evidence theo core:principles');
+  // Agent chưa được nối vào workflow trước pha publish, vì installer ẩn workflow có closure chưa được offer.
+  // Xoá assert này ở pha nối workflow (spec §9 P2) khi feature/testing/release thêm agent.
+  const e2eWfDir = path.join(REPO_ROOT, 'workflows');
+  const e2eWfMentions = fs.readdirSync(e2eWfDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(e2eWfDir, e.name, 'WORKFLOW.md')))
+    .filter((e) => fs.readFileSync(path.join(e2eWfDir, e.name, 'WORKFLOW.md'), 'utf8').includes('frontend-e2e-test-writer'))
+    .map((e) => e.name);
+  ok(e2eWfMentions.length === 0, `frontend-e2e-test-writer: chưa workflow nào dùng (draft) — đang nhắc ở: ${e2eWfMentions.join(', ') || '(không)'}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
