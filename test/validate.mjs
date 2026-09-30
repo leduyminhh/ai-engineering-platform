@@ -1062,6 +1062,22 @@ if (fs.existsSync(BUILD)) {
     'workflow-release: Mục tiêu nêu baseline build/test');
 }
 
+// 17. SOURCE: P3 — WF3-b, A3, WF12, vùng rủi ro, WF11 (spec 2026-09-29 §5.3, §8.5)
+{
+  const wf17 = (id) => workflows.stages.find((s) => s.id === id);
+  const noStep17 = { title: '', body: '', checkpoint: false };
+  const step17 = (wf, n) => (wf ? parseSteps(wf.body).find((s) => s.n === n) ?? noStep17 : noStep17);
+  const flat17 = (t) => t.replace(/\s+/g, ' ');
+
+  // WF3-b: Flyway forward-only không có rollback nên "up → rollback → up" không thực hiện được với mọi công cụ.
+  const dbc17 = wf17('workflow-db-change');
+  const dbcVerify = step17(dbc17, 6);
+  ok(/Chạy thử|verify/i.test(dbcVerify.title) && flat17(dbcVerify.body).includes('forward-only') && flat17(dbcVerify.body).includes('migration bù'),
+    'workflow-db-change Bước 6: verify theo công cụ, có nhánh forward-only dùng migration bù');
+  ok(/chu trình verify/.test(flat17(dbcVerify.body.split('**Gate:**')[1] ?? '').split('- **')[0]),
+    'workflow-db-change Bước 6: Gate nêu chu trình verify theo công cụ');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
