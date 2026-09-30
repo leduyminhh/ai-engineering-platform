@@ -857,14 +857,6 @@ if (fs.existsSync(BUILD)) {
     'frontend-data-integrator: mode write, skills = frontend-data-integration');
   ok(diAgent.includes('container') && diAgent.includes('docs/contracts/') && diAgent.includes('core:principles'),
     'frontend-data-integrator: nối ở container/page, không sửa docs/contracts/, trỏ contract đầu ra ở core:principles');
-  // N1: agent chưa được nối vào workflow trước pha publish, vì installer ẩn workflow có closure chưa được offer.
-  // Xoá assert này ở pha publish (spec §9 P1c) khi WF4/WF5 thêm agent.
-  const diWfDir = path.join(REPO_ROOT, 'workflows');
-  const diWfMentions = fs.readdirSync(diWfDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && fs.existsSync(path.join(diWfDir, e.name, 'WORKFLOW.md')))
-    .filter((e) => fs.readFileSync(path.join(diWfDir, e.name, 'WORKFLOW.md'), 'utf8').includes('frontend-data-integrator'))
-    .map((e) => e.name);
-  ok(diWfMentions.length === 0, `frontend-data-integrator: chưa workflow nào dùng (draft) — đang nhắc ở: ${diWfMentions.join(', ')}`);
 }
 
 // 13. SOURCE: frontend-e2e-testing — hợp đồng skill/references/agent (spec 2026-09-29 §7.2, §8.2)
@@ -1308,6 +1300,19 @@ if (fs.existsSync(BUILD)) {
   const feImpl19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-implement', 'SKILL.md'), 'utf8');
   ok(flat19(feImpl19).includes('`frontend-data-integration`'),
     'frontend-implement: trỏ phần nối data/API sang frontend-data-integration');
+  const offWf19 = offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? [];
+  // Nối agent chỉ hợp lệ khi skill của agent đã publish; nếu rút về draft, wizard ẩn workflow lặng lẽ.
+  for (const w of ['workflow-api', 'workflow-feature', 'workflow-testing']) {
+    ok(offWf19.includes(`workflows/${w}`), `offeredCatalog: vẫn offer workflows/${w} (closure agent frontend đã publish)`);
+  }
+  const api19 = wf19('workflow-api');
+  const apiS6 = step19(api19, 6);
+  ok(/^FE client/.test(apiS6.title) && field19(apiS6.body, 'Thực hiện').includes('agent `frontend-data-integrator`'),
+    'workflow-api Bước 6: FE client do agent frontend-data-integrator thực hiện');
+  ok(!flat19(apiS6.body).includes('Gap G1') && field19(apiS6.body, 'Ràng buộc').includes('docs/contracts/'),
+    'workflow-api Bước 6: bỏ ghi chú Gap G1; Ràng buộc cấm sửa docs/contracts/');
+  ok(api19 && api19.agents.includes('frontend-data-integrator'), 'workflow-api: frontmatter agents có frontend-data-integrator');
+  ok(parseSteps(api19?.body ?? '').length === 8, 'workflow-api: vẫn 8 bước');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
