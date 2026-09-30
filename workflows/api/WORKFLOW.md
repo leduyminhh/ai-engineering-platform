@@ -1,12 +1,12 @@
 ---
 name: workflow-api
-description: "Workflow điều phối làm API contract-first: chốt OpenAPI 3.1 trước khi code, implement backend theo contract, test integration + contract, kiểm drift contract↔code, tuỳ chọn sinh FE client, cập nhật docs rồi commit. Dùng workflow NÀY khi người dùng muốn \"làm API\", \"thêm endpoint\", \"OpenAPI\", \"contract-first\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối làm API contract-first: chốt OpenAPI 3.1 trước khi code, implement backend theo contract, test integration + contract, kiểm drift contract↔code song song với review authorization/input validation, tuỳ chọn sinh FE client, cập nhật docs rồi commit. Dùng workflow NÀY khi người dùng muốn \"làm API\", \"thêm endpoint\", \"OpenAPI\", \"contract-first\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
 order: 8
 title: "API — contract-first, implement, kiểm drift"
 kind: workflow
 tier: 2
 risk: medium
-agents: "backend-implementer,backend-test-writer,backend-reviewer"
+agents: "backend-implementer,backend-test-writer,backend-reviewer,engineering-quality-auditor"
 requires: "backend/backend-api-contract,core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -19,14 +19,15 @@ next: null
 ## Mục tiêu & đầu vào
 
 - **Mục tiêu:** có endpoint API mới/đổi, contract OpenAPI 3.1 hợp lệ chốt trước khi code, backend implement
-  khớp contract, test integration + contract pass, 0 drift contract↔code, docs cập nhật.
+  khớp contract, test integration + contract pass, 0 drift contract↔code, 0 finding blocker về
+  authorization/input validation, docs cập nhật.
 - **Đầu vào bắt buộc:** mô tả endpoint cần làm (mục đích, request/response, ai gọi).
 - **Đầu vào tuỳ chọn:** contract OpenAPI hiện có (nếu là đổi endpoint đã có), FE có cần nối client hay không.
 
 ## Điều kiện tiên quyết
 
 - Skill/agent đã cài: `backend-implementer`, `backend-test-writer`, `backend-reviewer`,
-  skill `backend/backend-api-contract`, `core/git-workflow`.
+  `engineering-quality-auditor`, skill `backend/backend-api-contract`, `core/git-workflow`.
 - Artifact phải có sẵn: `docs/contracts/` của project (nếu đã có API khác) để giữ nhất quán versioning.
 - Baseline: build/test hiện tại của backend đang XANH trước khi thêm endpoint.
 
@@ -70,16 +71,21 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** test fail → phân tích failure → sửa code (không xoá/nới test) → chạy lại.
 - **Evidence:** lệnh chạy test + exit code + số liệu pass/fail.
 
-### Bước 4 — Kiểm drift
+### Bước 4 — Kiểm drift & bảo mật
 
-- **Thực hiện:** agent `backend-reviewer`
+- **Thực hiện:** agent `backend-reviewer` ∥ agent `engineering-quality-auditor`
 - **Đầu vào:** contract + code + test đã qua Bước 1–3
-- **Hành động:** đối chiếu endpoint/DTO thực tế với contract (thiếu/thừa field, kiểu sai, endpoint lệch).
-- **Ràng buộc:** chỉ đọc, không tự sửa code.
-- **Đầu ra:** danh sách drift (nếu có) hoặc xác nhận 0 drift.
-- **Gate:** 0 drift contract↔code.
-- **Khi fail:** phát hiện drift → quay lại Bước 2 sửa code hoặc Bước 1 sửa contract, review lại.
-- **Evidence:** danh sách đối chiếu contract↔code trong report bước.
+- **Hành động:** `backend-reviewer` đối chiếu endpoint/DTO thực tế với contract (thiếu/thừa field, kiểu sai,
+  endpoint lệch). `engineering-quality-auditor` review endpoint mới/đổi về authorization (mỗi endpoint có kiểm
+  quyền theo vai trò/chủ sở hữu tài nguyên, không lộ dữ liệu của người khác) và input validation (ràng buộc
+  trong schema contract được thực thi ở server); mask mọi secret nếu gặp.
+- **Ràng buộc:** chỉ đọc, không tự sửa code; không in giá trị secret.
+- **Đầu ra:** danh sách drift (nếu có) hoặc xác nhận 0 drift; danh sách finding bảo mật theo severity (contract
+  đầu ra, `core:principles`).
+- **Gate:** 0 drift contract↔code; 0 finding `blocker` về authorization/input validation.
+- **Khi fail:** phát hiện drift → quay lại Bước 2 sửa code hoặc Bước 1 sửa contract; còn finding `blocker` bảo
+  mật → quay lại Bước 2 sửa code; review lại phần đã sửa.
+- **Evidence:** danh sách đối chiếu contract↔code + danh sách finding bảo mật (severity/category/location/evidence/confidence) trong report bước.
 
 ### Bước 5 — FE client (tuỳ chọn)
 
@@ -137,6 +143,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Người dùng không xác nhận contract (sau Bước 1 ⏸) | Sửa lại theo góp ý, trình lại, không code trước |
 | Phát hiện drift contract↔code (Bước 4) | Quay lại Bước 2 sửa code hoặc Bước 1 sửa contract |
+| Finding `blocker` về authorization/input validation (Bước 4) | Quay lại Bước 2 sửa code, review lại phần đã sửa |
 | Người dùng không duyệt diff (sau Bước 7 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 
 - **Điều kiện dừng:** người dùng không xác nhận contract sau nhiều vòng; drift contract↔code không sửa được;
@@ -149,7 +156,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] Contract OpenAPI 3.1 hợp lệ đã xác nhận — evidence: Bước 1
 - [ ] Build xanh sau implement BE — evidence: Bước 2
 - [ ] Integration + contract test pass — evidence: Bước 3
-- [ ] 0 drift contract↔code — evidence: Bước 4
+- [ ] 0 drift contract↔code và 0 finding `blocker` về authorization/input validation — evidence: Bước 4
 - [ ] FE client khớp contract hoặc ghi "bỏ qua" — evidence: Bước 5
 - [ ] Docs API cập nhật hoặc ghi "không ảnh hưởng" — evidence: Bước 6
 - [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 7

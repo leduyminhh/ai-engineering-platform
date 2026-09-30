@@ -82,6 +82,35 @@ giới tầng** — soát import ở đầu file trước:
   `backend-testing` → `references/test-strategy.md` mục "Tránh test giòn".) Sâu về chiến lược test → route
   `backend-testing`.
 
+## Trục 6 — Performance
+
+Đọc diff tĩnh chỉ cho thấy **rủi ro hiệu năng**, không cho thấy số đo. Contract đầu ra (`core:principles`) cấm kết
+luận về hiệu năng khi không có số đo trước/sau trên cùng điều kiện, nên finding của trục này mặc định:
+
+- nhãn **suspected**, `category: performance`, `confidence` tối đa `medium`;
+- **không viết con số** (ms, %, số truy vấn) vào `impact` khi chưa đo;
+- severity tối đa **major** khi chưa có số đo hay kế hoạch thực thi (`blocker` cần bằng chứng đo được).
+
+Dấu hiệu:
+
+- **N+1 query:** vòng lặp gọi `repository.findById(...)` cho từng phần tử; truy cập quan hệ lazy (vd `order.getItems()`)
+  trong vòng lặp hoặc `stream().map(...)` sau khi đã tải danh sách cha; mapper DTO chạm quan hệ lazy. Python/ORM: truy
+  cập quan hệ lazy trong vòng lặp mà không tải trước theo lô. Hướng sửa thường là tải theo lô hoặc `JOIN FETCH`/
+  `@EntityGraph` (Hibernate), `selectinload`/`joinedload` (SQLAlchemy) `[Inference]` — đối chiếu ORM và phiên bản của
+  project.
+- **Query trong vòng lặp:** gọi DB, HTTP hoặc RPC trong `for`/`while`/`stream` thay vì gom thành một truy vấn theo
+  lô (`IN`, batch, bulk).
+- **Thiếu index:** điều kiện lọc, join hoặc sắp xếp mới trên cột chưa có index (kiểm migration trong diff và schema
+  hiện có); `LIKE '%…'` đầu chuỗi; bọc cột bằng hàm trong điều kiện (`WHERE lower(col) = …`). `[Inference]` Ảnh hưởng
+  phụ thuộc DB và kích thước dữ liệu, kiểm bằng kế hoạch thực thi; index thừa làm chậm ghi cũng đáng nêu ở mức minor.
+- **Tải eager/thừa:** `FetchType.EAGER` trên quan hệ dạng tập hợp; tải cả aggregate để hiển thị vài trường (cân nhắc
+  projection/read model); danh sách không phân trang hoặc không giới hạn (vd `findAll()` trên bảng lớn); tải cả bảng
+  vào bộ nhớ rồi lọc bằng code.
+
+Cách đo chỉ **đề xuất** trong finding (skill là READ-ONLY, không tự chạy trên môi trường thật): log SQL hoặc đếm
+truy vấn trong test tích hợp, `EXPLAIN` trên môi trường local/test, profiler của stack. Cần tối ưu có số đo
+trước/sau → `workflow-performance` (nếu project đã cài).
+
 ## Severity — thang phân loại + evidence
 
 | Severity | Nghĩa | Ví dụ |

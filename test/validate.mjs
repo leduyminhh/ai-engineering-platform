@@ -809,6 +809,192 @@ if (fs.existsSync(BUILD)) {
     'P0 D11: engineering-spec-analyst không còn "cả hai skill" (agent dùng ba skill)');
 }
 
+// 12. SOURCE: frontend-data-integration — hợp đồng skill/references/agent (spec 2026-09-29 §7.3, §8.3)
+{
+  const diDir = path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-data-integration');
+  const diRef = path.join(diDir, 'references');
+  const diFiles = listFilesRec(diRef);
+  const diRead = (rel) => fs.readFileSync(path.join(diRef, rel), 'utf8');
+  const diSkillPath = path.join(diDir, 'SKILL.md');
+  const diSkillExists = fs.existsSync(diSkillPath);
+  ok(diSkillExists, 'frontend-data-integration: có SKILL.md');
+  const diSkill = diSkillExists ? fs.readFileSync(diSkillPath, 'utf8') : '';
+  ok(/^order: 7$/m.test(diSkill) && /^pipeline: false$/m.test(diSkill) && /^sharedAssets: templates\/architecture$/m.test(diSkill),
+    'frontend-data-integration: frontmatter order 7, pipeline false, sharedAssets templates/architecture');
+  ok(['I1', 'I2', 'I3', 'I4', 'I5'].every((g) => diSkill.includes(`### ${g}.`)),
+    'frontend-data-integration: SKILL.md có đủ cổng I1–I5');
+  for (const f of ['contract-and-codegen.md', 'data-layer-by-architecture.md', 'states-and-errors.md']) {
+    ok(diFiles.includes(f), `frontend-data-integration: có references/${f}`);
+    ok(diSkill.includes(`(references/${f})`), `frontend-data-integration: SKILL.md link tới references/${f}`);
+  }
+  const diLayer = diFiles.includes('data-layer-by-architecture.md') ? diRead('data-layer-by-architecture.md') : '';
+  ok(['Feature-Based', 'FSD', 'Micro-FE'].every((k) => diLayer.includes(`| ${k} |`)),
+    'frontend-data-integration: bảng đặt file có đủ 3 kiến trúc');
+  ok(diLayer.includes('entities/<x>/api') && diLayer.includes('features/<x>/api'),
+    'frontend-data-integration: FSD tách đọc (entities) và ghi (features)');
+  const diStates = diFiles.includes('states-and-errors.md') ? diRead('states-and-errors.md') : '';
+  ok(['loading', 'error', 'empty', 'success'].every((s) => diStates.includes(`| ${s} |`)),
+    'frontend-data-integration: bảng trạng thái đủ 4 hàng loading/error/empty/success');
+  const diCodegen = diFiles.includes('contract-and-codegen.md') ? diRead('contract-and-codegen.md') : '';
+  ok(diCodegen.includes('https://'),
+    'frontend-data-integration: contract-and-codegen có nguồn https cho hành vi công cụ');
+  // Tên file references không trùng giữa các skill frontend (validate mục hygiene cũng kiểm, ở đây báo rõ theo skill).
+  const diOtherRefs = fs.readdirSync(path.join(PLUGINS_DIR, 'frontend', 'skills'))
+    .filter((d) => d !== 'frontend-data-integration')
+    .flatMap((d) => listFilesRec(path.join(PLUGINS_DIR, 'frontend', 'skills', d, 'references')));
+  ok(diFiles.every((f) => !diOtherRefs.includes(f)), 'frontend-data-integration: tên file references không trùng skill frontend khác');
+  const diAgentPath = path.join(PLUGINS_DIR, 'frontend', 'agents', 'frontend-data-integrator.md');
+  const diAgentExists = fs.existsSync(diAgentPath);
+  ok(diAgentExists, 'frontend-data-integrator: có agent file');
+  const diAgent = diAgentExists ? fs.readFileSync(diAgentPath, 'utf8') : '';
+  ok(/^mode: write$/m.test(diAgent) && /^skills: "frontend-data-integration"$/m.test(diAgent),
+    'frontend-data-integrator: mode write, skills = frontend-data-integration');
+  ok(diAgent.includes('container') && diAgent.includes('docs/contracts/') && diAgent.includes('core:principles'),
+    'frontend-data-integrator: nối ở container/page, không sửa docs/contracts/, trỏ contract đầu ra ở core:principles');
+  // N1: agent chưa được nối vào workflow trước pha publish, vì installer ẩn workflow có closure chưa được offer.
+  // Xoá assert này ở pha publish (spec §9 P1c) khi WF4/WF5 thêm agent.
+  const diWfDir = path.join(REPO_ROOT, 'workflows');
+  const diWfMentions = fs.readdirSync(diWfDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(diWfDir, e.name, 'WORKFLOW.md')))
+    .filter((e) => fs.readFileSync(path.join(diWfDir, e.name, 'WORKFLOW.md'), 'utf8').includes('frontend-data-integrator'))
+    .map((e) => e.name);
+  ok(diWfMentions.length === 0, `frontend-data-integrator: chưa workflow nào dùng (draft) — đang nhắc ở: ${diWfMentions.join(', ')}`);
+}
+
+// 13. SOURCE: frontend-e2e-testing — hợp đồng skill/references/agent (spec 2026-09-29 §7.2, §8.2)
+{
+  const e2eDir = path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-e2e-testing');
+  const e2eRef = path.join(e2eDir, 'references');
+  const e2eFiles = listFilesRec(e2eRef);
+  const e2eRead = (rel) => fs.readFileSync(path.join(e2eRef, rel), 'utf8');
+  const e2eSkillPath = path.join(e2eDir, 'SKILL.md');
+  const e2eSkillExists = fs.existsSync(e2eSkillPath);
+  ok(e2eSkillExists, 'frontend-e2e-testing: có SKILL.md');
+  const e2eSkill = e2eSkillExists ? fs.readFileSync(e2eSkillPath, 'utf8') : '';
+  ok(/^order: 8$/m.test(e2eSkill) && /^pipeline: false$/m.test(e2eSkill) && /^sharedAssets: templates\/architecture$/m.test(e2eSkill),
+    'frontend-e2e-testing: frontmatter order 8, pipeline false, sharedAssets templates/architecture');
+  ok(['E1', 'E2', 'E3', 'E4', 'E5'].every((g) => e2eSkill.includes(`### ${g}.`)),
+    'frontend-e2e-testing: SKILL.md có đủ cổng E1–E5');
+  ok(['E-r1', 'E-r2', 'E-r3', 'E-r4', 'E-r5', 'E-r6', 'E-r7'].every((r) => e2eSkill.includes(`| ${r} |`)),
+    'frontend-e2e-testing: SKILL.md có đủ quy tắc E-r1–E-r7');
+  for (const f of ['playwright-config-and-auth.md', 'flow-selection-and-patterns.md']) {
+    ok(e2eFiles.includes(f), `frontend-e2e-testing: có references/${f}`);
+    ok(e2eSkill.includes(`(references/${f})`), `frontend-e2e-testing: SKILL.md link tới references/${f}`);
+  }
+  const e2eCfg = e2eFiles.includes('playwright-config-and-auth.md') ? e2eRead('playwright-config-and-auth.md') : '';
+  ok(e2eCfg.includes("trace: 'on-first-retry'") && e2eCfg.includes('storageState') && e2eCfg.includes('E2E_BASE_URL'),
+    'frontend-e2e-testing: config mẫu có trace on-first-retry, storageState, baseURL từ biến môi trường');
+  ok(/retries:\s*process\.env\.CI \? 2 : 1/.test(e2eCfg), 'frontend-e2e-testing: config mẫu có retries ≥ 1 để trace on-first-retry được ghi');
+  ok(e2eCfg.includes('assertLocalBaseURL') && /staging/.test(e2eCfg) && /production/.test(e2eCfg),
+    'frontend-e2e-testing: có hàm chặn host không phải local/test (staging/production)');
+  ok(e2eCfg.includes('https://playwright.dev/'),
+    'frontend-e2e-testing: playwright-config-and-auth có nguồn https://playwright.dev/ cho hành vi công cụ');
+  ok(['Feature-Based', 'FSD', 'Micro-FE'].every((k) => e2eCfg.includes(`| ${k} |`)),
+    'frontend-e2e-testing: bảng vị trí e2e có đủ 3 kiến trúc');
+  const e2eFlow = e2eFiles.includes('flow-selection-and-patterns.md') ? e2eRead('flow-selection-and-patterns.md') : '';
+  ok(e2eFlow.includes('| # | Luồng | AC |') && e2eFlow.includes('--repeat-each=3'),
+    'frontend-e2e-testing: có bảng chọn luồng → AC và lệnh --repeat-each=3');
+  // E-r1/E-r2: ví dụ trong tài liệu không được tự vi phạm quy tắc của chính skill.
+  ok(!/locator\(\s*['"`][.#\/]/.test(e2eCfg + e2eFlow) && !/waitForTimeout\(/.test(e2eCfg + e2eFlow),
+    'frontend-e2e-testing: ví dụ không dùng selector CSS/XPath và không dùng waitForTimeout(');
+  // Tên file references không trùng giữa các skill frontend (validate mục hygiene cũng kiểm, ở đây báo rõ theo skill).
+  const e2eOtherRefs = fs.readdirSync(path.join(PLUGINS_DIR, 'frontend', 'skills'))
+    .filter((d) => d !== 'frontend-e2e-testing')
+    .flatMap((d) => listFilesRec(path.join(PLUGINS_DIR, 'frontend', 'skills', d, 'references')));
+  ok(e2eFiles.every((f) => !e2eOtherRefs.includes(f)), 'frontend-e2e-testing: tên file references không trùng skill frontend khác');
+
+  const e2eAgentPath = path.join(PLUGINS_DIR, 'frontend', 'agents', 'frontend-e2e-test-writer.md');
+  const e2eAgentExists = fs.existsSync(e2eAgentPath);
+  ok(e2eAgentExists, 'frontend-e2e-test-writer: có agent file');
+  const e2eAgent = e2eAgentExists ? fs.readFileSync(e2eAgentPath, 'utf8') : '';
+  ok(/^mode: write$/m.test(e2eAgent) && /^skills: "frontend-e2e-testing"$/m.test(e2eAgent),
+    'frontend-e2e-test-writer: mode write, skills = frontend-e2e-testing');
+  ok(e2eAgent.includes('e2e/') && e2eAgent.includes('staging/production') && e2eAgent.includes('not_run') && e2eAgent.includes('core:principles'),
+    'frontend-e2e-test-writer: chỉ ghi e2e/, cấm staging/production, not_run khi thiếu môi trường, evidence theo core:principles');
+  // Agent chưa được nối vào workflow trước pha publish, vì installer ẩn workflow có closure chưa được offer.
+  // Xoá assert này ở pha nối workflow (spec §9 P2) khi feature/testing/release thêm agent.
+  const e2eWfDir = path.join(REPO_ROOT, 'workflows');
+  const e2eWfMentions = fs.readdirSync(e2eWfDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && fs.existsSync(path.join(e2eWfDir, e.name, 'WORKFLOW.md')))
+    .filter((e) => fs.readFileSync(path.join(e2eWfDir, e.name, 'WORKFLOW.md'), 'utf8').includes('frontend-e2e-test-writer'))
+    .map((e) => e.name);
+  ok(e2eWfMentions.length === 0, `frontend-e2e-test-writer: chưa workflow nào dùng (draft) — đang nhắc ở: ${e2eWfMentions.join(', ') || '(không)'}`);
+}
+
+// 14. SOURCE: backend-code-review — trục performance (spec 2026-09-29 §3.3 S4, lỗi D12)
+{
+  const brDir = path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-code-review');
+  const brRead = (rel) => fs.readFileSync(path.join(brDir, rel), 'utf8');
+  const brDims = brRead('references/review-dimensions.md');
+  const brSkill = brRead('SKILL.md');
+  const brTemplate = brRead('references/review-output-template.md');
+  const brAgent = fs.readFileSync(path.join(PLUGINS_DIR, 'backend', 'agents', 'backend-reviewer.md'), 'utf8');
+  ok(brDims.includes('## Trục 6 — Performance'), 'backend-code-review: review-dimensions có "Trục 6 — Performance"');
+  const brPerf = (brDims.split('## Trục 6 — Performance')[1] ?? '').split('\n## ')[0];
+  ok(['N+1', 'index', 'vòng lặp', 'eager'].every((k) => brPerf.includes(k)),
+    'backend-code-review: Trục 6 nêu đủ N+1, thiếu index, query trong vòng lặp, tải eager thừa');
+  // Contract đầu ra cấm kết luận hiệu năng khi thiếu số đo; trục mới phải giữ đúng ràng buộc đó.
+  ok(brPerf.includes('suspected') && brPerf.includes('số đo'),
+    'backend-code-review: Trục 6 quy định finding hiệu năng không có số đo là suspected');
+  ok(brSkill.includes('- **Performance**') && /^description: .*N\+1/m.test(brSkill),
+    'backend-code-review: SKILL.md có bullet Performance ở bước 1 và nêu N+1 trong description');
+  ok(brTemplate.includes('`performance`'), 'backend-code-review: mẫu output liệt kê trục performance');
+  ok(/hiệu năng/.test(brAgent), 'backend-reviewer: Vai trò nêu rủi ro hiệu năng');
+}
+
+// 15. SOURCE: workflow — sửa lỗi major không phụ thuộc skill draft (spec 2026-09-29 §5.3 WF7, WF4, WF3; lỗi D7–D10)
+{
+  const wfBody = (id) => workflows.stages.find((s) => s.id === id);
+  const noStep = { title: '', body: '', checkpoint: false };
+
+  const sec = wfBody('workflow-security-review');
+  const secSteps = sec ? parseSteps(sec.body) : [];
+  const secStep = (n) => secSteps.find((s) => s.n === n) ?? noStep;
+  ok(!!sec && ['engineering-quality-auditor', 'backend-test-writer', 'frontend-test-writer'].every((a) => sec.agents.includes(a)),
+    'workflow-security-review: agents gồm auditor + 2 test-writer (regression test)');
+  // D7: vùng rủi ro phải phủ authorization, SSRF và misconfiguration.
+  ok(/authorization/.test(secStep(1).body) && secStep(1).body.includes('SSRF') && /misconfiguration/i.test(secStep(1).body),
+    'workflow-security-review Bước 1: vùng rủi ro có authorization/access control, SSRF, security misconfiguration');
+  // D8: secret lộ phải có bước rotate do người dùng thực hiện, đặt trước bước sửa code.
+  ok(secStep(5).title.includes('Thu hồi secret') && secStep(5).checkpoint && /rotate/.test(secStep(5).body) && /người dùng/.test(secStep(5).body),
+    'workflow-security-review Bước 5: bước Thu hồi secret (rotate) do người dùng thực hiện, có ⏸');
+  ok(/Regression/i.test(secStep(6).title) && secStep(6).body.includes('agent `backend-test-writer`') && secStep(6).body.includes('agent `frontend-test-writer`'),
+    'workflow-security-review Bước 6: regression test qua test-writer');
+  ok(secSteps.length === 9 && secStep(7).title.startsWith('Sửa') && secStep(8).title.startsWith('Re-scan') && secStep(9).title.startsWith('Commit'),
+    'workflow-security-review: 9 bước, Sửa ở Bước 7, Re-scan ở Bước 8, Commit ở Bước 9');
+
+  const api = wfBody('workflow-api');
+  const apiStep4 = api ? parseSteps(api.body).find((s) => s.n === 4) ?? noStep : noStep;
+  ok(!!api && api.agents.includes('engineering-quality-auditor'), 'workflow-api: agents có engineering-quality-auditor');
+  // D10: DoD đòi 0 blocker nên phải có bước review bảo mật, không chỉ kiểm drift.
+  ok(apiStep4.body.includes('agent `backend-reviewer`') && apiStep4.body.includes('agent `engineering-quality-auditor`')
+    && /authorization/.test(apiStep4.body) && /input validation/.test(apiStep4.body),
+    'workflow-api Bước 4: kiểm drift song song với auditor kiểm authorization + input validation');
+
+  const dbc = wfBody('workflow-db-change');
+  const dbcSteps = dbc ? parseSteps(dbc.body) : [];
+  const dbcStep = (n) => dbcSteps.find((s) => s.n === n) ?? noStep;
+  // D9: đổi query/ORM/DTO mà không có bước test thì thay đổi schema không có lưới an toàn.
+  ok(!!dbc && dbc.agents.includes('backend-test-writer'), 'workflow-db-change: agents có backend-test-writer');
+  ok(/^Test/.test(dbcStep(7).title) && dbcStep(7).body.includes('agent `backend-test-writer`') && /Testcontainers/.test(dbcStep(7).body),
+    'workflow-db-change Bước 7: bước Test qua backend-test-writer (integration, Testcontainers)');
+  ok(/data-model\.md/.test(dbcStep(8).body) && /next_actions/.test(dbcStep(8).body),
+    'workflow-db-change Bước 8: cập nhật data-model.md và ghi nợ contract vào next_actions');
+  ok(dbcSteps.length === 9 && dbcStep(9).title.startsWith('Commit'), 'workflow-db-change: 9 bước, Commit ở Bước 9');
+
+  ok(secStep(6).body.includes('local/test'), 'workflow-security-review Bước 6: test regression chỉ chạy trên môi trường local/test');
+  ok(/ngoại lệ/.test(dbcStep(7).body) && /Docker/.test(dbcStep(7).body),
+    'workflow-db-change Bước 7: DB tạm là ngoại lệ, có fallback khi không có Docker/Testcontainers');
+  // Bảng agent ở README liệt kê workflow dùng từng agent; phải đi theo frontmatter sau khi sửa D7–D10.
+  for (const f of ['README.md', 'README_VI.md']) {
+    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+    const row = (agent) => rd.split('\n').find((l) => l.startsWith(`| \`${agent}\` |`)) ?? '';
+    ok(row('backend-test-writer').includes('WF06') && row('backend-test-writer').includes('WF07')
+      && row('frontend-test-writer').includes('WF06') && row('engineering-quality-auditor').includes('WF08'),
+      `${f}: bảng agent nêu đủ workflow dùng test-writer/auditor sau khi sửa D7–D10`);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {

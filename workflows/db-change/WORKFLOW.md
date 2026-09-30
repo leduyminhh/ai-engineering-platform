@@ -1,12 +1,12 @@
 ---
 name: workflow-db-change
-description: "Workflow điều phối thay đổi schema database: xác định bảng/cột/index bị ảnh hưởng, thiết kế migration forward + rollback tương thích ngược, implement migration và code, review query/index, chạy thử migrate up/rollback/up trên DB test, rồi commit. Dùng workflow NÀY khi người dùng muốn \"đổi schema\", \"migration\", \"thêm cột/bảng\", \"đổi index\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối thay đổi schema database: xác định bảng/cột/index bị ảnh hưởng, thiết kế migration forward + rollback tương thích ngược, implement migration và code, review query/index, chạy thử migrate up/rollback/up trên DB test, viết integration test cho query/repository bị ảnh hưởng, cập nhật data-model.md, rồi commit. Dùng workflow NÀY khi người dùng muốn \"đổi schema\", \"migration\", \"thêm cột/bảng\", \"đổi index\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
 order: 7
 title: "DB change — migration schema forward/rollback"
 kind: workflow
 tier: 2
 risk: high
-agents: "backend-implementer,backend-reviewer"
+agents: "backend-implementer,backend-test-writer,backend-reviewer"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -19,13 +19,14 @@ next: null
 ## Mục tiêu & đầu vào
 
 - **Mục tiêu:** thay đổi schema database an toàn — có migration forward + rollback tương thích ngược, code
-  đi kèm đã review, đã chạy thử migrate up → rollback → migrate up thành công trên DB test.
+  đi kèm đã review, đã chạy thử migrate up → rollback → migrate up thành công trên DB test, có integration
+  test cho query/repository bị ảnh hưởng và `data-model.md` được cập nhật.
 - **Đầu vào bắt buộc:** mô tả thay đổi schema (bảng/cột/index cần thêm/sửa/xoá).
 - **Đầu vào tuỳ chọn:** data-model/ERD hiện tại, migration tool đang dùng của project.
 
 ## Điều kiện tiên quyết
 
-- Skill/agent đã cài: `backend-implementer`, `backend-reviewer`, skill `core/git-workflow`.
+- Skill/agent đã cài: `backend-implementer`, `backend-test-writer`, `backend-reviewer`, skill `core/git-workflow`.
 - Artifact phải có sẵn: schema/data-model hiện tại đọc được (migration trước đó, ERD, hoặc kết nối DB test).
 - Baseline: có DB test riêng biệt để chạy thử migration, không phải DB production.
 
@@ -109,10 +110,42 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   chuỗi từ đầu.
 - **Evidence:** lệnh migrate up/rollback/up + exit code từng lượt.
 
-### Bước 7 — Commit ⏸
+### Bước 7 — Test
+
+- **Thực hiện:** agent `backend-test-writer`
+- **Đầu vào:** migration + code đã qua Bước 4–6 + nơi dùng đã xác định ở Bước 1
+- **Hành động:** viết integration test cho repository/query bị ảnh hưởng: đọc/ghi qua schema mới; khi đang ở
+  giai đoạn expand, kiểm code cũ vẫn đọc được dữ liệu. Dùng DB tạm (Testcontainers hoặc tương đương của
+  project) hoặc đúng target đã xác nhận ở Bước 5; chạy test và ghi kết quả.
+- **Ràng buộc:** không chạy trên DB production hay target chưa xác nhận (DB tạm do chính test tự dựng, vd
+  Testcontainers, là ngoại lệ); không sửa code production — bug thật thì giữ test đỏ và báo; không xoá/nới
+  test để qua.
+- **Đầu ra:** integration test cho query/repository bị ảnh hưởng, chạy được.
+- **Gate:** integration test pass.
+- **Khi fail:** lỗi do test → sửa test; lỗi do code hoặc migration → quay lại Bước 3 sửa, chạy lại từ Bước 4;
+  project không có DB tạm (Docker/Testcontainers) → chạy trên target đã xác nhận ở Bước 5, hoặc hỏi người dùng
+  nếu chưa có, không tự dựng hạ tầng.
+- **Evidence:** lệnh chạy test + exit code + số liệu pass/fail.
+
+### Bước 8 — Cập nhật data-model & nợ contract
+
+- **Thực hiện:** session chính
+- **Đầu vào:** migration + code + test đã qua Bước 1–7
+- **Hành động:** cập nhật `project-knowledge/data-model.md` (ERD) theo schema mới; nếu thay đổi theo
+  expand/contract và còn pha contract chưa làm (xoá cột/ràng buộc cũ ở migration sau), ghi việc đó vào
+  `next_actions` của report cuối kèm điều kiện thực hiện.
+- **Ràng buộc:** chỉ sửa phần ERD/tài liệu liên quan tới thay đổi; không sửa vùng managed block của
+  `AGENTS.md`/`CLAUDE.md`; không thực hiện pha contract trong workflow này.
+- **Đầu ra:** `data-model.md` đã cập nhật (hoặc "không ảnh hưởng" kèm lý do) + nợ contract đã ghi vào
+  `next_actions` (hoặc "không có").
+- **Gate:** data-model cập nhật hoặc ghi "không ảnh hưởng"; nợ contract được ghi nếu có.
+- **Khi fail:** không tìm thấy `data-model.md` → hỏi người dùng nơi lưu ERD, không tự tạo file mới.
+- **Evidence:** đường dẫn file đã cập nhật + danh sách nợ contract (hoặc "không có").
+
+### Bước 9 — Commit ⏸
 
 - **Thực hiện:** skill `git-workflow`
-- **Đầu vào:** migration + code đã qua Bước 1–6
+- **Đầu vào:** migration + code + test + docs đã qua Bước 1–8
 - **Hành động:** đề xuất commit message Conventional Commits (header EN, body VI); trình diff cho người dùng
   duyệt.
 - **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
@@ -127,7 +160,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 |---|---|---|
 | 2 | Thiết kế migration forward + rollback + tương thích ngược | Người dùng xác nhận thiết kế |
 | 5 | Target DB (profile, host, tên database — đã mask) | Người dùng xác nhận rõ ràng target là DB test |
-| 7 | Diff migration + code | Người dùng duyệt diff |
+| 9 | Diff migration + code + test + docs | Người dùng duyệt diff |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
 
@@ -142,7 +175,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Người dùng không xác nhận thiết kế migration (sau Bước 2 ⏸) | Quay lại Bước 1 làm rõ impact/ràng buộc |
 | Target DB trỏ production hoặc chưa được xác nhận (sau Bước 5 ⏸) | Dừng, không chạy migration |
 | Một lượt migrate up/rollback/up thất bại (Bước 6) | Quay lại Bước 3 sửa migration, chạy lại cả chuỗi từ đầu |
-| Người dùng không duyệt diff (sau Bước 7 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+| Integration test đỏ (Bước 7) | Lỗi test → sửa test; lỗi code/migration → quay lại Bước 3 (không nới test) |
+| Người dùng không duyệt diff (sau Bước 9 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 | Thay đổi phá huỷ dữ liệu chưa được xác nhận | Cấm thực hiện; quay lại Bước 2 xin xác nhận rõ ràng |
 | Yêu cầu chạy migration trên production | Cấm thực hiện; chỉ chạy trên DB test |
 
@@ -160,7 +194,9 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] 0 finding blocker ở review query/index — evidence: Bước 4
 - [ ] Target DB đã được người dùng xác nhận là DB test — evidence: Bước 5
 - [ ] Migrate up → rollback → migrate up thành công trên DB test — evidence: Bước 6
-- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 7
+- [ ] Integration test cho query/repository bị ảnh hưởng pass — evidence: Bước 7
+- [ ] `data-model.md` cập nhật (hoặc "không ảnh hưởng"); nợ contract ghi vào `next_actions` — evidence: Bước 8
+- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 9
 - [ ] Mọi gate có evidence `passed`
 - [ ] 0 finding `blocker`
 
@@ -183,5 +219,5 @@ workflow_result:
   findings: []             # severity, category, location, evidence, impact, recommendation, confidence
   remaining_risks: []
   docs_updated: []
-  next_actions: []
+  next_actions: []         # gồm migration pha contract còn nợ (xoá cột/ràng buộc cũ ở đợt sau)
 ```

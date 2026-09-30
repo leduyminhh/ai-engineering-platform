@@ -9,7 +9,12 @@
     "backend/backend-migrate-vault-consul",
     "backend/backend-migrate-architecture",
     "backend/backend-api-contract",
-    "frontend",
+    "frontend/frontend-init",
+    "frontend/frontend-implement",
+    "frontend/frontend-testing",
+    "frontend/frontend-code-review",
+    "frontend/frontend-refactor",
+    "frontend/frontend-migrate-architecture",
     "engineering",
     "ops"
   ]
