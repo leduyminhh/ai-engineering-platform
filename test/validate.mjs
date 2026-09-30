@@ -1323,6 +1323,17 @@ if (fs.existsSync(BUILD)) {
   const orch19 = workflows.stages.find((s) => s.kind === 'orchestrator');
   const featRow19 = parseRegistry(orch19?.body ?? '').rows.find((r) => r.id === 'workflow-feature');
   ok(featRow19 && featRow19.next.length === 0, 'orchestrator: workflow-feature không nối tiếp workflow-docs (Bước 7 đã làm docs)');
+  const tst19 = wf19('workflow-testing');
+  const tS4 = step19(tst19, 4), tS5 = step19(tst19, 5);
+  for (const [n, s] of [[4, tS4], [5, tS5]]) {
+    ok(field19(s.body, 'Thực hiện').includes('agent `frontend-e2e-test-writer`'),
+      `workflow-testing Bước ${n}: loại "luồng quan trọng: e2e" do frontend-e2e-test-writer thực hiện`);
+    ok(field19(s.body, 'Gate').includes('playwright.config'),
+      `workflow-testing Bước ${n}: Gate cho phép e2e/ + playwright.config.*`);
+  }
+  ok(flat19(tS5.body).includes('not_run'), 'workflow-testing Bước 5: e2e thiếu BE/DB test → not_run hợp lệ');
+  ok(tst19 && tst19.agents.includes('frontend-e2e-test-writer'), 'workflow-testing: frontmatter agents có frontend-e2e-test-writer');
+  ok(parseSteps(tst19?.body ?? '').length === 7, 'workflow-testing: vẫn 7 bước');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

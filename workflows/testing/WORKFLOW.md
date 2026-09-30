@@ -6,7 +6,7 @@ title: "Testing — viết test theo chiến lược, đo coverage"
 kind: workflow
 tier: 2
 risk: low
-agents: "backend-test-writer,frontend-test-writer"
+agents: "backend-test-writer,frontend-test-writer,frontend-e2e-test-writer"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -25,7 +25,8 @@ next: null
 
 ## Điều kiện tiên quyết
 
-- Skill/agent đã cài: `backend-test-writer`, `frontend-test-writer`, skill `core/git-workflow`.
+- Skill/agent đã cài: `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer` (chỉ khi chiến
+  lược có e2e), skill `core/git-workflow`.
 - Artifact phải có sẵn: code/hành vi cần test đã tồn tại (không phải feature chưa implement).
 - Baseline: build hiện tại của vùng đụng đang XANH trước khi thêm test — được đo và ghi số mốc ở Bước 1.
 
@@ -72,32 +73,35 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 4 — Viết test
 
-- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng)
+- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng); hành vi loại "luồng quan trọng: e2e" → agent `frontend-e2e-test-writer`
 - **Đầu vào:** chiến lược đã xác nhận từ Bước 3
-- **Hành động:** viết test đúng loại đã chọn cho từng hành vi trong danh sách.
+- **Hành động:** viết test đúng loại đã chọn cho từng hành vi trong danh sách; e2e viết bằng Playwright theo
+  skill `frontend-e2e-testing` (mỗi test map 1 hành vi/AC, selector theo role/label, không sleep cứng).
 - **Ràng buộc:** không viết test giòn (phụ thuộc thứ tự/thời gian/mạng thật).
 - **Đầu ra:** test mới, chạy được.
 - **Gate:** test chạy được; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi
   hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test
-  (và fixture/mock của test).
+  (và fixture/mock của test; e2e: thư mục `e2e/` và `playwright.config.*`).
 - **Khi fail:** test không chạy được (lỗi biên dịch/setup) → sửa test, chạy lại.
 - **Evidence:** lệnh chạy test + exit code; danh sách file thay đổi hoặc mới trong bước so với trạng thái đầu
   bước.
 
 ### Bước 5 — Chạy & phân tích failure
 
-- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng)
+- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng); e2e → agent `frontend-e2e-test-writer`
 - **Đầu vào:** test mới từ Bước 4
 - **Hành động:** chạy toàn bộ test mới; với mỗi failure, phân loại lỗi test (test sai) hay lỗi code (code có
-  bug); lỗi code → đề xuất chạy `workflow-bugfix`.
+  bug); lỗi code → đề xuất chạy `workflow-bugfix`; e2e chạy `npx playwright test --repeat-each=3`, flaky →
+  sửa test (không nới assertion); thiếu BE/DB test → `not_run` + lý do.
 - **Ràng buộc:** không tự sửa code production để test qua khi failure là lỗi code — chỉ đề xuất `workflow-bugfix`.
 - **Đầu ra:** danh sách failure đã phân loại (nếu có).
 - **Gate:** mọi failure phân loại lỗi test | lỗi code; lỗi code → đề xuất `workflow-bugfix`; so với trạng thái
   ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only`
-  và `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test).
+  và `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test; e2e: thư mục
+  `e2e/` và `playwright.config.*`); e2e `not_run` vì thiếu môi trường là hợp lệ (ghi vào `remaining_risks`).
 - **Khi fail:** không phân loại được nguyên nhân failure → hỏi người dùng thêm ngữ cảnh, không tự đoán.
 - **Evidence:** lệnh chạy test + exit code + danh sách failure đã phân loại; danh sách file thay đổi hoặc mới
-  trong bước so với trạng thái đầu bước.
+  trong bước so với trạng thái đầu bước; e2e: lệnh Playwright + kết quả hoặc `not_run` + lý do.
 
 ### Bước 6 — Coverage
 
@@ -139,6 +143,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Baseline đỏ (Bước 1) | Dừng `blocked`, không tiếp tục trên baseline đỏ; đề xuất workflow-bugfix (bugfix: báo người dùng) |
 | Build fail | Chẩn đoán → sửa → build lại |
 | Test fail | Phân loại failure: lỗi test (test sai) → sửa test (không xoá/nới test để qua), chạy lại; lỗi code → dừng, đề xuất `workflow-bugfix`, không sửa code production (Bước 5) |
+| e2e thiếu BE/DB test (Bước 4–5) | Ghi `not_run` + lý do vào `remaining_risks`; không tự dựng hạ tầng |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Người dùng không đồng ý chiến lược (sau Bước 3 ⏸) | Quay lại Bước 2 làm rõ hành vi/rủi ro |
