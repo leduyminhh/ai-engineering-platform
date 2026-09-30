@@ -877,6 +877,30 @@ if (fs.existsSync(BUILD)) {
     'frontend-e2e-testing: SKILL.md có đủ cổng E1–E5');
   ok(['E-r1', 'E-r2', 'E-r3', 'E-r4', 'E-r5', 'E-r6', 'E-r7'].every((r) => e2eSkill.includes(`| ${r} |`)),
     'frontend-e2e-testing: SKILL.md có đủ quy tắc E-r1–E-r7');
+  for (const f of ['playwright-config-and-auth.md', 'flow-selection-and-patterns.md']) {
+    ok(e2eFiles.includes(f), `frontend-e2e-testing: có references/${f}`);
+    ok(e2eSkill.includes(`(references/${f})`), `frontend-e2e-testing: SKILL.md link tới references/${f}`);
+  }
+  const e2eCfg = e2eFiles.includes('playwright-config-and-auth.md') ? e2eRead('playwright-config-and-auth.md') : '';
+  ok(e2eCfg.includes("trace: 'on-first-retry'") && e2eCfg.includes('storageState') && e2eCfg.includes('E2E_BASE_URL'),
+    'frontend-e2e-testing: config mẫu có trace on-first-retry, storageState, baseURL từ biến môi trường');
+  ok(e2eCfg.includes('assertLocalBaseURL') && /staging/.test(e2eCfg) && /production/.test(e2eCfg),
+    'frontend-e2e-testing: có hàm chặn host không phải local/test (staging/production)');
+  ok(e2eCfg.includes('https://playwright.dev/'),
+    'frontend-e2e-testing: playwright-config-and-auth có nguồn https://playwright.dev/ cho hành vi công cụ');
+  ok(['Feature-Based', 'FSD', 'Micro-FE'].every((k) => e2eCfg.includes(`| ${k} |`)),
+    'frontend-e2e-testing: bảng vị trí e2e có đủ 3 kiến trúc');
+  const e2eFlow = e2eFiles.includes('flow-selection-and-patterns.md') ? e2eRead('flow-selection-and-patterns.md') : '';
+  ok(e2eFlow.includes('| # | Luồng | AC |') && e2eFlow.includes('--repeat-each=3'),
+    'frontend-e2e-testing: có bảng chọn luồng → AC và lệnh --repeat-each=3');
+  // E-r1/E-r2: ví dụ trong tài liệu không được tự vi phạm quy tắc của chính skill.
+  ok(!/locator\(\s*['"`][.#\/]/.test(e2eCfg + e2eFlow) && !/waitForTimeout\(/.test(e2eCfg + e2eFlow),
+    'frontend-e2e-testing: ví dụ không dùng selector CSS/XPath và không dùng waitForTimeout(');
+  // Tên file references không trùng giữa các skill frontend (validate mục hygiene cũng kiểm, ở đây báo rõ theo skill).
+  const e2eOtherRefs = fs.readdirSync(path.join(PLUGINS_DIR, 'frontend', 'skills'))
+    .filter((d) => d !== 'frontend-e2e-testing')
+    .flatMap((d) => listFilesRec(path.join(PLUGINS_DIR, 'frontend', 'skills', d, 'references')));
+  ok(e2eFiles.every((f) => !e2eOtherRefs.includes(f)), 'frontend-e2e-testing: tên file references không trùng skill frontend khác');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
