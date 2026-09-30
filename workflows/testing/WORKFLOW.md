@@ -27,7 +27,7 @@ next: null
 
 - Skill/agent đã cài: `backend-test-writer`, `frontend-test-writer`, skill `core/git-workflow`.
 - Artifact phải có sẵn: code/hành vi cần test đã tồn tại (không phải feature chưa implement).
-- Baseline: build hiện tại của vùng đụng đang XANH trước khi thêm test.
+- Baseline: build hiện tại của vùng đụng đang XANH trước khi thêm test — được đo và ghi số mốc ở Bước 1.
 
 Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.
 
@@ -35,7 +35,19 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 
 Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint người duyệt thì gắn ⏸ cuối tên bước.
 
-### Bước 1 — Phân tích
+### Bước 1 — Baseline build/test
+
+- **Thực hiện:** session chính
+- **Đầu vào:** vùng cần thêm test của người dùng
+- **Hành động:** chạy build và test của vùng đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+  pass/fail) làm baseline cho các bước sau.
+- **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
+- **Gate:** build/test xanh (exit code 0) và số mốc đã ghi.
+- **Khi fail:** đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; không thêm test trên baseline đỏ.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail.
+
+### Bước 2 — Phân tích
 
 - **Thực hiện:** session chính
 - **Đầu vào:** phạm vi code/hành vi cần test của người dùng
@@ -46,22 +58,22 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** không xác định được hành vi từ code → hỏi lại người dùng phạm vi cụ thể hơn.
 - **Evidence:** danh sách hành vi cần test trong report bước.
 
-### Bước 2 — Chiến lược ⏸
+### Bước 3 — Chiến lược ⏸
 
 - **Thực hiện:** session chính
-- **Đầu vào:** danh sách hành vi từ Bước 1
+- **Đầu vào:** danh sách hành vi từ Bước 2
 - **Hành động:** chọn loại test theo policy (feature: unit; API: integration + contract; luồng quan trọng:
   e2e); trình cho người dùng xác nhận trước khi viết test.
 - **Ràng buộc:** không tự chọn e2e cho hành vi không phải luồng quan trọng.
 - **Đầu ra:** loại test đã chọn cho từng hành vi, đã được người dùng xác nhận.
 - **Gate:** loại test theo policy (feature: unit; API: integration + contract; luồng quan trọng: e2e).
-- **Khi fail:** người dùng không đồng ý chiến lược → quay lại Bước 1 làm rõ hành vi/rủi ro.
+- **Khi fail:** người dùng không đồng ý chiến lược → quay lại Bước 2 làm rõ hành vi/rủi ro.
 - **Evidence:** bảng hành vi → loại test đã xác nhận trong report bước.
 
-### Bước 3 — Viết test
+### Bước 4 — Viết test
 
 - **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng)
-- **Đầu vào:** chiến lược đã xác nhận từ Bước 2
+- **Đầu vào:** chiến lược đã xác nhận từ Bước 3
 - **Hành động:** viết test đúng loại đã chọn cho từng hành vi trong danh sách.
 - **Ràng buộc:** không viết test giòn (phụ thuộc thứ tự/thời gian/mạng thật).
 - **Đầu ra:** test mới, chạy được.
@@ -69,10 +81,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** test không chạy được (lỗi biên dịch/setup) → sửa test, chạy lại.
 - **Evidence:** lệnh chạy test + exit code; kết quả `git diff --name-only`.
 
-### Bước 4 — Chạy & phân tích failure
+### Bước 5 — Chạy & phân tích failure
 
 - **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng)
-- **Đầu vào:** test mới từ Bước 3
+- **Đầu vào:** test mới từ Bước 4
 - **Hành động:** chạy toàn bộ test mới; với mỗi failure, phân loại lỗi test (test sai) hay lỗi code (code có
   bug); lỗi code → đề xuất chạy `workflow-bugfix`.
 - **Ràng buộc:** không tự sửa code production để test qua khi failure là lỗi code — chỉ đề xuất `workflow-bugfix`.
@@ -82,10 +94,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** không phân loại được nguyên nhân failure → hỏi người dùng thêm ngữ cảnh, không tự đoán.
 - **Evidence:** lệnh chạy test + exit code + danh sách failure đã phân loại; kết quả `git diff --name-only`.
 
-### Bước 5 — Coverage
+### Bước 6 — Coverage
 
 - **Thực hiện:** session chính
-- **Đầu vào:** test lỗi-test đã xanh từ Bước 4 + danh sách lỗi-code đã chuyển sang `workflow-bugfix`
+- **Đầu vào:** test lỗi-test đã xanh từ Bước 5 + danh sách lỗi-code đã chuyển sang `workflow-bugfix`
 - **Hành động:** chạy coverage tool của project cho vùng đụng; ghi lại số liệu, hoặc ghi `not_run` kèm lý do
   nếu project chưa có coverage tool.
 - **Ràng buộc:** không tự thêm coverage tool ngoài yêu cầu.
@@ -94,10 +106,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** coverage tool lỗi cấu hình → ghi `not_run` kèm lý do, không chặn hoàn thành.
 - **Evidence:** lệnh coverage + exit code + số liệu, hoặc lý do `not_run`.
 
-### Bước 6 — Commit ⏸
+### Bước 7 — Commit ⏸
 
 - **Thực hiện:** skill `git-workflow`
-- **Đầu vào:** test mới đã qua Bước 1–5
+- **Đầu vào:** test mới đã qua Bước 1–6
 - **Hành động:** đề xuất commit message Conventional Commits (header EN, body VI); trình diff cho người dùng
   duyệt.
 - **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff.
@@ -110,8 +122,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
-| 2 | Bảng hành vi → loại test theo policy | Người dùng xác nhận chiến lược |
-| 6 | Diff test mới | Người dùng duyệt diff |
+| 3 | Bảng hành vi → loại test theo policy | Người dùng xác nhận chiến lược |
+| 7 | Diff test mới | Người dùng duyệt diff |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
 
@@ -119,12 +131,13 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 
 | Tình huống | Hành động |
 |---|---|
+| Baseline đỏ (Bước 1) | Dừng `blocked`, không tiếp tục trên baseline đỏ; đề xuất workflow-bugfix (bugfix: báo người dùng) |
 | Build fail | Chẩn đoán → sửa → build lại |
-| Test fail | Phân loại failure: lỗi test (test sai) → sửa test (không xoá/nới test để qua), chạy lại; lỗi code → dừng, đề xuất `workflow-bugfix`, không sửa code production (Bước 4) |
+| Test fail | Phân loại failure: lỗi test (test sai) → sửa test (không xoá/nới test để qua), chạy lại; lỗi code → dừng, đề xuất `workflow-bugfix`, không sửa code production (Bước 5) |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
-| Người dùng không đồng ý chiến lược (sau Bước 2 ⏸) | Quay lại Bước 1 làm rõ hành vi/rủi ro |
-| Người dùng không duyệt diff (sau Bước 6 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+| Người dùng không đồng ý chiến lược (sau Bước 3 ⏸) | Quay lại Bước 2 làm rõ hành vi/rủi ro |
+| Người dùng không duyệt diff (sau Bước 7 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 
 - **Điều kiện dừng:** không xác định được hành vi cần test sau khi hỏi lại; failure là lỗi code chưa được xử
   lý qua `workflow-bugfix`; người dùng không duyệt diff.
@@ -133,12 +146,13 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 
 ## Definition of Done
 
-- [ ] Danh sách hành vi cần test — evidence: Bước 1
-- [ ] Chiến lược test đã được người dùng xác nhận — evidence: Bước 2
-- [ ] Test mới chạy được — evidence: Bước 3
-- [ ] Mọi failure đã phân loại lỗi test | lỗi code — evidence: Bước 4
-- [ ] Coverage report hoặc `not_run` có lý do — evidence: Bước 5
-- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 6
+- [ ] Baseline build/test đã đo, số mốc đã ghi — evidence: Bước 1
+- [ ] Danh sách hành vi cần test — evidence: Bước 2
+- [ ] Chiến lược test đã được người dùng xác nhận — evidence: Bước 3
+- [ ] Test mới chạy được — evidence: Bước 4
+- [ ] Mọi failure đã phân loại lỗi test | lỗi code — evidence: Bước 5
+- [ ] Coverage report hoặc `not_run` có lý do — evidence: Bước 6
+- [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed`
 
 ## Report cuối

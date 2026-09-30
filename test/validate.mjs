@@ -1107,6 +1107,16 @@ if (fs.existsSync(BUILD)) {
     'quality-gate security-review-areas: có key check authorization, SSRF, security misconfiguration');
   ok(areas17.includes('| authorization/access control |') && areas17.includes('| SSRF |') && areas17.includes('| security misconfiguration |'),
     'quality-gate security-review-areas: bảng ánh xạ 8 vùng của workflow-security-review sang 5 vùng');
+
+  // WF11 (phần 1): baseline từng chỉ là tiền điều kiện không ai đo (W-a).
+  for (const id of ['workflow-feature', 'workflow-bugfix', 'workflow-testing']) {
+    const w = wf17(id);
+    const s1 = step17(w, 1);
+    ok(/^Baseline/.test(s1.title) && flat17(s1.body).includes('session chính') && flat17(w?.body ?? '').includes('Baseline đỏ'),
+      `${id}: Bước 1 là Baseline build/test do session chính đo, có hàng lỗi Baseline đỏ`);
+    ok(flat17((w?.body ?? '').split('## Điều kiện tiên quyết')[1]?.split('## Các bước')[0] ?? '').includes('ở Bước 1'),
+      `${id}: tiền điều kiện Baseline nêu được đo ở Bước 1`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
