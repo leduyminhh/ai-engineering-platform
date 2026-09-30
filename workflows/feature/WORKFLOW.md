@@ -6,7 +6,7 @@ title: "Feature — implement end-to-end từ yêu cầu tới commit"
 kind: workflow
 tier: 1
 risk: medium
-agents: "engineering-spec-analyst,backend-implementer,frontend-implementer,backend-test-writer,frontend-test-writer,backend-reviewer,frontend-reviewer,engineering-quality-auditor"
+agents: "engineering-spec-analyst,backend-implementer,frontend-implementer,frontend-data-integrator,backend-test-writer,frontend-test-writer,frontend-e2e-test-writer,backend-reviewer,frontend-reviewer,engineering-quality-auditor"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -27,8 +27,8 @@ next: null
 ## Điều kiện tiên quyết
 
 - Skill/agent đã cài: `engineering-spec-analyst`, `backend-implementer`, `frontend-implementer`,
-  `backend-test-writer`, `frontend-test-writer`, `backend-reviewer`, `frontend-reviewer`,
-  `engineering-quality-auditor`, skill `core/git-workflow`.
+  `frontend-data-integrator`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`,
+  `backend-reviewer`, `frontend-reviewer`, `engineering-quality-auditor`, skill `core/git-workflow`.
 - Artifact phải có sẵn: `project-knowledge/architecture.md` (backend và/hoặc frontend, tuỳ phạm vi);
   `design-system.md` nếu có phần frontend.
 - Baseline: build/test hiện tại của project đang XANH trước khi bắt đầu implement — được đo và ghi số mốc ở Bước 1.
@@ -56,12 +56,16 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** agent `engineering-spec-analyst`
 - **Đầu vào:** mô tả yêu cầu/user story của người dùng
 - **Hành động:** khảo sát yêu cầu còn thiếu, viết acceptance criteria đo được vào `docs/requests/…`; xác
-  định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`.
+  định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`. Phạm vi cần đổi schema DB
+  (bảng/cột/index/migration) → dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature (chuỗi
+  `db-change → feature`).
 - **Ràng buộc:** chỉ ghi trong `docs/`; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả
   định]`; không phân rã story/task chi tiết.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` với acceptance criteria + phạm vi BE/FE/fullstack.
-- **Gate:** acceptance criteria đo được; phạm vi ∈ {backend, frontend, fullstack}.
-- **Khi fail:** acceptance criteria mơ hồ/không đo được → hỏi lại người dùng, không tự suy diễn tiếp.
+- **Gate:** acceptance criteria đo được; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc đã
+  có xác nhận chạy `workflow-db-change` trước.
+- **Khi fail:** acceptance criteria mơ hồ/không đo được → hỏi lại người dùng, không tự suy diễn tiếp; phạm vi
+  có đổi schema → dừng, đề xuất `workflow-db-change`.
 - **Evidence:** đường dẫn `requirement.md` + trích đoạn acceptance criteria.
 
 ### Bước 3 — Thiết kế & contract ⏸
@@ -78,34 +82,40 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 4 — Implement
 
-- **Thực hiện:** agent `backend-implementer` ∥ agent `frontend-implementer` (chỉ phía có đụng theo phạm vi
-  Bước 2)
+- **Thực hiện:** agent `backend-implementer` ∥ agent `frontend-implementer` (chỉ phía có đụng theo phạm vi Bước 2); phạm vi `fullstack` có contract ở Bước 3 → agent `frontend-data-integrator` chạy sau khi `frontend-implementer` xong
 - **Đầu vào:** `requirement.md` + contract (nếu có) từ Bước 2–3
 - **Hành động:** sinh vertical slice backend (aggregate/use-case/port/adapter) bám kiến trúc đã chọn; và/hoặc
-  sinh component frontend bám kiến trúc UI + design-system; chạy build của từng phía.
-- **Ràng buộc:** chỉ sửa file trong slice/feature được giao; frontend chưa nối API thật (Gap G1) → để trống
-  bằng props + TODO, không giả lập data ẩn.
-- **Đầu ra:** code implementation (backend và/hoặc frontend) build xanh.
-- **Gate:** build xanh.
-- **Khi fail:** build lỗi → chẩn đoán → sửa → build lại; lặp tới khi xanh.
-- **Evidence:** lệnh build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0.
+  sinh component frontend presentational bám kiến trúc UI + design-system (chỗ cần dữ liệu để trống bằng props +
+  TODO); khi fullstack, `frontend-data-integrator` nối container/page với API theo contract (type sinh từ
+  contract, data hook đúng tầng, đủ 4 trạng thái); chạy build của từng phía.
+- **Ràng buộc:** chỉ sửa file trong slice/feature được giao; không giả lập data ẩn; integrator không sửa
+  `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3.
+- **Đầu ra:** code implementation (backend và/hoặc frontend, gồm tầng data khi fullstack) build xanh.
+- **Gate:** build xanh; khi fullstack: `tsc`/lint/build xanh sau khi nối data.
+- **Khi fail:** build lỗi → chẩn đoán → sửa → build lại; lặp tới khi xanh; contract lệch khi nối data → quay lại
+  Bước 3.
+- **Evidence:** lệnh build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0; report của integrator
+  (endpoint ↔ hook ↔ container) khi fullstack.
 
 ### Bước 5 — Test
 
-- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (chỉ phía có đụng)
+- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (chỉ phía có đụng); AC dạng luồng UI đầu-cuối → thêm agent `frontend-e2e-test-writer`
 - **Đầu vào:** code implementation từ Bước 4 + acceptance criteria từ Bước 2
 - **Hành động:** viết unit/integration test cho từng acceptance criterion; chạy toàn bộ test suite của phía
-  tương ứng.
+  tương ứng; với AC dạng luồng UI, `frontend-e2e-test-writer` viết e2e Playwright (3–5 luồng, mỗi test map 1 AC)
+  và chạy `--repeat-each=3`.
 - **Ràng buộc:** không sửa code production để "cho test xanh"; không viết test phụ thuộc thứ tự/thời gian
-  thực/mạng thật.
-- **Đầu ra:** test mới + báo cáo test pass.
-- **Gate:** mỗi acceptance criterion ≥1 test; test pass; so với trạng thái ghi lại ở đầu bước
-  (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only` và
-  `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test).
+  thực/mạng thật; e2e chỉ chạy trên môi trường local/test — thiếu BE/DB test thì agent trả `not_run` + lý do,
+  không tự dựng hạ tầng.
+- **Đầu ra:** test mới + báo cáo test pass (e2e: pass hoặc `not_run` có lý do).
+- **Gate:** mỗi acceptance criterion ≥1 test; test pass (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào
+  `remaining_risks`); so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới
+  trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test (và
+  fixture/mock của test; e2e: thư mục `e2e/` và `playwright.config.*`).
 - **Khi fail:** test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test); test đỏ do lỗi viết
-  test → sửa test.
-- **Evidence:** lệnh test + exit code 0 + số liệu (`X tests, X passed`); danh sách file thay đổi hoặc mới
-  trong bước so với trạng thái đầu bước.
+  test → sửa test; e2e flaky → sửa test, không nới assertion.
+- **Evidence:** lệnh test + exit code 0 + số liệu (`X tests, X passed`); e2e: lệnh Playwright + kết quả hoặc
+  `not_run` + lý do; danh sách file thay đổi hoặc mới trong bước so với trạng thái đầu bước.
 
 ### Bước 6 — Review
 
@@ -167,6 +177,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Acceptance criteria không đo được (sau Bước 2 ⏸) | Dừng, hỏi lại người dùng, không tự suy diễn |
 | Chưa rõ có API hay contract xung đột (sau Bước 3 ⏸) | Dừng, hỏi lại người dùng cách xử lý breaking change |
+| Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature |
+| e2e thiếu BE/DB test (Bước 5) | Ghi `not_run` + lý do vào `remaining_risks`; không tự dựng hạ tầng |
 | Người dùng không duyệt diff (sau Bước 8 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 
 - **Điều kiện dừng:** acceptance criteria không đo được sau khi hỏi lại; finding `blocker` không sửa được

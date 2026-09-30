@@ -35,7 +35,7 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 
 | id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |
 |---|---|---|---|---|
-| `workflow-feature` | "thêm tính năng", "làm feature", "user story", acceptance criteria | medium | `workflow-docs` | Chỉ sửa lỗi hành vi đã có → bugfix |
+| `workflow-feature` | "thêm tính năng", "làm feature", "user story", acceptance criteria | medium | — | Chỉ sửa lỗi hành vi đã có → bugfix |
 | `workflow-bugfix` | "lỗi", "bug", stacktrace, "không chạy", "sai kết quả" | medium | `workflow-docs` | Hệ thống production đang sập → incident |
 | `workflow-refactor` | "refactor", "tái cấu trúc", "đổi kiến trúc" | medium | `workflow-docs` | Đổi hành vi → feature |
 | `workflow-code-review` | "PR #", "review", "diff" | low | — | Cần sửa code → feature/bugfix |

@@ -909,14 +909,6 @@ if (fs.existsSync(BUILD)) {
     'frontend-e2e-test-writer: mode write, skills = frontend-e2e-testing');
   ok(e2eAgent.includes('e2e/') && e2eAgent.includes('staging/production') && e2eAgent.includes('not_run') && e2eAgent.includes('core:principles'),
     'frontend-e2e-test-writer: chỉ ghi e2e/, cấm staging/production, not_run khi thiếu môi trường, evidence theo core:principles');
-  // Agent chưa được nối vào workflow trước pha publish, vì installer ẩn workflow có closure chưa được offer.
-  // Xoá assert này ở pha nối workflow (spec §9 P2) khi feature/testing/release thêm agent.
-  const e2eWfDir = path.join(REPO_ROOT, 'workflows');
-  const e2eWfMentions = fs.readdirSync(e2eWfDir, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && fs.existsSync(path.join(e2eWfDir, e.name, 'WORKFLOW.md')))
-    .filter((e) => fs.readFileSync(path.join(e2eWfDir, e.name, 'WORKFLOW.md'), 'utf8').includes('frontend-e2e-test-writer'))
-    .map((e) => e.name);
-  ok(e2eWfMentions.length === 0, `frontend-e2e-test-writer: chưa workflow nào dùng (draft) — đang nhắc ở: ${e2eWfMentions.join(', ') || '(không)'}`);
 }
 
 // 14. SOURCE: backend-code-review — trục performance (spec 2026-09-29 §3.3 S4, lỗi D12)
@@ -1313,6 +1305,24 @@ if (fs.existsSync(BUILD)) {
     'workflow-api Bước 6: bỏ ghi chú Gap G1; Ràng buộc cấm sửa docs/contracts/');
   ok(api19 && api19.agents.includes('frontend-data-integrator'), 'workflow-api: frontmatter agents có frontend-data-integrator');
   ok(parseSteps(api19?.body ?? '').length === 8, 'workflow-api: vẫn 8 bước');
+  const feat19 = wf19('workflow-feature');
+  const fS2 = step19(feat19, 2), fS4 = step19(feat19, 4), fS5 = step19(feat19, 5);
+  ok(/^Phân tích/.test(fS2.title) && flat19(fS2.body).includes('schema') && flat19(fS2.body).includes('`workflow-db-change`'),
+    'workflow-feature Bước 2: phạm vi có đổi schema → dừng, đề xuất workflow-db-change trước');
+  // Integrator nối vào component do implementer dựng, nên phải chạy SAU, không song song.
+  ok(/^Implement/.test(fS4.title) && field19(fS4.body, 'Thực hiện').includes('agent `frontend-data-integrator`')
+    && field19(fS4.body, 'Thực hiện').includes('sau khi') && !flat19(fS4.body).includes('Gap G1'),
+    'workflow-feature Bước 4: frontend-data-integrator chạy sau frontend-implementer (fullstack), bỏ Gap G1');
+  ok(/^Test/.test(fS5.title) && field19(fS5.body, 'Thực hiện').includes('agent `frontend-e2e-test-writer`'),
+    'workflow-feature Bước 5: có frontend-e2e-test-writer cho AC dạng luồng UI');
+  ok(field19(fS5.body, 'Gate').includes('playwright.config') && flat19(fS5.body).includes('not_run'),
+    'workflow-feature Bước 5: Gate cho phép e2e/ + playwright.config.*; e2e thiếu BE/DB test → not_run hợp lệ');
+  ok(feat19 && ['frontend-data-integrator', 'frontend-e2e-test-writer'].every((a) => feat19.agents.includes(a)),
+    'workflow-feature: frontmatter agents có frontend-data-integrator, frontend-e2e-test-writer');
+  ok(parseSteps(feat19?.body ?? '').length === 8, 'workflow-feature: vẫn 8 bước');
+  const orch19 = workflows.stages.find((s) => s.kind === 'orchestrator');
+  const featRow19 = parseRegistry(orch19?.body ?? '').rows.find((r) => r.id === 'workflow-feature');
+  ok(featRow19 && featRow19.next.length === 0, 'orchestrator: workflow-feature không nối tiếp workflow-docs (Bước 7 đã làm docs)');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
