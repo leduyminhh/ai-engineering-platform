@@ -240,6 +240,11 @@ tên là `frontend-e2e-test-writer` và `frontend-data-integrator`.
 
 ### 7.1 `backend-db-migration` (gộp G2 — phương án A, đã chốt 2026-09-29)
 
+> **Cập nhật 2026-09-30 (ADR-0001, `docs/decisions/0001-database-capabilities-in-data-plugin.md`):** skill này nay
+> thuộc plugin `data` với tên `data-db-migration`. Mọi đường dẫn `plugins/backend/skills/backend-db-migration/…` và
+> tên `backend-db-migration` trong toàn bộ spec này đọc là `plugins/data/skills/data-db-migration/…` và
+> `data-db-migration`. Nội dung thiết kế không đổi.
+
 Gộp G2 `backend-migrate-db` (spec `2026-09-07-backend-migrate-db-design.md`, đã duyệt, chưa hiện thực) với năng
 lực "viết một thay đổi schema" thành **một** skill có 2 chế độ. Chế độ `adopt` **giữ nguyên G2**: §3–§8 của spec
 đó là nguồn sự thật cho template Spring Boot. Mục này chỉ ghi phần mới và phần khác so với G2.
@@ -596,7 +601,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | Pha | Nội dung | Mục |
 |---|---|---|
 | **P0 — Sửa lỗi nội dung** | D1, D2, D3, D4, D5, D6, D11; PL1 (ship §5.1), PL2 (manifest) | S1–S3, WF1, WF2, A1, A2 |
-| **P1 — Năng lực mới** | ADR phân ranh `backend-db-migration` ↔ `data-oltp-implement` (Q5); `backend-db-migration` theo §7.1.10 (M-P1–M-P9, draft); `frontend-data-integration` theo §7.3.7 (DI-P1–DI-P3, draft); `frontend-e2e-testing` theo §7.2; 2 agent frontend theo §8.2–§8.3; S4, S7 | §7, §8 |
+| **P1 — Năng lực mới** | ~~ADR phân ranh `backend-db-migration` ↔ `data-oltp-implement` (Q5)~~ (xong: ADR-0001, skill nay là `data-db-migration`); `backend-db-migration` theo §7.1.10 (M-P1–M-P9, draft); `frontend-data-integration` theo §7.3.7 (DI-P1–DI-P3, draft); `frontend-e2e-testing` theo §7.2; 2 agent frontend theo §8.2–§8.3; S4, S7 | §7, §8 |
 | **P1b — Publish db-migration** (sau pilot, Q6) | Pha publish của §7.1.10: `_published.json`, thêm skill vào `backend-implementer`, S8; WF3 đi cùng | §7.1.10, WF3 |
 | **P1c — Publish frontend-data-integration** (sau pilot, Q7) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 |
 | **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 |
@@ -626,7 +631,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | Q2 | Bước sửa code ở session chính (W-b) có chuyển sang agent implementer không? | Có, ở P3 |
 | Q3 | Môi trường e2e (BE + DB test) do ai cung cấp? | Project tự cung cấp (compose/lệnh); agent chỉ `not_run` khi thiếu |
 | Q4 | Skill frontend mới publish ngay (cả plugin) hay publish từng phần sau smoke? | Từng phần (`frontend/<skill>`) — cùng nguyên tắc với M4. Lưu ý P-d: chỉ gate được wizard |
-| Q5 | Plugin `data`: giữ draft hay publish nhánh OLTP để tránh trùng với `backend-db-migration`? | Giữ draft; quy tắc phân ranh (inference) đã viết ở §7.1.3, nhưng **chưa phải ADR chính thức** — vẫn cần chốt trước P1 |
+| ~~Q5~~ | ~~Plugin `data`: giữ draft hay publish nhánh OLTP để tránh trùng với `backend-db-migration`?~~ | **Đã chốt (2026-09-30, ADR-0001):** mọi năng lực liên quan database thuộc plugin `data`; skill chuyển sang `data-db-migration`; plugin `data` vẫn draft, quy tắc phân ranh §7.1.3 giữ nguyên trong cùng plugin |
 | Q6 | Pilot `backend-db-migration` trên project Spring nào? | Chưa chốt. G2 từng nêu `be-directive-mgt` (đã hoãn ở G2 Q2) |
 | Q7 | Pilot `frontend-data-integration` trên project React nào (cần contract OpenAPI thật ở `docs/contracts/`)? | Chưa chốt |
 
