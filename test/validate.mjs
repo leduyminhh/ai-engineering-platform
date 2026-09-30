@@ -942,6 +942,28 @@ if (fs.existsSync(BUILD)) {
   ok(/hiệu năng/.test(brAgent), 'backend-reviewer: Vai trò nêu rủi ro hiệu năng');
 }
 
+// 15. SOURCE: workflow — sửa lỗi major không phụ thuộc skill draft (spec 2026-09-29 §5.3 WF7, WF4, WF3; lỗi D7–D10)
+{
+  const wfBody = (id) => workflows.stages.find((s) => s.id === id);
+  const noStep = { title: '', body: '', checkpoint: false };
+
+  const sec = wfBody('workflow-security-review');
+  const secSteps = sec ? parseSteps(sec.body) : [];
+  const secStep = (n) => secSteps.find((s) => s.n === n) ?? noStep;
+  ok(!!sec && ['engineering-quality-auditor', 'backend-test-writer', 'frontend-test-writer'].every((a) => sec.agents.includes(a)),
+    'workflow-security-review: agents gồm auditor + 2 test-writer (regression test)');
+  // D7: vùng rủi ro phải phủ authorization, SSRF và misconfiguration.
+  ok(/authorization/.test(secStep(1).body) && secStep(1).body.includes('SSRF') && /misconfiguration/i.test(secStep(1).body),
+    'workflow-security-review Bước 1: vùng rủi ro có authorization/access control, SSRF, security misconfiguration');
+  // D8: secret lộ phải có bước rotate do người dùng thực hiện, đặt trước bước sửa code.
+  ok(secStep(5).title.includes('Thu hồi secret') && secStep(5).checkpoint && /rotate/.test(secStep(5).body) && /người dùng/.test(secStep(5).body),
+    'workflow-security-review Bước 5: bước Thu hồi secret (rotate) do người dùng thực hiện, có ⏸');
+  ok(/Regression/i.test(secStep(6).title) && secStep(6).body.includes('agent `backend-test-writer`') && secStep(6).body.includes('agent `frontend-test-writer`'),
+    'workflow-security-review Bước 6: regression test qua test-writer');
+  ok(secSteps.length === 9 && secStep(7).title.startsWith('Sửa') && secStep(8).title.startsWith('Re-scan') && secStep(9).title.startsWith('Commit'),
+    'workflow-security-review: 9 bước, Sửa ở Bước 7, Re-scan ở Bước 8, Commit ở Bước 9');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
