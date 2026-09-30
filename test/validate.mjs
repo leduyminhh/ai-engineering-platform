@@ -1160,8 +1160,8 @@ if (fs.existsSync(BUILD)) {
       `${p}-fix: chế độ performance không tự tuyên bố nhanh hơn, số đo thuộc Bước 5 của workflow`);
     ok(s.includes('blocked') && flat18(s).includes('không tự mở'),
       `${p}-fix: cần sửa ngoài danh sách → blocked, không tự mở phạm vi`);
-    ok(/không sửa/i.test(s) && s.includes('snapshot'),
-      `${p}-fix: F3 cấm sửa file test/fixture/snapshot`);
+    ok(/^\| F3 \| Không sửa[^\n]*test[^\n]*fixture[^\n]*snapshot/m.test(s),
+      `${p}-fix: hàng F3 của bảng gate cấm sửa file test/fixture/snapshot`);
     ok(s.includes('che triệu chứng'), `${p}-fix: F4 có danh sách che triệu chứng`);
   }
   ok(fixSkill('backend').includes('@Disabled') && fixSkill('backend').includes('pytest.skip'),
