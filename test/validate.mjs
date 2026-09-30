@@ -1030,6 +1030,18 @@ if (fs.existsSync(BUILD)) {
     'workflow-release: Quality gate ở Bước 2, Version bump ở Bước 4, Tag ở Bước 8');
   ok(relStep(5).body.includes('agent `ops-release-engineer`') && /migration/.test(relStep(5).body) && /thứ tự/.test(relStep(5).body),
     'workflow-release Bước 5: deploy checklist kiểm migration chờ chạy và thứ tự migration↔deploy');
+
+  // WF10: orchestrator từng không ghép được db-change + api + feature, và không chỉ đường tới skill không có workflow.
+  const orch16 = wf16('workflow-orchestrator');
+  const reg16 = orch16 ? parseRegistry(orch16.body) : { rows: [], priority: [] };
+  const nextOf = (id) => (reg16.rows.find((r) => r.id === id) ?? { next: [] }).next;
+  ok(nextOf('workflow-db-change').includes('workflow-api') && nextOf('workflow-api').includes('workflow-feature'),
+    'workflow-orchestrator: Registry cho chuỗi db-change → api → feature qua cột Nối tiếp');
+  const direct16 = ((orch16?.body ?? '').split('## Yêu cầu chạy trực tiếp bằng skill')[1] ?? '').split('\n## ')[0];
+  ok(['backend-init', 'frontend-init', 'backend-migrate-vault-consul'].every((s) => direct16.includes(`\`${s}\``)),
+    'workflow-orchestrator: mục "Yêu cầu chạy trực tiếp bằng skill" nêu backend-init, frontend-init, backend-migrate-vault-consul');
+  ok(/tối đa 3/.test(orch16?.body ?? '') && /thứ tự phụ thuộc/.test(orch16?.body ?? ''),
+    'workflow-orchestrator: giữ luật chuỗi tối đa 3 workflow và ghép theo thứ tự phụ thuộc');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
