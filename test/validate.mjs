@@ -1241,10 +1241,6 @@ if (fs.existsSync(BUILD)) {
     ok(field('Hành động').includes('git status --porcelain') && field('Hành động').includes('dispatch'),
       `${id} Bước ${n}: session chính ghi mốc git status --porcelain trước khi dispatch agent`);
   }
-  for (const [f, head] of [['README.md', '### Agents (13)'], ['README_VI.md', '### Agent (13)']]) {
-    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
-    ok(rd.split('\n').some((l) => l.startsWith(head)), `${f}: tiêu đề bảng agent là "${head}"`);
-  }
   // Bug phát hiện khi refactor chưa có oracle nên không thể đi thẳng sang *-implement (sinh code mới).
   for (const p of ['backend', 'frontend']) {
     const r = flat18(fs.readFileSync(path.join(PLUGINS_DIR, p, 'skills', `${p}-refactor`, 'SKILL.md'), 'utf8'));
@@ -1334,6 +1330,16 @@ if (fs.existsSync(BUILD)) {
   ok(flat19(tS5.body).includes('not_run'), 'workflow-testing Bước 5: e2e thiếu BE/DB test → not_run hợp lệ');
   ok(tst19 && tst19.agents.includes('frontend-e2e-test-writer'), 'workflow-testing: frontmatter agents có frontend-e2e-test-writer');
   ok(parseSteps(tst19?.body ?? '').length === 7, 'workflow-testing: vẫn 7 bước');
+  for (const [f, head] of [['README.md', '### Agents (15)'], ['README_VI.md', '### Agent (15)']]) {
+    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+    const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
+    ok(rd.split('\n').some((l) => l.trim() === head), `${f}: heading ${head}`);
+    ok(['WF01', 'WF08'].every((w) => row('frontend-data-integrator').includes(w)),
+      `${f}: bảng agent có frontend-data-integrator dùng ở WF01, WF08`);
+    ok(['WF01', 'WF05'].every((w) => row('frontend-e2e-test-writer').includes(w)),
+      `${f}: bảng agent có frontend-e2e-test-writer dùng ở WF01, WF05`);
+    ok(!/^\| G1 \|/m.test(rd) && !/^\| G5 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G1, G5 (đã có skill)`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
