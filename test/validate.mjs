@@ -1100,6 +1100,13 @@ if (fs.existsSync(BUILD)) {
     'workflow-incident: cửa sổ theo dõi phục hồi do người dùng chốt ở Bước 4 và dùng ở Bước 6');
   ok(/người dùng tự gửi|người dùng gửi/.test(flat17(step17(inc17, 5).body)) && !/agent `/.test(step17(inc17, 5).body.split('**Thực hiện:**')[1]?.split('\n')[0] ?? ''),
     'workflow-incident Bước 5: chỉ soạn nội dung, người dùng tự gửi, không agent');
+
+  // Workflow security-review có 8 vùng; reference của quality-gate phải có key check cho 3 vùng mới và bảng ánh xạ.
+  const areas17 = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-quality-gate', 'references', 'security-review-areas.md'), 'utf8');
+  ok(/authorization|phân quyền|kiểm quyền/i.test(areas17) && /SSRF/.test(areas17) && /misconfiguration|cấu hình (sai|không an toàn)/i.test(areas17),
+    'quality-gate security-review-areas: có key check authorization, SSRF, security misconfiguration');
+  ok(areas17.includes('| authorization/access control |') && areas17.includes('| SSRF |') && areas17.includes('| security misconfiguration |'),
+    'quality-gate security-review-areas: bảng ánh xạ 8 vùng của workflow-security-review sang 5 vùng');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

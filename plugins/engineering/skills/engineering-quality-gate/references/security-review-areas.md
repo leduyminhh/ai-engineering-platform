@@ -3,6 +3,22 @@
 Gộp checklist review source-first thành 5 vùng. Nạp vùng liên quan tới code đang review; mỗi finding gắn
 OWASP/ASVS/CWE qua [owasp-asvs-cwe-mapping.md](owasp-asvs-cwe-mapping.md) và trích evidence cụ thể.
 
+## Ánh xạ với vùng rủi ro của `workflow-security-review`
+
+Workflow chia 8 vùng để phân công; file này gom checklist thành 5 vùng. Khi review theo vùng của workflow, nạp
+mục tương ứng dưới đây:
+
+| Vùng của workflow | Mục trong file này |
+|---|---|
+| auth/session | 1. Auth / Session |
+| authorization/access control | 1. Auth / Session (key check kiểm quyền) |
+| input validation | 2. Input validation / Injection |
+| SSRF | 2. Input validation / Injection (key check SSRF) |
+| crypto/secrets | 3. Crypto / Secrets |
+| security misconfiguration | 3. Crypto / Secrets (key check cấu hình) |
+| dependency | 4. Dependency / Supply-chain |
+| logging | 5. Logging / Error handling |
+
 ## 1. Auth / Session (A01, A07)
 
 - **Authentication:** thuật toán + tham số hash mật khẩu đủ mạnh (adaptive hashing); lockout / throttling
@@ -32,6 +48,9 @@ OWASP/ASVS/CWE qua [owasp-asvs-cwe-mapping.md](owasp-asvs-cwe-mapping.md) và tr
 - Password: adaptive hashing, kiểm cost + đường nâng cấp.
 - Token: từ chối `alg=none`; ghim thuật toán chấp nhận; validate issuer/audience/expiry + nguồn khoá.
 - Secret management: secret đến từ **env / vault / secure store**; không log/echo secret trong CI.
+- **Security misconfiguration:** cấu hình không an toàn ở môi trường triển khai: debug/actuator/console bật,
+  CORS mở rộng (`*` kèm credential), thiếu header bảo mật (HSTS, CSP, X-Content-Type-Options), credential mặc
+  định, endpoint quản trị không hạn chế.
 - **Red flag:** Base64 bị tưởng là mã hoá; IV tĩnh dùng chung; secret trong `application.yml` / `.env.example`
   / test data commit mà không tách rõ non-production.
 
