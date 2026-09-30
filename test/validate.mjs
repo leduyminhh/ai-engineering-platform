@@ -1422,6 +1422,12 @@ if (fs.existsSync(BUILD)) {
     'db-query-analysis.md: có EXPLAIN ANALYZE và N+1');
   ok(perfRefs.every((n) => perfRef(n).includes('[Unverified]') || !/`[a-z0-9-]+ [^`]*--/.test(perfRef(n))),
     'backend-performance references: lệnh có cờ công cụ phải gắn [Unverified] trong file');
+  const pub20 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_published.json'), 'utf8')).published;
+  ok(pub20.includes('backend/backend-performance'), '_published.json: có backend/backend-performance (publish trước khi nối workflow)');
+  const cowork20 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
+  ok(cowork20.includes('backend:backend-performance'), '_cowork.json: có backend:backend-performance');
+  const beMan20 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', '.manifest.json'), 'utf8'));
+  ok(beMan20.version === '1.5.0', 'backend manifest: version 1.5.0');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

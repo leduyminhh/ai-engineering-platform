@@ -180,7 +180,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   ok(beAll && !beAll.skillIds.some((s) => s.includes('db-migration')),
     'skillCatalog: plugin backend không còn skill db-migration');
   const beOff = offeredCatalog().plugins.find((p) => p.id === 'backend');
-  ok(beOff && beOff.skillIds.length === 9, 'offeredCatalog: vẫn offer đủ 9 skill backend đã publish');
+  ok(beOff && beOff.skillIds.length === 10, 'offeredCatalog: vẫn offer đủ 10 skill backend đã publish');
 }
 
 // frontend-data-integration + frontend-e2e-testing đã publish (spec 2026-09-29 §7.3.7, §7.2; publish không chờ pilot).
