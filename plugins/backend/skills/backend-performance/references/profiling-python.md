@@ -54,11 +54,13 @@ stats.sort_stats('cumulative').print_stats(20)
 - Profile **trong lúc có tải** của `measure` (cùng script k6, cùng bảng điều kiện), attach py-spy vào worker.
 - Tách lần đo latency và lần profile: profiler và log debug làm chậm request → không lấy số latency từ lần
   đang profile.
-- Middleware profile theo request (nếu project đã có) chỉ bật ở cấu hình môi trường test; không thêm middleware
-  vào `src/` production (P5) — thêm cấu hình tool đo cần hỏi trước.
+- Middleware profile theo request (nếu project đã có) chỉ bật lúc khởi chạy (settings module riêng trong `perf/`
+  qua `DJANGO_SETTINGS_MODULE`, biến môi trường) `[Unverified]`, không sửa file trong `src/` (P5); không làm được
+  → `blocked` + đề xuất; thêm cấu hình tool đo cần hỏi trước.
 - Async (FastAPI/asyncio): hàm blocking chạy trong event loop làm mọi request chờ → trong flame graph tìm lời
   gọi I/O đồng bộ (driver DB đồng bộ, HTTP client đồng bộ) trong coroutine.
-- Đếm query ORM mỗi request (Django ORM, SQLAlchemy) → chi tiết ở `db-query-analysis.md`.
+- Đếm query ORM mỗi request (Django ORM, SQLAlchemy): bật lúc khởi chạy, không sửa file trong `src/` → chi tiết ở
+  `db-query-analysis.md`.
 
 ## Evidence và đầu ra
 

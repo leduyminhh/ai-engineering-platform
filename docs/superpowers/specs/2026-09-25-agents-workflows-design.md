@@ -125,7 +125,7 @@ Ký hiệu: `→` tuần tự, `∥` song song, `⏸` checkpoint người duyệ
 | WF06 | Phạm vi + threat theo vùng rủi ro → source review + scan (quality-auditor) → validate findings → kế hoạch remediation ⏸ → sửa (session chính) → re-scan → report | Finding `blocker` chặn `completed`. Mask mọi secret trong report |
 | WF07 | Data model + impact → thiết kế migration forward + rollback + tương thích ngược (expand/contract) ⏸ → implement migration (session chính) + code (backend-implementer) → review query/index (backend-reviewer) → xác nhận DB đích là DB test ⏸ → chạy migration + rollback trên DB test → commit ⏸ | Cấm thay đổi phá huỷ dữ liệu khi chưa xác nhận; không chạy trên production. Migration tool chờ G2 |
 | WF08 | Contract-first OpenAPI (backend-implementer, skill `backend-api-contract`) ⏸ → implement BE → integration + contract test (backend-test-writer) → kiểm drift contract↔code (backend-reviewer) → FE client (session chính chạy codegen sẵn có của project, tuỳ chọn — `frontend-implement` không nối API, Gap G1) → docs → commit ⏸ | Breaking change phải có versioning/deprecation |
-| WF09 | Định nghĩa metric + mục tiêu → baseline → profile → giả thuyết ⏸ → tối ưu → benchmark + so sánh trước/sau → regression test → review (backend-reviewer ∥ frontend-reviewer, chỉ phía có đụng) | Không có số đo trước/sau trên cùng điều kiện → không được `completed`. Tool đo chờ G10 |
+| WF09 | Định nghĩa metric + mục tiêu → baseline → profile → giả thuyết ⏸ → tối ưu → benchmark + so sánh trước/sau → regression test → review (backend-reviewer ∥ frontend-reviewer, chỉ phía có đụng) | Không có số đo trước/sau trên cùng điều kiện → không được `completed`. Tool đo chờ G10 (G10 backend xong 2026-09-30 — spec `2026-09-30-backend-performance-design.md`; frontend còn mở) |
 | WF10 | Triage + blast radius (investigator) → evidence (log/metric/trace/deploy/infra/DB) → giả thuyết + kiểm chứng → **đề xuất** mitigation ⏸ → xác minh phục hồi → RCA + postmortem (spec-analyst) → nối tiếp WF02 | Agent chỉ đọc; mitigation do người thực hiện hoặc xác nhận. Output có `incident` block (summary, timeline, impact, root_cause, mitigation, prevention) |
 | WF11 | Gate (quality-auditor) ⏸ → release notes (release-scribe) ⏸ → commit release CHANGELOG + version bump qua `git-workflow` ⏸ → deploy checklist + điều kiện rollback (release-engineer) → người dùng deploy ⏸ → hậu kiểm health/observability (release-engineer) → đề xuất tag trên commit release qua `git-workflow` ⏸ | Tag/push chỉ đề xuất lệnh, chờ xác nhận. CI chờ G6 |
 | WF12 | Diff → phát hiện tài liệu bị ảnh hưởng (README, API docs, ADR, runbook, `project-knowledge/`, `AGENTS.md`) → cập nhật (spec-analyst cho ADR/diagram; session chính cho phần còn lại) → kiểm link/ví dụ → commit ⏸ | Không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`. Docs-sync sâu chờ G11 |
@@ -367,7 +367,7 @@ Kết quả: cài từ npm được đủ 12 workflow + orchestrator.
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | workflow-onboarding |
 | G8 | `engineering-tech-debt-audit` | engineering | workflow-tech-debt-review |
 | G9 | `engineering-task-breakdown`: spec → task có ước lượng, phụ thuộc | engineering | WF01 |
-| G10 | `backend-performance-testing` (k6/JMeter/Gatling) | backend | WF09 |
+| G10 | `backend-performance-testing` (k6/JMeter/Gatling) (G10 backend xong 2026-09-30 — spec `2026-09-30-backend-performance-design.md`; frontend còn mở) | backend | WF09 |
 | G11 | `engineering-docs-sync` | engineering | WF12 |
 
 ### Workflow tương lai

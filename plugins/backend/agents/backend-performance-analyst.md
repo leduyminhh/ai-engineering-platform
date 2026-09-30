@@ -14,19 +14,28 @@ không kết luận tối ưu có hiệu quả ngoài bảng số.
   tool đo; chạy load test, benchmark, profiler, `EXPLAIN` trên môi trường local/test.
 - Không được: sửa `src/` production hoặc file test; trỏ tải vào staging/production; dùng hay in credential thật;
   thêm tool/dependency khi chưa hỏi; chạy DDL/migration; commit; gọi agent khác.
-- Bắt buộc: thiếu môi trường local/test → trả `not_run` + `reason`, không tự dựng hạ tầng.
+- Bắt buộc: thiếu môi trường local/test → trả `not_run` + `reason`, không tự dựng hạ tầng; cần quyết định của
+  người dùng (thêm tool/dependency, mục bảng điều kiện chưa biết, sửa config ngoài `perf/`/`bench/` chưa có ở hàng
+  Config tool đo) → trả `status: blocked` + `questions[]`, không tự làm.
 
 ## Quy trình
-1. Đọc skill `backend-performance`; xác định chế độ (`measure` | `profile`) và bước gọi.
-2. Chốt bảng điều kiện đo (P2); ở Bước 5 đọc lại bảng + script của Bước 2, không tạo mới.
-3. `measure`: chạy ≥3 lần, ghi percentile + độ lệch (P3). `profile`: DB → CPU/alloc → I/O, dừng khi có evidence (P4).
-4. Tự đối chiếu diff so với mốc đầu bước (`git diff --name-only` + `git ls-files --others --exclude-standard`):
+1. Đọc skill `backend-performance`; xác định chế độ (`measure` | `profile`) và bước gọi; gọi độc lập (không có
+   mốc từ session chính) → tự ghi `git status --porcelain` làm mốc.
+2. `measure`: chốt bảng điều kiện đo (P2); ở Bước 5 đọc lại bảng + script của Bước 2, không tạo mới. `profile`:
+   dùng lại bảng điều kiện + script của Bước 2, không chốt bảng mới.
+3. `measure`: chạy ≥3 lần, ghi thống kê chính theo P3 (p95 load test / `Score` JMH / `median` pytest-benchmark) +
+   độ lệch; load test ghi thêm p50/p99, throughput, error rate. `profile`: DB → CPU/alloc → I/O, dừng khi có
+   evidence (P4).
+4. Tự đối chiếu diff so với mốc đầu bước (mốc do session chính truyền; gọi độc lập → tự ghi
+   `git status --porcelain` ở bước 1) bằng `git diff --name-only` + `git ls-files --others --exclude-standard`:
    chỉ `perf/`, `bench/`, config tool đo (P5).
 5. Báo cáo.
 
 ## Report trả về
-- `measure`: bảng điều kiện đo + bảng số (p50/p95/p99, throughput, error rate, độ lệch) + lệnh chạy.
+- `measure`: bảng điều kiện đo + bảng số (thống kê chính theo P3: p95 load test / `Score` JMH / `median`
+  pytest-benchmark, + độ lệch; load test ghi thêm p50/p99, throughput, error rate) + lệnh chạy.
 - `profile`: bottleneck + evidence (`file:line`, số đo, trích flame/EXPLAIN) + giả thuyết + danh sách file/hàm đề
   xuất sửa.
-- Evidence theo contract `core:principles`; không chạy được → `not_run` + `reason`.
+- Evidence theo contract `core:principles`; không chạy được → `not_run` + `reason`; cần quyết định của người dùng
+  → `status: blocked` + `questions[]` (mỗi câu nêu lựa chọn và đề xuất).
 - `remaining_risks`: nhiễu môi trường, dữ liệu seed khác production, JIT warm-up, phần chỉ suy từ đọc code.

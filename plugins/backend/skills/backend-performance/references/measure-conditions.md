@@ -12,18 +12,21 @@ lệch có thể đến từ nhiễu hoặc dữ liệu khác chứ không phả
 
 ## Bảng mẫu
 
-Điền đủ mọi hàng trước khi chạy; hàng nào chưa biết → dừng, hỏi (P2). Không để trống, không ghi "như cũ".
+Điền đủ mọi hàng trước khi chạy; hàng nào chưa biết → dừng, hỏi (P2; chạy như subagent: trả `blocked` + câu hỏi).
+Không để trống, không ghi "như cũ".
 
 | Mục | Giá trị | Ghi chú |
 |---|---|---|
 | Môi trường | host local/test (vd `localhost`), OS, CPU (số core), RAM | Cấm staging/production (P1); ghi cả tiến trình nặng khác đang chạy |
-| Build | commit SHA / phiên bản artifact, cờ JVM hoặc phiên bản Python | Bước 5 chỉ được khác đúng thay đổi tối ưu |
+| Build | commit SHA + `git diff --name-only` của working tree; cờ JVM hoặc phiên bản Python | Bước 5: chỉ khác đúng danh sách file Bước 4 |
+| Khởi chạy ứng dụng | lệnh start nguyên văn (kèm tham số/biến môi trường bật tool đo — chỉ tên biến, không giá trị secret), ai start (agent hay người dùng), port | Bước 5 build + khởi chạy lại từ working tree bằng đúng lệnh này và xác nhận tiến trình mới (PID/thời điểm start khác baseline, hoặc version/actuator info) trước warm-up; không tự làm được → `blocked` hỏi người dùng |
 | Dữ liệu seed | kích thước (số bản ghi bảng chính), cách tạo (script/lệnh seed) | Seed tái lập được; ghi rõ khác production ở đâu |
 | Endpoint/luồng | method + path hoặc chuỗi request; payload mẫu | Không chứa credential thật; token lấy từ biến môi trường |
 | Mô hình tải | VU hoặc RPS, thời lượng, think time; lần đo giữ tải hằng định, không ramp | Mô hình mở (RPS) hay đóng (VU) — ghi rõ loại |
 | Warm-up | cách tách (lần chạy warm-up riêng, bỏ kết quả) + thời lượng hoặc số iteration | JVM cần warm-up cho JIT; Python cần warm cache/pool |
 | Số lần lặp | ≥ 3 | Mỗi lần chạy lại từ cùng trạng thái dữ liệu |
 | Công cụ + phiên bản | vd k6, JMH, pytest-benchmark + phiên bản thật (lệnh in version) | Không ghi phiên bản đoán; lấy từ output lệnh |
+| Config tool đo | danh sách file config/manifest ngoài `perf/`/`bench/` người dùng đã duyệt được đổi (vd `build.gradle` plugin JMH, `settings.gradle` include, `pyproject.toml` pytest-benchmark, dòng `.gitignore` cho output); không có → ghi "không có" | Gate diff Bước 2/3/5 so với danh sách này; file ngoài danh sách → revert, không nhận |
 | Ngưỡng độ lệch | 10% độ lệch giữa các lần (mặc định): p95 cho load test, score chính cho micro-benchmark | Project ghi đè tại đây nếu máy nhiễu hơn/ít hơn |
 
 ## Đọc số: percentile, throughput, error rate

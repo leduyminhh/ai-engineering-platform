@@ -14,10 +14,11 @@ DB trước (`db-query-analysis.md`); chỉ xuống tầng này khi DB chưa gi�
 
 ## JFR (JDK Flight Recorder)
 
-Bật khi khởi động JVM `[Unverified]` cú pháp tham số:
+Bật khi khởi động JVM `[Unverified]` cú pháp tham số; `delay=` hoãn lúc bắt đầu ghi để bỏ qua startup và warm-up
+`[Unverified]` (chọn ≥ thời gian khởi động + warm-up, ghi vào báo cáo):
 
 ```bash
-java -XX:StartFlightRecording=duration=120s,filename=perf/out/app.jfr,settings=profile -jar app.jar
+java -XX:StartFlightRecording=delay=60s,duration=120s,filename=perf/out/app.jfr,settings=profile -jar app.jar
 ```
 
 Hoặc bật trên process đang chạy bằng `jcmd` `[Unverified]`. Chọn MỘT trong hai cách; recording có
@@ -66,8 +67,10 @@ asprof -d 60 -e lock  -f perf/out/lock.html  <pid>
 ## Spring: đếm query
 
 - Bật log SQL hoặc datasource-proxy để đếm query mỗi request → chi tiết ở `db-query-analysis.md`.
-- Bật log SQL chỉ trong profile/cấu hình của môi trường test; log SQL dày làm chậm chính lần đo → không đo
-  latency trong lúc bật log đếm query, tách hai lần chạy.
+- Bật log SQL/thống kê Hibernate lúc khởi chạy (tham số dòng lệnh, hoặc `--spring.config.additional-location`
+  trỏ file trong `perf/`) `[Unverified]`, không sửa file trong `src/`; không làm được → `blocked` + đề xuất (chi
+  tiết ở `db-query-analysis.md`).
+- Log SQL dày làm chậm chính lần đo → không đo latency trong lúc bật log đếm query, tách hai lần chạy.
 
 ## Đầu ra
 

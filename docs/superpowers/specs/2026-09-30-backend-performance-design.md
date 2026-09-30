@@ -1,7 +1,8 @@
 # Thiết kế: Skill `backend-performance` + agent `backend-performance-analyst` — đo và profile cho `workflow-performance` (G10)
 
 - Ngày: 2026-09-30
-- Trạng thái: **Đề xuất — chờ duyệt**. Chưa thực thi.
+- Trạng thái: **Đã thực thi** trên nhánh `feature/backend-performance` (2026-09-30), chờ merge; sửa sau review
+  toàn nhánh ghi ở §8.
 - Phạm vi: đóng G10 (spec [`2026-09-25-agents-workflows-design.md`](2026-09-25-agents-workflows-design.md) §9;
   spec [`2026-09-29-skill-plugin-workflow-upgrade-design.md`](2026-09-29-skill-plugin-workflow-upgrade-design.md)
   §5.1, §13.2) cho **phía backend**: cung cấp công cụ và chủ sở hữu cho Bước 2 (Baseline), Bước 3 (Profile &
@@ -97,21 +98,27 @@ và câu "KHÔNG sửa code production (đó là `backend-fix`); KHÔNG thay tes
 ### 3.3 Chế độ `measure` (Bước 2 và Bước 5)
 
 1. Chốt **bảng điều kiện đo** (mẫu ở `references/measure-conditions.md`): môi trường (host local/test), phiên bản
-   build, dữ liệu seed (kích thước, cách tạo), endpoint/luồng, mô hình tải (VU hoặc RPS, thời lượng, ramp),
-   warm-up, số lần lặp, công cụ + phiên bản.
+   build, dữ liệu seed (kích thước, cách tạo), endpoint/luồng, mô hình tải (VU hoặc RPS, thời lượng; tải hằng
+   định, không ramp — warm-up chạy riêng), warm-up, số lần lặp, công cụ + phiên bản. Bảng có thêm hàng **Khởi chạy
+   ứng dụng** (lệnh start, ai start, port) và **Config tool đo** (file config/manifest ngoài `perf/`/`bench/`
+   người dùng đã duyệt được đổi); hàng Build = commit SHA + `git diff --name-only` của working tree (Bước 5: chỉ
+   khác đúng danh sách file Bước 4).
 2. Viết hoặc tái dùng script: load test ở `perf/` (mặc định **k6**), micro-benchmark ở `bench/` (mặc định **JMH**
    cho Java, **pytest-benchmark** cho Python). Chọn công cụ **project đã có** trước; chưa có → đề xuất mặc định
    và **hỏi trước** khi thêm tool/dependency.
 3. Chạy **≥ 3 lần**; ghi p50/p95/p99, throughput, error rate và độ lệch giữa các lần.
-4. Ở Bước 5: đọc bảng điều kiện + script của Bước 2, **chạy lại nguyên trạng**; điều kiện lệch (build khác ngoài
-   thay đổi tối ưu, dữ liệu khác, tải khác) → từ chối so sánh, báo.
+4. Ở Bước 5: đọc bảng điều kiện + script của Bước 2, khởi chạy lại ứng dụng từ working tree và xác nhận tiến
+   trình mới trước warm-up, rồi **chạy lại nguyên trạng**; điều kiện lệch (build khác ngoài thay đổi tối ưu, dữ
+   liệu khác, tải khác) → từ chối so sánh, báo.
 
 ### 3.4 Chế độ `profile` (Bước 3)
 
 Thứ tự tầng rẻ → đắt; dừng ở tầng tìm ra bottleneck có evidence:
 
 1. **DB:** đếm query mỗi request (bắt N+1), `EXPLAIN ANALYZE` query chậm, slow query log
-   (`references/db-query-analysis.md`).
+   (`references/db-query-analysis.md`). Đếm query bật lúc khởi chạy (tham số dòng lệnh/biến môi trường, file cấu
+   hình hoặc harness trong `perf/`, đếm phía DB test), không sửa file trong `src/`; không làm được → `blocked` +
+   đề xuất.
 2. **CPU/alloc:** JFR / async-profiler (Java), py-spy / cProfile (Python), chạy trong lúc có tải của `measure`
    (`references/profiling-java.md`, `profiling-python.md`).
 3. **I/O, pool, lock:** thread dump, metric connection pool, thời gian chờ lock.
@@ -124,10 +131,10 @@ sách file/hàm đề xuất sửa** (đầu vào F2 của `backend-fixer`).
 | Cổng | Nội dung | Đỏ thì |
 |---|---|---|
 | P1 Môi trường | Chỉ chạy trên local/test; host staging/production → từ chối | Thiếu môi trường → `not_run` + lý do; không tự dựng hạ tầng |
-| P2 Điều kiện đo | Bảng điều kiện đo đầy đủ **trước** khi chạy; Bước 5 dùng lại bảng Bước 2 | Thiếu mục → dừng, hỏi |
+| P2 Điều kiện đo | Bảng điều kiện đo đầy đủ **trước** khi chạy; Bước 5 dùng lại bảng Bước 2 | Thiếu mục → dừng, hỏi (chạy như subagent: trả `blocked` + câu hỏi) |
 | P3 Ổn định | ≥ 3 lần; báo độ lệch; độ lệch p95 giữa các lần > **10%** (mặc định, project ghi đè trong bảng điều kiện) → cảnh báo, không kết luận | Tăng số lần lặp hoặc cô lập nhiễu |
 | P4 Evidence | Mọi giả thuyết có evidence đo được; không suy diễn chỉ từ đọc code | Profile thêm |
-| P5 Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo; thêm tool/dependency → hỏi trước; không sửa `src/` production, không sửa test, không chạy DDL/migration | Gỡ thay đổi ngoài phạm vi |
+| P5 Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo; thêm tool/dependency → hỏi trước (chạy như subagent: trả `blocked` + câu hỏi); không sửa `src/` production, không sửa test, không chạy DDL/migration | Gỡ thay đổi ngoài phạm vi |
 
 ### 3.6 Ranh giới an toàn (SKILL.md)
 
@@ -166,21 +173,30 @@ không kết luận tối ưu có hiệu quả ngoài bảng số.
   tool đo; chạy load test, benchmark, profiler, `EXPLAIN` trên môi trường local/test.
 - Không được: sửa `src/` production hoặc file test; trỏ tải vào staging/production; dùng hay in credential thật;
   thêm tool/dependency khi chưa hỏi; chạy DDL/migration; commit; gọi agent khác.
-- Bắt buộc: thiếu môi trường local/test → trả `not_run` + `reason`, không tự dựng hạ tầng.
+- Bắt buộc: thiếu môi trường local/test → trả `not_run` + `reason`, không tự dựng hạ tầng; cần quyết định của
+  người dùng (thêm tool/dependency, mục bảng điều kiện chưa biết, sửa config ngoài `perf/`/`bench/` chưa có ở hàng
+  Config tool đo) → trả `status: blocked` + `questions[]`, không tự làm.
 
 ## Quy trình
-1. Đọc skill `backend-performance`; xác định chế độ (`measure` | `profile`) và bước gọi.
-2. Chốt bảng điều kiện đo (P2); ở Bước 5 đọc lại bảng + script của Bước 2, không tạo mới.
-3. `measure`: chạy ≥3 lần, ghi percentile + độ lệch (P3). `profile`: DB → CPU/alloc → I/O, dừng khi có evidence (P4).
-4. Tự đối chiếu diff so với mốc đầu bước (`git diff --name-only` + `git ls-files --others --exclude-standard`):
+1. Đọc skill `backend-performance`; xác định chế độ (`measure` | `profile`) và bước gọi; gọi độc lập (không có
+   mốc từ session chính) → tự ghi `git status --porcelain` làm mốc.
+2. `measure`: chốt bảng điều kiện đo (P2); ở Bước 5 đọc lại bảng + script của Bước 2, không tạo mới. `profile`:
+   dùng lại bảng điều kiện + script của Bước 2, không chốt bảng mới.
+3. `measure`: chạy ≥3 lần, ghi thống kê chính theo P3 (p95 load test / `Score` JMH / `median` pytest-benchmark) +
+   độ lệch; load test ghi thêm p50/p99, throughput, error rate. `profile`: DB → CPU/alloc → I/O, dừng khi có
+   evidence (P4).
+4. Tự đối chiếu diff so với mốc đầu bước (mốc do session chính truyền; gọi độc lập → tự ghi
+   `git status --porcelain` ở bước 1) bằng `git diff --name-only` + `git ls-files --others --exclude-standard`:
    chỉ `perf/`, `bench/`, config tool đo (P5).
 5. Báo cáo.
 
 ## Report trả về
-- `measure`: bảng điều kiện đo + bảng số (p50/p95/p99, throughput, error rate, độ lệch) + lệnh chạy.
+- `measure`: bảng điều kiện đo + bảng số (thống kê chính theo P3: p95 load test / `Score` JMH / `median`
+  pytest-benchmark, + độ lệch; load test ghi thêm p50/p99, throughput, error rate) + lệnh chạy.
 - `profile`: bottleneck + evidence (`file:line`, số đo, trích flame/EXPLAIN) + giả thuyết + danh sách file/hàm đề
   xuất sửa.
-- Evidence theo contract `core:principles`; không chạy được → `not_run` + `reason`.
+- Evidence theo contract `core:principles`; không chạy được → `not_run` + `reason`; cần quyết định của người dùng
+  → `status: blocked` + `questions[]` (mỗi câu nêu lựa chọn và đề xuất).
 - `remaining_risks`: nhiễu môi trường, dữ liệu seed khác production, JIT warm-up, phần chỉ suy từ đọc code.
 ```
 
@@ -206,10 +222,10 @@ Analyst đo, không sửa; fixer sửa, không đo. Chuỗi trong workflow: anal
 | Bước | Thay đổi |
 |---|---|
 | 1 Metric & mục tiêu | Giữ session chính. Đầu ra thêm "điều kiện đo sơ bộ (môi trường local/test, endpoint/luồng, tải mục tiêu)". |
-| 2 Baseline | `Thực hiện: agent \`backend-performance-analyst\` (chế độ \`measure\`; phía BE)`. Hành động theo skill `backend-performance`. Gate: bảng điều kiện đo đầy đủ; ≥ 3 lần + độ lệch; so với mốc `git status --porcelain` đầu bước, file thay đổi/mới (`git diff --name-only`, `git ls-files --others --exclude-standard`) chỉ gồm `perf/`, `bench/`, config tool đo. Khi fail: `not_run` vì thiếu môi trường → workflow dừng `blocked` (không có baseline thì không tối ưu). |
-| 3 Profile & giả thuyết ⏸ | `Thực hiện: agent \`backend-performance-analyst\` (chế độ \`profile\`; phía BE)`. Đầu ra giữ nguyên (bottleneck + giả thuyết + danh sách file/hàm cho Bước 4). Gate thêm "evidence đo được (không chỉ đọc code); diff chỉ `perf/`, `bench/`, config tool đo". Người dùng xác nhận ở ⏸. |
+| 2 Baseline | `Thực hiện: agent \`backend-performance-analyst\` (chế độ \`measure\`; phía BE)`. Hành động theo skill `backend-performance`. Gate: bảng điều kiện đo đầy đủ; ≥ 3 lần + độ lệch; so với mốc `git status --porcelain` đầu bước, file thay đổi/mới (`git diff --name-only`, `git ls-files --others --exclude-standard`) chỉ gồm `perf/`, `bench/`, config tool đo đã liệt kê ở hàng Config tool đo của bảng điều kiện. Khi fail: `not_run` vì thiếu môi trường → workflow dừng `blocked` (không có baseline thì không tối ưu); agent trả `blocked` + câu hỏi → session chính hỏi người dùng, ghi quyết định vào bảng điều kiện (hàng Config tool đo nếu liên quan), gọi lại agent; diff ngoài phạm vi (ngoài `perf/`, `bench/`, hàng Config tool đo) → revert phần lệch, không nhận. |
+| 3 Profile & giả thuyết ⏸ | `Thực hiện: agent \`backend-performance-analyst\` (chế độ \`profile\`; phía BE)`. Đầu vào: bảng điều kiện + script + số đo baseline từ Bước 2. Hành động: session chính ghi mốc `git status --porcelain` rồi dispatch. Đầu ra giữ nguyên (bottleneck + giả thuyết + danh sách file/hàm cho Bước 4). Gate thêm "evidence đo được (không chỉ đọc code); diff chỉ `perf/`, `bench/`, config tool đo đã liệt kê ở hàng Config tool đo của bảng điều kiện". Khi fail: agent trả `blocked` + câu hỏi → session chính hỏi người dùng, ghi quyết định vào bảng điều kiện, gọi lại agent; diff ngoài phạm vi → revert phần lệch, không nhận. Người dùng xác nhận ở ⏸. |
 | 4 Tối ưu | Không đổi (`backend-fixer`). |
-| 5 Benchmark & so sánh | `Thực hiện: agent \`backend-performance-analyst\` (chế độ \`measure\`; phía BE)`. Đầu vào: **script + bảng điều kiện đo của Bước 2** + code đã tối ưu. Ràng buộc: không đổi điều kiện đo. Gate: bảng baseline vs sau cùng điều kiện; đạt hoặc báo không đạt ngưỡng; nhiễu vượt P3 → không kết luận. |
+| 5 Benchmark & so sánh | `Thực hiện: agent \`backend-performance-analyst\` (chế độ \`measure\`; phía BE)`. Đầu vào: **script + bảng điều kiện đo của Bước 2** + code đã tối ưu. Hành động: session chính ghi mốc `git status --porcelain` + `git hash-object` của script và file bảng điều kiện Bước 2, rồi dispatch; agent build + khởi chạy lại ứng dụng từ working tree theo hàng Khởi chạy ứng dụng (không tự làm được → `blocked` hỏi người dùng), xác nhận là tiến trình mới (PID/thời điểm start khác baseline, hoặc version/actuator info) trước warm-up. Ràng buộc: không đổi điều kiện đo. Gate: bảng baseline vs sau cùng điều kiện; đạt hoặc báo không đạt ngưỡng; nhiễu vượt P3 → không kết luận; script và bảng điều kiện Bước 2 không đổi (`git hash-object` trước/sau bằng nhau); file mới chỉ trong `perf/`/`bench/` (output); diff code production của working tree đúng bằng danh sách Bước 4. Khi fail: agent trả `blocked` + câu hỏi → session chính hỏi người dùng, ghi quyết định vào bảng điều kiện, gọi lại agent. |
 | 6, 7 | Không đổi. |
 
 Frontmatter `agents`: `"backend-performance-analyst,backend-fixer,frontend-fixer,backend-reviewer,frontend-reviewer"`.
@@ -298,6 +314,13 @@ PF-P3 phải đi trước PF-P5 (publish trước, nối sau).
 - Agent mode `write` không bị chặn ghi theo đường dẫn bằng công cụ; phạm vi `perf/`, `bench/` chỉ được kiểm bằng
   gate diff của workflow (giống A3).
 - Frontend performance chưa có; workflow chỉ có câu chờ.
+- **Mở rộng sau review toàn nhánh (2026-09-30):** agent chạy như subagent nên "hỏi" = trả `status: blocked` +
+  `questions[]` (session chính hỏi người dùng, ghi quyết định vào bảng điều kiện, gọi lại); bảng điều kiện thêm
+  hàng **Config tool đo** (file config ngoài `perf/`/`bench/` đã duyệt — gate diff so với danh sách này) và
+  **Khởi chạy ứng dụng** (Bước 5 khởi chạy lại từ working tree, xác nhận tiến trình mới trước warm-up); gate
+  Bước 5 so `git hash-object` trước/sau của script + bảng điều kiện Bước 2; đếm query bật lúc khởi chạy, không
+  sửa file trong `src/` (không làm được → `blocked` + đề xuất). `[Inference]` Các cổng này vẫn là kiểm bằng lệnh
+  git của session chính, không phải chặn ghi bằng công cụ.
 
 ---
 

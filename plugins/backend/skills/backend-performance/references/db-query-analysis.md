@@ -28,17 +28,24 @@ ROLLBACK;
 N+1: một query lấy danh sách N bản ghi, rồi N query nữa lấy quan hệ cho từng bản ghi (thường do lazy loading
 trong vòng lặp hoặc serializer). Dấu hiệu: số query mỗi request tăng theo kích thước dữ liệu trả về.
 
-| Stack | Cách đếm |
-|---|---|
-| Java/Hibernate | `hibernate.generate_statistics` (Spring: `spring.jpa.properties.hibernate.generate_statistics=true`) + log SQL `logging.level.org.hibernate.SQL=DEBUG` `[Unverified]` |
-| Java (mọi JDBC) | datasource-proxy bọc `DataSource`, bật đếm query (`ProxyDataSourceBuilder` … `countQuery()`) `[Unverified]` — thêm dependency → hỏi trước |
-| Django | `connection.queries` khi `DEBUG=True`, hoặc `CaptureQueriesContext` `[Unverified]` |
-| SQLAlchemy | event `before_cursor_execute` trên engine để đếm, hoặc `echo=True` `[Unverified]` |
+**Bật đếm query lúc khởi chạy, không sửa file trong `src/`** (P5): không sửa `src/…/application*.yml`,
+`settings.py` hay code tạo engine/`DataSource`. Chọn một cách dưới đây và ghi lệnh khởi chạy vào hàng Khởi chạy ứng
+dụng của bảng điều kiện đo:
 
+| Stack | Cách bật không sửa `src/` |
+|---|---|
+| Spring/Hibernate | tham số dòng lệnh khi start: `--spring.jpa.properties.hibernate.generate_statistics=true --logging.level.org.hibernate.SQL=DEBUG` `[Unverified]`; hoặc biến môi trường relaxed-binding / `SPRING_APPLICATION_JSON` `[Unverified]` (key map chứa `.`/`_` có thể bị đổi khi bind từ biến môi trường — kiểm log thống kê có xuất hiện); hoặc `--spring.config.additional-location=perf/application-perf.yml` (file nằm trong `perf/`) `[Unverified]` |
+| Java (mọi JDBC) | datasource-proxy bọc `DataSource` (`ProxyDataSourceBuilder` … `countQuery()`) `[Unverified]` cần thêm dependency và bean trong `src/` → không tự làm; trả `blocked` + đề xuất, hoặc dùng cách đếm phía DB bên dưới |
+| Django | settings module riêng trong `perf/` (vd `perf/settings_perf.py`: import settings gốc, bật `DEBUG` hoặc logger `django.db.backends`), chọn qua `DJANGO_SETTINGS_MODULE=perf.settings_perf` `[Unverified]`; đọc `connection.queries` hoặc `CaptureQueriesContext` trong harness ở `perf/` `[Unverified]` |
+| SQLAlchemy | harness trong `perf/` import engine của ứng dụng và gắn event listener `before_cursor_execute` để đếm `[Unverified]`; không đổi `echo=` trong `src/` |
+| Mọi stack | đếm phía DB trên DB test: PostgreSQL `log_statement = 'all'` hoặc `pg_stat_statements` (cột `calls`) `[Unverified]`; MySQL general log / slow log với `long_query_time = 0` `[Unverified]` — đổi cấu hình DB test ghi vào bảng điều kiện, tắt lại sau khi đếm; cài extension → hỏi trước |
+
+- Không cách nào đếm được mà không sửa `src/` → trả `status: blocked` + đề xuất thay đổi cụ thể (file, dòng cấu
+  hình, lý do); không tự sửa.
 - Đếm với **hai kích thước dữ liệu** (ví dụ trang ít và nhiều bản ghi): số query tăng tuyến tính theo số bản ghi
   → N+1 có evidence; ghi cả hai con số thật.
 - Từ log SQL, truy ngược `file:line` gọi query (repository/service/serializer) — đó là evidence cho P4.
-- Bật log đếm query chỉ trong cấu hình môi trường test; tách lần đếm query khỏi lần đo latency.
+- Tách lần đếm query khỏi lần đo latency: log SQL dày làm chậm chính request đang đo.
 
 ## EXPLAIN ANALYZE — đọc kế hoạch thực thi
 

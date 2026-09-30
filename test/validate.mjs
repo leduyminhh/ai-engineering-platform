@@ -1470,6 +1470,25 @@ if (fs.existsSync(BUILD)) {
     ok((rd.split('\n').find((l) => l.startsWith('| WF09 |')) ?? '').includes('backend-performance-analyst'), `${f}: WF09 liệt kê backend-performance-analyst`);
     ok(!/^\| G10 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G10`);
   }
+  const paFlow = flat20(pa.split('## Quy trình')[1]?.split('## Report trả về')[0] ?? '');
+  ok(pa.includes('blocked') && pa.includes('questions'), 'backend-performance-analyst: cần quyết định người dùng → trả blocked + questions[]');
+  ok(paFlow.includes('Score') && paFlow.includes('median'), 'backend-performance-analyst: Quy trình ghi thống kê chính theo P3 (Score JMH, median pytest-benchmark)');
+  ok(/^\| P5 [^\n]*blocked/m.test(perfSkill), 'backend-performance: P5 chạy như subagent → trả blocked');
+  const perfMeasure = flat20(perfSkill.split('### `measure`')[1]?.split('### `profile`')[0] ?? '');
+  ok(perfMeasure.includes('không ramp') && !/(?<!không )ramp/.test(perfMeasure),
+    'backend-performance: measure dùng tải hằng định, không ramp (warm-up chạy riêng)');
+  ok(perfRef('measure-conditions').includes('Config tool đo') && perfRef('measure-conditions').includes('Khởi chạy ứng dụng'),
+    'measure-conditions.md: bảng điều kiện có hàng Config tool đo và Khởi chạy ứng dụng');
+  const dbq20 = flat20(perfRef('db-query-analysis'));
+  ok(dbq20.includes('không sửa') && dbq20.includes('`src/`') && /pg_stat_statements|log_statement/.test(dbq20) && dbq20.includes('blocked'),
+    'db-query-analysis.md: đếm query bật lúc khởi chạy, không sửa src/, có cách đếm phía DB, bí → blocked');
+  ok(field20(pS5.body, 'Gate').includes('hash-object'), 'workflow-performance Bước 5: Gate so git hash-object script + bảng điều kiện Bước 2');
+  ok(field20(pS5.body, 'Hành động').includes('tiến trình mới'), 'workflow-performance Bước 5: khởi chạy lại ứng dụng, xác nhận tiến trình mới trước warm-up');
+  for (const [n, s] of [[2, pS2], [3, pS3], [5, pS5]]) {
+    ok(field20(s.body, 'Khi fail').includes('blocked') && field20(s.body, 'Khi fail').includes('câu hỏi'),
+      `workflow-performance Bước ${n}: Khi fail — agent trả blocked + câu hỏi → session chính hỏi người dùng`);
+  }
+  ok(field20(pS3.body, 'Đầu vào').includes('script'), 'workflow-performance Bước 3: Đầu vào có bảng điều kiện + script Bước 2');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -32,13 +32,15 @@ phải bộ công cụ dựng sẵn. Gọi độc lập hoặc từ Bước 2 (B
 
 1. Chốt **bảng điều kiện đo** theo mẫu [references/measure-conditions.md](references/measure-conditions.md):
    môi trường (host local/test), phiên bản build, dữ liệu seed, endpoint/luồng, mô hình tải (VU hoặc RPS, thời
-   lượng, ramp), warm-up, số lần lặp, công cụ + phiên bản, ngưỡng độ lệch.
+   lượng; tải hằng định, không ramp — warm-up chạy riêng), warm-up, số lần lặp, công cụ + phiên bản, ngưỡng độ
+   lệch.
 2. Viết hoặc tái dùng script: load test ở `perf/` ([references/k6.md](references/k6.md)); micro-benchmark ở
    `bench/` ([references/jmh-pytest-benchmark.md](references/jmh-pytest-benchmark.md)). Ưu tiên công cụ project
    đã có; chưa có → đề xuất mặc định (k6, JMH, pytest-benchmark) và **hỏi trước** khi thêm tool/dependency.
 3. Chạy **≥ 3 lần**; ghi p50/p95/p99, throughput, error rate và độ lệch giữa các lần.
-4. Ở Bước 5: đọc bảng điều kiện + script của Bước 2 và **chạy lại nguyên trạng**. Điều kiện lệch (build khác ngoài
-   thay đổi tối ưu, dữ liệu khác, tải khác) → từ chối so sánh, báo.
+4. Ở Bước 5: đọc bảng điều kiện + script của Bước 2, khởi chạy lại ứng dụng từ working tree và xác nhận tiến trình
+   mới trước warm-up, rồi **chạy lại nguyên trạng**. Điều kiện lệch (build khác ngoài thay đổi tối ưu, dữ liệu
+   khác, tải khác) → từ chối so sánh, báo.
 
 ### `profile` — Profile & giả thuyết (Bước 3)
 
@@ -58,7 +60,8 @@ sách file/hàm đề xuất sửa** (đầu vào F2 của `backend-fix`).
   môi trường). Thiếu môi trường → `not_run` + lý do; không tự dựng hạ tầng.
 - **Không sửa code production.** Chỉ ghi `perf/`, `bench/` và config tool đo; không sửa `src/`, không sửa test,
   không chạy DDL/migration. Phát hiện bottleneck → chỉ đề xuất danh sách file cho `backend-fix`.
-- **Hỏi trước khi thêm tool/dependency** (k6, JMH, pytest-benchmark, async-profiler, py-spy).
+- **Hỏi trước khi thêm tool/dependency** (k6, JMH, pytest-benchmark, async-profiler, py-spy). Chạy như subagent:
+  trả `blocked` + câu hỏi, không tự thêm.
 - **Không push thẳng main.** Script đo là artifact; con người **duyệt diff** trước khi commit.
 - **Ngôn ngữ (bắt buộc):** báo cáo, commit message viết **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo bằng số và lệnh THẬT; không dùng "nhanh hơn rõ rệt", "tối ưu hoàn toàn"; luôn nêu
@@ -69,10 +72,10 @@ sách file/hàm đề xuất sửa** (đầu vào F2 của `backend-fix`).
 | # | Gate | Nội dung | Chế độ | Đỏ thì |
 |---|------|---------|--------|--------|
 | P1 | Môi trường | Chỉ chạy trên local/test; host staging/production → từ chối | cả hai | Thiếu môi trường → `not_run` + lý do; không tự dựng hạ tầng |
-| P2 | Điều kiện đo | Bảng điều kiện đo đầy đủ TRƯỚC khi chạy; Bước 5 dùng lại bảng Bước 2 | `measure` | Thiếu mục → dừng, hỏi |
+| P2 | Điều kiện đo | Bảng điều kiện đo đầy đủ TRƯỚC khi chạy; Bước 5 dùng lại bảng Bước 2 | `measure` | Thiếu mục → dừng, hỏi (chạy như subagent: trả `blocked` + câu hỏi) |
 | P3 | Ổn định | ≥ 3 lần; báo độ lệch; độ lệch p95 (load test) hoặc score chính (micro-benchmark) giữa các lần > 10% (mặc định, project ghi đè trong bảng điều kiện) → cảnh báo, không kết luận | `measure` | Tăng số lần lặp hoặc cô lập nhiễu |
 | P4 | Evidence | Mọi giả thuyết có evidence đo được; không suy diễn chỉ từ đọc code | `profile` | Profile thêm |
-| P5 | Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo; thêm tool/dependency → hỏi trước; không sửa `src/` production, không sửa test, không chạy DDL/migration | cả hai | Gỡ thay đổi ngoài phạm vi |
+| P5 | Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo; thêm tool/dependency → hỏi trước (chạy như subagent: trả `blocked` + câu hỏi); không sửa `src/` production, không sửa test, không chạy DDL/migration | cả hai | Gỡ thay đổi ngoài phạm vi |
 
 ## Sau khi xong
 Báo: bảng điều kiện đo; bảng số (p50/p95/p99, throughput, error rate, độ lệch) + lệnh chạy; hoặc bottleneck +
