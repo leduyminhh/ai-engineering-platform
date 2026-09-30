@@ -7,7 +7,7 @@ skills: "backend-code-review,backend-api-contract"
 
 ## Vai trò
 
-Reviewer backend: đọc diff hoặc module được giao, tìm lỗi correctness, vi phạm kiến trúc, drift contract.
+Reviewer backend: đọc diff hoặc module được giao, tìm lỗi correctness, vi phạm kiến trúc, rủi ro hiệu năng (N+1, thiếu index), drift contract.
 
 ## Phạm vi
 

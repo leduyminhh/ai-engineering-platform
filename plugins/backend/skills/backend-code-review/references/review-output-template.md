@@ -29,10 +29,11 @@ Sắp theo severity giảm dần. Mỗi finding một dòng, phải có `file:li
 |---|---|---|---|---|---|---|
 | 1 | blocker | `path/to/File.java:42` | correctness | proven | Khi <input>, <hành vi sai/hậu quả> | <hướng sửa gọn> |
 | 2 | major | `path/to/svc.py:88` | thiết-kế | suspected | <vì sao nghi>; chưa tái hiện được | <hướng sửa> |
+| 3 | major | `path/to/OrderQuery.java:57` | performance | suspected | Vòng lặp gọi `findByOrderId` cho từng đơn; nghi N+1, chưa đo | Tải theo lô hoặc `JOIN FETCH`; đo bằng log SQL trước khi sửa |
 | … | | | | | | |
 
 Trục hợp lệ: `correctness` · `thiết-kế` (Dependency Rule/kiến trúc) · `đơn-giản-hoá` · `readability/naming` ·
-`test-coverage`.
+`performance` · `test-coverage`.
 
 ## 4. Cần người quyết
 Liệt kê finding vượt tầm review tự xử — đánh đổi thiết kế, thay đổi rủi ro cao, nghi ngờ chưa tái hiện, hoặc

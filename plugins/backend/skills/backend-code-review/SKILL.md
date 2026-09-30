@@ -1,6 +1,6 @@
 ---
 name: backend-code-review
-description: "Recipe on-demand: REVIEW một diff/PR/module BACKEND (Java/Spring, Python) theo các TRỤC — correctness (bug/edge/null/error-handling/concurrency-race/resource-leak/transaction), thiết kế & bám kiến trúc (Dependency Rule: domain/application không import hạ tầng, inbound không gọi thẳng outbound, một transaction một aggregate, map ở biên bằng mapper thủ công), đơn giản hoá & tái dùng (trùng lặp, over-engineering, đặt logic đúng tầng), readability & naming theo code-convention, và test coverage (unit lõi + edge). Phân loại severity (blocker/major/minor/nit) + evidence file:line + đề xuất fix; READ-ONLY mặc định (không tự sửa trừ khi được yêu cầu). Defer security/tool scan sang engineering-quality-gate, tái cấu trúc sang backend-refactor. Dùng skill NÀY khi người dùng muốn \"review code backend\", \"review PR backend\", \"review API/service\", \"đánh giá code Java/Spring\", \"review Python backend\", \"review diff backend\", \"đọc soát PR\", \"nhận xét thiết kế backend\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
+description: "Recipe on-demand: REVIEW một diff/PR/module BACKEND (Java/Spring, Python) theo các TRỤC — correctness (bug/edge/null/error-handling/concurrency-race/resource-leak/transaction), thiết kế & bám kiến trúc (Dependency Rule: domain/application không import hạ tầng, inbound không gọi thẳng outbound, một transaction một aggregate, map ở biên bằng mapper thủ công), đơn giản hoá & tái dùng (trùng lặp, over-engineering, đặt logic đúng tầng), readability & naming theo code-convention, hiệu năng (N+1, thiếu index, query trong vòng lặp, tải eager thừa — nhãn suspected khi chưa có số đo), và test coverage (unit lõi + edge). Phân loại severity (blocker/major/minor/nit) + evidence file:line + đề xuất fix; READ-ONLY mặc định (không tự sửa trừ khi được yêu cầu). Defer security/tool scan sang engineering-quality-gate, tái cấu trúc sang backend-refactor. Dùng skill NÀY khi người dùng muốn \"review code backend\", \"review PR backend\", \"review API/service\", \"đánh giá code Java/Spring\", \"review Python backend\", \"review diff backend\", \"đọc soát PR\", \"nhận xét thiết kế backend\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 4
 stageNumber: "04"
 title: "Backend Code Review — Review diff/PR backend theo trục, có evidence (recipe on-demand)"
@@ -72,6 +72,8 @@ tầng, map rò kiểu ở biên) — review bám `architecture/ARD.md` mục "D
   vào lõi), đặt logic đúng tầng (altitude).
 - **Đơn giản hoá & tái dùng** — trùng lặp, over-engineering, trừu tượng thừa, logic đặt sai tầng.
 - **Readability & naming** — theo `code-convention` của project (Ubiquitous Language, hậu tố tầng), không áp gu lạ.
+- **Performance** — N+1, query/HTTP trong vòng lặp, thiếu index cho điều kiện lọc/join/sắp xếp mới, tải eager
+  hoặc không phân trang. Không có số đo thì nhãn **suspected**, không nêu con số; chỉ đề xuất cách đo.
 - **Test coverage** — unit lõi cho nhánh nghiệp vụ mới + case biên; thiếu test cho code có rủi ro là một finding.
 
 ### 2. Phân loại severity + evidence + đề xuất fix
