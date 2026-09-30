@@ -1402,6 +1402,26 @@ if (fs.existsSync(BUILD)) {
   ok(/≥\s?3/.test(perfSkill) && perfSkill.includes('`perf/`') && perfSkill.includes('`bench/`'),
     'backend-performance: đo ≥3 lần, script ở perf/ và bench/');
   ok(/^\| P5 [^\n]*`src\/`/m.test(perfSkill), 'backend-performance: P5 cấm sửa src/ production');
+  const perfRefs = ['measure-conditions', 'k6', 'jmh-pytest-benchmark', 'profiling-java', 'profiling-python', 'db-query-analysis'];
+  const perfRef = (n) => { const f = path.join(perfDir, 'references', `${n}.md`); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : ''; };
+  for (const n of perfRefs) {
+    ok(perfRef(n).length > 200, `backend-performance references/${n}.md: có nội dung`);
+    ok(perfSkill.includes(`(references/${n}.md)`), `backend-performance: SKILL.md link tới references/${n}.md`);
+  }
+  ok(/\| *Môi trường *\|/.test(perfRef('measure-conditions')) && /warm-up/i.test(perfRef('measure-conditions')) && perfRef('measure-conditions').includes('10%'),
+    'measure-conditions.md: bảng điều kiện đo có Môi trường, warm-up, ngưỡng 10%');
+  ok(perfRef('k6').includes('__ENV.BASE_URL') && !/https?:\/\/(?!localhost|127\.0\.0\.1)[a-z]/i.test(perfRef('k6')),
+    'k6.md: script mẫu lấy BASE_URL từ biến môi trường, không trỏ host ngoài localhost');
+  ok(perfRef('jmh-pytest-benchmark').includes('@Benchmark') && perfRef('jmh-pytest-benchmark').includes('benchmark('),
+    'jmh-pytest-benchmark.md: có ví dụ JMH @Benchmark và pytest-benchmark');
+  ok(/JFR|jcmd/.test(perfRef('profiling-java')) && /async-profiler/.test(perfRef('profiling-java')),
+    'profiling-java.md: có JFR và async-profiler');
+  ok(/py-spy/.test(perfRef('profiling-python')) && /cProfile/.test(perfRef('profiling-python')),
+    'profiling-python.md: có py-spy và cProfile');
+  ok(/EXPLAIN ANALYZE/.test(perfRef('db-query-analysis')) && /N\+1/.test(perfRef('db-query-analysis')),
+    'db-query-analysis.md: có EXPLAIN ANALYZE và N+1');
+  ok(perfRefs.every((n) => perfRef(n).includes('[Unverified]') || !/`[a-z0-9-]+ [^`]*--/.test(perfRef(n))),
+    'backend-performance references: lệnh có cờ công cụ phải gắn [Unverified] trong file');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
