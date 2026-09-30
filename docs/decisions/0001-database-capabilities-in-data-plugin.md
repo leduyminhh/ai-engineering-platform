@@ -15,7 +15,7 @@ Repo có hai skill cùng viết migration schema theo expand/contract, đặt �
 - `backend-db-migration` (plugin `backend`, draft): áp Flyway/Liquibase và viết thay đổi schema trong repo của một app backend.
 - `data-oltp-implement` (plugin `data`, draft): hiện thực schema vật lý cho một database project OLTP dùng chung, giữ schema contract đã công bố cho consumer; mỗi migration `up` phải có `down`.
 
-Quy tắc phân ranh giữa hai skill nằm ở Bước 0 của skill migration (spec §7.1.3): có `data-oltp-init` hoặc schema là contract cho nhiều consumer thì DỪNG và chuyển sang `data-oltp-implement`. Spec Q5 ghi rõ quy tắc này là suy luận, chưa phải ADR chính thức.
+Quy tắc phân ranh giữa hai skill nằm ở Bước 0 của skill migration (spec §7.1.3): có `data-oltp-init` hoặc schema là contract cho nhiều consumer thì DỪNG và chuyển sang `data-oltp-implement`. Spec (trước khi đóng Q5) ghi rõ quy tắc này là suy luận, chưa phải ADR chính thức.
 
 Lực đẩy:
 - Một chủ sở hữu cho mọi việc về schema; tránh hai bộ hướng dẫn migration trùng lặp hoặc mâu thuẫn.
@@ -36,7 +36,7 @@ Lực đẩy:
    - Nhược: trộn hai đối tượng khác nhau (migration trong repo app so với DB project riêng có schema contract), skill phình to, khó pilot và khó review từng phần.
 4. **D. Publish nhánh OLTP của plugin `data` trước, giữ hai plugin.**
    - Ưu: hết cảnh trỏ sang skill draft.
-   - Nhược: trì hoãn pilot của `backend-db-migration` (spec M4), vẫn hai plugin và hai chủ sở hữu.
+   - Nhược: vẫn hai plugin và hai chủ sở hữu, chưa giải quyết trùng lặp giữa `data-db-migration` và `data-oltp-implement` `[Inference]`.
 
 ## Quyết định
 
@@ -48,7 +48,7 @@ Lý do: B đáp ứng hai lực đầu (một chủ sở hữu, redirect nội b
 
 Tích cực:
 - Một plugin sở hữu mọi việc về database; redirect giữa hai skill là nội bộ, không còn liên kết chéo plugin.
-- Skill giữ nguyên nội dung thiết kế; chỉ đổi vị trí và tên.
+- Skill không đổi nội dung thiết kế; chỉ đổi vị trí, tên, `order`/`stageNumber`/tiêu đề và một câu trỏ sang `data-oltp-implement` (nay cùng plugin).
 
 Tiêu cực và rủi ro:
 - Đổi tên skill: các tham chiếu tên cũ trong `docs/superpowers/` là lịch sử, không sửa.
