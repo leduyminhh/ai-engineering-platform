@@ -169,14 +169,17 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     'publishedPluginIds per-skill: plugin có skill lẻ vẫn tính published');
 }
 
-// backend-db-migration là DRAFT (spec 2026-09-29 §7.1.1 M4): có trên đĩa nhưng wizard không offer.
+// data-db-migration là DRAFT (plugin data chưa publish; spec 2026-09-29 §7.1.1 M4, ADR 0001): có trên đĩa nhưng wizard không offer.
 {
+  const daAll = skillCatalog().plugins.find((p) => p.id === 'data');
+  ok(daAll && daAll.skillIds.includes('data/data-db-migration'),
+    'skillCatalog: có data/data-db-migration (draft vẫn cài được bằng --skill)');
+  ok(!offeredCatalog().plugins.some((p) => p.id === 'data'),
+    'offeredCatalog: KHÔNG offer plugin data (draft), gồm data-db-migration');
   const beAll = skillCatalog().plugins.find((p) => p.id === 'backend');
-  ok(beAll && beAll.skillIds.includes('backend/backend-db-migration'),
-    'skillCatalog: có backend/backend-db-migration (draft vẫn cài được bằng --skill)');
+  ok(beAll && !beAll.skillIds.some((s) => s.includes('db-migration')),
+    'skillCatalog: plugin backend không còn skill db-migration');
   const beOff = offeredCatalog().plugins.find((p) => p.id === 'backend');
-  ok(beOff && !beOff.skillIds.includes('backend/backend-db-migration'),
-    'offeredCatalog: KHÔNG offer backend-db-migration (draft)');
   ok(beOff && beOff.skillIds.length === 8, 'offeredCatalog: vẫn offer đủ 8 skill backend đã publish');
 }
 

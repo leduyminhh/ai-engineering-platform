@@ -1,16 +1,16 @@
 ---
-name: backend-db-migration
+name: data-db-migration
 description: "Recipe on-demand cho SCHEMA DATABASE của một BACKEND project, 2 chế độ: ADOPT — kiểm kê cơ chế schema hiện trạng (ddl-auto, DDL chạy tay), so sánh Flyway ↔ Liquibase bằng bằng chứng của chính project, DỪNG cho người dùng chọn, rồi áp module migration chạy riêng; CHANGE — viết MỘT thay đổi schema an toàn theo expand/contract (thêm/đổi/xoá cột, index, FK), kiểm rủi ro khoá bảng PostgreSQL, verify trên DB test theo chu trình của từng công cụ (Flyway forward-only). Template có cho Java/Spring Boot + PostgreSQL; Python/Alembic chỉ có hướng dẫn quy trình. KHÔNG chạy migration lên production. Dùng skill NÀY khi người dùng muốn \"migrate db\", \"flyway\", \"liquibase\", \"công cụ migration\", \"bỏ ddl-auto\", \"quản lý schema\", \"database migration\", \"đổi schema\", \"thêm cột\", \"expand contract\", \"schema change\", \"migration an toàn\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG dùng khi project đã chạy data-oltp-init (dùng data-oltp-implement). KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
-order: 9
-stageNumber: "09"
-title: "Backend DB Migration — Áp công cụ migration & viết thay đổi schema an toàn (recipe on-demand)"
+order: 5
+stageNumber: "05"
+title: "Data DB Migration — Áp công cụ migration & viết thay đổi schema an toàn (recipe on-demand)"
 runsIn: execute
 invoke: per-request
 pipeline: false
 next: null
 ---
 
-# Backend DB Migration — Áp công cụ migration & viết thay đổi schema an toàn (recipe on-demand)
+# Data DB Migration — Áp công cụ migration & viết thay đổi schema an toàn (recipe on-demand)
 
 Recipe hướng dẫn agent làm việc với schema database của một backend project theo **hai chế độ**:
 
@@ -27,7 +27,7 @@ hướng dẫn agent, KHÔNG phải công cụ tự chạy migration lên DB.
 - Project có mã nguồn backend. Đọc CLAUDE.md / AGENTS.md, `project-knowledge/` (`stack-profile.md`,
   `data-model.md`, `architecture.md`), ADR trong `docs/decisions/` để biết ranh giới an toàn và quyết định đã chốt.
 - Project đã chạy `data-oltp-init` hoặc sở hữu DB như sản phẩm (schema contract cho nhiều consumer) → KHÔNG dùng
-  skill này; dùng `data-oltp-implement` (plugin `data`).
+  skill này; dùng `data-oltp-implement` (cùng plugin `data`).
 
 ## Ranh giới an toàn (CLAUDE.md)
 - Không chạy migration lên DB nào khi chưa qua cổng C4 (chế độ `change`) hoặc bước A7 (chế độ `adopt`); **không bao

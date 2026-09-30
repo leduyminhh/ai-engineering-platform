@@ -1,4 +1,4 @@
-# Kit template `backend-db-migration` — Spring Boot + PostgreSQL
+# Kit template `data-db-migration` — Spring Boot + PostgreSQL
 
 Dùng ở bước **A6** (chế độ `adopt`). Chỉ có template cho Spring Boot 3 + PostgreSQL; stack khác sinh layout trung tính
 và hỏi người dùng. Template **chưa được pilot** trên project thật.
