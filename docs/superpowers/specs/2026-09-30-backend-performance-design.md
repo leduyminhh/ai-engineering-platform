@@ -320,7 +320,7 @@ PF-P3 phải đi trước PF-P5 (publish trước, nối sau).
   skill ưu tiên JMH, cảnh báo khi không dùng.
 - Agent mode `write` không bị chặn ghi theo đường dẫn bằng công cụ; phạm vi `perf/`, `bench/` chỉ được kiểm bằng
   gate diff của workflow (giống A3).
-- Frontend performance chưa có; workflow chỉ có câu chờ.
+- Frontend performance đã làm ở spec [`2026-10-01-frontend-performance-design.md`](2026-10-01-frontend-performance-design.md) (skill + agent + nối workflow).
 - **Mở rộng sau review toàn nhánh (2026-09-30):** agent chạy như subagent nên "hỏi" = trả `status: blocked` +
   `questions[]` (session chính hỏi người dùng, ghi quyết định vào report của bước đó, gọi lại; Bước 5 → report Bước 5);
   bảng điều kiện thêm hàng **Config tool đo** (file config ngoài `perf/`/`bench/` đã duyệt — gate diff so với danh sách này) và
@@ -339,4 +339,4 @@ PF-P3 phải đi trước PF-P5 (publish trước, nối sau).
 |---|---|---|
 | ~~G-Q1…G-Q6~~ | (§2) | Đã chốt 2026-09-30 |
 | G-Q7 | Có thêm bước perf regression tự động trong CI không? | Mở — ngoài phạm vi; cần `ops-ci-pipeline` (G6) trước |
-| G-Q8 | Spec frontend performance | Mở — sau spec này |
+| G-Q8 | Spec frontend performance | Đã làm — [`2026-10-01-frontend-performance-design.md`](2026-10-01-frontend-performance-design.md) |

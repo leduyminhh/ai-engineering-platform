@@ -1,7 +1,7 @@
 # Thiết kế: Skill `frontend-performance` + agent `frontend-performance-analyst` — đo và profile frontend cho `workflow-performance`
 
 - Ngày: 2026-10-01
-- Trạng thái: **Đề xuất — chờ duyệt**. Chưa thực thi.
+- Trạng thái: **Đã duyệt và thực thi (2026-10-01)**.
 - Phạm vi: phần **frontend** của G10 (spec backend
   [`2026-09-30-backend-performance-design.md`](2026-09-30-backend-performance-design.md) §8 G-Q8; spec
   [`2026-09-29-skill-plugin-workflow-upgrade-design.md`](2026-09-29-skill-plugin-workflow-upgrade-design.md) §13.2):

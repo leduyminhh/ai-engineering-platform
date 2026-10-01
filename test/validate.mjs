@@ -1720,10 +1720,9 @@ if (fs.existsSync(BUILD)) {
   const beImpl22 = flat22(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-implement', 'SKILL.md'), 'utf8'));
   ok(beImpl22.includes('`data-db-migration`') && beImpl22.includes('`backend-migrate-vault-consul`'),
     'backend-implement (S8): ranh giới trỏ đích danh data-db-migration và backend-migrate-vault-consul');
-  for (const [f, head] of [['README.md', '### Agents (17)'], ['README_VI.md', '### Agent (17)']]) {
+  for (const f of ['README.md', 'README_VI.md']) {
     const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
     const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
-    ok(rd.split('\n').some((l) => l.trim() === head), `${f}: heading ${head}`);
     ok(row('data-migration-writer').includes('WF07'), `${f}: bảng agent có data-migration-writer dùng ở WF07`);
     ok((rd.split('\n').find((l) => l.startsWith('| WF07 |')) ?? '').includes('data-migration-writer'), `${f}: WF07 liệt kê data-migration-writer`);
     ok(!/^\| G2 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G2 (đã có data-db-migration)`);
@@ -1877,6 +1876,22 @@ if (fs.existsSync(BUILD)) {
   const bpaFlow23 = flat23(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', 'agents', 'backend-performance-analyst.md'), 'utf8')
     .split('## Quy trình')[1]?.split('## Report trả về')[0] ?? '');
   ok(bpaFlow23.includes('perf/backend/'), 'backend-performance-analyst: Quy trình ghi artifact vào perf/backend/ khi workflow có cả hai phía');
+  for (const [f, head] of [['README.md', '### Agents (18)'], ['README_VI.md', '### Agent (18)']]) {
+    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+    const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
+    ok(rd.split('\n').some((l) => l.trim() === head), `${f}: heading ${head}`);
+    ok(row('frontend-performance-analyst').includes('WF09') && row('frontend-performance-analyst').includes('frontend-performance'),
+      `${f}: bảng agent có frontend-performance-analyst dùng ở WF09`);
+    ok((rd.split('\n').find((l) => l.startsWith('| WF09 |')) ?? '').includes('frontend-performance-analyst'),
+      `${f}: WF09 liệt kê frontend-performance-analyst`);
+  }
+  ok(flat23(fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8')).includes('`frontend` (10 skills published'),
+    'CLAUDE.md: frontend 10 skill published (gồm frontend-performance)');
+  ok(flat23(fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8')).includes('`frontend-performance`'),
+    'CLAUDE.md: nêu frontend-performance');
+  ok(flat23(fs.readFileSync(path.join(REPO_ROOT, 'docs', 'superpowers', 'specs', '2026-09-30-backend-performance-design.md'), 'utf8'))
+    .includes('2026-10-01-frontend-performance-design.md'),
+    'spec backend-performance: G-Q8 trỏ tới spec frontend-performance (đã làm)');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -152,7 +152,7 @@ workflow (running in the main session) orchestrates and calls `core:git-workflow
 checkpoint. Every agent report is structured (result, `file:line`, residual risk); a claim
 of "ran / passed" always carries evidence, or `not_run` + reason.
 
-### Agents (17)
+### Agents (18)
 
 `mode` is provider-neutral: Claude maps `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mode: "read-only"` and
@@ -172,6 +172,7 @@ and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mo
 | `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF05, WF11 |
 | `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
+| `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
 | `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (audit mode) | WF01–WF04, WF06, WF08, WF11 |
 | `engineering-spec-analyst` | engineering | write (`docs/` only) | engineering-spec-writing, engineering-adr, engineering-diagram | WF01, WF03, WF10, WF12 |
 | `engineering-release-scribe` | engineering | write (`docs/`, `CHANGELOG.md` only) | engineering-release-notes | WF11 |
@@ -197,7 +198,7 @@ orchestrator's confirmation strictness.
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
 | WF07 | `workflow-db-change` | 2 | high | W15 | data-migration-writer, backend-implementer, backend-test-writer, backend-reviewer |
 | WF08 | `workflow-api` | 2 | medium | new (split from the W1 contract step) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor, frontend-data-integrator |
-| WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
+| WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, frontend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer, frontend-e2e-test-writer |
 | WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |

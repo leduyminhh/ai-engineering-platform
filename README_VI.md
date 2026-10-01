@@ -147,7 +147,7 @@ session chính) mới điều phối và gọi `core:git-workflow` sau checkpoin
 có cấu trúc (kết quả, `file:line`, residual risk); khẳng định "đã chạy / đã pass" luôn kèm
 evidence, hoặc `not_run` + lý do.
 
-### Agent (17)
+### Agent (18)
 
 `mode` trung lập với provider: Claude map `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mode: "read-only"` và
@@ -167,6 +167,7 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF05, WF11 |
 | `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
+| `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
 | `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF08, WF11 |
 | `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram | WF01, WF03, WF10, WF12 |
 | `engineering-release-scribe` | engineering | write (chỉ `docs/`, `CHANGELOG.md`) | engineering-release-notes | WF11 |
@@ -192,7 +193,7 @@ xác nhận bắt buộc của orchestrator.
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
 | WF07 | `workflow-db-change` | 2 | high | W15 | data-migration-writer, backend-implementer, backend-test-writer, backend-reviewer |
 | WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract của W1) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor, frontend-data-integrator |
-| WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
+| WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, frontend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer, frontend-e2e-test-writer |
 | WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |

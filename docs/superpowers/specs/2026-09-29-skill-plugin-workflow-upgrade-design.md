@@ -2,7 +2,7 @@
 
 - Ngày: 2026-09-29
 - Trạng thái: **Đang thực thi** (cập nhật 2026-10-01). P0 xong; P1 xong;
-  P1c xong (publish không chờ pilot, 2026-09-30); P1b xong (publish không chờ pilot, 2026-10-01); P2 WF3–WF11 xong; P3 xong (G10 phần backend, 2026-09-30); frontend performance còn mở. Tiến độ và việc còn lại: §13.
+  P1c xong (publish không chờ pilot, 2026-09-30); P1b xong (publish không chờ pilot, 2026-10-01); P2 WF3–WF11 xong; P3 xong (G10 backend 2026-09-30, frontend 2026-10-01). Tiến độ và việc còn lại: §13.
 - Phạm vi: đánh giá chất lượng 4 plugin `backend`, `frontend`, `engineering`, `workflows`; định hướng nâng cấp
   theo 3 cấp; thiết kế 3 skill + 2 agent mới đã được chủ dự án chốt:
   `backend-db-migration`, agent e2e, agent data-integration. Plugin `ops` **không** được audit; 2 agent `ops`
@@ -490,7 +490,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 
 ## 8. Plan thiết kế agent
 
-### 8.1 Catalog sau nâng cấp (11 → 17)
+### 8.1 Catalog sau nâng cấp (11 → 18)
 
 | Agent | Plugin | Mode | Skills | Workflow dùng | Thay đổi |
 |---|---|---|---|---|---|
@@ -511,6 +511,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 | **frontend-fixer** | frontend | write | frontend-fix | bugfix, security-review, performance | **mới** (A4, spec 2026-09-30) |
 | **backend-performance-analyst** | backend | write | backend-performance | performance | **mới** (G10, spec 2026-09-30) |
 | data-migration-writer | data | write | data-db-migration | db-change | mới (2026-10-01) |
+| **frontend-performance-analyst** | frontend | write | frontend-performance | performance | **mới** (2026-10-01) |
 
 Cột `skills` lấy từ frontmatter thật trong `plugins/*/agents/*.md`. Cột Mode lấy theo `disallowedTools` của bản cài.
 
@@ -610,7 +611,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | **P1b — Publish db-migration** (publish không chờ pilot, 2026-10-01) | Pha publish của §7.1.10: `_published.json`, S8; WF3 đi cùng | §7.1.10, WF3 | ✅ publish không chờ pilot (2026-10-01); agent data-migration-writer thay cho việc thêm skill vào backend-implementer |
 | **P1c — Publish frontend-data-integration** (publish không chờ pilot, 2026-09-30) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ✅ publish không chờ pilot (2026-09-30), merge `d0cc23f` |
 | **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF3–WF11 xong |
-| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); G10 backend xong, merge `16a8064`; frontend performance còn mở |
+| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); G10 backend xong, merge `16a8064`; G10 frontend xong (2026-10-01, spec 2026-10-01-frontend-performance-design) |
 
 Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa làm. Chi tiết từng mục ở §13.
 
@@ -688,9 +689,8 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | G10 (backend) | `16a8064` | `21ee797`, `c32b42b`, `7b2f8cc`, `c6870ec`, `336c49f`, `71f2cb6`, `ce647d4`, `5ff2c8d`, `ab63691`, `d91176b` |
 | e2e smoke ở release (Bước 5, trước deploy) | nhánh `feature/release-e2e-smoke` | (xem git log) |
 | P1b, S8, WF3 (dùng skill) | (xem git log) | (xem git log) |
+| Frontend performance (skill + agent + nối workflow-performance) | (xem git log) | (xem git log) |
 
 ### 13.2 Còn lại
 
-| Mục | Hiện trạng (bằng chứng) | Chặn bởi |
-|---|---|---|
-| Frontend performance (Web Vitals/Lighthouse/React Profiler/bundle) | `workflow-performance` Bước 2/3/5 phía FE chỉ có câu chờ | Chưa có spec (G-Q8 của spec 2026-09-30-backend-performance-design) |
+Không còn mục mở (kiểm 2026-10-01).
