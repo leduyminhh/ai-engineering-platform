@@ -1644,6 +1644,25 @@ if (fs.existsSync(BUILD)) {
   const offData22 = offeredCatalog().plugins.find((p) => p.id === 'data');
   ok(!!offData22 && offData22.skillIds.includes('data/data-db-migration') && !offData22.skillIds.some((s) => /data-(oltp|olap)/.test(s)),
     'offeredCatalog: plugin data chỉ offer data/data-db-migration');
+  const dmwPath = path.join(PLUGINS_DIR, 'data', 'agents', 'data-migration-writer.md');
+  const dmw = fs.existsSync(dmwPath) ? fs.readFileSync(dmwPath, 'utf8') : '';
+  ok(dmw.length > 0, 'data-migration-writer: có agent file');
+  ok(/^mode: write$/m.test(dmw) && /^skills: "data-db-migration"$/m.test(dmw),
+    'data-migration-writer: mode write, skills = data-db-migration (đúng 1 skill)');
+  const dmwScope = flat22(dmw.split('## Phạm vi')[1]?.split('## Quy trình')[0] ?? '');
+  ok(dmwScope.includes('kết nối DB') && dmwScope.includes('chạy migration'),
+    'data-migration-writer: Phạm vi cấm kết nối DB và chạy migration');
+  ok(dmwScope.includes('file migration đã có') && dmwScope.includes('repair'),
+    'data-migration-writer: Phạm vi cấm sửa file migration đã có và repair/clean');
+  ok(dmwScope.includes('`src/`') && dmwScope.includes('blocked') && dmwScope.includes('questions'),
+    'data-migration-writer: cấm sửa src/, cần quyết định → blocked + questions');
+  ok(dmw.includes('git diff --name-only') && dmw.includes('not_run'),
+    'data-migration-writer: tự đối chiếu diff; validation not_run (verify do session chính)');
+  const dmwSpec = fs.readFileSync(path.join(REPO_ROOT, 'docs', 'superpowers', 'specs', '2026-10-01-data-migration-writer-design.md'), 'utf8')
+    .replace(/\r\n/g, '\n');
+  const dmwBlock = dmwSpec.split('### 3.2')[1]?.split('```markdown\n')[1]?.split('\n```')[0] ?? '';
+  ok(dmwBlock.length > 0 && dmwBlock.trimEnd() === dmw.replace(/\r\n/g, '\n').trimEnd(),
+    'data-migration-writer: khối agent trong spec §3.2 giống hệt file agent');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
