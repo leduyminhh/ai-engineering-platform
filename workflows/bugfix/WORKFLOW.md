@@ -121,7 +121,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   lỗi mà không sửa nguyên nhân); cấm xoá/nới điều kiện test cho qua; không sửa ngoài danh sách file — cần mở
   rộng → agent trả `blocked`, session chính hỏi người dùng rồi gọi lại.
 - **Đầu ra:** code fix + failing test của Bước 3 chuyển xanh + build/lint xanh.
-- **Gate:** failing test chuyển xanh; build/lint xanh; so với trạng thái ghi lại ở đầu bước
+- **Gate:** failing test chuyển xanh (hoặc, oracle tái hiện thủ công: chạy lại bước tái hiện có kết quả đúng;
+  quay lại từ Bước 8: reviewer xác nhận finding đã sửa); build/lint xanh; so với trạng thái ghi lại ở đầu bước
   (`git status --porcelain`), file thay đổi hoặc mới trong bước (`git diff --name-only` và
   `git ls-files --others --exclude-standard`) ⊆ danh sách file của Bước 5 và không chứa file
   test/fixture/snapshot/mock; file test đã bẩn trong mốc (test của Bước 3 / Bước 7) không đổi nội dung

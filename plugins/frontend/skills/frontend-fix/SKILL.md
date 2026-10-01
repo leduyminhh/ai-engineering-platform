@@ -61,9 +61,9 @@ re-scan Bước 9 sạch.
   `// @ts-expect-error` mới, `// eslint-disable` mới; `test.skip`/`it.skip`/`xit` mới; nới `waitFor` timeout;
   cập nhật snapshot cho khớp output sai (`-u`); `catch` nuốt lỗi; `key={index}` để tắt warning.
 - **Không đổi thứ ngoài code.** Không sửa `docs/contracts/`, không đổi design-system token. KHÔNG THÊM
-  dependency mới. NÂNG version một dependency đã có (sửa manifest `pom.xml`/`build.gradle`/`pyproject.toml`/
-  `package.json` + lockfile) ĐƯỢC PHÉP khi các file đó nằm trong danh sách và finding là CVE của dependency đó.
-  Cần khác → DỪNG và báo.
+  dependency mới. NÂNG version một dependency đã có (sửa manifest `package.json` + lockfile
+  `package-lock.json`/`pnpm-lock.yaml`/`yarn.lock`) ĐƯỢC PHÉP khi các file đó nằm trong danh sách và
+  finding là CVE của dependency đó. Cần khác → DỪNG và báo.
 - **Tôn trọng boundary.** Sửa trong slice/feature của file được giao; không cross-import ruột feature khác.
 - **Không push thẳng main.** Một fix = 1 commit; DỪNG cho người **duyệt diff** trước commit.
 - **Ngôn ngữ (bắt buộc):** báo cáo, commit message viết **tiếng Việt CÓ DẤU** (UTF-8).

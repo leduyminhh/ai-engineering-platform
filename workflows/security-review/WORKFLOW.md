@@ -161,7 +161,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   session chính hỏi người dùng rồi gọi lại; không chỉ che triệu chứng (vd log giảm chi tiết thay vì sửa lỗ hổng
   thật); không xoá hay nới test regression để qua.
 - **Đầu ra:** code đã sửa, build/test xanh, test regression xanh.
-- **Gate:** build/test xanh, gồm test regression; so với trạng thái ghi lại ở đầu bước (`git status --porcelain`),
+- **Gate:** build/test xanh, gồm test regression (hoặc, finding không có test: re-scan Bước 9 sạch; quay lại từ
+  Bước 9: finding không còn); so với trạng thái ghi lại ở đầu bước (`git status --porcelain`),
   file thay đổi hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) ⊆
   danh sách file của Bước 5 và không chứa file test/fixture/snapshot/mock; file test đã bẩn trong mốc (test của
   Bước 7) không đổi nội dung (`git hash-object` trước/sau).

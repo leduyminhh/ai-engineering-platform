@@ -106,7 +106,7 @@ Description phải ghi rõ ba câu "KHÔNG dùng khi": viết feature mới (→
 
 | Chế độ | Oracle | Gate xanh |
 |---|---|---|
-| `bug` | failing test tái hiện (bugfix Bước 3) | test đó xanh |
+| `bug` | failing test tái hiện (bugfix Bước 3); loại oracle khác: xem mục Oracle chấp nhận (a)–(e) của skill | test đó xanh |
 | `security` | regression test đỏ (security-review Bước 7) + finding | test đó xanh; không "che triệu chứng" |
 | `performance` | giả thuyết bottleneck đã xác nhận + file/hàm (performance Bước 3); **không có test đỏ** | build/test hiện có xanh; skill **không tự tuyên bố nhanh hơn** — số đo là việc của Bước 5 |
 
@@ -114,7 +114,7 @@ Description phải ghi rõ ba câu "KHÔNG dùng khi": viết feature mới (→
 
 | Cổng | Nội dung | Khi fail |
 |---|---|---|
-| F1 Có oracle | Chạy oracle xác nhận **đang đỏ** (bug/security) hoặc có giả thuyết đã xác nhận (performance) | Không có / đỏ vì lý do khác → dừng, báo, không sửa |
+| F1 Có oracle | Chạy oracle xác nhận **đang đỏ** (bug/security) hoặc có giả thuyết đã xác nhận (performance); loại oracle khác: xem mục Oracle chấp nhận (a)–(e) của skill | Không có / đỏ vì lý do khác → dừng, báo, không sửa |
 | F2 Phạm vi khoanh trước | Bước gọi đưa **danh sách file/module được sửa**; chỉ sửa trong đó | Cần sửa ngoài danh sách → dừng, trả `blocked` + file đề nghị thêm, chờ người dùng |
 | F3 Không đụng test | Không sửa/xoá/nới file test, fixture, snapshot, mock | Test sai thật → báo, để test-writer xử lý |
 | F4 Sửa nguyên nhân | Cấm che triệu chứng (danh sách theo stack, §3.5) | Phát hiện trong tự đối chiếu → gỡ, sửa lại |
@@ -158,7 +158,7 @@ plugins/frontend/agents/frontend-fixer.md
 ```markdown
 ---
 name: backend-fixer
-description: "Agent chỉ SỬA code backend có sẵn theo skill backend-fix: nhận một oracle đỏ (failing test, regression test, hoặc giả thuyết bottleneck đã xác nhận) và danh sách file được sửa, áp fix tối thiểu cho oracle xanh, không đụng test, không sửa ngoài danh sách. Cần sửa ngoài phạm vi → dừng và trả blocked. Dùng khi workflow bugfix/security-review/performance cần bước sửa code có khoá phạm vi."
+description: "Agent chỉ SỬA code backend có sẵn theo skill backend-fix: nhận một oracle (test đỏ; finding đã validate khi quay lại từ review/re-scan; giả thuyết bottleneck có evidence profile; bước tái hiện thủ công; finding bảo mật không có test) và danh sách file được sửa, áp fix tối thiểu cho oracle đạt gate xanh, không đụng test, không sửa ngoài danh sách. Cần sửa ngoài phạm vi → dừng và trả blocked. Dùng khi workflow bugfix/security-review/performance cần bước sửa code có khoá phạm vi."
 mode: write
 skills: "backend-fix"
 ---
@@ -169,19 +169,25 @@ Sửa đúng một chỗ trong code có sẵn để oracle đỏ chuyển xanh, 
 ## Phạm vi
 - Được: đọc skill `backend-fix`, `project-knowledge/architecture.md`, `code-convention.md`, code trong danh
   sách file được giao; chạy oracle + build/lint để lấy evidence.
+- Được: nâng version một dependency ĐÃ CÓ khi manifest + lockfile nằm trong danh sách và finding là CVE của
+  dependency đó.
 - Không được: sửa file test/fixture/snapshot/mock; sửa file ngoài danh sách; đổi `docs/contracts/`; thêm hay
-  đổi migration; thêm dependency; commit; gọi agent khác.
+  đổi migration; không thêm dependency mới; commit; gọi agent khác.
 - Bắt buộc: cần mở rộng phạm vi → trả `status: blocked` + danh sách file đề nghị thêm; không tự mở.
 
 ## Quy trình
 1. Đọc skill `backend-fix`; nhận oracle (lệnh + kỳ vọng đỏ→xanh) và danh sách file từ bước gọi.
-2. Chạy oracle, xác nhận đang đỏ đúng lý do (F1); đỏ vì lý do khác hoặc không đỏ → báo, dừng.
+2. Xác nhận oracle theo loại (F1): (a) test đỏ: chạy oracle, xác nhận đang đỏ đúng lý do; (b)/(e) finding: xác
+   nhận `file:line` còn đúng trong code hiện tại, gate xanh = review/re-scan lại; (d) tái hiện thủ công: chạy
+   lại bước tái hiện, ghi kết quả trước khi sửa. Đỏ vì lý do khác/không đỏ (a)/(d) hoặc finding không còn đúng
+   (b)/(e) → báo, dừng.
 3. Sửa tối thiểu trong danh sách (F2), không đụng test (F3), không che triệu chứng (F4).
 4. Chạy oracle + build/lint (F5); chưa xanh → sửa tiếp trong danh sách; hết cách → `blocked`.
 5. Tự đối chiếu `git diff --name-only` với danh sách và với danh sách che triệu chứng của skill trước khi trả.
 
 ## Report trả về
-- Oracle trước/sau: `command`, `exit_code`, `status` (đỏ → xanh).
+- Oracle trước/sau, ghi theo loại: (a) `command`, `exit_code`, `status` đỏ → xanh; (b)/(e) finding `file:line` +
+  kết quả review/re-scan lại; (d) kết quả chạy lại bước tái hiện trước/sau.
 - File đã sửa (`file:line`) và xác nhận ⊆ danh sách giao; evidence build/lint theo contract `core:principles`;
   không chạy được → `not_run` + `reason`.
 - `remaining_risks`: giả định về nguyên nhân; chỗ cùng pattern chưa sửa vì ngoài phạm vi; phần chỉ kiểm bằng

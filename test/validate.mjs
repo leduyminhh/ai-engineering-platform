@@ -1253,6 +1253,34 @@ if (fs.existsSync(BUILD)) {
     ok(!new RegExp(`bug[^.;\`]*\`${p}-implement\``).test(r) && r.includes('`workflow-bugfix`'),
       `${p}-refactor: bug phát hiện khi dọn route workflow-bugfix, không route ${p}-implement`);
   }
+
+  // Dọn minor đã park: description/Phạm vi của agent phải khớp "Oracle chấp nhận" của skill (a)–(e), và gate
+  // của workflow phải có nhánh xanh cho oracle không phải test đỏ.
+  for (const p of ['backend', 'frontend']) {
+    const a = fixAgent(p);
+    ok(/^description: .*tái hiện thủ công/m.test(a),
+      `${p}-fixer: description nêu đủ loại oracle, gồm bước tái hiện thủ công`);
+    const scope = flat18((a.split('## Phạm vi')[1] ?? '').split('## Quy trình')[0]);
+    const bullets = scope.split(/ - /);
+    ok(bullets.some((b) => /^(- )?Được: nâng version/.test(b) && b.includes('CVE')),
+      `${p}-fixer: có câu "Được" riêng cho nâng version dependency đã có, điều kiện CVE`);
+    ok(bullets.some((b) => /^(- )?Không được:/.test(b) && b.includes('không thêm dependency mới') && !b.includes('nâng version')),
+      `${p}-fixer: "Không được" giữ cấm thêm dependency mới, không còn phủ định kép về nâng version`);
+  }
+  {
+    const upgradeSentence = (t) => flat18(t.slice(t.indexOf('NÂNG version'), t.indexOf('CVE của dependency đó')));
+    const upFe = upgradeSentence(fixSkill('frontend'));
+    ok(upFe.length > 0 && upFe.includes('package-lock') && !upFe.includes('pom.xml'),
+      'frontend-fix: câu NÂNG version liệt kê manifest/lockfile frontend, không liệt kê pom.xml');
+    const upBe = upgradeSentence(fixSkill('backend'));
+    ok(upBe.includes('pom.xml') && !upBe.includes('package.json'),
+      'backend-fix: câu NÂNG version liệt kê manifest backend, không liệt kê package.json');
+    const gateOf = (id, n) => flat18((step18(wf18(id), n).body.split('**Gate:**')[1] ?? '').split('\n- **')[0]);
+    ok(gateOf('workflow-bugfix', 6).includes('tái hiện'),
+      'workflow-bugfix Bước 6: Gate có nhánh xanh cho oracle tái hiện thủ công');
+    ok(gateOf('workflow-security-review', 8).includes('re-scan'),
+      'workflow-security-review Bước 8: Gate có nhánh xanh cho finding không có test (re-scan)');
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
