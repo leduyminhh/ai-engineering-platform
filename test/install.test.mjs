@@ -14,7 +14,7 @@ process.env.AIE_INSTALL_ROOT = TMP;
 const { install, uninstall, update, check, linkDisabledForRoot, claudePluginCommands,
   claudePluginRefreshCommands, claudeCliScope, marketplacesToRemove,
   skillCatalog, allSkillsOf, resolveSelection, effectiveSkills, pluginsFromSelection,
-  normFilter, entryMatches, offeredCatalog, publishedPluginIds, stripUnsupportedWorkflows } =
+  normFilter, entryMatches, offeredCatalog, publishedPluginIds, stripUnsupportedWorkflows, shouldGitPull } =
   await import('../cli/lib/install.mjs');
 const { zipBuffer, coworkSkillIds, coworkBuildSet, pack } = await import('../cli/lib/pack.mjs');
 const { wizardReportModel, renderWizardReportMd } = await import('../cli/lib/report.mjs');
@@ -25,6 +25,15 @@ let pass = 0;
 const fails = [];
 const ok = (c, m) => { if (c) pass++; else fails.push(m); };
 const exists = (rel) => fs.existsSync(path.join(TMP, rel));
+
+// ── unit: shouldGitPull — chỉ pull khi nguồn là git checkout, không phải bản cài từ npm ──
+ok(shouldGitPull('/src/ai-engineering-platform', () => true) === true, 'shouldGitPull: có .git → pull');
+ok(shouldGitPull('/src/ai-engineering-platform', () => false) === false, 'shouldGitPull: không có .git → bỏ pull');
+ok(shouldGitPull('/home/u/lib/node_modules/ai-engineering-platform', () => true) === false,
+  'shouldGitPull: nằm trong node_modules → bỏ pull dù có .git (POSIX)');
+ok(shouldGitPull('C:\\Users\\u\\AppData\\npm\\node_modules\\ai-engineering-platform', () => true) === false,
+  'shouldGitPull: nằm trong node_modules → bỏ pull (Windows)');
+ok(shouldGitPull(REPO) === fs.existsSync(path.join(REPO, '.git')), 'shouldGitPull: mặc định dùng fs thật');
 
 // ── unit: phát hiện môi trường npm (node_modules) ──────────────────────────
 ok(linkDisabledForRoot('/home/u/app/node_modules/cowork-code-workflow-kit') === true,

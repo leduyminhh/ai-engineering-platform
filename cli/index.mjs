@@ -55,7 +55,8 @@ function reportInstall(r) {
 
 function reportUpdate(r) {
   console.log(`\naip update (scope=${r.scope}) tại: ${r.root}`);
-  if (r.pulled.skipped) console.log('  1) git pull: (bỏ qua)');
+  if (r.pulled.npm) console.log('  1) git pull: (bỏ qua — cài từ npm; cập nhật gói bằng: npm update -g ai-engineering-platform)');
+  else if (r.pulled.skipped) console.log('  1) git pull: (bỏ qua)');
   else if (r.pulled.ok) console.log(`  1) git pull: ✓ ${(r.pulled.out || '').split('\n').filter(Boolean).slice(-1)[0] || ''}`.trimEnd());
   else console.log(`  1) git pull: ⚠ bỏ qua — ${r.pulled.reason} (dùng nguồn hiện tại)`);
   if (r.empty) { console.log('  Chưa cài plugin nào ở scope này — không có gì để update.'); return; }
@@ -134,6 +135,7 @@ CÁCH DÙNG
   aip                    mở wizard tương tác (không cần nhớ cờ)
   aip <lệnh> [tùy chọn]
 
+  Lưu ý: gói npm chỉ ship core (git-workflow); plugin/workflow cài từ source (git clone + npm link).
   Mẹo: chạy lệnh KHÔNG cờ để vào wizard chọn bằng phím (Space chọn, ↑/↓, Enter, b quay lại, q huỷ).
 
 LỆNH
@@ -154,8 +156,8 @@ TÙY CHỌN
   --provider <p|all>        công cụ đích: ${PROVIDERS.join(', ')}, hoặc all (mặc định all)
   --plugin <id|all>         plugin cần cài/build: ${plugins.length ? plugins.join(', ') : '<id>'}, hoặc all (mặc định all)
                             — 'core' (nguyên tắc nền tảng) LUÔN tự đi kèm
-  --all                     wizard liệt kê MỌI skill kể cả draft (vd plugin data) + mọi workflow; non-interactive
-                            (kèm --provider/--plugin) tương đương --plugin all. Dùng khi cài từ source.
+  --all                     chỉ ảnh hưởng wizard: hiện mọi skill kể cả draft (vd plugin data) + mọi workflow.
+                            Cài non-interactive mặc định đã là mọi plugin có trên đĩa. Dùng khi cài từ source.
   --skill <a,b>             (install/uninstall/update) chọn skill LẺ dạng 'plugin/skill' hoặc tên
                             skill; nhiều skill ngăn bằng dấu phẩy. Khác --plugin (cả plugin).
                             update: lọc theo mức ENTRY — skill khớp làm tươi cả entry chứa nó.

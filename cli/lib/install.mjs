@@ -781,6 +781,12 @@ export function check({ scope = 'project' } = {}) {
 }
 
 // ── update: cập nhật plugin ĐÃ CÀI (pull → build → cài lại nếu là copy) ─────────
+/** Chỉ git pull khi nguồn là git checkout; bản cài từ npm (node_modules hoặc không có .git) do
+ *  `npm update -g` cập nhật, pull ở đó sẽ lỗi hoặc đụng nhầm repo cha. */
+export function shouldGitPull(root, exists = fs.existsSync) {
+  return !linkDisabledForRoot(root) && exists(path.join(root, '.git'));
+}
+
 /** git pull nguồn kit (best-effort, --ff-only). Trả {ok, out} hoặc {ok:false, reason}. */
 function gitPull() {
   try {
@@ -804,7 +810,9 @@ function gitPull() {
  *   pull=false để bỏ qua git (dùng cho test).
  */
 export function update({ scope = 'project', pull = true, providers, plugins, skills } = {}) {
-  const pulled = pull ? gitPull() : { ok: true, skipped: true };
+  const pulled = !pull ? { ok: true, skipped: true }
+    : shouldGitPull(REPO_ROOT) ? gitPull()
+    : { ok: true, skipped: true, npm: true };
   const root = scopeRoot(scope);
   const m = readManifest(scope);
   if (!m.installs.length) return { scope, root, pulled, built: [], entries: [], empty: true };

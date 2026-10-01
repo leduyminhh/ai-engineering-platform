@@ -120,7 +120,7 @@ lives in `plugins/_published.json` — each entry is either a whole plugin (`bac
 a single skill (`frontend/frontend-init`); the wizard offers only what is listed (from source;
 the npm package ships core only), and
 `npm run build` writes `build/wizard-install-report.md`. Plugins with no published skill
-(e.g. `data`) stay drafts, installable only via `--plugin`.
+(e.g. `data`) stay drafts, installable via `--plugin`/`--skill`, or `aip --all` in the wizard.
 
 | Plugin | Capability | Skills |
 | --- | --- | --- |

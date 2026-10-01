@@ -115,7 +115,7 @@ plugin capability xuyên suốt (`engineering`, `ops`); skill là **recipe độ
 gọi-khi-cần** (KHÔNG có pipeline bắt buộc). Tập publish nằm ở `plugins/_published.json`
 — mỗi phần tử là CẢ plugin (`backend`) hoặc MỘT skill (`frontend/frontend-init`); wizard
 chỉ offer phần được liệt kê (khi chạy từ source; gói npm chỉ ship core), và `npm run build` sinh `build/wizard-install-report.md`.
-Plugin không có skill nào được publish (vd `data`) là draft, chỉ cài bằng `--plugin`.
+Plugin không có skill nào được publish (vd `data`) là draft, cài bằng `--plugin`/`--skill`, hoặc `aip --all` trong wizard.
 
 | Plugin | Năng lực | Skill |
 | --- | --- | --- |

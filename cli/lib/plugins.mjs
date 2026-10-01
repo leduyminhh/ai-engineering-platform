@@ -43,8 +43,9 @@ export function normalizePublished(raw) {
 }
 
 /**
- * Map plugin ĐÃ published (nguồn sự thật cho wizard offer + đóng gói npm): {pluginId: '*'|[fullSkillId]}.
- * Thiếu file/shape sai → null = "không giới hạn" (mọi plugin/skill trên đĩa đều offer/ship).
+ * Map plugin ĐÃ published (nguồn sự thật cho wizard offer; KHÔNG quyết định nội dung gói npm —
+ * gói chỉ ship core, xem pack.config.json): {pluginId: '*'|[fullSkillId]}.
+ * Thiếu file/shape sai → null = "không giới hạn" (mọi plugin/skill trên đĩa đều offer).
  * @returns {Object<string,'*'|string[]>|null}
  */
 export function loadPublished() {
