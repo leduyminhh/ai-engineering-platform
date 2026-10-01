@@ -1489,6 +1489,15 @@ if (fs.existsSync(BUILD)) {
       `workflow-performance Bước ${n}: Khi fail — agent trả blocked + câu hỏi → session chính hỏi người dùng`);
   }
   ok(field20(pS3.body, 'Đầu vào').includes('script'), 'workflow-performance Bước 3: Đầu vào có bảng điều kiện + script Bước 2');
+  const pf2 = step20(wf20('workflow-performance'), 2), pf3 = step20(wf20('workflow-performance'), 3), pf5 = step20(wf20('workflow-performance'), 5);
+  ok(field20(pf2.body, 'Evidence').includes('hash-object'), 'workflow-performance Bước 2: Evidence ghi mốc git hash-object của script + bảng điều kiện');
+  ok(field20(pf5.body, 'Gate').includes('mốc Bước 2'), 'workflow-performance Bước 5: Gate so hash với mốc Bước 2');
+  ok(field20(pf5.body, 'Khi fail').includes('report Bước 5') && field20(pf5.body, 'Khi fail').includes('quay lại Bước 2'),
+    'workflow-performance Bước 5: blocked ghi quyết định vào report Bước 5; đổi điều kiện → quay lại Bước 2');
+  ok(field20(pf3.body, 'Ràng buộc').includes('không sửa bảng điều kiện'), 'workflow-performance Bước 3: không sửa bảng điều kiện của Bước 2');
+  ok(!flat20(perfRef('db-query-analysis')).includes('vào hàng Khởi chạy ứng dụng'),
+    'db-query-analysis.md: profile không ghi lệnh khởi chạy vào bảng điều kiện Bước 2');
+  ok(/^\| Khởi chạy ứng dụng \|[^|\n]*PID/m.test(perfRef('measure-conditions')), 'measure-conditions.md: hàng Khởi chạy ứng dụng ghi PID/thời điểm start Bước 2');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

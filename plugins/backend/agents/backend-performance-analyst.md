@@ -28,7 +28,7 @@ không kết luận tối ưu có hiệu quả ngoài bảng số.
    evidence (P4).
 4. Tự đối chiếu diff so với mốc đầu bước (mốc do session chính truyền; gọi độc lập → tự ghi
    `git status --porcelain` ở bước 1) bằng `git diff --name-only` + `git ls-files --others --exclude-standard`:
-   chỉ `perf/`, `bench/`, config tool đo (P5).
+   chỉ `perf/`, `bench/`, config tool đo đã liệt kê ở hàng Config tool đo (P5).
 5. Báo cáo.
 
 ## Report trả về

@@ -29,8 +29,8 @@ N+1: một query lấy danh sách N bản ghi, rồi N query nữa lấy quan h�
 trong vòng lặp hoặc serializer). Dấu hiệu: số query mỗi request tăng theo kích thước dữ liệu trả về.
 
 **Bật đếm query lúc khởi chạy, không sửa file trong `src/`** (P5): không sửa `src/…/application*.yml`,
-`settings.py` hay code tạo engine/`DataSource`. Chọn một cách dưới đây và ghi lệnh khởi chạy vào hàng Khởi chạy ứng
-dụng của bảng điều kiện đo:
+`settings.py` hay code tạo engine/`DataSource`. Chọn một cách dưới đây và ghi lệnh khởi chạy (bật đếm query) vào
+report Bước 3 hoặc file `perf/profile-<luồng>.md`:
 
 | Stack | Cách bật không sửa `src/` |
 |---|---|
@@ -38,7 +38,7 @@ dụng của bảng điều kiện đo:
 | Java (mọi JDBC) | datasource-proxy bọc `DataSource` (`ProxyDataSourceBuilder` … `countQuery()`) `[Unverified]` cần thêm dependency và bean trong `src/` → không tự làm; trả `blocked` + đề xuất, hoặc dùng cách đếm phía DB bên dưới |
 | Django | settings module riêng trong `perf/` (vd `perf/settings_perf.py`: import settings gốc, bật `DEBUG` hoặc logger `django.db.backends`), chọn qua `DJANGO_SETTINGS_MODULE=perf.settings_perf` `[Unverified]`; đọc `connection.queries` hoặc `CaptureQueriesContext` trong harness ở `perf/` `[Unverified]` |
 | SQLAlchemy | harness trong `perf/` import engine của ứng dụng và gắn event listener `before_cursor_execute` để đếm `[Unverified]`; không đổi `echo=` trong `src/` |
-| Mọi stack | đếm phía DB trên DB test: PostgreSQL `log_statement = 'all'` hoặc `pg_stat_statements` (cột `calls`) `[Unverified]`; MySQL general log / slow log với `long_query_time = 0` `[Unverified]` — đổi cấu hình DB test ghi vào bảng điều kiện, tắt lại sau khi đếm; cài extension → hỏi trước |
+| Mọi stack | đếm phía DB trên DB test: PostgreSQL `log_statement = 'all'` hoặc `pg_stat_statements` (cột `calls`) `[Unverified]`; MySQL general log / slow log với `long_query_time = 0` `[Unverified]` — đổi cấu hình DB test ghi vào report Bước 3, tắt lại sau khi đếm; cài extension → hỏi trước |
 
 - Không cách nào đếm được mà không sửa `src/` → trả `status: blocked` + đề xuất thay đổi cụ thể (file, dòng cấu
   hình, lý do); không tự sửa.
@@ -46,6 +46,8 @@ dụng của bảng điều kiện đo:
   → N+1 có evidence; ghi cả hai con số thật.
 - Từ log SQL, truy ngược `file:line` gọi query (repository/service/serializer) — đó là evidence cho P4.
 - Tách lần đếm query khỏi lần đo latency: log SQL dày làm chậm chính request đang đo.
+- Không sửa bảng điều kiện của Bước 2 khi profile; lần đo ở Bước 5 khởi chạy lại bằng lệnh của hàng Khởi chạy ứng
+  dụng, lệnh này **không** bật đếm query/SQL log.
 
 ## EXPLAIN ANALYZE — đọc kế hoạch thực thi
 
@@ -69,7 +71,7 @@ Những gì cần đọc:
 - PostgreSQL: `log_min_duration_statement` `[Unverified]`; extension `pg_stat_statements` `[Unverified]` (cài
   extension là thay đổi cấu hình DB → hỏi trước).
 - MySQL: `slow_query_log`, `long_query_time` `[Unverified]`.
-- Chỉ bật trên DB test, ghi ngưỡng đã đặt vào bảng điều kiện đo; tắt lại sau khi đo.
+- Chỉ bật trên DB test, ghi ngưỡng đã đặt vào report Bước 3 (hoặc `perf/profile-<luồng>.md`); tắt lại sau khi đo.
 
 ## Đầu ra cho `backend-fix`
 

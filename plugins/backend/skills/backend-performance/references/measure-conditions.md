@@ -18,8 +18,8 @@ Không để trống, không ghi "như cũ".
 | Mục | Giá trị | Ghi chú |
 |---|---|---|
 | Môi trường | host local/test (vd `localhost`), OS, CPU (số core), RAM | Cấm staging/production (P1); ghi cả tiến trình nặng khác đang chạy |
-| Build | commit SHA + `git diff --name-only` của working tree; cờ JVM hoặc phiên bản Python | Bước 5: chỉ khác đúng danh sách file Bước 4 |
-| Khởi chạy ứng dụng | lệnh start nguyên văn (kèm tham số/biến môi trường bật tool đo — chỉ tên biến, không giá trị secret), ai start (agent hay người dùng), port | Bước 5 build + khởi chạy lại từ working tree bằng đúng lệnh này và xác nhận tiến trình mới (PID/thời điểm start khác baseline, hoặc version/actuator info) trước warm-up; không tự làm được → `blocked` hỏi người dùng |
+| Build | commit SHA + `git diff --name-only` của working tree; cờ JVM hoặc phiên bản Python | Bước 5: diff code production (`git diff --name-only` + `git ls-files --others --exclude-standard`) chỉ gồm danh sách file Bước 4; file ở hàng Config tool đo được phép |
+| Khởi chạy ứng dụng | lệnh start nguyên văn (kèm tham số/biến môi trường bật tool đo — chỉ tên biến, không giá trị secret), ai start (agent hay người dùng), port, PID / thời điểm start của tiến trình đo ở Bước 2 | Bước 5 build + khởi chạy lại từ working tree bằng đúng lệnh này và xác nhận tiến trình mới (PID/thời điểm start khác baseline, hoặc version/actuator info) trước warm-up; không tự làm được → `blocked` hỏi người dùng |
 | Dữ liệu seed | kích thước (số bản ghi bảng chính), cách tạo (script/lệnh seed) | Seed tái lập được; ghi rõ khác production ở đâu |
 | Endpoint/luồng | method + path hoặc chuỗi request; payload mẫu | Không chứa credential thật; token lấy từ biến môi trường |
 | Mô hình tải | VU hoặc RPS, thời lượng, think time; lần đo giữ tải hằng định, không ramp | Mô hình mở (RPS) hay đóng (VU) — ghi rõ loại |
