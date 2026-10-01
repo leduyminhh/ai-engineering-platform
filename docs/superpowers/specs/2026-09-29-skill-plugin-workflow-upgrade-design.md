@@ -687,9 +687,9 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | A4/Q2: fixer agent | `909f1b9` | `d0e17ce`, `8fa1c13`, `875c430`, `b017350`, `534d379`, `6db2c11`, `d7b1e0d`, `fca093e`, `938349f`, `528ec4f` |
 | S7, P1c, WF4, WF5, WF6 | `d0cc23f` | `5b314a3`, `0282bc6`, `b5da76a`, `57dab44`, `7c56037`, `cdaa27d`, `71b7a02`, `f8f2ac6` |
 | G10 (backend) | `16a8064` | `21ee797`, `c32b42b`, `7b2f8cc`, `c6870ec`, `336c49f`, `71f2cb6`, `ce647d4`, `5ff2c8d`, `ab63691`, `d91176b` |
-| e2e smoke ở release (Bước 5, trước deploy) | nhánh `feature/release-e2e-smoke` | (xem git log) |
-| P1b, S8, WF3 (dùng skill) | (xem git log) | (xem git log) |
-| Frontend performance (skill + agent + nối workflow-performance) | (xem git log) | (xem git log) |
+| e2e smoke ở release (Bước 5, trước deploy) | fast-forward (không có merge commit) | `2edc7d3`, `36445c1` |
+| P1b, S8, WF3 (dùng skill) | fast-forward (không có merge commit) | `0bf2022`, `4c43d72`, `42449f4`, `95f886e`, `88ddf35`, `57a4c1e` |
+| Frontend performance (skill + agent + nối workflow-performance) | fast-forward (không có merge commit) | `1e5cade`, `f73dfb8`, `c360ac3`, `1fec2d2`, `3842cf1`, `872fae7`, `f4b477e`, `a25a19b`, `a63499d` |
 
 ### 13.2 Còn lại
 
