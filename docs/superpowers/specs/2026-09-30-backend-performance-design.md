@@ -316,10 +316,10 @@ PF-P3 phải đi trước PF-P5 (publish trước, nối sau).
   gate diff của workflow (giống A3).
 - Frontend performance chưa có; workflow chỉ có câu chờ.
 - **Mở rộng sau review toàn nhánh (2026-09-30):** agent chạy như subagent nên "hỏi" = trả `status: blocked` +
-  `questions[]` (session chính hỏi người dùng, ghi quyết định vào bảng điều kiện, gọi lại); bảng điều kiện thêm
-  hàng **Config tool đo** (file config ngoài `perf/`/`bench/` đã duyệt — gate diff so với danh sách này) và
+  `questions[]` (session chính hỏi người dùng, ghi quyết định vào report của bước đó, gọi lại; Bước 5 → report Bước 5);
+  bảng điều kiện thêm hàng **Config tool đo** (file config ngoài `perf/`/`bench/` đã duyệt — gate diff so với danh sách này) và
   **Khởi chạy ứng dụng** (Bước 5 khởi chạy lại từ working tree, xác nhận tiến trình mới trước warm-up); gate
-  Bước 5 so `git hash-object` trước/sau của script + bảng điều kiện Bước 2; đếm query bật lúc khởi chạy, không
+  Bước 5 so `git hash-object` hiện tại của script + bảng điều kiện với mốc ghi ở Bước 2; đếm query bật lúc khởi chạy, không
   sửa file trong `src/` (không làm được → `blocked` + đề xuất). `[Inference]` Các cổng này vẫn là kiểm bằng lệnh
   git của session chính, không phải chặn ghi bằng công cụ.
 - Bảng điều kiện + script đo chốt ở cuối Bước 2, mốc `git hash-object` ghi ở Evidence Bước 2; Bước 3 và Bước 5

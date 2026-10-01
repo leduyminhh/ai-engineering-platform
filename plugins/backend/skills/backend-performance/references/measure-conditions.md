@@ -65,7 +65,7 @@ Với N lần chạy (N ≥ 3), lấy **thống kê chính** của từng lần 
   - cố định CPU governor trên Linux, ví dụ `cpupower frequency-set -g performance` `[Unverified]` (cần quyền
     hệ thống — hỏi trước, ghi vào bảng điều kiện);
   - Windows: chọn power plan hiệu năng cao `[Unverified]`; laptop cắm sạc.
-- Mọi thay đổi để giảm nhiễu phải ghi vào bảng và áp **cho cả baseline lẫn lần đo sau**.
+- Mọi thay đổi để giảm nhiễu phải ghi vào bảng và áp **cho cả baseline lẫn lần đo sau**. Bảng điều kiện và script chốt ở cuối Bước 2; sau đó không sửa — cần đổi điều kiện thì quay lại Bước 2 đo lại baseline.
 
 ## Mẫu bảng kết quả baseline vs sau
 

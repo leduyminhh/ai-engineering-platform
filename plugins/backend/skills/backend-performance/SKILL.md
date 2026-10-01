@@ -40,7 +40,7 @@ phải bộ công cụ dựng sẵn. Gọi độc lập hoặc từ Bước 2 (B
 3. Chạy **≥ 3 lần**; ghi p50/p95/p99, throughput, error rate và độ lệch giữa các lần.
 4. Ở Bước 5: đọc bảng điều kiện + script của Bước 2, khởi chạy lại ứng dụng từ working tree và xác nhận tiến trình
    mới trước warm-up, rồi **chạy lại nguyên trạng**. Điều kiện lệch (build khác ngoài thay đổi tối ưu, dữ liệu
-   khác, tải khác) → từ chối so sánh, báo.
+   khác, tải khác) → từ chối so sánh, báo. Bảng điều kiện và script chốt ở cuối Bước 2; sau đó không sửa — cần đổi điều kiện thì quay lại Bước 2 đo lại baseline.
 
 ### `profile` — Profile & giả thuyết (Bước 3)
 

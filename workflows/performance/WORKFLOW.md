@@ -121,11 +121,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** agent `backend-performance-analyst` (chế độ `measure`; phía BE)
 - **Đầu vào:** code đã tối ưu từ Bước 4 + script và bảng điều kiện đo của Bước 2
 - **Hành động:** session chính ghi mốc `git status --porcelain`, đọc mốc `git hash-object` của script và bảng
-  điều kiện đã ghi ở Evidence Bước 2, rồi dispatch; agent build + khởi chạy lại ứng dụng từ working tree theo hàng Khởi chạy ứng dụng
-  (không tự làm được → `blocked` hỏi người dùng), xác nhận là tiến trình mới (PID/thời điểm start khác baseline,
-  hoặc version/actuator info) trước warm-up, rồi chạy lại đúng script + bảng điều kiện của Bước 2 (≥ 3 lần), so
-  với baseline, lập bảng baseline vs sau. Phía FE: chưa có skill đo/profile frontend — session chính đo theo công
-  cụ sẵn có của project, ghi `[giả định]` cho phần không kiểm chứng được.
+  điều kiện đã ghi ở Evidence Bước 2, rồi dispatch;
+  agent build + khởi chạy lại ứng dụng từ working tree theo hàng Khởi chạy ứng dụng (không tự làm được →
+  `blocked` hỏi người dùng), xác nhận là tiến trình mới (PID/thời điểm start khác baseline, hoặc version/actuator
+  info) trước warm-up, rồi chạy lại đúng script + bảng điều kiện của Bước 2 (≥ 3 lần), so với baseline, lập bảng
+  baseline vs sau. Phía FE: chưa có skill đo/profile frontend — session chính đo theo công cụ sẵn có của project,
+  ghi `[giả định]` cho phần không kiểm chứng được.
 - **Ràng buộc:** không đổi điều kiện đo so với Bước 2 (môi trường, dữ liệu seed, tải, warm-up, số lần lặp); không
   so sánh số đo khác điều kiện với baseline.
 - **Đầu ra:** số đo sau + kết luận đạt/không đạt ngưỡng.
