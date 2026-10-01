@@ -132,7 +132,7 @@ sách file/hàm đề xuất sửa** (đầu vào F2 của `backend-fixer`).
 |---|---|---|
 | P1 Môi trường | Chỉ chạy trên local/test; host staging/production → từ chối | Thiếu môi trường → `not_run` + lý do; không tự dựng hạ tầng |
 | P2 Điều kiện đo | Bảng điều kiện đo đầy đủ **trước** khi chạy; Bước 5 dùng lại bảng Bước 2 | Thiếu mục → dừng, hỏi (chạy như subagent: trả `blocked` + câu hỏi) |
-| P3 Ổn định | ≥ 3 lần; báo độ lệch; độ lệch p95 giữa các lần > **10%** (mặc định, project ghi đè trong bảng điều kiện) → cảnh báo, không kết luận | Tăng số lần lặp hoặc cô lập nhiễu |
+| P3 Ổn định | ≥ 3 lần; báo độ lệch; độ lệch p95 (load test) hoặc score chính (micro-benchmark) giữa các lần > **10%** (mặc định, project ghi đè trong bảng điều kiện) → cảnh báo, không kết luận | Tăng số lần lặp hoặc cô lập nhiễu |
 | P4 Evidence | Mọi giả thuyết có evidence đo được; không suy diễn chỉ từ đọc code | Profile thêm |
 | P5 Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo; thêm tool/dependency → hỏi trước (chạy như subagent: trả `blocked` + câu hỏi); không sửa `src/` production, không sửa test, không chạy DDL/migration | Gỡ thay đổi ngoài phạm vi |
 
@@ -159,7 +159,7 @@ sách file/hàm đề xuất sửa** (đầu vào F2 của `backend-fixer`).
 ```markdown
 ---
 name: backend-performance-analyst
-description: "Agent đo và profile hiệu năng BACKEND theo skill backend-performance: chế độ measure chốt bảng điều kiện đo, chạy load test/benchmark ≥3 lần, ghi p50/p95/p99, throughput, error rate, độ lệch; chế độ profile tìm bottleneck theo thứ tự DB → CPU/alloc → I/O có evidence và đề xuất danh sách file cho backend-fixer. Chỉ ghi perf/, bench/, config tool đo; không sửa code production; chỉ chạy trên local/test. Dùng khi workflow-performance cần Baseline, Profile hoặc Benchmark."
+description: "Agent đo và profile hiệu năng BACKEND theo skill backend-performance: chế độ measure chốt bảng điều kiện đo, chạy load test/benchmark ≥3 lần, ghi thống kê chính theo P3 (p95 load test / Score JMH / median pytest-benchmark) + độ lệch, load test thêm p50/p99, throughput, error rate; chế độ profile tìm bottleneck theo thứ tự DB → CPU/alloc → I/O có evidence và đề xuất danh sách file cho backend-fixer. Chỉ ghi perf/, bench/, config tool đo; không sửa code production; chỉ chạy trên local/test. Dùng khi workflow-performance cần Baseline, Profile hoặc Benchmark."
 mode: write
 skills: "backend-performance"
 ---
@@ -267,11 +267,18 @@ Khối `// 20.` ở cuối `test/validate.mjs` (helper riêng `flat20`, `wf20`, 
   "staging/production", `not_run`, regex `/≥\s?3/` (số lần lặp), `perf/`, `bench/`; ranh giới nêu `backend-fix` và `backend-testing`;
   `references/` có đủ 6 file.
 - agent: `mode: write`, `skills` đúng 1; body chứa `perf/`, `bench/`, "staging/production", `not_run`,
-  `core:principles`, `src/`.
+  `core:principles`, `src/`; description chứa `Score` (thống kê chính theo P3); Quy trình chứa `Score`/`median`;
+  trả `blocked` + `questions[]` khi cần quyết định của người dùng.
 - publish: `_published.json`, `_cowork.json`.
 - workflow: Bước 2/3/5 `field20(…,'Thực hiện')` chứa agent analyst; Bước 2/3 Gate chứa `perf/`; Bước 5 Đầu vào
   chứa "Bước 2" và Ràng buộc chứa "điều kiện"; vẫn 7 bước; frontmatter agents; `offeredCatalog` vẫn chứa
   `workflows/workflow-performance` (kiểm có răng).
+- nhóm assert bổ sung (đã có trong khối 20): `blocked` + câu hỏi ở Bước 2/3/5 (Khi fail) và `questions[]` của agent; hàng
+  Config tool đo và Khởi chạy ứng dụng (PID/thời điểm start) của `measure-conditions.md`, Bước 5 xác nhận tiến trình
+  mới; `git hash-object` script + bảng điều kiện ghi ở Evidence Bước 2, so với mốc ở Gate Bước 3 và Bước 5;
+  `db-query-analysis.md` không sửa `src/` (đếm query bật lúc khởi chạy / phía DB); Bước 3 Ràng buộc không sửa bảng
+  điều kiện của Bước 2; Gate Bước 2/3 chứa `bench/` và `git ls-files --others`; Bước 5 Ràng buộc "không đổi điều
+  kiện đo".
 - README: heading `(16)`; hàng agent dùng ở WF09; không còn hàng G10.
 
 ### 6.4 Kiểm chứng

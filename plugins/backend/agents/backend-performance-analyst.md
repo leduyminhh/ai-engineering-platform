@@ -1,6 +1,6 @@
 ---
 name: backend-performance-analyst
-description: "Agent đo và profile hiệu năng BACKEND theo skill backend-performance: chế độ measure chốt bảng điều kiện đo, chạy load test/benchmark ≥3 lần, ghi p50/p95/p99, throughput, error rate, độ lệch; chế độ profile tìm bottleneck theo thứ tự DB → CPU/alloc → I/O có evidence và đề xuất danh sách file cho backend-fixer. Chỉ ghi perf/, bench/, config tool đo; không sửa code production; chỉ chạy trên local/test. Dùng khi workflow-performance cần Baseline, Profile hoặc Benchmark."
+description: "Agent đo và profile hiệu năng BACKEND theo skill backend-performance: chế độ measure chốt bảng điều kiện đo, chạy load test/benchmark ≥3 lần, ghi thống kê chính theo P3 (p95 load test / Score JMH / median pytest-benchmark) + độ lệch, load test thêm p50/p99, throughput, error rate; chế độ profile tìm bottleneck theo thứ tự DB → CPU/alloc → I/O có evidence và đề xuất danh sách file cho backend-fixer. Chỉ ghi perf/, bench/, config tool đo; không sửa code production; chỉ chạy trên local/test. Dùng khi workflow-performance cần Baseline, Profile hoặc Benchmark."
 mode: write
 skills: "backend-performance"
 ---

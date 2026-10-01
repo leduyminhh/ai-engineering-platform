@@ -1071,9 +1071,10 @@ if (fs.existsSync(BUILD)) {
   // A3: mode write không khoá được theo đường dẫn nên mỗi bước test-writer phải tự chứng minh chỉ đụng file test.
   let matched = 0;
   for (const w17 of workflows.stages) {
+    const refs17 = stepRefs(w17.body);
     for (const st of parseSteps(w17.body)) {
-      const doer = st.body.split('\n').find((l) => l.includes('**Thực hiện:**')) || '';
-      if (!/agent `(backend|frontend)-test-writer`/.test(doer)) continue;
+      const doers = refs17.find((r) => r.n === st.n)?.agents ?? [];
+      if (!doers.some((a) => a === 'backend-test-writer' || a === 'frontend-test-writer')) continue;
       matched += 1;
       const gate = flat17((st.body.split('**Gate:**')[1] ?? '').split('\n- **')[0]);
       const evidence = flat17((st.body.split('**Evidence:**')[1] ?? '').split('\n- **')[0]);
@@ -1093,7 +1094,8 @@ if (fs.existsSync(BUILD)) {
     'workflow-incident Bước 1: có thang severity mặc định SEV1–SEV4 khi project chưa có thang');
   ok(/cửa sổ theo dõi/.test(flat17(step17(inc17, 4).body)) && /cửa sổ theo dõi/.test(flat17(step17(inc17, 6).body)),
     'workflow-incident: cửa sổ theo dõi phục hồi do người dùng chốt ở Bước 4 và dùng ở Bước 6');
-  ok(/người dùng tự gửi|người dùng gửi/.test(flat17(step17(inc17, 5).body)) && !/agent `/.test(step17(inc17, 5).body.split('**Thực hiện:**')[1]?.split('\n')[0] ?? ''),
+  ok(/người dùng tự gửi|người dùng gửi/.test(flat17(step17(inc17, 5).body))
+    && stepRefs(inc17?.body ?? '').find((r) => r.n === 5)?.agents.length === 0,
     'workflow-incident Bước 5: chỉ soạn nội dung, người dùng tự gửi, không agent');
 
   // Workflow security-review có 8 vùng; reference của quality-gate phải có key check cho 3 vùng mới và bảng ánh xạ.
@@ -1490,11 +1492,13 @@ if (fs.existsSync(BUILD)) {
   }
   ok(field20(pS1.body, 'Đầu ra').includes('điều kiện đo'), 'workflow-performance Bước 1: Đầu ra có điều kiện đo sơ bộ');
   for (const [n, s] of [[2, pS2], [3, pS3]]) {
-    ok(field20(s.body, 'Gate').includes('`perf/`') && field20(s.body, 'Gate').includes('git diff --name-only'),
+    const gate20 = field20(s.body, 'Gate');
+    ok(gate20.includes('`perf/`') && gate20.includes('`bench/`') && gate20.includes('git diff --name-only')
+      && gate20.includes('git ls-files --others'),
       `workflow-performance Bước ${n}: Gate so diff chỉ perf/ bench/ config tool đo`);
   }
   ok(field20(pS2.body, 'Khi fail').includes('blocked'), 'workflow-performance Bước 2: thiếu môi trường → dừng blocked');
-  ok(field20(pS5.body, 'Đầu vào').includes('Bước 2') && field20(pS5.body, 'Ràng buộc').includes('điều kiện'),
+  ok(field20(pS5.body, 'Đầu vào').includes('Bước 2') && field20(pS5.body, 'Ràng buộc').includes('không đổi điều kiện đo'),
     'workflow-performance Bước 5: dùng lại script + bảng điều kiện Bước 2, không đổi điều kiện');
   ok(field20(pS5.body, 'Gate').includes('nhiễu'), 'workflow-performance Bước 5: nhiễu vượt P3 → không kết luận');
   ok(pS3.checkpoint, 'workflow-performance Bước 3: giữ ⏸');
@@ -1535,6 +1539,9 @@ if (fs.existsSync(BUILD)) {
   const pf2 = step20(wf20('workflow-performance'), 2), pf3 = step20(wf20('workflow-performance'), 3), pf5 = step20(wf20('workflow-performance'), 5);
   ok(field20(pf2.body, 'Evidence').includes('hash-object'), 'workflow-performance Bước 2: Evidence ghi mốc git hash-object của script + bảng điều kiện');
   ok(field20(pf5.body, 'Gate').includes('mốc Bước 2'), 'workflow-performance Bước 5: Gate so hash với mốc Bước 2');
+  ok(field20(pf3.body, 'Gate').includes('mốc Bước 2'),
+    'workflow-performance Bước 3: Gate so git hash-object script + bảng điều kiện với mốc Bước 2');
+  ok(/^description: .*Score/m.test(pa), 'backend-performance-analyst: description nêu thống kê chính theo P3 (Score JMH)');
   ok(field20(pf5.body, 'Khi fail').includes('report Bước 5') && field20(pf5.body, 'Khi fail').includes('quay lại Bước 2'),
     'workflow-performance Bước 5: blocked ghi quyết định vào report Bước 5; đổi điều kiện → quay lại Bước 2');
   ok(field20(pf3.body, 'Ràng buộc').includes('không sửa bảng điều kiện'), 'workflow-performance Bước 3: không sửa bảng điều kiện của Bước 2');

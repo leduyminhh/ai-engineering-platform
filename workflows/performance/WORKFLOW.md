@@ -84,7 +84,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   Bước 4).
 - **Gate:** bottleneck có evidence đo được (không chỉ đọc code); có danh sách file được sửa; so với mốc đầu bước,
   file thay đổi hoặc mới (`git diff --name-only`, `git ls-files --others --exclude-standard`) chỉ gồm `perf/`,
-  `bench/`, config tool đo đã liệt kê ở hàng Config tool đo của bảng điều kiện.
+  `bench/`, config tool đo đã liệt kê ở hàng Config tool đo của bảng điều kiện; script và bảng điều kiện Bước 2
+  không đổi (`git hash-object` bằng mốc Bước 2).
 - **Khi fail:** người dùng không đồng ý hướng tối ưu → profile lại hoặc thu thêm evidence; agent trả `blocked` +
   câu hỏi → session chính hỏi người dùng, ghi quyết định vào report Bước 3, gọi lại agent; quyết định làm đổi điều
   kiện đo (môi trường, dữ liệu seed, tải, warm-up, số lần lặp, config tool đo) → quay lại Bước 2 đo lại baseline;
