@@ -1388,6 +1388,15 @@ if (fs.existsSync(BUILD)) {
     ok(g.includes('.gitignore') && g.includes('E-r7'),
       `${name}: Gate cho phép dòng .gitignore của Playwright và package.json/lockfile chỉ khi đã duyệt (E-r7)`);
   }
+  // Dọn minor đã park: Đầu ra/Evidence e2e của testing Bước 4, integrator blocked ở feature Bước 4, E-r7 gồm script.
+  for (const [name, s] of [['workflow-feature Bước 5', fS5], ['workflow-testing Bước 4', tS4], ['workflow-testing Bước 5', tS5]]) {
+    ok(field19(s.body, 'Gate').includes('script chạy e2e'),
+      `${name}: Gate E-r7 gồm cả việc thêm script chạy e2e vào package.json`);
+  }
+  ok(field19(tS4.body, 'Đầu ra').includes('not_run') && field19(tS4.body, 'Evidence').includes('not_run'),
+    'workflow-testing Bước 4: Đầu ra và Evidence nêu e2e not_run có lý do khi thiếu môi trường BE/DB test');
+  ok(field19(fS4.body, 'Khi fail').includes('codegen') && field19(fS4.body, 'Khi fail').includes('blocked'),
+    'workflow-feature Bước 4: Khi fail xử lý integrator trả blocked vì thiếu codegen/thư viện data');
   for (const [name, w] of [['workflow-feature', feat19], ['workflow-testing', tst19]]) {
     const b = w?.body ?? '';
     const i = b.indexOf('## Definition of Done'), j = b.indexOf('## Report');

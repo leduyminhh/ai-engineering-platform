@@ -101,7 +101,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Gate:** build xanh; khi fullstack có contract ở Bước 3: type khớp contract, `tsc`/lint/build xanh sau khi nối
   data.
 - **Khi fail:** build lỗi → chẩn đoán → sửa → build lại; lặp tới khi xanh; contract lệch khi nối data → quay lại
-  Bước 3.
+  Bước 3; integrator trả `blocked` vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại.
 - **Evidence:** lệnh build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0; report của integrator
   (endpoint ↔ hook ↔ container) khi fullstack có contract ở Bước 3.
 
@@ -123,7 +123,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test (và
   fixture/mock của test; e2e: thư mục `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục auth/output
   của Playwright (vd `e2e/.auth/` và thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi
-  người dùng đã duyệt thêm `@playwright/test` (E-r7)).
+  người dùng đã duyệt (E-r7: thêm `@playwright/test`, hoặc thêm script chạy e2e)).
 - **Khi fail:** test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test); test đỏ do lỗi viết
   test → sửa test; e2e flaky → sửa test, không nới assertion.
 - **Evidence:** lệnh test + exit code 0 + số liệu (`X tests, X passed`); e2e: lệnh Playwright + kết quả hoặc

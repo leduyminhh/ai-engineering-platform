@@ -485,7 +485,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 | DI-P1 | `SKILL.md` + gate draft (`_published.json` 6 mục lẻ) + manifest `1.3.0` + assert draft ở `install.test.mjs` | `npm test` xanh; wizard không offer skill mới |
 | DI-P2 | 3 file `references/` (đối chiếu template và tài liệu công cụ trước khi viết) | Link hợp lệ; nhận định công cụ có nguồn hoặc nhãn `[Unverified]` |
 | DI-P3 | Agent `frontend-data-integrator` (§8.3) + assert agent | Agent qua contract `validate.mjs`; không lộ khi skill chưa cài |
-| **Pha publish** (sau pilot, §9 P1c) | Thêm `frontend/frontend-data-integration` vào `_published.json`; WF4, WF5; sửa `principles.md:14,41` (`state-model` treo) và thêm pointer từ `frontend-implement` sang skill này | Pilot có evidence chạy thật — miễn pilot (quyết định 2026-09-30, §12) |
+| **Pha publish** (publish không chờ pilot, 2026-09-30) | Thêm `frontend/frontend-data-integration` vào `_published.json`; WF4, WF5; sửa `principles.md:14,41` (`state-model` treo) và thêm pointer từ `frontend-implement` sang skill này | Pilot có evidence chạy thật — miễn pilot (quyết định 2026-09-30, §12) |
 
 ---
 
@@ -607,7 +607,7 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | **P0 — Sửa lỗi nội dung** | D1, D2, D3, D4, D5, D6, D11; PL1 (ship §5.1), PL2 (manifest) | S1–S3, WF1, WF2, A1, A2 | ✅ merge `2619be9` |
 | **P1 — Năng lực mới** | ~~ADR phân ranh `backend-db-migration` ↔ `data-oltp-implement` (Q5)~~ (xong: ADR-0001, skill nay là `data-db-migration`); `backend-db-migration` theo §7.1.10 (M-P1–M-P9, draft); `frontend-data-integration` theo §7.3.7 (DI-P1–DI-P3, draft); `frontend-e2e-testing` theo §7.2; 2 agent frontend theo §8.2–§8.3; S4, S7 | §7, §8 | ✅ merge `48f90d0`, `a609735`, `482c50b`; S7 xong trên nhánh `feature/spec-followups` |
 | **P1b — Publish db-migration** (sau pilot, Q6) | Pha publish của §7.1.10: `_published.json`, thêm skill vào `backend-implementer`, S8; WF3 đi cùng | §7.1.10, WF3 | ⏳ chờ pilot (Q6) |
-| **P1c — Publish frontend-data-integration** (sau pilot, Q7) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ✅ publish không chờ pilot (2026-09-30), merge `d0cc23f` |
+| **P1c — Publish frontend-data-integration** (publish không chờ pilot, 2026-09-30) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ✅ publish không chờ pilot (2026-09-30), merge `d0cc23f` |
 | **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF4–WF11 xong; WF3 phần dùng skill còn chờ P1b |
 | **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); G10 backend xong, merge `16a8064`; frontend performance còn mở |
 

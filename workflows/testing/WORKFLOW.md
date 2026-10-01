@@ -81,17 +81,17 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** viết test đúng loại đã chọn cho từng hành vi trong danh sách; e2e viết bằng Playwright theo
   skill `frontend-e2e-testing` (mỗi test map 1 hành vi/AC, selector theo role/label, không sleep cứng).
 - **Ràng buộc:** không viết test giòn (phụ thuộc thứ tự/thời gian/mạng thật).
-- **Đầu ra:** test mới, chạy được.
+- **Đầu ra:** test mới, chạy được (e2e: hoặc `not_run` có lý do vì thiếu môi trường BE/DB test).
 - **Gate:** test chạy được, hoặc e2e `not_run` vì thiếu môi trường BE/DB test (hợp lệ, ghi vào
   `remaining_risks`); so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới
   trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test (và
   fixture/mock của test; e2e: thư mục `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục auth/output
   của Playwright (vd `e2e/.auth/` và thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi
-  người dùng đã duyệt thêm `@playwright/test` (E-r7)).
+  người dùng đã duyệt (E-r7: thêm `@playwright/test`, hoặc thêm script chạy e2e)).
 - **Khi fail:** test không chạy được (lỗi biên dịch/setup) → sửa test, chạy lại; e2e không chạy vì thiếu BE/DB
   test → `not_run`, không lặp sửa test.
 - **Evidence:** lệnh chạy test + exit code; danh sách file thay đổi hoặc mới trong bước so với trạng thái đầu
-  bước.
+  bước; e2e: lệnh Playwright + kết quả hoặc `not_run` + lý do.
 
 ### Bước 5 — Chạy & phân tích failure
 
@@ -109,8 +109,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   ghi lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only`
   và `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test; e2e: thư mục
   `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục auth/output của Playwright (vd `e2e/.auth/` và
-  thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi người dùng đã duyệt thêm
-  `@playwright/test` (E-r7)); e2e `not_run` vì thiếu môi trường là hợp lệ (ghi vào `remaining_risks`).
+  thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi người dùng đã duyệt
+  (E-r7: thêm `@playwright/test`, hoặc thêm script chạy e2e)); e2e `not_run` vì thiếu môi trường là hợp
+  lệ (ghi vào `remaining_risks`).
 - **Khi fail:** không phân loại được nguyên nhân failure → hỏi người dùng thêm ngữ cảnh, không tự đoán.
 - **Evidence:** lệnh chạy test + exit code + danh sách failure đã phân loại; danh sách file thay đổi hoặc mới
   trong bước so với trạng thái đầu bước; e2e: lệnh Playwright + kết quả hoặc `not_run` + lý do.
