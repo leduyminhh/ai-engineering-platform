@@ -59,3 +59,9 @@ Tiêu cực và rủi ro:
 Residual risk: skill chưa pilot trên project Spring thật.
 
 Việc theo sau (không thuộc ADR này): pha publish sau pilot (spec §9 P1b); workflow db-change dùng `data-db-migration` khi publish.
+
+## Cập nhật 2026-10-01
+
+- `data/data-db-migration` đã publish (không chờ pilot), plugin `data` publish một phần; 4 skill `data-oltp/olap` vẫn draft.
+- Không thêm skill chéo plugin vào `backend-implementer`: file migration do agent `data-migration-writer` (plugin `data`) viết, chỉ làm C1 + C3; C2/C4/C5 thuộc `workflow-db-change` (Bước 2, 5–6, 8).
+- Rủi ro chéo plugin nêu ở mục Hệ quả không còn áp dụng; rủi ro còn lại: skill chưa pilot trên project thật.

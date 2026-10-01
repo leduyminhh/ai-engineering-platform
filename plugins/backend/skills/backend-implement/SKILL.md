@@ -75,8 +75,8 @@ Theo [references/checklist.md](references/checklist.md):
 
 ## Ranh giới
 
-- Một use-case/aggregate mỗi lần; **KHÔNG chạy DB migration thật** (thuộc `data` nhánh OLTP / recipe migration
-  khác); **KHÔNG externalize config/secret** (thuộc `backend-migrate-vault-consul`); không đụng secret.
+- Một use-case/aggregate mỗi lần; **KHÔNG chạy DB migration thật** (thuộc skill `data-db-migration` của plugin
+  `data`); **KHÔNG externalize config/secret** (thuộc `backend-migrate-vault-consul`); không đụng secret.
 - Defer `code-convention.md` + **blueprint kiến trúc tuyệt đối**; **KHÔNG chép lại cây/naming** của template —
   chỉ TRỎ tới `architecture/<stack>-<kiểu>.template.md` + `ARD.md`.
 - Đổi kiến trúc là việc của `backend-migrate-architecture`, không phải skill này.
@@ -86,4 +86,5 @@ Theo [references/checklist.md](references/checklist.md):
 
 - Chưa chạy `backend-init` → thiếu `project-knowledge/`; đề nghị chạy `backend-init` trước để có kiến trúc +
   data-model làm chuẩn, rồi mới gọi skill này.
-- Nối hạ tầng thật (DB migration, externalize config) là các recipe khác, ngoài phạm vi slice này.
+- Nối hạ tầng thật là recipe khác, ngoài phạm vi slice này: DB migration → `data-db-migration` (plugin
+  `data`); externalize config/secret → `backend-migrate-vault-consul`.

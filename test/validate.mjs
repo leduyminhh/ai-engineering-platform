@@ -1528,10 +1528,9 @@ if (fs.existsSync(BUILD)) {
   const perfErr = flat20(perfWf?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '');
   ok(perfErr.includes('Môi trường đo thiếu') && perfErr.includes('lệch Bước 2') && perfErr.includes('Nhiễu vượt'),
     'workflow-performance: bảng lỗi có 3 hàng môi trường thiếu / điều kiện lệch / nhiễu');
-  for (const [f, head] of [['README.md', '### Agents (16)'], ['README_VI.md', '### Agent (16)']]) {
+  for (const f of ['README.md', 'README_VI.md']) {
     const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
     const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
-    ok(rd.split('\n').some((l) => l.trim() === head), `${f}: heading ${head}`);
     ok(row('backend-performance-analyst').includes('WF09'), `${f}: bảng agent có backend-performance-analyst dùng ở WF09`);
     ok((rd.split('\n').find((l) => l.startsWith('| WF09 |')) ?? '').includes('backend-performance-analyst'), `${f}: WF09 liệt kê backend-performance-analyst`);
     ok(!/^\| G10 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G10`);
@@ -1705,6 +1704,23 @@ if (fs.existsSync(BUILD)) {
     'workflow-db-change: bảng lỗi có hàng agent migration trả blocked');
   ok((offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? []).includes('workflows/workflow-db-change'),
     'offeredCatalog: vẫn offer workflows/workflow-db-change (closure data-db-migration đã publish)');
+  const beImpl22 = flat22(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-implement', 'SKILL.md'), 'utf8'));
+  ok(beImpl22.includes('`data-db-migration`') && beImpl22.includes('`backend-migrate-vault-consul`'),
+    'backend-implement (S8): ranh giới trỏ đích danh data-db-migration và backend-migrate-vault-consul');
+  for (const [f, head] of [['README.md', '### Agents (17)'], ['README_VI.md', '### Agent (17)']]) {
+    const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+    const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
+    ok(rd.split('\n').some((l) => l.trim() === head), `${f}: heading ${head}`);
+    ok(row('data-migration-writer').includes('WF07'), `${f}: bảng agent có data-migration-writer dùng ở WF07`);
+    ok((rd.split('\n').find((l) => l.startsWith('| WF07 |')) ?? '').includes('data-migration-writer'), `${f}: WF07 liệt kê data-migration-writer`);
+    ok(!/^\| G2 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G2 (đã có data-db-migration)`);
+    ok(!(rd.split('\n').find((l) => l.startsWith('| `data` |')) ?? '').includes('draft, not yet published') && !(rd.split('\n').find((l) => l.startsWith('| `data` |')) ?? '').includes('draft, chưa publish'),
+      `${f}: hàng plugin data không còn ghi draft toàn khối`);
+  }
+  ok(flat22(fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8')).includes('`data-db-migration` published'),
+    'CLAUDE.md: data có data-db-migration published, 4 skill còn draft');
+  ok(fs.readFileSync(path.join(REPO_ROOT, 'docs', 'decisions', '0001-database-capabilities-in-data-plugin.md'), 'utf8').includes('data-migration-writer'),
+    'ADR-0001: ghi cập nhật publish data-db-migration và agent data-migration-writer');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

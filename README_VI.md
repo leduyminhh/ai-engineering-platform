@@ -115,14 +115,14 @@ plugin capability xuyên suốt (`engineering`, `ops`); skill là **recipe độ
 gọi-khi-cần** (KHÔNG có pipeline bắt buộc). Tập publish nằm ở `plugins/_published.json`
 — mỗi phần tử là CẢ plugin (`backend`) hoặc MỘT skill (`frontend/frontend-init`); wizard
 chỉ offer phần được liệt kê (khi chạy từ source; gói npm chỉ ship core), và `npm run build` sinh `build/wizard-install-report.md`.
-Plugin không có skill nào được publish (vd `data`) là draft, cài bằng `--plugin`/`--skill`, hoặc `aip --all` trong wizard.
+Skill chưa được publish của một plugin (vd các skill `data-oltp-*` / `data-olap-*`) là draft, cài bằng `--plugin`/`--skill`, hoặc `aip --all` trong wizard.
 
 | Plugin | Năng lực | Skill |
 | --- | --- | --- |
 | `core` | Baseline mọi plugin phụ thuộc. | `principles`, `git-workflow` |
 | `backend` | Project backend (REST API / service). | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Project frontend (web app / SPA). | `frontend-init`, `frontend-migrate-architecture` |
-| `data` | Project dữ liệu — CSDL OLTP (`data-oltp-*`) + kho/pipeline OLAP (`data-olap-*`). *(draft, chưa publish)* | `data-oltp-init`, `data-olap-init` |
+| `data` | Project dữ liệu — CSDL OLTP (`data-oltp-*`) + kho/pipeline OLAP (`data-olap-*`). *(publish một phần: `data-db-migration`; skill OLTP/OLAP còn draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
 | `engineering` | Capability kỹ thuật xuyên suốt (quality gate, spec, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-adr` |
 | `ops` | Maintain server — deploy/release, xử lý sự cố, observability. | `ops-deploy-release`, `ops-incident-troubleshooting`, `ops-observability` |
 
@@ -147,7 +147,7 @@ session chính) mới điều phối và gọi `core:git-workflow` sau checkpoin
 có cấu trúc (kết quả, `file:line`, residual risk); khẳng định "đã chạy / đã pass" luôn kèm
 evidence, hoặc `not_run` + lý do.
 
-### Agent (16)
+### Agent (17)
 
 `mode` trung lập với provider: Claude map `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mode: "read-only"` và
@@ -160,6 +160,7 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01–WF04, WF07–WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
 | `backend-performance-analyst` | backend | write | backend-performance | WF09 |
+| `data-migration-writer` | data | write | data-db-migration | WF07 |
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
 | `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01, WF08 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05, WF06 |
@@ -189,7 +190,7 @@ xác nhận bắt buộc của orchestrator.
 | WF04 | `workflow-code-review` | 1 | low | W5 | BE/FE reviewer, quality-auditor |
 | WF05 | `workflow-testing` | 2 | low | mới | BE/FE test-writer, FE e2e-test-writer |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
-| WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-test-writer, backend-reviewer |
+| WF07 | `workflow-db-change` | 2 | high | W15 | data-migration-writer, backend-implementer, backend-test-writer, backend-reviewer |
 | WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract của W1) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor, frontend-data-integrator |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
@@ -227,7 +228,6 @@ Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2
 
 | # | Skill | Plugin | Hưởng lợi |
 | --- | --- | --- | --- |
-| G2 | `backend-migrate-db` (Flyway ↔ Liquibase) | backend | WF07 |
 | G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
 | G4 | `engineering-bugfix` (tái hiện → evidence → failing test → root cause → fix tối thiểu) | engineering | WF02 |
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
@@ -281,7 +281,7 @@ aip list                  # adapter + plugin phát hiện được
 - **Wizard** chọn ở mức skill: skill được gộp theo plugin (toggle header plugin cascade xuống mọi
   skill con), nên có thể chọn cả plugin hoặc từng skill trong một danh sách; `core/principles`
   luôn khoá-bật.
-- **`--all`** làm wizard liệt kê mọi skill có trong source — gồm draft (vd plugin `data`, gắn nhãn
+- **`--all`** làm wizard liệt kê mọi skill có trong source — gồm draft (vd các skill `data-oltp-*` / `data-olap-*`, gắn nhãn
   `(draft)`) và toàn bộ workflow — thay vì chỉ phần `plugins/_published.json` cho phép offer. Cờ này
   không tắt wizard; lệnh non-interactive `aip install --plugin all` vốn đã cài tất cả.
 - **Uninstall** (alias `remove`) chỉ gỡ path đã track (không đụng target của link), prune thư mục

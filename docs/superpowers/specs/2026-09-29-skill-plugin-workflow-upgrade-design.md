@@ -1,9 +1,8 @@
 # Thiết kế: Audit & định hướng nâng cấp Skill → Plugin → Workflow + plan thiết kế agent mới
 
 - Ngày: 2026-09-29
-- Trạng thái: **Đang thực thi** (cập nhật 2026-10-01). P0 xong; P1 xong (`data-db-migration` vẫn draft);
-  P1c xong (publish không chờ pilot, 2026-09-30); P1b chờ pilot (Q6); P2 phần lớn xong (WF3 phần dùng skill
-  chờ P1b); P3 xong (G10 phần backend, 2026-09-30); frontend performance còn mở. Tiến độ và việc còn lại: §13.
+- Trạng thái: **Đang thực thi** (cập nhật 2026-10-01). P0 xong; P1 xong;
+  P1c xong (publish không chờ pilot, 2026-09-30); P1b xong (publish không chờ pilot, 2026-10-01); P2 WF3–WF11 xong; P3 xong (G10 phần backend, 2026-09-30); frontend performance còn mở. Tiến độ và việc còn lại: §13.
 - Phạm vi: đánh giá chất lượng 4 plugin `backend`, `frontend`, `engineering`, `workflows`; định hướng nâng cấp
   theo 3 cấp; thiết kế 3 skill + 2 agent mới đã được chủ dự án chốt:
   `backend-db-migration`, agent e2e, agent data-integration. Plugin `ops` **không** được audit; 2 agent `ops`
@@ -372,10 +371,10 @@ next: null
 | M-P7 | `references/README.md` (G2 P6) | Đọc README là dựng được module |
 | M-P8 | `_published.json`: `"backend"` → 8 mục `backend/<skill>` (chưa có db-migration); manifest backend liệt kê đủ skill (PL2); `npm test` | §7.1.9 xanh |
 | M-P9 | Người duyệt diff → commit qua `core:git-workflow` | Người dùng duyệt |
-| **Pha publish** (sau pilot) | Thêm `backend/backend-db-migration` vào `_published.json`; thêm skill vào `backend-implementer`; WF3 (`workflow-db-change`); S8 | Pilot có evidence chạy thật |
+| **Pha publish** (publish không chờ pilot, 2026-10-01) | Thêm `data/data-db-migration` vào `_published.json`; WF3 (`workflow-db-change`); S8 | Pilot có evidence chạy thật (không chờ) |
 
-Tích hợp agent + workflow để ở pha publish vì nếu thêm skill draft vào `backend-implementer` sớm, agent sẽ được cài
-qua wizard nhưng trỏ tới skill chưa cài.
+Không thêm skill vào `backend-implementer` (skill chéo plugin): đã chọn agent `data-migration-writer` thuộc plugin
+`data` thay thế (spec 2026-10-01-data-migration-writer-design).
 
 ### 7.2 `frontend-e2e-testing` (G5)
 
@@ -491,11 +490,11 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 
 ## 8. Plan thiết kế agent
 
-### 8.1 Catalog sau nâng cấp (11 → 15)
+### 8.1 Catalog sau nâng cấp (11 → 16)
 
 | Agent | Plugin | Mode | Skills | Workflow dùng | Thay đổi |
 |---|---|---|---|---|---|
-| backend-implementer | backend | write | `backend-implement,backend-api-contract,`**`backend-db-migration`** | feature, api, **db-change** | + skill (pha publish §7.1.10) |
+| backend-implementer | backend | write | `backend-implement,backend-api-contract` | feature, api, **db-change** | — (không thêm skill chéo plugin; file migration do `data-migration-writer`) |
 | backend-test-writer | backend | write | backend-testing | feature, bugfix, api, testing, refactor, **db-change** | + workflow |
 | backend-reviewer | backend | read-only | backend-code-review, backend-api-contract | … | trục performance (S4) |
 | frontend-implementer | frontend | write | frontend-implement | feature | — |
@@ -510,6 +509,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 | ops-release-engineer | ops | read-only | ops-deploy-release, ops-observability | release | — |
 | **backend-fixer** | backend | write | backend-fix | bugfix, security-review, performance | **mới** (A4, spec 2026-09-30) |
 | **frontend-fixer** | frontend | write | frontend-fix | bugfix, security-review, performance | **mới** (A4, spec 2026-09-30) |
+| data-migration-writer | data | write | data-db-migration | db-change | mới (2026-10-01) |
 
 Cột `skills` lấy từ frontmatter thật trong `plugins/*/agents/*.md`. Cột Mode lấy theo `disallowedTools` của bản cài.
 
@@ -606,9 +606,9 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 |---|---|---|---|
 | **P0 — Sửa lỗi nội dung** | D1, D2, D3, D4, D5, D6, D11; PL1 (ship §5.1), PL2 (manifest) | S1–S3, WF1, WF2, A1, A2 | ✅ merge `2619be9` |
 | **P1 — Năng lực mới** | ~~ADR phân ranh `backend-db-migration` ↔ `data-oltp-implement` (Q5)~~ (xong: ADR-0001, skill nay là `data-db-migration`); `backend-db-migration` theo §7.1.10 (M-P1–M-P9, draft); `frontend-data-integration` theo §7.3.7 (DI-P1–DI-P3, draft); `frontend-e2e-testing` theo §7.2; 2 agent frontend theo §8.2–§8.3; S4, S7 | §7, §8 | ✅ merge `48f90d0`, `a609735`, `482c50b`; S7 xong trên nhánh `feature/spec-followups` |
-| **P1b — Publish db-migration** (sau pilot, Q6) | Pha publish của §7.1.10: `_published.json`, thêm skill vào `backend-implementer`, S8; WF3 đi cùng | §7.1.10, WF3 | ⏳ chờ pilot (Q6) |
+| **P1b — Publish db-migration** (publish không chờ pilot, 2026-10-01) | Pha publish của §7.1.10: `_published.json`, S8; WF3 đi cùng | §7.1.10, WF3 | ✅ publish không chờ pilot (2026-10-01); agent data-migration-writer thay cho việc thêm skill vào backend-implementer |
 | **P1c — Publish frontend-data-integration** (publish không chờ pilot, 2026-09-30) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ✅ publish không chờ pilot (2026-09-30), merge `d0cc23f` |
-| **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF4–WF11 xong; WF3 phần dùng skill còn chờ P1b |
+| **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF3–WF11 xong |
 | **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); G10 backend xong, merge `16a8064`; frontend performance còn mở |
 
 Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa làm. Chi tiết từng mục ở §13.
@@ -653,9 +653,7 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 - `[Inference]` Nối ở container/page (N4) giả định `frontend-implement` để lại chỗ trống bằng `props` + `TODO`; project dựng UI bằng cách khác có thể cần điều chỉnh.
 - Thêm 2 agent và các bước song song làm tăng token cho mỗi lần chạy workflow.
 - Điểm số là đánh giá có lập luận, không phải đo lường; Codex có thể chấm khác trên cùng bằng chứng.
-- `[Inference]` §7.1.10 và §8.1 thêm `data-db-migration` (plugin `data`) vào `backend-implementer` (plugin `backend`):
-  đây là tham chiếu skill chéo plugin. Chưa kiểm installer có cài kèm skill của plugin khác theo agent hay không
-  (ADR-0001, mục Hệ quả). Phải kiểm trước pha publish P1b.
+- Đã xử lý: dùng agent `data-migration-writer` thuộc plugin `data`, không thêm skill chéo plugin vào `backend-implementer` (2026-10-01).
 - Publish `frontend-data-integration` và `frontend-e2e-testing` không chờ pilot (2026-09-30, lần thứ hai làm trái Q4 sau F-Q3 của spec fixer); chất lượng nội dung chưa kiểm trên project thật. `frontend-data-integration` giả định `frontend-implement` để lại `props` + `TODO`.
 
 ## 13. Tiến độ & việc còn lại (kiểm trên source 2026-10-01, `master` = `16a8064`)
@@ -688,12 +686,10 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | S7, P1c, WF4, WF5, WF6 | `d0cc23f` | `5b314a3`, `0282bc6`, `b5da76a`, `57dab44`, `7c56037`, `cdaa27d`, `71b7a02`, `f8f2ac6` |
 | G10 (backend) | `16a8064` | `21ee797`, `c32b42b`, `7b2f8cc`, `c6870ec`, `336c49f`, `71f2cb6`, `ce647d4`, `5ff2c8d`, `ab63691`, `d91176b` |
 | e2e smoke ở release (Bước 5, trước deploy) | nhánh `feature/release-e2e-smoke` | (xem git log) |
+| P1b, S8, WF3 (dùng skill) | (xem git log) | (xem git log) |
 
 ### 13.2 Còn lại
 
 | Mục | Hiện trạng (bằng chứng) | Chặn bởi |
 |---|---|---|
-| S8 | `plugins/backend/skills/backend-implement/SKILL.md:78` trỏ chung "`data` nhánh OLTP / recipe migration" | Nên đi cùng P1b |
-| P1b | `plugins/_published.json` và `package.json` `files` chưa có `data` | Q6 (pilot); rủi ro chéo plugin ở §12 |
-| WF3 phần dùng skill | `workflows/db-change/WORKFLOW.md` Bước 3: file migration vẫn ở session chính | P1b |
 | Frontend performance (Web Vitals/Lighthouse/React Profiler/bundle) | `workflow-performance` Bước 2/3/5 phía FE chỉ có câu chờ | Chưa có spec (G-Q8 của spec 2026-09-30-backend-performance-design) |

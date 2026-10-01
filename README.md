@@ -119,15 +119,15 @@ and cross-cutting capability plugins (`engineering`, `ops`); skills are
 lives in `plugins/_published.json` — each entry is either a whole plugin (`backend`) or
 a single skill (`frontend/frontend-init`); the wizard offers only what is listed (from source;
 the npm package ships core only), and
-`npm run build` writes `build/wizard-install-report.md`. Plugins with no published skill
-(e.g. `data`) stay drafts, installable via `--plugin`/`--skill`, or `aip --all` in the wizard.
+`npm run build` writes `build/wizard-install-report.md`. Skills of a plugin that are not
+published (e.g. the `data-oltp-*` / `data-olap-*` skills) stay drafts, installable via `--plugin`/`--skill`, or `aip --all` in the wizard.
 
 | Plugin | Capability | Skills |
 | --- | --- | --- |
 | `core` | Shared baseline every plugin depends on. | `principles`, `git-workflow` |
 | `backend` | Backend (REST API / service) project. | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Frontend (web app / SPA) project. | `frontend-init`, `frontend-migrate-architecture` |
-| `data` | Data project — OLTP DB (`data-oltp-*`) + OLAP warehouse/pipeline (`data-olap-*`). *(draft, not yet published)* | `data-oltp-init`, `data-olap-init` |
+| `data` | Data project — OLTP DB (`data-oltp-*`) + OLAP warehouse/pipeline (`data-olap-*`). *(partly published: `data-db-migration`; OLTP/OLAP skills still draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
 | `engineering` | Cross-cutting engineering capabilities (quality gate, spec, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-adr` |
 | `ops` | Server maintenance — deploy/release, incident triage, observability. | `ops-deploy-release`, `ops-incident-troubleshooting`, `ops-observability` |
 
@@ -152,7 +152,7 @@ workflow (running in the main session) orchestrates and calls `core:git-workflow
 checkpoint. Every agent report is structured (result, `file:line`, residual risk); a claim
 of "ran / passed" always carries evidence, or `not_run` + reason.
 
-### Agents (16)
+### Agents (17)
 
 `mode` is provider-neutral: Claude maps `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mode: "read-only"` and
@@ -165,6 +165,7 @@ and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mo
 | `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (drift check) | WF01–WF04, WF07–WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
 | `backend-performance-analyst` | backend | write | backend-performance | WF09 |
+| `data-migration-writer` | data | write | data-db-migration | WF07 |
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
 | `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01, WF08 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05, WF06 |
@@ -194,7 +195,7 @@ orchestrator's confirmation strictness.
 | WF04 | `workflow-code-review` | 1 | low | W5 | BE/FE reviewer, quality-auditor |
 | WF05 | `workflow-testing` | 2 | low | new | BE/FE test-writer, FE e2e-test-writer |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
-| WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-test-writer, backend-reviewer |
+| WF07 | `workflow-db-change` | 2 | high | W15 | data-migration-writer, backend-implementer, backend-test-writer, backend-reviewer |
 | WF08 | `workflow-api` | 2 | medium | new (split from the W1 contract step) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor, frontend-data-integrator |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
@@ -232,7 +233,6 @@ Tracked as open gaps in the design spec (`docs/superpowers/specs/2026-09-25-agen
 
 | # | Skill | Plugin | Benefits |
 | --- | --- | --- | --- |
-| G2 | `backend-migrate-db` (Flyway ↔ Liquibase) | backend | WF07 |
 | G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
 | G4 | `engineering-bugfix` (reproduce → evidence → failing test → root cause → minimal fix) | engineering | WF02 |
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
@@ -287,7 +287,7 @@ aip list                  # discovered adapters + plugins
 - **Wizard** selection is skill-granular: skills are grouped by plugin (toggling the
   plugin header cascades to all of its children), so you can pick whole plugins or
   individual skills in one list; `core/principles` stays locked-on.
-- **`--all`** makes the wizard list every skill in the source tree — drafts (e.g. plugin `data`, marked
+- **`--all`** makes the wizard list every skill in the source tree — drafts (e.g. the `data-oltp-*` / `data-olap-*` skills, marked
   `(draft)`) and all workflows — instead of only what `plugins/_published.json` offers. It does not
   switch off the wizard; non-interactive `aip install --plugin all` already installs everything.
 - **Uninstall** (alias `remove`) removes only tracked paths (never link targets),
