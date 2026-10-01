@@ -1597,6 +1597,9 @@ if (fs.existsSync(BUILD)) {
     'workflow-release Bước 5: Gate nhận smoke pass, not_run có lý do hoặc không có e2e');
   ok(field21(rS5.body, 'Khi fail').includes('không deploy') && field21(rS5.body, 'Khi fail').includes('workflow-bugfix'),
     'workflow-release Bước 5: Khi fail smoke đỏ → không deploy, đề xuất workflow-bugfix');
+  ok(flat21(rS5.body).includes('bỏ qua E2') && flat21(rS5.body).includes('không sửa test'),
+    'workflow-release Bước 5: chế độ smoke bỏ qua E2/E3 và không sửa test (flaky → chạy lại, không E4)');
+  ok(field21(rS6.body, 'Đầu vào').includes('smoke'), 'workflow-release Bước 6: Đầu vào có kết quả smoke e2e');
   ok((relWf?.agents ?? []).includes('frontend-e2e-test-writer'), 'workflow-release: frontmatter agents có frontend-e2e-test-writer');
   ok(relWf ? parseSteps(relWf.body).length === 8 : false, 'workflow-release: vẫn 8 bước');
   ok(rS6.checkpoint === true, 'workflow-release Bước 6: vẫn là checkpoint ⏸');

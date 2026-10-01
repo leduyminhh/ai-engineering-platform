@@ -102,7 +102,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   trường đích do người dùng xác nhận. Smoke e2e (tuỳ chọn): `frontend-e2e-test-writer` chạy 1–3 luồng e2e
   giá trị cao **đã có** trên bản release candidate (commit release Bước 4) chạy ở local/test,
   `npx playwright test` theo skill `frontend-e2e-testing` [lệnh cụ thể theo project]; không viết test mới,
-  không sửa test; thiếu môi trường BE/DB test → `not_run` + lý do.
+  không sửa test; thiếu môi trường BE/DB test → `not_run` + lý do. Chế độ smoke: luồng lấy từ e2e đã có (hoặc
+  người dùng chỉ định trong Bước 5) — bỏ qua E2/E3; flaky → chạy lại `--repeat-each=3`, không sửa test; vẫn
+  flaky → báo `failed`, dừng release.
 - **Ràng buộc:** không tự thực hiện deploy và không tự chạy migration — chỉ lập checklist và đề xuất thứ tự;
   smoke chỉ trên local/test, không trỏ staging/production (E-r3); không viết hay sửa file test trong bước này.
 - **Đầu ra:** deploy checklist + điều kiện rollback + danh sách migration chờ chạy kèm thứ tự (hoặc "không có
@@ -112,14 +114,15 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `git status --porcelain` đầu bước, smoke không thay đổi file nào ngoài output báo cáo/trace của Playwright.
 - **Khi fail:** thiếu bước quan trọng trong quy trình project, hoặc không xác định được migration nào đã áp
   → bổ sung/hỏi người dùng, ghi rõ lý do; smoke e2e đỏ vì hành vi sai → dừng, không deploy, đề xuất
-  `workflow-bugfix`; đỏ vì flaky → chạy lại theo E4, không nới assertion.
+  `workflow-bugfix`; đỏ vì flaky → chạy lại, không sửa test; flaky kéo dài = `failed` → không deploy.
 - **Evidence:** deploy checklist và danh sách migration trong report bước; smoke: lệnh Playwright +
   kết quả/trace hoặc `not_run` + lý do.
 
 ### Bước 6 — Deploy ⏸
 
 - **Thực hiện:** session chính
-- **Đầu vào:** deploy checklist + điều kiện rollback từ Bước 5
+- **Đầu vào:** deploy checklist + điều kiện rollback + kết quả smoke e2e (pass / `not_run` + lý do / "không có
+  e2e") từ Bước 5
 - **Hành động:** trình checklist cho người dùng; người dùng tự deploy commit release theo checklist rồi báo
   đã deploy, hoặc chủ động hoãn deploy.
 - **Ràng buộc:** không agent nào tự deploy hay chạy lệnh tác động môi trường; chỉ đi tiếp khi người dùng báo
@@ -161,7 +164,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 | 2 | Danh sách finding quality gate | Người dùng xác nhận 0 blocker |
 | 3 | Release notes/CHANGELOG | Người dùng xác nhận đúng phạm vi |
 | 4 | Diff commit release (CHANGELOG + version bump) | Người dùng duyệt diff |
-| 6 | Deploy checklist + điều kiện rollback + migration chờ chạy | Người dùng báo đã deploy, hoặc hoãn deploy |
+| 6 | Deploy checklist + điều kiện rollback + migration chờ chạy + kết quả smoke e2e | Người dùng báo đã deploy, hoặc hoãn deploy |
 | 8 | Lệnh tag/push đề xuất trên commit release | Người dùng xác nhận rõ ràng trước khi chạy |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent không tự commit.
@@ -177,14 +180,14 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Người dùng không xác nhận release notes (sau Bước 3 ⏸) | Sửa lại theo git log, trình lại |
 | Người dùng không duyệt commit release (sau Bước 4 ⏸) | Không commit, quay lại Bước 3 hoặc sửa version |
 | Không xác định được migration nào đã áp (Bước 5) | Hỏi người dùng, không tự suy; không tự chạy migration |
-| Smoke e2e đỏ trước deploy (Bước 5) | Dừng, không deploy; đề xuất `workflow-bugfix`; flaky → chạy lại, không nới assertion |
+| Smoke e2e đỏ trước deploy (Bước 5) | Dừng, không deploy; đề xuất `workflow-bugfix`; flaky → chạy lại, không sửa test; flaky kéo dài = `failed`, không deploy |
 | Deploy lỗi giữa chừng (sau Bước 6 ⏸) | Dừng, người dùng áp điều kiện rollback của Bước 5; đề xuất `workflow-incident` nếu production bị ảnh hưởng |
 | Health/observability bất thường sau deploy (Bước 7) | Dừng, đề xuất `workflow-incident` |
 | Người dùng không xác nhận lệnh tag/push (sau Bước 8 ⏸) | Giữ nguyên đề xuất, không tự chạy |
 
 - **Điều kiện dừng:** baseline build/test đỏ; finding `blocker` chưa xử lý; release notes sai phạm vi chưa
   sửa được; người dùng không duyệt commit release; deploy lỗi; health/observability bất thường sau deploy;
-  người dùng không xác nhận tag/push.
+  smoke e2e đỏ hoặc flaky kéo dài; người dùng không xác nhận tag/push.
 - **Rollback:** rollback deploy theo điều kiện đã ghi ở Bước 5 (người vận hành thực hiện); commit release
   chưa push có thể bỏ bằng thao tác git thủ công của người dùng (workflow không tự `reset --hard`); workflow
   không tự chạy tag/push nên không có gì để rollback ở tầng tag trước khi người dùng xác nhận.
@@ -195,7 +198,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] Quality gate 0 blocker — evidence: Bước 2
 - [ ] Release notes/CHANGELOG đúng phạm vi đã xác nhận — evidence: Bước 3
 - [ ] Commit release chứa CHANGELOG + version bump đã được duyệt — evidence: Bước 4
-- [ ] Deploy checklist + điều kiện rollback + kiểm migration chờ chạy + smoke e2e pass/`not_run` có lý do/không có e2e — evidence: Bước 5
+- [ ] Deploy checklist + điều kiện rollback + kiểm migration chờ chạy + smoke e2e pass/`not_run` có lý do/không
+  có e2e — evidence: Bước 5
 - [ ] Người dùng đã deploy hoặc xác nhận hoãn — evidence: Bước 6
 - [ ] Hậu kiểm bình thường hoặc `not_run` có lý do — evidence: Bước 7
 - [ ] Lệnh tag/push trên commit release đã đề xuất, chờ hoặc đã có xác nhận — evidence: Bước 8

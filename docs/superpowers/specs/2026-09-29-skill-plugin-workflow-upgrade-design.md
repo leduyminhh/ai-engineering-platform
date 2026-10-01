@@ -501,7 +501,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 | frontend-implementer | frontend | write | frontend-implement | feature | — |
 | frontend-test-writer | frontend | write | frontend-testing | … | — |
 | frontend-reviewer | frontend | read-only | frontend-code-review | … | — |
-| **frontend-e2e-test-writer** | frontend | write | frontend-e2e-testing | feature, testing, release (smoke) | **mới** — đã publish 2026-09-30 (không chờ pilot); workflow: feature, testing |
+| **frontend-e2e-test-writer** | frontend | write | frontend-e2e-testing | feature, testing, release (smoke) | **mới** — đã publish 2026-09-30 (không chờ pilot); workflow: feature, testing, release (smoke trước deploy) |
 | **frontend-data-integrator** | frontend | write | frontend-data-integration | feature, api | **mới** — đã publish 2026-09-30 (không chờ pilot); workflow: feature, api |
 | engineering-spec-analyst | engineering | write | spec-writing, adr, diagram | … | sửa D11 |
 | engineering-quality-auditor | engineering | read-only | quality-gate, convention-enforce | …, **api** | + workflow |
