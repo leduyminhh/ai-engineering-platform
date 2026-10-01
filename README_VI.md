@@ -251,6 +251,7 @@ Mọi lệnh chạy `node cli/index.mjs`.
 
 ```bash
 aip                 # menu wizard: install | uninstall | build | check
+aip --all           # wizard liệt kê MỌI skill kể cả draft + mọi workflow (cài từ source)
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
 aip uninstall [--provider ...] [--plugin ...] [--skill <a,b>] [-g] [--yes]   # alias: remove
 aip build     --provider all|<p>...   # cờ alias: --target
@@ -275,6 +276,9 @@ aip list                  # adapter + plugin phát hiện được
 - **Wizard** chọn ở mức skill: skill được gộp theo plugin (toggle header plugin cascade xuống mọi
   skill con), nên có thể chọn cả plugin hoặc từng skill trong một danh sách; `core/principles`
   luôn khoá-bật.
+- **`--all`** làm wizard liệt kê mọi skill có trong source — gồm draft (vd plugin `data`, gắn nhãn
+  `(draft)`) và toàn bộ workflow — thay vì chỉ phần `plugins/_published.json` cho phép offer. Cờ này
+  không tắt wizard; lệnh non-interactive `aip install --plugin all` vốn đã cài tất cả.
 - **Uninstall** (alias `remove`) chỉ gỡ path đã track (không đụng target của link), prune thư mục
   rỗng, và đếm-tham-chiếu khối managed dùng chung.
 - Provider cài mặc định: `claude`, `cursor`, `codex`. `antigravity` có build nhưng chỉ cài

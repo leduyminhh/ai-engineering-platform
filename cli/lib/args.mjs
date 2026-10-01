@@ -14,6 +14,7 @@ export function parse(argv) {
     else if (v === '--provider') { a.provider = argv[++i]; a.explicit = true; }
     else if (v === '--plugin') { a.plugin = argv[++i]; a.explicit = true; a.pluginExplicit = true; }
     else if (v === '--skill') { a.skill = csv(argv[++i]); a.explicit = true; }
+    else if (v === '--all') a.all = true; // cố ý KHÔNG đặt explicit: --all chỉ mở rộng cây wizard, vẫn vào wizard
     else if (v === '--target') a.target = argv[++i];
     else if (v === '--as-plugin') { a.mode = 'plugin'; a.explicit = true; } // claude: cài như plugin (qua `claude` CLI)
     else if (v.startsWith('--provider=')) { a.provider = v.slice(11); a.explicit = true; }

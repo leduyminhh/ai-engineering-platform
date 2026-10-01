@@ -94,9 +94,9 @@ function reportCheck(r) {
   }
 }
 
-async function wizardFlow(action) {
+async function wizardFlow(action, opts = {}) {
   let sel;
-  try { sel = await runWizard(action); }
+  try { sel = await runWizard(action, undefined, opts); }
   catch (e) {
     if (e instanceof WizardUnavailable) {
       console.error('Wizard cần terminal tương tác. Dùng cờ trực tiếp, vd:\n  aip install --provider claude --plugin backend');
@@ -154,6 +154,8 @@ TÙY CHỌN
   --provider <p|all>        công cụ đích: ${PROVIDERS.join(', ')}, hoặc all (mặc định all)
   --plugin <id|all>         plugin cần cài/build: ${plugins.length ? plugins.join(', ') : '<id>'}, hoặc all (mặc định all)
                             — 'core' (nguyên tắc nền tảng) LUÔN tự đi kèm
+  --all                     wizard liệt kê MỌI skill kể cả draft (vd plugin data) + mọi workflow; non-interactive
+                            (kèm --provider/--plugin) tương đương --plugin all. Dùng khi cài từ source.
   --skill <a,b>             (install/uninstall/update) chọn skill LẺ dạng 'plugin/skill' hoặc tên
                             skill; nhiều skill ngăn bằng dấu phẩy. Khác --plugin (cả plugin).
                             update: lọc theo mức ENTRY — skill khớp làm tươi cả entry chứa nó.
@@ -174,6 +176,7 @@ VÍ DỤ
   aip install --provider claude --plugin backend
   aip install --provider claude --skill backend/backend-init,core/git-workflow
   aip uninstall --skill backend/backend-testing
+  aip --all                              # wizard với mọi skill, kể cả draft
   aip install --provider claude --as-plugin        # cài claude như PLUGIN qua "claude plugin"
   aip install --provider cursor -g       # cài global cho mọi project
   aip check                              # xem đã cài gì (project)
@@ -203,10 +206,10 @@ async function main() {
   if (args.help || cmd === 'help') { console.log(buildHelp()); return; }
 
   // không có lệnh -> wizard
-  if (!cmd) return wizardFlow(undefined);
+  if (!cmd) return wizardFlow(undefined, { all: args.all });
 
   const WIZARDABLE = { install: 'install', uninstall: 'uninstall', remove: 'uninstall' };
-  if (WIZARDABLE[cmd] && !args.explicit) return wizardFlow(WIZARDABLE[cmd]);
+  if (WIZARDABLE[cmd] && !args.explicit) return wizardFlow(WIZARDABLE[cmd], { all: args.all });
 
   switch (cmd) {
     case 'build':

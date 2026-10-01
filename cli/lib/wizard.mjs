@@ -1,14 +1,14 @@
 // Wizard tương tác step-by-step (keypress TUI). Logic step-machine có back, deps injectable để test.
 import * as prompt from './prompt.mjs';
 import { PROVIDERS } from './paths.mjs';
-import { knownPluginIds, check, offeredCatalog } from './install.mjs';
+import { knownPluginIds, check, offeredCatalog, skillCatalog } from './install.mjs';
 
 const { BACK, CANCEL } = prompt;
 
 const defaultDeps = {
   selectOne: prompt.selectOne, selectMany: prompt.selectMany, confirmStep: prompt.confirmStep,
   selectTree: prompt.selectTree,
-  PROVIDERS, knownPluginIds, check, offeredCatalog,
+  PROVIDERS, knownPluginIds, check, offeredCatalog, skillCatalog,
 };
 
 /** Chạy danh sách step có back. step = { key, run(state) -> value|BACK|CANCEL }.
@@ -31,7 +31,8 @@ const SCOPE_ITEMS = [
   { label: 'global  — toàn máy (~)', value: 'global' },
 ];
 
-export async function runWizard(action, deps = defaultDeps) {
+// opts.all: bật cây skill đầy đủ (kể cả draft/workflow chưa published) cho người cài từ source.
+export async function runWizard(action, deps = defaultDeps, { all = false } = {}) {
   const d = { ...defaultDeps, ...deps };
 
   if (!action) {
@@ -84,10 +85,19 @@ export async function runWizard(action, deps = defaultDeps) {
       return set;
     };
     // Dựng nhóm cây skill từ catalog ĐƯỢC OFFER (core + plugin đã published; core/principles con KHOÁ).
-    const skillGroups = () => d.offeredCatalog().plugins.map((p) => ({
-      plugin: p.id, label: p.id,
-      skills: p.skillIds.map((v) => ({ value: v, label: v.split('/')[1], locked: v === 'core/principles' })),
-    }));
+    // --all: dùng catalog đầy đủ, skill không nằm trong offered gắn (draft) để người dùng biết chưa published.
+    const skillGroups = () => {
+      const offered = new Set(d.offeredCatalog().plugins.flatMap((p) => p.skillIds));
+      const cat = all ? d.skillCatalog() : d.offeredCatalog();
+      return cat.plugins.map((p) => ({
+        plugin: p.id, label: p.id,
+        skills: p.skillIds.map((v) => ({
+          value: v,
+          label: v.split('/')[1] + (all && !offered.has(v) ? ' (draft)' : ''),
+          locked: v === 'core/principles',
+        })),
+      }));
+    };
     // scope + provider hỏi TRƯỚC để biết bối cảnh, rồi mới dựng cây skill với preselect đúng provider.
     // Nhãn theo TÊN bước, không dùng "N/5": bước kiểu cài chỉ hiện khi chọn claude nên tổng số bước
     // thay đổi — mẫu số cố định sẽ sai khi bỏ qua bước đó.

@@ -255,6 +255,7 @@ Every command runs `node cli/index.mjs`.
 
 ```bash
 aip                 # menu wizard: install | uninstall | build | check
+aip --all           # wizard listing EVERY skill incl. drafts + all workflows (source installs)
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
 aip uninstall [--provider ...] [--plugin ...] [--skill <a,b>] [-g] [--yes]   # alias: remove
 aip build     --provider all|<p>...   # alias flag: --target
@@ -280,6 +281,9 @@ aip list                  # discovered adapters + plugins
 - **Wizard** selection is skill-granular: skills are grouped by plugin (toggling the
   plugin header cascades to all of its children), so you can pick whole plugins or
   individual skills in one list; `core/principles` stays locked-on.
+- **`--all`** makes the wizard list every skill in the source tree — drafts (e.g. plugin `data`, marked
+  `(draft)`) and all workflows — instead of only what `plugins/_published.json` offers. It does not
+  switch off the wizard; non-interactive `aip install --plugin all` already installs everything.
 - **Uninstall** (alias `remove`) removes only tracked paths (never link targets),
   prunes emptied directories, and reference-counts the shared managed block.
 - Providers installed by default: `claude`, `cursor`, `codex`. `antigravity` builds

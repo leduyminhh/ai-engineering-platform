@@ -168,6 +168,38 @@ function makeDeps({ one = [], many = [], confirm = [], tree = [], catalog = CATA
     'install: cây skill chỉ gồm plugin trong offeredCatalog (đã lọc published)');
 }
 
+// install --all: cây dựng từ skillCatalog đầy đủ (gồm draft), gắn nhãn (draft); offered thì không gắn
+{
+  const FULL = { plugins: [
+    ...CATALOG.plugins,
+    { id: 'data', skillIds: ['data/data-oltp-init'] },
+    { id: 'workflows', skillIds: ['workflows/workflow-feature'] },
+  ] };
+  const deps = { ...makeDeps({ one: ['project', 'skills'], many: [['claude']],
+    tree: [['core/git-workflow', 'data/data-oltp-init']], confirm: [true] }), skillCatalog: () => FULL };
+  const r = await runWizard('install', deps, { all: true });
+  const groups = deps._treeCalls[0].groups;
+  ok(JSON.stringify(groups.map((g) => g.plugin)) === '["core","backend","data","workflows"]',
+    'install --all: cây dùng skillCatalog đầy đủ (có plugin draft data + workflows)');
+  const dataSkill = groups.find((g) => g.plugin === 'data').skills[0];
+  ok(dataSkill.label.endsWith('(draft)'), 'install --all: skill ngoài offeredCatalog mang nhãn (draft)');
+  const backendSkill = groups.find((g) => g.plugin === 'backend').skills[0];
+  ok(!backendSkill.label.includes('(draft)'), 'install --all: skill đã offered KHÔNG gắn nhãn (draft)');
+  const principles = groups.find((g) => g.plugin === 'core').skills.find((x) => x.value === 'core/principles');
+  ok(principles && principles.locked === true, 'install --all: core/principles vẫn KHOÁ');
+  ok(r && JSON.stringify(r.skills) === '["core/git-workflow","data/data-oltp-init"]',
+    'install --all: action object lấy skill (kể cả draft) từ cây');
+}
+
+// install KHÔNG --all: bỏ qua skillCatalog (không dò draft)
+{
+  const deps = { ...makeDeps({ one: ['project', 'skills'], many: [['claude']],
+    tree: [['core/git-workflow']], confirm: [true] }), skillCatalog: () => { throw new Error('không được gọi'); } };
+  await runWizard('install', deps);
+  ok(deps._treeCalls[0].groups.every((g) => g.skills.every((x) => !x.label.includes('(draft)'))),
+    'install thường: không có nhãn (draft)');
+}
+
 // install: claude chọn kiểu plugin -> mode='plugin'
 {
   const deps = makeDeps({ one: ['project', 'plugin'], many: [['claude']],
