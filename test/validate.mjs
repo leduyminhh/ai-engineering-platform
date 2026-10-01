@@ -1738,6 +1738,48 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 23. SOURCE: frontend-performance skill + agent + workflow-performance Bước 2/3/5 phía FE (spec 2026-10-01-frontend-performance-design)
+{
+  const flat23 = (t) => t.replace(/\s+/g, ' ');
+  const wf23 = (id) => workflows.stages.find((s) => s.id === id);
+  const step23 = (wf, n) => (wf ? parseSteps(wf.body).find((s) => s.n === n) : undefined) ?? { title: '', body: '', checkpoint: false };
+  // Cắt đúng một trường cột 0 để assert không khớp nhầm chữ của trường khác trong cùng bước.
+  const field23 = (body, name) => {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const lines = body.split('\n');
+    const i = lines.findIndex((l) => new RegExp(`^- \\*\\*${esc}:\\*\\*`).test(l));
+    if (i < 0) return '';
+    let j = lines.findIndex((l, k) => k > i && /^- \*\*/.test(l));
+    if (j < 0) j = lines.length;
+    return flat23(lines.slice(i, j).join('\n'));
+  };
+  const feDir23 = path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-performance');
+  const feSkill23 = fs.existsSync(path.join(feDir23, 'SKILL.md')) ? fs.readFileSync(path.join(feDir23, 'SKILL.md'), 'utf8') : '';
+  ok(feSkill23.length > 0, 'frontend-performance: có SKILL.md');
+  ok(/^order: 10$/m.test(feSkill23) && /^pipeline: false$/m.test(feSkill23) && /^runsIn: execute$/m.test(feSkill23),
+    'frontend-performance: frontmatter order 10, pipeline false, runsIn execute');
+  ok(/^description: .*frontend-fix/m.test(feSkill23) && /^description: .*frontend-testing/m.test(feSkill23)
+    && /^description: .*frontend-e2e-testing/m.test(feSkill23),
+    'frontend-performance: description nêu ranh giới với frontend-fix, frontend-testing, frontend-e2e-testing');
+  for (const g of ['P1', 'P2', 'P3', 'P4', 'P5']) ok(new RegExp(`^\\| ${g} `, 'm').test(feSkill23), `frontend-performance: bảng gate có ${g}`);
+  ok(feSkill23.includes('`measure`') && feSkill23.includes('`profile`'), 'frontend-performance: có 2 chế độ measure / profile');
+  ok(/^\| P3 [^\n]*10%/m.test(feSkill23), 'frontend-performance: P3 có ngưỡng độ lệch mặc định 10%');
+  ok(/^\| P1 [^\n]*staging\/production/m.test(feSkill23) && flat23(feSkill23).includes('not_run'),
+    'frontend-performance: P1 từ chối staging/production, thiếu môi trường → not_run');
+  ok(/^\| P1 [^\n]*(bên thứ ba|dịch vụ đo)/m.test(feSkill23),
+    'frontend-performance: P1 cấm gửi URL cho dịch vụ đo của bên thứ ba');
+  ok(/≥\s?3/.test(feSkill23) && feSkill23.includes('`perf/`') && feSkill23.includes('`bench/`'),
+    'frontend-performance: đo ≥3 lần, script ở perf/ và bench/');
+  ok(feSkill23.includes('dev server') && feSkill23.includes('bản build production'),
+    'frontend-performance: đo trên bản build production, cấm dev server');
+  ok(feSkill23.includes('INP') && feSkill23.includes('TBT') && /lab/i.test(feSkill23),
+    'frontend-performance: nêu Lighthouse là số lab, INP không đo được, TBT thay thế');
+  ok(/^\| P5 [^\n]*`src\/`/m.test(feSkill23) && /^\| P5 [^\n]*blocked/m.test(feSkill23),
+    'frontend-performance: P5 cấm sửa src/, chạy như subagent → trả blocked');
+  ok(feSkill23.includes('`frontend-fix`'), 'frontend-performance: ranh giới nêu frontend-fix');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');
