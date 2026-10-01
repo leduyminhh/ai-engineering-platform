@@ -86,7 +86,7 @@ Viết đúng các file migration mới thể hiện kế hoạch schema đã đ
 
 ## Phạm vi
 - Được: ĐỌC không giới hạn (code, config, `project-knowledge/`, migration hiện có); TẠO file migration MỚI trong thư mục
-  migration đã nhận diện ở C1.
+  migration đã nhận diện ở C1; SỬA file migration do chính lượt workflow này tạo (chưa có trên base branch).
 - Không được: kết nối DB, chạy migration hay công cụ migration (kể cả `validate`/`info`), `pg_dump`; sửa/xoá file
   migration đã có trên base branch; dùng `repair`/`clearChecksums`/`clean`; sửa `src/` hay test; sửa
   `project-knowledge/data-model.md`; đọc hay in secret; thêm dependency; commit; gọi agent khác.
@@ -100,7 +100,9 @@ Viết đúng các file migration mới thể hiện kế hoạch schema đã đ
 2. C1: nhận diện công cụ + version, engine + version, thư mục migration, version mới nhất, quy ước đặt tên. Ghi mốc
    `git status --porcelain` do session chính truyền; gọi độc lập → tự ghi ở bước này.
 3. C3: chỉ THÊM file mới theo quy ước tìm được; đặt `lock_timeout`; backfill theo lô, tách khỏi migration đổi cấu
-   trúc; Liquibase: mỗi changeSet có `rollback`; Flyway forward-only: ghi migration bù đã thiết kế ở kế hoạch.
+   trúc; Liquibase: mỗi changeSet có `rollback`; Flyway forward-only: KHÔNG tạo file migration bù trong thư mục
+   migration (migrate sau sẽ áp nó); ghi đoạn SQL migration bù dưới dạng văn bản trong report (`compensating_sql`)
+   và `next_actions`/runbook.
 4. Tự đối chiếu `git diff --name-only` và `git ls-files --others --exclude-standard` so với mốc: chỉ có file MỚI
    trong thư mục migration; không file đã có bị sửa.
 5. Báo cáo; không chạy gì ngoài đọc file và lệnh git chỉ-đọc.
@@ -108,6 +110,7 @@ Viết đúng các file migration mới thể hiện kế hoạch schema đã đ
 ## Report trả về
 - Công cụ, version, engine đã nhận diện; thư mục migration; danh sách file migration mới (`file`) kèm pha
   (expand / migrate data / contract) mỗi file thuộc về.
+- `compensating_sql`: đoạn SQL migration bù dạng văn bản (công cụ forward-only), hoặc "không có / công cụ có rollback".
 - `validation`: `not_run` + `reason: "verify do session chính ở bước chạy thử trên DB test"` (agent không chạy migration).
 - `remaining_risks`: khoá bảng (theo `lock-risk-postgres.md`), backfill lớn, pha contract còn nợ.
 - `next_actions`: pha contract còn nợ kèm điều kiện kích hoạt.
@@ -117,7 +120,7 @@ Hợp đồng đầu ra theo `core:principles` (evidence/`not_run` + `reason`) �
 
 ### 3.3 Ranh giới với skill
 
-Agent chỉ thực hiện C1 + C3. C2 (kế hoạch ⏸), C4 (verify ⏸) và C5 (bàn giao, runbook, cập nhật `data-model.md`) do
+Agent chỉ thực hiện C1 + C3 (thêm file migration mới và sửa lại file do chính lượt này tạo; migration bù của công cụ forward-only chỉ là văn bản `compensating_sql` trong report, không phải file). C2 (kế hoạch ⏸), C4 (verify ⏸) và C5 (bàn giao, runbook, cập nhật `data-model.md`) do
 `workflow-db-change` đảm nhiệm ở Bước 2, 5–6, 8. Chế độ `adopt` (A1–A7) không thuộc workflow này và không giao cho agent.
 
 ---
@@ -134,16 +137,16 @@ Agent chỉ thực hiện C1 + C3. C2 (kế hoạch ⏸), C4 (verify ⏸) và C5
 
 | Bước | Thay đổi |
 |---|---|
-| 2 Thiết kế migration ⏸ | `Thực hiện: session chính (theo skill \`data-db-migration\`, C2)`. Hành động: tra pattern trong `references/change/change-patterns.md` và mức khoá trong `lock-risk-postgres.md`; hỏi số dòng bảng bị đụng; ghi rõ pha nào vào lượt này, pha nào để sau. Đầu ra thêm "kế hoạch theo pha (expand / migrate data / contract)" làm đầu vào cho Bước 3. |
-| 3 Implement | `Thực hiện: agent \`data-migration-writer\` (file migration) ∥ agent \`backend-implementer\` (code)`. Hành động: session chính ghi mốc `git status --porcelain` trước khi dispatch. Ràng buộc: file migration do agent viết chỉ là file MỚI; `backend-implementer` chỉ sửa code ngoài thư mục migration trong danh sách nơi dùng của Bước 1; danh sách file là hợp của hai phía, mỗi agent chỉ đối chiếu phần của mình. Gate: build xanh; so với mốc đầu bước, file thay đổi/mới chỉ gồm (a) file migration mới trong thư mục migration và (b) file code trong danh sách Bước 1; không file migration đã có bị sửa. Khi fail: agent trả `blocked` + câu hỏi → session chính hỏi người dùng, ghi quyết định vào kế hoạch Bước 2 (đổi kế hoạch → quay lại Bước 2), gọi lại; diff lệch → revert phần lệch. |
-| 6 Chạy thử | `Thực hiện: session chính (theo skill \`data-db-migration\`, C4)`; chu trình verify theo `references/change/verify-cycle.md` trên đúng DB đã xác nhận ở Bước 5. Nội dung hiện có giữ nguyên. |
+| 2 Thiết kế migration ⏸ | `Thực hiện: session chính (theo skill \`data-db-migration\`, C2)`. Hành động: tra pattern trong `references/change/change-patterns.md` và mức khoá trong `lock-risk-postgres.md`; hỏi số dòng bảng bị đụng; ghi rõ pha nào vào lượt này, pha nào để sau. Đầu ra thêm "kế hoạch theo pha (expand / migrate data / contract)" và số dòng bảng bị đụng, làm đầu vào cho Bước 3. |
+| 3 Implement | `Thực hiện: agent \`data-migration-writer\` (file migration) ∥ agent \`backend-implementer\` (code)`. Đầu vào thêm kế hoạch theo pha và số dòng bảng bị đụng từ Bước 2. Hành động: session chính ghi mốc `git status --porcelain` MỘT lần ở lần dispatch đầu của Bước 3; các lần gọi lại (sau Bước 4/6/7 hoặc `blocked`) dùng lại mốc đó. Agent chỉ thêm file migration MỚI (forward + rollback; với công cụ forward-only chỉ forward — migration bù là đoạn SQL `compensating_sql` trong report, không thành file) và được sửa lại file do chính lượt này tạo. Ràng buộc: file migration do agent viết chỉ là file MỚI; `backend-implementer` chỉ sửa code ngoài thư mục migration trong danh sách nơi dùng của Bước 1; file trong thư mục migration xuất hiện ở danh sách nơi dùng của Bước 1 (vd migration Java, `R__` lặp lại) không thuộc phạm vi hai agent → hỏi người dùng; danh sách file là hợp của hai phía, mỗi agent chỉ đối chiếu phần của mình. Gate: build xanh; so với mốc đầu bước, file thay đổi/mới chỉ gồm (a) file migration mới trong thư mục migration và (b) file code thuộc nơi dùng đã xác định ở Bước 1; không file migration đã có trên base branch bị sửa. Khi fail: agent trả `blocked` + câu hỏi → session chính hỏi người dùng; quyết định ghi vào report Bước 3 (làm đổi kế hoạch → quay lại Bước 2), gọi lại agent; diff lệch → revert phần lệch. Evidence nêu `compensating_sql`. |
+| 6 Chạy thử | `Thực hiện: session chính (theo skill \`data-db-migration\`, C4)`; chu trình verify theo `references/change/verify-cycle.md` trên đúng DB đã xác nhận ở Bước 5. Công cụ forward-only: đoạn SQL migration bù lấy từ report Bước 3 (không phải file trong thư mục migration), áp bằng tay trên đúng DB đã xác nhận ở Bước 5. Nội dung hiện có giữ nguyên. |
 | 8 Cập nhật data-model | Thêm: pha contract còn nợ lấy từ `next_actions` của agent ở Bước 3. |
 | 1, 4, 5, 7, 9 | Không đổi. |
 
 Frontmatter: `agents: "data-migration-writer,backend-implementer,backend-test-writer,backend-reviewer"`;
 `requires: "core/git-workflow,data/data-db-migration"`. Điều kiện tiên quyết liệt kê thêm agent và skill. Bảng lỗi thêm
-hàng: "Agent migration trả `blocked` (Bước 3)" → "Người dùng quyết định, ghi vào kế hoạch Bước 2 (đổi kế hoạch →
-quay lại Bước 2), gọi lại agent".
+hàng: "Agent migration trả `blocked` (Bước 3)" → "Người dùng quyết định; đổi kế hoạch → quay lại Bước 2, ngược lại ghi
+vào report Bước 3 rồi gọi lại agent".
 
 ---
 

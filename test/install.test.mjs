@@ -186,6 +186,8 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   const daOff = offeredCatalog().plugins.find((p) => p.id === 'data');
   ok(daOff && daOff.skillIds.includes('data/data-db-migration') && !daOff.skillIds.includes('data/data-oltp-init'),
     'offeredCatalog: plugin data chỉ offer data-db-migration, ẩn skill draft');
+  ok(JSON.stringify(daOff?.skillIds) === JSON.stringify(['data/data-db-migration']),
+    'offeredCatalog: plugin data offer đúng một skill data/data-db-migration');
   const beAll = skillCatalog().plugins.find((p) => p.id === 'backend');
   ok(beAll && !beAll.skillIds.some((s) => s.includes('db-migration')),
     'skillCatalog: plugin backend không còn skill db-migration');

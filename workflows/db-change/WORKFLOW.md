@@ -60,7 +60,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   contract) vào lượt này, pha nào để sau.
 - **Ràng buộc:** không thiết kế migration xoá dữ liệu ngay trong cùng migration thêm cột/bảng mới.
 - **Đầu ra:** thiết kế migration forward + rollback + tương thích ngược, đã được người dùng xác nhận, kèm kế
-  hoạch theo pha (expand / migrate data / contract) làm đầu vào cho Bước 3.
+  hoạch theo pha (expand / migrate data / contract) và số dòng bảng bị đụng làm đầu vào cho Bước 3.
 - **Gate:** forward + rollback + tương thích ngược (expand/contract).
 - **Khi fail:** người dùng không đồng ý thiết kế → quay lại Bước 1 làm rõ impact/ràng buộc.
 - **Evidence:** thiết kế migration + xác nhận của người dùng trong report bước.
@@ -68,14 +68,18 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 ### Bước 3 — Implement
 
 - **Thực hiện:** agent `data-migration-writer` (file migration) ∥ agent `backend-implementer` (code)
-- **Đầu vào:** thiết kế + kế hoạch theo pha đã xác nhận từ Bước 2 + nơi dùng đã xác định ở Bước 1
-- **Hành động:** session chính ghi mốc `git status --porcelain` rồi dispatch hai agent; `data-migration-writer`
-  nhận diện công cụ và thư mục migration rồi chỉ thêm file migration MỚI (forward + rollback, hoặc migration bù
-  với công cụ forward-only) cho các pha của lượt này; `backend-implementer` cập nhật code (query/ORM mapping/DTO)
-  theo nơi dùng đã xác định ở Bước 1.
+- **Đầu vào:** thiết kế + kế hoạch theo pha + số dòng bảng bị đụng đã xác nhận từ Bước 2 + nơi dùng đã xác định ở
+  Bước 1
+- **Hành động:** session chính ghi mốc `git status --porcelain` MỘT lần ở lần dispatch đầu của Bước 3 (các lần
+  gọi lại sau Bước 4/6/7 hoặc `blocked` dùng lại mốc đó) rồi dispatch hai agent; `data-migration-writer` nhận
+  diện công cụ và thư mục migration rồi chỉ thêm file migration MỚI (forward + rollback; với công cụ
+  forward-only chỉ forward — migration bù là đoạn SQL trong report, không thành file) cho các pha của lượt này;
+  `backend-implementer` cập nhật code (query/ORM mapping/DTO) theo nơi dùng đã xác định ở Bước 1.
 - **Ràng buộc:** không sửa file migration đã có trên base branch; `backend-implementer` không sửa file trong thư
   mục migration và không sửa code ngoài nơi dùng đã xác định ở Bước 1; danh sách file là hợp của hai phía, mỗi
-  agent chỉ đối chiếu phần của mình; agent không kết nối DB hay chạy migration (verify ở Bước 6).
+  agent chỉ đối chiếu phần của mình; file trong thư mục migration xuất hiện ở danh sách nơi dùng của Bước 1 (vd
+  migration Java, `R__` lặp lại) không thuộc phạm vi hai agent → hỏi người dùng; agent không kết nối DB hay chạy
+  migration (verify ở Bước 6).
 - **Đầu ra:** file migration mới + code cập nhật.
 - **Gate:** build xanh; so với mốc `git status --porcelain` đầu bước, file thay đổi hoặc mới trong bước
   (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm (a) file migration MỚI trong thư
@@ -85,7 +89,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   chính hỏi người dùng; quyết định làm đổi kế hoạch → quay lại Bước 2, ngược lại ghi vào report bước rồi gọi lại
   agent; diff ngoài phạm vi → revert phần lệch, không nhận.
 - **Evidence:** lệnh build + exit code 0; report của `data-migration-writer` (công cụ/engine, file migration mới
-  theo pha, `next_actions`); danh sách file thay đổi hoặc mới trong bước so với mốc đầu bước.
+  theo pha, `compensating_sql`, `next_actions`); danh sách file thay đổi hoặc mới trong bước so với mốc đầu bước.
 
 ### Bước 4 — Review query/index
 
@@ -119,8 +123,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** Chu trình verify theo `references/change/verify-cycle.md` của skill. Chạy chu trình verify theo
   công cụ migration của project trên DB test. Công cụ có rollback
   (vd Liquibase, Alembic): migrate up → rollback → migrate up lại. Công cụ forward-only (vd Flyway khi dùng
-  theo hướng forward-only): migrate up, rồi áp migration bù đã thiết kế ở Bước 2 và kiểm schema/dữ liệu sau
-  từng lượt; nếu Bước 2 chưa thiết kế migration bù cho thay đổi này thì quay lại Bước 2 bổ sung, không tự bịa
+  theo hướng forward-only): migrate up, rồi áp migration bù (đoạn SQL migration bù lấy từ report Bước 3, không
+  phải file trong thư mục migration) bằng tay trên DB đã xác nhận ở Bước 5 và kiểm schema/dữ liệu sau từng
+  lượt; nếu Bước 2 chưa thiết kế migration bù cho thay đổi này thì quay lại Bước 2 bổ sung, không tự bịa
   migration bù. Xác nhận mọi lượt thành công.
 - **Ràng buộc:** chỉ chạy trên đúng target đã xác nhận ở Bước 5 (cấu hình kết nối đổi → quay lại Bước 5);
   cấm chạy trên DB production; cấm thay đổi phá huỷ dữ liệu khi chưa được người dùng xác nhận ở Bước 2; không

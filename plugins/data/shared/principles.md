@@ -9,9 +9,9 @@ Plugin `data` gộp hai NHÁNH phân biệt, chọn theo bản chất project:
 OLAP đọc dữ liệu TỪ nguồn vận hành (gồm chính một DB OLTP); cả hai KHÁC ERD nhúng trong một app
 backend (mô hình dữ liệu của riêng service đó, phục vụ repository nội bộ — không phải DB dùng chung).
 
-Ngoại lệ về đối tượng: skill `data-db-migration` (đã publish) phục vụ **project backend có DB riêng của app** — áp
-Flyway/Liquibase/Alembic và viết thay đổi schema theo expand/contract — chứ không thuộc nhánh OLTP hay OLAP. Khi schema là
-contract cho nhiều consumer hoặc project sở hữu DB như một sản phẩm, dùng nhánh OLTP (`data-oltp-implement`) thay vì skill này.
+Ngoại lệ về đối tượng: skill `data-db-migration` phục vụ **project backend có DB riêng của app** — áp
+Flyway/Liquibase (Alembic: chỉ hướng dẫn quy trình) và viết thay đổi schema theo expand/contract — chứ không thuộc nhánh OLTP hay OLAP. Khi schema là
+contract cho nhiều consumer hoặc project sở hữu DB như một sản phẩm (hoặc project đã chạy `data-oltp-init`), dùng nhánh OLTP (`data-oltp-implement`) thay vì skill này.
 
 ---
 

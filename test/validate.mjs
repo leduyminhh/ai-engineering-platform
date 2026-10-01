@@ -1639,7 +1639,8 @@ if (fs.existsSync(BUILD)) {
   ok(dataMan22.version === '1.3.0' && !dataMan22.description.includes('DRAFT') && dataMan22.description.includes('data-db-migration'),
     'data manifest: version 1.3.0, description nêu data-db-migration và không còn nhãn DRAFT');
   const dataPr22 = fs.readFileSync(path.join(PLUGINS_DIR, 'data', 'shared', 'principles.md'), 'utf8');
-  ok(dataPr22.includes('data-db-migration') && flat22(dataPr22).includes('project backend'),
+  ok(dataPr22.includes('data-db-migration') && flat22(dataPr22).includes('project backend') && flat22(dataPr22).includes('DB riêng của app')
+    && dataPr22.includes('data-oltp-implement'),
     'data principles: nêu data-db-migration phục vụ project backend có DB riêng của app (không thuộc nhánh OLTP/OLAP)');
   const offData22 = offeredCatalog().plugins.find((p) => p.id === 'data');
   ok(!!offData22 && offData22.skillIds.includes('data/data-db-migration') && !offData22.skillIds.some((s) => /data-(oltp|olap)/.test(s)),
@@ -1658,6 +1659,10 @@ if (fs.existsSync(BUILD)) {
     'data-migration-writer: cấm sửa src/, cần quyết định → blocked + questions');
   ok(dmw.includes('git diff --name-only') && dmw.includes('not_run'),
     'data-migration-writer: tự đối chiếu diff; validation not_run (verify do session chính)');
+  ok(dmw.includes('compensating_sql') && dmw.includes('KHÔNG tạo file migration bù'),
+    'data-migration-writer: Flyway forward-only → migration bù là văn bản compensating_sql trong report, không tạo file');
+  ok(dmwScope.includes('do chính lượt workflow này tạo') && dmwScope.includes('đã có trên base branch'),
+    'data-migration-writer: được sửa file do chính lượt workflow tạo; cấm sửa file đã có trên base branch');
   const dmwSpec = fs.readFileSync(path.join(REPO_ROOT, 'docs', 'superpowers', 'specs', '2026-10-01-data-migration-writer-design.md'), 'utf8')
     .replace(/\r\n/g, '\n');
   const dmwBlock = dmwSpec.split('### 3.2')[1]?.split('```markdown\n')[1]?.split('\n```')[0] ?? '';
@@ -1672,16 +1677,23 @@ if (fs.existsSync(BUILD)) {
     'workflow-db-change Bước 2: Đầu ra có kế hoạch theo pha làm đầu vào cho Bước 3');
   ok(field22(dS3.body, 'Thực hiện').includes('agent `data-migration-writer`') && field22(dS3.body, 'Thực hiện').includes('agent `backend-implementer`'),
     'workflow-db-change Bước 3: data-migration-writer (file migration) ∥ backend-implementer (code)');
-  ok(field22(dS3.body, 'Hành động').includes('git status --porcelain'), 'workflow-db-change Bước 3: session chính ghi mốc git status --porcelain trước khi dispatch');
-  ok(field22(dS3.body, 'Ràng buộc').includes('không sửa file migration đã có') && field22(dS3.body, 'Ràng buộc').includes('không kết nối DB'),
+  ok(field22(dS3.body, 'Hành động').includes('git status --porcelain') && field22(dS3.body, 'Hành động').includes('MỘT lần'), 'workflow-db-change Bước 3: session chính ghi mốc git status --porcelain trước khi dispatch');
+  ok(field22(dS3.body, 'Ràng buộc').includes('không sửa file migration đã có') && field22(dS3.body, 'Ràng buộc').includes('không kết nối DB')
+    && field22(dS3.body, 'Ràng buộc').includes('không sửa file trong thư mục migration'),
     'workflow-db-change Bước 3: file migration chỉ file MỚI, agent không kết nối DB/chạy migration');
   ok(field22(dS3.body, 'Gate').includes('file migration MỚI') && field22(dS3.body, 'Gate').includes('git ls-files --others')
-    && field22(dS3.body, 'Gate').includes('đã có trên base branch'),
+    && field22(dS3.body, 'Gate').includes('đã có trên base branch') && field22(dS3.body, 'Gate').includes('nơi dùng đã xác định ở Bước 1'),
     'workflow-db-change Bước 3: Gate so diff với mốc — chỉ file migration mới + file code thuộc nơi dùng, không sửa file đã có');
   ok(field22(dS3.body, 'Khi fail').includes('blocked') && field22(dS3.body, 'Khi fail').includes('quay lại Bước 2'),
     'workflow-db-change Bước 3: agent blocked → hỏi người dùng; đổi kế hoạch → quay lại Bước 2');
   ok(field22(dS6.body, 'Thực hiện').includes('skill `data-db-migration`') && field22(dS6.body, 'Hành động').includes('verify-cycle'),
     'workflow-db-change Bước 6: chạy thử theo skill data-db-migration (C4), chu trình verify-cycle');
+  ok(field22(dS3.body, 'Hành động').includes('không thành file') && field22(dS3.body, 'Evidence').includes('compensating_sql')
+    && field22(dS6.body, 'Hành động').includes('report Bước 3') && field22(dS6.body, 'Hành động').includes('migration bù'),
+    'workflow-db-change: migration bù của công cụ forward-only là SQL trong report Bước 3 (không thành file), Bước 6 lấy từ report');
+  ok(field22(dS3.body, 'Ràng buộc').includes('R__') && field22(dS2.body, 'Đầu ra').includes('số dòng bảng bị đụng')
+    && field22(dS3.body, 'Đầu vào').includes('số dòng bảng bị đụng'),
+    'workflow-db-change: file migration thuộc nơi dùng Bước 1 → hỏi người dùng; số dòng bảng truyền từ Bước 2 sang Bước 3');
   ok(field22(dS8.body, 'Hành động').includes('next_actions') && field22(dS8.body, 'Hành động').includes('Bước 3'),
     'workflow-db-change Bước 8: pha contract còn nợ lấy từ next_actions của report Bước 3');
   ok(dbc22 && ['data-migration-writer', 'backend-implementer', 'backend-test-writer', 'backend-reviewer'].every((a) => dbc22.agents.includes(a))
