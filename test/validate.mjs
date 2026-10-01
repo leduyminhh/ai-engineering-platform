@@ -1615,6 +1615,38 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 22. SOURCE: publish data-db-migration + agent data-migration-writer + workflow-db-change (spec 2026-10-01-data-migration-writer-design)
+{
+  const flat22 = (t) => t.replace(/\s+/g, ' ');
+  const wf22 = (id) => workflows.stages.find((s) => s.id === id);
+  const step22 = (wf, n) => (wf ? parseSteps(wf.body).find((s) => s.n === n) : undefined) ?? { title: '', body: '', checkpoint: false };
+  // Cắt đúng một trường cột 0 để assert không khớp nhầm chữ của trường khác trong cùng bước.
+  const field22 = (body, name) => {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const lines = body.split('\n');
+    const i = lines.findIndex((l) => new RegExp(`^- \\*\\*${esc}:\\*\\*`).test(l));
+    if (i < 0) return '';
+    let j = lines.findIndex((l, k) => k > i && /^- \*\*/.test(l));
+    if (j < 0) j = lines.length;
+    return flat22(lines.slice(i, j).join('\n'));
+  };
+  const pub22 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_published.json'), 'utf8')).published;
+  ok(pub22.includes('data/data-db-migration'), '_published.json: có data/data-db-migration (publish không chờ pilot, publish trước khi nối workflow)');
+  ok(!pub22.some((e) => /^data\/data-(oltp|olap)/.test(e)), '_published.json: 4 skill data-oltp/olap vẫn draft');
+  const cowork22 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
+  ok(cowork22.includes('data:data-db-migration'), '_cowork.json: có data:data-db-migration');
+  const dataMan22 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'data', '.manifest.json'), 'utf8'));
+  ok(dataMan22.version === '1.3.0' && !dataMan22.description.includes('DRAFT') && dataMan22.description.includes('data-db-migration'),
+    'data manifest: version 1.3.0, description nêu data-db-migration và không còn nhãn DRAFT');
+  const dataPr22 = fs.readFileSync(path.join(PLUGINS_DIR, 'data', 'shared', 'principles.md'), 'utf8');
+  ok(dataPr22.includes('data-db-migration') && flat22(dataPr22).includes('project backend'),
+    'data principles: nêu data-db-migration phục vụ project backend có DB riêng của app (không thuộc nhánh OLTP/OLAP)');
+  const offData22 = offeredCatalog().plugins.find((p) => p.id === 'data');
+  ok(!!offData22 && offData22.skillIds.includes('data/data-db-migration') && !offData22.skillIds.some((s) => /data-(oltp|olap)/.test(s)),
+    'offeredCatalog: plugin data chỉ offer data/data-db-migration');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');

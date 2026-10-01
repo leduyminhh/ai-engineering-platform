@@ -153,13 +153,13 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   ok(pub.includes('backend') && pub.includes('frontend'),
     'publishedPluginIds: gồm backend, frontend');
   ok(pub.includes('engineering') && pub.includes('ops'), 'publishedPluginIds: gồm engineering, ops');
-  ok(!pub.includes('data'), 'publishedPluginIds: KHÔNG gồm data (draft)');
+  ok(pub.includes('data'), 'publishedPluginIds: gồm data (publish một phần: data-db-migration)');
   const offered = offeredCatalog().plugins.map((p) => p.id);
   ok(offered[0] === 'core' && offered[1] === 'workflows', 'offeredCatalog: core rồi workflows');
   ok(offered.includes('backend') && offered.includes('frontend'),
     'offeredCatalog: gồm 2 plugin đã publish');
-  ok(offered.includes('engineering') && offered.includes('ops') && !offered.includes('data'),
-    'offeredCatalog: offer engineering/ops, ẩn data');
+  ok(offered.includes('engineering') && offered.includes('ops') && offered.includes('data'),
+    'offeredCatalog: offer engineering/ops và data (chỉ data-db-migration)');
   ok(offeredCatalog().plugins[1].skillIds.length === 13, 'offeredCatalog: đủ 12 workflow + orchestrator');
   ok(offeredCatalog({ backend: '*', frontend: '*' }).plugins.find((p) => p.id === 'workflows')
     .skillIds.every((s) => !s.endsWith('/workflow-feature')), 'offeredCatalog: ẩn workflow có closure chưa được offer');
@@ -178,13 +178,14 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     'publishedPluginIds per-skill: plugin có skill lẻ vẫn tính published');
 }
 
-// data-db-migration là DRAFT (plugin data chưa publish; spec 2026-09-29 §7.1.1 M4, ADR 0001): có trên đĩa nhưng wizard không offer.
+// data-db-migration đã publish (spec 2026-10-01-data-migration-writer-design D-Q1); 4 skill data-oltp/olap vẫn draft.
 {
   const daAll = skillCatalog().plugins.find((p) => p.id === 'data');
-  ok(daAll && daAll.skillIds.includes('data/data-db-migration'),
-    'skillCatalog: có data/data-db-migration (draft vẫn cài được bằng --skill)');
-  ok(!offeredCatalog().plugins.some((p) => p.id === 'data'),
-    'offeredCatalog: KHÔNG offer plugin data (draft), gồm data-db-migration');
+  ok(daAll && daAll.skillIds.includes('data/data-db-migration') && daAll.skillIds.includes('data/data-oltp-init'),
+    'skillCatalog: có data/data-db-migration và các skill draft (cài được bằng --skill)');
+  const daOff = offeredCatalog().plugins.find((p) => p.id === 'data');
+  ok(daOff && daOff.skillIds.includes('data/data-db-migration') && !daOff.skillIds.includes('data/data-oltp-init'),
+    'offeredCatalog: plugin data chỉ offer data-db-migration, ẩn skill draft');
   const beAll = skillCatalog().plugins.find((p) => p.id === 'backend');
   ok(beAll && !beAll.skillIds.some((s) => s.includes('db-migration')),
     'skillCatalog: plugin backend không còn skill db-migration');
@@ -211,8 +212,8 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   ok(offeredIds.includes('engineering') && offeredIds.includes('ops') && !m.draft.some((e) => e.id === 'engineering'),
     'report: engineering + ops đã publish → nằm ở offered');
   ok(offeredIds.includes('workflows'), 'report: offered có nhóm workflows');
-  ok(m.draft.some((e) => e.id === 'data') && !offeredIds.includes('data'),
-    'report: data nằm ở draft, KHÔNG ở offered');
+  ok(offeredIds.includes('data') && m.offered.find((e) => e.id === 'data').partial === true && !m.draft.some((e) => e.id === 'data'),
+    'report: data offered một phần (chỉ data-db-migration), không còn ở draft');
   const be = m.offered.find((e) => e.id === 'backend');
   ok(be.published === true && be.skills.includes('backend/backend-init'),
     'report: entry offered có cờ published + danh sách skill');

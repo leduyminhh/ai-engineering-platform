@@ -31,6 +31,7 @@
     "ops:ops-deploy-release",
     "ops:ops-incident-troubleshooting",
     "ops:ops-observability",
+    "data:data-db-migration",
     "data:data-oltp-init",
     "data:data-oltp-implement",
     "data:data-olap-init",
