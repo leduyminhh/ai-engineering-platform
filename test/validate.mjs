@@ -1816,6 +1816,27 @@ if (fs.existsSync(BUILD)) {
   const offFe23 = offeredCatalog().plugins.find((p) => p.id === 'frontend');
   ok(!!offFe23 && offFe23.skillIds.includes('frontend/frontend-performance') && offFe23.skillIds.length === 10,
     'offeredCatalog: plugin frontend offer 10 skill gồm frontend-performance');
+
+  const fpaPath = path.join(PLUGINS_DIR, 'frontend', 'agents', 'frontend-performance-analyst.md');
+  const fpa = fs.existsSync(fpaPath) ? fs.readFileSync(fpaPath, 'utf8') : '';
+  ok(fpa.length > 0, 'frontend-performance-analyst: có agent file');
+  ok(/^mode: write$/m.test(fpa) && /^skills: "frontend-performance"$/m.test(fpa),
+    'frontend-performance-analyst: mode write, skills = frontend-performance (đúng 1 skill)');
+  const fpaScope = flat23(fpa.split('## Phạm vi')[1]?.split('## Quy trình')[0] ?? '');
+  ok(fpaScope.includes('`perf/`') && fpaScope.includes('`bench/`') && fpaScope.includes('`src/`')
+    && fpaScope.includes('dev server') && fpaScope.includes('staging/production'),
+    'frontend-performance-analyst: Phạm vi ghi perf/ bench/, cấm sửa src/, cấm dev server, cấm staging/production');
+  ok(fpaScope.includes('blocked') && fpaScope.includes('questions') && fpaScope.includes('not_run'),
+    'frontend-performance-analyst: cần quyết định → blocked + questions; thiếu môi trường → not_run');
+  ok(fpa.includes('core:principles') && fpa.includes('git diff --name-only'),
+    'frontend-performance-analyst: report theo core:principles, tự đối chiếu diff');
+  ok(fpa.includes('INP') && /^description: .*(LCP|TBT)/m.test(fpa),
+    'frontend-performance-analyst: nêu lab không phải INP; description nêu LCP/TBT');
+  const fpaSpec = fs.readFileSync(path.join(REPO_ROOT, 'docs', 'superpowers', 'specs', '2026-10-01-frontend-performance-design.md'), 'utf8')
+    .replace(/\r\n/g, '\n');
+  const fpaBlock = fpaSpec.split('### 4.2')[1]?.split('```markdown\n')[1]?.split('\n```')[0] ?? '';
+  ok(fpaBlock.length > 0 && fpaBlock.trimEnd() === fpa.replace(/\r\n/g, '\n').trimEnd(),
+    'frontend-performance-analyst: khối agent trong spec §4.2 giống hệt file agent');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
