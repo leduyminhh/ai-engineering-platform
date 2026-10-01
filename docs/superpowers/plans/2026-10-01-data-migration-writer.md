@@ -261,8 +261,8 @@ requires: "core/git-workflow,data/data-db-migration"
 - **Thực hiện:** agent `data-migration-writer` (file migration) ∥ agent `backend-implementer` (code)
 - **Đầu vào:** thiết kế + kế hoạch theo pha đã xác nhận từ Bước 2 + nơi dùng đã xác định ở Bước 1
 - **Hành động:** session chính ghi mốc `git status --porcelain` rồi dispatch hai agent; `data-migration-writer`
-  nhận diện công cụ và thư mục migration rồi chỉ thêm file migration MỚI (forward + rollback, hoặc migration bù
-  với công cụ forward-only) cho các pha của lượt này; `backend-implementer` cập nhật code (query/ORM mapping/DTO)
+  nhận diện công cụ và thư mục migration rồi chỉ thêm file migration MỚI (forward + rollback; công cụ forward-only
+  chỉ forward, SQL bù ghi trong report) cho các pha của lượt này; `backend-implementer` cập nhật code (query/ORM mapping/DTO)
   theo nơi dùng đã xác định ở Bước 1.
 - **Ràng buộc:** không sửa file migration đã có trên base branch; `backend-implementer` không sửa file trong thư
   mục migration và không sửa code ngoài nơi dùng đã xác định ở Bước 1; danh sách file là hợp của hai phía, mỗi

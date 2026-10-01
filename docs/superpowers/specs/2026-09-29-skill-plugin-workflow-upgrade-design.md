@@ -490,7 +490,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 
 ## 8. Plan thiết kế agent
 
-### 8.1 Catalog sau nâng cấp (11 → 16)
+### 8.1 Catalog sau nâng cấp (11 → 17)
 
 | Agent | Plugin | Mode | Skills | Workflow dùng | Thay đổi |
 |---|---|---|---|---|---|
@@ -509,6 +509,7 @@ lo CRUD; template FSD chia đọc/ghi như bảng trên, nên bảng này thay t
 | ops-release-engineer | ops | read-only | ops-deploy-release, ops-observability | release | — |
 | **backend-fixer** | backend | write | backend-fix | bugfix, security-review, performance | **mới** (A4, spec 2026-09-30) |
 | **frontend-fixer** | frontend | write | frontend-fix | bugfix, security-review, performance | **mới** (A4, spec 2026-09-30) |
+| **backend-performance-analyst** | backend | write | backend-performance | performance | **mới** (G10, spec 2026-09-30) |
 | data-migration-writer | data | write | data-db-migration | db-change | mới (2026-10-01) |
 
 Cột `skills` lấy từ frontmatter thật trong `plugins/*/agents/*.md`. Cột Mode lấy theo `disallowedTools` của bản cài.
@@ -647,8 +648,8 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 - `[Inference]` Mức tuân thủ gate và contract của model chỉ đo được khi chạy workflow thật; CLI không kiểm được.
 - `[Unverified]` Chi tiết theo công cụ ở §7.1.5–§7.1.6 (hành vi khoá của PostgreSQL, lệnh rollback Liquibase, undo
   của Flyway) phải kiểm lại tài liệu công cụ trước khi viết vào reference (M-P3).
-- Trước khi WF3 xong, `workflow-db-change` Bước 6 vẫn đòi "up → rollback → up", không làm được với Flyway
-  forward-only (M3). Skill ở dạng draft nên chưa có người dùng qua wizard gặp mâu thuẫn này.
+- Đã xử lý (2026-10-01): trước khi WF3 xong, `workflow-db-change` Bước 6 từng đòi "up → rollback → up", không làm được với Flyway
+  forward-only (M3). WF3 và việc publish `data-db-migration` đã khép lại mâu thuẫn này nên chưa có người dùng qua wizard gặp nó.
 - `[Unverified]` `openapi-typescript` (N3) và hành vi codegen: chưa đối chiếu tài liệu, chưa chạy trên project thật; phải kiểm trước khi viết `contract-and-codegen.md` (DI-P2).
 - `[Inference]` Nối ở container/page (N4) giả định `frontend-implement` để lại chỗ trống bằng `props` + `TODO`; project dựng UI bằng cách khác có thể cần điều chỉnh.
 - Thêm 2 agent và các bước song song làm tăng token cho mỗi lần chạy workflow.

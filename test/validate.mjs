@@ -1654,8 +1654,10 @@ if (fs.existsSync(BUILD)) {
     'data-migration-writer: Phạm vi cấm kết nối DB và chạy migration');
   ok(dmwScope.includes('file migration đã có') && dmwScope.includes('repair'),
     'data-migration-writer: Phạm vi cấm sửa file migration đã có và repair/clean');
-  ok(dmwScope.includes('`src/`') && dmwScope.includes('blocked') && dmwScope.includes('questions'),
-    'data-migration-writer: cấm sửa src/, cần quyết định → blocked + questions');
+  ok(dmwScope.includes('mã ứng dụng') && dmwScope.includes('ngoài thư mục migration') && dmwScope.includes('blocked') && dmwScope.includes('questions'),
+    'data-migration-writer: cấm sửa mã ứng dụng ngoài thư mục migration, cần quyết định → blocked + questions');
+  ok(dmwScope.includes('mã ứng dụng') && dmwScope.includes('vắng khỏi mốc') && dmw.split('\n')[2].includes('sửa file do chính lượt này tạo'),
+    'data-migration-writer: nhận diện file do chính lượt này tạo (vắng khỏi mốc); description nêu sửa file do chính lượt này tạo');
   ok(dmw.includes('git diff --name-only') && dmw.includes('not_run'),
     'data-migration-writer: tự đối chiếu diff; validation not_run (verify do session chính)');
   ok(dmw.includes('compensating_sql') && dmw.includes('KHÔNG tạo file migration bù'),
@@ -1702,6 +1704,18 @@ if (fs.existsSync(BUILD)) {
     'workflow-db-change: vẫn 9 bước, ⏸ ở Bước 2, 5, 9');
   ok(flat22(dbc22?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '').includes('Agent migration trả `blocked`'),
     'workflow-db-change: bảng lỗi có hàng agent migration trả blocked');
+  const dbcDoD22 = flat22(dbc22?.body.split('## Definition of Done')[1]?.split('## Report cuối')[0] ?? '');
+  ok(field22(step22(dbc22, 4).body, 'Đầu vào').includes('compensating_sql')
+    && field22(step22(dbc22, 8).body, 'Hành động').includes('runbook') && field22(step22(dbc22, 8).body, 'Hành động').includes('NGOÀI thư mục migration')
+    && dbcDoD22.includes('SQL bù'),
+    'workflow-db-change: SQL bù có chỗ ở — Bước 4 kiểm compensating_sql, Bước 8 ghi runbook ngoài thư mục migration, DoD có dòng SQL bù');
+  ok(field22(dS3.body, 'Gate').includes('trừ file đã được nhận ở bước trước') && field22(dS3.body, 'Gate').includes('test đơn vị'),
+    'workflow-db-change Bước 3: Gate chấp nhận file đã nhận ở bước trước (vòng Bước 7 → Bước 3) và test đơn vị của code');
+  ok(field22(dS6.body, 'Hành động').includes('nguyên văn') && field22(dS6.body, 'Hành động').includes('rỗng hoặc N-1')
+    && field22(dS6.body, 'Ràng buộc').includes('ngoại lệ'),
+    'workflow-db-change Bước 6: SQL bù áp nguyên văn, DB test về rỗng hoặc N-1 trước mỗi lần chạy, ngoại lệ cho điều cấm sửa tay schema');
+  ok(field22(step22(dbc22, 1).body, 'Hành động').includes('PostgreSQL') && field22(step22(dbc22, 1).body, 'Hành động').includes('data-oltp-implement'),
+    'workflow-db-change Bước 1: nhận diện công cụ + engine, điều kiện dừng (PostgreSQL, data-oltp-implement)');
   ok((offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? []).includes('workflows/workflow-db-change'),
     'offeredCatalog: vẫn offer workflows/workflow-db-change (closure data-db-migration đã publish)');
   const beImpl22 = flat22(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-implement', 'SKILL.md'), 'utf8'));
