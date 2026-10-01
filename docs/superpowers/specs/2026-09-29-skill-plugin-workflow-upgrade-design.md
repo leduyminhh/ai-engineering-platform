@@ -693,4 +693,4 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 
 ### 13.2 Còn lại
 
-Không còn mục mở (kiểm 2026-10-01).
+Không còn hạng mục triển khai (skill/agent/workflow) trong bảng 13.1 (kiểm 2026-10-01). Việc mở còn lại: Q6 (project pilot `backend-db-migration`, chưa chốt) và Q7 (pilot `frontend-data-integration`, vẫn nên làm) ở §11; chất lượng nội dung các skill publish không chờ pilot chưa kiểm trên project thật (§12).
