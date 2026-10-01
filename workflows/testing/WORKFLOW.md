@@ -75,7 +75,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 4 — Viết test
 
-- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng); hành vi loại "luồng quan trọng: e2e" → agent `frontend-e2e-test-writer`
+- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng); hành vi loại
+  "luồng quan trọng: e2e" → agent `frontend-e2e-test-writer`
 - **Đầu vào:** chiến lược đã xác nhận từ Bước 3 (e2e: bảng Bước 3 là duyệt E2, agent không trình lại)
 - **Hành động:** viết test đúng loại đã chọn cho từng hành vi trong danh sách; e2e viết bằng Playwright theo
   skill `frontend-e2e-testing` (mỗi test map 1 hành vi/AC, selector theo role/label, không sleep cứng).
@@ -94,7 +95,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 5 — Chạy & phân tích failure
 
-- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng); e2e → agent `frontend-e2e-test-writer`
+- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (phía có vùng đụng); e2e → agent
+  `frontend-e2e-test-writer`
 - **Đầu vào:** test mới từ Bước 4
 - **Hành động:** chạy toàn bộ test mới; với mỗi failure, phân loại lỗi test (test sai) hay lỗi code (code có
   bug); lỗi code → đề xuất chạy `workflow-bugfix`; e2e chạy `npx playwright test --repeat-each=3`, flaky →

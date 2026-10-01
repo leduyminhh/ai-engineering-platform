@@ -77,6 +77,12 @@ ok(Array.isArray(loadCore().agents) && loadCore().agents.length === 0, 'loadCore
     '### Bước 2 — B\n- **Thực hiện:** skill `backend-refactor` | skill `core/git-workflow`\n'));
   ok(JSON.stringify(refs[0].agents) === '["backend-reviewer","frontend-reviewer"]', 'stepRefs: bắt agent song song');
   ok(JSON.stringify(refs[1].skills) === '["backend-refactor","core/git-workflow"]', 'stepRefs: bắt skill trần + đầy đủ');
+  const wrapped = stepRefs(frame(
+    '### Bước 1 — A ⏸\n- **Thực hiện:** agent `backend-reviewer` rồi\n  agent `frontend-reviewer` và\n  skill `backend-refactor`\n' +
+    '- **Đầu vào:** agent `z-khac` | skill `z-skill`\n'));
+  ok(JSON.stringify(wrapped[0].agents) === '["backend-reviewer","frontend-reviewer"]',
+    'stepRefs: bắt agent ở dòng nối của Thực hiện, bỏ agent ở trường kế tiếp');
+  ok(JSON.stringify(wrapped[0].skills) === '["backend-refactor"]', 'stepRefs: bắt skill ở dòng nối, bỏ skill ở trường kế tiếp');
 
   const reg = parseRegistry([
     '## Registry', '| id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |', '|---|---|---|---|---|',

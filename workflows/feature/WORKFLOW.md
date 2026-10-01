@@ -72,7 +72,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 3 — Thiết kế & contract ⏸
 
-- **Thực hiện:** agent `backend-implementer` (skill `backend-api-contract`, chỉ khi phạm vi có API) ∥ agent `engineering-spec-analyst` (ADR, chỉ khi ảnh hưởng kiến trúc)
+- **Thực hiện:** agent `backend-implementer` (skill `backend-api-contract`, chỉ khi phạm vi có API) ∥ agent
+  `engineering-spec-analyst` (ADR, chỉ khi ảnh hưởng kiến trúc)
 - **Đầu vào:** `requirement.md` từ Bước 2
 - **Hành động:** nếu feature có endpoint mới/đổi endpoint cũ, `backend-implementer` chốt/đồng bộ OpenAPI
   contract trong `docs/contracts/`; nếu ảnh hưởng kiến trúc, `engineering-spec-analyst` viết ADR đề xuất.
@@ -84,7 +85,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 4 — Implement
 
-- **Thực hiện:** agent `backend-implementer` ∥ agent `frontend-implementer` (chỉ phía có đụng theo phạm vi Bước 2); phạm vi `fullstack` có contract ở Bước 3 → agent `frontend-data-integrator` chạy sau khi `frontend-implementer` xong
+- **Thực hiện:** agent `backend-implementer` ∥ agent `frontend-implementer` (chỉ phía có đụng theo phạm vi
+  Bước 2); phạm vi `fullstack` có contract ở Bước 3 → agent `frontend-data-integrator` chạy sau khi
+  `frontend-implementer` xong
 - **Đầu vào:** `requirement.md` + contract (nếu có) từ Bước 2–3
 - **Hành động:** sinh vertical slice backend (aggregate/use-case/port/adapter) bám kiến trúc đã chọn; và/hoặc
   sinh component frontend presentational bám kiến trúc UI + design-system (chỗ cần dữ liệu để trống bằng props +
@@ -104,7 +107,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 5 — Test
 
-- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (chỉ phía có đụng); AC dạng luồng UI đầu-cuối → thêm agent `frontend-e2e-test-writer`
+- **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (chỉ phía có đụng); AC dạng luồng
+  UI đầu-cuối → thêm agent `frontend-e2e-test-writer`
 - **Đầu vào:** code implementation từ Bước 4 + acceptance criteria từ Bước 2 + bảng ứng viên e2e đã được người
   dùng duyệt ở Bước 2 (đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
 - **Hành động:** viết unit/integration test cho từng acceptance criterion; chạy toàn bộ test suite của phía

@@ -48,7 +48,12 @@ export function checkWorkflowBody(text, { kind = 'workflow' } = {}) {
 
 export function stepRefs(text) {
   return parseSteps(text).map((s) => {
-    const line = s.body.split('\n').find((l) => l.includes('**Thực hiện:**')) || '';
+    const lines = s.body.split('\n');
+    const from = lines.findIndex((l) => /^- \*\*Thực hiện:\*\*/.test(l));
+    // Trường có thể xuống dòng nối thụt lề; dừng ở bullet cột 0 kế tiếp để không bắt token của trường khác.
+    let to = from === -1 ? -1 : lines.findIndex((l, i) => i > from && /^- \*\*/.test(l));
+    if (to === -1) to = lines.length;
+    const line = from === -1 ? '' : lines.slice(from, to).join(' ');
     // Chỉ token trong backtick có ký tự id hợp lệ; placeholder `<plugin>-<agent>` của template bị bỏ qua.
     const grab = (kw) => [...line.matchAll(new RegExp(`${kw}\\s+\`([a-z0-9/-]+)\``, 'g'))].map((m) => m[1]);
     return { n: s.n, agents: grab('agent'), skills: grab('skill') };
