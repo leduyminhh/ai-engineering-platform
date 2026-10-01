@@ -1507,7 +1507,6 @@ if (fs.existsSync(BUILD)) {
   for (const [n, s, mode] of [[2, pS2, 'measure'], [3, pS3, 'profile'], [5, pS5, 'measure']]) {
     ok(field20(s.body, 'Thực hiện').includes('agent `backend-performance-analyst`') && field20(s.body, 'Thực hiện').includes(`\`${mode}\``),
       `workflow-performance Bước ${n}: Thực hiện là backend-performance-analyst chế độ ${mode}`);
-    ok(flat20(s.body).includes('Phía FE: chưa có skill'), `workflow-performance Bước ${n}: có câu chờ cho phía FE`);
   }
   ok(field20(pS1.body, 'Đầu ra').includes('điều kiện đo'), 'workflow-performance Bước 1: Đầu ra có điều kiện đo sơ bộ');
   for (const [n, s] of [[2, pS2], [3, pS3]]) {
@@ -1837,6 +1836,47 @@ if (fs.existsSync(BUILD)) {
   const fpaBlock = fpaSpec.split('### 4.2')[1]?.split('```markdown\n')[1]?.split('\n```')[0] ?? '';
   ok(fpaBlock.length > 0 && fpaBlock.trimEnd() === fpa.replace(/\r\n/g, '\n').trimEnd(),
     'frontend-performance-analyst: khối agent trong spec §4.2 giống hệt file agent');
+
+  const pf23 = wf23('workflow-performance');
+  for (const [n, mode] of [[2, 'measure'], [3, 'profile'], [5, 'measure']]) {
+    const s = step23(pf23, n);
+    const th = field23(s.body, 'Thực hiện');
+    ok(th.includes('agent `backend-performance-analyst`') && th.includes('agent `frontend-performance-analyst`') && th.includes(`\`${mode}\``),
+      `workflow-performance Bước ${n}: Thực hiện có cả hai analyst (BE ∥ FE) chế độ ${mode}`);
+    ok(!flat23(s.body).includes('Phía FE: chưa có skill'), `workflow-performance Bước ${n}: không còn câu chờ phía FE`);
+    ok(field23(s.body, 'Khi fail').includes('blocked') && field23(s.body, 'Khi fail').includes('câu hỏi'),
+      `workflow-performance Bước ${n}: Khi fail — analyst trả blocked + câu hỏi → session chính hỏi người dùng`);
+  }
+  ok(!flat23(pf23?.body ?? '').includes('Phía FE: chưa có skill'), 'workflow-performance: body không còn "Phía FE: chưa có skill"');
+  const fS2 = step23(pf23, 2), fS3 = step23(pf23, 3), fS5 = step23(pf23, 5);
+  ok(field23(fS2.body, 'Evidence').includes('hash-object') && /từng phía|BE và FE|cả hai phía/.test(field23(fS2.body, 'Evidence')),
+    'workflow-performance Bước 2: Evidence ghi git hash-object script + bảng điều kiện của TỪNG phía');
+  ok(field23(fS2.body, 'Hành động').includes('perf/frontend/') && field23(fS2.body, 'Hành động').includes('perf/backend/'),
+    'workflow-performance Bước 2: hai phía dùng thư mục con riêng perf/backend/ và perf/frontend/');
+  ok(field23(fS3.body, 'Gate').includes('mốc Bước 2') && /từng phía|BE và FE|cả hai phía/.test(field23(fS3.body, 'Gate')),
+    'workflow-performance Bước 3: Gate so hash của từng phía với mốc Bước 2');
+  ok(field23(fS5.body, 'Gate').includes('mốc Bước 2') && /từng phía/.test(field23(fS5.body, 'Gate')),
+    'workflow-performance Bước 5: Gate hash từng phía bằng mốc Bước 2, kết luận đạt/không đạt theo từng phía');
+  ok(field23(fS5.body, 'Hành động').includes('hash') && field23(fS5.body, 'Hành động').includes('chunk')
+    && field23(fS5.body, 'Hành động').includes('bản build production'),
+    'workflow-performance Bước 5: FE build lại bản production, xác nhận bản mới (hash file build / tên chunk khác baseline)');
+  ok(field23(fS5.body, 'Ràng buộc').includes('dev server') || field23(fS2.body, 'Ràng buộc').includes('dev server'),
+    'workflow-performance: Ràng buộc FE cấm đo trên dev server');
+  ok(step23(pf23, 3).checkpoint && step23(pf23, 7).checkpoint && parseSteps(pf23?.body ?? '').length === 7,
+    'workflow-performance: vẫn 7 bước, ⏸ ở Bước 3 và 7');
+  ok(pf23 && ['backend-performance-analyst', 'frontend-performance-analyst', 'backend-fixer', 'frontend-fixer', 'backend-reviewer', 'frontend-reviewer']
+    .every((a) => pf23.agents.includes(a)),
+    'workflow-performance: frontmatter agents có frontend-performance-analyst');
+  const pfErr23 = flat23(pf23?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '');
+  ok(pfErr23.includes('Chrome') && pfErr23.includes('not_run'),
+    'workflow-performance: bảng lỗi có hàng bản build FE không dựng được / không có Chrome (not_run → blocked)');
+  ok(flat23(pf23?.body.split('## Điều kiện tiên quyết')[1]?.split('## Các bước')[0] ?? '').includes('frontend-performance-analyst'),
+    'workflow-performance: điều kiện tiên quyết liệt kê frontend-performance-analyst');
+  ok((offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? []).includes('workflows/workflow-performance'),
+    'offeredCatalog: vẫn offer workflows/workflow-performance (closure frontend-performance đã publish)');
+  const bpaFlow23 = flat23(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', 'agents', 'backend-performance-analyst.md'), 'utf8')
+    .split('## Quy trình')[1]?.split('## Report trả về')[0] ?? '');
+  ok(bpaFlow23.includes('perf/backend/'), 'backend-performance-analyst: Quy trình ghi artifact vào perf/backend/ khi workflow có cả hai phía');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

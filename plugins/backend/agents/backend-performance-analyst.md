@@ -20,7 +20,8 @@ không kết luận tối ưu có hiệu quả ngoài bảng số.
 
 ## Quy trình
 1. Đọc skill `backend-performance`; xác định chế độ (`measure` | `profile`) và bước gọi; gọi độc lập (không có
-   mốc từ session chính) → tự ghi `git status --porcelain` làm mốc.
+   mốc từ session chính) → tự ghi `git status --porcelain` làm mốc. Khi workflow có cả hai phía, ghi artifact vào
+   `perf/backend/` (phía frontend dùng `perf/frontend/`).
 2. `measure`: chốt bảng điều kiện đo (P2); ở Bước 5 đọc lại bảng + script của Bước 2, không tạo mới. `profile`:
    dùng lại bảng điều kiện + script của Bước 2, không chốt bảng mới.
 3. `measure`: chạy ≥3 lần, ghi thống kê chính theo P3 (p95 load test / `Score` JMH / `median` pytest-benchmark) +
