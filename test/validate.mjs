@@ -1282,6 +1282,25 @@ if (fs.existsSync(BUILD)) {
       'workflow-bugfix Bước 6: Gate có nhánh xanh cho oracle tái hiện thủ công');
     ok(gateOf('workflow-security-review', 8).includes('re-scan'),
       'workflow-security-review Bước 8: Gate có nhánh xanh cho finding không có test (re-scan)');
+    const fieldOf18 = (id, n, name) => flat18((step18(wf18(id), n).body.split(`**${name}:**`)[1] ?? '').split('\n- **')[0]);
+    for (const name of ['Đầu ra', 'Evidence']) {
+      ok(fieldOf18('workflow-bugfix', 6, name).includes('tái hiện thủ công'),
+        `workflow-bugfix Bước 6: ${name} nêu oracle tái hiện thủ công`);
+      ok(fieldOf18('workflow-security-review', 8, name).includes('re-scan'),
+        `workflow-security-review Bước 8: ${name} nêu finding không có test chờ re-scan`);
+    }
+  }
+  for (const p of ['backend', 'frontend']) {
+    ok(flat18(fixAgent(p)).includes('review/re-scan lại do bước sau của workflow'),
+      `${p}-fixer: Report oracle (b)/(e) chỉ ghi file:line đã sửa, review/re-scan thuộc bước sau của workflow`);
+  }
+  // Khối agent trong spec là bản hiện hành, không trôi khỏi file thật (LF, bỏ xuống dòng cuối).
+  {
+    const spec18 = fs.readFileSync(path.join(REPO_ROOT, 'docs', 'superpowers', 'specs', '2026-09-30-fixer-agent-design.md'), 'utf8');
+    const block18 = (spec18.split('### 4.2')[1] ?? '').match(/```markdown\n([\s\S]*?)\n```/)?.[1] ?? '';
+    const lf18 = (t) => t.replace(/\r\n/g, '\n').trimEnd();
+    ok(block18.length > 0 && lf18(block18) === lf18(fixAgent('backend')),
+      'spec fixer §4.2: khối agent giống hệt từng byte plugins/backend/agents/backend-fixer.md');
   }
 }
 
@@ -1392,8 +1411,8 @@ if (fs.existsSync(BUILD)) {
   }
   // Dọn minor đã park: Đầu ra/Evidence e2e của testing Bước 4, integrator blocked ở feature Bước 4, E-r7 gồm script.
   for (const [name, s] of [['workflow-feature Bước 5', fS5], ['workflow-testing Bước 4', tS4], ['workflow-testing Bước 5', tS5]]) {
-    ok(field19(s.body, 'Gate').includes('script chạy e2e'),
-      `${name}: Gate E-r7 gồm cả việc thêm script chạy e2e vào package.json`);
+    ok(field19(s.body, 'Gate').includes('script chạy e2e cũng cần duyệt'),
+      `${name}: Gate E-r7 gồm cả việc thêm script chạy e2e vào package.json (cần duyệt như E-r7)`);
   }
   ok(field19(tS4.body, 'Đầu ra').includes('not_run') && field19(tS4.body, 'Evidence').includes('not_run'),
     'workflow-testing Bước 4: Đầu ra và Evidence nêu e2e not_run có lý do khi thiếu môi trường BE/DB test');
@@ -1541,6 +1560,8 @@ if (fs.existsSync(BUILD)) {
   ok(field20(pf5.body, 'Gate').includes('mốc Bước 2'), 'workflow-performance Bước 5: Gate so hash với mốc Bước 2');
   ok(field20(pf3.body, 'Gate').includes('mốc Bước 2'),
     'workflow-performance Bước 3: Gate so git hash-object script + bảng điều kiện với mốc Bước 2');
+  ok(field20(pf3.body, 'Hành động').includes('git hash-object') && field20(pf3.body, 'Evidence').includes('mốc Bước 2'),
+    'workflow-performance Bước 3: Hành động đọc mốc hash-object, Evidence ghi hash hiện tại so với mốc Bước 2');
   ok(/^description: .*Score/m.test(pa), 'backend-performance-analyst: description nêu thống kê chính theo P3 (Score JMH)');
   ok(field20(pf5.body, 'Khi fail').includes('report Bước 5') && field20(pf5.body, 'Khi fail').includes('quay lại Bước 2'),
     'workflow-performance Bước 5: blocked ghi quyết định vào report Bước 5; đổi điều kiện → quay lại Bước 2');

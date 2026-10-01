@@ -61,8 +61,9 @@ re-scan Bước 9 sạch.
   lỗ hổng; `@SuppressWarnings` mới; đổi assert trong test.
 - **Không đổi thứ ngoài code.** Không sửa `docs/contracts/`, không thêm/sửa migration. KHÔNG THÊM dependency
   mới. NÂNG version một dependency đã có (sửa manifest `pom.xml`/`build.gradle`/`pyproject.toml` + lockfile
-  tương ứng nếu có, vd `poetry.lock`) ĐƯỢC PHÉP khi các file đó nằm trong danh sách và
-  finding là CVE của dependency đó. Cần khác → DỪNG và báo (đó là việc của skill khác: `backend-api-contract`, `data-db-migration`).
+  tương ứng nếu có, vd `poetry.lock`) ĐƯỢC PHÉP khi các file đó nằm trong danh sách và finding là CVE của
+  dependency đó. Cần khác → DỪNG và báo (đó là việc của skill khác: `backend-api-contract`,
+  `data-db-migration`).
 - **Không push thẳng main.** Một fix = 1 commit; DỪNG cho người **duyệt diff** trước commit.
 - **Ngôn ngữ (bắt buộc):** báo cáo, commit message viết **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo bằng oracle đỏ → xanh với lệnh THẬT + exit code, `file:line` đã sửa. KHÔNG dùng

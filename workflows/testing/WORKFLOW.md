@@ -87,7 +87,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm file test (và
   fixture/mock của test; e2e: thư mục `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục auth/output
   của Playwright (vd `e2e/.auth/` và thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi
-  người dùng đã duyệt (E-r7: thêm `@playwright/test`, hoặc thêm script chạy e2e)).
+  người dùng đã duyệt (E-r7: thêm `@playwright/test`; thêm script chạy e2e cũng cần duyệt như E-r7)).
 - **Khi fail:** test không chạy được (lỗi biên dịch/setup) → sửa test, chạy lại; e2e không chạy vì thiếu BE/DB
   test → `not_run`, không lặp sửa test.
 - **Evidence:** lệnh chạy test + exit code; danh sách file thay đổi hoặc mới trong bước so với trạng thái đầu
@@ -110,8 +110,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   và `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test; e2e: thư mục
   `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục auth/output của Playwright (vd `e2e/.auth/` và
   thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi người dùng đã duyệt
-  (E-r7: thêm `@playwright/test`, hoặc thêm script chạy e2e)); e2e `not_run` vì thiếu môi trường là hợp
-  lệ (ghi vào `remaining_risks`).
+  (E-r7: thêm `@playwright/test`; thêm script chạy e2e cũng cần duyệt như E-r7)); e2e `not_run` vì thiếu môi
+  trường là hợp lệ (ghi vào `remaining_risks`).
 - **Khi fail:** không phân loại được nguyên nhân failure → hỏi người dùng thêm ngữ cảnh, không tự đoán.
 - **Evidence:** lệnh chạy test + exit code + danh sách failure đã phân loại; danh sách file thay đổi hoặc mới
   trong bước so với trạng thái đầu bước; e2e: lệnh Playwright + kết quả hoặc `not_run` + lý do.

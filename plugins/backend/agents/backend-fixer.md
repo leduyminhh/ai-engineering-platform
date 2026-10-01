@@ -43,9 +43,9 @@ workflow.
 
 ## Report trả về
 
-- Oracle trước/sau, ghi theo loại: (a) `command`, `exit_code`, `status` đỏ → xanh; (b)/(e) finding `file:line` +
-  kết quả review/re-scan lại; (c) build/test trước/sau + evidence profile đã dùng; (d) kết quả chạy lại bước
-  tái hiện trước/sau.
+- Oracle trước/sau, ghi theo loại: (a) `command`, `exit_code`, `status` đỏ → xanh; (b)/(e) ghi `file:line` đã sửa
+  cho finding, review/re-scan lại do bước sau của workflow; (c) build/test trước/sau + evidence profile đã dùng;
+  (d) kết quả chạy lại bước tái hiện trước/sau.
 - File đã sửa (`file:line`) và xác nhận ⊆ danh sách giao; evidence build/lint theo contract `core:principles`;
   không chạy được → `not_run` + `reason`.
 - `remaining_risks`: giả định về nguyên nhân; chỗ cùng pattern chưa sửa vì ngoài phạm vi; phần chỉ kiểm bằng

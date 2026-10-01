@@ -120,7 +120,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** cấm sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh; cấm chỉ sửa triệu chứng (che
   lỗi mà không sửa nguyên nhân); cấm xoá/nới điều kiện test cho qua; không sửa ngoài danh sách file — cần mở
   rộng → agent trả `blocked`, session chính hỏi người dùng rồi gọi lại.
-- **Đầu ra:** code fix + failing test của Bước 3 chuyển xanh + build/lint xanh.
+- **Đầu ra:** code fix + build/lint xanh + oracle đạt gate xanh: failing test của Bước 3 chuyển xanh, hoặc kết
+  quả chạy lại bước tái hiện thủ công, hoặc (quay lại từ Bước 8) `file:line` finding đã sửa, chờ reviewer xác
+  nhận.
 - **Gate:** failing test chuyển xanh (hoặc, oracle tái hiện thủ công: chạy lại bước tái hiện có kết quả đúng;
   quay lại từ Bước 8: reviewer xác nhận finding đã sửa); build/lint xanh; so với trạng thái ghi lại ở đầu bước
   (`git status --porcelain`), file thay đổi hoặc mới trong bước (`git diff --name-only` và
@@ -131,7 +133,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause; diff lệch danh sách
   → revert phần lệch, không nhận.
 - **Evidence:** report của agent (lệnh chạy lại đúng test của Bước 3, exit code đỏ → 0) + danh sách file thay
-  đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn.
+  đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn; oracle
+  tái hiện thủ công: kết quả chạy lại bước tái hiện; quay lại từ Bước 8: `file:line` finding đã sửa.
 
 ### Bước 7 — Regression
 

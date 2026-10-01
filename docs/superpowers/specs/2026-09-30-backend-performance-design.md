@@ -271,14 +271,13 @@ Khối `// 20.` ở cuối `test/validate.mjs` (helper riêng `flat20`, `wf20`, 
   trả `blocked` + `questions[]` khi cần quyết định của người dùng.
 - publish: `_published.json`, `_cowork.json`.
 - workflow: Bước 2/3/5 `field20(…,'Thực hiện')` chứa agent analyst; Bước 2/3 Gate chứa `perf/`; Bước 5 Đầu vào
-  chứa "Bước 2" và Ràng buộc chứa "điều kiện"; vẫn 7 bước; frontmatter agents; `offeredCatalog` vẫn chứa
+  chứa "Bước 2" và Ràng buộc chứa "không đổi điều kiện đo"; vẫn 7 bước; frontmatter agents; `offeredCatalog` vẫn chứa
   `workflows/workflow-performance` (kiểm có răng).
 - nhóm assert bổ sung (đã có trong khối 20): `blocked` + câu hỏi ở Bước 2/3/5 (Khi fail) và `questions[]` của agent; hàng
   Config tool đo và Khởi chạy ứng dụng (PID/thời điểm start) của `measure-conditions.md`, Bước 5 xác nhận tiến trình
   mới; `git hash-object` script + bảng điều kiện ghi ở Evidence Bước 2, so với mốc ở Gate Bước 3 và Bước 5;
   `db-query-analysis.md` không sửa `src/` (đếm query bật lúc khởi chạy / phía DB); Bước 3 Ràng buộc không sửa bảng
-  điều kiện của Bước 2; Gate Bước 2/3 chứa `bench/` và `git ls-files --others`; Bước 5 Ràng buộc "không đổi điều
-  kiện đo".
+  điều kiện của Bước 2; Gate Bước 2/3 chứa `bench/` và `git ls-files --others`.
 - README: heading `(16)`; hàng agent dùng ở WF09; không còn hàng G10.
 
 ### 6.4 Kiểm chứng

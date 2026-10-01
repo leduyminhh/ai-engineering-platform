@@ -73,8 +73,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-performance-analyst` (chế độ `profile`; phía BE)
 - **Đầu vào:** bảng điều kiện + script + số đo baseline từ Bước 2
-- **Hành động:** session chính ghi mốc `git status --porcelain` rồi dispatch; agent profile theo thứ tự DB →
-  CPU/alloc → I/O trong lúc chạy tải của Bước 2, nêu bottleneck + giả thuyết kèm evidence đo được, đề xuất danh
+- **Hành động:** session chính ghi mốc `git status --porcelain`, đọc mốc `git hash-object` của script và bảng
+  điều kiện ghi ở Evidence Bước 2, rồi dispatch; agent profile theo thứ tự DB → CPU/alloc → I/O trong lúc chạy
+  tải của Bước 2, nêu bottleneck + giả thuyết kèm evidence đo được, đề xuất danh
   sách file/hàm cho Bước 4; session chính trình người dùng xác nhận hướng tối ưu. Phía FE: chưa có skill
   đo/profile frontend — session chính đo theo công cụ sẵn có của project, ghi `[giả định]` cho phần không kiểm
   chứng được.
@@ -91,7 +92,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   kiện đo (môi trường, dữ liệu seed, tải, warm-up, số lần lặp, config tool đo) → quay lại Bước 2 đo lại baseline;
   diff ngoài phạm vi (ngoài `perf/`, `bench/`, hàng Config tool đo) → revert phần lệch, không nhận.
 - **Evidence:** kết quả profile (file:line hoặc số đo) trong report bước + danh sách file được sửa + xác nhận
-  của người dùng.
+  của người dùng + `git hash-object` hiện tại của script và bảng điều kiện so với mốc Bước 2.
 
 ### Bước 4 — Tối ưu
 

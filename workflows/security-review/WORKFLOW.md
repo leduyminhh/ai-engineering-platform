@@ -160,7 +160,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** không sửa ngoài phạm vi finding đã chọn và danh sách file — cần mở rộng → agent trả `blocked`,
   session chính hỏi người dùng rồi gọi lại; không chỉ che triệu chứng (vd log giảm chi tiết thay vì sửa lỗ hổng
   thật); không xoá hay nới test regression để qua.
-- **Đầu ra:** code đã sửa, build/test xanh, test regression xanh.
+- **Đầu ra:** code đã sửa, build/test xanh, test regression xanh (finding không có test: `file:line` đã sửa, chờ
+  re-scan Bước 9).
 - **Gate:** build/test xanh, gồm test regression (hoặc, finding không có test: re-scan Bước 9 sạch; quay lại từ
   Bước 9: finding không còn); so với trạng thái ghi lại ở đầu bước (`git status --porcelain`),
   file thay đổi hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) ⊆
@@ -170,7 +171,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   xong vẫn đỏ → chẩn đoán lại, sửa tiếp trong danh sách, không bỏ qua; diff lệch danh sách → revert phần lệch,
   không nhận.
 - **Evidence:** report của agent (lệnh build/test + exit code 0, test regression đã từ đỏ sang xanh) + danh sách
-  file thay đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn.
+  file thay đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn;
+  finding không có test: `file:line` đã sửa (re-scan Bước 9 xác nhận).
 
 ### Bước 9 — Re-scan
 
