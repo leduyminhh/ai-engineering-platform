@@ -6,8 +6,8 @@ title: "DB change — migration schema forward/rollback"
 kind: workflow
 tier: 2
 risk: high
-agents: "backend-implementer,backend-test-writer,backend-reviewer"
-requires: "core/git-workflow"
+agents: "data-migration-writer,backend-implementer,backend-test-writer,backend-reviewer"
+requires: "core/git-workflow,data/data-db-migration"
 runsIn: execute
 invoke: per-request
 pipeline: false
@@ -26,7 +26,8 @@ next: null
 
 ## Điều kiện tiên quyết
 
-- Skill/agent đã cài: `backend-implementer`, `backend-test-writer`, `backend-reviewer`, skill `core/git-workflow`.
+- Skill/agent đã cài: `data-migration-writer`, `backend-implementer`, `backend-test-writer`, `backend-reviewer`,
+  skill `core/git-workflow`, `data/data-db-migration`.
 - Artifact phải có sẵn: schema/data-model hiện tại đọc được (migration trước đó, ERD, hoặc kết nối DB test).
 - Baseline: có DB test riêng biệt để chạy thử migration, không phải DB production.
 
@@ -50,27 +51,41 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 2 — Thiết kế migration ⏸
 
-- **Thực hiện:** session chính
+- **Thực hiện:** session chính (theo skill `data-db-migration`, chế độ `change`, bước C2)
 - **Đầu vào:** danh sách impact từ Bước 1
 - **Hành động:** thiết kế migration forward + rollback theo chiến lược expand/contract (công cụ forward-only: "rollback" là một migration bù mới) (thêm trước, backfill,
-  rồi mới xoá/đổi ràng buộc cũ ở migration sau); trình cho người dùng xác nhận trước khi implement.
+  rồi mới xoá/đổi ràng buộc cũ ở migration sau); trình cho người dùng xác nhận trước khi implement. Tra pattern
+  trong `references/change/change-patterns.md` và mức khoá trong `references/change/lock-risk-postgres.md` của
+  skill; hỏi số dòng của bảng bị đụng (không có ngưỡng mặc định); ghi rõ pha nào (expand / migrate data /
+  contract) vào lượt này, pha nào để sau.
 - **Ràng buộc:** không thiết kế migration xoá dữ liệu ngay trong cùng migration thêm cột/bảng mới.
-- **Đầu ra:** thiết kế migration forward + rollback + tương thích ngược, đã được người dùng xác nhận.
+- **Đầu ra:** thiết kế migration forward + rollback + tương thích ngược, đã được người dùng xác nhận, kèm kế
+  hoạch theo pha (expand / migrate data / contract) làm đầu vào cho Bước 3.
 - **Gate:** forward + rollback + tương thích ngược (expand/contract).
 - **Khi fail:** người dùng không đồng ý thiết kế → quay lại Bước 1 làm rõ impact/ràng buộc.
 - **Evidence:** thiết kế migration + xác nhận của người dùng trong report bước.
 
 ### Bước 3 — Implement
 
-- **Thực hiện:** session chính (file migration) ∥ agent `backend-implementer` (code)
-- **Đầu vào:** thiết kế đã xác nhận từ Bước 2
-- **Hành động:** viết file migration forward + rollback theo migration tool của project; cập nhật code
-  (query/ORM mapping/DTO) theo nơi dùng đã xác định ở Bước 1.
-- **Ràng buộc:** không sửa code ngoài phạm vi nơi dùng đã xác định.
-- **Đầu ra:** file migration + code cập nhật.
-- **Gate:** build xanh.
-- **Khi fail:** build đỏ → chẩn đoán → sửa → build lại.
-- **Evidence:** lệnh build + exit code 0.
+- **Thực hiện:** agent `data-migration-writer` (file migration) ∥ agent `backend-implementer` (code)
+- **Đầu vào:** thiết kế + kế hoạch theo pha đã xác nhận từ Bước 2 + nơi dùng đã xác định ở Bước 1
+- **Hành động:** session chính ghi mốc `git status --porcelain` rồi dispatch hai agent; `data-migration-writer`
+  nhận diện công cụ và thư mục migration rồi chỉ thêm file migration MỚI (forward + rollback, hoặc migration bù
+  với công cụ forward-only) cho các pha của lượt này; `backend-implementer` cập nhật code (query/ORM mapping/DTO)
+  theo nơi dùng đã xác định ở Bước 1.
+- **Ràng buộc:** không sửa file migration đã có trên base branch; `backend-implementer` không sửa file trong thư
+  mục migration và không sửa code ngoài nơi dùng đã xác định ở Bước 1; danh sách file là hợp của hai phía, mỗi
+  agent chỉ đối chiếu phần của mình; agent không kết nối DB hay chạy migration (verify ở Bước 6).
+- **Đầu ra:** file migration mới + code cập nhật.
+- **Gate:** build xanh; so với mốc `git status --porcelain` đầu bước, file thay đổi hoặc mới trong bước
+  (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm (a) file migration MỚI trong thư
+  mục migration và (b) file code thuộc nơi dùng đã xác định ở Bước 1; không có file migration đã có trên base
+  branch bị sửa.
+- **Khi fail:** build đỏ → chẩn đoán → sửa → build lại; `data-migration-writer` trả `blocked` + câu hỏi → session
+  chính hỏi người dùng; quyết định làm đổi kế hoạch → quay lại Bước 2, ngược lại ghi vào report bước rồi gọi lại
+  agent; diff ngoài phạm vi → revert phần lệch, không nhận.
+- **Evidence:** lệnh build + exit code 0; report của `data-migration-writer` (công cụ/engine, file migration mới
+  theo pha, `next_actions`); danh sách file thay đổi hoặc mới trong bước so với mốc đầu bước.
 
 ### Bước 4 — Review query/index
 
@@ -99,9 +114,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 6 — Chạy thử trên DB test
 
-- **Thực hiện:** session chính
+- **Thực hiện:** session chính (theo skill `data-db-migration`, chế độ `change`, bước C4)
 - **Đầu vào:** migration đã qua review từ Bước 4 + target DB đã xác nhận ở Bước 5
-- **Hành động:** chạy chu trình verify theo công cụ migration của project trên DB test. Công cụ có rollback
+- **Hành động:** Chu trình verify theo `references/change/verify-cycle.md` của skill. Chạy chu trình verify theo
+  công cụ migration của project trên DB test. Công cụ có rollback
   (vd Liquibase, Alembic): migrate up → rollback → migrate up lại. Công cụ forward-only (vd Flyway khi dùng
   theo hướng forward-only): migrate up, rồi áp migration bù đã thiết kế ở Bước 2 và kiểm schema/dữ liệu sau
   từng lượt; nếu Bước 2 chưa thiết kế migration bù cho thay đổi này thì quay lại Bước 2 bổ sung, không tự bịa
@@ -142,7 +158,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** migration + code + test đã qua Bước 1–7
 - **Hành động:** cập nhật `project-knowledge/data-model.md` (ERD) theo schema mới; nếu thay đổi theo
   expand/contract và còn pha contract chưa làm (xoá cột/ràng buộc cũ ở migration sau), ghi việc đó vào
-  `next_actions` của report cuối kèm điều kiện thực hiện.
+  `next_actions` của report cuối kèm điều kiện thực hiện; pha contract còn nợ lấy từ `next_actions` trong
+  report Bước 3.
 - **Ràng buộc:** chỉ sửa phần ERD/tài liệu liên quan tới thay đổi; không sửa vùng managed block của
   `AGENTS.md`/`CLAUDE.md`; không thực hiện pha contract trong workflow này.
 - **Đầu ra:** `data-model.md` đã cập nhật (hoặc "không ảnh hưởng" kèm lý do) + nợ contract đã ghi vào
@@ -187,6 +204,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Integration test đỏ (Bước 7) | Lỗi test → sửa test; lỗi code/migration → quay lại Bước 3 (không nới test) |
 | Người dùng không duyệt diff (sau Bước 9 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 | Thay đổi phá huỷ dữ liệu chưa được xác nhận | Cấm thực hiện; quay lại Bước 2 xin xác nhận rõ ràng |
+| Agent migration trả `blocked` (Bước 3) | Người dùng quyết định; đổi kế hoạch → quay lại Bước 2, ngược lại ghi vào report Bước 3 rồi gọi lại agent |
 | Yêu cầu chạy migration trên production | Cấm thực hiện; chỉ chạy trên DB test |
 
 - **Điều kiện dừng:** người dùng không xác nhận thiết kế migration sau nhiều vòng; chu trình verify migration

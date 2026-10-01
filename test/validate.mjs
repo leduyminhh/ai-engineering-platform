@@ -1663,6 +1663,36 @@ if (fs.existsSync(BUILD)) {
   const dmwBlock = dmwSpec.split('### 3.2')[1]?.split('```markdown\n')[1]?.split('\n```')[0] ?? '';
   ok(dmwBlock.length > 0 && dmwBlock.trimEnd() === dmw.replace(/\r\n/g, '\n').trimEnd(),
     'data-migration-writer: khối agent trong spec §3.2 giống hệt file agent');
+  const dbc22 = wf22('workflow-db-change');
+  const dS2 = step22(dbc22, 2), dS3 = step22(dbc22, 3), dS6 = step22(dbc22, 6), dS8 = step22(dbc22, 8);
+  ok(field22(dS2.body, 'Thực hiện').includes('skill `data-db-migration`') && field22(dS2.body, 'Hành động').includes('change-patterns')
+    && field22(dS2.body, 'Hành động').includes('lock-risk-postgres'),
+    'workflow-db-change Bước 2: theo skill data-db-migration (C2), tra change-patterns và lock-risk-postgres');
+  ok(field22(dS2.body, 'Đầu ra').includes('expand') && field22(dS2.body, 'Đầu ra').includes('Bước 3'),
+    'workflow-db-change Bước 2: Đầu ra có kế hoạch theo pha làm đầu vào cho Bước 3');
+  ok(field22(dS3.body, 'Thực hiện').includes('agent `data-migration-writer`') && field22(dS3.body, 'Thực hiện').includes('agent `backend-implementer`'),
+    'workflow-db-change Bước 3: data-migration-writer (file migration) ∥ backend-implementer (code)');
+  ok(field22(dS3.body, 'Hành động').includes('git status --porcelain'), 'workflow-db-change Bước 3: session chính ghi mốc git status --porcelain trước khi dispatch');
+  ok(field22(dS3.body, 'Ràng buộc').includes('không sửa file migration đã có') && field22(dS3.body, 'Ràng buộc').includes('không kết nối DB'),
+    'workflow-db-change Bước 3: file migration chỉ file MỚI, agent không kết nối DB/chạy migration');
+  ok(field22(dS3.body, 'Gate').includes('file migration MỚI') && field22(dS3.body, 'Gate').includes('git ls-files --others')
+    && field22(dS3.body, 'Gate').includes('đã có trên base branch'),
+    'workflow-db-change Bước 3: Gate so diff với mốc — chỉ file migration mới + file code thuộc nơi dùng, không sửa file đã có');
+  ok(field22(dS3.body, 'Khi fail').includes('blocked') && field22(dS3.body, 'Khi fail').includes('quay lại Bước 2'),
+    'workflow-db-change Bước 3: agent blocked → hỏi người dùng; đổi kế hoạch → quay lại Bước 2');
+  ok(field22(dS6.body, 'Thực hiện').includes('skill `data-db-migration`') && field22(dS6.body, 'Hành động').includes('verify-cycle'),
+    'workflow-db-change Bước 6: chạy thử theo skill data-db-migration (C4), chu trình verify-cycle');
+  ok(field22(dS8.body, 'Hành động').includes('next_actions') && field22(dS8.body, 'Hành động').includes('Bước 3'),
+    'workflow-db-change Bước 8: pha contract còn nợ lấy từ next_actions của report Bước 3');
+  ok(dbc22 && ['data-migration-writer', 'backend-implementer', 'backend-test-writer', 'backend-reviewer'].every((a) => dbc22.agents.includes(a))
+    && dbc22.requires.includes('data/data-db-migration'),
+    'workflow-db-change: frontmatter agents có data-migration-writer, requires có data/data-db-migration');
+  ok(parseSteps(dbc22?.body ?? '').length === 9 && step22(dbc22, 2).checkpoint && step22(dbc22, 5).checkpoint && step22(dbc22, 9).checkpoint,
+    'workflow-db-change: vẫn 9 bước, ⏸ ở Bước 2, 5, 9');
+  ok(flat22(dbc22?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '').includes('Agent migration trả `blocked`'),
+    'workflow-db-change: bảng lỗi có hàng agent migration trả blocked');
+  ok((offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? []).includes('workflows/workflow-db-change'),
+    'offeredCatalog: vẫn offer workflows/workflow-db-change (closure data-db-migration đã publish)');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
