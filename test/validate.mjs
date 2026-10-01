@@ -1336,8 +1336,8 @@ if (fs.existsSync(BUILD)) {
     ok(cowork19.includes(s), `_cowork.json: có ${s}`);
   }
   const feMan19 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', '.manifest.json'), 'utf8'));
-  ok(feMan19.version === '1.6.0' && !feMan19.description.includes('DRAFT'),
-    'frontend manifest: version 1.6.0, description không còn nhãn DRAFT');
+  ok(feMan19.version === '1.7.0' && !feMan19.description.includes('DRAFT'),
+    'frontend manifest: version 1.7.0, description không còn nhãn DRAFT');
   const fePr19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'shared', 'principles.md'), 'utf8');
   ok(!fePr19.includes('state-model'), 'frontend principles: không còn tham chiếu state-model treo (spec §7.3.7)');
   const feImpl19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-implement', 'SKILL.md'), 'utf8');
@@ -1805,6 +1805,17 @@ if (fs.existsSync(BUILD)) {
     'chrome-trace.md: long task, xuất trace, ghi lệnh vào report Bước 3');
   ok(!/https?:\/\/(?!localhost|127\.0\.0\.1)[a-z]/i.test(feRefs23.map(feRef23).join('\n').replace(/https?:\/\/(?:github\.com|developer\.chrome\.com|web\.dev|react\.dev)[^\s)]*/g, '')),
     'frontend-performance references: không URL host ngoài (trừ link tài liệu chính thức)');
+
+  const pub23 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_published.json'), 'utf8')).published;
+  ok(pub23.includes('frontend/frontend-performance'), '_published.json: có frontend/frontend-performance (publish trước khi nối workflow)');
+  const cowork23 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
+  ok(cowork23.includes('frontend:frontend-performance'), '_cowork.json: có frontend:frontend-performance');
+  const feMan23 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', '.manifest.json'), 'utf8'));
+  ok(feMan23.version === '1.7.0' && feMan23.description.includes('frontend-performance'),
+    'frontend manifest: version 1.7.0, description nêu frontend-performance');
+  const offFe23 = offeredCatalog().plugins.find((p) => p.id === 'frontend');
+  ok(!!offFe23 && offFe23.skillIds.includes('frontend/frontend-performance') && offFe23.skillIds.length === 10,
+    'offeredCatalog: plugin frontend offer 10 skill gồm frontend-performance');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

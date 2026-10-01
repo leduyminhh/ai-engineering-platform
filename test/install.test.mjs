@@ -201,7 +201,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   for (const s of ['frontend/frontend-data-integration', 'frontend/frontend-e2e-testing']) {
     ok(feOff && feOff.skillIds.includes(s), `offeredCatalog: offer ${s} (đã publish)`);
   }
-  ok(feOff && feOff.skillIds.length === 9, 'offeredCatalog: offer đủ 9 skill frontend đã publish');
+  ok(feOff && feOff.skillIds.length === 10, 'offeredCatalog: offer đủ 10 skill frontend đã publish');
 }
 
 // ── unit: wizardReportModel — report "phần nào cài được qua wizard" (offered vs draft) ──
