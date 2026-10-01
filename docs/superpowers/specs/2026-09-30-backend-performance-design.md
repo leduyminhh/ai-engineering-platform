@@ -1,8 +1,8 @@
 # Thiết kế: Skill `backend-performance` + agent `backend-performance-analyst` — đo và profile cho `workflow-performance` (G10)
 
 - Ngày: 2026-09-30
-- Trạng thái: **Đã thực thi** trên nhánh `feature/backend-performance` (2026-09-30), chờ merge; sửa sau review
-  toàn nhánh ghi ở §8.
+- Trạng thái: **Đã thực thi**, merge vào `master` = `16a8064` (2026-10-01); sửa sau review toàn nhánh
+  ghi ở §8.
 - Phạm vi: đóng G10 (spec [`2026-09-25-agents-workflows-design.md`](2026-09-25-agents-workflows-design.md) §9;
   spec [`2026-09-29-skill-plugin-workflow-upgrade-design.md`](2026-09-29-skill-plugin-workflow-upgrade-design.md)
   §5.1, §13.2) cho **phía backend**: cung cấp công cụ và chủ sở hữu cho Bước 2 (Baseline), Bước 3 (Profile &

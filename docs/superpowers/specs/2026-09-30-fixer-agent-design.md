@@ -1,7 +1,7 @@
 # Thiết kế: Agent `*-fixer` + skill `*-fix` — khoá phạm vi bước sửa code trong workflow (A4/Q2)
 
 - Ngày: 2026-09-30
-- Trạng thái: **Đã thực thi** trên nhánh `feature/fixer-agent` (2026-09-30), chờ merge; các sửa sau review toàn
+- Trạng thái: **Đã thực thi**, merge vào `master` = `909f1b9` (2026-09-30); các sửa sau review toàn
   nhánh ghi ở §8.
 - Phạm vi: đóng mục A4 (§8.5) và Q2 (§11) của spec
   [`2026-09-29-skill-plugin-workflow-upgrade-design.md`](2026-09-29-skill-plugin-workflow-upgrade-design.md)

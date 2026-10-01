@@ -1,7 +1,7 @@
 # Thiết kế: Audit & định hướng nâng cấp Skill → Plugin → Workflow + plan thiết kế agent mới
 
 - Ngày: 2026-09-29
-- Trạng thái: **Đang thực thi** (cập nhật 2026-09-30). P0 xong; P1 xong (`data-db-migration` vẫn draft);
+- Trạng thái: **Đang thực thi** (cập nhật 2026-10-01). P0 xong; P1 xong (`data-db-migration` vẫn draft);
   P1c xong (publish không chờ pilot, 2026-09-30); P1b chờ pilot (Q6); P2 phần lớn xong (WF3 phần dùng skill
   chờ P1b); P3 xong (G10 phần backend, 2026-09-30); frontend performance còn mở. Tiến độ và việc còn lại: §13.
 - Phạm vi: đánh giá chất lượng 4 plugin `backend`, `frontend`, `engineering`, `workflows`; định hướng nâng cấp
@@ -607,9 +607,9 @@ Mỗi task = 1 branch + 1 commit (theo `AGENTS.md`), người duyệt diff trư�
 | **P0 — Sửa lỗi nội dung** | D1, D2, D3, D4, D5, D6, D11; PL1 (ship §5.1), PL2 (manifest) | S1–S3, WF1, WF2, A1, A2 | ✅ merge `2619be9` |
 | **P1 — Năng lực mới** | ~~ADR phân ranh `backend-db-migration` ↔ `data-oltp-implement` (Q5)~~ (xong: ADR-0001, skill nay là `data-db-migration`); `backend-db-migration` theo §7.1.10 (M-P1–M-P9, draft); `frontend-data-integration` theo §7.3.7 (DI-P1–DI-P3, draft); `frontend-e2e-testing` theo §7.2; 2 agent frontend theo §8.2–§8.3; S4, S7 | §7, §8 | ✅ merge `48f90d0`, `a609735`, `482c50b`; S7 xong trên nhánh `feature/spec-followups` |
 | **P1b — Publish db-migration** (sau pilot, Q6) | Pha publish của §7.1.10: `_published.json`, thêm skill vào `backend-implementer`, S8; WF3 đi cùng | §7.1.10, WF3 | ⏳ chờ pilot (Q6) |
-| **P1c — Publish frontend-data-integration** (sau pilot, Q7) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ✅ publish không chờ pilot (2026-09-30), nhánh `feature/spec-followups` |
+| **P1c — Publish frontend-data-integration** (sau pilot, Q7) | Pha publish của §7.3.7: `_published.json`, WF4, WF5, sửa `principles.md:14,41`, pointer từ `frontend-implement` | §7.3.7, WF4, WF5 | ✅ publish không chờ pilot (2026-09-30), merge `d0cc23f` |
 | **P2 — Nối vào workflow** | WF3–WF7 (db-change, api, feature, testing, security-review); WF8–WF11 | §5.3 | ◐ WF4–WF11 xong; WF3 phần dùng skill còn chờ P1b |
-| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); G10 backend xong trên nhánh `feature/backend-performance`; frontend performance còn mở |
+| **P3 — Phần còn lại** | WF12; G10 performance; A3, A4; S5, S6 | — | ◐ merge `1d8b42f`, `0a22df5`, `909f1b9`; A4 xong (spec 2026-09-30-fixer-agent-design); G10 backend xong, merge `16a8064`; frontend performance còn mở |
 
 Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa làm. Chi tiết từng mục ở §13.
 
@@ -658,7 +658,7 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
   (ADR-0001, mục Hệ quả). Phải kiểm trước pha publish P1b.
 - Publish `frontend-data-integration` và `frontend-e2e-testing` không chờ pilot (2026-09-30, lần thứ hai làm trái Q4 sau F-Q3 của spec fixer); chất lượng nội dung chưa kiểm trên project thật. `frontend-data-integration` giả định `frontend-implement` để lại `props` + `TODO`.
 
-## 13. Tiến độ & việc còn lại (kiểm trên source 2026-09-30, `master` = `909f1b9`)
+## 13. Tiến độ & việc còn lại (kiểm trên source 2026-10-01, `master` = `16a8064`)
 
 ### 13.1 Đã xong
 
@@ -685,8 +685,8 @@ Ký hiệu: ✅ xong · ◐ xong một phần · ⏳ chờ pilot · ☐ chưa l�
 | Ánh xạ vùng rủi ro security-review ↔ quality-gate | `0a22df5` | `bd1cfb4` |
 | WF11 (Bước 1 Baseline) | `0a22df5` | `1baa5f9`, `aa93f8d`, `9db78d8`, `e4ff661` |
 | A4/Q2: fixer agent | `909f1b9` | `d0e17ce`, `8fa1c13`, `875c430`, `b017350`, `534d379`, `6db2c11`, `d7b1e0d`, `fca093e`, `938349f`, `528ec4f` |
-| S7, P1c, WF4, WF5, WF6 | nhánh `feature/spec-followups` | `5b314a3`, `0282bc6`, `b5da76a`, `57dab44`, `7c56037`, `cdaa27d` |
-| G10 (backend) | nhánh `feature/backend-performance` | `21ee797`, `c32b42b`, `7b2f8cc`, `c6870ec`, `336c49f`, `71f2cb6` |
+| S7, P1c, WF4, WF5, WF6 | `d0cc23f` | `5b314a3`, `0282bc6`, `b5da76a`, `57dab44`, `7c56037`, `cdaa27d`, `71b7a02`, `f8f2ac6` |
+| G10 (backend) | `16a8064` | `21ee797`, `c32b42b`, `7b2f8cc`, `c6870ec`, `336c49f`, `71f2cb6`, `ce647d4`, `5ff2c8d`, `ab63691`, `d91176b` |
 
 ### 13.2 Còn lại
 
