@@ -1777,6 +1777,34 @@ if (fs.existsSync(BUILD)) {
   ok(/^\| P5 [^\n]*`src\/`/m.test(feSkill23) && /^\| P5 [^\n]*blocked/m.test(feSkill23),
     'frontend-performance: P5 cấm sửa src/, chạy như subagent → trả blocked');
   ok(feSkill23.includes('`frontend-fix`'), 'frontend-performance: ranh giới nêu frontend-fix');
+  const feRefs23 = ['measure-conditions', 'serve-production-build', 'lighthouse-cli', 'bundle-analysis', 'profiling-react', 'chrome-trace'];
+  const feRef23 = (n) => { const f = path.join(feDir23, 'references', `${n}.md`); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : ''; };
+  for (const n of feRefs23) {
+    ok(feRef23(n).length > 200, `frontend-performance references/${n}.md: có nội dung`);
+    ok(feSkill23.includes(`(references/${n}.md)`), `frontend-performance: SKILL.md link tới references/${n}.md`);
+    ok(feRef23(n).includes('[Unverified]'), `frontend-performance references/${n}.md: lệnh/cờ chưa kiểm gắn [Unverified]`);
+  }
+  const fmc23 = feRef23('measure-conditions');
+  ok(/\| *Route/.test(fmc23) && /\| *Build/.test(fmc23) && fmc23.includes('Config tool đo') && fmc23.includes('10%')
+    && /\| *Cache/.test(fmc23) && /throttl/i.test(fmc23) && fmc23.includes('Phục vụ bản build'),
+    'measure-conditions.md (FE): bảng điều kiện có Route, Build, Phục vụ bản build, Cache, throttle, Config tool đo, ngưỡng 10%');
+  ok(/vite preview|next start/.test(feRef23('serve-production-build')) && feRef23('serve-production-build').includes('dev server')
+    && feRef23('serve-production-build').includes('blocked'),
+    'serve-production-build.md: lệnh phục vụ bản build (vite preview / next start), cấm dev server, project không có lệnh → blocked');
+  ok(/lighthouse/i.test(feRef23('lighthouse-cli')) && feRef23('lighthouse-cli').includes('--output=json')
+    && feRef23('lighthouse-cli').includes('localhost') && !/https?:\/\/(?!localhost|127\.0\.0\.1)[a-z]/i.test(feRef23('lighthouse-cli'))
+    && feRef23('lighthouse-cli').includes('INP'),
+    'lighthouse-cli.md: lệnh Lighthouse CLI trỏ localhost, xuất JSON, không URL ngoài, nêu INP không đo trong lab');
+  ok(/bundle/i.test(feRef23('bundle-analysis')) && /(source-map-explorer|visualizer|webpack-bundle-analyzer)/.test(feRef23('bundle-analysis'))
+    && /code-splitting|dynamic import/i.test(feRef23('bundle-analysis')),
+    'bundle-analysis.md: có bundle analyzer và code-splitting');
+  ok(/Profiler/.test(feRef23('profiling-react')) && /(profiling build|build profiling)/i.test(feRef23('profiling-react'))
+    && /commit/i.test(feRef23('profiling-react')),
+    'profiling-react.md: React Profiler, cần build profiling, commit thừa');
+  ok(/long task/i.test(feRef23('chrome-trace')) && /trace/i.test(feRef23('chrome-trace')) && feRef23('chrome-trace').includes('Bước 3'),
+    'chrome-trace.md: long task, xuất trace, ghi lệnh vào report Bước 3');
+  ok(!/https?:\/\/(?!localhost|127\.0\.0\.1)[a-z]/i.test(feRefs23.map(feRef23).join('\n').replace(/https?:\/\/(?:github\.com|developer\.chrome\.com|web\.dev|react\.dev)[^\s)]*/g, '')),
+    'frontend-performance references: không URL host ngoài (trừ link tài liệu chính thức)');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
