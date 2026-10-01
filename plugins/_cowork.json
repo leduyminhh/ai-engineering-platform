@@ -12,6 +12,7 @@
     "backend:backend-migrate-architecture",
     "backend:backend-migrate-vault-consul",
     "backend:backend-fix",
+    "backend:backend-performance",
     "frontend:frontend-init",
     "frontend:frontend-implement",
     "frontend:frontend-testing",

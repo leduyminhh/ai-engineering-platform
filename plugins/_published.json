@@ -10,6 +10,7 @@
     "backend/backend-migrate-architecture",
     "backend/backend-api-contract",
     "backend/backend-fix",
+    "backend/backend-performance",
     "frontend/frontend-init",
     "frontend/frontend-implement",
     "frontend/frontend-testing",

@@ -6,7 +6,7 @@ title: "Performance — profile, tối ưu, benchmark trước/sau"
 kind: workflow
 tier: 3
 risk: medium
-agents: "backend-fixer,frontend-fixer,backend-reviewer,frontend-reviewer"
+agents: "backend-performance-analyst,backend-fixer,frontend-fixer,backend-reviewer,frontend-reviewer"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -25,8 +25,8 @@ next: null
 
 ## Điều kiện tiên quyết
 
-- Skill/agent đã cài: `backend-fixer`, `frontend-fixer`, `backend-reviewer`, `frontend-reviewer`, skill
-  `core/git-workflow`.
+- Skill/agent đã cài: `backend-performance-analyst`, `backend-fixer`, `frontend-fixer`, `backend-reviewer`,
+  `frontend-reviewer`, skill `core/git-workflow`.
 - Artifact phải có sẵn: không bắt buộc, ngoài mô tả vấn đề của người dùng.
 - Baseline: build/test hiện tại của vùng đụng đang XANH trước khi tối ưu.
 
@@ -42,33 +42,53 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** mô tả vấn đề hiệu năng của người dùng
 - **Hành động:** chọn metric đo (latency/throughput/memory/…) và ngưỡng mục tiêu cần đạt.
 - **Ràng buộc:** không bắt đầu tối ưu khi chưa có metric + ngưỡng cụ thể.
-- **Đầu ra:** metric + ngưỡng mục tiêu.
+- **Đầu ra:** metric + ngưỡng mục tiêu + điều kiện đo sơ bộ (môi trường local/test, endpoint/luồng, tải mục tiêu).
 - **Gate:** metric + ngưỡng + điều kiện đo.
 - **Khi fail:** người dùng chưa nêu rõ mục tiêu → hỏi lại ngưỡng cụ thể.
 - **Evidence:** metric + ngưỡng ghi trong report bước.
 
 ### Bước 2 — Baseline
 
-- **Thực hiện:** session chính
-- **Đầu vào:** metric từ Bước 1
-- **Hành động:** đo baseline hiện tại đúng môi trường/tải/dữ liệu đã chọn.
-- **Ràng buộc:** không đổi code trước khi có baseline.
-- **Đầu ra:** số đo baseline.
-- **Gate:** số đo baseline có lệnh + môi trường.
-- **Khi fail:** không đo được → hỏi công cụ/môi trường đo, không tự chọn thay.
-- **Evidence:** lệnh đo + kết quả baseline.
+- **Thực hiện:** agent `backend-performance-analyst` (chế độ `measure`; phía BE)
+- **Đầu vào:** metric + ngưỡng + điều kiện đo sơ bộ từ Bước 1
+- **Hành động:** session chính ghi mốc `git status --porcelain` rồi dispatch agent; agent chốt bảng điều kiện đo
+  theo skill `backend-performance`, viết/tái dùng script trong `perf/` hoặc `bench/`, chạy ≥ 3 lần trên môi trường
+  local/test, ghi p50/p95/p99, throughput, error rate, độ lệch. Phía FE: chưa có skill đo/profile frontend —
+  session chính đo theo công cụ sẵn có của project, ghi `[giả định]` cho phần không kiểm chứng được.
+- **Ràng buộc:** không đổi code production trước khi có baseline; không trỏ tải vào staging/production; thêm
+  tool/dependency đo → hỏi trước.
+- **Đầu ra:** bảng điều kiện đo + script đo + số đo baseline.
+- **Gate:** bảng điều kiện đo đầy đủ; ≥ 3 lần + độ lệch; so với mốc đầu bước, file thay đổi hoặc mới trong bước
+  (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm `perf/`, `bench/`, config tool đo
+  đã liệt kê ở hàng Config tool đo của bảng điều kiện.
+- **Khi fail:** agent trả `not_run` vì thiếu môi trường local/test → dừng `blocked`, báo người dùng cung cấp môi
+  trường (không có baseline thì không tối ưu); agent trả `blocked` + câu hỏi → session chính hỏi người dùng, ghi
+  quyết định vào bảng điều kiện (hàng Config tool đo nếu liên quan), gọi lại agent; độ lệch vượt ngưỡng P3 → tăng
+  số lần lặp hoặc cô lập nhiễu, đo lại; diff ngoài phạm vi (ngoài `perf/`, `bench/`, hàng Config tool đo) → revert
+  phần lệch, không nhận.
+- **Evidence:** report của agent (bảng điều kiện, bảng số, lệnh chạy) + danh sách file thay đổi so với mốc đầu
+  bước + `git hash-object` của script và file bảng điều kiện sau khi chốt (mốc bất biến cho Bước 5).
 
 ### Bước 3 — Profile & giả thuyết ⏸
 
-- **Thực hiện:** session chính
-- **Đầu vào:** baseline từ Bước 2
-- **Hành động:** profile để tìm bottleneck, nêu giả thuyết nguyên nhân kèm evidence, trình người dùng xác nhận
-  hướng tối ưu.
-- **Ràng buộc:** không tối ưu khi giả thuyết chưa có evidence.
+- **Thực hiện:** agent `backend-performance-analyst` (chế độ `profile`; phía BE)
+- **Đầu vào:** bảng điều kiện + script + số đo baseline từ Bước 2
+- **Hành động:** session chính ghi mốc `git status --porcelain` rồi dispatch; agent profile theo thứ tự DB →
+  CPU/alloc → I/O trong lúc chạy tải của Bước 2, nêu bottleneck + giả thuyết kèm evidence đo được, đề xuất danh
+  sách file/hàm cho Bước 4; session chính trình người dùng xác nhận hướng tối ưu. Phía FE: chưa có skill
+  đo/profile frontend — session chính đo theo công cụ sẵn có của project, ghi `[giả định]` cho phần không kiểm
+  chứng được.
+- **Ràng buộc:** không tối ưu khi giả thuyết chưa có evidence; không sửa bảng điều kiện và script đo của Bước 2 —
+  lệnh/config bật đếm query hay profiler ghi vào report Bước 3 (hoặc `perf/profile-<luồng>.md`).
 - **Đầu ra:** bottleneck + giả thuyết đã xác nhận + **danh sách file/hàm bottleneck được sửa** (đầu vào cho
   Bước 4).
-- **Gate:** bottleneck có evidence; có danh sách file được sửa.
-- **Khi fail:** người dùng không đồng ý hướng tối ưu → profile lại hoặc thu thêm evidence.
+- **Gate:** bottleneck có evidence đo được (không chỉ đọc code); có danh sách file được sửa; so với mốc đầu bước,
+  file thay đổi hoặc mới (`git diff --name-only`, `git ls-files --others --exclude-standard`) chỉ gồm `perf/`,
+  `bench/`, config tool đo đã liệt kê ở hàng Config tool đo của bảng điều kiện.
+- **Khi fail:** người dùng không đồng ý hướng tối ưu → profile lại hoặc thu thêm evidence; agent trả `blocked` +
+  câu hỏi → session chính hỏi người dùng, ghi quyết định vào report Bước 3, gọi lại agent; quyết định làm đổi điều
+  kiện đo (môi trường, dữ liệu seed, tải, warm-up, số lần lặp, config tool đo) → quay lại Bước 2 đo lại baseline;
+  diff ngoài phạm vi (ngoài `perf/`, `bench/`, hàng Config tool đo) → revert phần lệch, không nhận.
 - **Evidence:** kết quả profile (file:line hoặc số đo) trong report bước + danh sách file được sửa + xác nhận
   của người dùng.
 
@@ -98,14 +118,28 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 5 — Benchmark & so sánh
 
-- **Thực hiện:** session chính
-- **Đầu vào:** code đã tối ưu từ Bước 4
-- **Hành động:** đo lại đúng điều kiện Bước 2, so với baseline, kết luận đạt hay không đạt ngưỡng.
-- **Ràng buộc:** không so sánh số đo khác điều kiện với baseline.
-- **Đầu ra:** số đo sau + kết luận đạt/không đạt.
-- **Gate:** số đo sau cùng điều kiện; đạt ngưỡng hoặc báo không đạt.
-- **Khi fail:** không đạt ngưỡng → báo rõ, quay lại Bước 3 tìm hướng khác hoặc dừng theo quyết định người dùng.
-- **Evidence:** bảng baseline vs sau + lệnh đo.
+- **Thực hiện:** agent `backend-performance-analyst` (chế độ `measure`; phía BE)
+- **Đầu vào:** code đã tối ưu từ Bước 4 + script và bảng điều kiện đo của Bước 2
+- **Hành động:** session chính ghi mốc `git status --porcelain`, đọc mốc `git hash-object` của script và bảng
+  điều kiện đã ghi ở Evidence Bước 2, rồi dispatch;
+  agent build + khởi chạy lại ứng dụng từ working tree theo hàng Khởi chạy ứng dụng (không tự làm được →
+  `blocked` hỏi người dùng), xác nhận là tiến trình mới (PID/thời điểm start khác baseline, hoặc version/actuator
+  info) trước warm-up, rồi chạy lại đúng script + bảng điều kiện của Bước 2 (≥ 3 lần), so với baseline, lập bảng
+  baseline vs sau. Phía FE: chưa có skill đo/profile frontend — session chính đo theo công cụ sẵn có của project,
+  ghi `[giả định]` cho phần không kiểm chứng được.
+- **Ràng buộc:** không đổi điều kiện đo so với Bước 2 (môi trường, dữ liệu seed, tải, warm-up, số lần lặp); không
+  so sánh số đo khác điều kiện với baseline.
+- **Đầu ra:** số đo sau + kết luận đạt/không đạt ngưỡng.
+- **Gate:** bảng baseline vs sau cùng điều kiện; đạt ngưỡng hoặc báo không đạt; độ lệch vượt ngưỡng P3 (nhiễu) →
+  không kết luận; script và bảng điều kiện Bước 2 không đổi (`git hash-object` bằng mốc Bước 2); file mới chỉ
+  trong `perf/`/`bench/` (output); diff code production của working tree (`git diff --name-only` +
+  `git ls-files --others --exclude-standard`) chỉ gồm danh sách file Bước 4, cộng file ở hàng Config tool đo.
+- **Khi fail:** không đạt ngưỡng → báo rõ, quay lại Bước 3 tìm hướng khác hoặc dừng theo quyết định người dùng;
+  điều kiện lệch Bước 2 → chạy lại đúng điều kiện; nhiễu vượt ngưỡng → đo lại; agent trả `blocked` + câu hỏi →
+  session chính hỏi người dùng, ghi quyết định vào report Bước 5, gọi lại agent; quyết định làm đổi điều kiện đo
+  (môi trường, dữ liệu seed, tải, warm-up, số lần lặp, config tool đo) → quay lại Bước 2 đo lại baseline.
+- **Evidence:** report của agent (bảng baseline vs sau + lệnh đo) + `git hash-object` hiện tại của script và
+  bảng điều kiện so với mốc Bước 2.
 
 ### Bước 6 — Review
 
@@ -148,6 +182,10 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` (Bước 6) | Quay lại Bước 4 sửa, review lại |
 | Không có số đo trước/sau trên cùng điều kiện | Dừng `blocked`, không kết luận về hiệu năng |
+| Môi trường đo thiếu (Bước 2/5, `not_run`) | Dừng `blocked`, báo người dùng cung cấp môi trường local/test; không tối ưu khi chưa có baseline |
+| Điều kiện Bước 5 lệch Bước 2 | Từ chối so sánh; chạy lại đúng điều kiện Bước 2 |
+| Nhiễu vượt ngưỡng P3 (Bước 2/5) | Không kết luận; tăng số lần lặp hoặc cô lập nhiễu rồi đo lại |
+| Quyết định phát sinh ở Bước 3/5 làm đổi điều kiện đo | Quay lại Bước 2 đo lại baseline; không sửa bảng điều kiện đã chốt |
 | Người dùng không đồng ý hướng tối ưu (sau Bước 3 ⏸) | Profile lại hoặc thu thêm evidence |
 | Fixer trả `blocked` (Bước 4) | Người dùng mở rộng danh sách file có xác nhận, gọi lại agent; không tự mở phạm vi |
 | Không đạt ngưỡng mục tiêu (Bước 5) | Báo rõ, quay lại Bước 3 tìm hướng khác hoặc dừng theo quyết định người dùng |
@@ -161,7 +199,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 ## Definition of Done
 
 - [ ] Metric + ngưỡng mục tiêu — evidence: Bước 1
-- [ ] Baseline đo đúng điều kiện — evidence: Bước 2
+- [ ] Baseline đo đúng điều kiện (bảng điều kiện đo + ≥ 3 lần) — evidence: Bước 2
 - [ ] Bottleneck có evidence, người dùng xác nhận hướng tối ưu — evidence: Bước 3
 - [ ] Build/test xanh sau tối ưu — evidence: Bước 4
 - [ ] Số đo sau cùng điều kiện với baseline, đạt hoặc báo không đạt ngưỡng — evidence: Bước 5

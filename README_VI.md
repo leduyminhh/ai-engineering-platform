@@ -142,7 +142,7 @@ session chính) mới điều phối và gọi `core:git-workflow` sau checkpoin
 có cấu trúc (kết quả, `file:line`, residual risk); khẳng định "đã chạy / đã pass" luôn kèm
 evidence, hoặc `not_run` + lý do.
 
-### Agent (15)
+### Agent (16)
 
 `mode` trung lập với provider: Claude map `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mode: "read-only"` và
@@ -154,6 +154,7 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF03, WF05, WF06, WF07, WF08 |
 | `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01–WF04, WF07–WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
+| `backend-performance-analyst` | backend | write | backend-performance | WF09 |
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
 | `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01, WF08 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05, WF06 |
@@ -185,7 +186,7 @@ xác nhận bắt buộc của orchestrator.
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
 | WF07 | `workflow-db-change` | 2 | high | W15 | backend-implementer, backend-test-writer, backend-reviewer |
 | WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract của W1) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor, frontend-data-integrator |
-| WF09 | `workflow-performance` | 3 | medium | W16 | backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
+| WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
 | WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer |
 | WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |
@@ -228,7 +229,6 @@ Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
 | G9 | `engineering-task-breakdown` | engineering | WF01 |
-| G10 | `backend-performance-testing` (k6/JMeter/Gatling) | backend | WF09 |
 | G11 | `engineering-docs-sync` | engineering | WF12 |
 
 **Workflow tương lai:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),
