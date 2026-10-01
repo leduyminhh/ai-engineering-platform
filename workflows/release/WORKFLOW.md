@@ -6,7 +6,7 @@ title: "Release — quality gate, release notes, deploy checklist"
 kind: workflow
 tier: 2
 risk: high
-agents: "engineering-quality-auditor,engineering-release-scribe,ops-release-engineer"
+agents: "engineering-quality-auditor,engineering-release-scribe,ops-release-engineer,frontend-e2e-test-writer"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -28,7 +28,7 @@ next: null
 ## Điều kiện tiên quyết
 
 - Skill/agent đã cài: `engineering-quality-auditor`, `engineering-release-scribe`, `ops-release-engineer`,
-  skill `core/git-workflow`.
+  `frontend-e2e-test-writer` (chỉ khi project có e2e), skill `core/git-workflow`.
 - Artifact phải có sẵn: git log của phạm vi release (tag trước hoặc khoảng commit xác định được).
 - Baseline: build/test của branch release đang XANH — được đo và ghi số mốc ở Bước 1 trước khi chạy quality gate.
 
@@ -92,20 +92,29 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 5 — Deploy checklist
 
-- **Thực hiện:** agent `ops-release-engineer`
+- **Thực hiện:** agent `ops-release-engineer` ∥ agent `frontend-e2e-test-writer` (smoke e2e tuỳ chọn — chỉ khi
+  project có `e2e/`)
 - **Đầu vào:** commit release từ Bước 4
 - **Hành động:** lập checklist các bước deploy theo quy trình project; ghi rõ điều kiện rollback (khi nào
   cần rollback, cách rollback). Liệt kê migration schema nằm trong phạm vi release (thư mục migration của
   project, so với tag trước) và ghi thứ tự migration↔deploy: migration tương thích ngược chạy trước khi
   deploy code mới, migration phá tương thích chỉ sau khi code cũ đã ngừng dùng; migration nào đã áp trên môi
-  trường đích do người dùng xác nhận.
-- **Ràng buộc:** không tự thực hiện deploy và không tự chạy migration — chỉ lập checklist và đề xuất thứ tự.
+  trường đích do người dùng xác nhận. Smoke e2e (tuỳ chọn): `frontend-e2e-test-writer` chạy 1–3 luồng e2e
+  giá trị cao **đã có** trên bản release candidate (commit release Bước 4) chạy ở local/test,
+  `npx playwright test` theo skill `frontend-e2e-testing` [lệnh cụ thể theo project]; không viết test mới,
+  không sửa test; thiếu môi trường BE/DB test → `not_run` + lý do.
+- **Ràng buộc:** không tự thực hiện deploy và không tự chạy migration — chỉ lập checklist và đề xuất thứ tự;
+  smoke chỉ trên local/test, không trỏ staging/production (E-r3); không viết hay sửa file test trong bước này.
 - **Đầu ra:** deploy checklist + điều kiện rollback + danh sách migration chờ chạy kèm thứ tự (hoặc "không có
-  migration").
-- **Gate:** checklist + điều kiện rollback + kiểm migration (danh sách hoặc "không có migration").
+  migration") + kết quả smoke e2e (pass/fail/`not_run` + lý do) hoặc "không có e2e".
+- **Gate:** checklist + điều kiện rollback + kiểm migration (danh sách hoặc "không có migration"); smoke e2e
+  pass, hoặc `not_run` có lý do (ghi vào `remaining_risks`), hoặc "không có e2e"; so với mốc
+  `git status --porcelain` đầu bước, smoke không thay đổi file nào ngoài output báo cáo/trace của Playwright.
 - **Khi fail:** thiếu bước quan trọng trong quy trình project, hoặc không xác định được migration nào đã áp
-  → bổ sung/hỏi người dùng, ghi rõ lý do.
-- **Evidence:** deploy checklist và danh sách migration trong report bước.
+  → bổ sung/hỏi người dùng, ghi rõ lý do; smoke e2e đỏ vì hành vi sai → dừng, không deploy, đề xuất
+  `workflow-bugfix`; đỏ vì flaky → chạy lại theo E4, không nới assertion.
+- **Evidence:** deploy checklist và danh sách migration trong report bước; smoke: lệnh Playwright +
+  kết quả/trace hoặc `not_run` + lý do.
 
 ### Bước 6 — Deploy ⏸
 
@@ -168,6 +177,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Người dùng không xác nhận release notes (sau Bước 3 ⏸) | Sửa lại theo git log, trình lại |
 | Người dùng không duyệt commit release (sau Bước 4 ⏸) | Không commit, quay lại Bước 3 hoặc sửa version |
 | Không xác định được migration nào đã áp (Bước 5) | Hỏi người dùng, không tự suy; không tự chạy migration |
+| Smoke e2e đỏ trước deploy (Bước 5) | Dừng, không deploy; đề xuất `workflow-bugfix`; flaky → chạy lại, không nới assertion |
 | Deploy lỗi giữa chừng (sau Bước 6 ⏸) | Dừng, người dùng áp điều kiện rollback của Bước 5; đề xuất `workflow-incident` nếu production bị ảnh hưởng |
 | Health/observability bất thường sau deploy (Bước 7) | Dừng, đề xuất `workflow-incident` |
 | Người dùng không xác nhận lệnh tag/push (sau Bước 8 ⏸) | Giữ nguyên đề xuất, không tự chạy |
@@ -185,7 +195,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 - [ ] Quality gate 0 blocker — evidence: Bước 2
 - [ ] Release notes/CHANGELOG đúng phạm vi đã xác nhận — evidence: Bước 3
 - [ ] Commit release chứa CHANGELOG + version bump đã được duyệt — evidence: Bước 4
-- [ ] Deploy checklist + điều kiện rollback + kiểm migration chờ chạy — evidence: Bước 5
+- [ ] Deploy checklist + điều kiện rollback + kiểm migration chờ chạy + smoke e2e pass/`not_run` có lý do/không có e2e — evidence: Bước 5
 - [ ] Người dùng đã deploy hoặc xác nhận hoãn — evidence: Bước 6
 - [ ] Hậu kiểm bình thường hoặc `not_run` có lý do — evidence: Bước 7
 - [ ] Lệnh tag/push trên commit release đã đề xuất, chờ hoặc đã có xác nhận — evidence: Bước 8
