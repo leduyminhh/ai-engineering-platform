@@ -6,6 +6,8 @@ import { classifyFiles, describePack, loadPolicy } from "../cli/lib/pack-guard.m
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..");
+// Policy gốc của repo (gói chỉ core) — dùng làm nền để test dựng biến thể shipPlugins.
+const DEFAULT_POLICY_FOR_TEST = loadPolicy(REPO_ROOT);
 
 // Bộ file tối thiểu có vẻ hợp lệ, đủ các file bắt buộc.
 function baseline() {
@@ -41,10 +43,10 @@ test("pack-guard: chặn mọi file .test.mjs và docs/", () => {
   assert.ok(errs.some((e) => e.includes('"docs"')), "phải chặn docs/");
 });
 
-test("pack-guard: nội dung skill trong plugin KHÔNG bị chặn", () => {
-  // file phụ trợ trong cây plugin hợp lệ (nội dung skill) nằm trong allowlist, không denylist.
+test("pack-guard: nội dung skill của plugin trong shipPlugins KHÔNG bị chặn", () => {
+  const policy = { ...DEFAULT_POLICY_FOR_TEST, shipPlugins: ["backend"] };
   const ok = baseline().concat(["plugins/backend/skills/backend-init/references/structure.md"]);
-  assert.deepEqual(classifyFiles(ok).filter((e) => e.includes("structure.md")), []);
+  assert.deepEqual(classifyFiles(ok, policy), []);
 });
 
 test("pack-guard: mục ngoài allowlist bị chặn", () => {
@@ -74,9 +76,9 @@ test("pack-guard: describePack tách allowed/denied/missing", () => {
     "test/wizard.test.mjs",
     "docs/internal/plan.md",
   ];
-  const { allowed, denied, missing } = describePack(files);
+  const { allowed, denied, missing } = describePack(files, { ...DEFAULT_POLICY_FOR_TEST, shipPlugins: ["backend"] });
   assert.ok(allowed.includes("cli/index.mjs"), "file hợp lệ phải nằm ở allowed");
-  assert.ok(allowed.includes("plugins/backend/skills/backend-init/references/structure.md"), "nội dung skill plugin phải allowed");
+  assert.ok(allowed.includes("plugins/backend/skills/backend-init/references/structure.md"), "nội dung skill plugin trong shipPlugins phải allowed");
   assert.ok(denied.includes("test/wizard.test.mjs"), "test suite phải bị denied");
   assert.ok(denied.includes("docs/internal/plan.md"), "docs/ phải bị denied");
   assert.deepEqual(missing, [], "bộ file này đủ required");
@@ -87,26 +89,56 @@ test("pack-guard: describePack báo thiếu file bắt buộc", () => {
   assert.ok(missing.includes("cli/index.mjs"), "phải nêu thiếu cli/index.mjs");
 });
 
-test("pack-guard: loadPolicy suy denylist plugin chưa publish từ _published.json", () => {
+test("pack-guard: pack.config.json của repo chỉ ship core (shipPlugins rỗng, deny workflows/)", () => {
   const policy = loadPolicy(REPO_ROOT);
-  assert.ok(Array.isArray(policy.published) && policy.published.includes("backend"),
-    "policy.published phải phản ánh _published.json");
-  assert.ok(policy.published.includes("engineering") && policy.published.includes("ops"),
-    "engineering + ops đã publish");
-  const files = baseline().concat([
-    "plugins/backend/.manifest.json",
-    "plugins/frontend/.manifest.json",
-    "plugins/data/skills/data-oltp-init/SKILL.md",
-  ]);
-  const errs = classifyFiles(files, policy);
-  assert.ok(errs.some((e) => e.includes("plugins/data/")), "plugin chưa publish (data) phải bị chặn");
+  assert.deepEqual(policy.shipPlugins, [], "shipPlugins phải rỗng — gói npm chỉ có core");
+  assert.ok(policy.deny.includes("^workflows/"), "deny phải gồm ^workflows/");
 });
 
-test("pack-guard: báo thiếu plugin đã publish khi vắng khỏi package", () => {
-  const policy = loadPolicy(REPO_ROOT);
+test("pack-guard: gói chỉ core (không plugin, không workflows) hợp lệ", () => {
   const files = baseline().concat([
-    "plugins/backend/.manifest.json",
-  ]); // thiếu 'frontend' (đang published)
+    "core/skills/git-workflow/SKILL.md",
+    "plugins/_marketplace.json",
+    "plugins/_published.json",
+  ]);
+  assert.deepEqual(classifyFiles(files, DEFAULT_POLICY_FOR_TEST), []);
+});
+
+test("pack-guard: chặn plugins/<id>/ ngoài shipPlugins (kể cả plugin từng published)", () => {
+  const files = baseline().concat(["plugins/backend/skills/backend-init/SKILL.md", "plugins/data/.manifest.json"]);
+  const errs = classifyFiles(files, DEFAULT_POLICY_FOR_TEST);
+  assert.ok(errs.some((e) => e.includes("plugins/backend/")), "plugin backend ngoài shipPlugins phải bị chặn");
+  assert.ok(errs.some((e) => e.includes("plugins/data/")), "plugin data ngoài shipPlugins phải bị chặn");
+});
+
+test("pack-guard: chặn workflows/ trong gói", () => {
+  const files = baseline().concat(["workflows/orchestrator/WORKFLOW.md"]);
+  const errs = classifyFiles(files, DEFAULT_POLICY_FOR_TEST);
+  assert.ok(errs.some((e) => e.includes("workflows/orchestrator/WORKFLOW.md")), "workflows/ phải bị chặn");
+});
+
+test("pack-guard: file cấp plugins/ (_published.json, _marketplace.json) không bị coi là plugin", () => {
+  const files = baseline().concat(["plugins/_published.json", "plugins/_marketplace.json"]);
+  assert.deepEqual(classifyFiles(files, DEFAULT_POLICY_FOR_TEST), []);
+});
+
+test("pack-guard: shipPlugins khai báo mà thiếu trong gói → THIẾU", () => {
+  const policy = { ...DEFAULT_POLICY_FOR_TEST, shipPlugins: ["backend"] };
+  const errs = classifyFiles(baseline(), policy);
+  assert.ok(errs.some((e) => e.includes("THIẾU") && e.includes("plugins/backend/")),
+    "plugin trong shipPlugins vắng khỏi gói phải báo THIẾU");
+});
+
+test("pack-guard: plugin trong shipPlugins có mặt → hợp lệ, plugin khác vẫn bị chặn", () => {
+  const policy = { ...DEFAULT_POLICY_FOR_TEST, shipPlugins: ["backend"] };
+  const files = baseline().concat(["plugins/backend/.manifest.json", "plugins/frontend/.manifest.json"]);
   const errs = classifyFiles(files, policy);
-  assert.ok(errs.some((e) => e.includes("frontend")), "phải báo thiếu plugin đã publish 'frontend'");
+  assert.ok(!errs.some((e) => e.includes("plugins/backend/")), "backend được ship");
+  assert.ok(errs.some((e) => e.includes("plugins/frontend/")), "frontend vẫn bị chặn");
+});
+
+test("pack-guard: _published.json không còn buộc plugin published phải có trong gói", () => {
+  // _published.json (wizard offer) giữ nguyên, nhưng không được ép ship: gói chỉ core vẫn hợp lệ.
+  const policy = loadPolicy(REPO_ROOT);
+  assert.deepEqual(classifyFiles(baseline(), policy), []);
 });

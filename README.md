@@ -42,6 +42,12 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 End users do not need to clone the repo — the `ai-engineering-platform` package is published
 to the npm registry, and both `aip` and `ai-engineering-platform` bins point to the same CLI.
 
+> **The npm package ships core only** — the baseline principles and the `git-workflow` skill
+> (`core:principles` + `core:git-workflow`). Plugins (`backend`, `frontend`, `engineering`,
+> `ops`, `data`) and workflows are **not** in the package; install them from source:
+> `git clone` + `npm link` (see [Quickstart](#quickstart)), then `aip install --plugin all`, or
+> `aip --all` to open the wizard with every skill including drafts.
+
 **1. Check Node.js** — **v20 or newer** is required:
 
 ```bash
@@ -67,9 +73,8 @@ wizard or a direct command:
 ```bash
 cd /path/to/project
 aip                                   # interactive wizard (install/uninstall/build/check menu)
-# or non-interactive:
-aip install --provider all --plugin all --yes
-aip install --provider claude --plugin backend --yes
+# or non-interactive (the npm package only has core, so this installs git-workflow + principles):
+aip install --provider all --yes
 ```
 
 **5. Review the result** in the project with `aip check` — it lists each skill and written
@@ -90,7 +95,7 @@ Run once without a global install — `npx` pulls the package into the npm cache
 add a bin to PATH:
 
 ```bash
-npx ai-engineering-platform install --provider all --plugin all --yes
+npx ai-engineering-platform install --provider all --yes
 ```
 
 ## Structure
@@ -112,7 +117,8 @@ Content is intentionally lean: `core`, domain plugins (`backend`, `frontend`, `d
 and cross-cutting capability plugins (`engineering`, `ops`); skills are
 **standalone, on-demand recipes** (there is no mandatory pipeline). The published set
 lives in `plugins/_published.json` — each entry is either a whole plugin (`backend`) or
-a single skill (`frontend/frontend-init`); the wizard offers only what is listed, and
+a single skill (`frontend/frontend-init`); the wizard offers only what is listed (from source;
+the npm package ships core only), and
 `npm run build` writes `build/wizard-install-report.md`. Plugins with no published skill
 (e.g. `data`) stay drafts, installable only via `--plugin`.
 
@@ -332,6 +338,10 @@ deterministic `build/cowork/<skill>.zip` files for Customize → Skills → Uplo
 
 The package uses the `files[]` allowlist in `package.json`; the `prepack` hook runs
 pack-guard automatically (fail-loud if the file set drifts from `pack.config.json`).
+The npm package ships **core only**: pack-guard rejects any `plugins/<id>/` whose id is not
+listed in `shipPlugins` (empty by default), rejects `workflows/`, and fails if a plugin listed in
+`shipPlugins` is missing. `plugins/_published.json` only controls what the wizard offers from
+source — it no longer decides what the tarball contains.
 The package is unscoped, so it publishes public by default. In order:
 
 ```bash

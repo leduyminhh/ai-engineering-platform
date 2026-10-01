@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-01
+
 ### Added
 
 - **11 agents** — subagents packaging existing skills, projected per provider
@@ -28,12 +30,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Installer dependency closure** — installing a workflow (`--plugin workflows` /
   `--skill workflows/<id>`) pulls in its `requires` plus the skills of every agent it lists,
   recursively, deduped; uninstalling drops what no other remaining workflow still needs.
+- **`--all` flag** — `aip --all` / `aip install --all` opens the wizard with the full skill tree
+  (drafts such as plugin `data` marked `(draft)`, plus every workflow) instead of only what
+  `plugins/_published.json` offers. Non-interactive installs already default to `--plugin all`.
+- **Fixer agents + `*-fix` skills** (`backend-fix`, `frontend-fix`), wired into the bugfix,
+  security-review and performance workflows behind a diff gate.
+- **`backend-performance`** measure/profile skill and `backend-performance-analyst` agent.
+- **`frontend-data-integration` and `frontend-e2e-testing`** skills published, wired into the
+  feature, api and testing workflows.
+- **Pre-deploy e2e smoke** step in `workflow-release`.
 
 ### Changed
 
-- **Publish set** — `plugins/_published.json` now includes `engineering` and `ops` (previously
-  draft-only); `data` stays draft. `package.json` `files`, `pack.config.json` `allowTop`, and
-  the npm-publish tarball now include `workflows/`, `plugins/engineering/`, `plugins/ops/`.
+- **The npm package ships core only** (`core:principles` + `core:git-workflow`). `package.json`
+  `files` drops `workflows/` and `plugins/{backend,frontend,engineering,ops}/`; plugins and workflows
+  are installed from source (`git clone` + `npm link`, then `aip install --plugin all` or
+  `aip --all`). `plugins/_published.json` is unchanged and still gates what the wizard offers.
+- **pack-guard** — new `shipPlugins` key in `pack.config.json` (empty = core only): rejects any
+  `plugins/<id>/` not listed and all of `workflows/`, and fails if a listed plugin is missing. It no
+  longer requires every published plugin to be in the tarball.
 
 ## [1.1.1] - 2026-09-03
 

@@ -1,5 +1,5 @@
 {
-  "allowTop": ["adapters", "cli", "core", "plugins", "templates", "workflows"],
+  "allowTop": ["adapters", "cli", "core", "plugins", "templates"],
   "allowFile": ["package.json", "package-lock.json", "LICENSE", "README.md", "AGENTS.md"],
   "deny": [
     "\\.test\\.mjs$",
@@ -7,7 +7,9 @@
     "^docs/",
     "^completions/",
     "^SHELL_SETUP\\.md$",
-    "^plugins/_cowork\\.json$"
+    "^plugins/_cowork\\.json$",
+    "^workflows/"
   ],
+  "shipPlugins": [],
   "required": ["cli/index.mjs", "cli/build.mjs", "cli/lib/install.mjs", "cli/lib/plugins.mjs"]
 }

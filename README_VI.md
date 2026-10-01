@@ -42,6 +42,12 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 Người dùng cuối không cần clone repo — gói `ai-engineering-platform` phát hành trên npm
 registry, hai bin `aip` và `ai-engineering-platform` trỏ cùng một CLI.
 
+> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow`
+> (`core:principles` + `core:git-workflow`). Các plugin (`backend`, `frontend`, `engineering`,
+> `ops`, `data`) và workflow **không** có trong gói; hãy cài từ source:
+> `git clone` + `npm link` (xem [Bắt đầu nhanh](#bắt-đầu-nhanh)), rồi `aip install --plugin all`, hoặc
+> `aip --all` để mở wizard với mọi skill kể cả draft.
+
 **1. Kiểm tra Node.js** — cần **v20 trở lên**:
 
 ```bash
@@ -66,9 +72,8 @@ aip check         # liệt kê năng lực đã cài (rỗng lúc đầu)
 ```bash
 cd /duong-dan/project
 aip                                   # wizard tương tác (menu install/uninstall/build/check)
-# hoặc non-interactive:
-aip install --provider all --plugin all --yes
-aip install --provider claude --plugin backend --yes
+# hoặc non-interactive (gói npm chỉ có core nên chỉ cài git-workflow + principles):
+aip install --provider all --yes
 ```
 
 **5. Kiểm tra kết quả** trong project: `aip check` liệt kê từng skill và file đã ghi
@@ -87,7 +92,7 @@ npm update -g ai-engineering-platform
 Chạy một lần, không cài global — `npx` tải gói về npm cache và không thêm bin vào PATH:
 
 ```bash
-npx ai-engineering-platform install --provider all --plugin all --yes
+npx ai-engineering-platform install --provider all --yes
 ```
 
 ## Cấu trúc
@@ -109,7 +114,7 @@ Nội dung được giữ gọn: `core`, các domain plugin (`backend`, `fronten
 plugin capability xuyên suốt (`engineering`, `ops`); skill là **recipe độc lập,
 gọi-khi-cần** (KHÔNG có pipeline bắt buộc). Tập publish nằm ở `plugins/_published.json`
 — mỗi phần tử là CẢ plugin (`backend`) hoặc MỘT skill (`frontend/frontend-init`); wizard
-chỉ offer phần được liệt kê, và `npm run build` sinh `build/wizard-install-report.md`.
+chỉ offer phần được liệt kê (khi chạy từ source; gói npm chỉ ship core), và `npm run build` sinh `build/wizard-install-report.md`.
 Plugin không có skill nào được publish (vd `data`) là draft, chỉ cài bằng `--plugin`.
 
 | Plugin | Năng lực | Skill |
@@ -327,6 +332,10 @@ Cowork upload: `cli/lib/pack.mjs` đóng gói tập skill khai trong `_cowork.js
 
 Gói dùng allowlist `files[]` trong `package.json`; hook `prepack` tự chạy pack-guard
 (fail-loud nếu tập file lệch `pack.config.json`). Gói không có scope nên mặc định public.
+Gói npm chỉ ship **core**: pack-guard từ chối mọi `plugins/<id>/` có id không nằm trong
+`shipPlugins` (mặc định rỗng), từ chối `workflows/`, và báo lỗi nếu plugin khai trong `shipPlugins`
+vắng khỏi gói. `plugins/_published.json` chỉ điều khiển phần wizard offer khi chạy từ source —
+không còn quyết định nội dung tarball.
 Làm theo thứ tự:
 
 ```bash

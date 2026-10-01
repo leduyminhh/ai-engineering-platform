@@ -6,10 +6,15 @@
 // thư mục và (b) denylist cấp file, rồi fail-loud khi có file vượt ranh giới —
 // bắt được cả trường hợp `files` bị nới rộng nhầm.
 //
+// Luật phạm vi: gói npm CHỈ ship core (core/ + CLI + adapters + templates). Plugin và workflows
+// người dùng cài từ source (clone + npm link) nên `plugins/<id>/` chỉ được có mặt khi id nằm trong
+// `shipPlugins` (mặc định rỗng) và `workflows/` luôn bị chặn. `plugins/_published.json` chỉ điều
+// khiển wizard offer khi chạy từ source — KHÔNG còn quyết định gói ship gì.
+//
 // Policy publish lấy từ <root>/pack.config.json — nguồn sự thật duy nhất.
 // Khi thiếu file (vd consumer cài package), fallback về DEFAULT_POLICY.
 import { spawn } from "node:child_process";
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 // ---- policy mặc định (fallback khi thiếu pack.config.json) ----
@@ -20,9 +25,8 @@ const DEFAULT_POLICY = {
   allowTop: ["adapters", "cli", "core", "plugins", "templates"],
   // file nhất định cấp root trong package (luôn có).
   allowFile: ["package.json", "package-lock.json", "LICENSE", "README.md", "AGENTS.md"],
-  // denylist: pattern regex (string) chặn file dù nằm trong allowlist. Deny plugin CHƯA publish
-  // KHÔNG liệt kê ở đây nữa mà suy tự động từ plugins/_published.json (loadPolicy). Ở đây chỉ giữ
-  // các deny cố định phi-plugin. Config Cowork (_cowork.json, tham chiếu skill mọi plugin) luôn chặn.
+  // denylist: pattern regex (string) chặn file dù nằm trong allowlist. Config Cowork (_cowork.json,
+  // tham chiếu skill mọi plugin) và workflows/ luôn chặn vì gói không ship plugin/workflow.
   deny: [
     "\\.test\\.mjs$",
     "^test/",
@@ -30,7 +34,10 @@ const DEFAULT_POLICY = {
     "^completions/",
     "^SHELL_SETUP\\.md$",
     "^plugins/_cowork\\.json$",
+    "^workflows/",
   ],
+  // plugin id được ship dưới plugins/<id>/. Rỗng = gói chỉ có core; plugin còn lại cài từ source.
+  shipPlugins: [],
   // file bắt buộc phải có trong package (gồm bin entry + khai báo).
   required: ["cli/index.mjs", "cli/build.mjs", "cli/lib/install.mjs", "cli/lib/plugins.mjs"],
 };
@@ -41,53 +48,20 @@ function hasArray(obj, key) {
   return obj && Array.isArray(obj[key]);
 }
 
-/**
- * Danh sách plugin ĐÃ published từ <root>/plugins/_published.json (mức NGUYÊN-PLUGIN cho đóng gói).
- * Entry "plugin" hoặc "plugin/skill" đều tính plugin đó published (ship cả dir). Thiếu/shape sai → null.
- */
-function loadPublished(root) {
-  try {
-    const cfg = JSON.parse(readFileSync(resolve(root, "plugins", "_published.json"), "utf8"));
-    if (!Array.isArray(cfg.published)) return null;
-    return [...new Set(cfg.published.filter((e) => typeof e === "string").map((e) => e.split("/")[0]))];
-  } catch { return null; }
-}
-
-/** Tên thư mục plugin trên đĩa (<root>/plugins/<id> có .manifest.json). */
-function pluginDirsOnDisk(root) {
-  const dir = resolve(root, "plugins");
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && !e.name.startsWith("_") && existsSync(resolve(dir, e.name, ".manifest.json")))
-    .map((e) => e.name);
-}
-
-/**
- * Bổ sung policy bằng _published.json (nguồn sự thật): suy deny cho MỌI plugin trên đĩa KHÔNG
- * published, và gắn policy.published = danh sách plugin published thực sự tồn tại (để classifyFiles
- * assert chúng có mặt trong gói). _published.json vắng → không giới hạn (published=null).
- */
-function withPublished(root, base) {
-  const published = loadPublished(root);
-  if (!published) return { ...base, published: null };
-  const set = new Set(published);
-  const onDisk = pluginDirsOnDisk(root);
-  const derivedDeny = onDisk.filter((id) => !set.has(id)).map((id) => `^plugins/${id}/`);
-  return { ...base, deny: [...base.deny, ...derivedDeny], published: onDisk.filter((id) => set.has(id)) };
-}
-
-/** Đọc policy từ <root>/pack.config.json; lỗi/shape sai → DEFAULT_POLICY. Luôn suy thêm từ _published.json. */
+/** Đọc policy từ <root>/pack.config.json; lỗi/shape sai → DEFAULT_POLICY. Thiếu shipPlugins → [] (chỉ core). */
 export function loadPolicy(root) {
-  let base;
   try {
     const cfg = JSON.parse(readFileSync(resolve(root, CONFIG_NAME), "utf8"));
-    base = (!hasArray(cfg, "allowTop") || !hasArray(cfg, "allowFile") || !hasArray(cfg, "deny") || !hasArray(cfg, "required"))
-      ? DEFAULT_POLICY
-      : { allowTop: cfg.allowTop, allowFile: cfg.allowFile, deny: cfg.deny, required: cfg.required };
+    if (!hasArray(cfg, "allowTop") || !hasArray(cfg, "allowFile") || !hasArray(cfg, "deny") || !hasArray(cfg, "required")) {
+      return DEFAULT_POLICY;
+    }
+    return {
+      allowTop: cfg.allowTop, allowFile: cfg.allowFile, deny: cfg.deny, required: cfg.required,
+      shipPlugins: hasArray(cfg, "shipPlugins") ? cfg.shipPlugins : [],
+    };
   } catch {
-    base = DEFAULT_POLICY;
+    return DEFAULT_POLICY;
   }
-  return withPublished(root, base);
 }
 
 const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
@@ -135,6 +109,18 @@ function compileDeny(policy) {
   return policy.deny.map((d) => new RegExp(d));
 }
 
+/** Id plugin nếu file nằm dưới plugins/<id>/; file cấp plugins/ (_published.json…) → null. */
+function pluginIdOf(file) {
+  const m = /^plugins\/([^/]+)\//.exec(file);
+  return m ? m[1] : null;
+}
+
+/** Plugin không nằm trong shipPlugins: file của nó không được lên npm. */
+function isUnshippedPlugin(file, policy) {
+  const id = pluginIdOf(file);
+  return id !== null && !(policy.shipPlugins || []).includes(id);
+}
+
 // ---- hàm thuần: test được không cần gọi npm pack ----
 
 /** Trả danh sách vi phạm cho một bộ file đã cho. Rỗng = hợp lệ. */
@@ -148,6 +134,10 @@ export function classifyFiles(files, policy = DEFAULT_POLICY) {
       errors.push(`CẤM: mục ngoài allowlist "${top}" không được publish (${file})`);
       continue;
     }
+    if (isUnshippedPlugin(file, policy)) {
+      errors.push(`CẤM: plugin "${pluginIdOf(file)}" không nằm trong shipPlugins — gói npm chỉ ship core (${file})`);
+      continue;
+    }
     for (const pat of denies) {
       if (pat.test(file)) {
         errors.push(`CẤM: file bị denylist — ${file}`);
@@ -158,12 +148,10 @@ export function classifyFiles(files, policy = DEFAULT_POLICY) {
   for (const req of policy.required) {
     if (!files.includes(req)) errors.push(`THIẾU: file bắt buộc không có trong package — ${req}`);
   }
-  // Mỗi plugin đã publish PHẢI có mặt trong gói — bắt lỗi package.json files lệch với _published.json.
-  if (Array.isArray(policy.published)) {
-    for (const id of policy.published) {
-      if (!files.some((f) => f.startsWith(`plugins/${id}/`))) {
-        errors.push(`THIẾU: plugin đã publish không có file trong package — plugins/${id}/`);
-      }
+  // Mỗi plugin trong shipPlugins PHẢI có mặt — bắt lỗi package.json files lệch với pack.config.json.
+  for (const id of policy.shipPlugins || []) {
+    if (!files.some((f) => f.startsWith(`plugins/${id}/`))) {
+      errors.push(`THIẾU: plugin trong shipPlugins không có file trong package — plugins/${id}/`);
     }
   }
   return errors;
@@ -182,6 +170,11 @@ export function describePack(files, policy = DEFAULT_POLICY) {
     let bad = false;
     if (!policy.allowFile.includes(file)) {
       if (!policy.allowTop.includes(top)) {
+        denied.push(file);
+        deniedSet.add(file);
+        bad = true;
+      }
+      if (!bad && isUnshippedPlugin(file, policy)) {
         denied.push(file);
         deniedSet.add(file);
         bad = true;
@@ -246,6 +239,7 @@ async function runShow() {
   console.log(`allowTop : ${policy.allowTop.join(", ")}`);
   console.log(`allowFile: ${policy.allowFile.join(", ")}`);
   console.log(`deny     : ${policy.deny.join(", ")}`);
+  console.log(`shipPlugins: ${(policy.shipPlugins || []).join(", ") || "(rỗng — chỉ core)"}`);
   console.log(`required : ${policy.required.join(", ")}`);
   console.log(`\n=== File sẽ publish (npm pack --dry-run): ${files.length} ===`);
   console.log(`allowed : ${allowed.length}`);
