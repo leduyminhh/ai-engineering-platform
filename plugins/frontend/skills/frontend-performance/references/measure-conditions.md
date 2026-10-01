@@ -28,16 +28,18 @@ Không để trống, không ghi "như cũ".
 | Config tool đo | file config ngoài `perf/`/`bench/` người dùng đã duyệt được đổi (vd `package.json` script đo, `.gitignore`); không có → ghi "không có" | Gate diff Bước 2/3/5 so với danh sách này; file ngoài danh sách → revert, không nhận |
 
 Bảng + script đo chốt ở cuối Bước 2. Artifact của Bước 2: script đo, bảng điều kiện, `assets-baseline.txt`
-(`serve-production-build.md`) và các file ở hàng Config tool đo. Ghi `git hash-object` của từng artifact đó vào
-một file riêng `perf/frontend/<luồng>.hashes.txt` hoặc vào report Bước 2, **không** ghi vào chính bảng (một file
-không chứa được hash của chính nó). File hashes này không tự băm. Bước 5 băm lại các artifact và so với file
-hashes/report; lệch → điều kiện đã bị sửa sau khi chốt, từ chối so sánh. Cần đổi điều kiện thì quay lại Bước 2,
+(`serve-production-build.md`) và các file ở hàng Config tool đo. **Session chính** tự chạy `git hash-object` cho từng artifact đó và ghi các giá trị hash vào Evidence/report
+Bước 2 (như phía BE), **không** ghi vào chính bảng (một file không chứa được hash của chính nó). File
+`perf/frontend/<luồng>.hashes.txt` (nếu agent tạo) chỉ là bản sao tiện lợi, không có thẩm quyền vì agent ghi
+được file đó. Bước 3/5 băm lại các artifact và so với giá trị hash trong Evidence Bước 2; lệch → điều kiện đã bị
+sửa sau khi chốt, từ chối so sánh. Cần đổi điều kiện thì quay lại Bước 2,
 đo lại baseline. `[Unverified]` `git hash-object` chỉ băm nội dung file, không băm đường dẫn.
 
 ## Chỉ số báo cáo
 
 - **LCP, TBT, CLS:** lấy từ Lighthouse JSON, median của các lần (`lighthouse-cli.md`). Là số **lab**.
-- **INP** không đo được trong lab; TBT là chỉ số thay thế, không phải INP.
+- **INP:** Lighthouse navigation mặc định không báo INP (không có tương tác người dùng); `[Unverified]` chế độ
+  timespan/user-flow có thể ghi INP lab, ngoài phạm vi recipe. Số báo cáo là TBT, không phải INP.
 - **Kích thước bundle:** tổng + chunk lớn nhất, đọc từ output build (`bundle-analysis.md`). Chỉ số xác định, so
   trực tiếp, không cần tính độ lệch.
 

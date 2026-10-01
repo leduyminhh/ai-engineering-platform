@@ -1,6 +1,6 @@
 ---
 name: frontend-performance
-description: "Recipe on-demand: ĐO và PROFILE hiệu năng FRONTEND (React/TypeScript) — chế độ measure chốt bảng điều kiện đo (route/luồng, build, cách phục vụ bản build production ở local, preset thiết bị + throttle, trạng thái cache, số lần lặp), viết/tái dùng script đo ở perf/ (Lighthouse CLI), chạy ≥3 lần trên bản build production, báo median LCP/TBT/CLS, kích thước bundle và độ lệch; chế độ profile tìm bottleneck theo thứ tự bundle (analyzer) → render (React Profiler) → main thread (Chrome trace) có evidence, và đề xuất danh sách file/component cho frontend-fix. Lighthouse là số lab, không đo được INP (dùng TBT thay thế). Chỉ chạy trên local/test, từ chối staging/production và dịch vụ đo của bên thứ ba; thiếu môi trường → not_run. KHÔNG sửa code (đó là frontend-fix); KHÔNG thay test đúng/sai (đó là frontend-testing/frontend-e2e-testing). Dùng skill NÀY khi người dùng muốn \"đo hiệu năng frontend\", \"Lighthouse\", \"LCP\", \"bundle size\", \"profile React\", \"render chậm\", \"trang tải chậm\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
+description: "Recipe on-demand: ĐO và PROFILE hiệu năng FRONTEND (React/TypeScript) — chế độ measure chốt bảng điều kiện đo (route/luồng, build, cách phục vụ bản build production ở local, preset thiết bị + throttle, trạng thái cache, số lần lặp), viết/tái dùng script đo ở perf/ (Lighthouse CLI), chạy ≥3 lần trên bản build production, báo median LCP/TBT/CLS, kích thước bundle và độ lệch; chế độ profile tìm bottleneck theo thứ tự bundle (analyzer) → render (React Profiler) → main thread (Chrome trace) có evidence, và đề xuất danh sách file/component cho frontend-fix. Lighthouse là số lab; navigation mặc định không báo INP (không có tương tác người dùng; [Unverified] chế độ timespan/user-flow có thể ghi INP lab, ngoài phạm vi recipe), số báo cáo là TBT, không phải INP. Chỉ chạy trên local/test, từ chối staging/production và dịch vụ đo của bên thứ ba; thiếu môi trường → not_run. KHÔNG sửa code (đó là frontend-fix); KHÔNG thay test đúng/sai (đó là frontend-testing/frontend-e2e-testing). Dùng skill NÀY khi người dùng muốn \"đo hiệu năng frontend\", \"Lighthouse\", \"LCP\", \"bundle size\", \"profile React\", \"render chậm\", \"trang tải chậm\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 10
 stageNumber: "10"
 title: "Frontend Performance — Đo và profile hiệu năng frontend có điều kiện tái lập (recipe on-demand)"
@@ -52,8 +52,9 @@ dùng thật), và kích thước bundle là chỉ số **xác định** (không
    sánh, báo. Bảng điều kiện và script chốt ở cuối Bước 2; sau đó không sửa — cần đổi điều kiện thì quay lại
    Bước 2 đo lại baseline.
 
-Báo rõ trong report: Lighthouse đo **lab**, **không** phản ánh INP (không đo được INP trong lab); **TBT** là chỉ
-số thay thế. Chỉ số người dùng thật (RUM) ngoài phạm vi.
+Báo rõ trong report: Lighthouse đo **lab**; navigation mặc định **không báo INP** (không có tương tác người dùng;
+`[Unverified]` chế độ timespan/user-flow có thể ghi INP lab, ngoài phạm vi recipe). Số báo cáo là **TBT**, không
+phải INP. Chỉ số người dùng thật (RUM) ngoài phạm vi.
 
 ### `profile` — Profile & giả thuyết (Bước 3)
 

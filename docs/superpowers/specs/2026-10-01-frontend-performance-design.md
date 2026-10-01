@@ -40,8 +40,9 @@ phía FE chạy ở session chính, không có bảng điều kiện đo, không
 
 - **Đo trên bản build production**, không phải dev server: dev server (HMR, source map, React dev build) cho số đo vô nghĩa.
   Bước 5 phải build lại và phục vụ bản mới ở local trước khi đo.
-- **Chỉ số lab, không phải số người dùng thật:** Lighthouse CLI đo lab (LCP, TBT, CLS); **INP không đo được trong lab** —
-  dùng TBT làm chỉ số thay thế và nói rõ. Chỉ số người dùng thật (RUM) ngoài phạm vi.
+- **Chỉ số lab, không phải số người dùng thật:** Lighthouse CLI đo lab (LCP, TBT, CLS); Lighthouse navigation mặc định **không báo INP**
+  (không có tương tác người dùng); `[Unverified]` chế độ timespan/user-flow có thể ghi INP lab, ngoài phạm vi recipe —
+  số báo cáo là TBT, nói rõ đó không phải INP. Chỉ số người dùng thật (RUM) ngoài phạm vi.
 - **Kích thước bundle** là chỉ số xác định (không nhiễu như latency): lấy từ output build/stats.
 - **Công cụ đo mở trình duyệt:** Lighthouse CLI cần Chrome cài trên máy; thêm công cụ là thay đổi dependency → hỏi trước.
 - **Không gửi URL cho dịch vụ bên thứ ba** (PageSpeed Insights, WebPageTest công cộng): đó là dữ liệu ra ngoài máy.
@@ -111,7 +112,8 @@ chậm", "trang tải chậm" — kèm "KHÔNG sửa code (đó là `frontend-fi
    rồi chạy lại **nguyên trạng** script + bảng điều kiện của Bước 2. Điều kiện lệch → từ chối so sánh. Bảng điều kiện và
    script chốt ở cuối Bước 2; sau đó không sửa — cần đổi điều kiện thì quay lại Bước 2 đo lại baseline.
 
-Ghi rõ trong report: Lighthouse đo lab, **không** phản ánh INP; TBT là chỉ số thay thế.
+Ghi rõ trong report: Lighthouse đo lab; navigation mặc định không báo INP (không có tương tác người dùng;
+`[Unverified]` chế độ timespan/user-flow có thể ghi INP lab, ngoài phạm vi recipe); số báo cáo là TBT, không phải INP.
 
 ### 3.4 Chế độ `profile` (Bước 3)
 
@@ -296,7 +298,10 @@ FP-P3 phải đi trước FP-P5 (publish trước, nối sau).
   cách xuất trace headless đều `[Unverified]`; sửa sau lần dùng thật đầu tiên.
 - `[Inference]` Số đo lab trên máy local nhiễu cao (CPU boost, extension, tiến trình nền); 10% có thể quá chặt — để project
   ghi đè.
-- Lighthouse đo một preset thiết bị mỗi lần; kết quả không đại diện người dùng thật; INP không có trong lab.
+- Lighthouse đo một preset thiết bị mỗi lần; kết quả không đại diện người dùng thật; navigation mặc định không báo INP.
+- `[Inference]` Rủi ro nhiễu chéo: pha đo BE (load test, khởi động lại ứng dụng) và pha đo FE (Lighthouse) chạy song
+  song trên cùng máy có thể làm lệch baseline và lần đo sau không đều nhau. Giảm thiểu: workflow đo lại từng phía tuần
+  tự khi độ lệch vượt ngưỡng P3; chủ sở hữu có thể quyết định tuần tự hoá các pha đo (bỏ ∥ ở Bước 2/5) nếu nhiễu lặp lại.
 - `[Inference]` Hai analyst song song cùng working tree: mỗi analyst chỉ ghi thư mục con của mình; gate cuối ở session
   chính kiểm hợp hai danh sách. Hai phía dùng chung tên `measure-conditions.md` ở hai plugin khác nhau (hygiene tên file
   chỉ kiểm trong cùng plugin).

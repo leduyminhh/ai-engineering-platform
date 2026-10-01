@@ -16,8 +16,9 @@ Lighthouse trong file này chưa được đối chiếu với tài liệu chín
 
 ## Giới hạn của số lab
 
-- Lighthouse chạy một lần nạp trang trong môi trường giả lập; **INP không đo được trong lab** (cần tương tác
-  thật của người dùng). Báo **TBT** làm chỉ số thay thế và nói rõ đó không phải INP.
+- Lighthouse chạy một lần nạp trang trong môi trường giả lập; chế độ navigation mặc định **không báo INP** (không
+  có tương tác người dùng). `[Unverified]` chế độ timespan/user-flow có thể ghi INP lab, ngoài phạm vi recipe này.
+  Số báo cáo là **TBT**, nói rõ đó không phải INP.
 - Chỉ số người dùng thật (RUM, CrUX) ngoài phạm vi.
 - **Không** dùng PageSpeed Insights hay WebPageTest công cộng: các dịch vụ đó nhận URL từ bên ngoài, vi phạm P1
   và không chạy được với `localhost`.

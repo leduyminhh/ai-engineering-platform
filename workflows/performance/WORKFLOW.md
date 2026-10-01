@@ -60,23 +60,28 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   Lighthouse/đo bundle ≥ 3 lần, ghi median LCP/TBT/CLS, kích thước bundle và độ lệch; số lab, không phải INP;
   thư mục output build (dist/.next/…) không tính vào gate diff khi đã nằm trong `.gitignore`, chưa bị ignore →
   agent trả `blocked` + câu hỏi. Khi phạm vi có cả hai phía, hai agent chạy song song, mỗi phía ghi vào thư mục
-  con riêng `perf/backend/` và `perf/frontend/` với bảng điều kiện + script riêng.
+  con riêng `perf/backend/` và `perf/frontend/` với bảng điều kiện + script riêng. Mỗi agent chỉ tự đối chiếu diff
+  của phía mình (thư mục con riêng cùng hàng Config tool đo của bảng phía mình) và không revert file của phía kia.
 - **Ràng buộc:** không đổi code production trước khi có baseline; không trỏ tải vào staging/production; thêm
   tool/dependency đo → hỏi trước; phía FE không đo trên dev server, không trỏ URL ngoài local/test, không gửi URL
   cho dịch vụ đo của bên thứ ba.
 - **Đầu ra:** bảng điều kiện đo + script đo + số đo baseline (phía FE thêm `assets-baseline.txt`).
 - **Gate:** bảng điều kiện đo đầy đủ; ≥ 3 lần + độ lệch; so với mốc đầu bước, file thay đổi hoặc mới trong bước
   (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm `perf/`, `bench/`, config tool đo
-  đã liệt kê ở hàng Config tool đo của bảng điều kiện; điều kiện này áp cho từng phía có đụng (BE và FE).
+  đã liệt kê ở hàng Config tool đo của bảng điều kiện; session chính chỉ ghi MỘT mốc nên diff chứa file của cả hai
+  phía và được đối chiếu với hợp của hai bảng Config tool đo (bảng của từng phía, BE và FE).
 - **Khi fail:** agent trả `not_run` vì thiếu môi trường local/test → dừng `blocked`, báo người dùng cung cấp môi
   trường (không có baseline thì không tối ưu); agent FE trả `not_run` vì không dựng được bản build hoặc không có
   Chrome → dừng `blocked`, báo người dùng; agent trả `blocked` + câu hỏi → session chính hỏi người dùng, ghi
   quyết định vào bảng điều kiện (hàng Config tool đo nếu liên quan), gọi lại agent; độ lệch vượt ngưỡng P3 → tăng
-  số lần lặp hoặc cô lập nhiễu, đo lại; diff ngoài phạm vi (ngoài `perf/`, `bench/`, hàng Config tool đo) → revert
-  phần lệch, không nhận (áp cho từng phía).
+  số lần lặp hoặc cô lập nhiễu, đo lại; nếu độ lệch vượt ngưỡng P3 do hai pha đo chồng nhau trên cùng máy → đo lại
+  từng phía tuần tự; diff ngoài phạm vi (ngoài `perf/`, `bench/`, hợp hai bảng Config tool đo) → revert phần lệch,
+  không nhận (mỗi agent chỉ revert file của phía mình, không đụng file của phía kia).
 - **Evidence:** report của agent (bảng điều kiện, bảng số, lệnh chạy) + danh sách file thay đổi so với mốc đầu
   bước + `git hash-object` của script và file bảng điều kiện **của từng phía** (BE và FE) sau khi chốt (mốc bất
-  biến cho Bước 5); phía FE: hash ghi trong file hashes riêng hoặc report Bước 2, gồm cả `assets-baseline.txt`.
+  biến cho Bước 5); phía FE gồm cả `assets-baseline.txt`. Session chính tự chạy `git hash-object` và ghi giá trị
+  hash vào Evidence/report Bước 2 (như phía BE); file `<luồng>.hashes.txt` của agent chỉ là bản sao tiện lợi,
+  không có thẩm quyền; Bước 3/5 so với giá trị hash trong Evidence này.
 
 ### Bước 3 — Profile & giả thuyết ⏸
 
@@ -90,22 +95,25 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   thứ tự bundle → render (React Profiler) → main thread (trace), dùng lại bảng điều kiện của Bước 2, nêu
   bottleneck + giả thuyết kèm evidence (số đo, `file:line` hoặc tên chunk/component), đề xuất danh sách file/hàm
   cho phần FE của Bước 4; lệnh/config bật profiler ghi vào report Bước 3, config chỉ dùng để profile thì gỡ sau
-  khi profile xong (không để lại trong diff).
+  khi profile xong (không để lại trong diff); output build profile (`dist-profile/`) xoá sau khi profile hoặc đã
+  nằm trong `.gitignore`, chưa bị ignore → agent trả `blocked` + câu hỏi.
 - **Ràng buộc:** không tối ưu khi giả thuyết chưa có evidence; không sửa bảng điều kiện và script đo của Bước 2 —
   lệnh/config bật đếm query hay profiler ghi vào report Bước 3 (hoặc `perf/profile-<luồng>.md`).
 - **Đầu ra:** bottleneck + giả thuyết đã xác nhận + **danh sách file/hàm bottleneck được sửa** (đầu vào cho
   Bước 4).
 - **Gate:** bottleneck có evidence đo được (không chỉ đọc code); có danh sách file được sửa; so với mốc đầu bước,
   file thay đổi hoặc mới (`git diff --name-only`, `git ls-files --others --exclude-standard`) chỉ gồm `perf/`,
-  `bench/`, config tool đo đã liệt kê ở hàng Config tool đo của bảng điều kiện; script và bảng điều kiện Bước 2
-  của từng phía (BE và FE) không đổi (`git hash-object` bằng mốc Bước 2).
+  `bench/`, config tool đo đã liệt kê ở hàng Config tool đo của bảng điều kiện (đối chiếu với hợp của hai bảng
+  Config tool đo, vì mốc là một và diff chứa file của cả hai phía; mỗi agent chỉ tự kiểm phía mình); script, bảng
+  điều kiện Bước 2 của từng phía (BE và FE) và `assets-baseline.txt` (FE) không đổi (`git hash-object` bằng
+  giá trị ở mốc Bước 2).
 - **Khi fail:** người dùng không đồng ý hướng tối ưu → profile lại hoặc thu thêm evidence; agent trả `blocked` +
   câu hỏi → session chính hỏi người dùng, ghi quyết định vào report Bước 3, gọi lại agent; quyết định làm đổi điều
   kiện đo (môi trường, dữ liệu seed, tải, warm-up, số lần lặp, config tool đo) → quay lại Bước 2 đo lại baseline;
-  diff ngoài phạm vi (ngoài `perf/`, `bench/`, hàng Config tool đo) → revert phần lệch, không nhận (áp cho
-  từng phía).
+  diff ngoài phạm vi (ngoài `perf/`, `bench/`, hợp hai bảng Config tool đo) → revert phần lệch, không nhận (mỗi
+  agent chỉ revert file của phía mình, không đụng file của phía kia).
 - **Evidence:** kết quả profile (file:line hoặc số đo) trong report bước + danh sách file được sửa + xác nhận
-  của người dùng + `git hash-object` hiện tại của script và bảng điều kiện của từng phía so với mốc Bước 2.
+  của người dùng + `git hash-object` hiện tại của script, bảng điều kiện của từng phía và `assets-baseline.txt` (FE) so với mốc Bước 2.
 
 ### Bước 4 — Tối ưu
 
@@ -144,21 +152,23 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   baseline vs sau. Phía FE: agent build lại bản build production và phục vụ lại từ working tree, xác nhận là bản mới
   (hash file build hoặc tên chunk khác baseline) trước khi đo, rồi chạy lại đúng script + bảng điều kiện của
   Bước 2 (≥ 3 lần), lập bảng baseline vs sau; thư mục output build (dist/.next/…) không tính vào gate diff khi
-  đã nằm trong `.gitignore`, chưa bị ignore → agent trả `blocked` + câu hỏi.
+  đã nằm trong `.gitignore`, chưa bị ignore → agent trả `blocked` + câu hỏi. Mỗi agent chỉ tự đối chiếu diff
+  của phía mình, không revert file của phía kia.
 - **Ràng buộc:** không đổi điều kiện đo so với Bước 2 (môi trường, dữ liệu seed, tải, warm-up, số lần lặp); không
   so sánh số đo khác điều kiện với baseline; phía FE không đo trên dev server.
 - **Đầu ra:** số đo sau + kết luận đạt/không đạt ngưỡng.
 - **Gate:** bảng baseline vs sau cùng điều kiện; đạt ngưỡng hoặc báo không đạt, kết luận đạt/không đạt theo
   từng phía; độ lệch vượt ngưỡng P3 (nhiễu) → không kết luận; script và bảng điều kiện Bước 2 không đổi
-  (`git hash-object` của từng phía bằng mốc Bước 2); file mới chỉ
+  (`git hash-object` của từng phía, gồm `assets-baseline.txt` (FE), bằng mốc Bước 2); file mới chỉ
   trong `perf/`/`bench/` (output); diff code production của working tree (`git diff --name-only` +
-  `git ls-files --others --exclude-standard`) chỉ gồm danh sách file Bước 4, cộng file ở hàng Config tool đo.
+  `git ls-files --others --exclude-standard`) chỉ gồm danh sách file Bước 4, cộng file ở hợp của hai bảng Config
+  tool đo (một mốc, diff chứa file của cả hai phía).
 - **Khi fail:** không đạt ngưỡng → báo rõ, quay lại Bước 3 tìm hướng khác hoặc dừng theo quyết định người dùng;
-  điều kiện lệch Bước 2 → chạy lại đúng điều kiện; nhiễu vượt ngưỡng → đo lại; agent trả `blocked` + câu hỏi →
+  điều kiện lệch Bước 2 → chạy lại đúng điều kiện; nhiễu vượt ngưỡng → đo lại, nếu do hai pha đo chồng nhau trên cùng máy → đo lại từng phía tuần tự; agent trả `blocked` + câu hỏi →
   session chính hỏi người dùng, ghi quyết định vào report Bước 5, gọi lại agent; quyết định làm đổi điều kiện đo
   (môi trường, dữ liệu seed, tải, warm-up, số lần lặp, config tool đo) → quay lại Bước 2 đo lại baseline.
-- **Evidence:** report của agent (bảng baseline vs sau + lệnh đo) + `git hash-object` hiện tại của script và
-  bảng điều kiện của từng phía so với mốc Bước 2.
+- **Evidence:** report của agent (bảng baseline vs sau + lệnh đo) + `git hash-object` hiện tại của script,
+  bảng điều kiện của từng phía và `assets-baseline.txt` (FE) so với mốc Bước 2.
 
 ### Bước 6 — Review
 

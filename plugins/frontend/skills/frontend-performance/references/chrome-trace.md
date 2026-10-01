@@ -34,7 +34,7 @@ Trace luôn lấy trên **bản build production phục vụ ở local** (`serve
 2. **Script evaluation:** tên bundle/hàm chiếm thời gian parse/compile/execute; khớp với chunk lớn từ tầng 1.
 3. **Layout/style thrash:** chuỗi đọc layout (`offsetHeight`) xen ghi style lặp lại gây forced reflow; recalc
    style/layout lặp nhiều lần trong một frame.
-4. **Third-party/handler:** script ngoài, event handler chạy lâu (liên quan INP thật, không đo được trong lab).
+4. **Third-party/handler:** script ngoài, event handler chạy lâu (liên quan INP thật; Lighthouse navigation mặc định không báo INP, số lab là TBT).
 5. **Tài nguyên chặn render:** CSS/font/ảnh LCP tải muộn.
 
 ## Ghi lệnh vào report Bước 3
