@@ -27,9 +27,12 @@ Không để trống, không ghi "như cũ".
 | Ngưỡng độ lệch | 10% giữa các lần (mặc định) cho median LCP/TBT | Project ghi đè tại đây nếu máy nhiễu hơn/ít hơn |
 | Config tool đo | file config ngoài `perf/`/`bench/` người dùng đã duyệt được đổi (vd `package.json` script đo, `.gitignore`); không có → ghi "không có" | Gate diff Bước 2/3/5 so với danh sách này; file ngoài danh sách → revert, không nhận |
 
-Bảng + script đo chốt ở cuối Bước 2; ghi `git hash-object` của từng file (bảng, script, config tool đo) vào
-cuối bảng. Bước 5 băm lại và so; lệch → điều kiện đã bị sửa sau khi chốt, từ chối so sánh. Cần đổi điều kiện thì
-quay lại Bước 2, đo lại baseline. `[Unverified]` `git hash-object` chỉ băm nội dung file, không băm đường dẫn.
+Bảng + script đo chốt ở cuối Bước 2. Artifact của Bước 2: script đo, bảng điều kiện, `assets-baseline.txt`
+(`serve-production-build.md`) và các file ở hàng Config tool đo. Ghi `git hash-object` của từng artifact đó vào
+một file riêng `perf/frontend/<luồng>.hashes.txt` hoặc vào report Bước 2, **không** ghi vào chính bảng (một file
+không chứa được hash của chính nó). File hashes này không tự băm. Bước 5 băm lại các artifact và so với file
+hashes/report; lệch → điều kiện đã bị sửa sau khi chốt, từ chối so sánh. Cần đổi điều kiện thì quay lại Bước 2,
+đo lại baseline. `[Unverified]` `git hash-object` chỉ băm nội dung file, không băm đường dẫn.
 
 ## Chỉ số báo cáo
 
