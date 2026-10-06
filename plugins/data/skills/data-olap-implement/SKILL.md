@@ -2,12 +2,9 @@
 name: data-olap-implement
 description: "Recipe hiện thực TRANSFORM/MODEL + PIPELINE cho một DATA WAREHOUSE/LAKEHOUSE project OLAP: từ data-contract (schema đầu ra + grain + SLA) và kiến trúc phân tầng (do data-olap-init tạo trong project-knowledge/) build transform thật trong pipelines/ (source/ingest → transform/model → sink/serving), mô hình hóa dimensional (fact/dim theo grain) hoặc normalized, layer staging → intermediate → mart, transform idempotent/incremental, data-quality test (not-null/unique/accepted-values/referential/freshness/row-count-anomaly) làm cổng trước khi publish dataset, và lineage nguồn→đích (cột/bảng) cho downstream truy vết; giữ DATA CONTRACT đầu ra đã công bố. Dùng skill NÀY khi người dùng muốn \"build pipeline\", \"viết transform\", \"ETL/ELT\", \"data model warehouse\", \"dimensional model\", \"data quality test\", \"lineage\", \"build dataset\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG chạy pipeline lên dữ liệu production khi chưa duyệt. KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã chạy data-olap-init."
 order: 4
-stageNumber: "04"
 title: "OLAP Warehouse Implement — Hiện thực transform/model + pipeline"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # OLAP Warehouse Implement — Hiện thực transform/model + pipeline

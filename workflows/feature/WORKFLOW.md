@@ -10,8 +10,6 @@ agents: "engineering-spec-analyst,backend-implementer,frontend-implementer,front
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Feature — implement end-to-end từ yêu cầu tới commit

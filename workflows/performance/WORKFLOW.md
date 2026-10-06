@@ -10,8 +10,6 @@ agents: "backend-performance-analyst,frontend-performance-analyst,backend-fixer,
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Performance — profile, tối ưu, benchmark trước/sau

@@ -2,13 +2,10 @@
 name: backend-implement
 description: "Recipe on-demand: biến một use-case/feature/contract thành MỘT vertical slice tối thiểu (aggregate + use-case + driven port + adapter) bám ĐÚNG kiến trúc backend đã chọn (Java/Python × Onion+DDD / Hexagonal+DDD / Hexagonal-Clean+CQRS / layered) + quy ước đặt tên của blueprint. Sinh code xuyên mọi tầng, map ở biên bằng mapper thủ công, kèm test lõi mock/fake port; con người duyệt diff. Dùng skill NÀY khi người dùng muốn \"code API mới\", \"hiện thực feature backend\", \"sinh endpoint/use-case\", \"viết vertical slice\", \"làm API theo contract\", \"thêm use case\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã chạy backend-init."
 order: 2
-stageNumber: "02"
 title: "Backend Implement — Sinh vertical slice từ use-case/contract"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Backend Implement — Sinh vertical slice từ use-case (recipe on-demand)

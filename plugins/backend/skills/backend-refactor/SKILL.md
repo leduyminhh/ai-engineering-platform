@@ -2,13 +2,10 @@
 name: backend-refactor
 description: "Recipe on-demand: REFACTOR mã nguồn BACKEND (Java/Spring, Python) mà GIỮ NGUYÊN hành vi nghiệp vụ — extract method/class, gom trùng lặp về shared/util đúng tầng, thay điều kiện phức tạp bằng guard clause/polymorphism, tách god class, introduce parameter object, đảo phụ thuộc qua port. TÔN TRỌNG boundary/Dependency Rule của kiến trúc đã chốt; áp design pattern CHỈ khi gỡ được phức tạp thật (tránh lạm dụng, HỎI trước khi áp pattern lớn). Đi qua cổng behavior-preserving: baseline build/test/lint XANH → thiếu test vùng đụng thì viết characterization test trước → bước nhỏ, XANH sau mỗi bước → verify + con người duyệt diff. KHÁC với đổi KIỂU kiến trúc (Onion/Hexagonal/CQRS) — việc đó dùng backend-migrate-architecture. Dùng skill NÀY khi người dùng muốn \"refactor backend\", \"tái cấu trúc code backend\", \"dọn code Java/Python\", \"giảm trùng lặp\", \"tách hàm/tách class\", \"đơn giản hoá code\", \"gỡ god class\", \"áp design pattern backend\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 5
-stageNumber: "05"
 title: "Backend Refactor — Tái cấu trúc code backend giữ nguyên hành vi (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Backend Refactor — Tái cấu trúc code backend giữ nguyên hành vi (recipe on-demand)

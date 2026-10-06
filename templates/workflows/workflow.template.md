@@ -10,8 +10,6 @@ agents: "<plugin>-<agent>,<plugin>-<agent>"
 requires: "<plugin>/<skill>,<plugin>/<skill>"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # <Tiêu đề workflow>

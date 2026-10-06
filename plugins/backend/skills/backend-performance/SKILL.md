@@ -2,12 +2,9 @@
 name: backend-performance
 description: "Recipe on-demand: ĐO và PROFILE hiệu năng BACKEND (Java/Spring, Python) — chế độ measure chốt bảng điều kiện đo (môi trường local/test, dữ liệu seed, mô hình tải, warm-up, số lần lặp), viết/tái dùng script load test (k6) ở perf/ hoặc micro-benchmark (JMH, pytest-benchmark) ở bench/, chạy ≥3 lần, báo p50/p95/p99, throughput, error rate và độ lệch; chế độ profile tìm bottleneck theo thứ tự DB (đếm query, N+1, EXPLAIN ANALYZE) → CPU/alloc (JFR, async-profiler, py-spy, cProfile) → I/O/pool/lock, có evidence đo được, và đề xuất danh sách file/hàm cho backend-fix. Chỉ chạy trên local/test, từ chối staging/production; thiếu môi trường → not_run. KHÔNG sửa code production (đó là backend-fix); KHÔNG thay test đúng/sai (đó là backend-testing). Dùng skill NÀY khi người dùng muốn \"đo hiệu năng backend\", \"load test\", \"benchmark\", \"profile\", \"tìm bottleneck\", \"p95/p99\", \"N+1\", \"query chậm\", \"latency API\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 10
-stageNumber: "10"
 title: "Backend Performance — Đo và profile hiệu năng backend có điều kiện tái lập (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Backend Performance — Đo và profile hiệu năng backend có điều kiện tái lập (recipe on-demand)

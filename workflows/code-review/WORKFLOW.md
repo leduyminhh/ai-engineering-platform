@@ -10,8 +10,6 @@ agents: "backend-reviewer,frontend-reviewer,engineering-quality-auditor"
 requires: ""
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Code review — review diff/PR đa vai trò, chỉ đọc

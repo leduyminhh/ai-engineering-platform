@@ -2,12 +2,9 @@
 name: engineering-quality-gate
 description: "Skill capability xuyên suốt (plugin engineering) để chạy quality + security gate trên mã nguồn. Hai chiều bổ trợ nhau: (1) TOOL GATE — SonarQube (bug / vulnerability / code smell / security hotspot / quality gate) + Black Duck SCA mặc định (CVE + CVSS + license của dependency; Trivy là lựa chọn thay thế); (2) SECURITY REVIEW SOURCE-FIRST — review thủ công theo vùng rủi ro (auth/session, input-validation/injection, crypto/secrets, dependency/supply-chain, logging) ánh xạ OWASP Top 10 / ASVS / CWE, scanner chỉ là enrichment. Gộp findings, triage, tự sửa lỗi rõ ràng theo code-convention (con người DUYỆT DIFF), rồi xuất report có evidence + residual risk + mask secret. Hỗ trợ luồng fix-từ-report cũ (đọc report → áp fix an toàn trong đúng scope). Truy cập KHÔNG dùng web API: chạy scanner tại chỗ qua CLI khi có cấu hình + token qua biến môi trường, hoặc đọc report/BOM/SARIF đã xuất. Dùng skill NÀY khi người dùng muốn \"quét sonar\", \"chạy sonarqube\", \"check black duck\", \"quét bảo mật phụ thuộc\", \"security review\", \"review bảo mật code\", \"quality gate\", \"sửa lỗi sonar\", \"fix từ report\", \"review chất lượng code\", \"kiểm tra lỗ hổng dependency\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần ở bất kỳ giai đoạn nào cần kiểm chất lượng/bảo mật."
 order: 1
-stageNumber: "01"
 title: "Quality Gate — SonarQube + Black Duck + review bảo mật source-first, triage, fix, report"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Quality Gate (capability engineering)

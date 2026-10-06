@@ -15,6 +15,7 @@ import { offeredCatalog } from '../cli/lib/install.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
+import { agentsFiles, whenToUse } from '../adapters/_shared/lib.mjs';
 
 let pass = 0;
 const fails = [];
@@ -182,11 +183,8 @@ for (const s of core.stages) {
   ok(fs.existsSync(path.join(CORE_DIR, 'skills', s.id, 'SKILL.md')), `core ${s.id}: có SKILL.md`);
   ok(!!s.description && s.description.length > 10, `core ${s.id}: có description`);
   ok(!!s.body && s.body.trim().length > 50, `core ${s.id}: có body hướng dẫn`);
-  ok(s.pipeline === false && s.next === null,
-    `core ${s.id}: recipe on-demand (pipeline=false, next=null) — core không có pipeline`);
   ok(RUN_IN.includes(s.runsIn), `core ${s.id}: runsIn ∈ {plan,execute} (=${s.runsIn})`);
   ok(INVOKE_IN.includes(s.invoke), `core ${s.id}: invoke ∈ {once,per-request} (=${s.invoke})`);
-  ok(!!s.stageNumber, `core ${s.id}: có stageNumber (metadata workflow; strip ở adapter)`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,7 +214,6 @@ for (const p of plugins) {
 
   // mỗi skill: SKILL.md + frontmatter hợp lệ
   const orders = [];
-  const ids = new Set(p.stages.map((s) => s.id));
   for (const s of p.stages) {
     const skillFile = path.join(dir, 'skills', s.id, 'SKILL.md');
     ok(fs.existsSync(skillFile), `${s.id}: có SKILL.md`);
@@ -230,22 +227,10 @@ for (const p of plugins) {
     ok(typeof s.order === 'number' && s.order > 0, `${s.id}: order là số > 0`);
     ok(RUN_IN.includes(s.runsIn), `${s.id}: runsIn ∈ {plan,execute} (=${s.runsIn})`);
     ok(INVOKE_IN.includes(s.invoke), `${s.id}: invoke ∈ {once,per-request} (=${s.invoke})`);
-    ok(s.next === null || typeof s.next === 'string', `${s.id}: next là string|null`);
-    if (typeof s.next === 'string') ok(ids.has(s.next), `${s.id}: next "${s.next}" trỏ tới skill có thật`);
     orders.push(s.order);
   }
 
-  // Chia stage pipeline (chuỗi bắt buộc) vs recipe on-demand (pipeline=false).
-  const pipe = p.stages.filter((s) => s.pipeline !== false);
-  const recipes = p.stages.filter((s) => s.pipeline === false);
-  const pipeOrders = pipe.map((s) => s.order);
-
-  // order: unique toàn plugin; pipeline liên tục 1..N; recipe đứng SAU pipeline.
   ok(new Set(orders).size === orders.length, `${p.id}: order không trùng`);
-  const sortedPipe = [...pipeOrders].sort((a, b) => a - b);
-  ok(sortedPipe.every((v, i) => v === i + 1), `${p.id}: order pipeline liên tục 1..${pipe.length}`);
-  ok(recipes.every((s) => s.order > pipe.length), `${p.id}: order recipe > ${pipe.length} (đứng sau pipeline)`);
-  ok(recipes.every((s) => s.next === null), `${p.id}: recipe skill có next=null (không nối pipeline)`);
 
   // references/ — tên file KHÔNG trùng giữa các skill trong cùng plugin (giữ hygiene; trước đây
   // bắt buộc vì cursor ship references/ phẳng dưới rules/; giờ mỗi skill có folder riêng).
@@ -256,16 +241,6 @@ for (const p of plugins) {
     }
   }
   ok(new Set(refRel).size === refRel.length, `${p.id}: tên file trong references/ không trùng giữa các skill`);
-
-  // Nếu plugin CÓ pipeline: đúng 1 skill kết thúc (next=null), order lớn nhất. Bỏ pipeline
-  // (mọi skill là recipe) → không áp ràng buộc này (không còn khái niệm chuỗi bắt buộc).
-  if (pipe.length > 0) {
-    const terminals = pipe.filter((s) => s.next === null);
-    ok(terminals.length === 1, `${p.id}: đúng 1 skill pipeline kết thúc (next=null)`);
-    if (terminals.length === 1) {
-      ok(terminals[0].order === Math.max(...pipeOrders), `${p.id}: skill pipeline kết thúc có order lớn nhất`);
-    }
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -312,7 +287,6 @@ if (workflows) {
     ok(['workflow', 'orchestrator'].includes(s.kind), `${s.id}: kind ∈ {workflow, orchestrator}`);
     ok(s.description.length > 10, `${s.id}: có description`);
     ok(RUN_IN.includes(s.runsIn) && INVOKE_IN.includes(s.invoke), `${s.id}: runsIn/invoke hợp lệ`);
-    ok(s.pipeline === false && s.next === null, `${s.id}: pipeline=false, next=null`);
     for (const aid of s.agents) ok(agentById.has(aid), `${s.id}: agent "${aid}" tồn tại`);
     for (const r of s.requires) ok(catalogSkillIds.has(r), `${s.id}: requires "${r}" là skill plugin/core có thật`);
     const errs = checkWorkflowBody(s.body, { kind: s.kind });
@@ -656,8 +630,8 @@ if (fs.existsSync(BUILD)) {
   // ADR 0001: mọi năng lực liên quan database thuộc plugin data; bản cũ ở backend phải biến mất hẳn.
   ok(!fs.existsSync(path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-db-migration')),
     'data-db-migration: không còn thư mục backend-db-migration ở plugin backend');
-  ok(/^name: data-db-migration$/m.test(skillMd) && /^order: 5$/m.test(skillMd) && /^stageNumber: "05"$/m.test(skillMd),
-    'data-db-migration: frontmatter name, order 5, stageNumber "05" trong plugin data');
+  ok(/^name: data-db-migration$/m.test(skillMd) && /^order: 5$/m.test(skillMd),
+    'data-db-migration: frontmatter name, order 5 trong plugin data');
   for (const f of ['adopt/inventory-checklist.md', 'adopt/tool-comparison-rubric.md']) {
     ok(dbmFiles.includes(f), `data-db-migration: có references/${f}`);
     ok(skillMd.includes(`(references/${f})`), `data-db-migration: SKILL.md link tới references/${f}`);
@@ -831,8 +805,8 @@ if (fs.existsSync(BUILD)) {
   const diSkillExists = fs.existsSync(diSkillPath);
   ok(diSkillExists, 'frontend-data-integration: có SKILL.md');
   const diSkill = diSkillExists ? fs.readFileSync(diSkillPath, 'utf8') : '';
-  ok(/^order: 7$/m.test(diSkill) && /^pipeline: false$/m.test(diSkill) && /^sharedAssets: templates\/architecture$/m.test(diSkill),
-    'frontend-data-integration: frontmatter order 7, pipeline false, sharedAssets templates/architecture');
+  ok(/^order: 7$/m.test(diSkill) && /^sharedAssets: templates\/architecture$/m.test(diSkill),
+    'frontend-data-integration: frontmatter order 7, sharedAssets templates/architecture');
   ok(['I1', 'I2', 'I3', 'I4', 'I5'].every((g) => diSkill.includes(`### ${g}.`)),
     'frontend-data-integration: SKILL.md có đủ cổng I1–I5');
   for (const f of ['contract-and-codegen.md', 'data-layer-by-architecture.md', 'states-and-errors.md']) {
@@ -875,8 +849,8 @@ if (fs.existsSync(BUILD)) {
   const e2eSkillExists = fs.existsSync(e2eSkillPath);
   ok(e2eSkillExists, 'frontend-e2e-testing: có SKILL.md');
   const e2eSkill = e2eSkillExists ? fs.readFileSync(e2eSkillPath, 'utf8') : '';
-  ok(/^order: 8$/m.test(e2eSkill) && /^pipeline: false$/m.test(e2eSkill) && /^sharedAssets: templates\/architecture$/m.test(e2eSkill),
-    'frontend-e2e-testing: frontmatter order 8, pipeline false, sharedAssets templates/architecture');
+  ok(/^order: 8$/m.test(e2eSkill) && /^sharedAssets: templates\/architecture$/m.test(e2eSkill),
+    'frontend-e2e-testing: frontmatter order 8, sharedAssets templates/architecture');
   ok(['E1', 'E2', 'E3', 'E4', 'E5'].every((g) => e2eSkill.includes(`### ${g}.`)),
     'frontend-e2e-testing: SKILL.md có đủ cổng E1–E5');
   ok(['E-r1', 'E-r2', 'E-r3', 'E-r4', 'E-r5', 'E-r6', 'E-r7'].every((r) => e2eSkill.includes(`| ${r} |`)),
@@ -1142,8 +1116,8 @@ if (fs.existsSync(BUILD)) {
   for (const p of ['backend', 'frontend']) {
     const s = fixSkill(p);
     ok(s.length > 0, `${p}-fix: có SKILL.md`);
-    ok(/^order: 9$/m.test(s) && /^pipeline: false$/m.test(s) && /^runsIn: execute$/m.test(s),
-      `${p}-fix: frontmatter order 9, pipeline false, runsIn execute`);
+    ok(/^order: 9$/m.test(s) && /^runsIn: execute$/m.test(s),
+      `${p}-fix: frontmatter order 9, runsIn execute`);
     // §3.2: ranh giới với implement/refactor phải nằm trong description để trigger đúng skill.
     ok(/^description: .*oracle/m.test(s) && /^description: .*-implement/m.test(s) && /^description: .*-refactor/m.test(s),
       `${p}-fix: description nêu oracle và ranh giới với ${p}-implement / ${p}-refactor`);
@@ -1453,8 +1427,8 @@ if (fs.existsSync(BUILD)) {
   const perfDir = path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-performance');
   const perfSkill = fs.existsSync(path.join(perfDir, 'SKILL.md')) ? fs.readFileSync(path.join(perfDir, 'SKILL.md'), 'utf8') : '';
   ok(perfSkill.length > 0, 'backend-performance: có SKILL.md');
-  ok(/^order: 10$/m.test(perfSkill) && /^pipeline: false$/m.test(perfSkill) && /^runsIn: execute$/m.test(perfSkill),
-    'backend-performance: frontmatter order 10, pipeline false, runsIn execute');
+  ok(/^order: 10$/m.test(perfSkill) && /^runsIn: execute$/m.test(perfSkill),
+    'backend-performance: frontmatter order 10, runsIn execute');
   ok(/^description: .*backend-fix/m.test(perfSkill) && /^description: .*backend-testing/m.test(perfSkill),
     'backend-performance: description nêu ranh giới với backend-fix và backend-testing');
   for (const g of ['P1', 'P2', 'P3', 'P4', 'P5']) ok(new RegExp(`^\\| ${g} `, 'm').test(perfSkill), `backend-performance: bảng gate có ${g}`);
@@ -1754,8 +1728,8 @@ if (fs.existsSync(BUILD)) {
   const feDir23 = path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-performance');
   const feSkill23 = fs.existsSync(path.join(feDir23, 'SKILL.md')) ? fs.readFileSync(path.join(feDir23, 'SKILL.md'), 'utf8') : '';
   ok(feSkill23.length > 0, 'frontend-performance: có SKILL.md');
-  ok(/^order: 10$/m.test(feSkill23) && /^pipeline: false$/m.test(feSkill23) && /^runsIn: execute$/m.test(feSkill23),
-    'frontend-performance: frontmatter order 10, pipeline false, runsIn execute');
+  ok(/^order: 10$/m.test(feSkill23) && /^runsIn: execute$/m.test(feSkill23),
+    'frontend-performance: frontmatter order 10, runsIn execute');
   ok(/^description: .*frontend-fix/m.test(feSkill23) && /^description: .*frontend-testing/m.test(feSkill23)
     && /^description: .*frontend-e2e-testing/m.test(feSkill23),
     'frontend-performance: description nêu ranh giới với frontend-fix, frontend-testing, frontend-e2e-testing');
@@ -1907,6 +1881,34 @@ if (fs.existsSync(BUILD)) {
   ok(flat23(fs.readFileSync(path.join(REPO_ROOT, 'docs', 'superpowers', 'specs', '2026-09-30-backend-performance-design.md'), 'utf8'))
     .includes('2026-10-01-frontend-performance-design.md'),
     'spec backend-performance: G-Q8 trỏ tới spec frontend-performance (đã làm)');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 24. Chuẩn hoá A1: frontmatter không còn trường chết (spec 2026-10-06 §4.1)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const DEAD = /^(pipeline|next|stageNumber):/m;
+  const fmOf = (file) => (fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---/) || [, ''])[1];
+  const sources = [
+    ...core.stages.map((s) => path.join(CORE_DIR, 'skills', s.id, 'SKILL.md')),
+    ...plugins.flatMap((p) => p.stages.map((s) => path.join(PLUGINS_DIR, p.id, 'skills', s.id, 'SKILL.md'))),
+    ...(workflows ? workflows.stages.map((s) => path.join(s.dir, 'WORKFLOW.md')) : []),
+    path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md'),
+  ];
+  for (const f of sources) {
+    ok(!DEAD.test(fmOf(f)), `${path.relative(REPO_ROOT, f)}: frontmatter không còn pipeline/next/stageNumber`);
+  }
+  for (const s of [...core.stages, ...plugins.flatMap((p) => p.stages), ...(workflows ? workflows.stages : [])]) {
+    ok(!('pipeline' in s) && !('next' in s) && !('stageNumber' in s), `${s.id}: loader không trả pipeline/next/stageNumber`);
+  }
+  const ag24 = agentsFiles({ id: 'fx', name: 'Fixture', shared: { principles: '' }, stages: [{
+    id: 'fx-a', title: 'A', description: 'Làm A. Chi tiết.', runsIn: 'execute', invoke: 'per-request', body: 'x',
+    assets: [], fileAssets: [], dirAssets: [] }] }, { tool: 'Antigravity', base: 'fx', core: fxCore });
+  const agMd24 = (ag24.find((f) => f.path === 'fx/AGENTS.md') || { content: '' }).content;
+  ok(!agMd24.includes('Pipeline & các giai đoạn') && !agMd24.includes('Thứ tự bắt buộc') && !agMd24.includes('Tiếp theo'),
+    'agentsFiles: không còn mục pipeline / "Tiếp theo"');
+  ok(agMd24.includes('## Skill (gọi theo yêu cầu)') && agMd24.includes('### fx-a — A')
+    && agMd24.includes('- **Khi nào dùng:** Làm A.'), 'agentsFiles: liệt kê skill trong một nhóm');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

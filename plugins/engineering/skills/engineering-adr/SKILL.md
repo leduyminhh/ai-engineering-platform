@@ -2,12 +2,9 @@
 name: engineering-adr
 description: "Skill capability (plugin engineering) để ĐIỀU PHỐI một quyết định kiến trúc/thiết kế rồi GHI thành ADR chuẩn (Nygard) vào docs/decisions/ của project. Làm rõ bối cảnh & lực đẩy (forces), liệt kê 2–4 phương án thực chất kèm đánh đổi, chốt quyết định + lý do truy vết được, ghi hệ quả TRUNG THỰC (cả tích cực lẫn tiêu cực + residual risk); đánh số tiếp theo convention docs/decisions/, đặt Status (Proposed/Accepted/…), link tới spec (docs/requests/) + contract/data-model (docs/contracts/). Giúp teamlead/manager chốt quyết định có truy vết. Portable ra mọi provider (claude/cursor/codex/antigravity). Dùng skill NÀY khi người dùng muốn \"viết ADR\", \"ghi quyết định kiến trúc\", \"architecture decision record\", \"quyết định thiết kế\", \"chọn phương án\", \"đánh đổi kiến trúc\", \"lưu lý do quyết định\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG tự quyết quyết định lớn thay người dùng (facilitate + đề xuất, con người chốt Status). KHÔNG thuộc pipeline bắt buộc; gọi khi cần ở giai đoạn plan."
 order: 5
-stageNumber: "05"
 title: "ADR — điều phối quyết định kiến trúc + ghi architecture decision record"
 runsIn: plan
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # ADR — Architecture Decision Record (skill dùng chung)

@@ -10,8 +10,6 @@ agents: "engineering-quality-auditor,backend-test-writer,frontend-test-writer,ba
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Security review — threat model, scan, remediation, re-scan

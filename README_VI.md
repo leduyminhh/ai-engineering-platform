@@ -309,7 +309,7 @@ Skill nào ship thư mục `references/` thì ship tới **mọi** provider (par
 ## Viết nội dung
 
 - **Skill mới** → thêm `plugins/<id>/skills/<skill-id>/SKILL.md` với frontmatter (`name`,
-  `description`, `order`, `title`, `runsIn`, `invoke`, `pipeline: false`, `next: null`).
+  `description`, `order`, `title`, `runsIn`, `invoke`).
   Tự động được phát hiện — không phải khai vào manifest. File tham chiếu đặt dưới
   `skills/<skill>/references/`.
 - **Hành vi provider mới** → sửa `adapters/<provider>/adapter.mjs`; giữ là hàm thuần

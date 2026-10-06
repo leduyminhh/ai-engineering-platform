@@ -2,13 +2,10 @@
 name: backend-code-review
 description: "Recipe on-demand: REVIEW một diff/PR/module BACKEND (Java/Spring, Python) theo các TRỤC — correctness (bug/edge/null/error-handling/concurrency-race/resource-leak/transaction), thiết kế & bám kiến trúc (Dependency Rule: domain/application không import hạ tầng, inbound không gọi thẳng outbound, một transaction một aggregate, map ở biên bằng mapper thủ công), đơn giản hoá & tái dùng (trùng lặp, over-engineering, đặt logic đúng tầng), readability & naming theo code-convention, hiệu năng (N+1, thiếu index, query trong vòng lặp, tải eager thừa — nhãn suspected khi chưa có số đo), và test coverage (unit lõi + edge). Phân loại severity (blocker/major/minor/nit) + evidence file:line + đề xuất fix; READ-ONLY mặc định (không tự sửa trừ khi được yêu cầu). Defer security/tool scan sang engineering-quality-gate, tái cấu trúc sang backend-refactor. Dùng skill NÀY khi người dùng muốn \"review code backend\", \"review PR backend\", \"review API/service\", \"đánh giá code Java/Spring\", \"review Python backend\", \"review diff backend\", \"đọc soát PR\", \"nhận xét thiết kế backend\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 4
-stageNumber: "04"
 title: "Backend Code Review — Review diff/PR backend theo trục, có evidence (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Backend Code Review — Review diff/PR/module backend theo trục (recipe on-demand)

@@ -2,12 +2,9 @@
 name: ops-observability
 description: "Skill vận hành (plugin ops) hướng dẫn THIẾT LẬP & ĐÁNH GIÁ observability cho một service: (1) nạp context + chốt service/scope, đọc project-knowledge/CLAUDE.md, dò stack observability hiện có (Prometheus/Grafana/OpenTelemetry/ELK/Loki/Datadog… từ config/dependency) và health endpoint; (2) ba trụ cột metrics/logs/traces — dùng cái gì cho việc gì, structured logging + correlation/trace context; (3) golden signals (latency, traffic, errors, saturation) + chọn SLI, đặt SLO + error budget, RED/USE method; (4) alerting theo triệu chứng (symptom-based) hơn nguyên nhân, ngưỡng bám SLO, chống alert fatigue/noise, severity + link runbook; (5) đánh giá độ phủ observability hiện có (mỗi service đã có metrics/log/trace/alert/dashboard chưa), chỉ ra khoảng trống + ĐỀ XUẤT bổ sung. Docs-only + ĐỀ XUẤT là mặc định: KHÔNG tự đổi cấu hình monitoring/hạ tầng prod (nêu kế hoạch, con người áp dụng); KHÔNG lộ/log secret (chỉ nêu tên biến env, mask giá trị). Dùng skill NÀY khi người dùng muốn \"observability\", \"giám sát\", \"monitoring\", \"metrics/logs/traces\", \"alert\", \"cảnh báo\", \"SLO/SLI\", \"dashboard\", \"golden signals\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần; con người áp dụng vào hạ tầng thật."
 order: 3
-stageNumber: "03"
 title: "Observability — ba trụ cột metrics/logs/traces, golden signals + SLI/SLO, alerting theo triệu chứng, đánh giá độ phủ"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Observability (capability ops)

@@ -2,13 +2,10 @@
 name: frontend-migrate-architecture
 description: "Recipe on-demand: tái cấu trúc mã nguồn của một FRONTEND (React) project hiện có sang kiến trúc đích trong bộ chuẩn (Feature-Based, Feature-Sliced Design, hoặc Micro-Frontend), GIỮ NGUYÊN hành vi — với Feature-Based/FSD dời/gom file in-place và sửa import theo tầng/slice, ép ranh giới bằng import-boundary lint; với Micro-Frontend CHỈ nhận diện + lập KẾ HOẠCH phân rã (slice→remote, host shell, packages chia sẻ), KHÔNG auto-move. Nhận diện cấu trúc src hiện trạng, chọn đích, di chuyển theo lô nhỏ XANH-mỗi-bước, con người duyệt diff. Xử lý cả project đã chạy frontend-init lẫn code cũ chưa theo chuẩn. Dùng skill NÀY khi người dùng muốn \"đổi kiến trúc frontend\", \"tái cấu trúc React\", \"chuyển sang Feature-Based/FSD\", \"áp Feature-Sliced Design\", \"tách Micro-Frontend\", \"restructure src frontend\", \"refactor cấu trúc UI\", \"dọn cấu trúc component\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn React."
 order: 6
-stageNumber: "06"
 title: "Frontend Migrate — Kiến trúc mã nguồn UI (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Frontend Migrate — Kiến trúc mã nguồn UI (recipe on-demand)

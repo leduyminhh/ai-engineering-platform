@@ -2,12 +2,9 @@
 name: engineering-spec-writing
 description: "Skill capability (plugin engineering) để KHẢO SÁT yêu cầu và VIẾT một feature/requirement spec GỌN vào đúng cấu trúc tài liệu sẵn có của project (docs/requests/<ngày>-<slug>/requirement.md + khung plan.md). Khảo sát BA còn thiếu (mục tiêu & success criteria, actors, phạm vi & out-of-scope, ràng buộc, NFR, edge case, tiêu chí chấp nhận) rồi viết đặc tả ở MỨC FEATURE (không phân rã story) với acceptance criteria ĐO ĐƯỢC, link ADR (docs/decisions/) + contract/data-model (docs/contracts/), liệt kê rủi ro/giả định/câu hỏi mở. Portable ra mọi provider (claude/cursor/codex/antigravity). Dùng skill NÀY khi người dùng muốn \"viết spec\", \"đặc tả yêu cầu\", \"làm tài liệu nghiệp vụ\", \"khảo sát yêu cầu\", \"feature spec\", \"requirement spec\", \"PRD gọn\", \"viết yêu cầu tính năng\" — kể cả khi không nói chính xác chữ \"skill\". Cần bộ artifact BA đầy đủ (PRD/SOD/DDD/FSD/BRD/personas) hay đặc tả SAP-specific và đang ở Cowork → handoff cho FIS (fisba/fissap/fispm). KHÔNG thuộc pipeline bắt buộc; gọi khi cần ở giai đoạn plan."
 order: 2
-stageNumber: "02"
 title: "Spec Writing — khảo sát yêu cầu + viết feature/requirement spec"
 runsIn: plan
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Spec Writing (skill dùng chung)

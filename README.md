@@ -315,9 +315,8 @@ enforced by `test/validate.mjs`).
 ## Authoring content
 
 - **New skill** → add `plugins/<id>/skills/<skill-id>/SKILL.md` with frontmatter
-  (`name`, `description`, `order`, `title`, `runsIn`, `invoke`, `pipeline: false`,
-  `next: null`). It is auto-discovered — no manifest list to update. Put shipped
-  reference files under `skills/<skill>/references/`.
+  (`name`, `description`, `order`, `title`, `runsIn`, `invoke`). It is auto-discovered —
+  no manifest list to update. Put shipped reference files under `skills/<skill>/references/`.
 - **New provider behavior** → edit `adapters/<provider>/adapter.mjs`; keep it a pure
   `build(plugins, { outDir, marketplace, core }) -> fileEntry[]` where an entry is
   `{path, content}` | `{path, copyFrom}` | `{path, copyDir}`.

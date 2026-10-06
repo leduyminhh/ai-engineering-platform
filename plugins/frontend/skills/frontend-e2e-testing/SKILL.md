@@ -2,13 +2,10 @@
 name: frontend-e2e-testing
 description: "Recipe on-demand: viết TEST ĐẦU-CUỐI (e2e) bằng Playwright cho 3–5 luồng người dùng GIÁ TRỊ CAO của một FRONTEND React đã nối API thật — mỗi test map tới một acceptance criterion, đặt ở e2e/ ngoài src/ (Micro-FE: gốc monorepo), selector theo role/label/text, không sleep cứng, baseURL và credential lấy từ biến môi trường và CHỈ chạy trên môi trường local/test (từ chối staging/production), đăng nhập một lần qua setup project + storageState, dữ liệu cô lập theo từng lần chạy, chống flaky bằng --repeat-each=3, evidence bằng trace + report HTML. Test đỏ vì bug thật thì giữ đỏ và báo, KHÔNG sửa code production. KHÔNG thay unit/integration (đó là frontend-testing), KHÔNG load test, KHÔNG tự cài @playwright/test hay tải browser khi chưa hỏi. Dùng skill NÀY khi người dùng muốn \"e2e\", \"end-to-end\", \"test đầu-cuối\", \"Playwright\", \"test luồng người dùng\", \"smoke test FE\", \"kiểm luồng xuyên FE-BE-DB\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã chạy frontend-init và có luồng đã nối API thật."
 order: 8
-stageNumber: "08"
 title: "Frontend E2E Testing — Test đầu-cuối Playwright cho vài luồng giá trị cao (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Frontend E2E Testing — Test đầu-cuối Playwright cho vài luồng giá trị cao (recipe on-demand)

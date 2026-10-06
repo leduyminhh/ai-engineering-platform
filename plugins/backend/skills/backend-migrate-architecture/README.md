@@ -1,7 +1,7 @@
 # backend-migrate-architecture (recipe on-demand)
 
 Skill migrate KIỂU kiến trúc mã nguồn của một backend project đã tồn tại sang kiểu đích
-(Onion / Hexagonal / CQRS / layered), giữ nguyên hành vi. Recipe `pipeline: false`, gọi
+(Onion / Hexagonal / CQRS / layered), giữ nguyên hành vi. Recipe on-demand, gọi
 khi cần — không thuộc chuỗi bắt buộc init→…→implement.
 
 - Nguồn kiểu kiến trúc đích: `plugins/backend/templates/architecture/` (ship kèm qua

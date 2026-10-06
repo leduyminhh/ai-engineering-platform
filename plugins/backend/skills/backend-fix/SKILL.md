@@ -2,12 +2,9 @@
 name: backend-fix
 description: "Recipe on-demand: SỬA code BACKEND có sẵn (Java/Spring, Python) theo MỘT oracle đỏ — failing test tái hiện bug, regression test của finding bảo mật, hoặc giả thuyết bottleneck đã xác nhận — với phạm vi file được khoanh TRƯỚC. Áp fix tối thiểu cho oracle chuyển xanh; KHÔNG đụng file test/fixture/snapshot; KHÔNG sửa ngoài danh sách file (cần mở rộng → dừng, trả blocked); KHÔNG che triệu chứng (nuốt exception, skip test, nới timeout, hạ log). Ba chế độ: bug / security / performance. KHÁC với sinh code mới (đó là backend-implement) và KHÁC với dọn code giữ hành vi (đó là backend-refactor); chưa có oracle → chạy workflow-bugfix từ đầu để tái hiện. Dùng skill NÀY khi người dùng muốn \"sửa bug theo failing test\", \"fix finding bảo mật\", \"sửa theo root cause\", \"áp fix tối thiểu\", \"tối ưu theo bottleneck đã xác nhận\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 9
-stageNumber: "09"
 title: "Backend Fix — Sửa code backend theo oracle đỏ, phạm vi khoanh trước (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Backend Fix — Sửa code backend theo oracle đỏ, phạm vi khoanh trước (recipe on-demand)

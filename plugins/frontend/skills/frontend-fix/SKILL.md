@@ -2,12 +2,9 @@
 name: frontend-fix
 description: "Recipe on-demand: SỬA code FRONTEND có sẵn (React/TypeScript) theo MỘT oracle đỏ — failing test tái hiện bug, regression test của finding bảo mật, hoặc giả thuyết bottleneck đã xác nhận — với phạm vi file được khoanh TRƯỚC. Áp fix tối thiểu cho oracle chuyển xanh; KHÔNG đụng file test/fixture/snapshot; KHÔNG sửa ngoài danh sách file (cần mở rộng → dừng, trả blocked); KHÔNG che triệu chứng (any, non-null !, ts-ignore, eslint-disable, skip test, nới waitFor). Ba chế độ: bug / security / performance. KHÁC với dựng UI mới (đó là frontend-implement) và KHÁC với dọn component giữ hành vi (đó là frontend-refactor); chưa có oracle → chạy workflow-bugfix từ đầu để tái hiện. Dùng skill NÀY khi người dùng muốn \"sửa bug React theo failing test\", \"fix finding bảo mật frontend\", \"sửa theo root cause\", \"áp fix tối thiểu\", \"tối ưu theo bottleneck đã xác nhận\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn React."
 order: 9
-stageNumber: "09"
 title: "Frontend Fix — Sửa code React theo oracle đỏ, phạm vi khoanh trước (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Frontend Fix — Sửa code React theo oracle đỏ, phạm vi khoanh trước (recipe on-demand)

@@ -10,8 +10,6 @@ agents: "backend-implementer,backend-test-writer,backend-reviewer,engineering-qu
 requires: "backend/backend-api-contract,core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # API — contract-first, implement, kiểm drift

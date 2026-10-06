@@ -10,8 +10,6 @@ agents: "engineering-quality-auditor,engineering-release-scribe,ops-release-engi
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Release — quality gate, release notes, deploy checklist

@@ -10,8 +10,6 @@ agents: "engineering-spec-analyst"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Docs — đồng bộ tài liệu theo thay đổi hành vi

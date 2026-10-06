@@ -11,11 +11,6 @@ import { frontmatter } from '../../cli/lib/write.mjs';
 
 export { frontmatter };
 
-/** Stage slug = stage id without the leading "<plugin.id>-" prefix (backend-init -> init). */
-export function stageSlug(stage, plugin) {
-  return stage.id.replace(new RegExp('^' + plugin.id + '-'), '');
-}
-
 /**
  * Full principles for a plugin = shared CORE baseline + plugin's domain-specific part.
  * Used by adapters that embed principles inline (cursor rules, antigravity AGENTS.md).
@@ -92,7 +87,7 @@ export function whenToUse(stage) {
 
 /**
  * AGENTS.md-style bundle for ONE plugin (used by antigravity; codex switched to native skills),
- * written under `<base>/`: AGENTS.md (principles + pipeline index) + docs/workflow/<id>.md per stage.
+ * written under `<base>/`: AGENTS.md (principles + skill index) + docs/workflow/<id>.md per stage.
  * Antigravity reads a root AGENTS.md as its "contract" file.
  */
 export function agentsFiles(plugin, { tool, base, core }) {
@@ -107,33 +102,14 @@ export function agentsFiles(plugin, { tool, base, core }) {
   L.push('');
   L.push(fullPrinciples(core, plugin).trim());
   L.push('');
-  // Chia stage pipeline (chuỗi bắt buộc) vs recipe on-demand (pipeline=false, đứng riêng).
-  const pipe = plugin.stages.filter((s) => s.pipeline !== false);
-  const recipes = plugin.stages.filter((s) => s.pipeline === false);
-
-  L.push('## Pipeline & các giai đoạn');
+  L.push('## Skill (gọi theo yêu cầu)');
   L.push('');
-  L.push(`Thứ tự bắt buộc: **${pipe.map((s) => stageSlug(s, plugin)).join(' → ')}**.`);
-  L.push('');
-  for (const s of pipe) {
-    L.push(`### ${s.order}. ${s.id} — ${s.title}`);
-    L.push(`- **Chạy ở:** ${s.runsIn} · **Tần suất:** ${s.invoke} · **Tiếp theo:** ${s.next || '—'}`);
+  for (const s of plugin.stages) {
+    L.push(`### ${s.id} — ${s.title}`);
+    L.push(`- **Chạy ở:** ${s.runsIn} · **Tần suất:** ${s.invoke}`);
     L.push(`- **Khi nào dùng:** ${whenToUse(s)}`);
     L.push(`- **Hướng dẫn chi tiết:** \`${workflowDocPath(s)}\``);
     L.push('');
-  }
-  if (recipes.length) {
-    L.push('## Skill theo yêu cầu (KHÔNG thuộc pipeline bắt buộc)');
-    L.push('');
-    L.push('Gọi khi cần, không nằm trong chuỗi tuyến tính ở trên.');
-    L.push('');
-    for (const s of recipes) {
-      L.push(`### ${s.id} — ${s.title}`);
-      L.push(`- **Chạy ở:** ${s.runsIn} · **Tần suất:** ${s.invoke}`);
-      L.push(`- **Khi nào dùng:** ${whenToUse(s)}`);
-      L.push(`- **Hướng dẫn chi tiết:** \`${workflowDocPath(s)}\``);
-      L.push('');
-    }
   }
   L.push('## Cách dùng');
   L.push('- Trước khi làm một giai đoạn, đọc `docs/workflow/<id>.md` tương ứng và tuân thủ đầy đủ.');

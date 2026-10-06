@@ -2,12 +2,9 @@
 name: backend-migrate-vault-consul
 description: "Recipe on-demand: migrate cấu hình một BACKEND project hiện có từ .env + file cấu hình phẳng (properties/env) sang HashiCorp Consul (config thường) + Vault (secrets). Kiểm kê & phân loại biến (secret vs config vs thông tin kết nối, trục global/app), chọn cơ chế tích hợp theo stack, chuyển định dạng cấu hình, sinh file cấu hình consul-config/vault-secrets (kèm biến thể profile/global) vào configs/<type> từ .env cũ, seed vào Consul/Vault có sẵn và verify boot. Dùng skill NÀY khi người dùng muốn \"migrate .env sang vault/consul\", \"chuyển cấu hình sang Consul + Vault\", \"externalize config/secret\", \"đưa secret vào Vault\", \"đưa config vào Consul\", \"bỏ .env dùng vault\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có cấu trúc workflow."
 order: 6
-stageNumber: "06"
 title: "Backend Migrate — .env → Vault + Consul (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Backend Migrate — .env → Vault + Consul (recipe on-demand)

@@ -10,8 +10,6 @@ agents: "backend-test-writer,frontend-test-writer,frontend-e2e-test-writer"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Testing — viết test theo chiến lược, đo coverage

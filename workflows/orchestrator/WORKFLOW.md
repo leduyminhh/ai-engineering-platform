@@ -8,8 +8,6 @@ agents: ""
 requires: ""
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Orchestrator — chọn và chạy workflow theo yêu cầu

@@ -2,12 +2,9 @@
 name: engineering-release-notes
 description: "Skill capability (plugin engineering) để từ LỊCH SỬ GIT (giữa 2 tag/version, một khoảng ngày, N ngày gần nhất, hoặc từ một nhóm commit) VIẾT changelog + release notes HƯỚNG NGƯỜI DÙNG: phân nhóm thay đổi (New Features / Improvements / Fixes / Breaking Changes / Security), lọc churn nội bộ (refactor/format/chore không đổi hành vi), viết lại commit khô khan thành ngôn ngữ KẾT QUẢ/GIÁ TRỊ (không lặp nguyên văn subject), nêu rõ breaking change + cách migrate, và giữ TRUY VẾT (tag/hash/PR/ticket). Là bước HOÀN TẤT của handoff từ skill core git-workflow (git-workflow gom lịch sử theo phạm vi; skill NÀY viết nội dung cuối). Dùng skill NÀY khi người dùng muốn \"release notes\", \"changelog\", \"ghi chú phát hành\", \"tóm tắt thay đổi từ tag\", \"tổng hợp commit tuần/tháng\", \"what's new\", \"viết note cho bản phát hành\" — kể cả khi không nói chính xác chữ \"skill\". Docs-only: KHÔNG tự tag/release/push, KHÔNG bịa thay đổi ngoài lịch sử; con người duyệt. KHÔNG thuộc pipeline bắt buộc; gọi khi cần ở giai đoạn plan (chuẩn bị phát hành)."
 order: 4
-stageNumber: "04"
 title: "Release Notes — từ lịch sử git viết changelog + release notes hướng người dùng"
 runsIn: plan
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Release Notes (skill dùng chung)

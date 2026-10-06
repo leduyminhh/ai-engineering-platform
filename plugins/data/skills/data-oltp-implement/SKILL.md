@@ -2,12 +2,9 @@
 name: data-oltp-implement
 description: "Recipe hiện thực SCHEMA VẬT LÝ cho một DATABASE project OLTP: từ data-model + schema-conventions (do data-oltp-init tạo trong project-knowledge/) sinh DDL (bảng/cột/kiểu/nullability/default/khóa chính/khóa ngoại/unique/check/index) + migration versioned theo expand-contract, REVERSIBLE (mỗi up có down), tương thích online (không khóa lâu, backfill theo lô) + DB object tối thiểu (view/constraint/trigger) + seed idempotent, đặt trong root db/ đã phân tầng; giữ SCHEMA CONTRACT đã công bố cho consumer; test toàn vẹn chạy up/down trên DB tạm. Dùng skill NÀY khi người dùng muốn \"tạo schema database\", \"viết migration\", \"DDL\", \"expand-contract migration\", \"áp schema OLTP\", \"thêm bảng/cột\", \"seed dữ liệu\", \"schema change\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG tự áp migration lên production (nêu kế hoạch, con người duyệt/chạy). KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã chạy data-oltp-init."
 order: 2
-stageNumber: "02"
 title: "OLTP Database Implement — Hiện thực schema vật lý + migration"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # OLTP Database Implement — Hiện thực schema vật lý + migration

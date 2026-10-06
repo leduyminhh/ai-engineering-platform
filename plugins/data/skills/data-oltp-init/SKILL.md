@@ -2,12 +2,9 @@
 name: data-oltp-init
 description: "Khởi tạo cấu trúc thư mục nền tảng cho một DATABASE project (cơ sở dữ liệu vận hành OLTP dùng chung, độc lập vòng đời với một app cụ thể) theo workflow Cowork→Code: project-knowledge (kiến trúc database, quy ước schema, engine-profile, tech-stack), docs/requests, docs/decisions/ADR, docs/contracts (schema contract đã công bố cho consumer), CLAUDE.md, CONTRIBUTING.md, và layout root db/ phân tầng schema → migrations → seeds → queries → functions. Dùng skill NÀY mỗi khi người dùng muốn \"khởi tạo database\", \"tạo cấu trúc thư mục database project\", \"scaffold cơ sở dữ liệu vận hành\", \"setup project database mới\", \"tạo bộ tài liệu nền cho database\" — kể cả khi họ không nói chính xác chữ \"skill\". Chỉ chạy MỘT LẦN cho mỗi project."
 order: 1
-stageNumber: "01"
 title: "OLTP Database Init — Khởi tạo cấu trúc database project"
 runsIn: plan
 invoke: once
-pipeline: false
-next: null
 ---
 
 # OLTP Database Init — Khởi tạo cấu trúc database project

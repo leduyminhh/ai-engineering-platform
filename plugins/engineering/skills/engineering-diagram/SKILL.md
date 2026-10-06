@@ -2,12 +2,9 @@
 name: engineering-diagram
 description: "Skill capability xuyên suốt (plugin engineering) để biến mô tả hệ thống / luồng / kiến trúc / cấu trúc dữ liệu / kế hoạch thành DIAGRAM: CHỌN ĐÚNG LOẠI diagram TRƯỚC (theo câu hỏi cần trả lời, loại nhỏ-nhất-đủ-dùng), rồi mới sinh nguồn PlantUML RENDERABLE (bọc @startuml…@enduml hoặc start tag chuyên biệt), nhãn theo ngôn ngữ domain, đánh dấu [giả định] cho phần suy đoán. Chỉ ghi file vào docs/diagram/ khi người dùng XÁC NHẬN (protected path). Dùng skill NÀY khi người dùng muốn \"vẽ diagram\", \"sinh sơ đồ\", \"PlantUML\", \"sequence diagram\", \"ERD\", \"class diagram\", \"component/architecture diagram\", \"activity/state diagram\", \"deployment/network diagram\", \"sơ đồ luồng\", \"sơ đồ tuần tự\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần ở bất kỳ giai đoạn nào cần trực quan hoá (vd nhúng diagram vào spec)."
 order: 3
-stageNumber: "03"
 title: "Diagram — chọn đúng loại rồi sinh PlantUML renderable"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Diagram (capability engineering)

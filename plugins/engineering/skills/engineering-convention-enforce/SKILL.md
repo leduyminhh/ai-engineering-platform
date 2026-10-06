@@ -2,12 +2,9 @@
 name: engineering-convention-enforce
 description: "Skill capability xuyên suốt (plugin engineering) để KIỂM và ENFORCE quy ước của project trên mã nguồn: đặt tên (file/thư mục/định danh) + cấu trúc thư mục/file + convention chung. Đối chiếu với nguồn chuẩn của project `project-knowledge/code-convention.md` (+ `source-structure.md`/`architecture.md`/lint config nếu có), phát hiện lệch, BÁO có evidence `file:line`/path + rule nguồn, đề xuất sửa (path · rule · hiện tại → đề xuất · severity). READ-ONLY mặc định; sửa hàng loạt CHỈ khi người dùng yêu cầu và con người DUYỆT DIFF. KHÔNG tự bịa chuẩn (thiếu code-convention → fail-loud, đề nghị chạy init/bổ sung trước); ĐỔI convention là quyết định kiến trúc → trỏ engineering-adr, không tự đổi. Docs-only recipe (hướng dẫn agent), KHÔNG phải validator chạy được, KHÔNG sinh code. Dùng skill NÀY khi người dùng muốn \"enforce convention\", \"kiểm quy ước\", \"chuẩn hoá đặt tên\", \"kiểm cấu trúc thư mục\", \"convention check\", \"lint quy ước\", \"áp chuẩn code convention\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần ở bất kỳ giai đoạn nào cần kiểm/áp quy ước."
 order: 6
-stageNumber: "06"
 title: "Convention Enforce — kiểm & áp quy ước đặt tên + cấu trúc thư mục theo code-convention của project"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Convention Enforce — kiểm & enforce quy ước project (skill dùng chung)

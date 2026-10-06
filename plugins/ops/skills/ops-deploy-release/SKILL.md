@@ -2,12 +2,9 @@
 name: ops-deploy-release
 description: "Skill vận hành (plugin ops) hướng dẫn deploy/release một service lên server MỘT CÁCH AN TOÀN: (1) nạp context + dò cấu hình deploy/CI/CD của project và chốt scope release (version/artifact/service, môi trường staging/prod); (2) chuẩn bị + chạy checklist tiền deploy (build/test/migration sẵn sàng, backup + điểm rollback, thông báo, feature flag); (3) chọn chiến lược triển khai phù hợp (rolling / blue-green / canary) kèm tiêu chí tiến/lùi; (4) triển khai theo cấu hình project + health-check, KHÔNG tự chạy lệnh deploy/rollback prod — trình bày lệnh/kế hoạch, chờ người xác nhận; (5) verify hậu deploy theo health/metric/smoke test, rollback theo chiến lược đã chọn khi vượt ngưỡng; (6) đóng checklist hậu deploy + nêu residual risk. Đọc Dockerfile/compose/k8s manifest/CI pipeline/script release làm ràng buộc, KHÔNG dựng lại hạ tầng, KHÔNG lộ secret (token qua biến môi trường, mask trong log). Dùng skill NÀY khi người dùng muốn \"deploy\", \"release\", \"phát hành\", \"triển khai lên server\", \"rollback\", \"release checklist\", \"canary\", \"blue-green\", \"rolling update\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần; con người DUYỆT trước mọi tác động production."
 order: 1
-stageNumber: "01"
 title: "Deploy / Release an toàn — checklist tiền/hậu deploy, chiến lược triển khai, health-check + rollback"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Deploy / Release (capability ops)

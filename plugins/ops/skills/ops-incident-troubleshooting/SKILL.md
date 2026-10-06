@@ -2,12 +2,9 @@
 name: ops-incident-troubleshooting
 description: "Skill vận hành (plugin ops) hướng dẫn TRIAGE & ĐIỀU TRA sự cố production một cách an toàn: (1) nạp context + chốt phạm vi sự cố (triệu chứng, thời điểm bắt đầu, blast radius, service/môi trường ảnh hưởng) và dò nguồn tín hiệu (log/metric/trace/dashboard, health endpoint); (2) khoanh vùng theo tầng (edge/LB → app → DB → dependency ngoài → infra/tài nguyên) dựa trên thời điểm bắt đầu + thay đổi gần đây (deploy/config); (3) đọc log/metric/trace theo tầng, tương quan timeline, lọc nhiễu, mask secret; (4) đặt 1 giả thuyết rõ → kiểm chứng bằng bằng chứng cụ thể (log line/metric), loại trừ dần, phân biệt bằng chứng chắc vs nghi ngờ; (5) đề XUẤT mitigation tạm (rollback deploy nghi ngờ, scale, feature flag, circuit breaker) — KHÔNG tự thực thi trên prod, nêu rủi ro mỗi phương án; (6) RCA đo được (triệu chứng/timeline/nguyên nhân gốc/khắc phục/phòng ngừa) + residual risk. Read-only + ĐỀ XUẤT là mặc định: KHÔNG tự sửa/khởi động lại/rollback/đụng prod khi chưa xác nhận; KHÔNG lộ secret (mask trong log/output). Dùng skill NÀY khi người dùng muốn \"điều tra sự cố\", \"incident\", \"prod lỗi\", \"server down\", \"điều tra lỗi production\", \"triage\", \"RCA\", \"đọc log lỗi\", \"500 error\", \"service chậm\", \"khoanh vùng lỗi\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần; con người DUYỆT trước mọi tác động production."
 order: 2
-stageNumber: "02"
 title: "Incident troubleshooting — triage, khoanh vùng theo tầng, giả thuyết → kiểm chứng, mitigation đề xuất + RCA"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Incident troubleshooting (capability ops)

@@ -2,13 +2,10 @@
 name: backend-testing
 description: "Recipe on-demand: chiến lược và viết TEST cho một BACKEND project (Java/Spring, Python) BÁM kiến trúc đã chọn — unit cho lõi domain/application thuần (mock/fake driven port, KHÔNG cần DB), integration cho adapter (Testcontainers/DB thật), web slice cho controller, characterization khi đụng code cũ ít test. Đặt test đúng tầng theo test pyramid, chọn loại test theo mức rủi ro, đo độ phủ nhánh chính + edge, tránh test giòn (phụ thuộc thứ tự/thời gian/mạng). Dùng skill NÀY khi người dùng muốn \"viết test backend\", \"unit test\", \"integration test\", \"test service/API\", \"test coverage\", \"đo độ phủ\", \"TDD backend\", \"kiểm thử backend\", \"viết JUnit/pytest\", \"test controller/repository\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 3
-stageNumber: "03"
 title: "Backend Testing — Chiến lược và viết test bám kiến trúc (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Backend Testing — Chiến lược và viết test bám kiến trúc (recipe on-demand)

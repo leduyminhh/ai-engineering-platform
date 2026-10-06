@@ -10,8 +10,6 @@ agents: "ops-incident-investigator,engineering-spec-analyst"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Incident — triage, mitigation, phục hồi, RCA

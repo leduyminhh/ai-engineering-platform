@@ -2,12 +2,9 @@
 name: data-db-migration
 description: "Recipe on-demand cho SCHEMA DATABASE của một BACKEND project, 2 chế độ: ADOPT — kiểm kê cơ chế schema hiện trạng (ddl-auto, DDL chạy tay), so sánh Flyway ↔ Liquibase bằng bằng chứng của chính project, DỪNG cho người dùng chọn, rồi áp module migration chạy riêng; CHANGE — viết MỘT thay đổi schema an toàn theo expand/contract (thêm/đổi/xoá cột, index, FK), kiểm rủi ro khoá bảng PostgreSQL, verify trên DB test theo chu trình của từng công cụ (Flyway forward-only). Template có cho Java/Spring Boot + PostgreSQL; Python/Alembic chỉ có hướng dẫn quy trình. KHÔNG chạy migration lên production. Dùng skill NÀY khi người dùng muốn \"migrate db\", \"flyway\", \"liquibase\", \"công cụ migration\", \"bỏ ddl-auto\", \"quản lý schema\", \"database migration\", \"đổi schema\", \"thêm cột\", \"expand contract\", \"schema change\", \"migration an toàn\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG dùng khi project đã chạy data-oltp-init (dùng data-oltp-implement). KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 5
-stageNumber: "05"
 title: "Data DB Migration — Áp công cụ migration & viết thay đổi schema an toàn (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Data DB Migration — Áp công cụ migration & viết thay đổi schema an toàn (recipe on-demand)

@@ -2,13 +2,10 @@
 name: frontend-data-integration
 description: "Recipe on-demand: NỐI một UI React đã dựng (component presentational do frontend-implement sinh ra) với API THẬT theo contract OpenAPI ở docs/contracts/ — dùng type sinh từ contract (codegen sẵn có của project, hoặc đề xuất openapi-typescript và hỏi trước khi cài), tạo data hook đúng tầng kiến trúc (Feature-Based/FSD/Micro-FE) bằng TanStack Query, nối ở container/page (KHÔNG sửa presentational), xử lý đủ loading/error/empty/success, map DTO sang view model ở biên, map lỗi 401/4xx/5xx, test bằng msw qua frontend-testing. Lệch contract thì DỪNG, báo drift, không tự sửa contract. KHÔNG quyết định lưu token/auth, KHÔNG thêm global store hay thư viện data khi chưa hỏi. Dùng skill NÀY khi người dùng muốn \"nối API\", \"gọi API cho màn hình\", \"tích hợp API vào React\", \"data hook\", \"sinh type từ OpenAPI\", \"nối data cho component\", \"thay mock bằng API thật\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã chạy frontend-init và đã có contract."
 order: 7
-stageNumber: "07"
 title: "Frontend Data Integration — Nối UI với API theo contract OpenAPI (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Frontend Data Integration — Nối UI với API theo contract (recipe on-demand)

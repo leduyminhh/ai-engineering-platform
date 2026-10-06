@@ -10,8 +10,6 @@ agents: "data-migration-writer,backend-implementer,backend-test-writer,backend-r
 requires: "core/git-workflow,data/data-db-migration"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # DB change — migration schema forward/rollback

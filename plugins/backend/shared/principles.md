@@ -14,7 +14,7 @@ chỉ giao tiếp qua API công khai hoặc shared (no reach-in). Layered thư�
 ## Trình tự khuyến nghị khi làm đầy đủ (không phải pipeline bắt buộc)
 Khi làm một use-case đầy đủ từ đầu, thứ tự hợp lý là: **Contract** (REST API + mock, skill
 `backend-api-contract`) → **data model/repository** → **Implement đầy đủ** (skill `backend-implement`).
-Đây là 2 skill độc lập (`pipeline: false`), gọi khi cần, không phải chuỗi ép buộc — chốt giao diện
+Đây là 2 skill độc lập (recipe on-demand), gọi khi cần, không phải chuỗi ép buộc — chốt giao diện
 API trước giúp tránh phải đổi lại nghiệp vụ đã viết khi hình dạng dữ liệu thay đổi.
 
 Contract của backend là **REST API contract**: chốt trước endpoint (method + path), request/response

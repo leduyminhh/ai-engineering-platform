@@ -2,13 +2,10 @@
 name: backend-api-contract
 description: "Recipe on-demand: chốt & đồng bộ API CONTRACT (OpenAPI-first) giữa backend và frontend cho một BACKEND project (Java/Spring, Python) — thiết kế/cập nhật contract ở docs/contracts/ (OpenAPI 3.1) TRƯỚC khi code, versioning + backward-compat (SemVer, thay đổi tương thích vs breaking, deprecate có lộ trình), và kiểm DRIFT contract↔code (endpoint/DTO thực tế khớp contract: thiếu/thừa field, kiểu sai, endpoint lệch). Contract là nguồn sự thật FE↔BE — BE dựng controller/@HttpExchange theo contract, FE sinh client/type từ contract. READ-ONLY mặc định ở bước kiểm drift; con người duyệt diff. Dùng skill NÀY khi người dùng muốn \"api contract\", \"openapi\", \"swagger/openapi spec\", \"hợp đồng API\", \"đồng bộ contract FE BE\", \"versioning API\", \"kiểm drift contract\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có docs/contracts hoặc mã nguồn."
 order: 8
-stageNumber: "08"
 title: "Backend API Contract — Chốt & đồng bộ OpenAPI contract FE↔BE, kiểm drift (recipe on-demand)"
 runsIn: plan
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Backend API Contract — Chốt & đồng bộ API contract (OpenAPI-first, recipe on-demand)

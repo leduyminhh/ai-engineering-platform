@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Removed the dead `pipeline`, `next` and `stageNumber` frontmatter keys from every skill, workflow
+  and the workflow template; the loader no longer exposes them, and the Antigravity `AGENTS.md`
+  lists skills in a single group (the empty "Pipeline" section is gone).
+
 ## [1.2.1] - 2026-10-01
 
 ### Added

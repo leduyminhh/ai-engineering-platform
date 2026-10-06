@@ -2,13 +2,10 @@
 name: frontend-testing
 description: "Recipe on-demand: chiến lược và viết TEST cho một FRONTEND React/TypeScript project BÁM kiến trúc UI đã chọn (Feature-Based/FSD/Micro-FE) — render + interaction test bằng Testing Library (query theo role/accessible, dùng userEvent), test custom hook, mock mạng bằng msw (KHÔNG mock fetch thủ công), snapshot có kiểm soát, characterization khi đụng code cũ. Test theo hành vi người dùng, tránh test chi tiết cài đặt/giòn (phụ thuộc timer/thứ tự/DOM nội bộ). Dùng skill NÀY khi người dùng muốn \"test frontend\", \"test React\", \"unit test component\", \"test hook\", \"React Testing Library\", \"mock API msw\", \"test coverage FE\", \"kiểm thử giao diện\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã có mã nguồn."
 order: 3
-stageNumber: "03"
 title: "Frontend Testing — Chiến lược và viết test React bám kiến trúc (recipe on-demand)"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Frontend Testing — Chiến lược và viết test React bám kiến trúc (recipe on-demand)

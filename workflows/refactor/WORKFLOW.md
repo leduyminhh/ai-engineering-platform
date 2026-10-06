@@ -10,8 +10,6 @@ agents: "backend-test-writer,frontend-test-writer,backend-reviewer,frontend-revi
 requires: "backend/backend-refactor,frontend/frontend-refactor,backend/backend-migrate-architecture,frontend/frontend-migrate-architecture,core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Refactor — đổi code/kiến trúc giữ nguyên hành vi

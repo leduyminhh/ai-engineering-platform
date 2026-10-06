@@ -2,13 +2,10 @@
 name: frontend-implement
 description: "Recipe on-demand: chuyển một thiết kế có sẵn (file HTML/CSS, Figma qua MCP/Dev Mode, hoặc ảnh/screenshot) thành React component TypeScript bám ĐÚNG kiến trúc đã chọn (Feature-Based/FSD/Micro-FE) + design-system của project. Ưu tiên tái dùng component library (shadcn/MUI/antd) + Tailwind; sinh ở mức presentational + tương tác cơ bản (props typed, state/handler nội bộ), KHÔNG nối API/data/route. Dùng skill NÀY khi người dùng muốn \"code React từ Figma\", \"dựng UI từ HTML có sẵn\", \"chuyển mockup/ảnh sang component\", \"convert design sang React\", \"làm màn hình theo thiết kế\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần trên project đã chạy frontend-init."
 order: 2
-stageNumber: "02"
 title: "Frontend Implement — Sinh React component từ HTML/Figma/ảnh"
 runsIn: execute
 invoke: per-request
-pipeline: false
 sharedAssets: templates/architecture
-next: null
 ---
 
 # Frontend Implement — Sinh React component từ thiết kế (recipe on-demand)

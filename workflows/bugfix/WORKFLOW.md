@@ -10,8 +10,6 @@ agents: "backend-test-writer,frontend-test-writer,backend-fixer,frontend-fixer,b
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
-pipeline: false
-next: null
 ---
 
 # Bugfix — tái hiện, root cause, fix tối thiểu, regression

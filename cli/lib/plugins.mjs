@@ -122,9 +122,9 @@ function parseFrontmatter(text) {
 }
 
 /**
- * Load a plugin's skills from `skills/<skill-id>/SKILL.md`. Workflow metadata lives in the
- * SKILL.md frontmatter (order, stageNumber, title, runsIn, invoke, next); body is the
- * instructions. Files alongside SKILL.md (e.g. `references/`) are treated as assets to ship.
+ * Load a plugin's skills from `skills/<skill-id>/SKILL.md`. Metadata lives in the SKILL.md
+ * frontmatter (order, title, runsIn, invoke, sharedAssets); body is the instructions. Files
+ * alongside SKILL.md (e.g. `references/`) are treated as assets to ship.
  * Returns the same internal stage shape adapters already consume, ordered by `order`.
  */
 function loadSkills(pluginDir) {
@@ -162,16 +162,10 @@ function loadSkills(pluginDir) {
     stages.push({
       id: meta.name || e.name,
       order: typeof meta.order === 'number' ? meta.order : 0,
-      stageNumber: meta.stageNumber || '',
       title: meta.title || '',
       description: meta.description || '',
       runsIn: meta.runsIn || '',
       invoke: meta.invoke || '',
-      // pipeline=false đánh dấu "recipe on-demand" — skill KHÔNG thuộc chuỗi bắt buộc
-      // init→...→implement (đứng riêng, next=null). Frontmatter parser trả "false" dạng
-      // string nên nhận cả hai. Mặc định (thiếu field) = true = stage pipeline.
-      pipeline: meta.pipeline === false || meta.pipeline === 'false' ? false : true,
-      next: meta.next === undefined ? null : meta.next,
       body,
       dir,
       assetsDir: dir,
@@ -238,8 +232,6 @@ export function loadWorkflows() {
       requires: splitList(meta.requires),
       runsIn: meta.runsIn || '',
       invoke: meta.invoke || '',
-      pipeline: meta.pipeline === false || meta.pipeline === 'false' ? false : true,
-      next: meta.next === undefined ? null : meta.next,
       body,
       dir,
       assetsDir: dir,
