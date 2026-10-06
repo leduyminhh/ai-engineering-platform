@@ -273,3 +273,173 @@ trên `4f139f4`.
 | S8 | §4.3 rule 3 | Thêm cặp trùng `git-workflow` ↔ `ops-deploy-release` ("release"): đổi trigger của `git-workflow` thành "release branch" | Cặp này chưa được liệt kê ở §2 |
 | S9 | §4.3 rule 1 | `→ <id>` lấy từ "Không dùng khi" tới hết description (câu này phải đứng cuối); thêm lỗi khi trỏ vào chính nó | Tách câu theo dấu chấm hỏng với "v.v." |
 | S10 | §5.4 | Plan chỉ đo (B0) và ghi quyết định (B1). Nếu `api → feature` đạt cả 5 tiêu chí, việc gộp (stub `deprecatedBy`, wizard/installer, `aip update`) làm spec + plan riêng | Chưa có cơ chế stub; tiêu chí 1 có thể đã loại ứng viên: `workflow-api` có trigger riêng "làm API", "contract-first" |
+
+---
+
+## 11. Đặc tả chi tiết Task 5–6 (Pha B, 2026-10-06)
+
+Phần này đặc tả đầy đủ hai task còn lại của plan để duyệt trước khi chạy. Trạng thái lúc viết: Task 1–4 đã commit
+(`5655add`, `b87a14c`, `e8fc75b`, `2d49639`). Số "đo trước" dưới đây chạy bằng đúng code `test/overlap.mjs` trong plan,
+trên HEAD `2d49639`, ở thư mục tạm git-ignored; Task 5 phải tái tạo được các số này.
+
+### 11.1 Mục tiêu
+
+| Task | Kết quả | Không làm |
+|---|---|---|
+| 5 (B0) | Một lệnh in số đo trùng lặp skill ↔ skill và workflow ↔ workflow, chạy lại được khi thêm skill mới | Không chặn CI, không gộp gì, không đo thư mục `references/` |
+| 6 (B1) | Quyết định gộp hoặc không gộp `workflow-api` vào `workflow-feature`, ghi kèm số đo vào §5.3.1 | Không sửa workflow, installer, wizard; không làm cơ chế stub |
+
+### 11.2 Task 5: `test/overlap.mjs`
+
+#### 11.2.1 Giao diện
+
+| Export | Chữ ký | Nghĩa |
+|---|---|---|
+| `normLines` | `(text: string) => Set<string>` | Tập dòng nội dung đã chuẩn hoá (§11.2.2) |
+| `lineOverlap` | `(a: string, b: string) => number` | `|A ∩ B| / min(|A|, |B|)` trên `normLines`; 0 nếu một bên rỗng |
+| `stepOverlap` | `(a: string, b: string) => number` | Tỉ lệ bước của `a` có cặp (Thực hiện, Hành động) trùng nguyên văn với một bước của `b`, chia cho `min(số bước a, số khoá bước khác nhau của b)`; 0 nếu một bên không có bước |
+| `titleOverlap` | `(a: string, b: string) => number` | Như `stepOverlap` nhưng khoá là tên bước (chữ thường, bỏ `⏸`, trim) |
+
+- Chạy trực tiếp (`node test/overlap.mjs`, alias `npm run overlap`) thì in báo cáo. Khi bị `import` (từ `test/validate.mjs`)
+  thì không in gì. Điều kiện chạy: `import.meta.url === pathToFileURL(process.argv[1]).href`.
+- Phụ thuộc: chỉ `cli/lib/plugins.mjs` (loader), `cli/lib/workflows.mjs` (`WF_ANCHORS`, `parseSteps`), Node built-in.
+- Không nằm trong `npm test`, không nằm trong gói npm (pack-guard đã loại `test/`).
+
+#### 11.2.2 Chuẩn hoá dòng
+
+Thứ tự áp dụng cho mỗi dòng của body (body do loader trả, đã bỏ frontmatter và đã đổi CRLF → LF):
+
+1. `trim()` hai đầu.
+2. Bỏ dòng rỗng.
+3. Bỏ dòng nằm trong `WF_ANCHORS`: dòng khung giống nhau ở mọi workflow, không phản ánh nội dung.
+4. Bỏ dòng cấu trúc khớp `^(\|[-| :]+\||```.*|#+|---)$` (dòng kẻ bảng, rào code, dòng chỉ có `#`, `---`).
+5. Gom thành `Set`: dòng lặp trong cùng một file chỉ tính một lần.
+
+Dòng heading có chữ (vd `## Quy trình`) **được giữ**, vì tên heading là nội dung có thể trùng thật.
+
+#### 11.2.3 Tập so sánh
+
+| Bảng | Phần tử | Số cặp |
+|---|---|---|
+| Skill ↔ skill | 35 skill: `core/skills/*` + `plugins/*/skills/*` | 595 |
+| Workflow ↔ workflow | 13 `WORKFLOW.md`, gồm orchestrator | 78 |
+
+Mỗi cặp không thứ tự tính một lần (`i < j` theo thứ tự loader trả).
+
+#### 11.2.4 Định dạng báo cáo
+
+```text
+## Skill ↔ skill (top 15)
+
+| Cặp | Dòng |
+|---|---|
+| <id-a> ↔ <id-b> | 56% |
+…
+
+## Workflow ↔ workflow (top 15)
+
+| Cặp | Dòng | Bước (Thực hiện + Hành động) | Tên bước |
+|---|---|---|---|
+…
+
+⚠ = chạm ngưỡng gộp 60% (spec §5.2 tiêu chí 2).
+```
+
+- Sắp giảm dần theo **giá trị lớn nhất trong các cột** của dòng; hoà nhau giữ thứ tự sinh cặp.
+- Phần trăm làm tròn `Math.round(x * 100)`; giá trị ≥ 0,6 có thêm ` ⚠`.
+- Exit code luôn 0; không ném lỗi khi thiếu `workflows/` (`loadWorkflows()` trả `null` → bảng workflow rỗng).
+
+#### 11.2.5 Kiểm thử (block `// 28.` trong `test/validate.mjs`)
+
+| # | Đầu vào | Kỳ vọng |
+|---|---|---|
+| 1 | `lineOverlap('a\nb\nc', 'b\nc\nd\ne')` | `2/3` (chia cho tập nhỏ hơn) |
+| 2 | Hai text chỉ chung một dòng `WF_ANCHORS` | `0` |
+| 3 | Hai text chỉ chung `|---|---|` và ```` ``` ```` | `0` |
+| 4 | `lineOverlap('', 'a')` | `0` |
+| 5 | Hai workflow fixture: bước 1 trùng cả Thực hiện lẫn Hành động, bước 2 khác Thực hiện | `stepOverlap = 0.5` |
+| 6 | Cùng fixture, tên bước T1/T2 có ở cả hai | `titleOverlap = 1` |
+
+Bằng chứng chạy: `node test/validate.mjs` → `0 fail`; `npm run overlap` → in đủ 2 bảng, exit 0.
+
+#### 11.2.6 Số đo trước (HEAD `2d49639`)
+
+Skill ↔ skill, top 8 (không cặp nào ≥ 60%):
+
+| Cặp | Dòng |
+|---|---|
+| data-oltp-init ↔ data-olap-init | 56% |
+| backend-init ↔ data-oltp-init | 55% |
+| data-oltp-init ↔ frontend-init | 55% |
+| backend-init ↔ data-olap-init | 51% |
+| data-olap-init ↔ frontend-init | 51% |
+| backend-fix ↔ frontend-fix | 51% |
+| backend-code-review ↔ frontend-code-review | 49% |
+| backend-init ↔ frontend-init | 48% |
+
+Workflow ↔ workflow, các dòng liên quan (không cặp nào ≥ 60%):
+
+| Cặp | Dòng | Bước | Tên bước |
+|---|---|---|---|
+| workflow-feature ↔ workflow-api | 30% | 0% | 38% |
+| workflow-feature ↔ workflow-bugfix | 26% | 0% | 38% |
+| workflow-feature ↔ workflow-db-change | 20% | 0% | 38% |
+| workflow-api ↔ workflow-docs | 35% | 20% | 20% |
+
+`[Inference]` Bốn skill `*-init` trùng 48–56% vì cùng khung scaffold (Tiền đề, bước copy `templates/`, mục an toàn mới
+của Task 2). Đây là trùng boilerplate, không phải trùng chức năng: mỗi skill tạo cây thư mục khác nhau. Ghi nhận, ngoài
+phạm vi spec này.
+
+#### 11.2.7 Giới hạn đã biết
+
+- `lineOverlap` so dòng nguyên văn nên đánh giá thấp nội dung được diễn đạt lại; không có so khớp ngữ nghĩa.
+- `stepOverlap` so nguyên văn hai trường nên gần như luôn 0 giữa workflow khác nhau (đo trước: 0% ở mọi cặp có
+  `workflow-feature`). Cột này chủ yếu bắt workflow bị chép nguyên bước.
+- Ngưỡng 60% là đề xuất của spec (§3 D5), chưa được hiệu chỉnh bằng dữ liệu sử dụng thật.
+
+### 11.3 Task 6: quyết định B1 cho `workflow-api → workflow-feature`
+
+#### 11.3.1 Đính chính §5.3
+
+§5.3 ghi "6/8 tên bước của `api` tương ứng bước của `feature`". Con số đó do so tên bước **theo nghĩa** (vd "Contract"
+≈ "Thiết kế & contract"). So **nguyên văn** (`titleOverlap`) chỉ trùng 3/8 bước của `api` (38%): "Baseline build/test",
+"Test", "Commit". Task 6 sửa câu trong §5.3 theo số nguyên văn và giữ ghi chú về cách so cũ.
+
+#### 11.3.2 Cách đánh giá từng tiêu chí
+
+| # | Tiêu chí (§5.2) | Cách kiểm | Đạt khi | Đo trước |
+|---|---|---|---|---|
+| 1 | Không có trigger độc lập | Lấy cụm trong ngoặc kép ở description `workflow-api`; kiểm từng cụm có xuất hiện (không phân biệt hoa thường) trong description `workflow-feature` | Mọi cụm của `api` có trong `feature` | **Không đạt**: "làm API", "thêm endpoint", "OpenAPI", "contract-first" không có trong `feature` |
+| 2 | Trùng ≥ 60% | Dòng `workflow-feature ↔ workflow-api` trong `npm run overlap` | Cột Dòng **hoặc** cột Bước ≥ 60% | **Không đạt**: Dòng 30%, Bước 0% |
+| 3 | Cùng `risk` và `tier` | Frontmatter hai file | Bằng nhau cả hai | **Không đạt**: risk cùng `medium`; tier `api` = 2, `feature` = 1 |
+| 4 | Bản gộp ≤ 272 dòng | `wc -l`; ước lượng = dòng `feature` + dòng riêng của `api` (= dòng `api` × (1 − cột Dòng)) | Ước lượng ≤ 272 | **Không đạt**: 232 + 209 × 0,70 ≈ 378 |
+| 5 | Có đường migrate | Có cơ chế stub `deprecatedBy` + `aip update` không lỗi với id cũ | Cả hai có | **Không đạt**: chưa có cơ chế stub (§5.4) |
+
+Gộp chỉ khi đạt cả 5. Với số đo trước, kết luận dự kiến là **không gộp**. Task 6 phải chạy lại `npm run overlap` và
+đối chiếu: nếu số mới khác số đo trước ở bất kỳ ô nào, ghi số mới và đánh giá lại; không được chép bảng đo trước.
+
+#### 11.3.3 Nội dung ghi vào spec
+
+1. Thêm `### 5.3.1 Số đo B0 và quyết định (<ngày chạy>)` ngay sau bảng §5.3, gồm theo thứ tự:
+   a. lệnh đã chạy và HEAD lúc chạy;
+   b. hai bảng top 15 dán nguyên văn từ `npm run overlap`;
+   c. bảng 5 tiêu chí của §11.3.2 với cột "Kết quả" là số vừa đo;
+   d. một câu kết luận: "Không gộp `workflow-api` vào `workflow-feature`; Pha B kết thúc." hoặc, nếu đạt cả 5,
+      "Đủ điều kiện gộp; việc gộp làm spec + plan riêng (§5.4, §10 S10)".
+2. Bảng §5.3: cột "Trạng thái" của dòng `workflow-api` đổi từ "Chờ số đo B0" thành "Giữ (§5.3.1)" hoặc
+   "Đủ điều kiện, spec riêng"; cột "Bằng chứng hiện có" sửa theo §11.3.1.
+3. Dòng trạng thái đầu spec: `**Đã thực thi Pha A + B0 + B1 (<ngày chạy>)**`.
+4. Không sửa file nào ngoài spec này.
+
+#### 11.3.4 Kiểm chứng Task 6
+
+- `npm test` exit 0 (spec không nằm trong phạm vi validator nhưng vẫn chạy để chắc không có thay đổi lạc).
+- `git diff --stat HEAD` chỉ có file spec.
+- Mọi số trong §5.3.1 truy được về output `npm run overlap` hoặc frontmatter/description (người duyệt so được).
+
+### 11.4 Rủi ro còn lại
+
+- `[Inference]` Nếu ngưỡng 60% quá cao thì Pha B không bao giờ ra quyết định gộp; đổi ngưỡng là quyết định của chủ dự
+  án, không thuộc spec này.
+- `[Unverified]` Số đo trước chạy trên bản tạm có cùng nội dung với HEAD `2d49639`; Task 5 chạy trên repo thật phải ra
+  cùng số. Lệch thì ghi số thật.
