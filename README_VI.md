@@ -312,6 +312,8 @@ Skill nào ship thư mục `references/` thì ship tới **mọi** provider (par
   `description`, `order`, `title`, `runsIn`, `invoke`).
   Tự động được phát hiện — không phải khai vào manifest. File tham chiếu đặt dưới
   `skills/<skill>/references/`.
+  Thân skill phải có H2 `## Quy trình…` và `## Ranh giới an toàn…` (cho phép hậu tố sau dấu
+  cách), do `test/validate.mjs` kiểm.
 - **Hành vi provider mới** → sửa `adapters/<provider>/adapter.mjs`; giữ là hàm thuần
   `build(plugins, { outDir, marketplace, core }) -> fileEntry[]` với entry là
   `{path, content}` | `{path, copyFrom}` | `{path, copyDir}`.

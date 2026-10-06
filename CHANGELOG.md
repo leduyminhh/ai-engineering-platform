@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the dead `pipeline`, `next` and `stageNumber` frontmatter keys from every skill, workflow
   and the workflow template; the loader no longer exposes them, and the Antigravity `AGENTS.md`
   lists skills in a single group (the empty "Pipeline" section is gone).
+- `SKILL.md` must have `## Quy trình…` and `## Ranh giới an toàn…` headings (`cli/lib/conventions.mjs`);
+  headings normalised in 15 skills and the 4 `*-init` skills gained a safety section built from rules
+  they already stated.
 
 ## [1.2.1] - 2026-10-01
 

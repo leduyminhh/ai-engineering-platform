@@ -50,5 +50,11 @@ có thì giữ nguyên.
 3. Hỏi người dùng domain + mô hình dữ liệu để điền `project-knowledge/`.
 4. KHÔNG viết code thực thi — mới chỉ scaffold.
 
+## Ranh giới an toàn
+
+- Cấu trúc đã tồn tại → KHÔNG ghi đè, báo lại; khi copy `templates/` chỉ thêm file chưa có.
+- CHỈ scaffold tài liệu: KHÔNG sinh code skeleton, KHÔNG sinh DDL/migration thật, KHÔNG viết code thực thi.
+- Con người chốt phương án và duyệt diff.
+
 ## Ghi chú
 - Muốn viết schema/migration/seed thật cho database này → recipe on-demand `data-oltp-implement`.

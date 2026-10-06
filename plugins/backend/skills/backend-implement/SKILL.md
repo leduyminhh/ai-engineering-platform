@@ -70,7 +70,7 @@ Theo [references/checklist.md](references/checklist.md):
 - **Đúng một aggregate/use-case** (không phình); map thủ công ở biên; đặt tên theo convention.
 - Nêu rõ phần **bỏ qua / giả định** (fail-loud). Con người **duyệt diff** trước khi commit.
 
-## Ranh giới
+## Ranh giới an toàn
 
 - Một use-case/aggregate mỗi lần; **KHÔNG chạy DB migration thật** (thuộc skill `data-db-migration` của plugin
   `data`); **KHÔNG externalize config/secret** (thuộc `backend-migrate-vault-consul`); không đụng secret.

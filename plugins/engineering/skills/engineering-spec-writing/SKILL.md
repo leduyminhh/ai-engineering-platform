@@ -40,7 +40,7 @@ KHÔNG dùng skill này để phân rã story/task chi tiết, sinh code, hay d�
 - Defer `project-knowledge/` + `code-convention.md` (skill init lo); docs-only, không đụng CLI/adapter/engine.
 - Con người **duyệt** spec trước khi dùng làm nguồn cho plan/triển khai.
 
-## Luồng viết spec
+## Quy trình — viết spec
 
 1. **Nạp context (BẮT BUỘC — trước khi khảo sát).**
    Đọc `project-knowledge/` (`project-overview.md`, `domain-context.md`), `docs/decisions/` (ADR đã có),

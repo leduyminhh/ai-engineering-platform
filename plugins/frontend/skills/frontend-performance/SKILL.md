@@ -27,7 +27,7 @@ dùng thật), và kích thước bundle là chỉ số **xác định** (không
 | `frontend-code-review` | đọc diff tìm lỗi/thiết kế; không đo |
 | `backend-performance` | phía backend của cùng workflow |
 
-## Hai chế độ
+## Quy trình — hai chế độ
 
 ### `measure` — Baseline (Bước 2) và Benchmark (Bước 5)
 

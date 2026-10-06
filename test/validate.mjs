@@ -16,6 +16,7 @@ import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse } from '../adapters/_shared/lib.mjs';
+import { checkSkillBody } from '../cli/lib/conventions.mjs';
 
 let pass = 0;
 const fails = [];
@@ -1909,6 +1910,25 @@ if (fs.existsSync(BUILD)) {
     'agentsFiles: không còn mục pipeline / "Tiếp theo"');
   ok(agMd24.includes('## Skill (gọi theo yêu cầu)') && agMd24.includes('### fx-a — A')
     && agMd24.includes('- **Khi nào dùng:** Làm A.'), 'agentsFiles: liệt kê skill trong một nhóm');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 25. Chuẩn hoá A2: khung H2 SKILL.md (spec 2026-10-06 §4.2)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  ok(checkSkillBody('## Quy trình\nx\n## Ranh giới an toàn\nx').length === 0, 'checkSkillBody: đủ 2 heading → hợp lệ');
+  ok(checkSkillBody('## Quy trình (trung tính stack) — cổng\n## Ranh giới an toàn (CLAUDE.md)').length === 0,
+    'checkSkillBody: cho phép hậu tố sau dấu cách');
+  ok(checkSkillBody('## Luồng viết spec\n## Ranh giới an toàn').some((e) => e.includes('Quy trình')),
+    'checkSkillBody: "## Luồng …" không thay được "## Quy trình"');
+  ok(checkSkillBody('## Quy trình\n## Ranh giới').some((e) => e.includes('Ranh giới an toàn')),
+    'checkSkillBody: "## Ranh giới" trần không đạt');
+  ok(checkSkillBody('## Quy trìnhX\n## Ranh giới an toàn').length === 1, 'checkSkillBody: chữ dính sau tên heading không đạt');
+  ok(checkSkillBody('### Quy trình\n## Ranh giới an toàn').length === 1, 'checkSkillBody: H3 không thay được H2');
+  for (const s of [...core.stages, ...plugins.flatMap((p) => p.stages)]) {
+    const errs = checkSkillBody(s.body);
+    ok(errs.length === 0, `${s.id}: khung SKILL.md hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

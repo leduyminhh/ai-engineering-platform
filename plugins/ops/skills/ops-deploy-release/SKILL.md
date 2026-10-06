@@ -45,7 +45,7 @@ production mà không có xác nhận.
   KHÔNG tuyên bố "đảm bảo / loại bỏ / chặn triệt để" — kế hoạch phản ánh dữ liệu tại thời điểm làm, môi
   trường thật có thể khác; nêu `[giả định]` khi suy luận thiếu dữ liệu.
 
-## Luồng deploy / release
+## Quy trình — deploy / release
 
 0. **Nạp context + dò cấu hình (BẮT BUỘC — trước khi triển khai).**
    Đọc `CLAUDE.md` / project-knowledge để nắm **ranh giới an toàn** + quy trình release. Dò cấu hình deploy/CI:

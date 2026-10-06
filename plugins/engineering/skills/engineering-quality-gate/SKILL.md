@@ -60,7 +60,7 @@ Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải ch�
   risk**. KHÔNG tuyên bố "chặn / đảm bảo / loại bỏ / sửa triệt để" lỗ hổng — findings phản ánh thời điểm quét
   với dữ liệu sẵn có, có thể sót.
 
-## Luồng quality + security gate
+## Quy trình — quality + security gate
 
 1. **Nạp context + dò cấu hình (BẮT BUỘC — trước khi quét/review).**
    Đọc CLAUDE.md / project-knowledge để nắm **ranh giới an toàn** + `code-convention.md`, và **chốt scope +

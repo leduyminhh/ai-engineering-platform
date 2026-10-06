@@ -15,7 +15,7 @@ Chọn phạm vi vừa đủ trả lời "có gì mới từ mốc trước đ�
 - **Từ một nhóm commit đã gom** — khi `git-workflow` đã trả sẵn danh sách commit theo phạm vi.
 
 Nếu người dùng chưa nói mốc: hỏi **một câu** để chốt mốc bắt đầu (tag phát hành gần nhất thường là mốc đúng).
-Nếu lịch sử chưa được gom → đề nghị chạy `git-workflow` (`Luồng changelog / release notes`) để lấy lịch sử theo
+Nếu lịch sử chưa được gom → đề nghị chạy `git-workflow` (`Quy trình — changelog / release notes`) để lấy lịch sử theo
 phạm vi trước; skill này không tự chạy lệnh git.
 
 ## 2. Nhóm chuẩn (theo tác động người dùng, không theo loại commit)

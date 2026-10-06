@@ -50,7 +50,7 @@ mặc định đó khi người dùng yêu cầu tường minh. Nếu branch hi�
 `develop`, `dev`: nạp branch-convention và tạo/chuyển sang branch dạng
 `<role>/<scope-or-module>-<short-summary-slug>` TRƯỚC khi commit.
 
-## Luồng commit & push
+## Quy trình — commit & push
 
 Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, chuẩn bị PR.
 
@@ -82,7 +82,7 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
 Báo cáo branch, commit, push, PR, verification và ghi chú bằng tiếng Việt theo
 [references/output-template-vi.md](references/output-template-vi.md).
 
-## Luồng changelog / release notes
+## Quy trình — changelog / release notes
 
 Dùng khi người dùng yêu cầu: release notes, tóm tắt thay đổi từ tag/version, tổng hợp
 tuần/tháng từ commit, changelog thân thiện người dùng.

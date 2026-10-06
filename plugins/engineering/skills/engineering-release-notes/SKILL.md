@@ -19,7 +19,7 @@ ngữ **kết quả/giá trị** (không lặp nguyên văn subject), nêu rõ b
 vết** (tag/hash/PR/ticket) để đối chiếu ngược.
 
 Skill này là **bước HOÀN TẤT của handoff** từ skill core `git-workflow`: `git-workflow` gom lịch sử git theo
-phạm vi (`Luồng changelog / release notes`) và giao phần **VIẾT nội dung cuối** cho skill này. Nếu chỉ có
+phạm vi (`Quy trình — changelog / release notes`) và giao phần **VIẾT nội dung cuối** cho skill này. Nếu chỉ có
 `git-workflow` mà thiếu skill này, `git-workflow` chỉ tạo bản tóm tắt tối thiểu; skill này viết bản đầy đủ,
 hướng người dùng. Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần ở giai đoạn
 **plan** (chuẩn bị phát hành). Con người giữ chốt: **duyệt release notes** trước khi công bố.
@@ -30,7 +30,7 @@ hướng người dùng. Skill này KHÔNG thuộc chuỗi pipeline bắt buộc
 - Cần tóm tắt thay đổi từ tag/version (`v2.4.0..v2.5.0`), theo khoảng ngày, N ngày gần nhất, hoặc từ một nhóm
   commit đã gom sẵn.
 - Cần tổng hợp commit tuần/tháng thành bản tin thay đổi cho người dùng cuối / dev / stakeholder.
-- Đang ở cuối `git-workflow` (`Luồng changelog / release notes`) và cần bước viết nội dung cuối.
+- Đang ở cuối `git-workflow` (`Quy trình — changelog / release notes`) và cần bước viết nội dung cuối.
 
 KHÔNG dùng skill này để thực hiện thao tác git (tag/release/push/merge) — đó là việc của `git-workflow`; skill
 này chỉ **viết nội dung**.
@@ -48,13 +48,13 @@ này chỉ **viết nội dung**.
 - **Giữ truy vết** nhưng phân biệt kênh: bản công khai có thể ẩn hash nội bộ; giữ tag/PR/ticket nếu là kênh nội bộ.
 - Con người **duyệt** release notes trước khi công bố (protected: kênh phát hành công khai).
 
-## Luồng viết release notes
+## Quy trình — viết release notes
 
 0. **Nạp context (BẮT BUỘC — trước khi viết).**
    Chốt **phạm vi so sánh nhỏ nhất có ích**: giữa 2 tag/version (`vX..vY`), một khoảng ngày, N ngày gần nhất,
    hoặc từ một nhóm commit đã gom. Xác định **đối tượng đọc** (người dùng cuối / dev / stakeholder) và **kênh
    xuất** (`CHANGELOG.md` / trang release / bản tin). Lịch sử thường do skill `git-workflow` gom sẵn; nếu chưa
-   có → nói rõ (fail-loud) và đề nghị chạy `git-workflow` (`Luồng changelog / release notes`) để lấy lịch sử
+   có → nói rõ (fail-loud) và đề nghị chạy `git-workflow` (`Quy trình — changelog / release notes`) để lấy lịch sử
    theo phạm vi trước, hoặc viết với phần đầu vào đã có + ghi rõ giới hạn.
 
 1. **Gom & phân loại.**
@@ -95,7 +95,7 @@ này chỉ **viết nội dung**.
 Skill này **không** thao tác git. Việc **gom lịch sử theo phạm vi** (tag/ngày/N ngày/nhóm commit) và mọi thao
 tác git (tag, release branch, push, merge-back) thuộc skill core **`git-workflow`**. Quan hệ chuẩn:
 
-- `git-workflow` (`Luồng changelog / release notes`) → gom lịch sử, giữ tag/hash/PR/ticket → **giao** phần viết
+- `git-workflow` (`Quy trình — changelog / release notes`) → gom lịch sử, giữ tag/hash/PR/ticket → **giao** phần viết
   nội dung cuối cho skill này.
 - Skill này → phân loại + viết hướng người dùng + định dạng → trả bản release notes để con người duyệt, rồi
   quay lại `git-workflow` nếu cần tag/release thật.

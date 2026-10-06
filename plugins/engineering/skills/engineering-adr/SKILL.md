@@ -45,7 +45,7 @@ KHÔNG dùng skill này để sinh code, để tự chốt một quyết định
 - Defer `project-knowledge/` (skill init lo); docs-only, không đụng CLI/adapter/engine.
 - Con người **duyệt** ADR và **chốt Status** trước khi coi là quyết định chính thức.
 
-## Luồng viết ADR
+## Quy trình — viết ADR
 
 0. **Nạp context (BẮT BUỘC — trước khi làm rõ).**
    Đọc `project-knowledge/` (`project-overview.md`, `domain-context.md`) và **quét `docs/decisions/`** hiện có

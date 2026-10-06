@@ -48,7 +48,7 @@ hay để **tự sửa hàng loạt** khi chưa được yêu cầu và chưa c�
 - **Không đụng secrets** (`.env`, key material…) và **không quét** ngoài scope đã chốt; defer `project-knowledge/`
   cho skill init lo — skill này *đọc* làm nguồn chuẩn, không *dựng*.
 
-## Luồng kiểm & enforce
+## Quy trình — kiểm & enforce
 
 0. **Nạp context (BẮT BUỘC — trước khi kiểm).**
    Đọc `project-knowledge/code-convention.md` làm **nguồn chuẩn** (+ `source-structure.md` / `architecture.md`

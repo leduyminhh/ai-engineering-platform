@@ -38,7 +38,7 @@ chỉ ghi file khi người dùng **xác nhận**.
   mục đích + tóm tắt nội dung trước); mặc định trả trong khung code, không tự ghi file.
 - Không tuyên bố "đã render thành công" trừ khi thật sự chạy lệnh render.
 
-## Luồng sinh diagram
+## Quy trình — sinh diagram
 
 1. **Xác định ý định + đối tượng đọc.** Câu hỏi diagram cần trả lời là gì (giải thích / review kiến trúc /
    thiết kế luồng / mô hình dữ liệu / kế hoạch / UI)? Đối tượng đọc là ai (engineering / product / ops / lãnh đạo)?

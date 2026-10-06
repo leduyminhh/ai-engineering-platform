@@ -51,7 +51,7 @@ kết luận độ phủ mà không dựa trên cấu hình/dependency đọc đ
   chứ không loại bỏ sự cố; đánh giá phản ánh cấu hình đọc được tại thời điểm làm; nêu `[giả định]` khi suy
   luận thiếu dữ liệu.
 
-## Luồng observability
+## Quy trình — observability
 
 0. **Nạp context + dò stack (BẮT BUỘC — trước khi đánh giá).**
    Đọc `CLAUDE.md` / project-knowledge để nắm **ranh giới an toàn** + kiến trúc service. **Chốt service /

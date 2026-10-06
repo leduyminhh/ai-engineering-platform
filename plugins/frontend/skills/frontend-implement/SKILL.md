@@ -64,7 +64,7 @@ Theo [references/fidelity-checklist.md](references/fidelity-checklist.md):
 - Nêu rõ phần **ước lượng** (nhất là từ ảnh) — độ trung thực pixel không tự verify tuyệt đối được.
 - Con người **duyệt diff** trước khi commit.
 
-## Ranh giới
+## Ranh giới an toàn
 
 - Không nối data/API, không routing, không backend, không sinh test nghiệp vụ (chỉ component + tương tác cơ bản).
   Nối data/API → `frontend-data-integration`.

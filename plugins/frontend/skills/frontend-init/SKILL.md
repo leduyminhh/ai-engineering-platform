@@ -54,3 +54,9 @@ có thì giữ nguyên.
    mỗi quyết định tạo ADR mới đánh số tiếp.
 3. Hỏi người dùng domain + mô hình dữ liệu để điền `project-knowledge/`.
 4. KHÔNG viết code thực thi — mới chỉ scaffold.
+
+## Ranh giới an toàn
+
+- Cấu trúc đã tồn tại → KHÔNG ghi đè, báo lại; khi copy `templates/` chỉ thêm file chưa có.
+- CHỈ scaffold tài liệu: KHÔNG copy/sinh skeleton code, KHÔNG viết code thực thi.
+- Con người chốt phương án UX/IA và duyệt diff.

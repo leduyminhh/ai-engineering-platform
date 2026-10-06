@@ -23,7 +23,7 @@ phải bộ công cụ dựng sẵn. Gọi độc lập hoặc từ Bước 2 (B
 | `backend-fix` chế độ `performance` | sửa theo giả thuyết; không tự kết luận nhanh hơn |
 | `backend-code-review` trục performance | đọc diff tìm N+1/thiếu index; không đo |
 
-## Hai chế độ
+## Quy trình — hai chế độ
 
 ### `measure` — Baseline (Bước 2) và Benchmark (Bước 5)
 

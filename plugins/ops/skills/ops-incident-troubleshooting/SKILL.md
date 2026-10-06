@@ -45,7 +45,7 @@ kết luận nguyên nhân từ một tín hiệu đơn lẻ chưa kiểm chứn
   **nghi ngờ**; LUÔN nêu **residual risk**. KHÔNG tuyên bố "đảm bảo / loại bỏ / chặn triệt để" — kết luận
   phản ánh dữ liệu quan sát được tại thời điểm điều tra; nêu `[giả định]` khi suy luận thiếu dữ liệu.
 
-## Luồng điều tra sự cố
+## Quy trình — điều tra sự cố
 
 0. **Nạp context + chốt phạm vi (BẮT BUỘC — trước khi điều tra).**
    Đọc `CLAUDE.md` / project-knowledge để nắm **ranh giới an toàn** + kiến trúc service. **Chốt phạm vi
