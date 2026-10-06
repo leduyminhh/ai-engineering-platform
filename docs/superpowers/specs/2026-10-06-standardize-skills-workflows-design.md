@@ -1,7 +1,7 @@
 # Thiết kế: Chuẩn hoá skill + workflow và gộp có điều kiện
 
 - Ngày: 2026-10-06
-- Trạng thái: **Đã duyệt spec (2026-10-06); plan đã lập, có sai lệch ghi ở §10**.
+- Trạng thái: **Đã thực thi Pha A + B0 + B1 (2026-10-06)**.
 - Phạm vi: toàn bộ `SKILL.md` (35 file: `core/skills/` + `plugins/*/skills/`), `WORKFLOW.md` (13 file trong `workflows/`),
   validator `test/validate.mjs`, loader `cli/lib/plugins.mjs`, adapter dùng chung `adapters/_shared/lib.mjs`.
 - Người duyệt: chủ dự án.
@@ -191,11 +191,70 @@ Rule validator:
 
 | Ứng viên | Bằng chứng hiện có | Trạng thái |
 |---|---|---|
-| `workflow-api` → chế độ của `workflow-feature` | 6/8 tên bước của `api` tương ứng bước của `feature`; cùng risk `medium`. `[Unverified]` Mới so tên bước, chưa so nội dung | Chờ số đo B0 |
+| `workflow-api` → chế độ của `workflow-feature` | So nguyên văn (`titleOverlap`) chỉ 3/8 tên bước của `api` trùng bước của `feature` (38%): "Baseline build/test", "Test", "Commit"; cùng risk `medium`. Cách so theo nghĩa trước đó cho 6/8 (vd "Contract" ≈ "Thiết kế & contract"), giữ làm ghi chú; số đo đầy đủ ở §5.3.1 | Giữ (§5.3.1) |
 | `workflow-db-change` | 9 bước riêng, risk `high`, checkpoint xác nhận DB đích | Giữ |
 | `workflow-docs` | Là đích nối tiếp của 6 workflow trong Registry | Giữ |
 | 4 skill `data-oltp-*`/`data-olap-*` | `init` 25/57, `implement` 10/96 dòng chung | Giữ (§2.1) |
 | 6 cặp skill BE/FE | 16–53 dòng chung | Giữ (D2) |
+
+### 5.3.1 Số đo B0 và quyết định (2026-10-06)
+
+Lệnh: `npm run overlap` (= `node test/overlap.mjs`), chạy trên HEAD `7c44f9a`, working tree sạch. Hai bảng dưới đây dán
+nguyên văn từ output (bỏ dòng banner của npm); mọi dòng đã ghi ở "số đo trước" (§11.2.6) đều khớp từng ô.
+
+#### Skill ↔ skill (top 15)
+
+| Cặp | Dòng |
+|---|---|
+| data-oltp-init ↔ data-olap-init | 56% |
+| backend-init ↔ data-oltp-init | 55% |
+| data-oltp-init ↔ frontend-init | 55% |
+| backend-init ↔ data-olap-init | 51% |
+| data-olap-init ↔ frontend-init | 51% |
+| backend-fix ↔ frontend-fix | 51% |
+| backend-code-review ↔ frontend-code-review | 49% |
+| backend-init ↔ frontend-init | 48% |
+| backend-performance ↔ frontend-performance | 32% |
+| frontend-data-integration ↔ frontend-e2e-testing | 22% |
+| data-db-migration ↔ frontend-data-integration | 19% |
+| backend-refactor ↔ frontend-refactor | 18% |
+| data-db-migration ↔ frontend-e2e-testing | 17% |
+| backend-testing ↔ frontend-testing | 15% |
+| backend-implement ↔ frontend-implement | 14% |
+
+#### Workflow ↔ workflow (top 15)
+
+| Cặp | Dòng | Bước (Thực hiện + Hành động) | Tên bước |
+|---|---|---|---|
+| workflow-feature ↔ workflow-bugfix | 26% | 0% | 38% |
+| workflow-feature ↔ workflow-db-change | 20% | 0% | 38% |
+| workflow-feature ↔ workflow-api | 30% | 0% | 38% |
+| workflow-testing ↔ workflow-docs | 35% | 20% | 20% |
+| workflow-api ↔ workflow-docs | 35% | 20% | 20% |
+| workflow-performance ↔ workflow-docs | 35% | 20% | 20% |
+| workflow-db-change ↔ workflow-docs | 34% | 20% | 20% |
+| workflow-feature ↔ workflow-docs | 33% | 0% | 20% |
+| workflow-bugfix ↔ workflow-docs | 33% | 0% | 20% |
+| workflow-feature ↔ workflow-testing | 31% | 0% | 29% |
+| workflow-security-review ↔ workflow-docs | 30% | 0% | 20% |
+| workflow-refactor ↔ workflow-docs | 29% | 0% | 0% |
+| workflow-feature ↔ workflow-performance | 18% | 0% | 29% |
+| workflow-bugfix ↔ workflow-testing | 26% | 0% | 29% |
+| workflow-bugfix ↔ workflow-performance | 20% | 0% | 29% |
+
+⚠ = chạm ngưỡng gộp 60% (spec §5.2 tiêu chí 2). Không có ô nào mang ⚠ ở cả hai bảng.
+
+Đánh giá 5 tiêu chí (§5.2) cho `workflow-api → workflow-feature`:
+
+| # | Tiêu chí | Kết quả |
+|---|---|---|
+| 1 | Không có trigger độc lập | **Không đạt**. Trigger trong ngoặc kép ở description `workflow-api`: "làm API", "thêm endpoint", "OpenAPI", "contract-first"; cả 4 cụm đều không có trong description `workflow-feature` (trigger của `feature`: "làm feature", "thêm tính năng", "implement user story", "làm chức năng mới end-to-end"). Cụm "workflow" trong câu "kể cả khi không nói chính xác chữ" là từ chung của cả hai file, không tính là trigger |
+| 2 | Trùng ≥ 60% | **Không đạt**. Dòng `workflow-feature ↔ workflow-api` 30%, Bước 0%, Tên bước 38% (cả hai cột tính ngưỡng đều < 60%) |
+| 3 | Cùng `risk` và `tier` | **Không đạt**. `risk`: cả hai `medium`; `tier`: `workflow-api` = 2, `workflow-feature` = 1 |
+| 4 | Bản gộp ≤ workflow dài nhất | **Không đạt**. `wc -l`: `workflow-api` 209 dòng, `workflow-feature` 232 dòng; ước lượng 232 + 209 × (1 − 0,30) ≈ 378 dòng. Workflow dài nhất hiện có là `workflows/security-review/WORKFLOW.md` = 270 dòng (`wc -l`), 378 > 270. Số mới khác "272" ghi ở §5.2 mục 4 và §11.3.2; dùng 270 vì đây là số đo trên HEAD `7c44f9a`, kết luận không đổi |
+| 5 | Có đường migrate | **Không đạt**. Chưa có cơ chế stub `deprecatedBy` (§5.4): `grep -rn deprecatedBy cli adapters test` không trả dòng nào |
+
+Kết luận: Không gộp `workflow-api` vào `workflow-feature`; Pha B kết thúc.
 
 ### 5.4 B1 — Cơ chế gộp (chỉ chạy nếu ứng viên qua §5.2)
 
