@@ -2021,10 +2021,20 @@ if (fs.existsSync(BUILD)) {
   ok(wInParen.endsWith('c…') && wInParen.includes('(x, y)'), 'whenToUse: dấu phẩy trong ngoặc không phải ranh giới mệnh đề');
   ok(whenToUse({ description: `${'a'.repeat(50)}, ${'b '.repeat(80)}cuối. Hai.` }).endsWith('b…'),
     'whenToUse: ranh giới trước ký tự 100 bị bỏ qua, quay về cắt theo từ');
-  const byId26 = new Map(all26.map((s) => [s.id, s]));
-  ok(whenToUse(byId26.get('backend-refactor')).endsWith('tách god class…')
-    && whenToUse(byId26.get('frontend-refactor')).endsWith('bỏ prop drilling…'),
-    'whenToUse: dữ liệu thật dừng sau trọn mệnh đề (backend-refactor, frontend-refactor)');
+  const firstSentence26 = (s) => {
+    const d = (s.description || '').trim().replace(/\s+/g, ' ');
+    const m = d.match(/^(.*?[.。])\s/);
+    return m ? m[1] : d;
+  };
+  const cut26 = all26.filter((s) => whenToUse(s).endsWith('…'));
+  const atClause26 = cut26.filter((s) => {
+    const kept = whenToUse(s).slice(0, -1);
+    const first = firstSentence26(s);
+    return first.startsWith(kept) && [', ', '; ', ' — ', ': '].some((b) => first.startsWith(b, kept.length));
+  });
+  // Cắt theo từ cũng tình cờ dừng trước dấu phẩy (đo: 5/39), nên đòi đa số thay vì "ít nhất một".
+  ok(cut26.length > 0 && atClause26.length * 2 >= cut26.length,
+    `whenToUse: đa số dòng thật bị cắt dừng sau trọn mệnh đề (${atClause26.length}/${cut26.length})`);
   const unbalanced26 = all26.filter((s) => !parenBalanced(whenToUse(s))).map((s) => s.id);
   ok(unbalanced26.length === 0, `whenToUse: mọi dòng "Khi nào dùng" cân ngoặc${unbalanced26.length ? ' — ' + unbalanced26.join(', ') : ''}`);
   const longWhen = all26.filter((s) => [...whenToUse(s)].length > WHEN_TO_USE_MAX).map((s) => s.id);
