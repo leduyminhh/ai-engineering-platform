@@ -1,6 +1,6 @@
 ---
 name: workflow-code-review
-description: "Workflow điều phối review một diff/PR đã có sẵn: hiểu intent thay đổi, phân vùng diff theo backend/frontend, review song song đa vai trò theo trục correctness/thiết kế/a11y/test, validate lại từng finding bằng cách đọc file:line, rồi tổng hợp verdict approve/request-changes. Dùng workflow NÀY khi người dùng muốn \"review PR\", \"review code\", \"đọc soát diff\", \"nhận xét PR\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối review một diff/PR đã có sẵn: hiểu intent thay đổi, phân vùng diff theo backend/frontend, review song song đa vai trò theo trục correctness/thiết kế/a11y/test, validate lại từng finding bằng cách đọc file:line, rồi tổng hợp verdict approve/request-changes. Dùng workflow NÀY khi người dùng muốn \"review PR\", \"review code\", \"đọc soát diff\", \"nhận xét PR\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi cần thêm tính năng → workflow-feature; cần sửa lỗi → workflow-bugfix."
 order: 4
 title: "Code review — review diff/PR đa vai trò, chỉ đọc"
 kind: workflow

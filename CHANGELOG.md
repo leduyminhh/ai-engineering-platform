@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SKILL.md` must have `## Quy trình…` and `## Ranh giới an toàn…` headings (`cli/lib/conventions.mjs`);
   headings normalised in 15 skills and the 4 `*-init` skills gained a safety section built from rules
   they already stated.
+- Skill and workflow `description`s are at most 1024 characters (Agent Skills limit), end with
+  `Không dùng khi … → <id>`, and no quoted trigger is shared verbatim between two skills; 22
+  over-long descriptions were shortened with their trigger lists kept.
 
 ## [1.2.1] - 2026-10-01
 

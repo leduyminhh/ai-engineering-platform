@@ -1,6 +1,6 @@
 ---
 name: workflow-api
-description: "Workflow điều phối làm API contract-first: chốt OpenAPI 3.1 trước khi code, implement backend theo contract, test integration + contract, kiểm drift contract↔code song song với review authorization/input validation, tuỳ chọn nối FE client, cập nhật docs rồi commit. Dùng workflow NÀY khi người dùng muốn \"làm API\", \"thêm endpoint\", \"OpenAPI\", \"contract-first\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối làm API contract-first: chốt OpenAPI 3.1 trước khi code, implement backend theo contract, test integration + contract, kiểm drift contract↔code song song với review authorization/input validation, tuỳ chọn nối FE client, cập nhật docs rồi commit. Dùng workflow NÀY khi người dùng muốn \"làm API\", \"thêm endpoint\", \"OpenAPI\", \"contract-first\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi không cần contract mới, chỉ đổi logic nội bộ để thêm tính năng → workflow-feature; để sửa lỗi → workflow-bugfix."
 order: 8
 title: "API — contract-first, implement, kiểm drift"
 kind: workflow

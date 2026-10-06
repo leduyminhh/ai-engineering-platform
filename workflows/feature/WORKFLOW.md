@@ -1,6 +1,6 @@
 ---
 name: workflow-feature
-description: "Workflow điều phối làm một feature/user story end-to-end: phân tích yêu cầu + acceptance criteria, thiết kế/contract nếu có API, implement backend/frontend, viết test theo từng acceptance criterion, review đa vai trò, cập nhật docs, rồi commit qua git-workflow. Dùng workflow NÀY khi người dùng muốn \"làm feature\", \"thêm tính năng\", \"implement user story\", \"làm chức năng mới end-to-end\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối làm một feature/user story end-to-end: phân tích yêu cầu + acceptance criteria, thiết kế/contract nếu có API, implement backend/frontend, viết test theo từng acceptance criterion, review đa vai trò, cập nhật docs, rồi commit qua git-workflow. Dùng workflow NÀY khi người dùng muốn \"làm feature\", \"thêm tính năng\", \"implement user story\", \"làm chức năng mới end-to-end\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi chỉ sửa lỗi hành vi đã có → workflow-bugfix."
 order: 1
 title: "Feature — implement end-to-end từ yêu cầu tới commit"
 kind: workflow

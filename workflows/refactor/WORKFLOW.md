@@ -1,6 +1,6 @@
 ---
 name: workflow-refactor
-description: "Workflow điều phối refactor mã nguồn (đổi code hoặc đổi kiểu kiến trúc) mà giữ nguyên hành vi quan sát được: chọn chế độ & phạm vi, ADR khi đổi kiến trúc, baseline xanh, characterization test khoá hành vi, refactor từng bước nhỏ luôn xanh, so hành vi, review đa vai trò, rồi commit theo lô qua git-workflow. Dùng workflow NÀY khi người dùng muốn \"refactor\", \"tái cấu trúc\", \"dọn code\", \"đổi kiến trúc\", \"chuyển sang Hexagonal/FSD\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối refactor mã nguồn (đổi code hoặc đổi kiểu kiến trúc) mà giữ nguyên hành vi quan sát được: chọn chế độ & phạm vi, ADR khi đổi kiến trúc, baseline xanh, characterization test khoá hành vi, refactor từng bước nhỏ luôn xanh, so hành vi, review đa vai trò, rồi commit theo lô qua git-workflow. Dùng workflow NÀY khi người dùng muốn \"refactor\", \"tái cấu trúc\", \"dọn code\", \"đổi kiến trúc\", \"chuyển sang Hexagonal/FSD\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi đổi hành vi → workflow-feature."
 order: 3
 title: "Refactor — đổi code/kiến trúc giữ nguyên hành vi"
 kind: workflow

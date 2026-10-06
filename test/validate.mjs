@@ -16,11 +16,13 @@ import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse } from '../adapters/_shared/lib.mjs';
-import { checkSkillBody } from '../cli/lib/conventions.mjs';
+import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, FIRST_SENTENCE_MAX } from '../cli/lib/conventions.mjs';
 
 let pass = 0;
 const fails = [];
 const ok = (cond, msg) => { if (cond) pass++; else fails.push(msg); };
+const warns = [];
+const warn = (cond, msg) => { if (!cond) warns.push(msg); };
 
 const RUN_IN = ['plan', 'execute'];
 const INVOKE_IN = ['once', 'per-request'];
@@ -1932,7 +1934,62 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 26. Chuẩn hoá A3: description (spec 2026-10-06 §4.3, §10)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const known26 = new Set(['a-b', 'c-d', 'workflow-x']);
+  ok(checkDescription('Làm X. Không dùng khi Y → a-b.', known26, 'c-d').length === 0, 'checkDescription: hợp lệ');
+  ok(checkDescription('Làm X.', known26, 'c-d').some((e) => e.includes('thiếu câu')), 'checkDescription: thiếu câu Không dùng khi');
+  ok(checkDescription('Làm X. Không dùng khi Y.', known26, 'c-d').some((e) => e.includes('không có')),
+    'checkDescription: câu Không dùng khi không có đích');
+  ok(checkDescription('Làm X. Không dùng khi Y → z-z.', known26, 'c-d').some((e) => e.includes('z-z')),
+    'checkDescription: đích không tồn tại');
+  ok(checkDescription('Làm X. Không dùng khi Y → c-d.', known26, 'c-d').some((e) => e.includes('chính nó')),
+    'checkDescription: trỏ vào chính nó');
+  ok(checkDescription('Làm X. KHÔNG thuộc pipeline bắt buộc; gọi khi cần. Không dùng khi Y → a-b.', known26, 'c-d')
+    .some((e) => e.includes('pipeline')), 'checkDescription: còn câu pipeline');
+  ok(checkDescription(`${'x'.repeat(1020)}. Không dùng khi Y → a-b.`, known26, 'c-d').some((e) => e.includes('1024')),
+    'checkDescription: quá 1024 ký tự');
+  ok(JSON.stringify(notForTargets('Làm X v.v. Không dùng khi Y, v.v. → a-b; Z →c-d; W → `workflow-x`.'))
+    === '["a-b","c-d","workflow-x"]', 'notForTargets: chịu "v.v.", mũi tên dính, backtick');
+  ok(notForTargets('Làm X.') === null, 'notForTargets: không có câu → null');
+  ok(JSON.stringify(quotedPhrases('muốn "OpenAPI", " openapi " — chữ "skill"')) === '["openapi","openapi"]',
+    'quotedPhrases: chữ thường, trim, bỏ "skill"');
+  const col26 = triggerCollisions([
+    { id: 'a-b', kind: 'skill', description: 'Dùng khi "Sửa Lỗi". Không dùng khi Y → c-d.' },
+    { id: 'c-d', kind: 'skill', description: 'Dùng khi "sửa lỗi ". Không dùng khi Y → a-b.' },
+    { id: 'e-f', kind: 'skill', description: 'Dùng khi "release". Không dùng khi Y → workflow-x.' },
+    { id: 'g-h', kind: 'skill', description: 'Dùng khi "deploy". Không dùng khi Y → a-b.' },
+    { id: 'workflow-x', kind: 'workflow', description: 'Dùng khi "release", "deploy". Không dùng khi Y → a-b.' },
+  ]);
+  ok(col26.some((e) => e.includes('"sửa lỗi"') && e.includes('a-b') && e.includes('c-d')),
+    'triggerCollisions: trùng skill ↔ skill (khác hoa/thường, khoảng trắng) → lỗi');
+  ok(!col26.some((e) => e.includes('e-f')), 'triggerCollisions: skill ↔ workflow có "→ workflow-x" → hợp lệ');
+  ok(col26.some((e) => e.includes('g-h') && e.includes('workflow-x')), 'triggerCollisions: skill ↔ workflow không trỏ → lỗi');
+
+  const all26 = [
+    ...core.stages.map((s) => ({ ...s, kind: 'skill' })),
+    ...plugins.flatMap((p) => p.stages.map((s) => ({ ...s, kind: 'skill' }))),
+    ...(workflows ? workflows.stages.map((s) => ({ ...s, kind: 'workflow' })) : []),
+  ];
+  const ids26 = new Set([...all26.map((s) => s.id), ...allAgents.map((a) => a.id)]);
+  for (const s of all26) {
+    const errs = checkDescription(s.description, ids26, s.id);
+    ok(errs.length === 0, `${s.id}: description hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
+  }
+  const real26 = triggerCollisions(all26.map((s) => ({ id: s.id, kind: s.kind, description: s.description })));
+  ok(real26.length === 0, `không có trigger trùng${real26.length ? ' — ' + real26.join(' | ') : ''}`);
+  const longFirst = all26.filter((s) => [...whenToUse(s)].length > FIRST_SENTENCE_MAX).map((s) => s.id);
+  warn(longFirst.length === 0, `${longFirst.length}/${all26.length} description có câu đầu > ${FIRST_SENTENCE_MAX} ký tự `
+    + `(render ở AGENTS.md antigravity), vd ${longFirst.slice(0, 5).join(', ')}`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
+if (warns.length) {
+  console.log('CẢNH BÁO (không chặn):');
+  for (const w of warns) console.log('  ! ' + w);
+}
 if (fails.length) {
   console.log('FAIL:');
   for (const f of fails) console.log('  ✗ ' + f);

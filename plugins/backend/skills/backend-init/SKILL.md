@@ -1,6 +1,6 @@
 ---
 name: backend-init
-description: "Khởi tạo cấu trúc thư mục nền tảng cho một BACKEND project theo workflow Cowork→Code (project-knowledge, docs/requests, docs/decisions/ADR, docs/contracts, CLAUDE.md, CONTRIBUTING.md, data-model/ERD, layout src/ phân tầng theo KIẾN TRÚC chọn khi init). Dùng skill NÀY mỗi khi người dùng muốn \"khởi tạo backend\", \"tạo cấu trúc thư mục\", \"scaffold backend/API/service\", \"setup project backend mới\", \"tạo bộ tài liệu nền\" — kể cả khi họ không nói chính xác chữ \"skill\". Chỉ chạy MỘT LẦN cho mỗi project."
+description: "Khởi tạo cấu trúc thư mục nền tảng cho một BACKEND project theo workflow Cowork→Code (project-knowledge, docs/requests, docs/decisions/ADR, docs/contracts, CLAUDE.md, CONTRIBUTING.md, data-model/ERD, layout src/ phân tầng theo KIẾN TRÚC chọn khi init). Dùng skill NÀY mỗi khi người dùng muốn \"khởi tạo backend\", \"tạo cấu trúc thư mục\", \"scaffold backend/API/service\", \"setup project backend mới\", \"tạo bộ tài liệu nền\" — kể cả khi họ không nói chính xác chữ \"skill\". Chỉ chạy MỘT LẦN cho mỗi project. Không dùng khi project đã có mã nguồn và cần đổi kiến trúc → backend-migrate-architecture; cần externalize config/secret → backend-migrate-vault-consul."
 order: 1
 title: "Backend Init — Khởi tạo cấu trúc backend project"
 runsIn: plan

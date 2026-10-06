@@ -1,6 +1,6 @@
 ---
 name: frontend-init
-description: "Khởi tạo cấu trúc thư mục nền tảng cho một FRONTEND project (web app/SPA) theo workflow Cowork→Code: project-knowledge (kiến trúc UI, design system/tokens, stack, code-convention), docs/requests, docs/decisions/ADR, docs/contracts, CLAUDE.md, CONTRIBUTING.md, và layout src/ phân tầng presentational/component → container/hook (state) → data layer (API client/store). Dùng skill NÀY mỗi khi người dùng muốn \"khởi tạo frontend\", \"tạo cấu trúc thư mục frontend\", \"scaffold web app/SPA\", \"setup project frontend mới\", \"tạo bộ tài liệu nền cho UI\" — kể cả khi họ không nói chính xác chữ \"skill\". Chỉ chạy MỘT LẦN cho mỗi project."
+description: "Khởi tạo cấu trúc thư mục nền tảng cho một FRONTEND project (web app/SPA) theo workflow Cowork→Code: project-knowledge (kiến trúc UI, design system/tokens, stack, code-convention), docs/requests, docs/decisions/ADR, docs/contracts, CLAUDE.md, CONTRIBUTING.md, và layout src/ phân tầng presentational/component → container/hook (state) → data layer (API client/store). Dùng skill NÀY mỗi khi người dùng muốn \"khởi tạo frontend\", \"tạo cấu trúc thư mục frontend\", \"scaffold web app/SPA\", \"setup project frontend mới\", \"tạo bộ tài liệu nền cho UI\" — kể cả khi họ không nói chính xác chữ \"skill\". Chỉ chạy MỘT LẦN cho mỗi project. Không dùng khi project đã có mã nguồn React và cần đổi kiến trúc → frontend-migrate-architecture."
 order: 1
 title: "Frontend Init — Khởi tạo cấu trúc frontend project"
 runsIn: plan

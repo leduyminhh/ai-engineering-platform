@@ -1,6 +1,6 @@
 ---
 name: workflow-orchestrator
-description: "Workflow điều phối: đọc yêu cầu người dùng, phân loại tín hiệu để chọn 1 (hoặc tối đa 2 ứng viên) trong bộ workflow đã cài, xác nhận với người dùng rồi chạy tuần tự chuỗi nối tiếp, tổng hợp kết quả cuối. Dùng workflow NÀY khi người dùng muốn \"không biết dùng workflow nào\", \"chọn workflow\", \"orchestrate\", \"làm giúp việc này theo quy trình\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối: đọc yêu cầu người dùng, phân loại tín hiệu để chọn 1 (hoặc tối đa 2 ứng viên) trong bộ workflow đã cài, xác nhận với người dùng rồi chạy tuần tự chuỗi nối tiếp, tổng hợp kết quả cuối. Dùng workflow NÀY khi người dùng muốn \"không biết dùng workflow nào\", \"chọn workflow\", \"orchestrate\", \"làm giúp việc này theo quy trình\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi việc cần làm đã rõ là sửa bug → workflow-bugfix; làm feature → workflow-feature."
 order: 0
 title: "Orchestrator — chọn và chạy workflow theo yêu cầu"
 kind: orchestrator

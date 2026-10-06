@@ -1,6 +1,6 @@
 ---
 name: workflow-testing
-description: "Workflow điều phối viết test cho code đã có: phân tích hành vi cần test, chọn chiến lược theo policy (feature: unit; API: integration + contract; luồng quan trọng: e2e), viết test, chạy và phân loại failure (lỗi test vs lỗi code), đo coverage, rồi commit. Dùng workflow NÀY khi người dùng muốn \"viết test\", \"tăng coverage\", \"test strategy\", \"kiểm thử\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối viết test cho code đã có: phân tích hành vi cần test, chọn chiến lược theo policy (feature: unit; API: integration + contract; luồng quan trọng: e2e), viết test, chạy và phân loại failure (lỗi test vs lỗi code), đo coverage, rồi commit. Dùng workflow NÀY khi người dùng muốn \"viết test\", \"tăng coverage\", \"test strategy\", \"kiểm thử\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi failure là lỗi code cần sửa → workflow-bugfix."
 order: 5
 title: "Testing — viết test theo chiến lược, đo coverage"
 kind: workflow

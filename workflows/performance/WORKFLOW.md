@@ -1,6 +1,6 @@
 ---
 name: workflow-performance
-description: "Workflow điều phối tối ưu hiệu năng: xác định metric + ngưỡng mục tiêu, đo baseline, profile tìm bottleneck có evidence, tối ưu, benchmark so sánh trước/sau cùng điều kiện, review rồi commit. Dùng workflow NÀY khi người dùng muốn \"chậm\", \"tối ưu hiệu năng\", \"performance\", \"latency\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối tối ưu hiệu năng: xác định metric + ngưỡng mục tiêu, đo baseline, profile tìm bottleneck có evidence, tối ưu, benchmark so sánh trước/sau cùng điều kiện, review rồi commit. Dùng workflow NÀY khi người dùng muốn \"chậm\", \"tối ưu hiệu năng\", \"performance\", \"latency\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi chậm do lỗi logic rõ ràng, không phải hiệu năng → workflow-bugfix."
 order: 9
 title: "Performance — profile, tối ưu, benchmark trước/sau"
 kind: workflow
