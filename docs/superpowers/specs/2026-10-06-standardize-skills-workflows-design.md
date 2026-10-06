@@ -1,7 +1,7 @@
 # Thiết kế: Chuẩn hoá skill + workflow và gộp có điều kiện
 
 - Ngày: 2026-10-06
-- Trạng thái: **Chờ duyệt spec**.
+- Trạng thái: **Đã duyệt spec (2026-10-06); plan đã lập, có sai lệch ghi ở §10**.
 - Phạm vi: toàn bộ `SKILL.md` (35 file: `core/skills/` + `plugins/*/skills/`), `WORKFLOW.md` (13 file trong `workflows/`),
   validator `test/validate.mjs`, loader `cli/lib/plugins.mjs`, adapter dùng chung `adapters/_shared/lib.mjs`.
 - Người duyệt: chủ dự án.
@@ -152,9 +152,10 @@ Rule validator:
    vi phạm: `backend-fix`/`frontend-fix` (3 cụm), `frontend-migrate-architecture`/`frontend-refactor`,
    `data-db-migration`/`data-oltp-implement`.
 4. Trigger trùng giữa skill và workflow được phép khi description của skill có `→ workflow-<x>` trỏ đúng workflow đó.
-5. Câu đầu tiên (đến dấu `.` đầu) không quá 200 ký tự, vì `whenToUse()` render câu này.
-6. Độ dài: cảnh báo khi vượt ngưỡng, không chặn. `[Unverified]` Một số provider có thể giới hạn độ dài description
-   (vd 1.024 ký tự); plan phải kiểm tài liệu chính thức của từng provider trước khi chốt ngưỡng.
+5. Câu đầu tiên (đến dấu `.` đầu) không quá 200 ký tự, vì `whenToUse()` render câu này. **Đã đổi thành cảnh báo,
+   xem §10 S1.**
+6. Độ dài: **lỗi cứng khi vượt 1024 ký tự** (xem §10 S2). Nguồn: tài liệu Agent Skills, mục "Skill structure"
+   (platform.claude.com/docs/en/agents-and-tools/agent-skills/overview): `description` "Maximum 1024 characters".
 
 ### 4.4 A4 — Drift guard
 
@@ -249,6 +250,26 @@ Git: header commit tiếng Anh `type(scope): summary`, thân tiếng Việt có 
 
 ## 9. Câu hỏi mở (chốt trong plan)
 
-1. Ngưỡng cảnh báo độ dài description: chờ kiểm giới hạn chính thức của từng provider (§4.3 rule 6).
+1. ~~Ngưỡng độ dài description~~: đã chốt 1024 ký tự, lỗi cứng (§10 S2).
 2. Có giữ hậu tố trong heading (`Quy trình (trung tính stack)`) hay chuẩn về `Quy trình` trần: spec hiện cho phép hậu tố
    để giảm diff.
+
+---
+
+## 10. Sai lệch khi lập plan (2026-10-06)
+
+Plan: [`2026-10-06-standardize-skills-workflows.md`](../plans/2026-10-06-standardize-skills-workflows.md). Số liệu đo
+trên `4f139f4`.
+
+| # | Mục spec | Thay đổi | Lý do (số đo) |
+|---|---|---|---|
+| S1 | §4.3 rule 5 | Câu đầu > 200 ký tự: **cảnh báo một dòng**, không chặn | 41/48 description vượt; sửa hết là viết lại câu mở đầu, ngoài phạm vi |
+| S2 | §4.3 rule 6 | Description > 1024 ký tự: **lỗi cứng**; rút gọn 22 description trong Task 3, giữ nguyên danh sách trigger | Giới hạn chính thức 1024 ký tự. Hiện 12/48 vượt (cả 12 thuộc `_cowork.json`); thêm "Không dùng khi" thì thành 22/48. Chủ dự án chọn 2026-10-06. `[Unverified]` claude.ai từ chối hay cắt khi upload; Claude Code có áp cùng giới hạn không |
+| S3 | §4.4 mục 1 | Dòng neo = 5 dòng khung cố định (`WF_ANCHORS`), không phải mọi dòng cố định của template; áp cho cả 13 file (orchestrator đạt sẵn) | Bảng lỗi, DoD, dòng commit được workflow tuỳ biến hợp lệ (có mặt ở 7–10/12 file) |
+| S4 | §4.4 mục 1 | Bỏ dòng "Không có subagent → session chính chạy tuần tự skill tương ứng." khỏi template | 0/12 workflow có dòng này; `adapters/_shared/agents.mjs:46` đã chèn câu tương đương vào preamble khi build |
+| S5 | §4.2 | `backend-performance`/`frontend-performance`: đổi `## Hai chế độ` → `## Quy trình — hai chế độ` (giữ H3) thay vì bọc + hạ cấp. `data-db-migration` vẫn bọc + hạ cấp | Diff chỉ một dòng heading mỗi file |
+| S6 | §4.2 | Không có vòng "cảnh báo" riêng: rule viết dạng lỗi, test đỏ liệt kê file, sửa trong cùng commit | Cả hai bước nằm trong một task/commit nên vòng cảnh báo không mang thêm thông tin |
+| S7 | §4.2 | Mục an toàn của 4 `*-init` lấy từ `## Tiền đề` + `## Quy trình` của chính skill, không lấy từ `## Ghi chú` | `## Ghi chú` của các skill này không có quy tắc an toàn nào |
+| S8 | §4.3 rule 3 | Thêm cặp trùng `git-workflow` ↔ `ops-deploy-release` ("release"): đổi trigger của `git-workflow` thành "release branch" | Cặp này chưa được liệt kê ở §2 |
+| S9 | §4.3 rule 1 | `→ <id>` lấy từ "Không dùng khi" tới hết description (câu này phải đứng cuối); thêm lỗi khi trỏ vào chính nó | Tách câu theo dấu chấm hỏng với "v.v." |
+| S10 | §5.4 | Plan chỉ đo (B0) và ghi quyết định (B1). Nếu `api → feature` đạt cả 5 tiêu chí, việc gộp (stub `deprecatedBy`, wizard/installer, `aip update`) làm spec + plan riêng | Chưa có cơ chế stub; tiêu chí 1 có thể đã loại ứng viên: `workflow-api` có trigger riêng "làm API", "contract-first" |
