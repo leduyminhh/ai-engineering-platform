@@ -64,4 +64,5 @@ function main() {
   console.log('\n⚠ = chạm ngưỡng gộp 60% (spec §5.2 tiêu chí 2).');
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) main();
+// `node -e` hay REPL không có argv[1]; khi đó module chỉ được import, không chạy báo cáo.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

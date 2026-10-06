@@ -7,14 +7,16 @@ export const SKILL_HEADINGS = [
   ['Ranh giới an toàn', /^## Ranh giới an toàn(?: .*)?$/m],
 ];
 
+// Heading trong khối code là ví dụ, không phải mục thật của skill; bỏ khối code trước khi kiểm.
+const FENCE = /^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm;
+
 export function checkSkillBody(body) {
-  return SKILL_HEADINGS.filter(([, re]) => !re.test(body)).map(([h]) => `thiếu heading "## ${h}"`);
+  const text = body.replace(FENCE, '');
+  return SKILL_HEADINGS.filter(([, re]) => !re.test(text)).map(([h]) => `thiếu heading "## ${h}"`);
 }
 
 // Giới hạn của Agent Skills (platform.claude.com, mục "Skill structure"); bộ zip Cowork được upload lên claude.ai.
 export const DESCRIPTION_MAX = 1024;
-// whenToUse() render câu đầu vào mục lục AGENTS.md của antigravity; câu quá dài làm mục lục khó đọc.
-export const FIRST_SENTENCE_MAX = 200;
 export const NOT_FOR = 'Không dùng khi';
 const GENERIC = new Set(['skill', 'workflow']);
 

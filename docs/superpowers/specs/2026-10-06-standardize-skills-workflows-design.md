@@ -153,7 +153,7 @@ Rule validator:
    `data-db-migration`/`data-oltp-implement`.
 4. Trigger trùng giữa skill và workflow được phép khi description của skill có `→ workflow-<x>` trỏ đúng workflow đó.
 5. Câu đầu tiên (đến dấu `.` đầu) không quá 200 ký tự, vì `whenToUse()` render câu này. **Đã đổi thành cảnh báo,
-   xem §10 S1.**
+   xem §10 S1; sau đó thay bằng cắt ở renderer, §10 S11.**
 6. Độ dài: **lỗi cứng khi vượt 1024 ký tự** (xem §10 S2). Nguồn: tài liệu Agent Skills, mục "Skill structure"
    (platform.claude.com/docs/en/agents-and-tools/agent-skills/overview): `description` "Maximum 1024 characters".
 
@@ -332,6 +332,7 @@ trên `4f139f4`.
 | S8 | §4.3 rule 3 | Thêm cặp trùng `git-workflow` ↔ `ops-deploy-release` ("release"): đổi trigger của `git-workflow` thành "release branch" | Cặp này chưa được liệt kê ở §2 |
 | S9 | §4.3 rule 1 | `→ <id>` lấy từ "Không dùng khi" tới hết description (câu này phải đứng cuối); thêm lỗi khi trỏ vào chính nó | Tách câu theo dấu chấm hỏng với "v.v." |
 | S10 | §5.4 | Plan chỉ đo (B0) và ghi quyết định (B1). Nếu `api → feature` đạt cả 5 tiêu chí, việc gộp (stub `deprecatedBy`, wizard/installer, `aip update`) làm spec + plan riêng | Chưa có cơ chế stub; tiêu chí 1 có thể đã loại ứng viên: `workflow-api` có trigger riêng "làm API", "contract-first" |
+| S11 | §4.3 rule 5, S1 | Bỏ cảnh báo câu đầu > 200 ký tự; `whenToUse()` cắt dòng "Khi nào dùng" còn ≤ 200 ký tự ở ranh giới từ và thêm `…` | `whenToUse()` chỉ render mục lục `AGENTS.md` của antigravity (`adapters/_shared/lib.mjs`); sửa ở renderer thay vì viết lại 39 description. Không đổi description nào |
 
 ---
 

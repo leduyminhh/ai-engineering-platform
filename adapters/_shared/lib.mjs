@@ -78,11 +78,19 @@ export function workflowDocPath(stage) {
   return hasAssets ? `docs/workflow/${stage.id}/SKILL.md` : `docs/workflow/${stage.id}.md`;
 }
 
-/** Single-line "when to use" — first sentence of the stage description. */
+// Mục lục AGENTS.md chỉ cần một dòng nhận diện; bản đầy đủ nằm ở file hướng dẫn mà dòng kế tiếp trỏ tới.
+export const WHEN_TO_USE_MAX = 200;
+
+/** Single-line "when to use" — first sentence of the stage description, cut at a word boundary. */
 export function whenToUse(stage) {
   const d = (stage.description || '').trim().replace(/\s+/g, ' ');
   const m = d.match(/^(.*?[.。])\s/);
-  return m ? m[1] : d;
+  const first = m ? m[1] : d;
+  const chars = [...first];
+  if (chars.length <= WHEN_TO_USE_MAX) return first;
+  const head = chars.slice(0, WHEN_TO_USE_MAX - 1).join('');
+  const cut = head.lastIndexOf(' ');
+  return `${(cut > 0 ? head.slice(0, cut) : head).replace(/[\s,;:—\-/+&|×(]+$/, '')}…`;
 }
 
 /**

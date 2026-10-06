@@ -9,21 +9,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
 import { checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, missingAnchors, registrySignals } from '../cli/lib/workflows.mjs';
 import { offeredCatalog } from '../cli/lib/install.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
-import { agentsFiles, whenToUse } from '../adapters/_shared/lib.mjs';
-import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, FIRST_SENTENCE_MAX } from '../cli/lib/conventions.mjs';
+import { agentsFiles, whenToUse, WHEN_TO_USE_MAX } from '../adapters/_shared/lib.mjs';
+import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
 
 let pass = 0;
 const fails = [];
 const ok = (cond, msg) => { if (cond) pass++; else fails.push(msg); };
-const warns = [];
-const warn = (cond, msg) => { if (!cond) warns.push(msg); };
 
 const RUN_IN = ['plan', 'execute'];
 const INVOKE_IN = ['once', 'per-request'];
@@ -1928,6 +1927,10 @@ if (fs.existsSync(BUILD)) {
     'checkSkillBody: "## Ranh giới" trần không đạt');
   ok(checkSkillBody('## Quy trìnhX\n## Ranh giới an toàn').length === 1, 'checkSkillBody: chữ dính sau tên heading không đạt');
   ok(checkSkillBody('### Quy trình\n## Ranh giới an toàn').length === 1, 'checkSkillBody: H3 không thay được H2');
+  ok(checkSkillBody('```md\n## Quy trình\n```\n## Ranh giới an toàn').some((e) => e.includes('Quy trình')),
+    'checkSkillBody: heading chỉ nằm trong khối ``` không tính');
+  ok(checkSkillBody('~~~\n## Ranh giới an toàn\n~~~\n## Quy trình\n## Ranh giới an toàn').length === 0,
+    'checkSkillBody: heading thật ngoài khối ~~~ vẫn đạt');
   for (const s of [...core.stages, ...plugins.flatMap((p) => p.stages)]) {
     const errs = checkSkillBody(s.body);
     ok(errs.length === 0, `${s.id}: khung SKILL.md hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
@@ -1982,9 +1985,13 @@ if (fs.existsSync(BUILD)) {
   }
   const real26 = triggerCollisions(all26.map((s) => ({ id: s.id, kind: s.kind, description: s.description })));
   ok(real26.length === 0, `không có trigger trùng${real26.length ? ' — ' + real26.join(' | ') : ''}`);
-  const longFirst = all26.filter((s) => [...whenToUse(s)].length > FIRST_SENTENCE_MAX).map((s) => s.id);
-  warn(longFirst.length === 0, `${longFirst.length}/${all26.length} description có câu đầu > ${FIRST_SENTENCE_MAX} ký tự `
-    + `(render ở AGENTS.md antigravity), vd ${longFirst.slice(0, 5).join(', ')}`);
+  ok(whenToUse({ description: 'Làm A. Chi tiết.' }) === 'Làm A.', 'whenToUse: câu đầu ngắn giữ nguyên');
+  const w26 = whenToUse({ description: `${'từ '.repeat(120)}cuối. Câu hai.` });
+  ok([...w26].length <= WHEN_TO_USE_MAX && /(^| )từ…$/.test(w26), 'whenToUse: câu dài cắt ở ranh giới từ, thêm "…"');
+  const w26b = whenToUse({ description: `${'abc / '.repeat(60)}cuối. Câu hai.` });
+  ok(/abc…$/.test(w26b) && [...w26b].length <= WHEN_TO_USE_MAX, 'whenToUse: bỏ ký tự nối lơ lửng (/, +, () trước "…"');
+  const longWhen = all26.filter((s) => [...whenToUse(s)].length > WHEN_TO_USE_MAX).map((s) => s.id);
+  ok(longWhen.length === 0, `whenToUse: mọi dòng "Khi nào dùng" ≤ ${WHEN_TO_USE_MAX} ký tự${longWhen.length ? ' — ' + longWhen.join(', ') : ''}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2031,14 +2038,17 @@ if (fs.existsSync(BUILD)) {
   const wb = `## Các bước\n${st(1, 'session chính', 'chạy build')}${st(2, 'agent \`y\`', 'viết test')}${st(3, 'a', 'b')}## Checkpoint\n`;
   ok(stepOverlap(wa, wb) === 0.5, 'stepOverlap: khớp cả Thực hiện lẫn Hành động');
   ok(titleOverlap(wa, wb) === 1, 'titleOverlap: so tên bước');
+  let out28 = null;
+  try {
+    out28 = execFileSync('node', ['--input-type=module', '-e',
+      `await import(${JSON.stringify(pathToFileURL(path.join(REPO_ROOT, 'test', 'overlap.mjs')).href)})`],
+    { cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  } catch { out28 = null; }
+  ok(out28 === '', 'overlap.mjs: import từ node -e không ném lỗi và không in báo cáo');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 console.log('');
-if (warns.length) {
-  console.log('CẢNH BÁO (không chặn):');
-  for (const w of warns) console.log('  ! ' + w);
-}
 if (fails.length) {
   console.log('FAIL:');
   for (const f of fails) console.log('  ✗ ' + f);

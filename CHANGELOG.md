@@ -28,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Forks with their own skills: `npm run validate` now fails a `SKILL.md` without `## Quy trình…` /
   `## Ranh giới an toàn…` headings or a description without a trailing `Không dùng khi … → <id>`; the failure
   message names each offending skill.
+- The Antigravity `AGENTS.md` index cuts each "Khi nào dùng" line to 200 characters at a word boundary
+  (`…`) instead of the validator warning about long first sentences; `checkSkillBody` ignores headings
+  inside fenced code blocks; `test/overlap.mjs` no longer throws when imported without `argv[1]`.
 
 ## [1.2.1] - 2026-10-01
 
