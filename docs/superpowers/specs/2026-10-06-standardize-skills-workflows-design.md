@@ -191,7 +191,7 @@ Rule validator:
 
 | Ứng viên | Bằng chứng hiện có | Trạng thái |
 |---|---|---|
-| `workflow-api` → chế độ của `workflow-feature` | So nguyên văn (`titleOverlap`) chỉ 3/8 tên bước của `api` trùng bước của `feature` (38%): "Baseline build/test", "Test", "Commit"; cùng risk `medium`. Cách so theo nghĩa trước đó cho 6/8 (vd "Contract" ≈ "Thiết kế & contract"), giữ làm ghi chú; số đo đầy đủ ở §5.3.1 | Giữ (§5.3.1) |
+| `workflow-api` → chế độ của `workflow-feature` | So nguyên văn (`titleOverlap`) chỉ 3/8 tên bước của `api` trùng bước của `feature` (38%): "Baseline build/test", "Test", "Commit"; cùng risk `medium`. [Unverified] Cách so theo nghĩa trước đó cho 6/8 (vd "Contract" ≈ "Thiết kế & contract"), giữ làm ghi chú; số đo đầy đủ ở §5.3.1 | Giữ (§5.3.1) |
 | `workflow-db-change` | 9 bước riêng, risk `high`, checkpoint xác nhận DB đích | Giữ |
 | `workflow-docs` | Là đích nối tiếp của 6 workflow trong Registry | Giữ |
 | 4 skill `data-oltp-*`/`data-olap-*` | `init` 25/57, `implement` 10/96 dòng chung | Giữ (§2.1) |

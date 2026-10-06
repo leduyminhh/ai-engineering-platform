@@ -36,7 +36,7 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 | `workflow-feature` | "thêm tính năng", "làm feature", "user story", acceptance criteria | medium | — | Chỉ sửa lỗi hành vi đã có → bugfix |
 | `workflow-bugfix` | "lỗi", "bug", stacktrace, "không chạy", "sai kết quả" | medium | `workflow-docs` | Hệ thống production đang sập → incident |
 | `workflow-refactor` | "refactor", "tái cấu trúc", "đổi kiến trúc" | medium | `workflow-docs` | Đổi hành vi → feature |
-| `workflow-code-review` | "PR #", "review", "diff" | low | — | Cần sửa code → feature/bugfix |
+| `workflow-code-review` | "PR#", "review", "diff" | low | — | Cần sửa code → feature/bugfix |
 | `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | `workflow-docs` | Chỉ cần quality gate trước release → release |
 | `workflow-incident` | "prod down", "sự cố", "alert", "incident" | critical | `workflow-bugfix`, `workflow-docs` | Lỗi tái hiện được ở local, production vẫn ổn → bugfix |
 | `workflow-testing` | "viết test", "tăng coverage", "test strategy", "kiểm thử" | low | — | Failure là lỗi code cần sửa → bugfix |

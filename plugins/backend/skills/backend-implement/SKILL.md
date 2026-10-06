@@ -12,7 +12,7 @@ sharedAssets: templates/architecture
 
 Biến một **use-case / feature / contract** thành **MỘT vertical slice tối thiểu** (một aggregate + một
 use-case + một driven port + một adapter) bám kiến trúc backend + quy ước đặt tên của project. Skill này là
-**hướng dẫn cách agent sinh code** (docs-only recipe), KHÔNG phải công cụ codegen. Recipe `pipeline: false`,
+**hướng dẫn cách agent sinh code** (docs-only recipe), KHÔNG phải công cụ codegen. Recipe on-demand,
 gọi khi cần — không thuộc chuỗi bắt buộc.
 
 ## Tiền đề

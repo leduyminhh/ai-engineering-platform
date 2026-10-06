@@ -22,9 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they already stated.
 - Skill and workflow `description`s are at most 1024 characters (Agent Skills limit), end with
   `Không dùng khi … → <id>`, and no quoted trigger is shared verbatim between two skills; 22
-  over-long descriptions were shortened with their trigger lists kept.
+  descriptions were rewritten to fit (12 were already over the limit) with their trigger lists kept.
 - Workflow drift guards: the five fixed template lines (`WF_ANCHORS`) must appear in every
   `WORKFLOW.md`, and every quoted Registry signal must appear in that workflow's `description`.
+- Forks with their own skills: `npm run validate` now fails a `SKILL.md` without `## Quy trình…` /
+  `## Ranh giới an toàn…` headings or a description without a trailing `Không dùng khi … → <id>`; the failure
+  message names each offending skill.
 
 ## [1.2.1] - 2026-10-01
 

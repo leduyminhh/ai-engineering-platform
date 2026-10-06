@@ -11,7 +11,7 @@ sharedAssets: templates/architecture
 # Frontend Implement — Sinh React component từ thiết kế (recipe on-demand)
 
 Chuyển một thiết kế có sẵn thành **React component** bám kiến trúc + design-system của project. Skill này
-là **hướng dẫn cách agent sinh code** (docs-only recipe), KHÔNG phải công cụ codegen. Recipe `pipeline: false`,
+là **hướng dẫn cách agent sinh code** (docs-only recipe), KHÔNG phải công cụ codegen. Recipe on-demand,
 gọi khi cần — không thuộc chuỗi bắt buộc.
 
 ## Tiền đề

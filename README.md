@@ -332,6 +332,7 @@ enforced by `test/validate.mjs`).
 npm test            # validate --build + install + wizard + managed-block + pack-guard
 npm run build       # build all providers into build/
 npm run validate    # source + build-output contract
+npm run overlap     # skill/workflow overlap report (advisory)
 npm run pack:verify # assert the npm-publish file set stays within pack.config.json
 ```
 

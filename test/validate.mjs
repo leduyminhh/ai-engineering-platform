@@ -1951,6 +1951,8 @@ if (fs.existsSync(BUILD)) {
     .some((e) => e.includes('pipeline')), 'checkDescription: còn câu pipeline');
   ok(checkDescription(`${'x'.repeat(1020)}. Không dùng khi Y → a-b.`, known26, 'c-d').some((e) => e.includes('1024')),
     'checkDescription: quá 1024 ký tự');
+  ok(checkDescription('Làm X "PR #". Không dùng khi Y → a-b.', known26, 'c-d').some((e) => e.includes('" #"')),
+    'checkDescription: chứa " #" (YAML hiểu là comment khi ghi plain scalar)');
   ok(JSON.stringify(notForTargets('Làm X v.v. Không dùng khi Y, v.v. → a-b; Z →c-d; W → `workflow-x`.'))
     === '["a-b","c-d","workflow-x"]', 'notForTargets: chịu "v.v.", mũi tên dính, backtick');
   ok(notForTargets('Làm X.') === null, 'notForTargets: không có câu → null');

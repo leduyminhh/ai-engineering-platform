@@ -327,6 +327,7 @@ Skill nào ship thư mục `references/` thì ship tới **mọi** provider (par
 npm test            # validate --build + install + wizard + managed-block + pack-guard
 npm run build       # build tất cả provider vào build/
 npm run validate    # hợp đồng source + build-output
+npm run overlap     # báo cáo trùng lặp skill/workflow (tham khảo)
 npm run pack:verify # kiểm tập file npm-publish nằm trong pack.config.json
 ```
 

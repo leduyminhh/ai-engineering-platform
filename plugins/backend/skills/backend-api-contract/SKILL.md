@@ -15,7 +15,7 @@ Recipe hướng dẫn agent **chốt và đồng bộ API contract giữa backen
 FE↔BE**, quản **versioning + backward-compat**, và **kiểm drift** contract↔code (endpoint/DTO thực tế
 có khớp contract không). Đây là **docs-only recipe** — hướng dẫn cách agent đọc, thiết kế contract và
 báo cáo lệch, KHÔNG phải công cụ codegen/sinh client, cũng KHÔNG phải trình validate dựng sẵn. Recipe
-`pipeline: false`, gọi khi cần — không thuộc chuỗi bắt buộc.
+on-demand, gọi khi cần — không thuộc chuỗi bắt buộc.
 
 Vị trí trong hệ: contract là **mặt published** của service — theo `architecture/ARD.md` mục 5 (module
 `<bc>-api-contract`: "chỉ hợp đồng, không logic, không domain") và mục 6.1 ("Publish & versioning

@@ -12,7 +12,7 @@ sharedAssets: templates/architecture
 
 Nối một UI đã dựng với API thật, lấy **contract OpenAPI** ở `docs/contracts/` làm nguồn sự thật giữa frontend và
 backend. Skill này là **hướng dẫn cách agent làm** (docs-only recipe), KHÔNG phải công cụ codegen hay bộ code dựng
-sẵn. Recipe `pipeline: false`, gọi khi cần — không thuộc chuỗi bắt buộc.
+sẵn. Recipe on-demand, gọi khi cần — không thuộc chuỗi bắt buộc.
 
 Phân công với skill anh em: `frontend-implement` dựng component presentational + tương tác cơ bản và để chỗ trống
 bằng `props` + `TODO`; skill này lấp chỗ trống đó bằng dữ liệu thật ở **container/page**; `frontend-testing` viết

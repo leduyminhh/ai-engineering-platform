@@ -17,6 +17,7 @@ npm test            # validate --build + install + wizard + managed-block + pack
 npm run build       # node cli/build.mjs --target all   -> build/<provider>/
 npm run list        # list discovered adapters + plugins
 npm run validate    # node test/validate.mjs (source + build-output contract)
+npm run overlap     # node test/overlap.mjs (skill/workflow overlap report, advisory)
 npm run pack:verify # pack-guard: assert the npm-publish file set stays within policy
 ```
 

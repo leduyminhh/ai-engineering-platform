@@ -34,6 +34,8 @@ export function checkDescription(desc, knownIds, selfId) {
   const len = [...desc].length;
   if (len > DESCRIPTION_MAX) errs.push(`dài ${len} ký tự (tối đa ${DESCRIPTION_MAX})`);
   if (desc.includes('KHÔNG thuộc pipeline')) errs.push('còn câu "KHÔNG thuộc pipeline…" (khái niệm pipeline đã bỏ)');
+  // frontmatter() ghi description dạng YAML plain scalar; " #" mở comment nên parser chặt sẽ cắt mất phần sau.
+  if (desc.includes(' #')) errs.push('chứa " #" (YAML hiểu là comment khi ghi plain scalar)');
   const targets = notForTargets(desc);
   if (targets === null) errs.push(`thiếu câu "${NOT_FOR} … → <id>"`);
   else if (!targets.length) errs.push(`câu "${NOT_FOR}" không có "→ <id>"`);

@@ -12,7 +12,7 @@ sharedAssets: templates/architecture
 
 Viết test đầu-cuối chạy trình duyệt thật qua Playwright để làm **lưới an toàn xuyên tầng FE → BE → DB** cho vài
 luồng quan trọng. Skill này là **hướng dẫn cách agent làm** (docs-only recipe), KHÔNG phải bộ test dựng sẵn hay công
-cụ sinh test. Recipe `pipeline: false`, gọi khi cần — không thuộc chuỗi bắt buộc.
+cụ sinh test. Recipe on-demand, gọi khi cần — không thuộc chuỗi bắt buộc.
 
 Phân công với skill anh em: `frontend-testing` phủ unit/integration (Testing Library + msw) và là nơi mặc định để
 chứng minh rủi ro; skill này chỉ nhận luồng mà tầng thấp **không** chứng minh được; `frontend-data-integration` nối
