@@ -1990,6 +1990,27 @@ if (fs.existsSync(BUILD)) {
   ok([...w26].length <= WHEN_TO_USE_MAX && /(^| )từ…$/.test(w26), 'whenToUse: câu dài cắt ở ranh giới từ, thêm "…"');
   const w26b = whenToUse({ description: `${'abc / '.repeat(60)}cuối. Câu hai.` });
   ok(/abc…$/.test(w26b) && [...w26b].length <= WHEN_TO_USE_MAX, 'whenToUse: bỏ ký tự nối lơ lửng (/, +, () trước "…"');
+  const parenBalanced = (s) => {
+    let depth = 0;
+    for (const ch of s) {
+      if (ch === '(') depth++;
+      else if (ch === ')') { if (!depth) return false; depth--; }
+    }
+    return depth === 0;
+  };
+  ok(whenToUse({ description: `Mở đầu (${'từ '.repeat(100)}đóng). Câu hai.` }) === 'Mở đầu…',
+    'whenToUse: lùi về trước "(" ngoài cùng chưa đóng');
+  const wNested = whenToUse({ description: `Mở (a) b (c (${'từ '.repeat(100)}x)). Hai.` });
+  ok(wNested === 'Mở (a) b…', 'whenToUse: ngoặc lồng chưa đóng → lùi về trước "(" ngoài cùng, giữ ngoặc đã đóng');
+  const wStart = whenToUse({ description: `(${'từ '.repeat(100)}x). Hai.` });
+  ok(wStart.endsWith('…)') && parenBalanced(wStart) && [...wStart].length <= WHEN_TO_USE_MAX,
+    'whenToUse: "(" ở đầu câu → đóng ngoặc sau "…", vẫn ≤ 200 ký tự');
+  const wEdge = whenToUse({ description: `(${'a'.repeat(194)} ( x${'y'.repeat(20)}. Hai.` });
+  ok(parenBalanced(wEdge) && [...wEdge].length <= WHEN_TO_USE_MAX, 'whenToUse: số ")" tính trên phần đã rút ngắn');
+  const wCap = whenToUse({ description: `(${'a'.repeat(100)}(${'b'.repeat(96)})zzzzzz tail. Hai.` });
+  ok(parenBalanced(wCap) && [...wCap].length <= WHEN_TO_USE_MAX, 'whenToUse: nhánh "(" đầu câu vẫn ≤ 200 ký tự sau khi đóng ngoặc');
+  const unbalanced26 = all26.filter((s) => !parenBalanced(whenToUse(s))).map((s) => s.id);
+  ok(unbalanced26.length === 0, `whenToUse: mọi dòng "Khi nào dùng" cân ngoặc${unbalanced26.length ? ' — ' + unbalanced26.join(', ') : ''}`);
   const longWhen = all26.filter((s) => [...whenToUse(s)].length > WHEN_TO_USE_MAX).map((s) => s.id);
   ok(longWhen.length === 0, `whenToUse: mọi dòng "Khi nào dùng" ≤ ${WHEN_TO_USE_MAX} ký tự${longWhen.length ? ' — ' + longWhen.join(', ') : ''}`);
 }

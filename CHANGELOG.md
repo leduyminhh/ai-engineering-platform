@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Antigravity `AGENTS.md` index cuts each "Khi nào dùng" line to 200 characters at a word boundary
   (`…`) instead of the validator warning about long first sentences; `checkSkillBody` ignores headings
   inside fenced code blocks; `test/overlap.mjs` no longer throws when imported without `argv[1]`.
+- The Antigravity "Khi nào dùng" index line no longer ends inside an unclosed parenthesis: a cut that would leave
+  "(" open backs up to before it.
 
 ## [1.2.1] - 2026-10-01
 

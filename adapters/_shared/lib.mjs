@@ -90,7 +90,30 @@ export function whenToUse(stage) {
   if (chars.length <= WHEN_TO_USE_MAX) return first;
   const head = chars.slice(0, WHEN_TO_USE_MAX - 1).join('');
   const cut = head.lastIndexOf(' ');
-  return `${(cut > 0 ? head.slice(0, cut) : head).replace(/[\s,;:—\-/+&|×(]+$/, '')}…`;
+  return closeCut(cut > 0 ? head.slice(0, cut) : head);
+}
+
+const TRAILING_JOINERS = /[\s,;:—\-/+&|×(]+$/;
+
+function unclosedOpens(text) {
+  const open = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '(') open.push(i);
+    else if (text[i] === ')' && open.length) open.pop();
+  }
+  return open;
+}
+
+// Cắt giữa ngoặc để lại "(" không đóng; lùi về trước "(" ngoài cùng chưa đóng để dòng mục lục đọc trọn ý.
+function closeCut(text) {
+  const open = unclosedOpens(text);
+  if (!open.length) return `${text.replace(TRAILING_JOINERS, '')}…`;
+  const before = text.slice(0, open[0]).replace(TRAILING_JOINERS, '');
+  if (before) return `${before}…`;
+  const body = [...text.replace(TRAILING_JOINERS, '')];
+  while (body.length && body.length + 1 + unclosedOpens(body.join('')).length > WHEN_TO_USE_MAX) body.pop();
+  const kept = body.join('');
+  return `${kept}…${')'.repeat(unclosedOpens(kept).length)}`;
 }
 
 /**
