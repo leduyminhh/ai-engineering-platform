@@ -2009,6 +2009,22 @@ if (fs.existsSync(BUILD)) {
   ok(parenBalanced(wEdge) && [...wEdge].length <= WHEN_TO_USE_MAX, 'whenToUse: số ")" tính trên phần đã rút ngắn');
   const wCap = whenToUse({ description: `(${'a'.repeat(100)}(${'b'.repeat(96)})zzzzzz tail. Hai.` });
   ok(parenBalanced(wCap) && [...wCap].length <= WHEN_TO_USE_MAX, 'whenToUse: nhánh "(" đầu câu vẫn ≤ 200 ký tự sau khi đóng ngoặc');
+  ok(whenToUse({ description: `${'a'.repeat(120)}, ${'b '.repeat(60)}cuối. Hai.` }) === `${'a'.repeat(120)}…`,
+    'whenToUse: cắt ở ranh giới mệnh đề ", " gần nhất');
+  ok(whenToUse({ description: `${'a'.repeat(130)} — ${'b '.repeat(60)}cuối. Hai.` }) === `${'a'.repeat(130)}…`,
+    'whenToUse: cắt ở ranh giới mệnh đề " — "');
+  ok(whenToUse({ description: `${'a'.repeat(110)}, ${'b'.repeat(30)}; ${'c '.repeat(40)}cuối. Hai.` }) === `${'a'.repeat(110)}, ${'b'.repeat(30)}…`,
+    'whenToUse: nhiều ranh giới hợp lệ → chọn ranh giới cuối ("; ")');
+  ok(whenToUse({ description: `${'a'.repeat(120)}: ${'b '.repeat(60)}cuối. Hai.` }) === `${'a'.repeat(120)}…`,
+    'whenToUse: cắt ở ranh giới mệnh đề ": "');
+  const wInParen = whenToUse({ description: `${'a'.repeat(110)} (x, y) ${'c '.repeat(60)}cuối. Hai.` });
+  ok(wInParen.endsWith('c…') && wInParen.includes('(x, y)'), 'whenToUse: dấu phẩy trong ngoặc không phải ranh giới mệnh đề');
+  ok(whenToUse({ description: `${'a'.repeat(50)}, ${'b '.repeat(80)}cuối. Hai.` }).endsWith('b…'),
+    'whenToUse: ranh giới trước ký tự 100 bị bỏ qua, quay về cắt theo từ');
+  const byId26 = new Map(all26.map((s) => [s.id, s]));
+  ok(whenToUse(byId26.get('backend-refactor')).endsWith('tách god class…')
+    && whenToUse(byId26.get('frontend-refactor')).endsWith('bỏ prop drilling…'),
+    'whenToUse: dữ liệu thật dừng sau trọn mệnh đề (backend-refactor, frontend-refactor)');
   const unbalanced26 = all26.filter((s) => !parenBalanced(whenToUse(s))).map((s) => s.id);
   ok(unbalanced26.length === 0, `whenToUse: mọi dòng "Khi nào dùng" cân ngoặc${unbalanced26.length ? ' — ' + unbalanced26.join(', ') : ''}`);
   const longWhen = all26.filter((s) => [...whenToUse(s)].length > WHEN_TO_USE_MAX).map((s) => s.id);

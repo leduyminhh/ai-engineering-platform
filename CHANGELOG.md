@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   inside fenced code blocks; `test/overlap.mjs` no longer throws when imported without `argv[1]`.
 - The Antigravity "Khi nào dùng" index line no longer ends inside an unclosed parenthesis: a cut that would leave
   "(" open backs up to before it.
+- The Antigravity "Khi nào dùng" index line now stops after a whole clause (`, ` `; ` ` — ` `: ` outside parentheses,
+  from character 100 on) instead of mid-clause, falling back to a word boundary.
 
 ## [1.2.1] - 2026-10-01
 

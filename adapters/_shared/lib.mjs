@@ -81,7 +81,7 @@ export function workflowDocPath(stage) {
 // Mục lục AGENTS.md chỉ cần một dòng nhận diện; bản đầy đủ nằm ở file hướng dẫn mà dòng kế tiếp trỏ tới.
 export const WHEN_TO_USE_MAX = 200;
 
-/** Single-line "when to use" — first sentence of the stage description, cut at a word boundary. */
+/** Single-line "when to use" — first sentence of the stage description, cut at a clause or word boundary. */
 export function whenToUse(stage) {
   const d = (stage.description || '').trim().replace(/\s+/g, ' ');
   const m = d.match(/^(.*?[.。])\s/);
@@ -89,8 +89,26 @@ export function whenToUse(stage) {
   const chars = [...first];
   if (chars.length <= WHEN_TO_USE_MAX) return first;
   const head = chars.slice(0, WHEN_TO_USE_MAX - 1).join('');
-  const cut = head.lastIndexOf(' ');
+  const clause = clauseBreak(head);
+  const cut = clause >= 0 ? clause : head.lastIndexOf(' ');
   return closeCut(cut > 0 ? head.slice(0, cut) : head);
+}
+
+// Dưới ngưỡng này dòng mục lục quá cụt; khi đó cắt theo từ giữ được nhiều ý hơn.
+const CLAUSE_MIN = 100;
+const CLAUSE_BREAKS = [', ', '; ', ' — ', ': '];
+
+// Dừng sau trọn một mệnh đề; dấu phẩy trong ngoặc là liệt kê, không phải ranh giới mệnh đề của câu.
+function clauseBreak(head) {
+  let depth = 0;
+  let best = -1;
+  for (let i = 0; i < head.length; i++) {
+    const c = head[i];
+    if (c === '(') depth++;
+    else if (c === ')' && depth) depth--;
+    else if (depth === 0 && i >= CLAUSE_MIN && CLAUSE_BREAKS.some((b) => head.startsWith(b, i))) best = i;
+  }
+  return best;
 }
 
 const TRAILING_JOINERS = /[\s,;:—\-/+&|×(]+$/;
