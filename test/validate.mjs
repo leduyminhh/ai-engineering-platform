@@ -2032,7 +2032,7 @@ if (fs.existsSync(BUILD)) {
     const first = firstSentence26(s);
     return first.startsWith(kept) && [', ', '; ', ' — ', ': '].some((b) => first.startsWith(b, kept.length));
   });
-  // Cắt theo từ cũng tình cờ dừng trước dấu phẩy (đo: 5/39), nên đòi đa số thay vì "ít nhất một".
+  // Cắt theo từ cũng có thể tình cờ dừng trước dấu phẩy, nên đòi đa số thay vì "ít nhất một".
   ok(cut26.length > 0 && atClause26.length * 2 >= cut26.length,
     `whenToUse: đa số dòng thật bị cắt dừng sau trọn mệnh đề (${atClause26.length}/${cut26.length})`);
   const unbalanced26 = all26.filter((s) => !parenBalanced(whenToUse(s))).map((s) => s.id);
