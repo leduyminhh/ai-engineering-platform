@@ -14,6 +14,7 @@
     "build": "node cli/build.mjs --target all",
     "list": "node cli/build.mjs --list",
     "validate": "node test/validate.mjs",
+    "overlap": "node test/overlap.mjs",
     "test": "node test/validate.mjs --build && node test/install.test.mjs && node test/wizard.test.mjs && node test/managed-block.test.mjs && node test/pack-guard.test.mjs && node test/args.test.mjs",
     "pack:verify": "node cli/lib/pack-guard.mjs",
     "pack:show": "node cli/lib/pack-guard.mjs --show",

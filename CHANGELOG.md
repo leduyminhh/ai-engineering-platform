@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `npm run overlap` (`test/overlap.mjs`) prints skill/skill and workflow/workflow content-overlap
+  ratios used to decide merges.
+
 ### Changed
 
 - Removed the dead `pipeline`, `next` and `stageNumber` frontmatter keys from every skill, workflow

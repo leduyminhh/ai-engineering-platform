@@ -17,6 +17,7 @@ import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse } from '../adapters/_shared/lib.mjs';
 import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, FIRST_SENTENCE_MAX } from '../cli/lib/conventions.mjs';
+import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
 
 let pass = 0;
 const fails = [];
@@ -2012,6 +2013,22 @@ if (fs.existsSync(BUILD)) {
       ok(miss.length === 0, `${id}: mọi tín hiệu Registry có trong description${miss.length ? ' — thiếu: ' + miss.join(', ') : ''}`);
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 28. Chuẩn hoá B0: chỉ số trùng lặp (spec 2026-10-06 §5.1)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  ok(lineOverlap('a\nb\nc', 'b\nc\nd\ne') === 2 / 3, 'lineOverlap: chia cho tập nhỏ hơn');
+  ok(lineOverlap('Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.\nx',
+    'Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.\ny') === 0, 'lineOverlap: bỏ dòng neo template');
+  ok(lineOverlap('|---|---|\n```\nx', '|---|---|\n```\ny') === 0, 'lineOverlap: bỏ dòng cấu trúc markdown');
+  ok(lineOverlap('', 'a') === 0, 'lineOverlap: rỗng → 0');
+  const st = (n, who, act) => `### Bước ${n} — T${n}\n- **Thực hiện:** ${who}\n- **Hành động:** ${act}\n`;
+  const wa = `## Các bước\n${st(1, 'session chính', 'chạy build')}${st(2, 'agent \`x\`', 'viết test')}## Checkpoint\n`;
+  const wb = `## Các bước\n${st(1, 'session chính', 'chạy build')}${st(2, 'agent \`y\`', 'viết test')}${st(3, 'a', 'b')}## Checkpoint\n`;
+  ok(stepOverlap(wa, wb) === 0.5, 'stepOverlap: khớp cả Thực hiện lẫn Hành động');
+  ok(titleOverlap(wa, wb) === 1, 'titleOverlap: so tên bước');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
