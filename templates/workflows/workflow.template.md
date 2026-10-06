@@ -31,7 +31,6 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 ## Các bước
 
 Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint người duyệt thì gắn ⏸ cuối tên bước.
-Không có subagent → session chính chạy tuần tự skill tương ứng.
 
 ### Bước 1 — <Tên bước>
 

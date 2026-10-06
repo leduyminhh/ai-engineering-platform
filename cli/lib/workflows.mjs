@@ -7,6 +7,14 @@ export const STEP_FIELDS = ['Thực hiện', 'Đầu vào', 'Hành động', 'R�
 export const RISKS = ['low', 'medium', 'high', 'critical'];
 // Cursor/Antigravity chưa có đích native cho workflow (spec §9 P1) nên installer bỏ workflow ở đó.
 export const WORKFLOW_PROVIDERS = ['claude', 'codex'];
+// Chỉ neo dòng khung; bảng lỗi, DoD và dòng commit được từng workflow tuỳ biến hợp lệ (đo 7–10/12 file).
+export const WF_ANCHORS = [
+  'Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.',
+  'Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint người duyệt thì gắn ⏸ cuối tên bước.',
+  '| Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |',
+  '| Tình huống | Hành động |',
+  'Trả về đúng khối sau; mục nào không chạy được ghi `status: not_run` kèm `reason`.',
+];
 
 function section(text, heading) {
   const lines = text.split('\n');
@@ -100,4 +108,21 @@ export function expandWorkflowDeps(selected, { workflows = [], agents = [] } = {
 
 export function missingDeps(skills, catalogIds) {
   return [...skills].filter((s) => !catalogIds.has(s)).sort();
+}
+
+export function missingAnchors(text) {
+  const lines = new Set(text.split('\n').map((l) => l.trimEnd()));
+  return WF_ANCHORS.filter((a) => !lines.has(a));
+}
+
+export function registrySignals(text) {
+  const out = new Map();
+  for (const line of (section(text, 'Registry') || '').split('\n')) {
+    const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+    if (cells.length < 5) continue;
+    const id = cells[0].replace(/`/g, '');
+    if (!id.startsWith('workflow-')) continue;
+    out.set(id, [...cells[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]));
+  }
+  return out;
 }

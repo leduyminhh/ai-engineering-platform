@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Skill and workflow `description`s are at most 1024 characters (Agent Skills limit), end with
   `Không dùng khi … → <id>`, and no quoted trigger is shared verbatim between two skills; 22
   over-long descriptions were shortened with their trigger lists kept.
+- Workflow drift guards: the five fixed template lines (`WF_ANCHORS`) must appear in every
+  `WORKFLOW.md`, and every quoted Registry signal must appear in that workflow's `description`.
 
 ## [1.2.1] - 2026-10-01
 

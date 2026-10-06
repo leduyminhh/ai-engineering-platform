@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
-import { checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS } from '../cli/lib/workflows.mjs';
+import { checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, missingAnchors, registrySignals } from '../cli/lib/workflows.mjs';
 import { offeredCatalog } from '../cli/lib/install.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
@@ -1982,6 +1982,36 @@ if (fs.existsSync(BUILD)) {
   const longFirst = all26.filter((s) => [...whenToUse(s)].length > FIRST_SENTENCE_MAX).map((s) => s.id);
   warn(longFirst.length === 0, `${longFirst.length}/${all26.length} description có câu đầu > ${FIRST_SENTENCE_MAX} ký tự `
     + `(render ở AGENTS.md antigravity), vd ${longFirst.slice(0, 5).join(', ')}`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 27. Chuẩn hoá A4: drift guard workflow ↔ template, Registry ↔ description (spec 2026-10-06 §4.4, §10)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const tpl27 = fs.readFileSync(path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n');
+  ok(missingAnchors(tpl27).length === 0, 'template workflow chứa mọi dòng neo WF_ANCHORS');
+  ok(!tpl27.includes('Không có subagent'), 'template workflow: không lặp câu fallback subagent (adapter đã chèn preamble)');
+  ok(missingAnchors(tpl27.replace('Thiếu điều kiện nào → dừng', 'Thiếu điều kiện → dừng')).length === 1,
+    'missingAnchors: lệch một chữ → báo thiếu');
+  ok(missingAnchors(tpl27.replace(/\n/g, '\r\n')).length === 0, 'missingAnchors: chấp nhận CRLF');
+  const fx27 = registrySignals(['## Registry', '| id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |', '|---|---|---|---|---|',
+    '| `workflow-x` | "a b", stacktrace, "c" | low | — | x |', '## Khác'].join('\n'));
+  ok(JSON.stringify(fx27.get('workflow-x')) === '["a b","c"]', 'registrySignals: chỉ lấy cụm trong ngoặc kép');
+  if (workflows) {
+    for (const s of workflows.stages) {
+      const miss = missingAnchors(s.body);
+      ok(miss.length === 0, `${s.id}: đủ dòng neo khung${miss.length ? ' — thiếu: ' + miss.join(' | ') : ''}`);
+    }
+    const orch27 = workflows.stages.find((s) => s.kind === 'orchestrator');
+    const sig27 = registrySignals(orch27 ? orch27.body : '');
+    ok(sig27.size === workflows.stages.filter((s) => s.kind === 'workflow').length, 'registrySignals: đọc đủ dòng Registry');
+    for (const [id, sigs] of sig27) {
+      const w = workflows.stages.find((s) => s.id === id);
+      const d = (w ? w.description : '').toLowerCase();
+      const miss = sigs.filter((x) => !d.includes(x.toLowerCase()));
+      ok(miss.length === 0, `${id}: mọi tín hiệu Registry có trong description${miss.length ? ' — thiếu: ' + miss.join(', ') : ''}`);
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
