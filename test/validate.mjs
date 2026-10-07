@@ -2173,6 +2173,25 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 29d. SOURCE: engineering-task-breakdown — tích hợp manifest/cowork/README/spec-writing (spec 2026-10-07 §6.2)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const read29 = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
+  const mf = JSON.parse(read29('plugins/engineering/.manifest.json'));
+  ok(mf.description.includes('7 skill') && mf.description.includes('engineering-task-breakdown') && mf.version === '1.3.0',
+    'engineering manifest: 7 skill, có engineering-task-breakdown, version 1.3.0');
+  ok(JSON.parse(read29('plugins/_cowork.json')).skills.includes('engineering:engineering-task-breakdown'),
+    '_cowork.json: có engineering:engineering-task-breakdown');
+  for (const f of ['README.md', 'README_VI.md']) {
+    const t = read29(f);
+    ok(/^\| `engineering` \|.*engineering-task-breakdown/m.test(t), `${f}: dòng plugin engineering nêu engineering-task-breakdown`);
+    ok(!/^\| G9 \|/m.test(t), `${f}: Roadmap không còn gap G9 (đã lấp)`);
+  }
+  ok(read29('plugins/engineering/skills/engineering-spec-writing/SKILL.md').includes('→ `engineering-task-breakdown`'),
+    'engineering-spec-writing: trỏ phần phân rã task sang engineering-task-breakdown');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');

@@ -128,7 +128,7 @@ published (e.g. the `data-oltp-*` / `data-olap-*` skills) stay drafts, installab
 | `backend` | Backend (REST API / service) project. | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Frontend (web app / SPA) project. | `frontend-init`, `frontend-migrate-architecture` |
 | `data` | Data project — OLTP DB (`data-oltp-*`) + OLAP warehouse/pipeline (`data-olap-*`). *(partly published: `data-db-migration`; OLTP/OLAP skills still draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
-| `engineering` | Cross-cutting engineering capabilities (quality gate, spec, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-adr` |
+| `engineering` | Cross-cutting engineering capabilities (quality gate, spec, task breakdown, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-task-breakdown`, `engineering-adr` |
 | `ops` | Server maintenance — deploy/release, incident triage, observability. | `ops-deploy-release`, `ops-incident-troubleshooting`, `ops-observability` |
 
 Each `*-init` skill is a **docs-only scaffolder**: it drops the `templates/init`
@@ -239,7 +239,6 @@ Tracked as open gaps in the design spec (`docs/superpowers/specs/2026-09-25-agen
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
-| G9 | `engineering-task-breakdown` | engineering | WF01 |
 | G11 | `engineering-docs-sync` | engineering | WF12 |
 
 **Future workflows:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),
