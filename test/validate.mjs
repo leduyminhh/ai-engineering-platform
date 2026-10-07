@@ -2126,6 +2126,36 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 29b. SOURCE: engineering-task-breakdown — template task common/backend/frontend (spec 2026-10-07 §3)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const TB_REF = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-task-breakdown', 'references');
+  const tbRef = (f) => { const p = path.join(TB_REF, f); return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : ''; };
+  const common = tbRef('task-template-common.md');
+  ok(['CT', 'DB', 'BE', 'FE-UI', 'FE-INT', 'E2E'].every((t) => common.includes(`| \`${t}\` |`)),
+    'engineering-task-breakdown: template common có bảng đủ 6 loại task');
+  ok(['Use case', 'Loại', 'Size', 'Phụ thuộc', 'Owner', 'Trạng thái', 'Skill gợi ý', 'Nguồn'].every((h) => common.includes(`| ${h} |`))
+    && ['**Ngữ cảnh:**', '**Acceptance criteria:**', '**File dự kiến:**', '**Lệnh verify:**', '**DoD:**'].every((h) => common.includes(h)),
+    'engineering-task-breakdown: template common có đủ header chung');
+  ok(common.includes('N/A — <lý do>') && common.includes('[giả định]'),
+    'engineering-task-breakdown: template common có quy tắc N/A và [giả định]');
+  ok(common.includes('Chỉ sinh loại cần') && common.includes('không sinh `CT`, `BE`, `FE-INT`')
+    && common.includes('không sinh `FE-UI`, `FE-INT`, `E2E`'),
+    'engineering-task-breakdown: use case không có API / chỉ backend thì không sinh loại task thừa');
+  ok(['### CT', '### DB', '### E2E'].every((h) => common.includes(h)), 'engineering-task-breakdown: có template CT/DB/E2E');
+  const be = tbRef('task-template-backend.md');
+  ok(Array.from({ length: 10 }, (_, i) => `### B${i + 1}. `).every((h) => be.includes(h))
+    && Array.from({ length: 10 }, (_, i) => `**B${i + 1}. `).every((h) => be.includes(h)),
+    'engineering-task-breakdown: template backend có đủ B1–B10 (hướng dẫn + template chép được)');
+  const fe = tbRef('task-template-frontend.md');
+  ok(Array.from({ length: 9 }, (_, i) => `### F${i + 1}. `).every((h) => fe.includes(h))
+    && Array.from({ length: 9 }, (_, i) => `**F${i + 1}. `).every((h) => fe.includes(h)),
+    'engineering-task-breakdown: template frontend có đủ F1–F9 (hướng dẫn + template chép được)');
+  ok(fe.includes('đồng bộ với B4') && fe.includes('msw'), 'engineering-task-breakdown: FE đồng bộ validation với BE, mock API bằng msw');
+  ok(![common, be, fe].some((t) => /\bTODO\b|\bTBD\b/.test(t)), 'engineering-task-breakdown: template không còn TODO/TBD');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');
