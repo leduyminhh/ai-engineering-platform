@@ -27,7 +27,7 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
 - Cần làm rõ một yêu cầu mơ hồ thành đặc tả có tiêu chí chấp nhận đo được trước khi lập kế hoạch/triển khai.
 - Cần đặt spec vào đúng `docs/requests/` và link tới ADR + contract/data-model.
 
-KHÔNG dùng skill này để phân rã story/task chi tiết, sinh code, hay dựng lại artifact FIS (xem mục Ghi chú).
+KHÔNG dùng skill này để phân rã story/task chi tiết (→ `engineering-task-breakdown`), sinh code, hay dựng lại artifact FIS (xem mục Ghi chú).
 
 ## Ranh giới an toàn
 

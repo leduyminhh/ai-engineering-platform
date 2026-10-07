@@ -123,7 +123,7 @@ Skill chưa được publish của một plugin (vd các skill `data-oltp-*` / `
 | `backend` | Project backend (REST API / service). | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Project frontend (web app / SPA). | `frontend-init`, `frontend-migrate-architecture` |
 | `data` | Project dữ liệu — CSDL OLTP (`data-oltp-*`) + kho/pipeline OLAP (`data-olap-*`). *(publish một phần: `data-db-migration`; skill OLTP/OLAP còn draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
-| `engineering` | Capability kỹ thuật xuyên suốt (quality gate, spec, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-adr` |
+| `engineering` | Capability kỹ thuật xuyên suốt (quality gate, spec, phân rã task, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-task-breakdown`, `engineering-adr` |
 | `ops` | Maintain server — deploy/release, xử lý sự cố, observability. | `ops-deploy-release`, `ops-incident-troubleshooting`, `ops-observability` |
 
 Mỗi skill `*-init` là **bộ scaffold TÀI LIỆU**: drop cây `templates/init` +
@@ -234,7 +234,6 @@ Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
-| G9 | `engineering-task-breakdown` | engineering | WF01 |
 | G11 | `engineering-docs-sync` | engineering | WF12 |
 
 **Workflow tương lai:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),

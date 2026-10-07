@@ -29,6 +29,7 @@
     "engineering:engineering-release-notes",
     "engineering:engineering-adr",
     "engineering:engineering-convention-enforce",
+    "engineering:engineering-task-breakdown",
     "ops:ops-deploy-release",
     "ops:ops-incident-troubleshooting",
     "ops:ops-observability",
