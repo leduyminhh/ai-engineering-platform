@@ -2192,6 +2192,28 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 30a-1. SOURCE: skill code nhận task từ tasks.md (spec 2026-10-07 integration §2.1–§2.4)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const rd = (...p) => fs.readFileSync(path.join(PLUGINS_DIR, ...p), 'utf8');
+  const intake = rd('backend', 'skills', 'backend-implement', 'references', 'use-case-intake.md');
+  ok(/^## Nguồn D — task `BE` trong `tasks\.md`$/m.test(intake) && ['B1', 'B3', 'B6', 'B10'].every((b) => intake.includes(`| ${b} `)),
+    'backend-implement: use-case-intake có Nguồn D map trường task BE');
+  ok(rd('backend', 'skills', 'backend-implement', 'SKILL.md').includes('task `BE` trong `tasks.md`'),
+    'backend-implement: bước 1 liệt kê task BE trong tasks.md là nguồn đầu vào');
+  const feImpl = rd('frontend', 'skills', 'frontend-implement', 'SKILL.md');
+  ok(feImpl.includes('**Nhận task `FE-UI` từ `tasks.md`**') && feImpl.includes('F6 là `N/A`'),
+    'frontend-implement: nhận task FE-UI, F6 để cho task FE-INT');
+  const feInt = rd('frontend', 'skills', 'frontend-data-integration', 'SKILL.md');
+  ok(feInt.includes('**Nhận task `FE-INT` từ `tasks.md`**') && feInt.includes('bảng B7'),
+    'frontend-data-integration: nhận task FE-INT, map lỗi theo bảng B7');
+  for (const [name, t] of [['use-case-intake', intake], ['frontend-implement', feImpl], ['frontend-data-integration', feInt]]) {
+    ok(/KHÔNG sửa\s+`tasks\.md`/.test(t) && t.includes('[giả định]'),
+      `${name}: agent không sửa tasks.md, hỏi lại mục [giả định]`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');

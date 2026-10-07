@@ -55,6 +55,12 @@ nối); không dùng "đảm bảo / an toàn tuyệt đối"; luôn nêu rủi 
   (openapi-typescript / orval / openapi-generator), `api-client` sẵn có (`lib/api-client.ts` hoặc `shared/api`),
   msw. Ghi lại phiên bản TanStack Query thật (chữ ký `useQuery` khác nhau giữa v4 và v5).
 - Đọc các component được giao và liệt kê chỗ `TODO` / props còn thiếu dữ liệu do `frontend-implement` để lại.
+- **Nhận task `FE-INT` từ `tasks.md`** (do `engineering-task-breakdown` sinh, dạng "task `UC01-FE-02` trong
+  `docs/requests/<...>/tasks.md`"): đọc **chỉ** mục chi tiết của task đó + mục của các task trong cột Phụ thuộc
+  (task `FE-UI` trong đó là container/page cần nối). Map: F6 → `operationId` + map lỗi theo bảng B7 của task `BE`
+  liên quan; F4 → 4 trạng thái; F9 → test mock bằng msw. AC + DoD của task là tiêu chí xong, "Lệnh verify" là lệnh
+  phải chạy. Mục còn `[giả định]` (endpoint, map lỗi) → hỏi lại. Kết thúc: báo trạng thái đề xuất cho session chính;
+  KHÔNG sửa `tasks.md`.
 
 ### I1. Contract
 

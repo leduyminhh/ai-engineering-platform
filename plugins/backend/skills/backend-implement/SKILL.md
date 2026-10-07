@@ -37,7 +37,7 @@ gọi khi cần — không thuộc chuỗi bắt buộc.
 
 ### 1. Chốt use-case
 Từ nguồn đầu vào (mô tả người dùng · `docs/requests/<...>/requirement.md` · contract
-`docs/contracts/openapi.json` nếu có), xác định phạm vi TRƯỚC khi sinh — chi tiết:
+`docs/contracts/openapi.json` nếu có · task `BE` trong `tasks.md`), xác định phạm vi TRƯỚC khi sinh — chi tiết:
 [references/use-case-intake.md](references/use-case-intake.md).
 - **Aggregate root + invariant** liên quan; use-case là **command** (đổi trạng thái) hay **query** (đọc);
   **driven port** cần (repository/gateway); **input/output DTO**.
