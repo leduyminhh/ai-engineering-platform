@@ -11,7 +11,8 @@ invoke: per-request
 
 Biến yêu cầu thô, use case, ARD hoặc `requirement.md` thành **danh sách task giao được** cho hai đối tượng: dev
 trong team đọc markdown trong repo, và agent AI (`backend-implementer`, `frontend-implementer`…) nhận từng task để
-code. Skill này là **docs-only recipe** — hướng dẫn agent phân tích và viết tài liệu task, KHÔNG sinh code.
+code. Skill này là **docs-only recipe** — hướng dẫn agent phân tích và viết tài liệu task, KHÔNG sinh mã nguồn cho
+project; kèm script kiểm tra/xuất tất định `scripts/check-tasks.mjs`.
 
 Tách theo **use case — lát dọc** `CT → DB → BE → FE-UI → FE-INT → E2E`, chỉ sinh loại task thật sự cần. Mỗi task
 **tự đủ nghĩa**: người hoặc agent nhận một task không cần đọc lại toàn bộ input. `tasks.md` là **nguồn sự thật**;
@@ -31,7 +32,8 @@ KHÔNG dùng khi yêu cầu còn mơ hồ (chạy `engineering-spec-writing` tr�
 
 ## Ranh giới an toàn
 
-- **Docs-only** — KHÔNG sinh code; chỉ ghi trong `docs/requests/`.
+- **Docs-only** — KHÔNG sinh mã nguồn cho project; chỉ ghi trong `docs/requests/` (kể cả CSV do
+  `check-tasks.mjs --csv` xuất).
 - **KHÔNG bịa yêu cầu.** Thiếu thông tin → đánh dấu **[giả định]** hoặc đưa vào Câu hỏi mở; không âm thầm điền.
 - KHÔNG tự chốt quyết định kiến trúc → ghi Câu hỏi mở + gợi ý `engineering-adr`.
 - KHÔNG gán người: cột `Owner` để trống cho teamlead.
@@ -82,8 +84,9 @@ KHÔNG dùng khi yêu cầu còn mơ hồ (chạy `engineering-spec-writing` tr�
    Ghi bản nháp `docs/requests/<yyyy-mm-dd>-<slug>/tasks.md` theo
    [references/output-formats.md](references/output-formats.md) §2–§3 (đã tồn tại → hỏi trước). Có Node → chạy
    `node <thư mục skill>/scripts/check-tasks.mjs <đường dẫn tasks.md>` ([scripts/check-tasks.mjs](scripts/check-tasks.mjs));
-   exit 1 → sửa `tasks.md` theo từng dòng lỗi rồi chạy lại tới khi 0 lỗi; cảnh báo W* → sửa hoặc nêu lý do ở Ngữ
-   cảnh. Rồi chạy [references/breakdown-checklist.md](references/breakdown-checklist.md) cho các mục script không kiểm
+   exit 1 → sửa `tasks.md` theo từng dòng lỗi rồi chạy lại tới khi 0 lỗi; cảnh báo W1 → thêm phụ thuộc hoặc nêu lý do ở
+   Ngữ cảnh; W2 → bỏ `CT` khỏi Phụ thuộc của `FE-UI` (luật ở bước 3). Rồi chạy
+   [references/breakdown-checklist.md](references/breakdown-checklist.md) cho các mục script không kiểm
    (không có Node → kiểm cả checklist thủ công). Nêu rõ phần còn thiếu (fail-loud); trình bảng tổng task cho
    teamlead duyệt. Câu hỏi mở phát sinh ở bước 3–5 trình cùng Checkpoint 2.
 

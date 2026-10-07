@@ -1,7 +1,7 @@
 # Thiết kế: nối `engineering-task-breakdown` vào platform + script `check-tasks.mjs`
 
 - Ngày: 2026-10-07
-- Trạng thái: **Chờ duyệt spec**
+- Trạng thái: **Đã duyệt — đã hiện thực trên `feature/task-breakdown-integration`**
 - Phạm vi: Phase 1 — skill code nhận task từ `tasks.md`, `workflow-feature`, agent `engineering-spec-analyst`,
   `plugins/engineering/shared/principles.md`. Phase 2 — script Node zero-dep `check-tasks.mjs` (kiểm + xuất CSV) ship
   kèm skill `engineering-task-breakdown`.
@@ -225,7 +225,7 @@ Không thêm file test mới (thêm vào `npm test` phải sửa `package.json`)
 
 - Fixture `tasks.md` hợp lệ tối thiểu (1 UC, task CT + BE + FE-UI + FE-INT, đủ B1–B10/F1–F9) → 0 lỗi, 0 cảnh báo.
 - Mỗi mã E1–E9 + W1, W2: một biến thể fixture → đúng mã đó xuất hiện.
-- `toCsv`: bắt đầu bằng `﻿`; số bản ghi = 1 header + số task; tiêu đề chứa `"` được nhân đôi `""`; ô AC có `\n`
+- `toCsv`: bắt đầu bằng `\uFEFF`; số bản ghi = 1 header + số task; tiêu đề chứa `"` được nhân đôi `""`; ô AC có `\n`
   nằm trong ngoặc kép.
 - CLI: chạy `node check-tasks.mjs <fixture lỗi>` qua `execFileSync` trên file tạm trong `os.tmpdir()` → exit 1, không
   tạo file CSV; fixture hợp lệ + `--csv` → exit 0 và có file; thiếu tham số → exit 2. Dọn file tạm bằng `fs.rmSync`.

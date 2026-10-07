@@ -16,7 +16,7 @@
 - KHÔNG sửa: `package.json`, `pack.config.json`, `cli/`, `adapters/`, `plugins/_published.json`, `plugins/_cowork.json`.
 - KHÔNG bump version manifest `backend` / `frontend` (đang bị assert ghim `test/validate.mjs:1316`, `:1470`, `:1789`).
 - `workflows/feature/WORKFLOW.md`: KHÔNG đổi số bước, frontmatter `agents`, hay Registry orchestrator; khung `WF_ANCHORS` + 8 trường mỗi bước phải giữ nguyên.
-- Script `check-tasks.mjs`: chỉ import `node:*`; exit `0` không lỗi, `1` có lỗi E*, `2` sai tham số/không đọc được file; CSV chỉ ghi khi 0 lỗi; CSV = `﻿` + mọi ô quote + `"` nhân đôi + dòng kết thúc `\r\n`; 11 cột `ID · UC · Loại · Tiêu đề · Size · Phụ thuộc · Owner · Trạng thái · Skill gợi ý · AC · Link chi tiết`.
+- Script `check-tasks.mjs`: chỉ import `node:*`; exit `0` không lỗi, `1` có lỗi E*, `2` sai tham số/không đọc được file; CSV chỉ ghi khi 0 lỗi; CSV = `\uFEFF` + mọi ô quote + `"` nhân đôi + dòng kết thúc `\r\n`; 11 cột `ID · UC · Loại · Tiêu đề · Size · Phụ thuộc · Owner · Trạng thái · Skill gợi ý · AC · Link chi tiết`.
 - Mã luật: E1 ID/Loại, E2 trùng ID, E3 bảng tổng ↔ chi tiết + anchor, E4 phụ thuộc không tồn tại, E5 vòng phụ thuộc, E6 size, E7 AC chưa phủ, E8 AC lạ / task 0 AC, E9 ô trống + B1–B10/F1–F9; W1 thiếu phụ thuộc tối thiểu, W2 FE-UI chờ CT.
 - Agent subagent không sửa `tasks.md`; skill code chỉ báo trạng thái đề xuất.
 - Commit qua `core:git-workflow`: header tiếng Anh `type(scope): summary`, body tiếng Việt có dấu (Changed/Reason), `git commit -F <file>` sau khi chạy script encoding, KHÔNG có dòng `Co-authored-by` / `Co-Authored-By`. Branch: `feature/task-breakdown-integration`.
@@ -428,7 +428,7 @@ Khối:
     }
     ok(check(FX.replace('| M | UC01-CT-01 |', '| M | — |')).errors.length === 0, 'check-tasks: W1 chỉ là cảnh báo, không thành lỗi');
     ok(check(FX.replace(/\n/g, '\r\n')).errors.length === 0, 'check-tasks: tasks.md CRLF → 0 lỗi');
-    ok(check('﻿' + FX).errors.length === 0, 'check-tasks: tasks.md có BOM → 0 lỗi');
+    ok(check('\uFEFF' + FX).errors.length === 0, 'check-tasks: tasks.md có BOM → 0 lỗi');
     const linked = check(FX.replace('| M | UC01-CT-01 |', '| M | [UC01-CT-01](#uc01-ct-01) |'));
     ok(linked.errors.length === 0 && linked.warnings.length === 0, 'check-tasks: Phụ thuộc dạng link markdown được nhận');
     let noDetail = null;
@@ -436,7 +436,7 @@ Khối:
     ok(!!noDetail && noDetail.errors.some((p) => p.code === 'E3'), 'check-tasks: thiếu mục Chi tiết task → E3, không ném lỗi');
     const csv = tb.toCsv(tb.parseTasks(FX));
     const recs = csv.slice(1).split('\r\n').filter(Boolean);
-    ok(csv.startsWith('﻿') && csv.endsWith('\r\n') && recs.length === 5, 'check-tasks: CSV có BOM, 1 header + 4 task, kết thúc CRLF');
+    ok(csv.startsWith('\uFEFF') && csv.endsWith('\r\n') && recs.length === 5, 'check-tasks: CSV có BOM, 1 header + 4 task, kết thúc CRLF');
     ok(recs[0] === tb.CSV_COLS.map((c) => `"${c}"`).join(',') && tb.CSV_COLS.length === 11, 'check-tasks: CSV header đủ 11 cột');
     ok(recs[1].startsWith('"UC01-CT-01","UC01","CT","Chốt contract ""đăng ký""","S","—",""'),
       'check-tasks: CSV ID trần, ngoặc kép nhân đôi, Phụ thuộc rỗng = —');
@@ -453,7 +453,7 @@ Khối:
     };
     try {
       const good = path.join(tmp, 'tasks.md');
-      fs.writeFileSync(good, '﻿' + FX.replace(/\n/g, '\r\n'));
+      fs.writeFileSync(good, '\uFEFF' + FX.replace(/\n/g, '\r\n'));
       const bad = path.join(tmp, 'bad.md');
       fs.writeFileSync(bad, FX.replace('| M | UC01-CT-01 |', '| M | UC01-CT-09 |'));
       const okCsv = path.join(tmp, 'ok.csv');
@@ -528,7 +528,7 @@ function table(lines, sec) {
 }
 
 export function parseTasks(text) {
-  const lines = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n').split('\n');
+  const lines = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n');
   const secs = sections(lines);
   // Tìm mục theo tên heading thay vì số thứ tự vì agent có thể đánh số lại các mục H2.
   const find = (kw) => secs.find((s) => s.title.includes(kw));
@@ -687,7 +687,7 @@ export function toCsv(model) {
     `tasks.md#${t.id.toLowerCase()}`,
   ]);
   // BOM để Excel trên Windows đọc đúng UTF-8 (dấu tiếng Việt); CRLF theo RFC 4180.
-  return '﻿' + [CSV_COLS, ...rows].map((r) => r.map(quote).join(',')).join('\r\n') + '\r\n';
+  return '\uFEFF' + [CSV_COLS, ...rows].map((r) => r.map(quote).join(',')).join('\r\n') + '\r\n';
 }
 
 function main(argv) {

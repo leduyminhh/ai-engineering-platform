@@ -58,25 +58,29 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   (bảng/cột/index/migration) → dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature (chuỗi
   `db-change → feature`). Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
   chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do). Ở checkpoint, hỏi người dùng có tách task
-  không (gợi ý có khi phạm vi `fullstack` hoặc ≥ 2 use case); có → `engineering-spec-analyst` chạy skill
-  `engineering-task-breakdown`, sinh `tasks.md` cùng thư mục `requirement.md`.
+  không (gợi ý có khi phạm vi `fullstack` hoặc ≥ 2 use case); có → gọi lại `engineering-spec-analyst` chạy
+  skill `engineering-task-breakdown` theo hai lượt: lượt 1 trả bảng Use case + Câu hỏi mở (Checkpoint 1),
+  session chính trình người dùng duyệt; lượt 2 tách task, ghi `tasks.md` cùng thư mục `requirement.md`, trả
+  bảng tổng task + output `check-tasks.mjs` (Checkpoint 2), session chính trình duyệt. Chưa duyệt Checkpoint 2
+  → chưa sang Bước 3.
 - **Ràng buộc:** chỉ ghi trong `docs/`; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả
   định]`; chỉ phân rã task khi người dùng chọn ở checkpoint.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` với acceptance criteria + phạm vi BE/FE/fullstack
   + bảng ứng viên e2e (nếu có); `tasks.md` nếu người dùng chọn tách task.
 - **Gate:** acceptance criteria đo được; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc đã
   có xác nhận chạy `workflow-db-change` trước; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e"; có
-  `tasks.md` thì đạt checklist của `engineering-task-breakdown`.
+  `tasks.md` thì `check-tasks.mjs` báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và
+  người dùng đã duyệt Checkpoint 1 + Checkpoint 2.
 - **Khi fail:** acceptance criteria mơ hồ/không đo được → hỏi lại người dùng, không tự suy diễn tiếp; phạm vi
   có đổi schema → dừng, đề xuất `workflow-db-change`.
-- **Evidence:** đường dẫn `requirement.md` + trích đoạn acceptance criteria; có `tasks.md` thì đường dẫn + kết
-  quả checklist.
+- **Evidence:** đường dẫn `requirement.md` + trích đoạn acceptance criteria; có `tasks.md` thì đường dẫn +
+  output `check-tasks.mjs` (dòng tổng + exit code) hoặc kết quả checklist thủ công.
 
 ### Bước 3 — Thiết kế & contract ⏸
 
 - **Thực hiện:** agent `backend-implementer` (skill `backend-api-contract`, chỉ khi phạm vi có API) ∥ agent
   `engineering-spec-analyst` (ADR, chỉ khi ảnh hưởng kiến trúc)
-- **Đầu vào:** `requirement.md` từ Bước 2
+- **Đầu vào:** `requirement.md` (+ task `CT` trong `tasks.md` nếu có) từ Bước 2
 - **Hành động:** nếu feature có endpoint mới/đổi endpoint cũ, `backend-implementer` chốt/đồng bộ OpenAPI
   contract trong `docs/contracts/`; nếu ảnh hưởng kiến trúc, `engineering-spec-analyst` viết ADR đề xuất.
 - **Ràng buộc:** không code implementation ở bước này; không đổi kiểu kiến trúc đã chốt.
@@ -97,8 +101,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   (type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); chạy build của từng phía.
   Có `tasks.md` từ Bước 2 → giao từng task theo thứ tự phụ thuộc (nhóm song song chạy song song): `BE` →
   `backend-implementer`, `FE-UI` → `frontend-implementer`, `FE-INT` → `frontend-data-integrator`; mỗi agent nhận
-  "task `<ID>` trong `tasks.md`", task xong thì session chính cập nhật cột Trạng thái. Không có `tasks.md` → giữ
-  luồng trên.
+  "task `<ID>` trong `tasks.md`", task xong thì session chính cập nhật cột Trạng thái. Task loại khác không giao
+  ở bước này: `CT` làm ở Bước 3 (session chính đặt `Done` khi đạt Gate Bước 3); `DB` đã chạy qua
+  `workflow-db-change` trước feature (chưa áp → dừng như Bước 2); `E2E` giao cho agent e2e của Bước 5. Không
+  có `tasks.md` → giữ luồng trên.
 - **Ràng buộc:** chỉ sửa file trong slice/feature được giao; không giả lập data ẩn; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator: chưa có codegen/thư viện data → dừng,
   đề xuất, chờ người dùng chọn; không viết tay type trùng contract; không gọi `fetch`/`axios` trong component.

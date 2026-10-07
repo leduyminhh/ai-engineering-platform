@@ -15,9 +15,10 @@ const NO_DEP = new Set(['', '—', '-']);
 const MIN_DEPS = { BE: ['CT', 'DB'], 'FE-INT': ['CT', 'FE-UI'], E2E: ['BE', 'FE-INT'] };
 
 const cellsOf = (line) => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+const bare = (s) => s.replace(/^`([^`]*)`$/, '$1');
 const linkText = (cell) => {
   const m = cell.match(/^\[([^\]]+)\]\([^)]*\)$/);
-  return m ? m[1] : cell;
+  return bare(m ? m[1] : cell);
 };
 
 function sections(lines) {
@@ -45,12 +46,16 @@ function table(lines, sec) {
 }
 
 export function parseTasks(text) {
-  const lines = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n');
+  const lines = text.replace(/^\uFEFF/, '').normalize('NFC').replace(/\r\n?/g, '\n').split('\n');
   const secs = sections(lines);
   // Tìm mục theo tên heading thay vì số thứ tự vì agent có thể đánh số lại các mục H2.
   const find = (kw) => secs.find((s) => s.title.includes(kw));
-  const ucTable = table(lines, find('use case'));
-  const sumTable = table(lines, find('bảng tổng task'));
+  const findTable = (kw) => {
+    for (const s of secs) if (s.title.includes(kw)) { const t = table(lines, s); if (t) return t; }
+    return null;
+  };
+  const ucTable = findTable('use case');
+  const sumTable = findTable('bảng tổng task');
   const detSec = find('chi tiết task');
   const useCases = ucTable
     ? ucTable.rows.map((r) => ({ id: r.get('ID'), acs: r.get('AC').match(AC_RE) || [], line: r.line }))
@@ -76,7 +81,7 @@ export function parseTasks(text) {
       const l = lines[i];
       const a = l.match(/^<a id="([^"]*)"><\/a>\s*$/);
       if (a) { anchor = a[1]; continue; }
-      const h = l.match(/^### (\S+)\s+[—-]\s+/);
+      const h = l.match(/^### (\S+)\s+[—–-]\s+/);
       if (h) {
         cur = { id: h[1], anchor, line: i + 1, acs: [], acTexts: [], b: new Set(), f: new Set() };
         details.push(cur);
@@ -228,7 +233,10 @@ function main(argv) {
     if (csv) console.log('Không ghi CSV vì còn lỗi.');
     return 1;
   }
-  if (csv) { fs.writeFileSync(csv, toCsv(model)); console.log(`Đã ghi ${csv}`); }
+  if (csv) {
+    try { fs.writeFileSync(csv, toCsv(model)); } catch (e) { console.error(`Không ghi được ${csv}: ${e.message}`); return 2; }
+    console.log(`Đã ghi ${csv}`);
+  }
   return 0;
 }
 

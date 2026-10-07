@@ -2288,6 +2288,10 @@ if (fs.existsSync(BUILD)) {
       ['E8', '- [ ] AC1.2 — hiện lỗi 409\n', ''],
       ['E9', '- **B7. Mục:** x\n', ''],
       ['E9', '| Tạo tài khoản | M |', '|  | M |'],
+      ['E3', '### UC01-FE-02 — Nối form', '### UC01-FE-09 — Nối form'],
+      ['E6', '| M | UC01-CT-01 |', '| XL | UC01-CT-01 |'],
+      ['E9', '- **F9. Mục:** x', ''],
+      ['E9', '| Skill gợi ý |', '| Skill |'],
       ['W1', '| M | UC01-CT-01 |', '| M | — |'],
       ['W2', '| S | — |  | Todo | frontend-implement |', '| S | UC01-CT-01 |  | Todo | frontend-implement |'],
     ];
@@ -2299,6 +2303,10 @@ if (fs.existsSync(BUILD)) {
     ok(check('\uFEFF' + FX).errors.length === 0, 'check-tasks: tasks.md có BOM → 0 lỗi');
     const linked = check(FX.replace('| M | UC01-CT-01 |', '| M | [UC01-CT-01](#uc01-ct-01) |'));
     ok(linked.errors.length === 0 && linked.warnings.length === 0, 'check-tasks: Phụ thuộc dạng link markdown được nhận');
+    ok(check(FX.replace('### UC01-FE-01 — ', '### UC01-FE-01 – ')).errors.length === 0, 'check-tasks: heading en dash vẫn nhận');
+    ok(check(FX.replace('# Tasks: Mẫu', '# Tasks: Mẫu\n\n## 1. Tóm tắt use case\n\n- Use case: 1')).errors.length === 0, 'check-tasks: bỏ qua mục H2 "use case" không có bảng');
+    ok(check(FX.replace('| S | UC01-CT-01, UC01-FE-01 |', '| S | `UC01-CT-01`, `UC01-FE-01` |')).errors.length === 0, 'check-tasks: Phụ thuộc trong backtick được nhận');
+    ok(check(FX.normalize('NFD')).errors.length === 0, 'check-tasks: tasks.md NFD → 0 lỗi');
     let noDetail = null;
     try { noDetail = check(FX.replace('## 5. Chi tiết task', '## 5. Ghi chú')); } catch { noDetail = null; }
     ok(!!noDetail && noDetail.errors.some((p) => p.code === 'E3'), 'check-tasks: thiếu mục Chi tiết task → E3, không ném lỗi');
@@ -2311,7 +2319,7 @@ if (fs.existsSync(BUILD)) {
     ok(recs[2].includes('"AC1.1 — tạo tài khoản\nAC1.2 — email trùng trả 409"') && recs[2].endsWith('"tasks.md#uc01-be-01"'),
       'check-tasks: CSV ô AC nhiều dòng trong ngoặc kép, link chi tiết theo anchor');
     const src = fs.readFileSync(TB_SCRIPT, 'utf8');
-    ok(!/from\s+['"](?!node:)/.test(src) && !/require\(/.test(src), 'check-tasks: chỉ import node:*');
+    ok(!/(?:from\s+|import\s*\(?\s*)['"](?!node:)/.test(src) && !/require\(/.test(src), 'check-tasks: chỉ import node:*');
     ok(src.includes('realpathSync'), 'check-tasks: guard CLI so sánh qua realpath (chạy được qua junction/symlink)');
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'check-tasks-'));
     const run = (...args) => {
@@ -2332,6 +2340,7 @@ if (fs.existsSync(BUILD)) {
       const r2 = run(bad, '--csv', badCsv);
       ok(r2.code === 1 && /bad\.md:\d+: \[E4\] UC01-BE-01 phụ thuộc UC01-CT-09 không tồn tại/.test(r2.out) && !fs.existsSync(badCsv),
         `check-tasks CLI: có lỗi → exit 1, báo dòng, không ghi CSV (${r2.code}: ${r2.out.trim()})`);
+      ok(run(good, '--csv', path.join(tmp, 'khong-co-thu-muc', 'x.csv')).code === 2, 'check-tasks CLI: không ghi được CSV → exit 2');
       ok(run().code === 2 && run(path.join(tmp, 'khong-co.md')).code === 2, 'check-tasks CLI: thiếu tham số / không đọc được file → exit 2');
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
@@ -2352,10 +2361,10 @@ if (fs.existsSync(BUILD)) {
   const out = rd('references/output-formats.md');
   ok(out.includes('check-tasks.mjs <tasks.md> --csv'), 'output-formats: CSV qua check-tasks.mjs --csv');
   const cl = rd('references/breakdown-checklist.md');
-  ok(['**(script E7)**', '**(script E1, E2)**', '**(script E4, E5)**', '**(script E6)**', '**(script W1, W2 một phần;'].every((s) => cl.includes(s)),
+  ok(['**(script E7)**', '**(script E1, E2)**', '**(script E4, E5)**', '**(script E6)**', '**(script E8)**', '**(script E9 cho BE/FE;', '**(script W1, W2 một phần;'].every((s) => cl.includes(s)),
     'breakdown-checklist: đánh dấu mục script kiểm tự động');
   const pr = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'shared', 'principles.md'), 'utf8');
-  ok(pr.includes('chỉ khi thoả cả 3 điều kiện') && pr.includes('check-tasks.mjs') && !pr.includes('KHÔNG sinh code chạy được'),
+  ok(pr.includes('chỉ khi thoả cả 3 điều kiện') && pr.includes('check-tasks.mjs') && !pr.includes('KHÔNG sinh code chạy được') && ['(1)', '(2)', '(3)'].every((s) => pr.includes(s)),
     'engineering principles: cho phép script tất định với 3 điều kiện');
   const mf30 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', '.manifest.json'), 'utf8'));
   ok(mf30.description.includes('check-tasks.mjs'), 'engineering manifest: description nêu check-tasks.mjs');

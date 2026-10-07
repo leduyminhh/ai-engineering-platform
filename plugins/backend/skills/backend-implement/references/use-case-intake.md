@@ -1,8 +1,8 @@
 # Use-case intake — chốt phạm vi slice trước khi sinh
 
 Trước khi sinh bất kỳ code nào, luôn chốt một **phạm vi use-case** rõ ràng — mô tả trung gian, KHÔNG phải
-code — rồi mới thiết kế slice. Nhờ đó ba nguồn đầu vào (mô tả người dùng, `requirement.md`, contract OpenAPI)
-hội tụ về một đường sinh chung, và slice không phình ra ngoài một aggregate.
+code — rồi mới thiết kế slice. Nhờ đó bốn nguồn đầu vào (mô tả người dùng, `requirement.md`, contract OpenAPI,
+task `BE` trong `tasks.md`) hội tụ về một đường sinh chung, và slice không phình ra ngoài một aggregate.
 
 ## "Phạm vi use-case" gồm gì
 
@@ -69,6 +69,7 @@ Cách chốt:
   | B4 Validation, B5 Phân quyền, B7 Bảng lỗi | ràng buộc ở biên + mã lỗi |
   | B6 Dữ liệu chạm | driven port (repository/gateway); đổi schema → task `DB` phải xong trước |
   | B8 Transaction / idempotency | ranh giới transaction |
+  | B9 NFR | ràng buộc phi chức năng của slice (ngưỡng hiệu năng, audit/log, dữ liệu nhạy cảm) → tiêu chí verify; không tự thêm hạ tầng ngoài slice |
   | B10 Test bắt buộc | test lõi + integration của slice |
 
 - AC + DoD của task là tiêu chí xong; "Lệnh verify" là lệnh build/test phải chạy ở bước verify.
