@@ -2095,6 +2095,37 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 29a. SOURCE: engineering-task-breakdown — SKILL.md + analysis/sizing/checklist (spec 2026-10-07 §4, §6.1)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const TB_DIR = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-task-breakdown');
+  const tbRead = (rel) => { const p = path.join(TB_DIR, rel); return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : ''; };
+  const skill = tbRead('SKILL.md');
+  ok(skill !== '', 'engineering-task-breakdown: có SKILL.md');
+  ok(/^order: 7$/m.test(skill) && /^runsIn: plan$/m.test(skill) && /^invoke: per-request$/m.test(skill),
+    'engineering-task-breakdown: frontmatter order 7, runsIn plan, invoke per-request');
+  for (const f of ['analysis.md', 'task-template-common.md', 'task-template-backend.md', 'task-template-frontend.md',
+    'sizing.md', 'output-formats.md', 'breakdown-checklist.md']) {
+    ok(skill.includes(`(references/${f})`), `engineering-task-breakdown: SKILL.md link tới references/${f}`);
+  }
+  ok(skill.includes('CT → DB → BE → FE-UI → FE-INT → E2E'), 'engineering-task-breakdown: SKILL.md nêu chuỗi lát dọc đủ 6 loại');
+  ok(skill.includes('Checkpoint 1') && skill.includes('Checkpoint 2'), 'engineering-task-breakdown: có 2 checkpoint teamlead duyệt');
+  ok(skill.includes('engineering-spec-writing') && skill.includes('ngưỡng mơ hồ'),
+    'engineering-task-breakdown: input mơ hồ → chuyển engineering-spec-writing');
+  ok(skill.includes('Thiếu `project-knowledge/`') && skill.includes('[giả định]'),
+    'engineering-task-breakdown: thiếu project-knowledge vẫn chạy, đánh dấu [giả định]');
+  const analysis = tbRead('references/analysis.md');
+  ok(analysis.includes('Ngưỡng mơ hồ') && analysis.includes('mâu thuẫn') && analysis.includes('| ID | Tên | Actor |'),
+    'engineering-task-breakdown: analysis có ngưỡng mơ hồ, xử lý nguồn mâu thuẫn, bảng Use case');
+  const sizing = tbRead('references/sizing.md');
+  ok(['| S |', '| M |', '| L |'].every((s) => sizing.includes(s)) && sizing.includes('Buộc tách'),
+    'engineering-task-breakdown: sizing có S/M/L và quy tắc buộc tách L');
+  const checklist = tbRead('references/breakdown-checklist.md');
+  ok(checklist.includes('vòng phụ thuộc') && checklist.includes('N/A — <lý do>') && checklist.includes('size `L`'),
+    'engineering-task-breakdown: checklist kiểm vòng phụ thuộc, mục N/A, task L');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');
