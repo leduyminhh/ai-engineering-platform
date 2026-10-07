@@ -145,7 +145,7 @@ F4 → 4 trạng thái; F9 → test mock bằng msw; task `FE-UI` trong Phụ th
 - Chạy: `node <skill-dir>/scripts/check-tasks.mjs <path/tasks.md> [--csv <out.csv>]`.
 - Exit code: `0` không lỗi (có thể có cảnh báo), `1` có lỗi E*, `2` sai tham số / không đọc được file.
 - Module export `parseTasks(text)`, `checkTasks(model)`, `toCsv(model)`; phần CLI chỉ chạy khi file được gọi trực tiếp
-  (`import.meta.url === pathToFileURL(process.argv[1]).href`) để test import được.
+  (`import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href` — realpath vì skill cài trên Windows qua junction) để test import được.
 
 ### 3.2 Hợp đồng parse (bám `output-formats.md` §3)
 
@@ -168,7 +168,7 @@ F4 → 4 trạng thái; F9 → test mock bằng msw; task `FE-UI` trong Phụ th
 | E5 | lỗi | Không vòng phụ thuộc (in ra chu trình) |
 | E6 | lỗi | Size ∈ {S, M}; `L` → "buộc tách" |
 | E7 | lỗi | Mọi AC trong bảng Use case được ≥ 1 task phủ |
-| E8 | lỗi | Mọi AC trong task tồn tại trong bảng Use case |
+| E8 | lỗi | Mọi AC trong task tồn tại trong bảng Use case; mỗi task có ≥ 1 AC |
 | E9 | lỗi | Ô bảng tổng không rỗng (trừ Owner); task `BE` đủ B1–B10; `FE-UI`/`FE-INT` đủ F1–F9 |
 | W1 | cảnh báo | Thiếu phụ thuộc tối thiểu: `BE` thiếu `CT`/`DB` cùng UC đang tồn tại; `FE-INT` thiếu `CT`/`FE-UI` cùng UC; `E2E` thiếu `BE`/`FE-INT` cùng UC |
 | W2 | cảnh báo | `FE-UI` có `CT` trong Phụ thuộc |
