@@ -68,6 +68,8 @@ KHÔNG dùng khi yêu cầu còn mơ hồ (chạy `engineering-spec-writing` tr�
    | `FE-INT` | `CT`, `FE-UI` |
    | `E2E` | `BE`, `FE-INT` |
 
+   Bảng là phụ thuộc **tối thiểu**. Được thêm phụ thuộc ngoài bảng — `BE` → `BE` khi dùng sự kiện/dữ liệu task kia tạo; chéo use case khi dùng bảng/contract của use case khác; task dùng nền tảng → task `UC00` tương ứng — nếu nêu lý do ở Ngữ cảnh. `FE-UI` không ghi `CT` vào Phụ thuộc.
+
    Nền tảng dùng chung (auth, layout, shared component) → nhóm `UC00`, chỉ khi ≥ 2 use case cần.
 
 4. **Điền template + size.**
@@ -79,7 +81,7 @@ KHÔNG dùng khi yêu cầu còn mơ hồ (chạy `engineering-spec-writing` tr�
 5. **Kiểm tra. ⏸ Checkpoint 2**
    Chạy [references/breakdown-checklist.md](references/breakdown-checklist.md): phủ AC, không vòng phụ thuộc,
    không task L, không mục trống, ID duy nhất. Nêu rõ phần còn thiếu (fail-loud); trình bảng tổng task cho
-   teamlead duyệt.
+   teamlead duyệt. Câu hỏi mở phát sinh ở bước 3–5 trình cùng Checkpoint 2.
 
 6. **Xuất file.**
    Hỏi định dạng (nếu chưa nói): `md` (mặc định) hoặc `md + excel`. Ghi

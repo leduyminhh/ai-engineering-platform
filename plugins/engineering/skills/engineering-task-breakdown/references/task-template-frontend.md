@@ -22,7 +22,7 @@ task → `N/A — <lý do>` (vd F6 trong `FE-UI`: `N/A — nối API ở UC01-FE
 - **F6. API dùng:** operationId `<id>`; 401 → <xử lý>; 403 → <xử lý>; 4xx → <xử lý>; 5xx → <xử lý>
 - **F7. Phân quyền hiển thị:** <role nào thấy / ẩn / disable phần nào>
 - **F8. i18n / a11y / responsive:** i18n <key>; a11y <label, role, bàn phím, focus>; breakpoint <...>
-- **F9. Test bắt buộc:** render + interaction cho <case>; mock API bằng msw cho <case>
+- **F9. Test bắt buộc:** render + interaction cho <case>; mock API bằng msw cho <case> (chỉ `FE-INT`; `FE-UI` → `N/A — nối API ở <ID FE-INT>`)
 ````
 
 ## Hướng dẫn từng mục

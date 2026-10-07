@@ -26,4 +26,4 @@ Size là **gợi ý** cho teamlead, không phải cam kết; teamlead chỉnh �
 | `CT` | Mỗi resource một task |
 | `E2E` | Mỗi luồng đầu-cuối một task |
 
-Sau khi tách: đánh số lại ID liên tục, cập nhật phụ thuộc, và truy vết AC cho từng task con.
+Sau khi tách: cập nhật phụ thuộc và truy vết AC cho từng task con. Chỉ đánh số lại ID liên tục khi `tasks.md` chưa được ghi; đang cập nhật `tasks.md` có sẵn → giữ ID cũ, task con lấy số tiếp theo (xem output-formats §2).

@@ -65,6 +65,8 @@ Owner luôn để trống — teamlead điền. Trạng thái khởi tạo `Todo
 
 ## 4. Template theo loại
 
+Mục riêng đặt dưới heading `#### Contract` / `#### Schema` / `#### E2E` (tương ứng `#### Backend` / `#### Frontend`).
+
 ### CT — Contract
 
 - **Endpoint cần chốt:** method + path + `operationId`.
@@ -79,7 +81,7 @@ Owner luôn để trống — teamlead điền. Trạng thái khởi tạo `Todo
 - **Backfill dữ liệu:** có / không; khối lượng ước tính.
 - **Rollback:** cách quay lui; thay đổi nào không đảo ngược được.
 - **Luồng:** chạy qua `workflow-db-change` (skill `data-db-migration`).
-- **Test bắt buộc:** migration chạy lên/xuống trên DB cục bộ.
+- **Test bắt buộc:** migration chạy lên trên DB cục bộ; chạy xuống nếu đảo ngược được, không thì `N/A — <lý do>` + cách khôi phục (backup / forward-fix).
 
 ### E2E — Luồng đầu-cuối
 
@@ -94,4 +96,5 @@ Owner luôn để trống — teamlead điền. Trạng thái khởi tạo `Todo
 - Mục không áp dụng → ghi `N/A — <lý do>` (vd `N/A — query chỉ đọc, không có transaction ghi`). KHÔNG bỏ trống:
   mục trống bị hiểu là quên.
 - Thiếu thông tin → ghi **[giả định] <giá trị>** tại chỗ và thêm vào Câu hỏi mở; KHÔNG bịa.
+- Nhiều **[giả định]** cùng chủ đề được gộp vào một Câu hỏi mở; ghi `(Qn)` cạnh [giả định] để truy vết.
 - Mỗi task phải đọc được độc lập: không viết "như task trên"; lặp lại thông tin cần thiết.

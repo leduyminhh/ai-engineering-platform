@@ -17,7 +17,7 @@ chung (task-template-common §3) + 10 mục dưới. Mục không áp dụng →
   |---|---|---|
   | <field> | <rule> | <thông báo> |
 
-- **B5. Phân quyền:** <role/scope được gọi>; chưa đăng nhập → 401; không đủ quyền → 403
+- **B5. Phân quyền:** <role/scope được gọi | công khai>; chưa đăng nhập → <401 | N/A — công khai>; không đủ quyền → <403 | N/A — <lý do>>
 - **B6. Dữ liệu chạm:** đọc <bảng>; ghi <bảng>; đổi schema → <UC..-DB-..> hoặc `N/A — không đổi schema`
 - **B7. Bảng lỗi:**
 
@@ -52,8 +52,8 @@ Rule cho từng field đầu vào: bắt buộc, kiểu, độ dài, định d�
 
 ### B5. Phân quyền
 
-Role/scope được gọi; người chưa đăng nhập nhận 401, không đủ quyền nhận 403. Ràng buộc theo dữ liệu (vd chỉ chủ sở
-hữu được sửa) ghi rõ.
+Role/scope được gọi. Endpoint cần đăng nhập: chưa đăng nhập → 401, không đủ quyền → 403. Endpoint công khai → ghi
+"công khai" và `N/A` cho 401/403. Ràng buộc theo dữ liệu (vd chỉ chủ sở hữu được sửa) ghi rõ.
 
 ### B6. Dữ liệu chạm
 
@@ -77,3 +77,7 @@ Hiệu năng (vd p95 ≤ 300 ms ở 50 rps), audit/log (sự kiện cần ghi; k
 
 Unit lõi với mock/fake port cho invariant + validation + phân quyền; integration adapter cho persistence/gateway.
 Liệt kê case cụ thể gắn AC (vd "AC1.2 → test email trùng trả 409").
+
+## Task không qua HTTP (job, consumer)
+
+B1 ghi trigger (topic / lịch chạy); B5 `N/A — không có người gọi` hoặc quyền của service account; B7 cột HTTP ghi `N/A — không qua HTTP` + cách xử lý lỗi (retry, dead-letter); B8 nêu idempotency theo message (giao at-least-once → dedupe hay chấp nhận trùng).

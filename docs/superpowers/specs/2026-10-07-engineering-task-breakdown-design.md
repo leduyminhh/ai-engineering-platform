@@ -186,7 +186,7 @@ tasks.xlsx    # hoặc tasks.csv — chỉ khi chọn excel
 ### 5.3 Cấu trúc `tasks.md`
 
 1. Tóm tắt: nguồn input, số use case, số task, tổng size theo loại.
-2. Bảng Use case: ID, tên, actor, AC, nguồn.
+2. Bảng Use case: ID, tên, actor, mục tiêu, AC, NFR, nguồn.
 3. Bảng tổng task: ID (anchor link), UC, loại, tiêu đề, size, phụ thuộc, owner, trạng thái, skill gợi ý.
 4. Thứ tự thực hiện gợi ý: theo phụ thuộc, đánh dấu nhóm song song được.
 5. Chi tiết từng task: `### UC01-BE-01 — <tiêu đề>` theo template §3.
@@ -197,7 +197,7 @@ tasks.xlsx    # hoặc tasks.csv — chỉ khi chọn excel
 | Sheet | Cột |
 |---|---|
 | `Tasks` | ID · UC · Loại · Tiêu đề · Size · Phụ thuộc · Owner · Trạng thái · Skill gợi ý · AC (nhiều dòng trong 1 ô) · Link chi tiết (`tasks.md#…`) |
-| `UseCases` | ID · Tên · Actor · AC · Nguồn |
+| `UseCases` | ID · Tên · Actor · Mục tiêu · AC · NFR · Nguồn |
 | `OpenQuestions` | # · Câu hỏi · Ảnh hưởng tới task · Trạng thái |
 
 - `.xlsx`: sinh khi môi trường có công cụ (skill xlsx, hoặc Python + `openpyxl`).

@@ -23,9 +23,8 @@ docs/requests/<yyyy-mm-dd>-<slug>/
 ```
 
 - Đã có thư mục cho yêu cầu này → ghi vào đó; chưa có → tạo theo ngày hôm nay + slug tiếng Anh kebab-case.
-- `tasks.md` **đã tồn tại** → KHÔNG ghi đè im lặng. Hỏi người dùng: (a) cập nhật — giữ nguyên Owner/Trạng thái đã
-  điền của các task trùng ID, thêm task mới, đánh dấu task bị bỏ; hoặc (b) ghi đè toàn bộ.
-- Dòng link thêm vào `plan.md`: `Chi tiết task: [tasks.md](tasks.md)`.
+- `tasks.md` **đã tồn tại** → KHÔNG ghi đè im lặng. Hỏi người dùng: (a) cập nhật — KHÔNG đánh số lại ID đã có; giữ Owner/Trạng thái đã điền của task trùng ID; task mới lấy số tiếp theo trong use case; task bị bỏ giữ ID, đặt Trạng thái `Bỏ` + lý do ở Ngữ cảnh, không tái dùng ID đó; hoặc (b) ghi đè toàn bộ.
+- Dòng link thêm vào `plan.md`: `Chi tiết task: [tasks.md](tasks.md)` — đã có dòng này thì không thêm lại; chưa có `plan.md` thì không tạo.
 
 ## 3. Cấu trúc `tasks.md`
 
@@ -37,11 +36,12 @@ docs/requests/<yyyy-mm-dd>-<slug>/
 - Nguồn input: <file / mô tả>
 - Use case: <n> · Task: <n> (CT <n> · DB <n> · BE <n> · FE-UI <n> · FE-INT <n> · E2E <n>)
 - Size: S <n> · M <n>
+- Loại không sinh: <loại> — <lý do> (vd `E2E` — AC chứng minh được bằng integration + msw)
 
 ## 2. Use case
 
-| ID | Tên | Actor | AC | Nguồn |
-|---|---|---|---|---|
+| ID | Tên | Actor | Mục tiêu | AC | NFR | Nguồn |
+|---|---|---|---|---|---|---|
 
 ## 3. Bảng tổng task
 
@@ -51,10 +51,9 @@ docs/requests/<yyyy-mm-dd>-<slug>/
 
 ## 4. Thứ tự thực hiện gợi ý
 
-1. UC01-CT-01, UC01-DB-01
-2. Song song: UC01-BE-01 ∥ UC01-FE-01
-3. UC01-FE-02
-4. UC01-E2E-01
+1. Song song: UC01-CT-01 ∥ UC01-DB-01 ∥ UC01-FE-01
+2. Song song: UC01-BE-01 ∥ UC01-FE-02
+3. UC01-E2E-01
 
 ## 5. Chi tiết task
 
@@ -72,6 +71,8 @@ docs/requests/<yyyy-mm-dd>-<slug>/
 Mỗi task có `<a id="<id chữ thường>"></a>` ngay trên heading; bảng tổng và Excel link tới anchor này, không phụ
 thuộc cách renderer sinh anchor từ heading tiếng Việt.
 
+Mỗi bước trong "Thứ tự thực hiện gợi ý" gồm các task có mọi phụ thuộc nằm ở bước trước.
+
 ## 4. Excel
 
 ### Sheet và cột
@@ -79,10 +80,10 @@ thuộc cách renderer sinh anchor từ heading tiếng Việt.
 | Sheet | Cột |
 |---|---|
 | `Tasks` | ID · UC · Loại · Tiêu đề · Size · Phụ thuộc · Owner · Trạng thái · Skill gợi ý · AC · Link chi tiết |
-| `UseCases` | ID · Tên · Actor · AC · Nguồn |
+| `UseCases` | ID · Tên · Actor · Mục tiêu · AC · NFR · Nguồn |
 | `OpenQuestions` | # · Câu hỏi · Ảnh hưởng tới · Trạng thái |
 
-- Cột AC: nhiều AC trong một ô, mỗi AC một dòng.
+- Cột AC: trong bảng md nhiều AC cách nhau bằng `<br>`; khi xuất Excel đổi `<br>` thành xuống dòng (mỗi AC một dòng).
 - Link chi tiết: `tasks.md#<id chữ thường>` (vd `tasks.md#uc01-be-01`). Excel không chứa chi tiết đầy đủ để tránh hai
   nguồn lệch nhau.
 - Số dòng sheet `Tasks` phải bằng số task trong bảng tổng của `tasks.md`.
@@ -90,7 +91,7 @@ thuộc cách renderer sinh anchor từ heading tiếng Việt.
 ### Chọn `.xlsx` hay CSV
 
 1. Môi trường có công cụ tạo xlsx (skill xlsx của provider, hoặc Python có `openpyxl`) → sinh `tasks.xlsx` 3 sheet.
-   Kiểm `openpyxl`: `python -c "import openpyxl"` (exit 0 = có).
+   Kiểm `openpyxl` lần lượt bằng `python -c "import openpyxl"`, `python3 -c …`, `py -3 -c …`; một lệnh exit 0 = có, dùng đúng lệnh đó để chạy mẫu bên dưới. Trên Windows `python` có thể là stub Microsoft Store (exit khác 0 dù đã cài Python qua `py`) — KHÔNG kết luận thiếu `openpyxl` chỉ từ một lệnh lỗi.
 2. Không có → sinh `tasks.csv` (chỉ sheet `Tasks`) và **báo rõ** đã fallback CSV vì môi trường không có công cụ tạo
    xlsx. Không tự cài package vào môi trường người dùng khi chưa hỏi.
 
@@ -101,7 +102,7 @@ thuộc cách renderer sinh anchor từ heading tiếng Việt.
   ngoặc kép trong nội dung được nhân đôi `""` (module `csv` tự làm).
 - Dấu phân cách `,`.
 
-### Mẫu sinh file (Python, chạy tạm — không thêm vào mã nguồn project)
+### Mẫu sinh file (Python, chạy qua stdin `py -` / `python -` hoặc file tạm ngoài repo và xoá sau khi chạy — không thêm vào mã nguồn project)
 
 ```python
 import csv
@@ -124,7 +125,7 @@ def write_tasks_xlsx(path, tasks, use_cases, questions):
     wb = Workbook()
     sheets = [
         ("Tasks", TASK_COLS, tasks),
-        ("UseCases", ["ID", "Tên", "Actor", "AC", "Nguồn"], use_cases),
+        ("UseCases", ["ID", "Tên", "Actor", "Mục tiêu", "AC", "NFR", "Nguồn"], use_cases),
         ("OpenQuestions", ["#", "Câu hỏi", "Ảnh hưởng tới", "Trạng thái"], questions),
     ]
     for i, (name, cols, rows) in enumerate(sheets):

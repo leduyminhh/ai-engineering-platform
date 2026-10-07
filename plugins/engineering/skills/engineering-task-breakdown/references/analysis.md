@@ -26,7 +26,7 @@ Thiếu vài chi tiết (validation cụ thể, mã lỗi) KHÔNG phải ngưỡ
 ```markdown
 | ID | Tên | Actor | Mục tiêu | AC | NFR | Nguồn |
 |---|---|---|---|---|---|---|
-| UC01 | Đăng ký tài khoản | Khách | Tạo tài khoản bằng email | AC1.1 Given email chưa dùng When gửi form hợp lệ Then tạo tài khoản và gửi mail xác nhận trong ≤ 1 phút; AC1.2 Given email đã dùng When gửi form Then báo lỗi "Email đã tồn tại" | p95 ≤ 500 ms | requirement.md §3.1 |
+| UC01 | Đăng ký tài khoản | Khách | Tạo tài khoản bằng email | AC1.1 Given email chưa dùng When gửi form hợp lệ Then tạo tài khoản và gửi mail xác nhận trong ≤ 1 phút<br>AC1.2 Given email đã dùng When gửi form Then báo lỗi "Email đã tồn tại" | p95 ≤ 500 ms | requirement.md §3.1 |
 ```
 
 - ID use case: `UC01`, `UC02`… theo thứ tự xuất hiện trong nguồn chính. `UC00` dành cho nền tảng dùng chung.
@@ -41,13 +41,16 @@ Thiếu vài chi tiết (validation cụ thể, mã lỗi) KHÔNG phải ngưỡ
 - Thiếu thông tin nhưng có giá trị hợp lý → ghi **[giả định] <giá trị>** ngay tại chỗ + thêm vào Câu hỏi mở để
   teamlead xác nhận.
 - Quyết định kiến trúc chưa chốt (chọn message broker, cách xác thực…) → Câu hỏi mở + gợi ý `engineering-adr`.
+- Tiền đề ngoài input (vd hệ đăng nhập đã có chưa) và rủi ro thấy rõ khi đọc yêu cầu (vd thông báo lỗi lộ email đã đăng ký) → Câu hỏi mở + gợi ý skill liên quan; không tự tạo task.
 
 ## 5. Câu hỏi mở
 
 ```markdown
 | # | Câu hỏi | Ảnh hưởng tới | Trạng thái |
 |---|---|---|---|
-| Q1 | Duyệt tài khoản thủ công hay tự động? (UC spec §2 vs ARD §4.1) | UC01-BE-01, UC01-FE-01 | Mở |
+| Q1 | Duyệt tài khoản thủ công hay tự động? (UC spec §2 vs ARD §4.1) | UC01 | Mở |
 ```
+
+Ở Checkpoint 1 cột Ảnh hưởng tới ghi ID use case; sau bước 3 thay bằng ID task.
 
 Trình bảng Use case + Câu hỏi mở cho teamlead ở **Checkpoint 1** trước khi tách task.
