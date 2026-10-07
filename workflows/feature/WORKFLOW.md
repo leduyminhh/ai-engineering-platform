@@ -57,16 +57,20 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`. Phạm vi cần đổi schema DB
   (bảng/cột/index/migration) → dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature (chuỗi
   `db-change → feature`). Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
-  chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do).
+  chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do). Ở checkpoint, hỏi người dùng có tách task
+  không (gợi ý có khi phạm vi `fullstack` hoặc ≥ 2 use case); có → `engineering-spec-analyst` chạy skill
+  `engineering-task-breakdown`, sinh `tasks.md` cùng thư mục `requirement.md`.
 - **Ràng buộc:** chỉ ghi trong `docs/`; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả
-  định]`; không phân rã story/task chi tiết.
+  định]`; chỉ phân rã task khi người dùng chọn ở checkpoint.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` với acceptance criteria + phạm vi BE/FE/fullstack
-  + bảng ứng viên e2e (nếu có).
+  + bảng ứng viên e2e (nếu có); `tasks.md` nếu người dùng chọn tách task.
 - **Gate:** acceptance criteria đo được; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc đã
-  có xác nhận chạy `workflow-db-change` trước; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e".
+  có xác nhận chạy `workflow-db-change` trước; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e"; có
+  `tasks.md` thì đạt checklist của `engineering-task-breakdown`.
 - **Khi fail:** acceptance criteria mơ hồ/không đo được → hỏi lại người dùng, không tự suy diễn tiếp; phạm vi
   có đổi schema → dừng, đề xuất `workflow-db-change`.
-- **Evidence:** đường dẫn `requirement.md` + trích đoạn acceptance criteria.
+- **Evidence:** đường dẫn `requirement.md` + trích đoạn acceptance criteria; có `tasks.md` thì đường dẫn + kết
+  quả checklist.
 
 ### Bước 3 — Thiết kế & contract ⏸
 
@@ -86,11 +90,15 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** agent `backend-implementer` ∥ agent `frontend-implementer` (chỉ phía có đụng theo phạm vi
   Bước 2); phạm vi `fullstack` có contract ở Bước 3 → agent `frontend-data-integrator` chạy sau khi
   `frontend-implementer` xong
-- **Đầu vào:** `requirement.md` + contract (nếu có) từ Bước 2–3
+- **Đầu vào:** `requirement.md` + contract (nếu có) + `tasks.md` (nếu có) từ Bước 2–3
 - **Hành động:** sinh vertical slice backend (aggregate/use-case/port/adapter) bám kiến trúc đã chọn; và/hoặc
   sinh component frontend presentational bám kiến trúc UI + design-system (chỗ cần dữ liệu để trống bằng props +
   TODO); khi fullstack có contract ở Bước 3, `frontend-data-integrator` nối container/page với API theo contract
   (type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); chạy build của từng phía.
+  Có `tasks.md` từ Bước 2 → giao từng task theo thứ tự phụ thuộc (nhóm song song chạy song song): `BE` →
+  `backend-implementer`, `FE-UI` → `frontend-implementer`, `FE-INT` → `frontend-data-integrator`; mỗi agent nhận
+  "task `<ID>` trong `tasks.md`", task xong thì session chính cập nhật cột Trạng thái. Không có `tasks.md` → giữ
+  luồng trên.
 - **Ràng buộc:** chỉ sửa file trong slice/feature được giao; không giả lập data ẩn; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator: chưa có codegen/thư viện data → dừng,
   đề xuất, chờ người dùng chọn; không viết tay type trùng contract; không gọi `fetch`/`axios` trong component.

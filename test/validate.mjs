@@ -2214,6 +2214,32 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 30a-2. SOURCE: workflow-feature + agent + principles nối engineering-task-breakdown (spec 2026-10-07 integration §2.5–§2.7)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const wf = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'WORKFLOW.md'), 'utf8');
+  const step = (n) => wf.split(/^### Bước /m).find((s) => s.startsWith(`${n} `)) || '';
+  ok(step(2).includes('engineering-task-breakdown') && step(2).includes('`tasks.md`'),
+    'workflow-feature: Bước 2 tuỳ chọn tách task bằng engineering-task-breakdown');
+  ok(!wf.includes('không phân rã story/task chi tiết'), 'workflow-feature: bỏ câu cấm phân rã task');
+  ok(step(4).includes('`tasks.md`') && step(4).includes('`FE-INT` → `frontend-data-integrator`'),
+    'workflow-feature: Bước 4 giao implementer theo từng task');
+  ok(/^### Bước 8 — Commit ⏸$/m.test(wf), 'workflow-feature: không đánh số lại bước');
+  const ag = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'agents', 'engineering-spec-analyst.md'), 'utf8');
+  ok(/^skills: "engineering-spec-writing,engineering-adr,engineering-diagram,engineering-task-breakdown"$/m.test(ag),
+    'engineering-spec-analyst: skills có engineering-task-breakdown');
+  ok(!ag.includes('phân rã story/task chi') && ag.includes('Checkpoint 2'),
+    'engineering-spec-analyst: tách task khi được yêu cầu, dừng ở 2 checkpoint');
+  const pr = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'shared', 'principles.md'), 'utf8');
+  ok(['quality-gate', 'spec-writing', 'task-breakdown', 'diagram', 'adr', 'convention-enforce', 'release-notes']
+    .every((s) => pr.includes(`\`${s}\``)), 'engineering principles: nêu đủ 7 skill');
+  for (const f of ['README.md', 'README_VI.md']) {
+    ok(/^\| `engineering-spec-analyst` \|.*engineering-task-breakdown/m.test(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8')),
+      `${f}: bảng agent nêu engineering-task-breakdown cho engineering-spec-analyst`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');

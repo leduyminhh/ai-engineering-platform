@@ -6,13 +6,16 @@
 ## Bản chất plugin
 Đây là các capability **opt-in, xuyên suốt (cross-cutting)** — KHÔNG thuộc pipeline bắt buộc của
 plugin nào, KHÔNG có thứ tự chạy ép buộc. Gọi từng skill khi cần: `quality-gate` (chất lượng +
-bảo mật), `spec-writing` (khảo sát + đặc tả), `diagram` (sinh PlantUML). Mỗi skill là **recipe
-docs-only** — hướng dẫn cách agent hành động, KHÔNG sinh code chạy được và KHÔNG đụng CLI/adapter/engine.
+bảo mật), `spec-writing` (khảo sát + đặc tả), `task-breakdown` (phân rã yêu cầu thành task BE/FE),
+`diagram` (sinh PlantUML), `adr` (ghi quyết định kiến trúc), `convention-enforce` (kiểm quy ước),
+`release-notes` (changelog + release notes).
+Mỗi skill là **recipe docs-only** — hướng dẫn cách agent hành động, KHÔNG sinh code chạy được và KHÔNG
+đụng CLI/adapter/engine.
 
 ## Ranh giới đặc thù
 - **Defer** `code-convention.md` và `project-knowledge/` cho skill init/plugin nghiệp vụ lo — plugin
   này ĐỌC chúng làm ràng buộc, KHÔNG dựng lại.
-- **Con người giữ chốt:** duyệt **diff** (quality-gate), duyệt **spec** (spec-writing), xác nhận
+- **Con người giữ chốt:** duyệt **diff** (quality-gate), duyệt **spec** (spec-writing), duyệt **use case + bảng task** (task-breakdown), xác nhận
   **protected path** trước khi ghi `docs/diagram/` (diagram). Không tự commit.
 - **Không** nhập/in/log token/secret; token đi qua **biến môi trường**, chỉ nêu tên biến; mask giá
   trị secret trong mọi output; không đọc/sửa ngoài scope người dùng nêu.
