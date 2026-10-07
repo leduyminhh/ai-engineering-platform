@@ -152,7 +152,7 @@ Ngữ cảnh (2–3 dòng) · AC đo được (truy vết về AC của use case
    - `E2E` ← `BE`, `FE-INT`
 4. **Điền template + size.** S ≤ 0.5 ngày, M ≤ 2 ngày, L > 2 ngày → **buộc tách**. Mỗi task có ≥ 1 AC truy vết về AC
    use case.
-5. **Kiểm tra** theo `checklist.md`: phủ AC, không vòng phụ thuộc, không task L, không mục trống, ID duy nhất.
+5. **Kiểm tra** theo `breakdown-checklist.md`: phủ AC, không vòng phụ thuộc, không task L, không mục trống, ID duy nhất.
    ⏸ **Checkpoint 2:** teamlead duyệt bản tách task.
 6. **Xuất file** theo §5.
 
@@ -225,7 +225,7 @@ Không ghi đè. Nếu `plan.md` đã tồn tại → chỉ thêm 1 dòng link t
 | `references/task-template-common.md` | §3.2 + §3.5 + §3.6 |
 | `references/sizing.md` | S/M/L + quy tắc tách L |
 | `references/output-formats.md` | §5 |
-| `references/checklist.md` | DoD bước 5 |
+| `references/breakdown-checklist.md` | DoD bước 5 (tên khác `checklist.md` của spec-writing vì tên file references/ phải duy nhất trong plugin — test/validate.mjs:240) |
 
 Description: ≤ 1024 ký tự; trigger dự kiến "tách task", "chia task", "phân rã yêu cầu", "breakdown task", "lập task
 BE FE", "task từ use case"; không trùng nguyên văn trigger của skill khác; kết thúc
@@ -237,7 +237,7 @@ BE FE", "task từ use case"; không trùng nguyên văn trigger của skill kh�
 |---|---|
 | `plugins/engineering/.manifest.json` | "6 skill" → "7 skill", thêm mô tả 1 dòng, version `1.2.1` → `1.3.0` |
 | `plugins/_cowork.json` | thêm `engineering:engineering-task-breakdown` |
-| `README.md`, `README_VI.md` | thêm skill vào danh sách engineering |
+| `README.md`, `README_VI.md` | thêm skill vào dòng plugin engineering; xoá dòng G9 `engineering-task-breakdown` khỏi Roadmap (gap đã lấp) |
 | `CLAUDE.md` | `engineering` (6 skills) → (7 skills) |
 | `plugins/engineering/skills/engineering-spec-writing/SKILL.md` | thêm 1 câu trỏ phần phân rã task sang skill mới; không đổi ranh giới |
 
@@ -266,7 +266,7 @@ Assert viết trước, chạy thấy đỏ, rồi mới thêm nội dung:
 ### 7.3 Pilot
 
 Chạy skill trên một yêu cầu mẫu nhỏ trong sandbox (`$AIE_INSTALL_ROOT`), kiểm `tasks.md` + `tasks.csv` theo
-`checklist.md`. `[Unverified]` Nhánh `.xlsx` phụ thuộc môi trường có `openpyxl`; nếu không có thì báo rõ chỉ kiểm được
+`breakdown-checklist.md`. `[Unverified]` Nhánh `.xlsx` phụ thuộc môi trường có `openpyxl`; nếu không có thì báo rõ chỉ kiểm được
 nhánh CSV.
 
 ---
