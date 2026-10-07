@@ -2156,6 +2156,23 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 29c. SOURCE: engineering-task-breakdown — định dạng đầu ra (spec 2026-10-07 §5)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const p = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-task-breakdown', 'references', 'output-formats.md');
+  const out = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
+  ok(out.includes('nguồn sự thật') && out.includes('docs/requests/<yyyy-mm-dd>-<slug>/'),
+    'engineering-task-breakdown: tasks.md là nguồn sự thật, đặt trong docs/requests/<ngày>-<slug>/');
+  ok(['`Tasks`', '`UseCases`', '`OpenQuestions`'].every((s) => out.includes(s)), 'engineering-task-breakdown: Excel có 3 sheet');
+  ok(out.includes('UTF-8 có BOM') && out.includes('utf-8-sig') && out.includes('QUOTE_ALL'),
+    'engineering-task-breakdown: CSV UTF-8 có BOM, quote mọi ô');
+  ok(out.includes('openpyxl') && out.includes('fallback'), 'engineering-task-breakdown: xlsx khi có openpyxl, không có thì fallback CSV');
+  ok(out.includes('tasks.md#uc01-be-01') && out.includes('<a id="uc01-ct-01"></a>'),
+    'engineering-task-breakdown: link chi tiết Excel trỏ anchor ổn định trong tasks.md');
+  ok(out.includes('đã tồn tại') && out.includes('Owner'), 'engineering-task-breakdown: tasks.md đã tồn tại → hỏi, giữ Owner/Trạng thái');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');
