@@ -2352,7 +2352,7 @@ if (fs.existsSync(BUILD)) {
   const out = rd('references/output-formats.md');
   ok(out.includes('check-tasks.mjs <tasks.md> --csv'), 'output-formats: CSV qua check-tasks.mjs --csv');
   const cl = rd('references/breakdown-checklist.md');
-  ok(['**(script E7)**', '**(script E1, E2)**', '**(script E4, E5)**', '**(script E6)**', '**(script W1, W2)**'].every((s) => cl.includes(s)),
+  ok(['**(script E7)**', '**(script E1, E2)**', '**(script E4, E5)**', '**(script E6)**', '**(script W1, W2 một phần;'].every((s) => cl.includes(s)),
     'breakdown-checklist: đánh dấu mục script kiểm tự động');
   const pr = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'shared', 'principles.md'), 'utf8');
   ok(pr.includes('chỉ khi thoả cả 3 điều kiện') && pr.includes('check-tasks.mjs') && !pr.includes('KHÔNG sinh code chạy được'),

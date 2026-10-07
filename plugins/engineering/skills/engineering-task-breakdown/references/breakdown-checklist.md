@@ -15,7 +15,7 @@ mục còn lại kiểm bằng đọc. Không có Node → kiểm tất cả b�
 
 - [ ] ID duy nhất, đúng dạng `UC<nn>-<loại>-<nn>` với `<loại>` ∈ `CT`/`DB`/`BE`/`FE`/`E2E` (`FE-UI` và `FE-INT` cùng dùng `FE`) **(script E1, E2)**.
 - [ ] Không có vòng phụ thuộc; phụ thuộc chỉ trỏ tới ID có thật **(script E4, E5)**.
-- [ ] Phụ thuộc có tối thiểu bảng chuẩn (`BE` ← `CT`/`DB`; `FE-INT` ← `CT`/`FE-UI`; `E2E` ← `BE`/`FE-INT`; `FE-UI` không chờ `BE`); phụ thuộc ngoài bảng có lý do ở Ngữ cảnh **(script W1, W2)**.
+- [ ] Phụ thuộc có tối thiểu bảng chuẩn (`BE` ← `CT`/`DB`; `FE-INT` ← `CT`/`FE-UI`; `E2E` ← `BE`/`FE-INT`; `FE-UI` không chờ `BE`); phụ thuộc ngoài bảng có lý do ở Ngữ cảnh **(script W1, W2 một phần; `FE-UI` không chờ `BE` và lý do phụ thuộc ngoài bảng kiểm bằng đọc)**.
 - [ ] Không còn task size `L` **(script E6)**.
 
 ## Nội dung
