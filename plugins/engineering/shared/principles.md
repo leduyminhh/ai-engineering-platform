@@ -9,8 +9,11 @@ plugin nào, KHÔNG có thứ tự chạy ép buộc. Gọi từng skill khi c�
 bảo mật), `spec-writing` (khảo sát + đặc tả), `task-breakdown` (phân rã yêu cầu thành task BE/FE),
 `diagram` (sinh PlantUML), `adr` (ghi quyết định kiến trúc), `convention-enforce` (kiểm quy ước),
 `release-notes` (changelog + release notes).
-Mỗi skill là **recipe docs-only** — hướng dẫn cách agent hành động, KHÔNG sinh code chạy được và KHÔNG
-đụng CLI/adapter/engine.
+Mỗi skill là **recipe docs-only** — hướng dẫn cách agent hành động, KHÔNG sinh mã nguồn cho project và KHÔNG
+đụng CLI/adapter/engine. Skill được kèm **script kiểm tra/xuất tất định** (vd `task-breakdown/scripts/check-tasks.mjs`)
+chỉ khi thoả cả 3 điều kiện: (1) chỉ dùng built-in của runtime, không phụ thuộc ngoài; (2) chỉ đọc input và ghi
+file đầu ra được chỉ định, không sửa mã nguồn project; (3) skill vẫn chạy được bằng hướng dẫn thủ công khi không có
+runtime. Tiền lệ: `core:git-workflow` kèm `scripts/test-commit-message-encoding.ps1`.
 
 ## Ranh giới đặc thù
 - **Defer** `code-convention.md` và `project-knowledge/` cho skill init/plugin nghiệp vụ lo — plugin

@@ -2179,8 +2179,8 @@ if (fs.existsSync(BUILD)) {
 {
   const read29 = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
   const mf = JSON.parse(read29('plugins/engineering/.manifest.json'));
-  ok(mf.description.includes('7 skill') && mf.description.includes('engineering-task-breakdown') && mf.version === '1.3.0',
-    'engineering manifest: 7 skill, có engineering-task-breakdown, version 1.3.0');
+  ok(mf.description.includes('7 skill') && mf.description.includes('engineering-task-breakdown') && mf.version === '1.4.0',
+    'engineering manifest: 7 skill, có engineering-task-breakdown, version 1.4.0');
   ok(JSON.parse(read29('plugins/_cowork.json')).skills.includes('engineering:engineering-task-breakdown'),
     '_cowork.json: có engineering:engineering-task-breakdown');
   for (const f of ['README.md', 'README_VI.md']) {
@@ -2335,6 +2335,38 @@ if (fs.existsSync(BUILD)) {
       ok(run().code === 2 && run(path.join(tmp, 'khong-co.md')).code === 2, 'check-tasks CLI: thiếu tham số / không đọc được file → exit 2');
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 30c. SOURCE: tài liệu engineering-task-breakdown dùng check-tasks.mjs + nguyên tắc script (spec 2026-10-07 integration §3.5–§3.7)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const TB = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-task-breakdown');
+  const rd = (rel) => fs.readFileSync(path.join(TB, rel), 'utf8');
+  const skill = rd('SKILL.md');
+  ok(skill.includes('(scripts/check-tasks.mjs)') && skill.includes('check-tasks.mjs <đường dẫn tasks.md>'),
+    'engineering-task-breakdown: SKILL.md bước 5 chạy check-tasks.mjs và link tới script');
+  ok(skill.includes('không có Node → kiểm cả checklist thủ công'), 'engineering-task-breakdown: không có Node → checklist thủ công');
+  const out = rd('references/output-formats.md');
+  ok(out.includes('check-tasks.mjs <tasks.md> --csv'), 'output-formats: CSV qua check-tasks.mjs --csv');
+  const cl = rd('references/breakdown-checklist.md');
+  ok(['**(script E7)**', '**(script E1, E2)**', '**(script E4, E5)**', '**(script E6)**', '**(script W1, W2)**'].every((s) => cl.includes(s)),
+    'breakdown-checklist: đánh dấu mục script kiểm tự động');
+  const pr = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'shared', 'principles.md'), 'utf8');
+  ok(pr.includes('chỉ khi thoả cả 3 điều kiện') && pr.includes('check-tasks.mjs') && !pr.includes('KHÔNG sinh code chạy được'),
+    'engineering principles: cho phép script tất định với 3 điều kiện');
+  const mf30 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', '.manifest.json'), 'utf8'));
+  ok(mf30.description.includes('check-tasks.mjs'), 'engineering manifest: description nêu check-tasks.mjs');
+  for (const [p, rel] of [
+    ['claude', 'claude/plugins/engineering/skills/engineering-task-breakdown'],
+    ['codex', 'codex/engineering/skills/engineering-task-breakdown'],
+    ['cursor', 'cursor/engineering/.cursor/skills/engineering-task-breakdown'],
+    ['antigravity', 'antigravity/engineering/docs/workflow/engineering-task-breakdown'],
+  ]) {
+    if (fs.existsSync(path.join(REPO_ROOT, 'build', p))) {
+      ok(fs.existsSync(path.join(REPO_ROOT, 'build', rel, 'scripts', 'check-tasks.mjs')), `build ${p}: ship scripts/check-tasks.mjs`);
     }
   }
 }
