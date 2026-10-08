@@ -1,6 +1,6 @@
 // Contract Phase 3: eval case (evals/<plugin>/<case>/) hợp lệ về cấu trúc; KHÔNG chạy `claude plugin eval` (tốn tiền model).
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, core, plugins, parseFrontmatter, checkEvalCase, EVAL_GRADER_TYPES } = ctx;
+  const { fs, path, REPO_ROOT, plugins, parseFrontmatter, checkEvalCase, EVAL_GRADER_TYPES } = ctx;
 
   // checkEvalCase thuần: dựng meta tối thiểu hợp lệ rồi bóp méo từng điểm
   const grader = (o = {}) => ({ type: 'llm', body: 'PASS if x.', ...o });
@@ -27,23 +27,25 @@ export default async function run({ ok, ctx }) {
   // Mọi case trong evals/ phải qua checkEvalCase
   const evalsDir = path.join(REPO_ROOT, 'evals');
   const pluginIds = new Set(['core', 'workflows', ...plugins.map((p) => p.id)]);
-  ok(core.id === 'core', 'ctx.core là core');
   const subdirs = (d) => fs.readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
   let cases = 0;
   for (const pid of fs.existsSync(evalsDir) ? subdirs(evalsDir) : []) {
     ok(pluginIds.has(pid), `evals/${pid}: khớp một plugin/core/workflows có thật`);
     for (const name of subdirs(path.join(evalsDir, pid))) {
       const dir = path.join(evalsDir, pid, name);
-      if (!fs.existsSync(path.join(dir, 'prompt.md'))) continue;
-      cases++;
       const at = `evals/${pid}/${name}`;
+      if (!fs.existsSync(path.join(dir, 'prompt.md'))) {
+        ok(!fs.existsSync(path.join(dir, 'graders')) && !fs.existsSync(path.join(dir, 'case.yaml')), `${at}: có graders/ hoặc case.yaml nhưng thiếu prompt.md`);
+        continue;
+      }
+      cases++;
       const prompt = parseFrontmatter(fs.readFileSync(path.join(dir, 'prompt.md'), 'utf8'));
       ok(prompt.body.trim().length > 0, `${at}: prompt.md có nội dung prompt`);
       const gdir = path.join(dir, 'graders');
       const files = fs.existsSync(gdir) ? fs.readdirSync(gdir).filter((f) => f.endsWith('.md')).sort() : [];
       const graders = files.map((f) => {
         const g = parseFrontmatter(fs.readFileSync(path.join(gdir, f), 'utf8'));
-        return { ...g.meta, body: g.body };
+        return { ...g.meta, body: g.body, name: f.slice(0, -3) };
       });
       const errs = checkEvalCase({ promptMeta: prompt.meta, graders });
       ok(errs.length === 0, `${at}: cấu trúc eval hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
