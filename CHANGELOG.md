@@ -70,6 +70,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `node cli/dist.mjs [--dry-run]` builds a local `dist` branch holding `build/claude` (without `drafts/`) so the
   marketplace can be added with `claude plugin marketplace add <owner>/<repo>@dist`. It never pushes. Requires git >= 2.42
   (`git worktree add --orphan`).
+- Hook fixes from the final review: the `guard-bash` matcher is now `Bash|PowerShell` (PowerShell 5.1 was bypassing H1/H2/H3);
+  H1 tracks `cd`/`chdir`/`pushd`/`Set-Location`/`sl` between segments and resolves the branch of the target
+  directory (unresolvable targets ask for a push with no refspec/`HEAD`/`@`); H5 anchors the write scope to the git root
+  of the target file instead of the session cwd. README "Hooks" lists the extra false positives and residual risks
+  (PowerShell parsing, Grep on a directory, H5 outside a git repo, `bypassPermissions` [Unverified], about 0.2 s per call on Windows).
 - Skills-mode Claude install warns when the same plugin is already installed in plugin mode (every skill would
   appear twice).
 
@@ -80,9 +85,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   manifest removes the legacy `.codex/skills` copy; a copy that the manifest does not track must be removed by hand.
   [Inference] `.codex/skills` still loaded on Codex 0.147.0 in a local test, but it is no longer documented.
 - The installer never overwrites or deletes a foreign regular file when placing skills; a foreign real directory is
-  merged and its existing files are kept (skipped with a warning); an existing symlink/junction at the destination is replaced.
+  merged and its existing files are kept (skipped with a warning); a symlink/junction at the destination that the manifest
+  does not track and that does not already point at the source is treated as foreign and skipped with a warning.
 - Removed the dead `.mcp.json` branch from the Claude install layout; `hooks` are plugin-mode only.
-- Version bumps for Phase 3: core 1.4.0 (MINOR, hooks), frontend 1.9.1 (e2e agent body now states that
+- `backend-migrate-vault-consul` no longer reads secret values: the agent works from variable names (the user runs a
+  names-only command), and backup/trim of `.env`, generation of `configs/` from `.env.bak` and seeding are commands the
+  user runs (or the agent runs after explicit confirmation), never Read/Edit on `.env*`. Keeps the core H3 deny coherent with the skill.
+- `test/contract/96-dist.contract.mjs` isolates the temporary repo from the developer's global git config
+  (`GIT_CONFIG_GLOBAL`, `GIT_CONFIG_NOSYSTEM`); `cli/dist.mjs` is unchanged.
+- Version bumps for Phase 3: core 1.4.1 (MINOR 1.4.0 for hooks, PATCH for the final-review fixes), backend 1.7.1 (vault-consul skill), frontend 1.9.1 (e2e agent body now states that
   `.gitignore` is out of scope), workflows 1.3.2 (orchestrator names `.agents/skills/workflow-<slug>/` for Codex);
   `plugins/_versions.lock.json` refreshed.
 - `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;

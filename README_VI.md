@@ -319,20 +319,24 @@ Plugin `core` mang hai hook `PreToolUse` cho Claude Code (`core/hooks/`; Node kh
 
 | Quy tắc | Tool | Quyết định | Phạm vi |
 | --- | --- | --- | --- |
-| H1 | Bash | ask | `git push` lên `main`/`master`/`dev`/`develop`, và push `--force`/`--delete`/`--mirror`/`--all`/`--prune` (lệnh ghép, `git -C`, ref có nháy, cụm cờ) |
-| H2 | Bash | deny | `git commit -m` có ký tự non-ASCII — dùng `git commit -F <file>` (xem skill `git-workflow`) |
+| H1 | Bash, PowerShell | ask | `git push` lên `main`/`master`/`dev`/`develop`, và push `--force`/`--delete`/`--mirror`/`--all`/`--prune` (lệnh ghép, `git -C`, đích của `cd`/`pushd`/`Set-Location`/`sl` đứng trước, ref có nháy, cụm cờ). Đích `cd` chứa `$`, `~`, backtick, `-` hoặc để trống thì không resolve được: push không refspec / `HEAD` / `@` sẽ hỏi |
+| H2 | Bash, PowerShell | deny | `git commit -m` có ký tự non-ASCII — dùng `git commit -F <file>` (xem skill `git-workflow`) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | file bí mật: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, khoá riêng `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (kể cả `_sk` và hậu tố bất kỳ khác `.pub`), và chỉ `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` (có giải symlink và NTFS stream; [Unverified] tên ngắn 8.3). `.env.example`/`.env.sample`/`.env.template` và `*.pub` được phép |
-| H3 | Bash | ask | lệnh nhắc tới file bí mật |
-| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
+| H3 | Bash, PowerShell | ask | lệnh nhắc tới file bí mật |
+| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git của file đích, không phải của cwd phiên): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
 
 Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường) thoát 0 không quyết định. Khi `guard-bash` không phân tích chắc chắn được lệnh thì nghiêng về `ask` (`guard-files` không có hành vi này). Không có H4: agent ops không có tool Bash.
 
 **Giới hạn / residual risk.** Hook là cổng regex, không phải sandbox.
 
 - Không bắt được: `bash -c "…"` / `eval`, ref bị escape như `ma\in`, literal `$'…'`, và file bí mật ngoài danh sách trên (ví dụ `credentials.csv`, `credentials.xml`, `credentials.toml`).
-- H5 chỉ canh tool ghi — agent có Bash vẫn có thể ghi ra chỗ khác.
+- H5 chỉ canh tool ghi — agent có Bash vẫn có thể ghi ra chỗ khác. Ngoài mọi repo git, H5 quay về cwd của phiên làm mốc neo.
+- Phân tích lệnh theo kiểu POSIX. Với tool PowerShell, dấu backtick được coi là dấu tách lệnh, nên lỗi nghiêng về `ask`.
+- [Unverified: phụ thuộc mặc định của ripgrep] Grep trên một đường dẫn thư mục có thể đọc `prod.env` không ẩn nằm trong đó; H3 chỉ kiểm `path`/`glob` của Grep, không kiểm các file mà việc duyệt thư mục chạm tới.
+- [Unverified] chưa rõ `ask` của hook còn hiện hộp thoại khi phiên chạy ở chế độ `bypassPermissions` hay không. Nên chạy thử thủ công một lần (`git push origin main` trong repo nháp) trước khi dựa vào H1 ở chế độ đó.
+- Chi phí: đo được khoảng 0,2 s mỗi lần gọi tool có hook trên Windows (mỗi lần spawn một tiến trình Node).
 - Kiểm `glob` của Grep chỉ là heuristic cố gắng hết sức (ví dụ `*.k*` không được nhận ra là glob khoá).
-- Dương tính giả đã biết, đều nghiêng về an toàn: `.env.local.example`, chứng chỉ `*.pem` công khai, file như `src/id_rsa.go`, lệnh Bash chỉ nhắc `import.meta.env` hoặc `config.env`.
+- Dương tính giả đã biết, đều nghiêng về an toàn: `.env.local.example`, chứng chỉ `*.pem` công khai, file như `src/id_rsa.go`, lệnh Bash chỉ nhắc `import.meta.env` hoặc `config.env`, `grep -rn credentials src` (ask), `node -e "console.log(o.key)"` (ask), và thân commit dạng heredoc `git commit -F -` có nhắc `.env` (ask). Deny của Read cũng trúng `.env.development`/`.env.production`/`.env.test` đã commit (Vite/Next).
 
 **Tắt hook tạm thời.** Disable hoặc gỡ plugin `core`: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; lệnh có trong `claude plugin --help`), bật lại bằng `claude plugin enable core@ai-engineering-platform`. [Inference] Tắt `core` cũng tắt luôn skill của nó. [Unverified] chưa xác nhận `/hooks` trong phiên có tắt được riêng một hook của plugin hay không. [Unverified] Mọi plugin domain khai báo `dependencies: ["core"]`; chưa kiểm Claude Code xử lý các plugin phụ thuộc đó thế nào khi `core` bị disable hoặc gỡ (từ chối, kéo theo, hay vẫn chạy thiếu core) — chạy `claude plugin disable` và đọc kết quả trước khi dựa vào.
 

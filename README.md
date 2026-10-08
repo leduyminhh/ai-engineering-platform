@@ -325,20 +325,24 @@ The `core` plugin ships two Claude Code `PreToolUse` hooks (`core/hooks/`; zero-
 
 | Rule | Tool | Decision | Covers |
 | --- | --- | --- | --- |
-| H1 | Bash | ask | `git push` to `main`/`master`/`dev`/`develop`, and `--force`/`--delete`/`--mirror`/`--all`/`--prune` pushes (compound commands, `git -C`, quoted refs, flag clusters) |
-| H2 | Bash | deny | `git commit -m` with non-ASCII text — use `git commit -F <file>` (see the `git-workflow` skill) |
+| H1 | Bash, PowerShell | ask | `git push` to `main`/`master`/`dev`/`develop`, and `--force`/`--delete`/`--mirror`/`--all`/`--prune` pushes (compound commands, `git -C`, a preceding `cd`/`pushd`/`Set-Location`/`sl` target, quoted refs, flag clusters). A `cd` target containing `$`, `~`, a backtick, `-` or nothing cannot be resolved: a push with no refspec / `HEAD` / `@` asks |
+| H2 | Bash, PowerShell | deny | `git commit -m` with non-ASCII text — use `git commit -F <file>` (see the `git-workflow` skill) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | secret files: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private keys `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (also `_sk` and any non-`.pub` suffix), and `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` only (symlinks and NTFS streams are resolved; [Unverified] 8.3 short names). `.env.example`/`.env.sample`/`.env.template` and `*.pub` are allowed |
-| H3 | Bash | ask | a command that names a secret file |
-| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
+| H3 | Bash, PowerShell | ask | a command that names a secret file |
+| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root of the target file, not of the session cwd): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
 
 The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When `guard-bash` cannot parse a command reliably it falls toward `ask` (`guard-files` does not). There is no H4: the ops agents have no Bash tool.
 
 **Limits / residual risk.** The hooks are a regex gate, not a sandbox.
 
 - Not caught: `bash -c "…"` / `eval`, escaped refs such as `ma\in`, `$'…'` literals, and secret files outside the list above (for example `credentials.csv`, `credentials.xml`, `credentials.toml`).
-- H5 guards write tools only — an agent that has Bash can still write elsewhere.
+- H5 guards write tools only — an agent that has Bash can still write elsewhere. Outside any git repository H5 falls back to the session cwd as the anchor.
+- Command parsing is POSIX-shaped. For the PowerShell tool a backtick is treated as a command separator, which fails toward `ask`.
+- [Unverified: depends on ripgrep defaults] Grep on a directory path may read a non-hidden `prod.env` inside it; H3 checks the Grep `path`/`glob`, not the files the directory walk reaches.
+- [Unverified] whether a hook `ask` still prompts when the session runs in `bypassPermissions` mode. Run one manual smoke test (`git push origin main` in a scratch repo) before relying on H1 in that mode.
+- Cost: measured at about 0.2 s per guarded tool call on Windows (a Node process is spawned per call).
 - The Grep `glob` check is a best-effort heuristic (for example `*.k*` is not recognized as a key glob).
-- Known false positives, all on the safe side: `.env.local.example`, public `*.pem` certificates, files such as `src/id_rsa.go`, and Bash commands that merely mention `import.meta.env` or `config.env`.
+- Known false positives, all on the safe side: `.env.local.example`, public `*.pem` certificates, files such as `src/id_rsa.go`, Bash commands that merely mention `import.meta.env` or `config.env`, `grep -rn credentials src` (ask), `node -e "console.log(o.key)"` (ask), and `git commit -F -` heredoc bodies that mention `.env` (ask). The Read deny also hits committed `.env.development`/`.env.production`/`.env.test` (Vite/Next).
 
 **Turning hooks off temporarily.** Disable or uninstall the `core` plugin: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; the command exists in `claude plugin --help`), and `claude plugin enable core@ai-engineering-platform` to restore it. [Inference] Disabling `core` also disables its skills. [Unverified] whether `/hooks` inside a session can switch a single plugin hook off. [Unverified] Every domain plugin declares `dependencies: ["core"]`; how Claude Code treats those dependents when `core` is disabled or uninstalled (refuse, cascade, or leave them running without core) was not checked — run `claude plugin disable` and read its output before relying on it.
 
