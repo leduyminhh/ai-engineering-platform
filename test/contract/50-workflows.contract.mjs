@@ -138,5 +138,16 @@ export default async function run({ ok, ctx }) {
         if (s.passthrough['argument-hint']) ok(/^argument-hint: ".+"$/m.test(c.split('\n---')[0]), `build claude ${s.id}: argument-hint`);
       }
     }
+
+    // Phase 2 Task 5: mọi references/<x>.md được trỏ tới phải tồn tại và được ship
+    for (const s of workflows.stages) {
+      const refs = [...s.body.matchAll(/`references\/([\w.-]+\.md)`/g)].map((m) => m[1]);
+      for (const r of new Set(refs)) {
+        ok(fs.existsSync(path.join(s.dir, 'references', r)), `${s.id}: references/${r} tồn tại`);
+        if (fs.existsSync(claudeDir)) {
+          ok(fs.existsSync(path.join(claudeDir, 'plugins/workflows/skills', s.id, 'references', r)), `build claude ${s.id}: ship references/${r}`);
+        }
+      }
+    }
   }
 }

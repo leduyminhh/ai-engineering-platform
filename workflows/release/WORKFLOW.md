@@ -99,12 +99,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   cần rollback, cách rollback). Liệt kê migration schema nằm trong phạm vi release (thư mục migration của
   project, so với tag trước) và ghi thứ tự migration↔deploy: migration tương thích ngược chạy trước khi
   deploy code mới, migration phá tương thích chỉ sau khi code cũ đã ngừng dùng; migration nào đã áp trên môi
-  trường đích do người dùng xác nhận. Smoke e2e (tuỳ chọn): `frontend-e2e-test-writer` chạy 1–3 luồng e2e
-  giá trị cao **đã có** trên bản release candidate (commit release Bước 4) chạy ở local/test,
-  `npx playwright test` theo skill `frontend-e2e-testing` [lệnh cụ thể theo project]; không viết test mới,
-  không sửa test; thiếu môi trường BE/DB test → `not_run` + lý do. Chế độ smoke: luồng lấy từ e2e đã có (hoặc
-  người dùng chỉ định trong Bước 5) — bỏ qua E2/E3; flaky → chạy lại `--repeat-each=3`, không sửa test; vẫn
-  flaky → báo `failed`, dừng release.
+  trường đích do người dùng xác nhận. Khi project có `e2e/` → đọc `references/smoke-e2e.md` (smoke e2e tuỳ
+  chọn; không viết test mới, không sửa test; thiếu môi trường BE/DB test → `not_run` + lý do; flaky kéo dài →
+  `failed`, dừng release).
 - **Ràng buộc:** không tự thực hiện deploy và không tự chạy migration — chỉ lập checklist và đề xuất thứ tự;
   smoke chỉ trên local/test, không trỏ staging/production (E-r3); không viết hay sửa file test trong bước này.
 - **Đầu ra:** deploy checklist + điều kiện rollback + danh sách migration chờ chạy kèm thứ tự (hoặc "không có

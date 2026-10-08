@@ -1,6 +1,6 @@
 // Pin nội dung: frontend-performance.
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, core, workflows } = ctx;
+  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, core, workflows, wfText } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 23. SOURCE: frontend-performance skill + agent + workflow-performance Bước 2/3/5 phía FE (spec 2026-10-01-frontend-performance-design)
@@ -118,12 +118,12 @@ export default async function run({ ok, ctx }) {
       'workflow-performance Bước 3: Gate so hash của từng phía với mốc Bước 2');
     ok(field23(fS5.body, 'Gate').includes('mốc Bước 2') && /từng phía/.test(field23(fS5.body, 'Gate')),
       'workflow-performance Bước 5: Gate hash từng phía bằng mốc Bước 2, kết luận đạt/không đạt theo từng phía');
-    ok(field23(fS5.body, 'Hành động').includes('hash') && field23(fS5.body, 'Hành động').includes('chunk')
-      && field23(fS5.body, 'Hành động').includes('bản build production'),
+    ok(flat23(wfText('performance')).includes('hash') && flat23(wfText('performance')).includes('chunk')
+      && flat23(wfText('performance')).includes('bản build production'),
       'workflow-performance Bước 5: FE build lại bản production, xác nhận bản mới (hash file build / tên chunk khác baseline)');
     ok(field23(fS5.body, 'Ràng buộc').includes('dev server') && field23(fS2.body, 'Ràng buộc').includes('dev server'),
       'workflow-performance: Ràng buộc FE cấm đo trên dev server ở CẢ Bước 2 và Bước 5');
-    ok(field23(fS3.body, 'Hành động').includes('dist-profile') || field23(fS3.body, 'Ràng buộc').includes('dist-profile'),
+    ok(flat23(wfText('performance')).includes('dist-profile'),
       'workflow-performance Bước 3: output build profile (dist-profile/) xoá sau khi profile hoặc .gitignore, nếu không thì blocked');
     ok(field23(fS3.body, 'Gate').includes('assets-baseline.txt') && field23(fS5.body, 'Gate').includes('assets-baseline.txt')
       && field23(fS5.body, 'Evidence').includes('assets-baseline.txt'),
@@ -143,7 +143,7 @@ export default async function run({ ok, ctx }) {
     ok(pf23 && ['backend-performance-analyst', 'frontend-performance-analyst', 'backend-fixer', 'frontend-fixer', 'backend-reviewer', 'frontend-reviewer']
       .every((a) => pf23.agents.includes(a)),
       'workflow-performance: frontmatter agents có frontend-performance-analyst');
-    const pfErr23 = flat23(pf23?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '');
+    const pfErr23 = flat23(wfText('performance'));
     ok(pfErr23.includes('Chrome') && pfErr23.includes('not_run'),
       'workflow-performance: bảng lỗi có hàng bản build FE không dựng được / không có Chrome (not_run → blocked)');
     ok(flat23(pf23?.body.split('## Điều kiện tiên quyết')[1]?.split('## Các bước')[0] ?? '').includes('frontend-performance-analyst'),

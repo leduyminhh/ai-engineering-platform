@@ -56,7 +56,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** danh sách hành vi cần test.
 - **Gate:** danh sách hành vi cần test.
 - **Khi fail:** không xác định được hành vi từ code → hỏi lại người dùng phạm vi cụ thể hơn.
-- **Evidence:** danh sách hành vi cần test trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 3 — Chiến lược ⏸
 

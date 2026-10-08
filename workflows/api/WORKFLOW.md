@@ -163,11 +163,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
-| Người dùng không xác nhận contract (sau Bước 2 ⏸) | Sửa lại theo góp ý, trình lại, không code trước |
-| Phát hiện drift contract↔code (Bước 5) | Quay lại Bước 3 sửa code hoặc Bước 2 sửa contract |
-| Finding `blocker` về authorization/input validation (Bước 5) | Quay lại Bước 3 sửa code, review lại phần đã sửa |
-| Contract lệch khi nối FE (Bước 6) | Dừng, quay lại Bước 2 chỉnh contract; không sửa contract để hợp FE |
-| Người dùng không duyệt diff (sau Bước 8 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+
+Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
 - **Điều kiện dừng:** người dùng không xác nhận contract sau nhiều vòng; drift contract↔code không sửa được;
   finding `blocker` không sửa được; người dùng không duyệt diff.

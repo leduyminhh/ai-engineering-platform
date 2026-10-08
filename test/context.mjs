@@ -63,6 +63,14 @@ export async function buildContext({ build = false, fails = [] } = {}) {
   const fxCore = { ...loadCore(), stages: [] };
   const fxMk = { name: 'fx-mkt', owner: { name: 'fx' }, description: '' };
   const byPath = (files) => new Map(files.map((f) => [f.path, f]));
+  // Pin đọc cả WORKFLOW.md lẫn references/ vì câu nhánh hiếm được tách sang đó nhưng vẫn là nội dung của workflow.
+  const wfText = (slug) => {
+    const dir = path.join(REPO_ROOT, 'workflows', slug);
+    const refDir = path.join(dir, 'references');
+    const refs = fs.existsSync(refDir) ? fs.readdirSync(refDir).filter((f) => f.endsWith('.md')).sort() : [];
+    return [path.join(dir, 'WORKFLOW.md'), ...refs.map((f) => path.join(refDir, f))]
+      .map((f) => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')).join('\n');
+  };
 
   return {
     fs, path, os, execFileSync, pathToFileURL,
@@ -76,7 +84,7 @@ export async function buildContext({ build = false, fails = [] } = {}) {
     hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList,
     RUN_IN, INVOKE_IN, listFilesRec, hasFiles, BUILD, claudeDir,
     core, plugins, workflows, catalogSkillIds, allAgents,
-    fxAgent, fxPlugin, fxWorkflows, fxCore, fxMk, byPath,
+    fxAgent, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, wfText,
     fails,
   };
 }

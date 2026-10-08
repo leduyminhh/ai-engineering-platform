@@ -51,7 +51,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** chế độ `code`/`architecture` + invariant hành vi ghi rõ trong report bước.
 - **Gate:** chế độ `code` \| `architecture` + invariant hành vi ghi rõ.
 - **Khi fail:** người dùng không phân biệt được chế độ hoặc invariant chưa rõ → hỏi lại, không tự suy diễn tiếp.
-- **Evidence:** đoạn ghi chế độ + invariant hành vi trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 2 — ADR ⏸
 
@@ -170,12 +170,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
-| Người dùng không chấp nhận ADR (sau Bước 2 ⏸) | Quay lại Bước 1 làm rõ lại đích kiến trúc/ràng buộc |
-| Baseline đỏ trước khi refactor (Bước 3) | Dừng, báo người dùng xử lý lỗi có sẵn trước, không tự sửa ngoài phạm vi |
-| Một bước nhỏ ở Bước 5 làm đỏ test/build | Lùi lại bước nhỏ đó, chia nhỏ hơn hoặc sửa, không tiếp tục khi chưa xanh |
-| Đổi API công khai ngoài phạm vi (Bước 6) | Quay lại Bước 5 điều chỉnh, hoặc xin người dùng mở rộng phạm vi |
-| Vi phạm boundary/Dependency Rule (chế độ `architecture`, Bước 7) | Chặn hoàn thành, quay lại Bước 5 sửa đúng boundary |
-| Người dùng không duyệt diff một lô (sau Bước 8 ⏸) | Không commit lô đó, quay lại bước người dùng yêu cầu sửa |
+
+Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
 - **Điều kiện dừng:** ADR không được chấp nhận sau nhiều vòng; baseline không xanh được; một bước nhỏ liên
   tục đỏ không sửa được trong phạm vi refactor; finding `blocker` hoặc vi phạm boundary không sửa được;

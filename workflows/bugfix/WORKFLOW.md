@@ -58,7 +58,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** mô tả "mong đợi vs thực tế" + phía BE/FE ghi rõ.
 - **Gate:** hành vi mong đợi vs thực tế + phía BE/FE ghi rõ.
 - **Khi fail:** mô tả bug không đủ để phân biệt mong đợi vs thực tế → hỏi lại người dùng.
-- **Evidence:** đoạn mô tả "mong đợi vs thực tế" trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 3 — Tái hiện
 
@@ -195,9 +195,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Cấm: sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh | Từ chối sửa, quay lại Bước 3/4 thu thêm evidence |
 | Cấm: chỉ sửa triệu chứng (che lỗi, không sửa nguyên nhân) | Từ chối, quay lại Bước 5 xác định lại root cause |
 | Cấm: xoá/nới điều kiện test cho qua | Từ chối, quay lại Bước 6 sửa đúng code |
-| Fixer trả `blocked` (Bước 6) | Người dùng mở rộng danh sách file có xác nhận, gọi lại agent; không tự mở phạm vi |
-| Người dùng không đồng ý root cause (sau Bước 5 ⏸) | Quay lại Bước 4 thu thêm evidence hoặc xem lại giả thuyết |
-| Người dùng không duyệt diff (sau Bước 9 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+
+Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
 - **Điều kiện dừng:** không tái hiện được bug sau khi hỏi lại người dùng; người dùng không đồng ý root cause
   sau nhiều vòng; finding `blocker` không sửa được trong phạm vi bugfix; người dùng không duyệt diff.

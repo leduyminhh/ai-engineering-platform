@@ -47,7 +47,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** mục tiêu thay đổi (1–2 câu) + danh sách file đổi.
 - **Gate:** mục tiêu thay đổi + danh sách file đổi.
 - **Khi fail:** không xác định được mục tiêu thay đổi từ diff/PR → hỏi lại người dùng.
-- **Evidence:** đoạn tóm tắt mục tiêu + danh sách file đổi trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 2 — Phân vùng diff
 

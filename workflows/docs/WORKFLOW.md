@@ -43,7 +43,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** danh sách thay đổi hành vi công khai.
 - **Gate:** danh sách thay đổi hành vi công khai.
 - **Khi fail:** không xác định được diff → hỏi người dùng phạm vi thay đổi cụ thể.
-- **Evidence:** danh sách thay đổi trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 2 — Tài liệu bị ảnh hưởng
 
@@ -55,7 +55,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** danh sách file docs cần sửa.
 - **Gate:** danh sách file docs cần sửa.
 - **Khi fail:** không chắc tài liệu nào liên quan → hỏi người dùng xác nhận phạm vi.
-- **Evidence:** danh sách file trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 3 — Cập nhật
 

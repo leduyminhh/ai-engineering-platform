@@ -1,6 +1,6 @@
 // Pin nội dung: *-fix skill, *-fixer agent và nối workflow.
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, core, plugins, workflows } = ctx;
+  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, core, plugins, workflows, wfText } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 18. SOURCE: *-fix skill + *-fixer agent + nối workflow (spec 2026-09-30-fixer-agent-design)
@@ -78,7 +78,7 @@ export default async function run({ ok, ctx }) {
       ok(flat18(fix.body).includes('blocked'), `${id} Bước ${fixN}: Khi fail xử lý agent trả blocked`);
       ok(w && w.agents.includes('backend-fixer') && w.agents.includes('frontend-fixer'),
         `${id}: frontmatter agents có backend-fixer, frontend-fixer`);
-      ok(flat18(w?.body ?? '').includes('Fixer trả `blocked`'), `${id}: bảng lỗi có hàng Fixer trả blocked`);
+      ok(flat18(wfText(id.replace(/^workflow-/, ''))).includes('Fixer trả `blocked`'), `${id}: bảng lỗi có hàng Fixer trả blocked`);
     };
     fixStepOk('workflow-bugfix', 5, 6, /^Root cause/, /^Fix tối thiểu/);
     ok(parseSteps(wf18('workflow-bugfix')?.body ?? '').length === 9, 'workflow-bugfix: vẫn 9 bước');

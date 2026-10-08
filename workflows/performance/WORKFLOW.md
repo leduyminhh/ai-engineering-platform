@@ -45,7 +45,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** metric + ngưỡng mục tiêu + điều kiện đo sơ bộ (môi trường local/test, endpoint/luồng, tải mục tiêu).
 - **Gate:** metric + ngưỡng + điều kiện đo.
 - **Khi fail:** người dùng chưa nêu rõ mục tiêu → hỏi lại ngưỡng cụ thể.
-- **Evidence:** metric + ngưỡng ghi trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 2 — Baseline
 
@@ -54,11 +54,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** metric + ngưỡng + điều kiện đo sơ bộ từ Bước 1
 - **Hành động:** session chính ghi mốc `git status --porcelain` rồi dispatch agent; agent chốt bảng điều kiện đo
   theo skill `backend-performance`, viết/tái dùng script trong `perf/` hoặc `bench/`, chạy ≥ 3 lần trên môi trường
-  local/test, ghi p50/p95/p99, throughput, error rate, độ lệch. Phía FE: agent chốt bảng điều kiện đo theo skill
-  `frontend-performance`, build và phục vụ bản build production ở local (không đo trên dev server), chạy
-  Lighthouse/đo bundle ≥ 3 lần, ghi median LCP/TBT/CLS, kích thước bundle và độ lệch; số lab, không phải INP;
-  thư mục output build (dist/.next/…) không tính vào gate diff khi đã nằm trong `.gitignore`, chưa bị ignore →
-  agent trả `blocked` + câu hỏi. Khi phạm vi có cả hai phía, hai agent chạy song song, mỗi phía ghi vào thư mục
+  local/test, ghi p50/p95/p99, throughput, error rate, độ lệch. Khi phạm vi có phía FE → đọc
+  `references/frontend.md`, mục Bước 2. Khi phạm vi có cả hai phía, hai agent chạy song song, mỗi phía ghi vào thư mục
   con riêng `perf/backend/` và `perf/frontend/` với bảng điều kiện + script riêng. Mỗi agent chỉ tự đối chiếu diff
   của phía mình (thư mục con riêng cùng hàng Config tool đo của bảng phía mình) và không revert file của phía kia.
 - **Ràng buộc:** không đổi code production trước khi có baseline; không trỏ tải vào staging/production; thêm
@@ -90,12 +87,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** session chính ghi mốc `git status --porcelain`, đọc mốc `git hash-object` của script và bảng
   điều kiện ghi ở Evidence Bước 2, rồi dispatch; agent profile theo thứ tự DB → CPU/alloc → I/O trong lúc chạy
   tải của Bước 2, nêu bottleneck + giả thuyết kèm evidence đo được, đề xuất danh
-  sách file/hàm cho Bước 4; session chính trình người dùng xác nhận hướng tối ưu. Phía FE: agent profile theo
-  thứ tự bundle → render (React Profiler) → main thread (trace), dùng lại bảng điều kiện của Bước 2, nêu
-  bottleneck + giả thuyết kèm evidence (số đo, `file:line` hoặc tên chunk/component), đề xuất danh sách file/hàm
-  cho phần FE của Bước 4; lệnh/config bật profiler ghi vào report Bước 3, config chỉ dùng để profile thì gỡ sau
-  khi profile xong (không để lại trong diff); output build profile (`dist-profile/`) xoá sau khi profile hoặc đã
-  nằm trong `.gitignore`, chưa bị ignore → agent trả `blocked` + câu hỏi.
+  sách file/hàm cho Bước 4; session chính trình người dùng xác nhận hướng tối ưu. Khi phạm vi có phía FE → đọc
+  `references/frontend.md`, mục Bước 3.
 - **Ràng buộc:** không tối ưu khi giả thuyết chưa có evidence; không sửa bảng điều kiện và script đo của Bước 2 —
   lệnh/config bật đếm query hay profiler ghi vào report Bước 3 (hoặc `perf/profile-<luồng>.md`).
 - **Đầu ra:** bottleneck + giả thuyết đã xác nhận + **danh sách file/hàm bottleneck được sửa** (đầu vào cho
@@ -148,11 +141,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   agent build + khởi chạy lại ứng dụng từ working tree theo hàng Khởi chạy ứng dụng (không tự làm được →
   `blocked` hỏi người dùng), xác nhận là tiến trình mới (PID/thời điểm start khác baseline, hoặc version/actuator
   info) trước warm-up, rồi chạy lại đúng script + bảng điều kiện của Bước 2 (≥ 3 lần), so với baseline, lập bảng
-  baseline vs sau. Phía FE: agent build lại bản build production và phục vụ lại từ working tree, xác nhận là bản mới
-  (hash file build hoặc tên chunk khác baseline) trước khi đo, rồi chạy lại đúng script + bảng điều kiện của
-  Bước 2 (≥ 3 lần), lập bảng baseline vs sau; thư mục output build (dist/.next/…) không tính vào gate diff khi
-  đã nằm trong `.gitignore`, chưa bị ignore → agent trả `blocked` + câu hỏi. Mỗi agent chỉ tự đối chiếu diff
-  của phía mình, không revert file của phía kia.
+  baseline vs sau. Khi phạm vi có phía FE → đọc `references/frontend.md`, mục Bước 5. Mỗi agent chỉ tự đối chiếu
+  diff của phía mình, không revert file của phía kia.
 - **Ràng buộc:** không đổi điều kiện đo so với Bước 2 (môi trường, dữ liệu seed, tải, warm-up, số lần lặp); không
   so sánh số đo khác điều kiện với baseline; phía FE không đo trên dev server.
 - **Đầu ra:** số đo sau + kết luận đạt/không đạt ngưỡng.
@@ -211,14 +201,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Finding `blocker` (Bước 6) | Quay lại Bước 4 sửa, review lại |
 | Không có số đo trước/sau trên cùng điều kiện | Dừng `blocked`, không kết luận về hiệu năng |
 | Môi trường đo thiếu (Bước 2/5, `not_run`) | Dừng `blocked`, báo người dùng cung cấp môi trường local/test; không tối ưu khi chưa có baseline |
-| Bản build FE không dựng được hoặc không có Chrome (Bước 2/5, `not_run`) | Dừng `blocked`, báo người dùng cung cấp môi trường; không tối ưu khi chưa có baseline |
-| Điều kiện Bước 5 lệch Bước 2 | Từ chối so sánh; chạy lại đúng điều kiện Bước 2 |
-| Nhiễu vượt ngưỡng P3 (Bước 2/5) | Không kết luận; tăng số lần lặp hoặc cô lập nhiễu rồi đo lại |
-| Quyết định phát sinh ở Bước 3/5 làm đổi điều kiện đo | Quay lại Bước 2 đo lại baseline; không sửa bảng điều kiện đã chốt |
-| Người dùng không đồng ý hướng tối ưu (sau Bước 3 ⏸) | Profile lại hoặc thu thêm evidence |
-| Fixer trả `blocked` (Bước 4) | Người dùng mở rộng danh sách file có xác nhận, gọi lại agent; không tự mở phạm vi |
-| Không đạt ngưỡng mục tiêu (Bước 5) | Báo rõ, quay lại Bước 3 tìm hướng khác hoặc dừng theo quyết định người dùng |
-| Người dùng không duyệt diff (sau Bước 7 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+
+Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
 - **Điều kiện dừng:** không có số đo trước/sau cùng điều kiện; người dùng không đồng ý hướng tối ưu sau nhiều
   vòng; finding `blocker` không sửa được; người dùng không duyệt diff.
