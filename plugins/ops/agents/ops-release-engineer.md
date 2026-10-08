@@ -2,6 +2,7 @@
 name: ops-release-engineer
 description: "Release engineer: chỉ đọc, dò cấu hình deploy/CI, chạy checklist tiền/hậu deploy, chọn chiến lược triển khai; chỉ đề xuất lệnh, không tự thực thi, theo skill ops-deploy-release. Dùng khi workflow cần chuẩn bị hoặc rà soát một đợt deploy/release."
 mode: read-only
+tools: Read, Grep, Glob, Skill
 skills: "ops-deploy-release,ops-observability"
 ---
 

@@ -146,4 +146,36 @@ export default async function run({ ok, ctx }) {
       }
     }
   }
+
+  // Task 3: agent passthrough
+  {
+    const { claudeAdapter, codexAdapter, fxPlugin, fxAgent, fxCore, fxMk, byPath, checkAgentTools, SOURCE_KEYS } = ctx;
+    ok(['tools', 'maxTurns', 'isolation'].every((k) => SOURCE_KEYS.agent.includes(k)) && !SOURCE_KEYS.agent.includes('permissionMode'),
+      'SOURCE_KEYS.agent: có tools/maxTurns/isolation, không có permissionMode (bị bỏ qua với agent plugin)');
+    const ag = { ...fxAgent, skills: ['fx/fx-review', 'fx/fx-extra'], tools: ['Read', 'Grep', 'Glob', 'Skill'], maxTurns: 20, isolation: null };
+    const md = byPath(claudeAdapter.build([{ ...fxPlugin, agents: [ag] }], { marketplace: fxMk, core: fxCore }))
+      .get('plugins/fx/agents/fx-reviewer.md').content;
+    ok(md.includes('tools: Read, Grep, Glob, Skill') && md.includes('skills:\n  - fx-review\n') && !md.includes('- fx-extra'),
+      'claude agent: tools chuỗi phẩy + skills preload chỉ skill đầu (tên trần)');
+    ok(md.includes('maxTurns: 20') && !md.includes('isolation:'), 'claude agent: maxTurns khi có, bỏ isolation khi null');
+    const plain = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore })).get('plugins/fx/agents/fx-reviewer.md').content;
+    ok(!/^tools:/m.test(plain) && plain.includes('skills:\n  - fx-review'), 'claude agent: không khai tools → không ghi tools, vẫn preload');
+    const toml = byPath(codexAdapter.build([{ ...fxPlugin, agents: [ag] }], { core: fxCore })).get('fx/agents/fx-reviewer.toml').content;
+    ok(!/^tools|^skills|^maxTurns/m.test(toml), 'codex agent: không ghi tools/skills/maxTurns');
+    ok(checkAgentTools({ mode: 'read-only', skills: ['a/x', 'a/y'], tools: ['Read', 'Edit'] }).length === 2,
+      'checkAgentTools: read-only có Edit + thiếu Skill khi > 1 skill → 2 lỗi');
+    ok(checkAgentTools({ mode: 'read-only', skills: ['a/x'], tools: [] }).length === 0, 'checkAgentTools: không khai tools → không lỗi');
+  }
+  {
+    const { allAgents } = ctx;
+    const ro = allAgents.filter((a) => a.mode === 'read-only');
+    ok(ro.length === 5 && ro.every((a) => a.tools.length > 0), 'mọi agent read-only khai báo tools allowlist (W1)');
+    for (const a of allAgents) {
+      const errs = ctx.checkAgentTools(a);
+      ok(errs.length === 0, `${a.id}: tools hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
+    }
+    for (const a of allAgents.filter((x) => x.plugin === 'ops')) {
+      ok(!a.tools.includes('Bash'), `${a.id}: không có Bash (chỉ đề xuất lệnh)`);
+    }
+  }
 }

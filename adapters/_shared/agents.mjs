@@ -14,13 +14,19 @@ export function skillPointer(fullIds) {
 }
 
 export function claudeAgentMd(agent) {
+  const tools = agent.tools || [];
   const head = frontmatter([
     ['name', agent.id],
     ['description', agent.description],
+    ['tools', tools.length ? tools.join(', ') : null],
     ['disallowedTools', CLAUDE_DENY[agent.mode]],
+    // Preload chỉ skill chính: preload nhét toàn bộ nội dung skill vào mỗi lần dispatch; skill khác gọi qua tool Skill.
+    ['skills', agent.skills.length ? [agent.skills[0].split('/')[1]] : null],
     ['model', agent.model],
     ['effort', agent.effort],
     ['color', agent.color],
+    ['maxTurns', agent.maxTurns ?? null],
+    ['isolation', agent.isolation ?? null],
   ]);
   const note = `> **Dùng skill:** ${skillPointer(agent.skills)}.\n${principlesDigest({ provider: 'claude' })}`;
   return `${head}\n\n${note}\n\n${agent.body.replace(/^\n+/, '')}`;

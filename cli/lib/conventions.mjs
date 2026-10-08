@@ -145,7 +145,7 @@ export const SKILL_PASSTHROUGH = ['argument-hint', 'arguments', 'user-invocable'
 // Allowlist khoá frontmatter NGUỒN: loader chỉ đọc các khoá này, khoá lạ bị bỏ im lặng nên gõ sai (vd `runin`) không lộ ra.
 export const SOURCE_KEYS = {
   skill: ['name', 'description', 'order', 'title', 'runsIn', 'invoke', 'sharedAssets', ...SKILL_PASSTHROUGH],
-  agent: ['name', 'description', 'mode', 'skills', 'model', 'effort', 'color'],
+  agent: ['name', 'description', 'mode', 'skills', 'model', 'effort', 'color', 'tools', 'maxTurns', 'isolation'],
   workflow: ['name', 'description', 'order', 'title', 'kind', 'tier', 'risk', 'agents', 'requires', 'runsIn', 'invoke', 'argument-hint'],
 };
 
@@ -175,4 +175,19 @@ export function checkSourceKeys(kind, meta) {
   const allowed = new Set(SOURCE_KEYS[kind] || []);
   return Object.keys(meta).filter((k) => !allowed.has(k))
     .map((k) => `khoá frontmatter lạ "${k}" (chưa được chiếu, sẽ bị bỏ im lặng)`);
+}
+
+const WRITE_TOOLS = ['Edit', 'Write', 'NotebookEdit', 'Agent'];
+
+// tools là allowlist: agent read-only không được có tool ghi; thiếu Skill thì agent không nạp được skill thứ hai.
+export function checkAgentTools(agent) {
+  const tools = agent.tools || [];
+  if (!tools.length) return [];
+  const errs = [];
+  if (agent.mode === 'read-only') {
+    const bad = tools.filter((t) => WRITE_TOOLS.includes(t));
+    if (bad.length) errs.push(`read-only nhưng tools có ${bad.join(', ')}`);
+  }
+  if ((agent.skills || []).length > 1 && !tools.includes('Skill')) errs.push('có > 1 skill nhưng tools thiếu Skill');
+  return errs;
 }

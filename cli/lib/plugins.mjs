@@ -255,6 +255,9 @@ function loadAgents(pluginDir, pluginId) {
       model: meta.model || null,
       effort: meta.effort || null,
       color: meta.color || null,
+      tools: splitList(meta.tools),
+      maxTurns: typeof meta.maxTurns === 'number' ? meta.maxTurns : null,
+      isolation: meta.isolation || null,
       body,
       file: path.join(dir, f),
     };

@@ -2,6 +2,7 @@
 name: engineering-quality-auditor
 description: "Auditor chất lượng: chỉ đọc, chạy quality + security gate (SonarQube/Black Duck, review OWASP/ASVS/CWE) và kiểm convention, mask secret, không tự sửa, theo skill engineering-quality-gate. Dùng khi workflow cần audit chất lượng/bảo mật/convention."
 mode: read-only
+tools: Read, Grep, Glob, Bash, Skill
 skills: "engineering-quality-gate,engineering-convention-enforce"
 ---
 
