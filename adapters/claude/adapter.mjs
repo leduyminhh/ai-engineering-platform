@@ -120,6 +120,14 @@ function workflowFiles(wfs, plugins, author, meta, skillKeys) {
   return files;
 }
 
+// Khoá theo id agent (không kèm plugin) vì hook nhận agent_type và script bỏ tiền tố plugin: trước khi tra.
+function scopeLockJson(plugins) {
+  const map = {};
+  const scoped = plugins.flatMap((p) => p.agents || []).filter((a) => (a.writeScope || []).length);
+  for (const a of scoped.sort((x, y) => x.id.localeCompare(y.id))) map[a.id] = a.writeScope;
+  return `${JSON.stringify(map, null, 2)}\n`;
+}
+
 export default {
   name: 'claude',
   describe: 'Claude Code marketplace — core (dependency) + plugins/<id>/ (mỗi plugin có skills/)',
@@ -157,6 +165,8 @@ export default {
       }
     }
     if (wfs) files.push(...workflowFiles(wfs, plugins, author, meta, skillKeys));
+    // Phải đứng sau entry copyDir của hooks để file sinh ra không bị bản copy ghi đè.
+    if (core.hooksDir) files.push({ path: 'plugins/core/hooks/scope-lock.json', content: scopeLockJson(plugins) });
     return files;
   },
 };

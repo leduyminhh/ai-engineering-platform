@@ -3,6 +3,9 @@ name: engineering-release-scribe
 description: "Người soạn release notes: viết changelog hướng người dùng từ lịch sử git đã gom, chỉ ghi docs/ và CHANGELOG.md, theo skill engineering-release-notes. Dùng khi workflow cần soạn nội dung phát hành sau khi git-workflow gom lịch sử."
 mode: write
 skills: "engineering-release-notes"
+writeScope:
+  - docs/**
+  - CHANGELOG.md
 ---
 
 ## Vai trò

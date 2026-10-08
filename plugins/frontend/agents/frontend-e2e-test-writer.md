@@ -3,6 +3,9 @@ name: frontend-e2e-test-writer
 description: "Test writer E2E: chỉ viết test Playwright cho vài luồng giá trị cao, chỉ chạy local/test, test đỏ vì bug thật thì giữ đỏ và báo, theo skill frontend-e2e-testing. Dùng khi workflow cần kiểm luồng xuyên FE→BE→DB."
 mode: write
 skills: "frontend-e2e-testing"
+writeScope:
+  - e2e/**
+  - playwright.config.*
 ---
 
 ## Vai trò

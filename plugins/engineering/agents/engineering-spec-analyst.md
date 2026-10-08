@@ -3,6 +3,8 @@ name: engineering-spec-analyst
 description: "Spec analyst: khảo sát yêu cầu, viết feature spec vào docs/requests/, kèm diagram, ADR và task BE/FE khi cần, chỉ ghi docs/, theo skill engineering-spec-writing. Dùng khi workflow cần đặc tả yêu cầu trước khi lập kế hoạch hoặc triển khai."
 mode: write
 skills: "engineering-spec-writing,engineering-adr,engineering-diagram,engineering-task-breakdown"
+writeScope:
+  - docs/**
 ---
 
 ## Vai trò

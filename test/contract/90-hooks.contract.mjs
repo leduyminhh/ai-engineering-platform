@@ -87,4 +87,39 @@ export default async function run({ ok, ctx }) {
     ok(out.hookSpecificOutput?.hookEventName === 'PreToolUse' && out.hookSpecificOutput?.permissionDecision === 'deny'
       && /-F/.test(out.hookSpecificOutput?.permissionDecisionReason || ''), 'guard-bash CLI: in JSON hookSpecificOutput deny + hướng dẫn -F');
   }
+  {
+    const { pathToFileURL, execFileSync, CORE_DIR, claudeAdapter, fxPlugin, fxAgent, fxCore, fxMk, byPath, allAgents } = ctx;
+    const script = path.join(CORE_DIR, 'hooks', 'scripts', 'guard-files.mjs');
+    const { decide, globToRegExp } = await import(pathToFileURL(script).href);
+    const scopes = { 'fx-writer': ['docs/**', 'CHANGELOG.md'], 'fx-tests': ['**/test/**', '**/*.test.*'] };
+    const call = (tool, file, agent) => decide({ tool_name: tool, cwd: '/repo', agent_type: agent, tool_input: { file_path: file } }, { scopes });
+    ok(call('Read', '/repo/.env')?.decision === 'deny' && call('Edit', '/repo/app/.env.local')?.decision === 'deny'
+      && call('Read', '/repo/certs/server.pem')?.decision === 'deny', 'H3: tool file đụng .env/.env.local/.pem → deny');
+    ok(call('Read', '/repo/.env.example') === null && call('Read', '/repo/config/.env.sample') === null
+      && call('Read', '/repo/keys/id_rsa.pub') === null, 'H3: .env.example/.sample và khoá public → cho qua');
+    ok(call('Write', '/repo/docs/a.md', 'fx-writer') === null && call('Write', '/repo/CHANGELOG.md', 'plugin:fx-writer') === null,
+      'H5: ghi trong writeScope (kể cả agent_type có tiền tố plugin:) → cho qua');
+    ok(call('Write', '/repo/src/a.js', 'fx-writer')?.decision === 'deny' && call('Write', '/other/x.md', 'fx-writer')?.decision === 'deny',
+      'H5: ghi ngoài writeScope (kể cả ngoài repo) → deny');
+    ok(call('Write', '/repo/src/test/A.java', 'fx-tests') === null && call('Write', '/repo/web/a.test.ts', 'fx-tests') === null
+      && call('Edit', '/repo/src/a.ts', 'fx-tests')?.decision === 'deny', 'H5: glob test cho test-writer');
+    ok(call('Read', '/repo/src/a.js', 'fx-writer') === null, 'H5: chỉ khoá ghi, không khoá đọc');
+    ok(call('Write', '../x.md', 'fx-writer')?.decision === 'deny' && call('Write', 'docs/../src/a.js', 'fx-writer')?.decision === 'deny'
+      && call('Write', 'docs/a.md', 'fx-writer') === null, 'H5: đường dẫn tương đối và ../ được chuẩn hoá theo cwd');
+    ok(call('Write', '/repo/src/a.js') === null && call('Write', '/repo/src/a.js', 'khac') === null,
+      'H5: phiên chính hoặc agent không có writeScope → không khoá');
+    ok(globToRegExp('**/test/**').test('test/a.java') && !globToRegExp('docs/*').test('docs/a/b.md'), 'globToRegExp: **/ và *');
+    const run = (stdin) => execFileSync('node', [script], { input: stdin, encoding: 'utf8' });
+    ok(run('') === '' && run('nope') === '', 'guard-files CLI: input hỏng → exit 0, không in gì');
+    const ag = { ...fxAgent, id: 'fx-writer', mode: 'write', writeScope: ['docs/**'] };
+    const out = byPath(claudeAdapter.build([{ ...fxPlugin, agents: [ag] }], { marketplace: fxMk, core: { ...fxCore, hooksDir: path.join(CORE_DIR, 'hooks') } }));
+    const lock = JSON.parse((out.get('plugins/core/hooks/scope-lock.json') || { content: '{}' }).content);
+    ok(JSON.stringify(lock['fx-writer']) === '["docs/**"]', 'adapter: sinh scope-lock.json từ writeScope');
+    ok(!(out.get('plugins/fx/agents/fx-writer.md') || { content: '' }).content.includes('writeScope'), 'adapter: không ghi writeScope vào agent .md');
+    const { checkAgentTools } = ctx;
+    ok(checkAgentTools({ mode: 'read-only', skills: [], tools: [], writeScope: ['docs/**'] }).length === 1
+      && checkAgentTools({ mode: 'write', skills: [], tools: [], writeScope: ['docs/**'] }).length === 0, 'checkAgentTools: writeScope chỉ cho agent mode write');
+    const scoped = allAgents.filter((a) => a.writeScope.length);
+    ok(scoped.length === 5 && scoped.every((a) => a.mode === 'write'), '5 agent ghi có writeScope (H5)');
+  }
 }

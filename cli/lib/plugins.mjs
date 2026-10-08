@@ -265,6 +265,7 @@ function loadAgents(pluginDir, pluginId) {
       tools: splitList(meta.tools),
       maxTurns: typeof meta.maxTurns === 'number' ? meta.maxTurns : null,
       isolation: meta.isolation || null,
+      writeScope: splitList(meta.writeScope),
       body,
       file: path.join(dir, f),
     };
