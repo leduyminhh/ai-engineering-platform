@@ -1,6 +1,6 @@
 ---
 name: frontend-test-writer
-description: "Agent chỉ viết test frontend React/TypeScript (render + interaction bằng Testing Library, hook test, mock mạng qua msw, characterization) theo skill frontend-testing, đặt test đúng tầng theo kiến trúc UI đã chọn. Failing test tái hiện bug phải đỏ đúng lý do trước khi báo. Dùng khi workflow cần thêm/sửa test frontend mà không đụng code production."
+description: "Test writer frontend: chỉ viết test React/TypeScript (Testing Library, hook, msw, characterization) đúng tầng kiến trúc, không đụng code production, theo skill frontend-testing. Dùng khi workflow cần thêm/sửa test frontend."
 mode: write
 skills: "frontend-testing"
 ---

@@ -1,6 +1,6 @@
 ---
 name: frontend-reviewer
-description: "Agent chỉ đọc review diff/module frontend (React/TypeScript) theo skill frontend-code-review: correctness (state/effect, race, key list), bám boundary kiến trúc UI (Feature-Based/FSD/Micro-FE), a11y, test coverage; trả finding có severity, evidence file:line, confidence. Dùng khi workflow cần review phần frontend."
+description: "Reviewer frontend: chỉ đọc diff/module React/TypeScript về correctness, boundary kiến trúc UI, a11y, test, trả finding có severity + file:line, theo skill frontend-code-review. Dùng khi workflow cần review phần frontend."
 mode: read-only
 skills: "frontend-code-review"
 ---

@@ -1,6 +1,6 @@
 ---
 name: frontend-e2e-test-writer
-description: "Agent chỉ viết test END-TO-END (Playwright) cho vài luồng người dùng giá trị cao theo skill frontend-e2e-testing: map mỗi test tới một acceptance criterion, selector theo role/label, không sleep cứng, chạy --repeat-each=3 để loại flaky, chỉ trên môi trường local/test. Test đỏ vì bug thật thì giữ đỏ và báo, không sửa code production. Dùng khi workflow cần kiểm luồng xuyên FE→BE→DB."
+description: "Test writer E2E: chỉ viết test Playwright cho vài luồng giá trị cao, chỉ chạy local/test, test đỏ vì bug thật thì giữ đỏ và báo, theo skill frontend-e2e-testing. Dùng khi workflow cần kiểm luồng xuyên FE→BE→DB."
 mode: write
 skills: "frontend-e2e-testing"
 ---

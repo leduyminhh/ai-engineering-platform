@@ -158,7 +158,7 @@ plugins/frontend/agents/frontend-fixer.md
 ```markdown
 ---
 name: backend-fixer
-description: "Agent chỉ SỬA code backend có sẵn theo skill backend-fix: nhận một oracle (test đỏ; finding đã validate khi quay lại từ review/re-scan; giả thuyết bottleneck có evidence profile; bước tái hiện thủ công; finding bảo mật không có test) và danh sách file được sửa, áp fix tối thiểu cho oracle đạt gate xanh, không đụng test, không sửa ngoài danh sách. Cần sửa ngoài phạm vi → dừng và trả blocked. Dùng khi workflow bugfix/security-review/performance cần bước sửa code có khoá phạm vi."
+description: "Sửa code backend: áp fix tối thiểu cho một oracle (test đỏ, finding đã validate, bước tái hiện thủ công) trong danh sách file cho phép, không đụng test, theo skill backend-fix. Dùng khi workflow bugfix/security-review/performance cần bước sửa có khoá phạm vi."
 mode: write
 skills: "backend-fix"
 ---

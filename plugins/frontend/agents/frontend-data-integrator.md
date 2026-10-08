@@ -1,6 +1,6 @@
 ---
 name: frontend-data-integrator
-description: "Agent nối UI React đã dựng với API THẬT theo contract OpenAPI (skill frontend-data-integration): dùng type sinh từ docs/contracts bằng codegen sẵn có của project, tạo data hook đúng tầng kiến trúc (Feature-Based/FSD/Micro-FE), nối ở container/page (không sửa presentational), xử lý loading/error/empty/success, map DTO→view model ở biên. Không đổi contract; lệch contract thì dừng và báo drift. tsc/lint/build phải xanh trước khi trả. Dùng khi workflow cần nối data cho màn hình đã có."
+description: "Data integrator frontend: nối UI React đã dựng với API thật theo contract OpenAPI (type sinh từ contract, data hook ở container/page), lệch contract thì dừng, theo skill frontend-data-integration. Dùng khi workflow cần nối data cho màn hình đã có."
 mode: write
 skills: "frontend-data-integration"
 ---

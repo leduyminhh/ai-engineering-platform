@@ -1,6 +1,6 @@
 ---
 name: backend-implementer
-description: "Agent sinh MỘT vertical slice backend (aggregate + use-case + driven port + adapter) từ use-case/feature/contract theo skill backend-implement, và chốt/đồng bộ API contract theo backend-api-contract khi slice có endpoint. Bám kiến trúc đã chọn trong project-knowledge/architecture.md, build phải xanh trước khi trả. Dùng khi workflow cần hiện thực một slice backend cụ thể."
+description: "Hiện thực backend: sinh một vertical slice (aggregate, use-case, port, adapter) theo kiến trúc đã chọn và chốt API contract khi có endpoint, theo skill backend-implement. Dùng khi workflow cần hiện thực một slice backend cụ thể."
 mode: write
 skills: "backend-implement,backend-api-contract"
 ---

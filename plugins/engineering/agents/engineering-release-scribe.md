@@ -1,6 +1,6 @@
 ---
 name: engineering-release-scribe
-description: "Agent viết changelog + release notes hướng người dùng từ lịch sử git đã gom (theo skill engineering-release-notes): phân nhóm New/Improvements/Fixes/Breaking/Security, lọc churn nội bộ, nêu breaking change kèm cách migrate. Chỉ ghi docs/ và CHANGELOG.md, không tag/push. Dùng khi workflow cần soạn nội dung phát hành sau khi git-workflow đã gom lịch sử."
+description: "Người soạn release notes: viết changelog hướng người dùng từ lịch sử git đã gom, chỉ ghi docs/ và CHANGELOG.md, theo skill engineering-release-notes. Dùng khi workflow cần soạn nội dung phát hành sau khi git-workflow gom lịch sử."
 mode: write
 skills: "engineering-release-notes"
 ---

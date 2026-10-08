@@ -1,6 +1,6 @@
 ---
 name: backend-reviewer
-description: "Agent chỉ đọc review diff/module backend (Java/Spring, Python) theo skill backend-code-review và kiểm drift contract↔code theo backend-api-contract; trả finding có severity, evidence file:line, confidence. Dùng khi workflow cần review phần backend."
+description: "Reviewer backend: chỉ đọc diff/module Java/Spring, Python và kiểm drift contract↔code, trả finding có severity + file:line theo skill backend-code-review. Dùng khi workflow cần review phần backend."
 mode: read-only
 skills: "backend-code-review,backend-api-contract"
 ---

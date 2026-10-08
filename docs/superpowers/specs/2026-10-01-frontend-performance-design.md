@@ -162,7 +162,7 @@ bảng điều kiện của Bước 2.
 ```markdown
 ---
 name: frontend-performance-analyst
-description: "Agent đo và profile hiệu năng FRONTEND theo skill frontend-performance: chế độ measure chốt bảng điều kiện đo, build và phục vụ bản production ở local, chạy Lighthouse/đo bundle ≥3 lần, ghi median LCP/TBT/CLS, kích thước bundle và độ lệch; chế độ profile tìm bottleneck theo thứ tự bundle → render (React Profiler) → main thread (trace) có evidence và đề xuất danh sách file cho frontend-fixer. Chỉ ghi perf/, bench/ và config tool đo; không sửa code hay test; chỉ chạy trên local/test. Dùng khi workflow-performance cần Baseline, Profile hoặc Benchmark cho phía frontend."
+description: "Phân tích hiệu năng frontend: đo ≥3 lần median LCP/TBT/CLS + bundle hoặc profile bottleneck, chỉ ghi perf/, bench/, config đo, chạy local/test, theo skill frontend-performance. Dùng khi workflow-performance cần Baseline, Profile hoặc Benchmark phía frontend."
 mode: write
 skills: "frontend-performance"
 ---

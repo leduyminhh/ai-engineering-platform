@@ -1,6 +1,6 @@
 ---
 name: backend-test-writer
-description: "Agent chỉ viết test backend (unit lõi mock/fake port, integration adapter, web slice controller, characterization) theo skill backend-testing, đặt test đúng tầng theo kiến trúc đã chọn. Failing test tái hiện bug phải đỏ đúng lý do trước khi báo. Dùng khi workflow cần thêm/sửa test backend mà không đụng code production."
+description: "Test writer backend: chỉ viết test (unit, integration, web slice, characterization) đúng tầng kiến trúc, không đụng code production, theo skill backend-testing. Dùng khi workflow cần thêm/sửa test backend."
 mode: write
 skills: "backend-testing"
 ---
