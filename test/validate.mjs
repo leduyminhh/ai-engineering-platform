@@ -19,7 +19,7 @@ import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse, WHEN_TO_USE_MAX } from '../adapters/_shared/lib.mjs';
 import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
-import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml } from '../cli/lib/conventions.mjs';
+import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
 import { hashDir, currentVersions, planLock, lockDecision, diffLock, readLock } from '../cli/lib/versions.mjs';
 import { parseClaudePluginList } from '../cli/lib/install.mjs';
@@ -2042,7 +2042,8 @@ if (fs.existsSync(BUILD)) {
     return first.startsWith(kept) && [', ', '; ', ' — ', ': '].some((b) => first.startsWith(b, kept.length));
   });
   // Cắt theo từ cũng có thể tình cờ dừng trước dấu phẩy, nên đòi đa số thay vì "ít nhất một".
-  ok(cut26.length > 0 && atClause26.length * 2 >= cut26.length,
+  // Sau khi viết lại description (câu đầu ≤ 200) có thể không còn dòng nào bị cắt; khi đó không có gì để đo.
+  ok(cut26.length === 0 || atClause26.length * 2 >= cut26.length,
     `whenToUse: đa số dòng thật bị cắt dừng sau trọn mệnh đề (${atClause26.length}/${cut26.length})`);
   const unbalanced26 = all26.filter((s) => !parenBalanced(whenToUse(s))).map((s) => s.id);
   ok(unbalanced26.length === 0, `whenToUse: mọi dòng "Khi nào dùng" cân ngoặc${unbalanced26.length ? ' — ' + unbalanced26.join(', ') : ''}`);
@@ -2538,6 +2539,45 @@ if (fs.existsSync(BUILD)) {
   const sample = 'Installed plugins:\n\n  ❯ backend@ai-engineering-platform\n    Version: 1.2.0\n    Scope: user\n    Status: ✔ enabled\n\n  ❯ feature-dev@claude-plugins-official\n    Version: 2a8ad9f74633\n\n  ❯ workflows@ai-engineering-platform\n    Version: 1.0.0\n    Status: ✘ failed to load\n';
   ok(JSON.stringify(parseClaudePluginList(sample, 'ai-engineering-platform')) === '[{"id":"backend","version":"1.2.0"},{"id":"workflows","version":"1.0.0"}]',
     'parseClaudePluginList: lấy đúng plugin của marketplace + version');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 35. Phase 1: mẫu description skill/agent — áp dần theo plugin (spec 2026-10-07 audit S1, W4 / P1.1, P1.2)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const good35 = 'Review diff backend theo correctness, kiến trúc và test. Dùng khi người dùng muốn "review code backend", "review PR backend", "đọc soát PR". Không dùng khi cần quét bảo mật → engineering-quality-gate.';
+  ok(checkDescriptionStyle(good35).length === 0, 'checkDescriptionStyle: mẫu chuẩn hợp lệ');
+  ok(checkDescriptionStyle(`${'a'.repeat(205)}. Dùng khi người dùng muốn "x", "y", "z". Không dùng khi k → a-b.`).some((e) => e.includes('câu đầu')),
+    'checkDescriptionStyle: câu đầu > 200 ký tự → lỗi');
+  ok(checkDescriptionStyle('Làm A. Dùng khi người dùng muốn "x", "y". Không dùng khi k → a-b.').some((e) => e.includes('trigger')),
+    'checkDescriptionStyle: < 3 trigger → lỗi');
+  ok(checkDescriptionStyle('Làm A. Dùng khi người dùng muốn "a", "b", "c", "d", "e", "f", "g". Không dùng khi k → a-b.').some((e) => e.includes('trigger')),
+    'checkDescriptionStyle: > 5 trigger → lỗi');
+  ok(checkDescriptionStyle('Recipe on-demand: làm A. Dùng khi người dùng muốn "x", "y", "z". Không dùng khi k → a-b.').some((e) => e.includes('boilerplate')),
+    'checkDescriptionStyle: cụm boilerplate → lỗi');
+  ok(checkDescriptionStyle('Làm A. Khi người dùng muốn "x", "y", "z". Không dùng khi k → a-b.').some((e) => e.includes('Dùng khi')),
+    'checkDescriptionStyle: thiếu "Dùng khi" → lỗi');
+  ok(checkDescriptionStyle(`${good35}${' thêm'.repeat(100)}`).some((e) => e.includes(`${DESCRIPTION_TARGET}`)),
+    'checkDescriptionStyle: vượt DESCRIPTION_TARGET → lỗi');
+  ok(checkAgentDescription('Reviewer backend: đọc diff, trả finding có severity theo skill backend-code-review. Dùng khi workflow cần review phần backend.').length === 0,
+    'checkAgentDescription: mẫu chuẩn hợp lệ');
+  ok(checkAgentDescription(`${'a'.repeat(270)}. Dùng khi x.`).some((e) => e.includes(`${AGENT_DESCRIPTION_MAX}`)), 'checkAgentDescription: quá dài → lỗi');
+  ok(checkAgentDescription('Agent làm X. Không được: a, b, c.').some((e) => e.includes('Dùng khi')), 'checkAgentDescription: thiếu "Dùng khi" → lỗi');
+
+  const STYLE_READY = new Set([]); // Task 2–4 thêm plugin đã viết lại; Task 8 thay bằng tất cả
+  const AGENT_STYLE_READY = new Set([]);
+  for (const p of [core, ...plugins]) {
+    if (!STYLE_READY.has(p.id)) continue;
+    for (const s of p.stages) {
+      const errs = checkDescriptionStyle(s.description);
+      ok(errs.length === 0, `${s.id}: description theo mẫu Phase 1${errs.length ? ' — ' + errs.join('; ') : ''}`);
+    }
+  }
+  for (const a of allAgents) {
+    if (!AGENT_STYLE_READY.has(a.id)) continue;
+    const errs = checkAgentDescription(a.description);
+    ok(errs.length === 0, `${a.id}: description agent theo mẫu Phase 1${errs.length ? ' — ' + errs.join('; ') : ''}`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

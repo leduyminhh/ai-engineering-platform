@@ -92,3 +92,38 @@ export function checkFrontmatterYaml(fmText) {
   }
   return errs;
 }
+
+// Mẫu description Phase 1: câu hành động ngắn → "Dùng khi" 3–5 trigger → "Không dùng khi → id".
+// Câu đầu ≤ 200 vì adapter cắt dòng mục lục ở WHEN_TO_USE_MAX; boilerplate là phần mô hình suy ra được, chỉ tốn context.
+export const DESCRIPTION_TARGET = 500;
+export const AGENT_DESCRIPTION_MAX = 260;
+export const FIRST_SENTENCE_MAX = 200;
+export const BOILERPLATE = ['kể cả khi không nói chính xác', 'Recipe on-demand', 'Skill capability', 'Skill vận hành',
+  'KHÔNG thuộc pipeline', 'Gọi khi cần'];
+
+function firstSentence(desc) {
+  const d = desc.trim().replace(/\s+/g, ' ');
+  const m = d.match(/^(.*?[.。])\s/);
+  return m ? m[1] : d;
+}
+
+export function checkDescriptionStyle(desc, { max = DESCRIPTION_TARGET, minTriggers = 3, maxTriggers = 5 } = {}) {
+  const errs = [];
+  const len = [...desc].length;
+  if (len > max) errs.push(`dài ${len} ký tự (mục tiêu ≤ ${max})`);
+  const first = [...firstSentence(desc)].length;
+  if (first > FIRST_SENTENCE_MAX) errs.push(`câu đầu ${first} ký tự (≤ ${FIRST_SENTENCE_MAX})`);
+  const n = new Set(quotedPhrases(desc)).size;
+  if (n < minTriggers || n > maxTriggers) errs.push(`${n} trigger (cần ${minTriggers}–${maxTriggers})`);
+  for (const b of BOILERPLATE) if (desc.includes(b)) errs.push(`còn boilerplate "${b}"`);
+  if (!desc.includes('Dùng khi')) errs.push('thiếu "Dùng khi"');
+  return errs;
+}
+
+export function checkAgentDescription(desc) {
+  const errs = [];
+  const len = [...desc].length;
+  if (len > AGENT_DESCRIPTION_MAX) errs.push(`dài ${len} ký tự (≤ ${AGENT_DESCRIPTION_MAX})`);
+  if (!desc.includes('Dùng khi')) errs.push('thiếu "Dùng khi"');
+  return errs;
+}
