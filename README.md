@@ -295,6 +295,8 @@ aip list                  # discovered adapters + plugins
 - Providers installed by default: `claude`, `cursor`, `codex`. `antigravity` builds
   but installs only when named explicitly (`--provider antigravity`).
 
+`aip build` keeps draft skills out of the Claude marketplace: they are written to `build/claude/drafts/<plugin>/…`, still installable with `--plugin`/`--skill`. Pass `--include-draft` (`node cli/build.mjs --include-draft`) to build them into the plugin tree as before.
+
 State for every install lives in `<scope-root>/.ai-engineering/manifest.json`.
 
 ## Provider Outputs

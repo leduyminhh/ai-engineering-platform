@@ -289,6 +289,8 @@ aip list                  # adapter + plugin phát hiện được
 - Provider cài mặc định: `claude`, `cursor`, `codex`. `antigravity` có build nhưng chỉ cài
   khi gọi tường minh (`--provider antigravity`).
 
+`aip build` không đưa skill draft vào marketplace của Claude: chúng được ghi vào `build/claude/drafts/<plugin>/…` và vẫn cài được bằng `--plugin`/`--skill`. Thêm `--include-draft` (`node cli/build.mjs --include-draft`) để build draft vào cây plugin như trước.
+
 State mỗi lần cài nằm ở `<scope-root>/.ai-engineering/manifest.json`.
 
 ## Đầu ra theo provider

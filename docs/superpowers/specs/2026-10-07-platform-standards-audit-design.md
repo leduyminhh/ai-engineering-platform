@@ -198,6 +198,8 @@ P1.6 temp-dir `try/finally` trong install.test.mjs và P1.4 rút Evidence trùng
 | P2.5 | Marketplace lọc draft theo `_published.json` (cờ `--include-draft`); plugin.json thêm `homepage/repository/license`, `keywords` riêng; marketplace `owner.email/url`, `renames` | E8, E9 |
 | P2.6 | Workflow risk ≥ high: `[Đề xuất]` giữ model-invocable nhưng thêm `argument-hint` + gate xác nhận ⏸ đầu (vì `disable-model-invocation` ẩn description → orchestrator không route được); tách nhánh hiếm sang `workflows/<slug>/references/` (adapter copy) | W5, W6 |
 
+Thực thi 2026-10-08: R1 không tách when_to_use; R2 không đặt disallowed-tools cho skill (đều có chế độ ghi tuỳ chọn); R3 preload chỉ skill chính; R5 không permissionMode/isolation mặc định (xem plan 2026-10-08-standards-phase2).
+
 ### Phase 3 — Hooks, eval, phân phối (M–L)
 
 | # | Việc | Giải quyết |
