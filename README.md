@@ -120,7 +120,7 @@ lives in `plugins/_published.json` — each entry is either a whole plugin (`bac
 a single skill (`frontend/frontend-init`); the wizard offers only what is listed (from source;
 the npm package ships core only), and
 `npm run build` writes `build/wizard-install-report.md`. Skills of a plugin that are not
-published (e.g. the `data-oltp-*` / `data-olap-*` skills) stay drafts, installable via `--plugin`/`--skill`, or `aip --all` in the wizard.
+published (e.g. the `data-oltp-*` / `data-olap-*` skills) stay drafts, installable via `--plugin`/`--skill`, or `aip --all` in the wizard (skills mode only).
 
 | Plugin | Capability | Skills |
 | --- | --- | --- |
@@ -295,7 +295,7 @@ aip list                  # discovered adapters + plugins
 - Providers installed by default: `claude`, `cursor`, `codex`. `antigravity` builds
   but installs only when named explicitly (`--provider antigravity`).
 
-`aip build` keeps draft skills out of the Claude marketplace: they are written to `build/claude/drafts/<plugin>/…`, still installable with `--plugin`/`--skill`. Pass `--include-draft` (`node cli/build.mjs --include-draft`) to build them into the plugin tree as before.
+`aip build` keeps draft skills out of the Claude marketplace: they are written to `build/claude/drafts/<plugin>/…`, still installable with `--plugin`/`--skill` (skills mode only — `--as-plugin` installs the marketplace plugin, which has no draft skills). Pass `--include-draft` (`node cli/build.mjs --include-draft`) to build them into the plugin tree as before.
 
 State for every install lives in `<scope-root>/.ai-engineering/manifest.json`.
 

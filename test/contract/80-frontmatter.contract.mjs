@@ -88,6 +88,10 @@ export default async function run({ ok, ctx }) {
       let msg = '';
       try { loadSkillsFrom(dir); } catch (e) { msg = String(e.message); }
       ok(msg.includes('runin') && msg.includes('SKILL.md'), 'loader: khoá frontmatter lạ → ném lỗi nêu khoá + file');
+      fs.writeFileSync(path.join(dir, 'skills', 'demo', 'SKILL.md'), '---\nname: demo\nargument-hint: [PR]\n---\nx\n');
+      msg = '';
+      try { loadSkillsFrom(dir); } catch (e) { msg = String(e.message); }
+      ok(msg.includes('argument-hint') && msg.includes('SKILL.md'), 'loader: argument-hint không quote (thành list) → ném lỗi nêu khoá + file');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -177,5 +181,21 @@ export default async function run({ ok, ctx }) {
     for (const a of allAgents.filter((x) => x.plugin === 'ops')) {
       ok(!a.tools.includes('Bash'), `${a.id}: không có Bash (chỉ đề xuất lệnh)`);
     }
+  }
+
+  // Agent dùng skill draft: nhánh adapter agent → drafts/ (build thật không có agent nào kích hoạt nhánh này)
+  {
+    const { claudeAdapter, fxPlugin, fxAgent, fxCore, fxMk, byPath } = ctx;
+    const mkStage = (id) => ({ id, title: '', description: `Fixture ${id}. Dùng khi người dùng muốn "a", "b", "c". Không dùng khi x → fx-other.`,
+      body: '## Quy trình\nx\n', passthrough: {}, assets: [], fileAssets: [], dirAssets: [], assetsDir: '' });
+    const fx = { ...fxPlugin, stages: [mkStage('a'), mkStage('b')], agents: [{ ...fxAgent, skills: ['fx/b'] }] };
+    const split = byPath(claudeAdapter.build([fx], { marketplace: fxMk, core: fxCore, published: { fx: ['fx/a'] } }));
+    ok(split.has('plugins/fx/skills/a/SKILL.md') && !split.has('drafts/fx/skills/a/SKILL.md'), 'claude published: skill published nằm ở plugins/');
+    ok(split.has('drafts/fx/skills/b/SKILL.md') && !split.has('plugins/fx/skills/b/SKILL.md'), 'claude published: skill draft nằm ở drafts/');
+    ok(split.has('drafts/fx/agents/fx-reviewer.md') && !split.has('plugins/fx/agents/fx-reviewer.md'),
+      'claude published: agent dùng skill draft nằm ở drafts/, không vào marketplace');
+    const all = byPath(claudeAdapter.build([fx], { marketplace: fxMk, core: fxCore, published: null }));
+    ok(all.has('plugins/fx/skills/b/SKILL.md') && all.has('plugins/fx/agents/fx-reviewer.md')
+      && ![...all.keys()].some((k) => k.startsWith('drafts/')), 'claude published=null: mọi skill/agent nằm ở plugins/');
   }
 }

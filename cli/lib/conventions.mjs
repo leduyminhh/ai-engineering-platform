@@ -83,7 +83,7 @@ const QUOTED = /^"(?:[^"\\]|\\.)*"$/;
 
 export function checkFrontmatterYaml(fmText) {
   const errs = [];
-  let parent = null; // khoá vừa mở khối con (giá trị rỗng)
+  let parent = null;
   const checkValue = (key, v) => {
     if (v.startsWith('"')) { if (!QUOTED.test(v)) errs.push(`${key}: chuỗi quote không đóng hoặc escape sai`); return; }
     if (PLAIN_UNSAFE_VALUE.test(v)) errs.push(`${key}: plain scalar không an toàn ("${v.slice(0, 30)}")`);

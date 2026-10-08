@@ -143,7 +143,7 @@ export function managedFilesToClean(removeEntries, keepEntries) {
 
 // ── build ensure ─────────────────────────────────────────────────────────────
 export function ensureBuilt(provider) {
-  execFileSync('node', ['cli/build.mjs', '--target', provider], { cwd: REPO_ROOT, stdio: 'ignore' });
+  execFileSync('node', ['cli/build.mjs', '--target', provider], { cwd: REPO_ROOT, stdio: ['ignore', 'ignore', 'inherit'] });
 }
 
 // ── claude plugin-mode (cài THẬT như plugin qua `claude` CLI, không phải skills phẳng) ───────
@@ -465,6 +465,29 @@ export function pluginsFromSelection({ plugins = [], skills = [] } = {}) {
   return [...out];
 }
 
+/**
+ * PURE: skill nguồn chưa published (draft) trong danh sách `plugin/skill`. core/workflows không bao giờ
+ * draft; published=null → không giới hạn. Plugin-mode chỉ cài bản marketplace nên các skill này bị rơi.
+ */
+export function draftSkillsIn(skillIds, published) {
+  if (!published) return [];
+  return skillIds.filter((sid) => {
+    const plug = sid.split('/')[0];
+    if (plug === 'core' || plug === 'workflows') return false;
+    const sel = published[plug];
+    return sel !== '*' && !(Array.isArray(sel) && sel.includes(sid));
+  });
+}
+
+/** Cảnh báo skill draft bị rơi khi cài/làm mới plugin-mode (marketplace chỉ chứa skill published). */
+function warnDraftSkillsDropped({ plugins = [], skills = [] }) {
+  const ids = [...new Set([...plugins.flatMap(allSkillsOf), ...skills])];
+  const drafts = draftSkillsIn(ids, loadPublished());
+  if (!drafts.length) return;
+  console.warn(`[aip] claude plugin-mode KHÔNG chứa skill draft: ${drafts.join(', ')}. ` +
+    'Các skill này chỉ có ở chế độ skills: aip install --provider claude --skill <plugin/skill> (không dùng --as-plugin).');
+}
+
 /** Tập `plugin/skill` để LỌC đặt file: core/principles ép bật; khối mở rộng theo kit HIỆN TẠI;
  *  skill lẻ cố định; MỌI plugin active kèm generated `<id>-principles` (baseline, không có trong loadSkills). */
 export function effectiveSkills(entry, { withDeps = true } = {}) {
@@ -671,6 +694,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
       // lựa chọn (khối + plugin của skill lẻ); loại core — core tự kéo qua dependency, không cài tường minh.
       const sel = resolveSelection({ plugins, skills });
       const inferred = pluginsFromSelection(sel).filter((id) => id !== 'core');
+      warnDraftSkillsDropped({ plugins: inferred, skills: sel.skills });
       if ((sel.skills || []).length) {
         console.warn('[aip] claude --as-plugin cài NGUYÊN plugin (không tách skill). ' +
           `Cài cả: ${inferred.join(', ')}. Dùng mode skills nếu muốn chọn lẻ.`);
@@ -883,6 +907,7 @@ export function update({ scope = 'project', pull = true, providers, plugins, ski
       try {
         // KHÔNG dùng install-semantics (marketplace add + plugin install đều no-op khi đã cài cùng
         // version → cache giữ bản cũ). Phải FORCE: marketplace update + uninstall/install từng plugin.
+        warnDraftSkillsDropped({ plugins: e.plugins });
         const cmd = claudePluginRefreshCommands({
           pluginIds: e.plugins, scope, marketplaceName: e.marketplace || loadMarketplace().name,
         });

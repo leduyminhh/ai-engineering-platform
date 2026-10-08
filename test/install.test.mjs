@@ -19,7 +19,8 @@ process.env.AIE_INSTALL_ROOT = TMP;
 const { install, uninstall, update, check, linkDisabledForRoot, claudePluginCommands,
   claudePluginRefreshCommands, claudeCliScope, marketplacesToRemove,
   skillCatalog, allSkillsOf, resolveSelection, effectiveSkills, pluginsFromSelection,
-  normFilter, entryMatches, offeredCatalog, publishedPluginIds, stripUnsupportedWorkflows, shouldGitPull } =
+  normFilter, entryMatches, offeredCatalog, publishedPluginIds, stripUnsupportedWorkflows, shouldGitPull,
+  draftSkillsIn } =
   await import('../cli/lib/install.mjs');
 const { zipBuffer, coworkSkillIds, coworkBuildSet, pack } = await import('../cli/lib/pack.mjs');
 const { wizardReportModel, renderWizardReportMd } = await import('../cli/lib/report.mjs');
@@ -294,6 +295,17 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     'pluginsFromSelection: gộp plugin của khối + plugin của skill lẻ, dedup');
 }
 
+// ── plugin-mode: nhận diện skill draft sẽ bị rơi khỏi plugin cài (PURE) ──────────
+{
+  const pub = { data: ['data/data-db-migration'], backend: '*' };
+  const d = draftSkillsIn(['data/data-oltp-init', 'data/data-db-migration', 'backend/backend-init',
+    'core/git-workflow', 'workflows/workflow-feature', 'ops/ops-observability'], pub);
+  ok(d.length === 2 && d.includes('data/data-oltp-init') && d.includes('ops/ops-observability'),
+    'draftSkillsIn: chỉ trả skill chưa published (plugin vắng khỏi published = draft; core/workflows không bao giờ draft)');
+  ok(draftSkillsIn(['data/data-oltp-init'], null).length === 0, 'draftSkillsIn: published=null → không có draft');
+  ok(draftSkillsIn(['backend/backend-x'], pub).length === 0, "draftSkillsIn: plugin published '*' → không draft");
+}
+
 // ── unit: effectiveSkills (PURE) — ép core/principles + generated <id>-principles + compat ──
 {
   // entry nguyên khối backend
@@ -355,7 +367,9 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   const TMP_D = mkTmp('cwf-draft-');
   process.env.AIE_INSTALL_ROOT = TMP_D;
   try {
-    install({ providers: 'claude', skills: ['data/data-oltp-init'], scope: 'project' });
+    const a = parse(['install', '--provider', 'claude', '--skill', 'data/data-oltp-init']);
+    const plugins = (a.skill.length && !a.pluginExplicit) ? [] : a.plugin;
+    install({ providers: a.provider, plugins, skills: a.skill, scope: 'project', mode: a.mode });
     ok(fs.existsSync(path.join(TMP_D, '.claude', 'skills', 'data-oltp-init', 'SKILL.md')),
       'install claude skills-mode: cài được skill draft từ drafts/');
     ok(!fs.existsSync(path.join(TMP_D, '.claude', 'skills', 'data-db-migration', 'SKILL.md')),
