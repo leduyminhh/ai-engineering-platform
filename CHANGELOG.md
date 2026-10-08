@@ -25,7 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   descriptions were rewritten to fit with their trigger lists kept (12 of them were already over the 1024-character limit of the earlier standardization).
 - Skill descriptions rewritten to a fixed template (action → "Dùng khi" triggers → "Không dùng khi → id"),
   ≤ 450 chars; agent descriptions ≤ 260 — skill descriptions 31,511 → 15,120 chars, agent descriptions
-  7,506 → 4,232 chars (always-on tokens to be re-measured with `claude plugin details` after install).
+  7,506 → 4,232 chars; `claude plugin details` always-on estimate for `engineering` ~1,968 → ~1,001 tokens
+  (after install: core ~177, backend ~1,537, frontend ~1,680, ops ~538, workflows ~1,471).
 - 7 workflow descriptions shortened to ≤ 500 chars (triggers and → ids kept).
 - Skills no longer force-load the principles skills on every call; a 3-line principles digest is
   embedded instead (full text on demand).
