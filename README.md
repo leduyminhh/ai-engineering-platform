@@ -299,6 +299,25 @@ aip list                  # discovered adapters + plugins
 
 State for every install lives in `<scope-root>/.ai-engineering/manifest.json`.
 
+## Distribution
+
+Two ways to get the Claude content into a project:
+
+- **Plugin-mode — the standard Claude path.** `aip install --provider claude --as-plugin` (or add the marketplace yourself) installs real plugins, namespaced `<id>:<skill>`. Only plugin-mode carries the core **hooks** (`${CLAUDE_PLUGIN_ROOT}` exists only for installed plugins).
+- **Skills-mode** — flat `.claude/skills/`. Use it to pick individual skills, or to bundle skills for Cowork (`aip pack`). It installs **no hooks**.
+
+Do not install the same plugin in both modes: every skill would appear twice. `aip install` in skills-mode now warns when `claude plugin list` shows a selected plugin already installed from this marketplace (the check is skipped when `AIE_INSTALL_ROOT` is set, and silently when `claude` is not on PATH).
+
+Publishing the marketplace from a git branch (maintainer):
+
+```bash
+node cli/dist.mjs --dry-run   # build, then print the file list and commit message only
+node cli/dist.mjs             # build, then commit build/claude (minus drafts/) to the LOCAL branch `dist`
+git push origin dist          # your decision — the script never pushes
+```
+
+Users then add it with `claude plugin marketplace add <owner>/<repo>@dist`. [Unverified] Installing the marketplace from a branch ref has not been tried end to end yet; check it once after the first push.
+
 ## Provider Outputs
 
 `aip build` writes one tree per provider under `build/<provider>/`:

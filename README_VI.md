@@ -293,6 +293,25 @@ aip list                  # adapter + plugin phát hiện được
 
 State mỗi lần cài nằm ở `<scope-root>/.ai-engineering/manifest.json`.
 
+## Phân phối
+
+Có hai cách đưa nội dung Claude vào một project:
+
+- **Plugin-mode — đường chuẩn cho Claude.** `aip install --provider claude --as-plugin` (hoặc tự thêm marketplace) cài plugin thật, đặt tên `<id>:<skill>`. Chỉ plugin-mode mang **hook** của core (`${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài).
+- **Skills-mode** — `.claude/skills/` phẳng. Dùng khi muốn chọn lẻ từng skill hoặc đóng gói skill cho Cowork (`aip pack`). Chế độ này **không cài hook**.
+
+Không cài cùng một plugin ở cả hai chế độ: mỗi skill sẽ hiện hai lần. `aip install` ở skills-mode nay cảnh báo khi `claude plugin list` cho thấy plugin được chọn đã cài từ marketplace này (bỏ qua khi đặt `AIE_INSTALL_ROOT`, và bỏ qua im lặng khi không có `claude` trên PATH).
+
+Phát hành marketplace từ một branch git (maintainer):
+
+```bash
+node cli/dist.mjs --dry-run   # build rồi chỉ in danh sách file và commit message
+node cli/dist.mjs             # build rồi commit build/claude (trừ drafts/) vào branch CỤC BỘ `dist`
+git push origin dist          # do bạn quyết định — script không bao giờ push
+```
+
+Người dùng thêm marketplace bằng `claude plugin marketplace add <owner>/<repo>@dist`. [Unverified] Việc cài marketplace từ ref là branch chưa được thử đầu-cuối; hãy kiểm một lần sau lần push đầu tiên.
+
 ## Đầu ra theo provider
 
 `aip build` ghi một cây cho mỗi provider dưới `build/<provider>/`:

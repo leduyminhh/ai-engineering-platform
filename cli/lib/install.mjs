@@ -263,6 +263,29 @@ export function parseClaudePluginJson(text, marketplaceName) {
     .map((r) => ({ id: r.id.slice(0, -(`@${marketplaceName}`.length)), version: r.version || null }));
 }
 
+/** Thuần: plugin vừa đã cài dạng plugin vừa nằm trong lựa chọn skills-mode (theo thứ tự lựa chọn, không trùng). */
+export function claudePluginOverlap(installedIds, selectedPluginIds) {
+  const installed = new Set(installedIds || []);
+  return [...new Set(selectedPluginIds || [])].filter((id) => installed.has(id));
+}
+
+/** Cảnh báo (không chặn) khi skills-mode sắp cài skill của plugin đã cài dạng plugin → skill hiện hai lần. */
+function warnClaudePluginDuplicates(effSet) {
+  if (process.env.AIE_INSTALL_ROOT) return; // test cô lập: không hỏi claude CLI thật
+  let installed = [];
+  try {
+    const j = runClaudeCli(['plugin', 'list', '--json'], { tolerate: true, timeout: 15000 });
+    if (!j.ok) return;
+    installed = (parseClaudePluginJson(j.out, loadMarketplace().name) || []).map((e) => e.id);
+  } catch { return; } // không có CLI → bỏ qua im lặng
+  const selected = [...new Set([...effSet].map((sid) => sid.split('/')[0]))];
+  const dup = claudePluginOverlap(installed, selected);
+  if (dup.length) {
+    console.warn(`[aip] đã cài dạng plugin: ${dup.join(', ')} — skill sẽ xuất hiện hai lần; gỡ một trong hai ` +
+      `(claude plugin uninstall <id>@${loadMarketplace().name}, hoặc aip uninstall).`);
+  }
+}
+
 /** Đối chiếu version plugin đã cài trong Claude Code với nguồn; không có CLI → available=false, không ném. */
 function claudeDoctor() {
   const mkt = loadMarketplace().name;
@@ -728,6 +751,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     if (miss.length) throw new Error(`Workflow cần skill không có trong bản cài nguồn: ${miss.join(', ')}`);
     uninstallEntries(m, root, (e) => e.provider === provider); // gỡ bản cũ cùng (provider,scope) rồi cài lại UNION
     const effSet = effectiveSkills(entry);
+    if (provider === 'claude') warnClaudePluginDuplicates(effSet);
     const { files, links } = installOne(provider, effSet, scope);
     const rel = (arr) => arr.map((f) => path.relative(root, f).split(path.sep).join('/'));
     const relF = rel(files), relL = rel(links);
