@@ -20,4 +20,30 @@ export default async function run({ ok, ctx }) {
         `${u.id}: hook không lọt sang codex/cursor`);
     }
   }
+  {
+    const { pathToFileURL, execFileSync, CORE_DIR } = ctx;
+    const script = path.join(CORE_DIR, 'hooks', 'scripts', 'guard-bash.mjs');
+    const { decide } = await import(pathToFileURL(script).href);
+    const on = (branch) => ({ currentBranch: () => branch });
+    const bash = (command) => ({ tool_name: 'Bash', cwd: '.', tool_input: { command } });
+    const d = (cmd, br = 'feature/x') => decide(bash(cmd), on(br));
+    ok(d('git push origin main')?.decision === 'ask', 'H1: push main → ask');
+    ok(d('git add . && git push origin develop')?.decision === 'ask', 'H1: lệnh ghép push develop → ask');
+    ok(d('git -C repo push origin master')?.decision === 'ask', 'H1: git -C … push master → ask');
+    ok(d('git push origin HEAD', 'main')?.decision === 'ask' && d('git push', 'dev')?.decision === 'ask', 'H1: HEAD/không refspec khi đang ở nhánh bảo vệ → ask');
+    ok(d('git push origin feature:main')?.decision === 'ask', 'H1: src:dst vào main → ask');
+    ok(d('git push --force origin feature/x')?.decision === 'ask' && d('git push origin +feature/x')?.decision === 'ask'
+      && d('git push origin --delete feature/x')?.decision === 'ask', 'H1: force/+ref/delete → ask');
+    ok(d('git push -u origin feature/x') === null && d('git push') === null, 'H1: push nhánh feature → không quyết định');
+    ok(d('git commit -m "sửa lỗi"')?.decision === 'deny' && d('git commit -m "fix bug"') === null && d('git commit -F msg.txt') === null,
+      'H2: -m có dấu → deny; -m ASCII và -F → cho qua');
+    ok(d('cat .env')?.decision === 'ask' && d('source ./.env.local')?.decision === 'ask' && d('cat certs/server.pem')?.decision === 'ask',
+      'H3: Bash đụng file bí mật → ask');
+    ok(d('cp .env.example .env.example.bak') === null && d('ls -la') === null, 'H3: .env.example và lệnh thường → cho qua');
+    const run = (stdin) => execFileSync('node', [script], { input: stdin, encoding: 'utf8' });
+    ok(run('') === '' && run('{bad json') === '' && run('{}') === '', 'guard-bash CLI: input rỗng/hỏng → exit 0, không in gì (fail-open)');
+    const out = JSON.parse(run(JSON.stringify(bash('git commit -m "thêm"'))) || '{}');
+    ok(out.hookSpecificOutput?.hookEventName === 'PreToolUse' && out.hookSpecificOutput?.permissionDecision === 'deny'
+      && /-F/.test(out.hookSpecificOutput?.permissionDecisionReason || ''), 'guard-bash CLI: in JSON hookSpecificOutput deny + hướng dẫn -F');
+  }
 }
