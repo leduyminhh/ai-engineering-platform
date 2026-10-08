@@ -2564,7 +2564,7 @@ if (fs.existsSync(BUILD)) {
   ok(checkAgentDescription(`${'a'.repeat(270)}. Dùng khi x.`).some((e) => e.includes(`${AGENT_DESCRIPTION_MAX}`)), 'checkAgentDescription: quá dài → lỗi');
   ok(checkAgentDescription('Agent làm X. Không được: a, b, c.').some((e) => e.includes('Dùng khi')), 'checkAgentDescription: thiếu "Dùng khi" → lỗi');
 
-  const STYLE_READY = new Set(['backend', 'data']); // Task 2–4 thêm plugin đã viết lại; Task 8 thay bằng tất cả
+  const STYLE_READY = new Set(['backend', 'data', 'frontend', 'ops', 'core']); // Task 2–4 thêm plugin đã viết lại; Task 8 thay bằng tất cả
   const AGENT_STYLE_READY = new Set([]);
   for (const p of [core, ...plugins]) {
     if (!STYLE_READY.has(p.id)) continue;

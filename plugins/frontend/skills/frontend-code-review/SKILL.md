@@ -1,6 +1,6 @@
 ---
 name: frontend-code-review
-description: "Recipe on-demand: REVIEW một diff/PR/module FRONTEND (React/TypeScript) theo các TRỤC — correctness (state/effect, dependency array, race giữa request, key list, memo, loading/error/empty), bám boundary kiến trúc UI (Feature-Based/FSD/Micro-FE, public API, server-state ở React Query), đơn giản hoá & tái dùng, a11y, readability & naming theo code-convention, test coverage. Phân loại severity (blocker/major/minor/nit) + evidence file:line + đề xuất fix; READ-ONLY mặc định. Defer tái cấu trúc sang frontend-refactor. Dùng skill NÀY khi người dùng muốn \"review code frontend\", \"review PR React\", \"review component\", \"đánh giá code FE\", \"review diff frontend\", \"review UI code\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần trên project đã có mã nguồn. Không dùng khi cần quét bảo mật hoặc tool scan → engineering-quality-gate; review cả PR đa vai trò BE + FE → workflow-code-review."
+description: "Review diff/PR/module frontend (React/TypeScript) theo correctness, boundary kiến trúc UI, a11y, naming và test; trả finding có severity + file:line, chỉ đọc mặc định. Dùng khi người dùng muốn \"review code frontend\", \"review PR React\", \"review component\", \"review diff frontend\". Không dùng khi cần quét bảo mật hoặc tool scan → engineering-quality-gate; tái cấu trúc → frontend-refactor; review cả PR đa vai trò BE + FE → workflow-code-review."
 order: 4
 title: "Frontend Code Review — Review diff/PR frontend React/TS theo trục, có evidence (recipe on-demand)"
 runsIn: execute

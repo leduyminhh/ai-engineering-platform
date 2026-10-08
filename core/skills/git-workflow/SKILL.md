@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: "Skill dùng chung (core) cho mọi thao tác Git an toàn: commit, push, tạo/chuyển branch, chuẩn bị PR, merge, revert, release, hotfix, và gom lịch sử git cho changelog/release notes. Sinh commit message Conventional Commits với header tiếng Anh + body tiếng Việt CÓ DẤU (UTF-8, commit qua git commit -F + kiểm tra encoding), tự sinh branch theo role khi đang ở main/master/develop/dev, stage đúng phạm vi yêu cầu. Dùng skill NÀY mỗi khi người dùng muốn \"commit\", \"push\", \"tạo branch\", \"chuẩn bị PR\", \"merge\", \"revert\", \"release branch\", \"hotfix\", \"gom changelog\", \"tóm tắt thay đổi từ tag/ngày\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần ở mọi giai đoạn có thao tác git. Không dùng khi cần viết nội dung changelog/release notes hướng người dùng → engineering-release-notes; chuẩn bị cả đợt phát hành (quality gate, release notes, deploy checklist) → workflow-release."
+description: "Thao tác Git an toàn: commit Conventional Commits (header tiếng Anh, body tiếng Việt có dấu, commit -F), tạo branch theo role, chuẩn bị PR, merge; không push khi chưa xác nhận branch. Dùng khi người dùng muốn \"commit\", \"push\", \"tạo branch\", \"chuẩn bị PR\", \"merge\". Không dùng khi cần viết nội dung changelog/release notes → engineering-release-notes; chuẩn bị cả đợt phát hành → workflow-release."
 order: 2
 title: "Git Workflow — commit, branch, push, PR, merge, release (dùng chung)"
 runsIn: execute
