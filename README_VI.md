@@ -100,7 +100,8 @@ npx ai-engineering-platform install --provider all --yes
 | Đường dẫn | Vai trò |
 | --- | --- |
 | `plugins/` | Nguồn năng lực: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, cùng `_marketplace.json` và `_cowork.json`. |
-| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, và recipe dùng chung `skills/git-workflow/`. |
+| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, và `hooks/` an toàn (chỉ plugin-mode). |
+| `evals/` | Case `claude plugin eval` theo plugin (chạy tay; không ship; `npm test` chỉ kiểm cấu trúc). |
 | `templates/` | `init/` khung project (do skill `*-init` drop ra) và `skills/` khung viết skill. |
 | `adapters/` | Chiếu theo provider (`<provider>/adapter.mjs`), auto-discover. `_shared/lib.mjs` chứa logic dùng chung. |
 | `cli/` | CLI `aip` (`index.mjs` + `lib/*.mjs` + `build.mjs`). Pure ESM, zero-dep. |
@@ -293,6 +294,65 @@ aip list                  # adapter + plugin phát hiện được
 
 State mỗi lần cài nằm ở `<scope-root>/.ai-engineering/manifest.json`.
 
+## Phân phối
+
+Có hai cách đưa nội dung Claude vào một project:
+
+- **Plugin-mode — đường chuẩn cho Claude.** `aip install --provider claude --as-plugin` (hoặc tự thêm marketplace) cài plugin thật, đặt tên `<id>:<skill>`. Chỉ plugin-mode mang **hook** của core (`${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài).
+- **Skills-mode** — `.claude/skills/` phẳng. Dùng khi muốn chọn lẻ từng skill hoặc đóng gói skill cho Cowork (`aip pack`). Chế độ này **không cài hook**.
+
+Không cài cùng một plugin ở cả hai chế độ: mỗi skill sẽ hiện hai lần. `aip install` ở skills-mode nay cảnh báo khi `claude plugin list` cho thấy plugin được chọn đã cài từ marketplace này (bỏ qua khi đặt `AIE_INSTALL_ROOT`, và bỏ qua im lặng khi không có `claude` trên PATH).
+
+Phát hành marketplace từ một branch git (maintainer; cần git >= 2.42 cho `git worktree add --orphan`):
+
+```bash
+node cli/dist.mjs --dry-run   # build rồi chỉ in danh sách file và commit message
+node cli/dist.mjs             # build rồi commit build/claude (trừ drafts/) vào branch CỤC BỘ `dist`
+git push origin dist          # do bạn quyết định — script không bao giờ push
+```
+
+Người dùng thêm marketplace bằng `claude plugin marketplace add <owner>/<repo>@dist`. [Unverified] Việc cài marketplace từ ref là branch chưa được thử đầu-cuối; hãy kiểm một lần sau lần push đầu tiên.
+
+## Hooks
+
+Plugin `core` mang hai hook `PreToolUse` cho Claude Code (`core/hooks/`; Node không phụ thuộc thư viện). **Chỉ có ở cài đặt plugin-mode** — skills-mode (`.claude/skills/` phẳng) không cài hook nào vì `${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài. Cài đặt managed `allowManagedHooksOnly` sẽ tắt hook của plugin nào không được quản trị viên force-enable.
+
+| Quy tắc | Tool | Quyết định | Phạm vi |
+| --- | --- | --- | --- |
+| H1 | Bash, PowerShell | ask | `git push` lên `main`/`master`/`dev`/`develop`, và push `--force`/`--delete`/`--mirror`/`--all`/`--prune` (lệnh ghép, `git -C`, đích của `cd`/`chdir`/`pushd`/`Push-Location`/`Set-Location`/`sl` đứng trước (bỏ qua `--`), ref có nháy, cụm cờ). Đích `cd` chứa `$`, `~`, backtick, `-` hoặc để trống, `popd`/`Pop-Location`, hay lệnh đứng sau `||` / `|` mà phía trước có `cd` thì không resolve được: push không refspec / `HEAD` / `@` sẽ hỏi |
+| H2 | Bash, PowerShell | deny | `git commit -m` có ký tự non-ASCII — dùng `git commit -F <file>` (xem skill `git-workflow`) |
+| H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | file bí mật: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, khoá riêng `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (kể cả `_sk` và hậu tố bất kỳ khác `.pub`), và chỉ `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` (có giải symlink và NTFS stream; [Unverified] tên ngắn 8.3). `.env.example`/`.env.sample`/`.env.template` và `*.pub` được phép |
+| H3 | Bash, PowerShell | ask | lệnh nhắc tới file bí mật |
+| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git của file đích, không phải của cwd phiên): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
+
+Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường) thoát 0 không quyết định. Khi `guard-bash` không phân tích chắc chắn được lệnh thì nghiêng về `ask` (`guard-files` không có hành vi này). Không có H4: agent ops không có tool Bash.
+
+**Giới hạn / residual risk.** Hook là cổng regex, không phải sandbox.
+
+- Không bắt được: `bash -c "…"` / `eval`, ref bị escape như `ma\in`, literal `$'…'`, và file bí mật ngoài danh sách trên (ví dụ `credentials.csv`, `credentials.xml`, `credentials.toml`).
+- H5 chỉ canh tool ghi — agent có Bash vẫn có thể ghi ra chỗ khác. Ngoài mọi repo git, H5 quay về cwd của phiên làm mốc neo.
+- Phân tích lệnh theo kiểu POSIX. Với tool PowerShell, nối dòng bằng backtick và escape backtick (``git push origin ` `` + xuống dòng + `main`, ``ma`in``) được chuẩn hoá trước khi phân tích nên không che được push; cú pháp riêng khác của PowerShell (here-string `@'…'@`, `Invoke-Expression`, `-EncodedCommand`) không được phân tích và không bị bắt.
+- [Unverified: phụ thuộc mặc định của ripgrep] Grep trên một đường dẫn thư mục có thể đọc `prod.env` không ẩn nằm trong đó; H3 chỉ kiểm `path`/`glob` của Grep, không kiểm các file mà việc duyệt thư mục chạm tới.
+- [Unverified] chưa rõ `ask` của hook còn hiện hộp thoại khi phiên chạy ở chế độ `bypassPermissions` hay không. Nên chạy thử thủ công một lần (`git push origin main` trong repo nháp) trước khi dựa vào H1 ở chế độ đó.
+- Chi phí: đo được khoảng 0,2 s mỗi lần gọi tool có hook trên Windows (mỗi lần spawn một tiến trình Node).
+- Kiểm `glob` của Grep chỉ là heuristic cố gắng hết sức (ví dụ `*.k*` không được nhận ra là glob khoá).
+- Dương tính giả đã biết, đều nghiêng về an toàn: `.env.local.example`, chứng chỉ `*.pem` công khai, file như `src/id_rsa.go`, lệnh Bash chỉ nhắc `import.meta.env` hoặc `config.env`, `grep -rn credentials src` (ask), `node -e "console.log(o.key)"` (ask), và thân commit dạng heredoc `git commit -F -` có nhắc `.env` (ask). Deny của Read cũng trúng `.env.development`/`.env.production`/`.env.test` đã commit (Vite/Next).
+
+**Tắt hook tạm thời.** Disable hoặc gỡ plugin `core`: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; lệnh có trong `claude plugin --help`), bật lại bằng `claude plugin enable core@ai-engineering-platform`. [Inference] Tắt `core` cũng tắt luôn skill của nó. [Unverified] chưa xác nhận `/hooks` trong phiên có tắt được riêng một hook của plugin hay không. [Unverified] Mọi plugin domain khai báo `dependencies: ["core"]`; chưa kiểm Claude Code xử lý các plugin phụ thuộc đó thế nào khi `core` bị disable hoặc gỡ (từ chối, kéo theo, hay vẫn chạy thiếu core) — chạy `claude plugin disable` và đọc kết quả trước khi dựa vào.
+
+## Eval
+
+`evals/<plugin>/<case>/` chứa 3 case `claude plugin eval` (`engineering/spec-writing-routes`, `backend/code-review-readonly`, `workflows/bugfix-routes`). Chúng nằm ở cấp repo, không ship trong plugin hay gói npm. `npm test` chỉ kiểm cấu trúc; **chạy case là việc thủ công, gọi model trên tài khoản của bạn và tốn tiền**, nên không nằm trong `npm test` hay CI.
+
+Chạy từ thư mục gốc repo:
+
+```bash
+aip install --provider claude --as-plugin --plugin engineering -g --yes
+claude plugin eval engineering@ai-engineering-platform --eval-dir evals/engineering --ablation none --runs 3 --threshold 0.8 --max-cost-usd 5 --no-publish --allow-tools Write Edit
+```
+
+[Unverified] Chưa case nào được chạy đầu-cuối; làm theo danh sách kiểm lần chạy đầu và cờ riêng từng plugin trong [evals/README.md](evals/README.md) (bắt đầu bằng `--case <name> --runs 1 --max-cost-usd 0.5`).
+
 ## Đầu ra theo provider
 
 `aip build` ghi một cây cho mỗi provider dưới `build/<provider>/`:
@@ -301,11 +361,13 @@ State mỗi lần cài nằm ở `<scope-root>/.ai-engineering/manifest.json`.
 | --- | --- | --- |
 | Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core là plugin dependency) | `.claude/skills/<skill>`; khối baseline → `CLAUDE.md` |
 | Cursor | `<id>/.cursor/rules/<id>-00-principles.mdc` + `.cursor/skills/<skill>/` | `.cursor/rules` + `.cursor/skills` |
-| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.codex/skills/<skill>` (global: `~/.codex/skills`); khối baseline → `AGENTS.md` |
+| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agent giữ ở `.codex/agents/`); khối baseline → `AGENTS.md` |
 | Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | khi cài tường minh; khối baseline → `AGENTS.md` |
 
 Skill nào ship thư mục `references/` thì ship tới **mọi** provider (parity, do
 `test/validate.mjs` bắt buộc).
+
+**Ghi chú nâng cấp Codex.** Skill đã chuyển từ `.codex/skills` sang `.agents/skills`. Chạy `aip update` (thêm `-g` nếu cài global) hoặc cài lại: manifest cài đặt sẽ gỡ bản cũ ở `.codex/skills`. Bản cũ không do manifest theo dõi thì phải xoá tay. Installer không bao giờ ghi đè hay xoá file thường không phải do nó cài; thư mục thật không phải của nó được merge và giữ nguyên các file đã có (bỏ qua kèm cảnh báo); symlink/junction đã có ở đích thì bị thay.
 
 ## Viết nội dung
 

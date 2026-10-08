@@ -7,11 +7,13 @@ liệt kê ở mục "CẦN XÁC NHẬN" và hỏi người dùng — KHÔNG t�
 Dấu hiệu tên (không phân biệt hoa/thường): `PASSWORD`, `PASSWD`, `PWD`, `SECRET`, `TOKEN`,
 `APIKEY`, `API_KEY`, `ACCESS_KEY`, `PRIVATE_KEY`, `CREDENTIAL`, `CLIENT_SECRET`, `SALT`,
 `ENCRYPTION_KEY`, `JWT_SECRET`, `KEYSTORE_PASSWORD`.
-Dấu hiệu giá trị: connection string nhúng credential (`db://user:pass@host`), chuỗi base64/PEM,
-key dài ngẫu nhiên.
+Dấu hiệu giá trị: connection string nhúng credential (`db://user:pass@host`, `?password=`), chuỗi base64/PEM,
+key dài ngẫu nhiên. Agent không đọc giá trị: dấu hiệu này đến từ cờ `CRED` của lệnh kiểm kê chỉ in TÊN
+(xem SKILL.md bước 2). Biến có cờ `CRED` → SECRET, kể cả khi tên là `*_URL`/`*_HOST`
+(vd `REDIS_URL=redis://:pw@host`, `SPRING_DATASOURCE_URL=jdbc:…://user:pw@…`).
 
 ## CONFIG thường → Consul (KV)
-Không nhạy cảm, cần theo môi trường: `*_HOST`, `*_PORT`, `*_URL` (không kèm credential),
+Không nhạy cảm, cần theo môi trường: `*_HOST`, `*_PORT`, `*_URL` (chỉ khi người dùng đã xác nhận không kèm credential — xem mục "Ca ranh giới"),
 `*_TIMEOUT`, `*_POOL_SIZE`, `MAX_*`, `*_ENABLED` (feature flag), `LOG_LEVEL`, `*_TOPIC`,
 `*_QUEUE`, `*_BUCKET`, `REGION`, `*_ENDPOINT` (public), `DDL_AUTO`, `CACHE_TTL`.
 
@@ -23,6 +25,10 @@ Thông tin để app biết cách TỚI chính Consul/Vault + chọn profile —
 `references/spring-boot/application.yml`).
 
 ## Ca ranh giới cần XÁC NHẬN
+- **Tên dạng URL/URI/DSN/connection string** — `*_URL`, `*_URI`, `*_DSN`, `*CONNECTION*`, `*_CONN*`, `DATABASE_*` (và
+  `*_HOST` có cờ `CRED`): chỉ có tên thì không biết giá trị có nhúng `user:pass@` hay không. Cờ `CRED` → SECRET; cờ `-` →
+  KHÔNG tự xếp CONFIG mà HỎI người dùng "giá trị có nhúng credential không?" (cờ `-` chỉ là lệnh không nhận ra, không
+  chứng minh sạch). Có → SECRET hoặc tách credential sang Vault; không → CONFIG. Tránh để credential lọt vào Consul.
 - **Username DB / user credential**: mặc định gom về Vault CÙNG password (là cặp credential). Nếu
   người dùng muốn để username ở Consul, xác nhận rõ.
 - **URL có tham số nhạy cảm** (`?sslkey=`, `?token=`): tách phần secret sang Vault.

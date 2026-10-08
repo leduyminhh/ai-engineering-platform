@@ -30,24 +30,29 @@ config vào Consul", "bỏ .env dùng vault" trên một project đã có cấu 
 ## Step-by-step áp dụng vào project
 
 **B0. Kích hoạt.** Mở Claude Code trong project đích, nói ví dụ: *"migrate .env sang Vault + Consul"*.
-Skill tự chạy 8 bước sau; mỗi bước sửa file đều DỪNG cho bạn duyệt diff trước khi commit.
+Skill dẫn qua 8 bước sau (agent làm phần đọc mã/sửa file, còn lệnh cần giá trị `.env` do BẠN chạy); mỗi bước sửa file đều DỪNG cho bạn duyệt diff trước khi commit.
 
 1. **Nạp context** — đọc `CLAUDE.md`, `project-knowledge/`, `stack-profile.md`; liệt kê nguồn cấu hình
    (`.env`, `.env.*`, file cấu hình app) và xác định `<app-name>` + các profile.
-2. **Kiểm kê & phân loại biến** — mỗi biến → Vault (secret) / Consul (config) / ở-lại-`.env` (bootstrap
-   kết nối); kèm trục **global vs app**. Ca không chắc → skill HỎI bạn. → *bạn rà soát bảng phân loại.*
+2. **Kiểm kê & phân loại biến** — agent KHÔNG đọc giá trị trong `.env*`. **Bạn chạy** lệnh kiểm kê chỉ-in-TÊN do
+   agent đề xuất (bash `awk` / PowerShell) và dán kết quả vào chat: mỗi dòng là `TÊN` + cờ `CRED`/`-` (cờ `CRED` =
+   giá trị nhúng `user:pass@`/`?password=`, không in giá trị). Mỗi biến → Vault (secret) / Consul (config) /
+   ở-lại-`.env` (bootstrap kết nối); kèm trục **global vs app**. Cờ `CRED` → Vault; tên dạng URL/URI/DSN/connection
+   string với cờ `-` → skill HỎI bạn giá trị có nhúng credential không. → *bạn rà soát bảng phân loại.*
 3. **Chọn cơ chế tích hợp — DỪNG cho bạn chọn** — skill đọc version thật (pom.xml/build.gradle) rồi đề
    xuất (Spring: `spring.config.import` vs `bootstrap.yml`). → *bạn chọn phương án; skill ghi ADR.*
 4. **Checkout nhánh** — `git checkout -b <type>/consul-vault-migration` trước mọi thay đổi (không làm trên `main`).
-5. **Wiring + chuyển định dạng** — backup `.env` → `.env.bak`; **lọc `.env`: check TRỰC TIẾP từng biến có
-   được tham chiếu trong project không (evidence-based, không tự định nghĩa) — biến không dùng thì BỎ khỏi
-   `.env` rồi mới đi tiếp**; thêm dependency Consul/Vault; **BẮT BUỘC chuyển hết `.properties` → `.yaml`**
+5. **Wiring + chuyển định dạng** — **bạn chạy** lệnh backup `.env` → `.env.bak` do agent đề xuất (`cp .env .env.bak` /
+   `Copy-Item`); **lọc `.env`: agent tìm theo TÊN biến (loại `.env*` khỏi phạm vi tìm) xem biến có được tham chiếu
+   trong project không (evidence-based, không tự định nghĩa) — biến không dùng thì BỎ khỏi `.env` (bạn tự xoá dòng) rồi
+   mới đi tiếp**; thêm dependency Consul/Vault; **BẮT BUỘC chuyển hết `.properties` → `.yaml`**
    (không bỏ qua; còn file `.properties` cấu hình app = chưa xong bước này).
 6. **Sinh 2 file cấu hình** từ `.env.bak` vào `configs/consul/` + `configs/vault/` (và biến thể theo
-   profile/global nếu có) + bảng ánh xạ — toàn bộ `configs/` vào `.gitignore` trước khi commit; sau đó
-   mới rút gọn `.env` còn thông tin kết nối (không comment) và sinh lại `.env.example`/`env.template`
-   từ `.env` mới.
-7. **Seed + verify** — seed 2 file vào Consul/Vault đang chạy; verify 2 kịch bản: (a) đủ hạ tầng,
+   profile/global nếu có) + bảng ánh xạ — agent viết script chuyển đổi (không chứa giá trị), **bạn chạy** script đó;
+   toàn bộ `configs/` vào `.gitignore` trước khi commit. Sau khi bảng ánh xạ được duyệt, **bạn chạy** lệnh rút gọn
+   `.env` còn thông tin kết nối (không comment); agent sinh lại `.env.example`/`env.template` từ danh sách TÊN biến
+   bootstrap đã chốt (không đọc `.env` mới).
+7. **Seed + verify** — **bạn chạy** script seed 2 file vào Consul/Vault đang chạy (không in giá trị); verify 2 kịch bản: (a) đủ hạ tầng,
    (b) thiếu Consul → paste `consul-config.yml` xuống local vẫn boot (nhờ import `optional:`).
 8. **Test lại toàn bộ project** — chạy full test/lint/build (vd `mvn verify`, `./gradlew build`) ở profile
    dùng Consul/Vault để bắt regression. Fail → DỪNG, sửa, không tuyên bố xong khi suite chưa xanh.

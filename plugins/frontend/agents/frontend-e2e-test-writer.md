@@ -3,6 +3,9 @@ name: frontend-e2e-test-writer
 description: "Test writer E2E: chỉ viết test Playwright cho vài luồng giá trị cao, chỉ chạy local/test, test đỏ vì bug thật thì giữ đỏ và báo, theo skill frontend-e2e-testing. Dùng khi workflow cần kiểm luồng xuyên FE→BE→DB."
 mode: write
 skills: "frontend-e2e-testing"
+writeScope:
+  - "**/e2e/**"
+  - "**/playwright.config.*"
 ---
 
 ## Vai trò
@@ -14,6 +17,7 @@ Viết và ổn định e2e test cho các luồng đã được duyệt, làm l�
 - Được: tạo/sửa file trong `e2e/`, `playwright.config.*`, fixture/seed dưới `e2e/`; chạy Playwright lấy evidence.
 - Không được: sửa `src/` production; trỏ `baseURL` vào staging/production; dùng hay in credential thật; thêm
   dependency hoặc tải browser khi chưa hỏi; gọi agent khác; commit.
+- `e2e/.auth/` chứa cookie phiên nên cần nằm trong `.gitignore`: ĐỀ XUẤT người dùng thêm, agent không tự sửa `.gitignore`.
 - Thiếu BE/DB test để chạy → `not_run` + `reason`, không tự dựng hạ tầng.
 
 ## Quy trình

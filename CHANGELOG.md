@@ -41,8 +41,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `npm run overlap` (`test/overlap.mjs`) prints skill/skill and workflow/workflow content-overlap
   ratios used to decide merges.
 
+- Core hooks (`core/hooks/hooks.json` + `scripts/guard-bash.mjs`, `scripts/guard-files.mjs`, zero-dep Node): the
+  Claude adapter projects `hooks/` into `build/claude/plugins/core/hooks/`. Plugin mode only: skills-mode installs no
+  hooks (`${CLAUDE_PLUGIN_ROOT}` exists only for installed plugins), and the managed setting `allowManagedHooksOnly`
+  disables plugin hooks that are not force-enabled. Rules (PreToolUse):
+  H1 `ask` on `git push` to `main`/`master`/`dev`/`develop` and on force/delete/mirror/all/prune pushes
+  (compound commands, `-C`, quoted refs and flag clusters are handled); H2 `deny` `git commit -m` with non-ASCII text
+  (use `-F`, see `git-workflow`); H3 `deny` Read/Edit/Write/MultiEdit/NotebookEdit/Grep on secret files
+  (`.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private keys `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519`
+  (also `_sk` and any non-`.pub` suffix), `credentials`, `credentials.json`/`.yml`/`.yaml` only; `.env.example`/`.sample`/`.template`
+  and `*.pub` stay allowed) and `ask` when a Bash command names
+  one; H5 write-scope lock (below). Scripts fail open on internal errors (exit 0, no decision); when Bash parsing is
+  unreliable `guard-bash` falls toward `ask` (not `guard-files`). H4 (block Bash for ops agents) was dropped: the ops agents have no Bash.
+  This is a regex gate, not a sandbox (see the README "Hooks" section for residual risk).
+- Agent key `writeScope` (list of globs, `mode: write` only; matched against the path relative to the git root, `/`
+  separators, `*` and `**` supported, not starting with `./` `/` `..`, no `\`, `{`, `?`). The Claude adapter collects it
+  into the generated `hooks/scope-lock.json` of `core`; `guard-files` denies Edit/Write/MultiEdit/NotebookEdit outside the
+  scope for that agent (including `../x`). Set on 5 agents: `engineering-release-scribe`, `engineering-spec-analyst`,
+  `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and agents without
+  `writeScope` are not locked, and an agent that has Bash can still write elsewhere.
+- `evals/<plugin>/` (repo level, not shipped in plugins or npm): 3 `claude plugin eval` cases —
+  `engineering/spec-writing-routes`, `backend/code-review-readonly`, `workflows/bugfix-routes` — checked
+  structurally by `test/contract/95-evals.contract.mjs` in `npm test`. Running them is manual
+  (`aip install --provider claude --as-plugin --plugin <id> -g`, then
+  `claude plugin eval <id>@ai-engineering-platform --eval-dir evals/<id> --ablation none …`), costs model usage
+  on your account and is not part of `npm test` or CI. [Unverified] never run end to end; the first-run checklist
+  is in `evals/README.md`.
+- `node cli/dist.mjs [--dry-run]` builds a local `dist` branch holding `build/claude` (without `drafts/`) so the
+  marketplace can be added with `claude plugin marketplace add <owner>/<repo>@dist`. It never pushes. Requires git >= 2.42
+  (`git worktree add --orphan`).
+- Hook fixes from the final review: the `guard-bash` matcher is now `Bash|PowerShell` (PowerShell 5.1 was bypassing H1/H2/H3);
+  H1 tracks `cd`/`chdir`/`pushd`/`Set-Location`/`sl` between segments and resolves the branch of the target
+  directory (unresolvable targets ask for a push with no refspec/`HEAD`/`@`); H5 anchors the write scope to the git root
+  of the target file instead of the session cwd. README "Hooks" lists the extra false positives and residual risks
+  (PowerShell parsing, Grep on a directory, H5 outside a git repo, `bypassPermissions` [Unverified], about 0.2 s per call on Windows).
+- Hook residual fixes (core 1.4.2): for the PowerShell tool `guard-bash` joins backtick line continuations and strips backtick
+  escapes before parsing, so a push split by a backtick-newline or written as ``ma`in`` is asked like `git push origin main` (the
+  README no longer claims a backtick "fails toward ask"); the `cd` tracker also knows `Push-Location` and skips a `--`
+  argument (`cd -- repo && git push`); `popd`/`Pop-Location` count as an unresolvable target, and after `||` or `|` a previous
+  `cd` is no longer trusted (`cd repo || git push` asks when it pushes with no refspec/`HEAD`/`@`). Covered in `test/contract/90-hooks.contract.mjs`.
+- Skills-mode Claude install warns when the same plugin is already installed in plugin mode (every skill would
+  appear twice).
+
 ### Changed
 
+- Codex skills now install to `<root>/.agents/skills/` (global: `~/.agents/skills/`), the path the current Codex docs
+  list; Codex agents stay in `.codex/agents/`. Upgrade note: run `aip update` (add `-g` for a global install) or reinstall — the install
+  manifest removes the legacy `.codex/skills` copy; a copy that the manifest does not track must be removed by hand.
+  [Inference] `.codex/skills` still loaded on Codex 0.147.0 in a local test, but it is no longer documented.
+- The installer never overwrites or deletes a foreign regular file when placing skills; a foreign real directory is
+  merged and its existing files are kept (skipped with a warning); a symlink/junction at the destination that the manifest
+  does not track and that does not already point at the source is treated as foreign and skipped with a warning.
+- Removed the dead `.mcp.json` branch from the Claude install layout; `hooks` are plugin-mode only.
+- `backend-migrate-vault-consul` no longer reads secret values: the agent works from variable names (the user runs a
+  names-only command), and backup/trim of `.env`, generation of `configs/` from `.env.bak` and seeding are commands the
+  user runs (or the agent runs after explicit confirmation), never Read/Edit on `.env*`. Keeps the core H3 deny coherent with the skill.
+- `backend-migrate-vault-consul` residual fixes (backend 1.7.3): the names-only inventory command now also prints a `CRED`/`-` flag
+  per variable (embedded `://user:pw@` or `?password=`-style parameters; values are never printed and multi-line PEM continuation lines
+  are skipped; bash `awk` and PowerShell variants) and `CRED` variables are classified SECRET; variables named like a URL/URI/DSN/connection
+  string (`*_URL`, `*_URI`, `*_DSN`, `*CONNECTION*`, `*_CONN*`, `DATABASE_*`) with flag `-` go to "CẦN XÁC NHẬN" instead of Consul, so a
+  credential embedded in e.g. `REDIS_URL` cannot land in Consul. Confirmation to run a command is an explicit "yes" in chat (user-run
+  scripts and skills-mode bypass the hook); multi-profile differences come from the user or a user-run script; the `.env.example`
+  template derives from the agreed bootstrap variable names, never from reading the new `.env`; the skill folder `README.md` says
+  which commands the user runs. Follow-up: the names-only commands trim whitespace after `=` before detecting a quoted multi-line value
+  (`KEY= "-----BEGIN…`), so inner PEM lines are no longer printed as names.
+- `test/contract/96-dist.contract.mjs` isolates the temporary repo from the developer's global git config
+  (`GIT_CONFIG_GLOBAL`, `GIT_CONFIG_NOSYSTEM`); `cli/dist.mjs` is unchanged.
+- Version bumps for Phase 3: core 1.4.2 (MINOR 1.4.0 for hooks, PATCH for the final-review and residual fixes), backend 1.7.3 (vault-consul skill), frontend 1.9.1 (e2e agent body now states that
+  `.gitignore` is out of scope), workflows 1.3.2 (orchestrator names `.agents/skills/workflow-<slug>/` for Codex);
+  `plugins/_versions.lock.json` refreshed.
 - `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;
   `test/install.test.mjs` removes its temp directories on exit.
 - All plugins bumped MINOR for Phase 2 (routing behaviour changes: `disable-model-invocation`, agent `tools`):

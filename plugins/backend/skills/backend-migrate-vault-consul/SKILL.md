@@ -24,6 +24,14 @@ Không push thẳng main. Không commit secret (giá trị secret CHỈ nằm tr
 phải gitignore). Mỗi task = 1 commit, DỪNG cho người duyệt diff trước khi commit. Không chạy lệnh
 phá huỷ dữ liệu khi chưa duyệt.
 
+**Không đọc GIÁ TRỊ secret (nguyên tắc nền):** agent KHÔNG dùng công cụ Read/Edit/Write/Grep trên `.env*`
+(`.env`, `.env.bak`, `.env.production`...) và không đọc `configs/vault/vault-secrets*.yml`. Ở plugin-mode,
+hook của core chặn công cụ file trên `.env*`; đừng lách bằng Bash (`cat`/`type`/`Get-Content`). Agent chỉ làm việc với TÊN
+biến; mọi thao tác cần giá trị (backup, rút gọn, sinh file cấu hình, seed) là LỆNH agent đề xuất để NGƯỜI DÙNG chạy
+(hoặc agent chạy sau khi người dùng trả lời "đồng ý" rõ ràng trong chat) và lệnh không in giá trị ra màn hình. Xác nhận
+phải là câu trả lời tường minh của người dùng, không dựa vào bước hỏi của hook: script do người dùng chạy không đi qua hook
+và skills-mode không có hook.
+
 **Ngôn ngữ (bắt buộc):** MỌI đầu ra hướng người dùng của skill — bảng kiểm kê/ánh xạ, ADR, báo cáo
 từng bước, commit message, comment trong file cấu hình sinh ra — viết **tiếng Việt CÓ DẤU** (UTF-8).
 Không viết tiếng Việt không dấu, không trộn tiếng Anh khi đã có từ tiếng Việt thông dụng.
@@ -32,15 +40,50 @@ Không viết tiếng Việt không dấu, không trộn tiếng Anh khi đã c�
 
 ### 1. Nạp context + xác định phạm vi
 Đọc CLAUDE.md, project-knowledge/, stack-profile.md. Liệt kê mọi nguồn cấu hình hiện có:
-`.env`, `.env.*`, file cấu hình app (properties/yml/toml...). Xác định `<app-name>` + các profile
-(dev/staging/prod).
+`.env`, `.env.*`, file cấu hình app (properties/yml/toml...) — với `.env*` chỉ ghi nhận TÊN file, không mở.
+Xác định `<app-name>` + các profile (dev/staging/prod).
 
 ### 2. Kiểm kê & phân loại biến
+**Lấy TÊN biến + cờ credential, không lấy giá trị:** agent đề xuất lệnh để người dùng chạy rồi dán kết quả vào chat. Mỗi
+dòng in ra chỉ gồm `TÊN` và cờ `CRED` (giá trị có dạng `://…:…@` hoặc tham số `?password=`/`token=`…) hoặc `-`; giá
+trị không bao giờ được in, và dòng nối của giá trị nhiều dòng (PEM) bị bỏ qua:
+- bash (lặp cho từng `.env.<profile>`):
+```bash
+awk -F= '
+inq { if (index($0, q)) inq = 0; next }
+/^[[:space:]]*(export[[:space:]]+)?[A-Za-z_][A-Za-z0-9_.-]*[[:space:]]*=/ {
+  n = $1; sub(/^[[:space:]]*(export[[:space:]]+)?/, "", n); sub(/[[:space:]]+$/, "", n)
+  val = substr($0, index($0, "=") + 1); sub(/^[[:space:]]+/, "", val); c = substr(val, 1, 1)
+  if ((c == "\"" || c == "\047") && index(substr(val, 2), c) == 0) { inq = 1; q = c }
+  v = tolower(val)
+  print n, ((v ~ /:\/\/[^\/]*:[^\/]*@/ || v ~ /[?&;](password|passwd|pwd|secret|token|apikey|api_key|sslkey)=/) ? "CRED" : "-")
+}' .env
+```
+- PowerShell (chạy trong thư mục chứa `.env`; lặp cho từng `.env.<profile>`):
+```powershell
+$q = $null
+Get-Content .env | ForEach-Object {
+  if ($q) { if ($_.Contains($q)) { $q = $null }; return }
+  if ($_ -match '^\s*(export\s+)?([A-Za-z_][A-Za-z0-9_.-]*)\s*=(.*)$') {
+    $name = $Matches[2]; $val = $Matches[3].TrimStart()
+    if ($val.Length -gt 0 -and ($val[0] -eq '"' -or $val[0] -eq "'") -and $val.IndexOf($val[0], 1) -lt 0) { $q = [string]$val[0] }
+    $flag = if ($val -match '://[^/]*:[^/]*@' -or $val -match '[?&;](password|passwd|pwd|secret|token|apikey|api_key|sslkey)=') { 'CRED' } else { '-' }
+    "$name $flag"
+  }
+}
+```
+Phân loại dựa trên TÊN + cờ + nơi biến được tham chiếu trong mã nguồn; ca không đoán được loại từ tên thì xếp
+"CẦN XÁC NHẬN" và hỏi người dùng, KHÔNG mở `.env` để xem giá trị. Cờ `-` chỉ nghĩa là lệnh không nhận ra credential
+nhúng, KHÔNG chứng minh giá trị sạch.
 Lập bảng: mỗi biến cấu hình → một trong ba đích. Heuristic chi tiết ở
 `references/classification-heuristic.md`.
 - **SECRET → Vault (KV v2):** tên chứa PASSWORD/PASSWD/SECRET/TOKEN/KEY/CREDENTIAL/PRIVATE/APIKEY,
-  hoặc connection string nhúng `user:pass`.
-- **CONFIG thường → Consul (KV):** host, port, URL không kèm credential, pool size, timeout,
+  hoặc cờ `CRED` (connection string nhúng `user:pass`) — cờ `CRED` thắng mọi quy tắc theo tên, kể cả `*_URL`.
+- **CẦN XÁC NHẬN (bắt buộc hỏi người dùng):** biến có tên dạng URL/URI/DSN/connection string — `*_URL`, `*_URI`,
+  `*_DSN`, `*CONNECTION*`, `*_CONN*`, `DATABASE_*` — mà cờ là `-`: agent không thấy giá trị nên KHÔNG tự xếp CONFIG, mà hỏi
+  người dùng "giá trị có nhúng credential (`user:pass@`, `?password=`, token...) không?". Có → SECRET (hoặc tách phần
+  credential sang Vault, giữ host ở Consul); không → CONFIG. `*_HOST` có cờ `CRED` → SECRET; cờ `-` → CONFIG như thường.
+- **CONFIG thường → Consul (KV):** host, port, URL đã được người dùng xác nhận không kèm credential, pool size, timeout,
   feature flag, log level, tên topic/queue...
 - **BOOTSTRAP kết nối → ở lại `.env`:** thông tin để app biết cách TỚI Consul/Vault (địa chỉ,
   token/AppRole, profile). Đây là ngoại lệ có chủ đích: `.env` sau migration CHỈ còn nhóm này.
@@ -72,17 +115,20 @@ template stack; KHÔNG hardcode `config/`, `secret/` khi tổ chức dùng giá 
   migration nằm trên nhánh; không push thẳng main.
 
 ### 5. Wiring + chuyển định dạng (làm từng task, 1 task = 1 commit)
-- **Backup `.env` TRƯỚC mọi thay đổi (chống mất nguồn giá trị):** copy `.env` → `.env.bak` và thêm
-  `.env.bak` vào `.gitignore`. Đây là nguồn gốc để bước 6 sinh config; KHÔNG rút gọn `.env` ở bước này
-  (việc rút gọn để cuối bước 6, sau khi đã sinh xong 2 file).
+- **Backup `.env` TRƯỚC mọi thay đổi (chống mất nguồn giá trị):** agent đề xuất lệnh `cp .env .env.bak`
+  (PowerShell: `Copy-Item .env .env.bak`) để NGƯỜI DÙNG chạy (hoặc agent chạy sau khi người dùng xác nhận) — không
+  dùng Read/Write/Edit trên `.env*`; agent tự thêm `.env.bak` vào `.gitignore`. Đây là nguồn gốc để bước 6 sinh config;
+  KHÔNG rút gọn `.env` ở bước này (việc rút gọn để cuối bước 6, sau khi đã sinh xong 2 file).
 - **Lọc `.env` — CHECK TRỰC TIẾP từng biến (BẮT BUỘC, KHÔNG tự định nghĩa):** áp cho các biến config/secret
   của app (KHÔNG áp cho nhóm bootstrap kết nối ở bước 2 — nhóm đó luôn giữ). Với MỖI biến trong `.env`, TÌM
   THẬT trên toàn project mọi tham chiếu — mã nguồn + file cấu hình + Dockerfile/compose/k8s/CI/script — theo
   tên env var, placeholder `${VAR}`, `@Value` / `Environment.getProperty` / `System.getenv`,
-  `@ConfigurationProperties`. Kết luận CHỈ dựa trên kết quả tìm được; KHÔNG suy diễn, KHÔNG tự bịa công dụng.
+  `@ConfigurationProperties`. Loại `.env*` khỏi phạm vi tìm (vd `rg -n --glob '!.env*' <TÊN_BIẾN>`) — chỉ tìm theo TÊN,
+  không đọc giá trị. Kết luận CHỈ dựa trên kết quả tìm được; KHÔNG suy diễn, KHÔNG tự bịa công dụng.
   - Có ≥ 1 tham chiếu thật → ĐANG DÙNG → migrate.
   - KHÔNG có tham chiếu nào → KHÔNG DÙNG → BỎ biến khỏi `.env` (không migrate), rồi mới tiếp bước 6.
-  - Báo cáo danh sách biến đã bỏ (người dùng thấy khi duyệt diff `.env`). Chỉ biến ĐANG DÙNG mới sang bước 6.
+  - Báo cáo danh sách TÊN biến đã bỏ; người dùng tự xoá các dòng đó khỏi `.env` (hoặc chạy lệnh agent đề xuất) và duyệt.
+    Chỉ biến ĐANG DÙNG mới sang bước 6.
 - Thêm dependency client Consul/Vault theo stack; cấu hình app đọc từ Consul + Vault theo cơ chế đã chốt.
 - **BẮT BUỘC: chuyển `.properties` → `.yaml` — KHÔNG được bỏ qua.** Nếu project còn BẤT KỲ file cấu hình
   `.properties` nào giữ config của app (vd `application.properties`, `application-<profile>.properties`,
@@ -111,22 +157,27 @@ template stack; KHÔNG hardcode `config/`, `secret/` khi tổ chức dùng giá 
 - Trước mỗi task: tóm tắt ngắn + file dự kiến đụng tới. Sau task: DỪNG cho duyệt diff, xác nhận mới commit.
 
 ### 6. Sinh FILE CẤU HÌNH từ `.env` cũ — tối thiểu 2 file, KÈM biến thể profile/global (đầu ra bắt buộc)
-Đọc `.env.bak` (bản gốc đã backup ở bước 5 — `.env` lúc này CHƯA rút gọn) + key trong file cấu hình cũ,
-CHỈ lấy các biến đã xác nhận ĐANG DÙNG ở bước 5 (biến không có tham chiếu đã bị BỎ khỏi `.env` ở bước 5),
-rồi sinh RA HAI file tách bạch (mẫu định dạng: `references/spring-boot/consul-config.example.yml` và
+Nguồn là `.env.bak` (bản gốc đã backup ở bước 5 — `.env` lúc này CHƯA rút gọn) + key trong file cấu hình cũ,
+CHỈ lấy các biến đã xác nhận ĐANG DÙNG ở bước 5. Agent KHÔNG đọc `.env.bak`: dựa trên bảng ánh xạ TÊN → đích đã duyệt,
+agent viết script chuyển đổi (ngoài `configs/`, vd `scripts/migrate-env.sh` / `.ps1`, không chứa giá trị) để NGƯỜI DÙNG chạy;
+script đọc `.env.bak` và ghi thẳng ra file đích dưới `configs/` mà không in giá trị. Sau khi chạy, agent kiểm bằng lệnh
+chỉ liệt kê KEY (không giá trị) và chỉ đọc `configs/consul/*.yml` sau khi người dùng xác nhận file đó không chứa secret;
+`configs/vault/vault-secrets*.yml` agent không mở. Kết quả là HAI file tách bạch (mẫu định dạng: `references/spring-boot/consul-config.example.yml` và
 `references/spring-boot/vault-secrets.example.yml`):
 Mọi file cấu hình sinh ra gom về MỘT thư mục `configs/<type>` ở gốc project (`configs/consul/`,
 `configs/vault/` — gồm cả biến thể profile/global). **Thêm TOÀN BỘ `configs/` vào `.gitignore` NGAY khi
 tạo thư mục, TRƯỚC khi commit bất kỳ task nào** — đây là file gen ra từ `.env`, KHÔNG commit:
 - **`configs/consul/consul-config.yml`** — CONFIG thường, YAML nguyên khối theo cây key của app; KHÔNG chứa
   secret. Đây là nội dung nạp vào Consul KV (`<prefix>/<app>/data`) và cũng là file fallback paste xuống local.
-- **`configs/vault/vault-secrets.yml`** — map phẳng `<property-key>: "<giá trị thật từ .env>"` (tên key theo
+- **`configs/vault/vault-secrets.yml`** — map phẳng `<property-key>: "<giá trị thật từ .env>"` (do script của người dùng ghi; tên key theo
   quy tắc quy đổi ENV_VAR → property-key trong `references/classification-heuristic.md`), chỉ gồm biến
   đã phân loại secret. Nội dung nạp vào Vault KV v2 (`<backend>/<app>`). CHỨA SECRET THẬT → đã nằm trong
   `configs/` gitignore; xoá sau khi seed.
 - **Secret cũ coi như ĐÃ LỘ (P3):** giá trị secret từng nằm plaintext trong `.env` (nhất là nếu `.env`
   đã từng commit vào git history) phải coi là compromised — đánh dấu để ROTATE ở mục "Sau khi xong".
-- **Đa profile (P2):** nếu giá trị KHÁC nhau theo môi trường, sinh THÊM `consul-config-<profile>.yml`
+- **Đa profile (P2):** agent không thấy giá trị nên không tự biết biến nào khác nhau giữa các môi trường: HỎI người dùng
+  danh sách TÊN biến khác nhau theo môi trường, hoặc để script do người dùng chạy tự so `.env.bak` với các `.env.<profile>`
+  rồi ghi file profile. Với phần khác nhau, sinh THÊM `consul-config-<profile>.yml`
   (→ Consul `<prefix>/<app>-<profile>/data`, profile-separator "-") và `vault-secrets-<profile>.yml` (→ Vault `<backend>/<app>/<profile>`);
   file base (`<prefix>/<app>/data`, `<backend>/<app>`) giữ giá trị dùng chung, profile chỉ override phần khác biệt.
   Chỉ 1 môi trường → ghi rõ scope single-env và bỏ qua phần này.
@@ -137,17 +188,18 @@ tạo thư mục, TRƯỚC khi commit bất kỳ task nào** — đây là file 
 In BẢNG ÁNH XẠ mỗi biến `.env` cũ → đích (Consul / Vault / ở-lại-.env) cho người dùng rà soát.
 
 CHỈ SAU khi 2 file + bảng ánh xạ được duyệt:
-- **Rút gọn `.env`** còn nhóm bootstrap kết nối. `.env` sau rút gọn CHỈ gồm dòng `KEY=value` —
-  **KHÔNG viết comment vào `.env`**.
+- **Rút gọn `.env`** còn nhóm bootstrap kết nối: agent đề xuất lệnh lọc theo TÊN bootstrap đã chốt (vd
+  `grep -E '^(CONSUL_|VAULT_|SPRING_PROFILES_ACTIVE=)' .env.bak > .env`) để NGƯỜI DÙNG chạy; agent không Edit `.env`.
+  `.env` sau rút gọn CHỈ gồm dòng `KEY=value` — **KHÔNG viết comment vào `.env`**.
 - **Sinh lại file template env** (`.env.example` / `env.template` / `.env.sample` — theo đúng tên project
-  đang dùng) **TỪ `.env` MỚI đã rút gọn**: cùng danh sách key với `.env` mới, giá trị để trống hoặc mẫu.
-  **KHÔNG sinh từ `.env.bak`** — template phải phản ánh env SAU migration (chỉ nhóm bootstrap kết nối),
-  không phải env cũ đầy đủ. Comment trong template viết **tiếng Việt CÓ DẤU** (mẫu:
+  đang dùng) **TỪ danh sách TÊN biến bootstrap đã chốt** (chính danh sách dùng để rút gọn `.env`): cùng key với `.env`
+  mới, giá trị để trống hoặc mẫu. Agent KHÔNG đọc `.env` mới (hay `.env.bak`) để lấy danh sách — template phải
+  phản ánh env SAU migration (chỉ nhóm bootstrap kết nối), không phải env cũ đầy đủ. Comment trong template viết **tiếng Việt CÓ DẤU** (mẫu:
   `references/spring-boot/env.example`).
 - Đảm bảo `.env`, `.env.bak`, và **toàn bộ `configs/`** đều nằm trong `.gitignore` trước khi commit.
 
 ### 7. Seed cấu hình vào Consul/Vault + verify
-- Seed các file đã sinh vào Consul/Vault ĐANG CHẠY SẴN ở môi trường dev (script seed idempotent, mẫu Spring:
+- Seed (script đọc `configs/`, không in giá trị; người dùng chạy hoặc agent chạy sau khi người dùng xác nhận) các file đã sinh vào Consul/Vault ĐANG CHẠY SẴN ở môi trường dev (script seed idempotent, mẫu Spring:
   `references/spring-boot/`). Dựng/vận hành hạ tầng Consul/Vault là việc NGOÀI skill (không sinh docker-compose).
   - File app → `<prefix>/<app>/data`, `<backend>/<app>`.
   - File theo profile (P2) → `<prefix>/<app>-<profile>/data`, `<backend>/<app>/<profile>` (script nhận tham số profile).

@@ -3,6 +3,15 @@ name: backend-test-writer
 description: "Test writer backend: chỉ viết test (unit, integration, web slice, characterization) đúng tầng kiến trúc, không đụng code production, theo skill backend-testing. Dùng khi workflow cần thêm/sửa test backend."
 mode: write
 skills: "backend-testing"
+writeScope:
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/*Test.java"
+  - "**/*Tests.java"
+  - "**/*IT.java"
+  - "**/test_*.py"
+  - "**/*_test.py"
+  - "**/conftest.py"
 ---
 
 ## Vai trò

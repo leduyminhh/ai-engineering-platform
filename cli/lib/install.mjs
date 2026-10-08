@@ -20,17 +20,19 @@ const USE_LINK = !linkDisabledForRoot(REPO_ROOT);
 const BUILD_DIR = path.join(REPO_ROOT, 'build');
 
 // ── fs helpers ───────────────────────────────────────────────────────────────
-function copyFileRec(src, dest, files) {
+function copyFileRec(src, dest, files, skipped) {
+  // File đã có mà không phải do lần cài này đặt → của người dùng/công cụ khác, không đè.
+  if (skipped && fs.existsSync(dest) && !files.includes(dest)) { skipped.push(dest); return; }
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
   files.push(dest);
 }
-function copyDirRec(src, destDir, files) {
+function copyDirRec(src, destDir, files, skipped) {
   for (const e of fs.readdirSync(src, { withFileTypes: true })) {
     const s = path.join(src, e.name);
     const d = path.join(destDir, e.name);
-    if (e.isDirectory()) copyDirRec(s, d, files);
-    else copyFileRec(s, d, files);
+    if (e.isDirectory()) copyDirRec(s, d, files, skipped);
+    else copyFileRec(s, d, files, skipped);
   }
 }
 /** Dọn các thư mục cha rỗng từ `start` lên tới (không gồm) `stopAt`. */
@@ -56,6 +58,7 @@ function symlinkType(isDir) {
 }
 /** true nếu `p` là symlink HOẶC junction (readlink chạy được cho cả hai; ném với dir thật). */
 function isLinkPath(p) { try { fs.readlinkSync(p); return true; } catch { return false; } }
+function linksTo(link, src) { try { return path.resolve(path.dirname(link), fs.readlinkSync(link)) === path.resolve(src); } catch { return false; } }
 
 /** Gỡ một LINK an toàn: unlink (symlink) / rmdir (junction) — KHÔNG xóa nội dung target. */
 function removeLinkAndPruneEmpty(link, stopAt) {
@@ -261,6 +264,29 @@ export function parseClaudePluginJson(text, marketplaceName) {
   return rows
     .filter((r) => r && typeof r.id === 'string' && r.id.endsWith(`@${marketplaceName}`))
     .map((r) => ({ id: r.id.slice(0, -(`@${marketplaceName}`.length)), version: r.version || null }));
+}
+
+/** Thuần: plugin vừa đã cài dạng plugin vừa nằm trong lựa chọn skills-mode (theo thứ tự lựa chọn, không trùng). */
+export function claudePluginOverlap(installedIds, selectedPluginIds) {
+  const installed = new Set(installedIds || []);
+  return [...new Set(selectedPluginIds || [])].filter((id) => installed.has(id));
+}
+
+/** Cảnh báo (không chặn) khi skills-mode sắp cài skill của plugin đã cài dạng plugin → skill hiện hai lần. */
+function warnClaudePluginDuplicates(effSet) {
+  if (process.env.AIE_INSTALL_ROOT) return; // test cô lập: không hỏi claude CLI thật
+  let installed = [];
+  try {
+    const j = runClaudeCli(['plugin', 'list', '--json'], { tolerate: true, timeout: 15000 });
+    if (!j.ok) return;
+    installed = (parseClaudePluginJson(j.out, loadMarketplace().name) || []).map((e) => e.id);
+  } catch { return; } // không có CLI → bỏ qua im lặng
+  const selected = [...new Set([...effSet].map((sid) => sid.split('/')[0]))];
+  const dup = claudePluginOverlap(installed, selected);
+  if (dup.length) {
+    console.warn(`[aip] đã cài dạng plugin: ${dup.join(', ')} — skill sẽ xuất hiện hai lần; gỡ một trong hai ` +
+      `(claude plugin uninstall <id>@${loadMarketplace().name}, hoặc aip uninstall).`);
+  }
 }
 
 /** Đối chiếu version plugin đã cài trong Claude Code với nguồn; không có CLI → available=false, không ném. */
@@ -521,7 +547,7 @@ function placeEntry(src, dest, ctx) {
   const isDir = fs.statSync(src).isDirectory();
 
   if (!ctx.useLink) { // môi trường npm (node_modules) → copy thuần
-    if (isDir) copyDirRec(src, dest, ctx.files); else copyFileRec(src, dest, ctx.files);
+    if (isDir) copyDirRec(src, dest, ctx.files, ctx.skipped); else copyFileRec(src, dest, ctx.files, ctx.skipped);
     return;
   }
 
@@ -530,6 +556,13 @@ function placeEntry(src, dest, ctx) {
     for (const e of fs.readdirSync(src, { withFileTypes: true })) {
       placeEntry(path.join(src, e.name), path.join(dest, e.name), ctx);
     }
+    return;
+  }
+
+  // Bản cài trước của ta đã được gỡ từ manifest trước khi cài lại, nên thứ còn đó (file/thư mục thật, hoặc link
+  // không trỏ về src này và không do lần cài này đặt) là của người dùng/công cụ khác (vd .agents/skills dùng chung) → bỏ qua.
+  if (isLinkPath(dest) ? !ctx.links.includes(dest) && !linksTo(dest, src) : fs.existsSync(dest) && !ctx.files.includes(dest)) {
+    ctx.skipped.push(dest);
     return;
   }
 
@@ -544,7 +577,7 @@ function placeEntry(src, dest, ctx) {
       console.warn(`[aip] Không tạo được symlink (${err.code || err.message}); chuyển sang copy. ` +
         `Bản cài sẽ KHÔNG tự cập nhật khi rebuild.`);
     }
-    if (isDir) copyDirRec(src, dest, ctx.files); else copyFileRec(src, dest, ctx.files);
+    if (isDir) copyDirRec(src, dest, ctx.files, ctx.skipped); else copyFileRec(src, dest, ctx.files, ctx.skipped);
   }
 }
 
@@ -559,7 +592,7 @@ function installOne(provider, effSetArg, scope) {
   const root = scopeRoot(scope);
   const pbuild = path.join(BUILD_DIR, provider);
   if (!fs.existsSync(pbuild)) throw new Error(`Chưa build ${provider} (build/${provider} không có).`);
-  const ctx = { files: [], links: [], useLink: USE_LINK, warned: false, root };
+  const ctx = { files: [], links: [], skipped: [], useLink: USE_LINK, warned: false, root };
   const effSet = new Set(effSetArg); // LỌC thuần: chỉ đặt skill-dir có id trong tập (không tự ép core)
   const pluginActive = (id) => { for (const s of effSet) if (s.startsWith(`${id}/`)) return true; return false; };
   const agentSkills = new Map(loadPlugins().flatMap((p) => p.agents).map((a) => [a.id, a.skills]));
@@ -576,7 +609,8 @@ function installOne(provider, effSetArg, scope) {
         const pdir = path.join(pluginsDir, id);
         if (!fs.statSync(pdir).isDirectory()) continue;
         for (const comp of fs.readdirSync(pdir, { withFileTypes: true })) {
-          if (!comp.isDirectory() || comp.name === '.claude-plugin') continue; // bỏ manifest plugin
+          // Hook cần ${CLAUDE_PLUGIN_ROOT} nên chỉ chạy ở plugin-mode; skills-mode không cài.
+          if (!comp.isDirectory() || comp.name === '.claude-plugin' || comp.name === 'hooks') continue;
           const srcComp = path.join(pdir, comp.name);
           const destComp = path.join(claudeRoot, comp.name);
           if (comp.name === 'agents') {
@@ -594,14 +628,12 @@ function installOne(provider, effSetArg, scope) {
             placeEntry(path.join(srcComp, skill.name), path.join(destComp, skill.name), ctx);
           }
         }
-        // .mcp.json cấp plugin: chỉ đặt khi plugin đó active (có ≥1 skill hiệu lực) → gộp thành <id>.mcp.json
-        const mcp = path.join(pdir, '.mcp.json');
-        if (fs.existsSync(mcp) && pluginActive(id)) placeEntry(mcp, path.join(claudeRoot, `${id}.mcp.json`), ctx);
       }
     }
   } else if (layout.kind === 'codex') {
-    // Codex nạp native skills từ <root>/.codex/skills/<skill-id>/ (global -g → ~/.codex/skills/).
-    const skillsRoot = path.join(root, '.codex', 'skills');
+    // Docs Codex hiện hành chỉ còn `.agents/skills` (repo) và `~/.agents/skills` (user); `.codex/skills`
+    // vẫn được nạp ở Codex 0.147 nhưng không còn trong docs. Agent TOML giữ `.codex/agents`.
+    const skillsRoot = path.join(root, '.agents', 'skills');
     for (const id of fs.readdirSync(pbuild)) {
       const adir = path.join(pbuild, id, 'agents');
       if (fs.existsSync(adir)) {
@@ -664,6 +696,10 @@ function installOne(provider, effSetArg, scope) {
       }
     }
   }
+  if (ctx.skipped.length) {
+    console.warn(`[aip] Bỏ qua ${ctx.skipped.length} đường dẫn đã tồn tại và không do aip cài (giữ nguyên, không đè):\n` +
+      ctx.skipped.map((f) => `  - ${path.relative(root, f)}`).join('\n'));
+  }
   return { files: ctx.files, links: ctx.links };
 }
 
@@ -677,12 +713,6 @@ function installOne(provider, effSetArg, scope) {
 export function install({ providers, plugins, skills, scope = 'project', mode = 'skills' }) {
   if (!USE_LINK) console.warn('[aip] Cài qua npm (node_modules) → dùng copy thay vì symlink (bản cài self-contained).');
   const provs = !providers || providers === 'all' ? PROVIDERS : (Array.isArray(providers) ? providers : [providers]);
-  // Codex nạp native skills ở mức user (~/.codex/skills). Cài scope=project (.codex/skills/ trong
-  // repo) thường KHÔNG được codex đọc → cảnh báo để tránh tưởng đã cài.
-  if (scope === 'project' && provs.includes('codex')) {
-    console.warn('[aip] codex nạp native skills từ ~/.codex/skills (mức user); cài scope=project ' +
-      'thường KHÔNG được codex đọc — cân nhắc cài global: aip install --provider codex -g');
-  }
   const root = scopeRoot(scope);
   const m = readManifest(scope);
   const results = [];
@@ -730,6 +760,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     if (miss.length) throw new Error(`Workflow cần skill không có trong bản cài nguồn: ${miss.join(', ')}`);
     uninstallEntries(m, root, (e) => e.provider === provider); // gỡ bản cũ cùng (provider,scope) rồi cài lại UNION
     const effSet = effectiveSkills(entry);
+    if (provider === 'claude') warnClaudePluginDuplicates(effSet);
     const { files, links } = installOne(provider, effSet, scope);
     const rel = (arr) => arr.map((f) => path.relative(root, f).split(path.sep).join('/'));
     const relF = rel(files), relL = rel(links);

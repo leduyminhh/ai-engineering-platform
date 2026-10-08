@@ -3,6 +3,15 @@ name: frontend-test-writer
 description: "Test writer frontend: chỉ viết test React/TypeScript (Testing Library, hook, msw, characterization) đúng tầng kiến trúc, không đụng code production, theo skill frontend-testing. Dùng khi workflow cần thêm/sửa test frontend."
 mode: write
 skills: "frontend-testing"
+writeScope:
+  - "**/__tests__/**"
+  - "**/*.test.*"
+  - "**/*.spec.*"
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/mocks/**"
+  - "**/__mocks__/**"
+  - "**/*.handlers.*"
 ---
 
 ## Vai trò
