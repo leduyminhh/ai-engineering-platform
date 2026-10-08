@@ -1,6 +1,6 @@
 ---
 name: backend-code-review
-description: "Review diff/PR/module backend (Java/Spring, Python) theo correctness, kiến trúc, naming, test và hiệu năng (N+1, thiếu index); trả finding có severity + file:line, chỉ đọc. Dùng khi người dùng muốn \"review code backend\", \"review PR backend\", \"review diff backend\", \"đọc soát PR\". Không dùng khi cần quét bảo mật hoặc tool scan → engineering-quality-gate; review cả PR đa vai trò BE + FE → workflow-code-review."
+description: "Review diff/PR/module backend (Java/Spring, Python) theo correctness, kiến trúc, naming, test và hiệu năng (N+1, thiếu index); trả finding có severity + file:line, chỉ đọc mặc định. Dùng khi người dùng muốn \"review code backend\", \"review PR backend\", \"review diff backend\", \"đọc soát PR\". Không dùng khi cần quét bảo mật hoặc tool scan → engineering-quality-gate; review cả PR đa vai trò BE + FE → workflow-code-review."
 order: 4
 title: "Backend Code Review — Review diff/PR backend theo trục, có evidence (recipe on-demand)"
 runsIn: execute

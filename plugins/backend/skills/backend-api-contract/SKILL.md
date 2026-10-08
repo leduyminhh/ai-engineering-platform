@@ -1,6 +1,6 @@
 ---
 name: backend-api-contract
-description: "Chốt và đồng bộ API contract OpenAPI-first giữa backend và frontend: thiết kế contract ở docs/contracts/ trước khi code, versioning, kiểm drift contract↔code. Dùng khi người dùng muốn \"api contract\", \"openapi\", \"hợp đồng API\", \"versioning API\", \"kiểm drift contract\". Không dùng khi cần làm API end-to-end (contract, code, test, commit) → workflow-api; hiện thực code theo contract đã chốt → backend-implement."
+description: "Chốt và đồng bộ API contract OpenAPI-first giữa backend (Java/Spring, Python) và frontend: thiết kế contract ở docs/contracts/ trước khi code, versioning, kiểm drift chỉ đọc. Dùng khi người dùng muốn \"api contract\", \"openapi\", \"hợp đồng API\", \"versioning API\", \"kiểm drift contract\". Không dùng khi cần làm API end-to-end (contract, code, test, commit) → workflow-api; hiện thực code theo contract đã chốt → backend-implement."
 order: 8
 title: "Backend API Contract — Chốt & đồng bộ OpenAPI contract FE↔BE, kiểm drift (recipe on-demand)"
 runsIn: plan

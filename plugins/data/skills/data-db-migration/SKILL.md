@@ -1,6 +1,6 @@
 ---
 name: data-db-migration
-description: "Quản lý schema DB của backend project (Spring Boot + PostgreSQL): ADOPT chọn Flyway/Liquibase theo bằng chứng; CHANGE viết thay đổi schema expand/contract, kiểm khoá bảng, verify trên DB test. Dùng khi người dùng muốn \"migrate db\", \"flyway\", \"liquibase\", \"bỏ ddl-auto\", \"đổi schema\". Không dùng khi project đã chạy data-oltp-init → data-oltp-implement; cần quy trình đổi schema có review query và commit → workflow-db-change."
+description: "Quản lý schema DB backend (Spring Boot + PostgreSQL; Python/Alembic chỉ hướng dẫn): ADOPT so Flyway/Liquibase để người dùng chọn; CHANGE viết schema expand/contract, kiểm khoá bảng. Dùng khi người dùng muốn \"migrate db\", \"flyway\", \"bỏ ddl-auto\", \"đổi schema\", \"thêm cột\". Không dùng khi project đã chạy data-oltp-init → data-oltp-implement; cần quy trình đổi schema có review query và commit → workflow-db-change."
 order: 5
 title: "Data DB Migration — Áp công cụ migration & viết thay đổi schema an toàn (recipe on-demand)"
 runsIn: execute

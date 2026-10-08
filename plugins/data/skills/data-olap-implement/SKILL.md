@@ -1,6 +1,6 @@
 ---
 name: data-olap-implement
-description: "Hiện thực transform/model và pipeline cho data warehouse/lakehouse OLAP từ data-contract: staging, intermediate, mart; transform idempotent, data-quality test làm cổng publish, lineage. Dùng khi người dùng muốn \"build pipeline\", \"viết transform\", \"ETL/ELT\", \"dimensional model\", \"data quality test\". Không dùng khi đổi schema database vận hành → data-oltp-implement."
+description: "Hiện thực transform/model và pipeline cho warehouse/lakehouse OLAP từ data-contract: staging → mart, idempotent, data-quality test làm cổng publish, lineage; không chạy lên production khi chưa duyệt. Dùng khi người dùng muốn \"build pipeline\", \"viết transform\", \"ETL/ELT\", \"dimensional model\", \"data quality test\". Không dùng khi đổi schema database vận hành → data-oltp-implement."
 order: 4
 title: "OLAP Warehouse Implement — Hiện thực transform/model + pipeline"
 runsIn: execute
