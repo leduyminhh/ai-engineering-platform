@@ -8,7 +8,12 @@ import { fileURLToPath } from 'node:url';
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const isLink = (p) => { try { fs.readlinkSync(p); return true; } catch { return false; } };
 
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-test-'));
+// Assert fail giữa chừng làm bỏ qua lệnh dọn cuối khối; dọn mọi thư mục tạm khi process thoát (Node rmSync, an toàn với junction).
+const TMP_DIRS = [];
+const mkTmp = (prefix) => { const d = fs.mkdtempSync(path.join(os.tmpdir(), prefix)); TMP_DIRS.push(d); return d; };
+process.on('exit', () => { for (const d of TMP_DIRS) { try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* đã xoá */ } } });
+
+const TMP = mkTmp('cwf-test-');
 process.env.AIE_INSTALL_ROOT = TMP;
 
 const { install, uninstall, update, check, linkDisabledForRoot, claudePluginCommands,
@@ -312,7 +317,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 
 // ── additive: cài cùng provider 2 lần -> CỘNG DỒN plugin (không thay thế) ─────
 {
-  const TMP_ADD = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-add-'));
+  const TMP_ADD = mkTmp('cwf-add-');
   process.env.AIE_INSTALL_ROOT = TMP_ADD;
   install({ providers: 'claude', plugins: 'backend', scope: 'project' });
   install({ providers: 'claude', plugins: 'frontend', scope: 'project' });
@@ -329,7 +334,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 
 // ── skill-granular: cài LẺ 1 skill → chỉ skill đó (+ baseline principles) ─────
 {
-  const TMP_S = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-skill-'));
+  const TMP_S = mkTmp('cwf-skill-');
   process.env.AIE_INSTALL_ROOT = TMP_S;
   install({ providers: 'claude', skills: ['backend/backend-init'], scope: 'project' });
   const E = (rel) => fs.existsSync(path.join(TMP_S, rel));
@@ -347,7 +352,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 
 // ── skill draft nằm ở build/claude/drafts/ nhưng skills-mode vẫn cài được (R6) ─────────────
 {
-  const TMP_D = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-draft-'));
+  const TMP_D = mkTmp('cwf-draft-');
   process.env.AIE_INSTALL_ROOT = TMP_D;
   try {
     install({ providers: 'claude', skills: ['data/data-oltp-init'], scope: 'project' });
@@ -363,7 +368,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 
 // ── partial uninstall: entry nhiều plugin, gỡ 1 plugin -> GIỮ phần còn lại ────
 {
-  const TMP_P = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-partial-'));
+  const TMP_P = mkTmp('cwf-partial-');
   process.env.AIE_INSTALL_ROOT = TMP_P;
   install({ providers: 'claude', plugins: ['backend', 'frontend'], scope: 'project' });
   uninstall({ providers: 'claude', plugins: 'backend', scope: 'project' });
@@ -382,7 +387,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 // Khối backend "vỡ" thành skills lẻ (8 skill trừ 1); core vẫn whole (default-whole-core) nên
 // git-workflow + principles còn nguyên.
 {
-  const TMP_RU = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-skill-rm-'));
+  const TMP_RU = mkTmp('cwf-skill-rm-');
   process.env.AIE_INSTALL_ROOT = TMP_RU;
   install({ providers: 'claude', plugins: 'backend', scope: 'project' }); // nguyên khối
   uninstall({ providers: 'claude', skills: ['backend/backend-testing'], scope: 'project' });
@@ -410,14 +415,14 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 // ── update: empty manifest + reinstall (tái quét) + regression phát hiện SKILL MỚI ──────────
 {
   // empty manifest → update không làm gì (pull=false: không đụng git)
-  const TMP_E = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-upd-empty-'));
+  const TMP_E = mkTmp('cwf-upd-empty-');
   process.env.AIE_INSTALL_ROOT = TMP_E;
   const re = update({ scope: 'project', pull: false });
   ok(re.empty === true && re.entries.length === 0, 'update: manifest trống → empty, không cập nhật gì');
   fs.rmSync(TMP_E, { recursive: true, force: true });
 
   // integration: cài claude backend rồi update (pull=false) → reinstall (tái quét), skill vẫn còn
-  const TMP_UP = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-upd-int-'));
+  const TMP_UP = mkTmp('cwf-upd-int-');
   process.env.AIE_INSTALL_ROOT = TMP_UP;
   install({ providers: 'claude', plugins: 'backend', scope: 'project' });
   const ru = update({ scope: 'project', pull: false });
@@ -429,7 +434,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   // REGRESSION (root cause): skill dùng chung MỚI của core (git-workflow) phải xuất hiện sau update
   // dù bản cài trước đó KHÔNG có nó. Mô phỏng "cài trước khi git-workflow tồn tại" = xoá link/skill
   // git-workflow rồi update. Trước fix: symlink-pass giữ nguyên tập link cũ → git-workflow BỎ SÓT.
-  const TMP_NEW = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-upd-new-'));
+  const TMP_NEW = mkTmp('cwf-upd-new-');
   process.env.AIE_INSTALL_ROOT = TMP_NEW;
   install({ providers: 'claude', plugins: 'backend', scope: 'project' });
   const gwf = path.join(TMP_NEW, '.claude/skills/git-workflow');
@@ -446,7 +451,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 
 // ── update: khối nhận skill MỚI; skill-lẻ KHÔNG kéo anh em; check trả skills ──
 {
-  const TMP_U2 = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-upd-skill-'));
+  const TMP_U2 = mkTmp('cwf-upd-skill-');
   process.env.AIE_INSTALL_ROOT = TMP_U2;
   install({ providers: 'claude', skills: ['backend/backend-init'], scope: 'project' }); // cài LẺ
   const chk = check({ scope: 'project' }).installs.find((e) => e.provider === 'claude');
@@ -464,7 +469,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 
 // ── update FILTER: chỉ làm tươi entry khớp --provider/--plugin; không khớp → noMatch ──
 {
-  const TMP_UF = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-upd-filter-'));
+  const TMP_UF = mkTmp('cwf-upd-filter-');
   process.env.AIE_INSTALL_ROOT = TMP_UF;
   install({ providers: 'claude', plugins: 'backend', scope: 'project' });
   install({ providers: 'cursor', plugins: 'frontend', scope: 'project' });
@@ -494,7 +499,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 
 // ── narrowing: chọn LẺ core/principles → KHÔNG kéo git-workflow (Q2) ──────────
 {
-  const TMP_NW = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-narrow-'));
+  const TMP_NW = mkTmp('cwf-narrow-');
   process.env.AIE_INSTALL_ROOT = TMP_NW;
   install({ providers: 'claude', skills: ['core/principles'], scope: 'project' });
   const E = (rel) => fs.existsSync(path.join(TMP_NW, rel));
@@ -506,7 +511,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 
 // ── CLI seam: --skill KHÔNG kèm --plugin → chỉ cài skill đó, KHÔNG cài mọi plugin ──
 {
-  const TMP_CLI = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-cli-'));
+  const TMP_CLI = mkTmp('cwf-cli-');
   process.env.AIE_INSTALL_ROOT = TMP_CLI;
   const a = parse(['install', '--provider', 'claude', '--skill', 'backend/backend-init']);
   const plugins = (a.skill.length && !a.pluginExplicit) ? [] : a.plugin;
@@ -523,7 +528,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
 // index.mjs truyền skills=args.skill (mặc định []). [] phải được coi là "không lọc theo skill",
 // KHÔNG phải "lọc theo tập rỗng" (khiến matched luôn false → gỡ 0 file).
 {
-  const TMP_UR = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-cli-rm-'));
+  const TMP_UR = mkTmp('cwf-cli-rm-');
   process.env.AIE_INSTALL_ROOT = TMP_UR;
   const E = (rel) => fs.existsSync(path.join(TMP_UR, rel));
 
@@ -553,7 +558,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   const MARK = '<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->';
 
   // A) vòng đời đầy đủ: install khối → gỡ lẻ → update → gỡ provider (một scope)
-  const TA = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-agy-'));
+  const TA = mkTmp('cwf-agy-');
   process.env.AIE_INSTALL_ROOT = TA;
   const A = (rel) => fs.existsSync(path.join(TA, rel));
   install({ providers: 'antigravity', plugins: 'backend', scope: 'project' });
@@ -584,7 +589,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   fs.rmSync(TA, { recursive: true, force: true });
 
   // B) install LẺ 1 skill → chỉ skill đó + git-workflow, không kéo anh em
-  const TB = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-agy-skill-'));
+  const TB = mkTmp('cwf-agy-skill-');
   process.env.AIE_INSTALL_ROOT = TB;
   const B = (rel) => fs.existsSync(path.join(TB, rel));
   install({ providers: 'antigravity', skills: ['backend/backend-init'], scope: 'project' });
@@ -676,7 +681,7 @@ try {
   ok(!stripped.plugins.includes('workflows') && stripped.skills.length === 0 && stripped.plugins.includes('backend'),
     'stripUnsupportedWorkflows: cursor bỏ workflows, giữ plugin khác');
 
-  const TMP_W = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wf-'));
+  const TMP_W = mkTmp('cwf-wf-');
   process.env.AIE_INSTALL_ROOT = TMP_W;
   const a = parse(['install', '--provider', 'claude', '--skill', 'workflows/workflow-feature']);
   const plugins = (a.skill.length && !a.pluginExplicit) ? [] : a.plugin;
@@ -695,7 +700,7 @@ try {
     'gỡ workflow: gỡ luôn phần kéo theo + agent');
   fs.rmSync(TMP_W, { recursive: true, force: true });
 
-  const TMP_X = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wfx-'));
+  const TMP_X = mkTmp('cwf-wfx-');
   process.env.AIE_INSTALL_ROOT = TMP_X;
   install({ providers: 'codex', skills: ['workflows/workflow-bugfix'], scope: 'project' });
   ok(fs.existsSync(path.join(TMP_X, '.codex/skills/workflow-bugfix/SKILL.md')), 'codex: cài workflow skill');
@@ -709,7 +714,7 @@ try {
 // → với provider chưa hỗ trợ workflow (cursor/antigravity), dòng tóm tắt CLI (reportInstall) vẫn
 // liệt kê workflows như đã cài dù manifest đã strip — mâu thuẫn với cảnh báo "chưa hỗ trợ workflow".
 {
-  const TMP_RS = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-wf-strip-'));
+  const TMP_RS = mkTmp('cwf-wf-strip-');
   process.env.AIE_INSTALL_ROOT = TMP_RS;
   const r = install({ providers: 'cursor', skills: ['workflows/workflow-feature'], scope: 'project' });
   const res = r.results[0];
@@ -743,7 +748,7 @@ try {
   ok(sub.plugins.every((p) => p.stages.length > 0),
     'coworkBuildSet: loại plugin không có stage cowork nào');
 
-  const TMP_PK = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-pack-'));
+  const TMP_PK = mkTmp('cwf-pack-');
   const r = pack({ outDir: TMP_PK });
   ok(r.packed.some((p) => p.skill === 'backend-init'), 'pack: đóng gói skill backend-init');
   ok(r.packed.length === ids.length && r.missing.length === 0,

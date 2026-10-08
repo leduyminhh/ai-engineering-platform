@@ -16,7 +16,7 @@ import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
 import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
 import { hashDir, currentVersions, planLock, lockDecision, diffLock, readLock } from '../cli/lib/versions.mjs';
-import { parseClaudePluginList } from '../cli/lib/install.mjs';
+import { parseClaudePluginList, parseClaudePluginJson } from '../cli/lib/install.mjs';
 
 const RUN_IN = ['plan', 'execute'];
 const INVOKE_IN = ['once', 'per-request'];
@@ -86,7 +86,7 @@ export async function buildContext({ build = false, fails = [] } = {}) {
     checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml,
     checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools,
     lineOverlap, stepOverlap, titleOverlap,
-    hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList,
+    hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList, parseClaudePluginJson,
     RUN_IN, INVOKE_IN, listFilesRec, hasFiles, BUILD, claudeDir, claudeSkillDir,
     core, plugins, workflows, catalogSkillIds, allAgents,
     fxAgent, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, wfText,

@@ -252,14 +252,34 @@ export function parseClaudePluginList(text, marketplaceName) {
   return out;
 }
 
+/** Output `claude plugin list --json`; null khi không phải JSON để caller rơi về parser text (CLI cũ). */
+export function parseClaudePluginJson(text, marketplaceName) {
+  let data;
+  try { data = JSON.parse(String(text || '')); } catch { return null; }
+  const rows = Array.isArray(data) ? data : (data && Array.isArray(data.installed) ? data.installed : null);
+  if (!rows) return null;
+  return rows
+    .filter((r) => r && typeof r.id === 'string' && r.id.endsWith(`@${marketplaceName}`))
+    .map((r) => ({ id: r.id.slice(0, -(`@${marketplaceName}`.length)), version: r.version || null }));
+}
+
 /** Đối chiếu version plugin đã cài trong Claude Code với nguồn; không có CLI → available=false, không ném. */
 function claudeDoctor() {
-  let out;
-  try { out = runClaudeCli(['plugin', 'list'], { tolerate: true, timeout: 15000 }); } catch { return { available: false, stale: [] }; }
-  if (!out.ok) return { available: false, stale: [] };
+  const mkt = loadMarketplace().name;
+  let entries = null;
+  try {
+    const j = runClaudeCli(['plugin', 'list', '--json'], { tolerate: true, timeout: 15000 });
+    if (j.ok) entries = parseClaudePluginJson(j.out, mkt);
+  } catch { /* rơi về text */ }
+  if (!entries) {
+    let out;
+    try { out = runClaudeCli(['plugin', 'list'], { tolerate: true, timeout: 15000 }); } catch { return { available: false, stale: [] }; }
+    if (!out.ok) return { available: false, stale: [] };
+    entries = parseClaudePluginList(out.out, mkt);
+  }
   const wf = loadWorkflows();
   const source = new Map([loadCore(), ...loadPlugins(), ...(wf ? [wf] : [])].map((u) => [u.id, u.version]));
-  const stale = parseClaudePluginList(out.out, loadMarketplace().name)
+  const stale = entries
     .filter((e) => e.version && source.has(e.id) && e.version !== source.get(e.id))
     .map((e) => ({ id: e.id, installed: e.version, source: source.get(e.id) }));
   return { available: true, stale };
