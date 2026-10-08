@@ -21,6 +21,12 @@ npm run overlap     # node test/overlap.mjs (skill/workflow overlap report, advi
 npm run pack:verify # pack-guard: assert the npm-publish file set stays within policy
 ```
 
+Version gate: Claude Code caches plugins **by version**, so any change to projected content must bump the
+plugin's `.manifest.json` version (core: `core/.manifest.json`). After `npm run build`, run
+`node cli/lib/versions.mjs --lock` to refresh `plugins/_versions.lock.json` (it refuses when content changed but
+the version did not); `npm test` fails if the lock does not match the build. `aip check` reports installed
+Claude plugins whose version differs from source.
+
 Run a **single test file** directly (no build step):
 
 ```bash
@@ -53,7 +59,7 @@ Pure ESM, zero runtime dependencies (Node built-ins only, incl. a hand-rolled YA
 Content flows one direction: **canonical source → in-memory model → adapter → files on disk.**
 
 1. **Canonical source** — `plugins/<id>/` (`.manifest.json` = `{id,name,description,version}` + `shared/principles.md` + `skills/<skill-id>/SKILL.md` + `agents/<agent-id>.md`), plus `plugins/_marketplace.json` (marketplace identity) and `plugins/_cowork.json` (the skill set zipped for Anthropic Cowork upload). Shared content lives in `core/` (`agents/AGENTS.template.md`, `principles/`, `skills/git-workflow/`). Cross-plugin workflows live in the repo-level `workflows/` (`<slug>/WORKFLOW.md`, `orchestrator/WORKFLOW.md`, registry table in the orchestrator body) plus `templates/workflows/workflow.template.md`. Project scaffolding lives in `templates/init/` + `templates/skills/`.
-2. **`cli/lib/plugins.mjs`** — `loadPlugins()` scans `plugins/*/.manifest.json` (dirs starting `_` are config, not plugins); `loadSkills()` discovers `skills/*/SKILL.md`, parses frontmatter with a zero-dep parser, and orders by `order`. `loadAgents()` discovers `agents/*.md` per plugin (frontmatter `name`, `description`, `mode`, `skills`). `loadCore()` returns core as a plugin-shaped object. `loadWorkflows()` returns `workflows/` as a plugin-shaped object (`{ id: 'workflows', name, version, description, stages: [...], agents: [] }`), one stage per `WORKFLOW.md` parsed with the same frontmatter parser plus `kind`, `tier`, `risk`, `agents[]`, `requires[]`. The skill is the unit; frontmatter (`order`, `title`, `runsIn`, `invoke`, `sharedAssets`) describes each one — **this repo runs skills as standalone recipes** (no mandatory chain).
+2. **`cli/lib/plugins.mjs`** — `loadPlugins()` scans `plugins/*/.manifest.json` (dirs starting `_` are config, not plugins); `loadSkills()` discovers `skills/*/SKILL.md`, parses frontmatter with a zero-dep parser, and orders by `order`. `loadAgents()` discovers `agents/*.md` per plugin (frontmatter `name`, `description`, `mode`, `skills`). `loadCore()` returns core as a plugin-shaped object (identity/version from `core/.manifest.json`). `loadWorkflows()` returns `workflows/` as a plugin-shaped object (`{ id: 'workflows', name, version, description, stages: [...], agents: [] }`), one stage per `WORKFLOW.md` parsed with the same frontmatter parser plus `kind`, `tier`, `risk`, `agents[]`, `requires[]`. The skill is the unit; frontmatter (`order`, `title`, `runsIn`, `invoke`, `sharedAssets`) describes each one — **this repo runs skills as standalone recipes** (no mandatory chain).
 3. **`cli/build.mjs`** — `discoverAdapters()` scans `adapters/*/adapter.mjs` (auto-discovered by convention; `_`-prefixed dirs skipped). Cross-adapter helpers (skill/agent/workflow rendering, Codex TOML) live in `adapters/_shared/lib.mjs` + `agents.mjs`; workflow body/registry parsing and dependency expansion live in `cli/lib/workflows.mjs`. Each adapter is a pure function `build(plugins, { outDir, marketplace, core }) -> fileEntry[]`, where an entry is `{path, content}` | `{path, copyFrom}` | `{path, copyDir}`. `cli/lib/write.mjs` `writeFiles()` is the sole materializer.
 4. **`cli/lib/install.mjs`** — `install()` / `uninstall()` / `check()` / `update()` apply the built output to the target project: symlink-first with copy fallback (junctions on Windows; copy when run from `node_modules`), child-by-child directory merge that never clobbers user files, and additive installs. Everything is recorded in `<scope-root>/.ai-engineering/manifest.json`. On Windows, never `rm -rf` a sandbox containing junctions from Git Bash (it deletes through into `build/`); clean up with Node `fs.rmSync`.
 
@@ -75,6 +81,7 @@ Every lifecycle command takes a scope: **project** (default, cwd) or **global** 
 - New workflow → copy `templates/workflows/workflow.template.md` to `workflows/<slug>/WORKFLOW.md`, add a row to the registry in `workflows/orchestrator/WORKFLOW.md`.
 - New provider behavior → edit `adapters/<provider>/adapter.mjs`; keep it a pure `build(plugins, ctx) -> fileEntry[]`.
 - Changes affecting projection should be covered by `test/*.test.mjs` and the `test/validate.mjs` contract.
+- Any content change → bump the owning plugin's version and re-run `node cli/lib/versions.mjs --lock` (see Version gate above). `workflows/.manifest.json` `hardDependencies` lists the plugins the `workflows` plugin depends on; a workflow needing another plugin (e.g. `data`, `ops`) gets a "Plugin cần có" preamble line instead.
 
 ## Conventions
 

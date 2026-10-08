@@ -81,9 +81,16 @@ function reportPack(r) {
   console.log(`    → upload từng .zip vào Cowork qua Customize → Skills.`);
   if (r.missing.length) console.log(`    ⚠ thiếu (chưa build?): ${r.missing.join(', ')}`);
 }
+// Cài tay bằng `claude plugin install` không có trong manifest aip nhưng vẫn có thể lệch version → in cả khi manifest trống.
+function reportStaleClaude(r) {
+  if (!(r.claude && r.claude.available && r.claude.stale.length)) return;
+  console.log('\n⚠ Plugin trong Claude Code lệch nguồn (cache key theo version) — chạy "aip update" hoặc cài lại:');
+  for (const s of r.claude.stale) console.log(`  - ${s.id}: đã cài ${s.installed}, nguồn ${s.source}`);
+}
+
 function reportCheck(r) {
   console.log(`\nĐã cài ở scope=${r.scope} (${r.root}):`);
-  if (!r.installs.length) { console.log('  (trống)'); return; }
+  if (!r.installs.length) { console.log('  (trống)'); reportStaleClaude(r); return; }
   for (const e of r.installs) {
     if (e.mode === 'plugin') { // do Claude quản lý (cache + settings.json) — không soi file, không bịa present/files
       console.log(`  - ${e.provider.padEnd(12)} ${e.plugins.join(',').padEnd(28)} (plugin do Claude quản lý — xác thực: "claude plugin list")`);
@@ -93,6 +100,7 @@ function reportCheck(r) {
     const skills = (e.skills && e.skills.length) ? `  + skills: ${e.skills.join(', ')}` : '';
     console.log(`  - ${e.provider.padEnd(12)} ${e.plugins.join(',').padEnd(28)} ${e.present}/${e.files} file${warn}${skills}`);
   }
+  reportStaleClaude(r);
 }
 
 async function wizardFlow(action, opts = {}) {

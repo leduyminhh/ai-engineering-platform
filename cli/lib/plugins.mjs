@@ -80,15 +80,17 @@ function readCorePrinciples() {
  * declare as a dependency, so installing any plugin always pulls in the core logic.
  * Ngoài principles, core còn có SKILL DÙNG CHUNG ở core/skills/<id>/SKILL.md (vd
  * git-workflow) — load bằng cùng cơ chế loadSkills như plugin, ship kèm core ở mọi adapter.
+ * id/name/description/version đọc từ core/.manifest.json, cùng cơ chế với plugin.
  * @returns {{id:string, name:string, description:string, version:string, principles:string, stages:Array}}
  */
 export function loadCore() {
+  const manifest = readJSON(path.join(CORE_DIR, '.manifest.json'));
   return {
-    id: 'core',
-    name: 'Core — Nguyên tắc nền tảng Cowork→Code',
-    description:
-      'Nguyên tắc nền tảng dùng chung (4 nguyên tắc cốt lõi, 3 tầng tài liệu, ranh giới an toàn, nguồn sự thật) cho mọi plugin workflow Cowork → Code. Mọi plugin phụ thuộc core này.',
-    version: '1.1.1',
+    id: manifest.id || 'core',
+    name: manifest.name,
+    description: manifest.description,
+    version: manifest.version,
+    manifest,
     principles: readCorePrinciples(),
     stages: loadSkills(CORE_DIR),
     agents: [],

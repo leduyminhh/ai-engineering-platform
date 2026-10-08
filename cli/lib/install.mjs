@@ -238,6 +238,33 @@ function runClaudeCli(argv, { tolerate = false } = {}) {
   }
 }
 
+/** Thuần: đọc output `claude plugin list`, trả plugin của marketplace này kèm version đã cài. */
+export function parseClaudePluginList(text, marketplaceName) {
+  const out = [];
+  let cur = null;
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    const head = line.match(/^❯\s+([a-z0-9-]+)@(.+)$/);
+    if (head) { cur = head[2] === marketplaceName ? { id: head[1], version: null } : null; if (cur) out.push(cur); continue; }
+    const ver = line.match(/^Version:\s*(\S+)/);
+    if (ver && cur) cur.version = ver[1];
+  }
+  return out;
+}
+
+/** Đối chiếu version plugin đã cài trong Claude Code với nguồn; không có CLI → available=false, không ném. */
+function claudeDoctor() {
+  let out;
+  try { out = runClaudeCli(['plugin', 'list'], { tolerate: true }); } catch { return { available: false, stale: [] }; }
+  if (!out.ok) return { available: false, stale: [] };
+  const wf = loadWorkflows();
+  const source = new Map([loadCore(), ...loadPlugins(), ...(wf ? [wf] : [])].map((u) => [u.id, u.version]));
+  const stale = parseClaudePluginList(out.out, loadMarketplace().name)
+    .filter((e) => source.has(e.id) && e.version !== source.get(e.id))
+    .map((e) => ({ id: e.id, installed: e.version, source: source.get(e.id) }));
+  return { available: true, stale };
+}
+
 /** Cài claude dạng plugin: đăng ký marketplace (idempotent) rồi install từng plugin đã chọn. */
 function installClaudePlugin({ pluginIds, scope }) {
   const dir = claudeMarketplaceDir();
@@ -758,6 +785,7 @@ export function check({ scope = 'project' } = {}) {
     root,
     scope,
     manifest: manifestPath(scope),
+    claude: claudeDoctor(),
     installs: m.installs.map((e) => {
       if (e.mode === 'plugin') {
         // do `claude` CLI quản lý (cache + settings.json) → không soi file ở scope root.
