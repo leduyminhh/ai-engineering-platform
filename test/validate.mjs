@@ -422,7 +422,11 @@ if (fs.existsSync(claudeDir)) {
   }
   if (wfBuilt) {
     const pj = JSON.parse(fs.readFileSync(path.join(claudeDir, 'plugins/workflows/.claude-plugin/plugin.json'), 'utf8'));
-    ok(pj.dependencies[0] === 'core', 'build claude workflows: depends on core');
+    const hard32 = ['core', ...(workflows.manifest.hardDependencies || []).filter((d) => d !== 'core').sort()];
+    const mkNames32 = new Set(mk.plugins.map((x) => x.name));
+    ok(JSON.stringify(pj.dependencies) === JSON.stringify(hard32.filter((d) => mkNames32.has(d))),
+      `build claude workflows: dependencies = hardDependencies có mặt trong marketplace (${pj.dependencies.join(',')})`);
+    ok(pj.dependencies.every((d) => mkNames32.has(d)), 'build claude workflows: mọi dependency là entry marketplace');
     for (const s of workflows.stages) {
       const f = path.join(claudeDir, 'plugins/workflows/skills', s.id, 'SKILL.md');
       const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
@@ -2419,6 +2423,41 @@ if (fs.existsSync(BUILD)) {
     }
     ok(seen > 0 && bad.length === 0, `build ${prov}: ${seen} frontmatter đều là YAML an toàn${bad.length ? ' — ' + bad.slice(0, 3).join(' | ') : ''}`);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 32. workflows: hard-dependency tường minh + plugin còn lại ghi trong preamble (spec 2026-10-07 audit E6 / P0.2)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  if (workflows) {
+    const hard = workflows.manifest.hardDependencies;
+    ok(Array.isArray(hard) && hard.includes('core') && hard.length < plugins.length + 1,
+      'workflows manifest: hardDependencies tường minh, có core, không bao trùm mọi plugin');
+    ok(/^\d+\.\d+\.\d+$/.test(workflows.version) && workflows.version !== '1.0.0', 'workflows manifest: version đã bump khỏi 1.0.0');
+    const pluginOfAgent = new Map(allAgents.map((a) => [a.id, a.plugin]));
+    for (const wf of workflows.stages) {
+      const need = new Set([...wf.requires.map((r) => r.split('/')[0]), ...wf.agents.map((a) => pluginOfAgent.get(a)).filter(Boolean)]);
+      const soft = [...need].filter((p) => !(hard || []).includes(p)).sort();
+      const built = path.join(BUILD, 'claude', 'plugins', 'workflows', 'skills', wf.id, 'SKILL.md');
+      const c = fs.existsSync(built) ? fs.readFileSync(built, 'utf8') : '';
+      if (soft.length) {
+        ok(c.includes(`> **Plugin cần có:** ${soft.map((p) => `\`${p}\``).join(', ')}`),
+          `${wf.id}: preamble nêu plugin ngoài hard-dep (${soft.join(',')})`);
+      } else {
+        ok(!c.includes('**Plugin cần có:**'), `${wf.id}: không có plugin ngoài hard-dep → không có dòng "Plugin cần có"`);
+      }
+    }
+  }
+  // Fixture: hardDependencies lọc theo plugin có mặt; thiếu hardDependencies → giữ hành vi cũ (union).
+  const fxWfHard = { ...fxWorkflows, manifest: { hardDependencies: ['core', 'fx', 'absent-plugin'] } };
+  const outH = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore, workflows: fxWfHard }));
+  const pjH = JSON.parse(outH.get('plugins/workflows/.claude-plugin/plugin.json').content);
+  ok(JSON.stringify(pjH.dependencies) === '["core","fx"]', 'claude workflows: hardDependencies lọc plugin vắng mặt');
+  const fxWfSoft = { ...fxWorkflows, manifest: { hardDependencies: ['core'] } };
+  const outS = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore, workflows: fxWfSoft }));
+  ok(JSON.parse(outS.get('plugins/workflows/.claude-plugin/plugin.json').content).dependencies.length === 1
+    && outS.get('plugins/workflows/skills/workflow-demo/SKILL.md').content.includes('> **Plugin cần có:** `fx`'),
+    'claude workflows: plugin ngoài hard-dep → không vào dependencies, có dòng Plugin cần có');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

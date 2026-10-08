@@ -26,10 +26,13 @@ export function claudeAgentMd(agent) {
   return `${head}\n\n${note}\n\n${agent.body.replace(/^\n+/, '')}`;
 }
 
-export function workflowPreamble(wf, agentsById, provider) {
+export function workflowPreamble(wf, agentsById, provider, { softDeps = [] } = {}) {
   const L = [];
   if (provider === 'claude') {
     L.push('> **Đọc trước** nguyên tắc nền tảng — skill `principles` (bản cài dạng plugin: `core:principles`).');
+    if (softDeps.length) {
+      L.push(`> **Plugin cần có:** ${softDeps.map((p) => `\`${p}\``).join(', ')} (không nằm trong dependency của plugin workflows — cài thêm trước khi chạy).`);
+    }
     if (wf.agents.length) {
       L.push('> **Cách dispatch trên Claude:** bước ghi `agent <id>` → gọi subagent qua tool Agent: ' +
         wf.agents.map((id) => `\`${id}\` (bản cài dạng plugin: \`${(agentsById.get(id) || {}).plugin}:${id}\`)`).join(', ') + '.');
