@@ -6,6 +6,7 @@ title: "DB change — migration schema forward/rollback"
 kind: workflow
 tier: 2
 risk: high
+argument-hint: "[thay đổi schema]"
 agents: "data-migration-writer,backend-implementer,backend-test-writer,backend-reviewer"
 requires: "core/git-workflow,data/data-db-migration"
 runsIn: execute

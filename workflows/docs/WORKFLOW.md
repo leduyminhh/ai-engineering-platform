@@ -1,11 +1,12 @@
 ---
 name: workflow-docs
-description: "Workflow điều phối cập nhật tài liệu sau thay đổi hành vi công khai: xác định diff, tìm tài liệu bị ảnh hưởng (README, API docs, ADR, runbook, project-knowledge), cập nhật, kiểm link/ví dụ khớp code rồi commit. Dùng workflow NÀY khi người dùng muốn \"cập nhật tài liệu\", \"sync docs\", \"README lỗi thời\", \"viết runbook\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi cần đổi hành vi/code để thêm tính năng → workflow-feature; để sửa lỗi → workflow-bugfix."
+description: "Điều phối cập nhật tài liệu sau thay đổi hành vi công khai: xác định diff, tìm tài liệu bị ảnh hưởng (README, API docs, ADR, runbook), cập nhật, kiểm link/ví dụ khớp code, commit. Dùng khi người dùng muốn \"cập nhật tài liệu\", \"sync docs\", \"README lỗi thời\", \"viết runbook\". Không dùng khi cần đổi hành vi/code để thêm tính năng → workflow-feature; để sửa lỗi → workflow-bugfix."
 order: 12
 title: "Docs — đồng bộ tài liệu theo thay đổi hành vi"
 kind: workflow
 tier: 3
 risk: low
+argument-hint: "[tài liệu cần cập nhật]"
 agents: "engineering-spec-analyst"
 requires: "core/git-workflow"
 runsIn: execute

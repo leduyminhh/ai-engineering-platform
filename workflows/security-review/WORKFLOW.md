@@ -1,11 +1,12 @@
 ---
 name: workflow-security-review
-description: "Điều phối review bảo mật: phạm vi & threat model, review/scan theo OWASP và vùng rủi ro, validate finding bằng file:line, remediation (người dùng tự rotate secret bị lộ), regression test, sửa, re-scan, commit. Dùng khi người dùng muốn \"security review\", \"review bảo mật\", \"quét lỗ hổng\", \"OWASP\", \"kiểm secret\", \"CVE\". Không dùng khi chỉ cần quét một lần → engineering-quality-gate; quality gate trước release → workflow-release."
+description: "Điều phối review bảo mật: threat model, scan theo OWASP, validate finding bằng file:line, remediation (người dùng tự rotate secret bị lộ), regression test, sửa, re-scan, commit. Dùng khi người dùng muốn \"review bảo mật\", \"quét lỗ hổng\", \"OWASP\", \"kiểm secret\", \"CVE\". Không dùng khi chỉ cần quét một lần → engineering-quality-gate; quality gate trước release → workflow-release."
 order: 6
 title: "Security review — threat model, scan, remediation, re-scan"
 kind: workflow
 tier: 1
 risk: high
+argument-hint: "[phạm vi | PR]"
 agents: "engineering-quality-auditor,backend-test-writer,frontend-test-writer,backend-fixer,frontend-fixer"
 requires: "core/git-workflow"
 runsIn: execute

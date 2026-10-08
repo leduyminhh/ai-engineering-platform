@@ -1,11 +1,12 @@
 ---
 name: workflow-performance
-description: "Workflow điều phối tối ưu hiệu năng: xác định metric + ngưỡng mục tiêu, đo baseline, profile tìm bottleneck có evidence, tối ưu, benchmark so sánh trước/sau cùng điều kiện, review rồi commit. Dùng workflow NÀY khi người dùng muốn \"chậm\", \"tối ưu hiệu năng\", \"performance\", \"latency\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi chậm do lỗi logic rõ ràng, không phải hiệu năng → workflow-bugfix."
+description: "Điều phối tối ưu hiệu năng: chốt metric + ngưỡng, đo baseline, profile bottleneck có evidence, tối ưu, benchmark trước/sau cùng điều kiện, review, commit. Dùng khi người dùng muốn \"chậm\", \"tối ưu hiệu năng\", \"performance\", \"latency\". Không dùng khi chậm do lỗi logic rõ ràng, không phải hiệu năng → workflow-bugfix."
 order: 9
 title: "Performance — profile, tối ưu, benchmark trước/sau"
 kind: workflow
 tier: 3
 risk: medium
+argument-hint: "[luồng | metric mục tiêu]"
 agents: "backend-performance-analyst,frontend-performance-analyst,backend-fixer,frontend-fixer,backend-reviewer,frontend-reviewer"
 requires: "core/git-workflow"
 runsIn: execute

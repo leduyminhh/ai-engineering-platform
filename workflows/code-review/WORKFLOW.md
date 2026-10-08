@@ -6,6 +6,7 @@ title: "Code review — review diff/PR đa vai trò, chỉ đọc"
 kind: workflow
 tier: 1
 risk: low
+argument-hint: "[PR | branch]"
 agents: "backend-reviewer,frontend-reviewer,engineering-quality-auditor"
 requires: ""
 runsIn: execute

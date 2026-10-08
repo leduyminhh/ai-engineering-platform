@@ -1,11 +1,12 @@
 ---
 name: workflow-bugfix
-description: "Workflow điều phối sửa bug đúng quy trình: hiểu bối cảnh, tái hiện bằng failing test, thu evidence, xác định root cause có xác nhận người dùng, fix tối thiểu, chạy regression toàn bộ, review đa vai trò, rồi commit qua git-workflow. Dùng workflow NÀY khi người dùng muốn \"sửa bug\", \"fix lỗi\", \"debug\", \"tại sao bị lỗi\", \"không chạy\", \"sai kết quả\", hoặc dán stacktrace — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi hệ thống production đang sập → workflow-incident."
+description: "Điều phối sửa bug: tái hiện bằng failing test, thu evidence, root cause có xác nhận người dùng, fix tối thiểu, regression toàn bộ, review đa vai trò, commit qua git-workflow. Dùng khi người dùng muốn \"sửa bug\", \"fix lỗi\", \"debug\", \"không chạy\", \"sai kết quả\", hoặc dán stacktrace. Không dùng khi hệ thống production đang sập → workflow-incident."
 order: 2
 title: "Bugfix — tái hiện, root cause, fix tối thiểu, regression"
 kind: workflow
 tier: 1
 risk: medium
+argument-hint: "[mô tả bug | issue]"
 agents: "backend-test-writer,frontend-test-writer,backend-fixer,frontend-fixer,backend-reviewer,frontend-reviewer,engineering-quality-auditor"
 requires: "core/git-workflow"
 runsIn: execute

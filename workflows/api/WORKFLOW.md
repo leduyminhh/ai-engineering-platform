@@ -6,6 +6,7 @@ title: "API — contract-first, implement, kiểm drift"
 kind: workflow
 tier: 2
 risk: medium
+argument-hint: "[endpoint | use case]"
 agents: "backend-implementer,backend-test-writer,backend-reviewer,engineering-quality-auditor,frontend-data-integrator"
 requires: "backend/backend-api-contract,core/git-workflow"
 runsIn: execute

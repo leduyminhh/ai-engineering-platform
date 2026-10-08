@@ -6,6 +6,7 @@ title: "Refactor — đổi code/kiến trúc giữ nguyên hành vi"
 kind: workflow
 tier: 1
 risk: medium
+argument-hint: "[module | mục tiêu refactor]"
 agents: "backend-test-writer,frontend-test-writer,backend-reviewer,frontend-reviewer,engineering-spec-analyst,engineering-quality-auditor"
 requires: "backend/backend-refactor,frontend/frontend-refactor,backend/backend-migrate-architecture,frontend/frontend-migrate-architecture,core/git-workflow"
 runsIn: execute

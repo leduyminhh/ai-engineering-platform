@@ -1,11 +1,12 @@
 ---
 name: workflow-incident
-description: "Điều phối xử lý sự cố production: triage & blast radius, thu evidence, kiểm chứng giả thuyết, đề xuất mitigation cho người dùng thực hiện (agent không tác động production), xác minh phục hồi, RCA/postmortem. Dùng khi người dùng muốn \"sự cố production\", \"prod down\", \"incident\", \"hệ thống chậm bất thường\", \"alert\". Không dùng khi lỗi tái hiện được ở local, production vẫn ổn → workflow-bugfix."
+description: "Điều phối xử lý sự cố production: triage & blast radius, thu evidence, kiểm chứng giả thuyết, đề xuất mitigation cho người dùng thực hiện (agent không tác động production), xác minh phục hồi, RCA. Dùng khi người dùng muốn \"sự cố production\", \"prod down\", \"incident\", \"hệ thống chậm bất thường\", \"alert\". Không dùng khi lỗi tái hiện được ở local, production vẫn ổn → workflow-bugfix."
 order: 10
 title: "Incident — triage, mitigation, phục hồi, RCA"
 kind: workflow
 tier: 1
 risk: critical
+argument-hint: "[triệu chứng | thời điểm bắt đầu]"
 agents: "ops-incident-investigator,engineering-spec-analyst"
 requires: "core/git-workflow"
 runsIn: execute
