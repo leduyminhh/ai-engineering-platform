@@ -2461,6 +2461,24 @@ if (fs.existsSync(BUILD)) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 33. Mô tả skill <plugin>-principles không còn "pipeline bắt buộc", có tình huống dùng (spec 2026-10-07 audit S3 / P0.5)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  for (const p of plugins) {
+    if (!(p.shared.principles && p.shared.principles.trim())) continue;
+    for (const [prov, rel] of [['claude', path.join('claude', 'plugins', p.id, 'skills', `${p.id}-principles`, 'SKILL.md')],
+      ['codex', path.join('codex', p.id, 'skills', `${p.id}-principles`, 'SKILL.md')]]) {
+      const f = path.join(BUILD, rel);
+      const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+      // Chỉ xét dòng description: thân principles có thể phủ định hợp lệ ("không phải pipeline bắt buộc").
+      const desc = (c.match(/^description: .*$/m) || [''])[0];
+      ok(desc && !desc.includes('pipeline bắt buộc') && desc.includes('Dùng khi'),
+        `build ${prov} ${p.id}-principles: mô tả không nhắc pipeline bắt buộc, có "Dùng khi"`);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (fails.length) {
   console.log('FAIL:');

@@ -78,9 +78,9 @@ function pluginPrinciplesFiles(p) {
   if (!body.trim()) return [];
   const name = `${p.id}-principles`;
   const description =
-    `Nguyên tắc nền tảng RIÊNG của plugin ${p.id} (pipeline bắt buộc, phân tầng, ranh giới ` +
-    `an toàn, nguồn sự thật đặc thù) — đọc TRƯỚC khi chạy bất kỳ giai đoạn ${p.id}-* nào; ` +
-    `bổ sung cho skill core principles.`;
+    `Nguyên tắc riêng của plugin ${p.id} (phân tầng, ranh giới an toàn, nguồn sự thật đặc thù), ` +
+    `bổ sung cho skill core principles. Dùng khi bắt đầu bất kỳ skill ${p.id}-* nào hoặc trước khi ` +
+    `quyết định điều gì chạm ranh giới an toàn của plugin ${p.id}.`;
   const skill = frontmatter([['name', name], ['description', description]]) + '\n\n' + body;
   return [{ path: `plugins/${p.id}/skills/${name}/SKILL.md`, content: skill }];
 }
