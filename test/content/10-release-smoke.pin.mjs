@@ -44,4 +44,9 @@ export default async function run({ ok, ctx }) {
       ok(wfRow.includes('frontend-e2e-test-writer'), `${rd}: hàng WF11 liệt kê frontend-e2e-test-writer`);
     }
   }
+
+  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
+  {
+    ok((workflows.stages.find((s) => s.id === 'workflow-release')?.body ?? '').includes('`references/smoke-e2e.md`'), 'workflow-release: WORKFLOW.md vẫn trỏ tới references/smoke-e2e.md');
+  }
 }

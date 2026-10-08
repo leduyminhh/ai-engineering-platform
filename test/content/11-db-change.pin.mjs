@@ -119,4 +119,10 @@ export default async function run({ ok, ctx }) {
     ok(fs.readFileSync(path.join(REPO_ROOT, 'docs', 'decisions', '0001-database-capabilities-in-data-plugin.md'), 'utf8').includes('data-migration-writer'),
       'ADR-0001: ghi cập nhật publish data-db-migration và agent data-migration-writer');
   }
+
+  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
+  {
+    ok((workflows.stages.find((s) => s.id === 'workflow-db-change')?.body ?? '').includes('`references/forward-only.md`'), 'workflow-db-change: WORKFLOW.md vẫn trỏ tới references/forward-only.md');
+    ok((workflows.stages.find((s) => s.id === 'workflow-db-change')?.body ?? '').includes('`references/error-matrix.md`'), 'workflow-db-change: WORKFLOW.md vẫn trỏ tới references/error-matrix.md');
+  }
 }

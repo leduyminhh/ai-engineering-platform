@@ -167,4 +167,10 @@ export default async function run({ ok, ctx }) {
     ok(flat23(fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8')).includes('`frontend-performance`'),
       'CLAUDE.md: nêu frontend-performance');
   }
+
+  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
+  {
+    ok((workflows.stages.find((s) => s.id === 'workflow-performance')?.body ?? '').includes('`references/frontend.md`'), 'workflow-performance: WORKFLOW.md vẫn trỏ tới references/frontend.md');
+    ok((workflows.stages.find((s) => s.id === 'workflow-performance')?.body ?? '').includes('`references/error-matrix.md`'), 'workflow-performance: WORKFLOW.md vẫn trỏ tới references/error-matrix.md');
+  }
 }

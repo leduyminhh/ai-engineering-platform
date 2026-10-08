@@ -35,6 +35,9 @@ export default async function run({ ok, ctx }) {
     ok(!wf.includes('không phân rã story/task chi tiết'), 'workflow-feature: bỏ câu cấm phân rã task');
     ok(step(4).includes('`tasks.md`') && wf.includes('`FE-INT` → `frontend-data-integrator`'),
       'workflow-feature: Bước 4 giao implementer theo từng task');
+    const featBody = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'WORKFLOW.md'), 'utf8');
+    ok(step(2).includes('`references/task-breakdown.md`') && step(4).includes('`references/task-breakdown.md`') && featBody.includes('`references/task-breakdown.md`'),
+      'workflow-feature: Bước 2 và Bước 4 trong WORKFLOW.md vẫn trỏ tới references/task-breakdown.md');
     ok(/^### Bước 8 — Commit ⏸$/m.test(wf), 'workflow-feature: không đánh số lại bước');
     const ag = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'agents', 'engineering-spec-analyst.md'), 'utf8');
     ok(/^skills: "engineering-spec-writing,engineering-adr,engineering-diagram,engineering-task-breakdown"$/m.test(ag),

@@ -148,6 +148,13 @@ export default async function run({ ok, ctx }) {
           ok(fs.existsSync(path.join(claudeDir, 'plugins/workflows/skills', s.id, 'references', r)), `build claude ${s.id}: ship references/${r}`);
         }
       }
+      // Chiều ngược: file nằm trong references/ của workflow mà body không trỏ tới thì model không bao giờ mở nó.
+      const refDir = path.join(s.dir, 'references');
+      if (fs.existsSync(refDir)) {
+        for (const f of fs.readdirSync(refDir).filter((x) => x.endsWith('.md'))) {
+          ok(s.body.includes(`\`references/${f}\``), `${s.id}: WORKFLOW.md trỏ tới references/${f}`);
+        }
+      }
     }
   }
 }

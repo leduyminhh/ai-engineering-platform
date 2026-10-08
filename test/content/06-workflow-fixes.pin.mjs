@@ -194,4 +194,10 @@ export default async function run({ ok, ctx }) {
         `${id}: tiền điều kiện Baseline nêu được đo ở Bước 1`);
     }
   }
+
+  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
+  {
+    ok((workflows.stages.find((s) => s.id === 'workflow-db-change')?.body ?? '').includes('`references/forward-only.md`'), 'workflow-db-change: WORKFLOW.md vẫn trỏ tới references/forward-only.md');
+    ok((workflows.stages.find((s) => s.id === 'workflow-incident')?.body ?? '').includes('`references/severity-scale.md`'), 'workflow-incident: WORKFLOW.md vẫn trỏ tới references/severity-scale.md');
+  }
 }
