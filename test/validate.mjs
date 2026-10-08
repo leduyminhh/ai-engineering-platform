@@ -21,7 +21,7 @@ import { agentsFiles, whenToUse, WHEN_TO_USE_MAX } from '../adapters/_shared/lib
 import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
 import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
-import { hashDir, currentVersions, planLock, diffLock, readLock } from '../cli/lib/versions.mjs';
+import { hashDir, currentVersions, planLock, lockDecision, diffLock, readLock } from '../cli/lib/versions.mjs';
 import { parseClaudePluginList } from '../cli/lib/install.mjs';
 
 let pass = 0;
@@ -2402,6 +2402,7 @@ if (fs.existsSync(BUILD)) {
   ok(yamlScalar('') === '""' && yamlScalar('a ') === '"a "', 'yamlScalar: rỗng / khoảng trắng cuối → quote');
   ok(frontmatter([['name', 'x'], ['description', 'A: b'], ['effort', 'high'], ['skip', null]])
     === '---\nname: x\ndescription: "A: b"\neffort: high\n---', 'frontmatter: quote đúng key cần quote, bỏ key null');
+  ok(yamlScalar('foo:') === '"foo:"' && checkFrontmatterYaml('d: foo:').length === 1, 'yamlScalar/checker: ":" cuối chuỗi → quote');
   ok(checkFrontmatterYaml('name: x\ndescription: "A: b"').length === 0, 'checkFrontmatterYaml: hợp lệ');
   ok(checkFrontmatterYaml('description: A: b').some((e) => e.includes('plain scalar')), 'checkFrontmatterYaml: ": " không quote → lỗi');
   ok(checkFrontmatterYaml('description: "chưa đóng').some((e) => e.includes('quote')), 'checkFrontmatterYaml: quote không đóng → lỗi');
@@ -2526,6 +2527,12 @@ if (fs.existsSync(BUILD)) {
   ok(plan34.refused.length === 1 && plan34.refused[0].id === 'core', 'planLock: hash đổi + version giữ → từ chối đúng plugin');
   ok(plan34.next.be.hash === 'k2' && plan34.next.fe && plan34.next.core.hash === 'h1', 'planLock: entry hợp lệ cập nhật, entry mới thêm, entry bị từ chối giữ cũ');
   ok(diffLock(cur, prev).length === 3 && diffLock(cur, { ...cur }).length === 0, 'diffLock: báo lệch hash/version/thiếu id; khớp → rỗng');
+  const dMissing = lockDecision({ a: { version: '1', hash: 'h' } }, { a: { version: '1', hash: 'h' }, b: { version: '1', hash: 'g' } });
+  ok(!dMissing.write && dMissing.code === 2 && dMissing.missing[0] === 'b', 'lockDecision: build thiếu id trong lock → không ghi, exit 2');
+  const dRefuse = lockDecision({ a: { version: '1', hash: 'h2' } }, { a: { version: '1', hash: 'h' } });
+  ok(!dRefuse.write && dRefuse.code === 1 && dRefuse.refused.length === 1, 'lockDecision: hash đổi version giữ → không ghi, exit 1');
+  const dOk = lockDecision({ a: { version: '2', hash: 'h2' }, c: { version: '1', hash: 'x' } }, { a: { version: '1', hash: 'h' } });
+  ok(dOk.write && dOk.code === 0 && dOk.next.c && dOk.next.a.version === '2', 'lockDecision: bump hợp lệ + plugin mới → ghi');
   const gone34 = diffLock({ a: { version: '1', hash: 'h' } }, { a: { version: '1', hash: 'h' }, gone: { version: '1', hash: 'g' } });
   ok(gone34.length === 1 && gone34[0].includes('không còn trong build'), 'diffLock: báo entry có trong lock nhưng không còn trong build');
   const sample = 'Installed plugins:\n\n  ❯ backend@ai-engineering-platform\n    Version: 1.2.0\n    Scope: user\n    Status: ✔ enabled\n\n  ❯ feature-dev@claude-plugins-official\n    Version: 2a8ad9f74633\n\n  ❯ workflows@ai-engineering-platform\n    Version: 1.0.0\n    Status: ✘ failed to load\n';

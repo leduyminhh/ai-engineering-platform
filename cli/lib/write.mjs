@@ -45,7 +45,7 @@ export function writeFiles(outDir, files) {
 
 // Plain scalar chỉ an toàn khi không mở đầu bằng ký tự cấu trúc YAML và không chứa ": " / " #";
 // mô tả tiếng Việt thường có ": " hoặc dấu " nên phải quote, nếu không parser chặt báo "mapping values are not allowed here".
-const PLAIN_UNSAFE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:\s|\s#|\s$|["\n\r\t]/;
+const PLAIN_UNSAFE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:(?:\s|$)|\s#|\s$|["\n\r\t]/;
 
 /** Chuỗi YAML an toàn: plain khi vô hại, ngược lại double-quoted kiểu JSON (YAML 1.2 chấp nhận). */
 export function yamlScalar(v) {

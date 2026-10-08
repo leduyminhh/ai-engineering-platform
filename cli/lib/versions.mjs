@@ -65,6 +65,14 @@ export function planLock(current, previous) {
   return { next, refused };
 }
 
+/** Thuần: quyết định ghi lock. Build thiếu id đã có trong lock (build lọc --plugin) → không ghi, tránh xoá entry rồi lần sau thêm lại mà không so hash. */
+export function lockDecision(current, previous) {
+  const missing = Object.keys(previous).filter((id) => !current[id]).sort();
+  if (missing.length) return { write: false, code: 2, missing, refused: [], next: previous };
+  const { next, refused } = planLock(current, previous);
+  return { write: refused.length === 0, code: refused.length ? 1 : 0, missing, refused, next };
+}
+
 /** Thuần: lệch giữa build hiện tại và lock đã commit. */
 export function diffLock(current, lock) {
   const errs = [];
@@ -82,11 +90,16 @@ function main(argv) {
   const current = currentVersions();
   if (!Object.keys(current).length) { console.error('Chưa có build/claude/plugins — chạy npm run build trước.'); return 2; }
   if (argv.includes('--lock')) {
-    const { next, refused } = planLock(current, readLock());
-    for (const r of refused) console.error(`✗ ${r.id}@${r.version}: ${r.reason} — bump version trong manifest rồi chạy lại.`);
-    fs.writeFileSync(LOCK_PATH, JSON.stringify(next, null, 2) + '\n');
-    console.log(`Đã ghi ${path.relative(REPO_ROOT, LOCK_PATH)} (${Object.keys(next).length} plugin).`);
-    return refused.length ? 1 : 0;
+    const d = lockDecision(current, readLock());
+    if (d.missing.length) {
+      console.error(`✗ Build thiếu ${d.missing.join(', ')} — chạy npm run build (đủ plugin) rồi --lock lại; gỡ plugin thật thì xoá entry trong lock bằng tay.`);
+      return 2;
+    }
+    for (const r of d.refused) console.error(`✗ ${r.id}@${r.version}: ${r.reason} — bump version trong manifest rồi chạy lại.`);
+    if (!d.write) return d.code;
+    fs.writeFileSync(LOCK_PATH, JSON.stringify(d.next, null, 2) + '\n');
+    console.log(`Đã ghi ${path.relative(REPO_ROOT, LOCK_PATH).split(path.sep).join('/')} (${Object.keys(d.next).length} plugin).`);
+    return 0;
   }
   const diff = diffLock(current, readLock());
   for (const d of diff) console.error(`✗ ${d}`);

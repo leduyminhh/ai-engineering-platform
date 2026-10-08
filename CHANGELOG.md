@@ -35,6 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "(" open backs up to before it.
 - The Antigravity "Khi nào dùng" index line now stops after a whole clause (`, ` `; ` ` — ` `: ` outside parentheses,
   from character 100 on) instead of mid-clause, falling back to a word boundary.
+- Plugin content changes must bump the owning `.manifest.json` version (core: `core/.manifest.json`) and
+  refresh `plugins/_versions.lock.json` with `node cli/lib/versions.mjs --lock`; `npm test` fails when the
+  lock does not match the build.
+- The `workflows` plugin now depends only on `core`, `backend`, `frontend`, `engineering`; `db-change` needs
+  `data`, `incident`/`release` need `ops` (stated in each workflow's preamble as "Plugin cần có").
+- Built frontmatter values are double-quoted when unsafe as YAML plain scalars (Claude, Codex, Cursor `.mdc`).
+- `aip check` also lists installed Claude Code plugins whose version differs from source.
+- CI runs on ubuntu/windows × Node 20/24 and validates the built marketplace with
+  `claude plugin validate --strict`.
 
 ## [1.2.1] - 2026-10-01
 

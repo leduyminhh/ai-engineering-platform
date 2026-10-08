@@ -260,7 +260,7 @@ function claudeDoctor() {
   const wf = loadWorkflows();
   const source = new Map([loadCore(), ...loadPlugins(), ...(wf ? [wf] : [])].map((u) => [u.id, u.version]));
   const stale = parseClaudePluginList(out.out, loadMarketplace().name)
-    .filter((e) => source.has(e.id) && e.version !== source.get(e.id))
+    .filter((e) => e.version && source.has(e.id) && e.version !== source.get(e.id))
     .map((e) => ({ id: e.id, installed: e.version, source: source.get(e.id) }));
   return { available: true, stale };
 }

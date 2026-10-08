@@ -324,6 +324,7 @@ enforced by `test/validate.mjs`).
   `build(plugins, { outDir, marketplace, core }) -> fileEntry[]` where an entry is
   `{path, content}` | `{path, copyFrom}` | `{path, copyDir}`.
 - Run `npm run build` and `npm test` (which runs `test/validate.mjs --build`).
+- Any content change → bump the owning plugin's version and run `node cli/lib/versions.mjs --lock` (Claude Code caches plugins by version).
 
 ## Maintainer
 

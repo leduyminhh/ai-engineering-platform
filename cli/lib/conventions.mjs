@@ -77,7 +77,7 @@ export function triggerCollisions(entries) {
 
 // Kiểm frontmatter ĐÃ PHÁT: value chứa ": ", " #" hoặc mở đầu bằng ký tự cấu trúc phải nằm trong ngoặc kép.
 // Chỉ nhận dạng `key: value` một dòng — đúng tập con mà frontmatter() phát ra hiện nay.
-const PLAIN_UNSAFE_VALUE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:\s|\s#|\s$/;
+const PLAIN_UNSAFE_VALUE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:(?:\s|$)|\s#|\s$/;
 const QUOTED = /^"(?:[^"\\]|\\.)*"$/;
 
 export function checkFrontmatterYaml(fmText) {
