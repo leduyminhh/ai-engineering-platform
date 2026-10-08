@@ -2515,6 +2515,10 @@ if (fs.existsSync(BUILD)) {
     ok(h1 === hashDir(tmp34) && /^[0-9a-f]{64}$/.test(h1), 'hashDir: tất định, sha256 hex');
     fs.writeFileSync(path.join(tmp34, 'a', 'x.md'), 'hai');
     ok(hashDir(tmp34) !== h1, 'hashDir: đổi nội dung → đổi hash');
+    fs.writeFileSync(path.join(tmp34, 'a', 'x.md'), 'x\r\n');
+    const hCrlf = hashDir(tmp34);
+    fs.writeFileSync(path.join(tmp34, 'a', 'x.md'), 'x\n');
+    ok(hCrlf === hashDir(tmp34), 'hashDir: CRLF và LF cho cùng hash (gate không đỏ giả khi working tree còn CRLF)');
   } finally { fs.rmSync(tmp34, { recursive: true, force: true }); }
   const prev = { core: { version: '1.0.0', hash: 'h1' }, be: { version: '2.0.0', hash: 'k1' } };
   const cur = { core: { version: '1.0.0', hash: 'h2' }, be: { version: '2.0.1', hash: 'k2' }, fe: { version: '0.1.0', hash: 'f' } };
@@ -2522,6 +2526,8 @@ if (fs.existsSync(BUILD)) {
   ok(plan34.refused.length === 1 && plan34.refused[0].id === 'core', 'planLock: hash đổi + version giữ → từ chối đúng plugin');
   ok(plan34.next.be.hash === 'k2' && plan34.next.fe && plan34.next.core.hash === 'h1', 'planLock: entry hợp lệ cập nhật, entry mới thêm, entry bị từ chối giữ cũ');
   ok(diffLock(cur, prev).length === 3 && diffLock(cur, { ...cur }).length === 0, 'diffLock: báo lệch hash/version/thiếu id; khớp → rỗng');
+  const gone34 = diffLock({ a: { version: '1', hash: 'h' } }, { a: { version: '1', hash: 'h' }, gone: { version: '1', hash: 'g' } });
+  ok(gone34.length === 1 && gone34[0].includes('không còn trong build'), 'diffLock: báo entry có trong lock nhưng không còn trong build');
   const sample = 'Installed plugins:\n\n  ❯ backend@ai-engineering-platform\n    Version: 1.2.0\n    Scope: user\n    Status: ✔ enabled\n\n  ❯ feature-dev@claude-plugins-official\n    Version: 2a8ad9f74633\n\n  ❯ workflows@ai-engineering-platform\n    Version: 1.0.0\n    Status: ✘ failed to load\n';
   ok(JSON.stringify(parseClaudePluginList(sample, 'ai-engineering-platform')) === '[{"id":"backend","version":"1.2.0"},{"id":"workflows","version":"1.0.0"}]',
     'parseClaudePluginList: lấy đúng plugin của marketplace + version');

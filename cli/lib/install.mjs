@@ -220,11 +220,11 @@ function shQuote(arg) { return /[\s"&|<>^()]/.test(arg) ? `"${arg.replace(/"/g, 
  * KHÔNG ném khi lệnh fail (để gọi nơi khác quyết định bỏ qua, vd marketplace add trùng); CHỈ
  * ném khi không tìm thấy `claude` trên PATH (ENOENT) — báo lỗi rõ cho người dùng.
  */
-function runClaudeCli(argv, { tolerate = false } = {}) {
+function runClaudeCli(argv, { tolerate = false, timeout } = {}) {
   try {
     const out = process.platform === 'win32'
-      ? execSync(['claude', ...argv].map(shQuote).join(' '), { encoding: 'utf8', stdio: 'pipe' })
-      : execFileSync('claude', argv, { encoding: 'utf8', stdio: 'pipe' });
+      ? execSync(['claude', ...argv].map(shQuote).join(' '), { encoding: 'utf8', stdio: 'pipe', timeout })
+      : execFileSync('claude', argv, { encoding: 'utf8', stdio: 'pipe', timeout });
     return { ok: true, out: String(out || '') };
   } catch (err) {
     if (err && err.code === 'ENOENT') {
@@ -255,7 +255,7 @@ export function parseClaudePluginList(text, marketplaceName) {
 /** Đối chiếu version plugin đã cài trong Claude Code với nguồn; không có CLI → available=false, không ném. */
 function claudeDoctor() {
   let out;
-  try { out = runClaudeCli(['plugin', 'list'], { tolerate: true }); } catch { return { available: false, stale: [] }; }
+  try { out = runClaudeCli(['plugin', 'list'], { tolerate: true, timeout: 15000 }); } catch { return { available: false, stale: [] }; }
   if (!out.ok) return { available: false, stale: [] };
   const wf = loadWorkflows();
   const source = new Map([loadCore(), ...loadPlugins(), ...(wf ? [wf] : [])].map((u) => [u.id, u.version]));
@@ -778,14 +778,14 @@ export function uninstall({ providers, plugins, skills, scope = 'project' }) {
 }
 
 /** Liệt kê đã cài gì ở scope (đọc manifest) + tồn tại file thực tế. */
-export function check({ scope = 'project' } = {}) {
+export function check({ scope = 'project', doctor = false } = {}) {
   const root = scopeRoot(scope);
   const m = readManifest(scope);
   return {
     root,
     scope,
     manifest: manifestPath(scope),
-    claude: claudeDoctor(),
+    claude: doctor ? claudeDoctor() : null,
     installs: m.installs.map((e) => {
       if (e.mode === 'plugin') {
         // do `claude` CLI quản lý (cache + settings.json) → không soi file ở scope root.

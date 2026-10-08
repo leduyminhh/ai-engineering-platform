@@ -240,7 +240,7 @@ async function main() {
     case 'update':
       return reportUpdate(update({ scope: args.scope, providers: args.provider, plugins: args.plugin, skills: args.skill }));
     case 'check':
-      return reportCheck(check({ scope: args.scope }));
+      return reportCheck(check({ scope: args.scope, doctor: true }));
     case 'pack': {
       console.log('Đóng gói skill cho Cowork…');
       return reportPack(pack());

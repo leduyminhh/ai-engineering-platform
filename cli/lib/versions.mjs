@@ -12,7 +12,7 @@ export const LOCK_PATH = path.join(REPO_ROOT, 'plugins', '_versions.lock.json');
 const BUILD_CLAUDE_PLUGINS = path.join(REPO_ROOT, 'build', 'claude', 'plugins');
 
 function walk(dir, base = dir, out = []) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, base, out);
     else out.push(path.relative(base, p).split(path.sep).join('/'));
@@ -23,8 +23,10 @@ function walk(dir, base = dir, out = []) {
 export function hashDir(dir) {
   const h = createHash('sha256');
   for (const rel of walk(dir)) {
-    h.update(rel); h.update('\0');
-    h.update(fs.readFileSync(path.join(dir, rel))); h.update('\0');
+    const buf = fs.readFileSync(path.join(dir, rel));
+    // Working tree có thể còn CRLF (checkout cũ trước .gitattributes eol=lf) trong khi CI là LF; hash theo nội dung LF để gate không đỏ giả.
+    const data = buf.includes(0) ? buf : Buffer.from(buf.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
+    h.update(rel); h.update('\0'); h.update(data); h.update('\0');
   }
   return h.digest('hex');
 }
