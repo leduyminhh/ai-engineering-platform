@@ -97,7 +97,6 @@ export default async function run({ ok, ctx }) {
       'frontend-performance-analyst: report theo core:principles, tự đối chiếu diff');
     ok(fpa.includes('INP') && /^description: .*(LCP|TBT)/m.test(fpa),
       'frontend-performance-analyst: nêu lab không phải INP; description nêu LCP/TBT');
-    // Spec frontend-performance cũ là tài liệu lịch sử, không ghim byte với agent hiện tại.
 
     const pf23 = wf23('workflow-performance');
     for (const [n, mode] of [[2, 'measure'], [3, 'profile'], [5, 'measure']]) {
@@ -167,6 +166,5 @@ export default async function run({ ok, ctx }) {
       'CLAUDE.md: frontend 10 skill published (gồm frontend-performance)');
     ok(flat23(fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8')).includes('`frontend-performance`'),
       'CLAUDE.md: nêu frontend-performance');
-    // Spec backend-performance cũ là tài liệu lịch sử, không ghim nội dung tham chiếu chéo.
   }
 }

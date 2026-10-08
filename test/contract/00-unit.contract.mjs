@@ -10,6 +10,8 @@ export default async function run({ ok, ctx }) {
   ok(JSON.stringify(splitList(' a, b ,,c ')) === '["a","b","c"]', 'splitList: tách phẩy + trim + bỏ rỗng');
   ok(parseOnly(['--only']).error && parseOnly(['--only', '--build']).error, 'parseOnly: --only thiếu giá trị hoặc theo sau là flag → lỗi');
   ok(!parseOnly(['--only', 'versions']).error && parseOnly(['--only', 'versions']).onlys[0] === 'versions', 'parseOnly: --only <tên> hợp lệ');
+  ok(!parseOnly(['--only=versions']).error && parseOnly(['--only=versions']).onlys.join() === 'versions', 'parseOnly: --only=<tên> hợp lệ');
+  ok(!!parseOnly(['--only=']).error, 'parseOnly: --only= (giá trị rỗng) → lỗi');
   ok(Array.isArray(splitList(undefined)) && splitList(undefined).length === 0, 'splitList: không phải chuỗi → []');
   ok(loadPlugins().every((p) => Array.isArray(p.agents)), 'loadPlugins: mỗi plugin có mảng agents');
   ok(Array.isArray(loadCore().agents) && loadCore().agents.length === 0, 'loadCore: agents = []');

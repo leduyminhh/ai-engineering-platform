@@ -35,6 +35,7 @@ test (msw); `backend-api-contract` chốt và kiểm drift contract.
 - KHÔNG tự cài dependency (codegen, thư viện data, global store); đề xuất và HỎI. Thư viện data mới → ADR
   (`engineering-adr`).
 - KHÔNG quyết định nơi lưu token hay luồng auth/refresh; chỉ map lỗi 401 thành trạng thái UI hoặc lỗi hook trả ra.
+- KHÔNG hardcode API key/base URL vào component hay hook; lấy từ cấu hình môi trường sẵn có của project.
 - KHÔNG thêm e2e (thuộc `frontend-e2e-testing`).
 - Làm trên branch riêng (không `main`/`master`/`dev`/`develop`); dừng cho người duyệt diff trước khi commit
   (1 task = 1 commit).

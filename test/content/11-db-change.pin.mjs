@@ -53,7 +53,6 @@ export default async function run({ ok, ctx }) {
       'data-migration-writer: Flyway forward-only → migration bù là văn bản compensating_sql trong report, không tạo file');
     ok(dmwScope.includes('do chính lượt workflow này tạo') && dmwScope.includes('đã có trên base branch'),
       'data-migration-writer: được sửa file do chính lượt workflow tạo; cấm sửa file đã có trên base branch');
-    // Spec data-migration-writer cũ là tài liệu lịch sử, không ghim byte với agent hiện tại.
     const dbc22 = wf22('workflow-db-change');
     const dS2 = step22(dbc22, 2), dS3 = step22(dbc22, 3), dS6 = step22(dbc22, 6), dS8 = step22(dbc22, 8);
     ok(field22(dS2.body, 'Thực hiện').includes('skill `data-db-migration`') && field22(dS2.body, 'Hành động').includes('change-patterns')

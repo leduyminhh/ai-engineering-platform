@@ -3,10 +3,16 @@
 export function parseOnly(argv) {
   const onlys = [];
   let error = null;
+  const need = '--only cần một giá trị (tên module hoặc chuỗi con), vd --only versions';
   argv.forEach((a, i) => {
+    if (a.startsWith('--only=')) {
+      const v = a.slice('--only='.length);
+      if (!v) error = need; else onlys.push(v);
+      return;
+    }
     if (a !== '--only') return;
     const v = argv[i + 1];
-    if (!v || v.startsWith('--')) error = '--only cần một giá trị (tên module hoặc chuỗi con), vd --only versions';
+    if (!v || v.startsWith('--')) error = need;
     else onlys.push(v);
   });
   return { onlys, error };

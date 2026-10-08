@@ -12,7 +12,7 @@ import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest } from '../adapters/_shared/lib.mjs';
 import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
-import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX } from '../cli/lib/conventions.mjs';
+import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
 import { hashDir, currentVersions, planLock, lockDecision, diffLock, readLock } from '../cli/lib/versions.mjs';
 import { parseClaudePluginList } from '../cli/lib/install.mjs';
@@ -70,7 +70,7 @@ export async function buildContext({ build = false, fails = [] } = {}) {
     offeredCatalog, claudeAdapter, codexAdapter, tomlBasic, tomlMultiline,
     agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar,
     checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml,
-    checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX,
+    checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys,
     lineOverlap, stepOverlap, titleOverlap,
     hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList,
     RUN_IN, INVOKE_IN, listFilesRec, hasFiles, BUILD, claudeDir,

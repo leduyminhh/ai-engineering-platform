@@ -1,6 +1,6 @@
 ---
 name: engineering-quality-gate
-description: "Chạy quality gate (SonarQube, Black Duck SCA) và security review source-first theo OWASP/ASVS/CWE; mask secret, người duyệt diff khi tự sửa, report có residual risk. Dùng khi người dùng muốn \"quét sonar\", \"check black duck\", \"security review\", \"quality gate\", \"fix từ report\". Không dùng khi cần quy trình bảo mật đầy đủ → workflow-security-review; review correctness/thiết kế → backend-code-review; review frontend → frontend-code-review."
+description: "Chạy quality gate (SonarQube, Black Duck SCA) và security review source-first theo OWASP/ASVS/CWE; mask secret, người duyệt diff khi tự sửa, report có residual risk. Dùng khi người dùng muốn \"quét sonar\", \"kiểm tra lỗ hổng dependency\", \"security review\", \"quality gate\", \"fix từ report\". Không dùng khi cần quy trình bảo mật đầy đủ → workflow-security-review; review correctness/thiết kế → backend-code-review; review frontend → frontend-code-review."
 order: 1
 title: "Quality Gate — SonarQube + Black Duck + review bảo mật source-first, triage, fix, report"
 runsIn: execute

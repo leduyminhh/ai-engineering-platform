@@ -1,6 +1,6 @@
 // Contract conventions: frontmatter, khung H2, description, trùng lặp và các mẫu chuẩn hoá áp mọi skill/agent.
 export default async function run({ ok, ctx }) {
-  const { fs, path, execFileSync, pathToFileURL, REPO_ROOT, PLUGINS_DIR, CORE_DIR, agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar, checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, lineOverlap, stepOverlap, titleOverlap, listFilesRec, core, plugins, allAgents, workflows, BUILD, fxCore } = ctx;
+  const { fs, path, execFileSync, pathToFileURL, REPO_ROOT, PLUGINS_DIR, CORE_DIR, agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar, checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, lineOverlap, stepOverlap, titleOverlap, listFilesRec, core, plugins, allAgents, workflows, BUILD, fxCore } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 24. Chuẩn hoá A1: frontmatter không còn trường chết (spec 2026-10-06 §4.1)
@@ -241,7 +241,7 @@ export default async function run({ ok, ctx }) {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 35. Phase 1: mẫu description skill/agent — áp dần theo plugin (spec 2026-10-07 audit S1, W4 / P1.1, P1.2)
+  // 35. Phase 1: mẫu description skill/agent (spec 2026-10-07 audit S1, W4 / P1.1, P1.2)
   // ─────────────────────────────────────────────────────────────────────────────
   {
     const good35 = 'Review diff backend theo correctness, kiến trúc và test. Dùng khi người dùng muốn "review code backend", "review PR backend", "đọc soát PR". Không dùng khi cần quét bảo mật → engineering-quality-gate.';
@@ -263,10 +263,7 @@ export default async function run({ ok, ctx }) {
     ok(checkAgentDescription(`${'a'.repeat(270)}. Dùng khi x.`).some((e) => e.includes(`${AGENT_DESCRIPTION_MAX}`)), 'checkAgentDescription: quá dài → lỗi');
     ok(checkAgentDescription('Agent làm X. Không được: a, b, c.').some((e) => e.includes('Dùng khi')), 'checkAgentDescription: thiếu "Dùng khi" → lỗi');
 
-    const STYLE_READY = new Set([core.id, ...plugins.map((p) => p.id)]);
-    const AGENT_STYLE_READY = new Set(allAgents.map((a) => a.id));
     for (const p of [core, ...plugins]) {
-      if (!STYLE_READY.has(p.id)) continue;
       for (const s of p.stages) {
         const errs = checkDescriptionStyle(s.description);
         ok(errs.length === 0, `${s.id}: description theo mẫu Phase 1${errs.length ? ' — ' + errs.join('; ') : ''}`);
@@ -281,7 +278,6 @@ export default async function run({ ok, ctx }) {
       ok(lost.length === 0, `${s.id}: giữ đủ id "Không dùng khi"${lost.length ? ' — mất: ' + lost.join(', ') : ''}`);
     }
     for (const a of allAgents) {
-      if (!AGENT_STYLE_READY.has(a.id)) continue;
       const errs = checkAgentDescription(a.description);
       ok(errs.length === 0, `${a.id}: description agent theo mẫu Phase 1${errs.length ? ' — ' + errs.join('; ') : ''}`);
     }
@@ -324,5 +320,31 @@ export default async function run({ ok, ctx }) {
     for (const s of [...core.stages, ...plugins.flatMap((p) => p.stages)]) {
       ok(!/^## Khi nào dùng/m.test(s.body), `${s.id}: không còn mục "## Khi nào dùng" (description đã nêu)`);
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 38. Phase 1: allowlist khoá frontmatter nguồn skill/agent/workflow (spec 2026-10-07 audit / P1.4; final-review I3)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    ok(checkSourceKeys('skill', { name: 'x', runsIn: 'plan' }).length === 0, 'checkSourceKeys: khoá hợp lệ → không lỗi');
+    ok(checkSourceKeys('skill', { name: 'x', runin: 'plan' }).some((e) => e.includes('"runin"')), 'checkSourceKeys: khoá lạ → lỗi nêu tên khoá');
+    ok(checkSourceKeys('agent', { name: 'x', tier: 1 }).length === 1, 'checkSourceKeys: khoá của workflow không hợp lệ ở agent');
+    ok(SOURCE_KEYS.skill.includes('sharedAssets') && SOURCE_KEYS.workflow.includes('requires') && SOURCE_KEYS.agent.includes('skills'), 'SOURCE_KEYS: đủ khoá lõi mỗi loại');
+    const fmKeys = (file) => {
+      const m = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---/);
+      return Object.fromEntries((m ? m[1].split('\n') : []).map((l) => l.match(/^([A-Za-z][\w-]*):/)).filter(Boolean).map((x) => [x[1], true]));
+    };
+    const targets = [
+      ...core.stages.map((s) => ['skill', path.join(CORE_DIR, 'skills', s.id, 'SKILL.md')]),
+      ...plugins.flatMap((p) => p.stages.map((s) => ['skill', path.join(PLUGINS_DIR, p.id, 'skills', s.id, 'SKILL.md')])),
+      ...allAgents.map((a) => ['agent', a.file]),
+      ...(workflows ? workflows.stages.map((s) => ['workflow', path.join(s.dir, 'WORKFLOW.md')]) : []),
+      ['workflow', path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md')],
+    ];
+    const bad = [];
+    for (const [kind, file] of targets) {
+      for (const e of checkSourceKeys(kind, fmKeys(file))) bad.push(`${path.relative(REPO_ROOT, file)}: ${e}`);
+    }
+    ok(targets.length > 0 && bad.length === 0, `mọi skill/agent/workflow nguồn chỉ dùng khoá frontmatter trong allowlist${bad.length ? ' — ' + bad.slice(0, 3).join('; ') : ''}`);
   }
 }

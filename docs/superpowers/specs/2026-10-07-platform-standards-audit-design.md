@@ -185,6 +185,8 @@ Cột **Mức**: High = đang gây lỗi hoặc đánh lừa người dùng; Med
 | P1.5 | Script: chuyển 3 `.sh` sang `scripts/`; port `test-commit-message-encoding.ps1` sang Node; (tuỳ chọn) `collect-history.mjs` cho git-workflow | S6 |
 | P1.6 | Test: tách `validate.mjs` → `test/harness.mjs` (`--only`) + `test/contract/*` (generic) + `test/content/*` (pin); về hưu pin câu chữ khi rule đã thành contract; sửa L419/L424; thay 4 chỗ đọc spec docs; thêm kiểm BOM/LF/UTF-8, manifest ↔ skill, allowlist key frontmatter nguồn (chuẩn bị cho Phase 2); `try/finally` temp dir; không chạy 2 lượt song song | T2, T3, T6 |
 
+P1.6 temp-dir `try/finally` trong install.test.mjs và P1.4 rút Evidence trùng Gate chuyển sang Phase 2 (ghi nhận 2026-10-08).
+
 ### Phase 2 — Engine: chiếu frontmatter đầy đủ (M)
 
 | # | Việc | Giải quyết |

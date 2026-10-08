@@ -2,5 +2,5 @@
   "id": "engineering",
   "name": "Engineering Practices",
   "description": "Plugin capability xuyên suốt (opt-in, KHÔNG thuộc core), 7 skill: engineering-quality-gate (SonarQube chất lượng + Black Duck SCA + review bảo mật source-first ánh xạ OWASP/ASVS/CWE, luồng fix-từ-report), engineering-spec-writing (khảo sát yêu cầu + viết feature spec đo được), engineering-task-breakdown (phân rã yêu cầu/use case/ARD thành task BE/FE giao được cho dev và agent, kiểm tasks.md bằng script check-tasks.mjs, xuất tasks.md + Excel tuỳ chọn), engineering-diagram (chọn đúng loại rồi sinh PlantUML renderable), engineering-adr (điều phối quyết định kiến trúc + ghi ADR chuẩn Nygard vào docs/decisions/), engineering-convention-enforce (kiểm & áp quy ước đặt tên + cấu trúc theo code-convention của project, read-only mặc định), engineering-release-notes (từ lịch sử git viết changelog + release notes hướng người dùng). Gọi khi cần ở bất kỳ giai đoạn nào; không thuộc pipeline bắt buộc; con người duyệt diff/spec/diagram trước khi dùng.",
-  "version": "1.5.0"
+  "version": "1.5.1"
 }

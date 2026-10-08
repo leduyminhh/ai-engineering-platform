@@ -13,7 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createHarness } from './harness.mjs';
+import { createHarness, parseOnly } from './harness.mjs';
 import { buildContext } from './context.mjs';
 
 const argv = process.argv.slice(2);
@@ -26,7 +26,7 @@ for (const dir of ['contract', 'content']) {
 }
 const selected = modules.filter((rel) => h.only(rel, modules));
 if (selected.length === 0) {
-  console.error(`--only ${argv.filter((_, i) => argv[i - 1] === '--only').join(', ')}: không có module nào khớp`);
+  console.error(`--only ${parseOnly(argv).onlys.join(', ')}: không có module nào khớp`);
   process.exit(2);
 }
 // Chọn module và thoát sớm TRƯỚC khi build để lỗi tham số không tốn một lượt build.

@@ -165,6 +165,5 @@ export default async function run({ ok, ctx }) {
       ok(flat18(fixAgent(p)).includes('review/re-scan lại do bước sau của workflow'),
         `${p}-fixer: Report oracle (b)/(e) chỉ ghi file:line đã sửa, review/re-scan thuộc bước sau của workflow`);
     }
-    // Spec fixer-agent cũ là tài liệu lịch sử, không ghim byte với agent hiện tại.
   }
 }

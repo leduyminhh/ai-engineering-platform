@@ -41,6 +41,7 @@ fetch/store; feature không cross-import ruột feature khác; import chỉ tr�
   kiểu kiến trúc — đó là `frontend-migrate-architecture`.
 - **Bám code-convention + design-system, không áp gu lạ.** Đặt tên/tổ chức theo `code-convention`;
   token/spacing/variant theo `design-system` của project; convention của project thắng sở thích cá nhân.
+- **Không đổi token/theme toàn cục.** Gom style/token trùng chỉ về token đã có trong `design-system`; đổi design tokens hay theme toàn cục cần người duyệt trước.
 - **Không tự mở rộng phạm vi.** Chỉ refactor đúng vùng người dùng nêu; thấy vùng khác cần dọn → đề
   xuất, không tự lan.
 - **Không push thẳng main.** Mỗi bước refactor = 1 commit; DỪNG cho người **duyệt diff** trước commit.

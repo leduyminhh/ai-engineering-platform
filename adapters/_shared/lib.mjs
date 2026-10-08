@@ -21,7 +21,7 @@ export function principlesDigest({ provider, pluginId = null }) {
     : '';
   const git = ns ? '`git-workflow` (bản cài dạng plugin: `core:git-workflow`)' : '`git-workflow`';
   return [
-    '> **Nguyên tắc nền (tóm tắt):** (1) mọi bối cảnh nằm trong file — đọc `project-knowledge/` trước, ghi quyết định vào `docs/requests/` + `docs/decisions/`; (2) con người giữ 2 chốt — chọn giải pháp và duyệt diff trước khi commit; (3) không push `main`, không lệnh phá huỷ khi chưa được duyệt, không đụng `.env`/secret, không commit lệch `code-convention.md`/fail lint; (4) nguồn sự thật: code/migration thật > tài liệu, contract > mock, `plan.md` > `TODO.md`; (5) ngôn ngữ đo được, nêu `[giả định]` và residual risk.',
+    '> **Nguyên tắc nền (tóm tắt):** (1) mọi bối cảnh nằm trong file — đọc `project-knowledge/` trước, ghi quyết định vào `docs/requests/` + `docs/decisions/`; (2) con người giữ 2 chốt — chọn giải pháp và duyệt diff trước khi commit; (3) không push `main`, không lệnh phá huỷ khi chưa được duyệt, không sửa file bí mật (`.env`/secret/credentials), không commit lệch `code-convention.md`/fail lint; (4) nguồn sự thật: code/migration thật > tài liệu, contract > mock, `plan.md` > `TODO.md`; (5) ngôn ngữ đo được, nêu `[giả định]` và residual risk.',
     `> Bản đầy đủ${pluginId ? ' + nguyên tắc riêng plugin' : ''}: skill ${core}${plug} — đọc khi cần, không bắt buộc mỗi lần.`,
     `> Khi commit/push/tạo branch/PR: gọi skill ${git}.`,
   ].join('\n');

@@ -96,7 +96,7 @@ export function checkFrontmatterYaml(fmText) {
 
 // Mẫu description Phase 1: câu hành động ngắn → "Dùng khi" 3–5 trigger → "Không dùng khi → id".
 // Câu đầu ≤ 200 vì adapter cắt dòng mục lục ở WHEN_TO_USE_MAX; boilerplate là phần mô hình suy ra được, chỉ tốn context.
-export const DESCRIPTION_TARGET = 500;
+export const DESCRIPTION_TARGET = 450;
 export const AGENT_DESCRIPTION_MAX = 260;
 export const FIRST_SENTENCE_MAX = 200;
 export const BOILERPLATE = ['kể cả khi không nói chính xác', 'Recipe on-demand', 'Skill capability', 'Skill vận hành',
@@ -127,4 +127,17 @@ export function checkAgentDescription(desc) {
   if (len > AGENT_DESCRIPTION_MAX) errs.push(`dài ${len} ký tự (≤ ${AGENT_DESCRIPTION_MAX})`);
   if (!desc.includes('Dùng khi')) errs.push('thiếu "Dùng khi"');
   return errs;
+}
+
+// Allowlist khoá frontmatter NGUỒN: loader chỉ đọc các khoá này, khoá lạ bị bỏ im lặng nên gõ sai (vd `runin`) không lộ ra.
+export const SOURCE_KEYS = {
+  skill: ['name', 'description', 'order', 'title', 'runsIn', 'invoke', 'sharedAssets'],
+  agent: ['name', 'description', 'mode', 'skills', 'model', 'effort', 'color'],
+  workflow: ['name', 'description', 'order', 'title', 'kind', 'tier', 'risk', 'agents', 'requires', 'runsIn', 'invoke'],
+};
+
+export function checkSourceKeys(kind, meta) {
+  const allowed = new Set(SOURCE_KEYS[kind] || []);
+  return Object.keys(meta).filter((k) => !allowed.has(k))
+    .map((k) => `khoá frontmatter lạ "${k}" (chưa được chiếu, sẽ bị bỏ im lặng)`);
 }

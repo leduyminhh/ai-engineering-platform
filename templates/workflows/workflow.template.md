@@ -1,6 +1,6 @@
 ---
 name: workflow-<slug>
-description: "Workflow điều phối <mục tiêu> cho <vai>: <chuỗi bước rút gọn>. Dùng workflow NÀY khi người dùng muốn \"<trigger 1>\", \"<trigger 2>\" — kể cả khi không nói chính xác chữ \"workflow\". KHÔNG thuộc pipeline bắt buộc; gọi khi cần."
+description: "Workflow điều phối <mục tiêu>: <chuỗi bước rút gọn>. Dùng khi người dùng muốn \"<trigger 1>\", \"<trigger 2>\", \"<trigger 3>\". Không dùng khi <tình huống> → workflow-<khác>."
 order: <n>
 title: "<Tiêu đề workflow>"
 kind: workflow

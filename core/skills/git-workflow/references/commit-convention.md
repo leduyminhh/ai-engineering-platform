@@ -106,7 +106,7 @@ diff trực tiếp chứng minh. Ý định không rõ → chọn từ ngữ tru
 
 - Đọc/ghi commit text bằng UTF-8; giữ nguyên dấu tiếng Việt.
 - Ghi toàn bộ message vào file UTF-8 và commit bằng `git commit -F <file>`.
-- Trước khi commit, chạy `node scripts/check-commit-message.mjs <file>` (hoặc
+- Trước khi commit, chạy `node <thư mục skill>/scripts/check-commit-message.mjs <file>` (hoặc
   `scripts/test-commit-message-encoding.ps1 -MessageFile <file>` trên PowerShell) khi body có tiếng Việt.
 - Sau khi commit, kiểm tra `git log -1 --format=%B`; amend ngay nếu tiếng Việt bị hỏng.
 - Terminal hỏng encoding → sửa encoding trước, KHÔNG âm thầm bỏ dấu trừ khi người dùng
