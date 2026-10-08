@@ -21,16 +21,6 @@ Skill này **portable ra mọi provider** (claude/cursor/codex/antigravity) và 
 — không dựng cấu trúc song song. KHÔNG thuộc chuỗi pipeline bắt buộc; gọi khi cần ở giai đoạn **plan**. Con
 người giữ chốt: **duyệt và chốt Status** trước khi ADR được coi là quyết định chính thức.
 
-## Khi nào dùng
-
-- Người dùng muốn viết ADR, ghi quyết định kiến trúc, architecture decision record, lưu lý do một quyết định
-  thiết kế, so sánh/chọn phương án, ghi lại đánh đổi kiến trúc.
-- Có một quyết định đáng lưu (chọn phương án, đánh đổi phạm vi, ràng buộc kỹ thuật lớn, chọn stack/pattern) cần
-  truy vết được về lý do.
-- Skill `engineering-spec-writing` phát hiện quyết định lớn trong lúc viết spec và cần ghi ADR để link ngược.
-
-KHÔNG dùng skill này để sinh code, để tự chốt một quyết định lớn thay người dùng, hay để phân rã story/task.
-
 ## Ranh giới an toàn
 
 - **Docs-only** — KHÔNG sinh code; chỉ tạo/cập nhật file ADR trong `docs/decisions/`.

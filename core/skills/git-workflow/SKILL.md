@@ -20,16 +20,6 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
 giai đoạn nào có thao tác git (init commit scaffold, implement commit từng task,
 release/hotfix...).
 
-## Khi nào dùng
-
-- Người dùng yêu cầu commit, push, stage, tạo/chuyển branch, merge, revert, release, hotfix.
-- Cần đặt tên branch hoặc viết conventional commit.
-- Cần chuẩn bị PR hoặc checklist release.
-- Cần gom lịch sử git cho changelog, release notes, tóm tắt tuần/tháng, hoặc tóm tắt
-  thay đổi từ một tag/version/branch/khoảng ngày.
-
-KHÔNG dùng skill này để giải thích code chung chung khi không có ý định git hay gom lịch sử.
-
 ## Ranh giới an toàn
 
 - Đọc diff trước khi stage; chỉ stage file thuộc phạm vi người dùng yêu cầu — thay đổi

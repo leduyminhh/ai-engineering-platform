@@ -28,20 +28,8 @@ Có **hai chế độ truy cập, KHÔNG dùng web API**: (a) **chạy scanner t
 **fix-từ-report**: đọc một report bảo mật/chất lượng cũ rồi **áp fix an toàn trong đúng scope** của report.
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần ở bất kỳ giai đoạn nào cần kiểm
-chất lượng/bảo mật. Con người giữ chốt: **duyệt diff trước khi commit**.
-
-## Khi nào dùng
-
-- Người dùng yêu cầu quét Sonar / chạy SonarQube, check Black Duck (hoặc Trivy), quét bảo mật phụ thuộc,
-  chạy quality gate.
-- Người dùng yêu cầu **security review / review bảo mật code** một diff, module, service, config, hoặc
-  dependency; hoặc đối chiếu với OWASP/ASVS/CWE.
-- Cần sửa lỗi Sonar, review chất lượng code, kiểm tra lỗ hổng dependency, hay **áp fix từ một report cũ**.
-- Cần bump version một dependency có lỗ hổng đã có bản vá và xác nhận build/test không vỡ.
-
-KHÔNG dùng skill này để tự cấu hình server/CI, hay gọi web API của SonarQube/Black Duck (ngoài phạm vi).
-Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải chất lượng hay bảo mật) → dùng skill
-`engineering-convention-enforce`.
+chất lượng/bảo mật. Con người giữ chốt: **duyệt diff trước khi commit**. Kiểm quy ước đặt tên và cấu trúc
+thư mục/file (không phải chất lượng hay bảo mật) → `engineering-convention-enforce`.
 
 ## Ranh giới an toàn
 

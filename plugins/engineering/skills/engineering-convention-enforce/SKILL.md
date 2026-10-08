@@ -21,17 +21,6 @@ sửa hàng loạt chỉ khi người dùng yêu cầu và **con người duyệ
 Skill này **portable ra mọi provider** (claude/cursor/codex/antigravity). KHÔNG thuộc chuỗi pipeline bắt
 buộc; gọi khi cần ở bất kỳ giai đoạn nào cần kiểm/áp quy ước.
 
-## Khi nào dùng
-
-- Người dùng muốn enforce convention, kiểm quy ước, chuẩn hoá đặt tên, kiểm cấu trúc thư mục, convention
-  check, lint quy ước, áp chuẩn code convention.
-- Trước khi merge / sau khi thêm module/file mới / sau refactor: muốn xác nhận đặt tên + cấu trúc còn bám
-  convention của project.
-- Rà một thư mục/module nghi ngờ lệch chuẩn và cần bảng lệch có evidence để con người quyết.
-
-KHÔNG dùng skill này để **đổi convention** (đó là quyết định kiến trúc → `engineering-adr`), để **sinh code**,
-hay để **tự sửa hàng loạt** khi chưa được yêu cầu và chưa có người duyệt diff.
-
 ## Ranh giới an toàn
 
 - **Read-only mặc định** — chỉ đọc + báo cáo; KHÔNG sửa file khi chưa được yêu cầu. Sửa hàng loạt chỉ khi

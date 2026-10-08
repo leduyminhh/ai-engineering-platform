@@ -19,12 +19,6 @@ quan hoá (vd `engineering-spec-writing` cần nhúng flow/ERD/sequence/kiến t
 **protected path** —
 chỉ ghi file khi người dùng **xác nhận**.
 
-## Khi nào dùng
-
-- Người dùng muốn vẽ/sinh/review một diagram: sequence, use case, class, activity, component, deployment,
-  state, ER/ERD, network, wireframe, gantt/WBS… cho kiến trúc, luồng, mô hình dữ liệu, kế hoạch, hay UI.
-- Cần trực quan hoá một mô tả hệ thống để review hoặc nhúng vào tài liệu (spec, ADR).
-
 ## Ranh giới an toàn
 
 - **Chọn loại trước, sinh sau.** Chọn sai loại sẽ giấu mất quan hệ người dùng cần xem. Loại **nhỏ nhất đủ

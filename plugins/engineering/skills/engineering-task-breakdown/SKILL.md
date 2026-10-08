@@ -20,16 +20,6 @@ Excel chỉ là bản xuất.
 
 Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint 1**) và duyệt bản tách task (**Checkpoint 2**).
 
-## Khi nào dùng
-
-- Teamlead/manager muốn tách task, chia task, phân rã yêu cầu thành việc cho team Backend/Frontend.
-- Đã có use case, ARD hoặc `requirement.md` (ví dụ do `engineering-spec-writing` viết) và cần biến thành task có
-  ID, phụ thuộc, size, AC.
-- Cần giao việc cho agent theo từng task: "làm task `UC01-BE-01` trong `tasks.md`".
-
-KHÔNG dùng khi yêu cầu còn mơ hồ (chạy `engineering-spec-writing` trước), hay khi muốn làm feature end-to-end
-(dùng `workflow-feature`).
-
 ## Ranh giới an toàn
 
 - **Docs-only** — KHÔNG sinh mã nguồn cho project; chỉ ghi trong `docs/requests/` (kể cả CSV do

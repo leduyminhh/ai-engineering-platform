@@ -21,19 +21,6 @@ hình monitoring/hạ tầng production** — con người giữ chốt và áp 
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần thiết lập/đánh giá observability.
 
-## Khi nào dùng
-
-- Cần **thiết lập observability** cho một service: bổ sung metrics/logs/traces, dashboard, alert từ đầu hay
-  cho phần còn thiếu.
-- Cần chọn **golden signals**, định nghĩa **SLI/SLO** + **error budget**, hoặc áp **RED/USE method**.
-- Cần thiết kế **alerting**: cảnh báo theo triệu chứng, đặt ngưỡng theo SLO, giảm **alert fatigue/noise**,
-  gắn **severity + runbook**.
-- Cần **đánh giá độ phủ** observability hiện có (mỗi service đã có metrics/log/trace/alert/dashboard chưa),
-  tìm **khoảng trống** và đề xuất bổ sung.
-
-KHÔNG dùng skill này để tự đổi cấu hình monitoring/hạ tầng prod, dựng lại stack quan sát ngoài scope, hay
-kết luận độ phủ mà không dựa trên cấu hình/dependency đọc được.
-
 ## Ranh giới an toàn
 
 - **KHÔNG tự đổi cấu hình monitoring/hạ tầng production.** Trình bày **kế hoạch + cấu hình đề xuất** (rule

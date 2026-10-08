@@ -17,7 +17,7 @@ import { offeredCatalog } from '../cli/lib/install.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
-import { agentsFiles, whenToUse, WHEN_TO_USE_MAX } from '../adapters/_shared/lib.mjs';
+import { agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest } from '../adapters/_shared/lib.mjs';
 import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
 import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
@@ -2585,6 +2585,39 @@ if (fs.existsSync(BUILD)) {
     if (!AGENT_STYLE_READY.has(a.id)) continue;
     const errs = checkAgentDescription(a.description);
     ok(errs.length === 0, `${a.id}: description agent theo mẫu Phase 1${errs.length ? ' — ' + errs.join('; ') : ''}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 36. Digest nguyên tắc nền thay preamble ép nạp principles; bỏ mục "Khi nào dùng" (spec 2026-10-07 audit S2, S5 / P1.3)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const d36 = principlesDigest({ provider: 'claude', pluginId: 'backend' });
+  ok(d36.includes('**Nguyên tắc nền (tóm tắt):**') && d36.includes('`backend-principles`') && d36.includes('`core:principles`')
+    && d36.includes('`backend:backend-principles`') && d36.includes('`core:git-workflow`') && !d36.includes('Đọc trước'),
+    'principlesDigest claude: digest + pointer 2 dạng + git-workflow, không còn "Đọc trước"');
+  const c36 = principlesDigest({ provider: 'codex', pluginId: 'ops' });
+  ok(c36.includes('`ops-principles`') && !c36.includes('core:principles') && c36.includes('`git-workflow`'), 'principlesDigest codex: tên trần, không namespace');
+  ok(!principlesDigest({ provider: 'claude' }).includes('-principles`'), 'principlesDigest không pluginId: không trỏ skill principles plugin');
+  ok(d36.split('\n').length <= 4 && [...d36].length <= 900, 'principlesDigest: ≤ 4 dòng, ≤ 900 ký tự');
+  const claude36 = path.join(BUILD, 'claude', 'plugins');
+  if (fs.existsSync(claude36)) {
+    const bad = [];
+    for (const rel of listFilesRec(claude36).filter((f) => f.endsWith('.md'))) {
+      const c = fs.readFileSync(path.join(claude36, rel), 'utf8');
+      if (c.includes('**Đọc trước** nguyên tắc nền tảng')) bad.push(rel);
+    }
+    ok(bad.length === 0, `build claude: không còn preamble "Đọc trước nguyên tắc nền tảng"${bad.length ? ' — ' + bad.slice(0, 3).join(', ') : ''}`);
+    const sample36 = fs.readFileSync(path.join(claude36, 'backend', 'skills', 'backend-implement', 'SKILL.md'), 'utf8');
+    ok(sample36.includes('**Nguyên tắc nền (tóm tắt):**') && sample36.includes('`backend:backend-principles`'), 'build claude backend-implement: có digest + pointer');
+  }
+  const codex36 = path.join(BUILD, 'codex');
+  if (fs.existsSync(codex36)) {
+    const sample = fs.readFileSync(path.join(codex36, 'engineering', 'skills', 'engineering-adr', 'SKILL.md'), 'utf8');
+    ok(sample.includes('**Nguyên tắc nền (tóm tắt):**') && !sample.includes('**Đọc trước**'), 'build codex engineering-adr: digest thay preamble');
+  }
+  for (const s of [...core.stages, ...plugins.flatMap((p) => p.stages)]) {
+    ok(!/^## Khi nào dùng/m.test(s.body), `${s.id}: không còn mục "## Khi nào dùng" (description đã nêu)`);
   }
 }
 

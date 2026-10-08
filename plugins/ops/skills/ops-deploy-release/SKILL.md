@@ -20,16 +20,6 @@ production khi chưa có xác nhận** — con người giữ chốt và duyệt
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần triển khai/phát hành.
 
-## Khi nào dùng
-
-- Người dùng muốn deploy / release / phát hành / triển khai một service lên server (staging hoặc prod).
-- Cần lập **release checklist**, chọn **chiến lược triển khai** (rolling / blue-green / canary), hay xác định
-  **tiêu chí health-check + rollback**.
-- Cần **rollback** một release đang có vấn đề về đúng phiên bản/điểm khôi phục đã chuẩn bị.
-
-KHÔNG dùng skill này để dựng lại hạ tầng/CI từ đầu, sửa cấu hình pipeline ngoài scope, hay tự ý tác động
-production mà không có xác nhận.
-
 ## Ranh giới an toàn
 
 - **KHÔNG tự thực thi deploy/rollback production.** Trình bày **kế hoạch + lệnh cụ thể**, chờ người xác nhận

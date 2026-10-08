@@ -19,15 +19,7 @@ rủi ro/giả định là gì. Spec này **portable ra mọi provider** (claude
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần ở giai đoạn **plan** (trước khi lập
 `plan.md` chi tiết hoặc bắt tay code). Con người giữ chốt: **duyệt spec** trước khi dùng làm nguồn.
-
-## Khi nào dùng
-
-- Người dùng muốn viết spec, đặc tả yêu cầu, làm tài liệu nghiệp vụ, khảo sát yêu cầu, feature/requirement
-  spec, "PRD gọn", viết yêu cầu tính năng.
-- Cần làm rõ một yêu cầu mơ hồ thành đặc tả có tiêu chí chấp nhận đo được trước khi lập kế hoạch/triển khai.
-- Cần đặt spec vào đúng `docs/requests/` và link tới ADR + contract/data-model.
-
-KHÔNG dùng skill này để phân rã story/task chi tiết (→ `engineering-task-breakdown`), sinh code, hay dựng lại artifact FIS (xem mục Ghi chú).
+Phân rã story/task chi tiết → `engineering-task-breakdown`.
 
 ## Ranh giới an toàn
 

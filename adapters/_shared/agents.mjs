@@ -1,6 +1,7 @@
 // Helper dựng agent (Claude .md / Codex .toml) và preamble dispatch cho workflow. Là thư viện,
 // không phải adapter (thư mục `_shared` bị build bỏ qua khi discover).
 import { frontmatter } from '../../cli/lib/write.mjs';
+import { principlesDigest } from './lib.mjs';
 
 const CLAUDE_DENY = { 'read-only': 'Edit, Write, NotebookEdit, Agent', write: 'Agent' };
 
@@ -21,15 +22,14 @@ export function claudeAgentMd(agent) {
     ['effort', agent.effort],
     ['color', agent.color],
   ]);
-  const note = `> **Dùng skill:** ${skillPointer(agent.skills)}. ` +
-    'Đọc trước skill `principles` (bản cài dạng plugin: `core:principles`).';
+  const note = `> **Dùng skill:** ${skillPointer(agent.skills)}.\n${principlesDigest({ provider: 'claude' })}`;
   return `${head}\n\n${note}\n\n${agent.body.replace(/^\n+/, '')}`;
 }
 
 export function workflowPreamble(wf, agentsById, provider, { softDeps = [] } = {}) {
   const L = [];
   if (provider === 'claude') {
-    L.push('> **Đọc trước** nguyên tắc nền tảng — skill `principles` (bản cài dạng plugin: `core:principles`).');
+    L.push(principlesDigest({ provider: 'claude' }));
     if (softDeps.length) {
       L.push(`> **Plugin cần có:** ${softDeps.map((p) => `\`${p}\``).join(', ')} (không nằm trong dependency của plugin workflows — cài thêm trước khi chạy).`);
     }
@@ -39,7 +39,7 @@ export function workflowPreamble(wf, agentsById, provider, { softDeps = [] } = {
     }
     if (wf.requires.length) L.push(`> **Skill dùng trực tiếp:** ${skillPointer(wf.requires)}.`);
   } else {
-    L.push('> **Đọc trước** nguyên tắc nền tảng — skill `principles`.');
+    L.push(principlesDigest({ provider: 'codex' }));
     if (wf.agents.length) {
       L.push('> **Cách dispatch trên Codex:** bước ghi `agent <id>` → spawn subagent theo tên: ' +
         wf.agents.map((id) => `\`${codexAgentName(id)}\``).join(', ') + '.');
@@ -74,7 +74,7 @@ export function codexAgentToml(agent) {
     `sandbox_mode = ${tomlBasic(CODEX_SANDBOX[agent.mode])}`,
   ];
   if (agent.effort && CODEX_EFFORT.has(agent.effort)) lines.push(`model_reasoning_effort = ${tomlBasic(agent.effort)}`);
-  const note = `> Dùng skill: ${agent.skills.map((s) => `\`${s.split('/')[1]}\``).join(', ')}. Đọc trước skill \`principles\`.`;
+  const note = `> Dùng skill: ${agent.skills.map((s) => `\`${s.split('/')[1]}\``).join(', ')}.\n${principlesDigest({ provider: 'codex' })}`;
   lines.push(`developer_instructions = ${tomlMultiline(`${note}\n\n${agent.body.replace(/^\n+/, '')}`)}`);
   return lines.join('\n') + '\n';
 }

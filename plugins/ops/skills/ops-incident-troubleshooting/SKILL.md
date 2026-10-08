@@ -20,16 +20,6 @@ production khi chưa có xác nhận** — con người giữ chốt và quyết
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần điều tra sự cố.
 
-## Khi nào dùng
-
-- Có sự cố production: service **down / chậm / lỗi 5xx**, error rate tăng, latency cao, hàng đợi ứ, out-of-memory.
-- Cần **triage** nhanh: khoanh vùng triệu chứng về **tầng nghi ngờ**, xác định blast radius, tìm thay đổi gần đây.
-- Cần **đọc log/metric/trace** để tương quan timeline và **đặt giả thuyết → kiểm chứng** nguyên nhân.
-- Cần **RCA** (root cause analysis) sau sự cố: dòng thời gian, nguyên nhân gốc, hành động khắc phục đo được.
-
-KHÔNG dùng skill này để tự ý tác động production (restart/scale/rollback), sửa cấu hình ngoài scope, hay
-kết luận nguyên nhân từ một tín hiệu đơn lẻ chưa kiểm chứng.
-
 ## Ranh giới an toàn
 
 - **KHÔNG tự tác động production.** Điều tra ở chế độ **read-only**; mọi mitigation (restart, scale,

@@ -24,17 +24,6 @@ phạm vi (`Quy trình — changelog / release notes`) và giao phần **VIẾT 
 hướng người dùng. Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần ở giai đoạn
 **plan** (chuẩn bị phát hành). Con người giữ chốt: **duyệt release notes** trước khi công bố.
 
-## Khi nào dùng
-
-- Người dùng muốn viết release notes, changelog, ghi chú phát hành, "what's new".
-- Cần tóm tắt thay đổi từ tag/version (`v2.4.0..v2.5.0`), theo khoảng ngày, N ngày gần nhất, hoặc từ một nhóm
-  commit đã gom sẵn.
-- Cần tổng hợp commit tuần/tháng thành bản tin thay đổi cho người dùng cuối / dev / stakeholder.
-- Đang ở cuối `git-workflow` (`Quy trình — changelog / release notes`) và cần bước viết nội dung cuối.
-
-KHÔNG dùng skill này để thực hiện thao tác git (tag/release/push/merge) — đó là việc của `git-workflow`; skill
-này chỉ **viết nội dung**.
-
 ## Ranh giới an toàn
 
 - **Docs-only** — KHÔNG sinh code; KHÔNG tự `git tag` / tạo release / push; KHÔNG bump version thay người dùng.
