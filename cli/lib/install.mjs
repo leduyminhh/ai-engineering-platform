@@ -621,8 +621,9 @@ function installOne(provider, effSetArg, scope) {
       }
     }
   } else if (layout.kind === 'codex') {
-    // Codex nạp native skills từ <root>/.codex/skills/<skill-id>/ (global -g → ~/.codex/skills/).
-    const skillsRoot = path.join(root, '.codex', 'skills');
+    // Docs Codex hiện hành chỉ còn `.agents/skills` (repo) và `~/.agents/skills` (user); `.codex/skills`
+    // vẫn được nạp ở Codex 0.147 nhưng không còn trong docs. Agent TOML giữ `.codex/agents`.
+    const skillsRoot = path.join(root, '.agents', 'skills');
     for (const id of fs.readdirSync(pbuild)) {
       const adir = path.join(pbuild, id, 'agents');
       if (fs.existsSync(adir)) {
@@ -698,12 +699,6 @@ function installOne(provider, effSetArg, scope) {
 export function install({ providers, plugins, skills, scope = 'project', mode = 'skills' }) {
   if (!USE_LINK) console.warn('[aip] Cài qua npm (node_modules) → dùng copy thay vì symlink (bản cài self-contained).');
   const provs = !providers || providers === 'all' ? PROVIDERS : (Array.isArray(providers) ? providers : [providers]);
-  // Codex nạp native skills ở mức user (~/.codex/skills). Cài scope=project (.codex/skills/ trong
-  // repo) thường KHÔNG được codex đọc → cảnh báo để tránh tưởng đã cài.
-  if (scope === 'project' && provs.includes('codex')) {
-    console.warn('[aip] codex nạp native skills từ ~/.codex/skills (mức user); cài scope=project ' +
-      'thường KHÔNG được codex đọc — cân nhắc cài global: aip install --provider codex -g');
-  }
   const root = scopeRoot(scope);
   const m = readManifest(scope);
   const results = [];

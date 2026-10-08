@@ -421,8 +421,9 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     'gỡ-lẻ: core vẫn whole trong manifest (default-whole-core giữ nguyên)');
   ok(mf.installs.length === 1 && mf.installs[0].provider === 'claude',
     'gỡ-lẻ: KHÔNG rò rỉ sang provider khác (chỉ còn entry claude)');
-  ok(!E('.cursor/skills/backend-init/SKILL.md') && !E('.codex/skills/backend-init/SKILL.md'),
-    'gỡ-lẻ: không tạo cây .cursor/.codex ngoài ý muốn');
+  ok(!E('.cursor/skills/backend-init/SKILL.md') && !E('.codex/skills/backend-init/SKILL.md')
+    && !E('.agents/skills/backend-init/SKILL.md'),
+    'gỡ-lẻ: không tạo cây .cursor/.codex/.agents ngoài ý muốn');
   fs.rmSync(TMP_RU, { recursive: true, force: true });
   process.env.AIE_INSTALL_ROOT = TMP;
 }
@@ -643,13 +644,14 @@ try {
   ok(isLink(path.join(TMP, '.cursor/skills/frontend-init')), 'cursor: skill-dir là link (junction/symlink)');
   ok(isLink(path.join(TMP, '.cursor/skills/git-workflow')), 'cursor: git-workflow skill-dir là link');
 
-  // 3. install codex -> native skills vào .codex/skills/ (core đi kèm)
+  // 3. install codex -> native skills vào .agents/skills/ (core đi kèm); agent TOML giữ .codex/agents/
   install({ providers: 'codex', plugins: 'data', scope: 'project' });
-  ok(exists('.codex/skills/data-olap-init/SKILL.md'), 'codex: skill-dir vào .codex/skills/');
-  ok(exists('.codex/skills/principles/SKILL.md'), 'codex: core principles đi kèm');
+  ok(exists('.agents/skills/data-olap-init/SKILL.md'), 'codex: skill-dir vào .agents/skills/');
+  ok(!exists('.codex/skills'), 'codex: KHÔNG còn tạo .codex/skills');
+  ok(exists('.agents/skills/principles/SKILL.md'), 'codex: core principles đi kèm');
   // skill có references -> ship references/ đi kèm SKILL.md (parity) — core git-workflow còn references/
-  ok(exists('.codex/skills/git-workflow/references/branch-convention.md'), 'codex: references đi kèm SKILL.md');
-  ok(isLink(path.join(TMP, '.codex/skills/data-olap-init')), 'codex: skill-dir là link (junction/symlink)');
+  ok(exists('.agents/skills/git-workflow/references/branch-convention.md'), 'codex: references đi kèm SKILL.md');
+  ok(isLink(path.join(TMP, '.agents/skills/data-olap-init')), 'codex: skill-dir là link (junction/symlink)');
 
   // 4. check
   const c = check({ scope: 'project' });
@@ -661,7 +663,7 @@ try {
   ok(!exists('.claude/skills/backend-init/SKILL.md'), 'uninstall claude: file đã xóa');
   ok(fs.existsSync(path.join(REPO, 'build/claude/plugins/backend/skills/backend-init/SKILL.md')),
     'uninstall claude: build/ nguồn KHÔNG bị xóa qua link');
-  ok(exists('.codex/skills/data-olap-init/SKILL.md'), 'uninstall claude: KHÔNG đụng codex');
+  ok(exists('.agents/skills/data-olap-init/SKILL.md'), 'uninstall claude: KHÔNG đụng codex');
   ok(exists('.cursor/skills/frontend-init/SKILL.md'), 'uninstall claude: KHÔNG đụng cursor skills');
   ok(check({ scope: 'project' }).installs.length === 2, 'check: còn 2 install');
 
@@ -670,7 +672,7 @@ try {
   ok(!exists('.cursor/rules/frontend-00-principles.mdc'), 'uninstall cursor: rules đã xóa');
   ok(!exists('.cursor/skills/frontend-init/SKILL.md'), 'uninstall cursor: skills đã xóa');
   ok(!exists('.cursor/skills/git-workflow/SKILL.md'), 'uninstall cursor: core skills đã xóa');
-  ok(exists('.codex/skills/data-olap-init/SKILL.md'), 'uninstall cursor: KHÔNG đụng codex');
+  ok(exists('.agents/skills/data-olap-init/SKILL.md'), 'uninstall cursor: KHÔNG đụng codex');
   ok(check({ scope: 'project' }).installs.length === 1, 'check: còn 1 install (codex)');
 
   // 6. uninstall all -> manifest biến mất
@@ -718,7 +720,7 @@ try {
   const TMP_X = mkTmp('cwf-wfx-');
   process.env.AIE_INSTALL_ROOT = TMP_X;
   install({ providers: 'codex', skills: ['workflows/workflow-bugfix'], scope: 'project' });
-  ok(fs.existsSync(path.join(TMP_X, '.codex/skills/workflow-bugfix/SKILL.md')), 'codex: cài workflow skill');
+  ok(fs.existsSync(path.join(TMP_X, '.agents/skills/workflow-bugfix/SKILL.md')), 'codex: cài workflow skill');
   ok(fs.existsSync(path.join(TMP_X, '.codex/agents/backend-test-writer.toml')), 'codex: đặt agent .toml');
   fs.rmSync(TMP_X, { recursive: true, force: true });
   process.env.AIE_INSTALL_ROOT = TMP;
@@ -740,6 +742,58 @@ try {
   ok(JSON.stringify(res.plugins) === JSON.stringify(ce.plugins) && JSON.stringify(res.skills) === JSON.stringify(ce.skills),
     'results khớp ĐÚNG với manifest entry (cùng selection đã strip, không lệch)');
   fs.rmSync(TMP_RS, { recursive: true, force: true });
+  process.env.AIE_INSTALL_ROOT = TMP;
+}
+
+// ── codex: đường cài .agents/skills, nâng cấp từ .codex/skills, giữ skill lạ ─────────────────
+{
+  const TMP_CX = mkTmp('cwf-codex-agents-');
+  process.env.AIE_INSTALL_ROOT = TMP_CX;
+  const P = (...r) => path.join(TMP_CX, ...r);
+  const E = (rel) => fs.existsSync(P(rel));
+
+  // Skill lạ do công cụ khác đặt trong ~/.agents/skills — install/uninstall không được đụng tới.
+  fs.mkdirSync(P('.agents/skills/foreign-skill'), { recursive: true });
+  fs.writeFileSync(P('.agents/skills/foreign-skill/SKILL.md'), '---\nname: foreign-skill\n---\n');
+
+  // Bản cài cũ: manifest ghi link/file dưới .codex/skills (đường trước Phase 3).
+  fs.mkdirSync(P('old-src/old-linked'), { recursive: true });
+  fs.writeFileSync(P('old-src/old-linked/SKILL.md'), 'old');
+  fs.mkdirSync(P('.codex/skills'), { recursive: true });
+  fs.symlinkSync(P('old-src/old-linked'), P('.codex/skills/old-linked'), process.platform === 'win32' ? 'junction' : 'dir');
+  fs.mkdirSync(P('.codex/skills/old-copied'), { recursive: true });
+  fs.writeFileSync(P('.codex/skills/old-copied/SKILL.md'), 'old');
+  fs.mkdirSync(P('.ai-engineering'), { recursive: true });
+  fs.writeFileSync(P('.ai-engineering/manifest.json'), JSON.stringify({
+    version: 1,
+    installs: [{
+      provider: 'codex', plugins: ['core'], skills: [], scope: 'project',
+      files: ['.codex/skills/old-copied/SKILL.md'], links: ['.codex/skills/old-linked'],
+      managed: [], installedAt: '2026-01-01T00:00:00.000Z',
+    }],
+  }, null, 2));
+
+  const a = parse(['install', '--provider', 'codex', '--plugin', 'core']);
+  install({ providers: a.provider, plugins: a.plugin, skills: a.skill, scope: 'project', mode: a.mode });
+  ok(!E('.codex/skills'), 'codex nâng cấp: .codex/skills cũ bị gỡ sạch (không còn hai bản)');
+  ok(E('old-src/old-linked/SKILL.md'), 'codex nâng cấp: gỡ link cũ không xoá xuyên vào đích');
+  ok(E('.agents/skills/principles/SKILL.md') && E('.agents/skills/git-workflow/SKILL.md'),
+    'codex nâng cấp: skill nằm ở .agents/skills');
+  ok(E('.agents/skills/foreign-skill/SKILL.md'), 'codex: skill lạ trong .agents/skills sống sót sau install');
+  const mf = JSON.parse(fs.readFileSync(P('.ai-engineering/manifest.json'), 'utf8'));
+  const ce = mf.installs.filter((e) => e.provider === 'codex');
+  ok(ce.length === 1 && [...ce[0].files, ...ce[0].links].every((r) => !r.startsWith('.codex/skills/')),
+    'codex nâng cấp: manifest chỉ còn đường mới, không còn .codex/skills');
+
+  uninstall({ providers: 'codex', scope: 'project' });
+  ok(E('.agents/skills/foreign-skill/SKILL.md'), 'codex: skill lạ sống sót sau uninstall');
+  ok(!E('.agents/skills/principles') && !E('.agents/skills/git-workflow'), 'codex: uninstall gỡ skill đã cài');
+
+  // Agent TOML vẫn ở .codex/agents (docs: ~/.codex/agents, .codex/agents).
+  install({ providers: 'codex', skills: ['workflows/workflow-bugfix'], scope: 'project' });
+  ok(E('.codex/agents/backend-test-writer.toml'), 'codex: agent TOML giữ .codex/agents');
+  ok(!E('.codex/skills'), 'codex: agent không kéo theo .codex/skills');
+  fs.rmSync(TMP_CX, { recursive: true, force: true });
   process.env.AIE_INSTALL_ROOT = TMP;
 }
 

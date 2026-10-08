@@ -30,14 +30,14 @@ export function manifestPath(scope) {
  *   - 'claude'  : mỗi skill-dir của plugin -> <root>/.claude/skills/<skillDir>/ (phẳng; id duy nhất)
  *                 thành phần khác (commands/agents/hooks/.mcp.json) -> <root>/.claude/<comp>
  *   - 'cursor'  : rules -> <root>/.cursor/rules/<id>-00-principles.mdc; skills -> <root>/.cursor/skills/<skill-id>/
- *   - 'codex'   : mỗi skill-dir -> <root>/.codex/skills/<skill-id>/ (native skills; global -g → ~/.codex/skills/)
+ *   - 'codex'   : mỗi skill-dir -> <root>/.agents/skills/<skill-id>/ (native skills; global -g → ~/.agents/skills/); agent TOML → <root>/.codex/agents/
  *   - 'agents'  : antigravity; 1 plugin -> gốc (AGENTS.md + docs/workflow/), nhiều plugin -> <root>/cowork-<provider>/<plugin>/
- * [Inference] Đường dẫn tool thực đọc (.claude/skills, .cursor/rules + .cursor/skills, ~/.codex/skills,
+ * [Inference] Đường dẫn tool thực đọc (.claude/skills, .cursor/rules + .cursor/skills, ~/.agents/skills,
  * AGENTS.md ở gốc) theo tài liệu từng tool; nếu tool đổi vị trí, chỉ cần sửa map này.
  */
 export const PROVIDER_LAYOUT = {
   claude: { kind: 'claude', label: 'Claude Code', base: '.claude' },
   cursor: { kind: 'cursor', label: 'Cursor', base: '.cursor' },
-  codex: { kind: 'codex', label: 'OpenAI Codex', base: '.codex/skills' },
+  codex: { kind: 'codex', label: 'OpenAI Codex', base: '.agents/skills' },
   antigravity: { kind: 'agents', label: 'Google Antigravity', base: '.' }, // PENDING (xem PROVIDERS)
 };

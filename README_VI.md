@@ -320,7 +320,7 @@ Người dùng thêm marketplace bằng `claude plugin marketplace add <owner>/<
 | --- | --- | --- |
 | Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core là plugin dependency) | `.claude/skills/<skill>`; khối baseline → `CLAUDE.md` |
 | Cursor | `<id>/.cursor/rules/<id>-00-principles.mdc` + `.cursor/skills/<skill>/` | `.cursor/rules` + `.cursor/skills` |
-| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.codex/skills/<skill>` (global: `~/.codex/skills`); khối baseline → `AGENTS.md` |
+| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agent giữ ở `.codex/agents/`); khối baseline → `AGENTS.md` |
 | Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | khi cài tường minh; khối baseline → `AGENTS.md` |
 
 Skill nào ship thư mục `references/` thì ship tới **mọi** provider (parity, do

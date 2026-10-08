@@ -326,7 +326,7 @@ Users then add it with `claude plugin marketplace add <owner>/<repo>@dist`. [Unv
 | --- | --- | --- |
 | Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core as a dependency plugin) | `.claude/skills/<skill>`; baseline block → `CLAUDE.md` |
 | Cursor | `<id>/.cursor/rules/<id>-00-principles.mdc` + `.cursor/skills/<skill>/` | `.cursor/rules` + `.cursor/skills` |
-| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.codex/skills/<skill>` (global: `~/.codex/skills`); baseline block → `AGENTS.md` |
+| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agents stay in `.codex/agents/`); baseline block → `AGENTS.md` |
 | Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | on explicit install; baseline block → `AGENTS.md` |
 
 Any skill that ships a `references/` folder ships it to **every** provider (parity,

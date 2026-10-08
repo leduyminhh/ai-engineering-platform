@@ -1,5 +1,5 @@
-// codex adapter — OpenAI Codex nạp NATIVE SKILLS từ `$CODEX_HOME/skills/` (mặc định
-// `~/.codex/skills/`): mỗi skill là một thư mục con chứa SKILL.md (frontmatter name +
+// codex adapter — OpenAI Codex nạp NATIVE SKILLS từ `.agents/skills/` (repo, quét từ cwd lên
+// root repo) và `~/.agents/skills/` (user): mỗi skill là một thư mục con chứa SKILL.md (frontmatter name +
 // description). Vì thế ta build CÙNG layout skill như claude (nhưng PHẲNG, không marketplace):
 //
 // build/codex/
@@ -7,7 +7,8 @@
 //   <id>/skills/<id>-principles/SKILL.md      <- nguyên tắc RIÊNG của plugin (nếu có)
 //   <id>/skills/<stage>/SKILL.md (+ assets)   <- mỗi giai đoạn = 1 skill
 //
-// install (kind 'codex') link mỗi thư mục skill vào `<root>/.codex/skills/<skill-id>/`.
+// install (kind 'codex') link mỗi thư mục skill vào `<root>/.agents/skills/<skill-id>/`
+// (agent TOML vào `<root>/.codex/agents/`).
 // Tên skill (backend-init, principles, <id>-principles) đã DUY NHẤT toàn cục nên cài nhiều
 // plugin không đụng nhau — khác hẳn mô hình AGENTS.md cũ (3 plugin = 3 AGENTS.md không gộp
 // được vào 1 file gốc). Codex KHÔNG auto-load skill khác khi gọi 1 skill, nên chèn pointer
@@ -48,7 +49,7 @@ function pluginPrinciplesSkill(p) {
 
 export default {
   name: 'codex',
-  describe: 'OpenAI Codex — build/codex/<id>/skills/<skill>/SKILL.md (native skills → ~/.codex/skills/)',
+  describe: 'OpenAI Codex — build/codex/<id>/skills/<skill>/SKILL.md (native skills → .agents/skills/, ~/.agents/skills/)',
   build(plugins, { core, workflows }) {
     const files = [...coreSkill(core)];
     for (const p of plugins) {
