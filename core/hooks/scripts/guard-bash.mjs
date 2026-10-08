@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// PreToolUse(Bash): biến các ranh giới "không push nhánh bảo vệ / commit -F / không đụng file bí mật" thành cổng cứng.
+// PreToolUse(Bash|PowerShell): biến các ranh giới "không push nhánh bảo vệ / commit -F / không đụng file bí mật" thành cổng cứng.
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -79,7 +79,7 @@ function commitMessages(t, from) {
   return msgs;
 }
 
-function pushReason(t, gc, cwd, currentBranch) {
+function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false) {
   let force = false;
   const pos = [];
   const args = t.slice(gc.i + 1);
@@ -100,14 +100,30 @@ function pushReason(t, gc, cwd, currentBranch) {
   const specs = pos.slice(1);
   if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return 'push dạng force/xoá/mirror/all';
   // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
-  const unresolvable = gc.dirs.some((d) => /[$~`]/.test(d));
+  const unresolvable = cdUnresolved || gc.dirs.some((d) => /[$~`]/.test(d));
   const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs) : cwd;
   const refs = specs.map((r) => r.split(':').pop().replace(/^refs\/heads\//, ''));
   const wantsHead = (refs.length ? refs : ['HEAD']).some((r) => r === 'HEAD' || r === '@');
-  if (unresolvable && wantsHead) return 'push không xác định được nhánh hiện tại (đường dẫn -C chứa biến/~)';
+  if (unresolvable && wantsHead) return 'push không xác định được nhánh hiện tại (đường dẫn -C/cd chứa biến/~)';
   const targets = (refs.length ? refs : ['HEAD']).map((r) => (r === 'HEAD' || r === '@' ? currentBranch(dir) : r));
   const hit = targets.find((r) => r && PROTECTED.has(r));
   return hit ? `push vào nhánh bảo vệ "${hit}"` : null;
+}
+
+const CD_CMDS = new Set(['cd', 'chdir', 'pushd', 'set-location', 'sl']);
+
+// Theo dõi thư mục làm việc qua các đoạn theo thứ tự: `cd repo && git push` phải tra nhánh của repo, không phải của cwd phiên.
+function withDirs(segs, cwd) {
+  let dir = cwd;
+  let unres = false;
+  return segs.map((t) => {
+    if (CD_CMDS.has(String(t[0]).toLowerCase())) {
+      const arg = t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '/d' || x === '/D'));
+      if (arg === undefined || /[$~`]|^-$/.test(arg)) unres = true;
+      else { dir = path.resolve(dir, arg); if (path.isAbsolute(arg)) unres = false; }
+    }
+    return { t, gc: gitCmd(t), dir, unres };
+  }).filter((x) => x.gc);
 }
 
 function defaultBranch(cwd) {
@@ -143,14 +159,14 @@ export function decide(input, { currentBranch = defaultBranch } = {}) {
   if (!cmd) return null;
   const cwd = input?.cwd || '.';
   const { segs, unclosed } = parse(cmd);
-  const parsed = segs.map((t) => ({ t, gc: gitCmd(t) })).filter((x) => x.gc);
+  const parsed = withDirs(segs, cwd);
   if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m)))) return DENY_COMMIT;
   // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → hỏi người dùng (ask) khi có dấu bất kỳ.
   if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd)) return ASK_UNPARSABLE;
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
-  const naive = naiveSegments(cmd).map((t) => ({ t, gc: gitCmd(t) })).filter((x) => x.gc);
-  for (const { t, gc } of [...parsed, ...naive]) {
-    const why = gc.sub === 'push' ? pushReason(t, gc, cwd, currentBranch) : null;
+  const naive = withDirs(naiveSegments(cmd), cwd);
+  for (const { t, gc, dir, unres } of [...parsed, ...naive]) {
+    const why = gc.sub === 'push' ? pushReason(t, gc, dir, currentBranch, unres) : null;
     if (why) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
   }
   if (SECRET.test(cmd)) return { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };

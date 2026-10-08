@@ -29,10 +29,13 @@ function loadScopes() {
   try { return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : {}; } catch { return {}; }
 }
 
-// Phạm vi ghi neo theo gốc repo (không phải cwd) để agent chạy từ thư mục con vẫn khớp glob; lỗi git → quay về cwd.
-function gitRoot(cwd) {
+// Phạm vi ghi neo theo gốc git của file đích (worktree lồng trong cwd có gốc riêng); lỗi git → quay về cwd.
+// Thư mục đích có thể chưa tồn tại (Write tạo mới) nên đi lên thư mục cha gần nhất đã có.
+function gitRoot(dir, cwd) {
   try {
-    const out = execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    let d = dir;
+    while (!existsSync(d) && path.dirname(d) !== d) d = path.dirname(d);
+    const out = execFileSync('git', ['-C', d, 'rev-parse', '--show-toplevel'], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
     return out || cwd;
   } catch { return cwd; }
 }
@@ -67,7 +70,7 @@ function globNamesSecret(glob) {
 
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
-export function decide(input, { scopes, repoRoot, ignoreCase = process.platform === 'win32' } = {}) {
+export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32' } = {}) {
   const ti = input?.tool_input;
   const file = ti?.file_path || ti?.notebook_path || (input?.tool_name === 'Grep' ? ti?.path : undefined);
   const cwd = path.resolve(input?.cwd || '.');
@@ -82,7 +85,7 @@ export function decide(input, { scopes, repoRoot, ignoreCase = process.platform 
   const table = scopes || loadScopes();
   const scope = agent && Object.hasOwn(table, agent) ? table[agent] : null;
   if (!Array.isArray(scope) || !scope.length) return null;
-  const root = path.resolve(repoRoot || gitRoot(cwd));
+  const root = path.resolve(repoRoot || rootOf(path.dirname(target), cwd));
   const rel = path.relative(root, target).replace(/\\/g, '/');
   const outside = rel === '..' || rel.startsWith('../') || path.isAbsolute(rel);
   if (!outside && scope.some((g) => globToRegExp(g, { ignoreCase }).test(rel))) return null;

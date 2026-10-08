@@ -7,6 +7,12 @@ export default async function run({ ok, ctx }) {
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-dist-test-'));
   const put = (root, rel, text = 'x\n') => { const p = path.join(root, rel); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, text); };
+  // Cô lập khỏi git config của máy dev (gpgsign, hooksPath...): chỉ trong test, cli/dist.mjs không đổi hành vi.
+  const savedEnv = { g: process.env.GIT_CONFIG_GLOBAL, s: process.env.GIT_CONFIG_NOSYSTEM };
+  const emptyCfg = path.join(tmp, 'empty.gitconfig');
+  fs.writeFileSync(emptyCfg, '');
+  process.env.GIT_CONFIG_GLOBAL = emptyCfg;
+  process.env.GIT_CONFIG_NOSYSTEM = '1';
   const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
   try {
     // distPlan thuần trên fixture
@@ -38,6 +44,9 @@ export default async function run({ ok, ctx }) {
     put(buildDir, 'plugins/a/old.md');
     put(buildDir, 'drafts/b/y.md');
     put(buildDir, '.claude-plugin/marketplace.json', '{}\n');
+    let leaked = true;
+    try { execFileSync('git', ['config', '--global', '--get-regexp', '^(commit\.gpgsign|core\.hookspath)$'], { stdio: 'pipe' }); } catch { leaked = false; }
+    ok(!leaked, 'F6: git config toàn cục của máy dev không lọt vào repo tạm (gpgsign/hooksPath)');
     const quiet = { log: { log: () => {} } };
     const r1 = publishDist({ repoRoot: repo, buildDir, build: false, ...quiet });
     ok(r1.committed === true && /^[0-9a-f]{40}$/.test(git(repo, 'rev-parse', 'dist')), 'publishDist: tạo branch dist cục bộ với 1 commit');
@@ -64,6 +73,7 @@ export default async function run({ ok, ctx }) {
     ok(claudePluginOverlap([], ['backend']).length === 0 && claudePluginOverlap(['a'], []).length === 0, 'claudePluginOverlap: rỗng → rỗng');
     ok(JSON.stringify(claudePluginOverlap(['core', 'backend'], ['backend', 'core', 'backend'])) === '["backend","core"]', 'claudePluginOverlap: theo thứ tự đang chọn, không trùng');
   } finally {
+    for (const [k, v] of [['GIT_CONFIG_GLOBAL', savedEnv.g], ['GIT_CONFIG_NOSYSTEM', savedEnv.s]]) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }

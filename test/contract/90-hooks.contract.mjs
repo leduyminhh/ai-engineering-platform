@@ -207,4 +207,54 @@ export default async function run({ ok, ctx }) {
     ok(['./docs/**', '/docs/**', '../x/**', 'a\\b', 'a.{ts,js}', 'a?.md'].every((x) => g([x]).length === 1)
       && g(['docs/**', '**/test/**', 'playwright.config.*', 'CHANGELOG.md']).length === 0, 'checkAgentTools: glob writeScope bắt đầu ./ / .. hoặc chứa \\ { ? → lỗi');
   }
+  // Vòng sửa cuối: PowerShell, cd tracking, neo gốc repo theo file đích
+  {
+    const { pathToFileURL, CORE_DIR, os, execFileSync } = ctx;
+    const dir = path.join(CORE_DIR, 'hooks', 'scripts');
+    const bash = await import(pathToFileURL(path.join(dir, 'guard-bash.mjs')).href);
+    const files = await import(pathToFileURL(path.join(dir, 'guard-files.mjs')).href);
+    const hooks = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'hooks', 'hooks.json'), 'utf8'));
+    const bashGroup = hooks.hooks.PreToolUse.find((g) => g.hooks[0].args[0].endsWith('guard-bash.mjs'));
+    ok(bashGroup && bashGroup.matcher.split('|').includes('Bash') && bashGroup.matcher.split('|').includes('PowerShell'), 'F1: matcher guard-bash phủ cả Bash và PowerShell');
+    const ps = (command, br = 'feature/x') => bash.decide({ tool_name: 'PowerShell', cwd: '.', tool_input: { command } }, { currentBranch: () => br });
+    ok(ps('git push origin main')?.decision === 'ask' && ps('git commit -m "sửa"')?.decision === 'deny' && ps('git commit -F msg.txt') === null,
+      'F1: decide() với tool_name PowerShell: push main → ask, commit -m có dấu → deny, -F → cho qua');
+    // F2: cd/pushd/Set-Location đổi thư mục làm việc trước khi push
+    const root = path.resolve('.');
+    const repoDir = path.resolve(root, 'repo');
+    const inRepo = { currentBranch: (d) => (d === repoDir ? 'main' : 'feature/x') };
+    const cd = (command) => bash.decide({ tool_name: 'Bash', cwd: root, tool_input: { command } }, inRepo);
+    ok(cd('cd repo && git push')?.decision === 'ask' && cd('cd repo; git push origin HEAD')?.decision === 'ask'
+      && cd('pushd repo && git push origin @')?.decision === 'ask' && cd('Set-Location repo; git push')?.decision === 'ask'
+      && cd('sl -Path repo; git push')?.decision === 'ask' && cd('cd /d repo && git push')?.decision === 'ask'
+      && cd('cd repo && cd .. && git push') === null,
+      'F2: cd/pushd/Set-Location <repo trên main> rồi git push → ask; cd ra ngoài lại → theo nhánh cwd');
+    ok(cd('cd repo && git push origin feature/x') === null && cd('git push origin HEAD') === null && cd('cd other && git push') === null,
+      'F2: cd repo && push nhánh feature → không quyết định; cd thư mục khác → theo nhánh của thư mục đó');
+    ok(['cd $REPO && git push', 'cd ~/repo; git push origin HEAD', 'cd - && git push', 'cd && git push', 'cd `pwd` ; git push'].every((c) => cd(c)?.decision === 'ask')
+      && cd('cd $REPO && git push origin feature/x') === null,
+      'F2: cd target chứa $/~/backtick/- hoặc trống, push không refspec/HEAD → ask; refspec tường minh feature → cho qua');
+    // PowerShell: dấu backtick được coi như dấu tách đoạn (nghiêng về ask)
+    ok(ps('Set-Location repo; git push origin HEAD', 'feature/x') === null, 'F1: PowerShell Set-Location theo nhánh thật của thư mục');
+    // F5: gốc git theo file đích, không theo cwd của phiên
+    const w = path.resolve('/repo/.worktrees/x');
+    const rootOf = (d) => (path.relative(w, d).startsWith('..') ? path.resolve('/repo') : w);
+    const scopes = { 'spec-analyst': ['docs/**'] };
+    const wt = (file) => files.decide({ tool_name: 'Write', cwd: '/repo', agent_type: 'spec-analyst', tool_input: { file_path: file } }, { scopes, rootOf, ignoreCase: false });
+    ok(wt('/repo/.worktrees/x/docs/a.md') === null && wt('/repo/.worktrees/x/src/a.js')?.decision === 'deny' && wt('/repo/docs/a.md') === null,
+      'F5: gốc scope = gốc git của file đích (worktree lồng trong cwd) → docs/** khớp trong worktree');
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-root-'));
+    try {
+      const other = path.join(tmp, 'other');
+      const repo = path.join(tmp, 'repo');
+      fs.mkdirSync(other, { recursive: true });
+      fs.mkdirSync(repo);
+      execFileSync('git', ['init', '-q', repo]);
+      const real = (cwd, file) => files.decide({ tool_name: 'Write', cwd, agent_type: 'spec-analyst', tool_input: { file_path: file } }, { scopes, ignoreCase: false });
+      ok(real(other, path.join(repo, 'docs', 'new', 'a.md')) === null && real(other, path.join(repo, 'src', 'a.js'))?.decision === 'deny',
+        'F5: cwd ngoài repo, file đích trong repo (thư mục chưa tồn tại) → neo theo gốc git của đích qua git rev-parse');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
 }
