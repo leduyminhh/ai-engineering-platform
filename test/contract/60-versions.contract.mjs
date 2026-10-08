@@ -1,6 +1,6 @@
 // Contract versions: core manifest, semver, lock hash và doctor.
 export default async function run({ ok, ctx }) {
-  const { fs, path, os, loadCore, CORE_DIR, hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList, core, plugins, workflows, BUILD } = ctx;
+  const { fs, path, os, loadCore, CORE_DIR, hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList, parseClaudePluginJson, core, plugins, workflows, BUILD } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 34. Version gate: core manifest, semver + đồng bộ version, lock hash↔version, doctor (spec 2026-10-07 audit E5 / P0.3)
@@ -58,5 +58,13 @@ export default async function run({ ok, ctx }) {
     const sample = 'Installed plugins:\n\n  ❯ backend@ai-engineering-platform\n    Version: 1.2.0\n    Scope: user\n    Status: ✔ enabled\n\n  ❯ feature-dev@claude-plugins-official\n    Version: 2a8ad9f74633\n\n  ❯ workflows@ai-engineering-platform\n    Version: 1.0.0\n    Status: ✘ failed to load\n';
     ok(JSON.stringify(parseClaudePluginList(sample, 'ai-engineering-platform')) === '[{"id":"backend","version":"1.2.0"},{"id":"workflows","version":"1.0.0"}]',
       'parseClaudePluginList: lấy đúng plugin của marketplace + version');
+    const pjson = JSON.stringify([
+      { id: 'backend@mkt', version: '1.7.0', scope: 'user', enabled: true, installPath: 'x' },
+      { id: 'other@else', version: '9.9.9', scope: 'user', enabled: true, installPath: 'y' },
+    ]);
+    ok(JSON.stringify(parseClaudePluginJson(pjson, 'mkt')) === '[{"id":"backend","version":"1.7.0"}]', 'parseClaudePluginJson: lọc theo marketplace');
+    ok(JSON.stringify(parseClaudePluginJson(JSON.stringify({ installed: JSON.parse(pjson) }), 'mkt')) === '[{"id":"backend","version":"1.7.0"}]',
+      'parseClaudePluginJson: dạng {installed: [...]} (--available)');
+    ok(parseClaudePluginJson('Installed plugins:\n  ❯ backend@mkt', 'mkt') === null, 'parseClaudePluginJson: output text (CLI cũ) → null để rơi về parser text');
   }
 }

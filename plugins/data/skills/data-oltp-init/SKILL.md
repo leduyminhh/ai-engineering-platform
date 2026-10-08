@@ -5,6 +5,7 @@ order: 1
 title: "OLTP Database Init — Khởi tạo cấu trúc database project"
 runsIn: plan
 invoke: once
+disable-model-invocation: true
 ---
 
 # OLTP Database Init — Khởi tạo cấu trúc database project

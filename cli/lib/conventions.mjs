@@ -77,19 +77,27 @@ export function triggerCollisions(entries) {
 }
 
 // Kiểm frontmatter ĐÃ PHÁT: value chứa ": ", " #" hoặc mở đầu bằng ký tự cấu trúc phải nằm trong ngoặc kép.
-// Chỉ nhận dạng `key: value` một dòng — đúng tập con mà frontmatter() phát ra hiện nay.
+// Nhận `key: value` và dòng con `  - x` / `  k: v` mà frontmatter() phát ra.
 const PLAIN_UNSAFE_VALUE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:(?:\s|$)|\s#|\s$/;
 const QUOTED = /^"(?:[^"\\]|\\.)*"$/;
 
 export function checkFrontmatterYaml(fmText) {
   const errs = [];
+  let parent = null;
+  const checkValue = (key, v) => {
+    if (v.startsWith('"')) { if (!QUOTED.test(v)) errs.push(`${key}: chuỗi quote không đóng hoặc escape sai`); return; }
+    if (PLAIN_UNSAFE_VALUE.test(v)) errs.push(`${key}: plain scalar không an toàn ("${v.slice(0, 30)}")`);
+  };
   for (const line of fmText.split('\n')) {
     if (!line.trim()) continue;
+    const item = line.match(/^ {2}- (.*)$/);
+    const sub = line.match(/^ {2}([A-Za-z][\w-]*): (.*)$/);
+    if ((item || sub) && parent) { checkValue(parent, item ? item[1] : sub[2]); continue; }
     const m = line.match(/^([A-Za-z][\w-]*):(?:\s(.*))?$/);
-    if (!m) { errs.push(`dòng không phải "key: value": ${line.slice(0, 40)}`); continue; }
+    if (!m) { errs.push(`dòng không phải "key: value": ${line.slice(0, 40)}`); parent = null; continue; }
     const v = m[2] ?? '';
-    if (v.startsWith('"')) { if (!QUOTED.test(v)) errs.push(`${m[1]}: chuỗi quote không đóng hoặc escape sai`); continue; }
-    if (PLAIN_UNSAFE_VALUE.test(v)) errs.push(`${m[1]}: plain scalar không an toàn ("${v.slice(0, 30)}")`);
+    parent = v === '' ? m[1] : null;
+    if (v !== '') checkValue(m[1], v);
   }
   return errs;
 }
@@ -129,15 +137,57 @@ export function checkAgentDescription(desc) {
   return errs;
 }
 
+// Khoá skill chiếu thẳng sang SKILL.md, tên theo https://code.claude.com/docs/en/skills.md (re-fetch 2026-10-08).
+// Không có when_to_use: Claude gộp nó với description nên không tiết kiệm token, provider khác không hiểu.
+export const SKILL_PASSTHROUGH = ['argument-hint', 'arguments', 'user-invocable', 'disable-model-invocation',
+  'allowed-tools', 'disallowed-tools', 'effort', 'paths', 'compatibility', 'metadata'];
+
 // Allowlist khoá frontmatter NGUỒN: loader chỉ đọc các khoá này, khoá lạ bị bỏ im lặng nên gõ sai (vd `runin`) không lộ ra.
 export const SOURCE_KEYS = {
-  skill: ['name', 'description', 'order', 'title', 'runsIn', 'invoke', 'sharedAssets'],
-  agent: ['name', 'description', 'mode', 'skills', 'model', 'effort', 'color'],
-  workflow: ['name', 'description', 'order', 'title', 'kind', 'tier', 'risk', 'agents', 'requires', 'runsIn', 'invoke'],
+  skill: ['name', 'description', 'order', 'title', 'runsIn', 'invoke', 'sharedAssets', ...SKILL_PASSTHROUGH],
+  agent: ['name', 'description', 'mode', 'skills', 'model', 'effort', 'color', 'tools', 'maxTurns', 'isolation'],
+  workflow: ['name', 'description', 'order', 'title', 'kind', 'tier', 'risk', 'agents', 'requires', 'runsIn', 'invoke', 'argument-hint'],
 };
+
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+const isStr = (v) => typeof v === 'string';
+const isStrList = (v) => isStr(v) || (Array.isArray(v) && v.every(isStr));
+const PASSTHROUGH_TYPES = {
+  'argument-hint': [isStr, 'chuỗi (giá trị bắt đầu bằng "[" phải đặt trong ngoặc kép)'],
+  arguments: [isStrList, 'chuỗi hoặc list chuỗi'],
+  'user-invocable': [(v) => typeof v === 'boolean', 'true/false'],
+  'disable-model-invocation': [(v) => typeof v === 'boolean', 'true/false'],
+  'allowed-tools': [isStrList, 'chuỗi hoặc list chuỗi'],
+  'disallowed-tools': [isStrList, 'chuỗi hoặc list chuỗi'],
+  effort: [(v) => EFFORTS.includes(v), EFFORTS.join('|')],
+  paths: [isStrList, 'chuỗi hoặc list chuỗi'],
+  compatibility: [(v) => isStr(v) && [...v].length <= 500, 'chuỗi ≤ 500 ký tự'],
+  metadata: [(v) => !!v && typeof v === 'object' && !Array.isArray(v), 'map'],
+};
+
+export function checkPassthroughTypes(meta) {
+  return Object.entries(PASSTHROUGH_TYPES)
+    .filter(([k]) => meta[k] !== undefined && !PASSTHROUGH_TYPES[k][0](meta[k]))
+    .map(([k, [, want]]) => `khoá "${k}" sai kiểu (cần ${want})`);
+}
 
 export function checkSourceKeys(kind, meta) {
   const allowed = new Set(SOURCE_KEYS[kind] || []);
   return Object.keys(meta).filter((k) => !allowed.has(k))
     .map((k) => `khoá frontmatter lạ "${k}" (chưa được chiếu, sẽ bị bỏ im lặng)`);
+}
+
+const WRITE_TOOLS = ['Edit', 'Write', 'NotebookEdit', 'Agent'];
+
+// tools là allowlist: agent read-only không được có tool ghi; thiếu Skill thì agent không nạp được skill thứ hai.
+export function checkAgentTools(agent) {
+  const tools = agent.tools || [];
+  if (!tools.length) return [];
+  const errs = [];
+  if (agent.mode === 'read-only') {
+    const bad = tools.filter((t) => WRITE_TOOLS.includes(t));
+    if (bad.length) errs.push(`read-only nhưng tools có ${bad.join(', ')}`);
+  }
+  if ((agent.skills || []).length > 1 && !tools.includes('Skill')) errs.push('có > 1 skill nhưng tools thiếu Skill');
+  return errs;
 }

@@ -5,6 +5,7 @@ order: 1
 title: "Frontend Init — Khởi tạo cấu trúc frontend project"
 runsIn: plan
 invoke: once
+disable-model-invocation: true
 sharedAssets: templates/architecture
 ---
 

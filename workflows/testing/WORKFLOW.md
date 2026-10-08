@@ -1,11 +1,12 @@
 ---
 name: workflow-testing
-description: "Workflow điều phối viết test cho code đã có: phân tích hành vi cần test, chọn chiến lược theo policy (feature: unit; API: integration + contract; luồng quan trọng: e2e), viết test, chạy và phân loại failure (lỗi test vs lỗi code), đo coverage, rồi commit. Dùng workflow NÀY khi người dùng muốn \"viết test\", \"tăng coverage\", \"test strategy\", \"kiểm thử\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi failure là lỗi code cần sửa → workflow-bugfix."
+description: "Điều phối viết test cho code đã có: chọn chiến lược theo policy (unit; integration + contract; e2e), viết test, phân loại failure (lỗi test vs lỗi code), đo coverage, commit. Dùng khi người dùng muốn \"viết test\", \"tăng coverage\", \"test strategy\", \"kiểm thử\". Không dùng khi failure là lỗi code cần sửa → workflow-bugfix."
 order: 5
 title: "Testing — viết test theo chiến lược, đo coverage"
 kind: workflow
 tier: 2
 risk: low
+argument-hint: "[module | loại test]"
 agents: "backend-test-writer,frontend-test-writer,frontend-e2e-test-writer"
 requires: "core/git-workflow"
 runsIn: execute
@@ -55,7 +56,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** danh sách hành vi cần test.
 - **Gate:** danh sách hành vi cần test.
 - **Khi fail:** không xác định được hành vi từ code → hỏi lại người dùng phạm vi cụ thể hơn.
-- **Evidence:** danh sách hành vi cần test trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 3 — Chiến lược ⏸
 

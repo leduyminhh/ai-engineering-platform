@@ -1,6 +1,6 @@
 // Contract workflows: drift guard workflow, hard-dependency và script Phase 1.
 export default async function run({ ok, ctx }) {
-  const { fs, path, os, execFileSync, REPO_ROOT, PLUGINS_DIR, CORE_DIR, missingAnchors, registrySignals, claudeAdapter, core, plugins, allAgents, workflows, BUILD, fxPlugin, fxWorkflows, fxCore, fxMk, byPath } = ctx;
+  const { fs, path, os, execFileSync, REPO_ROOT, PLUGINS_DIR, CORE_DIR, missingAnchors, registrySignals, claudeAdapter, core, plugins, allAgents, workflows, BUILD, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, checkDescriptionStyle, notForTargets, claudeDir } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 27. Chuẩn hoá A4: drift guard workflow ↔ template, Registry ↔ description (spec 2026-10-06 §4.4, §10)
@@ -116,5 +116,45 @@ export default async function run({ ok, ctx }) {
     const gw = fs.readFileSync(path.join(CORE_DIR, 'skills', 'git-workflow', 'SKILL.md'), 'utf8');
     ok(gw.includes('scripts/check-commit-message.mjs') && gw.includes('test-commit-message-encoding.ps1'),
       'git-workflow SKILL.md: nêu bản Node (ưu tiên) và bản PowerShell');
+  }
+
+  // Phase 2 Task 4: gate đầu cho risk cao, argument-hint, description đúng mẫu
+  if (workflows) {
+    const snap = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'test', 'fixtures', 'workflow-not-for-ids.json'), 'utf8'));
+    for (const s of workflows.stages) {
+      const errs = checkDescriptionStyle(s.description, { max: 500 });
+      ok(errs.length === 0, `${s.id}: description đúng mẫu Phase 1 (≤ 500)${errs.length ? ' — ' + errs.join('; ') : ''}`);
+      const now = notForTargets(s.description) || [];
+      ok((snap[s.id] || []).every((id) => now.includes(id)), `${s.id}: giữ mọi "→ id" của snapshot`);
+      if (s.kind === 'workflow') ok(typeof s.passthrough['argument-hint'] === 'string', `${s.id}: có argument-hint`);
+    }
+    const hi = workflows.stages.filter((s) => ['high', 'critical'].includes(s.risk));
+    ok(hi.length === 4, `4 workflow risk ≥ high (=${hi.map((s) => s.id).join(', ')})`);
+    if (fs.existsSync(claudeDir)) {
+      for (const s of workflows.stages) {
+        const c = fs.readFileSync(path.join(claudeDir, 'plugins/workflows/skills', s.id, 'SKILL.md'), 'utf8');
+        const has = c.includes('> **⏸ Xác nhận trước khi bắt đầu:**');
+        ok(has === hi.includes(s), `build claude ${s.id}: gate ⏸ đầu ${hi.includes(s) ? 'có' : 'không có'} (risk ${s.risk || '—'})`);
+        if (s.passthrough['argument-hint']) ok(/^argument-hint: ".+"$/m.test(c.split('\n---')[0]), `build claude ${s.id}: argument-hint`);
+      }
+    }
+
+    // Phase 2 Task 5: mọi references/<x>.md được trỏ tới phải tồn tại và được ship
+    for (const s of workflows.stages) {
+      const refs = [...s.body.matchAll(/`references\/([\w.-]+\.md)`/g)].map((m) => m[1]);
+      for (const r of new Set(refs)) {
+        ok(fs.existsSync(path.join(s.dir, 'references', r)), `${s.id}: references/${r} tồn tại`);
+        if (fs.existsSync(claudeDir)) {
+          ok(fs.existsSync(path.join(claudeDir, 'plugins/workflows/skills', s.id, 'references', r)), `build claude ${s.id}: ship references/${r}`);
+        }
+      }
+      // Chiều ngược: file nằm trong references/ của workflow mà body không trỏ tới thì model không bao giờ mở nó.
+      const refDir = path.join(s.dir, 'references');
+      if (fs.existsSync(refDir)) {
+        for (const f of fs.readdirSync(refDir).filter((x) => x.endsWith('.md'))) {
+          ok(s.body.includes(`\`references/${f}\``), `${s.id}: WORKFLOW.md trỏ tới references/${f}`);
+        }
+      }
+    }
   }
 }

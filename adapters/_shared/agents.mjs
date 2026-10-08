@@ -14,22 +14,35 @@ export function skillPointer(fullIds) {
 }
 
 export function claudeAgentMd(agent) {
+  const tools = agent.tools || [];
   const head = frontmatter([
     ['name', agent.id],
     ['description', agent.description],
+    ['tools', tools.length ? tools.join(', ') : null],
     ['disallowedTools', CLAUDE_DENY[agent.mode]],
+    // Preload chỉ skill chính: preload nhét toàn bộ nội dung skill vào mỗi lần dispatch; skill khác gọi qua tool Skill.
+    ['skills', agent.skills.length ? [agent.skills[0].split('/')[1]] : null],
     ['model', agent.model],
     ['effort', agent.effort],
     ['color', agent.color],
+    ['maxTurns', agent.maxTurns ?? null],
+    ['isolation', agent.isolation ?? null],
   ]);
   const note = `> **Dùng skill:** ${skillPointer(agent.skills)}.\n${principlesDigest({ provider: 'claude' })}`;
   return `${head}\n\n${note}\n\n${agent.body.replace(/^\n+/, '')}`;
 }
 
+// Không dùng disable-model-invocation (ẩn description → orchestrator không route được); chặn bằng xác nhận đầu.
+const startGate = (wf) => (['high', 'critical'].includes(wf.risk)
+  ? `> **⏸ Xác nhận trước khi bắt đầu:** workflow risk ${wf.risk} — tóm tắt phạm vi, môi trường đích và các bước có tác động; dừng chờ người dùng đồng ý rồi mới vào Bước 1.`
+  : null);
+
 export function workflowPreamble(wf, agentsById, provider, { softDeps = [] } = {}) {
   const L = [];
+  const gate = startGate(wf);
   if (provider === 'claude') {
     L.push(principlesDigest({ provider: 'claude' }));
+    if (gate) L.push(gate);
     if (softDeps.length) {
       L.push(`> **Plugin cần có:** ${softDeps.map((p) => `\`${p}\``).join(', ')} (không nằm trong dependency của plugin workflows — cài thêm trước khi chạy).`);
     }
@@ -41,6 +54,7 @@ export function workflowPreamble(wf, agentsById, provider, { softDeps = [] } = {
     if (wf.requires.length) L.push(`> **Skill dùng trực tiếp:** ${skillPointer(wf.requires)}.`);
   } else {
     L.push(principlesDigest({ provider: 'codex' }));
+    if (gate) L.push(gate);
     if (wf.agents.length) {
       L.push('> **Cách dispatch trên Codex:** bước ghi `agent <id>` → spawn subagent theo tên: ' +
         wf.agents.map((id) => `\`${codexAgentName(id)}\``).join(', ') + '.' +

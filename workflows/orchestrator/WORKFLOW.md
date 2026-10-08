@@ -1,6 +1,6 @@
 ---
 name: workflow-orchestrator
-description: "Workflow điều phối: đọc yêu cầu người dùng, phân loại tín hiệu để chọn 1 (hoặc tối đa 2 ứng viên) trong bộ workflow đã cài, xác nhận với người dùng rồi chạy tuần tự chuỗi nối tiếp, tổng hợp kết quả cuối. Dùng workflow NÀY khi người dùng muốn \"không biết dùng workflow nào\", \"chọn workflow\", \"orchestrate\", \"làm giúp việc này theo quy trình\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi việc cần làm đã rõ là sửa bug → workflow-bugfix; làm feature → workflow-feature."
+description: "Phân loại yêu cầu để chọn 1 (hoặc tối đa 2 ứng viên) workflow đã cài, xác nhận với người dùng rồi chạy tuần tự chuỗi nối tiếp và tổng hợp kết quả. Dùng khi người dùng muốn \"không biết dùng workflow nào\", \"chọn workflow\", \"orchestrate\", \"làm giúp việc này theo quy trình\". Không dùng khi việc đã rõ là sửa bug → workflow-bugfix; làm feature → workflow-feature."
 order: 0
 title: "Orchestrator — chọn và chạy workflow theo yêu cầu"
 kind: orchestrator
@@ -55,8 +55,8 @@ skill cần gọi và kết thúc (không phải lỗi). Kết thúc tại Bư�
 
 | Tín hiệu | Skill |
 |---|---|
-| "khởi tạo backend", "scaffold API/service", "setup project backend mới" | `backend-init` |
-| "khởi tạo frontend", "setup project React mới", "scaffold tài liệu nền frontend" | `frontend-init` |
+| "khởi tạo backend", "scaffold API/service", "setup project backend mới" | `backend-init` (model không tự gọi được: đề nghị người dùng gõ `/backend:backend-init` khi cài dạng plugin, `/backend-init` khi cài dạng skills) |
+| "khởi tạo frontend", "setup project React mới", "scaffold tài liệu nền frontend" | `frontend-init` (model không tự gọi được: đề nghị người dùng gõ `/frontend:frontend-init` khi cài dạng plugin, `/frontend-init` khi cài dạng skills) |
 | "chuyển .env sang Vault/Consul", "externalize config/secret", "đưa secret vào Vault" | `backend-migrate-vault-consul` |
 
 ## Các bước

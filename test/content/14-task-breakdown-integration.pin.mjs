@@ -1,6 +1,6 @@
 // Pin nội dung: tích hợp engineering-task-breakdown và check-tasks.mjs.
 export default async function run({ ok, ctx }) {
-  const { fs, path, os, execFileSync, pathToFileURL, REPO_ROOT, PLUGINS_DIR, plugins } = ctx;
+  const { fs, path, os, execFileSync, pathToFileURL, REPO_ROOT, PLUGINS_DIR, plugins, wfText } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 30a-1. SOURCE: skill code nhận task từ tasks.md (spec 2026-10-07 integration §2.1–§2.4)
@@ -28,13 +28,16 @@ export default async function run({ ok, ctx }) {
   // 30a-2. SOURCE: workflow-feature + agent + principles nối engineering-task-breakdown (spec 2026-10-07 integration §2.5–§2.7)
   // ─────────────────────────────────────────────────────────────────────────────
   {
-    const wf = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'WORKFLOW.md'), 'utf8');
+    const wf = wfText('feature');
     const step = (n) => wf.split(/^### Bước /m).find((s) => s.startsWith(`${n} `)) || '';
-    ok(step(2).includes('engineering-task-breakdown') && step(2).includes('`tasks.md`'),
+    ok(wf.includes('engineering-task-breakdown') && step(2).includes('`tasks.md`'),
       'workflow-feature: Bước 2 tuỳ chọn tách task bằng engineering-task-breakdown');
     ok(!wf.includes('không phân rã story/task chi tiết'), 'workflow-feature: bỏ câu cấm phân rã task');
-    ok(step(4).includes('`tasks.md`') && step(4).includes('`FE-INT` → `frontend-data-integrator`'),
+    ok(step(4).includes('`tasks.md`') && wf.includes('`FE-INT` → `frontend-data-integrator`'),
       'workflow-feature: Bước 4 giao implementer theo từng task');
+    const featBody = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'WORKFLOW.md'), 'utf8');
+    ok(step(2).includes('`references/task-breakdown.md`') && step(4).includes('`references/task-breakdown.md`') && featBody.includes('`references/task-breakdown.md`'),
+      'workflow-feature: Bước 2 và Bước 4 trong WORKFLOW.md vẫn trỏ tới references/task-breakdown.md');
     ok(/^### Bước 8 — Commit ⏸$/m.test(wf), 'workflow-feature: không đánh số lại bước');
     const ag = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'agents', 'engineering-spec-analyst.md'), 'utf8');
     ok(/^skills: "engineering-spec-writing,engineering-adr,engineering-diagram,engineering-task-breakdown"$/m.test(ag),

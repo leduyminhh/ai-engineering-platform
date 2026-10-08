@@ -1,6 +1,6 @@
 // Pin nội dung: sửa lỗi workflow (major, P2, P3).
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, stepRefs, parseRegistry, frontmatter, workflows } = ctx;
+  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, stepRefs, parseRegistry, frontmatter, workflows, wfText } = ctx;
 
   // 15. SOURCE: workflow — sửa lỗi major không phụ thuộc skill draft (spec 2026-09-29 §5.3 WF7, WF4, WF3; lỗi D7–D10)
   {
@@ -127,7 +127,7 @@ export default async function run({ ok, ctx }) {
     // WF3-b: Flyway forward-only không có rollback nên "up → rollback → up" không thực hiện được với mọi công cụ.
     const dbc17 = wf17('workflow-db-change');
     const dbcVerify = step17(dbc17, 6);
-    ok(/Chạy thử|verify/i.test(dbcVerify.title) && flat17(dbcVerify.body).includes('forward-only') && flat17(dbcVerify.body).includes('migration bù'),
+    ok(/Chạy thử|verify/i.test(dbcVerify.title) && flat17(wfText('db-change')).includes('forward-only') && flat17(wfText('db-change')).includes('migration bù'),
       'workflow-db-change Bước 6: verify theo công cụ, có nhánh forward-only dùng migration bù');
     ok(/chu trình verify/.test(flat17(dbcVerify.body.split('**Gate:**')[1] ?? '').split('- **')[0]),
       'workflow-db-change Bước 6: Gate nêu chu trình verify theo công cụ');
@@ -154,7 +154,7 @@ export default async function run({ ok, ctx }) {
     ok(incSteps.length === 8 && /Cập nhật stakeholder/.test(step17(inc17, 5).title) && step17(inc17, 5).checkpoint
       && step17(inc17, 6).title.startsWith('Xác minh phục hồi') && step17(inc17, 8).title.startsWith('Commit'),
       'workflow-incident: 8 bước, Bước 5 Cập nhật stakeholder ⏸, Xác minh phục hồi ở Bước 6, Commit ở Bước 8');
-    ok(['SEV1', 'SEV2', 'SEV3', 'SEV4'].every((s) => flat17(step17(inc17, 1).body).includes(s)),
+    ok(['SEV1', 'SEV2', 'SEV3', 'SEV4'].every((s) => flat17(wfText('incident')).includes(s)),
       'workflow-incident Bước 1: có thang severity mặc định SEV1–SEV4 khi project chưa có thang');
     ok(/cửa sổ theo dõi/.test(flat17(step17(inc17, 4).body)) && /cửa sổ theo dõi/.test(flat17(step17(inc17, 6).body)),
       'workflow-incident: cửa sổ theo dõi phục hồi do người dùng chốt ở Bước 4 và dùng ở Bước 6');
@@ -193,5 +193,11 @@ export default async function run({ ok, ctx }) {
       ok(flat17((w?.body ?? '').split('## Điều kiện tiên quyết')[1]?.split('## Các bước')[0] ?? '').includes('ở Bước 1'),
         `${id}: tiền điều kiện Baseline nêu được đo ở Bước 1`);
     }
+  }
+
+  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
+  {
+    ok((workflows.stages.find((s) => s.id === 'workflow-db-change')?.body ?? '').includes('`references/forward-only.md`'), 'workflow-db-change: WORKFLOW.md vẫn trỏ tới references/forward-only.md');
+    ok((workflows.stages.find((s) => s.id === 'workflow-incident')?.body ?? '').includes('`references/severity-scale.md`'), 'workflow-incident: WORKFLOW.md vẫn trỏ tới references/severity-scale.md');
   }
 }

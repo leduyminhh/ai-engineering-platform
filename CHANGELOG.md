@@ -9,11 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Frontmatter parser reads inline lists `[a, b]`, block lists (indented or at column 0), one-level maps and
+  `true`/`false`/`null`; a stray top-level line is an error. The loader fails loud on a frontmatter key outside
+  `SOURCE_KEYS` (message names file and key) and the emitter writes lists/maps and quotes strings that look like
+  booleans, numbers or `null`.
+- Skill frontmatter keys are projected per provider (`SKILL_PASSTHROUGH` with type checks, `PROVIDER_SKILL_KEYS`:
+  Claude all, Cursor `paths`/`disable-model-invocation`/`metadata`, Codex none); the Cowork pack keeps only
+  `name` + `description`. A value starting with `[` that is not a list (e.g. an unquoted `argument-hint: [PR]`)
+  is rejected by the loader.
+- The 4 `*-init` skills carry `disable-model-invocation: true`; the generated principles skills carry
+  `user-invocable: false` (Claude only); `argument-hint` on 9 skills and 12 workflows.
+- Agent keys `tools`, `maxTurns`, `isolation` (validated by `checkAgentTools`). The 5 read-only agents have a
+  `tools` allowlist (reviewers/auditor: `Read, Grep, Glob, Bash, Skill`; the 2 ops agents without `Bash`:
+  `Read, Grep, Glob, Skill`) and every Claude agent preloads its primary (first) skill through `skills:`.
+  `permissionMode` is deliberately not supported (Claude ignores it for plugin agents).
+- Workflows with risk `high`/`critical` (db-change, incident, release, security-review) open with a
+  start-confirmation gate (`⏸`) in the Claude and Codex preambles; 9 workflow descriptions were rewritten to the
+  description template (`test/fixtures/workflow-not-for-ids.json`).
+- Rare workflow branches moved to `workflows/<slug>/references/*.md` (12 files across 9 workflows) and 9
+  Evidence lines trimmed; the contract checks both directions (pointer → file, file → pointer). The 13
+  `WORKFLOW.md` files shrank from 201,722 to 194,572 bytes (-3.54 %; the 10 % target of the plan was not reached).
+- Draft skills (and the agents that use them) build to `build/claude/drafts/<plugin>/…` and the marketplace
+  only sees published ones; `node cli/build.mjs --include-draft` keeps the previous single layout, and skills-mode
+  install reads both locations. Upgrade note: an existing skills-mode install of a draft skill points into
+  `build/claude/plugins/data/skills/…`, which a rebuild removes — run `aip update` (or reinstall) to re-link.
+  Plugin mode drops draft skills: `--as-plugin` and `aip update` on a plugin-mode `data` install no longer contain
+  the 4 `data-oltp-*`/`data-olap-*` skills (aip warns); use skills mode to keep them.
+- Claude `plugin.json` gains `homepage`/`repository`/`license` (from `plugins/_marketplace.json`) and a
+  per-plugin `keywords` list (from the manifest); manifest descriptions are at most 500 characters and name every
+  published skill.
 - `npm run overlap` (`test/overlap.mjs`) prints skill/skill and workflow/workflow content-overlap
   ratios used to decide merges.
 
 ### Changed
 
+- `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;
+  `test/install.test.mjs` removes its temp directories on exit.
+- All plugins bumped MINOR for Phase 2 (routing behaviour changes: `disable-model-invocation`, agent `tools`):
+  core 1.3.0, backend 1.7.0, frontend 1.9.0, engineering 1.6.0, ops 1.4.1, data 1.5.1, workflows 1.3.1
+  (ops/data/workflows took a PATCH after the final review: ops agent wording, `*-init` routing in the orchestrator,
+  data manifest description); `plugins/_versions.lock.json` refreshed.
 - Removed the dead `pipeline`, `next` and `stageNumber` frontmatter keys from every skill, workflow
   and the workflow template; the loader no longer exposes them, and the Antigravity `AGENTS.md`
   lists skills in a single group (the empty "Pipeline" section is gone).

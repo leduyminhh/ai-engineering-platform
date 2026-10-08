@@ -5,6 +5,7 @@ order: 4
 title: "Frontend Code Review — Review diff/PR frontend React/TS theo trục, có evidence (recipe on-demand)"
 runsIn: execute
 invoke: per-request
+argument-hint: "[PR | branch | đường dẫn]"
 sharedAssets: templates/architecture
 ---
 

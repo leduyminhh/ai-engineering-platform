@@ -1,11 +1,12 @@
 ---
 name: workflow-feature
-description: "Workflow điều phối làm một feature/user story end-to-end: phân tích yêu cầu + acceptance criteria, thiết kế/contract nếu có API, implement backend/frontend, viết test theo từng acceptance criterion, review đa vai trò, cập nhật docs, rồi commit qua git-workflow. Dùng workflow NÀY khi người dùng muốn \"làm feature\", \"thêm tính năng\", \"implement user story\", \"làm chức năng mới end-to-end\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi chỉ sửa lỗi hành vi đã có → workflow-bugfix."
+description: "Điều phối làm feature/user story end-to-end: phân tích yêu cầu + acceptance criteria, contract nếu có API, implement backend/frontend, test theo từng criterion, review, docs, commit qua git-workflow. Dùng khi người dùng muốn \"làm feature\", \"thêm tính năng\", \"implement user story\", \"làm chức năng mới end-to-end\". Không dùng khi chỉ sửa lỗi hành vi đã có → workflow-bugfix."
 order: 1
 title: "Feature — implement end-to-end từ yêu cầu tới commit"
 kind: workflow
 tier: 1
 risk: medium
+argument-hint: "[yêu cầu | đường dẫn requirement]"
 agents: "engineering-spec-analyst,backend-implementer,frontend-implementer,frontend-data-integrator,backend-test-writer,frontend-test-writer,frontend-e2e-test-writer,backend-reviewer,frontend-reviewer,engineering-quality-auditor"
 requires: "core/git-workflow"
 runsIn: execute
@@ -58,11 +59,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   (bảng/cột/index/migration) → dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature (chuỗi
   `db-change → feature`). Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
   chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do). Ở checkpoint, hỏi người dùng có tách task
-  không (gợi ý có khi phạm vi `fullstack` hoặc ≥ 2 use case); có → gọi lại `engineering-spec-analyst` chạy
-  skill `engineering-task-breakdown` theo hai lượt: lượt 1 trả bảng Use case + Câu hỏi mở (Checkpoint 1),
-  session chính trình người dùng duyệt; lượt 2 tách task, ghi `tasks.md` cùng thư mục `requirement.md`, trả
-  bảng tổng task + output `check-tasks.mjs` (Checkpoint 2), session chính trình duyệt. Chưa duyệt Checkpoint 2
-  → chưa sang Bước 3.
+  không (gợi ý có khi phạm vi `fullstack` hoặc ≥ 2 use case); khi người dùng chọn tách task → đọc
+  `references/task-breakdown.md`, mục Bước 2. Chưa duyệt Checkpoint 2 → chưa sang Bước 3.
 - **Ràng buộc:** chỉ ghi trong `docs/`; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả
   định]`; chỉ phân rã task khi người dùng chọn ở checkpoint.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` với acceptance criteria + phạm vi BE/FE/fullstack
@@ -99,12 +97,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   sinh component frontend presentational bám kiến trúc UI + design-system (chỗ cần dữ liệu để trống bằng props +
   TODO); khi fullstack có contract ở Bước 3, `frontend-data-integrator` nối container/page với API theo contract
   (type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); chạy build của từng phía.
-  Có `tasks.md` từ Bước 2 → giao từng task theo thứ tự phụ thuộc (nhóm song song chạy song song): `BE` →
-  `backend-implementer`, `FE-UI` → `frontend-implementer`, `FE-INT` → `frontend-data-integrator`; mỗi agent nhận
-  "task `<ID>` trong `tasks.md`", task xong thì session chính cập nhật cột Trạng thái. Task loại khác không giao
-  ở bước này: `CT` làm ở Bước 3 (session chính đặt `Done` khi đạt Gate Bước 3); `DB` đã chạy qua
-  `workflow-db-change` trước feature (chưa áp → dừng như Bước 2); `E2E` giao cho agent e2e của Bước 5. Không
-  có `tasks.md` → giữ luồng trên.
+  Khi có `tasks.md` từ Bước 2 → đọc `references/task-breakdown.md`, mục Bước 4; không có `tasks.md` → giữ luồng
+  trên.
 - **Ràng buộc:** chỉ sửa file trong slice/feature được giao; không giả lập data ẩn; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator: chưa có codegen/thư viện data → dừng,
   đề xuất, chờ người dùng chọn; không viết tay type trùng contract; không gọi `fetch`/`axios` trong component.
@@ -199,11 +193,9 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
-| Acceptance criteria không đo được (sau Bước 2 ⏸) | Dừng, hỏi lại người dùng, không tự suy diễn |
-| Chưa rõ có API hay contract xung đột (sau Bước 3 ⏸) | Dừng, hỏi lại người dùng cách xử lý breaking change |
 | Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature |
-| e2e thiếu BE/DB test (Bước 5) | Ghi `not_run` + lý do vào `remaining_risks`; không tự dựng hạ tầng |
-| Người dùng không duyệt diff (sau Bước 8 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+
+Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
 - **Điều kiện dừng:** acceptance criteria không đo được sau khi hỏi lại; finding `blocker` không sửa được
   trong phạm vi feature; người dùng không duyệt diff.

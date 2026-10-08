@@ -1,6 +1,13 @@
 {
   "id": "backend",
   "name": "Backend Cowork→Code",
-  "description": "Workflow backend Cowork → Code (docs-first, không pipeline bắt buộc): backend-init scaffold cấu trúc thư mục + tài liệu nền (project-knowledge, ADR, data-model/ERD, layout src theo kiến trúc chọn khi init); recipe on-demand: backend-implement (vertical slice theo kiến trúc), backend-testing (test theo tầng), backend-code-review (review diff/PR), backend-refactor (giữ nguyên hành vi), backend-migrate-architecture (Onion/Hexagonal/CQRS/layered), backend-migrate-vault-consul (config/secret sang Vault/Consul), backend-api-contract (OpenAPI-first, kiểm drift), backend-fix (sửa code có sẵn theo oracle đỏ, phạm vi khoanh trước), backend-performance (đo và profile hiệu năng có điều kiện tái lập, chỉ local/test).",
-  "version": "1.6.1"
+  "description": "Workflow backend (Java/Spring, Python) Cowork → Code, docs-first, không pipeline bắt buộc. Skill: backend-init, backend-implement, backend-testing, backend-code-review, backend-refactor, backend-migrate-architecture, backend-migrate-vault-consul, backend-api-contract, backend-fix, backend-performance.",
+  "keywords": [
+    "backend",
+    "java",
+    "spring",
+    "python",
+    "api"
+  ],
+  "version": "1.7.0"
 }

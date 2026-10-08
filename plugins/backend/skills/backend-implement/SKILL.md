@@ -5,6 +5,7 @@ order: 2
 title: "Backend Implement — Sinh vertical slice từ use-case/contract"
 runsIn: execute
 invoke: per-request
+argument-hint: "[use case | đường dẫn contract]"
 sharedAssets: templates/architecture
 ---
 

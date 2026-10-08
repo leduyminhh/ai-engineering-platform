@@ -5,6 +5,7 @@ order: 5
 title: "ADR — điều phối quyết định kiến trúc + ghi architecture decision record"
 runsIn: plan
 invoke: per-request
+argument-hint: "[quyết định cần chốt]"
 ---
 
 # ADR — Architecture Decision Record (skill dùng chung)

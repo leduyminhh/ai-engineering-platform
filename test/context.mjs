@@ -4,18 +4,19 @@ import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
+import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, loadPublished, splitList, parseFrontmatter, loadSkillsFrom, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
 import { checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, missingAnchors, registrySignals } from '../cli/lib/workflows.mjs';
 import { offeredCatalog } from '../cli/lib/install.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
+import cursorAdapter from '../adapters/cursor/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest } from '../adapters/_shared/lib.mjs';
 import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
-import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys } from '../cli/lib/conventions.mjs';
+import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
 import { hashDir, currentVersions, planLock, lockDecision, diffLock, readLock } from '../cli/lib/versions.mjs';
-import { parseClaudePluginList } from '../cli/lib/install.mjs';
+import { parseClaudePluginList, parseClaudePluginJson } from '../cli/lib/install.mjs';
 
 const RUN_IN = ['plan', 'execute'];
 const INVOKE_IN = ['once', 'per-request'];
@@ -49,6 +50,11 @@ export async function buildContext({ build = false, fails = [] } = {}) {
   ]);
   const allAgents = plugins.flatMap((p) => p.agents);
   const claudeDir = path.join(BUILD, 'claude');
+  // Skill draft nằm ở drafts/ (không vào marketplace); published nằm ở plugins/.
+  const claudeSkillDir = (pid, sid) => {
+    const pub = path.join(claudeDir, 'plugins', pid, 'skills', sid);
+    return fs.existsSync(pub) ? pub : path.join(claudeDir, 'drafts', pid, 'skills', sid);
+  };
 
   // Fixture adapter thuần (không đọc plugin thật).
   const fxAgent = { id: 'fx-reviewer', plugin: 'fx', description: 'Agent fixture để test adapter', mode: 'read-only',
@@ -62,20 +68,28 @@ export async function buildContext({ build = false, fails = [] } = {}) {
   const fxCore = { ...loadCore(), stages: [] };
   const fxMk = { name: 'fx-mkt', owner: { name: 'fx' }, description: '' };
   const byPath = (files) => new Map(files.map((f) => [f.path, f]));
+  // Pin đọc cả WORKFLOW.md lẫn references/ vì câu nhánh hiếm được tách sang đó nhưng vẫn là nội dung của workflow.
+  const wfText = (slug) => {
+    const dir = path.join(REPO_ROOT, 'workflows', slug);
+    const refDir = path.join(dir, 'references');
+    const refs = fs.existsSync(refDir) ? fs.readdirSync(refDir).filter((f) => f.endsWith('.md')).sort() : [];
+    return [path.join(dir, 'WORKFLOW.md'), ...refs.map((f) => path.join(refDir, f))]
+      .map((f) => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n')).join('\n');
+  };
 
   return {
     fs, path, os, execFileSync, pathToFileURL,
-    loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR,
+    loadPlugins, loadCore, loadMarketplace, loadWorkflows, loadPublished, splitList, parseFrontmatter, loadSkillsFrom, REPO_ROOT, PLUGINS_DIR, CORE_DIR,
     checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, missingAnchors, registrySignals,
-    offeredCatalog, claudeAdapter, codexAdapter, tomlBasic, tomlMultiline,
+    offeredCatalog, claudeAdapter, codexAdapter, cursorAdapter, tomlBasic, tomlMultiline,
     agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar,
     checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml,
-    checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys,
+    checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools,
     lineOverlap, stepOverlap, titleOverlap,
-    hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList,
-    RUN_IN, INVOKE_IN, listFilesRec, hasFiles, BUILD, claudeDir,
+    hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList, parseClaudePluginJson,
+    RUN_IN, INVOKE_IN, listFilesRec, hasFiles, BUILD, claudeDir, claudeSkillDir,
     core, plugins, workflows, catalogSkillIds, allAgents,
-    fxAgent, fxPlugin, fxWorkflows, fxCore, fxMk, byPath,
+    fxAgent, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, wfText,
     fails,
   };
 }

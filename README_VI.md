@@ -115,7 +115,7 @@ plugin capability xuyên suốt (`engineering`, `ops`); skill là **recipe độ
 gọi-khi-cần** (KHÔNG có pipeline bắt buộc). Tập publish nằm ở `plugins/_published.json`
 — mỗi phần tử là CẢ plugin (`backend`) hoặc MỘT skill (`frontend/frontend-init`); wizard
 chỉ offer phần được liệt kê (khi chạy từ source; gói npm chỉ ship core), và `npm run build` sinh `build/wizard-install-report.md`.
-Skill chưa được publish của một plugin (vd các skill `data-oltp-*` / `data-olap-*`) là draft, cài bằng `--plugin`/`--skill`, hoặc `aip --all` trong wizard.
+Skill chưa được publish của một plugin (vd các skill `data-oltp-*` / `data-olap-*`) là draft, cài bằng `--plugin`/`--skill`, hoặc `aip --all` trong wizard (chỉ ở chế độ skills).
 
 | Plugin | Năng lực | Skill |
 | --- | --- | --- |
@@ -288,6 +288,8 @@ aip list                  # adapter + plugin phát hiện được
   rỗng, và đếm-tham-chiếu khối managed dùng chung.
 - Provider cài mặc định: `claude`, `cursor`, `codex`. `antigravity` có build nhưng chỉ cài
   khi gọi tường minh (`--provider antigravity`).
+
+`aip build` không đưa skill draft vào marketplace của Claude: chúng được ghi vào `build/claude/drafts/<plugin>/…` và vẫn cài được bằng `--plugin`/`--skill` (chỉ ở chế độ skills — `--as-plugin` cài plugin từ marketplace, không có skill draft). Thêm `--include-draft` (`node cli/build.mjs --include-draft`) để build draft vào cây plugin như trước.
 
 State mỗi lần cài nằm ở `<scope-root>/.ai-engineering/manifest.json`.
 

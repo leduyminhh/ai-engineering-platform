@@ -1,6 +1,6 @@
 // Pin nội dung: backend-performance.
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, core, workflows } = ctx;
+  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, core, workflows, wfText } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 20. SOURCE: backend-performance skill + agent + workflow-performance Bước 2/3/5 (spec 2026-09-30-backend-performance-design)
@@ -92,7 +92,7 @@ export default async function run({ ok, ctx }) {
     ok(parseSteps(perfWf?.body ?? '').length === 7, 'workflow-performance: vẫn 7 bước');
     ok((offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? []).includes('workflows/workflow-performance'),
       'offeredCatalog: vẫn offer workflows/workflow-performance (closure analyst đã publish)');
-    const perfErr = flat20(perfWf?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '');
+    const perfErr = flat20(wfText('performance'));
     ok(perfErr.includes('Môi trường đo thiếu') && perfErr.includes('lệch Bước 2') && perfErr.includes('Nhiễu vượt'),
       'workflow-performance: bảng lỗi có 3 hàng môi trường thiếu / điều kiện lệch / nhiễu');
     for (const f of ['README.md', 'README_VI.md']) {
@@ -135,5 +135,10 @@ export default async function run({ ok, ctx }) {
     ok(!flat20(perfRef('db-query-analysis')).includes('vào hàng Khởi chạy ứng dụng'),
       'db-query-analysis.md: profile không ghi lệnh khởi chạy vào bảng điều kiện Bước 2');
     ok(/^\| Khởi chạy ứng dụng \|[^|\n]*PID/m.test(perfRef('measure-conditions')), 'measure-conditions.md: hàng Khởi chạy ứng dụng ghi PID/thời điểm start Bước 2');
+  }
+
+  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
+  {
+    ok((workflows.stages.find((s) => s.id === 'workflow-performance')?.body ?? '').includes('`references/error-matrix.md`'), 'workflow-performance: WORKFLOW.md vẫn trỏ tới references/error-matrix.md');
   }
 }

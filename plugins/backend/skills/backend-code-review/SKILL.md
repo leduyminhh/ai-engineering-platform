@@ -5,6 +5,7 @@ order: 4
 title: "Backend Code Review — Review diff/PR backend theo trục, có evidence (recipe on-demand)"
 runsIn: execute
 invoke: per-request
+argument-hint: "[PR | branch | đường dẫn]"
 sharedAssets: templates/architecture
 ---
 

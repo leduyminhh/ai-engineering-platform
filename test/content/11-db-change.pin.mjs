@@ -1,6 +1,6 @@
 // Pin nội dung: publish data-db-migration, data-migration-writer và workflow-db-change.
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, workflows } = ctx;
+  const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, workflows, wfText } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 22. SOURCE: publish data-db-migration + agent data-migration-writer + workflow-db-change (spec 2026-10-01-data-migration-writer-design)
@@ -74,7 +74,7 @@ export default async function run({ ok, ctx }) {
     ok(field22(dS6.body, 'Thực hiện').includes('skill `data-db-migration`') && field22(dS6.body, 'Hành động').includes('verify-cycle'),
       'workflow-db-change Bước 6: chạy thử theo skill data-db-migration (C4), chu trình verify-cycle');
     ok(field22(dS3.body, 'Hành động').includes('không thành file') && field22(dS3.body, 'Evidence').includes('compensating_sql')
-      && field22(dS6.body, 'Hành động').includes('report Bước 3') && field22(dS6.body, 'Hành động').includes('migration bù'),
+      && flat22(wfText('db-change')).includes('report Bước 3') && flat22(wfText('db-change')).includes('migration bù'),
       'workflow-db-change: migration bù của công cụ forward-only là SQL trong report Bước 3 (không thành file), Bước 6 lấy từ report');
     ok(field22(dS3.body, 'Ràng buộc').includes('R__') && field22(dS2.body, 'Đầu ra').includes('số dòng bảng bị đụng')
       && field22(dS3.body, 'Đầu vào').includes('số dòng bảng bị đụng'),
@@ -86,7 +86,7 @@ export default async function run({ ok, ctx }) {
       'workflow-db-change: frontmatter agents có data-migration-writer, requires có data/data-db-migration');
     ok(parseSteps(dbc22?.body ?? '').length === 9 && step22(dbc22, 2).checkpoint && step22(dbc22, 5).checkpoint && step22(dbc22, 9).checkpoint,
       'workflow-db-change: vẫn 9 bước, ⏸ ở Bước 2, 5, 9');
-    ok(flat22(dbc22?.body.split('## Xử lý lỗi')[1]?.split('## Definition of Done')[0] ?? '').includes('Agent migration trả `blocked`'),
+    ok(flat22(wfText('db-change')).includes('Agent migration trả `blocked`'),
       'workflow-db-change: bảng lỗi có hàng agent migration trả blocked');
     const dbcDoD22 = flat22(dbc22?.body.split('## Definition of Done')[1]?.split('## Report cuối')[0] ?? '');
     ok(field22(step22(dbc22, 4).body, 'Đầu vào').includes('compensating_sql')
@@ -118,5 +118,11 @@ export default async function run({ ok, ctx }) {
       'CLAUDE.md: data có data-db-migration published, 4 skill còn draft');
     ok(fs.readFileSync(path.join(REPO_ROOT, 'docs', 'decisions', '0001-database-capabilities-in-data-plugin.md'), 'utf8').includes('data-migration-writer'),
       'ADR-0001: ghi cập nhật publish data-db-migration và agent data-migration-writer');
+  }
+
+  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
+  {
+    ok((workflows.stages.find((s) => s.id === 'workflow-db-change')?.body ?? '').includes('`references/forward-only.md`'), 'workflow-db-change: WORKFLOW.md vẫn trỏ tới references/forward-only.md');
+    ok((workflows.stages.find((s) => s.id === 'workflow-db-change')?.body ?? '').includes('`references/error-matrix.md`'), 'workflow-db-change: WORKFLOW.md vẫn trỏ tới references/error-matrix.md');
   }
 }

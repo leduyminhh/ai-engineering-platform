@@ -45,7 +45,8 @@ export function writeFiles(outDir, files) {
 
 // Plain scalar chỉ an toàn khi không mở đầu bằng ký tự cấu trúc YAML và không chứa ": " / " #";
 // mô tả tiếng Việt thường có ": " hoặc dấu " nên phải quote, nếu không parser chặt báo "mapping values are not allowed here".
-const PLAIN_UNSAFE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:(?:\s|$)|\s#|\s$|["\n\r\t]/;
+// Chuỗi trông như bool/số/null phải quote, nếu không YAML đọc lại thành kiểu khác.
+const PLAIN_UNSAFE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:(?:\s|$)|\s#|\s$|["\n\r\t]|^(?:true|false|null|~|-?\d+(?:\.\d+)?)$/i;
 
 /** Chuỗi YAML an toàn: plain khi vô hại, ngược lại double-quoted kiểu JSON (YAML 1.2 chấp nhận). */
 export function yamlScalar(v) {
@@ -53,13 +54,23 @@ export function yamlScalar(v) {
   return s === '' || PLAIN_UNSAFE.test(s) ? JSON.stringify(s) : s;
 }
 
+const plainValue = (v) => (typeof v === 'boolean' || typeof v === 'number' ? String(v) : yamlScalar(v));
+
 /** Emit a YAML frontmatter block from an ordered list of [key, value] pairs. */
 export function frontmatter(pairs) {
   const lines = ['---'];
   for (const [k, v] of pairs) {
     if (v === undefined || v === null) continue;
-    if (typeof v === 'boolean' || typeof v === 'number') lines.push(`${k}: ${v}`);
-    else lines.push(`${k}: ${yamlScalar(v)}`);
+    if (Array.isArray(v)) {
+      if (!v.length) continue;
+      lines.push(`${k}:`, ...v.map((x) => `  - ${plainValue(x)}`));
+    } else if (typeof v === 'object') {
+      const es = Object.entries(v).filter(([, x]) => x !== undefined && x !== null);
+      if (!es.length) continue;
+      lines.push(`${k}:`, ...es.map(([mk, mv]) => `  ${mk}: ${plainValue(mv)}`));
+    } else {
+      lines.push(`${k}: ${plainValue(v)}`);
+    }
   }
   lines.push('---');
   return lines.join('\n');

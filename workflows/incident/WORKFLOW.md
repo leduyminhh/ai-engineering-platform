@@ -1,11 +1,12 @@
 ---
 name: workflow-incident
-description: "Điều phối xử lý sự cố production: triage & blast radius, thu evidence, kiểm chứng giả thuyết, đề xuất mitigation cho người dùng thực hiện (agent không tác động production), xác minh phục hồi, RCA/postmortem. Dùng khi người dùng muốn \"sự cố production\", \"prod down\", \"incident\", \"hệ thống chậm bất thường\", \"alert\". Không dùng khi lỗi tái hiện được ở local, production vẫn ổn → workflow-bugfix."
+description: "Điều phối xử lý sự cố production: triage & blast radius, thu evidence, kiểm chứng giả thuyết, đề xuất mitigation cho người dùng thực hiện (agent không tác động production), xác minh phục hồi, RCA. Dùng khi người dùng muốn \"sự cố production\", \"prod down\", \"incident\", \"hệ thống chậm bất thường\", \"alert\". Không dùng khi lỗi tái hiện được ở local, production vẫn ổn → workflow-bugfix."
 order: 10
 title: "Incident — triage, mitigation, phục hồi, RCA"
 kind: workflow
 tier: 1
 risk: critical
+argument-hint: "[triệu chứng | thời điểm bắt đầu]"
 agents: "ops-incident-investigator,engineering-spec-analyst"
 requires: "core/git-workflow"
 runsIn: execute
@@ -42,18 +43,16 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `ops-incident-investigator`
 - **Đầu vào:** mô tả sự cố + thời điểm phát hiện của người dùng
-- **Hành động:** xác định mức độ nghiêm trọng (severity) theo thang của project; project chưa có thang thì
-  dùng thang mặc định đề xuất, người dùng có thể đổi: SEV1 (mất dịch vụ chính hoặc mất dữ liệu, ảnh hưởng đa
-  số người dùng), SEV2 (suy giảm nghiêm trọng hoặc ảnh hưởng một phần người dùng), SEV3 (ảnh hưởng nhỏ hoặc
-  có cách lách), SEV4 (chưa ảnh hưởng người dùng). Xác định phạm vi ảnh hưởng (service/khách hàng/khu vực) và
-  thời điểm bắt đầu ước tính dựa trên log/metric.
+- **Hành động:** xác định mức độ nghiêm trọng (severity) theo thang của project; project chưa có thang → đọc
+  `references/severity-scale.md` (thang mặc định đề xuất SEV1–SEV4, người dùng có thể đổi). Xác định phạm vi
+  ảnh hưởng (service/khách hàng/khu vực) và thời điểm bắt đầu ước tính dựa trên log/metric.
 - **Ràng buộc:** không hạ thấp mức độ nghiêm trọng khi chưa đủ evidence; không suy đoán thời điểm bắt đầu
   nếu không có log/metric hỗ trợ — ghi rõ "chưa xác định" nếu vậy.
 - **Đầu ra:** mức độ nghiêm trọng + phạm vi ảnh hưởng + thời điểm bắt đầu (hoặc "chưa xác định").
 - **Gate:** mức độ, phạm vi ảnh hưởng, thời điểm bắt đầu.
 - **Khi fail:** không xác định được phạm vi ảnh hưởng tối thiểu → hỏi lại người dùng thông tin truy cập
   log/metric cần thiết.
-- **Evidence:** đoạn ghi mức độ + phạm vi + thời điểm bắt đầu trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 2 — Thu evidence
 

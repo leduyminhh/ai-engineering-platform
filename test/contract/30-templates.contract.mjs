@@ -1,6 +1,6 @@
 // Contract templates: drift guard AGENTS.md và khung init dùng chung giữa CLI lẫn skill *-init.
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, PLUGINS_DIR, core, plugins, BUILD, claudeDir } = ctx;
+  const { fs, path, REPO_ROOT, PLUGINS_DIR, core, plugins, BUILD, claudeDir, claudeSkillDir } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 5. DRIFT GUARD: AGENTS.md (repo) == AGENTS.template.md (nguồn template)
@@ -62,7 +62,7 @@ export default async function run({ ok, ctx }) {
     for (const s of p.stages) {
       if (!s.id.endsWith('-init')) continue;
       const checks = [
-        ['claude', path.join(claudeDir, 'plugins', p.id, 'skills', s.id, 'AGENTS.template.md')],
+        ['claude', path.join(claudeSkillDir(p.id, s.id), 'AGENTS.template.md')],
         ['codex', path.join(BUILD, 'codex', p.id, 'skills', s.id, 'AGENTS.template.md')],
         ['antigravity', path.join(BUILD, 'antigravity', p.id, 'docs', 'workflow', s.id, 'AGENTS.template.md')],
         ['cursor', path.join(BUILD, 'cursor', p.id, '.cursor', 'skills', s.id, 'AGENTS.template.md')],
@@ -80,7 +80,7 @@ export default async function run({ ok, ctx }) {
       for (const s of p.stages) {
         if (!s.id.endsWith('-init')) continue;
         const targets = [
-          ['claude', path.join(claudeDir, 'plugins', p.id, 'skills', s.id, 'templates', 'CLAUDE.md')],
+          ['claude', path.join(claudeSkillDir(p.id, s.id), 'templates', 'CLAUDE.md')],
           ['codex', path.join(BUILD, 'codex', p.id, 'skills', s.id, 'templates', 'CLAUDE.md')],
           ['antigravity', path.join(BUILD, 'antigravity', p.id, 'docs', 'workflow', s.id, 'templates', 'CLAUDE.md')],
           ['cursor', path.join(BUILD, 'cursor', p.id, '.cursor', 'skills', s.id, 'templates', 'CLAUDE.md')],

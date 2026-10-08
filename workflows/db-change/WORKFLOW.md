@@ -6,6 +6,7 @@ title: "DB change — migration schema forward/rollback"
 kind: workflow
 tier: 2
 risk: high
+argument-hint: "[thay đổi schema]"
 agents: "data-migration-writer,backend-implementer,backend-test-writer,backend-reviewer"
 requires: "core/git-workflow,data/data-db-migration"
 runsIn: execute
@@ -126,12 +127,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** migration đã qua review từ Bước 4 + target DB đã xác nhận ở Bước 5
 - **Hành động:** Chu trình verify theo `references/change/verify-cycle.md` của skill; chạy theo công cụ migration
   của project trên DB test. Công cụ có rollback (vd Liquibase, Alembic): migrate up → rollback → migrate up lại.
-  Công cụ forward-only (vd Flyway khi dùng theo hướng forward-only): chạy (a)(b)(c) theo
-  `references/change/verify-cycle.md`, rồi thêm lượt kiểm SQL bù (migration bù của công cụ forward-only) do
-  workflow bổ sung: áp đúng nguyên văn đoạn SQL trong report Bước 3, không viết lại hay sửa tay, lên DB đã xác
-  nhận ở Bước 5, rồi kiểm schema/dữ liệu sau từng lượt; nếu report Bước 3 chưa có SQL bù cho thay đổi này thì
-  quay lại Bước 2 bổ sung kế hoạch rồi Bước 3, không tự bịa SQL bù. Đưa DB test về rỗng hoặc N-1 (người dùng
-  hoặc DB tạm) trước mỗi lần chạy lại và trước Bước 7 nếu dùng chung target Bước 5. Xác nhận mọi lượt thành công.
+  Công cụ forward-only (vd Flyway khi dùng theo hướng forward-only) → đọc `references/forward-only.md` của
+  workflow này (lượt kiểm SQL bù; SQL bù áp nguyên văn từ report Bước 3, không tự bịa). Đưa DB test về rỗng
+  hoặc N-1 (người dùng hoặc DB tạm) trước mỗi lần chạy lại và trước Bước 7 nếu dùng chung target Bước 5. Xác
+  nhận mọi lượt thành công.
 - **Ràng buộc:** chỉ chạy trên đúng target đã xác nhận ở Bước 5 (cấu hình kết nối đổi → quay lại Bước 5);
   cấm chạy trên DB production; cấm thay đổi phá huỷ dữ liệu khi chưa được người dùng xác nhận ở Bước 2; không
   giả lập lượt rollback bằng cách sửa tay schema (SQL bù đã duyệt ở Bước 2/4 áp nguyên văn là ngoại lệ).
@@ -212,14 +211,11 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
-| Người dùng không xác nhận thiết kế migration (sau Bước 2 ⏸) | Quay lại Bước 1 làm rõ impact/ràng buộc |
 | Target DB trỏ production hoặc chưa được xác nhận (sau Bước 5 ⏸) | Dừng, không chạy migration |
-| Một lượt trong chu trình verify thất bại (Bước 6) | Quay lại Bước 3 sửa migration, chạy lại cả chuỗi từ đầu |
-| Integration test đỏ (Bước 7) | Lỗi test → sửa test; lỗi code/migration → quay lại Bước 3 (không nới test) |
-| Người dùng không duyệt diff (sau Bước 9 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
 | Thay đổi phá huỷ dữ liệu chưa được xác nhận | Cấm thực hiện; quay lại Bước 2 xin xác nhận rõ ràng |
-| Agent migration trả `blocked` (Bước 3) | Người dùng quyết định; đổi kế hoạch → quay lại Bước 2, ngược lại ghi vào report Bước 3 rồi gọi lại agent |
 | Yêu cầu chạy migration trên production | Cấm thực hiện; chỉ chạy trên DB test |
+
+Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
 - **Điều kiện dừng:** người dùng không xác nhận thiết kế migration sau nhiều vòng; chu trình verify migration
   liên tục thất bại; finding `blocker` không sửa được; người dùng không duyệt diff; yêu cầu chạy migration

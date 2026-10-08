@@ -5,6 +5,7 @@ order: 7
 title: "Task Breakdown — phân rã yêu cầu thành task BE/FE giao được"
 runsIn: plan
 invoke: per-request
+argument-hint: "[đường dẫn requirement/use case/ARD]"
 ---
 
 # Task Breakdown (skill dùng chung)

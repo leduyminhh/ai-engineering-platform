@@ -1,11 +1,12 @@
 ---
 name: workflow-security-review
-description: "Điều phối review bảo mật: phạm vi & threat model, review/scan theo OWASP và vùng rủi ro, validate finding bằng file:line, remediation (người dùng tự rotate secret bị lộ), regression test, sửa, re-scan, commit. Dùng khi người dùng muốn \"security review\", \"review bảo mật\", \"quét lỗ hổng\", \"OWASP\", \"kiểm secret\", \"CVE\". Không dùng khi chỉ cần quét một lần → engineering-quality-gate; quality gate trước release → workflow-release."
+description: "Điều phối review bảo mật: threat model, scan theo OWASP, validate finding bằng file:line, remediation (người dùng tự rotate secret bị lộ), regression test, sửa, re-scan, commit. Dùng khi người dùng muốn \"security review\", \"review bảo mật\", \"OWASP\", \"kiểm secret\", \"CVE\", hoặc quét lỗ hổng. Không dùng khi chỉ cần quét một lần → engineering-quality-gate; quality gate trước release → workflow-release."
 order: 6
 title: "Security review — threat model, scan, remediation, re-scan"
 kind: workflow
 tier: 1
 risk: high
+argument-hint: "[phạm vi | PR]"
 agents: "engineering-quality-auditor,backend-test-writer,frontend-test-writer,backend-fixer,frontend-fixer"
 requires: "core/git-workflow"
 runsIn: execute
@@ -63,7 +64,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** danh sách vùng rủi ro áp dụng + lý do loại vùng không áp dụng.
 - **Gate:** danh sách vùng rủi ro áp dụng (auth/session, authorization/access control, input, SSRF, crypto/secrets, dependency, misconfiguration, logging).
 - **Khi fail:** không xác định được phạm vi rõ ràng → hỏi lại người dùng.
-- **Evidence:** danh sách vùng rủi ro áp dụng trong report bước.
+- **Evidence:** report bước.
 
 ### Bước 3 — Review & scan
 
@@ -220,10 +221,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Phát hiện secret chưa mask an toàn (Bước 3) | Dừng, báo người dùng xử lý thủ công secret trước khi tiếp tục |
 | Người dùng chưa quyết định remediation (sau Bước 5 ⏸) | Dừng, chờ xác nhận, không tự sửa |
 | Người dùng chưa rotate secret bị lộ (sau Bước 6 ⏸) | Dừng, coi secret là đã lộ, không đóng finding, ghi vào `remaining_risks` |
-| Test regression không đỏ đúng lý do (Bước 7) | Sửa test, chạy lại; không nới assertion |
-| Fixer trả `blocked` (Bước 8) | Người dùng mở rộng danh sách file có xác nhận, gọi lại agent; không tự mở phạm vi |
-| Finding đã sửa vẫn còn sau re-scan (Bước 9) | Quay lại Bước 8 sửa lại cho đúng |
-| Người dùng không duyệt diff (sau Bước 10 ⏸) | Không commit, quay lại bước người dùng yêu cầu sửa |
+
+Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
 - **Điều kiện dừng:** phát hiện secret không xử lý được an toàn; người dùng không rotate secret bị lộ; người
   dùng không quyết định được remediation sau nhiều vòng; finding `blocker` không sửa được và người dùng không

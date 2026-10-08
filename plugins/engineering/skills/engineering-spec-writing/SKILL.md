@@ -5,6 +5,7 @@ order: 2
 title: "Spec Writing — khảo sát yêu cầu + viết feature/requirement spec"
 runsIn: plan
 invoke: per-request
+argument-hint: "[mô tả yêu cầu]"
 ---
 
 # Spec Writing (skill dùng chung)

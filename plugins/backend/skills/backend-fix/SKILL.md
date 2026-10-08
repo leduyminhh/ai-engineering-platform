@@ -5,6 +5,7 @@ order: 9
 title: "Backend Fix — Sửa code backend theo oracle đỏ, phạm vi khoanh trước (recipe on-demand)"
 runsIn: execute
 invoke: per-request
+argument-hint: "[failing test | finding | bottleneck] [danh sách file]"
 ---
 
 # Backend Fix — Sửa code backend theo oracle đỏ, phạm vi khoanh trước (recipe on-demand)
