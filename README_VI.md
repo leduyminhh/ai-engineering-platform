@@ -169,7 +169,7 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
 | `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
 | `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF08, WF11 |
-| `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram | WF01, WF03, WF10, WF12 |
+| `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram, engineering-task-breakdown | WF01, WF03, WF10, WF12 |
 | `engineering-release-scribe` | engineering | write (chỉ `docs/`, `CHANGELOG.md`) | engineering-release-notes | WF11 |
 | `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | WF10 |
 | `ops-release-engineer` | ops | read-only | ops-deploy-release, ops-observability | WF11 |

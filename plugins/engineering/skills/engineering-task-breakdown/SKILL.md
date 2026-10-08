@@ -11,7 +11,8 @@ invoke: per-request
 
 Biến yêu cầu thô, use case, ARD hoặc `requirement.md` thành **danh sách task giao được** cho hai đối tượng: dev
 trong team đọc markdown trong repo, và agent AI (`backend-implementer`, `frontend-implementer`…) nhận từng task để
-code. Skill này là **docs-only recipe** — hướng dẫn agent phân tích và viết tài liệu task, KHÔNG sinh code.
+code. Skill này là **docs-only recipe** — hướng dẫn agent phân tích và viết tài liệu task, KHÔNG sinh mã nguồn cho
+project; kèm script kiểm tra/xuất tất định `scripts/check-tasks.mjs`.
 
 Tách theo **use case — lát dọc** `CT → DB → BE → FE-UI → FE-INT → E2E`, chỉ sinh loại task thật sự cần. Mỗi task
 **tự đủ nghĩa**: người hoặc agent nhận một task không cần đọc lại toàn bộ input. `tasks.md` là **nguồn sự thật**;
@@ -31,7 +32,8 @@ KHÔNG dùng khi yêu cầu còn mơ hồ (chạy `engineering-spec-writing` tr�
 
 ## Ranh giới an toàn
 
-- **Docs-only** — KHÔNG sinh code; chỉ ghi trong `docs/requests/`.
+- **Docs-only** — KHÔNG sinh mã nguồn cho project; chỉ ghi trong `docs/requests/` (kể cả CSV do
+  `check-tasks.mjs --csv` xuất).
 - **KHÔNG bịa yêu cầu.** Thiếu thông tin → đánh dấu **[giả định]** hoặc đưa vào Câu hỏi mở; không âm thầm điền.
 - KHÔNG tự chốt quyết định kiến trúc → ghi Câu hỏi mở + gợi ý `engineering-adr`.
 - KHÔNG gán người: cột `Owner` để trống cho teamlead.
@@ -79,20 +81,25 @@ KHÔNG dùng khi yêu cầu còn mơ hồ (chạy `engineering-spec-writing` tr�
    M ≤ 2 ngày, L → buộc tách. Mục không áp dụng ghi `N/A — <lý do>`, không bỏ trống.
 
 5. **Kiểm tra. ⏸ Checkpoint 2**
-   Chạy [references/breakdown-checklist.md](references/breakdown-checklist.md): phủ AC, không vòng phụ thuộc,
-   không task L, không mục trống, ID duy nhất. Nêu rõ phần còn thiếu (fail-loud); trình bảng tổng task cho
+   Ghi bản nháp `docs/requests/<yyyy-mm-dd>-<slug>/tasks.md` theo
+   [references/output-formats.md](references/output-formats.md) §2–§3 (đã tồn tại → hỏi trước). Có Node → chạy
+   `node <thư mục skill>/scripts/check-tasks.mjs <đường dẫn tasks.md>` ([scripts/check-tasks.mjs](scripts/check-tasks.mjs));
+   exit 1 → sửa `tasks.md` theo từng dòng lỗi rồi chạy lại tới khi 0 lỗi; cảnh báo W1 → thêm phụ thuộc hoặc nêu lý do ở
+   Ngữ cảnh; W2 → bỏ `CT` khỏi Phụ thuộc của `FE-UI` (luật ở bước 3). Rồi chạy
+   [references/breakdown-checklist.md](references/breakdown-checklist.md) cho các mục script không kiểm
+   (không có Node → kiểm cả checklist thủ công). Nêu rõ phần còn thiếu (fail-loud); trình bảng tổng task cho
    teamlead duyệt. Câu hỏi mở phát sinh ở bước 3–5 trình cùng Checkpoint 2.
 
 6. **Xuất file.**
-   Hỏi định dạng (nếu chưa nói): `md` (mặc định) hoặc `md + excel`. Ghi
-   `docs/requests/<yyyy-mm-dd>-<slug>/tasks.md` (+ `tasks.xlsx` hoặc `tasks.csv`) theo
-   [references/output-formats.md](references/output-formats.md). `plan.md` đã có → chỉ thêm 1 dòng link tới
-   `tasks.md`.
+   Hỏi định dạng (nếu chưa nói): `md` (mặc định) hoặc `md + excel`. `tasks.md` đã ghi ở bước 5; chọn excel →
+   `tasks.xlsx` hoặc `tasks.csv` theo [references/output-formats.md](references/output-formats.md) §4 (CSV ưu tiên
+   `check-tasks.mjs --csv`). `plan.md` đã có → chỉ thêm 1 dòng link tới `tasks.md`.
 
 ## Verification (trước khi báo hoàn thành)
 
 - Đã nạp context; phần suy đoán đánh dấu **[giả định]**; teamlead đã duyệt Checkpoint 1 và Checkpoint 2.
 - Mọi AC của use case được phủ bởi ≥ 1 task; không vòng phụ thuộc; không còn task size L.
+- `check-tasks.mjs` báo 0 lỗi (hoặc ghi rõ không có Node và đã kiểm checklist thủ công).
 - Mọi task có đủ header chung + mục theo loại; không mục trống.
 - `tasks.md` đặt đúng `docs/requests/<yyyy-mm-dd>-<slug>/`; Excel (nếu chọn) khớp `tasks.md`; nêu rõ nếu đã
   fallback CSV.
@@ -112,3 +119,5 @@ Nạp đúng file khi cần, đừng nạp tất cả:
 - [references/sizing.md](references/sizing.md): quy ước S/M/L + cách tách task L.
 - [references/output-formats.md](references/output-formats.md): cấu trúc `tasks.md`, Excel 3 sheet, CSV UTF-8 có BOM.
 - [references/breakdown-checklist.md](references/breakdown-checklist.md): Definition of Done trước Checkpoint 2.
+- [scripts/check-tasks.mjs](scripts/check-tasks.mjs): kiểm `tasks.md` (lỗi E1–E9, cảnh báo W1–W2) + xuất CSV UTF-8 có
+  BOM; Node ≥ 20, không phụ thuộc ngoài.

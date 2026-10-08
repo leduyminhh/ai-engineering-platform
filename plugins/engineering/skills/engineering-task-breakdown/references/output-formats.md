@@ -92,12 +92,14 @@ Mỗi bước trong "Thứ tự thực hiện gợi ý" gồm các task có mọ
 
 1. Môi trường có công cụ tạo xlsx (skill xlsx của provider, hoặc Python có `openpyxl`) → sinh `tasks.xlsx` 3 sheet.
    Kiểm `openpyxl` lần lượt bằng `python -c "import openpyxl"`, `python3 -c …`, `py -3 -c …`; một lệnh exit 0 = có, dùng đúng lệnh đó để chạy mẫu bên dưới. Trên Windows `python` có thể là stub Microsoft Store (exit khác 0 dù đã cài Python qua `py`) — KHÔNG kết luận thiếu `openpyxl` chỉ từ một lệnh lỗi.
-2. Không có → sinh `tasks.csv` (chỉ sheet `Tasks`) và **báo rõ** đã fallback CSV vì môi trường không có công cụ tạo
-   xlsx. Không tự cài package vào môi trường người dùng khi chưa hỏi.
+2. Không có → sinh `tasks.csv` (chỉ sheet `Tasks`) bằng
+   `node <thư mục skill>/scripts/check-tasks.mjs <tasks.md> --csv <thư mục>/tasks.csv` (chỉ ghi khi 0 lỗi); không có
+   Node → dùng `write_tasks_csv` ở mẫu Python bên dưới. Cả hai trường hợp **báo rõ** đã fallback CSV vì môi trường
+   không có công cụ tạo xlsx. Không tự cài package vào môi trường người dùng khi chưa hỏi.
 
 ### Quy tắc CSV
 
-- Mã hoá **UTF-8 có BOM** (Python: `encoding="utf-8-sig"`) để Excel trên Windows hiển thị đúng dấu tiếng Việt.
+- Mã hoá **UTF-8 có BOM** (`check-tasks.mjs` tự thêm BOM; Python: `encoding="utf-8-sig"`) để Excel trên Windows hiển thị đúng dấu tiếng Việt.
 - Quote **mọi ô** (`csv.QUOTE_ALL`): ô chứa dấu phẩy, ngoặc kép hoặc xuống dòng (AC nhiều dòng) vẫn đúng cột;
   ngoặc kép trong nội dung được nhân đôi `""` (module `csv` tự làm).
 - Dấu phân cách `,`.

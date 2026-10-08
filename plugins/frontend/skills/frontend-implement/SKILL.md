@@ -39,6 +39,14 @@ tương tác nhìn thấy) TRƯỚC khi sinh code. Cách rút cho từng dạng:
 - **File HTML/CSS**, **Figma qua MCP/Dev Mode**, hoặc **ảnh/screenshot**. Với ảnh: đánh dấu rõ phần
   **ước lượng** (khoảng cách/màu/độ đo) để người duyệt kiểm mắt.
 - Luôn map token quan sát → token chuẩn trong `design-system.md`; không chế token mới nếu đã có.
+- **Nhận task `FE-UI` từ `tasks.md`** (do `engineering-task-breakdown` sinh, dạng "task `UC01-FE-01` trong
+  `docs/requests/<...>/tasks.md`"): đọc **chỉ** mục chi tiết của task đó (anchor `<a id="uc01-fe-01">`) + mục của các
+  task trong cột Phụ thuộc. Map: F2 → nguồn thiết kế đưa vào input adapter; F3 → component tái dùng/mới; F1 → tên
+  màn hình/route chỉ để đặt tên + vị trí file, KHÔNG đăng ký route (cần route mới → nêu trong report); F4, F5, F7, F8
+  → yêu cầu UI (4 trạng thái, form, phân quyền hiển thị, i18n/a11y/responsive); F6 là `N/A` (nối API
+  thuộc task `FE-INT`); F9 → test render + interaction. AC + DoD của task là tiêu chí xong, "Lệnh verify" là lệnh phải
+  chạy. Mục còn `[giả định]` ảnh hưởng thiết kế (nguồn thiết kế, component) → hỏi lại. Kết thúc: báo trạng thái đề
+  xuất cho session chính; KHÔNG sửa `tasks.md`.
 
 ### 2. Map sang component
 - Ưu tiên **tái dùng component-library** của project (Button/Card/Dialog/Table/Tabs…) trước khi tự dựng;

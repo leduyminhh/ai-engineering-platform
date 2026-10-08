@@ -1,8 +1,8 @@
 # Use-case intake — chốt phạm vi slice trước khi sinh
 
 Trước khi sinh bất kỳ code nào, luôn chốt một **phạm vi use-case** rõ ràng — mô tả trung gian, KHÔNG phải
-code — rồi mới thiết kế slice. Nhờ đó ba nguồn đầu vào (mô tả người dùng, `requirement.md`, contract OpenAPI)
-hội tụ về một đường sinh chung, và slice không phình ra ngoài một aggregate.
+code — rồi mới thiết kế slice. Nhờ đó bốn nguồn đầu vào (mô tả người dùng, `requirement.md`, contract OpenAPI,
+task `BE` trong `tasks.md`) hội tụ về một đường sinh chung, và slice không phình ra ngoài một aggregate.
 
 ## "Phạm vi use-case" gồm gì
 
@@ -51,6 +51,31 @@ Chính xác nhất về shape biên (khi có). Cách chốt:
 - Method gợi loại: `POST`/`PUT`/`PATCH`/`DELETE` → command; `GET` → query (read model trực tiếp).
 - **Contract là nguồn shape ở biên, KHÔNG phải cấu trúc domain** — đừng để schema DTO rò vào aggregate; map ở
   inbound adapter.
+
+## Nguồn D — task `BE` trong `tasks.md`
+
+Do skill `engineering-task-breakdown` sinh; đầu vào dạng "task `UC01-BE-01` trong `docs/requests/<...>/tasks.md`".
+Cách chốt:
+
+- Đọc **chỉ** mục chi tiết của task đó (anchor `<a id="uc01-be-01">`) + mục của các task trong cột Phụ thuộc; không
+  làm phần việc của task khác.
+- Map trường task → phạm vi use-case:
+
+  | Trường task | Phạm vi use-case |
+  |---|---|
+  | B1 Endpoint | kênh vào (endpoint / trigger) + input/output DTO theo contract |
+  | B2 Use case | command hay query |
+  | B3 Aggregate + invariant | aggregate root + invariant |
+  | B4 Validation, B5 Phân quyền, B7 Bảng lỗi | ràng buộc ở biên + mã lỗi |
+  | B6 Dữ liệu chạm | driven port (repository/gateway); đổi schema → task `DB` phải xong trước |
+  | B8 Transaction / idempotency | ranh giới transaction |
+  | B9 NFR | ràng buộc phi chức năng của slice (ngưỡng hiệu năng, audit/log, dữ liệu nhạy cảm) → tiêu chí verify; không tự thêm hạ tầng ngoài slice |
+  | B10 Test bắt buộc | test lõi + integration của slice |
+
+- AC + DoD của task là tiêu chí xong; "Lệnh verify" là lệnh build/test phải chạy ở bước verify.
+- Mục còn `[giả định]` ảnh hưởng thiết kế (aggregate, endpoint, quyền) → hỏi lại, không tự chốt.
+- Kết thúc: báo trạng thái đề xuất (`Done` hoặc lý do chặn) để session chính cập nhật cột Trạng thái; KHÔNG sửa
+  `tasks.md`.
 
 ## Nguyên tắc "một use-case, một aggregate, tối giản"
 
