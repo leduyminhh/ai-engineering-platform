@@ -59,8 +59,9 @@ export default async function run({ ok, ctx }) {
       'H1: -C <dir> → tra nhánh của repo đích (so với cwd)');
     ok(['cat .env;echo', 'cat <.env', 'source .env&&npm start', 'echo $(cat .env)', 'type certs\\server.pem', 'cat ..\\.env']
       .every((c) => d(c)?.decision === 'ask'), 'H3: .env sau ;/</&&/$()/dấu backslash → ask');
-    ok(['cp .env.example .env.example.bak', 'cat config/.env.sample', 'cat id_rsa.pub', 'cat .envrc', 'echo process.env'].every((c) => d(c) === null),
-      'H3: .env.example/.env.sample/id_rsa.pub/.envrc/process.env → cho qua');
+    ok(['cp .env.example .env.example.bak', 'cat config/.env.sample', 'cat id_rsa.pub', 'echo process.env'].every((c) => d(c) === null)
+      && d('cat .envrc')?.decision === 'ask',
+      'H3: .env.example/.env.sample/id_rsa.pub/process.env → cho qua; .envrc → ask (vòng sửa 1: .envrc là file bí mật)');
     // Vòng sửa 2: nháy lẻ không được che lệnh phía sau; parse không tin cậy → nghiêng về an toàn
     ok(["cat > n.txt <<'EOF'\ndon't\nEOF\ngit push origin main", "git commit -F - <<'EOF'\nfeat: don't\nEOF\ngit push origin main",
       "git status # don't\ngit push origin main", "echo don\\'t && git push origin main", 'echo "C:\\\\" && git push origin main']
@@ -138,7 +139,7 @@ export default async function run({ ok, ctx }) {
     const allowed = ['.env.example', 'config/.env.sample', 'id_rsa.pub', 'src/credentials.ts', 'process.env.js', 'src/env.ts', 'keys.md'];
     ok(allowed.every((f) => read(`/repo/${f}`) === null), 'H3: .env.example/.sample, id_rsa.pub, credentials.ts, process.env.js → cho qua');
     const b = (command) => bash.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x' });
-    ok(['cat .ENV', 'cat prod.env', 'cat config/app.env', 'cat certs/server.key', 'cat id_rsa.bak', 'cat credentials.yml']
+    ok(['cat .ENV', 'cat prod.env', 'cat config/app.env', 'cat .envrc', 'cat certs/server.key', 'cat id_rsa.bak', 'cat credentials.yml']
       .every((c) => b(c)?.decision === 'ask'), 'H3 Bash: .ENV/prod.env/.envrc/.key/id_rsa.bak/credentials.yml → ask');
     ok(['cat id_rsa.pub', 'cat .env.example', 'cat src/credentials.ts', 'ls'].every((c) => b(c) === null), 'H3 Bash: id_rsa.pub/.env.example/credentials.ts → cho qua');
     // Grep không được đọc lén file bí mật
