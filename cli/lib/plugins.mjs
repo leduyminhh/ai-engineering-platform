@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkSourceKeys } from './conventions.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const PLUGINS_DIR = path.join(REPO_ROOT, 'plugins');
@@ -15,9 +16,10 @@ function readJSON(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
 // files were authored (Windows checkouts are often CRLF); adapters then emit canonical LF.
 function readText(p) { return fs.existsSync(p) ? fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n') : ''; }
 
-/** Danh sách trong frontmatter là chuỗi "a, b" vì parser chỉ nhận scalar. */
+/** Danh sách nguồn: chuỗi "a, b" (dạng cũ) hoặc YAML list. */
 export function splitList(v) {
-  return typeof v === 'string' ? v.split(',').map((s) => s.trim()).filter(Boolean) : [];
+  const items = Array.isArray(v) ? v.map(String) : typeof v === 'string' ? v.split(',') : [];
+  return items.map((s) => s.trim()).filter(Boolean);
 }
 
 /**
@@ -98,29 +100,78 @@ export function loadCore() {
 }
 
 /**
- * Minimal YAML frontmatter parser for SKILL.md (zero-dep). Handles the controlled subset
- * the kit emits: `key: value` lines where value is a double-quoted string (JSON-escaped),
- * `null`, an integer, or a bare scalar. Returns { meta, body } (body = text after frontmatter).
+ * Parser frontmatter zero-dep cho tập con YAML mà repo dùng: scalar một dòng (chuỗi "…" kiểu JSON, '…',
+ * số nguyên, true/false/null, plain), list inline `[a, b]`, block list `- x` và map một cấp `k: v` thụt lề.
  */
-function parseFrontmatter(text) {
-  const m = text.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+export function parseFrontmatter(text) {
+  const m = text.replace(/\r\n/g, '\n').match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!m) return { meta: {}, body: text };
   const meta = {};
-  for (const line of m[1].split('\n')) {
+  const lines = m[1].split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (!line.trim() || /^\s*#/.test(line)) continue;
-    const i = line.indexOf(':');
-    if (i === -1) continue;
-    const key = line.slice(0, i).trim();
-    const raw = line.slice(i + 1).trim();
-    let val;
-    if (raw === 'null') val = null;
-    else if (raw === '') val = '';
-    else if (raw[0] === '"') { try { val = JSON.parse(raw); } catch { val = raw; } }
-    else if (/^-?\d+$/.test(raw)) val = Number(raw);
-    else val = raw;
-    meta[key] = val;
+    if (/^\s/.test(line)) throw new Error(`frontmatter: dòng thụt lề không thuộc khoá nào: "${line.trim()}"`);
+    const c = line.indexOf(':');
+    if (c === -1) continue;
+    const key = line.slice(0, c).trim();
+    const raw = line.slice(c + 1).trim();
+    if (raw !== '') { meta[key] = parseInline(raw); continue; }
+    const block = [];
+    while (i + 1 < lines.length && /^\s+\S/.test(lines[i + 1])) block.push(lines[++i].trim());
+    if (!block.length) { meta[key] = ''; continue; }
+    if (block.every((b) => b === '-' || b.startsWith('- '))) {
+      meta[key] = block.map((b) => parseScalar(b.slice(1).trim()));
+    } else {
+      meta[key] = Object.fromEntries(block.map((b) => {
+        const j = b.indexOf(':');
+        if (j === -1) throw new Error(`frontmatter: "${key}" trộn list và map hoặc dòng con sai: "${b}"`);
+        return [b.slice(0, j).trim(), parseScalar(b.slice(j + 1).trim())];
+      }));
+    }
   }
   return { meta, body: m[2] };
+}
+
+function parseScalar(raw) {
+  if (raw === '') return '';
+  if (raw === 'null') return null;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  if (raw[0] === '"') { try { return JSON.parse(raw); } catch { return raw; } }
+  if (raw[0] === "'" && raw.length >= 2 && raw.endsWith("'")) return raw.slice(1, -1).replace(/''/g, "'");
+  if (/^-?\d+$/.test(raw)) return Number(raw);
+  return raw;
+}
+
+function parseInline(raw) {
+  if (!(raw[0] === '[' && raw.endsWith(']'))) return parseScalar(raw);
+  const inner = raw.slice(1, -1).trim();
+  return inner ? splitOutsideQuotes(inner).map((s) => parseScalar(s.trim())) : [];
+}
+
+// Dấu phẩy trong chuỗi quote là nội dung, không phải ranh giới phần tử.
+function splitOutsideQuotes(s) {
+  const out = [];
+  let cur = '', q = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) {
+      cur += ch;
+      if (ch === '\\' && q === '"' && i + 1 < s.length) cur += s[++i];
+      else if (ch === q) q = null;
+    } else if (ch === '"' || ch === "'") { q = ch; cur += ch; }
+    else if (ch === ',') { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+// Khoá gõ sai trước đây bị bỏ im lặng; ném lỗi để build và test dừng ngay ở file sai.
+function assertSourceKeys(kind, meta, file) {
+  const errs = checkSourceKeys(kind, meta);
+  if (errs.length) throw new Error(`${path.relative(REPO_ROOT, file)}: ${errs.join('; ')}`);
 }
 
 /**
@@ -139,6 +190,7 @@ function loadSkills(pluginDir) {
     const skillFile = path.join(dir, 'SKILL.md');
     if (!fs.existsSync(skillFile)) continue;
     const { meta, body } = parseFrontmatter(readText(skillFile));
+    assertSourceKeys('skill', meta, skillFile);
     // README.md ở gốc skill = tài liệu cho người đọc repo, KHÔNG ship sang adapter (và tránh bị
     // coi như asset thư mục gây vỡ build khi copyDir vào một file). references/ + thư mục khác vẫn ship.
     const assets = fs.readdirSync(dir).filter((f) => f !== 'SKILL.md' && f !== 'README.md'); // ship alongside (claude)
@@ -180,12 +232,15 @@ function loadSkills(pluginDir) {
   return stages;
 }
 
+export const loadSkillsFrom = loadSkills;
+
 /** Agent ở `agents/<id>.md`; `skills` trần hiểu là skill cùng plugin. */
 function loadAgents(pluginDir, pluginId) {
   const dir = path.join(pluginDir, 'agents');
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort().map((f) => {
     const { meta, body } = parseFrontmatter(readText(path.join(dir, f)));
+    assertSourceKeys('agent', meta, path.join(dir, f));
     return {
       id: meta.name || path.basename(f, '.md'),
       plugin: pluginId,
@@ -216,6 +271,7 @@ export function loadWorkflows() {
     const file = path.join(dir, 'WORKFLOW.md');
     if (!fs.existsSync(file)) continue;
     const { meta, body } = parseFrontmatter(readText(file));
+    assertSourceKeys('workflow', meta, file);
     const entries = fs.readdirSync(dir, { withFileTypes: true })
       .filter((x) => x.name !== 'WORKFLOW.md' && x.name !== 'README.md');
     // assetFiles copy `assets` bằng copyDir, nên file lẻ (checklist.md) phải đi đường fileAssets.

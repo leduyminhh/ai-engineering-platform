@@ -77,19 +77,27 @@ export function triggerCollisions(entries) {
 }
 
 // Kiểm frontmatter ĐÃ PHÁT: value chứa ": ", " #" hoặc mở đầu bằng ký tự cấu trúc phải nằm trong ngoặc kép.
-// Chỉ nhận dạng `key: value` một dòng — đúng tập con mà frontmatter() phát ra hiện nay.
+// Nhận `key: value` và dòng con `  - x` / `  k: v` mà frontmatter() phát ra.
 const PLAIN_UNSAFE_VALUE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:(?:\s|$)|\s#|\s$/;
 const QUOTED = /^"(?:[^"\\]|\\.)*"$/;
 
 export function checkFrontmatterYaml(fmText) {
   const errs = [];
+  let parent = null; // khoá vừa mở khối con (giá trị rỗng)
+  const checkValue = (key, v) => {
+    if (v.startsWith('"')) { if (!QUOTED.test(v)) errs.push(`${key}: chuỗi quote không đóng hoặc escape sai`); return; }
+    if (PLAIN_UNSAFE_VALUE.test(v)) errs.push(`${key}: plain scalar không an toàn ("${v.slice(0, 30)}")`);
+  };
   for (const line of fmText.split('\n')) {
     if (!line.trim()) continue;
+    const item = line.match(/^ {2}- (.*)$/);
+    const sub = line.match(/^ {2}([A-Za-z][\w-]*): (.*)$/);
+    if ((item || sub) && parent) { checkValue(parent, item ? item[1] : sub[2]); continue; }
     const m = line.match(/^([A-Za-z][\w-]*):(?:\s(.*))?$/);
-    if (!m) { errs.push(`dòng không phải "key: value": ${line.slice(0, 40)}`); continue; }
+    if (!m) { errs.push(`dòng không phải "key: value": ${line.slice(0, 40)}`); parent = null; continue; }
     const v = m[2] ?? '';
-    if (v.startsWith('"')) { if (!QUOTED.test(v)) errs.push(`${m[1]}: chuỗi quote không đóng hoặc escape sai`); continue; }
-    if (PLAIN_UNSAFE_VALUE.test(v)) errs.push(`${m[1]}: plain scalar không an toàn ("${v.slice(0, 30)}")`);
+    parent = v === '' ? m[1] : null;
+    if (v !== '') checkValue(m[1], v);
   }
   return errs;
 }

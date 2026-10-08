@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
+import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, parseFrontmatter, loadSkillsFrom, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
 import { checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, missingAnchors, registrySignals } from '../cli/lib/workflows.mjs';
 import { offeredCatalog } from '../cli/lib/install.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
@@ -65,7 +65,7 @@ export async function buildContext({ build = false, fails = [] } = {}) {
 
   return {
     fs, path, os, execFileSync, pathToFileURL,
-    loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, REPO_ROOT, PLUGINS_DIR, CORE_DIR,
+    loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, parseFrontmatter, loadSkillsFrom, REPO_ROOT, PLUGINS_DIR, CORE_DIR,
     checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, missingAnchors, registrySignals,
     offeredCatalog, claudeAdapter, codexAdapter, tomlBasic, tomlMultiline,
     agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar,
