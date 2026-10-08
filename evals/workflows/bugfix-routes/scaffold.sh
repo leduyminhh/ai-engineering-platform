@@ -4,7 +4,6 @@ set -euo pipefail
 mkdir -p src
 
 cat > src/checkout.js <<'JS'
-// Mã giảm giá cố định (amount) không có trường rules nên applyCoupon ném TypeError, API trả 500.
 function applyCoupon(total, coupon) {
   if (total < coupon.rules.minTotal) {
     throw new Error('Đơn hàng chưa đủ điều kiện dùng mã');

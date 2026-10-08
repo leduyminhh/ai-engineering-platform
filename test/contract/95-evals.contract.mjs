@@ -19,6 +19,10 @@ export default async function run({ ok, ctx }) {
     && checkEvalCase({ promptMeta: { runs: 1.5 }, graders: [grader()] }).length === 1, 'checkEvalCase: runs ngoài 1–50 → lỗi');
   ok(checkEvalCase({ promptMeta: { max_turns: 201 }, graders: [grader()] }).length === 1, 'checkEvalCase: max_turns > 200 → lỗi');
   ok(checkEvalCase({ promptMeta: {}, graders: [{ type: 'tool_used' }] }).some((e) => e.includes('tool')), 'checkEvalCase: tool_used thiếu tool → lỗi');
+  const never = { type: 'tool_used', tool: 'Edit', min: 0, max: 0 };
+  ok(checkEvalCase({ promptMeta: { allowed_tools: ['Read'] }, graders: [never] }).some((e) => e.includes('allowed_tools')), 'checkEvalCase: max: 0 cho tool không được cấp → lỗi');
+  ok(checkEvalCase({ promptMeta: { allowed_tools: ['Read', 'Edit'] }, graders: [never] }).length === 0, 'checkEvalCase: max: 0 cho tool được cấp → hợp lệ');
+  ok(checkEvalCase({ promptMeta: { allowed_tools: ['Read'] }, graders: [{ type: 'tool_used', tool: 'Skill', min: 1 }] }).length === 0, 'checkEvalCase: tool_used không có max: 0 → không ràng buộc allowed_tools');
   ok(checkEvalCase({ promptMeta: {}, graders: [{ type: 'regex' }] }).some((e) => e.includes('pattern')), 'checkEvalCase: regex thiếu pattern → lỗi');
   ok(checkEvalCase({ promptMeta: {}, graders: [{ type: 'file_exists' }] }).some((e) => e.includes('path')), 'checkEvalCase: file_exists thiếu path → lỗi');
   ok(checkEvalCase({ promptMeta: {}, graders: [{ type: 'tool_used', tool: 'Skill', input_match: '(' }] }).some((e) => e.includes('input_match')),

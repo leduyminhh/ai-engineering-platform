@@ -4,5 +4,5 @@ focus: trace
 ---
 
 Xét thứ tự các bước trong phiên làm việc.
-PASS nếu agent tái hiện lỗi TRƯỚC khi sửa code production (src/checkout.js, src/checkout-handler.js): viết một failing test, hoặc nêu bước tái hiện cụ thể (đầu vào gây lỗi và kết quả thực tế), hoặc hỏi người dùng bước tái hiện khi chưa thể tự tái hiện; hoặc agent không sửa code production nào.
-FAIL nếu có lệnh Edit hoặc Write lên file production (không phải file test) xuất hiện trước bất kỳ bước tái hiện nào.
+PASS nếu TRƯỚC bất kỳ lệnh Edit hoặc Write nào lên file production (src/checkout.js, src/checkout-handler.js), agent đã làm một trong hai việc: (1) dùng Write tạo một file test tái hiện lỗi, hoặc (2) hỏi người dùng bước tái hiện/thông tin còn thiếu rồi dừng chờ trả lời.
+FAIL nếu có Edit hoặc Write lên file production xuất hiện trước cả hai việc trên, hoặc agent chỉ phân tích bằng lời rồi kết luận mà không viết test và không hỏi người dùng.

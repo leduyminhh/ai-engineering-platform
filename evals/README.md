@@ -15,16 +15,19 @@ Bộ case kiểm hành vi của plugin: Claude có chọn đúng skill với cá
 
 - `prompt.md`: frontmatter (`runs: 3`, `max_turns`, `allowed_tools`, `tags`) + prompt tiếng Việt.
 - `graders/*.md`: mỗi file một grader (`tool_used`, `file_exists`, `llm`…).
+- Grader `scaffold-applied` (`tool_used: Read`, `input_match` tên file mẫu) đỏ khi agent không bao giờ đọc file mẫu, tức là scaffold không được áp (quên `--scaffold` hoặc script lỗi). [Unverified] chưa kiểm bằng lần chạy thật; `input_match` khớp trên JSON của lời gọi Read.
 - `case.yaml` + `scaffold.sh`: case backend và workflows dùng để dựng file mẫu có lỗi (Java N+1; JS áp mã giảm giá ném TypeError). Script chỉ dùng heredoc Bash, không cần mạng.
 - Contract cấu trúc: `test/contract/95-evals.contract.mjs` (chạy trong `npm test`, không gọi model).
 
 ## Chạy tay
 
-Điều kiện: plugin đã được cài để `claude plugin eval` tìm theo tên.
+Điều kiện: plugin đã được cài ở chế độ plugin (không phải skills phẳng) để `claude plugin eval` tìm theo tên `<id>@ai-engineering-platform`; chế độ plugin được chọn bằng `--as-plugin` (xem README gốc); `--plugin` nhận một id mỗi lần nên cài từng plugin một lệnh, hoặc `--plugin all`.
 
 ```bash
 npm run build
-aip install --provider claude -g
+aip install --provider claude --as-plugin --plugin engineering -g --yes
+aip install --provider claude --as-plugin --plugin backend -g --yes
+aip install --provider claude --as-plugin --plugin workflows -g --yes
 ```
 
 Từ thư mục gốc repo (mỗi plugin một lệnh; `<id>` là `engineering`, `backend` hoặc `workflows`):
@@ -66,5 +69,5 @@ Ghi chú về lệnh:
 
 - Mỗi lượt chạy gọi model trên tài khoản của người dùng; `--help` nêu `--max-cost-usd` là trần chi phí cứng và grader `llm` gọi thêm model chấm.
 - [Unverified] Theo tài liệu `claude plugin eval` (không có trong `--help`): Windows native từ chối case cấp quyền Bash (cần WSL2), nên không case nào khai `Bash` trong `allowed_tools` và contract chặn việc thêm; mỗi run chạy trong thư mục tạm, chỉ nạp plugin dưới test (hook, `CLAUDE.md`, skill cá nhân của bạn không có mặt); grader `file_exists` chỉ tính file Claude tạo trong run; grader `llm` với `focus: trace` chỉ thấy 12 message đầu và 12 message cuối.
-- Case workflows không có Bash nên agent không chạy được test; grader `repro-before-edit` chấp nhận failing test viết bằng Write hoặc bước tái hiện nêu rõ bằng lời.
+- Case workflows không có Bash nên agent không chạy được test; grader `repro-before-edit` chỉ cho PASS khi agent Write một file test tái hiện hoặc hỏi lại người dùng trước khi Edit/Write lên file production.
 - Một lần chạy có `--allow-tools Write Edit` cho phép agent ghi file trong workspace của run; [Unverified] workspace là thư mục tạm, không phải repo này.

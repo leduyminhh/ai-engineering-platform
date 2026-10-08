@@ -257,6 +257,8 @@ export function checkEvalCase({ promptMeta = {}, graders = [] }) {
     if (g.type === 'tool_used' && !g.tool) errs.push(`${at}: tool_used thiếu tool`);
     if (g.type === 'regex' && !g.pattern) errs.push(`${at}: regex thiếu pattern`);
     if (g.type === 'file_exists' && !g.path) errs.push(`${at}: file_exists thiếu path`);
+    // max: 0 trên tool không được cấp thì luôn pass vì tool bị gỡ khỏi phiên, grader không còn khả năng đỏ.
+    if (g.type === 'tool_used' && g.max === 0 && g.tool && Array.isArray(tools) && !tools.includes(g.tool)) errs.push(`${at}: max: 0 cho ${g.tool} nhưng allowed_tools không có ${g.tool}`);
     if (g.type === 'llm' && !String(g.criteria || g.body || '').trim()) errs.push(`${at}: llm thiếu criteria (thân file)`);
     for (const key of ['input_match', 'pattern']) {
       if (typeof g[key] !== 'string') continue;
