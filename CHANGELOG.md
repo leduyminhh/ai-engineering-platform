@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Workflows with risk `high`/`critical` (db-change, incident, release, security-review) open with a
   start-confirmation gate (`⏸`) in the Claude and Codex preambles; 9 workflow descriptions were rewritten to the
   description template (`test/fixtures/workflow-not-for-ids.json`).
-- Rare workflow branches moved to `workflows/<slug>/references/*.md` (12 files across 8 workflows) and 9
+- Rare workflow branches moved to `workflows/<slug>/references/*.md` (12 files across 9 workflows) and 9
   Evidence lines trimmed; the contract checks both directions (pointer → file, file → pointer). The 13
   `WORKFLOW.md` files shrank from 201,722 to 194,572 bytes (-3.54 %; the 10 % target of the plan was not reached).
 - Draft skills (and the agents that use them) build to `build/claude/drafts/<plugin>/…` and the marketplace
