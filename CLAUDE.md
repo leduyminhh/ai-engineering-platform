@@ -31,6 +31,7 @@ Run a **single test file** directly (no build step):
 
 ```bash
 node test/validate.mjs --build
+node test/validate.mjs --only <substr>   # chạy một nhóm module (contract/content), vd --only versions
 node test/install.test.mjs
 ```
 
@@ -81,6 +82,7 @@ Every lifecycle command takes a scope: **project** (default, cwd) or **global** 
 - New workflow → copy `templates/workflows/workflow.template.md` to `workflows/<slug>/WORKFLOW.md`, add a row to the registry in `workflows/orchestrator/WORKFLOW.md`.
 - New provider behavior → edit `adapters/<provider>/adapter.mjs`; keep it a pure `build(plugins, ctx) -> fileEntry[]`.
 - Changes affecting projection should be covered by `test/*.test.mjs` and the `test/validate.mjs` contract.
+- Tests layout: `test/validate.mjs` is a thin entry; `test/harness.mjs` (`ok`/`fails`, `--only`) and `test/context.mjs` (loads source once, runs the build when `--build`, exposes shared helpers/fixtures as `ctx`) feed the modules. `test/contract/*.contract.mjs` hold generic checks applied to every skill/agent/workflow; `test/content/*.pin.mjs` hold per-spec/per-skill wording pins that retire once a rule becomes a contract. Numeric filename prefixes fix the run order (contract first, then content); a module is `export default async function run({ ok, ctx })`.
 - Any content change → bump the owning plugin's version and re-run `node cli/lib/versions.mjs --lock` (see Version gate above). `workflows/.manifest.json` `hardDependencies` lists the plugins the `workflows` plugin depends on; a workflow needing another plugin (e.g. `data`, `ops`) gets a "Plugin cần có" preamble line instead.
 
 ## Conventions
