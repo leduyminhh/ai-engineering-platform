@@ -5,7 +5,6 @@ mode: write
 skills: "engineering-release-notes"
 writeScope:
   - docs/**
-  - CHANGELOG.md
   - "**/CHANGELOG.md"
 ---
 

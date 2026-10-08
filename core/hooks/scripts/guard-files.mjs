@@ -8,7 +8,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
 // Tên mẫu dùng để đoán một glob của Grep có chủ đích quét file bí mật hay không.
-const SECRET_PROBES = ['.env', '.env.local', '.envrc', 'prod.env', 'server.pem', 'server.key', 'store.jks', 'id_rsa', 'credentials.json'];
+const SECRET_PROBES = ['.env', '.env.local', '.envrc', 'prod.env', 'server.pem', 'server.key', 'store.jks', 'store.keystore', 'a.p12', 'a.pfx', 'a.ppk', 'a.p8',
+  'id_rsa', 'id_ed25519', 'credentials', 'credentials.json', 'credentials.yml'];
+// Phần chữ cố định của glob phải tự chứa từ khoá bí mật; chỉ khớp tên mẫu thôi sẽ chặn nhầm "*.json", "s*", "*rc"...
+const SECRET_WORDS = /env|pem|key|jks|keystore|p12|pfx|ppk|p8|id_|credentials/i;
 
 export function globToRegExp(glob, { ignoreCase = false } = {}) {
   let re = '';
@@ -42,6 +45,8 @@ function stripAliases(p) {
 function isSecretPath(abs, target) {
   if (SECRET.test(stripAliases(abs))) return true;
   // Symlink/junction tên vô hại nhưng trỏ tới file bí mật: so khớp cả đường dẫn thật (chỉ đọc).
+  // Đường UNC bỏ qua realpath để hook không chạm mạng; tên đã được kiểm ở trên.
+  if (abs.startsWith('//')) return false;
   try {
     if (existsSync(target)) return SECRET.test(realpathSync.native(target).replace(/\\/g, '/'));
   } catch { /* không resolve được thì dựa vào tên */ }
@@ -57,7 +62,7 @@ function braceAlternatives(glob) {
 // Glob chỉ bị coi là nhắm file bí mật khi có phần chữ cố định (vd ".env*", "*.pem"); "*" hay "**/*" thì không.
 function globNamesSecret(glob) {
   return braceAlternatives(String(glob).replace(/\\/g, '/').split('/').pop())
-    .some((g) => /[a-z0-9]/i.test(g) && SECRET_PROBES.some((p) => globToRegExp(g, { ignoreCase: true }).test(p)));
+    .some((g) => SECRET_WORDS.test(g.replace(/[*?]/g, '')) && SECRET_PROBES.some((p) => globToRegExp(g, { ignoreCase: true }).test(p)));
 }
 
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };

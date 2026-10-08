@@ -148,6 +148,15 @@ export default async function run({ ok, ctx }) {
       && tool('Grep', { pattern: 'x', glob: '**/{*.ts,.env}' })?.decision === 'deny', 'H3 Grep: path/glob nhắm file bí mật → deny');
     ok(tool('Grep', { pattern: 'x', path: '/repo/src', glob: '*.ts' }) === null && tool('Grep', { pattern: 'x' }) === null
       && tool('Grep', { pattern: 'x', glob: '**/*' }) === null && tool('Grep', { pattern: 'x', glob: '.env.example' }) === null, 'H3 Grep: path/glob thường → cho qua');
+    // Vòng sửa 2: glob thường không bị chặn nhầm; glob nhắm bí mật vẫn bị chặn
+    const grepGlob = (glob) => tool('Grep', { pattern: 'x', glob });
+    ok(['*.json', '**/*.json', '*.{ts,json}', '*.local', '*rc', 's*', 'p*', '*.{ts,tsx}', 'src/**/*.json'].every((x) => grepGlob(x) === null),
+      'H3 Grep: glob thường (*.json, *.{ts,json}, *.local, *rc, s*, p*) → cho qua');
+    ok(['.env*', '*.env', '*.pem', '**/.env', 'credentials.*', '*.key', 'id_*', '*.{ts,env}', '*.p12'].every((x) => grepGlob(x)?.decision === 'deny'),
+      'H3 Grep: glob có từ khoá bí mật và khớp tên bí mật → deny');
+    // UNC: chặn theo tên, không resolve thật (không chạm mạng)
+    ok(files.decide({ tool_name: 'Read', cwd: '/repo', tool_input: { file_path: String.raw`\\fileserver\share\app\.env` } }, opts)?.decision === 'deny'
+      && files.decide({ tool_name: 'Read', cwd: '/repo', tool_input: { file_path: '//fileserver/share/app/readme.md' } }, opts) === null, 'H3: đường UNC → quyết định theo tên');
     const hooks = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'hooks', 'hooks.json'), 'utf8'));
     ok(hooks.hooks.PreToolUse.some((g) => g.matcher.split('|').includes('Grep') && g.hooks[0].args[0].endsWith('guard-files.mjs')), 'hooks.json: matcher guard-files có Grep');
     // NotebookEdit / MultiEdit
