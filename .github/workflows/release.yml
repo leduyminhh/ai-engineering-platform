@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -12,21 +15,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           cache: npm
-
       - run: npm ci
       - run: npm test
       - run: npm run pack:verify
-
-      - name: Create Release
-        uses: actions/create-release@v1
+      - name: Create GitHub release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            See CHANGELOG.md and MIGRATION.md for details.
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "Release $GITHUB_REF_NAME" --notes "See CHANGELOG.md and MIGRATION.md for details."

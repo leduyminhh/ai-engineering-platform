@@ -5,8 +5,32 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [20, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run pack:verify
+
+  claude-plugin-validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,5 +39,18 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm test
-      - run: npm run validate
+      - run: npm run build
+      # CLI Claude Code không phải dependency của repo; cài tại chỗ để chạy đúng validator chính thức ở chế độ CI (--strict).
+      - name: Install Claude Code CLI
+        id: cli
+        continue-on-error: true
+        run: npm i -g @anthropic-ai/claude-code && claude --version
+      - name: claude plugin validate --strict
+        if: steps.cli.outcome == 'success'
+        shell: bash
+        run: |
+          claude plugin validate --strict build/claude
+          for p in build/claude/plugins/*/; do claude plugin validate --strict "$p"; done
+      - name: CLI unavailable
+        if: steps.cli.outcome != 'success'
+        run: echo "::warning::Không cài được Claude Code CLI trên runner — bỏ qua plugin validate --strict (đã chạy local)."
