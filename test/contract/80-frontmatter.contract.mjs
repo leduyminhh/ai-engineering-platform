@@ -43,6 +43,18 @@ export default async function run({ ok, ctx }) {
     try { parseFrontmatter('---\nname: x\n  - lạc\n---\n'); } catch { threw = true; }
     ok(threw, 'parseFrontmatter: dòng thụt lề không thuộc khoá nào → ném lỗi');
   }
+  {
+    const { meta } = parseFrontmatter('---\nname: x\ntools:\n- Read\n- Grep\nafter: y\n---\n');
+    ok(JSON.stringify(meta.tools) === '["Read","Grep"]' && meta.after === 'y', 'parseFrontmatter: block list không thụt lề → mảng');
+  }
+  {
+    let threw = false;
+    try { parseFrontmatter('---\nname: x\nstray\n---\n'); } catch { threw = true; }
+    ok(threw, 'parseFrontmatter: dòng cấp cao không có ":" → ném lỗi');
+    threw = false;
+    try { parseFrontmatter('---\nname: x\n- lạc\n---\n'); } catch { threw = true; }
+    ok(threw, 'parseFrontmatter: phần tử list không thuộc khoá nào → ném lỗi');
+  }
 
   // splitList nhận mảng
   ok(JSON.stringify(splitList(['a ', '', 'b'])) === '["a","b"]', 'splitList: nhận mảng, trim + bỏ rỗng');

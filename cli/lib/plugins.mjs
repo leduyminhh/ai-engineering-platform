@@ -113,12 +113,13 @@ export function parseFrontmatter(text) {
     if (!line.trim() || /^\s*#/.test(line)) continue;
     if (/^\s/.test(line)) throw new Error(`frontmatter: dòng thụt lề không thuộc khoá nào: "${line.trim()}"`);
     const c = line.indexOf(':');
-    if (c === -1) continue;
+    if (c === -1 || /^-(\s|$)/.test(line)) throw new Error(`frontmatter: dòng cấp cao không phải "khoá: giá trị" hoặc phần tử list của khoá nào: "${line.trim()}"`);
     const key = line.slice(0, c).trim();
     const raw = line.slice(c + 1).trim();
     if (raw !== '') { meta[key] = parseInline(raw); continue; }
     const block = [];
-    while (i + 1 < lines.length && /^\s+\S/.test(lines[i + 1])) block.push(lines[++i].trim());
+    // Block list YAML hợp lệ cả khi `- x` nằm sát lề trái.
+    while (i + 1 < lines.length && /^(\s+\S|-(\s|$))/.test(lines[i + 1])) block.push(lines[++i].trim());
     if (!block.length) { meta[key] = ''; continue; }
     if (block.every((b) => b === '-' || b.startsWith('- '))) {
       meta[key] = block.map((b) => parseScalar(b.slice(1).trim()));
