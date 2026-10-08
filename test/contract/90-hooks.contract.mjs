@@ -40,6 +40,27 @@ export default async function run({ ok, ctx }) {
     ok(d('cat .env')?.decision === 'ask' && d('source ./.env.local')?.decision === 'ask' && d('cat certs/server.pem')?.decision === 'ask',
       'H3: Bash đụng file bí mật → ask');
     ok(d('cp .env.example .env.example.bak') === null && d('ls -la') === null, 'H3: .env.example và lệnh thường → cho qua');
+    // Vòng sửa 1: các dạng lách cổng đã biết
+    const heredoc = ['git commit -m "$(cat <<\'EOF\'', 'feat: x', '', 'sửa lỗi', 'EOF', ')"'].join('\n');
+    ok(['git commit -am "sửa lỗi"', 'git commit -qm "sửa lỗi"', 'git commit -m"sửa lỗi"', 'git commit -m "fix; sửa"', heredoc, 'git commit --message="sửa"', 'git commit --message "sửa"']
+      .every((c) => d(c)?.decision === 'deny'), 'H2: -am/-qm/-m"…"/dấu ; trong message/heredoc/--message → deny');
+    ok(d('git commit -m "fix" -- tài-liệu.md') === null && d('git commit -F msg.txt') === null && d('git commit -am "fix"') === null,
+      'H2: non-ASCII chỉ ở path sau --, -F, -am ASCII → cho qua');
+    ok(['git push origin "main"', "git push origin 'main'", 'git push -fu origin feature/x', 'git push -uf origin feature/x', 'git push -d origin feature/x', 'git push --prune origin']
+      .every((c) => d(c)?.decision === 'ask'), 'H1: ref có nháy, cụm cờ -fu/-uf/-d, --prune → ask');
+    ok(d('git --git-dir .git push origin main')?.decision === 'ask' && d('git --work-tree . --namespace x push origin main')?.decision === 'ask',
+      'H1: --git-dir/--work-tree/--namespace tách token không làm lạc subcommand');
+    ok(d('git push -o ci.skip origin', 'main')?.decision === 'ask' && d('git push --push-option ci.skip origin', 'main')?.decision === 'ask'
+      && d('git push origin @', 'main')?.decision === 'ask' && d('git push -o ci.skip origin', 'feature/x') === null,
+      'H1: -o/--push-option bỏ qua giá trị; @ = HEAD');
+    const repoDir = path.resolve('.', 'repo');
+    const inRepo = { currentBranch: (dir) => (dir === repoDir ? 'main' : 'feature/x') };
+    ok(decide(bash('git -C repo push origin HEAD'), inRepo)?.decision === 'ask' && decide(bash('git push origin HEAD'), inRepo) === null,
+      'H1: -C <dir> → tra nhánh của repo đích (so với cwd)');
+    ok(['cat .env;echo', 'cat <.env', 'source .env&&npm start', 'echo $(cat .env)', 'type certs\\server.pem', 'cat ..\\.env']
+      .every((c) => d(c)?.decision === 'ask'), 'H3: .env sau ;/</&&/$()/dấu backslash → ask');
+    ok(['cp .env.example .env.example.bak', 'cat config/.env.sample', 'cat id_rsa.pub', 'cat .envrc', 'echo process.env'].every((c) => d(c) === null),
+      'H3: .env.example/.env.sample/id_rsa.pub/.envrc/process.env → cho qua');
     const run = (stdin) => execFileSync('node', [script], { input: stdin, encoding: 'utf8' });
     ok(run('') === '' && run('{bad json') === '' && run('{}') === '', 'guard-bash CLI: input rỗng/hỏng → exit 0, không in gì (fail-open)');
     const out = JSON.parse(run(JSON.stringify(bash('git commit -m "thêm"'))) || '{}');
