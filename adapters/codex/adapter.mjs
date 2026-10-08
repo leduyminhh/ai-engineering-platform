@@ -12,7 +12,7 @@
 // plugin không đụng nhau — khác hẳn mô hình AGENTS.md cũ (3 plugin = 3 AGENTS.md không gộp
 // được vào 1 file gốc). Codex KHÔNG auto-load skill khác khi gọi 1 skill, nên chèn pointer
 // nhắc đọc nguyên tắc nền tảng trước (giống claude).
-import { skillFiles, frontmatter } from '../_shared/lib.mjs';
+import { skillFiles, frontmatter, principlesDigest } from '../_shared/lib.mjs';
 import { codexAgentToml, workflowPreamble } from '../_shared/agents.mjs';
 
 // CORE = skill "principles" (nguyên tắc nền tảng) + các SKILL DÙNG CHUNG từ core/skills/
@@ -26,8 +26,7 @@ function coreSkill(core) {
     '\n\n' +
     core.principles.replace(/^\n+/, '');
   const files = [{ path: 'core/skills/principles/SKILL.md', content }];
-  const note =
-    '> **Đọc trước** nguyên tắc nền tảng — skill `principles` — rồi mới thực hiện skill này.';
+  const note = principlesDigest({ provider: 'codex' });
   for (const stage of core.stages || []) {
     files.push(...skillFiles(stage, 'core/skills', note));
   }
@@ -54,10 +53,7 @@ export default {
     const files = [...coreSkill(core)];
     for (const p of plugins) {
       files.push(...pluginPrinciplesSkill(p));
-      const note =
-        `> **Đọc trước** nguyên tắc nền tảng — skill \`principles\` + \`${p.id}-principles\` — ` +
-        `rồi mới thực hiện giai đoạn này.\n` +
-        `> Khi commit/push/tạo branch/PR: gọi skill \`git-workflow\`.`;
+      const note = principlesDigest({ provider: 'codex', pluginId: p.id });
       for (const stage of p.stages) {
         files.push(...skillFiles(stage, `${p.id}/skills`, note));
       }

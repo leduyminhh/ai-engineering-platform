@@ -15,8 +15,9 @@ export function checkSkillBody(body) {
   return SKILL_HEADINGS.filter(([, re]) => !re.test(text)).map(([h]) => `thiếu heading "## ${h}"`);
 }
 
-// Giới hạn của Agent Skills (platform.claude.com, mục "Skill structure"); bộ zip Cowork được upload lên claude.ai.
-export const DESCRIPTION_MAX = 1024;
+// Trần của repo thấp hơn trần 1.536 ký tự của Claude (description + when_to_use bị cắt ở mức này trong danh sách skill,
+// https://code.claude.com/docs/en/skills.md) vì khối "Dùng khi" ngắn là đủ, và index Antigravity/Codex chỉ lấy ~200 ký tự đầu.
+export const DESCRIPTION_MAX = 500;
 export const NOT_FOR = 'Không dùng khi';
 const GENERIC = new Set(['skill', 'workflow']);
 
@@ -91,4 +92,52 @@ export function checkFrontmatterYaml(fmText) {
     if (PLAIN_UNSAFE_VALUE.test(v)) errs.push(`${m[1]}: plain scalar không an toàn ("${v.slice(0, 30)}")`);
   }
   return errs;
+}
+
+// Mẫu description Phase 1: câu hành động ngắn → "Dùng khi" 3–5 trigger → "Không dùng khi → id".
+// Câu đầu ≤ 200 vì adapter cắt dòng mục lục ở WHEN_TO_USE_MAX; boilerplate là phần mô hình suy ra được, chỉ tốn context.
+export const DESCRIPTION_TARGET = 450;
+export const AGENT_DESCRIPTION_MAX = 260;
+export const FIRST_SENTENCE_MAX = 200;
+export const BOILERPLATE = ['kể cả khi không nói chính xác', 'Recipe on-demand', 'Skill capability', 'Skill vận hành',
+  'KHÔNG thuộc pipeline', 'Gọi khi cần'];
+
+function firstSentence(desc) {
+  const d = desc.trim().replace(/\s+/g, ' ');
+  const m = d.match(/^(.*?[.。])\s/);
+  return m ? m[1] : d;
+}
+
+export function checkDescriptionStyle(desc, { max = DESCRIPTION_TARGET, minTriggers = 3, maxTriggers = 5 } = {}) {
+  const errs = [];
+  const len = [...desc].length;
+  if (len > max) errs.push(`dài ${len} ký tự (mục tiêu ≤ ${max})`);
+  const first = [...firstSentence(desc)].length;
+  if (first > FIRST_SENTENCE_MAX) errs.push(`câu đầu ${first} ký tự (≤ ${FIRST_SENTENCE_MAX})`);
+  const n = new Set(quotedPhrases(desc)).size;
+  if (n < minTriggers || n > maxTriggers) errs.push(`${n} trigger (cần ${minTriggers}–${maxTriggers})`);
+  for (const b of BOILERPLATE) if (desc.includes(b)) errs.push(`còn boilerplate "${b}"`);
+  if (!desc.includes('Dùng khi')) errs.push('thiếu "Dùng khi"');
+  return errs;
+}
+
+export function checkAgentDescription(desc) {
+  const errs = [];
+  const len = [...desc].length;
+  if (len > AGENT_DESCRIPTION_MAX) errs.push(`dài ${len} ký tự (≤ ${AGENT_DESCRIPTION_MAX})`);
+  if (!desc.includes('Dùng khi')) errs.push('thiếu "Dùng khi"');
+  return errs;
+}
+
+// Allowlist khoá frontmatter NGUỒN: loader chỉ đọc các khoá này, khoá lạ bị bỏ im lặng nên gõ sai (vd `runin`) không lộ ra.
+export const SOURCE_KEYS = {
+  skill: ['name', 'description', 'order', 'title', 'runsIn', 'invoke', 'sharedAssets'],
+  agent: ['name', 'description', 'mode', 'skills', 'model', 'effort', 'color'],
+  workflow: ['name', 'description', 'order', 'title', 'kind', 'tier', 'risk', 'agents', 'requires', 'runsIn', 'invoke'],
+};
+
+export function checkSourceKeys(kind, meta) {
+  const allowed = new Set(SOURCE_KEYS[kind] || []);
+  return Object.keys(meta).filter((k) => !allowed.has(k))
+    .map((k) => `khoá frontmatter lạ "${k}" (chưa được chiếu, sẽ bị bỏ im lặng)`);
 }

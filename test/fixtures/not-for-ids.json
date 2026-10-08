@@ -1,0 +1,144 @@
+{
+  "git-workflow": [
+    "engineering-release-notes",
+    "workflow-release"
+  ],
+  "backend-init": [
+    "backend-migrate-architecture",
+    "backend-migrate-vault-consul"
+  ],
+  "backend-implement": [
+    "backend-api-contract",
+    "workflow-feature"
+  ],
+  "backend-testing": [
+    "frontend-e2e-testing",
+    "workflow-testing"
+  ],
+  "backend-code-review": [
+    "engineering-quality-gate",
+    "workflow-code-review"
+  ],
+  "backend-refactor": [
+    "backend-migrate-architecture",
+    "workflow-refactor"
+  ],
+  "backend-migrate-vault-consul": [
+    "engineering-quality-gate"
+  ],
+  "backend-migrate-architecture": [
+    "backend-refactor",
+    "workflow-refactor"
+  ],
+  "backend-api-contract": [
+    "backend-implement",
+    "workflow-api"
+  ],
+  "backend-fix": [
+    "backend-implement",
+    "backend-refactor",
+    "workflow-bugfix"
+  ],
+  "backend-performance": [
+    "backend-fix",
+    "workflow-performance"
+  ],
+  "data-oltp-init": [
+    "data-db-migration",
+    "data-olap-init"
+  ],
+  "data-oltp-implement": [
+    "data-db-migration",
+    "workflow-db-change"
+  ],
+  "data-olap-init": [
+    "data-oltp-init"
+  ],
+  "data-olap-implement": [
+    "data-oltp-implement"
+  ],
+  "data-db-migration": [
+    "data-oltp-implement",
+    "workflow-db-change"
+  ],
+  "engineering-quality-gate": [
+    "backend-code-review",
+    "frontend-code-review",
+    "workflow-security-review"
+  ],
+  "engineering-spec-writing": [
+    "engineering-adr",
+    "workflow-feature"
+  ],
+  "engineering-diagram": [
+    "engineering-spec-writing"
+  ],
+  "engineering-release-notes": [
+    "git-workflow",
+    "workflow-release"
+  ],
+  "engineering-adr": [
+    "engineering-spec-writing"
+  ],
+  "engineering-convention-enforce": [
+    "backend-code-review",
+    "engineering-adr",
+    "engineering-quality-gate"
+  ],
+  "engineering-task-breakdown": [
+    "engineering-spec-writing",
+    "workflow-feature"
+  ],
+  "frontend-init": [
+    "frontend-migrate-architecture"
+  ],
+  "frontend-implement": [
+    "frontend-data-integration",
+    "workflow-feature"
+  ],
+  "frontend-testing": [
+    "frontend-e2e-testing",
+    "workflow-testing"
+  ],
+  "frontend-code-review": [
+    "engineering-quality-gate",
+    "workflow-code-review"
+  ],
+  "frontend-refactor": [
+    "frontend-migrate-architecture",
+    "workflow-refactor"
+  ],
+  "frontend-migrate-architecture": [
+    "frontend-refactor",
+    "workflow-refactor"
+  ],
+  "frontend-data-integration": [
+    "backend-api-contract",
+    "frontend-implement"
+  ],
+  "frontend-e2e-testing": [
+    "frontend-performance",
+    "frontend-testing"
+  ],
+  "frontend-fix": [
+    "frontend-implement",
+    "frontend-refactor",
+    "workflow-bugfix"
+  ],
+  "frontend-performance": [
+    "frontend-fix",
+    "workflow-performance"
+  ],
+  "ops-deploy-release": [
+    "engineering-release-notes",
+    "workflow-release"
+  ],
+  "ops-incident-troubleshooting": [
+    "workflow-bugfix",
+    "workflow-incident"
+  ],
+  "ops-observability": [
+    "ops-incident-troubleshooting",
+    "workflow-incident"
+  ]
+}

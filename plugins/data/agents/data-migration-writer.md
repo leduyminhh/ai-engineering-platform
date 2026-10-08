@@ -1,6 +1,6 @@
 ---
 name: data-migration-writer
-description: "Agent chỉ VIẾT file migration schema mới theo skill data-db-migration (chế độ change, bước C1 nhận diện + C3 viết): nhận kế hoạch đã được người dùng duyệt ở workflow, nhận diện công cụ (Flyway/Liquibase/Alembic), thư mục migration và quy ước đặt tên, rồi chỉ tạo file migration MỚI (và sửa file do chính lượt này tạo) theo pattern expand/migrate/contract (lock_timeout, backfill theo lô, changeSet có rollback). Không kết nối DB, không chạy migration, không sửa file migration đã có trên base branch, không sửa mã ứng dụng ngoài thư mục migration hay test. Cần quyết định của người dùng → dừng và trả blocked. Dùng khi workflow db-change cần giao file migration cho agent có khoá phạm vi."
+description: "Người viết migration: chỉ tạo file migration schema mới và sửa file do chính lượt này tạo (Flyway/Liquibase/Alembic, expand/migrate/contract), không kết nối DB hay chạy, theo skill data-db-migration. Dùng khi workflow db-change cần giao file migration."
 mode: write
 skills: "data-db-migration"
 ---

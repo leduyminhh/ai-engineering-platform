@@ -10,7 +10,7 @@
 // HYBRID: core là MỘT plugin riêng; mỗi domain plugin khai báo "dependencies": ["<mkt>:core"]
 // nên khi /plugin install <id> thì Claude Code tự cài kèm core (lấy đúng logic nền tảng).
 // Mỗi giai đoạn = 1 skill (auto-discover trong skills/), gọi theo namespace /<plugin-id>:<skill>.
-import { skillFiles, frontmatter } from '../_shared/lib.mjs';
+import { skillFiles, frontmatter, principlesDigest } from '../_shared/lib.mjs';
 import { claudeAgentMd, workflowPreamble } from '../_shared/agents.mjs';
 
 function pluginJson(p, { dependencies, author } = {}) {
@@ -61,9 +61,7 @@ function coreFiles(core, { author } = {}) {
     { path: 'plugins/core/skills/principles/SKILL.md', content: skill },
   ];
   // Pointer 2 dạng (phẳng + plugin namespaced) giống stage skill của domain plugin.
-  const note =
-    '> **Đọc trước** nguyên tắc nền tảng — skill `principles` ' +
-    '(bản cài dạng plugin: `core:principles`) — rồi mới thực hiện skill này.';
+  const note = principlesDigest({ provider: 'claude' });
   for (const stage of core.stages || []) {
     files.push(...skillFiles(stage, 'plugins/core/skills', note));
   }
@@ -128,17 +126,9 @@ export default {
         content: pluginJson(p, { dependencies: ['core'], author }),
       });
       files.push(...pluginPrinciplesFiles(p)); // <plugin>-principles skill
-      // Claude KHÔNG auto-load skill khác khi gọi 1 skill (khác cursor alwaysApply / codex AGENTS.md).
-      // Chèn pointer để agent nạp nguyên tắc nền tảng trước khi thực hiện stage.
-      // Pointer phải đúng cho CẢ HAI đường phân phối: (a) aip install dạng skills PHẲNG →
-      // skill mang tên trần `principles` / `<id>-principles`; (b) cài qua marketplace dạng PLUGIN →
-      // skill namespaced `core:principles` / `<id>:<id>-principles`. Nêu cả hai để khớp mọi cách cài.
-      const principlesNote =
-        `> **Đọc trước** nguyên tắc nền tảng — skill \`principles\` + \`${p.id}-principles\` ` +
-        `(bản cài dạng plugin: \`core:principles\` + \`${p.id}:${p.id}-principles\`) — ` +
-        `rồi mới thực hiện giai đoạn này.\n` +
-        `> Khi commit/push/tạo branch/PR: gọi skill \`git-workflow\` ` +
-        `(bản cài dạng plugin: \`core:git-workflow\`).`;
+      // Claude không auto-load skill khác khi gọi một skill nên cần digest + pointer.
+      // Pointer có 2 dạng tên vì 2 đường cài: skills phẳng (`principles`) và plugin namespaced (`core:principles`).
+      const principlesNote = principlesDigest({ provider: 'claude', pluginId: p.id });
       for (const stage of p.stages) {
         files.push(...skillFiles(stage, `plugins/${p.id}/skills`, principlesNote));
       }

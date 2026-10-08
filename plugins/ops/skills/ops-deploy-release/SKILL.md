@@ -1,6 +1,6 @@
 ---
 name: ops-deploy-release
-description: "Skill vận hành (plugin ops) hướng dẫn deploy/release một service an toàn: dò cấu hình deploy/CI và chốt scope release, chạy checklist tiền deploy (build/test/migration, backup + điểm rollback, feature flag), chọn chiến lược rolling / blue-green / canary kèm tiêu chí tiến/lùi, KHÔNG tự chạy lệnh deploy/rollback prod (trình bày lệnh, chờ người xác nhận), verify hậu deploy bằng health/metric/smoke test, đóng checklist + residual risk. Đọc Dockerfile/compose/k8s/CI làm ràng buộc, KHÔNG dựng lại hạ tầng, KHÔNG lộ secret. Dùng skill NÀY khi người dùng muốn \"deploy\", \"release\", \"phát hành\", \"triển khai lên server\", \"rollback\", \"release checklist\", \"canary\", \"blue-green\", \"rolling update\" — kể cả khi không nói chính xác chữ \"skill\". Con người DUYỆT trước mọi tác động production. Không dùng khi cần cả quy trình phát hành (quality gate, release notes, version bump, hậu kiểm) → workflow-release; chỉ viết release notes → engineering-release-notes."
+description: "Hướng dẫn deploy/release service an toàn: chốt scope, checklist tiền deploy, chọn rolling/blue-green/canary, verify hậu deploy; không tự chạy lệnh lên môi trường, chỉ đề xuất và chờ người xác nhận. Dùng khi người dùng muốn \"deploy\", \"release checklist\", \"canary\", \"blue-green\", \"rollback\". Không dùng khi cần cả quy trình phát hành (quality gate, release notes, version bump) → workflow-release; chỉ viết release notes → engineering-release-notes."
 order: 1
 title: "Deploy / Release an toàn — checklist tiền/hậu deploy, chiến lược triển khai, health-check + rollback"
 runsIn: execute
@@ -19,16 +19,6 @@ release của project làm ràng buộc, rồi **trình bày kế hoạch + lệ
 production khi chưa có xác nhận** — con người giữ chốt và duyệt trước mọi tác động lên môi trường chạy thật.
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần triển khai/phát hành.
-
-## Khi nào dùng
-
-- Người dùng muốn deploy / release / phát hành / triển khai một service lên server (staging hoặc prod).
-- Cần lập **release checklist**, chọn **chiến lược triển khai** (rolling / blue-green / canary), hay xác định
-  **tiêu chí health-check + rollback**.
-- Cần **rollback** một release đang có vấn đề về đúng phiên bản/điểm khôi phục đã chuẩn bị.
-
-KHÔNG dùng skill này để dựng lại hạ tầng/CI từ đầu, sửa cấu hình pipeline ngoài scope, hay tự ý tác động
-production mà không có xác nhận.
 
 ## Ranh giới an toàn
 

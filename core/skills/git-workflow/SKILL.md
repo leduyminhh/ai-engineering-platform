@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: "Skill dùng chung (core) cho mọi thao tác Git an toàn: commit, push, tạo/chuyển branch, chuẩn bị PR, merge, revert, release, hotfix, và gom lịch sử git cho changelog/release notes. Sinh commit message Conventional Commits với header tiếng Anh + body tiếng Việt CÓ DẤU (UTF-8, commit qua git commit -F + kiểm tra encoding), tự sinh branch theo role khi đang ở main/master/develop/dev, stage đúng phạm vi yêu cầu. Dùng skill NÀY mỗi khi người dùng muốn \"commit\", \"push\", \"tạo branch\", \"chuẩn bị PR\", \"merge\", \"revert\", \"release branch\", \"hotfix\", \"gom changelog\", \"tóm tắt thay đổi từ tag/ngày\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần ở mọi giai đoạn có thao tác git. Không dùng khi cần viết nội dung changelog/release notes hướng người dùng → engineering-release-notes; chuẩn bị cả đợt phát hành (quality gate, release notes, deploy checklist) → workflow-release."
+description: "Git an toàn: commit Conventional Commits (header tiếng Anh, body tiếng Việt có dấu, commit -F), branch theo role, merge, revert, hotfix, gom lịch sử cho changelog; không push khi chưa xác nhận branch. Dùng khi người dùng muốn \"commit\", \"push\", \"tạo branch\", \"chuẩn bị PR\", \"merge\". Không dùng khi cần viết nội dung changelog/release notes → engineering-release-notes; chuẩn bị cả đợt phát hành → workflow-release."
 order: 2
 title: "Git Workflow — commit, branch, push, PR, merge, release (dùng chung)"
 runsIn: execute
@@ -19,16 +19,6 @@ khi được cài.
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần ở bất kỳ
 giai đoạn nào có thao tác git (init commit scaffold, implement commit từng task,
 release/hotfix...).
-
-## Khi nào dùng
-
-- Người dùng yêu cầu commit, push, stage, tạo/chuyển branch, merge, revert, release, hotfix.
-- Cần đặt tên branch hoặc viết conventional commit.
-- Cần chuẩn bị PR hoặc checklist release.
-- Cần gom lịch sử git cho changelog, release notes, tóm tắt tuần/tháng, hoặc tóm tắt
-  thay đổi từ một tag/version/branch/khoảng ngày.
-
-KHÔNG dùng skill này để giải thích code chung chung khi không có ý định git hay gom lịch sử.
 
 ## Ranh giới an toàn
 
@@ -63,8 +53,8 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
 5. Nếu người dùng đã cho commit message: giữ nguyên ý, chỉ chuẩn hoá lỗi format rõ ràng.
    Nếu chưa có: nạp [references/commit-convention.md](references/commit-convention.md)
    và sinh title + body theo quy ước đó (kèm template/ví dụ khi cần — xem Bản đồ tài liệu).
-6. Ghi toàn bộ message vào file tạm UTF-8, chạy
-   `scripts/test-commit-message-encoding.ps1 -MessageFile <file>`, kiểm tra pass.
+6. Ghi toàn bộ message vào file tạm UTF-8, chạy `node <thư mục skill>/scripts/check-commit-message.mjs <file>`
+   (hoặc `scripts/test-commit-message-encoding.ps1 -MessageFile <file>` trên PowerShell), kiểm tra pass.
 7. **DỪNG cho người dùng duyệt diff:** trình bày `git status --short` (file đã stage) +
    toàn bộ nội dung commit message, chờ người dùng xác nhận TRƯỚC khi chạy lệnh commit.
 8. Sau khi xác nhận: commit bằng `git commit -F <file>` (KHÔNG truyền tiếng Việt qua tham
@@ -137,5 +127,7 @@ Nạp đúng file khi cần, đừng nạp tất cả:
   staging, commit, push, merge, revert, release, hotfix.
 - [references/output-template-vi.md](references/output-template-vi.md): template trả lời
   tiếng Việt (trước commit, sau commit/push, changelog).
+- [scripts/check-commit-message.mjs](scripts/check-commit-message.mjs):
+  bản Node (ưu tiên, chạy mọi OS) — kiểm UTF-8, BOM, header Conventional Commits và dấu tiếng Việt trước `git commit -F`.
 - [scripts/test-commit-message-encoding.ps1](scripts/test-commit-message-encoding.ps1):
   kiểm tra message tiếng Việt còn UTF-8 hợp lệ trước `git commit -F`.

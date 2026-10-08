@@ -1,6 +1,6 @@
 ---
 name: backend-implement
-description: "Recipe on-demand: biến một use-case/feature/contract thành MỘT vertical slice tối thiểu (aggregate + use-case + driven port + adapter) bám ĐÚNG kiến trúc backend đã chọn (Java/Python × Onion+DDD / Hexagonal+DDD / Hexagonal-Clean+CQRS / layered) + quy ước đặt tên của blueprint. Sinh code xuyên mọi tầng, map ở biên bằng mapper thủ công, kèm test lõi mock/fake port; con người duyệt diff. Dùng skill NÀY khi người dùng muốn \"code API mới\", \"hiện thực feature backend\", \"sinh endpoint/use-case\", \"viết vertical slice\", \"làm API theo contract\", \"thêm use case\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần trên project đã chạy backend-init. Không dùng khi contract API chưa chốt → backend-api-contract; làm feature end-to-end nhiều bước → workflow-feature."
+description: "Biến một use-case/feature/contract thành một vertical slice tối thiểu (aggregate, use-case, port, adapter) đúng kiến trúc backend đã chọn, kèm test lõi mock/fake port. Dùng khi người dùng muốn \"code API mới\", \"hiện thực feature backend\", \"sinh endpoint/use-case\", \"viết vertical slice\", \"làm API theo contract\". Không dùng khi contract API chưa chốt → backend-api-contract; làm feature end-to-end nhiều bước → workflow-feature."
 order: 2
 title: "Backend Implement — Sinh vertical slice từ use-case/contract"
 runsIn: execute

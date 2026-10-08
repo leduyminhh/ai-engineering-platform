@@ -1,6 +1,6 @@
 ---
 name: ops-observability
-description: "Skill vận hành (plugin ops) hướng dẫn THIẾT LẬP & ĐÁNH GIÁ observability cho một service: dò stack hiện có (Prometheus/Grafana/OpenTelemetry/ELK/Loki/Datadog) và health endpoint, ba trụ cột metrics/logs/traces, golden signals + SLI/SLO + error budget, alerting theo triệu chứng bám SLO chống alert fatigue, đánh giá độ phủ và ĐỀ XUẤT bổ sung. Docs-only + đề xuất là mặc định: KHÔNG tự đổi cấu hình monitoring/hạ tầng prod; KHÔNG lộ secret. Dùng skill NÀY khi người dùng muốn \"observability\", \"giám sát\", \"monitoring\", \"metrics/logs/traces\", \"alert\", \"cảnh báo\", \"SLO/SLI\", \"dashboard\", \"golden signals\" — kể cả khi không nói chính xác chữ \"skill\". Con người áp dụng vào hạ tầng thật. Không dùng khi đang có sự cố cần điều tra → ops-incident-troubleshooting; cần quy trình xử lý sự cố đầy đủ → workflow-incident."
+description: "Thiết lập và đánh giá observability cho service: dò stack hiện có, metrics/logs/traces, golden signals + SLI/SLO, alerting bám SLO; chỉ tài liệu và đề xuất, không tự đổi cấu hình monitoring/hạ tầng. Dùng khi người dùng muốn \"observability\", \"giám sát\", \"SLO/SLI\", \"golden signals\", \"dashboard\". Không dùng khi đang có sự cố cần điều tra → ops-incident-troubleshooting; cần quy trình xử lý sự cố đầy đủ → workflow-incident."
 order: 3
 title: "Observability — ba trụ cột metrics/logs/traces, golden signals + SLI/SLO, alerting theo triệu chứng, đánh giá độ phủ"
 runsIn: execute
@@ -20,19 +20,6 @@ observability của project làm ràng buộc, rồi **trình bày đánh giá +
 hình monitoring/hạ tầng production** — con người giữ chốt và áp dụng đề xuất vào hạ tầng thật.
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần thiết lập/đánh giá observability.
-
-## Khi nào dùng
-
-- Cần **thiết lập observability** cho một service: bổ sung metrics/logs/traces, dashboard, alert từ đầu hay
-  cho phần còn thiếu.
-- Cần chọn **golden signals**, định nghĩa **SLI/SLO** + **error budget**, hoặc áp **RED/USE method**.
-- Cần thiết kế **alerting**: cảnh báo theo triệu chứng, đặt ngưỡng theo SLO, giảm **alert fatigue/noise**,
-  gắn **severity + runbook**.
-- Cần **đánh giá độ phủ** observability hiện có (mỗi service đã có metrics/log/trace/alert/dashboard chưa),
-  tìm **khoảng trống** và đề xuất bổ sung.
-
-KHÔNG dùng skill này để tự đổi cấu hình monitoring/hạ tầng prod, dựng lại stack quan sát ngoài scope, hay
-kết luận độ phủ mà không dựa trên cấu hình/dependency đọc được.
 
 ## Ranh giới an toàn
 

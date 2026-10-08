@@ -1,6 +1,6 @@
 ---
 name: ops-incident-troubleshooting
-description: "Skill vận hành (plugin ops) hướng dẫn TRIAGE & ĐIỀU TRA sự cố production an toàn: chốt phạm vi (triệu chứng, thời điểm, blast radius), khoanh vùng theo tầng (edge → app → DB → dependency → infra), đọc log/metric/trace và tương quan timeline, đặt giả thuyết rồi kiểm chứng bằng bằng chứng cụ thể, ĐỀ XUẤT mitigation kèm rủi ro, viết RCA + residual risk. Read-only + đề xuất là mặc định: KHÔNG tự sửa/khởi động lại/rollback/đụng prod khi chưa xác nhận; mask secret. Dùng skill NÀY khi người dùng muốn \"điều tra sự cố\", \"incident\", \"prod lỗi\", \"server down\", \"điều tra lỗi production\", \"triage\", \"RCA\", \"đọc log lỗi\", \"500 error\", \"service chậm\", \"khoanh vùng lỗi\" — kể cả khi không nói chính xác chữ \"skill\". Con người DUYỆT trước mọi tác động production. Không dùng khi cần quy trình sự cố đầy đủ (mitigation, xác minh phục hồi, commit RCA) → workflow-incident; lỗi tái hiện được ở local → workflow-bugfix."
+description: "Triage và điều tra sự cố production: khoanh vùng theo tầng, đọc log/metric/trace, kiểm chứng giả thuyết, viết RCA; chỉ đọc và đề xuất mitigation, không tự sửa/restart/rollback lên môi trường. Dùng khi người dùng muốn \"điều tra sự cố\", \"prod lỗi\", \"server down\", \"RCA\", \"đọc log lỗi\". Không dùng khi cần quy trình sự cố đầy đủ (mitigation, xác minh phục hồi, commit RCA) → workflow-incident; lỗi tái hiện được ở local → workflow-bugfix."
 order: 2
 title: "Incident troubleshooting — triage, khoanh vùng theo tầng, giả thuyết → kiểm chứng, mitigation đề xuất + RCA"
 runsIn: execute
@@ -19,16 +19,6 @@ Nguyên tắc trung tâm: **read-only + đề xuất là mặc định**. Agent 
 production khi chưa có xác nhận** — con người giữ chốt và quyết mọi hành động lên môi trường chạy thật.
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần điều tra sự cố.
-
-## Khi nào dùng
-
-- Có sự cố production: service **down / chậm / lỗi 5xx**, error rate tăng, latency cao, hàng đợi ứ, out-of-memory.
-- Cần **triage** nhanh: khoanh vùng triệu chứng về **tầng nghi ngờ**, xác định blast radius, tìm thay đổi gần đây.
-- Cần **đọc log/metric/trace** để tương quan timeline và **đặt giả thuyết → kiểm chứng** nguyên nhân.
-- Cần **RCA** (root cause analysis) sau sự cố: dòng thời gian, nguyên nhân gốc, hành động khắc phục đo được.
-
-KHÔNG dùng skill này để tự ý tác động production (restart/scale/rollback), sửa cấu hình ngoài scope, hay
-kết luận nguyên nhân từ một tín hiệu đơn lẻ chưa kiểm chứng.
 
 ## Ranh giới an toàn
 

@@ -1,6 +1,6 @@
 ---
 name: workflow-security-review
-description: "Workflow điều phối review bảo mật: xác định phạm vi & threat model, review/scan theo OWASP và các vùng rủi ro (auth/session, authorization/access control, input, SSRF, crypto/secrets, dependency, misconfiguration, logging), validate finding bằng đọc lại file:line, lập kế hoạch remediation cùng người dùng, thu hồi (rotate) secret bị lộ do người dùng thực hiện, viết regression test tái hiện lỗ hổng, sửa, re-scan xác nhận hết blocker, rồi commit qua git-workflow. Dùng workflow NÀY khi người dùng muốn \"security review\", \"review bảo mật\", \"quét lỗ hổng\", \"OWASP\", \"kiểm secret\", \"CVE\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi chỉ cần quét chất lượng/bảo mật một lần → engineering-quality-gate; chỉ cần quality gate trước release → workflow-release."
+description: "Điều phối review bảo mật: phạm vi & threat model, review/scan theo OWASP và vùng rủi ro, validate finding bằng file:line, remediation (người dùng tự rotate secret bị lộ), regression test, sửa, re-scan, commit. Dùng khi người dùng muốn \"security review\", \"review bảo mật\", \"quét lỗ hổng\", \"OWASP\", \"kiểm secret\", \"CVE\". Không dùng khi chỉ cần quét một lần → engineering-quality-gate; quality gate trước release → workflow-release."
 order: 6
 title: "Security review — threat model, scan, remediation, re-scan"
 kind: workflow

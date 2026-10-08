@@ -1,6 +1,6 @@
 ---
 name: engineering-task-breakdown
-description: "Skill capability (plugin engineering) để teamlead PHÂN RÃ yêu cầu, use case, ARD hoặc requirement.md thành danh sách task BE/FE giao được cho dev và agent. Phân tích ra bảng use case (actor, AC đo được, NFR), tách theo lát dọc CT → DB → BE → FE-UI → FE-INT → E2E, điền template chuẩn cho Backend và Frontend, ước lượng size S/M/L (L buộc tách), kiểm phủ AC và phụ thuộc, rồi xuất tasks.md vào docs/requests/ (tuỳ chọn Excel: xlsx hoặc CSV UTF-8 có BOM). Docs-only, không sinh code, không gán người. Dùng skill NÀY khi người dùng muốn \"tách task\", \"chia task\", \"phân rã yêu cầu\", \"breakdown task\", \"lập task BE FE\", \"task từ use case\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần ở giai đoạn plan. Không dùng khi yêu cầu còn mơ hồ cần khảo sát → engineering-spec-writing; làm feature end-to-end → workflow-feature."
+description: "Phân rã yêu cầu/use case/ARD thành task BE/FE theo lát dọc, qua 2 checkpoint teamlead và check-tasks.mjs, xuất tasks.md vào docs/requests/ (tuỳ chọn Excel). Dùng khi người dùng muốn \"tách task\", \"chia task\", \"phân rã yêu cầu\", \"breakdown task\", \"task từ use case\". Không dùng khi yêu cầu còn mơ hồ cần khảo sát → engineering-spec-writing; làm feature end-to-end → workflow-feature."
 order: 7
 title: "Task Breakdown — phân rã yêu cầu thành task BE/FE giao được"
 runsIn: plan
@@ -19,16 +19,6 @@ Tách theo **use case — lát dọc** `CT → DB → BE → FE-UI → FE-INT �
 Excel chỉ là bản xuất.
 
 Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint 1**) và duyệt bản tách task (**Checkpoint 2**).
-
-## Khi nào dùng
-
-- Teamlead/manager muốn tách task, chia task, phân rã yêu cầu thành việc cho team Backend/Frontend.
-- Đã có use case, ARD hoặc `requirement.md` (ví dụ do `engineering-spec-writing` viết) và cần biến thành task có
-  ID, phụ thuộc, size, AC.
-- Cần giao việc cho agent theo từng task: "làm task `UC01-BE-01` trong `tasks.md`".
-
-KHÔNG dùng khi yêu cầu còn mơ hồ (chạy `engineering-spec-writing` trước), hay khi muốn làm feature end-to-end
-(dùng `workflow-feature`).
 
 ## Ranh giới an toàn
 

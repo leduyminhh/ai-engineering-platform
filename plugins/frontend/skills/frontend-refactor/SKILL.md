@@ -1,6 +1,6 @@
 ---
 name: frontend-refactor
-description: "Recipe on-demand: REFACTOR mã nguồn FRONTEND (React/TypeScript) GIỮ NGUYÊN hành vi quan sát được — extract component/custom hook, lift/colocate state, bỏ prop drilling, tách presentational khỏi logic, gom style/token trùng, memoize hợp lý, bỏ useEffect thừa. Refactor TRONG ranh giới kiến trúc đã chốt (Feature-Based/FSD/Micro-FE). Cổng behavior-preserving: baseline XANH → characterization test cho vùng thiếu test → bước nhỏ XANH sau mỗi bước → con người duyệt diff. Dùng skill NÀY khi người dùng muốn \"refactor frontend\", \"tái cấu trúc React\", \"dọn component\", \"tách component/hook\", \"bỏ prop drilling\", \"giảm trùng lặp UI\", \"đơn giản hoá React\", \"tách logic khỏi JSX\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần trên project đã có mã nguồn React. Không dùng khi đổi kiểu kiến trúc → frontend-migrate-architecture; cần quy trình refactor nhiều bước có commit theo lô → workflow-refactor."
+description: "Refactor code frontend (React/TypeScript) giữ nguyên hành vi, trong ranh giới kiến trúc đã chốt: extract component/hook, bỏ prop drilling; baseline xanh, bước nhỏ, người duyệt diff. Dùng khi người dùng muốn \"refactor frontend\", \"tái cấu trúc React\", \"dọn component\", \"tách component/hook\", \"bỏ prop drilling\". Không dùng khi đổi kiểu kiến trúc → frontend-migrate-architecture; cần quy trình refactor nhiều bước có commit theo lô → workflow-refactor."
 order: 5
 title: "Frontend Refactor — Tái cấu trúc code React giữ nguyên hành vi (recipe on-demand)"
 runsIn: execute
@@ -41,6 +41,7 @@ fetch/store; feature không cross-import ruột feature khác; import chỉ tr�
   kiểu kiến trúc — đó là `frontend-migrate-architecture`.
 - **Bám code-convention + design-system, không áp gu lạ.** Đặt tên/tổ chức theo `code-convention`;
   token/spacing/variant theo `design-system` của project; convention của project thắng sở thích cá nhân.
+- **Không đổi token/theme toàn cục.** Gom style/token trùng chỉ về token đã có trong `design-system`; đổi design tokens hay theme toàn cục cần người duyệt trước.
 - **Không tự mở rộng phạm vi.** Chỉ refactor đúng vùng người dùng nêu; thấy vùng khác cần dọn → đề
   xuất, không tự lan.
 - **Không push thẳng main.** Mỗi bước refactor = 1 commit; DỪNG cho người **duyệt diff** trước commit.

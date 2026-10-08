@@ -1,6 +1,6 @@
 ---
 name: ops-incident-investigator
-description: "Agent chỉ đọc triage & điều tra sự cố production theo skill ops-incident-troubleshooting: khoanh vùng theo tầng, đọc log/metric/trace, đặt giả thuyết → kiểm chứng, viết RCA. Có thể đối chiếu độ phủ observability qua ops-observability. Mọi mitigation chỉ ĐỀ XUẤT lệnh, không tự thực thi lên môi trường. Dùng khi có sự cố production cần điều tra."
+description: "Điều tra sự cố: chỉ đọc, khoanh vùng theo tầng, đọc log/metric/trace, kiểm chứng giả thuyết, viết RCA; chỉ đề xuất lệnh, không tự thực thi, theo skill ops-incident-troubleshooting. Dùng khi có sự cố production cần điều tra."
 mode: read-only
 skills: "ops-incident-troubleshooting,ops-observability"
 ---

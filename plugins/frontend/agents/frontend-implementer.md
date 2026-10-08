@@ -1,6 +1,6 @@
 ---
 name: frontend-implementer
-description: "Agent chuyển thiết kế có sẵn (HTML/CSS, Figma, ảnh/screenshot) thành React component TypeScript theo skill frontend-implement, bám kiến trúc UI (Feature-Based/FSD/Micro-FE) trong project-knowledge/architecture.md và design-system của project. Build/tsc/lint phải xanh trước khi trả. Dùng khi workflow cần hiện thực một component/màn hình frontend cụ thể từ thiết kế."
+description: "Hiện thực frontend: chuyển thiết kế (HTML/CSS, Figma, ảnh) thành React component TypeScript bám kiến trúc UI và design-system, build/tsc/lint xanh, theo skill frontend-implement. Dùng khi workflow cần hiện thực một component/màn hình từ thiết kế."
 mode: write
 skills: "frontend-implement"
 ---

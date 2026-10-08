@@ -26,7 +26,7 @@ khi tới `SpringApplication.exit`, nên exit code đến từ exception không 
 | `common/DbMigrationApplication.java.tpl` | `src/main/java/<basePackage dạng thư mục>/db/migration/DbMigrationApplication.java` | |
 | `common/application-migration.yml` | `src/main/resources/application-migration.yml` | Tắt cả hai công cụ mặc định |
 | `common/env.example` | `env.example` | Xoá khối biến của công cụ không chọn |
-| `common/new-migration.sh` | `scripts/new-migration.sh` | Chạy từ thư mục gốc module |
+| `../scripts/new-migration.sh` (trong skill) | `scripts/new-migration.sh` | Chạy từ thư mục gốc module |
 | `flyway/application-flyway.yml` | `src/main/resources/application-flyway.yml` | Chỉ nhánh Flyway |
 | `flyway/CONVENTIONS.md` | `CONVENTIONS.md` của module | Chỉ nhánh Flyway |
 | `flyway/db/migration/baseline/V00000000000000__baseline_schema.sql.tpl` | `src/main/resources/db/migration/baseline/V00000000000000__baseline_schema.sql` | Luôn ship (xem "Baseline Flyway" dưới) |

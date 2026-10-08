@@ -20,9 +20,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SKILL.md` must have `## Quy trình…` and `## Ranh giới an toàn…` headings (`cli/lib/conventions.mjs`);
   headings normalised in 15 skills and the 4 `*-init` skills gained a safety section built from rules
   they already stated.
-- Skill and workflow `description`s are at most 1024 characters (Agent Skills limit), end with
+- Skill and workflow `description`s are at most 500 characters, end with
   `Không dùng khi … → <id>`, and no quoted trigger is shared verbatim between two skills; 22
-  descriptions were rewritten to fit (12 were already over the limit) with their trigger lists kept.
+  descriptions were rewritten to fit with their trigger lists kept (12 of them were already over the 1024-character limit of the earlier standardization).
+- Skill descriptions rewritten to a fixed template (action → "Dùng khi" triggers → "Không dùng khi → id"),
+  ≤ 450 chars; agent descriptions ≤ 260 — skill descriptions 31,511 → 15,120 chars, agent descriptions
+  7,506 → 4,232 chars (always-on tokens to be re-measured with `claude plugin details` after install).
+- 7 workflow descriptions shortened to ≤ 500 chars (triggers and → ids kept).
+- Skills no longer force-load the principles skills on every call; a 3-line principles digest is
+  embedded instead (full text on demand).
+- `workflows` preamble explains `∥`; the orchestrator prints the install command per install mode;
+  db-change/incident/release list extra plugins.
+- git-workflow ships `scripts/check-commit-message.mjs` (Node) beside the PowerShell check, and it also
+  rejects a `Co-Authored-By:` trailer; `.sh` helpers moved under each skill's `scripts/`.
+- Validator split into `test/contract/` and `test/content/`; `node test/validate.mjs --only <name>` runs one
+  group (a missing value is a usage error, checked before any build).
+- All plugins bumped (MINOR for the Phase 1 rewrite, then PATCH for the review fixes below): core 1.2.1,
+  backend 1.6.1, frontend 1.8.1, engineering 1.5.1, ops 1.3.1, data 1.4.1, workflows 1.2.2;
+  `plugins/_versions.lock.json` refreshed.
+- Phase 1 review fixes: `data-db-migration` states again that it never runs migrations on production and verifies on a
+  test DB; `frontend-data-integration` / `frontend-refactor` regain "no hardcoded API key/base URL" and "no global
+  token/theme change" safety lines; `engineering-quality-gate` regains its dependency-vulnerability trigger; the
+  principles digest says "không sửa file bí mật". Added a source frontmatter-key allowlist
+  (`SOURCE_KEYS`/`checkSourceKeys`) and a byte contract (`test/contract/70-bytes.contract.mjs`: no BOM, LF in the
+  index, valid UTF-8); `--only=<name>` is accepted.
 - Workflow drift guards: the five fixed template lines (`WF_ANCHORS`) must appear in every
   `WORKFLOW.md`, and every quoted Registry signal must appear in that workflow's `description`.
 - Forks with their own skills: `npm run validate` now fails a `SKILL.md` without `## Quy trình…` /

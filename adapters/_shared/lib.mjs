@@ -11,6 +11,22 @@ import { frontmatter } from '../../cli/lib/write.mjs';
 
 export { frontmatter };
 
+// Claude/Codex không tự nạp skill khác khi gọi một skill. Trước đây preamble ép đọc 2 skill principles mỗi lần
+// (~1,9–2,9k token); digest nhúng 5 ý cốt lõi là đủ cho đa số bước, bản đầy đủ chỉ đọc khi cần.
+export function principlesDigest({ provider, pluginId = null }) {
+  const ns = provider === 'claude';
+  const core = ns ? '`principles` (bản cài dạng plugin: `core:principles`)' : '`principles`';
+  const plug = pluginId
+    ? (ns ? ` + \`${pluginId}-principles\` (bản cài dạng plugin: \`${pluginId}:${pluginId}-principles\`)` : ` + \`${pluginId}-principles\``)
+    : '';
+  const git = ns ? '`git-workflow` (bản cài dạng plugin: `core:git-workflow`)' : '`git-workflow`';
+  return [
+    '> **Nguyên tắc nền (tóm tắt):** (1) mọi bối cảnh nằm trong file — đọc `project-knowledge/` trước, ghi quyết định vào `docs/requests/` + `docs/decisions/`; (2) con người giữ 2 chốt — chọn giải pháp và duyệt diff trước khi commit; (3) không push `main`, không lệnh phá huỷ khi chưa được duyệt, không sửa file bí mật (`.env`/secret/credentials), không commit lệch `code-convention.md`/fail lint; (4) nguồn sự thật: code/migration thật > tài liệu, contract > mock, `plan.md` > `TODO.md`; (5) ngôn ngữ đo được, nêu `[giả định]` và residual risk.',
+    `> Bản đầy đủ${pluginId ? ' + nguyên tắc riêng plugin' : ''}: skill ${core}${plug} — đọc khi cần, không bắt buộc mỗi lần.`,
+    `> Khi commit/push/tạo branch/PR: gọi skill ${git}.`,
+  ].join('\n');
+}
+
 /**
  * Full principles for a plugin = shared CORE baseline + plugin's domain-specific part.
  * Used by adapters that embed principles inline (cursor rules, antigravity AGENTS.md).

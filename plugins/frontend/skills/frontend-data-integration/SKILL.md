@@ -1,6 +1,6 @@
 ---
 name: frontend-data-integration
-description: "Recipe on-demand: NỐI UI React đã dựng (presentational từ frontend-implement) với API THẬT theo contract OpenAPI ở docs/contracts/ — type sinh từ contract, data hook đúng tầng kiến trúc bằng TanStack Query, nối ở container/page (KHÔNG sửa presentational), đủ loading/error/empty/success, map DTO sang view model ở biên, map lỗi 401/4xx/5xx, test bằng msw. Lệch contract thì DỪNG và báo drift. KHÔNG quyết định lưu token/auth, KHÔNG thêm global store hay thư viện data khi chưa hỏi. Dùng skill NÀY khi người dùng muốn \"nối API\", \"gọi API cho màn hình\", \"tích hợp API vào React\", \"data hook\", \"sinh type từ OpenAPI\", \"nối data cho component\", \"thay mock bằng API thật\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần trên project đã chạy frontend-init và đã có contract. Không dùng khi contract API chưa chốt → backend-api-contract; dựng UI từ thiết kế → frontend-implement."
+description: "Nối UI React đã dựng với API thật theo contract OpenAPI: type sinh từ contract, data hook TanStack Query ở container/page, đủ loading/error/empty, test bằng msw; lệch contract thì dừng và báo drift. Dùng khi người dùng muốn \"nối API\", \"tích hợp API vào React\", \"data hook\", \"sinh type từ OpenAPI\", \"thay mock bằng API thật\". Không dùng khi contract API chưa chốt → backend-api-contract; dựng UI từ thiết kế → frontend-implement."
 order: 7
 title: "Frontend Data Integration — Nối UI với API theo contract OpenAPI (recipe on-demand)"
 runsIn: execute
@@ -35,6 +35,7 @@ test (msw); `backend-api-contract` chốt và kiểm drift contract.
 - KHÔNG tự cài dependency (codegen, thư viện data, global store); đề xuất và HỎI. Thư viện data mới → ADR
   (`engineering-adr`).
 - KHÔNG quyết định nơi lưu token hay luồng auth/refresh; chỉ map lỗi 401 thành trạng thái UI hoặc lỗi hook trả ra.
+- KHÔNG hardcode API key/base URL vào component hay hook; lấy từ cấu hình môi trường sẵn có của project.
 - KHÔNG thêm e2e (thuộc `frontend-e2e-testing`).
 - Làm trên branch riêng (không `main`/`master`/`dev`/`develop`); dừng cho người duyệt diff trước khi commit
   (1 task = 1 commit).

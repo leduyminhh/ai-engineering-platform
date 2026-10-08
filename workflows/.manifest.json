@@ -2,6 +2,6 @@
   "id": "workflows",
   "name": "Engineering Workflows",
   "description": "Bộ 12 workflow kỹ thuật (feature, bugfix, refactor, code review, testing, security review, db change, API, performance, incident, release, docs) + orchestrator chọn workflow theo yêu cầu. Workflow điều phối agent/skill của nhiều plugin qua các bước có gate, evidence và checkpoint người duyệt. Plugin bắt buộc: core, backend, frontend, engineering; db-change cần thêm data, incident/release cần thêm ops (ghi ở preamble từng workflow).",
-  "version": "1.1.0",
+  "version": "1.2.2",
   "hardDependencies": ["core", "backend", "frontend", "engineering"]
 }

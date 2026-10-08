@@ -1,6 +1,6 @@
 ---
 name: engineering-release-notes
-description: "Skill capability (plugin engineering) để từ LỊCH SỬ GIT (giữa 2 tag, khoảng ngày, N ngày gần nhất, hoặc nhóm commit) VIẾT changelog + release notes HƯỚNG NGƯỜI DÙNG: phân nhóm New Features / Improvements / Fixes / Breaking Changes / Security, lọc churn nội bộ, viết lại commit thành ngôn ngữ kết quả, nêu breaking change + cách migrate, giữ truy vết tag/hash/PR/ticket. Là bước hoàn tất sau khi git-workflow gom lịch sử. Docs-only: KHÔNG tự tag/release/push, KHÔNG bịa thay đổi; con người duyệt. Dùng skill NÀY khi người dùng muốn \"release notes\", \"changelog\", \"ghi chú phát hành\", \"tóm tắt thay đổi từ tag\", \"tổng hợp commit tuần/tháng\", \"what's new\", \"viết note cho bản phát hành\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần ở giai đoạn plan. Không dùng khi chỉ cần gom lịch sử git → git-workflow; chuẩn bị cả đợt phát hành → workflow-release."
+description: "Viết changelog và release notes hướng người dùng từ lịch sử git, nhóm New/Improvements/Fixes/Breaking; chỉ ghi docs/ và CHANGELOG.md, không tag/push. Dùng khi người dùng muốn \"release notes\", \"changelog\", \"ghi chú phát hành\", \"tóm tắt thay đổi từ tag\", \"what's new\". Không dùng khi chỉ cần gom lịch sử git → git-workflow; chuẩn bị cả đợt phát hành → workflow-release."
 order: 4
 title: "Release Notes — từ lịch sử git viết changelog + release notes hướng người dùng"
 runsIn: plan
@@ -23,17 +23,6 @@ phạm vi (`Quy trình — changelog / release notes`) và giao phần **VIẾT 
 `git-workflow` mà thiếu skill này, `git-workflow` chỉ tạo bản tóm tắt tối thiểu; skill này viết bản đầy đủ,
 hướng người dùng. Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần ở giai đoạn
 **plan** (chuẩn bị phát hành). Con người giữ chốt: **duyệt release notes** trước khi công bố.
-
-## Khi nào dùng
-
-- Người dùng muốn viết release notes, changelog, ghi chú phát hành, "what's new".
-- Cần tóm tắt thay đổi từ tag/version (`v2.4.0..v2.5.0`), theo khoảng ngày, N ngày gần nhất, hoặc từ một nhóm
-  commit đã gom sẵn.
-- Cần tổng hợp commit tuần/tháng thành bản tin thay đổi cho người dùng cuối / dev / stakeholder.
-- Đang ở cuối `git-workflow` (`Quy trình — changelog / release notes`) và cần bước viết nội dung cuối.
-
-KHÔNG dùng skill này để thực hiện thao tác git (tag/release/push/merge) — đó là việc của `git-workflow`; skill
-này chỉ **viết nội dung**.
 
 ## Ranh giới an toàn
 

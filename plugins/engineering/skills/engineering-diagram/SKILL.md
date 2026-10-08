@@ -1,6 +1,6 @@
 ---
 name: engineering-diagram
-description: "Skill capability xuyên suốt (plugin engineering) để biến mô tả hệ thống / luồng / kiến trúc / cấu trúc dữ liệu / kế hoạch thành DIAGRAM: CHỌN ĐÚNG LOẠI diagram TRƯỚC (theo câu hỏi cần trả lời, loại nhỏ-nhất-đủ-dùng), rồi mới sinh nguồn PlantUML RENDERABLE (bọc @startuml…@enduml hoặc start tag chuyên biệt), nhãn theo ngôn ngữ domain, đánh dấu [giả định] cho phần suy đoán. Chỉ ghi file vào docs/diagram/ khi người dùng XÁC NHẬN (protected path). Dùng skill NÀY khi người dùng muốn \"vẽ diagram\", \"sinh sơ đồ\", \"PlantUML\", \"sequence diagram\", \"ERD\", \"class diagram\", \"component/architecture diagram\", \"activity/state diagram\", \"deployment/network diagram\", \"sơ đồ luồng\", \"sơ đồ tuần tự\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần ở bất kỳ giai đoạn nào cần trực quan hoá (vd nhúng diagram vào spec). Không dùng khi cần viết cả spec yêu cầu → engineering-spec-writing."
+description: "Chọn đúng loại diagram trước rồi sinh nguồn PlantUML renderable, đánh dấu [giả định] cho phần suy đoán; chỉ ghi vào docs/diagram/ khi người dùng xác nhận. Dùng khi người dùng muốn \"vẽ diagram\", \"sinh sơ đồ\", \"PlantUML\", \"sequence diagram\", \"ERD\". Không dùng khi cần viết cả spec yêu cầu → engineering-spec-writing."
 order: 3
 title: "Diagram — chọn đúng loại rồi sinh PlantUML renderable"
 runsIn: execute
@@ -18,12 +18,6 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
 quan hoá (vd `engineering-spec-writing` cần nhúng flow/ERD/sequence/kiến trúc vào spec). `docs/` là
 **protected path** —
 chỉ ghi file khi người dùng **xác nhận**.
-
-## Khi nào dùng
-
-- Người dùng muốn vẽ/sinh/review một diagram: sequence, use case, class, activity, component, deployment,
-  state, ER/ERD, network, wireframe, gantt/WBS… cho kiến trúc, luồng, mô hình dữ liệu, kế hoạch, hay UI.
-- Cần trực quan hoá một mô tả hệ thống để review hoặc nhúng vào tài liệu (spec, ADR).
 
 ## Ranh giới an toàn
 

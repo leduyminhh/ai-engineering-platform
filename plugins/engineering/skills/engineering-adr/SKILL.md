@@ -1,6 +1,6 @@
 ---
 name: engineering-adr
-description: "Skill capability (plugin engineering) để ĐIỀU PHỐI một quyết định kiến trúc/thiết kế rồi GHI thành ADR chuẩn (Nygard) vào docs/decisions/: làm rõ bối cảnh & forces, liệt kê 2–4 phương án kèm đánh đổi, chốt quyết định + lý do truy vết được, ghi hệ quả trung thực (cả tiêu cực + residual risk), đánh số tiếp theo convention, đặt Status, link spec + contract/data-model. Portable ra mọi provider. Dùng skill NÀY khi người dùng muốn \"viết ADR\", \"ghi quyết định kiến trúc\", \"architecture decision record\", \"quyết định thiết kế\", \"chọn phương án\", \"đánh đổi kiến trúc\", \"lưu lý do quyết định\" — kể cả khi không nói chính xác chữ \"skill\". KHÔNG tự quyết quyết định lớn thay người dùng (con người chốt Status). Gọi khi cần ở giai đoạn plan. Không dùng khi cần đặc tả yêu cầu tính năng → engineering-spec-writing."
+description: "Điều phối một quyết định kiến trúc/thiết kế rồi ghi thành ADR chuẩn Nygard vào docs/decisions/, kèm phương án và đánh đổi; con người chốt Status. Dùng khi người dùng muốn \"viết ADR\", \"ghi quyết định kiến trúc\", \"architecture decision record\", \"chọn phương án\", \"lưu lý do quyết định\". Không dùng khi cần đặc tả yêu cầu tính năng → engineering-spec-writing."
 order: 5
 title: "ADR — điều phối quyết định kiến trúc + ghi architecture decision record"
 runsIn: plan
@@ -20,16 +20,6 @@ Mục tiêu: giúp teamlead/manager **chốt quyết định có truy vết**, �
 Skill này **portable ra mọi provider** (claude/cursor/codex/antigravity) và bám `docs/decisions/_TEMPLATE.md`
 — không dựng cấu trúc song song. KHÔNG thuộc chuỗi pipeline bắt buộc; gọi khi cần ở giai đoạn **plan**. Con
 người giữ chốt: **duyệt và chốt Status** trước khi ADR được coi là quyết định chính thức.
-
-## Khi nào dùng
-
-- Người dùng muốn viết ADR, ghi quyết định kiến trúc, architecture decision record, lưu lý do một quyết định
-  thiết kế, so sánh/chọn phương án, ghi lại đánh đổi kiến trúc.
-- Có một quyết định đáng lưu (chọn phương án, đánh đổi phạm vi, ràng buộc kỹ thuật lớn, chọn stack/pattern) cần
-  truy vết được về lý do.
-- Skill `engineering-spec-writing` phát hiện quyết định lớn trong lúc viết spec và cần ghi ADR để link ngược.
-
-KHÔNG dùng skill này để sinh code, để tự chốt một quyết định lớn thay người dùng, hay để phân rã story/task.
 
 ## Ranh giới an toàn
 

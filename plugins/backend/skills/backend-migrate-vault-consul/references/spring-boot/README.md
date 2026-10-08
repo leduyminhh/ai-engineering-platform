@@ -39,9 +39,12 @@ seed cấu hình vào chúng.
 - `application.yml` — khung cấu hình app đọc từ Consul + Vault (cơ chế config.import).
 - `env.example` — TEMPLATE env sau migration: CHỈ thông tin kết nối + profile, comment tiếng Việt có dấu.
   File `.env` thật sinh từ template này KHÔNG chứa comment (chỉ `KEY=value`).
-- `seed-consul.sh` / `seed-vault.sh` — nạp file cấu hình vào Consul/Vault (idempotent, nhận tham số profile).
 - `consul-config.example.yml` — mẫu định dạng file config Consul (cũng là file fallback local).
 - `vault-secrets.example.yml` — mẫu định dạng file secret Vault (gitignore, không commit).
+
+## Script
+Script `seed-consul.sh` / `seed-vault.sh` nằm ở `scripts/` của skill (copy vào project trước khi chạy) — nạp file
+cấu hình vào Consul/Vault (idempotent, nhận tham số profile).
 
 ## Thứ tự làm
 1. Thêm dependency + append khối `application.yml` mẫu (config.import mặc định non-optional; dev đổi optional).
@@ -50,7 +53,7 @@ seed cấu hình vào chúng.
 3. Sinh `configs/consul/consul-config.yml` + `configs/vault/vault-secrets.yml` từ `.env` cũ (theo bảng
    phân loại; mọi file gen — kể cả profile/global — gom về `configs/<type>`; TOÀN BỘ `configs/` vào
    `.gitignore` trước khi commit — file gen, không commit).
-4. Seed vào Consul/Vault dev đang chạy: `seed-consul.sh` + `seed-vault.sh`.
+4. Seed vào Consul/Vault dev đang chạy: `seed-consul.sh` + `seed-vault.sh` (từ `scripts/` của skill).
 5. Rút gọn `.env` còn thông tin kết nối (chỉ `KEY=value`, KHÔNG comment); sinh lại `.env.example`/
    `env.template` TỪ `.env` MỚI đã rút gọn (không lấy từ `.env.bak`), comment tiếng Việt có dấu;
    verify boot 2 kịch bản (có / thiếu Consul).

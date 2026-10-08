@@ -1,6 +1,6 @@
 ---
 name: workflow-db-change
-description: "Workflow điều phối thay đổi schema database: xác định bảng/cột/index bị ảnh hưởng, thiết kế migration forward + rollback tương thích ngược, implement migration và code, review query/index, chạy thử chu trình verify theo công cụ (migrate up/rollback/up, hoặc up/SQL bù với công cụ forward-only) trên DB test, viết integration test cho query/repository bị ảnh hưởng, cập nhật data-model.md, rồi commit. Dùng workflow NÀY khi người dùng muốn \"đổi schema\", \"migration\", \"thêm cột/bảng\", \"đổi index\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi không đổi schema, chỉ đổi query/logic để thêm tính năng → workflow-feature; để sửa lỗi → workflow-bugfix."
+description: "Điều phối thay đổi schema database: xác định đối tượng bị ảnh hưởng, migration forward + rollback tương thích ngược, verify trên DB test, integration test, cập nhật data-model.md, commit. Dùng khi người dùng muốn \"đổi schema\", \"migration\", \"thêm cột/bảng\", \"đổi index\". Không dùng khi không đổi schema, chỉ đổi logic thêm tính năng → workflow-feature; sửa lỗi → workflow-bugfix."
 order: 7
 title: "DB change — migration schema forward/rollback"
 kind: workflow
@@ -26,6 +26,7 @@ invoke: per-request
 
 - Skill/agent đã cài: `data-migration-writer`, `backend-implementer`, `backend-test-writer`, `backend-reviewer`,
   skill `core/git-workflow`, `data/data-db-migration`.
+- Plugin cần cài thêm: `data` (không nằm trong dependency của plugin workflows; xem preamble).
 - Artifact phải có sẵn: schema/data-model hiện tại đọc được (migration trước đó, ERD, hoặc kết nối DB test).
 - Baseline: có DB test riêng biệt để chạy thử migration, không phải DB production.
 

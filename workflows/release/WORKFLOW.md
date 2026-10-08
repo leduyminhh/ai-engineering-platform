@@ -1,6 +1,6 @@
 ---
 name: workflow-release
-description: "Workflow điều phối chuẩn bị release: đo baseline build/test, chạy quality gate, sinh release notes/CHANGELOG từ git log, commit release (CHANGELOG + version bump), lập deploy checklist kèm điều kiện rollback và kiểm migration chờ chạy, để người dùng deploy, hậu kiểm sau deploy, rồi chỉ đề xuất lệnh tag/push trên commit release chờ xác nhận. Dùng workflow NÀY khi người dùng muốn \"release\", \"phát hành\", \"chuẩn bị deploy\", \"ra version\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi chưa sẵn sàng phát hành, cần thêm tính năng trước → workflow-feature; cần sửa lỗi trước → workflow-bugfix."
+description: "Điều phối chuẩn bị release: baseline build/test, quality gate, release notes/CHANGELOG, commit release (version bump), deploy checklist + điều kiện rollback + migration chờ chạy, người dùng tự deploy, hậu kiểm, chỉ đề xuất lệnh tag/push chờ xác nhận. Dùng khi người dùng muốn \"release\", \"phát hành\", \"chuẩn bị deploy\", \"ra version\". Không dùng khi chưa sẵn sàng, cần thêm tính năng trước → workflow-feature; cần sửa lỗi trước → workflow-bugfix."
 order: 11
 title: "Release — quality gate, release notes, deploy checklist"
 kind: workflow
@@ -27,6 +27,7 @@ invoke: per-request
 
 - Skill/agent đã cài: `engineering-quality-auditor`, `engineering-release-scribe`, `ops-release-engineer`,
   `frontend-e2e-test-writer` (chỉ khi project có e2e), skill `core/git-workflow`.
+- Plugin cần cài thêm: `ops` (không nằm trong dependency của plugin workflows; xem preamble).
 - Artifact phải có sẵn: git log của phạm vi release (tag trước hoặc khoảng commit xác định được).
 - Baseline: build/test của branch release đang XANH — được đo và ghi số mốc ở Bước 1 trước khi chạy quality gate.
 
