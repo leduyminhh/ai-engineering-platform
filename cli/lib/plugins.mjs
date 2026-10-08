@@ -12,14 +12,14 @@ export const CORE_DIR = path.join(REPO_ROOT, 'core');
 export const WORKFLOWS_DIR = path.join(REPO_ROOT, 'workflows');
 
 function readJSON(p) { return JSON.parse(fs.readFileSync(p, 'utf8')); }
-// Normalize CRLF -> LF so the model is line-ending agnostic regardless of how source
-// files were authored (Windows checkouts are often CRLF); adapters then emit canonical LF.
 // hooks/ chỉ được coi là có khi tồn tại hooks.json (file mặc định Claude Code nạp từ thư mục plugin).
 function hooksDirOf(dir) {
   const hooks = path.join(dir, 'hooks');
   return fs.existsSync(path.join(hooks, 'hooks.json')) ? hooks : null;
 }
 
+// Normalize CRLF -> LF so the model is line-ending agnostic regardless of how source
+// files were authored (Windows checkouts are often CRLF); adapters then emit canonical LF.
 function readText(p) { return fs.existsSync(p) ? fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n') : ''; }
 
 /** Danh sách nguồn: chuỗi "a, b" (dạng cũ) hoặc YAML list. */

@@ -28,7 +28,7 @@ export function manifestPath(scope) {
 /**
  * Mô tả cách 1 provider đặt file dưới gốc. `kind` quyết định layout copy:
  *   - 'claude'  : mỗi skill-dir của plugin -> <root>/.claude/skills/<skillDir>/ (phẳng; id duy nhất)
- *                 thành phần khác (commands/agents/hooks/.mcp.json) -> <root>/.claude/<comp>
+ *                 thành phần khác (commands/agents) -> <root>/.claude/<comp>; hooks chỉ có ở plugin-mode (không cài phẳng)
  *   - 'cursor'  : rules -> <root>/.cursor/rules/<id>-00-principles.mdc; skills -> <root>/.cursor/skills/<skill-id>/
  *   - 'codex'   : mỗi skill-dir -> <root>/.agents/skills/<skill-id>/ (native skills; global -g → ~/.agents/skills/); agent TOML → <root>/.codex/agents/
  *   - 'agents'  : antigravity; 1 plugin -> gốc (AGENTS.md + docs/workflow/), nhiều plugin -> <root>/cowork-<provider>/<plugin>/

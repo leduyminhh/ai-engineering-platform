@@ -103,7 +103,8 @@ npx ai-engineering-platform install --provider all --yes
 | Path | Owns |
 | --- | --- |
 | `plugins/` | Canonical capability source: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, plus `_marketplace.json` and `_cowork.json`. |
-| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, and the shared `skills/git-workflow/` recipe. |
+| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/` recipe, and the safety `hooks/` (plugin-mode only). |
+| `evals/` | `claude plugin eval` cases per plugin (manual run; not shipped; `npm test` checks structure only). |
 | `templates/` | `init/` project scaffold (dropped by `*-init` skills) and `skills/` authoring scaffold. |
 | `adapters/` | Per-provider projection (`<provider>/adapter.mjs`), auto-discovered. `_shared/lib.mjs` holds the cross-tool logic. |
 | `cli/` | The `aip` CLI (`index.mjs` + `lib/*.mjs` + `build.mjs`). Pure ESM, zero-dep. |
@@ -318,6 +319,40 @@ git push origin dist          # your decision — the script never pushes
 
 Users then add it with `claude plugin marketplace add <owner>/<repo>@dist`. [Unverified] Installing the marketplace from a branch ref has not been tried end to end yet; check it once after the first push.
 
+## Hooks
+
+The `core` plugin ships two Claude Code `PreToolUse` hooks (`core/hooks/`; zero-dependency Node). **They exist only in plugin-mode installs** — skills-mode (flat `.claude/skills/`) installs none, because `${CLAUDE_PLUGIN_ROOT}` only exists for installed plugins. A managed `allowManagedHooksOnly` setting disables plugin hooks that are not force-enabled by the administrator.
+
+| Rule | Tool | Decision | Covers |
+| --- | --- | --- | --- |
+| H1 | Bash | ask | `git push` to `main`/`master`/`dev`/`develop`, and `--force`/`--delete`/`--mirror`/`--all`/`--prune` pushes (compound commands, `git -C`, quoted refs, flag clusters) |
+| H2 | Bash | deny | `git commit -m` with non-ASCII text — use `git commit -F <file>` (see the `git-workflow` skill) |
+| H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | secret files: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private `id_*` keys, `credentials.*` (symlinks, 8.3 names and NTFS streams are resolved). `.env.example`/`.env.sample`/`.env.template` and `*.pub` are allowed |
+| H3 | Bash | ask | a command that names a secret file |
+| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
+
+The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When Bash parsing is unreliable they fall toward `ask`. There is no H4: the ops agents have no Bash tool.
+
+**Limits / residual risk.** The hooks are a regex gate, not a sandbox.
+
+- Not caught: `bash -c "…"` / `eval`, `/usr/bin/git`, escaped refs such as `ma\in`, `$'…'` literals.
+- H5 guards write tools only — an agent that has Bash can still write elsewhere.
+- The Grep `glob` check is a best-effort heuristic (for example `*.k*` is not recognized as a key glob).
+- Known false positives, all on the safe side: `.env.local.example`, public `*.pem` certificates, files such as `src/id_rsa.go`, and Bash commands that merely mention `import.meta.env` or `config.env`.
+
+**Turning hooks off temporarily.** Disable or uninstall the `core` plugin: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; the command exists in `claude plugin --help`), and `claude plugin enable core@ai-engineering-platform` to restore it. [Inference] Disabling `core` also disables its skills. [Unverified] whether `/hooks` inside a session can switch a single plugin hook off.
+
+## Eval
+
+`evals/<plugin>/<case>/` holds 3 `claude plugin eval` cases (`engineering/spec-writing-routes`, `backend/code-review-readonly`, `workflows/bugfix-routes`). They live at repo level and are not shipped in plugins or the npm package. `npm test` only checks their structure; **running them is manual, calls a model on your account and costs money**, so they are not part of `npm test` or CI.
+
+```bash
+aip install --provider claude --as-plugin --plugin engineering -g --yes
+claude plugin eval engineering@ai-engineering-platform --eval-dir evals/engineering --ablation none --runs 3 --threshold 0.8 --max-cost-usd 5 --no-publish --allow-tools Write Edit
+```
+
+[Unverified] No case has been run end to end yet; follow the first-run checklist and per-plugin flags in [evals/README.md](evals/README.md) (start with `--case <name> --runs 1 --max-cost-usd 0.5`).
+
 ## Provider Outputs
 
 `aip build` writes one tree per provider under `build/<provider>/`:
@@ -331,6 +366,8 @@ Users then add it with `claude plugin marketplace add <owner>/<repo>@dist`. [Unv
 
 Any skill that ships a `references/` folder ships it to **every** provider (parity,
 enforced by `test/validate.mjs`).
+
+**Codex upgrade note.** Skills moved from `.codex/skills` to `.agents/skills`. Run `aip update -g` (or reinstall): the install manifest removes the legacy `.codex/skills` copy. A legacy copy that the manifest does not track must be removed by hand. The installer never overwrites or deletes a file it did not install; it skips the path and prints a warning.
 
 ## Authoring content
 

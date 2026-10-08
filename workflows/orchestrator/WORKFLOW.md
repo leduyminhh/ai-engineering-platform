@@ -92,7 +92,7 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 - **Hành động:** kiểm mọi workflow đã chọn (kể cả các mắt trong chuỗi đề xuất) có trong danh sách skill khả
   dụng của session hiện tại (skill tên `workflow-<slug>`, hoặc `workflows:workflow-<slug>` khi cài dạng plugin
   Claude); nếu cần đối chiếu file, cài phẳng nằm ở `.claude/skills/workflow-<slug>/` (Claude) hoặc
-  `.codex/skills/workflow-<slug>/` (Codex), ở gốc project hoặc thư mục home khi cài global.
+  `.agents/skills/workflow-<slug>/` (Codex), ở gốc project hoặc thư mục home khi cài global.
 - **Ràng buộc:** không tự cài workflow thay người dùng.
 - **Đầu ra:** xác nhận đã cài, hoặc lệnh cài đề xuất.
 - **Gate:** workflow đã cài; chưa cài → in lệnh cài theo cách đang dùng (cài phẳng: `aip install --skill workflows/<id>`;

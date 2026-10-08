@@ -41,8 +41,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `npm run overlap` (`test/overlap.mjs`) prints skill/skill and workflow/workflow content-overlap
   ratios used to decide merges.
 
+- Core hooks (`core/hooks/hooks.json` + `scripts/guard-bash.mjs`, `scripts/guard-files.mjs`, zero-dep Node): the
+  Claude adapter projects `hooks/` into `build/claude/plugins/core/hooks/`. Plugin mode only: skills-mode installs no
+  hooks (`${CLAUDE_PLUGIN_ROOT}` exists only for installed plugins), and the managed setting `allowManagedHooksOnly`
+  disables plugin hooks that are not force-enabled. Rules (PreToolUse):
+  H1 `ask` on `git push` to `main`/`master`/`dev`/`develop` and on force/delete/mirror/all/prune pushes
+  (compound commands, `-C`, quoted refs and flag clusters are handled); H2 `deny` `git commit -m` with non-ASCII text
+  (use `-F`, see `git-workflow`); H3 `deny` Read/Edit/Write/MultiEdit/NotebookEdit/Grep on secret files
+  (`.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private `id_*` keys,
+  `credentials.*`; `.env.example`/`.sample`/`.template` and `*.pub` stay allowed) and `ask` when a Bash command names
+  one; H5 write-scope lock (below). Scripts fail open on internal errors (exit 0, no decision); when Bash parsing is
+  unreliable they fall toward `ask`. H4 (block Bash for ops agents) was dropped: the ops agents have no Bash.
+  This is a regex gate, not a sandbox (see the README "Hooks" section for residual risk).
+- Agent key `writeScope` (list of globs, `mode: write` only; matched against the path relative to the git root, `/`
+  separators, `*` and `**` supported, not starting with `./` `/` `..`, no `\`, `{`, `?`). The Claude adapter collects it
+  into the generated `hooks/scope-lock.json` of `core`; `guard-files` denies Edit/Write/MultiEdit/NotebookEdit outside the
+  scope for that agent (including `../x`). Set on 5 agents: `engineering-release-scribe`, `engineering-spec-analyst`,
+  `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and agents without
+  `writeScope` are not locked, and an agent that has Bash can still write elsewhere.
+- `evals/<plugin>/` (repo level, not shipped in plugins or npm): 3 `claude plugin eval` cases —
+  `engineering/spec-writing-routes`, `backend/code-review-readonly`, `workflows/bugfix-routes` — checked
+  structurally by `test/contract/95-evals.contract.mjs` in `npm test`. Running them is manual
+  (`aip install --provider claude --as-plugin --plugin <id> -g`, then
+  `claude plugin eval <id>@ai-engineering-platform --eval-dir evals/<id> --ablation none …`), costs model usage
+  on your account and is not part of `npm test` or CI. [Unverified] never run end to end; the first-run checklist
+  is in `evals/README.md`.
+- `node cli/dist.mjs [--dry-run]` builds a local `dist` branch holding `build/claude` (without `drafts/`) so the
+  marketplace can be added with `claude plugin marketplace add <owner>/<repo>@dist`. It never pushes.
+- Skills-mode Claude install warns when the same plugin is already installed in plugin mode (every skill would
+  appear twice).
+
 ### Changed
 
+- Codex skills now install to `<root>/.agents/skills/` (global: `~/.agents/skills/`), the path the current Codex docs
+  list; Codex agents stay in `.codex/agents/`. Upgrade note: run `aip update -g` (or reinstall) — the install
+  manifest removes the legacy `.codex/skills` copy; a copy that the manifest does not track must be removed by hand.
+  [Inference] `.codex/skills` still loaded on Codex 0.147.0 in a local test, but it is no longer documented.
+- The installer never overwrites or deletes a foreign file when placing skills: it skips the path with a warning.
+- Removed the dead `.mcp.json` branch from the Claude install layout; `hooks` are plugin-mode only.
+- Version bumps for Phase 3: core 1.4.0 (MINOR, hooks), frontend 1.9.1 (e2e agent body now states that
+  `.gitignore` is out of scope), workflows 1.3.2 (orchestrator names `.agents/skills/workflow-<slug>/` for Codex);
+  `plugins/_versions.lock.json` refreshed.
 - `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;
   `test/install.test.mjs` removes its temp directories on exit.
 - All plugins bumped MINOR for Phase 2 (routing behaviour changes: `disable-model-invocation`, agent `tools`):

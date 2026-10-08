@@ -145,7 +145,7 @@ export function decide(input, { currentBranch = defaultBranch } = {}) {
   const { segs, unclosed } = parse(cmd);
   const parsed = segs.map((t) => ({ t, gc: gitCmd(t) })).filter((x) => x.gc);
   if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m)))) return DENY_COMMIT;
-  // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → nghiêng về deny khi có dấu bất kỳ.
+  // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → hỏi người dùng (ask) khi có dấu bất kỳ.
   if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd)) return ASK_UNPARSABLE;
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
   const naive = naiveSegments(cmd).map((t) => ({ t, gc: gitCmd(t) })).filter((x) => x.gc);

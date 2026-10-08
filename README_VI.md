@@ -100,7 +100,8 @@ npx ai-engineering-platform install --provider all --yes
 | Đường dẫn | Vai trò |
 | --- | --- |
 | `plugins/` | Nguồn năng lực: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, cùng `_marketplace.json` và `_cowork.json`. |
-| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, và recipe dùng chung `skills/git-workflow/`. |
+| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, và `hooks/` an toàn (chỉ plugin-mode). |
+| `evals/` | Case `claude plugin eval` theo plugin (chạy tay; không ship; `npm test` chỉ kiểm cấu trúc). |
 | `templates/` | `init/` khung project (do skill `*-init` drop ra) và `skills/` khung viết skill. |
 | `adapters/` | Chiếu theo provider (`<provider>/adapter.mjs`), auto-discover. `_shared/lib.mjs` chứa logic dùng chung. |
 | `cli/` | CLI `aip` (`index.mjs` + `lib/*.mjs` + `build.mjs`). Pure ESM, zero-dep. |
@@ -312,6 +313,40 @@ git push origin dist          # do bạn quyết định — script không bao g
 
 Người dùng thêm marketplace bằng `claude plugin marketplace add <owner>/<repo>@dist`. [Unverified] Việc cài marketplace từ ref là branch chưa được thử đầu-cuối; hãy kiểm một lần sau lần push đầu tiên.
 
+## Hooks
+
+Plugin `core` mang hai hook `PreToolUse` cho Claude Code (`core/hooks/`; Node không phụ thuộc thư viện). **Chỉ có ở cài đặt plugin-mode** — skills-mode (`.claude/skills/` phẳng) không cài hook nào vì `${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài. Cài đặt managed `allowManagedHooksOnly` sẽ tắt hook của plugin nào không được quản trị viên force-enable.
+
+| Quy tắc | Tool | Quyết định | Phạm vi |
+| --- | --- | --- | --- |
+| H1 | Bash | ask | `git push` lên `main`/`master`/`dev`/`develop`, và push `--force`/`--delete`/`--mirror`/`--all`/`--prune` (lệnh ghép, `git -C`, ref có nháy, cụm cờ) |
+| H2 | Bash | deny | `git commit -m` có ký tự non-ASCII — dùng `git commit -F <file>` (xem skill `git-workflow`) |
+| H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | file bí mật: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, khoá riêng `id_*`, `credentials.*` (có giải symlink, tên 8.3, NTFS stream). `.env.example`/`.env.sample`/`.env.template` và `*.pub` được phép |
+| H3 | Bash | ask | lệnh nhắc tới file bí mật |
+| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
+
+Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường) thoát 0 không quyết định. Khi không phân tích chắc chắn được lệnh Bash, script nghiêng về `ask`. Không có H4: agent ops không có tool Bash.
+
+**Giới hạn / residual risk.** Hook là cổng regex, không phải sandbox.
+
+- Không bắt được: `bash -c "…"` / `eval`, `/usr/bin/git`, ref bị escape như `ma\in`, literal `$'…'`.
+- H5 chỉ canh tool ghi — agent có Bash vẫn có thể ghi ra chỗ khác.
+- Kiểm `glob` của Grep chỉ là heuristic cố gắng hết sức (ví dụ `*.k*` không được nhận ra là glob khoá).
+- Dương tính giả đã biết, đều nghiêng về an toàn: `.env.local.example`, chứng chỉ `*.pem` công khai, file như `src/id_rsa.go`, lệnh Bash chỉ nhắc `import.meta.env` hoặc `config.env`.
+
+**Tắt hook tạm thời.** Disable hoặc gỡ plugin `core`: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; lệnh có trong `claude plugin --help`), bật lại bằng `claude plugin enable core@ai-engineering-platform`. [Inference] Tắt `core` cũng tắt luôn skill của nó. [Unverified] chưa xác nhận `/hooks` trong phiên có tắt được riêng một hook của plugin hay không.
+
+## Eval
+
+`evals/<plugin>/<case>/` chứa 3 case `claude plugin eval` (`engineering/spec-writing-routes`, `backend/code-review-readonly`, `workflows/bugfix-routes`). Chúng nằm ở cấp repo, không ship trong plugin hay gói npm. `npm test` chỉ kiểm cấu trúc; **chạy case là việc thủ công, gọi model trên tài khoản của bạn và tốn tiền**, nên không nằm trong `npm test` hay CI.
+
+```bash
+aip install --provider claude --as-plugin --plugin engineering -g --yes
+claude plugin eval engineering@ai-engineering-platform --eval-dir evals/engineering --ablation none --runs 3 --threshold 0.8 --max-cost-usd 5 --no-publish --allow-tools Write Edit
+```
+
+[Unverified] Chưa case nào được chạy đầu-cuối; làm theo danh sách kiểm lần chạy đầu và cờ riêng từng plugin trong [evals/README.md](evals/README.md) (bắt đầu bằng `--case <name> --runs 1 --max-cost-usd 0.5`).
+
 ## Đầu ra theo provider
 
 `aip build` ghi một cây cho mỗi provider dưới `build/<provider>/`:
@@ -325,6 +360,8 @@ Người dùng thêm marketplace bằng `claude plugin marketplace add <owner>/<
 
 Skill nào ship thư mục `references/` thì ship tới **mọi** provider (parity, do
 `test/validate.mjs` bắt buộc).
+
+**Ghi chú nâng cấp Codex.** Skill đã chuyển từ `.codex/skills` sang `.agents/skills`. Chạy `aip update -g` (hoặc cài lại): manifest cài đặt sẽ gỡ bản cũ ở `.codex/skills`. Bản cũ không do manifest theo dõi thì phải xoá tay. Installer không bao giờ ghi đè hay xoá file không phải do nó cài; nó bỏ qua đường dẫn đó và in cảnh báo.
 
 ## Viết nội dung
 
