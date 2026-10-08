@@ -66,7 +66,16 @@ export default async function run({ ok, ctx }) {
       "git status # don't\ngit push origin main", "echo don\\'t && git push origin main", 'echo "C:\\\\" && git push origin main']
       .every((c) => d(c)?.decision === 'ask'), 'H1: nháy lẻ (heredoc/#/\\\'/\\\\ trước nháy đóng) không che push main → ask');
     const oddQuote = ['git commit -m "$(cat <<\'EOF\'', 'feat: x', '', 'fix "x', 'sửa lỗi', 'EOF', ')"'].join('\n');
-    ok(d(oddQuote)?.decision === 'deny', 'H2: số nháy " lẻ trong heredoc + non-ASCII → deny');
+    ok(d(oddQuote)?.decision === 'ask', 'H2: số nháy " lẻ trong heredoc + non-ASCII → ask (không phân tích chắc chắn)');
+    ok(d("cat > m.txt <<'EOF'\nsửa don't\nEOF\ngit commit -F m.txt && python -m pytest") === null
+      && d("git commit -F - <<'EOF'\nfeat(core): guard\n\n- chặn commit -m có dấu, don't\nEOF") === null,
+      'H2: đường -F có nháy lẻ + non-ASCII trong thân → không chặn');
+    {
+      const adversarial = '"é ' + 'git '.repeat(32000);
+      const t0 = Date.now();
+      d(adversarial);
+      ok(Date.now() - t0 < 500, `decide trên input ${adversarial.length} ký tự chạy < 500 ms (tuyến tính)`);
+    }
     ok(d('git -C "$VAR" push')?.decision === 'ask' && d('git -C ~/repo push')?.decision === 'ask' && d('git -C $(pwd) push')?.decision === 'ask',
       'H1: -C chứa $/~ không resolve được, không refspec → ask');
     ok(d('git --config-env x=y push origin main')?.decision === 'ask', 'H1: --config-env bỏ qua giá trị → ask');

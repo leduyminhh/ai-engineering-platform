@@ -119,6 +119,25 @@ function defaultBranch(cwd) {
 const NON_ASCII = /[^\x00-\x7F]/;
 const DENY_COMMIT = { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
 
+const ASK_UNPARSABLE = { decision: 'ask', reason: 'Không phân tích chắc chắn được lệnh (nháy không đóng) nhưng có vẻ là git commit -m kèm ký tự non-ASCII. Dùng `git commit -F <file>` (skill git-workflow) hoặc xác nhận thủ công.' };
+
+// Kiểm tuyến tính theo dòng/đoạn (không regex lồng) để input dài không gây backtracking bậc hai.
+function hasCommitWithMessageFlag(cmd) {
+  for (const line of cmd.split('\n')) {
+    for (const piece of line.split(/[;&|]+/)) {
+      const toks = piece.trim().split(/\s+/);
+      const g = toks.findIndex((x) => /(^|[\\/])git(\.exe)?$/i.test(x));
+      if (g === -1) continue;
+      const c = toks.indexOf('commit', g + 1);
+      if (c === -1) continue;
+      const rest = toks.slice(c + 1);
+      if (rest.some((x) => /^(-[A-Za-z]*F|--file)/.test(x))) continue;
+      if (rest.some((x) => /^(-[A-Za-z]*m|--message)/.test(x))) return true;
+    }
+  }
+  return false;
+}
+
 export function decide(input, { currentBranch = defaultBranch } = {}) {
   const cmd = String(input?.tool_input?.command ?? '');
   if (!cmd) return null;
@@ -127,7 +146,7 @@ export function decide(input, { currentBranch = defaultBranch } = {}) {
   const parsed = segs.map((t) => ({ t, gc: gitCmd(t) })).filter((x) => x.gc);
   if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m)))) return DENY_COMMIT;
   // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → nghiêng về deny khi có dấu bất kỳ.
-  if (unclosed && NON_ASCII.test(cmd) && /\bgit\b[^\n;&|]*\bcommit\b/.test(cmd) && /(^|\s)(-[A-Za-z]*m|--message)/.test(cmd)) return DENY_COMMIT;
+  if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd)) return ASK_UNPARSABLE;
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
   const naive = naiveSegments(cmd).map((t) => ({ t, gc: gitCmd(t) })).filter((x) => x.gc);
   for (const { t, gc } of [...parsed, ...naive]) {
