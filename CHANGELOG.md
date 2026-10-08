@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- AGENTS baseline: new **Testing** section (one behavior — one test at the lowest layer, what not to
+  write, protected tests, review findings on coverage stay Minor, run full suites of touched
+  components + dependents once at the end). Projected into every project's `AGENTS.md`/`CLAUDE.md`.
 - `npm run overlap` (`test/overlap.mjs`) prints skill/skill and workflow/workflow content-overlap
   ratios used to decide merges.
 
