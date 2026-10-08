@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only sees published ones; `node cli/build.mjs --include-draft` keeps the previous single layout, and skills-mode
   install reads both locations. Upgrade note: an existing skills-mode install of a draft skill points into
   `build/claude/plugins/data/skills/…`, which a rebuild removes — run `aip update` (or reinstall) to re-link.
+  Plugin mode drops draft skills: `--as-plugin` and `aip update` on a plugin-mode `data` install no longer contain
+  the 4 `data-oltp-*`/`data-olap-*` skills (aip warns); use skills mode to keep them.
 - Claude `plugin.json` gains `homepage`/`repository`/`license` (from `plugins/_marketplace.json`) and a
   per-plugin `keywords` list (from the manifest); manifest descriptions are at most 500 characters and name every
   published skill.
@@ -44,8 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;
   `test/install.test.mjs` removes its temp directories on exit.
 - All plugins bumped MINOR for Phase 2 (routing behaviour changes: `disable-model-invocation`, agent `tools`):
-  core 1.3.0, backend 1.7.0, frontend 1.9.0, engineering 1.6.0, ops 1.4.0, data 1.5.0, workflows 1.3.0;
-  `plugins/_versions.lock.json` refreshed.
+  core 1.3.0, backend 1.7.0, frontend 1.9.0, engineering 1.6.0, ops 1.4.1, data 1.5.1, workflows 1.3.1
+  (ops/data/workflows took a PATCH after the final review: ops agent wording, `*-init` routing in the orchestrator,
+  data manifest description); `plugins/_versions.lock.json` refreshed.
 - Removed the dead `pipeline`, `next` and `stageNumber` frontmatter keys from every skill, workflow
   and the workflow template; the loader no longer exposes them, and the Antigravity `AGENTS.md`
   lists skills in a single group (the empty "Pipeline" section is gone).

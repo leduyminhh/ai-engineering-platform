@@ -55,8 +55,8 @@ skill cần gọi và kết thúc (không phải lỗi). Kết thúc tại Bư�
 
 | Tín hiệu | Skill |
 |---|---|
-| "khởi tạo backend", "scaffold API/service", "setup project backend mới" | `backend-init` |
-| "khởi tạo frontend", "setup project React mới", "scaffold tài liệu nền frontend" | `frontend-init` |
+| "khởi tạo backend", "scaffold API/service", "setup project backend mới" | `backend-init` (model không tự gọi được: đề nghị người dùng gõ `/backend:backend-init` khi cài dạng plugin, `/backend-init` khi cài dạng skills) |
+| "khởi tạo frontend", "setup project React mới", "scaffold tài liệu nền frontend" | `frontend-init` (model không tự gọi được: đề nghị người dùng gõ `/frontend:frontend-init` khi cài dạng plugin, `/frontend-init` khi cài dạng skills) |
 | "chuyển .env sang Vault/Consul", "externalize config/secret", "đưa secret vào Vault" | `backend-migrate-vault-consul` |
 
 ## Các bước

@@ -1,11 +1,11 @@
 {
   "id": "data",
   "name": "Data (OLTP + OLAP) Cowork→Code",
-  "description": "Workflow Cowork → Code cho project sở hữu dữ liệu (nhánh OLTP và OLAP), docs-first, không pipeline bắt buộc. Skill: data-db-migration (áp Flyway/Liquibase, viết thay đổi schema theo expand/contract).",
+  "description": "Workflow Cowork → Code cho project sở hữu dữ liệu, docs-first, không pipeline bắt buộc. Skill đã publish: data-db-migration (áp Flyway/Liquibase, viết thay đổi schema theo expand/contract). Các skill OLTP/OLAP chưa publish, chỉ cài được ở chế độ skills.",
   "keywords": [
     "data",
     "database",
     "migration"
   ],
-  "version": "1.5.0"
+  "version": "1.5.1"
 }

@@ -15,7 +15,7 @@ triển khai phù hợp và tiêu chí health-check/rollback.
 
 - Được: đọc cấu hình deploy/CI (Dockerfile, compose, k8s manifest, pipeline, script release) và cấu hình
   observability liên quan (metric/alert dùng cho health-check) làm ràng buộc.
-- Không được: tự chạy lệnh deploy/rollback lên bất kỳ môi trường nào (kể cả staging) khi chưa có xác nhận;
+- Không được: tự chạy lệnh deploy/rollback lên bất kỳ môi trường nào (kể cả staging);
   chạy lệnh phá huỷ (xoá dữ liệu, drop/reset, force-push, đổi schema không đảo được); sửa cấu hình CI/hạ
   tầng ngoài phạm vi; đọc/in giá trị secret (chỉ nêu tên biến).
 - Bắt buộc: mọi bước triển khai/rollback chỉ trình bày dưới dạng **kế hoạch + lệnh cụ thể + thứ tự bước**,
