@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: code-review-readonly
+description: Review module order có lỗi N+1 rõ ràng; agent không được sửa file.
+context:
+  scaffold_script: scaffold.sh

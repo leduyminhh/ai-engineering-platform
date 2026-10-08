@@ -231,3 +231,37 @@ export function checkHooksJson(obj, { scriptsExist = () => true } = {}) {
   }
   return errs;
 }
+
+export const EVAL_GRADER_TYPES = ['regex', 'tool_used', 'tool_order', 'file_exists', 'llm', 'baseline'];
+// Khoá prompt.md của `claude plugin eval`: khoá lạ là lỗi tải case, bắt sớm ở contract thay vì lúc chạy tốn tiền.
+const EVAL_PROMPT_KEYS = ['schema_version', 'name', 'description', 'tags', 'plugins', 'runs', 'expected_outcome', 'model', 'max_turns',
+  'timeout_seconds', 'allowed_tools', 'append_system_prompt', 'env'];
+const EVAL_RUNS_MAX = 50;
+const EVAL_TURNS_MAX = 200;
+
+// Windows native từ chối case cấp Bash (cần WSL2), nên case của repo không được khai Bash, kể cả dạng Bash(pattern).
+export function checkEvalCase({ promptMeta = {}, graders = [] }) {
+  const errs = [];
+  for (const k of Object.keys(promptMeta)) if (!EVAL_PROMPT_KEYS.includes(k)) errs.push(`prompt.md: khoá lạ "${k}"`);
+  const { runs, max_turns: turns, allowed_tools: tools } = promptMeta;
+  if (runs !== undefined && !(Number.isInteger(runs) && runs >= 1 && runs <= EVAL_RUNS_MAX)) errs.push(`runs phải là số nguyên 1–${EVAL_RUNS_MAX}`);
+  if (turns !== undefined && !(Number.isInteger(turns) && turns >= 1 && turns <= EVAL_TURNS_MAX)) errs.push(`max_turns phải là số nguyên 1–${EVAL_TURNS_MAX}`);
+  if (tools !== undefined) {
+    if (!Array.isArray(tools)) errs.push('allowed_tools phải là list');
+    else if (tools.some((t) => /^Bash(\(|$)/.test(String(t)))) errs.push('allowed_tools không được có Bash (Windows native từ chối; chạy trong WSL2 mới cấp)');
+  }
+  if (!graders.length) errs.push('cần ≥ 1 grader');
+  graders.forEach((g, i) => {
+    const at = `grader[${g.name || i}]`;
+    if (!EVAL_GRADER_TYPES.includes(g.type)) { errs.push(`${at}: type "${g.type}" ngoài ${EVAL_GRADER_TYPES.join('/')}`); return; }
+    if (g.type === 'tool_used' && !g.tool) errs.push(`${at}: tool_used thiếu tool`);
+    if (g.type === 'regex' && !g.pattern) errs.push(`${at}: regex thiếu pattern`);
+    if (g.type === 'file_exists' && !g.path) errs.push(`${at}: file_exists thiếu path`);
+    if (g.type === 'llm' && !String(g.criteria || g.body || '').trim()) errs.push(`${at}: llm thiếu criteria (thân file)`);
+    for (const key of ['input_match', 'pattern']) {
+      if (typeof g[key] !== 'string') continue;
+      try { new RegExp(g[key]); } catch { errs.push(`${at}: ${key} không phải regex hợp lệ`); }
+    }
+  });
+  return errs;
+}

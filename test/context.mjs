@@ -13,7 +13,7 @@ import cursorAdapter from '../adapters/cursor/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest } from '../adapters/_shared/lib.mjs';
 import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
-import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools, checkHooksJson, HOOK_EVENTS } from '../cli/lib/conventions.mjs';
+import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools, checkHooksJson, HOOK_EVENTS, checkEvalCase, EVAL_GRADER_TYPES } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
 import { hashDir, currentVersions, planLock, lockDecision, diffLock, readLock } from '../cli/lib/versions.mjs';
 import { parseClaudePluginList, parseClaudePluginJson } from '../cli/lib/install.mjs';
@@ -84,7 +84,7 @@ export async function buildContext({ build = false, fails = [] } = {}) {
     offeredCatalog, claudeAdapter, codexAdapter, cursorAdapter, tomlBasic, tomlMultiline,
     agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar,
     checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml,
-    checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools, checkHooksJson, HOOK_EVENTS,
+    checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools, checkHooksJson, HOOK_EVENTS, checkEvalCase, EVAL_GRADER_TYPES,
     lineOverlap, stepOverlap, titleOverlap,
     hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList, parseClaudePluginJson,
     RUN_IN, INVOKE_IN, listFilesRec, hasFiles, BUILD, claudeDir, claudeSkillDir,

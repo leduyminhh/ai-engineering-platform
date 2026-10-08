@@ -13,3 +13,6 @@
 
 # Backup files
 *.bak
+
+# Kết quả chạy eval (sinh ra, không commit)
+evals/**/results/
