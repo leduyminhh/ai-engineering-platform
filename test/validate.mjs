@@ -2547,15 +2547,15 @@ if (fs.existsSync(BUILD)) {
 {
   const good35 = 'Review diff backend theo correctness, kiến trúc và test. Dùng khi người dùng muốn "review code backend", "review PR backend", "đọc soát PR". Không dùng khi cần quét bảo mật → engineering-quality-gate.';
   ok(checkDescriptionStyle(good35).length === 0, 'checkDescriptionStyle: mẫu chuẩn hợp lệ');
-  ok(checkDescriptionStyle(`${'a'.repeat(205)}. Dùng khi người dùng muốn "x", "y", "z". Không dùng khi k → a-b.`).some((e) => e.includes('câu đầu')),
+  ok(checkDescriptionStyle(`${'a'.repeat(205)}. Dùng khi người dùng muốn "xx", "yy", "zz". Không dùng khi k → a-b.`).some((e) => e.includes('câu đầu')),
     'checkDescriptionStyle: câu đầu > 200 ký tự → lỗi');
-  ok(checkDescriptionStyle('Làm A. Dùng khi người dùng muốn "x", "y". Không dùng khi k → a-b.').some((e) => e.includes('trigger')),
+  ok(checkDescriptionStyle('Làm A. Dùng khi người dùng muốn "xx", "yy". Không dùng khi k → a-b.').some((e) => e.includes('trigger')),
     'checkDescriptionStyle: < 3 trigger → lỗi');
-  ok(checkDescriptionStyle('Làm A. Dùng khi người dùng muốn "a", "b", "c", "d", "e", "f", "g". Không dùng khi k → a-b.').some((e) => e.includes('trigger')),
+  ok(checkDescriptionStyle('Làm A. Dùng khi người dùng muốn "aa", "bb", "cc", "dd", "ee", "ff", "gg". Không dùng khi k → a-b.').some((e) => e.includes('trigger')),
     'checkDescriptionStyle: > 5 trigger → lỗi');
-  ok(checkDescriptionStyle('Recipe on-demand: làm A. Dùng khi người dùng muốn "x", "y", "z". Không dùng khi k → a-b.').some((e) => e.includes('boilerplate')),
+  ok(checkDescriptionStyle('Recipe on-demand: làm A. Dùng khi người dùng muốn "xx", "yy", "zz". Không dùng khi k → a-b.').some((e) => e.includes('boilerplate')),
     'checkDescriptionStyle: cụm boilerplate → lỗi');
-  ok(checkDescriptionStyle('Làm A. Khi người dùng muốn "x", "y", "z". Không dùng khi k → a-b.').some((e) => e.includes('Dùng khi')),
+  ok(checkDescriptionStyle('Làm A. Khi người dùng muốn "xx", "yy", "zz". Không dùng khi k → a-b.').some((e) => e.includes('Dùng khi')),
     'checkDescriptionStyle: thiếu "Dùng khi" → lỗi');
   ok(checkDescriptionStyle(`${good35}${' thêm'.repeat(100)}`).some((e) => e.includes(`${DESCRIPTION_TARGET}`)),
     'checkDescriptionStyle: vượt DESCRIPTION_TARGET → lỗi');
@@ -2564,7 +2564,7 @@ if (fs.existsSync(BUILD)) {
   ok(checkAgentDescription(`${'a'.repeat(270)}. Dùng khi x.`).some((e) => e.includes(`${AGENT_DESCRIPTION_MAX}`)), 'checkAgentDescription: quá dài → lỗi');
   ok(checkAgentDescription('Agent làm X. Không được: a, b, c.').some((e) => e.includes('Dùng khi')), 'checkAgentDescription: thiếu "Dùng khi" → lỗi');
 
-  const STYLE_READY = new Set([]); // Task 2–4 thêm plugin đã viết lại; Task 8 thay bằng tất cả
+  const STYLE_READY = new Set(['backend', 'data']); // Task 2–4 thêm plugin đã viết lại; Task 8 thay bằng tất cả
   const AGENT_STYLE_READY = new Set([]);
   for (const p of [core, ...plugins]) {
     if (!STYLE_READY.has(p.id)) continue;
@@ -2572,6 +2572,14 @@ if (fs.existsSync(BUILD)) {
       const errs = checkDescriptionStyle(s.description);
       ok(errs.length === 0, `${s.id}: description theo mẫu Phase 1${errs.length ? ' — ' + errs.join('; ') : ''}`);
     }
+  }
+  // Viết lại description không được làm mất tuyến "Không dùng khi → id" đã có (snapshot trước Phase 1).
+  const notFor35 = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'test', 'fixtures', 'not-for-ids.json'), 'utf8'));
+  for (const p of [core, ...plugins]) for (const s of p.stages) {
+    const want = notFor35[s.id] || [];
+    const have = new Set(notForTargets(s.description) || []);
+    const lost = want.filter((id) => !have.has(id));
+    ok(lost.length === 0, `${s.id}: giữ đủ id "Không dùng khi"${lost.length ? ' — mất: ' + lost.join(', ') : ''}`);
   }
   for (const a of allAgents) {
     if (!AGENT_STYLE_READY.has(a.id)) continue;

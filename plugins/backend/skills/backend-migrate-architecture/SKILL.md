@@ -1,6 +1,6 @@
 ---
 name: backend-migrate-architecture
-description: "Recipe on-demand: migrate KIẾN TRÚC mã nguồn của một BACKEND project hiện có sang một kiểu kiến trúc đích trong bộ chuẩn (Onion+DDD, Hexagonal+DDD, Hexagonal/Clean+CQRS, layered đơn giản). Nhận diện kiến trúc hiện trạng, chọn đích, tái tổ chức src/ theo template, đảo phụ thuộc đúng tầng, giữ nguyên hành vi nghiệp vụ. Xử lý cả project đã chạy backend-init lẫn project cũ chưa theo chuẩn. Dùng skill NÀY khi người dùng muốn \"đổi kiến trúc\", \"chuyển sang Onion/Hexagonal/CQRS\", \"tái cấu trúc phân tầng\", \"áp clean architecture\", \"refactor kiến trúc\", \"restructure src\" — kể cả khi không nói chính xác chữ \"skill\". Gọi khi cần trên project đã có mã nguồn. Không dùng khi chỉ dọn code trong kiến trúc hiện tại → backend-refactor; cần quy trình đổi kiến trúc có ADR, characterization test và commit theo lô → workflow-refactor."
+description: "Tái tổ chức src/ của backend project hiện có sang kiến trúc đích trong bộ chuẩn (Onion+DDD, Hexagonal+DDD, Hexagonal/Clean+CQRS, layered), giữ nguyên hành vi. Dùng khi người dùng muốn \"đổi kiến trúc\", \"chuyển sang Onion/Hexagonal/CQRS\", \"áp clean architecture\", \"restructure src\". Không dùng khi chỉ dọn code trong kiến trúc hiện tại → backend-refactor; cần quy trình có ADR, characterization test và commit theo lô → workflow-refactor."
 order: 7
 title: "Backend Migrate — Kiến trúc mã nguồn (recipe on-demand)"
 runsIn: execute
