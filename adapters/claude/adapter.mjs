@@ -134,6 +134,7 @@ export default {
       { path: '.claude-plugin/marketplace.json', content: marketplaceJson(entries, marketplace) },
       ...coreFiles(core, { author, meta, skillKeys }),
     ];
+    if (core.hooksDir) files.push({ path: 'plugins/core/hooks', copyDir: core.hooksDir });
     for (const p of plugins) {
       files.push({
         path: `plugins/${p.id}/.claude-plugin/plugin.json`,
@@ -141,6 +142,7 @@ export default {
         // Claude Code không hỗ trợ shorthand "marketplace:plugin" trong dependencies).
         content: pluginJson(p, { dependencies: ['core'], author, meta }),
       });
+      if (p.hooksDir) files.push({ path: `plugins/${p.id}/hooks`, copyDir: p.hooksDir });
       files.push(...pluginPrinciplesFiles(p, skillKeys)); // <plugin>-principles skill
       // Claude không auto-load skill khác khi gọi một skill nên cần digest + pointer.
       // Pointer có 2 dạng tên vì 2 đường cài: skills phẳng (`principles`) và plugin namespaced (`core:principles`).

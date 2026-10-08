@@ -576,7 +576,8 @@ function installOne(provider, effSetArg, scope) {
         const pdir = path.join(pluginsDir, id);
         if (!fs.statSync(pdir).isDirectory()) continue;
         for (const comp of fs.readdirSync(pdir, { withFileTypes: true })) {
-          if (!comp.isDirectory() || comp.name === '.claude-plugin') continue; // bỏ manifest plugin
+          // Hook cần ${CLAUDE_PLUGIN_ROOT} nên chỉ chạy ở plugin-mode; skills-mode không cài.
+          if (!comp.isDirectory() || comp.name === '.claude-plugin' || comp.name === 'hooks') continue;
           const srcComp = path.join(pdir, comp.name);
           const destComp = path.join(claudeRoot, comp.name);
           if (comp.name === 'agents') {
@@ -594,9 +595,6 @@ function installOne(provider, effSetArg, scope) {
             placeEntry(path.join(srcComp, skill.name), path.join(destComp, skill.name), ctx);
           }
         }
-        // .mcp.json cấp plugin: chỉ đặt khi plugin đó active (có ≥1 skill hiệu lực) → gộp thành <id>.mcp.json
-        const mcp = path.join(pdir, '.mcp.json');
-        if (fs.existsSync(mcp) && pluginActive(id)) placeEntry(mcp, path.join(claudeRoot, `${id}.mcp.json`), ctx);
       }
     }
   } else if (layout.kind === 'codex') {

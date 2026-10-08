@@ -334,6 +334,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   install({ providers: 'claude', plugins: 'backend', scope: 'project' });
   install({ providers: 'claude', plugins: 'frontend', scope: 'project' });
   const E = (rel) => fs.existsSync(path.join(TMP_ADD, rel));
+  ok(!E('.claude/hooks'), 'additive: skills-mode không cài hook của core (chỉ plugin-mode)');
   ok(E('.claude/skills/backend-init/SKILL.md') && E('.claude/skills/frontend-init/SKILL.md'),
     'additive: cài backend rồi frontend → cả hai cùng tồn tại (không thay thế)');
   const mf = JSON.parse(fs.readFileSync(path.join(TMP_ADD, '.ai-engineering/manifest.json'), 'utf8'));

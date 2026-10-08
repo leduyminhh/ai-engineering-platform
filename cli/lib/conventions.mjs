@@ -191,3 +191,38 @@ export function checkAgentTools(agent) {
   if ((agent.skills || []).length > 1 && !tools.includes('Skill')) errs.push('có > 1 skill nhưng tools thiếu Skill');
   return errs;
 }
+
+export const HOOK_EVENTS = ['PreToolUse', 'PostToolUse'];
+const HOOK_SCRIPT_PREFIX = '${CLAUDE_PLUGIN_ROOT}/hooks/';
+const HOOK_TIMEOUT_MAX = 30;
+
+// Dạng exec (command "node" + args) là mẫu đa nền tảng; mọi script phải nằm trong hooks/ của chính plugin.
+export function checkHooksJson(obj, { scriptsExist = () => true } = {}) {
+  const errs = [];
+  if (!obj || typeof obj !== 'object' || !obj.hooks || typeof obj.hooks !== 'object' || Array.isArray(obj.hooks)) {
+    return ['thiếu khoá bọc "hooks"'];
+  }
+  for (const [event, groups] of Object.entries(obj.hooks)) {
+    if (!HOOK_EVENTS.includes(event)) { errs.push(`event "${event}" ngoài ${HOOK_EVENTS.join('/')}`); continue; }
+    if (!Array.isArray(groups)) { errs.push(`${event}: phải là mảng`); continue; }
+    groups.forEach((g, gi) => {
+      const at = `${event}[${gi}]`;
+      if (!g || !Array.isArray(g.hooks)) { errs.push(`${at}: thiếu mảng hooks`); return; }
+      g.hooks.forEach((h, hi) => {
+        const hat = `${at}.hooks[${hi}]`;
+        if (!h || h.type !== 'command') errs.push(`${hat}: type phải là "command"`);
+        if (!h || h.command !== 'node') errs.push(`${hat}: command phải là "node" (dạng exec)`);
+        const first = h && Array.isArray(h.args) ? h.args[0] : undefined;
+        if (typeof first !== 'string' || !first.startsWith(`${HOOK_SCRIPT_PREFIX}scripts/`)) {
+          errs.push(`${hat}: args[0] phải bắt đầu bằng ${HOOK_SCRIPT_PREFIX}scripts/`);
+        } else if (!scriptsExist(first.slice(HOOK_SCRIPT_PREFIX.length))) {
+          errs.push(`${hat}: script không tồn tại (${first})`);
+        }
+        if (typeof h?.timeout !== 'number' || !(h.timeout > 0) || h.timeout > HOOK_TIMEOUT_MAX) {
+          errs.push(`${hat}: timeout phải là số trong (0, ${HOOK_TIMEOUT_MAX}]`);
+        }
+      });
+    });
+  }
+  return errs;
+}
