@@ -61,6 +61,17 @@ export default async function run({ ok, ctx }) {
       .every((c) => d(c)?.decision === 'ask'), 'H3: .env sau ;/</&&/$()/dấu backslash → ask');
     ok(['cp .env.example .env.example.bak', 'cat config/.env.sample', 'cat id_rsa.pub', 'cat .envrc', 'echo process.env'].every((c) => d(c) === null),
       'H3: .env.example/.env.sample/id_rsa.pub/.envrc/process.env → cho qua');
+    // Vòng sửa 2: nháy lẻ không được che lệnh phía sau; parse không tin cậy → nghiêng về an toàn
+    ok(["cat > n.txt <<'EOF'\ndon't\nEOF\ngit push origin main", "git commit -F - <<'EOF'\nfeat: don't\nEOF\ngit push origin main",
+      "git status # don't\ngit push origin main", "echo don\\'t && git push origin main", 'echo "C:\\\\" && git push origin main']
+      .every((c) => d(c)?.decision === 'ask'), 'H1: nháy lẻ (heredoc/#/\\\'/\\\\ trước nháy đóng) không che push main → ask');
+    const oddQuote = ['git commit -m "$(cat <<\'EOF\'', 'feat: x', '', 'fix "x', 'sửa lỗi', 'EOF', ')"'].join('\n');
+    ok(d(oddQuote)?.decision === 'deny', 'H2: số nháy " lẻ trong heredoc + non-ASCII → deny');
+    ok(d('git -C "$VAR" push')?.decision === 'ask' && d('git -C ~/repo push')?.decision === 'ask' && d('git -C $(pwd) push')?.decision === 'ask',
+      'H1: -C chứa $/~ không resolve được, không refspec → ask');
+    ok(d('git --config-env x=y push origin main')?.decision === 'ask', 'H1: --config-env bỏ qua giá trị → ask');
+    ok(['git log --oneline', 'npm test', 'echo "a; b"', 'git commit -m "fix: a && b"', 'git status && git diff', 'git push -u origin feature/x']
+      .every((c) => d(c) === null), 'không báo nhầm: log/npm test/echo "a; b"/commit -m "…&&…"/status && diff/push -u feature');
     const run = (stdin) => execFileSync('node', [script], { input: stdin, encoding: 'utf8' });
     ok(run('') === '' && run('{bad json') === '' && run('{}') === '', 'guard-bash CLI: input rỗng/hỏng → exit 0, không in gì (fail-open)');
     const out = JSON.parse(run(JSON.stringify(bash('git commit -m "thêm"'))) || '{}');

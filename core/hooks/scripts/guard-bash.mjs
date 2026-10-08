@@ -7,7 +7,7 @@ import path from 'node:path';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 const SECRET = /(^|[\s'"=/\\<(])(\.env(\.(?!example\b|sample\b|template\b)[\w.-]+)?|[\w.-]+\.(pem|jks|keystore|p12|pfx)|id_(rsa|ed25519|ecdsa)|credentials(\.json)?)(?=$|[\s'";&|)<>])/;
-const GIT_OPTS_WITH_VALUE = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace']);
+const GIT_OPTS_WITH_VALUE = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--config-env']);
 const PUSH_OPTS_WITH_VALUE = new Set(['-o', '--push-option', '--repo', '--receive-pack', '--exec']);
 
 // Tách lệnh thành các đoạn token, tôn trọng nháy: toán tử/xuống dòng nằm trong nháy (vd heredoc trong -m "$(…)") không cắt đoạn.
@@ -23,10 +23,11 @@ function parse(cmd) {
     const c = cmd[i];
     if (q) {
       if (c === q) { q = null; continue; }
-      if (q === '"' && c === '\\' && cmd[i + 1] === '"') { cur += '"'; i++; continue; }
+      if (q === '"' && c === '\\' && (cmd[i + 1] === '"' || cmd[i + 1] === '\\')) { cur += cmd[i + 1]; i++; continue; }
       cur += c;
       continue;
     }
+    if (c === '\\' && (cmd[i + 1] === "'" || cmd[i + 1] === '"')) { cur += cmd[i + 1]; has = true; i++; continue; }
     if (c === '"' || c === "'") { q = c; has = true; continue; }
     if (c === '\n') { endSeg(); continue; }
     if (/\s/.test(c)) { endTok(); continue; }
@@ -35,7 +36,14 @@ function parse(cmd) {
     has = true;
   }
   endSeg();
-  return segs;
+  return { segs, unclosed: q !== null };
+}
+
+// Cách tách thô (không hiểu nháy) của bản cũ: chạy song song với parse() vì nháy lẻ (heredoc, #, \') làm parse() nuốt các lệnh phía sau.
+function naiveSegments(cmd) {
+  return cmd.split(/&&|\|\||;|\n|\|/)
+    .map((x) => (x.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((w) => w.replace(/^(["'])(.*)\1$/s, '$2')))
+    .filter((t) => t.length);
 }
 
 function gitCmd(t) {
@@ -91,8 +99,12 @@ function pushReason(t, gc, cwd, currentBranch) {
   }
   const specs = pos.slice(1);
   if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return 'push dạng force/xoá/mirror/all';
+  // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
+  const unresolvable = gc.dirs.some((d) => /[$~`]/.test(d));
   const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs) : cwd;
   const refs = specs.map((r) => r.split(':').pop().replace(/^refs\/heads\//, ''));
+  const wantsHead = (refs.length ? refs : ['HEAD']).some((r) => r === 'HEAD' || r === '@');
+  if (unresolvable && wantsHead) return 'push không xác định được nhánh hiện tại (đường dẫn -C chứa biến/~)';
   const targets = (refs.length ? refs : ['HEAD']).map((r) => (r === 'HEAD' || r === '@' ? currentBranch(dir) : r));
   const hit = targets.find((r) => r && PROTECTED.has(r));
   return hit ? `push vào nhánh bảo vệ "${hit}"` : null;
@@ -104,16 +116,21 @@ function defaultBranch(cwd) {
   } catch { return null; }
 }
 
+const NON_ASCII = /[^\x00-\x7F]/;
+const DENY_COMMIT = { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
+
 export function decide(input, { currentBranch = defaultBranch } = {}) {
   const cmd = String(input?.tool_input?.command ?? '');
   if (!cmd) return null;
   const cwd = input?.cwd || '.';
-  for (const t of parse(cmd)) {
-    const gc = gitCmd(t);
-    if (!gc) continue;
-    if (gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => /[^\x00-\x7F]/.test(m))) {
-      return { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
-    }
+  const { segs, unclosed } = parse(cmd);
+  const parsed = segs.map((t) => ({ t, gc: gitCmd(t) })).filter((x) => x.gc);
+  if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m)))) return DENY_COMMIT;
+  // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → nghiêng về deny khi có dấu bất kỳ.
+  if (unclosed && NON_ASCII.test(cmd) && /\bgit\b[^\n;&|]*\bcommit\b/.test(cmd) && /(^|\s)(-[A-Za-z]*m|--message)/.test(cmd)) return DENY_COMMIT;
+  // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
+  const naive = naiveSegments(cmd).map((t) => ({ t, gc: gitCmd(t) })).filter((x) => x.gc);
+  for (const { t, gc } of [...parsed, ...naive]) {
     const why = gc.sub === 'push' ? pushReason(t, gc, cwd, currentBranch) : null;
     if (why) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
   }
