@@ -15,7 +15,8 @@ export function checkSkillBody(body) {
   return SKILL_HEADINGS.filter(([, re]) => !re.test(text)).map(([h]) => `thiếu heading "## ${h}"`);
 }
 
-// Trần của repo thấp hơn trần 1.536 ký tự của Claude vì khối "Dùng khi" ngắn là đủ, và index Antigravity/Codex chỉ lấy ~200 ký tự đầu.
+// Trần của repo thấp hơn trần 1.536 ký tự của Claude (description + when_to_use bị cắt ở mức này trong danh sách skill,
+// https://code.claude.com/docs/en/skills.md) vì khối "Dùng khi" ngắn là đủ, và index Antigravity/Codex chỉ lấy ~200 ký tự đầu.
 export const DESCRIPTION_MAX = 500;
 export const NOT_FOR = 'Không dùng khi';
 const GENERIC = new Set(['skill', 'workflow']);

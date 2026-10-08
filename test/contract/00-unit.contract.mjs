@@ -1,4 +1,6 @@
 // Contract unit: loader agent/workflows, helper workflow và adapter với fixture (thuần, không đọc plugin thật).
+import { parseOnly } from '../harness.mjs';
+
 export default async function run({ ok, ctx }) {
   const { fs, path, loadPlugins, loadCore, loadWorkflows, splitList, REPO_ROOT, checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, claudeAdapter, codexAdapter, tomlBasic, tomlMultiline, frontmatter, core, plugins, workflows, fxPlugin, fxWorkflows, fxCore, fxMk, byPath } = ctx;
 
@@ -6,6 +8,8 @@ export default async function run({ ok, ctx }) {
   // 0. UNIT: loader agent + workflows
   // ─────────────────────────────────────────────────────────────────────────────
   ok(JSON.stringify(splitList(' a, b ,,c ')) === '["a","b","c"]', 'splitList: tách phẩy + trim + bỏ rỗng');
+  ok(parseOnly(['--only']).error && parseOnly(['--only', '--build']).error, 'parseOnly: --only thiếu giá trị hoặc theo sau là flag → lỗi');
+  ok(!parseOnly(['--only', 'versions']).error && parseOnly(['--only', 'versions']).onlys[0] === 'versions', 'parseOnly: --only <tên> hợp lệ');
   ok(Array.isArray(splitList(undefined)) && splitList(undefined).length === 0, 'splitList: không phải chuỗi → []');
   ok(loadPlugins().every((p) => Array.isArray(p.agents)), 'loadPlugins: mỗi plugin có mảng agents');
   ok(Array.isArray(loadCore().agents) && loadCore().agents.length === 0, 'loadCore: agents = []');

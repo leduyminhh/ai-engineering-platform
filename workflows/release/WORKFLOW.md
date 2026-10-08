@@ -1,6 +1,6 @@
 ---
 name: workflow-release
-description: "Điều phối chuẩn bị release: baseline build/test, quality gate, release notes/CHANGELOG, commit release, deploy checklist + điều kiện rollback, hậu kiểm, chỉ đề xuất lệnh tag/push chờ xác nhận. Dùng khi người dùng muốn \"release\", \"phát hành\", \"chuẩn bị deploy\", \"ra version\". Không dùng khi chưa sẵn sàng, cần thêm tính năng trước → workflow-feature; cần sửa lỗi trước → workflow-bugfix."
+description: "Điều phối chuẩn bị release: baseline build/test, quality gate, release notes/CHANGELOG, commit release (version bump), deploy checklist + điều kiện rollback + migration chờ chạy, người dùng tự deploy, hậu kiểm, chỉ đề xuất lệnh tag/push chờ xác nhận. Dùng khi người dùng muốn \"release\", \"phát hành\", \"chuẩn bị deploy\", \"ra version\". Không dùng khi chưa sẵn sàng, cần thêm tính năng trước → workflow-feature; cần sửa lỗi trước → workflow-bugfix."
 order: 11
 title: "Release — quality gate, release notes, deploy checklist"
 kind: workflow

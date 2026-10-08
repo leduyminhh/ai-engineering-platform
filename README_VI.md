@@ -316,7 +316,7 @@ Skill nào ship thư mục `references/` thì ship tới **mọi** provider (par
   `description` theo mẫu cố định: một câu hành động (≤ 200 ký tự), rồi
   `Dùng khi người dùng muốn "…", "…", "…"` (3–5 trigger trong ngoặc kép), rồi
   `Không dùng khi <tình huống> → <id>.` (id skill/workflow/agent có thật) — tối đa 500 ký tự
-  (mục tiêu 450), không có câu mẫu thừa, không lặp nguyên văn trigger của skill khác. Mô tả
+  (mục tiêu 450; description workflow cũng bị chặn ở 500), không có câu mẫu thừa, không lặp nguyên văn trigger của skill khác. Mô tả
   agent ≤ 260 ký tự và kết thúc bằng `Dùng khi …`.
 - **Hành vi provider mới** → sửa `adapters/<provider>/adapter.mjs`; giữ là hàm thuần
   `build(plugins, { outDir, marketplace, core }) -> fileEntry[]` với entry là

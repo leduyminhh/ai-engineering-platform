@@ -290,7 +290,7 @@ export default async function run({ ok, ctx }) {
     const budget35 = [core, ...plugins].flatMap((p) => p.stages).reduce((n, s) => n + [...s.description].length, 0);
     ok(budget35 <= skillCount35 * 450, `ngân sách description skill: ${budget35} ký tự (≤ ${skillCount35 * 450})`);
     const abudget35 = allAgents.reduce((n, a) => n + [...a.description].length, 0);
-    ok(abudget35 <= allAgents.length * AGENT_DESCRIPTION_MAX, `ngân sách description agent: ${abudget35} ký tự (≤ ${allAgents.length * AGENT_DESCRIPTION_MAX})`);
+    ok(abudget35 <= allAgents.length * 240, `ngân sách description agent: ${abudget35} ký tự (≤ ${allAgents.length * 240})`);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
