@@ -18,7 +18,8 @@ import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse, WHEN_TO_USE_MAX } from '../adapters/_shared/lib.mjs';
-import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions } from '../cli/lib/conventions.mjs';
+import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
+import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
 
 let pass = 0;
@@ -2377,6 +2378,46 @@ if (fs.existsSync(BUILD)) {
     if (fs.existsSync(path.join(REPO_ROOT, 'build', p))) {
       ok(fs.existsSync(path.join(REPO_ROOT, 'build', rel, 'scripts', 'check-tasks.mjs')), `build ${p}: ship scripts/check-tasks.mjs`);
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 31. Frontmatter build là YAML an toàn (spec 2026-10-07 audit E1 / Phase 0 P0.1)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  ok(yamlScalar('backend-adr') === 'backend-adr', 'yamlScalar: chuỗi thuần giữ plain');
+  ok(yamlScalar('Edit, Write, NotebookEdit, Agent') === 'Edit, Write, NotebookEdit, Agent', 'yamlScalar: dấu phẩy không cần quote');
+  ok(yamlScalar('Recipe on-demand: review') === '"Recipe on-demand: review"', 'yamlScalar: ": " giữa chuỗi → quote');
+  ok(yamlScalar('PR #12') === '"PR #12"', 'yamlScalar: " #" → quote');
+  ok(yamlScalar('[a] b') === '"[a] b"' && yamlScalar('- x') === '"- x"' && yamlScalar('*.ts') === '"*.ts"',
+    'yamlScalar: ký tự mở cấu trúc ở đầu → quote');
+  ok(yamlScalar('nói "skill"') === '"nói \\"skill\\""', 'yamlScalar: dấu " bên trong được escape');
+  ok(yamlScalar('') === '""' && yamlScalar('a ') === '"a "', 'yamlScalar: rỗng / khoảng trắng cuối → quote');
+  ok(frontmatter([['name', 'x'], ['description', 'A: b'], ['effort', 'high'], ['skip', null]])
+    === '---\nname: x\ndescription: "A: b"\neffort: high\n---', 'frontmatter: quote đúng key cần quote, bỏ key null');
+  ok(checkFrontmatterYaml('name: x\ndescription: "A: b"').length === 0, 'checkFrontmatterYaml: hợp lệ');
+  ok(checkFrontmatterYaml('description: A: b').some((e) => e.includes('plain scalar')), 'checkFrontmatterYaml: ": " không quote → lỗi');
+  ok(checkFrontmatterYaml('description: "chưa đóng').some((e) => e.includes('quote')), 'checkFrontmatterYaml: quote không đóng → lỗi');
+  ok(checkFrontmatterYaml('description: "có \\"escape\\" đúng"').length === 0, 'checkFrontmatterYaml: escape \\" hợp lệ');
+  ok(checkFrontmatterYaml('- item').length === 1, 'checkFrontmatterYaml: dòng không phải key: value → lỗi');
+  const fmOf31 = (text) => { const m = text.match(/^---\n([\s\S]*?)\n---/); return m ? m[1] : null; };
+  const targets31 = [
+    ['claude', path.join(BUILD, 'claude'), (f) => f.endsWith('.md')],
+    ['codex', path.join(BUILD, 'codex'), (f) => f.endsWith('SKILL.md')],
+    ['cursor', path.join(BUILD, 'cursor'), (f) => f.endsWith('SKILL.md') || f.endsWith('.mdc')],
+  ];
+  for (const [prov, dir, pick] of targets31) {
+    if (!fs.existsSync(dir)) continue;
+    const bad = [];
+    let seen = 0;
+    for (const rel of listFilesRec(dir).filter(pick)) {
+      const fm = fmOf31(fs.readFileSync(path.join(dir, rel), 'utf8'));
+      if (fm === null) continue;
+      seen++;
+      const errs = checkFrontmatterYaml(fm);
+      if (errs.length) bad.push(`${rel}: ${errs[0]}`);
+    }
+    ok(seen > 0 && bad.length === 0, `build ${prov}: ${seen} frontmatter đều là YAML an toàn${bad.length ? ' — ' + bad.slice(0, 3).join(' | ') : ''}`);
   }
 }
 
