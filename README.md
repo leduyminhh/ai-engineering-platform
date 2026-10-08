@@ -309,7 +309,7 @@ Two ways to get the Claude content into a project:
 
 Do not install the same plugin in both modes: every skill would appear twice. `aip install` in skills-mode now warns when `claude plugin list` shows a selected plugin already installed from this marketplace (the check is skipped when `AIE_INSTALL_ROOT` is set, and silently when `claude` is not on PATH).
 
-Publishing the marketplace from a git branch (maintainer):
+Publishing the marketplace from a git branch (maintainer; needs git >= 2.42 for `git worktree add --orphan`):
 
 ```bash
 node cli/dist.mjs --dry-run   # build, then print the file list and commit message only
@@ -327,24 +327,26 @@ The `core` plugin ships two Claude Code `PreToolUse` hooks (`core/hooks/`; zero-
 | --- | --- | --- | --- |
 | H1 | Bash | ask | `git push` to `main`/`master`/`dev`/`develop`, and `--force`/`--delete`/`--mirror`/`--all`/`--prune` pushes (compound commands, `git -C`, quoted refs, flag clusters) |
 | H2 | Bash | deny | `git commit -m` with non-ASCII text — use `git commit -F <file>` (see the `git-workflow` skill) |
-| H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | secret files: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private `id_*` keys, `credentials.*` (symlinks, 8.3 names and NTFS streams are resolved). `.env.example`/`.env.sample`/`.env.template` and `*.pub` are allowed |
+| H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | secret files: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private keys `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (also `_sk` and any non-`.pub` suffix), and `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` only (symlinks and NTFS streams are resolved; [Unverified] 8.3 short names). `.env.example`/`.env.sample`/`.env.template` and `*.pub` are allowed |
 | H3 | Bash | ask | a command that names a secret file |
 | H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
 
-The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When Bash parsing is unreliable they fall toward `ask`. There is no H4: the ops agents have no Bash tool.
+The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When `guard-bash` cannot parse a command reliably it falls toward `ask` (`guard-files` does not). There is no H4: the ops agents have no Bash tool.
 
 **Limits / residual risk.** The hooks are a regex gate, not a sandbox.
 
-- Not caught: `bash -c "…"` / `eval`, `/usr/bin/git`, escaped refs such as `ma\in`, `$'…'` literals.
+- Not caught: `bash -c "…"` / `eval`, escaped refs such as `ma\in`, `$'…'` literals, and secret files outside the list above (for example `credentials.csv`, `credentials.xml`, `credentials.toml`).
 - H5 guards write tools only — an agent that has Bash can still write elsewhere.
 - The Grep `glob` check is a best-effort heuristic (for example `*.k*` is not recognized as a key glob).
 - Known false positives, all on the safe side: `.env.local.example`, public `*.pem` certificates, files such as `src/id_rsa.go`, and Bash commands that merely mention `import.meta.env` or `config.env`.
 
-**Turning hooks off temporarily.** Disable or uninstall the `core` plugin: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; the command exists in `claude plugin --help`), and `claude plugin enable core@ai-engineering-platform` to restore it. [Inference] Disabling `core` also disables its skills. [Unverified] whether `/hooks` inside a session can switch a single plugin hook off.
+**Turning hooks off temporarily.** Disable or uninstall the `core` plugin: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; the command exists in `claude plugin --help`), and `claude plugin enable core@ai-engineering-platform` to restore it. [Inference] Disabling `core` also disables its skills. [Unverified] whether `/hooks` inside a session can switch a single plugin hook off. [Unverified] Every domain plugin declares `dependencies: ["core"]`; how Claude Code treats those dependents when `core` is disabled or uninstalled (refuse, cascade, or leave them running without core) was not checked — run `claude plugin disable` and read its output before relying on it.
 
 ## Eval
 
 `evals/<plugin>/<case>/` holds 3 `claude plugin eval` cases (`engineering/spec-writing-routes`, `backend/code-review-readonly`, `workflows/bugfix-routes`). They live at repo level and are not shipped in plugins or the npm package. `npm test` only checks their structure; **running them is manual, calls a model on your account and costs money**, so they are not part of `npm test` or CI.
+
+Run from the repo root:
 
 ```bash
 aip install --provider claude --as-plugin --plugin engineering -g --yes
@@ -367,7 +369,7 @@ claude plugin eval engineering@ai-engineering-platform --eval-dir evals/engineer
 Any skill that ships a `references/` folder ships it to **every** provider (parity,
 enforced by `test/validate.mjs`).
 
-**Codex upgrade note.** Skills moved from `.codex/skills` to `.agents/skills`. Run `aip update -g` (or reinstall): the install manifest removes the legacy `.codex/skills` copy. A legacy copy that the manifest does not track must be removed by hand. The installer never overwrites or deletes a file it did not install; it skips the path and prints a warning.
+**Codex upgrade note.** Skills moved from `.codex/skills` to `.agents/skills`. Run `aip update` (add `-g` for a global install) or reinstall: the install manifest removes the legacy `.codex/skills` copy. A legacy copy that the manifest does not track must be removed by hand. The installer never overwrites or deletes a foreign regular file; a foreign real directory is merged and its existing files are kept (skipped with a warning); an existing symlink/junction at the destination is replaced.
 
 ## Authoring content
 
