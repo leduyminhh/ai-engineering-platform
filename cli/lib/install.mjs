@@ -20,17 +20,19 @@ const USE_LINK = !linkDisabledForRoot(REPO_ROOT);
 const BUILD_DIR = path.join(REPO_ROOT, 'build');
 
 // ── fs helpers ───────────────────────────────────────────────────────────────
-function copyFileRec(src, dest, files) {
+function copyFileRec(src, dest, files, skipped) {
+  // File đã có mà không phải do lần cài này đặt → của người dùng/công cụ khác, không đè.
+  if (skipped && fs.existsSync(dest) && !files.includes(dest)) { skipped.push(dest); return; }
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
   files.push(dest);
 }
-function copyDirRec(src, destDir, files) {
+function copyDirRec(src, destDir, files, skipped) {
   for (const e of fs.readdirSync(src, { withFileTypes: true })) {
     const s = path.join(src, e.name);
     const d = path.join(destDir, e.name);
-    if (e.isDirectory()) copyDirRec(s, d, files);
-    else copyFileRec(s, d, files);
+    if (e.isDirectory()) copyDirRec(s, d, files, skipped);
+    else copyFileRec(s, d, files, skipped);
   }
 }
 /** Dọn các thư mục cha rỗng từ `start` lên tới (không gồm) `stopAt`. */
@@ -544,7 +546,7 @@ function placeEntry(src, dest, ctx) {
   const isDir = fs.statSync(src).isDirectory();
 
   if (!ctx.useLink) { // môi trường npm (node_modules) → copy thuần
-    if (isDir) copyDirRec(src, dest, ctx.files); else copyFileRec(src, dest, ctx.files);
+    if (isDir) copyDirRec(src, dest, ctx.files, ctx.skipped); else copyFileRec(src, dest, ctx.files, ctx.skipped);
     return;
   }
 
@@ -553,6 +555,13 @@ function placeEntry(src, dest, ctx) {
     for (const e of fs.readdirSync(src, { withFileTypes: true })) {
       placeEntry(path.join(src, e.name), path.join(dest, e.name), ctx);
     }
+    return;
+  }
+
+  // Bản cài trước của ta đã được gỡ từ manifest trước khi cài lại, nên thứ còn đó (không phải link,
+  // không do lần cài này đặt) là của người dùng/công cụ khác (vd .agents/skills dùng chung) → bỏ qua.
+  if (fs.existsSync(dest) && !isLinkPath(dest) && !ctx.files.includes(dest)) {
+    ctx.skipped.push(dest);
     return;
   }
 
@@ -567,7 +576,7 @@ function placeEntry(src, dest, ctx) {
       console.warn(`[aip] Không tạo được symlink (${err.code || err.message}); chuyển sang copy. ` +
         `Bản cài sẽ KHÔNG tự cập nhật khi rebuild.`);
     }
-    if (isDir) copyDirRec(src, dest, ctx.files); else copyFileRec(src, dest, ctx.files);
+    if (isDir) copyDirRec(src, dest, ctx.files, ctx.skipped); else copyFileRec(src, dest, ctx.files, ctx.skipped);
   }
 }
 
@@ -582,7 +591,7 @@ function installOne(provider, effSetArg, scope) {
   const root = scopeRoot(scope);
   const pbuild = path.join(BUILD_DIR, provider);
   if (!fs.existsSync(pbuild)) throw new Error(`Chưa build ${provider} (build/${provider} không có).`);
-  const ctx = { files: [], links: [], useLink: USE_LINK, warned: false, root };
+  const ctx = { files: [], links: [], skipped: [], useLink: USE_LINK, warned: false, root };
   const effSet = new Set(effSetArg); // LỌC thuần: chỉ đặt skill-dir có id trong tập (không tự ép core)
   const pluginActive = (id) => { for (const s of effSet) if (s.startsWith(`${id}/`)) return true; return false; };
   const agentSkills = new Map(loadPlugins().flatMap((p) => p.agents).map((a) => [a.id, a.skills]));
@@ -685,6 +694,10 @@ function installOne(provider, effSetArg, scope) {
         }
       }
     }
+  }
+  if (ctx.skipped.length) {
+    console.warn(`[aip] Bỏ qua ${ctx.skipped.length} đường dẫn đã tồn tại và không do aip cài (giữ nguyên, không đè):\n` +
+      ctx.skipped.map((f) => `  - ${path.relative(root, f)}`).join('\n'));
   }
   return { files: ctx.files, links: ctx.links };
 }
