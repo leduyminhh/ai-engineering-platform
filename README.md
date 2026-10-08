@@ -325,7 +325,7 @@ The `core` plugin ships two Claude Code `PreToolUse` hooks (`core/hooks/`; zero-
 
 | Rule | Tool | Decision | Covers |
 | --- | --- | --- | --- |
-| H1 | Bash, PowerShell | ask | `git push` to `main`/`master`/`dev`/`develop`, and `--force`/`--delete`/`--mirror`/`--all`/`--prune` pushes (compound commands, `git -C`, a preceding `cd`/`pushd`/`Set-Location`/`sl` target, quoted refs, flag clusters). A `cd` target containing `$`, `~`, a backtick, `-` or nothing cannot be resolved: a push with no refspec / `HEAD` / `@` asks |
+| H1 | Bash, PowerShell | ask | `git push` to `main`/`master`/`dev`/`develop`, and `--force`/`--delete`/`--mirror`/`--all`/`--prune` pushes (compound commands, `git -C`, a preceding `cd`/`chdir`/`pushd`/`Push-Location`/`Set-Location`/`sl` target (a `--` is skipped), quoted refs, flag clusters). A `cd` target containing `$`, `~`, a backtick, `-` or nothing, a `popd`/`Pop-Location`, or any command after `||` / `|` that follows a `cd` cannot be resolved: a push with no refspec / `HEAD` / `@` asks |
 | H2 | Bash, PowerShell | deny | `git commit -m` with non-ASCII text — use `git commit -F <file>` (see the `git-workflow` skill) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | secret files: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private keys `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (also `_sk` and any non-`.pub` suffix), and `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` only (symlinks and NTFS streams are resolved; [Unverified] 8.3 short names). `.env.example`/`.env.sample`/`.env.template` and `*.pub` are allowed |
 | H3 | Bash, PowerShell | ask | a command that names a secret file |
@@ -337,7 +337,7 @@ The scripts fail open: an internal error (empty stdin, broken JSON, missing fiel
 
 - Not caught: `bash -c "…"` / `eval`, escaped refs such as `ma\in`, `$'…'` literals, and secret files outside the list above (for example `credentials.csv`, `credentials.xml`, `credentials.toml`).
 - H5 guards write tools only — an agent that has Bash can still write elsewhere. Outside any git repository H5 falls back to the session cwd as the anchor.
-- Command parsing is POSIX-shaped. For the PowerShell tool a backtick is treated as a command separator, which fails toward `ask`.
+- Command parsing is POSIX-shaped. For the PowerShell tool a backtick line continuation and backtick escapes (``git push origin ` `` + newline + `main`, ``ma`in``) are normalized before parsing, so they do not hide a push; other PowerShell-only syntax (here-strings `@'…'@`, `Invoke-Expression`, `-EncodedCommand`) is not parsed and is not caught.
 - [Unverified: depends on ripgrep defaults] Grep on a directory path may read a non-hidden `prod.env` inside it; H3 checks the Grep `path`/`glob`, not the files the directory walk reaches.
 - [Unverified] whether a hook `ask` still prompts when the session runs in `bypassPermissions` mode. Run one manual smoke test (`git push origin main` in a scratch repo) before relying on H1 in that mode.
 - Cost: measured at about 0.2 s per guarded tool call on Windows (a Node process is spawned per call).

@@ -319,7 +319,7 @@ Plugin `core` mang hai hook `PreToolUse` cho Claude Code (`core/hooks/`; Node kh
 
 | Quy tắc | Tool | Quyết định | Phạm vi |
 | --- | --- | --- | --- |
-| H1 | Bash, PowerShell | ask | `git push` lên `main`/`master`/`dev`/`develop`, và push `--force`/`--delete`/`--mirror`/`--all`/`--prune` (lệnh ghép, `git -C`, đích của `cd`/`pushd`/`Set-Location`/`sl` đứng trước, ref có nháy, cụm cờ). Đích `cd` chứa `$`, `~`, backtick, `-` hoặc để trống thì không resolve được: push không refspec / `HEAD` / `@` sẽ hỏi |
+| H1 | Bash, PowerShell | ask | `git push` lên `main`/`master`/`dev`/`develop`, và push `--force`/`--delete`/`--mirror`/`--all`/`--prune` (lệnh ghép, `git -C`, đích của `cd`/`chdir`/`pushd`/`Push-Location`/`Set-Location`/`sl` đứng trước (bỏ qua `--`), ref có nháy, cụm cờ). Đích `cd` chứa `$`, `~`, backtick, `-` hoặc để trống, `popd`/`Pop-Location`, hay lệnh đứng sau `||` / `|` mà phía trước có `cd` thì không resolve được: push không refspec / `HEAD` / `@` sẽ hỏi |
 | H2 | Bash, PowerShell | deny | `git commit -m` có ký tự non-ASCII — dùng `git commit -F <file>` (xem skill `git-workflow`) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | file bí mật: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, khoá riêng `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (kể cả `_sk` và hậu tố bất kỳ khác `.pub`), và chỉ `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` (có giải symlink và NTFS stream; [Unverified] tên ngắn 8.3). `.env.example`/`.env.sample`/`.env.template` và `*.pub` được phép |
 | H3 | Bash, PowerShell | ask | lệnh nhắc tới file bí mật |
@@ -331,7 +331,7 @@ Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường
 
 - Không bắt được: `bash -c "…"` / `eval`, ref bị escape như `ma\in`, literal `$'…'`, và file bí mật ngoài danh sách trên (ví dụ `credentials.csv`, `credentials.xml`, `credentials.toml`).
 - H5 chỉ canh tool ghi — agent có Bash vẫn có thể ghi ra chỗ khác. Ngoài mọi repo git, H5 quay về cwd của phiên làm mốc neo.
-- Phân tích lệnh theo kiểu POSIX. Với tool PowerShell, dấu backtick được coi là dấu tách lệnh, nên lỗi nghiêng về `ask`.
+- Phân tích lệnh theo kiểu POSIX. Với tool PowerShell, nối dòng bằng backtick và escape backtick (``git push origin ` `` + xuống dòng + `main`, ``ma`in``) được chuẩn hoá trước khi phân tích nên không che được push; cú pháp riêng khác của PowerShell (here-string `@'…'@`, `Invoke-Expression`, `-EncodedCommand`) không được phân tích và không bị bắt.
 - [Unverified: phụ thuộc mặc định của ripgrep] Grep trên một đường dẫn thư mục có thể đọc `prod.env` không ẩn nằm trong đó; H3 chỉ kiểm `path`/`glob` của Grep, không kiểm các file mà việc duyệt thư mục chạm tới.
 - [Unverified] chưa rõ `ask` của hook còn hiện hộp thoại khi phiên chạy ở chế độ `bypassPermissions` hay không. Nên chạy thử thủ công một lần (`git push origin main` trong repo nháp) trước khi dựa vào H1 ở chế độ đó.
 - Chi phí: đo được khoảng 0,2 s mỗi lần gọi tool có hook trên Windows (mỗi lần spawn một tiến trình Node).

@@ -236,8 +236,31 @@ export default async function run({ ok, ctx }) {
       'F2: cd target chứa $/~/backtick/- hoặc trống, push không refspec/HEAD → ask; refspec tường minh feature → cho qua');
     // PowerShell: dấu backtick được coi như dấu tách đoạn (nghiêng về ask)
     ok(ps('Set-Location repo; git push origin HEAD', 'feature/x') === null, 'F1: PowerShell Set-Location theo nhánh thật của thư mục');
+    // Vòng sửa residual N3: alias Push-Location, `--`, và trạng thái cd không được mang qua `||` / `|`
+    const featOnRepo = { currentBranch: (d) => (d === repoDir ? 'feature/x' : 'main') };
+    const cdMain = (command) => bash.decide({ tool_name: 'Bash', cwd: root, tool_input: { command } }, featOnRepo);
+    ok(cd('Push-Location repo; git push')?.decision === 'ask' && cd('push-location repo && git push origin HEAD')?.decision === 'ask'
+      && cd('Push-Location -Path repo; git push')?.decision === 'ask' && cd('pushd -- repo && git push')?.decision === 'ask'
+      && cd('chdir repo && git push')?.decision === 'ask' && cd('Push-Location repo; git push origin feature/x') === null,
+      'N3: Push-Location/pushd/chdir (kể cả -Path, --) rồi git push → tra nhánh của repo đích');
+    ok(cd('cd -- repo && git push')?.decision === 'ask' && cd('Set-Location -- repo; git push')?.decision === 'ask' && cd('cd -- other && git push') === null,
+      'N3: `cd -- repo` bỏ qua `--`, không resolve thành thư mục "--"');
+    ok(cdMain('cd repo || git push')?.decision === 'ask' && cdMain('cd repo || git push origin HEAD')?.decision === 'ask'
+      && cdMain('cd repo | git push')?.decision === 'ask' && cdMain('cd repo && git push') === null
+      && cdMain('cd repo || git push origin feature/x') === null && cd('git status || git push') === null,
+      'N3: sau `||`/`|` cd có thể chưa xảy ra → không tin nhánh repo, push không refspec/HEAD → ask; `&&` và không cd → giữ nguyên');
+    ok(cd('popd && git push')?.decision === 'ask' && cd('Pop-Location; git push origin HEAD')?.decision === 'ask'
+      && cd('popd && git push origin feature/x') === null, 'N3: popd/Pop-Location không biết thư mục đích → như cd không resolve được');
+    // Vòng sửa residual N2: tool PowerShell chuẩn hoá nối dòng bằng backtick và escape backtick trước khi tách lệnh
+    const psMain = (command) => bash.decide({ tool_name: 'PowerShell', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x' });
+    ok(psMain('git push origin `\nmain')?.decision === 'ask' && psMain('git push origin `\r\n  main')?.decision === 'ask'
+      && psMain('git push origin ma`in')?.decision === 'ask' && psMain('git `push origin main')?.decision === 'ask'
+      && psMain('git push origin feature/x') === null && psMain('git push `\n  -u origin feature/x') === null,
+      'N2: PowerShell nối dòng bằng backtick / escape `ma`in` vẫn bị bắt như `git push origin main`');
+    ok(psMain('git commit -m "say `"hi`" sửa"')?.decision === 'deny' && psMain('cat .en`v')?.decision === 'ask',
+      'N2: PowerShell escape backtick không che commit -m có dấu hay file .env');
     // F5: gốc git theo file đích, không theo cwd của phiên
-    const w = path.resolve('/repo/.worktrees/x');
+    const w =path.resolve('/repo/.worktrees/x');
     const rootOf = (d) => (path.relative(w, d).startsWith('..') ? path.resolve('/repo') : w);
     const scopes = { 'spec-analyst': ['docs/**'] };
     const wt = (file) => files.decide({ tool_name: 'Write', cwd: '/repo', agent_type: 'spec-analyst', tool_input: { file_path: file } }, { scopes, rootOf, ignoreCase: false });

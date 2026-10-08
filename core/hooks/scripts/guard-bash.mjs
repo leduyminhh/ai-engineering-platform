@@ -17,8 +17,9 @@ function parse(cmd) {
   let cur = '';
   let has = false;
   let q = null;
+  let op = '';
   const endTok = () => { if (has) toks.push(cur); cur = ''; has = false; };
-  const endSeg = () => { endTok(); if (toks.length) segs.push(toks); toks = []; };
+  const endSeg = () => { endTok(); if (toks.length) { toks.op = op; op = ''; segs.push(toks); } toks = []; };
   for (let i = 0; i < cmd.length; i++) {
     const c = cmd[i];
     if (q) {
@@ -29,9 +30,16 @@ function parse(cmd) {
     }
     if (c === '\\' && (cmd[i + 1] === "'" || cmd[i + 1] === '"')) { cur += cmd[i + 1]; has = true; i++; continue; }
     if (c === '"' || c === "'") { q = c; has = true; continue; }
-    if (c === '\n') { endSeg(); continue; }
+    if (c === '\n') { endSeg(); if (op !== '||' && op !== '|') op = ';'; continue; }
     if (/\s/.test(c)) { endTok(); continue; }
-    if (';&|()`'.includes(c)) { endSeg(); continue; }
+    if (';&|()`'.includes(c)) {
+      endSeg();
+      // `||` / `|` giữ tới đoạn kế: lệnh sau đó có thể chạy khi `cd` phía trước chưa xảy ra.
+      if (c === '|' && cmd[i + 1] === '|') op = '||';
+      else if (c === '|' && op !== '||') op = '|';
+      else if (c !== '|' && op !== '||' && op !== '|') op = c;
+      continue;
+    }
     cur += c;
     has = true;
   }
@@ -41,9 +49,14 @@ function parse(cmd) {
 
 // Cách tách thô (không hiểu nháy) của bản cũ: chạy song song với parse() vì nháy lẻ (heredoc, #, \') làm parse() nuốt các lệnh phía sau.
 function naiveSegments(cmd) {
-  return cmd.split(/&&|\|\||;|\n|\|/)
-    .map((x) => (x.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((w) => w.replace(/^(["'])(.*)\1$/s, '$2')))
-    .filter((t) => t.length);
+  const out = [];
+  let op = '';
+  cmd.split(/(&&|\|\||;|\n|\|)/).forEach((x, k) => {
+    if (k % 2) { if (op !== '||' && op !== '|') op = x; return; }
+    const t = (x.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((w) => w.replace(/^(["'])(.*)\1$/s, '$2'));
+    if (t.length) { t.op = op; op = ''; out.push(t); }
+  });
+  return out;
 }
 
 function gitCmd(t) {
@@ -110,20 +123,34 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false) {
   return hit ? `push vào nhánh bảo vệ "${hit}"` : null;
 }
 
-const CD_CMDS = new Set(['cd', 'chdir', 'pushd', 'set-location', 'sl']);
+const CD_CMDS = new Set(['cd', 'chdir', 'pushd', 'push-location', 'set-location', 'sl']);
+const POP_CMDS = new Set(['popd', 'pop-location']);
 
 // Theo dõi thư mục làm việc qua các đoạn theo thứ tự: `cd repo && git push` phải tra nhánh của repo, không phải của cwd phiên.
 function withDirs(segs, cwd) {
   let dir = cwd;
   let unres = false;
+  let cdSeen = false;
   return segs.map((t) => {
-    if (CD_CMDS.has(String(t[0]).toLowerCase())) {
-      const arg = t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '/d' || x === '/D'));
+    const name = String(t[0]).toLowerCase();
+    // Sau `||` / `|` lệnh cd phía trước có thể chưa chạy (hoặc chạy ở tiến trình con) → không tin thư mục đang theo dõi.
+    if (cdSeen && (t.op === '||' || t.op === '|')) unres = true;
+    if (CD_CMDS.has(name)) {
+      cdSeen = true;
+      const arg = t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
       if (arg === undefined || /[$~`]|^-$/.test(arg)) unres = true;
       else { dir = path.resolve(dir, arg); if (path.isAbsolute(arg)) unres = false; }
+    } else if (POP_CMDS.has(name)) {
+      cdSeen = true;
+      unres = true;
     }
     return { t, gc: gitCmd(t), dir, unres };
   }).filter((x) => x.gc);
+}
+
+// PowerShell: backtick là ký tự escape/nối dòng, không phải dấu tách lệnh; chuẩn hoá trước khi tách để `ma`in` hay nối dòng không che push.
+function psNormalize(cmd) {
+  return cmd.replace(/`\r?\n/g, ' ').replace(/`([\s\S])/g, (_, c) => (c === '"' || c === "'" ? '\\' + c : c));
 }
 
 function defaultBranch(cwd) {
@@ -155,8 +182,9 @@ function hasCommitWithMessageFlag(cmd) {
 }
 
 export function decide(input, { currentBranch = defaultBranch } = {}) {
-  const cmd = String(input?.tool_input?.command ?? '');
-  if (!cmd) return null;
+  const raw = String(input?.tool_input?.command ?? '');
+  if (!raw) return null;
+  const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw;
   const cwd = input?.cwd || '.';
   const { segs, unclosed } = parse(cmd);
   const parsed = withDirs(segs, cwd);
@@ -169,7 +197,7 @@ export function decide(input, { currentBranch = defaultBranch } = {}) {
     const why = gc.sub === 'push' ? pushReason(t, gc, dir, currentBranch, unres) : null;
     if (why) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
   }
-  if (SECRET.test(cmd)) return { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
+  if (SECRET.test(cmd) || SECRET.test(raw)) return { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
   return null;
 }
 
