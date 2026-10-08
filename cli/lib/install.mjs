@@ -58,6 +58,7 @@ function symlinkType(isDir) {
 }
 /** true nếu `p` là symlink HOẶC junction (readlink chạy được cho cả hai; ném với dir thật). */
 function isLinkPath(p) { try { fs.readlinkSync(p); return true; } catch { return false; } }
+function linksTo(link, src) { try { return path.resolve(path.dirname(link), fs.readlinkSync(link)) === path.resolve(src); } catch { return false; } }
 
 /** Gỡ một LINK an toàn: unlink (symlink) / rmdir (junction) — KHÔNG xóa nội dung target. */
 function removeLinkAndPruneEmpty(link, stopAt) {
@@ -558,9 +559,9 @@ function placeEntry(src, dest, ctx) {
     return;
   }
 
-  // Bản cài trước của ta đã được gỡ từ manifest trước khi cài lại, nên thứ còn đó (không phải link,
-  // không do lần cài này đặt) là của người dùng/công cụ khác (vd .agents/skills dùng chung) → bỏ qua.
-  if (fs.existsSync(dest) && !isLinkPath(dest) && !ctx.files.includes(dest)) {
+  // Bản cài trước của ta đã được gỡ từ manifest trước khi cài lại, nên thứ còn đó (file/thư mục thật, hoặc link
+  // không trỏ về src này và không do lần cài này đặt) là của người dùng/công cụ khác (vd .agents/skills dùng chung) → bỏ qua.
+  if (isLinkPath(dest) ? !ctx.links.includes(dest) && !linksTo(dest, src) : fs.existsSync(dest) && !ctx.files.includes(dest)) {
     ctx.skipped.push(dest);
     return;
   }

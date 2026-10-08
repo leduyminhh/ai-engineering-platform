@@ -828,6 +828,37 @@ try {
   uninstall({ providers: 'codex', scope: 'project' });
   ok(fs.readFileSync(sentinel, 'utf8') === 'SENTINEL-FOREIGN', 'codex: uninstall không xoá file lạ');
   fs.rmSync(TMP_FG, { recursive: true, force: true });
+  // Symlink/junction lạ trùng tên skill của ta: không thay thế, có cảnh báo (F4).
+  {
+    const TMP_FL = mkTmp('cwf-codex-foreignlink-');
+    process.env.AIE_INSTALL_ROOT = TMP_FL;
+    const target = path.join(TMP_FL, 'shared-src', 'git-workflow');
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, 'SKILL.md'), 'SENTINEL-FOREIGN-LINK');
+    const linkPath = path.join(TMP_FL, '.agents/skills/git-workflow');
+    fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+    let linked = false;
+    try { fs.symlinkSync(target, linkPath, process.platform === 'win32' ? 'junction' : 'dir'); linked = true; } catch { /* máy không cho tạo symlink → bỏ ca này */ }
+    if (linked) {
+      const w = [];
+      const ow = console.warn;
+      console.warn = (...x) => w.push(x.join(' '));
+      try {
+        const fa = parse(['install', '--provider', 'codex', '--plugin', 'core']);
+        install({ providers: fa.provider, plugins: fa.plugin, skills: fa.skill, scope: 'project', mode: fa.mode });
+      } finally { console.warn = ow; }
+      ok(fs.lstatSync(linkPath).isSymbolicLink() && path.resolve(fs.readlinkSync(linkPath)) === path.resolve(target),
+        'codex: symlink/junction lạ trùng đường skill không bị thay thế');
+      ok(fs.readFileSync(path.join(target, 'SKILL.md'), 'utf8') === 'SENTINEL-FOREIGN-LINK', 'codex: đích của link lạ không bị đụng');
+      ok(w.some((x) => x.includes('.agents') && x.includes('git-workflow')), 'codex: cảnh báo nêu đường link lạ đã bỏ qua');
+      const lm = JSON.parse(fs.readFileSync(path.join(TMP_FL, '.ai-engineering/manifest.json'), 'utf8'));
+      const le = lm.installs.find((e) => e.provider === 'codex');
+      ok(![...le.files, ...le.links].some((r) => r.split('\\').join('/').endsWith('skills/git-workflow')), 'codex: link lạ không được ghi vào manifest');
+      uninstall({ providers: 'codex', scope: 'project' });
+      ok(fs.lstatSync(linkPath).isSymbolicLink() && fs.existsSync(path.join(target, 'SKILL.md')), 'codex: uninstall không gỡ link lạ');
+    }
+    fs.rmSync(TMP_FL, { recursive: true, force: true });
+  }
   process.env.AIE_INSTALL_ROOT = TMP_CX;
 
   // Agent TOML vẫn ở .codex/agents (docs: ~/.codex/agents, .codex/agents).
