@@ -101,13 +101,15 @@ export default async function run({ ok, ctx }) {
       const run = (...args) => { try { return { code: 0, out: execFileSync(process.execPath, [ccm, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) }; } catch (e) { return { code: e.status, out: `${e.stdout || ''}${e.stderr || ''}` }; } };
       try {
         const good = path.join(tmp37, 'ok.txt'); fs.writeFileSync(good, 'feat(x): add y\n\nChanged:\n- Thêm tính năng có dấu\n');
-        const bom = path.join(tmp37, 'bom.txt'); fs.writeFileSync(bom, '﻿feat(x): add y\n\nThêm\n');
+        const bom = path.join(tmp37, 'bom.txt'); fs.writeFileSync(bom, '\uFEFFfeat(x): add y\n\nThêm\n');
         const bad = path.join(tmp37, 'bad.txt'); fs.writeFileSync(bad, Buffer.from([0x66, 0x65, 0x61, 0x74, 0x3a, 0x20, 0x78, 0x0a, 0x0a, 0xe1, 0xba, 0x0a]));
         const hdr = path.join(tmp37, 'hdr.txt'); fs.writeFileSync(hdr, 'Thêm tính năng\n\nThân có dấu\n');
         ok(run(good).code === 0, 'check-commit-message: file hợp lệ → exit 0');
         ok(run(bom).code === 1 && /BOM/.test(run(bom).out), 'check-commit-message: BOM → exit 1');
         ok(run(bad).code === 1, 'check-commit-message: UTF-8 hỏng → exit 1');
         ok(run(hdr).code === 1 && /header/i.test(run(hdr).out), 'check-commit-message: header sai dạng → exit 1');
+        const coa = path.join(tmp37, 'coa.txt'); fs.writeFileSync(coa, 'feat(x): add y\n\nChanged:\n- Thêm có dấu\n\nCo-Authored-By: X <x@y>\n');
+        ok(run(coa).code === 1 && /Co-Authored-By/.test(run(coa).out), 'check-commit-message: có Co-Authored-By → exit 1');
         ok(run().code === 2, 'check-commit-message: thiếu tham số → exit 2');
       } finally { fs.rmSync(tmp37, { recursive: true, force: true }); }
     }

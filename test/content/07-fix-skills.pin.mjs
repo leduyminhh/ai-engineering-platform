@@ -165,13 +165,6 @@ export default async function run({ ok, ctx }) {
       ok(flat18(fixAgent(p)).includes('review/re-scan lại do bước sau của workflow'),
         `${p}-fixer: Report oracle (b)/(e) chỉ ghi file:line đã sửa, review/re-scan thuộc bước sau của workflow`);
     }
-    // Khối agent trong spec là bản hiện hành, không trôi khỏi file thật (LF, bỏ xuống dòng cuối).
-    {
-      const spec18 = fs.readFileSync(path.join(REPO_ROOT, 'docs', 'superpowers', 'specs', '2026-09-30-fixer-agent-design.md'), 'utf8');
-      const block18 = (spec18.split('### 4.2')[1] ?? '').match(/```markdown\n([\s\S]*?)\n```/)?.[1] ?? '';
-      const lf18 = (t) => t.replace(/\r\n/g, '\n').trimEnd();
-      ok(block18.length > 0 && lf18(block18) === lf18(fixAgent('backend')),
-        'spec fixer §4.2: khối agent giống hệt từng byte plugins/backend/agents/backend-fixer.md');
-    }
+    // Spec fixer-agent cũ là tài liệu lịch sử, không ghim byte với agent hiện tại.
   }
 }

@@ -15,8 +15,8 @@ export function checkSkillBody(body) {
   return SKILL_HEADINGS.filter(([, re]) => !re.test(text)).map(([h]) => `thiếu heading "## ${h}"`);
 }
 
-// Giới hạn của Agent Skills (platform.claude.com, mục "Skill structure"); bộ zip Cowork được upload lên claude.ai.
-export const DESCRIPTION_MAX = 1024;
+// Trần của repo thấp hơn trần 1.536 ký tự của Claude vì khối "Dùng khi" ngắn là đủ, và index Antigravity/Codex chỉ lấy ~200 ký tự đầu.
+export const DESCRIPTION_MAX = 500;
 export const NOT_FOR = 'Không dùng khi';
 const GENERIC = new Set(['skill', 'workflow']);
 

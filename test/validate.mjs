@@ -18,7 +18,7 @@ import { buildContext } from './context.mjs';
 
 const argv = process.argv.slice(2);
 const h = createHarness(argv);
-const ctx = await buildContext({ build: argv.includes('--build'), fails: h.fails });
+if (h.onlyError) { console.error(h.onlyError); process.exit(2); }
 const here = path.dirname(fileURLToPath(import.meta.url));
 const modules = [];
 for (const dir of ['contract', 'content']) {
@@ -29,6 +29,8 @@ if (selected.length === 0) {
   console.error(`--only ${argv.filter((_, i) => argv[i - 1] === '--only').join(', ')}: không có module nào khớp`);
   process.exit(2);
 }
+// Chọn module và thoát sớm TRƯỚC khi build để lỗi tham số không tốn một lượt build.
+const ctx = await buildContext({ build: argv.includes('--build'), fails: h.fails });
 for (const rel of selected) {
   const mod = await import(pathToFileURL(path.join(here, rel)).href);
   await mod.default({ ok: h.ok, ctx });

@@ -20,9 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SKILL.md` must have `## Quy trình…` and `## Ranh giới an toàn…` headings (`cli/lib/conventions.mjs`);
   headings normalised in 15 skills and the 4 `*-init` skills gained a safety section built from rules
   they already stated.
-- Skill and workflow `description`s are at most 1024 characters (Agent Skills limit), end with
+- Skill and workflow `description`s are at most 500 characters, end with
   `Không dùng khi … → <id>`, and no quoted trigger is shared verbatim between two skills; 22
   descriptions were rewritten to fit (12 were already over the limit) with their trigger lists kept.
+- Skill descriptions rewritten to a fixed template (action → "Dùng khi" triggers → "Không dùng khi → id"),
+  ≤ 450 chars; agent descriptions ≤ 260 — always-on context drops noticeably.
+- Skills no longer force-load the principles skills on every call; a 3-line principles digest is
+  embedded instead (full text on demand).
+- `workflows` preamble explains `∥`; the orchestrator prints the install command per install mode;
+  db-change/incident/release list extra plugins.
+- git-workflow ships `scripts/check-commit-message.mjs` (Node) beside the PowerShell check, and it also
+  rejects a `Co-Authored-By:` trailer; `.sh` helpers moved under each skill's `scripts/`.
+- Validator split into `test/contract/` and `test/content/`; `node test/validate.mjs --only <name>` runs one
+  group (a missing value is a usage error, checked before any build).
+- All plugins bumped MINOR (core 1.2.0, backend 1.6.0, frontend 1.8.0, engineering 1.5.0, ops 1.3.0,
+  data 1.4.0, workflows 1.2.0); `plugins/_versions.lock.json` refreshed.
 - Workflow drift guards: the five fixed template lines (`WF_ANCHORS`) must appear in every
   `WORKFLOW.md`, and every quoted Registry signal must appear in that workflow's `description`.
 - Forks with their own skills: `npm run validate` now fails a `SKILL.md` without `## Quy trình…` /

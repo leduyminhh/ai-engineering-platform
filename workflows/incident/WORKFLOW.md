@@ -1,6 +1,6 @@
 ---
 name: workflow-incident
-description: "Workflow điều phối xử lý sự cố production: triage & blast radius, thu evidence log/metric/trace/deploy, đặt và kiểm chứng giả thuyết, đề xuất mitigation cho người dùng thực hiện (agent không tác động production), xác minh phục hồi, viết RCA/postmortem, rồi commit tài liệu qua git-workflow. Dùng workflow NÀY khi người dùng muốn \"sự cố production\", \"prod down\", \"incident\", \"hệ thống chậm bất thường\", \"alert\" — kể cả khi không nói chính xác chữ \"workflow\". Không dùng khi lỗi tái hiện được ở local, production vẫn ổn → workflow-bugfix."
+description: "Điều phối xử lý sự cố production: triage & blast radius, thu evidence, kiểm chứng giả thuyết, đề xuất mitigation cho người dùng thực hiện (agent không tác động production), xác minh phục hồi, RCA/postmortem. Dùng khi người dùng muốn \"sự cố production\", \"prod down\", \"incident\", \"hệ thống chậm bất thường\", \"alert\". Không dùng khi lỗi tái hiện được ở local, production vẫn ổn → workflow-bugfix."
 order: 10
 title: "Incident — triage, mitigation, phục hồi, RCA"
 kind: workflow

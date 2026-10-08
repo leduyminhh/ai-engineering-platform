@@ -53,11 +53,7 @@ export default async function run({ ok, ctx }) {
       'data-migration-writer: Flyway forward-only → migration bù là văn bản compensating_sql trong report, không tạo file');
     ok(dmwScope.includes('do chính lượt workflow này tạo') && dmwScope.includes('đã có trên base branch'),
       'data-migration-writer: được sửa file do chính lượt workflow tạo; cấm sửa file đã có trên base branch');
-    const dmwSpec = fs.readFileSync(path.join(REPO_ROOT, 'docs', 'superpowers', 'specs', '2026-10-01-data-migration-writer-design.md'), 'utf8')
-      .replace(/\r\n/g, '\n');
-    const dmwBlock = dmwSpec.split('### 3.2')[1]?.split('```markdown\n')[1]?.split('\n```')[0] ?? '';
-    ok(dmwBlock.length > 0 && dmwBlock.trimEnd() === dmw.replace(/\r\n/g, '\n').trimEnd(),
-      'data-migration-writer: khối agent trong spec §3.2 giống hệt file agent');
+    // Spec data-migration-writer cũ là tài liệu lịch sử, không ghim byte với agent hiện tại.
     const dbc22 = wf22('workflow-db-change');
     const dS2 = step22(dbc22, 2), dS3 = step22(dbc22, 3), dS6 = step22(dbc22, 6), dS8 = step22(dbc22, 8);
     ok(field22(dS2.body, 'Thực hiện').includes('skill `data-db-migration`') && field22(dS2.body, 'Hành động').includes('change-patterns')

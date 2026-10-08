@@ -318,8 +318,11 @@ enforced by `test/validate.mjs`).
   no manifest list to update. Put shipped reference files under `skills/<skill>/references/`.
   The body must have `## Quy trình…` and `## Ranh giới an toàn…` H2 headings (a suffix after a
   space is allowed), enforced by `test/validate.mjs`.
-  The `description` is at most 1024 characters, ends with `Không dùng khi <case> → <id>.`
-  (real skill/workflow/agent ids), and must not repeat another skill's quoted trigger.
+  The `description` follows a fixed template: one action sentence (≤ 200 chars), then
+  `Dùng khi người dùng muốn "…", "…", "…"` (3–5 quoted triggers), then
+  `Không dùng khi <case> → <id>.` (real skill/workflow/agent ids) — at most 500 characters
+  (target 450), no boilerplate, and no quoted trigger repeated from another skill. Agent
+  descriptions are ≤ 260 characters and end with `Dùng khi …`.
 - **New provider behavior** → edit `adapters/<provider>/adapter.mjs`; keep it a pure
   `build(plugins, { outDir, marketplace, core }) -> fileEntry[]` where an entry is
   `{path, content}` | `{path, copyFrom}` | `{path, copyDir}`.

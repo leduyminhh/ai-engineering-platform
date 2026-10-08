@@ -11,9 +11,10 @@ export function checkCommitMessage(buf) {
   const errs = [];
   if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) errs.push('file có BOM — ghi lại UTF-8 không BOM');
   const text = buf.toString('utf8');
-  if (text.includes('�')) errs.push('UTF-8 hỏng (có ký tự thay thế U+FFFD) — kiểm encoding khi ghi file');
+  if (text.includes('\uFFFD')) errs.push('UTF-8 hỏng (có ký tự thay thế U+FFFD) — kiểm encoding khi ghi file');
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   if (!HEADER.test(lines[0] || '')) errs.push(`header không đúng dạng "type(scope): summary": "${(lines[0] || '').slice(0, 60)}"`);
+  if (/^co-authored-by:/im.test(text)) errs.push('có dòng Co-Authored-By — bỏ dòng này (quy tắc dự án)');
   const body = lines.slice(1).join('\n').trim();
   if (body && !DIACRITIC.test(body)) errs.push('body không có ký tự tiếng Việt có dấu — dấu đã bị mất?');
   return errs;

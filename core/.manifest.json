@@ -2,5 +2,5 @@
   "id": "core",
   "name": "Core — Nguyên tắc nền tảng Cowork→Code",
   "description": "Nguyên tắc nền tảng dùng chung (4 nguyên tắc cốt lõi, 3 tầng tài liệu, ranh giới an toàn, nguồn sự thật) cho mọi plugin workflow Cowork → Code. Mọi plugin phụ thuộc core này. Dùng khi bắt đầu bất kỳ skill nào của bộ hoặc khi cần đối chiếu ranh giới an toàn nền.",
-  "version": "1.1.2"
+  "version": "1.2.0"
 }

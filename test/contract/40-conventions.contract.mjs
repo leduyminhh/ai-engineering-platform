@@ -68,8 +68,8 @@ export default async function run({ ok, ctx }) {
       'checkDescription: trỏ vào chính nó');
     ok(checkDescription('Làm X. KHÔNG thuộc pipeline bắt buộc; gọi khi cần. Không dùng khi Y → a-b.', known26, 'c-d')
       .some((e) => e.includes('pipeline')), 'checkDescription: còn câu pipeline');
-    ok(checkDescription(`${'x'.repeat(1020)}. Không dùng khi Y → a-b.`, known26, 'c-d').some((e) => e.includes('1024')),
-      'checkDescription: quá 1024 ký tự');
+    ok(checkDescription(`${'x'.repeat(490)}. Không dùng khi Y → a-b.`, known26, 'c-d').some((e) => e.includes('500')),
+      'checkDescription: quá 500 ký tự');
     ok(checkDescription('Làm X "PR #". Không dùng khi Y → a-b.', known26, 'c-d').some((e) => e.includes('" #"')),
       'checkDescription: chứa " #" (YAML hiểu là comment khi ghi plain scalar)');
     ok(JSON.stringify(notForTargets('Làm X v.v. Không dùng khi Y, v.v. → a-b; Z →c-d; W → `workflow-x`.'))
@@ -263,7 +263,7 @@ export default async function run({ ok, ctx }) {
     ok(checkAgentDescription(`${'a'.repeat(270)}. Dùng khi x.`).some((e) => e.includes(`${AGENT_DESCRIPTION_MAX}`)), 'checkAgentDescription: quá dài → lỗi');
     ok(checkAgentDescription('Agent làm X. Không được: a, b, c.').some((e) => e.includes('Dùng khi')), 'checkAgentDescription: thiếu "Dùng khi" → lỗi');
 
-    const STYLE_READY = new Set(['backend', 'data', 'frontend', 'ops', 'core', 'engineering']); // Task 8 thay bằng tất cả
+    const STYLE_READY = new Set([core.id, ...plugins.map((p) => p.id)]);
     const AGENT_STYLE_READY = new Set(allAgents.map((a) => a.id));
     for (const p of [core, ...plugins]) {
       if (!STYLE_READY.has(p.id)) continue;
@@ -285,6 +285,12 @@ export default async function run({ ok, ctx }) {
       const errs = checkAgentDescription(a.description);
       ok(errs.length === 0, `${a.id}: description agent theo mẫu Phase 1${errs.length ? ' — ' + errs.join('; ') : ''}`);
     }
+    // Ngân sách tổng: mô tả skill/agent luôn nằm trong context, nên tăng dần sẽ bị chặn ở đây thay vì lộ ra khi đo.
+    const skillCount35 = [core, ...plugins].reduce((n, p) => n + p.stages.length, 0);
+    const budget35 = [core, ...plugins].flatMap((p) => p.stages).reduce((n, s) => n + [...s.description].length, 0);
+    ok(budget35 <= skillCount35 * 450, `ngân sách description skill: ${budget35} ký tự (≤ ${skillCount35 * 450})`);
+    const abudget35 = allAgents.reduce((n, a) => n + [...a.description].length, 0);
+    ok(abudget35 <= allAgents.length * AGENT_DESCRIPTION_MAX, `ngân sách description agent: ${abudget35} ký tự (≤ ${allAgents.length * AGENT_DESCRIPTION_MAX})`);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
