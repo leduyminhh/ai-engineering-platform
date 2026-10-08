@@ -92,4 +92,58 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   }
+
+  // Task 2: passthrough skill theo provider
+  {
+    const { claudeAdapter, codexAdapter, cursorAdapter, fxCore, fxMk, byPath, checkPassthroughTypes, SOURCE_KEYS } = ctx;
+    ok(SOURCE_KEYS.skill.includes('disable-model-invocation') && SOURCE_KEYS.workflow.includes('argument-hint')
+      && !SOURCE_KEYS.skill.includes('when_to_use'), 'SOURCE_KEYS: skill nhận khoá passthrough (không có when_to_use), workflow nhận argument-hint');
+    ok(checkPassthroughTypes({ 'argument-hint': ['PR'] }).length === 1, 'checkPassthroughTypes: argument-hint là list (quên quote "[...]") → lỗi');
+    ok(checkPassthroughTypes({ 'disable-model-invocation': 'true' }).length === 1, 'checkPassthroughTypes: cờ boolean viết dạng chuỗi → lỗi');
+    ok(checkPassthroughTypes({ 'allowed-tools': ['Read'], paths: 'src/**', metadata: { a: 1 }, effort: 'high' }).length === 0,
+      'checkPassthroughTypes: kiểu hợp lệ → không lỗi');
+    ok(checkPassthroughTypes({ effort: 'huge' }).length === 1, 'checkPassthroughTypes: effort ngoài low|medium|high|xhigh|max → lỗi');
+    const stage = { id: 'fx-init', title: '', description: 'Fixture init. Dùng khi người dùng muốn "a", "b", "c". Không dùng khi x → fx-other.',
+      body: '## Quy trình\nx\n', passthrough: { 'argument-hint': '[path]', 'disable-model-invocation': true, paths: ['src/**'] },
+      assets: [], fileAssets: [], dirAssets: [], assetsDir: '' };
+    const fx = { id: 'fx', name: 'Fx', description: 'Fx', version: '1.0.0', shared: { principles: 'P\n' }, stages: [stage], agents: [] };
+    const cl = byPath(claudeAdapter.build([fx], { marketplace: fxMk, core: fxCore }));
+    const clMd = cl.get('plugins/fx/skills/fx-init/SKILL.md').content;
+    ok(clMd.includes('argument-hint: "[path]"') && clMd.includes('disable-model-invocation: true') && clMd.includes('paths:\n  - src/**'),
+      'claude skill: chiếu argument-hint, disable-model-invocation, paths');
+    ok(cl.get('plugins/fx/skills/fx-principles/SKILL.md').content.includes('user-invocable: false')
+      && cl.get('plugins/core/skills/principles/SKILL.md').content.includes('user-invocable: false'),
+      'claude: skill principles (core + plugin) có user-invocable: false');
+    const cw = byPath(claudeAdapter.build([fx], { marketplace: fxMk, core: fxCore, skillKeys: [] }));
+    const cwMd = cw.get('plugins/fx/skills/fx-init/SKILL.md').content;
+    ok(!cwMd.includes('argument-hint') && !cw.get('plugins/core/skills/principles/SKILL.md').content.includes('user-invocable'),
+      'claude skillKeys: [] (gói Cowork): chỉ name + description');
+    const cx = byPath(codexAdapter.build([fx], { core: fxCore }));
+    const cxFm = cx.get('fx/skills/fx-init/SKILL.md').content.split('\n---')[0];
+    ok(!cxFm.includes('argument-hint') && !cxFm.includes('disable-model-invocation'), 'codex skill: chỉ name + description');
+    const cu = byPath(cursorAdapter.build([fx], { core: fxCore }));
+    const cuMd = cu.get('fx/.cursor/skills/fx-init/SKILL.md').content;
+    ok(cuMd.includes('disable-model-invocation: true') && cuMd.includes('paths:') && !cuMd.includes('argument-hint'),
+      'cursor skill: chỉ paths, disable-model-invocation, metadata');
+  }
+
+  {
+    const { fs, path, claudeDir, plugins } = ctx;
+    if (fs.existsSync(claudeDir)) {
+      const fmOf = (p) => (fs.readFileSync(p, 'utf8').match(/^---\n([\s\S]*?)\n---/) || ['', ''])[1];
+      for (const p of plugins) for (const s of p.stages.filter((x) => x.id.endsWith('-init'))) {
+        ok(/^disable-model-invocation: true$/m.test(fmOf(path.join(claudeDir, 'plugins', p.id, 'skills', s.id, 'SKILL.md'))),
+          `build claude ${s.id}: disable-model-invocation: true (D2)`);
+      }
+      for (const p of plugins) {
+        const f = path.join(claudeDir, 'plugins', p.id, 'skills', `${p.id}-principles`, 'SKILL.md');
+        if (fs.existsSync(f)) ok(/^user-invocable: false$/m.test(fmOf(f)), `build claude ${p.id}-principles: user-invocable: false`);
+      }
+      const hinted = plugins.flatMap((p) => p.stages.filter((s) => s.passthrough['argument-hint']).map((s) => [p.id, s.id]));
+      ok(hinted.length >= 9, `có ≥ 9 skill khai báo argument-hint (=${hinted.length})`);
+      for (const [pid, sid] of hinted) {
+        ok(/^argument-hint: ".+"$/m.test(fmOf(path.join(claudeDir, 'plugins', pid, 'skills', sid, 'SKILL.md'))), `build claude ${sid}: argument-hint`);
+      }
+    }
+  }
 }

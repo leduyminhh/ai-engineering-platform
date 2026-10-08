@@ -10,7 +10,7 @@
 // HYBRID: core là MỘT plugin riêng; mỗi domain plugin khai báo "dependencies": ["<mkt>:core"]
 // nên khi /plugin install <id> thì Claude Code tự cài kèm core (lấy đúng logic nền tảng).
 // Mỗi giai đoạn = 1 skill (auto-discover trong skills/), gọi theo namespace /<plugin-id>:<skill>.
-import { skillFiles, frontmatter, principlesDigest } from '../_shared/lib.mjs';
+import { skillFiles, frontmatter, principlesDigest, PROVIDER_SKILL_KEYS } from '../_shared/lib.mjs';
 import { claudeAgentMd, workflowPreamble } from '../_shared/agents.mjs';
 
 function pluginJson(p, { dependencies, author } = {}) {
@@ -46,13 +46,17 @@ function marketplaceJson(entries, marketplace) {
   ) + '\n';
 }
 
+// Principles là nền cho skill khác, không phải lệnh người dùng gõ; model vẫn gọi được.
+const principlesHidden = (skillKeys) => (skillKeys.includes('user-invocable') ? [['user-invocable', false]] : []);
+
 // CORE plugin = skill "principles" (nguyên tắc nền tảng) + các SKILL DÙNG CHUNG từ
 // core/skills/ (vd git-workflow) — cài plugin nào cũng kéo theo qua dependency "core".
-function coreFiles(core, { author } = {}) {
+function coreFiles(core, { author, skillKeys = [] } = {}) {
   const skill =
     frontmatter([
       ['name', 'principles'],
       ['description', core.description],
+      ...principlesHidden(skillKeys),
     ]) +
     '\n\n' +
     core.principles.replace(/^\n+/, '');
@@ -63,7 +67,7 @@ function coreFiles(core, { author } = {}) {
   // Pointer 2 dạng (phẳng + plugin namespaced) giống stage skill của domain plugin.
   const note = principlesDigest({ provider: 'claude' });
   for (const stage of core.stages || []) {
-    files.push(...skillFiles(stage, 'plugins/core/skills', note));
+    files.push(...skillFiles(stage, 'plugins/core/skills', note, { keys: skillKeys }));
   }
   return files;
 }
@@ -71,7 +75,7 @@ function coreFiles(core, { author } = {}) {
 // Nguyên tắc RIÊNG của plugin (shared/principles.md) thành một skill discoverable cho Claude.
 // cursor/codex/antigravity đã inline principles vào rules/AGENTS.md; claude thì KHÔNG, nên nếu
 // không làm bước này phần principles đặc thù lĩnh vực sẽ không tới Claude. Bổ sung cho skill core.
-function pluginPrinciplesFiles(p) {
+function pluginPrinciplesFiles(p, skillKeys = []) {
   const body = ((p.shared && p.shared.principles) || '').replace(/^\n+/, '');
   if (!body.trim()) return [];
   const name = `${p.id}-principles`;
@@ -79,14 +83,14 @@ function pluginPrinciplesFiles(p) {
     `Nguyên tắc riêng của plugin ${p.id} (phân tầng, ranh giới an toàn, nguồn sự thật đặc thù), ` +
     `bổ sung cho skill core principles. Dùng khi bắt đầu bất kỳ skill ${p.id}-* nào hoặc trước khi ` +
     `quyết định điều gì chạm ranh giới an toàn của plugin ${p.id}.`;
-  const skill = frontmatter([['name', name], ['description', description]]) + '\n\n' + body;
+  const skill = frontmatter([['name', name], ['description', description], ...principlesHidden(skillKeys)]) + '\n\n' + body;
   return [{ path: `plugins/${p.id}/skills/${name}/SKILL.md`, content: skill }];
 }
 
 // Plugin `workflows` gọi xuyên nhiều plugin. Claude coi `dependencies` là "phải enabled" nên chỉ khai
 // báo hard-dependency tường minh từ manifest (thiếu một plugin lẻ như `data` không được làm hỏng cả bộ);
 // plugin còn lại được nêu trong preamble từng workflow. Không có hardDependencies → union như trước.
-function workflowFiles(wfs, plugins, author) {
+function workflowFiles(wfs, plugins, author, skillKeys) {
   const agentsById = new Map(plugins.flatMap((p) => p.agents || []).map((a) => [a.id, a]));
   const present = new Set(plugins.map((p) => p.id));
   const pluginsOf = (wf) => {
@@ -101,7 +105,7 @@ function workflowFiles(wfs, plugins, author) {
   const files = [{ path: 'plugins/workflows/.claude-plugin/plugin.json', content: pluginJson(wfs, { dependencies, author }) }];
   for (const wf of wfs.stages) {
     const soft = hard ? [...pluginsOf(wf)].filter((p) => !hard.includes(p)).sort() : [];
-    files.push(...skillFiles(wf, 'plugins/workflows/skills', workflowPreamble(wf, agentsById, 'claude', { softDeps: soft })));
+    files.push(...skillFiles(wf, 'plugins/workflows/skills', workflowPreamble(wf, agentsById, 'claude', { softDeps: soft }), { keys: skillKeys }));
   }
   return files;
 }
@@ -109,14 +113,14 @@ function workflowFiles(wfs, plugins, author) {
 export default {
   name: 'claude',
   describe: 'Claude Code marketplace — core (dependency) + plugins/<id>/ (mỗi plugin có skills/)',
-  build(plugins, { marketplace, core, workflows }) {
+  build(plugins, { marketplace, core, workflows, skillKeys = PROVIDER_SKILL_KEYS.claude }) {
     const author = marketplace.owner; // attribution dùng chung cho mọi plugin.json (= owner marketplace)
     const wfs = workflows && workflows.stages.length ? workflows : null;
     // marketplace liệt kê core TRƯỚC rồi tới các domain plugin (+ workflows nếu có)
     const entries = [core, ...plugins, ...(wfs ? [wfs] : [])];
     const files = [
       { path: '.claude-plugin/marketplace.json', content: marketplaceJson(entries, marketplace) },
-      ...coreFiles(core, { author }),
+      ...coreFiles(core, { author, skillKeys }),
     ];
     for (const p of plugins) {
       files.push({
@@ -125,18 +129,18 @@ export default {
         // Claude Code không hỗ trợ shorthand "marketplace:plugin" trong dependencies).
         content: pluginJson(p, { dependencies: ['core'], author }),
       });
-      files.push(...pluginPrinciplesFiles(p)); // <plugin>-principles skill
+      files.push(...pluginPrinciplesFiles(p, skillKeys)); // <plugin>-principles skill
       // Claude không auto-load skill khác khi gọi một skill nên cần digest + pointer.
       // Pointer có 2 dạng tên vì 2 đường cài: skills phẳng (`principles`) và plugin namespaced (`core:principles`).
       const principlesNote = principlesDigest({ provider: 'claude', pluginId: p.id });
       for (const stage of p.stages) {
-        files.push(...skillFiles(stage, `plugins/${p.id}/skills`, principlesNote));
+        files.push(...skillFiles(stage, `plugins/${p.id}/skills`, principlesNote, { keys: skillKeys }));
       }
       for (const a of p.agents || []) {
         files.push({ path: `plugins/${p.id}/agents/${a.id}.md`, content: claudeAgentMd(a) });
       }
     }
-    if (wfs) files.push(...workflowFiles(wfs, plugins, author));
+    if (wfs) files.push(...workflowFiles(wfs, plugins, author, skillKeys));
     return files;
   },
 };

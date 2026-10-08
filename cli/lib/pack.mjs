@@ -151,7 +151,8 @@ export function pack({ outDir } = {}) {
   const { plugins, core } = coworkBuildSet(ids);
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-cowork-'));
   try {
-    writeFiles(tmp, claudeAdapter.build(plugins, { outDir: tmp, marketplace: loadMarketplace(), core }));
+    // Cowork upload chỉ chắc chắn nhận name + description; khoá Claude Code khác bỏ để zip không bị từ chối.
+    writeFiles(tmp, claudeAdapter.build(plugins, { outDir: tmp, marketplace: loadMarketplace(), core, skillKeys: [] }));
     const pluginsRoot = path.join(tmp, 'plugins');
     const packed = [], missing = [];
     for (const full of ids) {

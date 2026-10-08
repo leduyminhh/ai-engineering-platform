@@ -5,6 +5,7 @@ order: 1
 title: "Backend Init — Khởi tạo cấu trúc backend project"
 runsIn: plan
 invoke: once
+disable-model-invocation: true
 ---
 
 # Backend Init — Khởi tạo cấu trúc backend project

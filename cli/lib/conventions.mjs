@@ -137,12 +137,39 @@ export function checkAgentDescription(desc) {
   return errs;
 }
 
+// Khoá skill chiếu thẳng sang SKILL.md, tên theo https://code.claude.com/docs/en/skills.md (re-fetch 2026-10-08).
+// Không có when_to_use: Claude gộp nó với description nên không tiết kiệm token, provider khác không hiểu.
+export const SKILL_PASSTHROUGH = ['argument-hint', 'arguments', 'user-invocable', 'disable-model-invocation',
+  'allowed-tools', 'disallowed-tools', 'effort', 'paths', 'compatibility', 'metadata'];
+
 // Allowlist khoá frontmatter NGUỒN: loader chỉ đọc các khoá này, khoá lạ bị bỏ im lặng nên gõ sai (vd `runin`) không lộ ra.
 export const SOURCE_KEYS = {
-  skill: ['name', 'description', 'order', 'title', 'runsIn', 'invoke', 'sharedAssets'],
+  skill: ['name', 'description', 'order', 'title', 'runsIn', 'invoke', 'sharedAssets', ...SKILL_PASSTHROUGH],
   agent: ['name', 'description', 'mode', 'skills', 'model', 'effort', 'color'],
-  workflow: ['name', 'description', 'order', 'title', 'kind', 'tier', 'risk', 'agents', 'requires', 'runsIn', 'invoke'],
+  workflow: ['name', 'description', 'order', 'title', 'kind', 'tier', 'risk', 'agents', 'requires', 'runsIn', 'invoke', 'argument-hint'],
 };
+
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+const isStr = (v) => typeof v === 'string';
+const isStrList = (v) => isStr(v) || (Array.isArray(v) && v.every(isStr));
+const PASSTHROUGH_TYPES = {
+  'argument-hint': [isStr, 'chuỗi (giá trị bắt đầu bằng "[" phải đặt trong ngoặc kép)'],
+  arguments: [isStrList, 'chuỗi hoặc list chuỗi'],
+  'user-invocable': [(v) => typeof v === 'boolean', 'true/false'],
+  'disable-model-invocation': [(v) => typeof v === 'boolean', 'true/false'],
+  'allowed-tools': [isStrList, 'chuỗi hoặc list chuỗi'],
+  'disallowed-tools': [isStrList, 'chuỗi hoặc list chuỗi'],
+  effort: [(v) => EFFORTS.includes(v), EFFORTS.join('|')],
+  paths: [isStrList, 'chuỗi hoặc list chuỗi'],
+  compatibility: [(v) => isStr(v) && [...v].length <= 500, 'chuỗi ≤ 500 ký tự'],
+  metadata: [(v) => !!v && typeof v === 'object' && !Array.isArray(v), 'map'],
+};
+
+export function checkPassthroughTypes(meta) {
+  return Object.entries(PASSTHROUGH_TYPES)
+    .filter(([k]) => meta[k] !== undefined && !PASSTHROUGH_TYPES[k][0](meta[k]))
+    .map(([k, [, want]]) => `khoá "${k}" sai kiểu (cần ${want})`);
+}
 
 export function checkSourceKeys(kind, meta) {
   const allowed = new Set(SOURCE_KEYS[kind] || []);

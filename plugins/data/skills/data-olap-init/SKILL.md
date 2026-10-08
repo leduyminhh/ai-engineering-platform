@@ -5,6 +5,7 @@ order: 3
 title: "OLAP Warehouse Init — Khởi tạo cấu trúc pipeline project"
 runsIn: plan
 invoke: once
+disable-model-invocation: true
 ---
 
 # OLAP Warehouse Init — Khởi tạo cấu trúc pipeline project

@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkSourceKeys } from './conventions.mjs';
+import { checkSourceKeys, checkPassthroughTypes, SKILL_PASSTHROUGH } from './conventions.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const PLUGINS_DIR = path.join(REPO_ROOT, 'plugins');
@@ -171,9 +171,12 @@ function splitOutsideQuotes(s) {
 
 // Khoá gõ sai trước đây bị bỏ im lặng; ném lỗi để build và test dừng ngay ở file sai.
 function assertSourceKeys(kind, meta, file) {
-  const errs = checkSourceKeys(kind, meta);
+  const errs = [...checkSourceKeys(kind, meta), ...(kind === 'agent' ? [] : checkPassthroughTypes(meta))];
   if (errs.length) throw new Error(`${path.relative(REPO_ROOT, file)}: ${errs.join('; ')}`);
 }
+
+const pickPassthrough = (meta, keys) =>
+  Object.fromEntries(keys.filter((k) => meta[k] !== undefined).map((k) => [k, meta[k]]));
 
 /**
  * Load a plugin's skills from `skills/<skill-id>/SKILL.md`. Metadata lives in the SKILL.md
@@ -221,6 +224,7 @@ function loadSkills(pluginDir) {
       description: meta.description || '',
       runsIn: meta.runsIn || '',
       invoke: meta.invoke || '',
+      passthrough: pickPassthrough(meta, SKILL_PASSTHROUGH),
       body,
       dir,
       assetsDir: dir,
@@ -291,6 +295,7 @@ export function loadWorkflows() {
       requires: splitList(meta.requires),
       runsIn: meta.runsIn || '',
       invoke: meta.invoke || '',
+      passthrough: pickPassthrough(meta, ['argument-hint']),
       body,
       dir,
       assetsDir: dir,

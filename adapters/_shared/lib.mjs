@@ -8,8 +8,16 @@
 // `path` relative to build/<tool>/ using '/' separators. `plugins` is the FULL list.
 import path from 'node:path';
 import { frontmatter } from '../../cli/lib/write.mjs';
+import { SKILL_PASSTHROUGH } from '../../cli/lib/conventions.mjs';
 
 export { frontmatter };
+
+// Mỗi provider chỉ nhận khoá nó hiểu. Codex SKILL.md giữ name + description; Cursor theo tài liệu Agent Skills [Unverified].
+export const PROVIDER_SKILL_KEYS = {
+  claude: SKILL_PASSTHROUGH,
+  cursor: ['paths', 'disable-model-invocation', 'metadata'],
+  codex: [],
+};
 
 // Claude/Codex không tự nạp skill khác khi gọi một skill. Trước đây preamble ép đọc 2 skill principles mỗi lần
 // (~1,9–2,9k token); digest nhúng 5 ý cốt lõi là đủ cho đa số bước, bản đầy đủ chỉ đọc khi cần.
@@ -44,11 +52,13 @@ export function fullPrinciples(core, plugin) {
  * point a stage skill at the separately-shipped principles skills (Claude + Codex do NOT auto-load
  * them, so both pass a pointer preamble; cursor inline principles always-on, so it passes none).
  */
-export function skillMd(stage, preamble = '') {
+export function skillMd(stage, preamble = '', { keys = [] } = {}) {
+  const pt = stage.passthrough || {};
   return (
     frontmatter([
       ['name', stage.id],
       ['description', stage.description],
+      ...keys.filter((k) => pt[k] !== undefined).map((k) => [k, pt[k]]),
     ]) +
     '\n\n' +
     (preamble ? preamble.trim() + '\n\n' : '') +
@@ -79,9 +89,9 @@ export function assetFiles(stage, dir) {
  * File entries that materialize one stage as a skill directory under `<base>/<stage.id>/`.
  * Emits SKILL.md plus any declared asset directories (copied verbatim).
  */
-export function skillFiles(stage, base, preamble = '') {
+export function skillFiles(stage, base, preamble = '', opts = {}) {
   const dir = `${base}/${stage.id}`;
-  return [{ path: `${dir}/SKILL.md`, content: skillMd(stage, preamble) }, ...assetFiles(stage, dir)];
+  return [{ path: `${dir}/SKILL.md`, content: skillMd(stage, preamble, opts) }, ...assetFiles(stage, dir)];
 }
 
 /**

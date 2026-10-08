@@ -15,7 +15,7 @@
 //
 // [Inference] Khóa frontmatter .mdc (description / globs / alwaysApply) theo tài liệu
 // Cursor Rules; SKILL.md theo Cursor Agent Skills (name khớp folder + description).
-import { fullPrinciples, skillFiles } from '../_shared/lib.mjs';
+import { fullPrinciples, skillFiles, PROVIDER_SKILL_KEYS } from '../_shared/lib.mjs';
 import { yamlScalar } from '../../cli/lib/write.mjs';
 
 function mdc({ description = '', alwaysApply = false, globs = '' }, body) {
@@ -38,7 +38,7 @@ export default {
     // nguyên tắc đã inline vào <id>-00-principles của từng plugin). Không preamble: Cursor
     // nạp principles qua alwaysApply rule.
     for (const s of core.stages || []) {
-      files.push(...skillFiles(s, `${core.id}/.cursor/skills`));
+      files.push(...skillFiles(s, `${core.id}/.cursor/skills`, '', { keys: PROVIDER_SKILL_KEYS.cursor }));
     }
     for (const p of plugins) {
       const rulesBase = `${p.id}/.cursor/rules`;
@@ -51,7 +51,7 @@ export default {
       });
       // Stage skills dưới .cursor/skills/<skill-id>/ — không preamble (00-principles always-on).
       for (const s of p.stages) {
-        files.push(...skillFiles(s, `${p.id}/.cursor/skills`));
+        files.push(...skillFiles(s, `${p.id}/.cursor/skills`, '', { keys: PROVIDER_SKILL_KEYS.cursor }));
       }
     }
     return files;

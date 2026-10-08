@@ -5,6 +5,7 @@ order: 2
 title: "Frontend Implement — Sinh React component từ HTML/Figma/ảnh"
 runsIn: execute
 invoke: per-request
+argument-hint: "[đường dẫn thiết kế | link Figma]"
 sharedAssets: templates/architecture
 ---
 
