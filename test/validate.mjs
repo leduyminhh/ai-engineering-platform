@@ -18,8 +18,11 @@ import claudeAdapter from '../adapters/claude/adapter.mjs';
 import codexAdapter from '../adapters/codex/adapter.mjs';
 import { tomlBasic, tomlMultiline } from '../adapters/_shared/agents.mjs';
 import { agentsFiles, whenToUse, WHEN_TO_USE_MAX } from '../adapters/_shared/lib.mjs';
-import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions } from '../cli/lib/conventions.mjs';
+import { frontmatter, yamlScalar } from '../cli/lib/write.mjs';
+import { checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml } from '../cli/lib/conventions.mjs';
 import { lineOverlap, stepOverlap, titleOverlap } from './overlap.mjs';
+import { hashDir, currentVersions, planLock, lockDecision, diffLock, readLock } from '../cli/lib/versions.mjs';
+import { parseClaudePluginList } from '../cli/lib/install.mjs';
 
 let pass = 0;
 const fails = [];
@@ -416,12 +419,17 @@ if (fs.existsSync(claudeDir)) {
     const f = path.join(claudeDir, 'plugins', a.plugin, 'agents', `${a.id}.md`);
     ok(fs.existsSync(f), `build claude agent ${a.id}: có file`);
     const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
-    ok(c.includes(`name: ${a.id}`) && c.includes('disallowedTools:') && c.includes('Agent'),
+    const fmA = (c.match(/^---\n([\s\S]*?)\n---/) || ['', ''])[1];
+    ok(fmA.includes(`name: ${a.id}`) && /^disallowedTools: .*\bAgent\b/m.test(fmA),
       `build claude agent ${a.id}: name + chặn tool Agent`);
   }
   if (wfBuilt) {
     const pj = JSON.parse(fs.readFileSync(path.join(claudeDir, 'plugins/workflows/.claude-plugin/plugin.json'), 'utf8'));
-    ok(pj.dependencies[0] === 'core', 'build claude workflows: depends on core');
+    const hard32 = ['core', ...(workflows.manifest.hardDependencies || []).filter((d) => d !== 'core').sort()];
+    const mkNames32 = new Set(mk.plugins.map((x) => x.name));
+    ok(JSON.stringify(pj.dependencies) === JSON.stringify(hard32.filter((d) => mkNames32.has(d))),
+      `build claude workflows: dependencies = hardDependencies có mặt trong marketplace (${pj.dependencies.join(',')})`);
+    ok(pj.dependencies.every((d) => mkNames32.has(d)), 'build claude workflows: mọi dependency là entry marketplace');
     for (const s of workflows.stages) {
       const f = path.join(claudeDir, 'plugins/workflows/skills', s.id, 'SKILL.md');
       const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
@@ -1314,8 +1322,8 @@ if (fs.existsSync(BUILD)) {
     ok(cowork19.includes(s), `_cowork.json: có ${s}`);
   }
   const feMan19 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', '.manifest.json'), 'utf8'));
-  ok(feMan19.version === '1.7.0' && !feMan19.description.includes('DRAFT'),
-    'frontend manifest: version 1.7.0, description không còn nhãn DRAFT');
+  ok(/^\d+\.\d+\.\d+$/.test(feMan19.version) && !feMan19.description.includes('DRAFT'),
+    'frontend manifest: version semver, description không còn nhãn DRAFT');
   const fePr19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'shared', 'principles.md'), 'utf8');
   ok(!fePr19.includes('state-model'), 'frontend principles: không còn tham chiếu state-model treo (spec §7.3.7)');
   const feImpl19 = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-implement', 'SKILL.md'), 'utf8');
@@ -1468,7 +1476,7 @@ if (fs.existsSync(BUILD)) {
   const cowork20 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
   ok(cowork20.includes('backend:backend-performance'), '_cowork.json: có backend:backend-performance');
   const beMan20 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', '.manifest.json'), 'utf8'));
-  ok(beMan20.version === '1.5.0', 'backend manifest: version 1.5.0');
+  ok(/^\d+\.\d+\.\d+$/.test(beMan20.version), 'backend manifest: version semver');
   const paPath = path.join(PLUGINS_DIR, 'backend', 'agents', 'backend-performance-analyst.md');
   const pa = fs.existsSync(paPath) ? fs.readFileSync(paPath, 'utf8') : '';
   ok(pa.length > 0, 'backend-performance-analyst: có agent file');
@@ -1612,8 +1620,8 @@ if (fs.existsSync(BUILD)) {
   const cowork22 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
   ok(cowork22.includes('data:data-db-migration'), '_cowork.json: có data:data-db-migration');
   const dataMan22 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'data', '.manifest.json'), 'utf8'));
-  ok(dataMan22.version === '1.3.0' && !dataMan22.description.includes('DRAFT') && dataMan22.description.includes('data-db-migration'),
-    'data manifest: version 1.3.0, description nêu data-db-migration và không còn nhãn DRAFT');
+  ok(/^\d+\.\d+\.\d+$/.test(dataMan22.version) && !dataMan22.description.includes('DRAFT') && dataMan22.description.includes('data-db-migration'),
+    'data manifest: version semver, description nêu data-db-migration và không còn nhãn DRAFT');
   const dataPr22 = fs.readFileSync(path.join(PLUGINS_DIR, 'data', 'shared', 'principles.md'), 'utf8');
   ok(dataPr22.includes('data-db-migration') && flat22(dataPr22).includes('project backend') && flat22(dataPr22).includes('DB riêng của app')
     && dataPr22.includes('data-oltp-implement'),
@@ -1787,8 +1795,8 @@ if (fs.existsSync(BUILD)) {
   const cowork23 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
   ok(cowork23.includes('frontend:frontend-performance'), '_cowork.json: có frontend:frontend-performance');
   const feMan23 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', '.manifest.json'), 'utf8'));
-  ok(feMan23.version === '1.7.0' && feMan23.description.includes('frontend-performance'),
-    'frontend manifest: version 1.7.0, description nêu frontend-performance');
+  ok(/^\d+\.\d+\.\d+$/.test(feMan23.version) && feMan23.description.includes('frontend-performance'),
+    'frontend manifest: version semver, description nêu frontend-performance');
   const offFe23 = offeredCatalog().plugins.find((p) => p.id === 'frontend');
   ok(!!offFe23 && offFe23.skillIds.includes('frontend/frontend-performance') && offFe23.skillIds.length === 10,
     'offeredCatalog: plugin frontend offer 10 skill gồm frontend-performance');
@@ -2179,8 +2187,8 @@ if (fs.existsSync(BUILD)) {
 {
   const read29 = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
   const mf = JSON.parse(read29('plugins/engineering/.manifest.json'));
-  ok(mf.description.includes('7 skill') && mf.description.includes('engineering-task-breakdown') && mf.version === '1.4.0',
-    'engineering manifest: 7 skill, có engineering-task-breakdown, version 1.4.0');
+  ok(mf.description.includes('7 skill') && mf.description.includes('engineering-task-breakdown') && /^\d+\.\d+\.\d+$/.test(mf.version),
+    'engineering manifest: 7 skill, có engineering-task-breakdown, version semver');
   ok(JSON.parse(read29('plugins/_cowork.json')).skills.includes('engineering:engineering-task-breakdown'),
     '_cowork.json: có engineering:engineering-task-breakdown');
   for (const f of ['README.md', 'README_VI.md']) {
@@ -2378,6 +2386,158 @@ if (fs.existsSync(BUILD)) {
       ok(fs.existsSync(path.join(REPO_ROOT, 'build', rel, 'scripts', 'check-tasks.mjs')), `build ${p}: ship scripts/check-tasks.mjs`);
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 31. Frontmatter build là YAML an toàn (spec 2026-10-07 audit E1 / Phase 0 P0.1)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  ok(yamlScalar('backend-adr') === 'backend-adr', 'yamlScalar: chuỗi thuần giữ plain');
+  ok(yamlScalar('Edit, Write, NotebookEdit, Agent') === 'Edit, Write, NotebookEdit, Agent', 'yamlScalar: dấu phẩy không cần quote');
+  ok(yamlScalar('Recipe on-demand: review') === '"Recipe on-demand: review"', 'yamlScalar: ": " giữa chuỗi → quote');
+  ok(yamlScalar('PR #12') === '"PR #12"', 'yamlScalar: " #" → quote');
+  ok(yamlScalar('[a] b') === '"[a] b"' && yamlScalar('- x') === '"- x"' && yamlScalar('*.ts') === '"*.ts"',
+    'yamlScalar: ký tự mở cấu trúc ở đầu → quote');
+  ok(yamlScalar('nói "skill"') === '"nói \\"skill\\""', 'yamlScalar: dấu " bên trong được escape');
+  ok(yamlScalar('') === '""' && yamlScalar('a ') === '"a "', 'yamlScalar: rỗng / khoảng trắng cuối → quote');
+  ok(frontmatter([['name', 'x'], ['description', 'A: b'], ['effort', 'high'], ['skip', null]])
+    === '---\nname: x\ndescription: "A: b"\neffort: high\n---', 'frontmatter: quote đúng key cần quote, bỏ key null');
+  ok(yamlScalar('foo:') === '"foo:"' && checkFrontmatterYaml('d: foo:').length === 1, 'yamlScalar/checker: ":" cuối chuỗi → quote');
+  ok(checkFrontmatterYaml('name: x\ndescription: "A: b"').length === 0, 'checkFrontmatterYaml: hợp lệ');
+  ok(checkFrontmatterYaml('description: A: b').some((e) => e.includes('plain scalar')), 'checkFrontmatterYaml: ": " không quote → lỗi');
+  ok(checkFrontmatterYaml('description: "chưa đóng').some((e) => e.includes('quote')), 'checkFrontmatterYaml: quote không đóng → lỗi');
+  ok(checkFrontmatterYaml('description: "có \\"escape\\" đúng"').length === 0, 'checkFrontmatterYaml: escape \\" hợp lệ');
+  ok(checkFrontmatterYaml('- item').length === 1, 'checkFrontmatterYaml: dòng không phải key: value → lỗi');
+  const fmOf31 = (text) => { const m = text.match(/^---\n([\s\S]*?)\n---/); return m ? m[1] : null; };
+  const targets31 = [
+    ['claude', path.join(BUILD, 'claude'), (f) => f.endsWith('.md')],
+    ['codex', path.join(BUILD, 'codex'), (f) => f.endsWith('SKILL.md')],
+    ['cursor', path.join(BUILD, 'cursor'), (f) => f.endsWith('SKILL.md') || f.endsWith('.mdc')],
+  ];
+  for (const [prov, dir, pick] of targets31) {
+    if (!fs.existsSync(dir)) continue;
+    const bad = [];
+    let seen = 0;
+    for (const rel of listFilesRec(dir).filter(pick)) {
+      const fm = fmOf31(fs.readFileSync(path.join(dir, rel), 'utf8'));
+      if (fm === null) continue;
+      seen++;
+      const errs = checkFrontmatterYaml(fm);
+      if (errs.length) bad.push(`${rel}: ${errs[0]}`);
+    }
+    ok(seen > 0 && bad.length === 0, `build ${prov}: ${seen} frontmatter đều là YAML an toàn${bad.length ? ' — ' + bad.slice(0, 3).join(' | ') : ''}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 32. workflows: hard-dependency tường minh + plugin còn lại ghi trong preamble (spec 2026-10-07 audit E6 / P0.2)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  if (workflows) {
+    const hard = workflows.manifest.hardDependencies;
+    ok(Array.isArray(hard) && hard.includes('core') && hard.length < plugins.length + 1,
+      'workflows manifest: hardDependencies tường minh, có core, không bao trùm mọi plugin');
+    ok(/^\d+\.\d+\.\d+$/.test(workflows.version) && workflows.version !== '1.0.0', 'workflows manifest: version đã bump khỏi 1.0.0');
+    const pluginOfAgent = new Map(allAgents.map((a) => [a.id, a.plugin]));
+    for (const wf of workflows.stages) {
+      const need = new Set([...wf.requires.map((r) => r.split('/')[0]), ...wf.agents.map((a) => pluginOfAgent.get(a)).filter(Boolean)]);
+      const soft = [...need].filter((p) => !(hard || []).includes(p)).sort();
+      const built = path.join(BUILD, 'claude', 'plugins', 'workflows', 'skills', wf.id, 'SKILL.md');
+      const c = fs.existsSync(built) ? fs.readFileSync(built, 'utf8') : '';
+      if (soft.length) {
+        ok(c.includes(`> **Plugin cần có:** ${soft.map((p) => `\`${p}\``).join(', ')}`),
+          `${wf.id}: preamble nêu plugin ngoài hard-dep (${soft.join(',')})`);
+      } else {
+        ok(!c.includes('**Plugin cần có:**'), `${wf.id}: không có plugin ngoài hard-dep → không có dòng "Plugin cần có"`);
+      }
+    }
+  }
+  // Fixture: hardDependencies lọc theo plugin có mặt; thiếu hardDependencies → giữ hành vi cũ (union).
+  const fxWfHard = { ...fxWorkflows, manifest: { hardDependencies: ['core', 'fx', 'absent-plugin'] } };
+  const outH = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore, workflows: fxWfHard }));
+  const pjH = JSON.parse(outH.get('plugins/workflows/.claude-plugin/plugin.json').content);
+  ok(JSON.stringify(pjH.dependencies) === '["core","fx"]', 'claude workflows: hardDependencies lọc plugin vắng mặt');
+  const fxWfSoft = { ...fxWorkflows, manifest: { hardDependencies: ['core'] } };
+  const outS = byPath(claudeAdapter.build([fxPlugin], { marketplace: fxMk, core: fxCore, workflows: fxWfSoft }));
+  ok(JSON.parse(outS.get('plugins/workflows/.claude-plugin/plugin.json').content).dependencies.length === 1
+    && outS.get('plugins/workflows/skills/workflow-demo/SKILL.md').content.includes('> **Plugin cần có:** `fx`'),
+    'claude workflows: plugin ngoài hard-dep → không vào dependencies, có dòng Plugin cần có');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 33. Mô tả skill <plugin>-principles không còn "pipeline bắt buộc", có tình huống dùng (spec 2026-10-07 audit S3 / P0.5)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  for (const p of plugins) {
+    if (!(p.shared.principles && p.shared.principles.trim())) continue;
+    for (const [prov, rel] of [['claude', path.join('claude', 'plugins', p.id, 'skills', `${p.id}-principles`, 'SKILL.md')],
+      ['codex', path.join('codex', p.id, 'skills', `${p.id}-principles`, 'SKILL.md')]]) {
+      const f = path.join(BUILD, rel);
+      const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+      // Chỉ xét dòng description: thân principles có thể phủ định hợp lệ ("không phải pipeline bắt buộc").
+      const desc = (c.match(/^description: .*$/m) || [''])[0];
+      ok(desc && !desc.includes('pipeline bắt buộc') && desc.includes('Dùng khi'),
+        `build ${prov} ${p.id}-principles: mô tả không nhắc pipeline bắt buộc, có "Dùng khi"`);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 34. Version gate: core manifest, semver + đồng bộ version, lock hash↔version, doctor (spec 2026-10-07 audit E5 / P0.3)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const coreMf = path.join(CORE_DIR, '.manifest.json');
+  ok(fs.existsSync(coreMf), 'core: có core/.manifest.json');
+  const cm = fs.existsSync(coreMf) ? JSON.parse(fs.readFileSync(coreMf, 'utf8')) : {};
+  ok(cm.id === 'core' && core.version === cm.version && core.description === cm.description,
+    'core: loadCore đọc id/version/description từ manifest');
+  const units = [core, ...plugins, ...(workflows ? [workflows] : [])];
+  for (const u of units) ok(/^\d+\.\d+\.\d+$/.test(u.version), `${u.id}: version semver (${u.version})`);
+  const claudeDir34 = path.join(BUILD, 'claude');
+  if (fs.existsSync(claudeDir34)) {
+    const mk = JSON.parse(fs.readFileSync(path.join(claudeDir34, '.claude-plugin', 'marketplace.json'), 'utf8'));
+    const mkNames = new Set(mk.plugins.map((x) => x.name));
+    for (const u of units) {
+      const pj = JSON.parse(fs.readFileSync(path.join(claudeDir34, 'plugins', u.id, '.claude-plugin', 'plugin.json'), 'utf8'));
+      const entry = mk.plugins.find((x) => x.name === u.id) || {};
+      ok(pj.version === u.version && entry.version === u.version, `${u.id}: version đồng bộ manifest = plugin.json = marketplace`);
+      ok((pj.dependencies || []).every((d) => mkNames.has(d)), `${u.id}: dependencies ⊂ marketplace`);
+    }
+    // Lock = chân lý đã commit của "build của version này"; lệch ⇒ chạy node cli/lib/versions.mjs --lock (nó từ chối nếu chưa bump).
+    const diff = diffLock(currentVersions(), readLock());
+    ok(diff.length === 0, `versions lock khớp build${diff.length ? ' — ' + diff.slice(0, 3).join(' | ') : ''}`);
+  }
+  // Thuần: hash ổn định, nhạy nội dung; planLock từ chối khi hash đổi mà version giữ nguyên.
+  const tmp34 = fs.mkdtempSync(path.join(os.tmpdir(), 'ver-'));
+  try {
+    fs.mkdirSync(path.join(tmp34, 'a'));
+    fs.writeFileSync(path.join(tmp34, 'a', 'x.md'), 'một');
+    const h1 = hashDir(tmp34);
+    ok(h1 === hashDir(tmp34) && /^[0-9a-f]{64}$/.test(h1), 'hashDir: tất định, sha256 hex');
+    fs.writeFileSync(path.join(tmp34, 'a', 'x.md'), 'hai');
+    ok(hashDir(tmp34) !== h1, 'hashDir: đổi nội dung → đổi hash');
+    fs.writeFileSync(path.join(tmp34, 'a', 'x.md'), 'x\r\n');
+    const hCrlf = hashDir(tmp34);
+    fs.writeFileSync(path.join(tmp34, 'a', 'x.md'), 'x\n');
+    ok(hCrlf === hashDir(tmp34), 'hashDir: CRLF và LF cho cùng hash (gate không đỏ giả khi working tree còn CRLF)');
+  } finally { fs.rmSync(tmp34, { recursive: true, force: true }); }
+  const prev = { core: { version: '1.0.0', hash: 'h1' }, be: { version: '2.0.0', hash: 'k1' } };
+  const cur = { core: { version: '1.0.0', hash: 'h2' }, be: { version: '2.0.1', hash: 'k2' }, fe: { version: '0.1.0', hash: 'f' } };
+  const plan34 = planLock(cur, prev);
+  ok(plan34.refused.length === 1 && plan34.refused[0].id === 'core', 'planLock: hash đổi + version giữ → từ chối đúng plugin');
+  ok(plan34.next.be.hash === 'k2' && plan34.next.fe && plan34.next.core.hash === 'h1', 'planLock: entry hợp lệ cập nhật, entry mới thêm, entry bị từ chối giữ cũ');
+  ok(diffLock(cur, prev).length === 3 && diffLock(cur, { ...cur }).length === 0, 'diffLock: báo lệch hash/version/thiếu id; khớp → rỗng');
+  const dMissing = lockDecision({ a: { version: '1', hash: 'h' } }, { a: { version: '1', hash: 'h' }, b: { version: '1', hash: 'g' } });
+  ok(!dMissing.write && dMissing.code === 2 && dMissing.missing[0] === 'b', 'lockDecision: build thiếu id trong lock → không ghi, exit 2');
+  const dRefuse = lockDecision({ a: { version: '1', hash: 'h2' } }, { a: { version: '1', hash: 'h' } });
+  ok(!dRefuse.write && dRefuse.code === 1 && dRefuse.refused.length === 1, 'lockDecision: hash đổi version giữ → không ghi, exit 1');
+  const dOk = lockDecision({ a: { version: '2', hash: 'h2' }, c: { version: '1', hash: 'x' } }, { a: { version: '1', hash: 'h' } });
+  ok(dOk.write && dOk.code === 0 && dOk.next.c && dOk.next.a.version === '2', 'lockDecision: bump hợp lệ + plugin mới → ghi');
+  const gone34 = diffLock({ a: { version: '1', hash: 'h' } }, { a: { version: '1', hash: 'h' }, gone: { version: '1', hash: 'g' } });
+  ok(gone34.length === 1 && gone34[0].includes('không còn trong build'), 'diffLock: báo entry có trong lock nhưng không còn trong build');
+  const sample = 'Installed plugins:\n\n  ❯ backend@ai-engineering-platform\n    Version: 1.2.0\n    Scope: user\n    Status: ✔ enabled\n\n  ❯ feature-dev@claude-plugins-official\n    Version: 2a8ad9f74633\n\n  ❯ workflows@ai-engineering-platform\n    Version: 1.0.0\n    Status: ✘ failed to load\n';
+  ok(JSON.stringify(parseClaudePluginList(sample, 'ai-engineering-platform')) === '[{"id":"backend","version":"1.2.0"},{"id":"workflows","version":"1.0.0"}]',
+    'parseClaudePluginList: lấy đúng plugin của marketplace + version');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

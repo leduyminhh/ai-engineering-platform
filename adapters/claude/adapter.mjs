@@ -78,27 +78,32 @@ function pluginPrinciplesFiles(p) {
   if (!body.trim()) return [];
   const name = `${p.id}-principles`;
   const description =
-    `Nguyên tắc nền tảng RIÊNG của plugin ${p.id} (pipeline bắt buộc, phân tầng, ranh giới ` +
-    `an toàn, nguồn sự thật đặc thù) — đọc TRƯỚC khi chạy bất kỳ giai đoạn ${p.id}-* nào; ` +
-    `bổ sung cho skill core principles.`;
+    `Nguyên tắc riêng của plugin ${p.id} (phân tầng, ranh giới an toàn, nguồn sự thật đặc thù), ` +
+    `bổ sung cho skill core principles. Dùng khi bắt đầu bất kỳ skill ${p.id}-* nào hoặc trước khi ` +
+    `quyết định điều gì chạm ranh giới an toàn của plugin ${p.id}.`;
   const skill = frontmatter([['name', name], ['description', description]]) + '\n\n' + body;
   return [{ path: `plugins/${p.id}/skills/${name}/SKILL.md`, content: skill }];
 }
 
-// Plugin `workflows` gọi xuyên nhiều plugin; Claude chỉ resolve dependency có trong marketplace
-// nên bỏ plugin vắng mặt (build lọc --plugin).
+// Plugin `workflows` gọi xuyên nhiều plugin. Claude coi `dependencies` là "phải enabled" nên chỉ khai
+// báo hard-dependency tường minh từ manifest (thiếu một plugin lẻ như `data` không được làm hỏng cả bộ);
+// plugin còn lại được nêu trong preamble từng workflow. Không có hardDependencies → union như trước.
 function workflowFiles(wfs, plugins, author) {
   const agentsById = new Map(plugins.flatMap((p) => p.agents || []).map((a) => [a.id, a]));
   const present = new Set(plugins.map((p) => p.id));
-  const deps = new Set();
-  for (const wf of wfs.stages) {
-    for (const r of wf.requires) deps.add(r.split('/')[0]);
-    for (const id of wf.agents) { const a = agentsById.get(id); if (a) deps.add(a.plugin); }
-  }
+  const pluginsOf = (wf) => {
+    const s = new Set();
+    for (const r of wf.requires) s.add(r.split('/')[0]);
+    for (const id of wf.agents) { const a = agentsById.get(id); if (a) s.add(a.plugin); }
+    return s;
+  };
+  const hard = (wfs.manifest && wfs.manifest.hardDependencies) || null;
+  const deps = hard ? new Set(hard) : new Set(wfs.stages.flatMap((wf) => [...pluginsOf(wf)]));
   const dependencies = ['core', ...[...deps].filter((d) => d !== 'core' && present.has(d)).sort()];
   const files = [{ path: 'plugins/workflows/.claude-plugin/plugin.json', content: pluginJson(wfs, { dependencies, author }) }];
   for (const wf of wfs.stages) {
-    files.push(...skillFiles(wf, 'plugins/workflows/skills', workflowPreamble(wf, agentsById, 'claude')));
+    const soft = hard ? [...pluginsOf(wf)].filter((p) => !hard.includes(p)).sort() : [];
+    files.push(...skillFiles(wf, 'plugins/workflows/skills', workflowPreamble(wf, agentsById, 'claude', { softDeps: soft })));
   }
   return files;
 }

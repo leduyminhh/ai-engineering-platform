@@ -74,3 +74,21 @@ export function triggerCollisions(entries) {
   }
   return errs;
 }
+
+// Kiểm frontmatter ĐÃ PHÁT: value chứa ": ", " #" hoặc mở đầu bằng ký tự cấu trúc phải nằm trong ngoặc kép.
+// Chỉ nhận dạng `key: value` một dòng — đúng tập con mà frontmatter() phát ra hiện nay.
+const PLAIN_UNSAFE_VALUE = /^[\s"'#&*!|>%@`\[\]{},?:-]|:(?:\s|$)|\s#|\s$/;
+const QUOTED = /^"(?:[^"\\]|\\.)*"$/;
+
+export function checkFrontmatterYaml(fmText) {
+  const errs = [];
+  for (const line of fmText.split('\n')) {
+    if (!line.trim()) continue;
+    const m = line.match(/^([A-Za-z][\w-]*):(?:\s(.*))?$/);
+    if (!m) { errs.push(`dòng không phải "key: value": ${line.slice(0, 40)}`); continue; }
+    const v = m[2] ?? '';
+    if (v.startsWith('"')) { if (!QUOTED.test(v)) errs.push(`${m[1]}: chuỗi quote không đóng hoặc escape sai`); continue; }
+    if (PLAIN_UNSAFE_VALUE.test(v)) errs.push(`${m[1]}: plain scalar không an toàn ("${v.slice(0, 30)}")`);
+  }
+  return errs;
+}

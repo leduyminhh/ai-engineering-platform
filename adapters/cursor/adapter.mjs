@@ -16,10 +16,11 @@
 // [Inference] Khóa frontmatter .mdc (description / globs / alwaysApply) theo tài liệu
 // Cursor Rules; SKILL.md theo Cursor Agent Skills (name khớp folder + description).
 import { fullPrinciples, skillFiles } from '../_shared/lib.mjs';
+import { yamlScalar } from '../../cli/lib/write.mjs';
 
 function mdc({ description = '', alwaysApply = false, globs = '' }, body) {
   const fm = ['---'];
-  if (description) fm.push(`description: ${description}`);
+  if (description) fm.push(`description: ${yamlScalar(description)}`);
   if (globs) fm.push(`globs: ${globs}`); // bỏ key khi rỗng (tránh dòng "globs:" trống)
   fm.push(`alwaysApply: ${alwaysApply ? 'true' : 'false'}`);
   fm.push('---');

@@ -319,6 +319,7 @@ Skill nào ship thư mục `references/` thì ship tới **mọi** provider (par
   `build(plugins, { outDir, marketplace, core }) -> fileEntry[]` với entry là
   `{path, content}` | `{path, copyFrom}` | `{path, copyDir}`.
 - Chạy `npm run build` và `npm test` (đã gồm `test/validate.mjs --build`).
+- Mọi thay đổi nội dung → bump version của plugin sở hữu rồi chạy `node cli/lib/versions.mjs --lock` (Claude Code cache plugin theo version).
 
 ## Maintainer
 
