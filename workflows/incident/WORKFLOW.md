@@ -26,6 +26,7 @@ invoke: per-request
 ## Điều kiện tiên quyết
 
 - Skill/agent đã cài: `ops-incident-investigator`, `engineering-spec-analyst`, skill `core/git-workflow`.
+- Plugin cần cài thêm: `ops` (không nằm trong dependency của plugin workflows; xem preamble).
 - Artifact phải có sẵn: quyền truy cập log/metric/trace của hệ thống production (đọc), lịch sử deploy gần
   đây.
 - Baseline: không yêu cầu build/test xanh trước — sự cố có thể xảy ra bất kể trạng thái build/test của

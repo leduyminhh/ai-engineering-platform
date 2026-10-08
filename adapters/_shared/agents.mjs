@@ -35,14 +35,16 @@ export function workflowPreamble(wf, agentsById, provider, { softDeps = [] } = {
     }
     if (wf.agents.length) {
       L.push('> **Cách dispatch trên Claude:** bước ghi `agent <id>` → gọi subagent qua tool Agent: ' +
-        wf.agents.map((id) => `\`${id}\` (bản cài dạng plugin: \`${(agentsById.get(id) || {}).plugin}:${id}\`)`).join(', ') + '.');
+        wf.agents.map((id) => `\`${id}\` (bản cài dạng plugin: \`${(agentsById.get(id) || {}).plugin}:${id}\`)`).join(', ') + '.' +
+        ' Ký hiệu `∥` giữa các agent = gửi nhiều lời gọi Agent trong **một** message để chạy song song.');
     }
     if (wf.requires.length) L.push(`> **Skill dùng trực tiếp:** ${skillPointer(wf.requires)}.`);
   } else {
     L.push(principlesDigest({ provider: 'codex' }));
     if (wf.agents.length) {
       L.push('> **Cách dispatch trên Codex:** bước ghi `agent <id>` → spawn subagent theo tên: ' +
-        wf.agents.map((id) => `\`${codexAgentName(id)}\``).join(', ') + '.');
+        wf.agents.map((id) => `\`${codexAgentName(id)}\``).join(', ') + '.' +
+        ' `∥` = spawn song song.');
     }
     if (wf.requires.length) L.push(`> **Skill dùng trực tiếp:** ${wf.requires.map((s) => `\`${s.split('/')[1]}\``).join(', ')}.`);
   }

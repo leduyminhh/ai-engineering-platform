@@ -26,6 +26,7 @@ invoke: per-request
 
 - Skill/agent đã cài: `data-migration-writer`, `backend-implementer`, `backend-test-writer`, `backend-reviewer`,
   skill `core/git-workflow`, `data/data-db-migration`.
+- Plugin cần cài thêm: `data` (không nằm trong dependency của plugin workflows; xem preamble).
 - Artifact phải có sẵn: schema/data-model hiện tại đọc được (migration trước đó, ERD, hoặc kết nối DB test).
 - Baseline: có DB test riêng biệt để chạy thử migration, không phải DB production.
 

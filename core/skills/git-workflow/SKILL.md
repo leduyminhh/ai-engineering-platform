@@ -53,8 +53,8 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
 5. Nếu người dùng đã cho commit message: giữ nguyên ý, chỉ chuẩn hoá lỗi format rõ ràng.
    Nếu chưa có: nạp [references/commit-convention.md](references/commit-convention.md)
    và sinh title + body theo quy ước đó (kèm template/ví dụ khi cần — xem Bản đồ tài liệu).
-6. Ghi toàn bộ message vào file tạm UTF-8, chạy
-   `scripts/test-commit-message-encoding.ps1 -MessageFile <file>`, kiểm tra pass.
+6. Ghi toàn bộ message vào file tạm UTF-8, chạy `node <thư mục skill>/scripts/check-commit-message.mjs <file>`
+   (hoặc `scripts/test-commit-message-encoding.ps1 -MessageFile <file>` trên PowerShell), kiểm tra pass.
 7. **DỪNG cho người dùng duyệt diff:** trình bày `git status --short` (file đã stage) +
    toàn bộ nội dung commit message, chờ người dùng xác nhận TRƯỚC khi chạy lệnh commit.
 8. Sau khi xác nhận: commit bằng `git commit -F <file>` (KHÔNG truyền tiếng Việt qua tham
@@ -127,5 +127,7 @@ Nạp đúng file khi cần, đừng nạp tất cả:
   staging, commit, push, merge, revert, release, hotfix.
 - [references/output-template-vi.md](references/output-template-vi.md): template trả lời
   tiếng Việt (trước commit, sau commit/push, changelog).
+- [scripts/check-commit-message.mjs](scripts/check-commit-message.mjs):
+  bản Node (ưu tiên, chạy mọi OS) — kiểm UTF-8, BOM, header Conventional Commits và dấu tiếng Việt trước `git commit -F`.
 - [scripts/test-commit-message-encoding.ps1](scripts/test-commit-message-encoding.ps1):
   kiểm tra message tiếng Việt còn UTF-8 hợp lệ trước `git commit -F`.

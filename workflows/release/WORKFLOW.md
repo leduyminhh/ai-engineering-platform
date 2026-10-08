@@ -27,6 +27,7 @@ invoke: per-request
 
 - Skill/agent đã cài: `engineering-quality-auditor`, `engineering-release-scribe`, `ops-release-engineer`,
   `frontend-e2e-test-writer` (chỉ khi project có e2e), skill `core/git-workflow`.
+- Plugin cần cài thêm: `ops` (không nằm trong dependency của plugin workflows; xem preamble).
 - Artifact phải có sẵn: git log của phạm vi release (tag trước hoặc khoảng commit xác định được).
 - Baseline: build/test của branch release đang XANH — được đo và ghi số mốc ở Bước 1 trước khi chạy quality gate.
 

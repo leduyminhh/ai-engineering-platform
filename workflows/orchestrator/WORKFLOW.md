@@ -95,9 +95,10 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
   `.codex/skills/workflow-<slug>/` (Codex), ở gốc project hoặc thư mục home khi cài global.
 - **Ràng buộc:** không tự cài workflow thay người dùng.
 - **Đầu ra:** xác nhận đã cài, hoặc lệnh cài đề xuất.
-- **Gate:** workflow đã cài; chưa cài → in `aip install --skill workflows/<id>` và dừng `blocked`.
-- **Khi fail:** chưa cài → in đúng lệnh cài, dừng workflow, không thử cách khác.
-- **Evidence:** đường dẫn skill đã cài (hoặc lệnh `aip install` in ra khi chưa cài).
+- **Gate:** workflow đã cài; chưa cài → in lệnh cài theo cách đang dùng (cài phẳng: `aip install --skill workflows/<id>`;
+  cài plugin Claude: `claude plugin install workflows@<marketplace>`) và dừng `blocked`.
+- **Khi fail:** chưa cài → in đúng lệnh cài theo cách đang dùng, dừng workflow, không thử cách khác.
+- **Evidence:** đường dẫn skill đã cài (hoặc lệnh cài in ra khi chưa cài).
 
 ### Bước 3 — Xác nhận ⏸
 

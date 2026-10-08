@@ -676,7 +676,7 @@ if (fs.existsSync(BUILD)) {
   const sbFiles = dbmFiles.filter((f) => f.startsWith('spring-boot/'));
   const sbRead = (rel) => dbmRead(rel);
   for (const f of ['module-pom.xml.tpl', 'DbMigrationApplication.java.tpl', 'application-migration.yml',
-    'env.example', 'new-migration.sh']) {
+    'env.example']) {
     ok(sbFiles.includes(`spring-boot/common/${f}`), `data-db-migration: có spring-boot/common/${f}`);
   }
   // B2 của G2: env.example thừa/thiếu key so với yml là lỗi im lặng lúc chạy job.
@@ -2619,6 +2619,55 @@ if (fs.existsSync(BUILD)) {
   for (const s of [...core.stages, ...plugins.flatMap((p) => p.stages)]) {
     ok(!/^## Khi nào dùng/m.test(s.body), `${s.id}: không còn mục "## Khi nào dùng" (description đã nêu)`);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 37. Workflow/orchestrator/script Phase 1 (spec 2026-10-07 audit W7, S6; final-review M8 / P1.4, P1.5)
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  if (workflows) {
+    const orch = fs.readFileSync(path.join(workflows.dir, 'orchestrator', 'WORKFLOW.md'), 'utf8');
+    ok(orch.includes('claude plugin install workflows@') && orch.includes('aip install --skill workflows/'),
+      'orchestrator Bước 2: lệnh cài theo cả hai cách (phẳng + plugin Claude)');
+    for (const [slug, plug] of [['db-change', 'data'], ['incident', 'ops'], ['release', 'ops']]) {
+      const w = fs.readFileSync(path.join(workflows.dir, slug, 'WORKFLOW.md'), 'utf8');
+      ok(new RegExp(`Plugin cần cài thêm:.*\`${plug}\``).test(w), `workflow-${slug}: điều kiện tiên quyết nêu plugin ${plug}`);
+    }
+    const feat = path.join(BUILD, 'claude', 'plugins', 'workflows', 'skills', 'workflow-feature', 'SKILL.md');
+    if (fs.existsSync(feat)) ok(fs.readFileSync(feat, 'utf8').includes('`∥`'), 'preamble claude: giải thích ký hiệu ∥ (nhiều Agent trong một message)');
+  }
+  const mig = path.join(PLUGINS_DIR, 'data', 'skills', 'data-db-migration');
+  ok(fs.existsSync(path.join(mig, 'scripts', 'new-migration.sh')) && !fs.existsSync(path.join(mig, 'references', 'spring-boot', 'common', 'new-migration.sh')),
+    'data-db-migration: new-migration.sh nằm ở scripts/');
+  ok(fs.readFileSync(path.join(mig, 'references', 'README.md'), 'utf8').includes('../scripts/new-migration.sh'),
+    'data-db-migration references/README.md: trỏ ../scripts/new-migration.sh');
+  const vc = path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-migrate-vault-consul');
+  ok(['seed-consul.sh', 'seed-vault.sh'].every((f) => fs.existsSync(path.join(vc, 'scripts', f)) && !fs.existsSync(path.join(vc, 'references', 'spring-boot', f))),
+    'backend-migrate-vault-consul: seed-*.sh nằm ở scripts/');
+  ok(fs.readFileSync(path.join(vc, 'references', 'spring-boot', 'README.md'), 'utf8').includes('`scripts/` của skill'),
+    'vault-consul references/spring-boot/README.md: ghi script nằm ở `scripts/` của skill');
+  const ccm = path.join(CORE_DIR, 'skills', 'git-workflow', 'scripts', 'check-commit-message.mjs');
+  ok(fs.existsSync(ccm), 'git-workflow: có scripts/check-commit-message.mjs');
+  if (fs.existsSync(ccm)) {
+    const src = fs.readFileSync(ccm, 'utf8');
+    ok(!/(?:from\s+|import\s*\(?\s*)['"](?!node:)/.test(src) && src.includes('realpathSync'), 'check-commit-message: chỉ node:*, guard realpath');
+    const tmp37 = fs.mkdtempSync(path.join(os.tmpdir(), 'ccm-'));
+    const run = (...args) => { try { return { code: 0, out: execFileSync(process.execPath, [ccm, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) }; } catch (e) { return { code: e.status, out: `${e.stdout || ''}${e.stderr || ''}` }; } };
+    try {
+      const good = path.join(tmp37, 'ok.txt'); fs.writeFileSync(good, 'feat(x): add y\n\nChanged:\n- Thêm tính năng có dấu\n');
+      const bom = path.join(tmp37, 'bom.txt'); fs.writeFileSync(bom, '﻿feat(x): add y\n\nThêm\n');
+      const bad = path.join(tmp37, 'bad.txt'); fs.writeFileSync(bad, Buffer.from([0x66, 0x65, 0x61, 0x74, 0x3a, 0x20, 0x78, 0x0a, 0x0a, 0xe1, 0xba, 0x0a]));
+      const hdr = path.join(tmp37, 'hdr.txt'); fs.writeFileSync(hdr, 'Thêm tính năng\n\nThân có dấu\n');
+      ok(run(good).code === 0, 'check-commit-message: file hợp lệ → exit 0');
+      ok(run(bom).code === 1 && /BOM/.test(run(bom).out), 'check-commit-message: BOM → exit 1');
+      ok(run(bad).code === 1, 'check-commit-message: UTF-8 hỏng → exit 1');
+      ok(run(hdr).code === 1 && /header/i.test(run(hdr).out), 'check-commit-message: header sai dạng → exit 1');
+      ok(run().code === 2, 'check-commit-message: thiếu tham số → exit 2');
+    } finally { fs.rmSync(tmp37, { recursive: true, force: true }); }
+  }
+  const gw = fs.readFileSync(path.join(CORE_DIR, 'skills', 'git-workflow', 'SKILL.md'), 'utf8');
+  ok(gw.includes('scripts/check-commit-message.mjs') && gw.includes('test-commit-message-encoding.ps1'),
+    'git-workflow SKILL.md: nêu bản Node (ưu tiên) và bản PowerShell');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
