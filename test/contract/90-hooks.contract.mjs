@@ -234,7 +234,7 @@ export default async function run({ ok, ctx }) {
     ok(['cd $REPO && git push', 'cd ~/repo; git push origin HEAD', 'cd - && git push', 'cd && git push', 'cd `pwd` ; git push'].every((c) => cd(c)?.decision === 'ask')
       && cd('cd $REPO && git push origin feature/x') === null,
       'F2: cd target chứa $/~/backtick/- hoặc trống, push không refspec/HEAD → ask; refspec tường minh feature → cho qua');
-    // PowerShell: dấu backtick được coi như dấu tách đoạn (nghiêng về ask)
+    // PowerShell: backtick là escape/nối dòng, được chuẩn hoá trước khi tách đoạn (xem khối N2 bên dưới)
     ok(ps('Set-Location repo; git push origin HEAD', 'feature/x') === null, 'F1: PowerShell Set-Location theo nhánh thật của thư mục');
     // Vòng sửa residual N3: alias Push-Location, `--`, và trạng thái cd không được mang qua `||` / `|`
     const featOnRepo = { currentBranch: (d) => (d === repoDir ? 'feature/x' : 'main') };
@@ -260,7 +260,7 @@ export default async function run({ ok, ctx }) {
     ok(psMain('git commit -m "say `"hi`" sửa"')?.decision === 'deny' && psMain('cat .en`v')?.decision === 'ask',
       'N2: PowerShell escape backtick không che commit -m có dấu hay file .env');
     // F5: gốc git theo file đích, không theo cwd của phiên
-    const w =path.resolve('/repo/.worktrees/x');
+    const w = path.resolve('/repo/.worktrees/x');
     const rootOf = (d) => (path.relative(w, d).startsWith('..') ? path.resolve('/repo') : w);
     const scopes = { 'spec-analyst': ['docs/**'] };
     const wt = (file) => files.decide({ tool_name: 'Write', cwd: '/repo', agent_type: 'spec-analyst', tool_input: { file_path: file } }, { scopes, rootOf, ignoreCase: false });

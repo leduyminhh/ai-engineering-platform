@@ -53,7 +53,7 @@ awk -F= '
 inq { if (index($0, q)) inq = 0; next }
 /^[[:space:]]*(export[[:space:]]+)?[A-Za-z_][A-Za-z0-9_.-]*[[:space:]]*=/ {
   n = $1; sub(/^[[:space:]]*(export[[:space:]]+)?/, "", n); sub(/[[:space:]]+$/, "", n)
-  val = substr($0, index($0, "=") + 1); c = substr(val, 1, 1)
+  val = substr($0, index($0, "=") + 1); sub(/^[[:space:]]+/, "", val); c = substr(val, 1, 1)
   if ((c == "\"" || c == "\047") && index(substr(val, 2), c) == 0) { inq = 1; q = c }
   v = tolower(val)
   print n, ((v ~ /:\/\/[^\/]*:[^\/]*@/ || v ~ /[?&;](password|passwd|pwd|secret|token|apikey|api_key|sslkey)=/) ? "CRED" : "-")
@@ -65,7 +65,7 @@ $q = $null
 Get-Content .env | ForEach-Object {
   if ($q) { if ($_.Contains($q)) { $q = $null }; return }
   if ($_ -match '^\s*(export\s+)?([A-Za-z_][A-Za-z0-9_.-]*)\s*=(.*)$') {
-    $name = $Matches[2]; $val = $Matches[3]
+    $name = $Matches[2]; $val = $Matches[3].TrimStart()
     if ($val.Length -gt 0 -and ($val[0] -eq '"' -or $val[0] -eq "'") -and $val.IndexOf($val[0], 1) -lt 0) { $q = [string]$val[0] }
     $flag = if ($val -match '://[^/]*:[^/]*@' -or $val -match '[?&;](password|passwd|pwd|secret|token|apikey|api_key|sslkey)=') { 'CRED' } else { '-' }
     "$name $flag"

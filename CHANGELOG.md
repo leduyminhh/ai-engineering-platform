@@ -96,17 +96,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `backend-migrate-vault-consul` no longer reads secret values: the agent works from variable names (the user runs a
   names-only command), and backup/trim of `.env`, generation of `configs/` from `.env.bak` and seeding are commands the
   user runs (or the agent runs after explicit confirmation), never Read/Edit on `.env*`. Keeps the core H3 deny coherent with the skill.
-- `backend-migrate-vault-consul` residual fixes (backend 1.7.2): the names-only inventory command now also prints a `CRED`/`-` flag
+- `backend-migrate-vault-consul` residual fixes (backend 1.7.3): the names-only inventory command now also prints a `CRED`/`-` flag
   per variable (embedded `://user:pw@` or `?password=`-style parameters; values are never printed and multi-line PEM continuation lines
   are skipped; bash `awk` and PowerShell variants) and `CRED` variables are classified SECRET; variables named like a URL/URI/DSN/connection
   string (`*_URL`, `*_URI`, `*_DSN`, `*CONNECTION*`, `*_CONN*`, `DATABASE_*`) with flag `-` go to "CẦN XÁC NHẬN" instead of Consul, so a
   credential embedded in e.g. `REDIS_URL` cannot land in Consul. Confirmation to run a command is an explicit "yes" in chat (user-run
   scripts and skills-mode bypass the hook); multi-profile differences come from the user or a user-run script; the `.env.example`
   template derives from the agreed bootstrap variable names, never from reading the new `.env`; the skill folder `README.md` says
-  which commands the user runs.
+  which commands the user runs. Follow-up: the names-only commands trim whitespace after `=` before detecting a quoted multi-line value
+  (`KEY= "-----BEGIN…`), so inner PEM lines are no longer printed as names.
 - `test/contract/96-dist.contract.mjs` isolates the temporary repo from the developer's global git config
   (`GIT_CONFIG_GLOBAL`, `GIT_CONFIG_NOSYSTEM`); `cli/dist.mjs` is unchanged.
-- Version bumps for Phase 3: core 1.4.2 (MINOR 1.4.0 for hooks, PATCH for the final-review and residual fixes), backend 1.7.2 (vault-consul skill), frontend 1.9.1 (e2e agent body now states that
+- Version bumps for Phase 3: core 1.4.2 (MINOR 1.4.0 for hooks, PATCH for the final-review and residual fixes), backend 1.7.3 (vault-consul skill), frontend 1.9.1 (e2e agent body now states that
   `.gitignore` is out of scope), workflows 1.3.2 (orchestrator names `.agents/skills/workflow-<slug>/` for Codex);
   `plugins/_versions.lock.json` refreshed.
 - `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;

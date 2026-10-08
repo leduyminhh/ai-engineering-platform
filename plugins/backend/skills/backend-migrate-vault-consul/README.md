@@ -30,7 +30,7 @@ config vào Consul", "bỏ .env dùng vault" trên một project đã có cấu 
 ## Step-by-step áp dụng vào project
 
 **B0. Kích hoạt.** Mở Claude Code trong project đích, nói ví dụ: *"migrate .env sang Vault + Consul"*.
-Skill tự chạy 8 bước sau; mỗi bước sửa file đều DỪNG cho bạn duyệt diff trước khi commit.
+Skill dẫn qua 8 bước sau (agent làm phần đọc mã/sửa file, còn lệnh cần giá trị `.env` do BẠN chạy); mỗi bước sửa file đều DỪNG cho bạn duyệt diff trước khi commit.
 
 1. **Nạp context** — đọc `CLAUDE.md`, `project-knowledge/`, `stack-profile.md`; liệt kê nguồn cấu hình
    (`.env`, `.env.*`, file cấu hình app) và xác định `<app-name>` + các profile.
