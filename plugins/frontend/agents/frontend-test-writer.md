@@ -10,6 +10,7 @@ writeScope:
   - "**/test/**"
   - "**/tests/**"
   - "**/mocks/**"
+  - "**/__mocks__/**"
   - "**/*.handlers.*"
 ---
 

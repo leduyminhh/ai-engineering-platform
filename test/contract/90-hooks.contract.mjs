@@ -122,4 +122,79 @@ export default async function run({ ok, ctx }) {
     const scoped = allAgents.filter((a) => a.writeScope.length);
     ok(scoped.length === 5 && scoped.every((a) => a.mode === 'write'), '5 agent ghi có writeScope (H5)');
   }
+  // Vòng sửa 1: phủ rộng file bí mật, Grep, alias Windows, gốc git, glob không phân biệt hoa thường
+  {
+    const { pathToFileURL, execFileSync, CORE_DIR, REPO_ROOT, checkAgentTools, os } = ctx;
+    const dir = path.join(CORE_DIR, 'hooks', 'scripts');
+    const files = await import(pathToFileURL(path.join(dir, 'guard-files.mjs')).href);
+    const bash = await import(pathToFileURL(path.join(dir, 'guard-bash.mjs')).href);
+    const scopes = { 'spec-analyst': ['docs/**'], 'fx-tests': ['**/test/**'] };
+    const opts = { scopes, repoRoot: '/repo', ignoreCase: false };
+    const tool = (tool_name, tool_input, extra = {}) => files.decide({ tool_name, cwd: '/repo', tool_input, ...extra }, opts);
+    const read = (f) => tool('Read', { file_path: f });
+    const denied = ['certs/server.key', 'private.key', 'id_dsa', '.ssh/id_ed25519_sk', 'keys/key.ppk', 'creds/sa.p8', 'id_rsa.bak',
+      'prod.env', 'config/app.env', '.envrc', 'credentials.yml', 'ID_RSA', 'a/.ENV'];
+    ok(denied.every((f) => read(`/repo/${f}`)?.decision === 'deny'), `H3: ${denied.length} dạng file bí mật mở rộng (.key/.ppk/.p8/*.env/.envrc/id_*/credentials.yml/hoa thường) → deny`);
+    const allowed = ['.env.example', 'config/.env.sample', 'id_rsa.pub', 'src/credentials.ts', 'process.env.js', 'src/env.ts', 'keys.md'];
+    ok(allowed.every((f) => read(`/repo/${f}`) === null), 'H3: .env.example/.sample, id_rsa.pub, credentials.ts, process.env.js → cho qua');
+    const b = (command) => bash.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x' });
+    ok(['cat .ENV', 'cat prod.env', 'cat config/app.env', 'cat certs/server.key', 'cat id_rsa.bak', 'cat credentials.yml']
+      .every((c) => b(c)?.decision === 'ask'), 'H3 Bash: .ENV/prod.env/.envrc/.key/id_rsa.bak/credentials.yml → ask');
+    ok(['cat id_rsa.pub', 'cat .env.example', 'cat src/credentials.ts', 'ls'].every((c) => b(c) === null), 'H3 Bash: id_rsa.pub/.env.example/credentials.ts → cho qua');
+    // Grep không được đọc lén file bí mật
+    ok(tool('Grep', { pattern: 'x', path: '/repo/.env' })?.decision === 'deny' && tool('Grep', { pattern: 'x', glob: '.env*' })?.decision === 'deny'
+      && tool('Grep', { pattern: 'x', glob: '*.env' })?.decision === 'deny' && tool('Grep', { pattern: 'x', glob: '*.pem' })?.decision === 'deny'
+      && tool('Grep', { pattern: 'x', glob: '**/{*.ts,.env}' })?.decision === 'deny', 'H3 Grep: path/glob nhắm file bí mật → deny');
+    ok(tool('Grep', { pattern: 'x', path: '/repo/src', glob: '*.ts' }) === null && tool('Grep', { pattern: 'x' }) === null
+      && tool('Grep', { pattern: 'x', glob: '**/*' }) === null && tool('Grep', { pattern: 'x', glob: '.env.example' }) === null, 'H3 Grep: path/glob thường → cho qua');
+    const hooks = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'hooks', 'hooks.json'), 'utf8'));
+    ok(hooks.hooks.PreToolUse.some((g) => g.matcher.split('|').includes('Grep') && g.hooks[0].args[0].endsWith('guard-files.mjs')), 'hooks.json: matcher guard-files có Grep');
+    // NotebookEdit / MultiEdit
+    ok(tool('NotebookEdit', { notebook_path: '/repo/prod.env' })?.decision === 'deny', 'H3: NotebookEdit notebook_path bí mật → deny');
+    ok(tool('MultiEdit', { file_path: '/repo/src/a.js' }, { agent_type: 'spec-analyst' })?.decision === 'deny'
+      && tool('NotebookEdit', { notebook_path: '/repo/n.ipynb' }, { agent_type: 'spec-analyst' })?.decision === 'deny'
+      && tool('MultiEdit', { file_path: '/repo/docs/a.md' }, { agent_type: 'spec-analyst' }) === null, 'H5: MultiEdit/NotebookEdit ngoài scope → deny, trong scope → cho qua');
+    const script = path.join(dir, 'guard-files.mjs');
+    ok(execFileSync('node', [script], { input: '{}', encoding: 'utf8' }) === '', 'guard-files CLI: {} → exit 0, không in gì');
+    // Alias Windows: luồng NTFS + dấu chấm cuối
+    const ads = String.raw`C:\repo\.env::$DATA`;
+    ok(files.decide({ tool_name: 'Read', cwd: '/repo', tool_input: { file_path: ads } }, opts)?.decision === 'deny'
+      && files.decide({ tool_name: 'Read', cwd: '/repo', tool_input: { file_path: String.raw`C:\repo\.env:stream` } }, opts)?.decision === 'deny'
+      && read('/repo/.env.') ?.decision === 'deny', 'H3: .env::$DATA / .env:stream / .env. (alias NTFS) → deny');
+    // Symlink / junction tên vô hại trỏ tới file bí mật
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-guard-'));
+    try {
+      const real = path.join(tmp, 'real', 'prod.env');
+      fs.mkdirSync(real, { recursive: true });
+      const link = path.join(tmp, 'link.txt');
+      let linked = false;
+      try { fs.symlinkSync(real, link, 'junction'); linked = true; } catch { /* máy không cho tạo symlink/junction → bỏ nhánh này */ }
+      if (linked) {
+        ok(files.decide({ tool_name: 'Read', cwd: tmp, tool_input: { file_path: 'link.txt' } }, opts)?.decision === 'deny', 'H3: symlink/junction tên vô hại trỏ tới file bí mật → deny (realpath)');
+        fs.unlinkSync(link);
+      }
+      const plain = path.join(tmp, 'plain.txt');
+      fs.writeFileSync(plain, 'x');
+      ok(files.decide({ tool_name: 'Read', cwd: tmp, tool_input: { file_path: 'plain.txt' } }, opts) === null, 'H3: file thường tồn tại → cho qua');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+    // Gốc repo = git toplevel, không phải cwd
+    ok(files.decide({ tool_name: 'Write', cwd: '/repo/docs', agent_type: 'spec-analyst', tool_input: { file_path: '/repo/docs/a.md' } }, opts) === null
+      && files.decide({ tool_name: 'Write', cwd: '/repo/docs', agent_type: 'spec-analyst', tool_input: { file_path: '/repo/src/a.js' } }, opts)?.decision === 'deny',
+      'H5: cwd là thư mục con, repoRoot neo scope theo gốc repo');
+    if (fs.existsSync(path.join(REPO_ROOT, '.git'))) {
+      ok(files.decide({ tool_name: 'Write', cwd: path.join(REPO_ROOT, 'core'), agent_type: 'spec-analyst', tool_input: { file_path: path.join(REPO_ROOT, 'docs', 'a.md') } },
+        { scopes, ignoreCase: false }) === null, 'H5: không inject repoRoot → lấy từ git rev-parse --show-toplevel');
+    }
+    // Glob không phân biệt hoa thường (Windows)
+    ok(files.globToRegExp('docs/**', { ignoreCase: true }).test('DOCS/a.md') && !files.globToRegExp('docs/**').test('DOCS/a.md')
+      && files.decide({ tool_name: 'Write', cwd: '/repo', agent_type: 'spec-analyst', tool_input: { file_path: '/repo/DOCS/a.md' } }, { ...opts, ignoreCase: true }) === null
+      && files.decide({ tool_name: 'Write', cwd: '/repo', agent_type: 'spec-analyst', tool_input: { file_path: '/repo/DOCS/a.md' } }, opts)?.decision === 'deny',
+      'H5: ignoreCase bật → DOCS/ khớp docs/**, tắt → deny');
+    // Cú pháp glob của writeScope
+    const g = (writeScope) => checkAgentTools({ mode: 'write', skills: [], tools: [], writeScope });
+    ok(['./docs/**', '/docs/**', '../x/**', 'a\\b', 'a.{ts,js}', 'a?.md'].every((x) => g([x]).length === 1)
+      && g(['docs/**', '**/test/**', 'playwright.config.*', 'CHANGELOG.md']).length === 0, 'checkAgentTools: glob writeScope bắt đầu ./ / .. hoặc chứa \\ { ? → lỗi');
+  }
 }

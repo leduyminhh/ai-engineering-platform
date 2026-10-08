@@ -184,6 +184,10 @@ export function checkAgentTools(agent) {
   const tools = agent.tools || [];
   const errs = [];
   if ((agent.writeScope || []).length && agent.mode !== 'write') errs.push('writeScope chỉ dành cho agent ghi (mode: write)');
+  // Glob so khớp với đường dẫn tương đối gốc repo, dạng "/", không có ký pháp mà globToRegExp không hiểu.
+  for (const g of agent.writeScope || []) {
+    if (/^(\.\/|\/|\.\.)/.test(g) || g.includes('\\') || g.includes('{') || g.includes('?')) errs.push(`writeScope glob không hợp lệ: "${g}" (không bắt đầu bằng ./ / .., không chứa \\ { ?)`);
+  }
   if (!tools.length) return errs;
   if (agent.mode === 'read-only') {
     const bad = tools.filter((t) => WRITE_TOOLS.includes(t));
