@@ -15,9 +15,9 @@
 - UTF-8 **không BOM**, LF cho mọi file nguồn; nội dung/thông điệp tiếng Việt có dấu; comment code tiếng Việt, chỉ giải thích *vì sao*.
 - **KHÔNG sửa** `package.json`, `pack.config.json` (file packaging của chủ dự án). Script mới gọi trực tiếp `node cli/lib/<file>.mjs`.
 - Không đổi hành vi với provider khác ngoài việc quote YAML (Cursor `.mdc` description, Codex SKILL.md) — Antigravity không phát frontmatter.
-- Mọi assert cũ trong `test/validate.mjs` phải còn xanh trừ 5 assert ghim version được thay có chủ đích ở Task 5 (dòng 1316, 1470, 1614, 1789, 2181 tại `c9c3c97`).
+- Mọi assert cũ trong `test/validate.mjs` phải còn xanh trừ 5 assert ghim version được thay có chủ đích ở Task 5 (tìm theo nội dung; tại `692a40c` ở khoảng dòng 1316, 1470, 1614, 1789 và pin engineering `mf.version === '1.4.0'` trong khối 29d).
 - Semver: `version` khớp `^\d+\.\d+\.\d+$`; bump PATCH cho mọi plugin ở Task 5 (output đổi do Task 1): core `1.1.1→1.1.2`, backend `1.5.0→1.5.1`, frontend `1.7.0→1.7.1`, engineering `1.4.0→1.4.1`, ops `1.2.0→1.2.1`, data `1.3.0→1.3.1`; `workflows` `1.0.0→1.1.0` ở Task 2 (đổi dependency).
-- Commit qua `core:git-workflow`: header tiếng Anh `type(scope): summary`, body tiếng Việt (Changed/Reason), `git commit -F <file>` sau khi chạy `test-commit-message-encoding.ps1`; **KHÔNG** thêm `Co-authored-by` / `Co-Authored-By`. Branch: `chore/standards-phase0` (từ `master d804d01`; spec đã commit `c9c3c97`).
+- Commit qua `core:git-workflow`: header tiếng Anh `type(scope): summary`, body tiếng Việt (Changed/Reason), `git commit -F <file>` sau khi chạy `test-commit-message-encoding.ps1`; **KHÔNG** thêm `Co-authored-by` / `Co-Authored-By`. Branch: `chore/standards-phase0` (rebase lên `master 0e6a103`; spec `692a40c`).
 - Trước mỗi lần `node test/validate.mjs`: chạy `npm run build` (assert build đọc `build/`). Không chạy 2 lượt test song song (cùng ghi `build/`).
 - Trên Windows không `rm -rf` thư mục có junction; dọn bằng Node `fs.rmSync`.
 
@@ -639,7 +639,7 @@ Thay 5 dòng pin:
 // L1789
   ok(/^\d+\.\d+\.\d+$/.test(feMan23.version) && feMan23.description.includes('frontend-performance'),
     'frontend manifest: version semver, description nêu frontend-performance');
-// L2181
+// khối 29d (pin engineering hiện là 1.4.0)
   ok(mf.description.includes('7 skill') && mf.description.includes('engineering-task-breakdown') && /^\d+\.\d+\.\d+$/.test(mf.version),
     'engineering manifest: 7 skill, có engineering-task-breakdown, version semver');
 ```
