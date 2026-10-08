@@ -13,16 +13,19 @@
 import { skillFiles, frontmatter, principlesDigest, PROVIDER_SKILL_KEYS } from '../_shared/lib.mjs';
 import { claudeAgentMd, workflowPreamble } from '../_shared/agents.mjs';
 
-function pluginJson(p, { dependencies, author } = {}) {
+function pluginJson(p, { dependencies, author, meta } = {}) {
   const obj = {
     name: p.id, // kebab-case; namespace skill: /<id>:<skill>
     displayName: p.name,
     description: p.description,
     version: p.version, // semver MAJOR.MINOR.PATCH
     author, // attribution (= owner của marketplace) — tránh cảnh báo "No author" của `claude plugin validate`
-    keywords: ['workflow', 'cowork-to-code', p.id],
+    homepage: meta && meta.homepage,
+    repository: meta && meta.repository,
+    license: meta && meta.license,
+    keywords: Array.isArray(p.manifest && p.manifest.keywords) ? p.manifest.keywords : ['workflow', p.id],
   };
-  if (!author) delete obj.author;
+  for (const k of Object.keys(obj)) if (obj[k] === undefined) delete obj[k];
   if (dependencies && dependencies.length) obj.dependencies = dependencies; // tên trần cùng marketplace, vd ["core"]
   return JSON.stringify(obj, null, 2) + '\n';
 }
@@ -46,12 +49,19 @@ function marketplaceJson(entries, marketplace) {
   ) + '\n';
 }
 
+// Marketplace chỉ đọc plugins/, nên skill draft để ở drafts/: cài skills-mode và gói Cowork vẫn lấy được, marketplace thì không thấy.
+// core không có trong _published.json nên không bao giờ coi là draft.
+function draftOf(published) {
+  if (!published) return () => false;
+  return (pid, sid) => pid !== 'core' && published[pid] !== '*' && !(published[pid] || []).includes(`${pid}/${sid}`);
+}
+
 // Principles là nền cho skill khác, không phải lệnh người dùng gõ; model vẫn gọi được.
 const principlesHidden = (skillKeys) => (skillKeys.includes('user-invocable') ? [['user-invocable', false]] : []);
 
 // CORE plugin = skill "principles" (nguyên tắc nền tảng) + các SKILL DÙNG CHUNG từ
 // core/skills/ (vd git-workflow) — cài plugin nào cũng kéo theo qua dependency "core".
-function coreFiles(core, { author, skillKeys = [] } = {}) {
+function coreFiles(core, { author, meta, skillKeys = [] } = {}) {
   const skill =
     frontmatter([
       ['name', 'principles'],
@@ -61,7 +71,7 @@ function coreFiles(core, { author, skillKeys = [] } = {}) {
     '\n\n' +
     core.principles.replace(/^\n+/, '');
   const files = [
-    { path: 'plugins/core/.claude-plugin/plugin.json', content: pluginJson(core, { author }) },
+    { path: 'plugins/core/.claude-plugin/plugin.json', content: pluginJson(core, { author, meta }) },
     { path: 'plugins/core/skills/principles/SKILL.md', content: skill },
   ];
   // Pointer 2 dạng (phẳng + plugin namespaced) giống stage skill của domain plugin.
@@ -90,7 +100,7 @@ function pluginPrinciplesFiles(p, skillKeys = []) {
 // Plugin `workflows` gọi xuyên nhiều plugin. Claude coi `dependencies` là "phải enabled" nên chỉ khai
 // báo hard-dependency tường minh từ manifest (thiếu một plugin lẻ như `data` không được làm hỏng cả bộ);
 // plugin còn lại được nêu trong preamble từng workflow. Không có hardDependencies → union như trước.
-function workflowFiles(wfs, plugins, author, skillKeys) {
+function workflowFiles(wfs, plugins, author, meta, skillKeys) {
   const agentsById = new Map(plugins.flatMap((p) => p.agents || []).map((a) => [a.id, a]));
   const present = new Set(plugins.map((p) => p.id));
   const pluginsOf = (wf) => {
@@ -102,7 +112,7 @@ function workflowFiles(wfs, plugins, author, skillKeys) {
   const hard = (wfs.manifest && wfs.manifest.hardDependencies) || null;
   const deps = hard ? new Set(hard) : new Set(wfs.stages.flatMap((wf) => [...pluginsOf(wf)]));
   const dependencies = ['core', ...[...deps].filter((d) => d !== 'core' && present.has(d)).sort()];
-  const files = [{ path: 'plugins/workflows/.claude-plugin/plugin.json', content: pluginJson(wfs, { dependencies, author }) }];
+  const files = [{ path: 'plugins/workflows/.claude-plugin/plugin.json', content: pluginJson(wfs, { dependencies, author, meta }) }];
   for (const wf of wfs.stages) {
     const soft = hard ? [...pluginsOf(wf)].filter((p) => !hard.includes(p)).sort() : [];
     files.push(...skillFiles(wf, 'plugins/workflows/skills', workflowPreamble(wf, agentsById, 'claude', { softDeps: soft }), { keys: skillKeys }));
@@ -113,34 +123,38 @@ function workflowFiles(wfs, plugins, author, skillKeys) {
 export default {
   name: 'claude',
   describe: 'Claude Code marketplace — core (dependency) + plugins/<id>/ (mỗi plugin có skills/)',
-  build(plugins, { marketplace, core, workflows, skillKeys = PROVIDER_SKILL_KEYS.claude }) {
+  build(plugins, { marketplace, core, workflows, published, skillKeys = PROVIDER_SKILL_KEYS.claude }) {
     const author = marketplace.owner; // attribution dùng chung cho mọi plugin.json (= owner marketplace)
+    const meta = { homepage: marketplace.homepage, repository: marketplace.repository, license: marketplace.license };
+    const isDraft = draftOf(published);
     const wfs = workflows && workflows.stages.length ? workflows : null;
     // marketplace liệt kê core TRƯỚC rồi tới các domain plugin (+ workflows nếu có)
     const entries = [core, ...plugins, ...(wfs ? [wfs] : [])];
     const files = [
       { path: '.claude-plugin/marketplace.json', content: marketplaceJson(entries, marketplace) },
-      ...coreFiles(core, { author, skillKeys }),
+      ...coreFiles(core, { author, meta, skillKeys }),
     ];
     for (const p of plugins) {
       files.push({
         path: `plugins/${p.id}/.claude-plugin/plugin.json`,
         // Dependency CÙNG marketplace = TÊN TRẦN "core" (KHÔNG phải "<marketplace>:core";
         // Claude Code không hỗ trợ shorthand "marketplace:plugin" trong dependencies).
-        content: pluginJson(p, { dependencies: ['core'], author }),
+        content: pluginJson(p, { dependencies: ['core'], author, meta }),
       });
       files.push(...pluginPrinciplesFiles(p, skillKeys)); // <plugin>-principles skill
       // Claude không auto-load skill khác khi gọi một skill nên cần digest + pointer.
       // Pointer có 2 dạng tên vì 2 đường cài: skills phẳng (`principles`) và plugin namespaced (`core:principles`).
       const principlesNote = principlesDigest({ provider: 'claude', pluginId: p.id });
       for (const stage of p.stages) {
-        files.push(...skillFiles(stage, `plugins/${p.id}/skills`, principlesNote, { keys: skillKeys }));
+        const base = isDraft(p.id, stage.id) ? `drafts/${p.id}/skills` : `plugins/${p.id}/skills`;
+        files.push(...skillFiles(stage, base, principlesNote, { keys: skillKeys }));
       }
       for (const a of p.agents || []) {
-        files.push({ path: `plugins/${p.id}/agents/${a.id}.md`, content: claudeAgentMd(a) });
+        const root = a.skills.some((sid) => isDraft(...sid.split('/'))) ? 'drafts' : 'plugins';
+        files.push({ path: `${root}/${p.id}/agents/${a.id}.md`, content: claudeAgentMd(a) });
       }
     }
-    if (wfs) files.push(...workflowFiles(wfs, plugins, author, skillKeys));
+    if (wfs) files.push(...workflowFiles(wfs, plugins, author, meta, skillKeys));
     return files;
   },
 };

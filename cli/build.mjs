@@ -13,10 +13,11 @@
 //   node cli/build.mjs --target all                    # build mọi adapter
 //   node cli/build.mjs --target all --plugin backend   # chỉ build 1 plugin
 //   node cli/build.mjs --target cursor --out ./out     # đổi thư mục output
+//   node cli/build.mjs --target claude --include-draft # giữ skill draft trong plugins/ (mặc định chuyển sang drafts/)
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadPlugins, loadMarketplace, loadCore, loadWorkflows, REPO_ROOT } from './lib/plugins.mjs';
+import { loadPlugins, loadMarketplace, loadCore, loadWorkflows, loadPublished, REPO_ROOT } from './lib/plugins.mjs';
 import { writeFiles, ensureDir, rmrf } from './lib/write.mjs';
 import { writeWizardReport } from './lib/report.mjs';
 
@@ -24,10 +25,11 @@ const ADAPTERS_DIR = path.join(REPO_ROOT, 'adapters');
 const DEFAULT_OUT = path.join(REPO_ROOT, 'build');
 
 function parseArgs(argv) {
-  const a = { target: null, out: null, plugin: null, list: false };
+  const a = { target: null, out: null, plugin: null, list: false, includeDraft: false };
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i];
     if (v === '--list') a.list = true;
+    else if (v === '--include-draft') a.includeDraft = true;
     else if (v === '--target') a.target = argv[++i];
     else if (v === '--out') a.out = argv[++i];
     else if (v === '--plugin') a.plugin = argv[++i];
@@ -83,7 +85,7 @@ async function main() {
     }
     console.log('\nPlugin (auto-discovered từ plugins/*/.manifest.json):');
     for (const p of plugins) console.log(`  ${p.id.padEnd(14)} ${String(p.stages.length).padStart(2)} stage — ${p.name}`);
-    if (!args.target) console.log('\nDùng: node cli/build.mjs --target <name|all> [--plugin id] [--out dir]');
+    if (!args.target) console.log('\nDùng: node cli/build.mjs --target <name|all> [--plugin id] [--out dir] [--include-draft]');
     return;
   }
 
@@ -102,7 +104,7 @@ async function main() {
       : path.join(DEFAULT_OUT, adapter.name);
     rmrf(outDir);
     ensureDir(outDir);
-    const files = await adapter.build(plugins, { outDir, marketplace, core, workflows });
+    const files = await adapter.build(plugins, { outDir, marketplace, core, workflows, published: args.includeDraft ? null : loadPublished() });
     const n = writeFiles(outDir, files);
     console.log(`[${adapter.name}] ${plugins.length} plugin, ${n} mục -> ${path.relative(REPO_ROOT, outDir) || '.'}`);
   }

@@ -525,33 +525,36 @@ function installOne(provider, effSetArg, scope) {
 
   if (layout.kind === 'claude') {
     const claudeRoot = path.join(root, '.claude');
-    const pluginsDir = path.join(pbuild, 'plugins');
-    if (!fs.existsSync(pluginsDir)) return { files: ctx.files, links: ctx.links };
-    for (const id of fs.readdirSync(pluginsDir)) {
-      const pdir = path.join(pluginsDir, id);
-      if (!fs.statSync(pdir).isDirectory()) continue;
-      for (const comp of fs.readdirSync(pdir, { withFileTypes: true })) {
-        if (!comp.isDirectory() || comp.name === '.claude-plugin') continue; // bỏ manifest plugin
-        const srcComp = path.join(pdir, comp.name);
-        const destComp = path.join(claudeRoot, comp.name);
-        if (comp.name === 'agents') {
-          for (const f of fs.readdirSync(srcComp)) {
-            if (!f.endsWith('.md') || !agentActive(path.basename(f, '.md'))) continue;
-            fs.mkdirSync(destComp, { recursive: true });
-            placeEntry(path.join(srcComp, f), path.join(destComp, f), ctx);
+    // drafts/ giữ skill chưa published (không vào marketplace) nhưng skills-mode vẫn cài được.
+    for (const rootName of ['plugins', 'drafts']) {
+      const pluginsDir = path.join(pbuild, rootName);
+      if (!fs.existsSync(pluginsDir)) continue;
+      for (const id of fs.readdirSync(pluginsDir)) {
+        const pdir = path.join(pluginsDir, id);
+        if (!fs.statSync(pdir).isDirectory()) continue;
+        for (const comp of fs.readdirSync(pdir, { withFileTypes: true })) {
+          if (!comp.isDirectory() || comp.name === '.claude-plugin') continue; // bỏ manifest plugin
+          const srcComp = path.join(pdir, comp.name);
+          const destComp = path.join(claudeRoot, comp.name);
+          if (comp.name === 'agents') {
+            for (const f of fs.readdirSync(srcComp)) {
+              if (!f.endsWith('.md') || !agentActive(path.basename(f, '.md'))) continue;
+              fs.mkdirSync(destComp, { recursive: true });
+              placeEntry(path.join(srcComp, f), path.join(destComp, f), ctx);
+            }
+            continue;
           }
-          continue;
+          for (const skill of fs.readdirSync(srcComp, { withFileTypes: true })) { // comp='skills' → từng skill-dir
+            if (!skill.isDirectory()) continue;
+            if (!effSet.has(`${id}/${skill.name}`)) continue;
+            fs.mkdirSync(destComp, { recursive: true });         // dir TỔNG HỢP là thật (gộp nhiều plugin)
+            placeEntry(path.join(srcComp, skill.name), path.join(destComp, skill.name), ctx);
+          }
         }
-        for (const skill of fs.readdirSync(srcComp, { withFileTypes: true })) { // comp='skills' → từng skill-dir
-          if (!skill.isDirectory()) continue;
-          if (!effSet.has(`${id}/${skill.name}`)) continue;
-          fs.mkdirSync(destComp, { recursive: true });         // dir TỔNG HỢP là thật (gộp nhiều plugin)
-          placeEntry(path.join(srcComp, skill.name), path.join(destComp, skill.name), ctx);
-        }
+        // .mcp.json cấp plugin: chỉ đặt khi plugin đó active (có ≥1 skill hiệu lực) → gộp thành <id>.mcp.json
+        const mcp = path.join(pdir, '.mcp.json');
+        if (fs.existsSync(mcp) && pluginActive(id)) placeEntry(mcp, path.join(claudeRoot, `${id}.mcp.json`), ctx);
       }
-      // .mcp.json cấp plugin: chỉ đặt khi plugin đó active (có ≥1 skill hiệu lực) → gộp thành <id>.mcp.json
-      const mcp = path.join(pdir, '.mcp.json');
-      if (fs.existsSync(mcp) && pluginActive(id)) placeEntry(mcp, path.join(claudeRoot, `${id}.mcp.json`), ctx);
     }
   } else if (layout.kind === 'codex') {
     // Codex nạp native skills từ <root>/.codex/skills/<skill-id>/ (global -g → ~/.codex/skills/).

@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, parseFrontmatter, loadSkillsFrom, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
+import { loadPlugins, loadCore, loadMarketplace, loadWorkflows, loadPublished, splitList, parseFrontmatter, loadSkillsFrom, REPO_ROOT, PLUGINS_DIR, CORE_DIR } from '../cli/lib/plugins.mjs';
 import { checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, missingAnchors, registrySignals } from '../cli/lib/workflows.mjs';
 import { offeredCatalog } from '../cli/lib/install.mjs';
 import claudeAdapter from '../adapters/claude/adapter.mjs';
@@ -50,6 +50,11 @@ export async function buildContext({ build = false, fails = [] } = {}) {
   ]);
   const allAgents = plugins.flatMap((p) => p.agents);
   const claudeDir = path.join(BUILD, 'claude');
+  // Skill draft nằm ở drafts/ (không vào marketplace); published nằm ở plugins/.
+  const claudeSkillDir = (pid, sid) => {
+    const pub = path.join(claudeDir, 'plugins', pid, 'skills', sid);
+    return fs.existsSync(pub) ? pub : path.join(claudeDir, 'drafts', pid, 'skills', sid);
+  };
 
   // Fixture adapter thuần (không đọc plugin thật).
   const fxAgent = { id: 'fx-reviewer', plugin: 'fx', description: 'Agent fixture để test adapter', mode: 'read-only',
@@ -74,7 +79,7 @@ export async function buildContext({ build = false, fails = [] } = {}) {
 
   return {
     fs, path, os, execFileSync, pathToFileURL,
-    loadPlugins, loadCore, loadMarketplace, loadWorkflows, splitList, parseFrontmatter, loadSkillsFrom, REPO_ROOT, PLUGINS_DIR, CORE_DIR,
+    loadPlugins, loadCore, loadMarketplace, loadWorkflows, loadPublished, splitList, parseFrontmatter, loadSkillsFrom, REPO_ROOT, PLUGINS_DIR, CORE_DIR,
     checkWorkflowBody, parseSteps, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, missingAnchors, registrySignals,
     offeredCatalog, claudeAdapter, codexAdapter, cursorAdapter, tomlBasic, tomlMultiline,
     agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar,
@@ -82,7 +87,7 @@ export async function buildContext({ build = false, fails = [] } = {}) {
     checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, checkPassthroughTypes, checkAgentTools,
     lineOverlap, stepOverlap, titleOverlap,
     hashDir, currentVersions, planLock, lockDecision, diffLock, readLock, parseClaudePluginList,
-    RUN_IN, INVOKE_IN, listFilesRec, hasFiles, BUILD, claudeDir,
+    RUN_IN, INVOKE_IN, listFilesRec, hasFiles, BUILD, claudeDir, claudeSkillDir,
     core, plugins, workflows, catalogSkillIds, allAgents,
     fxAgent, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, wfText,
     fails,

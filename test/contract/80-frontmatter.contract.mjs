@@ -128,11 +128,11 @@ export default async function run({ ok, ctx }) {
   }
 
   {
-    const { fs, path, claudeDir, plugins } = ctx;
+    const { fs, path, claudeDir, claudeSkillDir, plugins } = ctx;
     if (fs.existsSync(claudeDir)) {
       const fmOf = (p) => (fs.readFileSync(p, 'utf8').match(/^---\n([\s\S]*?)\n---/) || ['', ''])[1];
       for (const p of plugins) for (const s of p.stages.filter((x) => x.id.endsWith('-init'))) {
-        ok(/^disable-model-invocation: true$/m.test(fmOf(path.join(claudeDir, 'plugins', p.id, 'skills', s.id, 'SKILL.md'))),
+        ok(/^disable-model-invocation: true$/m.test(fmOf(path.join(claudeSkillDir(p.id, s.id), 'SKILL.md'))),
           `build claude ${s.id}: disable-model-invocation: true (D2)`);
       }
       for (const p of plugins) {
@@ -142,7 +142,7 @@ export default async function run({ ok, ctx }) {
       const hinted = plugins.flatMap((p) => p.stages.filter((s) => s.passthrough['argument-hint']).map((s) => [p.id, s.id]));
       ok(hinted.length >= 9, `có ≥ 9 skill khai báo argument-hint (=${hinted.length})`);
       for (const [pid, sid] of hinted) {
-        ok(/^argument-hint: ".+"$/m.test(fmOf(path.join(claudeDir, 'plugins', pid, 'skills', sid, 'SKILL.md'))), `build claude ${sid}: argument-hint`);
+        ok(/^argument-hint: ".+"$/m.test(fmOf(path.join(claudeSkillDir(pid, sid), 'SKILL.md'))), `build claude ${sid}: argument-hint`);
       }
     }
   }

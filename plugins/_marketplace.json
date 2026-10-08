@@ -1,7 +1,11 @@
 {
   "name": "ai-engineering-platform",
   "owner": {
-    "name": "ai-engineering-platform"
+    "name": "ai-engineering-platform",
+    "url": "https://github.com/leduyminhh/ai-engineering-platform"
   },
-  "description": "ai-engineering-platform — marketplace workflow AI đa lĩnh vực; mỗi lĩnh vực là một plugin, build ra cấu hình cho nhiều công cụ AI (Claude Code, Cursor, Codex, Antigravity)."
+  "description": "ai-engineering-platform — marketplace workflow AI đa lĩnh vực; mỗi lĩnh vực là một plugin, build ra cấu hình cho nhiều công cụ AI (Claude Code, Cursor, Codex, Antigravity).",
+  "homepage": "https://github.com/leduyminhh/ai-engineering-platform",
+  "repository": "https://github.com/leduyminhh/ai-engineering-platform",
+  "license": "MIT"
 }

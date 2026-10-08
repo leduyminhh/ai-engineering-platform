@@ -1,6 +1,6 @@
 // Contract source: core, cấu trúc plugin, agents và workflows cấp repo.
 export default async function run({ ok, ctx }) {
-  const { fs, path, loadCore, PLUGINS_DIR, CORE_DIR, checkWorkflowBody, parseSteps, stepRefs, parseRegistry, RISKS, frontmatter, RUN_IN, INVOKE_IN, listFilesRec, core, plugins, catalogSkillIds, allAgents, workflows } = ctx;
+  const { fs, path, loadCore, PLUGINS_DIR, CORE_DIR, checkWorkflowBody, parseSteps, stepRefs, parseRegistry, RISKS, frontmatter, RUN_IN, INVOKE_IN, listFilesRec, core, plugins, catalogSkillIds, allAgents, workflows, loadPublished } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. CORE
@@ -161,6 +161,18 @@ export default async function run({ ok, ctx }) {
       }
       ok(priority.length === ids.size && [...ids].every((id) => priority.includes(id)),
         `${o.id}: thứ tự ưu tiên liệt kê đủ ${ids.size} workflow`);
+    }
+  }
+  // Phase 2 Task 6: manifest description gọn và nêu đủ skill published (thay pin PL2)
+  {
+    const pub = loadPublished();
+    for (const u of [core, ...plugins]) {
+      const len = [...u.description].length;
+      ok(len <= 500, `${u.id}: manifest description ≤ 500 ký tự (=${len})`);
+      const published = u.stages.filter((s) => u.id === 'core' || !pub || pub[u.id] === '*' || (pub[u.id] || []).includes(`${u.id}/${s.id}`));
+      const missing = published.map((s) => s.id).filter((id) => !u.description.includes(id));
+      ok(missing.length === 0, `${u.id}: manifest description nêu đủ skill published (thiếu: ${missing.join(', ')})`);
+      ok(Array.isArray(u.manifest.keywords) && u.manifest.keywords.length >= 2, `${u.id}: manifest có keywords`);
     }
   }
 }

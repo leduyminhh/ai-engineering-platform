@@ -1,6 +1,6 @@
 // Contract build output: chuẩn hoá ở tầng adapter, parity references/, cursor và pointer codex.
 export default async function run({ ok, ctx }) {
-  const { fs, path, loadMarketplace, frontmatter, hasFiles, core, plugins, allAgents, workflows, BUILD, claudeDir, fails } = ctx;
+  const { fs, path, loadMarketplace, frontmatter, hasFiles, core, plugins, allAgents, workflows, BUILD, claudeDir, claudeSkillDir, loadPublished, fails } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. BUILD OUTPUT (Claude) — chuẩn hóa ở tầng adapter
@@ -46,7 +46,7 @@ export default async function run({ ok, ctx }) {
 
       // SKILL.md output đã CHUẨN HÓA: chỉ name + description (metadata workflow bị strip ở adapter)
       for (const s of p.stages) {
-        const out = path.join(claudeDir, 'plugins', p.id, 'skills', s.id, 'SKILL.md');
+        const out = path.join(claudeSkillDir(p.id, s.id), 'SKILL.md');
         ok(fs.existsSync(out), `build ${s.id}: có SKILL.md`);
         const content = fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '';
         const fmText = content.match(/^---\n([\s\S]*?)\n---/);
@@ -71,12 +71,31 @@ export default async function run({ ok, ctx }) {
     }
 
     for (const a of allAgents) {
-      const f = path.join(claudeDir, 'plugins', a.plugin, 'agents', `${a.id}.md`);
+      const f = [path.join(claudeDir, 'plugins', a.plugin, 'agents', `${a.id}.md`), path.join(claudeDir, 'drafts', a.plugin, 'agents', `${a.id}.md`)].find((x) => fs.existsSync(x)) || path.join(claudeDir, 'plugins', a.plugin, 'agents', `${a.id}.md`);
       ok(fs.existsSync(f), `build claude agent ${a.id}: có file`);
       const c = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
       const fmA = (c.match(/^---\n([\s\S]*?)\n---/) || ['', ''])[1];
       ok(fmA.includes(`name: ${a.id}`) && /^disallowedTools: .*\bAgent\b/m.test(fmA),
         `build claude agent ${a.id}: name + chặn tool Agent`);
+    }
+    // Phase 2 Task 6: marketplace không lộ skill draft (E8)
+    {
+      const pub = loadPublished();
+      const isDraft = (pid, sid) => pid !== 'core' && !!pub && pub[pid] !== '*' && !(pub[pid] || []).includes(`${pid}/${sid}`);
+      for (const p of plugins) for (const s of p.stages) {
+        const inPlugins = fs.existsSync(path.join(claudeDir, 'plugins', p.id, 'skills', s.id, 'SKILL.md'));
+        const inDrafts = fs.existsSync(path.join(claudeDir, 'drafts', p.id, 'skills', s.id, 'SKILL.md'));
+        ok(isDraft(p.id, s.id) ? (!inPlugins && inDrafts) : (inPlugins && !inDrafts),
+          `build claude ${s.id}: ${isDraft(p.id, s.id) ? 'draft nằm ở drafts/' : 'published nằm ở plugins/'}`);
+      }
+      for (const a of allAgents) {
+        const inPlugins = fs.existsSync(path.join(claudeDir, 'plugins', a.plugin, 'agents', `${a.id}.md`));
+        if (inPlugins) ok(a.skills.every((sid) => !isDraft(...sid.split('/'))), `build claude agent ${a.id}: không trỏ skill draft`);
+      }
+      const pj = JSON.parse(fs.readFileSync(path.join(claudeDir, 'plugins/backend/.claude-plugin/plugin.json'), 'utf8'));
+      ok(/^https:\/\//.test(pj.homepage || '') && !!pj.repository && pj.license === 'MIT', 'plugin.json: homepage/repository/license (E9)');
+      ok(Array.isArray(pj.keywords) && pj.keywords.includes('backend') && !pj.keywords.includes('cowork-to-code'),
+        'plugin.json: keywords riêng theo plugin');
     }
     if (wfBuilt) {
       const pj = JSON.parse(fs.readFileSync(path.join(claudeDir, 'plugins/workflows/.claude-plugin/plugin.json'), 'utf8'));
@@ -105,7 +124,7 @@ export default async function run({ ok, ctx }) {
     for (const s of p.stages) {
       if (!(s.assets || []).includes('references')) continue;
       const checks = [
-        ['claude', path.join(claudeDir, 'plugins', p.id, 'skills', s.id, 'references')],
+        ['claude', path.join(claudeSkillDir(p.id, s.id), 'references')],
         ['codex', path.join(BUILD, 'codex', p.id, 'skills', s.id, 'references')],
         ['antigravity', path.join(BUILD, 'antigravity', p.id, 'docs', 'workflow', s.id, 'references')],
         ['cursor', path.join(BUILD, 'cursor', p.id, '.cursor', 'skills', s.id, 'references')],

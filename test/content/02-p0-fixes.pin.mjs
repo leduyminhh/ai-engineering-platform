@@ -32,14 +32,7 @@ export default async function run({ ok, ctx }) {
       'P0 S2: frontend principles không còn "nối API thật" (mâu thuẫn ranh giới frontend-implement)');
     ok(!readSrc('backend/skills/backend-init/SKILL.md').includes('Node-TypeScript'),
       'P0 S3: backend-init không còn lựa chọn stack Node-TypeScript (chưa có template)');
-    // Manifest description là nơi người dùng phát hiện skill; skill mới thêm mà quên cập nhật thì bị "ẩn".
-    for (const id of ['backend', 'frontend', 'engineering']) {
-      const desc = JSON.parse(readSrc(`${id}/.manifest.json`)).description;
-      const skillsDir = path.join(PLUGINS_DIR, id, 'skills');
-      const missing = fs.readdirSync(skillsDir, { withFileTypes: true })
-        .filter((e) => e.isDirectory() && !desc.includes(e.name)).map((e) => e.name);
-      ok(missing.length === 0, `P0 PL2: manifest ${id} nêu đủ skill trong description (thiếu: ${missing.join(', ')})`);
-    }
+    // PL2 (manifest nêu đủ skill) đã thành contract ở 10-source.
     ok(!JSON.parse(readSrc('frontend/.manifest.json')).description.includes('Layered'),
       'P0 D4: manifest frontend không còn "Layered" (kiểu kiến trúc đã đổi sang Feature-Based)');
   }

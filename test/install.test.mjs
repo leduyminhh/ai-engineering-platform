@@ -345,6 +345,22 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   process.env.AIE_INSTALL_ROOT = TMP;
 }
 
+// ── skill draft nằm ở build/claude/drafts/ nhưng skills-mode vẫn cài được (R6) ─────────────
+{
+  const TMP_D = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-draft-'));
+  process.env.AIE_INSTALL_ROOT = TMP_D;
+  try {
+    install({ providers: 'claude', skills: ['data/data-oltp-init'], scope: 'project' });
+    ok(fs.existsSync(path.join(TMP_D, '.claude', 'skills', 'data-oltp-init', 'SKILL.md')),
+      'install claude skills-mode: cài được skill draft từ drafts/');
+    ok(!fs.existsSync(path.join(TMP_D, '.claude', 'skills', 'data-db-migration', 'SKILL.md')),
+      'install claude skills-mode: skill draft không kéo skill published anh em');
+  } finally {
+    fs.rmSync(TMP_D, { recursive: true, force: true });
+    process.env.AIE_INSTALL_ROOT = TMP;
+  }
+}
+
 // ── partial uninstall: entry nhiều plugin, gỡ 1 plugin -> GIỮ phần còn lại ────
 {
   const TMP_P = fs.mkdtempSync(path.join(os.tmpdir(), 'cwf-partial-'));
