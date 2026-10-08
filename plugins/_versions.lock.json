@@ -1,11 +1,11 @@
 {
   "backend": {
-    "version": "1.7.1",
-    "hash": "05515c99393ef6d51b9ca089ef58997910786db08754018804792c09aa72d2e9"
+    "version": "1.7.2",
+    "hash": "d08f289bce087523fcaa27c5d5f72a5bd4ab08cc8c72db220913267441d8aad4"
   },
   "core": {
-    "version": "1.4.1",
-    "hash": "46691290b042a79880521fe5b46f165b1e5291bd53c8062cac20040b92ac454a"
+    "version": "1.4.2",
+    "hash": "6b43de60beb8e90251e8ffe9b5d8815bdf196b2aded3fcf507c7483732813358"
   },
   "data": {
     "version": "1.5.1",

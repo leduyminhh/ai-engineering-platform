@@ -75,6 +75,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   directory (unresolvable targets ask for a push with no refspec/`HEAD`/`@`); H5 anchors the write scope to the git root
   of the target file instead of the session cwd. README "Hooks" lists the extra false positives and residual risks
   (PowerShell parsing, Grep on a directory, H5 outside a git repo, `bypassPermissions` [Unverified], about 0.2 s per call on Windows).
+- Hook residual fixes (core 1.4.2): for the PowerShell tool `guard-bash` joins backtick line continuations and strips backtick
+  escapes before parsing, so a push split by a backtick-newline or written as ``ma`in`` is asked like `git push origin main` (the
+  README no longer claims a backtick "fails toward ask"); the `cd` tracker also knows `Push-Location` and skips a `--`
+  argument (`cd -- repo && git push`); `popd`/`Pop-Location` count as an unresolvable target, and after `||` or `|` a previous
+  `cd` is no longer trusted (`cd repo || git push` asks when it pushes with no refspec/`HEAD`/`@`). Covered in `test/contract/90-hooks.contract.mjs`.
 - Skills-mode Claude install warns when the same plugin is already installed in plugin mode (every skill would
   appear twice).
 
@@ -91,9 +96,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `backend-migrate-vault-consul` no longer reads secret values: the agent works from variable names (the user runs a
   names-only command), and backup/trim of `.env`, generation of `configs/` from `.env.bak` and seeding are commands the
   user runs (or the agent runs after explicit confirmation), never Read/Edit on `.env*`. Keeps the core H3 deny coherent with the skill.
+- `backend-migrate-vault-consul` residual fixes (backend 1.7.2): the names-only inventory command now also prints a `CRED`/`-` flag
+  per variable (embedded `://user:pw@` or `?password=`-style parameters; values are never printed and multi-line PEM continuation lines
+  are skipped; bash `awk` and PowerShell variants) and `CRED` variables are classified SECRET; variables named like a URL/URI/DSN/connection
+  string (`*_URL`, `*_URI`, `*_DSN`, `*CONNECTION*`, `*_CONN*`, `DATABASE_*`) with flag `-` go to "CẦN XÁC NHẬN" instead of Consul, so a
+  credential embedded in e.g. `REDIS_URL` cannot land in Consul. Confirmation to run a command is an explicit "yes" in chat (user-run
+  scripts and skills-mode bypass the hook); multi-profile differences come from the user or a user-run script; the `.env.example`
+  template derives from the agreed bootstrap variable names, never from reading the new `.env`; the skill folder `README.md` says
+  which commands the user runs.
 - `test/contract/96-dist.contract.mjs` isolates the temporary repo from the developer's global git config
   (`GIT_CONFIG_GLOBAL`, `GIT_CONFIG_NOSYSTEM`); `cli/dist.mjs` is unchanged.
-- Version bumps for Phase 3: core 1.4.1 (MINOR 1.4.0 for hooks, PATCH for the final-review fixes), backend 1.7.1 (vault-consul skill), frontend 1.9.1 (e2e agent body now states that
+- Version bumps for Phase 3: core 1.4.2 (MINOR 1.4.0 for hooks, PATCH for the final-review and residual fixes), backend 1.7.2 (vault-consul skill), frontend 1.9.1 (e2e agent body now states that
   `.gitignore` is out of scope), workflows 1.3.2 (orchestrator names `.agents/skills/workflow-<slug>/` for Codex);
   `plugins/_versions.lock.json` refreshed.
 - `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;
