@@ -113,6 +113,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Version bumps for Phase 3: core 1.4.2 (MINOR 1.4.0 for hooks, PATCH for the final-review and residual fixes), backend 1.7.3 (vault-consul skill), frontend 1.9.1 (e2e agent body now states that
   `.gitignore` is out of scope), workflows 1.3.2 (orchestrator names `.agents/skills/workflow-<slug>/` for Codex);
   `plugins/_versions.lock.json` refreshed.
+- backend 1.7.4 and frontend 1.9.2: their `*-init` skills ship `AGENTS.template.md`, which gained the Testing
+  section; lock refreshed.
 - `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;
   `test/install.test.mjs` removes its temp directories on exit.
 - All plugins bumped MINOR for Phase 2 (routing behaviour changes: `disable-model-invocation`, agent `tools`):
