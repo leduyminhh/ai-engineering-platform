@@ -115,6 +115,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `plugins/_versions.lock.json` refreshed.
 - backend 1.7.4 and frontend 1.9.2: their `*-init` skills ship `AGENTS.template.md`, which gained the Testing
   section; lock refreshed.
+- core 1.4.3: `guard-bash` and `guard-files` strip a leading BOM (U+FEFF) from stdin before parsing. Input piped
+  from PowerShell 5.1 starts with a BOM, which made `JSON.parse` fail and the hooks fail open silently.
 - `aip check` reads `claude plugin list --json` and falls back to the text output on older Claude Code CLIs;
   `test/install.test.mjs` removes its temp directories on exit.
 - All plugins bumped MINOR for Phase 2 (routing behaviour changes: `disable-model-invocation`, agent `tools`):
