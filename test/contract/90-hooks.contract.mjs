@@ -87,6 +87,8 @@ export default async function run({ ok, ctx }) {
     const out = JSON.parse(run(JSON.stringify(bash('git commit -m "thêm"'))) || '{}');
     ok(out.hookSpecificOutput?.hookEventName === 'PreToolUse' && out.hookSpecificOutput?.permissionDecision === 'deny'
       && /-F/.test(out.hookSpecificOutput?.permissionDecisionReason || ''), 'guard-bash CLI: in JSON hookSpecificOutput deny + hướng dẫn -F');
+    const bom = JSON.parse(run('﻿' + JSON.stringify(bash('git push origin main'), null, 2) + '\r\n') || '{}');
+    ok(bom.hookSpecificOutput?.permissionDecision === 'ask', 'guard-bash CLI: stdin có BOM + CRLF vẫn đọc được → ask');
   }
   {
     const { pathToFileURL, execFileSync, CORE_DIR, claudeAdapter, fxPlugin, fxAgent, fxCore, fxMk, byPath, allAgents } = ctx;
@@ -112,6 +114,8 @@ export default async function run({ ok, ctx }) {
     ok(globToRegExp('**/test/**').test('test/a.java') && !globToRegExp('docs/*').test('docs/a/b.md'), 'globToRegExp: **/ và *');
     const run = (stdin) => execFileSync('node', [script], { input: stdin, encoding: 'utf8' });
     ok(run('') === '' && run('nope') === '', 'guard-files CLI: input hỏng → exit 0, không in gì');
+    const bomOut = JSON.parse(run('﻿' + JSON.stringify({ tool_name: 'Read', cwd: '/repo', tool_input: { file_path: '/repo/.env' } })) || '{}');
+    ok(bomOut.hookSpecificOutput?.permissionDecision === 'deny', 'guard-files CLI: stdin có BOM vẫn đọc được → deny');
     const ag = { ...fxAgent, id: 'fx-writer', mode: 'write', writeScope: ['docs/**'] };
     const out = byPath(claudeAdapter.build([{ ...fxPlugin, agents: [ag] }], { marketplace: fxMk, core: { ...fxCore, hooksDir: path.join(CORE_DIR, 'hooks') } }));
     const lock = JSON.parse((out.get('plugins/core/hooks/scope-lock.json') || { content: '{}' }).content);

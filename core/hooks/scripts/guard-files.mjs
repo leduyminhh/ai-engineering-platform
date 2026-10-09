@@ -94,7 +94,8 @@ export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase =
 
 function main() {
   let input;
-  try { input = JSON.parse(readFileSync(0, 'utf8')); } catch { return; }
+  // Pipe từ PowerShell 5.1 chèn BOM vào đầu stdin; JSON.parse lỗi sẽ làm hook im lặng cho qua.
+  try { input = JSON.parse(readFileSync(0, 'utf8').replace(/^﻿/, '')); } catch { return; }
   const d = decide(input);
   if (!d) return;
   process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: d.decision, permissionDecisionReason: d.reason } }));
