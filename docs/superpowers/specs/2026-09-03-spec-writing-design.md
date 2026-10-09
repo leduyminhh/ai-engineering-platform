@@ -1,7 +1,7 @@
 # Thiết kế: Skill core `spec-writing` — khảo sát yêu cầu + viết feature/requirement spec
 
 - Ngày: 2026-09-03
-- Trạng thái: Đã duyệt thiết kế (brainstorming), đang thực thi.
+- Trạng thái: **Đã thực thi** — skill core `spec-writing` (`b0d49b7`), merge vào `master` qua PR #23 (`d08de01`, 2026-09-04); sau đó chuyển sang plugin `engineering` thành `engineering-spec-writing` (`7fda25c`).
 - Phạm vi: Nội dung — thêm skill DÙNG CHUNG (core) `spec-writing` dưới `core/skills/`. Không đổi
   engine/adapter/CLI.
 

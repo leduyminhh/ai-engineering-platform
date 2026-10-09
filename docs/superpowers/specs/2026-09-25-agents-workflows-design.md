@@ -1,7 +1,7 @@
 # Thiết kế: Agent + bộ 12 Workflow + Orchestrator (Claude + Codex)
 
 - Ngày: 2026-09-25
-- Trạng thái: Bản nháp chờ chủ dự án duyệt. Chưa thực thi.
+- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `4c02a84` (2026-09-25).
 - Phạm vi giai đoạn 1: provider **claude** + **codex**. cursor/antigravity để giai đoạn sau (§9 P1).
 - Vị trí nội dung:
   - **Agent** nằm trong plugin domain (`plugins/<id>/agents/`), vì agent gói skill của đúng domain đó.

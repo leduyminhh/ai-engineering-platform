@@ -3,6 +3,8 @@
 > Ngày: 2026-09-15 · Phạm vi: `plugins/frontend` · Mục tiêu: đưa bộ template kiến trúc frontend lên
 > ngang tầm "architecture kit" của backend (ARD làm selector + template chuẩn cho từng structure),
 > với bộ 3 kiến trúc **Feature-Based / FSD / Micro-Frontend**.
+>
+> Trạng thái: **Đã thực thi** trên `master` (`ca78ba2`, 2026-09-15; bổ sung `83d7b5a`, `f3419ee`).
 
 ## 1. Bối cảnh & vấn đề
 

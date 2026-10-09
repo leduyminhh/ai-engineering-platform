@@ -1,7 +1,7 @@
 # Thiết kế: Skill `backend-migrate-db` — chọn & áp công cụ migration DB (Flyway ↔ Liquibase)
 
 - Ngày: 2026-09-07
-- Trạng thái: Đã duyệt thiết kế (brainstorming). CHƯA thực thi — thực thi ở session khác.
+- Trạng thái: **Đã thay thế, không thực thi riêng** — gộp vào `backend-db-migration` (spec `2026-09-29-skill-plugin-workflow-upgrade-design.md` §7.1, phương án A), sau đó chuyển thành `data-db-migration` theo ADR-0001 (`8a98313`).
 - Phạm vi: Nội dung — thêm skill recipe on-demand `backend-migrate-db` cho plugin `backend`,
   kèm `references/spring-boot/` (template Flyway + Liquibase). Không đổi engine/adapter/CLI.
 - Người duyệt: chủ dự án (đã chốt 3 quyết định ở §2.3).

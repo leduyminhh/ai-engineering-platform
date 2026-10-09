@@ -1,7 +1,7 @@
 # Thiết kế: Skill `backend-implement` — sinh vertical slice từ use-case/contract
 
 - Ngày: 2026-09-03
-- Trạng thái: Đã duyệt thiết kế (brainstorming), đang thực thi.
+- Trạng thái: **Đã thực thi** — skill `backend-implement` (`a7c5342`), merge vào `master` qua PR #23 (`d08de01`, 2026-09-04).
 - Phạm vi: Nội dung — thêm skill recipe on-demand `backend-implement` cho plugin `backend`. Không đổi
   engine/adapter/CLI.
 

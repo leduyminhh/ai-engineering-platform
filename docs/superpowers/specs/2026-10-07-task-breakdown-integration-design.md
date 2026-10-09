@@ -1,7 +1,7 @@
 # Thiết kế: nối `engineering-task-breakdown` vào platform + script `check-tasks.mjs`
 
 - Ngày: 2026-10-07
-- Trạng thái: **Đã duyệt — đã hiện thực trên `feature/task-breakdown-integration`**
+- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `0e6a103` (2026-10-08).
 - Phạm vi: Phase 1 — skill code nhận task từ `tasks.md`, `workflow-feature`, agent `engineering-spec-analyst`,
   `plugins/engineering/shared/principles.md`. Phase 2 — script Node zero-dep `check-tasks.mjs` (kiểm + xuất CSV) ship
   kèm skill `engineering-task-breakdown`.

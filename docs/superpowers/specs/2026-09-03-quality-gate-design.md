@@ -1,7 +1,7 @@
 # Thiết kế: Skill `quality-gate` — quét SonarQube + Black Duck, triage, fix, report
 
 - Ngày: 2026-09-03
-- Trạng thái: Đã duyệt thiết kế (brainstorming), đang thực thi.
+- Trạng thái: **Đã thực thi** — skill core `quality-gate` (`36ec75d`), merge vào `master` qua PR #23 (`d08de01`, 2026-09-04); sau đó chuyển sang plugin `engineering` thành `engineering-quality-gate` (`7fda25c`).
 - Phạm vi: Nội dung — thêm skill dùng chung (core) `quality-gate` dưới `core/skills/`. Không đổi
   engine/adapter/CLI.
 

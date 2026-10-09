@@ -1,7 +1,7 @@
 # Thiết kế: Skill `frontend-migrate-architecture` — tái cấu trúc React sang Layered/FSD
 
 - Ngày: 2026-09-03
-- Trạng thái: Đã duyệt thiết kế (brainstorming), đang thực thi.
+- Trạng thái: **Đã thực thi** — skill `frontend-migrate-architecture` (`9cae8ab`), merge vào `master` qua PR #23 (`d08de01`, 2026-09-04).
 - Phạm vi: Nội dung — thêm skill recipe on-demand `frontend-migrate-architecture` cho plugin `frontend`.
   Không đổi engine/adapter/CLI.
 

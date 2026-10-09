@@ -1,7 +1,7 @@
 # Thiết kế: Cài đặt theo mức SKILL (chọn cha → load toàn bộ con) cho CLI + wizard
 
 - Ngày: 2026-09-08
-- Trạng thái: Đã duyệt thiết kế (brainstorming). CHƯA thực thi — thực thi ở phiên khác.
+- Trạng thái: **Đã thực thi** trên `master` (2026-09-08 → 2026-09-09, `e105866` … `27721b4`).
 - Phạm vi: Nâng cấp `cli/` (index + wizard + prompt + install) để chọn/cài/gỡ/update ở **mức skill**,
   với lựa chọn phân cấp plugin→skill. KHÔNG đổi adapter/build/parity, KHÔNG đổi nội dung plugins/.
 - Người duyệt: chủ dự án (đã chốt 4 quyết định ở §2.3 + ngữ nghĩa update ở §5).

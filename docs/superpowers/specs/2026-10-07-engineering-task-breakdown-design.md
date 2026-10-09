@@ -1,7 +1,7 @@
 # Thiết kế: skill `engineering-task-breakdown` — teamlead tách yêu cầu thành task BE/FE
 
 - Ngày: 2026-10-07
-- Trạng thái: **Chờ duyệt spec**
+- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `d804d01` (2026-10-07).
 - Phạm vi: skill mới trong plugin `engineering` + cập nhật manifest/cowork/README/CLAUDE.md + assert trong
   `test/validate.mjs`. Không đụng `cli/`, `adapters/`, `workflows/`, không thêm agent.
 - Người duyệt: chủ dự án (teamlead).

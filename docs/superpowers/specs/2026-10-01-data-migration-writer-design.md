@@ -1,7 +1,7 @@
 # Thiết kế: Publish `data-db-migration` + agent `data-migration-writer` + nối `workflow-db-change` (P1b, S8, WF3)
 
 - Ngày: 2026-10-01
-- Trạng thái: **Đã thực thi** trên nhánh `feature/data-migration-writer` (2026-10-01), chờ merge.
+- Trạng thái: **Đã thực thi** — vào `master` bằng fast-forward (`4c43d72`, 2026-10-01).
 - Phạm vi: đóng P1b, S8 và phần "dùng skill" của WF3 trong spec
   [`2026-09-29-skill-plugin-workflow-upgrade-design.md`](2026-09-29-skill-plugin-workflow-upgrade-design.md)
   (§7.1.10, §9 P1b, §13.2) theo ADR-0001 (năng lực database thuộc plugin `data`).

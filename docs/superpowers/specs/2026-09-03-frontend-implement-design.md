@@ -1,7 +1,7 @@
 # Thiết kế: Skill `frontend-implement` — sinh React từ HTML/Figma/ảnh
 
 - Ngày: 2026-09-03
-- Trạng thái: Đã duyệt thiết kế (brainstorming), đang thực thi.
+- Trạng thái: **Đã thực thi** — skill `frontend-implement` (`6595c2b`), merge vào `master` qua PR #23 (`d08de01`, 2026-09-04).
 - Phạm vi: Nội dung — thêm skill recipe on-demand `frontend-implement` cho plugin `frontend`. Không đổi
   engine/adapter/CLI.
 
