@@ -70,6 +70,47 @@ cannot be inferred from the code itself.
 Every comment explains **why**, never **what**. Write in Vietnamese with correct diacritics; keep
 1–2 lines, technical, and neutral. Delete redundant or outdated comments instead of adding new ones.
 
+### Testing
+
+Every test must catch a real defect that no other test catches; the suite must not grow with the
+number of review rounds.
+
+**Write:**
+
+- **One behavior — one test, at the lowest layer that can catch the defect.** Unit for pure logic;
+  integration only when the behavior needs a real DB, broker, HTTP, or framework wiring. Never assert
+  the same thing at two layers.
+- **Many inputs of one behavior → one parameterized test.**
+- **Every fixed bug → one regression test** reproducing it, at the lowest layer that can.
+- **Cross-component contracts** (schemas, HTTP JSON, shared vectors) are tested on both sides from one
+  shared source, not hand-copied.
+
+**Do not write:**
+
+- Tests that only re-assert a mock they just configured.
+- Tests pinned to implementation details: internal call order, log wording, private names.
+- Tests for cases the type system or a boundary invariant already makes impossible.
+- Tests pinning documentation prose — except operational contracts (commands, env var names,
+  thresholds an operator must use).
+- Duplicates of a behavior already caught at the same or a lower layer.
+
+**Protected — never delete when pruning** without naming the test that still covers the behavior:
+security checks (auth/permission matrices, input/URL validation, no secrets in logs), money/data
+invariants (idempotency, outbox, retention), schema/contract tests, and regression tests for named bugs.
+
+**Process:**
+
+- A review finding like "coverage could be broader" is **Minor** and does not become work by itself;
+  add a test only when the finding names a concrete defect no test catches. Fix rounds add regression
+  tests only for Critical/Important fixes.
+- While working, run targeted tests. At the end of a feature, run the **full suites of every touched
+  component plus its dependents** — select by component, never by individual test class (shared
+  fixtures, wiring and config break tests far from the edited file). If the project ships an
+  affected-tests script or mapping, use it.
+- Run the full suite **once** after the last fix round, not after every round.
+- No fixed `sleep` in tests; wait on a condition with the shortest stable timeout. Avoid test
+  configuration that forces a new framework context/container per class.
+
 ### Safety — never act without explicit confirmation
 
 - **Don't push to protected branches** (`main`/`master`/`dev`/`develop`). Work on a feature branch;
