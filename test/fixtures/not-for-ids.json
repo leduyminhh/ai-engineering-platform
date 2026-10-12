@@ -48,8 +48,7 @@
     "data-olap-init"
   ],
   "data-oltp-implement": [
-    "data-db-migration",
-    "workflow-db-change"
+    "data-db-migration"
   ],
   "data-olap-init": [
     "data-oltp-init"
@@ -134,11 +133,9 @@
     "workflow-release"
   ],
   "ops-incident-troubleshooting": [
-    "workflow-bugfix",
-    "workflow-incident"
+    "workflow-bugfix"
   ],
   "ops-observability": [
-    "ops-incident-troubleshooting",
-    "workflow-incident"
+    "ops-incident-troubleshooting"
   ]
 }

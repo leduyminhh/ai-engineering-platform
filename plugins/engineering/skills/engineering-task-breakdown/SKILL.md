@@ -28,7 +28,7 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
 - **KHÔNG bịa yêu cầu.** Thiếu thông tin → đánh dấu **[giả định]** hoặc đưa vào Câu hỏi mở; không âm thầm điền.
 - KHÔNG tự chốt quyết định kiến trúc → ghi Câu hỏi mở + gợi ý `engineering-adr`.
 - KHÔNG gán người: cột `Owner` để trống cho teamlead.
-- Đổi schema DB → nêu rõ trong task `DB` + gợi ý `workflow-db-change`.
+- Đổi schema DB → nêu rõ trong task `DB` + gợi ý skill `data-db-migration`.
 - KHÔNG ghi đè `requirement.md` / `plan.md` có sẵn; `tasks.md` đã tồn tại → hỏi trước (xem output-formats).
 - Ngôn ngữ đo được; không tuyên bố tuyệt đối.
 - Con người **duyệt** ở Checkpoint 1 và Checkpoint 2 trước khi task được giao.

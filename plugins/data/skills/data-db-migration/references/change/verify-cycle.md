@@ -50,6 +50,10 @@ java -jar target/<app>-db-migration.jar --spring.profiles.active=migration,flywa
 trang [Flyway schema history table](https://documentation.red-gate.com/fd/flyway-schema-history-table-273973417.html)
 không mô tả giá trị cột `script`. Nếu bước (b) báo lệch checksum/script, dừng và báo, không `repair`.
 
+**Kiểm SQL bù.** Kế hoạch C2 có migration bù cho thay đổi phá huỷ → sau (a)(b)(c), áp đúng nguyên văn SQL bù trong
+runbook lên DB test đã xác nhận (không viết lại, không sửa tay), rồi kiểm schema/dữ liệu sau lượt áp. Chưa có SQL bù
+cho thay đổi phá huỷ → quay lại C2 bổ sung kế hoạch, không tự viết SQL bù lúc verify.
+
 ## Liquibase
 
 | Bước | Lệnh | Chứng minh |

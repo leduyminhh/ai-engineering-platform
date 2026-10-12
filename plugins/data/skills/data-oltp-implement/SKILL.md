@@ -1,6 +1,6 @@
 ---
 name: data-oltp-implement
-description: "Hiện thực schema vật lý cho database project OLTP: DDL và migration expand-contract reversible, seed idempotent, giữ schema contract; test up/down trên DB tạm, không áp lên production. Dùng khi người dùng muốn \"tạo schema database\", \"viết migration\", \"DDL\", \"áp schema OLTP\", \"seed dữ liệu\". Không dùng khi schema thuộc một app backend → data-db-migration; cần quy trình đổi schema có review query và commit → workflow-db-change."
+description: "Hiện thực schema vật lý cho database project OLTP: DDL và migration expand-contract reversible, seed idempotent, giữ schema contract; test up/down trên DB tạm, không áp lên production. Dùng khi người dùng muốn \"tạo schema database\", \"viết migration\", \"DDL\", \"áp schema OLTP\", \"seed dữ liệu\". Không dùng khi schema thuộc một app backend → data-db-migration."
 order: 2
 title: "OLTP Database Implement — Hiện thực schema vật lý + migration"
 runsIn: execute

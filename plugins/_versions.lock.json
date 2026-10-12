@@ -8,20 +8,20 @@
     "hash": "7401499bea620ffadfaaa7e0d8c67ea1241dadd77b40074f67cd93ef4e5a95d7"
   },
   "data": {
-    "version": "1.5.2",
-    "hash": "b40767ba836ef16f0e89568bb00946b95c6c06c3b4fcf1f8c23d52000e11f7f6"
+    "version": "1.6.0",
+    "hash": "66262c51a8e45c1decb2e9b8282873766bae4994ac1593c6d70b5af5477c26d8"
   },
   "engineering": {
-    "version": "1.6.0",
-    "hash": "ebc1e6c0a16f5986a2f2a29e913235eab92aa4fea8303ed9922e0b8ea4339acb"
+    "version": "1.6.1",
+    "hash": "85a7b91042fbca611ecf0e2b516f49cff20299fe704e47add725f8c20f08744b"
   },
   "frontend": {
     "version": "1.9.3",
     "hash": "95a743ca2f13777b37341d311ec435e1cb4d8c9162e6e5d6b4b567cd54c3310f"
   },
   "ops": {
-    "version": "1.4.1",
-    "hash": "614374aac170c34403d1e9ee18cf7411006a45ea077b1fa6bf0b2beb49ef2856"
+    "version": "1.5.0",
+    "hash": "a8f5f958fdbd5020638f20624ea1746293a6e75c7ee96750754196040830550b"
   },
   "workflows": {
     "version": "1.3.2",

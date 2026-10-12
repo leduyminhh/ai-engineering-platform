@@ -126,6 +126,10 @@ Cập nhật `project-knowledge/data-model.md`. Pha contract còn nợ → `next
 bản app X.Y deploy hết mọi môi trường"). Viết runbook prod: thứ tự migration/deploy, thao tác có thể khoá lâu, bước
 chạy ngoài transaction, migration bù nếu cần hoàn tác (Flyway forward-only).
 
+Phần còn lại của thay đổi đi qua skill chuyên trách, theo thứ tự: code dùng cột/bảng mới → `backend-implement`;
+integration test cho repository/query bị đụng → `backend-testing`; review query mới và index (thiếu index, index thừa,
+N+1) cùng SQL bù → `backend-code-review`; commit qua `core:git-workflow` sau khi người dùng duyệt diff.
+
 ## Report trả về
 
 ```yaml
