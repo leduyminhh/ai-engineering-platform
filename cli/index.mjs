@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // aip — AI Engineering Platform CLI.
 //
-//   aip                                  mở wizard (build/install/check/uninstall)
+//   aip                                  mở wizard (init/install/uninstall/update/build)
 //   aip build  [--target all|<tool>] [--plugin <id>]
 //   aip init      [--full]               tạo AGENTS.md + CLAUDE.md (@AGENTS.md); --full thêm khung templates/init
 //   aip install   [--provider all|<p>] [--plugin all|<id>] [-g|--global]
@@ -124,6 +124,7 @@ async function wizardFlow(action, opts = {}) {
     throw e;
   }
   if (!sel) { console.log('Đã huỷ.'); return; }
+  if (sel.action === 'init') return reportInit(init({ root: scopeRoot('project'), full: sel.full }));
   if (sel.action === 'build') return runBuild(['--target', 'all']);
   if (sel.action === 'install') return reportInstall(install(sel));
   if (sel.action === 'update') return reportUpdate(update(sel));

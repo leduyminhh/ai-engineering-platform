@@ -40,7 +40,7 @@ Tests that exercise install/uninstall read from `build/`; if validate fails with
 End-user lifecycle (run from inside a *target* project, after `npm link`):
 
 ```bash
-aip                 # interactive menu wizard (install | uninstall | build | check)
+aip                 # interactive menu wizard (init | install | uninstall | update | build)
 aip init      [--full]      # AGENTS.md + CLAUDE.md (@AGENTS.md); --full adds templates/init; never overwrites
 aip install   --provider all --plugin all [-g] [--yes]
 aip uninstall [--provider ...] [--plugin ...] [-g] [--yes]

@@ -138,6 +138,15 @@ function makeDeps({ one = [], many = [], confirm = [], tree = [], catalog = CATA
   };
 }
 
+// init: menu -> kiểu (tối thiểu/đầy đủ) -> confirm; quay lại ở confirm cho chọn lại kiểu
+for (const [action, one, confirm, full] of [
+  [undefined, ['init', false], [true], false],
+  ['init', [false, true], [BACK, true], true],
+]) {
+  const r = await runWizard(action, makeDeps({ one, confirm }));
+  ok(r && r.action === 'init' && r.full === full, `init: ${JSON.stringify({ action, one })} → full=${full}`);
+}
+
 // install: scope -> providers -> skills (cây gộp plugin) -> (kiểu cài claude) -> confirm
 {
   const deps = makeDeps({ one: ['project', 'skills'], many: [['claude']],

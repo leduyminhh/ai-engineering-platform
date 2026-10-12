@@ -37,6 +37,7 @@ export async function runWizard(action, deps = defaultDeps, { all = false } = {}
 
   if (!action) {
     const picked = await d.selectOne('aip · Chọn thao tác', [
+      { label: 'init      — tạo AGENTS.md + CLAUDE.md cho thư mục hiện tại', value: 'init' },
       { label: 'install   — cài workflow', value: 'install' },
       { label: 'uninstall — gỡ workflow đã cài', value: 'uninstall' },
       { label: 'update    — cập nhật plugin đã cài (pull → build → cài lại)', value: 'update' },
@@ -67,6 +68,18 @@ export async function runWizard(action, deps = defaultDeps, { all = false } = {}
   if (action === 'build') {
     const ok = await d.confirmStep('build · build mọi adapter ra build/<tool>/');
     return (ok === BACK || ok === CANCEL) ? null : { action: 'build' };
+  }
+
+  if (action === 'init') {
+    const st = await runSteps([
+      { key: 'full', run: () => d.selectOne('init · Tạo những gì?', [
+        { label: 'tối thiểu — AGENTS.md + CLAUDE.md (import @AGENTS.md)', value: false },
+        { label: 'đầy đủ    — thêm khung templates/init (project-knowledge/, docs/, src/, tests/...)', value: true },
+      ]) },
+      { key: 'ok', run: (s) => d.confirmStep('init · xác nhận',
+        [`${s.full ? 'đầy đủ' : 'tối thiểu'} | thư mục hiện tại | giữ nguyên file đã có, không cài skill`]) },
+    ]);
+    return st ? { action: 'init', full: st.full } : null;
   }
 
   if (action === 'install') {
