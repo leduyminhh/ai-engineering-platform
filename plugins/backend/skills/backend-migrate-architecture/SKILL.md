@@ -1,6 +1,6 @@
 ---
 name: backend-migrate-architecture
-description: "Tái tổ chức src/ của backend project hiện có sang kiến trúc đích trong bộ chuẩn (Onion+DDD, Hexagonal+DDD, Hexagonal/Clean+CQRS, layered), giữ nguyên hành vi. Dùng khi người dùng muốn \"đổi kiến trúc\", \"chuyển sang Onion/Hexagonal/CQRS\", \"áp clean architecture\", \"restructure src\". Không dùng khi chỉ dọn code trong kiến trúc hiện tại → backend-refactor; cần quy trình có ADR, characterization test và commit theo lô → workflow-refactor."
+description: "Tái tổ chức src/ của backend project hiện có sang kiến trúc đích trong bộ chuẩn (Onion+DDD, Hexagonal+DDD, Hexagonal/Clean+CQRS, layered), giữ nguyên hành vi. Dùng khi người dùng muốn \"đổi kiến trúc\", \"chuyển sang Onion/Hexagonal/CQRS\", \"áp clean architecture\", \"restructure src\". Không dùng khi chỉ dọn code trong kiến trúc hiện tại → backend-refactor."
 order: 7
 title: "Backend Migrate — Kiến trúc mã nguồn (recipe on-demand)"
 runsIn: execute

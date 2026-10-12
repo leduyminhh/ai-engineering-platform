@@ -1,6 +1,6 @@
 ---
 name: workflow-feature
-description: "Điều phối làm feature/user story end-to-end: phân tích yêu cầu + acceptance criteria, contract nếu có API, implement backend/frontend, test theo từng criterion, review, docs, commit qua git-workflow. Dùng khi người dùng muốn \"làm feature\", \"thêm tính năng\", \"implement user story\", \"làm chức năng mới end-to-end\". Không dùng khi chỉ sửa lỗi hành vi đã có → workflow-bugfix."
+description: "Điều phối làm feature/user story end-to-end: phân tích yêu cầu + acceptance criteria, contract nếu có API, implement backend/frontend, test theo từng criterion, review, docs, commit qua git-workflow. Dùng khi người dùng muốn \"làm feature\", \"thêm tính năng\", \"thêm endpoint\", \"implement user story\", \"làm chức năng mới end-to-end\". Không dùng khi chỉ sửa lỗi hành vi đã có → workflow-bugfix."
 order: 1
 title: "Feature — implement end-to-end từ yêu cầu tới commit"
 kind: workflow
@@ -56,8 +56,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** mô tả yêu cầu/user story của người dùng
 - **Hành động:** khảo sát yêu cầu còn thiếu, viết acceptance criteria đo được vào `docs/requests/…`; xác
   định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`. Phạm vi cần đổi schema DB
-  (bảng/cột/index/migration) → dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature (chuỗi
-  `db-change → feature`). Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
+  (bảng/cột/index/migration) → dừng, đề xuất chạy skill `data-db-migration` (chế độ `change`, plugin `data`)
+  trước rồi quay lại feature. Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
   chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do). Ở checkpoint, hỏi người dùng có tách task
   không (gợi ý có khi phạm vi `fullstack` hoặc ≥ 2 use case); khi người dùng chọn tách task → đọc
   `references/task-breakdown.md`, mục Bước 2. Chưa duyệt Checkpoint 2 → chưa sang Bước 3.
@@ -65,12 +65,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   định]`; chỉ phân rã task khi người dùng chọn ở checkpoint.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` với acceptance criteria + phạm vi BE/FE/fullstack
   + bảng ứng viên e2e (nếu có); `tasks.md` nếu người dùng chọn tách task.
-- **Gate:** acceptance criteria đo được; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc đã
-  có xác nhận chạy `workflow-db-change` trước; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e"; có
-  `tasks.md` thì `check-tasks.mjs` báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và
+- **Gate:** acceptance criteria đo được; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc
+  migration đã viết và verify qua `data-db-migration`; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e";
+  có `tasks.md` thì `check-tasks.mjs` báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và
   người dùng đã duyệt Checkpoint 1 + Checkpoint 2.
 - **Khi fail:** acceptance criteria mơ hồ/không đo được → hỏi lại người dùng, không tự suy diễn tiếp; phạm vi
-  có đổi schema → dừng, đề xuất `workflow-db-change`.
+  có đổi schema → dừng, đề xuất skill `data-db-migration`.
 - **Evidence:** đường dẫn `requirement.md` + trích đoạn acceptance criteria; có `tasks.md` thì đường dẫn +
   output `check-tasks.mjs` (dòng tổng + exit code) hoặc kết quả checklist thủ công.
 
@@ -141,14 +141,18 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** diff hoàn chỉnh từ Bước 4–5
 - **Hành động:** review correctness/kiến trúc/a11y/test coverage theo phía tương ứng; chạy quality/security
   gate qua `engineering-quality-auditor`; validate lại từng finding (đọc `file:line`, loại finding không tái
-  lập được).
+  lập được). Phạm vi có API (Bước 3 có contract): `backend-reviewer` đối chiếu endpoint/DTO thực tế với contract
+  (thiếu/thừa field, kiểu sai, endpoint lệch); `engineering-quality-auditor` kiểm authorization của endpoint mới/đổi
+  (kiểm quyền theo vai trò/chủ sở hữu tài nguyên, không lộ dữ liệu người khác) và input validation (ràng buộc schema
+  contract được thực thi ở server).
 - **Ràng buộc:** chỉ đọc, không tự sửa code; mọi finding phải có `file:line` + evidence quan sát được.
 - **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`).
-- **Gate:** 0 finding `blocker`; finding `major` đã sửa, hoặc ghi vào `remaining_risks` để người dùng quyết ở
-  checkpoint Bước 8.
-- **Khi fail:** còn finding `blocker` → quay lại Bước 4/5 sửa, review lại phần đã sửa.
+- **Gate:** 0 finding `blocker`; có API thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
+  `remaining_risks` để người dùng quyết ở checkpoint Bước 8.
+- **Khi fail:** còn finding `blocker` → quay lại Bước 4/5 sửa, review lại phần đã sửa; drift contract↔code → quay lại
+  Bước 4 sửa code hoặc Bước 3 sửa contract.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence) + số finding còn lại sau
-  khi sửa.
+  khi sửa; có API: bảng đối chiếu contract↔code.
 
 ### Bước 7 — Tài liệu
 
@@ -193,7 +197,7 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
-| Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy `workflow-db-change` trước rồi quay lại feature |
+| Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy skill `data-db-migration` trước rồi quay lại feature |
 
 Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
@@ -210,6 +214,7 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
 - [ ] Build xanh cho phần backend/frontend có đụng — evidence: Bước 4
 - [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass (e2e `not_run` vì thiếu môi trường BE/DB test là
   hợp lệ, ghi vào `remaining_risks`) — evidence: Bước 5
+- [ ] Có API: 0 drift contract↔code, 0 `blocker` về authorization/input validation — evidence: Bước 6
 - [ ] Docs bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng" — evidence: Bước 7
 - [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 8
 - [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)

@@ -127,7 +127,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** xác nhận của người dùng: đã deploy (kèm thời điểm, môi trường) hoặc hoãn deploy.
 - **Gate:** người dùng xác nhận đã deploy commit release, hoặc xác nhận hoãn.
 - **Khi fail:** deploy lỗi giữa chừng → dừng, áp điều kiện rollback của Bước 5 (người dùng thực hiện), đề
-  xuất `workflow-incident` nếu production bị ảnh hưởng.
+  xuất skill `ops-incident-troubleshooting` nếu production bị ảnh hưởng.
 - **Evidence:** xác nhận của người dùng + thời điểm và môi trường deploy (hoặc lý do hoãn).
 
 ### Bước 7 — Hậu kiểm
@@ -139,7 +139,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** không tự deploy để hậu kiểm — chỉ kiểm khi deploy đã xảy ra.
 - **Đầu ra:** kết quả hậu kiểm, hoặc `not_run` có lý do.
 - **Gate:** health/observability bình thường sau deploy, hoặc `not_run` nếu đã hoãn deploy.
-- **Khi fail:** health/observability bất thường sau deploy → dừng, đề xuất `workflow-incident`.
+- **Khi fail:** health/observability bất thường sau deploy → dừng, đề xuất skill `ops-incident-troubleshooting`.
 - **Evidence:** log/metric hậu kiểm, hoặc lý do `not_run`.
 
 ### Bước 8 — Tag ⏸
@@ -178,8 +178,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 | Người dùng không duyệt commit release (sau Bước 4 ⏸) | Không commit, quay lại Bước 3 hoặc sửa version |
 | Không xác định được migration nào đã áp (Bước 5) | Hỏi người dùng, không tự suy; không tự chạy migration |
 | Smoke e2e đỏ trước deploy (Bước 5) | Dừng, không deploy; đề xuất `workflow-bugfix`; flaky → chạy lại, không sửa test; flaky kéo dài = `failed`, không deploy |
-| Deploy lỗi giữa chừng (sau Bước 6 ⏸) | Dừng, người dùng áp điều kiện rollback của Bước 5; đề xuất `workflow-incident` nếu production bị ảnh hưởng |
-| Health/observability bất thường sau deploy (Bước 7) | Dừng, đề xuất `workflow-incident` |
+| Deploy lỗi giữa chừng (sau Bước 6 ⏸) | Dừng, người dùng áp điều kiện rollback của Bước 5; đề xuất skill `ops-incident-troubleshooting` nếu production bị ảnh hưởng |
+| Health/observability bất thường sau deploy (Bước 7) | Dừng, đề xuất skill `ops-incident-troubleshooting` |
 | Người dùng không xác nhận lệnh tag/push (sau Bước 8 ⏸) | Giữ nguyên đề xuất, không tự chạy |
 
 - **Điều kiện dừng:** baseline build/test đỏ; finding `blocker` chưa xử lý; release notes sai phạm vi chưa

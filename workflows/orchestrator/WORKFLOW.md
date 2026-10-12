@@ -33,28 +33,29 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 
 | id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |
 |---|---|---|---|---|
-| `workflow-feature` | "thêm tính năng", "làm feature", "user story", acceptance criteria | medium | — | Chỉ sửa lỗi hành vi đã có → bugfix |
-| `workflow-bugfix` | "lỗi", "bug", stacktrace, "không chạy", "sai kết quả" | medium | `workflow-docs` | Hệ thống production đang sập → incident |
-| `workflow-refactor` | "refactor", "tái cấu trúc", "đổi kiến trúc" | medium | `workflow-docs` | Đổi hành vi → feature |
-| `workflow-code-review` | "PR#", "review", "diff" | low | — | Cần sửa code → feature/bugfix |
-| `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | `workflow-docs` | Chỉ cần quality gate trước release → release |
-| `workflow-incident` | "prod down", "sự cố", "alert", "incident" | critical | `workflow-bugfix`, `workflow-docs` | Lỗi tái hiện được ở local, production vẫn ổn → bugfix |
-| `workflow-testing` | "viết test", "tăng coverage", "test strategy", "kiểm thử" | low | — | Failure là lỗi code cần sửa → bugfix |
-| `workflow-db-change` | "đổi schema", "migration", "thêm cột/bảng", "đổi index" | high | `workflow-api`, `workflow-docs` | Không đổi schema, chỉ đổi query/logic → feature/bugfix |
-| `workflow-api` | "làm API", "thêm endpoint", "OpenAPI", "contract-first" | medium | `workflow-feature`, `workflow-docs` | Không cần contract mới, chỉ sửa logic nội bộ → feature/bugfix |
+| `workflow-feature` | "thêm tính năng", "thêm endpoint", "làm feature", "user story", acceptance criteria | medium | — | Chỉ sửa lỗi hành vi đã có → bugfix |
+| `workflow-bugfix` | "lỗi", "bug", stacktrace, "không chạy", "sai kết quả" | medium | — | Hệ thống production đang sập → skill `ops-incident-troubleshooting` |
+| `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | — | Chỉ cần quality gate trước release → release |
 | `workflow-release` | "release", "phát hành", "chuẩn bị deploy", "ra version" | high | — | Chưa sẵn sàng phát hành, cần sửa lỗi/tính năng trước → feature/bugfix |
 | `workflow-performance` | "chậm", "tối ưu hiệu năng", "performance", "latency" | medium | — | Chậm do lỗi logic rõ ràng, không phải hiệu năng → bugfix |
-| `workflow-docs` | "cập nhật tài liệu", "sync docs", "README lỗi thời", "viết runbook" | low | — | Cần đổi hành vi/code, không chỉ tài liệu → feature/bugfix |
 
-**Thứ tự ưu tiên:** `workflow-incident` > `workflow-security-review` > `workflow-bugfix` > `workflow-db-change` > `workflow-api` > `workflow-feature` > `workflow-refactor` > `workflow-performance` > `workflow-testing` > `workflow-code-review` > `workflow-release` > `workflow-docs`
+**Thứ tự ưu tiên:** `workflow-security-review` > `workflow-bugfix` > `workflow-feature` > `workflow-performance` > `workflow-release`
 
 ## Yêu cầu chạy trực tiếp bằng skill
 
-Các việc sau là skill on-demand, không có workflow. Khi yêu cầu khớp, orchestrator không chọn workflow: chỉ nêu
-skill cần gọi và kết thúc (không phải lỗi). Kết thúc tại Bước 1, không cần `orchestrator_result`.
+Các việc sau chỉ cần một năng lực nên là skill on-demand, không có workflow. Khi yêu cầu khớp, orchestrator không
+chọn workflow: chỉ nêu skill cần gọi và kết thúc (không phải lỗi). Kết thúc tại Bước 1, không cần
+`orchestrator_result`. Skill thuộc plugin chưa cài → in lệnh `aip install --plugin <id>`.
 
 | Tín hiệu | Skill |
 |---|---|
+| "prod down", "sự cố", "alert", "incident" (xét TRƯỚC Registry) | `ops-incident-troubleshooting` (plugin `ops`) |
+| "review", "PR#", "diff" | `backend-code-review` / `frontend-code-review` theo phía của diff; PR fullstack gọi cả hai |
+| "refactor", "tái cấu trúc" | `backend-refactor` / `frontend-refactor`; "đổi kiến trúc" → `backend-migrate-architecture` / `frontend-migrate-architecture` |
+| "viết test", "tăng coverage", "test strategy", "kiểm thử" | `backend-testing` / `frontend-testing`; luồng UI đầu-cuối → `frontend-e2e-testing` |
+| "đổi schema", "migration", "thêm cột/bảng", "đổi index" | `data-db-migration` (plugin `data`) |
+| "OpenAPI", "contract-first" (chỉ chốt contract, chưa code) | `backend-api-contract` |
+| "cập nhật tài liệu", "sync docs", "viết runbook" | Session chính sửa trực tiếp; ghi quyết định kiến trúc → `engineering-adr` |
 | "khởi tạo backend", "scaffold API/service", "setup project backend mới" | `backend-init` (model không tự gọi được: đề nghị người dùng gõ `/backend:backend-init` khi cài dạng plugin, `/backend-init` khi cài dạng skills) |
 | "khởi tạo frontend", "setup project React mới", "scaffold tài liệu nền frontend" | `frontend-init` (model không tự gọi được: đề nghị người dùng gõ `/frontend:frontend-init` khi cài dạng plugin, `/frontend-init` khi cài dạng skills) |
 | "chuyển .env sang Vault/Consul", "externalize config/secret", "đưa secret vào Vault" | `backend-migrate-vault-consul` |
@@ -68,12 +69,13 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả yêu cầu của người dùng
-- **Hành động:** so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; loại dòng mà yêu cầu rơi vào cột
+- **Hành động:** tín hiệu sự cố production ở mục "Yêu cầu chạy trực tiếp bằng skill" được xét TRƯỚC Registry;
+  khớp thì nêu skill và dừng. Sau đó so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; loại dòng mà yêu cầu rơi vào cột
   `Không dùng khi` (chuyển sang workflow cột đó chỉ tới); nếu vẫn khớp nhiều dòng, áp dụng **Thứ tự ưu tiên**
   để rút về tối đa 2 ứng viên. Khi yêu cầu cần nhiều workflow phụ thuộc nhau (vd đổi schema → làm API → làm
   tính năng), đề xuất chuỗi theo thứ tự phụ thuộc thay vì chọn một workflow, tối đa 3 workflow, mỗi mắt nối
   phải có trong cột `Nối tiếp` của workflow đứng trước. Yêu cầu khớp mục "Yêu cầu chạy trực tiếp bằng skill"
-  thì nêu skill cần gọi và dừng. Chuỗi đủ 3 workflow thì nhắc người dùng chạy `workflow-docs` riêng sau khi
+  thì nêu skill cần gọi và dừng. Chuỗi đủ 3 workflow thì nhắc người dùng cập nhật tài liệu riêng sau khi
   chuỗi xong, không nối thêm.
 - **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry; không đoán khi tín hiệu quá yếu — nêu rõ vì
   sao chọn.
@@ -184,7 +186,7 @@ orchestrator_result:
   request: "<tóm tắt yêu cầu>"
   classified: workflow-bugfix
   reason: "<tín hiệu khớp>"
-  chain: [workflow-bugfix, workflow-docs]
+  chain: [workflow-bugfix]
   results: [ <workflow_result>, … ]
   status: completed        # completed | failed | blocked — trạng thái xấu nhất trong chain
 ```

@@ -7,41 +7,16 @@
     "workflow-bugfix"
   ],
   "workflow-bugfix": [
-    "workflow-incident"
-  ],
-  "workflow-refactor": [
-    "workflow-feature"
-  ],
-  "workflow-code-review": [
-    "workflow-feature",
-    "workflow-bugfix"
-  ],
-  "workflow-testing": [
-    "workflow-bugfix"
+    "ops-incident-troubleshooting"
   ],
   "workflow-security-review": [
     "engineering-quality-gate",
     "workflow-release"
   ],
-  "workflow-db-change": [
-    "workflow-feature",
-    "workflow-bugfix"
-  ],
-  "workflow-api": [
-    "workflow-feature",
-    "workflow-bugfix"
-  ],
   "workflow-performance": [
     "workflow-bugfix"
   ],
-  "workflow-incident": [
-    "workflow-bugfix"
-  ],
   "workflow-release": [
-    "workflow-feature",
-    "workflow-bugfix"
-  ],
-  "workflow-docs": [
     "workflow-feature",
     "workflow-bugfix"
   ]

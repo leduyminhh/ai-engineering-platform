@@ -14,5 +14,5 @@ mục `requirement.md`, trả bảng tổng task + output `check-tasks.mjs` (Che
 Giao từng task theo thứ tự phụ thuộc (nhóm song song chạy song song): `BE` → `backend-implementer`, `FE-UI` →
 `frontend-implementer`, `FE-INT` → `frontend-data-integrator`; mỗi agent nhận "task `<ID>` trong `tasks.md`", task
 xong thì session chính cập nhật cột Trạng thái. Task loại khác không giao ở bước này: `CT` làm ở Bước 3 (session
-chính đặt `Done` khi đạt Gate Bước 3); `DB` đã chạy qua `workflow-db-change` trước feature (chưa áp → dừng như
+chính đặt `Done` khi đạt Gate Bước 3); `DB` đã chạy qua skill `data-db-migration` trước feature (chưa áp → dừng như
 Bước 2); `E2E` giao cho agent e2e của Bước 5.
