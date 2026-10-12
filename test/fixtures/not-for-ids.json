@@ -13,15 +13,14 @@
   ],
   "backend-testing": [
     "frontend-e2e-testing",
-    "workflow-testing"
+    "workflow-bugfix"
   ],
   "backend-code-review": [
     "engineering-quality-gate",
-    "workflow-code-review"
+    "frontend-code-review"
   ],
   "backend-refactor": [
-    "backend-migrate-architecture",
-    "workflow-refactor"
+    "backend-migrate-architecture"
   ],
   "backend-migrate-vault-consul": [
     "engineering-quality-gate"
@@ -97,19 +96,17 @@
   ],
   "frontend-testing": [
     "frontend-e2e-testing",
-    "workflow-testing"
+    "workflow-bugfix"
   ],
   "frontend-code-review": [
     "engineering-quality-gate",
-    "workflow-code-review"
+    "backend-code-review"
   ],
   "frontend-refactor": [
-    "frontend-migrate-architecture",
-    "workflow-refactor"
+    "frontend-migrate-architecture"
   ],
   "frontend-migrate-architecture": [
-    "frontend-refactor",
-    "workflow-refactor"
+    "frontend-refactor"
   ],
   "frontend-data-integration": [
     "backend-api-contract",

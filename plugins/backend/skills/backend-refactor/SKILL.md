@@ -1,6 +1,6 @@
 ---
 name: backend-refactor
-description: "Refactor code backend (Java/Spring, Python) giữ nguyên hành vi, trong ranh giới kiến trúc đã chốt: extract, gom trùng lặp, tách god class, đảo phụ thuộc qua port; bước nhỏ, test xanh. Dùng khi người dùng muốn \"refactor backend\", \"tái cấu trúc code backend\", \"dọn code Java/Python\", \"tách hàm/tách class\", \"gỡ god class\". Không dùng khi đổi kiểu kiến trúc → backend-migrate-architecture; cần quy trình nhiều bước có commit theo lô → workflow-refactor."
+description: "Refactor code backend (Java/Spring, Python) giữ nguyên hành vi, trong ranh giới kiến trúc đã chốt: extract, gom trùng lặp, tách god class, đảo phụ thuộc qua port; bước nhỏ, test xanh. Dùng khi người dùng muốn \"refactor backend\", \"tái cấu trúc code backend\", \"dọn code Java/Python\", \"tách hàm/tách class\", \"gỡ god class\". Không dùng khi đổi kiểu kiến trúc → backend-migrate-architecture."
 order: 5
 title: "Backend Refactor — Tái cấu trúc code backend giữ nguyên hành vi (recipe on-demand)"
 runsIn: execute

@@ -68,10 +68,10 @@ nối); không dùng "đảm bảo / an toàn tuyệt đối"; luôn nêu rủi 
 
 Đọc contract ở `docs/contracts/`: xác nhận mọi endpoint cần dùng có trong `paths` và schema trong
 `components.schemas`. Tìm bằng chứng contract đã qua drift-check gần nhất (report của `backend-api-contract` hoặc
-`workflow-api`); không có bằng chứng → HỎI người dùng, không tự suy. Chi tiết:
+bước Review của `workflow-feature`); không có bằng chứng → HỎI người dùng, không tự suy. Chi tiết:
 [references/contract-and-codegen.md](references/contract-and-codegen.md).
 
-**Đỏ khi:** chưa có contract, thiếu endpoint/schema cần dùng, hoặc đang drift → DỪNG, đề xuất `workflow-api` /
+**Đỏ khi:** chưa có contract, thiếu endpoint/schema cần dùng, hoặc đang drift → DỪNG, đề xuất
 `backend-api-contract`.
 
 ### I2. Công cụ ⏸

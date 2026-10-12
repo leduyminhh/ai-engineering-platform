@@ -1,6 +1,6 @@
 ---
 name: frontend-migrate-architecture
-description: "Tái cấu trúc code frontend (React) sang kiến trúc đích Feature-Based hoặc FSD, giữ nguyên hành vi, lô nhỏ xanh; Micro-Frontend chỉ lập kế hoạch, không tự di chuyển. Dùng khi người dùng muốn \"đổi kiến trúc frontend\", \"chuyển sang Feature-Based/FSD\", \"tách Micro-Frontend\", \"restructure src frontend\". Không dùng khi chỉ dọn component trong ranh giới hiện tại → frontend-refactor; cần quy trình có ADR và commit theo lô → workflow-refactor."
+description: "Tái cấu trúc code frontend (React) sang kiến trúc đích Feature-Based hoặc FSD, giữ nguyên hành vi, lô nhỏ xanh; Micro-Frontend chỉ lập kế hoạch, không tự di chuyển. Dùng khi người dùng muốn \"đổi kiến trúc frontend\", \"chuyển sang Feature-Based/FSD\", \"tách Micro-Frontend\", \"restructure src frontend\". Không dùng khi chỉ dọn component trong ranh giới hiện tại → frontend-refactor."
 order: 6
 title: "Frontend Migrate — Kiến trúc mã nguồn UI (recipe on-demand)"
 runsIn: execute

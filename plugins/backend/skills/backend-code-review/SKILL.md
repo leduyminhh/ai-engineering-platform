@@ -1,6 +1,6 @@
 ---
 name: backend-code-review
-description: "Review diff/PR/module backend (Java/Spring, Python) theo correctness, kiến trúc, naming, test và hiệu năng (N+1, thiếu index); trả finding có severity + file:line, chỉ đọc mặc định. Dùng khi người dùng muốn \"review code backend\", \"review PR backend\", \"review diff backend\", \"đọc soát PR\". Không dùng khi cần quét bảo mật hoặc tool scan → engineering-quality-gate; review cả PR đa vai trò BE + FE → workflow-code-review."
+description: "Review diff/PR/module backend (Java/Spring, Python) theo correctness, kiến trúc, naming, test và hiệu năng (N+1, thiếu index); trả finding có severity + file:line, chỉ đọc mặc định. Dùng khi người dùng muốn \"review code backend\", \"review PR backend\", \"review diff backend\", \"đọc soát PR\". Không dùng khi cần quét bảo mật hoặc tool scan → engineering-quality-gate; review phần frontend của PR → frontend-code-review."
 order: 4
 title: "Backend Code Review — Review diff/PR backend theo trục, có evidence (recipe on-demand)"
 runsIn: execute
@@ -59,6 +59,9 @@ tầng, map rò kiểu ở biên) — review bám `architecture/ARD.md` mục "D
   soát tay.
 - Thiếu diff/scope rõ hoặc thiếu `project-knowledge` → BÁO (fail-loud), hỏi người dùng thay vì tự bịa
   phạm vi hay tự suy kiến trúc.
+- **PR fullstack:** chia file của diff thành backend / frontend / khác. Phần frontend → `frontend-code-review`;
+  file CI/IaC/SQL (pipeline CI, Dockerfile/IaC, migration SQL) → `engineering-quality-gate`; docs/config thuần ghi
+  "không cần reviewer". Không bỏ sót file nào của diff.
 
 ### 1. Review theo TRỤC
 Đọc soát phần trong scope theo các trục cố định, mỗi trục có dấu hiệu cụ thể cho backend:
@@ -80,6 +83,9 @@ Mỗi finding gồm: **severity** (blocker / major / minor / nit), **`file:line`
 **đề xuất fix** (hướng sửa, không bắt buộc viết code trừ khi được yêu cầu). Thang severity + cách gắn evidence:
 [references/review-dimensions.md](references/review-dimensions.md) mục "Severity". Không có `file:line` cụ thể
 thì KHÔNG dựng finding (tránh nhận xét chung chung).
+
+- **Validate trước khi báo:** đọc lại `file:line` của từng finding trong diff thật; loại finding không tái lập được
+  hoặc sai vị trí, ghi số finding bị loại kèm lý do. Không hạ severity để giảm số `blocker`.
 
 ### 3. Xuất kết quả
 Trình bày theo [references/review-output-template.md](references/review-output-template.md): bảng finding
