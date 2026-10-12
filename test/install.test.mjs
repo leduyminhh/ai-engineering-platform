@@ -503,6 +503,24 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   process.env.AIE_INSTALL_ROOT = TMP;
 }
 
+// ── update: skill lẻ đã gỡ khỏi nguồn (vd workflow bị bỏ) không làm update ném lỗi ──
+{
+  const TMP_RT = mkTmp('cwf-upd-retired-');
+  process.env.AIE_INSTALL_ROOT = TMP_RT;
+  install({ providers: 'claude', skills: ['backend/backend-init'], scope: 'project' });
+  const mf = path.join(TMP_RT, '.ai-engineering', 'manifest.json');
+  const m = JSON.parse(fs.readFileSync(mf, 'utf8'));
+  m.installs.find((e) => e.provider === 'claude').skills.push('workflows/workflow-retired');
+  fs.writeFileSync(mf, JSON.stringify(m, null, 2));
+  let threw = null;
+  try { update({ scope: 'project', pull: false }); } catch (err) { threw = err; }
+  ok(threw === null, `update: skill đã gỡ khỏi nguồn không làm update ném lỗi (${threw?.message})`);
+  const after = JSON.parse(fs.readFileSync(mf, 'utf8')).installs.find((e) => e.provider === 'claude');
+  ok(after && !after.skills.includes('workflows/workflow-retired'), 'update: manifest bỏ skill đã gỡ khỏi nguồn');
+  ok(fs.existsSync(path.join(TMP_RT, '.claude/skills/backend-init/SKILL.md')), 'update: skill còn trong nguồn vẫn được cài lại');
+  process.env.AIE_INSTALL_ROOT = TMP;
+}
+
 // ── update FILTER: chỉ làm tươi entry khớp --provider/--plugin; không khớp → noMatch ──
 {
   const TMP_UF = mkTmp('cwf-upd-filter-');
