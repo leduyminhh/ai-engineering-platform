@@ -256,7 +256,7 @@ Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2
 Mọi lệnh chạy `node cli/index.mjs`.
 
 ```bash
-aip                 # menu wizard: install | uninstall | build | check
+aip                 # menu wizard: init | install | uninstall | update | build
 aip --all           # wizard liệt kê MỌI skill kể cả draft + mọi workflow (cài từ source)
 aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md import @AGENTS.md; --full thêm khung templates/init; bỏ qua file đã có
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]

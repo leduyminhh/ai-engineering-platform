@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `aip init [--full]` scaffolds agent instruction files in the current folder for any project type: `AGENTS.md`
   (baseline from `core/agents/AGENTS.template.md`) and `CLAUDE.md` importing `@AGENTS.md`
   (`templates/init-minimal/`). `--full` copies `templates/init/` instead. Existing files are never overwritten;
-  an existing `CLAUDE.md` without the import gets a warning. It installs no skills and rejects `-g`.
+  an existing `CLAUDE.md` without the import gets a warning. It installs no skills and rejects `-g`. The wizard
+  menu (`aip`) offers `init` first, asks minimal or full, then confirms.
 
 - Frontmatter parser reads inline lists `[a, b]`, block lists (indented or at column 0), one-level maps and
   `true`/`false`/`null`; a stray top-level line is an error. The loader fails loud on a frontmatter key outside

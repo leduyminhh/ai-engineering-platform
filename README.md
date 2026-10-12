@@ -261,7 +261,7 @@ Tracked as open gaps in the design spec (`docs/superpowers/specs/2026-09-25-agen
 Every command runs `node cli/index.mjs`.
 
 ```bash
-aip                 # menu wizard: install | uninstall | build | check
+aip                 # menu wizard: init | install | uninstall | update | build
 aip --all           # wizard listing EVERY skill incl. drafts + all workflows (source installs)
 aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md importing @AGENTS.md; --full adds templates/init; skips existing files
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
