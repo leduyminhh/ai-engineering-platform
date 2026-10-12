@@ -1,5 +1,11 @@
 # Thiết kế: Agent `*-fixer` + skill `*-fix` — khoá phạm vi bước sửa code trong workflow (A4/Q2)
 
+> **Cập nhật 2026-10-12:** các workflow `workflow-api`, `workflow-code-review`, `workflow-db-change`, `workflow-docs`,
+> `workflow-incident`, `workflow-refactor`, `workflow-testing` đã gỡ — workflow giờ chỉ là pipeline nối nhiều năng
+> lực. Gate của chúng chuyển sang skill (`data-db-migration`, `ops-incident-troubleshooting`, `*-testing`,
+> `*-code-review`) và Bước 6 của `workflow-feature`; `workflow-orchestrator` chỉ đường tới skill. Nội dung bên dưới
+> giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
+
 - Ngày: 2026-09-30
 - Trạng thái: **Đã thực thi**, merge vào `master` = `909f1b9` (2026-09-30); các sửa sau review toàn
   nhánh ghi ở §8.

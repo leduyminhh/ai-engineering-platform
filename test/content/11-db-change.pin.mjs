@@ -47,8 +47,7 @@ export default async function run({ ok, ctx }) {
     for (const f of ['README.md', 'README_VI.md']) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
       const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
-      ok(row('data-migration-writer').includes('WF07'), `${f}: bảng agent có data-migration-writer dùng ở WF07`);
-      ok((rd.split('\n').find((l) => l.startsWith('| WF07 |')) ?? '').includes('data-migration-writer'), `${f}: WF07 liệt kê data-migration-writer`);
+      ok(row('data-migration-writer').includes('data-db-migration'), `${f}: bảng agent có data-migration-writer dùng qua skill data-db-migration`);
       ok(!/^\| G2 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G2 (đã có data-db-migration)`);
       ok(!(rd.split('\n').find((l) => l.startsWith('| `data` |')) ?? '').includes('draft, not yet published') && !(rd.split('\n').find((l) => l.startsWith('| `data` |')) ?? '').includes('draft, chưa publish'),
         `${f}: hàng plugin data không còn ghi draft toàn khối`);

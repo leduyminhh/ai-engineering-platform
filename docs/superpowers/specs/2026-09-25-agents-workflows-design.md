@@ -1,5 +1,11 @@
 # Thiết kế: Agent + bộ 12 Workflow + Orchestrator (Claude + Codex)
 
+> **Cập nhật 2026-10-12:** các workflow `workflow-api`, `workflow-code-review`, `workflow-db-change`, `workflow-docs`,
+> `workflow-incident`, `workflow-refactor`, `workflow-testing` đã gỡ — workflow giờ chỉ là pipeline nối nhiều năng
+> lực. Gate của chúng chuyển sang skill (`data-db-migration`, `ops-incident-troubleshooting`, `*-testing`,
+> `*-code-review`) và Bước 6 của `workflow-feature`; `workflow-orchestrator` chỉ đường tới skill. Nội dung bên dưới
+> giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
+
 - Ngày: 2026-09-25
 - Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `4c02a84` (2026-09-25).
 - Phạm vi giai đoạn 1: provider **claude** + **codex**. cursor/antigravity để giai đoạn sau (§9 P1).

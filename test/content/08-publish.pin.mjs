@@ -67,10 +67,10 @@ export default async function run({ ok, ctx }) {
     for (const f of ['README.md', 'README_VI.md']) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
       const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
-      ok(['WF01', 'WF08'].every((w) => row('frontend-data-integrator').includes(w)),
-        `${f}: bảng agent có frontend-data-integrator dùng ở WF01, WF08`);
-      ok(['WF01', 'WF05'].every((w) => row('frontend-e2e-test-writer').includes(w)),
-        `${f}: bảng agent có frontend-e2e-test-writer dùng ở WF01, WF05`);
+      ok(row('frontend-data-integrator').includes('WF01'),
+        `${f}: bảng agent có frontend-data-integrator dùng ở WF01`);
+      ok(['WF01', 'WF11'].every((w) => row('frontend-e2e-test-writer').includes(w)),
+        `${f}: bảng agent có frontend-e2e-test-writer dùng ở WF01, WF11`);
       ok(!/^\| G1 \|/m.test(rd) && !/^\| G5 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G1, G5 (đã có skill)`);
     }
     // Duyệt E2 của skill e2e phải có chỗ trong workflow, nếu không agent sẽ trình lại hoặc bỏ qua cổng.

@@ -1,5 +1,11 @@
 # frontend-e2e-testing Implementation Plan
 
+> **Cập nhật 2026-10-12:** các workflow `workflow-api`, `workflow-code-review`, `workflow-db-change`, `workflow-docs`,
+> `workflow-incident`, `workflow-refactor`, `workflow-testing` đã gỡ — workflow giờ chỉ là pipeline nối nhiều năng
+> lực. Gate của chúng chuyển sang skill (`data-db-migration`, `ops-incident-troubleshooting`, `*-testing`,
+> `*-code-review`) và Bước 6 của `workflow-feature`; `workflow-orchestrator` chỉ đường tới skill. Nội dung bên dưới
+> giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Thêm skill recipe `frontend-e2e-testing` và agent `frontend-e2e-test-writer` vào plugin `frontend` ở trạng thái **draft**, kèm 2 file `references/` và assert hợp đồng trong `test/validate.mjs` (khối "13.") và `test/install.test.mjs`.

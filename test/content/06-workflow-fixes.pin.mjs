@@ -28,8 +28,8 @@ export default async function run({ ok, ctx }) {
     for (const f of ['README.md', 'README_VI.md']) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
       const row = (agent) => rd.split('\n').find((l) => l.startsWith(`| \`${agent}\` |`)) ?? '';
-      ok(row('backend-test-writer').includes('WF06') && row('backend-test-writer').includes('WF07')
-        && row('frontend-test-writer').includes('WF06') && row('engineering-quality-auditor').includes('WF08'),
+      ok(row('backend-test-writer').includes('WF06') && row('frontend-test-writer').includes('WF06')
+        && row('engineering-quality-auditor').includes('WF06'),
         `${f}: bảng agent nêu đủ workflow dùng test-writer/auditor sau khi sửa D7–D10`);
     }
   }

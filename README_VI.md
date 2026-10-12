@@ -156,29 +156,29 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 
 | Agent id | Plugin | Mode | Skill gói | Dùng trong |
 | --- | --- | --- | --- | --- |
-| `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01, WF07, WF08 |
-| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF03, WF05, WF06, WF07, WF08 |
-| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01–WF04, WF07–WF09 |
+| `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01 |
+| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF06 |
+| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01, WF02, WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
 | `backend-performance-analyst` | backend | write | backend-performance | WF09 |
-| `data-migration-writer` | data | write | data-db-migration | WF07 |
+| `data-migration-writer` | data | write | data-db-migration | skill data-db-migration |
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
-| `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01, WF08 |
-| `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05, WF06 |
-| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF05, WF11 |
-| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04, WF09 |
+| `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01 |
+| `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF06 |
+| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF11 |
+| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01, WF02, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
 | `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
-| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01–WF04, WF06, WF08, WF11 |
-| `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram, engineering-task-breakdown | WF01, WF03, WF10, WF12 |
+| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01, WF02, WF06, WF11 |
+| `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram, engineering-task-breakdown | WF01 |
 | `engineering-release-scribe` | engineering | write (chỉ `docs/`, `CHANGELOG.md`) | engineering-release-notes | WF11 |
-| `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | WF10 |
+| `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | skill ops-incident-troubleshooting |
 | `ops-release-engineer` | ops | read-only | ops-deploy-release, ops-observability | WF11 |
 
 Không có agent Security riêng: `engineering-quality-gate` đã phủ cả quality lẫn security review
 source-first (OWASP/ASVS/CWE, SCA, secrets); tách ra chỉ trùng lặp.
 
-### Workflow (12) + orchestrator
+### Workflow (5) + orchestrator
 
 Id dạng `workflow-<slug>`, nguồn ở `workflows/<slug>/WORKFLOW.md`. `tier` quyết định độ sâu nội
 dung (1 = nhiều gate/DoD chặt, 2 = đủ template nhưng gọn, 3 = gọn); `risk` quyết định mức độ
@@ -188,17 +188,14 @@ xác nhận bắt buộc của orchestrator.
 | --- | --- | --- | --- | --- | --- |
 | WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, FE data-integrator, BE/FE test-writer, FE e2e-test-writer, BE/FE reviewer, quality-auditor |
 | WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE fixer, BE/FE reviewer, quality-auditor |
-| WF03 | `workflow-refactor` | 1 | medium | W4a+W4b+W6 | BE/FE test-writer, BE/FE reviewer, spec-analyst, quality-auditor |
-| WF04 | `workflow-code-review` | 1 | low | W5 | BE/FE reviewer, quality-auditor |
-| WF05 | `workflow-testing` | 2 | low | mới | BE/FE test-writer, FE e2e-test-writer |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
-| WF07 | `workflow-db-change` | 2 | high | W15 | data-migration-writer, backend-implementer, backend-test-writer, backend-reviewer |
-| WF08 | `workflow-api` | 2 | medium | mới (tách từ bước contract của W1) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor, frontend-data-integrator |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, frontend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
-| WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer, frontend-e2e-test-writer |
-| WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |
 | — | `workflow-orchestrator` | — | — | mới | không (chạy ở session chính) |
+
+Việc chỉ cần một năng lực gọi thẳng skill (orchestrator cũng chỉ đường tới skill): review →
+`backend-code-review`/`frontend-code-review`; refactor → `*-refactor`/`*-migrate-architecture`; viết test →
+`*-testing`; đổi schema → `data-db-migration`; sự cố → `ops-incident-troubleshooting`.
 
 **Cách gọi:**
 
@@ -213,7 +210,7 @@ xác nhận bắt buộc của orchestrator.
 ```bash
 aip install --provider claude --plugin workflows
 aip install --provider claude --skill workflows/workflow-feature,workflows/workflow-bugfix
-aip install --provider codex -g --skill workflows/workflow-code-review
+aip install --provider codex -g --skill workflows/workflow-security-review
 aip install --provider claude --as-plugin --plugin workflows
 aip uninstall --skill workflows/workflow-feature
 ```
@@ -235,7 +232,7 @@ Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
-| G11 | `engineering-docs-sync` | engineering | WF12 |
+| G11 | `engineering-docs-sync` | engineering | — |
 
 **Workflow tương lai:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),
 `workflow-onboarding` (G7), `workflow-tech-debt-review` (G8).
@@ -245,7 +242,7 @@ Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2
 | # | Hạng mục | Ghi chú |
 | --- | --- | --- |
 | P1 | Agent/workflow cho Cursor, Antigravity | Antigravity có thể chiếu sang `.agent/workflows/` native, Cursor sang `.cursor/commands/` [Unverified] |
-| P2 | Claude native workflow `.js` | Fan-out tất định (vd WF04 nhiều module); tốn token, người dùng opt-in |
+| P2 | Claude native workflow `.js` | Fan-out tất định (vd review nhiều module); tốn token, người dùng opt-in |
 | P3 | Hooks (vd pre-commit gọi quality-auditor) | Hook trong plugin subagent bị Claude bỏ qua; phải đặt ở `settings.json` project |
 | P4 | `[agents]` trong `.codex/config.toml` | Config bền vững, cần người dùng xác nhận tường minh |
 | P6 | Workflow cho Cowork | Cowork không có subagent; chỉ thêm nếu có fallback tuần tự |
