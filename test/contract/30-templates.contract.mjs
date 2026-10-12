@@ -1,4 +1,5 @@
 // Contract templates: drift guard AGENTS.md và khung init dùng chung giữa CLI lẫn skill *-init.
+import { importsAgentsMd } from '../../cli/lib/managed-block.mjs';
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, PLUGINS_DIR, core, plugins, BUILD, claudeDir, claudeSkillDir } = ctx;
 
@@ -50,7 +51,7 @@ export default async function run({ ok, ctx }) {
     ];
     for (const rel of must) ok(fs.existsSync(path.join(T, rel)), `templates/init/${rel} tồn tại`);
     const claude = fs.existsSync(path.join(T, 'CLAUDE.md')) ? fs.readFileSync(path.join(T, 'CLAUDE.md'), 'utf8') : '';
-    ok(claude.includes('[AGENTS.md](AGENTS.md)'), 'templates/init/CLAUDE.md: link [AGENTS.md](AGENTS.md)');
+    ok(importsAgentsMd(claude), 'templates/init/CLAUDE.md: import @AGENTS.md (link Markdown không được Claude Code nạp)');
     ok(claude.includes('core:principles') && claude.includes('`principles`'),
       'templates/init/CLAUDE.md: pointer principles (phẳng + core:principles)');
     ok(claude.includes('core:git-workflow') && claude.includes('`git-workflow`'),

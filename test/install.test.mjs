@@ -363,6 +363,26 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   process.env.AIE_INSTALL_ROOT = TMP;
 }
 
+// ── claude + CLAUDE.md import @AGENTS.md: khối baseline chuyển sang AGENTS.md, không nạp 2 lần ─────
+{
+  const TMP_I = mkTmp('cwf-import-');
+  process.env.AIE_INSTALL_ROOT = TMP_I;
+  const MARK = '<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->';
+  const read = (rel) => (fs.existsSync(path.join(TMP_I, rel)) ? fs.readFileSync(path.join(TMP_I, rel), 'utf8') : '');
+  install({ providers: 'claude', skills: ['backend/backend-init'], scope: 'project' });
+  ok(read('CLAUDE.md').includes(MARK), 'import: chưa có @AGENTS.md → khối vào CLAUDE.md như cũ');
+  fs.writeFileSync(path.join(TMP_I, 'CLAUDE.md'), `@AGENTS.md\n\n# Rule riêng\n\n${read('CLAUDE.md')}`);
+  install({ providers: 'claude', skills: ['backend/backend-init'], scope: 'project' });
+  ok(!read('CLAUDE.md').includes(MARK) && read('CLAUDE.md').includes('# Rule riêng'),
+    'import: cài lại gỡ khối cũ khỏi CLAUDE.md, giữ rule riêng');
+  ok(read('AGENTS.md').includes(MARK), 'import: khối baseline nằm ở AGENTS.md');
+  uninstall({ providers: 'claude', scope: 'project' });
+  ok(!read('AGENTS.md').includes(MARK) && read('CLAUDE.md').includes('@AGENTS.md'),
+    'import: gỡ claude dọn khối ở AGENTS.md, không đụng CLAUDE.md');
+  fs.rmSync(TMP_I, { recursive: true, force: true });
+  process.env.AIE_INSTALL_ROOT = TMP;
+}
+
 // ── skill draft nằm ở build/claude/drafts/ nhưng skills-mode vẫn cài được (R6) ─────────────
 {
   const TMP_D = mkTmp('cwf-draft-');

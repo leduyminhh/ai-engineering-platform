@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mergeManagedBlock, removeManagedBlock, hasOnlyWhitespace } from "../cli/lib/managed-block.mjs";
+import { mergeManagedBlock, removeManagedBlock, hasOnlyWhitespace, importsAgentsMd } from "../cli/lib/managed-block.mjs";
 
 const BEGIN = "<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->";
 const END = "<!-- AI-ENGINEERING:END AGENTS_BASELINE -->";
@@ -41,4 +41,18 @@ test("remove trả rỗng khi file chỉ còn khối managed", () => {
 test("hasOnlyWhitespace phân biệt chuỗi rỗng và có nội dung", () => {
   assert.equal(hasOnlyWhitespace("  \n\t "), true);
   assert.equal(hasOnlyWhitespace("x"), false);
+});
+
+test("importsAgentsMd chỉ nhận dòng import thật, bỏ code span/fenced block", () => {
+  const cases = [
+    ["@AGENTS.md\n", true],
+    ["# CLAUDE.md\n\n@./AGENTS.md\n", true],
+    ["Xem @AGENTS.md trước khi code.", true],
+    ["xem [AGENTS.md](AGENTS.md)", false],
+    ["dùng `@AGENTS.md` để import", false],
+    ["```\n@AGENTS.md\n```\n", false],
+    ["@AGENTS.md.bak", false],
+    ["email@AGENTS.md", false],
+  ];
+  for (const [text, expected] of cases) assert.equal(importsAgentsMd(text), expected, JSON.stringify(text));
 });
