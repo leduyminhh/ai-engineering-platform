@@ -258,6 +258,7 @@ Mọi lệnh chạy `node cli/index.mjs`.
 ```bash
 aip                 # menu wizard: install | uninstall | build | check
 aip --all           # wizard liệt kê MỌI skill kể cả draft + mọi workflow (cài từ source)
+aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md import @AGENTS.md; --full thêm khung templates/init; bỏ qua file đã có
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
 aip uninstall [--provider ...] [--plugin ...] [--skill <a,b>] [-g] [--yes]   # alias: remove
 aip build     --provider all|<p>...   # cờ alias: --target

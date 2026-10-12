@@ -3,6 +3,7 @@
 //
 //   aip                                  mở wizard (build/install/check/uninstall)
 //   aip build  [--target all|<tool>] [--plugin <id>]
+//   aip init      [--full]               tạo AGENTS.md + CLAUDE.md (@AGENTS.md); --full thêm khung templates/init
 //   aip install   [--provider all|<p>] [--plugin all|<id>] [-g|--global]
 //   aip check     [-g|--global]
 //   aip uninstall [--provider all|<p>] [--plugin all|<id>] [-g|--global]
@@ -16,7 +17,8 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { install, uninstall, update, check, knownPluginIds } from './lib/install.mjs';
 import { pack } from './lib/pack.mjs';
-import { PROVIDERS } from './lib/paths.mjs';
+import { init } from './lib/init.mjs';
+import { PROVIDERS, scopeRoot } from './lib/paths.mjs';
 import { runWizard } from './lib/wizard.mjs';
 import { WizardUnavailable } from './lib/prompt.mjs';
 import { parse } from './lib/args.mjs';
@@ -51,6 +53,14 @@ function reportInstall(r) {
   }
   if (r.coworkPack) reportPack(r.coworkPack);
   console.log(`  Manifest: .ai-engineering/manifest.json (dùng "aip check"/"aip uninstall").`);
+}
+
+function reportInit(r) {
+  console.log(`\n✓ aip init tại: ${r.root}`);
+  for (const f of r.created) console.log(`  + ${f}`);
+  if (r.skipped.length) console.log(`  (giữ nguyên ${r.skipped.length} file đã có: ${r.skipped.join(', ')})`);
+  for (const w of r.warnings) console.log(`  ⚠ ${w}`);
+  console.log('  Tiếp theo: aip install --provider claude --plugin core   (Codex: chạy thêm với --provider codex)');
 }
 
 function reportUpdate(r) {
@@ -147,6 +157,9 @@ CÁCH DÙNG
   Mẹo: chạy lệnh KHÔNG cờ để vào wizard chọn bằng phím (Space chọn, ↑/↓, Enter, b quay lại, q huỷ).
 
 LỆNH
+  init                      tạo file chỉ dẫn agent ở thư mục hiện tại: AGENTS.md (baseline) + CLAUDE.md
+                            (import @AGENTS.md); bỏ qua file đã có, không cài skill. --full: thêm khung
+                            templates/init (project-knowledge/, docs/, src/, tests/...)
   install                   cài workflow (không cờ → wizard step-by-step; có --provider/--plugin → non-interactive)
                             (symlink tới build/, tự cập nhật khi rebuild; tự copy nếu
                             môi trường/npm không hỗ trợ link)
@@ -173,6 +186,7 @@ TÙY CHỌN
                             (đăng ký marketplace + namespaced <id>:<skill>) thay vì copy skills phẳng
                             vào .claude/skills/. Cần có CLI "claude" trên PATH. provider khác giữ skills.
   --target <tool|all>       (chỉ cho 'build') adapter cần build
+  --full                    (chỉ cho 'init') tạo cả khung templates/init, không chỉ AGENTS.md + CLAUDE.md
   -g, --global              scope = toàn máy (~); KHÔNG cờ này = project (thư mục hiện tại)
   -h, --help                hiện trợ giúp
 
@@ -224,6 +238,10 @@ async function main() {
   switch (cmd) {
     case 'build':
       return runBuild(['--target', args.target, ...(args.plugin !== 'all' ? ['--plugin', args.plugin] : [])]);
+    case 'init': {
+      if (args.scope === 'global') throw new Error('init chỉ áp dụng cho project (thư mục hiện tại), không nhận -g');
+      return reportInit(init({ root: scopeRoot('project'), full: args.full }));
+    }
     case 'list':
       return runBuild(['--list']);
     case 'install': {

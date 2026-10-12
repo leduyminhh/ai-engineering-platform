@@ -13,7 +13,7 @@ There is no application runtime to start — the deliverable is the CLI and the 
 Node.js 20+ required.
 
 ```bash
-npm test            # validate --build + install + wizard + managed-block + pack-guard + args tests (CI: matrix ubuntu/windows × Node 20/24 + claude plugin validate --strict)
+npm test            # validate --build + install + wizard + managed-block + init + pack-guard + args tests (CI: matrix ubuntu/windows × Node 20/24 + claude plugin validate --strict)
 npm run build       # node cli/build.mjs --target all   -> build/<provider>/
 npm run list        # list discovered adapters + plugins
 npm run validate    # node test/validate.mjs (source + build-output contract)
@@ -41,6 +41,7 @@ End-user lifecycle (run from inside a *target* project, after `npm link`):
 
 ```bash
 aip                 # interactive menu wizard (install | uninstall | build | check)
+aip init      [--full]      # AGENTS.md + CLAUDE.md (@AGENTS.md); --full adds templates/init; never overwrites
 aip install   --provider all --plugin all [-g] [--yes]
 aip uninstall [--provider ...] [--plugin ...] [-g] [--yes]
 aip build     --provider all
