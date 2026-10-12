@@ -19,6 +19,7 @@ ok(!parse(['install', '--all']).explicit, '--all KHÔNG đặt explicit (vẫn v
 ok(!parse(['install']).all, 'mặc định không có all');
 ok(parse(['install', '--all', '--provider', 'claude']).explicit === true, '--all + --provider vẫn explicit (non-interactive)');
 ok(parse(['install', '--provider', 'claude']).provider === 'claude', 'không hồi quy: --provider');
+ok(parse(['init', '--full']).full === true && !parse(['init']).full, '--full chỉ bật khi có cờ');
 
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }
 console.log(`args.test: ${pass} pass`);

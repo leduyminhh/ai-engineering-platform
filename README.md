@@ -263,6 +263,7 @@ Every command runs `node cli/index.mjs`.
 ```bash
 aip                 # menu wizard: install | uninstall | build | check
 aip --all           # wizard listing EVERY skill incl. drafts + all workflows (source installs)
+aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md importing @AGENTS.md; --full adds templates/init; skips existing files
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
 aip uninstall [--provider ...] [--plugin ...] [--skill <a,b>] [-g] [--yes]   # alias: remove
 aip build     --provider all|<p>...   # alias flag: --target
