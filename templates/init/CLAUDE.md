@@ -1,7 +1,9 @@
 # CLAUDE.md
 
-Baseline chung (cách hành xử, an toàn, Definition of Done, ngôn ngữ): xem [AGENTS.md](AGENTS.md).
-File này lưu rule RIÊNG của dự án — điền theo project.
+@AGENTS.md
+
+Baseline chung (cách hành xử, an toàn, Definition of Done, ngôn ngữ) nằm ở `AGENTS.md`, được nạp
+qua dòng import phía trên — giữ dòng đó ở đầu file. File này lưu rule RIÊNG của dự án — điền theo project.
 
 ## Đọc trước khi code (nguyên tắc nền tảng)
 Trước khi làm bất kỳ việc gì, đọc skill nguyên tắc nền tảng: `principles`

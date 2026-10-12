@@ -359,7 +359,7 @@ claude plugin eval engineering@ai-engineering-platform --eval-dir evals/engineer
 
 | Provider | Đầu ra build | Cài vào (scope project) |
 | --- | --- | --- |
-| Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core là plugin dependency) | `.claude/skills/<skill>`; khối baseline → `CLAUDE.md` |
+| Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core là plugin dependency) | `.claude/skills/<skill>`; khối baseline → `CLAUDE.md` (project: → `AGENTS.md` khi `CLAUDE.md` import `@AGENTS.md`) |
 | Cursor | `<id>/.cursor/rules/<id>-00-principles.mdc` + `.cursor/skills/<skill>/` | `.cursor/rules` + `.cursor/skills` |
 | Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agent giữ ở `.codex/agents/`); khối baseline → `AGENTS.md` |
 | Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | khi cài tường minh; khối baseline → `AGENTS.md` |

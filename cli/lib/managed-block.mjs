@@ -24,3 +24,14 @@ export function removeManagedBlock(existing) {
   const out = `${existing.slice(0, start)}${existing.slice(end + END.length)}`;
   return hasOnlyWhitespace(out) ? "" : out;
 }
+
+// Claude Code bỏ qua import nằm trong code span/fenced block, nên dòng ví dụ không được tính là import.
+export function importsAgentsMd(text) {
+  let inFence = false;
+  for (const line of text.split(/\r?\n/)) {
+    if (/^\s*(```|~~~)/.test(line)) { inFence = !inFence; continue; }
+    if (inFence) continue;
+    if (/(^|\s)@(\.\/)?AGENTS\.md(?=\s|$)/.test(line.replace(/`[^`]*`/g, ''))) return true;
+  }
+  return false;
+}

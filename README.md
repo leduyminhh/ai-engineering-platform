@@ -365,7 +365,7 @@ claude plugin eval engineering@ai-engineering-platform --eval-dir evals/engineer
 
 | Provider | Build output | Installed into (project scope) |
 | --- | --- | --- |
-| Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core as a dependency plugin) | `.claude/skills/<skill>`; baseline block → `CLAUDE.md` |
+| Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core as a dependency plugin) | `.claude/skills/<skill>`; baseline block → `CLAUDE.md` (project: → `AGENTS.md` when `CLAUDE.md` imports `@AGENTS.md`) |
 | Cursor | `<id>/.cursor/rules/<id>-00-principles.mdc` + `.cursor/skills/<skill>/` | `.cursor/rules` + `.cursor/skills` |
 | Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agents stay in `.codex/agents/`); baseline block → `AGENTS.md` |
 | Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | on explicit install; baseline block → `AGENTS.md` |

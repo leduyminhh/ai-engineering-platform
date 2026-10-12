@@ -7,7 +7,7 @@ import { REPO_ROOT, loadPlugins, loadCore, loadMarketplace, loadPublished, loadW
 import { expandWorkflowDeps, missingDeps, WORKFLOW_PROVIDERS } from './workflows.mjs';
 import { scopeRoot, manifestPath, PROVIDER_LAYOUT, PROVIDERS } from './paths.mjs';
 import { pack } from './pack.mjs';
-import { BEGIN as MB_BEGIN, END as MB_END, mergeManagedBlock, removeManagedBlock } from './managed-block.mjs';
+import { BEGIN as MB_BEGIN, END as MB_END, mergeManagedBlock, removeManagedBlock, importsAgentsMd } from './managed-block.mjs';
 
 // ── phát hiện môi trường ───────────────────────────────────────────────────
 /** true nếu kit chạy từ trong node_modules (đã cài như package) → KHÔNG link vào đó
@@ -107,9 +107,14 @@ function baselineBlock() {
 /** File chỉ dẫn (rel scope root) mỗi provider nhận khối. cursor + antigravity: bỏ qua — governance đã
  *  inline sẵn (cursor vào .cursor/rules; antigravity vào AGENTS.md sinh sẵn). Nếu trả 'AGENTS.md' cho
  *  antigravity, applyManagedBlock sẽ ghi XUYÊN symlink (AGENTS.md là artifact ship từ build) vào nguồn
- *  build, đồng thời trùng file với codex. */
-function instructionFiles(provider, scope) {
-  if (provider === 'claude') return [scope === 'global' ? '.claude/CLAUDE.md' : 'CLAUDE.md'];
+ *  build, đồng thời trùng file với codex.
+ *  claude project: CLAUDE.md đã `@AGENTS.md` thì khối vào AGENTS.md — ghi vào CLAUDE.md sẽ nạp baseline 2 lần. */
+function instructionFiles(provider, scope, root) {
+  if (provider === 'claude') {
+    if (scope === 'global') return ['.claude/CLAUDE.md'];
+    const claudeMd = path.join(root, 'CLAUDE.md');
+    return fs.existsSync(claudeMd) && importsAgentsMd(fs.readFileSync(claudeMd, 'utf8')) ? ['AGENTS.md'] : ['CLAUDE.md'];
+  }
   if (provider === 'codex') return [scope === 'global' ? '.codex/AGENTS.md' : 'AGENTS.md'];
   return [];
 }
@@ -734,7 +739,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
       const effPlugins = prev ? [...new Set([...(prev.plugins || []), ...inferred])] : inferred;
       uninstallEntries(m, root, (e) => e.provider === 'claude'); // gỡ bản claude cũ (skills HOẶC plugin)
       const info = installClaudePlugin({ pluginIds: effPlugins, scope });
-      const managed = applyManagedBlock(root, instructionFiles('claude', scope));
+      const managed = applyManagedBlock(root, instructionFiles('claude', scope, root));
       m.installs.push({
         provider: 'claude', mode: 'plugin', plugins: effPlugins, scope,
         marketplace: info.marketplace, cliScope: info.cliScope,
@@ -764,7 +769,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     const { files, links } = installOne(provider, effSet, scope);
     const rel = (arr) => arr.map((f) => path.relative(root, f).split(path.sep).join('/'));
     const relF = rel(files), relL = rel(links);
-    const managed = applyManagedBlock(root, instructionFiles(provider, scope));
+    const managed = applyManagedBlock(root, instructionFiles(provider, scope, root));
     m.installs.push({ ...entry, files: relF, links: relL, managed, installedAt: new Date().toISOString() });
     results.push({ provider, plugins: entry.plugins, skills: entry.skills, linked: relL.length, copied: relF.length, count: relF.length + relL.length, pulled: deps.pulled });
   }
