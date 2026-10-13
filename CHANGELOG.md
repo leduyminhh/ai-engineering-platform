@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `core/git-release` skill runs Gitflow release and hotfix locally: `release start|finish`, `hotfix start|finish`,
+  semver from Conventional Commits (`scripts/next-version.mjs`, picks the highest semver tag so a tag on the
+  production merge commit is found from `develop`), branch roles confirmed at every `start`, promotion through
+  `staging` before `main`, annotated tag on the last stage, merge-back, Java/Python/Node version files,
+  `-SNAPSHOT`/`.devN` handling, optional GitHub Release. Every push waits for confirmation.
+  `project-knowledge/release-policy.md` holds per-project defaults and a business-rules table.
+
 - `aip init [--full]` scaffolds agent instruction files in the current folder for any project type: `AGENTS.md`
   (baseline from `core/agents/AGENTS.template.md`) and `CLAUDE.md` importing `@AGENTS.md`
   (`templates/init-minimal/`). `--full` copies `templates/init/` instead. Existing files are never overwritten;

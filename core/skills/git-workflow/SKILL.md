@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: "Git an toàn: commit Conventional Commits (header tiếng Anh, body tiếng Việt có dấu, commit -F), branch theo role, merge, revert, hotfix, gom lịch sử cho changelog; không push khi chưa xác nhận branch. Dùng khi người dùng muốn \"commit\", \"push\", \"tạo branch\", \"chuẩn bị PR\", \"merge\". Không dùng khi cần viết nội dung changelog/release notes → engineering-release-notes; chuẩn bị cả đợt phát hành → workflow-release."
+description: "Git an toàn: commit Conventional Commits (header tiếng Anh, body tiếng Việt có dấu, commit -F), branch theo role, merge, revert, hotfix, gom lịch sử cho changelog; không push khi chưa xác nhận branch. Dùng khi người dùng muốn \"commit\", \"push\", \"tạo branch\", \"chuẩn bị PR\", \"merge\". Không dùng khi cần viết changelog/release notes → engineering-release-notes; release/hotfix có version → git-release; chuẩn bị cả đợt phát hành → workflow-release."
 order: 2
 title: "Git Workflow — commit, branch, push, PR, merge, release (dùng chung)"
 runsIn: execute
@@ -95,10 +95,8 @@ Theo checklist trong [references/gitflow-checklist.md](references/gitflow-checkl
   phá huỷ; verify sau khi resolve.
 - **Revert:** ưu tiên `git revert`, xác định đúng hash và title commit gốc, nêu tác động
   rollback dự kiến; verify sau revert.
-- **Release:** phạm vi hẹp, chốt version bump + changelog + verification cuối, đặt tên
-  branch `release/*`, merge-back về đúng các branch đang hoạt động.
-- **Hotfix:** sửa production tối thiểu, blast radius nhỏ, có test hồi quy hoặc
-  verification tập trung, branch `hotfix/*`, nhớ merge-back.
+- **Release / Hotfix có version** (tạo `release/*` / `hotfix/*`, bump, tag, merge-back): dùng skill
+  `git-release`; skill này chỉ lo commit bên trong các branch đó.
 
 ## Verification (trước khi báo hoàn thành)
 

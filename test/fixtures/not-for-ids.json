@@ -1,7 +1,12 @@
 {
   "git-workflow": [
     "engineering-release-notes",
+    "git-release",
     "workflow-release"
+  ],
+  "git-release": [
+    "git-workflow",
+    "ops-deploy-release"
   ],
   "backend-init": [
     "backend-migrate-architecture",

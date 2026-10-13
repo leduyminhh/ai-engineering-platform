@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 Người dùng cuối không cần clone repo — gói `ai-engineering-platform` phát hành trên npm
 registry, hai bin `aip` và `ai-engineering-platform` trỏ cùng một CLI.
 
-> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow`
-> (`core:principles` + `core:git-workflow`). Các plugin (`backend`, `frontend`, `engineering`,
+> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release`
+> (`core:principles` + `core:git-workflow` + `core:git-release`). Các plugin (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) và workflow **không** có trong gói; hãy cài từ source:
 > `git clone` + `npm link` (xem [Bắt đầu nhanh](#bắt-đầu-nhanh)), rồi `aip install --plugin all`, hoặc
 > `aip --all` để mở wizard với mọi skill kể cả draft.
@@ -100,7 +100,7 @@ npx ai-engineering-platform install --provider all --yes
 | Đường dẫn | Vai trò |
 | --- | --- |
 | `plugins/` | Nguồn năng lực: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, cùng `_marketplace.json` và `_cowork.json`. |
-| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, và `hooks/` an toàn (chỉ plugin-mode). |
+| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/` và `skills/git-release/`, và `hooks/` an toàn (chỉ plugin-mode). |
 | `evals/` | Case `claude plugin eval` theo plugin (chạy tay; không ship; `npm test` chỉ kiểm cấu trúc). |
 | `templates/` | `init/` khung project (do skill `*-init` drop ra) và `skills/` khung viết skill. |
 | `adapters/` | Chiếu theo provider (`<provider>/adapter.mjs`), auto-discover. `_shared/lib.mjs` chứa logic dùng chung. |
@@ -120,7 +120,7 @@ Skill chưa được publish của một plugin (vd các skill `data-oltp-*` / `
 
 | Plugin | Năng lực | Skill |
 | --- | --- | --- |
-| `core` | Baseline mọi plugin phụ thuộc. | `principles`, `git-workflow` |
+| `core` | Baseline mọi plugin phụ thuộc. | `principles`, `git-workflow`, `git-release` |
 | `backend` | Project backend (REST API / service). | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Project frontend (web app / SPA). | `frontend-init`, `frontend-migrate-architecture` |
 | `data` | Project dữ liệu — CSDL OLTP (`data-oltp-*`) + kho/pipeline OLAP (`data-olap-*`). *(publish một phần: `data-db-migration`; skill OLTP/OLAP còn draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
