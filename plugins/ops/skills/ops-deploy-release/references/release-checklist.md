@@ -12,8 +12,10 @@ backup, link thông báo…). Chưa kiểm → ghi **chưa đạt** (fail-loud),
 - [ ] Changelog / release note tóm tắt thay đổi + rủi ro đã có.
 
 ### 2. Migration & dữ liệu
-- [ ] Có migration? Nếu có: **thứ tự áp** rõ, **đảo được** (hoặc có kế hoạch forward-fix) — ưu tiên
-      backward-compatible để tách bước schema và bước code.
+- [ ] Liệt kê migration schema nằm trong phạm vi release (thư mục migration của project, so với tag trước),
+      hoặc ghi "không có migration". Migration nào đã áp trên môi trường đích do người dùng xác nhận, không tự suy.
+- [ ] Thứ tự migration ↔ deploy rõ ràng: migration tương thích ngược chạy trước khi deploy code mới; migration phá
+      tương thích chỉ chạy sau khi code cũ đã ngừng dùng. Mỗi migration **đảo được** (hoặc có kế hoạch forward-fix).
 - [ ] Dữ liệu lớn / khoá bảng: đã ước lượng thời gian + tác động; có phương án ngoài giờ cao điểm.
 
 ### 3. Backup & điểm rollback
@@ -31,6 +33,14 @@ backup, link thông báo…). Chưa kiểm → ghi **chưa đạt** (fail-loud),
 
 ### 6. Feature flag
 - [ ] Phần rủi ro cao được bọc **feature flag** (tắt nhanh không cần redeploy) khi khả thi.
+
+### 7. Smoke e2e trước deploy (tuỳ chọn, chỉ khi project có `e2e/`)
+- [ ] Chạy 1–3 luồng e2e giá trị cao **đã có** trên đúng commit/tag sẽ phát hành, chỉ ở local/test (không trỏ
+      staging/production), theo skill `frontend-e2e-testing` (agent `frontend-e2e-test-writer` khi có). Không viết
+      test mới, không sửa test.
+- [ ] Kết quả: pass, hoặc `not_run` + lý do (vd thiếu môi trường BE/DB test) ghi vào rủi ro còn lại. Flaky → chạy
+      lại `--repeat-each=3`; vẫn flaky = `failed`. Đỏ vì hành vi sai hoặc `failed` → KHÔNG deploy, đề xuất
+      `workflow-bugfix`.
 
 ## Hậu deploy (sau khi triển khai)
 

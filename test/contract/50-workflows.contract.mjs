@@ -75,10 +75,6 @@ export default async function run({ ok, ctx }) {
       const orch = fs.readFileSync(path.join(workflows.dir, 'orchestrator', 'WORKFLOW.md'), 'utf8');
       ok(orch.includes('claude plugin install workflows@') && orch.includes('aip install --skill workflows/'),
         'orchestrator Bước 2: lệnh cài theo cả hai cách (phẳng + plugin Claude)');
-      for (const [slug, plug] of [['release', 'ops']]) {
-        const w = fs.readFileSync(path.join(workflows.dir, slug, 'WORKFLOW.md'), 'utf8');
-        ok(new RegExp(`Plugin cần cài thêm:.*\`${plug}\``).test(w), `workflow-${slug}: điều kiện tiên quyết nêu plugin ${plug}`);
-      }
       const feat = path.join(BUILD, 'claude', 'plugins', 'workflows', 'skills', 'workflow-feature', 'SKILL.md');
       if (fs.existsSync(feat)) ok(fs.readFileSync(feat, 'utf8').includes('`∥`'), 'preamble claude: giải thích ký hiệu ∥ (nhiều Agent trong một message)');
     }
@@ -129,7 +125,7 @@ export default async function run({ ok, ctx }) {
       if (s.kind === 'workflow') ok(typeof s.passthrough['argument-hint'] === 'string', `${s.id}: có argument-hint`);
     }
     const hi = workflows.stages.filter((s) => ['high', 'critical'].includes(s.risk));
-    ok(hi.length === 2, `2 workflow risk ≥ high (=${hi.map((s) => s.id).join(', ')})`);
+    ok(hi.length === 1, `1 workflow risk ≥ high (=${hi.map((s) => s.id).join(', ')})`);
     if (fs.existsSync(claudeDir)) {
       for (const s of workflows.stages) {
         const c = fs.readFileSync(path.join(claudeDir, 'plugins/workflows/skills', s.id, 'SKILL.md'), 'utf8');

@@ -69,8 +69,8 @@ export default async function run({ ok, ctx }) {
       const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
       ok(row('frontend-data-integrator').includes('WF01'),
         `${f}: bảng agent có frontend-data-integrator dùng ở WF01`);
-      ok(['WF01', 'WF11'].every((w) => row('frontend-e2e-test-writer').includes(w)),
-        `${f}: bảng agent có frontend-e2e-test-writer dùng ở WF01, WF11`);
+      ok(row('frontend-e2e-test-writer').includes('WF01'),
+        `${f}: bảng agent có frontend-e2e-test-writer dùng ở WF01`);
       ok(!/^\| G1 \|/m.test(rd) && !/^\| G5 \|/m.test(rd), `${f}: bảng Skill gaps bỏ G1, G5 (đã có skill)`);
     }
     // Duyệt E2 của skill e2e phải có chỗ trong workflow, nếu không agent sẽ trình lại hoặc bỏ qua cổng.

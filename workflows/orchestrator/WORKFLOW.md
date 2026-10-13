@@ -35,11 +35,10 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 |---|---|---|---|---|
 | `workflow-feature` | "thêm tính năng", "thêm endpoint", "làm feature", "user story", acceptance criteria | medium | — | Chỉ sửa lỗi hành vi đã có → bugfix |
 | `workflow-bugfix` | "lỗi", "bug", stacktrace, "không chạy", "sai kết quả" | medium | — | Hệ thống production đang sập → skill `ops-incident-troubleshooting` |
-| `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | — | Chỉ cần quality gate trước release → release |
-| `workflow-release` | "release", "phát hành", "chuẩn bị deploy", "ra version" | high | — | Chưa sẵn sàng phát hành, cần sửa lỗi/tính năng trước → feature/bugfix |
+| `workflow-security-review` | "bảo mật", "OWASP", "CVE", "secret" | high | — | Chỉ cần quality gate trước release → skill `engineering-quality-gate` |
 | `workflow-performance` | "chậm", "tối ưu hiệu năng", "performance", "latency" | medium | — | Chậm do lỗi logic rõ ràng, không phải hiệu năng → bugfix |
 
-**Thứ tự ưu tiên:** `workflow-security-review` > `workflow-bugfix` > `workflow-feature` > `workflow-performance` > `workflow-release`
+**Thứ tự ưu tiên:** `workflow-security-review` > `workflow-bugfix` > `workflow-feature` > `workflow-performance`
 
 ## Yêu cầu chạy trực tiếp bằng skill
 
@@ -59,6 +58,8 @@ chọn workflow: chỉ nêu skill cần gọi và kết thúc (không phải l�
 | "khởi tạo backend", "scaffold API/service", "setup project backend mới" | `backend-init` (model không tự gọi được: đề nghị người dùng gõ `/backend:backend-init` khi cài dạng plugin, `/backend-init` khi cài dạng skills) |
 | "khởi tạo frontend", "setup project React mới", "scaffold tài liệu nền frontend" | `frontend-init` (model không tự gọi được: đề nghị người dùng gõ `/frontend:frontend-init` khi cài dạng plugin, `/frontend-init` khi cài dạng skills) |
 | "chuyển .env sang Vault/Consul", "externalize config/secret", "đưa secret vào Vault" | `backend-migrate-vault-consul` |
+| "release", "phát hành", "ra version", "release start", "release finish", "hotfix start", "tạo tag version" | `git-release` (core) |
+| "chuẩn bị deploy", "deploy checklist", "rollback" | `ops-deploy-release` (plugin `ops`) |
 
 ## Các bước
 

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `core/git-release` skill runs Gitflow release and hotfix locally: `release start|finish`, `hotfix start|finish`,
+  semver from Conventional Commits (`scripts/next-version.mjs`, picks the highest semver tag so a tag on the
+  production merge commit is found from `develop`), branch roles confirmed at every `start`, promotion through
+  `staging` before `main`, annotated tag on the last stage, merge-back, Java/Python/Node version files,
+  `-SNAPSHOT`/`.devN` handling, optional GitHub Release. Every push waits for confirmation.
+  `project-knowledge/release-policy.md` holds per-project defaults and a business-rules table.
+
 - `aip init [--full]` scaffolds agent instruction files in the current folder for any project type: `AGENTS.md`
   (baseline from `core/agents/AGENTS.template.md`) and `CLAUDE.md` importing `@AGENTS.md`
   (`templates/init-minimal/`). `--full` copies `templates/init/` instead. Existing files are never overwritten;
@@ -186,6 +193,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `aip check` also lists installed Claude Code plugins whose version differs from source.
 - CI runs on ubuntu/windows × Node 20/24 and validates the built marketplace with
   `claude plugin validate --strict`.
+- `ops-deploy-release` checklist takes the gates of the removed workflow: pending migrations since the previous
+  tag, migration ↔ deploy order, and an optional pre-deploy e2e smoke run (local/test only, no test edits).
 
 ### Removed
 
@@ -194,11 +203,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   several capabilities; single-capability tasks call the skill directly, and `workflow-orchestrator` routes those
   requests to the skill. Their extra gates moved into `data-db-migration`, `ops-incident-troubleshooting`,
   `*-testing`, `*-code-review`, and the API drift/authorization checks into `workflow-feature` step 6.
+- **BREAKING:** `workflow-release` and the agents `engineering-release-scribe` and `ops-release-engineer`, which
+  only that workflow used. Use `core/git-release` for version, tag and merge-back, and `ops-deploy-release` for the
+  deploy checklist. The orchestrator routes "release", "phát hành", "ra version" to `git-release` and
+  "chuẩn bị deploy" to `ops-deploy-release`.
 
 ### Fixed
 
 - `aip update` / `aip install` skip (with a warning) skills recorded in the install manifest that no longer exist
   in the source, instead of failing with `Skill không tồn tại`.
+- `core/git-release`: the version-consistency check now accounts for `-SNAPSHOT`/`.devN` suffixes (no false warning on every
+  `release start`); skill-created commits stay on the branch of their step; preflight compares `release/*`/`hotfix/*` with
+  `origin` and selects branches before build/test; merges use `--no-edit`; interrupted `finish` runs can be resumed; hotfix
+  push set is explicit and a same-version open release is rejected; `next-version.mjs` warns when the latest tag is not in
+  the base branch.
 
 ## [1.2.1] - 2026-10-01
 

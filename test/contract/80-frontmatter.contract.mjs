@@ -173,7 +173,7 @@ export default async function run({ ok, ctx }) {
   {
     const { allAgents } = ctx;
     const ro = allAgents.filter((a) => a.mode === 'read-only');
-    ok(ro.length === 5 && ro.every((a) => a.tools.length > 0), 'mọi agent read-only khai báo tools allowlist (W1)');
+    ok(ro.length === 4 && ro.every((a) => a.tools.length > 0), 'mọi agent read-only khai báo tools allowlist (W1)');
     for (const a of allAgents) {
       const errs = ctx.checkAgentTools(a);
       ok(errs.length === 0, `${a.id}: tools hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);

@@ -10,14 +10,9 @@
     "ops-incident-troubleshooting"
   ],
   "workflow-security-review": [
-    "engineering-quality-gate",
-    "workflow-release"
+    "engineering-quality-gate"
   ],
   "workflow-performance": [
-    "workflow-bugfix"
-  ],
-  "workflow-release": [
-    "workflow-feature",
     "workflow-bugfix"
   ]
 }

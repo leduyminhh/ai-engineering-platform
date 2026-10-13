@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 Người dùng cuối không cần clone repo — gói `ai-engineering-platform` phát hành trên npm
 registry, hai bin `aip` và `ai-engineering-platform` trỏ cùng một CLI.
 
-> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow`
-> (`core:principles` + `core:git-workflow`). Các plugin (`backend`, `frontend`, `engineering`,
+> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release`
+> (`core:principles` + `core:git-workflow` + `core:git-release`). Các plugin (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) và workflow **không** có trong gói; hãy cài từ source:
 > `git clone` + `npm link` (xem [Bắt đầu nhanh](#bắt-đầu-nhanh)), rồi `aip install --plugin all`, hoặc
 > `aip --all` để mở wizard với mọi skill kể cả draft.
@@ -100,7 +100,7 @@ npx ai-engineering-platform install --provider all --yes
 | Đường dẫn | Vai trò |
 | --- | --- |
 | `plugins/` | Nguồn năng lực: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, cùng `_marketplace.json` và `_cowork.json`. |
-| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, và `hooks/` an toàn (chỉ plugin-mode). |
+| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/` và `skills/git-release/`, và `hooks/` an toàn (chỉ plugin-mode). |
 | `evals/` | Case `claude plugin eval` theo plugin (chạy tay; không ship; `npm test` chỉ kiểm cấu trúc). |
 | `templates/` | `init/` khung project (do skill `*-init` drop ra) và `skills/` khung viết skill. |
 | `adapters/` | Chiếu theo provider (`<provider>/adapter.mjs`), auto-discover. `_shared/lib.mjs` chứa logic dùng chung. |
@@ -120,7 +120,7 @@ Skill chưa được publish của một plugin (vd các skill `data-oltp-*` / `
 
 | Plugin | Năng lực | Skill |
 | --- | --- | --- |
-| `core` | Baseline mọi plugin phụ thuộc. | `principles`, `git-workflow` |
+| `core` | Baseline mọi plugin phụ thuộc. | `principles`, `git-workflow`, `git-release` |
 | `backend` | Project backend (REST API / service). | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Project frontend (web app / SPA). | `frontend-init`, `frontend-migrate-architecture` |
 | `data` | Project dữ liệu — CSDL OLTP (`data-oltp-*`) + kho/pipeline OLAP (`data-olap-*`). *(publish một phần: `data-db-migration`; skill OLTP/OLAP còn draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
@@ -148,7 +148,7 @@ session chính) mới điều phối và gọi `core:git-workflow` sau checkpoin
 có cấu trúc (kết quả, `file:line`, residual risk); khẳng định "đã chạy / đã pass" luôn kèm
 evidence, hoặc `not_run` + lý do.
 
-### Agent (18)
+### Agent (16)
 
 `mode` trung lập với provider: Claude map `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mode: "read-only"` và
@@ -165,20 +165,18 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
 | `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF06 |
-| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF11 |
+| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01 |
 | `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01, WF02, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
 | `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
-| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01, WF02, WF06, WF11 |
+| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01, WF02, WF06 |
 | `engineering-spec-analyst` | engineering | write (chỉ `docs/`) | engineering-spec-writing, engineering-adr, engineering-diagram, engineering-task-breakdown | WF01 |
-| `engineering-release-scribe` | engineering | write (chỉ `docs/`, `CHANGELOG.md`) | engineering-release-notes | WF11 |
 | `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | skill ops-incident-troubleshooting |
-| `ops-release-engineer` | ops | read-only | ops-deploy-release, ops-observability | WF11 |
 
 Không có agent Security riêng: `engineering-quality-gate` đã phủ cả quality lẫn security review
 source-first (OWASP/ASVS/CWE, SCA, secrets); tách ra chỉ trùng lặp.
 
-### Workflow (5) + orchestrator
+### Workflow (4) + orchestrator
 
 Id dạng `workflow-<slug>`, nguồn ở `workflows/<slug>/WORKFLOW.md`. `tier` quyết định độ sâu nội
 dung (1 = nhiều gate/DoD chặt, 2 = đủ template nhưng gọn, 3 = gọn); `risk` quyết định mức độ
@@ -190,7 +188,6 @@ xác nhận bắt buộc của orchestrator.
 | WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE fixer, BE/FE reviewer, quality-auditor |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, frontend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
-| WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer, frontend-e2e-test-writer |
 | — | `workflow-orchestrator` | — | — | mới | không (chạy ở session chính) |
 
 Việc chỉ cần một năng lực gọi thẳng skill (orchestrator cũng chỉ đường tới skill): review →
@@ -229,7 +226,7 @@ Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2
 | --- | --- | --- | --- |
 | G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
 | G4 | `engineering-bugfix` (tái hiện → evidence → failing test → root cause → fix tối thiểu) | engineering | WF02 |
-| G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
+| G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | — |
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
 | G11 | `engineering-docs-sync` | engineering | — |
@@ -321,7 +318,7 @@ Plugin `core` mang hai hook `PreToolUse` cho Claude Code (`core/hooks/`; Node kh
 | H2 | Bash, PowerShell | deny | `git commit -m` có ký tự non-ASCII — dùng `git commit -F <file>` (xem skill `git-workflow`) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | file bí mật: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, khoá riêng `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (kể cả `_sk` và hậu tố bất kỳ khác `.pub`), và chỉ `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` (có giải symlink và NTFS stream; [Unverified] tên ngắn 8.3). `.env.example`/`.env.sample`/`.env.template` và `*.pub` được phép |
 | H3 | Bash, PowerShell | ask | lệnh nhắc tới file bí mật |
-| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git của file đích, không phải của cwd phiên): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
+| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git của file đích, không phải của cwd phiên): `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
 
 Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường) thoát 0 không quyết định. Khi `guard-bash` không phân tích chắc chắn được lệnh thì nghiêng về `ask` (`guard-files` không có hành vi này). Không có H4: agent ops không có tool Bash.
 

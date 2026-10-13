@@ -1,6 +1,6 @@
 ---
 name: engineering-release-notes
-description: "Viết changelog và release notes hướng người dùng từ lịch sử git, nhóm New/Improvements/Fixes/Breaking; chỉ ghi docs/ và CHANGELOG.md, không tag/push. Dùng khi người dùng muốn \"release notes\", \"changelog\", \"ghi chú phát hành\", \"tóm tắt thay đổi từ tag\", \"what's new\". Không dùng khi chỉ cần gom lịch sử git → git-workflow; chuẩn bị cả đợt phát hành → workflow-release."
+description: "Viết changelog và release notes hướng người dùng từ lịch sử git, nhóm New/Improvements/Fixes/Breaking; chỉ ghi docs/ và CHANGELOG.md, không tag/push. Dùng khi người dùng muốn \"release notes\", \"changelog\", \"ghi chú phát hành\", \"tóm tắt thay đổi từ tag\", \"what's new\". Không dùng khi chỉ cần gom lịch sử git → git-workflow; tạo version, tag, merge release theo Gitflow → git-release."
 order: 4
 title: "Release Notes — từ lịch sử git viết changelog + release notes hướng người dùng"
 runsIn: plan
@@ -27,7 +27,7 @@ hướng người dùng. Skill này KHÔNG thuộc chuỗi pipeline bắt buộc
 ## Ranh giới an toàn
 
 - **Docs-only** — KHÔNG sinh code; KHÔNG tự `git tag` / tạo release / push; KHÔNG bump version thay người dùng.
-  Các thao tác git thuộc skill `git-workflow`.
+  Tag/release/merge-back thuộc skill core `git-release`; các thao tác git khác thuộc `git-workflow`.
 - **KHÔNG bịa thay đổi.** Chỉ viết những gì có trong lịch sử git đã gom. Mục nào không rõ tác động người dùng →
   đưa vào câu hỏi mở, đánh dấu **[giả định]**, KHÔNG âm thầm điền.
 - Ngôn ngữ **đo được**; KHÔNG tuyên bố tuyệt đối kiểu "đảm bảo / loại bỏ hoàn toàn / chặn triệt để". Mô tả tác
@@ -82,14 +82,14 @@ hướng người dùng. Skill này KHÔNG thuộc chuỗi pipeline bắt buộc
 ## Ghi chú — quan hệ với git-workflow
 
 Skill này **không** thao tác git. Việc **gom lịch sử theo phạm vi** (tag/ngày/N ngày/nhóm commit) và mọi thao
-tác git (tag, release branch, push, merge-back) thuộc skill core **`git-workflow`**. Quan hệ chuẩn:
+tác git khác thuộc skill core **`git-workflow`**; tag, release branch, merge-back thuộc skill core **`git-release`**. Quan hệ chuẩn:
 
 - `git-workflow` (`Quy trình — changelog / release notes`) → gom lịch sử, giữ tag/hash/PR/ticket → **giao** phần viết
   nội dung cuối cho skill này.
 - Skill này → phân loại + viết hướng người dùng + định dạng → trả bản release notes để con người duyệt, rồi
-  quay lại `git-workflow` nếu cần tag/release thật.
+  quay lại `git-release` nếu cần tag/release thật.
 
-Nếu người dùng vừa muốn tag/release vừa muốn nội dung: dùng `git-workflow` cho phần git, skill này cho phần viết.
+Nếu người dùng vừa muốn tag/release vừa muốn nội dung: dùng `git-workflow` để gom lịch sử, `git-release` cho tag/release, skill này cho phần viết.
 
 ## Bản đồ tài liệu
 

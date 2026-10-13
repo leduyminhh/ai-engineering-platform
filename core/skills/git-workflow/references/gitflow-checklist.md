@@ -34,14 +34,7 @@
 - Nêu tác động rollback dự kiến; title revert tường minh.
 - Verify sau revert.
 
-## Release
+## Release / Hotfix
 
-- Phạm vi hẹp; chốt version bump, changelog/release notes, verification cuối.
-- Soát thay đổi dependency/build; branch đặt tên `release/*`.
-- Merge-back về đúng các branch đang hoạt động sau khi release.
-
-## Hotfix
-
-- Fix production tối thiểu, blast radius nhỏ nhất; branch `hotfix/*`.
-- Có regression test hoặc verification tập trung cho đúng chỗ sửa.
-- Nhớ kỳ vọng merge-back (về main VÀ branch phát triển đang hoạt động).
+- Tạo `release/*` / `hotfix/*`, tính version, tag, merge-back: theo skill `git-release`.
+- Commit bên trong các branch đó vẫn theo checklist commit ở trên.

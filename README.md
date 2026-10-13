@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 End users do not need to clone the repo — the `ai-engineering-platform` package is published
 to the npm registry, and both `aip` and `ai-engineering-platform` bins point to the same CLI.
 
-> **The npm package ships core only** — the baseline principles and the `git-workflow` skill
-> (`core:principles` + `core:git-workflow`). Plugins (`backend`, `frontend`, `engineering`,
+> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` skills
+> (`core:principles` + `core:git-workflow` + `core:git-release`). Plugins (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) and workflows are **not** in the package; install them from source:
 > `git clone` + `npm link` (see [Quickstart](#quickstart)), then `aip install --plugin all`, or
 > `aip --all` to open the wizard with every skill including drafts.
@@ -103,7 +103,7 @@ npx ai-engineering-platform install --provider all --yes
 | Path | Owns |
 | --- | --- |
 | `plugins/` | Canonical capability source: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, plus `_marketplace.json` and `_cowork.json`. |
-| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/` recipe, and the safety `hooks/` (plugin-mode only). |
+| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/` and `skills/git-release/` recipes, and the safety `hooks/` (plugin-mode only). |
 | `evals/` | `claude plugin eval` cases per plugin (manual run; not shipped; `npm test` checks structure only). |
 | `templates/` | `init/` project scaffold (dropped by `*-init` skills) and `skills/` authoring scaffold. |
 | `adapters/` | Per-provider projection (`<provider>/adapter.mjs`), auto-discovered. `_shared/lib.mjs` holds the cross-tool logic. |
@@ -125,7 +125,7 @@ published (e.g. the `data-oltp-*` / `data-olap-*` skills) stay drafts, installab
 
 | Plugin | Capability | Skills |
 | --- | --- | --- |
-| `core` | Shared baseline every plugin depends on. | `principles`, `git-workflow` |
+| `core` | Shared baseline every plugin depends on. | `principles`, `git-workflow`, `git-release` |
 | `backend` | Backend (REST API / service) project. | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Frontend (web app / SPA) project. | `frontend-init`, `frontend-migrate-architecture` |
 | `data` | Data project — OLTP DB (`data-oltp-*`) + OLAP warehouse/pipeline (`data-olap-*`). *(partly published: `data-db-migration`; OLTP/OLAP skills still draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
@@ -153,7 +153,7 @@ workflow (running in the main session) orchestrates and calls `core:git-workflow
 checkpoint. Every agent report is structured (result, `file:line`, residual risk); a claim
 of "ran / passed" always carries evidence, or `not_run` + reason.
 
-### Agents (18)
+### Agents (16)
 
 `mode` is provider-neutral: Claude maps `read-only` → `disallowedTools: Edit, Write, NotebookEdit, Agent`
 and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mode: "read-only"` and
@@ -170,20 +170,18 @@ and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mo
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
 | `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF06 |
-| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF11 |
+| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01 |
 | `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01, WF02, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
 | `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
-| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (audit mode) | WF01, WF02, WF06, WF11 |
+| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (audit mode) | WF01, WF02, WF06 |
 | `engineering-spec-analyst` | engineering | write (`docs/` only) | engineering-spec-writing, engineering-adr, engineering-diagram, engineering-task-breakdown | WF01 |
-| `engineering-release-scribe` | engineering | write (`docs/`, `CHANGELOG.md` only) | engineering-release-notes | WF11 |
 | `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | skill ops-incident-troubleshooting |
-| `ops-release-engineer` | ops | read-only | ops-deploy-release, ops-observability | WF11 |
 
 There is no separate Security agent: `engineering-quality-gate` already covers source-first
 quality **and** security review (OWASP/ASVS/CWE, SCA, secrets); a split would only duplicate it.
 
-### Workflows (5) + orchestrator
+### Workflows (4) + orchestrator
 
 Id is `workflow-<slug>`, sourced from `workflows/<slug>/WORKFLOW.md`. `tier` sets how deep the
 content goes (1 = heavy gates/DoD, 2 = full template but lean, 3 = lean); `risk` drives the
@@ -195,7 +193,6 @@ orchestrator's confirmation strictness.
 | WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE fixer, BE/FE reviewer, quality-auditor |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, frontend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
-| WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer, frontend-e2e-test-writer |
 | — | `workflow-orchestrator` | — | — | new | none (runs in the main session) |
 
 A single-capability task calls the skill directly (the orchestrator routes there too): review →
@@ -234,7 +231,7 @@ Tracked as open gaps in the design spec (`docs/superpowers/specs/2026-09-25-agen
 | --- | --- | --- | --- |
 | G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
 | G4 | `engineering-bugfix` (reproduce → evidence → failing test → root cause → minimal fix) | engineering | WF02 |
-| G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
+| G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | — |
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
 | G11 | `engineering-docs-sync` | engineering | — |
@@ -327,7 +324,7 @@ The `core` plugin ships two Claude Code `PreToolUse` hooks (`core/hooks/`; zero-
 | H2 | Bash, PowerShell | deny | `git commit -m` with non-ASCII text — use `git commit -F <file>` (see the `git-workflow` skill) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | secret files: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private keys `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (also `_sk` and any non-`.pub` suffix), and `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` only (symlinks and NTFS streams are resolved; [Unverified] 8.3 short names). `.env.example`/`.env.sample`/`.env.template` and `*.pub` are allowed |
 | H3 | Bash, PowerShell | ask | a command that names a secret file |
-| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root of the target file, not of the session cwd): `engineering-release-scribe`, `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
+| H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root of the target file, not of the session cwd): `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
 
 The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When `guard-bash` cannot parse a command reliably it falls toward `ask` (`guard-files` does not). There is no H4: the ops agents have no Bash tool.
 

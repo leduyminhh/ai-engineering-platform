@@ -1,7 +1,11 @@
 {
   "git-workflow": [
     "engineering-release-notes",
-    "workflow-release"
+    "git-release"
+  ],
+  "git-release": [
+    "git-workflow",
+    "ops-deploy-release"
   ],
   "backend-init": [
     "backend-migrate-architecture",
@@ -72,7 +76,7 @@
   ],
   "engineering-release-notes": [
     "git-workflow",
-    "workflow-release"
+    "git-release"
   ],
   "engineering-adr": [
     "engineering-spec-writing"
@@ -126,7 +130,7 @@
   ],
   "ops-deploy-release": [
     "engineering-release-notes",
-    "workflow-release"
+    "git-release"
   ],
   "ops-incident-troubleshooting": [
     "workflow-bugfix"
