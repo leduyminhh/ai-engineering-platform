@@ -28,7 +28,10 @@ Tool native không có trên máy → sửa trực tiếp file. Diff luôn đư�
 
 ## Kiểm nhất quán
 
-Version trong file (bỏ hậu tố dev) phải bằng `current` của `next-version.mjs`. Lệch → cảnh báo, hỏi, không bump đè.
+- Project không có hậu tố dev: version trong file phải bằng `current` của `next-version.mjs`.
+- Project có hậu tố dev (`-SNAPSHOT`, `.devN`): version trong file sau khi bỏ hậu tố phải lớn hơn `current`
+  (thường bằng `nextDev` đặt ở lần `release finish` trước, vd file `1.3.0-SNAPSHOT` khi tag mới nhất là `1.2.x`).
+- Lệch điều kiện trên → cảnh báo và hỏi người dùng; không ghi đè version trong file khi chưa có câu trả lời.
 
 ## Hậu tố dev
 

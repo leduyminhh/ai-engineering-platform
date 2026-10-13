@@ -70,5 +70,13 @@ export default async function run({ ok, ctx }) {
     const hot = run('--base', 'main', '--hotfix', '--json');
     ok(hot.code === 0 && JSON.parse(hot.out).next === '1.1.1', 'next-version CLI: --hotfix trên main → 1.1.1, exit 0');
     ok(run('--base', 'no-such-branch').code === 1, 'next-version CLI: ref không tồn tại → exit 1');
+
+    // Hotfix đã tag trên main nhưng chưa merge-back: tag mới nhất không nằm trong base → phải cảnh báo.
+    g('checkout', '-q', 'main'); g('commit', '-q', '--allow-empty', '-m', 'fix(c): hot'); g('tag', 'v1.1.1');
+    g('checkout', '-q', 'develop');
+    const stale = run('--base', 'develop', '--json');
+    const sr = stale.code === 0 ? JSON.parse(stale.out) : {};
+    ok(sr.current === '1.1.1' && sr.warnings?.some((w) => w.includes('v1.1.1')),
+      `next-version CLI: tag mới nhất chưa nằm trong base → warning (=${stale.code} ${sr.current})`);
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }

@@ -30,6 +30,9 @@ mỗi lần làm đúng một chặng kế tiếp của chuỗi promotion.
   file, không tự resolve.
 - Hoàn tác: chưa push thì chỉ ĐỀ XUẤT lệnh đưa branch về hash đã ghi ở preflight và xoá tag local; đã push thì chỉ
   đề xuất `git revert`, không động vào lịch sử remote.
+- Commit do skill này tạo (`chore(release)`, `docs(changelog)`, bump hậu tố dev) nằm đúng trên branch mà bước nêu
+  tên; quy tắc ưu tiên branch của `git-workflow` (tạo branch mới khi đang ở `main`/`develop`) không áp dụng cho
+  chúng, chỉ áp các bước message, `check-commit-message.mjs`, `git commit -F` và duyệt diff.
 - KHÔNG thêm dòng `Co-Authored-By` hay attribution của assistant vào commit, tag message, release notes.
 
 ## Quy trình — preflight chung
@@ -38,14 +41,19 @@ Chạy đầu mọi lệnh; sai điều kiện nào → dừng, báo thiếu gì
 
 1. Worktree sạch (`git status --porcelain` rỗng); `git fetch origin --tags`.
 2. Đọc `project-knowledge/release-policy.md` nếu có (mẫu: [references/release-policy.md](references/release-policy.md)).
-3. Mọi branch vai trò (integration, các chặng promotion) khớp `origin` (`git rev-parse <b>` = `git rev-parse
-   origin/<b>`); lệch → dừng, đề xuất người dùng pull/đồng bộ.
-4. `start`: không có `release/*` (release) hoặc `hotfix/*` (hotfix) đang mở. `finish`: có đúng một branch tương ứng.
-5. Có ít nhất một tag đúng `tag format`; chưa có → hỏi version khởi điểm.
-6. Chỉ ở `release start`: hỏi lệnh build/test của project, chạy (hoặc nhờ người dùng chạy) và ghi kết quả; đỏ →
-   dừng, đề xuất `workflow-bugfix`. Khuyến nghị chạy skill `engineering-quality-gate` trước khi tiếp tục (không bắt
-   buộc, không gọi tự động).
-7. Ghi hash hiện tại của mọi branch vai trò vào báo cáo (dùng cho đề xuất hoàn tác).
+3. Chọn branch theo mục "chọn branch" bên dưới: các bước sau cần biết vai trò branch.
+4. Mọi branch vai trò (integration, các chặng promotion) khớp `origin` (`git rev-parse <b>` = `git rev-parse
+   origin/<b>`); lệch → dừng, đề xuất người dùng pull/đồng bộ. Ngoại lệ khi `finish` chạy lại: branch/tag local đi
+   trước `origin` đúng do lần chạy trước tạo mà chưa push → xem "Chạy lại sau khi bị gián đoạn".
+5. `start`: không có `release/*` (release) hoặc `hotfix/*` (hotfix) đang mở. `finish`: có đúng một branch tương ứng;
+   nếu `origin/<release|hotfix branch>` tồn tại thì local phải bằng origin (đồng đội có thể đã push fix): local tụt
+   sau → ⏸ đề xuất `git merge --ff-only origin/<branch>`; hai bên phân kỳ → dừng, báo cáo.
+6. Có ít nhất một tag đúng `tag format`; chưa có → hỏi version khởi điểm.
+7. Chỉ ở `release start`: `git switch <integration, không có thì chặng cuối>` (base của release), hỏi lệnh build/test
+   của project, chạy (hoặc nhờ người dùng chạy) và ghi kết quả; đỏ → dừng, đề xuất `workflow-bugfix`. Khuyến nghị chạy
+   skill `engineering-quality-gate` trước khi tiếp tục (không bắt buộc, không gọi tự động).
+8. Ghi hash hiện tại của mọi branch vai trò và của `release/*` / `hotfix/*` (nếu có) vào báo cáo (dùng cho đề xuất
+   hoàn tác).
 
 ## Quy trình — chọn branch
 
@@ -61,7 +69,7 @@ policy không. `finish` không hỏi lại; policy đổi so với lúc `start` 
 
 ## Quy trình — release start
 
-1. Preflight + chọn branch ⏸.
+1. Preflight (đã gồm chọn branch ⏸).
 2. `node <thư mục skill>/scripts/next-version.mjs --base <integration, không có thì chặng cuối> --tag-prefix
    <tiền tố> --zero-breaking <policy> --json`. Exit `2` → dừng, hỏi người dùng có thật sự release không. Trình bảng
    commit theo nhóm + version đề xuất + warnings. ⏸ xác nhận version (người dùng có thể nhập số khác: phải đúng
@@ -85,11 +93,11 @@ Chi tiết từng chặng và ví dụ: [references/release-flow.md](references/
    commit mới (fix, merge-back hotfix) → làm lại từ chặng đầu.
 2. Có commit mới sau commit release → cập nhật mục `[X.Y.Z]` của CHANGELOG, ⏸ diff, commit
    `docs(changelog): update vX.Y.Z`.
-3. **Chặng chưa phải cuối:** `git switch <chặng>` → `git merge --no-ff release/X.Y.Z` → ⏸ `git push origin <chặng>
-   release/X.Y.Z` → dừng để người dùng deploy/test, báo chạy lại `release finish` khi đạt.
-4. **Chặng cuối:** `git switch <production>` → `git merge --no-ff release/X.Y.Z` → `git tag -a vX.Y.Z -m "Release
-   X.Y.Z"` trên merge commit → có integration branch thì `git switch <integration>` → `git merge --no-ff
-   release/X.Y.Z` → project dùng hậu tố dev thì bump integration lên `nextDev` + hậu tố, ⏸ diff, commit
+3. **Chặng chưa phải cuối:** `git switch <chặng>` → `git merge --no-ff --no-edit release/X.Y.Z` → ⏸
+   `git push origin <chặng> release/X.Y.Z` → dừng để người dùng deploy/test, báo chạy lại `release finish` khi đạt.
+4. **Chặng cuối:** `git switch <production>` → `git merge --no-ff --no-edit release/X.Y.Z` →
+   `git tag -a vX.Y.Z -m "Release X.Y.Z"` trên merge commit → có integration branch thì `git switch <integration>` → `git merge --no-ff
+   --no-edit release/X.Y.Z` → project dùng hậu tố dev thì bump integration lên `nextDev` + hậu tố, ⏸ diff, commit
    `chore(release): start <nextDev>-SNAPSHOT` (hoặc `.dev0`).
 5. ⏸ `git push --atomic origin <production> <integration nếu có> vX.Y.Z`.
 6. ⏸ GitHub Release, chỉ khi `origin` trỏ GitHub và `gh auth status` thành công: trích mục `[X.Y.Z]` của
@@ -98,15 +106,23 @@ Chi tiết từng chặng và ví dụ: [references/release-flow.md](references/
 7. ⏸ Xoá branch theo policy (`ask` mặc định): `git branch -d release/X.Y.Z` và `git push origin --delete release/X.Y.Z`.
 8. Báo cáo theo [references/output-template-vi.md](references/output-template-vi.md).
 
+**Chạy lại sau khi bị gián đoạn.** (a) Push bị từ chối hoặc dừng sau khi đã merge local: branch/tag local đi trước
+`origin` là bình thường với đúng những branch và tag lần chạy trước đã tạo; preflight không báo lỗi mà tiếp tục ở
+checkpoint push của chặng đó. (b) Chặng cuối đã merge nhưng chưa có tag → đặt `vX.Y.Z` lên đúng merge commit đó rồi
+làm tiếp. (c) Bước CHANGELOG (bước 2) chỉ chạy khi có commit sau commit changelog gần nhất, không chạy lại mỗi lần.
+
 ## Quy trình — hotfix start / hotfix finish
 
-- `hotfix start`: preflight + chọn branch ⏸ (base = chặng cuối tại tag gần nhất; merge-back = `release/*` đang mở,
+- `hotfix start`: preflight (đã gồm chọn branch ⏸; base = chặng cuối tại tag gần nhất; merge-back = `release/*` đang mở,
   không có thì integration, không có nữa thì bỏ) → `next-version.mjs --base <chặng cuối> --hotfix --json` (luôn
-  patch+1) ⏸ → `git switch -c hotfix/X.Y.Z vA.B.C` (tag gần nhất) → dừng. Người dùng sửa lỗi qua `git-workflow` /
+  patch+1) ⏸ → nếu có `release/*` đang mở cùng version X.Y.(Z+1) (trùng tag) thì dừng, báo và hỏi người dùng →
+  `git switch -c hotfix/X.Y.Z vA.B.C` (tag gần nhất) → dừng. Người dùng sửa lỗi qua `git-workflow` /
   `workflow-bugfix` / `backend-fix` / `frontend-fix`, xong chạy `hotfix finish`.
 - `hotfix finish`: giống `release finish` với `hotfix/X.Y.Z` thay cho `release/X.Y.Z`, cộng: bước bump + CHANGELOG
   của `release start` (bước 4–5) chạy ở lần `finish` đầu tiên; merge-back theo đích đã xác nhận ở `start`; KHÔNG
-  bump hậu tố dev cho integration. Người dùng có thể yêu cầu bỏ chặng khi khẩn cấp; báo cáo ghi rõ chặng đã bỏ.
+  bump hậu tố dev cho integration. Ở chặng cuối push theo bộ
+  `git push --atomic origin <production> <đích merge-back nếu có> vX.Y.Z`. Người dùng có thể yêu cầu bỏ chặng khi
+  khẩn cấp; báo cáo ghi rõ chặng đã bỏ.
 - Merge-back vào `release/*` hay gặp conflict ở dòng version và đầu CHANGELOG → xử lý theo
   [references/conflict-rules.md](references/conflict-rules.md).
 

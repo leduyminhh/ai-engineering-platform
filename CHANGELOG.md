@@ -212,6 +212,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `aip update` / `aip install` skip (with a warning) skills recorded in the install manifest that no longer exist
   in the source, instead of failing with `Skill không tồn tại`.
+- `core/git-release`: the version-consistency check now accounts for `-SNAPSHOT`/`.devN` suffixes (no false warning on every
+  `release start`); skill-created commits stay on the branch of their step; preflight compares `release/*`/`hotfix/*` with
+  `origin` and selects branches before build/test; merges use `--no-edit`; interrupted `finish` runs can be resumed; hotfix
+  push set is explicit and a same-version open release is rejected; `next-version.mjs` warns when the latest tag is not in
+  the base branch.
 
 ## [1.2.1] - 2026-10-01
 

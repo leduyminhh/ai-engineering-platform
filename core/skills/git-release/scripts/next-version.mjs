@@ -124,6 +124,10 @@ export function main(argv, cwd = process.cwd()) {
     .split('\x1e').map((s) => s.trim()).filter(Boolean)
     .map((rec) => { const [hash, message = ''] = rec.split('\x1f'); return { hash, message }; });
   const r = { ...computeNext({ current: latest.version, commits, hotfix: opts.hotfix, zeroMajorBreaking: opts.zeroBreaking, tagPrefix: opts.tagPrefix }), range };
+  // Tag cao nhất toàn repo là chủ ý; chưa là tổ tiên của base nghĩa là hotfix có thể chưa merge-back.
+  try { git(['merge-base', '--is-ancestor', latest.tag, opts.base], cwd); } catch (e) {
+    if (e.status === 1) r.warnings.push(`tag ${latest.tag} chưa nằm trong ${opts.base} (hotfix chưa merge-back?) — kiểm tra trước khi release`);
+  }
   console.log(opts.json ? JSON.stringify(r, null, 2) : render(r));
   return r.next ? 0 : 2;
 }
