@@ -513,11 +513,33 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   m.installs.find((e) => e.provider === 'claude').skills.push('workflows/workflow-retired');
   fs.writeFileSync(mf, JSON.stringify(m, null, 2));
   let threw = null;
-  try { update({ scope: 'project', pull: false }); } catch (err) { threw = err; }
+  const warnOrig = console.warn;
+  const warned = [];
+  console.warn = (...a) => { warned.push(a.join(' ')); };
+  try { update({ scope: 'project', pull: false }); } catch (err) { threw = err; } finally { console.warn = warnOrig; }
   ok(threw === null, `update: skill đã gỡ khỏi nguồn không làm update ném lỗi (${threw?.message})`);
+  ok(warned.filter((w) => w.includes('workflows/workflow-retired')).length === 1,
+    `update: cảnh báo skill đã gỡ in đúng 1 lần (=${warned.filter((w) => w.includes('workflows/workflow-retired')).length})`);
   const after = JSON.parse(fs.readFileSync(mf, 'utf8')).installs.find((e) => e.provider === 'claude');
   ok(after && !after.skills.includes('workflows/workflow-retired'), 'update: manifest bỏ skill đã gỡ khỏi nguồn');
   ok(fs.existsSync(path.join(TMP_RT, '.claude/skills/backend-init/SKILL.md')), 'update: skill còn trong nguồn vẫn được cài lại');
+  process.env.AIE_INSTALL_ROOT = TMP;
+}
+
+// ── uninstall lẻ: manifest còn skill đã gỡ khỏi nguồn → không ném lỗi, không mất skill được giữ ──
+{
+  const TMP_RU2 = mkTmp('cwf-uninst-retired-');
+  process.env.AIE_INSTALL_ROOT = TMP_RU2;
+  install({ providers: 'claude', skills: ['backend/backend-init', 'backend/backend-testing'], scope: 'project' });
+  const mf = path.join(TMP_RU2, '.ai-engineering', 'manifest.json');
+  const m = JSON.parse(fs.readFileSync(mf, 'utf8'));
+  m.installs.find((e) => e.provider === 'claude').skills.push('workflows/workflow-retired');
+  fs.writeFileSync(mf, JSON.stringify(m, null, 2));
+  let threw = null;
+  try { uninstall({ skills: ['backend/backend-init'], scope: 'project' }); } catch (err) { threw = err; }
+  ok(threw === null, `uninstall lẻ: skill đã gỡ khỏi nguồn trong manifest không làm uninstall ném lỗi (${threw?.message})`);
+  ok(fs.existsSync(path.join(TMP_RU2, '.claude/skills/backend-testing/SKILL.md')), 'uninstall lẻ: skill được giữ vẫn còn cài');
+  ok(!fs.existsSync(path.join(TMP_RU2, '.claude/skills/backend-init/SKILL.md')), 'uninstall lẻ: skill được chọn đã gỡ');
   process.env.AIE_INSTALL_ROOT = TMP;
 }
 
