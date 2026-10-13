@@ -1,5 +1,11 @@
 # P2 còn lại: WF8, WF9, WF10, S5, S6 Implementation Plan
 
+> **Cập nhật 2026-10-12:** các workflow `workflow-api`, `workflow-code-review`, `workflow-db-change`, `workflow-docs`,
+> `workflow-incident`, `workflow-refactor`, `workflow-testing` đã gỡ — workflow giờ chỉ là pipeline nối nhiều năng
+> lực. Gate của chúng chuyển sang skill (`data-db-migration`, `ops-incident-troubleshooting`, `*-testing`,
+> `*-code-review`) và Bước 6 của `workflow-feature`; `workflow-orchestrator` chỉ đường tới skill. Nội dung bên dưới
+> giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Hoàn tất các mục P2 của spec không phụ thuộc skill/agent draft: S5 (`engineering-quality-gate` trỏ sang `engineering-convention-enforce`), S6 (`engineering-spec-writing` bước 4 trỏ sang `engineering-adr`), WF9 (`workflow-code-review` phủ nhóm CI/IaC/SQL và kiểm drift contract), WF8 (`workflow-release` có bước baseline build/test và kiểm migration chờ chạy), WF10 (`workflow-orchestrator` cho phép chuỗi `db-change → api → feature` và chỉ đường tới skill không có workflow). Assert hợp đồng ở `test/validate.mjs` (khối "16.").

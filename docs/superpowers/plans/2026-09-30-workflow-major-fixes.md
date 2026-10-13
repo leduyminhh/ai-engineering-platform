@@ -1,5 +1,11 @@
 # Workflow major fixes (WF7, WF4, WF3 phần không phụ thuộc draft) Implementation Plan
 
+> **Cập nhật 2026-10-12:** các workflow `workflow-api`, `workflow-code-review`, `workflow-db-change`, `workflow-docs`,
+> `workflow-incident`, `workflow-refactor`, `workflow-testing` đã gỡ — workflow giờ chỉ là pipeline nối nhiều năng
+> lực. Gate của chúng chuyển sang skill (`data-db-migration`, `ops-incident-troubleshooting`, `*-testing`,
+> `*-code-review`) và Bước 6 của `workflow-feature`; `workflow-orchestrator` chỉ đường tới skill. Nội dung bên dưới
+> giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Sửa 4 lỗi mức **major** của workflow còn tồn tại (D7, D8, D9, D10) bằng các thay đổi chỉ dùng agent/skill đã publish: `workflow-security-review` (thêm vùng rủi ro authorization/SSRF/misconfiguration, bước thu hồi secret, regression test), `workflow-api` (auditor song song với kiểm drift), `workflow-db-change` (thêm bước Test và bước cập nhật `data-model.md`). Thêm assert hợp đồng trong `test/validate.mjs` (khối "15.") và đồng bộ bảng workflow ở `README.md`, `README_VI.md`.

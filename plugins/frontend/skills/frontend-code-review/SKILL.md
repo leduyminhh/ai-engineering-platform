@@ -1,6 +1,6 @@
 ---
 name: frontend-code-review
-description: "Review diff/PR/module frontend (React/TypeScript) theo correctness, boundary kiến trúc UI, a11y, naming và test; trả finding có severity + file:line, chỉ đọc mặc định. Dùng khi người dùng muốn \"review code frontend\", \"review PR React\", \"review component\", \"review diff frontend\". Không dùng khi cần quét bảo mật hoặc tool scan → engineering-quality-gate; tái cấu trúc → frontend-refactor; review cả PR đa vai trò BE + FE → workflow-code-review."
+description: "Review diff/PR/module frontend (React/TypeScript) theo correctness, boundary kiến trúc UI, a11y, naming và test; trả finding có severity + file:line, chỉ đọc mặc định. Dùng khi người dùng muốn \"review code frontend\", \"review PR React\", \"review component\", \"review diff frontend\". Không dùng khi cần quét bảo mật hoặc tool scan → engineering-quality-gate; tái cấu trúc → frontend-refactor; review phần backend của PR → backend-code-review."
 order: 4
 title: "Frontend Code Review — Review diff/PR frontend React/TS theo trục, có evidence (recipe on-demand)"
 runsIn: execute
@@ -63,6 +63,9 @@ của project, KHÔNG áp gu cá nhân.
   ép ranh giới (`eslint-plugin-boundaries`/Steiger?) — để biết luật nào lint đã ép, luật nào phải soát tay.
 - Thiếu diff/scope rõ hoặc thiếu `project-knowledge` → BÁO (fail-loud), hỏi người dùng thay vì tự bịa
   phạm vi hay tự suy kiến trúc/design-system.
+- **PR fullstack:** chia file của diff thành backend / frontend / khác. Phần backend → `backend-code-review`;
+  file CI/IaC/SQL (pipeline CI, Dockerfile/IaC, migration SQL) → `engineering-quality-gate`; docs/config thuần ghi
+  "không cần reviewer". Không bỏ sót file nào của diff.
 
 ### 1. Review theo TRỤC
 Đọc soát phần trong scope theo các trục cố định, mỗi trục có dấu hiệu cụ thể cho frontend:
@@ -92,10 +95,16 @@ và **đề xuất fix** (hướng sửa, không bắt buộc viết code trừ 
 evidence: [references/review-dimensions.md](references/review-dimensions.md) mục "Severity". Không có
 `file:line` cụ thể thì KHÔNG dựng finding (tránh nhận xét chung chung).
 
+- **Validate trước khi báo:** đọc lại `file:line` của từng finding trong diff thật; loại finding không tái lập được
+  hoặc sai vị trí, ghi số finding bị loại kèm lý do. Không hạ severity để giảm số `blocker`.
+
 ### 3. Xuất kết quả
 Trình bày theo [references/review-output-template.md](references/review-output-template.md): bảng finding
 (severity · `file:line` · trục · rationale · đề xuất fix), tóm tắt theo severity, mục **cần-người-quyết**,
 và **phần chưa soát + residual risk**. Ngôn ngữ đo được.
+
+**Kết luận PR fullstack:** khi chạy cùng skill review phía kia, session chính gộp finding của hai báo cáo, bỏ trùng
+theo `file:line`, rồi kết luận `approve` (0 `blocker`, 0 `major` chưa có người chấp nhận) hoặc `request-changes`.
 
 ### 4. Read-only + route — con người duyệt
 - Mặc định **KHÔNG sửa**; giao kết quả cho người quyết. Chỉ áp fix khi người dùng yêu cầu rõ, và chỉ cho

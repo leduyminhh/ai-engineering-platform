@@ -1,6 +1,6 @@
 ---
 name: workflow-bugfix
-description: "Điều phối sửa bug: tái hiện bằng failing test, thu evidence, root cause có xác nhận người dùng, fix tối thiểu, regression toàn bộ, review đa vai trò, commit qua git-workflow. Dùng khi người dùng muốn \"sửa bug\", \"fix lỗi\", \"debug\", \"không chạy\", \"sai kết quả\", hoặc dán stacktrace. Không dùng khi hệ thống production đang sập → workflow-incident."
+description: "Điều phối sửa bug: tái hiện bằng failing test, thu evidence, root cause có xác nhận người dùng, fix tối thiểu, regression toàn bộ, review đa vai trò, commit qua git-workflow. Dùng khi người dùng muốn \"sửa bug\", \"fix lỗi\", \"debug\", \"không chạy\", \"sai kết quả\", hoặc dán stacktrace. Không dùng khi hệ thống production đang sập → ops-incident-troubleshooting."
 order: 2
 title: "Bugfix — tái hiện, root cause, fix tối thiểu, regression"
 kind: workflow

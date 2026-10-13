@@ -1,6 +1,6 @@
 ---
 name: data-db-migration
-description: "Quản lý schema DB backend (Spring Boot + PostgreSQL; Python/Alembic chỉ hướng dẫn): ADOPT so Flyway/Liquibase để người dùng chọn; CHANGE viết expand/contract, verify DB test, không chạy production. Dùng khi người dùng muốn \"migrate db\", \"flyway\", \"bỏ ddl-auto\", \"đổi schema\", \"thêm cột\". Không dùng khi project đã chạy data-oltp-init → data-oltp-implement; cần quy trình đổi schema có review query và commit → workflow-db-change."
+description: "Quản lý schema DB backend (Spring Boot + PostgreSQL; Python/Alembic chỉ hướng dẫn): ADOPT so Flyway/Liquibase để người dùng chọn; CHANGE viết expand/contract, verify DB test, không chạy production. Dùng khi người dùng muốn \"migrate db\", \"flyway\", \"bỏ ddl-auto\", \"đổi schema\", \"thêm cột\". Không dùng khi project đã chạy data-oltp-init → data-oltp-implement; làm cả tính năng dùng schema mới → workflow-feature."
 order: 5
 title: "Data DB Migration — Áp công cụ migration & viết thay đổi schema an toàn (recipe on-demand)"
 runsIn: execute
@@ -114,6 +114,8 @@ chờ người dùng duyệt.
 Chỉ thêm file mới (file đã có trên base branch là bất biến); đặt tên theo quy ước tìm được ở C1 (chỉ dùng
 `CONVENTIONS.md` của kit khi project dựng từ kit); đặt `lock_timeout`; backfill theo lô, tách khỏi migration đổi cấu
 trúc; Liquibase: mỗi changeSet có `rollback`. Lỡ sửa file đã có trên base → huỷ thay đổi đó, viết file mới.
+Có thể giao bước viết cho agent `data-migration-writer` (truyền kế hoạch C2 + số dòng bảng); session chính ghi mốc
+`git status --porcelain` trước khi giao và tự chạy C4 — agent không kết nối DB.
 
 #### C4. Verify ⏸
 Xác nhận DB đích là **DB test** (profile/biến môi trường, host, tên database — đã mask), rồi chạy chu trình theo công cụ
@@ -125,6 +127,10 @@ trên production.
 Cập nhật `project-knowledge/data-model.md`. Pha contract còn nợ → `next_actions` kèm điều kiện kích hoạt (vd "sau khi
 bản app X.Y deploy hết mọi môi trường"). Viết runbook prod: thứ tự migration/deploy, thao tác có thể khoá lâu, bước
 chạy ngoài transaction, migration bù nếu cần hoàn tác (Flyway forward-only).
+
+Phần còn lại của thay đổi đi qua skill chuyên trách, theo thứ tự: code dùng cột/bảng mới → `backend-implement`;
+integration test cho repository/query bị đụng → `backend-testing`; review query mới và index (thiếu index, index thừa,
+N+1) cùng SQL bù → `backend-code-review`; commit qua `core:git-workflow` sau khi người dùng duyệt diff.
 
 ## Report trả về
 

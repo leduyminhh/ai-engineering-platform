@@ -187,6 +187,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI runs on ubuntu/windows × Node 20/24 and validates the built marketplace with
   `claude plugin validate --strict`.
 
+### Removed
+
+- Workflows `workflow-api`, `workflow-code-review`, `workflow-db-change`, `workflow-docs`, `workflow-incident`,
+  `workflow-refactor` and `workflow-testing` (plugin `workflows` 2.0.0). A workflow is now only a pipeline across
+  several capabilities; single-capability tasks call the skill directly, and `workflow-orchestrator` routes those
+  requests to the skill. Their extra gates moved into `data-db-migration`, `ops-incident-troubleshooting`,
+  `*-testing`, `*-code-review`, and the API drift/authorization checks into `workflow-feature` step 6.
+
+### Fixed
+
+- `aip update` / `aip install` skip (with a warning) skills recorded in the install manifest that no longer exist
+  in the source, instead of failing with `Skill không tồn tại`.
+
 ## [1.2.1] - 2026-10-01
 
 ### Added

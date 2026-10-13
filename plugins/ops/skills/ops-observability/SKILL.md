@@ -1,6 +1,6 @@
 ---
 name: ops-observability
-description: "Thiết lập và đánh giá observability cho service: dò stack hiện có, metrics/logs/traces, golden signals + SLI/SLO, alerting bám SLO; chỉ tài liệu và đề xuất, không tự đổi cấu hình monitoring/hạ tầng. Dùng khi người dùng muốn \"observability\", \"giám sát\", \"SLO/SLI\", \"golden signals\", \"dashboard\". Không dùng khi đang có sự cố cần điều tra → ops-incident-troubleshooting; cần quy trình xử lý sự cố đầy đủ → workflow-incident."
+description: "Thiết lập và đánh giá observability cho service: dò stack hiện có, metrics/logs/traces, golden signals + SLI/SLO, alerting bám SLO; chỉ tài liệu và đề xuất, không tự đổi cấu hình monitoring/hạ tầng. Dùng khi người dùng muốn \"observability\", \"giám sát\", \"SLO/SLI\", \"golden signals\", \"dashboard\". Không dùng khi đang có sự cố cần điều tra → ops-incident-troubleshooting."
 order: 3
 title: "Observability — ba trụ cột metrics/logs/traces, golden signals + SLI/SLO, alerting theo triệu chứng, đánh giá độ phủ"
 runsIn: execute

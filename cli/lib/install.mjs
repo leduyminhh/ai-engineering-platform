@@ -369,6 +369,14 @@ function workflowsModel() {
 }
 function catalogIds() { return new Set(skillCatalog().plugins.flatMap((p) => p.skillIds)); }
 
+/** Manifest có thể còn ghi skill mà nguồn đã gỡ (vd workflow bị bỏ); cài lại với ID đó sẽ ném lỗi nên bỏ qua kèm cảnh báo. */
+function dropRetiredSkills(skills, { warn = true } = {}) {
+  const ids = catalogIds();
+  const gone = skills.filter((s) => !ids.has(s));
+  if (gone.length && warn) console.warn(`[aip] Bỏ skill không còn trong nguồn: ${gone.join(', ')}`);
+  return skills.filter((s) => ids.has(s));
+}
+
 /** Provider chưa có đích cho workflow: bỏ workflow khỏi lựa chọn để không kéo closure vô ích. */
 export function stripUnsupportedWorkflows(provider, entry) {
   if (WORKFLOW_PROVIDERS.includes(provider)) return entry;
@@ -753,7 +761,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     const sel = resolveSelection({ plugins, skills });
     const prev = m.installs.find((e) => e.provider === provider && e.mode !== 'plugin');
     const effPlugins = prev ? [...new Set([...(prev.plugins || []), ...sel.plugins])] : sel.plugins;
-    const effSkills = prev ? [...new Set([...(prev.skills || []), ...sel.skills])] : sel.skills;
+    const effSkills = prev ? [...new Set([...dropRetiredSkills(prev.skills || []), ...sel.skills])] : sel.skills;
     // chuẩn hoá dedup: skill lẻ đã nằm trong khối → bỏ khỏi skills (khối đã phủ)
     const covered = new Set();
     for (const id of effPlugins) for (const s of allSkillsOf(id)) covered.add(s);
@@ -846,7 +854,7 @@ export function uninstall({ providers, plugins, skills, scope = 'project' }) {
         if (remaining.length) reinstall.push({ providers: [e.provider], plugins: remaining, scope, mode: 'plugin' });
         continue;
       }
-      const srcSel = new Set(e.skills || []);                        // selection nguồn hợp lệ của entry
+      const srcSel = new Set(dropRetiredSkills(e.skills || []));     // selection nguồn hợp lệ của entry
       for (const p of (e.plugins || [])) for (const s of allSkillsOf(p)) srcSel.add(s);
       const remaining = [...srcSel].filter((s) =>
         !removeSkills.has(s) && !removePlugins.has(s.split('/')[0]));
@@ -964,7 +972,8 @@ export function update({ scope = 'project', pull = true, providers, plugins, ski
       // Dùng SELECTION NGUỒN (plugins khối + skills lẻ) — hợp lệ với resolveSelection. Khối `e.plugins`
       // (kể cả core) mở rộng lại theo kit HIỆN TẠI → nhận skill mới; `e.skills` lẻ giữ cố định, KHÔNG
       // kéo skill anh em.
-      install({ providers: [e.provider], plugins: e.plugins || [], skills: e.skills || [], scope, mode: 'skills' });
+      // install() lọc lại chính entry này qua `prev` và cảnh báo ở đó; lọc im lặng ở đây để chỉ in một lần.
+      install({ providers: [e.provider], plugins: e.plugins || [], skills: dropRetiredSkills(e.skills || [], { warn: false }), scope, mode: 'skills' });
       entries.push({ provider: e.provider, plugins: e.plugins, action: 'reinstall' });
     }
   }

@@ -1,5 +1,11 @@
 # P3: WF3-b, WF11, WF12, A3 và đồng bộ vùng rủi ro Implementation Plan
 
+> **Cập nhật 2026-10-12:** các workflow `workflow-api`, `workflow-code-review`, `workflow-db-change`, `workflow-docs`,
+> `workflow-incident`, `workflow-refactor`, `workflow-testing` đã gỡ — workflow giờ chỉ là pipeline nối nhiều năng
+> lực. Gate của chúng chuyển sang skill (`data-db-migration`, `ops-incident-troubleshooting`, `*-testing`,
+> `*-code-review`) và Bước 6 của `workflow-feature`; `workflow-orchestrator` chỉ đường tới skill. Nội dung bên dưới
+> giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Làm nốt phần còn lại của spec 2026-09-29 mà **không cần pilot và không dùng skill/agent draft**: (1) WF3-b: `workflow-db-change` Bước 6 verify theo công cụ (Flyway forward-only không có rollback); (2) A3: cổng `git diff --name-only` cho mọi bước test-writer; (3) WF12: `workflow-incident` có thang severity mặc định, bước cập nhật stakeholder và cửa sổ theo dõi phục hồi; (4) đồng bộ 3 vùng rủi ro mới của `workflow-security-review` với `engineering-quality-gate/references/security-review-areas.md`; (5) WF11: bước "Baseline build/test" đo được (W-a) cho `feature`, `bugfix`, `testing`, `api`, `security-review`. Assert hợp đồng ở `test/validate.mjs` (khối "17.").

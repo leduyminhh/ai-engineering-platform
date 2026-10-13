@@ -24,7 +24,7 @@ mục còn lại kiểm bằng đọc. Không có Node → kiểm tất cả b�
 - [ ] Task `BE` có đủ B1–B10; task `FE-UI` / `FE-INT` có đủ F1–F9; task `CT` / `DB` / `E2E` có đủ mục theo loại **(script E9 cho BE/FE; CT/DB/E2E kiểm bằng đọc)**.
 - [ ] Không mục nào bỏ trống (trừ `Owner` — luôn để trống cho teamlead): mục không áp dụng ghi `N/A — <lý do>`.
 - [ ] Phần suy đoán đánh dấu **[giả định]** và có trong Câu hỏi mở.
-- [ ] Đổi schema có task `DB` + gợi ý `workflow-db-change`.
+- [ ] Đổi schema có task `DB` + gợi ý skill `data-db-migration`.
 - [ ] Không có quyết định kiến trúc tự chốt (nếu có → Câu hỏi mở + `engineering-adr`).
 
 ## Đầu ra

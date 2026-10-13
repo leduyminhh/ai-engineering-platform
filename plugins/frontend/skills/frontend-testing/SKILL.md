@@ -1,6 +1,6 @@
 ---
 name: frontend-testing
-description: "Chiến lược và viết test frontend React/TypeScript bám kiến trúc UI: render + interaction bằng Testing Library, test hook, mock mạng bằng msw, characterization cho code cũ. Dùng khi người dùng muốn \"test frontend\", \"test React\", \"unit test component\", \"test hook\", \"mock API msw\". Không dùng khi test luồng đầu-cuối bằng Playwright → frontend-e2e-testing; cần quy trình viết test có phân loại failure và commit → workflow-testing."
+description: "Chiến lược và viết test frontend React/TypeScript bám kiến trúc UI: render + interaction bằng Testing Library, test hook, mock mạng bằng msw, characterization cho code cũ. Dùng khi người dùng muốn \"test frontend\", \"test React\", \"unit test component\", \"test hook\", \"mock API msw\". Không dùng khi test luồng đầu-cuối bằng Playwright → frontend-e2e-testing; failure là lỗi code cần sửa → workflow-bugfix."
 order: 3
 title: "Frontend Testing — Chiến lược và viết test React bám kiến trúc (recipe on-demand)"
 runsIn: execute
@@ -101,6 +101,8 @@ không chạy theo con số phần trăm tổng.
   [references/test-strategy.md](references/test-strategy.md) mục "Tránh test giòn".
 - Nêu rõ **khoảng trống còn lại** (state/nhánh chưa phủ, phần bỏ qua vì thiếu handler msw) và
   **residual risk**; KHÔNG tuyên bố đã phủ hết.
+- **Phân loại mọi failure:** lỗi test (test viết sai → sửa test, không xoá/nới assertion để qua) hay lỗi code (code
+  có bug). Lỗi code → KHÔNG sửa code production để test qua; giữ test đỏ, báo lại và đề xuất `workflow-bugfix`.
 
 ## Bảng gate
 | # | Gate | Bước | Đỏ thì |

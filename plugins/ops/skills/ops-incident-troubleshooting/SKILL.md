@@ -1,6 +1,6 @@
 ---
 name: ops-incident-troubleshooting
-description: "Triage và điều tra sự cố production: khoanh vùng theo tầng, đọc log/metric/trace, kiểm chứng giả thuyết, viết RCA; chỉ đọc và đề xuất mitigation, không tự sửa/restart/rollback lên môi trường. Dùng khi người dùng muốn \"điều tra sự cố\", \"prod lỗi\", \"server down\", \"RCA\", \"đọc log lỗi\". Không dùng khi cần quy trình sự cố đầy đủ (mitigation, xác minh phục hồi, commit RCA) → workflow-incident; lỗi tái hiện được ở local → workflow-bugfix."
+description: "Triage và điều tra sự cố production: khoanh vùng theo tầng, đọc log/metric/trace, kiểm chứng giả thuyết, viết RCA; chỉ đọc và đề xuất mitigation, không tự sửa/restart/rollback lên môi trường. Dùng khi người dùng muốn \"điều tra sự cố\", \"prod lỗi\", \"server down\", \"RCA\", \"đọc log lỗi\". Không dùng khi lỗi tái hiện được ở local → workflow-bugfix."
 order: 2
 title: "Incident troubleshooting — triage, khoanh vùng theo tầng, giả thuyết → kiểm chứng, mitigation đề xuất + RCA"
 runsIn: execute
@@ -42,7 +42,11 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
    sự cố:** triệu chứng cụ thể, **thời điểm bắt đầu**, blast radius (bao nhiêu %/user/region), service +
    môi trường ảnh hưởng. Dò **nguồn tín hiệu**: log (app/access/error), metric/dashboard, trace, health
    endpoint. Nêu **tên biến env** nếu cần để truy nguồn, KHÔNG đọc giá trị secret. Thiếu tín hiệu/quyền
-   truy cập → nói rõ (fail-loud), đề nghị người cung cấp thay vì suy diễn.
+   truy cập → nói rõ (fail-loud), đề nghị người cung cấp thay vì suy diễn. **Gán severity** theo thang của
+   project; chưa có thang → dùng thang mặc định ở [references/severity-scale.md](references/severity-scale.md).
+
+Bước 1–3 và 6 chỉ đọc nên có thể giao agent `ops-incident-investigator` (Read/Grep/Glob, không chạy lệnh);
+mọi đề xuất, bản nháp gửi người dùng, ghi file và commit do session chính làm.
 
 1. **Khoanh vùng theo tầng.**
    Theo [references/triage-workflow.md](references/triage-workflow.md): thu hẹp từ triệu chứng → **tầng
@@ -63,15 +67,28 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
 4. **Mitigation tạm (ĐỀ XUẤT — chờ xác nhận).**
    Nêu phương án **giảm thiểu** khả dĩ: **rollback deploy nghi ngờ**, **scale** tài nguyên, bật/tắt
    **feature flag**, **circuit breaker** cho dependency lỗi. Mỗi phương án nêu **rủi ro + điều kiện áp dụng
-   + cách kiểm tra sau khi áp**. **KHÔNG tự thực thi trên prod** — trình bày lệnh/kế hoạch, chờ người xác
+   + cách kiểm tra sau khi áp**. Kèm **cửa sổ theo dõi phục hồi** và **ngưỡng metric bình thường** (rút từ
+   bước 0–2) để người dùng chốt cùng phương án. **KHÔNG tự thực thi trên prod** — trình bày lệnh/kế hoạch, chờ người xác
    nhận (chi tiết ranh giới: [references/triage-workflow.md](references/triage-workflow.md)). Khi người
    dùng cần THỰC THI rollback theo một chiến lược cụ thể (rolling/blue-green/canary) → route sang
    `ops-deploy-release` (skill này chỉ dừng ở mức đề xuất, không đi sâu cách rollback).
 
-5. **RCA + hành động khắc phục.**
+5. **Cập nhật stakeholder (chỉ SOẠN — người dùng tự gửi).**
+   Soạn bản cập nhật: severity, blast radius, trạng thái (đang điều tra / đã có mitigation / đang theo dõi),
+   mitigation đang áp, mốc cập nhật kế tiếp. Không đưa secret, dữ liệu cá nhân khách hàng hay suy đoán chưa có
+   bằng chứng; không tự gửi tin nhắn/thông báo thay người dùng.
+
+6. **Xác minh phục hồi.**
+   Sau khi người dùng báo đã áp mitigation, đọc lại metric/health trong cửa sổ theo dõi đã chốt ở bước 4, so với
+   ngưỡng bình thường trước sự cố. Mới cải thiện một phần, hoặc hết cửa sổ mà chưa ổn định → chưa kết luận phục
+   hồi, quay lại bước 4.
+
+7. **RCA + hành động khắc phục.**
    Theo [references/rca-template.md](references/rca-template.md): **nguyên nhân gốc** (phân biệt trigger vs
    root cause), **dòng thời gian** (bắt đầu → phát hiện → giảm thiểu → khôi phục), **hành động khắc phục**
    đo được (ai/gì/khi nào kiểm được), và **residual risk** (phần chưa verify, giả định, khả năng tái diễn).
+   Hành động phòng ngừa cần sửa code → `workflow-bugfix`. Session chính ghi RCA vào `docs/` của project; commit qua
+   `core:git-workflow` sau khi người dùng duyệt diff.
 
 ## Verification (trước khi báo hoàn thành)
 
@@ -83,6 +100,7 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
 - Mitigation chỉ **ĐỀ XUẤT** kèm rủi ro; **không tự tác động prod** (restart/scale/rollback) khi chưa xác
   nhận; không lệnh phá huỷ; không secret nào lọt ra (đã mask).
 - Có mục **RCA** + **Residual risk**; ngôn ngữ đo được, không tuyên bố tuyệt đối; phần chưa verify báo rõ.
+- Kết luận phục hồi dựa trên metric/health trong cửa sổ đã chốt; bản cập nhật stakeholder chỉ soạn, người dùng tự gửi.
 
 ## Bản đồ tài liệu
 
@@ -95,3 +113,5 @@ Nạp đúng file khi cần, đừng nạp tất cả:
   tầng**, **tương quan timeline**, **lọc nhiễu**, **mask secret**, và vì sao không kết luận từ tín hiệu đơn lẻ.
 - [references/rca-template.md](references/rca-template.md): **mẫu RCA** (triệu chứng / dòng thời gian /
   nguyên nhân gốc / khắc phục / phòng ngừa / residual risk) với ngôn ngữ **đo được**.
+- [references/severity-scale.md](references/severity-scale.md): **thang SEV1–SEV4 mặc định** khi project chưa có
+  thang riêng.

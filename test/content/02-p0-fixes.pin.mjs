@@ -37,24 +37,9 @@ export default async function run({ ok, ctx }) {
       'P0 D4: manifest frontend không còn "Layered" (kiểu kiến trúc đã đổi sang Feature-Based)');
   }
 
-  // 11. SOURCE: sửa lỗi workflow/agent (P0 WF1, WF2, D11)
+  // 11. SOURCE: sửa lỗi agent (P0 D11; WF1/WF2 đi theo workflow-testing/workflow-docs đã gỡ)
   {
     const readRepo = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
-    const testing = readRepo('workflows', 'testing', 'WORKFLOW.md');
-    // Bước 5 cấm sửa code production; câu phủ định "không sửa code" là hợp lệ nên loại trước khi kiểm.
-    const testFailRow = testing.split('\n').find((l) => l.startsWith('| Test fail |')) ?? '';
-    ok(testFailRow !== '' && !testFailRow.replaceAll('không sửa code', '').includes('sửa code'),
-      'P0 WF1: workflow-testing có dòng "Test fail" và không bảo "sửa code" (mâu thuẫn Bước 5)');
-    // "sửa test" phải kèm rào chắn chống xoá/nới test để qua; lỗi code phải chuyển sang workflow-bugfix.
-    ok(testFailRow.includes('nới') && testFailRow.includes('workflow-bugfix'),
-      'P0 WF1: dòng "Test fail" giữ rào "không xoá/nới test" và định tuyến lỗi code sang workflow-bugfix');
-    const step6 = testing.split('### Bước 6')[1]?.split('### Bước 7')[0] ?? '';
-    const step6Input = step6.split('\n').find((l) => l.startsWith('- **Đầu vào:**')) ?? '';
-    ok(step6Input !== '' && !step6Input.includes('đã chạy xanh'),
-      'P0 WF1: workflow-testing Bước 6 không đòi "đã chạy xanh" (lỗi code chuyển sang workflow-bugfix nên không xanh toàn bộ)');
-    const docs = readRepo('workflows', 'docs', 'WORKFLOW.md');
-    ok(!docs.includes('| Build fail | Chẩn đoán') && !docs.includes('| Test fail | Phân tích failure'),
-      'P0 WF2: workflow-docs không còn boilerplate Build fail/Test fail (workflow không build/test)');
     ok(!readRepo('plugins', 'engineering', 'agents', 'engineering-spec-analyst.md').includes('cả hai skill'),
       'P0 D11: engineering-spec-analyst không còn "cả hai skill" (agent dùng ba skill)');
   }

@@ -1,6 +1,6 @@
 ---
 name: frontend-refactor
-description: "Refactor code frontend (React/TypeScript) giữ nguyên hành vi, trong ranh giới kiến trúc đã chốt: extract component/hook, bỏ prop drilling; baseline xanh, bước nhỏ, người duyệt diff. Dùng khi người dùng muốn \"refactor frontend\", \"tái cấu trúc React\", \"dọn component\", \"tách component/hook\", \"bỏ prop drilling\". Không dùng khi đổi kiểu kiến trúc → frontend-migrate-architecture; cần quy trình refactor nhiều bước có commit theo lô → workflow-refactor."
+description: "Refactor code frontend (React/TypeScript) giữ nguyên hành vi, trong ranh giới kiến trúc đã chốt: extract component/hook, bỏ prop drilling; baseline xanh, bước nhỏ, người duyệt diff. Dùng khi người dùng muốn \"refactor frontend\", \"tái cấu trúc React\", \"dọn component\", \"tách component/hook\", \"bỏ prop drilling\". Không dùng khi đổi kiểu kiến trúc → frontend-migrate-architecture."
 order: 5
 title: "Frontend Refactor — Tái cấu trúc code React giữ nguyên hành vi (recipe on-demand)"
 runsIn: execute

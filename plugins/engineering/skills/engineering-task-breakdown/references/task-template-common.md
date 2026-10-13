@@ -5,7 +5,7 @@
 | Loại | Khi nào sinh | Skill / agent gợi ý |
 |---|---|---|
 | `CT` | Use case có API mới hoặc đổi API | `backend-api-contract` |
-| `DB` | Đổi bảng / cột / index | `data-db-migration` (luồng `workflow-db-change`) |
+| `DB` | Đổi bảng / cột / index | `data-db-migration` |
 | `BE` | Mỗi command/query | `backend-implement` → agent `backend-implementer` |
 | `FE-UI` | Mỗi màn hình / component | `frontend-implement` → agent `frontend-implementer` |
 | `FE-INT` | Nối UI với API | `frontend-data-integration` |
@@ -80,7 +80,7 @@ Mục riêng đặt dưới heading `#### Contract` / `#### Schema` / `#### E2E`
 - **Thay đổi:** bảng / cột / index / constraint.
 - **Backfill dữ liệu:** có / không; khối lượng ước tính.
 - **Rollback:** cách quay lui; thay đổi nào không đảo ngược được.
-- **Luồng:** chạy qua `workflow-db-change` (skill `data-db-migration`).
+- **Luồng:** chạy skill `data-db-migration` (chế độ `change`) trước task BE/FE dùng schema mới.
 - **Test bắt buộc:** migration chạy lên trên DB cục bộ; chạy xuống nếu đảo ngược được, không thì `N/A — <lý do>` + cách khôi phục (backup / forward-fix).
 
 ### E2E — Luồng đầu-cuối

@@ -1,5 +1,11 @@
 # Thiết kế: Publish `data-db-migration` + agent `data-migration-writer` + nối `workflow-db-change` (P1b, S8, WF3)
 
+> **Cập nhật 2026-10-12:** các workflow `workflow-api`, `workflow-code-review`, `workflow-db-change`, `workflow-docs`,
+> `workflow-incident`, `workflow-refactor`, `workflow-testing` đã gỡ — workflow giờ chỉ là pipeline nối nhiều năng
+> lực. Gate của chúng chuyển sang skill (`data-db-migration`, `ops-incident-troubleshooting`, `*-testing`,
+> `*-code-review`) và Bước 6 của `workflow-feature`; `workflow-orchestrator` chỉ đường tới skill. Nội dung bên dưới
+> giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
+
 - Ngày: 2026-10-01
 - Trạng thái: **Đã thực thi** — vào `master` bằng fast-forward (`4c43d72`, 2026-10-01).
 - Phạm vi: đóng P1b, S8 và phần "dùng skill" của WF3 trong spec

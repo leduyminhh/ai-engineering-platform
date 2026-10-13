@@ -161,29 +161,29 @@ and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mo
 
 | Agent id | Plugin | Mode | Skills packaged | Used in |
 | --- | --- | --- | --- | --- |
-| `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01, WF07, WF08 |
-| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF03, WF05, WF06, WF07, WF08 |
-| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (drift check) | WF01–WF04, WF07–WF09 |
+| `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01 |
+| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF06 |
+| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (drift check) | WF01, WF02, WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
 | `backend-performance-analyst` | backend | write | backend-performance | WF09 |
-| `data-migration-writer` | data | write | data-db-migration | WF07 |
+| `data-migration-writer` | data | write | data-db-migration | skill data-db-migration |
 | `frontend-implementer` | frontend | write | frontend-implement | WF01 |
-| `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01, WF08 |
-| `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF03, WF05, WF06 |
-| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF05, WF11 |
-| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01–WF04, WF09 |
+| `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01 |
+| `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF06 |
+| `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01, WF11 |
+| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01, WF02, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
 | `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
-| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (audit mode) | WF01–WF04, WF06, WF08, WF11 |
-| `engineering-spec-analyst` | engineering | write (`docs/` only) | engineering-spec-writing, engineering-adr, engineering-diagram, engineering-task-breakdown | WF01, WF03, WF10, WF12 |
+| `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (audit mode) | WF01, WF02, WF06, WF11 |
+| `engineering-spec-analyst` | engineering | write (`docs/` only) | engineering-spec-writing, engineering-adr, engineering-diagram, engineering-task-breakdown | WF01 |
 | `engineering-release-scribe` | engineering | write (`docs/`, `CHANGELOG.md` only) | engineering-release-notes | WF11 |
-| `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | WF10 |
+| `ops-incident-investigator` | ops | read-only | ops-incident-troubleshooting, ops-observability | skill ops-incident-troubleshooting |
 | `ops-release-engineer` | ops | read-only | ops-deploy-release, ops-observability | WF11 |
 
 There is no separate Security agent: `engineering-quality-gate` already covers source-first
 quality **and** security review (OWASP/ASVS/CWE, SCA, secrets); a split would only duplicate it.
 
-### Workflows (12) + orchestrator
+### Workflows (5) + orchestrator
 
 Id is `workflow-<slug>`, sourced from `workflows/<slug>/WORKFLOW.md`. `tier` sets how deep the
 content goes (1 = heavy gates/DoD, 2 = full template but lean, 3 = lean); `risk` drives the
@@ -193,17 +193,14 @@ orchestrator's confirmation strictness.
 | --- | --- | --- | --- | --- | --- |
 | WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, FE data-integrator, BE/FE test-writer, FE e2e-test-writer, BE/FE reviewer, quality-auditor |
 | WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE fixer, BE/FE reviewer, quality-auditor |
-| WF03 | `workflow-refactor` | 1 | medium | W4a+W4b+W6 | BE/FE test-writer, BE/FE reviewer, spec-analyst, quality-auditor |
-| WF04 | `workflow-code-review` | 1 | low | W5 | BE/FE reviewer, quality-auditor |
-| WF05 | `workflow-testing` | 2 | low | new | BE/FE test-writer, FE e2e-test-writer |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
-| WF07 | `workflow-db-change` | 2 | high | W15 | data-migration-writer, backend-implementer, backend-test-writer, backend-reviewer |
-| WF08 | `workflow-api` | 2 | medium | new (split from the W1 contract step) | backend-implementer, backend-test-writer, backend-reviewer, quality-auditor, frontend-data-integrator |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, frontend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
-| WF10 | `workflow-incident` | 1 | critical | W9 | ops-incident-investigator, spec-analyst |
 | WF11 | `workflow-release` | 2 | high | W8 | quality-auditor, release-scribe, release-engineer, frontend-e2e-test-writer |
-| WF12 | `workflow-docs` | 3 | low | W17 | spec-analyst |
 | — | `workflow-orchestrator` | — | — | new | none (runs in the main session) |
+
+A single-capability task calls the skill directly (the orchestrator routes there too): review →
+`backend-code-review`/`frontend-code-review`; refactor → `*-refactor`/`*-migrate-architecture`; tests →
+`*-testing`; schema change → `data-db-migration`; incident → `ops-incident-troubleshooting`.
 
 **Invoking:**
 
@@ -218,7 +215,7 @@ orchestrator's confirmation strictness.
 ```bash
 aip install --provider claude --plugin workflows
 aip install --provider claude --skill workflows/workflow-feature,workflows/workflow-bugfix
-aip install --provider codex -g --skill workflows/workflow-code-review
+aip install --provider codex -g --skill workflows/workflow-security-review
 aip install --provider claude --as-plugin --plugin workflows
 aip uninstall --skill workflows/workflow-feature
 ```
@@ -240,7 +237,7 @@ Tracked as open gaps in the design spec (`docs/superpowers/specs/2026-09-25-agen
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | WF11 |
 | G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
-| G11 | `engineering-docs-sync` | engineering | WF12 |
+| G11 | `engineering-docs-sync` | engineering | — |
 
 **Future workflows:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),
 `workflow-onboarding` (G7), `workflow-tech-debt-review` (G8).
@@ -250,7 +247,7 @@ Tracked as open gaps in the design spec (`docs/superpowers/specs/2026-09-25-agen
 | # | Item | Note |
 | --- | --- | --- |
 | P1 | Agents/workflows for Cursor, Antigravity | Antigravity might project to native `.agent/workflows/`, Cursor to `.cursor/commands/` [Unverified] |
-| P2 | Native Claude workflow `.js` | Deterministic fan-out (e.g. multi-module WF04); costs tokens, user opt-in |
+| P2 | Native Claude workflow `.js` | Deterministic fan-out (e.g. multi-module review); costs tokens, user opt-in |
 | P3 | Hooks (e.g. pre-commit calling quality-auditor) | Hooks in a plugin subagent are ignored by Claude; must live in project `settings.json` |
 | P4 | `[agents]` in `.codex/config.toml` | Persistent config, needs explicit user confirmation |
 | P6 | Workflows for Cowork | Cowork has no subagents; only add if a sequential fallback exists |
