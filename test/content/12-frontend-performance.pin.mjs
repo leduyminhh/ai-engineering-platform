@@ -153,7 +153,7 @@ export default async function run({ ok, ctx }) {
     const bpaFlow23 = flat23(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', 'agents', 'backend-performance-analyst.md'), 'utf8')
       .split('## Quy trình')[1]?.split('## Report trả về')[0] ?? '');
     ok(bpaFlow23.includes('perf/backend/'), 'backend-performance-analyst: Quy trình ghi artifact vào perf/backend/ khi workflow có cả hai phía');
-    for (const [f, head] of [['README.md', '### Agents (18)'], ['README_VI.md', '### Agent (18)']]) {
+    for (const [f, head] of [['README.md', '### Agents (16)'], ['README_VI.md', '### Agent (16)']]) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
       const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
       ok(rd.split('\n').some((l) => l.trim() === head), `${f}: heading ${head}`);

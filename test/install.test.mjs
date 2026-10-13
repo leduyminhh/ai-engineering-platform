@@ -166,7 +166,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     'offeredCatalog: gồm 2 plugin đã publish');
   ok(offered.includes('engineering') && offered.includes('ops') && offered.includes('data'),
     'offeredCatalog: offer engineering/ops và data (chỉ data-db-migration)');
-  ok(offeredCatalog().plugins[1].skillIds.length === 6, 'offeredCatalog: đủ 5 workflow + orchestrator');
+  ok(offeredCatalog().plugins[1].skillIds.length === 5, 'offeredCatalog: đủ 4 workflow + orchestrator');
   ok(offeredCatalog({ backend: '*', frontend: '*' }).plugins.find((p) => p.id === 'workflows')
     .skillIds.every((s) => !s.endsWith('/workflow-feature')), 'offeredCatalog: ẩn workflow có closure chưa được offer');
   ok(skillCatalog().plugins.some((p) => p.id === 'data'),

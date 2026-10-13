@@ -1,8 +1,7 @@
 {
   "git-workflow": [
     "engineering-release-notes",
-    "git-release",
-    "workflow-release"
+    "git-release"
   ],
   "git-release": [
     "git-workflow",
@@ -77,7 +76,7 @@
   ],
   "engineering-release-notes": [
     "git-workflow",
-    "workflow-release"
+    "git-release"
   ],
   "engineering-adr": [
     "engineering-spec-writing"
@@ -131,7 +130,7 @@
   ],
   "ops-deploy-release": [
     "engineering-release-notes",
-    "workflow-release"
+    "git-release"
   ],
   "ops-incident-troubleshooting": [
     "workflow-bugfix"

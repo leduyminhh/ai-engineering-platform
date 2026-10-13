@@ -49,17 +49,6 @@ export default async function run({ ok, ctx }) {
     ok(specStep4.includes('engineering-adr') && !specStep4.includes('<số kế tiếp>'),
       'S6: engineering-spec-writing bước 4 trỏ sang engineering-adr, không còn thủ tục đánh số ADR');
 
-    // WF8: baseline từng chỉ là tiền điều kiện không ai đo (W-a); migration chờ chạy từng không được kiểm.
-    const rel = wf16('workflow-release');
-    const relSteps = rel ? parseSteps(rel.body) : [];
-    const relStep = (n) => relSteps.find((s) => s.n === n) ?? noStep16;
-    ok(relSteps.length === 8 && /Baseline/.test(relStep(1).title) && relStep(1).body.includes('session chính'),
-      'workflow-release: 8 bước, Bước 1 là Baseline build/test do session chính đo');
-    ok(relStep(2).title.startsWith('Quality gate') && relStep(4).title.startsWith('Version bump') && relStep(8).title.startsWith('Tag'),
-      'workflow-release: Quality gate ở Bước 2, Version bump ở Bước 4, Tag ở Bước 8');
-    ok(relStep(5).body.includes('agent `ops-release-engineer`') && /migration/.test(relStep(5).body) && /thứ tự/.test(relStep(5).body),
-      'workflow-release Bước 5: deploy checklist kiểm migration chờ chạy và thứ tự migration↔deploy');
-
     // WF10: orchestrator từng không chỉ đường tới skill không có workflow (chuỗi db-change → api → feature đi theo workflow đã gỡ).
     const orch16 = wf16('workflow-orchestrator');
     const direct16 = ((orch16?.body ?? '').split('## Yêu cầu chạy trực tiếp bằng skill')[1] ?? '').split('\n## ')[0];
@@ -76,8 +65,6 @@ export default async function run({ ok, ctx }) {
       'workflow-orchestrator Bước 1: Đầu ra và Gate nêu chuỗi và mục skill trực tiếp');
     ok(((orch16?.body ?? '').replace(/\n\s+/g, ' ').match(/không khớp mục skill trực tiếp/g) ?? []).length >= 3,
       'workflow-orchestrator: Khi fail, bảng lỗi và Điều kiện dừng không coi yêu cầu skill trực tiếp là "không khớp"');
-    ok(((rel?.body ?? '').split('## Điều kiện tiên quyết')[0]).includes('baseline'),
-      'workflow-release: Mục tiêu nêu baseline build/test');
   }
 
   // 17. SOURCE: P3 — WF3-b, A3, WF12, vùng rủi ro, WF11 (spec 2026-09-29 §5.3, §8.5)

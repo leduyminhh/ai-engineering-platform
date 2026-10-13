@@ -193,6 +193,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `aip check` also lists installed Claude Code plugins whose version differs from source.
 - CI runs on ubuntu/windows × Node 20/24 and validates the built marketplace with
   `claude plugin validate --strict`.
+- `ops-deploy-release` checklist takes the gates of the removed workflow: pending migrations since the previous
+  tag, migration ↔ deploy order, and an optional pre-deploy e2e smoke run (local/test only, no test edits).
 
 ### Removed
 
@@ -201,6 +203,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   several capabilities; single-capability tasks call the skill directly, and `workflow-orchestrator` routes those
   requests to the skill. Their extra gates moved into `data-db-migration`, `ops-incident-troubleshooting`,
   `*-testing`, `*-code-review`, and the API drift/authorization checks into `workflow-feature` step 6.
+- **BREAKING:** `workflow-release` and the agents `engineering-release-scribe` and `ops-release-engineer`, which
+  only that workflow used. Use `core/git-release` for version, tag and merge-back, and `ops-deploy-release` for the
+  deploy checklist. The orchestrator routes "release", "phát hành", "ra version" to `git-release` and
+  "chuẩn bị deploy" to `ops-deploy-release`.
 
 ### Fixed
 

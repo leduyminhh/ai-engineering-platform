@@ -125,7 +125,7 @@ export default async function run({ ok, ctx }) {
     ok(checkAgentTools({ mode: 'read-only', skills: [], tools: [], writeScope: ['docs/**'] }).length === 1
       && checkAgentTools({ mode: 'write', skills: [], tools: [], writeScope: ['docs/**'] }).length === 0, 'checkAgentTools: writeScope chỉ cho agent mode write');
     const scoped = allAgents.filter((a) => a.writeScope.length);
-    ok(scoped.length === 5 && scoped.every((a) => a.mode === 'write'), '5 agent ghi có writeScope (H5)');
+    ok(scoped.length === 4 && scoped.every((a) => a.mode === 'write'), '4 agent ghi có writeScope (H5)');
   }
   // Vòng sửa 1: phủ rộng file bí mật, Grep, alias Windows, gốc git, glob không phân biệt hoa thường
   {

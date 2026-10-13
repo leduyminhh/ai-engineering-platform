@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: "Git an toàn: commit Conventional Commits (header tiếng Anh, body tiếng Việt có dấu, commit -F), branch theo role, merge, revert, hotfix, gom lịch sử cho changelog; không push khi chưa xác nhận branch. Dùng khi người dùng muốn \"commit\", \"push\", \"tạo branch\", \"chuẩn bị PR\", \"merge\". Không dùng khi cần viết changelog/release notes → engineering-release-notes; release/hotfix có version → git-release; chuẩn bị cả đợt phát hành → workflow-release."
+description: "Git an toàn: commit Conventional Commits (header tiếng Anh, body tiếng Việt có dấu, commit -F), branch theo role, merge, revert, gom lịch sử cho changelog; không push khi chưa xác nhận branch. Dùng khi người dùng muốn \"commit\", \"push\", \"tạo branch\", \"chuẩn bị PR\", \"merge\". Không dùng khi cần viết changelog/release notes → engineering-release-notes; release/hotfix có version → git-release."
 order: 2
 title: "Git Workflow — commit, branch, push, PR, merge, release (dùng chung)"
 runsIn: execute

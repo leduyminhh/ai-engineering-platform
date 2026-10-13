@@ -1,7 +1,7 @@
 # Định dạng đầu ra: changelog & release page
 
 Mục tiêu: chọn định dạng đúng kênh và trình bày nhất quán, có ngày và link truy vết. Đây là hướng dẫn định
-dạng nội dung, KHÔNG thao tác git (tag/release/push thuộc skill `git-workflow`).
+dạng nội dung, KHÔNG thao tác git (tag/release/merge-back thuộc skill `git-release`, push thuộc `git-workflow`).
 
 ## Chọn định dạng theo kênh
 
@@ -46,7 +46,7 @@ và dùng version + ngày làm tiêu đề bản.
 - **MAJOR** khi có Breaking Changes; **MINOR** khi có New Features tương thích ngược; **PATCH** khi chỉ Fixes/
   Security tương thích ngược.
 - Skill này **không tự bump/tag** — chỉ **đề xuất** mức tăng dựa trên nhóm thay đổi và nêu lý do; con người
-  (hoặc `git-workflow`) chốt version thật. Nếu người dùng đã cho version → dùng đúng version đó.
+  (hoặc `git-release`) chốt version thật. Nếu người dùng đã cho version → dùng đúng version đó.
 
 ## Ngày & link truy vết
 
