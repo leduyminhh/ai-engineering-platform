@@ -42,8 +42,11 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
    sự cố:** triệu chứng cụ thể, **thời điểm bắt đầu**, blast radius (bao nhiêu %/user/region), service +
    môi trường ảnh hưởng. Dò **nguồn tín hiệu**: log (app/access/error), metric/dashboard, trace, health
    endpoint. Nêu **tên biến env** nếu cần để truy nguồn, KHÔNG đọc giá trị secret. Thiếu tín hiệu/quyền
-   truy cập → nói rõ (fail-loud), đề nghị người cung cấp thay vì suy diễn. Project chưa có thang severity →
-   dùng thang mặc định ở [references/severity-scale.md](references/severity-scale.md).
+   truy cập → nói rõ (fail-loud), đề nghị người cung cấp thay vì suy diễn. **Gán severity** theo thang của
+   project; chưa có thang → dùng thang mặc định ở [references/severity-scale.md](references/severity-scale.md).
+
+Bước 1–3 và 6 chỉ đọc nên có thể giao agent `ops-incident-investigator` (Read/Grep/Glob, không chạy lệnh);
+mọi đề xuất, bản nháp gửi người dùng, ghi file và commit do session chính làm.
 
 1. **Khoanh vùng theo tầng.**
    Theo [references/triage-workflow.md](references/triage-workflow.md): thu hẹp từ triệu chứng → **tầng
@@ -84,7 +87,8 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
    Theo [references/rca-template.md](references/rca-template.md): **nguyên nhân gốc** (phân biệt trigger vs
    root cause), **dòng thời gian** (bắt đầu → phát hiện → giảm thiểu → khôi phục), **hành động khắc phục**
    đo được (ai/gì/khi nào kiểm được), và **residual risk** (phần chưa verify, giả định, khả năng tái diễn).
-   Ghi RCA vào `docs/` của project; commit qua `core:git-workflow` sau khi người dùng duyệt diff.
+   Hành động phòng ngừa cần sửa code → `workflow-bugfix`. Session chính ghi RCA vào `docs/` của project; commit qua
+   `core:git-workflow` sau khi người dùng duyệt diff.
 
 ## Verification (trước khi báo hoàn thành)
 

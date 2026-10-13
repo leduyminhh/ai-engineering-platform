@@ -39,8 +39,8 @@ export default async function run({ ok, ctx }) {
       'data-migration-writer: tự đối chiếu diff; validation not_run (verify do session chính)');
     ok(dmw.includes('compensating_sql') && dmw.includes('KHÔNG tạo file migration bù'),
       'data-migration-writer: Flyway forward-only → migration bù là văn bản compensating_sql trong report, không tạo file');
-    ok(dmwScope.includes('do chính lượt workflow này tạo') && dmwScope.includes('đã có trên base branch'),
-      'data-migration-writer: được sửa file do chính lượt workflow tạo; cấm sửa file đã có trên base branch');
+    ok(dmwScope.includes('do chính lượt giao việc này tạo') && dmwScope.includes('đã có trên base branch'),
+      'data-migration-writer: được sửa file do chính lượt giao việc tạo; cấm sửa file đã có trên base branch');
     const beImpl22 = flat22(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', 'skills', 'backend-implement', 'SKILL.md'), 'utf8'));
     ok(beImpl22.includes('`data-db-migration`') && beImpl22.includes('`backend-migrate-vault-consul`'),
       'backend-implement (S8): ranh giới trỏ đích danh data-db-migration và backend-migrate-vault-consul');

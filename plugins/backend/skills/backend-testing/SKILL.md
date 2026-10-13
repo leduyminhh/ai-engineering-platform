@@ -93,8 +93,8 @@ con số phần trăm tổng.
   [references/test-strategy.md](references/test-strategy.md) mục "Tránh test giòn".
 - Nêu rõ **khoảng trống còn lại** (đường đi/nhánh chưa phủ, phần bỏ qua vì hạ tầng CI thiếu) và
   **residual risk**; KHÔNG tuyên bố đã phủ hết.
-- **Phân loại mọi failure:** lỗi test (test viết sai → sửa test) hay lỗi code (code có bug). Lỗi code → KHÔNG sửa
-  code production để test qua; giữ test đỏ, báo lại và đề xuất `workflow-bugfix`.
+- **Phân loại mọi failure:** lỗi test (test viết sai → sửa test, không xoá/nới assertion để qua) hay lỗi code (code
+  có bug). Lỗi code → KHÔNG sửa code production để test qua; giữ test đỏ, báo lại và đề xuất `workflow-bugfix`.
 
 ## Bảng gate
 | # | Gate | Bước | Đỏ thì |

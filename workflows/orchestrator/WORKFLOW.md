@@ -70,15 +70,16 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả yêu cầu của người dùng
 - **Hành động:** tín hiệu sự cố production ở mục "Yêu cầu chạy trực tiếp bằng skill" được xét TRƯỚC Registry;
-  khớp thì nêu skill và dừng. Sau đó so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; loại dòng mà yêu cầu rơi vào cột
-  `Không dùng khi` (chuyển sang workflow cột đó chỉ tới); nếu vẫn khớp nhiều dòng, áp dụng **Thứ tự ưu tiên**
-  để rút về tối đa 2 ứng viên. Khi yêu cầu cần nhiều workflow phụ thuộc nhau (vd đổi schema → làm API → làm
-  tính năng), đề xuất chuỗi theo thứ tự phụ thuộc thay vì chọn một workflow, tối đa 3 workflow, mỗi mắt nối
+  khớp thì nêu skill và dừng. Sau đó so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; loại dòng mà
+  yêu cầu rơi vào cột `Không dùng khi` (chuyển sang workflow cột đó chỉ tới); nếu vẫn khớp nhiều dòng, áp dụng **Thứ tự ưu tiên**
+  để rút về tối đa 2 ứng viên. Khi yêu cầu cần nhiều workflow phụ thuộc nhau (chỉ khi cột `Nối tiếp` có cặp
+  tương ứng; Registry hiện chưa có cặp nào), đề xuất chuỗi theo thứ tự phụ thuộc thay vì chọn một workflow, tối đa 3 workflow, mỗi mắt nối
   phải có trong cột `Nối tiếp` của workflow đứng trước. Yêu cầu khớp mục "Yêu cầu chạy trực tiếp bằng skill"
-  thì nêu skill cần gọi và dừng. Chuỗi đủ 3 workflow thì nhắc người dùng cập nhật tài liệu riêng sau khi
+  thì nêu skill cần gọi và dừng; khớp cả Registry lẫn mục đó (ngoài tín hiệu sự cố, vd "review bảo mật PR#12")
+  thì ưu tiên workflow trong Registry vì workflow đã gồm năng lực của skill. Chuỗi đủ 3 workflow thì nhắc người dùng cập nhật tài liệu riêng sau khi
   chuỗi xong, không nối thêm.
-- **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry; không đoán khi tín hiệu quá yếu — nêu rõ vì
-  sao chọn.
+- **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry và mục "Yêu cầu chạy trực tiếp bằng skill"; không
+  đoán khi tín hiệu quá yếu — nêu rõ vì sao chọn.
 - **Đầu ra:** 1 workflow đã chọn, hoặc tối đa 2 ứng viên kèm lý do, hoặc một chuỗi tối đa 3 workflow theo thứ
   tự phụ thuộc, hoặc 1 skill trực tiếp.
 - **Gate:** chọn được 1 workflow, ≤2 ứng viên hoặc một chuỗi ≤3 workflow, có tín hiệu khớp trong Registry;

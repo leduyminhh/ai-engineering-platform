@@ -10,7 +10,7 @@ Viết đúng các file migration mới thể hiện kế hoạch schema đã đ
 
 ## Phạm vi
 - Được: ĐỌC không giới hạn (code, config, `project-knowledge/`, migration hiện có); TẠO file migration MỚI trong thư mục
-  migration đã nhận diện ở C1; SỬA file migration do chính lượt workflow này tạo (chưa có trên base branch). File "do
+  migration đã nhận diện ở C1; SỬA file migration do chính lượt giao việc này tạo (chưa có trên base branch). File "do
   chính lượt này tạo" = vắng khỏi mốc `git status --porcelain` và khỏi base branch; không sửa khi đã commit hoặc đã
   áp lên DB.
 - Không được: kết nối DB, chạy migration hay công cụ migration (kể cả `validate`/`info`), `pg_dump`; sửa/xoá file

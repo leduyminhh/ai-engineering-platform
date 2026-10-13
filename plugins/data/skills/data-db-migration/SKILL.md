@@ -114,6 +114,8 @@ chờ người dùng duyệt.
 Chỉ thêm file mới (file đã có trên base branch là bất biến); đặt tên theo quy ước tìm được ở C1 (chỉ dùng
 `CONVENTIONS.md` của kit khi project dựng từ kit); đặt `lock_timeout`; backfill theo lô, tách khỏi migration đổi cấu
 trúc; Liquibase: mỗi changeSet có `rollback`. Lỡ sửa file đã có trên base → huỷ thay đổi đó, viết file mới.
+Có thể giao bước viết cho agent `data-migration-writer` (truyền kế hoạch C2 + số dòng bảng); session chính ghi mốc
+`git status --porcelain` trước khi giao và tự chạy C4 — agent không kết nối DB.
 
 #### C4. Verify ⏸
 Xác nhận DB đích là **DB test** (profile/biến môi trường, host, tên database — đã mask), rồi chạy chu trình theo công cụ
