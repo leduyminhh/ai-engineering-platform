@@ -119,7 +119,9 @@ invariants (idempotency, outbox, retention), schema/contract tests, and regressi
   force-push, history rewrite) without explicit confirmation.
 - **Don't read, print, or modify secret files** (`.env`, `*.env`, credentials, `*.jks`/`*.keystore`,
   key material).
-- **Stop for human diff review before committing** (1 task = 1 commit).
+- **Stop for human diff review before integrating.** On a feature branch, commit each task without
+  pausing (1 task = 1 commit); the human reviews the whole branch diff before merge or push. On a
+  protected branch, stop before every commit.
 - **Don't add `Co-authored-by` / `Co-Authored-By` lines** (or assistant attribution) to commit
   messages, PR bodies, or tag/release notes.
 
