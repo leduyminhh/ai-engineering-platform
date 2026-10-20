@@ -62,7 +62,7 @@ export function planTestPaths(planText) {
     else if (!inRegion || !/^\s*-\s/.test(l)) { inRegion = false; return; }
     const marked = /^\s*-\s*Test:/i.test(l);
     for (const m of l.matchAll(/`([^`]+)`/g)) {
-      const p = m[1].trim().replace(/:\d+(-\d+)?$/, '');
+      const p = m[1].trim().replace(/:\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*$/, '');
       // Đoạn có khoảng trắng là lệnh (vd `npm test`), không phải đường dẫn.
       if (!p || /\s/.test(p) || seen.has(p) || !(marked || TEST_PATH_RE.test(p))) continue;
       seen.add(p);

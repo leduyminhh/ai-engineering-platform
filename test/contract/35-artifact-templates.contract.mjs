@@ -352,6 +352,7 @@ export default async function run({ ok, ctx }) {
       ['- Create: ', 'a_test.go', ['a_test.go']], ['- Create: ', 'test_a.py', ['test_a.py']],
       ['- Create: ', 'FooTest.java', ['FooTest.java']], ['- Test: ', 'qa/x.feature', ['qa/x.feature']],
       ['- Test: ', 'qa/x.feature:3-9', ['qa/x.feature']], ['- Create: ', 'test/a.mjs:5-9', ['test/a.mjs']],
+      ['- Create: ', 'test/a.mjs:15,342', ['test/a.mjs']], ['- Create: ', 'test/a.mjs:15-16,42-50', ['test/a.mjs']],
     ];
     for (const [lead, p, want] of cases) {
       ok(JSON.stringify(pt(lead + tick(p))) === JSON.stringify(want), `AC2.6: planTestPaths ${lead}${p}`);
