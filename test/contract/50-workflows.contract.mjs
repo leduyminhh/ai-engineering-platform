@@ -1,5 +1,6 @@
 // Contract workflows: drift guard workflow, hard-dependency và script Phase 1.
 import { checkGraph, checkGraphAgainstBody } from '../../cli/lib/workflows.mjs';
+import { readGraph } from '../../cli/lib/plugins.mjs';
 
 export default async function run({ ok, ctx }) {
   const { fs, path, os, execFileSync, REPO_ROOT, PLUGINS_DIR, CORE_DIR, missingAnchors, registrySignals, claudeAdapter, core, plugins, allAgents, workflows, BUILD, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, checkDescriptionStyle, notForTargets, claudeDir } = ctx;
@@ -256,6 +257,36 @@ export default async function run({ ok, ctx }) {
         for (const f of fs.readdirSync(refDir).filter((x) => x.endsWith('.md'))) {
           ok(s.body.includes(`\`references/${f}\``), `${s.id}: WORKFLOW.md trỏ tới references/${f}`);
         }
+      }
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Workflow graph (project 2b): graph.json cho pipeline workflow, khớp văn xuôi
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    if (workflows) {
+      const pipelines = workflows.stages.filter((s) => s.kind === 'workflow');
+      for (const s of pipelines) {
+        ok(s.graph != null && s.graph.workflow === s.id, `AC1.1: ${s.id} có graph.json với graph.workflow = id`);
+        if (!s.graph) continue;
+        const gErrs = checkGraph(s.graph);
+        ok(gErrs.length === 0, `AC1.1/AC1.2/AC1.3: ${s.id} graph hợp lệ${gErrs.length ? ' — ' + gErrs.join(' | ') : ''}`);
+        const pErrs = checkGraphAgainstBody(s.graph, s.body);
+        ok(pErrs.length === 0, `AC2.1–AC2.4: ${s.id} graph khớp văn xuôi${pErrs.length ? ' — ' + pErrs.join(' | ') : ''}`);
+      }
+      for (const s of workflows.stages) {
+        ok(!s.body.includes('quay lại bước tương ứng'), `AC2.5: ${s.id} không còn "quay lại bước tương ứng"`);
+      }
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-graph-'));
+      try {
+        const bad = path.join(tmp, 'graph.json');
+        fs.writeFileSync(bad, '{"schema":');
+        let msg = '';
+        try { readGraph(bad); } catch (e) { msg = e.message; }
+        ok(msg.includes(bad) && msg.includes('graph.json không phải JSON hợp lệ'), 'AC1.1: readGraph — JSON hỏng ném lỗi có đường dẫn file');
+        ok(readGraph(path.join(tmp, 'khong-ton-tai.json')) === null, 'AC1.1: readGraph — không có file → null');
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
       }
     }
   }

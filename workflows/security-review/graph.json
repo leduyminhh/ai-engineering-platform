@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "workflow": "workflow-security-review",
+  "start": "baseline",
+  "steps": [
+    {
+      "id": "baseline",
+      "n": 1,
+      "title": "Baseline build/test",
+      "run": { "session": true },
+      "next": "scope-threat",
+      "on_fail": [
+        { "to": "blocked", "when": "đỏ → dừng blocked, đề xuất workflow-bugfix" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "scope-threat",
+      "n": 2,
+      "title": "Phạm vi & threat",
+      "run": { "session": true },
+      "next": "review-scan",
+      "on_fail": [
+        { "to": "ask_user", "when": "không xác định được phạm vi rõ ràng → hỏi lại người dùng" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "review-scan",
+      "n": 3,
+      "title": "Review & scan",
+      "run": { "agents": ["engineering-quality-auditor"] },
+      "next": "validate-findings",
+      "on_fail": [
+        { "to": "blocked", "when": "phát hiện secret nhưng chưa mask được an toàn → dừng, báo người dùng xử lý thủ công" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "validate-findings",
+      "n": 4,
+      "title": "Validate findings",
+      "run": { "session": true },
+      "next": "remediation-plan",
+      "on_fail": [],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "remediation-plan",
+      "n": 5,
+      "title": "Kế hoạch remediation",
+      "run": { "session": true },
+      "next": "secret-revocation",
+      "on_fail": [
+        { "to": "ask_user", "when": "người dùng chưa quyết định được → dừng, chờ người dùng xác nhận" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Toàn bộ finding theo severity",
+        "approve": "secret-revocation",
+        "reject": "ask_user"
+      }
+    },
+    {
+      "id": "secret-revocation",
+      "n": 6,
+      "title": "Thu hồi secret",
+      "run": { "session": true },
+      "next": "regression-test",
+      "on_fail": [
+        { "to": "blocked", "when": "người dùng chưa rotate → dừng; secret vẫn coi là lộ, ghi vào remaining_risks" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Danh sách secret bị lộ (đã mask) và trạng thái rotate",
+        "approve": "regression-test",
+        "reject": "blocked"
+      }
+    },
+    {
+      "id": "regression-test",
+      "n": 7,
+      "title": "Regression test (đỏ)",
+      "run": {
+        "agents": [
+          { "id": "backend-test-writer", "when": "chỉ phía có finding cần sửa" },
+          { "id": "frontend-test-writer", "when": "chỉ phía có finding cần sửa" }
+        ],
+        "parallel": true
+      },
+      "next": "fix",
+      "on_fail": [
+        { "to": "validate-findings", "when": "test đã viết đúng mà vẫn xanh → nghi false positive, quay lại Bước 4 validate lại" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "fix",
+      "n": 8,
+      "title": "Sửa",
+      "run": {
+        "agents": [
+          { "id": "backend-fixer", "when": "chỉ phía có finding cần sửa" },
+          { "id": "frontend-fixer", "when": "chỉ phía có finding cần sửa" }
+        ],
+        "parallel": true
+      },
+      "next": "re-scan",
+      "on_fail": [],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "re-scan",
+      "n": 9,
+      "title": "Re-scan",
+      "run": { "agents": ["engineering-quality-auditor"] },
+      "next": "commit",
+      "on_fail": [
+        { "to": "fix", "when": "finding đã sửa vẫn còn xuất hiện → quay lại Bước 8 sửa lại cho đúng" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "commit",
+      "n": 10,
+      "title": "Commit",
+      "run": { "skills": ["git-workflow"] },
+      "next": "done",
+      "on_fail": [
+        { "to": "ask_user", "when": "người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Diff sửa hoàn chỉnh + test regression",
+        "approve": "done",
+        "reject": "ask_user"
+      }
+    }
+  ]
+}
