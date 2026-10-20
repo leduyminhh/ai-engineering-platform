@@ -13,7 +13,8 @@
    định, kế hoạch, kiến thức nền đều phải externalize ra file.
 3. **CLAUDE.md / AGENTS.md LÀ HỢP ĐỒNG**: công cụ thực thi tự đọc file này làm context đầu vào.
 4. **CON NGƯỜI GIỮ 2 CHỐT**: chọn giải pháp (sau giai đoạn phân tích) + duyệt diff trước khi
-   commit. Đây là 2 nơi sai sót đắt nhất nếu tự động hoàn toàn.
+   tích hợp (merge/push; trên protected branch: trước mỗi commit). Đây là 2 nơi sai sót đắt nhất
+   nếu tự động hoàn toàn.
 
 ## 3 tầng tài liệu (phân biệt rõ)
 - `project-knowledge/` = KIẾN THỨC NỀN: ổn định, ít đổi (kiến trúc, domain, stack, mô hình dữ
@@ -31,7 +32,8 @@ build/test/lint rõ ràng.
 - Không push thẳng lên `main`.
 - Không chạy lệnh phá hủy / ghi đè dữ liệu khi chưa được duyệt.
 - Không sửa file bí mật (`.env` / secrets / credentials).
-- Luôn để con người duyệt diff trước khi commit.
+- Không merge/push khi con người chưa duyệt toàn bộ diff branch; trên protected branch, không
+  commit khi chưa được duyệt diff.
 - Không commit code lệch `code-convention.md` / fail lint.
 
 > Mỗi plugin có thể BỔ SUNG ranh giới an toàn đặc thù lĩnh vực (vd: nhánh data-olap cấm

@@ -28,48 +28,11 @@ docs/requests/<yyyy-mm-dd>-<slug>/
 
 ## 3. Cấu trúc `tasks.md`
 
-````markdown
-# Tasks: <tên yêu cầu>
-
-## 1. Tóm tắt
-
-- Nguồn input: <file / mô tả>
-- Use case: <n> · Task: <n> (CT <n> · DB <n> · BE <n> · FE-UI <n> · FE-INT <n> · E2E <n>)
-- Size: S <n> · M <n>
-- Loại không sinh: <loại> — <lý do> (vd `E2E` — AC chứng minh được bằng integration + msw)
-
-## 2. Use case
-
-| ID | Tên | Actor | Mục tiêu | AC | NFR | Nguồn |
-|---|---|---|---|---|---|---|
-
-## 3. Bảng tổng task
-
-| ID | UC | Loại | Tiêu đề | Size | Phụ thuộc | Owner | Trạng thái | Skill gợi ý |
-|---|---|---|---|---|---|---|---|---|
-| [UC01-CT-01](#uc01-ct-01) | UC01 | CT | Chốt contract đăng ký | S | — |  | Todo | backend-api-contract |
-
-## 4. Thứ tự thực hiện gợi ý
-
-1. Song song: UC01-CT-01 ∥ UC01-DB-01 ∥ UC01-FE-01
-2. Song song: UC01-BE-01 ∥ UC01-FE-02
-3. UC01-E2E-01
-
-## 5. Chi tiết task
-
-<a id="uc01-ct-01"></a>
-### UC01-CT-01 — Chốt contract đăng ký
-
-<header chung + mục theo loại — task-template-common / task-template-backend / task-template-frontend>
-
-## 6. Câu hỏi mở & giả định
-
-| # | Câu hỏi | Ảnh hưởng tới | Trạng thái |
-|---|---|---|---|
-````
+Khung `tasks.md` (Tóm tắt, Use case, Bảng tổng task, Thứ tự thực hiện, Chi tiết task, Câu hỏi mở & giả định) lấy từ template
+`task.template.md` của skill `artifact-templates`; chi tiết BE/FE điền theo `task-template-backend.md` / `task-template-frontend.md`.
 
 Mỗi task có `<a id="<id chữ thường>"></a>` ngay trên heading; bảng tổng và Excel link tới anchor này, không phụ
-thuộc cách renderer sinh anchor từ heading tiếng Việt.
+thuộc cách renderer sinh anchor từ heading tiếng Việt (ví dụ `<a id="uc01-ct-01"></a>`).
 
 Mỗi bước trong "Thứ tự thực hiện gợi ý" gồm các task có mọi phụ thuộc nằm ở bước trước.
 

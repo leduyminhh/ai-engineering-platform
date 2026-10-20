@@ -290,7 +290,7 @@ Scaffold coi là đúng khi:
 ## References
 
 - [ARD.md](ARD.md) — Dependency Rule, vai trò 5 module, checklist review PR (mục 7).
-- Ghi **lựa chọn kiến trúc này thành ADR** (Nygard) trong `docs/decisions/` — vì sao chọn Onion + DDD cho BC này, các phương án đã cân nhắc, hệ quả.
+- Ghi **lựa chọn kiến trúc này thành ADR** (theo `docs/decisions/_TEMPLATE.md`) trong `docs/decisions/` — vì sao chọn Onion + DDD cho BC này, các phương án đã cân nhắc, hệ quả.
 - ArchUnit — <https://www.archunit.org>: fitness function ép ranh giới kiến trúc (Ford/Parsons/Kua, *Building Evolutionary Architectures*).
 
 ## Related

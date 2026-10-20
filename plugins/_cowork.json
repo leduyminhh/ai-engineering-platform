@@ -3,6 +3,7 @@
   "skills": [
     "core:principles",
     "core:git-workflow",
+    "core:artifact-templates",
     "backend:backend-init",
     "backend:backend-implement",
     "backend:backend-testing",

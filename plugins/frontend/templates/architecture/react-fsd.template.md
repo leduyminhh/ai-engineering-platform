@@ -362,7 +362,7 @@ Scaffold coi là đúng khi:
 
 ## References
 
-- Ghi **lựa chọn kiến trúc này thành ADR** (Nygard) ở `docs/decisions/` — vì sao FSD, phương án cân nhắc,
+- Ghi **lựa chọn kiến trúc này thành ADR** (theo `docs/decisions/_TEMPLATE.md`) ở `docs/decisions/` — vì sao FSD, phương án cân nhắc,
   hệ quả.
 - **Feature-Sliced Design** (chuẩn chính thức, v2.1):
   - Layers — <https://feature-sliced.design/docs/reference/layers> (7 layer, `processes` deprecated, ngoại lệ App/Shared).

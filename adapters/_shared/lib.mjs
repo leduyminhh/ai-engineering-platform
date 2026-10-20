@@ -29,7 +29,7 @@ export function principlesDigest({ provider, pluginId = null }) {
     : '';
   const git = ns ? '`git-workflow` (bản cài dạng plugin: `core:git-workflow`)' : '`git-workflow`';
   return [
-    '> **Nguyên tắc nền (tóm tắt):** (1) mọi bối cảnh nằm trong file — đọc `project-knowledge/` trước, ghi quyết định vào `docs/requests/` + `docs/decisions/`; (2) con người giữ 2 chốt — chọn giải pháp và duyệt diff trước khi commit; (3) không push `main`, không lệnh phá huỷ khi chưa được duyệt, không sửa file bí mật (`.env`/secret/credentials), không commit lệch `code-convention.md`/fail lint; (4) nguồn sự thật: code/migration thật > tài liệu, contract > mock, `plan.md` > `TODO.md`; (5) ngôn ngữ đo được, nêu `[giả định]` và residual risk.',
+    '> **Nguyên tắc nền (tóm tắt):** (1) mọi bối cảnh nằm trong file — đọc `project-knowledge/` trước, ghi quyết định vào `docs/requests/` + `docs/decisions/`; (2) con người giữ 2 chốt — chọn giải pháp và duyệt diff trước merge/push (protected branch: mỗi commit); (3) không push `main`, không lệnh phá huỷ khi chưa được duyệt, không sửa file bí mật (`.env`/secret/credentials), không commit lệch `code-convention.md`/fail lint; (4) nguồn sự thật: code/migration thật > tài liệu, contract > mock, `plan.md` > `TODO.md`; (5) ngôn ngữ đo được, nêu `[giả định]` và residual risk.',
     `> Bản đầy đủ${pluginId ? ' + nguyên tắc riêng plugin' : ''}: skill ${core}${plug} — đọc khi cần, không bắt buộc mỗi lần.`,
     `> Khi commit/push/tạo branch/PR: gọi skill ${git}.`,
   ].join('\n');
@@ -82,7 +82,9 @@ export function assetFiles(stage, dir) {
   const files = (stage.fileAssets || []).map((fa) => ({
     path: `${dir}/${fa.name}`, copyFrom: fa.from,
   }));
-  return [...dirs, ...extraDirs, ...files];
+  // Sau extraDirs: file nội dung ghi chồng vào cây đã copyDir (vd templates/docs/requests/_TEMPLATE).
+  const contents = (stage.contentAssets || []).map((ca) => ({ path: `${dir}/${ca.name}`, content: ca.content }));
+  return [...dirs, ...extraDirs, ...contents, ...files];
 }
 
 /**
@@ -100,7 +102,7 @@ export function skillFiles(stage, base, preamble = '', opts = {}) {
  * `references/...` links resolve; stages without assets stay a flat `<id>.md` (minimal churn).
  */
 export function workflowDocPath(stage) {
-  const hasAssets = (stage.assets || []).length || (stage.fileAssets || []).length || (stage.dirAssets || []).length;
+  const hasAssets = (stage.assets || []).length || (stage.fileAssets || []).length || (stage.dirAssets || []).length || (stage.contentAssets || []).length;
   return hasAssets ? `docs/workflow/${stage.id}/SKILL.md` : `docs/workflow/${stage.id}.md`;
 }
 
@@ -188,7 +190,7 @@ export function agentsFiles(plugin, { tool, base, core }) {
   }
   L.push('## Cách dùng');
   L.push('- Trước khi làm một giai đoạn, đọc `docs/workflow/<id>.md` tương ứng và tuân thủ đầy đủ.');
-  L.push('- Mọi bối cảnh giữ trong file (xem nguyên tắc trên). Con người duyệt diff trước khi commit.');
+  L.push('- Mọi bối cảnh giữ trong file (xem nguyên tắc trên). Con người duyệt diff trước merge/push (protected branch: mỗi commit).');
   L.push('');
 
   const files = [{ path: `${base}/AGENTS.md`, content: L.join('\n') }];
@@ -196,7 +198,7 @@ export function agentsFiles(plugin, { tool, base, core }) {
     const doc = workflowDocPath(s);
     files.push({ path: `${base}/${doc}`, content: s.body.replace(/^\n+/, '') });
     // ship references/ and fileAssets beside SKILL.md when the stage has assets (doc lives in its own folder)
-    if ((s.assets || []).length || (s.fileAssets || []).length || (s.dirAssets || []).length) files.push(...assetFiles(s, `${base}/${path.dirname(doc)}`));
+    if ((s.assets || []).length || (s.fileAssets || []).length || (s.dirAssets || []).length || (s.contentAssets || []).length) files.push(...assetFiles(s, `${base}/${path.dirname(doc)}`));
   }
   return files;
 }

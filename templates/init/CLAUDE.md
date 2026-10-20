@@ -40,7 +40,7 @@ Khi commit, push, tạo/chuyển branch, chuẩn bị PR, merge, release hoặc 
 - Không chạy migration hay lệnh phá hủy dữ liệu khi chưa được xác nhận.
 - Không sửa file bí mật (.env, secrets, credentials).
 - Không commit code lệch convention hoặc fail lint/format.
-- Luôn dừng cho người duyệt diff trước khi commit.
+- Duyệt diff trước khi tích hợp (mục Safety của `AGENTS.md`): feature branch duyệt toàn bộ diff trước merge/push; protected branch dừng trước mỗi commit.
 
 ## Nguồn sự thật khi tài liệu lệch nhau
 - Schema thực trong code  >  project-knowledge/data-model.md

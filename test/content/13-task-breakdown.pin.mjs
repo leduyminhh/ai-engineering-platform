@@ -12,7 +12,7 @@ export default async function run({ ok, ctx }) {
     ok(skill !== '', 'engineering-task-breakdown: có SKILL.md');
     ok(/^order: 7$/m.test(skill) && /^runsIn: plan$/m.test(skill) && /^invoke: per-request$/m.test(skill),
       'engineering-task-breakdown: frontmatter order 7, runsIn plan, invoke per-request');
-    for (const f of ['analysis.md', 'task-template-common.md', 'task-template-backend.md', 'task-template-frontend.md',
+    for (const f of ['analysis.md', 'task-template-backend.md', 'task-template-frontend.md',
       'sizing.md', 'output-formats.md', 'breakdown-checklist.md']) {
       ok(skill.includes(`(references/${f})`), `engineering-task-breakdown: SKILL.md link tới references/${f}`);
     }
@@ -39,18 +39,19 @@ export default async function run({ ok, ctx }) {
   {
     const TB_REF = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-task-breakdown', 'references');
     const tbRef = (f) => { const p = path.join(TB_REF, f); return fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : ''; };
-    const common = tbRef('task-template-common.md');
+    const commonPath = path.join(REPO_ROOT, 'core', 'skills', 'artifact-templates', 'references', 'task.template.md');
+    const common = fs.existsSync(commonPath) ? fs.readFileSync(commonPath, 'utf8') : '';
     ok(['CT', 'DB', 'BE', 'FE-UI', 'FE-INT', 'E2E'].every((t) => common.includes(`| \`${t}\` |`)),
-      'engineering-task-breakdown: template common có bảng đủ 6 loại task');
+      'artifact-templates: template task có bảng đủ 6 loại task');
     ok(['Use case', 'Loại', 'Size', 'Phụ thuộc', 'Owner', 'Trạng thái', 'Skill gợi ý', 'Nguồn'].every((h) => common.includes(`| ${h} |`))
       && ['**Ngữ cảnh:**', '**Acceptance criteria:**', '**File dự kiến:**', '**Lệnh verify:**', '**DoD:**'].every((h) => common.includes(h)),
-      'engineering-task-breakdown: template common có đủ header chung');
+      'artifact-templates: template task có đủ header chung');
     ok(common.includes('N/A — <lý do>') && common.includes('[giả định]'),
-      'engineering-task-breakdown: template common có quy tắc N/A và [giả định]');
+      'artifact-templates: template task có quy tắc N/A và [giả định]');
     ok(common.includes('Chỉ sinh loại cần') && common.includes('không sinh `CT`, `BE`, `FE-INT`')
       && common.includes('không sinh `FE-UI`, `FE-INT`, `E2E`'),
-      'engineering-task-breakdown: use case không có API / chỉ backend thì không sinh loại task thừa');
-    ok(['### CT', '### DB', '### E2E'].every((h) => common.includes(h)), 'engineering-task-breakdown: có template CT/DB/E2E');
+      'artifact-templates: use case không có API / chỉ backend thì không sinh loại task thừa');
+    ok(['### CT', '### DB', '### E2E'].every((h) => common.includes(h)), 'artifact-templates: template task có mục CT/DB/E2E');
     const be = tbRef('task-template-backend.md');
     ok(Array.from({ length: 10 }, (_, i) => `### B${i + 1}. `).every((h) => be.includes(h))
       && Array.from({ length: 10 }, (_, i) => `**B${i + 1}. `).every((h) => be.includes(h)),

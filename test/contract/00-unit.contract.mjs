@@ -2,7 +2,7 @@
 import { parseOnly } from '../harness.mjs';
 
 export default async function run({ ok, ctx }) {
-  const { fs, path, loadPlugins, loadCore, loadWorkflows, splitList, REPO_ROOT, checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, claudeAdapter, codexAdapter, tomlBasic, tomlMultiline, frontmatter, core, plugins, workflows, fxPlugin, fxWorkflows, fxCore, fxMk, byPath } = ctx;
+  const { fs, path, loadPlugins, loadCore, loadWorkflows, splitList, REPO_ROOT, CORE_DIR, checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, claudeAdapter, codexAdapter, tomlBasic, tomlMultiline, frontmatter, core, plugins, workflows, fxPlugin, fxWorkflows, fxCore, fxMk, byPath } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 0. UNIT: loader agent + workflows
@@ -23,7 +23,7 @@ export default async function run({ ok, ctx }) {
 
   // 0b. UNIT: helper workflow (khung body, step, registry, closure)
   {
-    const tpl = fs.readFileSync(path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n');
+    const tpl = fs.readFileSync(path.join(CORE_DIR, 'skills', 'artifact-templates', 'references', 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n');
     const tplErrs = checkWorkflowBody(tpl);
     ok(tplErrs.length === 0, `template workflow PASS checkWorkflowBody${tplErrs.length ? ' — ' + tplErrs.join('; ') : ''}`);
 

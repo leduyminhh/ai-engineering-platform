@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { initDocFiles } from './templates.mjs';
 import { checkSourceKeys, checkPassthroughTypes, SKILL_PASSTHROUGH } from './conventions.mjs';
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -224,6 +225,8 @@ function loadSkills(pluginDir) {
       .filter(Boolean)
       .map((rel) => ({ name: path.basename(rel), from: path.join(pluginDir, rel) }));
     const dirAssets = [...initAssets, ...sharedAssets];
+    // Khung docs/requests/_TEMPLATE lấy từ core/skills/artifact-templates (đã bỏ header), ship vào cây templates/ cạnh templates/init.
+    const contentAssets = isInit ? initDocFiles().map((f) => ({ name: `templates/${f.rel}`, content: f.content })) : [];
     stages.push({
       id: meta.name || e.name,
       order: typeof meta.order === 'number' ? meta.order : 0,
@@ -238,6 +241,7 @@ function loadSkills(pluginDir) {
       assets,
       fileAssets,
       dirAssets,
+      contentAssets,
     });
   }
   stages.sort((a, b) => a.order - b.order);

@@ -1,7 +1,7 @@
 # Backend cần gì — template task BE
 
 Task `BE` = một command hoặc một query của một use case (một vertical slice theo `backend-implement`). Điền header
-chung (task-template-common §3) + 10 mục dưới. Mục không áp dụng → `N/A — <lý do>`.
+chung (template `task.template.md` của skill `artifact-templates`, mục Chi tiết task) + 10 mục dưới. Mục không áp dụng → `N/A — <lý do>`.
 
 ## Template chép được
 

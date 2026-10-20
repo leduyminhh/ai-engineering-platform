@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { init } from "../cli/lib/init.mjs";
+import { initDocFiles } from "../cli/lib/templates.mjs";
 import { BEGIN, importsAgentsMd } from "../cli/lib/managed-block.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,8 +33,41 @@ test("init mặc định chỉ tạo AGENTS.md có khối baseline + CLAUDE.md i
 test("init --full tạo cả khung templates/init + AGENTS.md", () => {
   const root = tmp();
   const r = init({ root, full: true });
-  const expected = [...listFiles(path.join(REPO, "templates", "init")), "AGENTS.md"].sort();
+  const expected = [...listFiles(path.join(REPO, "templates", "init")), ...initDocFiles().map((f) => f.rel), "AGENTS.md"].sort();
   assert.deepEqual([...r.created].sort(), expected);
+});
+
+test("init --full sinh requirement/design/plan _TEMPLATE từ core, đã bỏ khối header", () => {
+  const root = tmp();
+  init({ root, full: true });
+  for (const f of ["requirement", "design", "plan"]) {
+    const text = read(root, `docs/requests/_TEMPLATE/${f}.md`);
+    assert.ok(text.length > 0, f);
+    assert.ok(!text.includes("<!-- artifact-template"), f);
+  }
+});
+
+test("init --full sinh docs/decisions/_TEMPLATE.md và project-knowledge/ từ core, đã bỏ khối header", () => {
+  const root = tmp();
+  init({ root, full: true });
+  for (const rel of ["docs/decisions/_TEMPLATE.md", "project-knowledge/project-overview.md", "project-knowledge/code-convention.md"]) {
+    const text = read(root, rel);
+    assert.ok(text.length > 0, rel);
+    assert.ok(!text.includes("<!-- artifact-template"), rel);
+  }
+  assert.ok(read(root, "docs/decisions/_TEMPLATE.md").includes("## Bối cảnh và vấn đề"));
+  assert.ok(fs.existsSync(path.join(root, "project-knowledge/tech-stack.yml")));
+});
+
+test("init --full không ghi đè docs/requests/_TEMPLATE/plan.md đã có", () => {
+  const root = tmp();
+  const old = "# Plan: kiểu cũ\n## Phase 1\n";
+  fs.mkdirSync(path.join(root, "docs/requests/_TEMPLATE"), { recursive: true });
+  fs.writeFileSync(path.join(root, "docs/requests/_TEMPLATE/plan.md"), old);
+  const r = init({ root, full: true });
+  assert.equal(read(root, "docs/requests/_TEMPLATE/plan.md"), old);
+  assert.ok(r.skipped.includes("docs/requests/_TEMPLATE/plan.md"));
+  assert.ok(r.created.includes("docs/requests/_TEMPLATE/design.md"));
 });
 
 test("init không ghi đè file đã có, cảnh báo khi CLAUDE.md có sẵn chưa import", () => {

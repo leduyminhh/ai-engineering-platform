@@ -119,7 +119,9 @@ invariants (idempotency, outbox, retention), schema/contract tests, and regressi
   force-push, history rewrite) without explicit confirmation.
 - **Don't read, print, or modify secret files** (`.env`, `*.env`, credentials, `*.jks`/`*.keystore`,
   key material).
-- **Stop for human diff review before committing** (1 task = 1 commit).
+- **Stop for human diff review before integrating.** On a feature branch, commit each task without
+  pausing (1 task = 1 commit); the human reviews the whole branch diff before merge or push. On a
+  protected branch, stop before every commit.
 - **Don't add `Co-authored-by` / `Co-Authored-By` lines** (or assistant attribution) to commit
   messages, PR bodies, or tag/release notes.
 
@@ -133,6 +135,18 @@ to the most specific skill and **say so**.
 
 > The catalog path is **tool-specific**, defined by the provider (e.g. Codex:
 > `.codex/workflows/commands.md`). Other tools ignore this line.
+
+### Superpowers workflow defaults (if the superpowers skills are installed)
+
+Spec approval (`brainstorming`) and plan approval (`writing-plans`) stay human gates; these defaults
+remove only the prompts after them.
+
+- Execution: `subagent-driven-development` (`executing-plans` when no subagent tool exists); do not
+  ask again once the plan is approved.
+- Commit each task on a feature branch without pausing (see **Safety**).
+- Before finishing, run the full suites of every touched component (see **Testing**).
+- `finishing-a-development-branch`: default to "Keep the branch as-is"; merge or push only after the
+  human confirms.
 
 ### Language
 

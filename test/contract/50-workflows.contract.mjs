@@ -6,7 +6,7 @@ export default async function run({ ok, ctx }) {
   // 27. Chuẩn hoá A4: drift guard workflow ↔ template, Registry ↔ description (spec 2026-10-06 §4.4, §10)
   // ─────────────────────────────────────────────────────────────────────────────
   {
-    const tpl27 = fs.readFileSync(path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n');
+    const tpl27 = fs.readFileSync(path.join(CORE_DIR, 'skills', 'artifact-templates', 'references', 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n');
     ok(missingAnchors(tpl27).length === 0, 'template workflow chứa mọi dòng neo WF_ANCHORS');
     ok(!tpl27.includes('Không có subagent'), 'template workflow: không lặp câu fallback subagent (adapter đã chèn preamble)');
     ok(missingAnchors(tpl27.replace('Thiếu điều kiện nào → dừng', 'Thiếu điều kiện → dừng')).length === 1,
