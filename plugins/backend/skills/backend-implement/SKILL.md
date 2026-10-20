@@ -22,7 +22,7 @@ gọi khi cần — không thuộc chuỗi bắt buộc.
   `source-structure.md`, `data-model.md`, `code-convention.md`, `tech-stack`). Chưa có → đề nghị chạy
   `backend-init` trước; hoặc chạy với **giả định an toàn + ghi rõ giả định** (fail-loud), không âm thầm bịa
   kiến trúc/naming.
-- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **duyệt diff trước khi commit**.
+- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **duyệt diff trước merge/push** (protected branch: mỗi commit).
 
 ## Quy trình
 
@@ -69,7 +69,8 @@ Theo [references/checklist.md](references/checklist.md):
 - **Ranh giới xanh:** ArchUnit (Java) / import-linter (Python) — `domain`/`application` không import
   framework; inbound không import outbound.
 - **Đúng một aggregate/use-case** (không phình); map thủ công ở biên; đặt tên theo convention.
-- Nêu rõ phần **bỏ qua / giả định** (fail-loud). Con người **duyệt diff** trước khi commit.
+- Nêu rõ phần **bỏ qua / giả định** (fail-loud). Con người **duyệt diff** trước merge/push
+  (protected branch: mỗi commit).
 
 ## Ranh giới an toàn
 
@@ -78,7 +79,7 @@ Theo [references/checklist.md](references/checklist.md):
 - Defer `code-convention.md` + **blueprint kiến trúc tuyệt đối**; **KHÔNG chép lại cây/naming** của template —
   chỉ TRỎ tới `architecture/<stack>-<kiểu>.template.md` + `ARD.md`.
 - Đổi kiến trúc là việc của `backend-migrate-architecture`, không phải skill này.
-- Chỉ chạm plugin `backend`. Con người duyệt diff trước commit.
+- Chỉ chạm plugin `backend`. Con người duyệt diff trước merge/push (protected branch: mỗi commit).
 
 ## Ghi chú
 

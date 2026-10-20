@@ -59,7 +59,8 @@ sách file/hàm đề xuất sửa** (đầu vào F2 của `backend-fix`).
   không chạy DDL/migration. Phát hiện bottleneck → chỉ đề xuất danh sách file cho `backend-fix`.
 - **Hỏi trước khi thêm tool/dependency** (k6, JMH, pytest-benchmark, async-profiler, py-spy). Chạy như subagent:
   trả `blocked` + câu hỏi, không tự thêm.
-- **Không push thẳng main.** Script đo là artifact; con người **duyệt diff** trước khi commit.
+- **Không push thẳng main.** Script đo là artifact; con người **duyệt diff** trước merge/push
+  (protected branch: mỗi commit).
 - **Ngôn ngữ (bắt buộc):** báo cáo, commit message viết **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo bằng số và lệnh THẬT; không dùng "nhanh hơn rõ rệt", "tối ưu hoàn toàn"; luôn nêu
   **residual risk** (nhiễu môi trường, dữ liệu seed khác production, JIT warm-up).

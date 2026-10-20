@@ -44,7 +44,8 @@ fetch/store; feature không cross-import ruột feature khác; import chỉ tr�
 - **Không đổi token/theme toàn cục.** Gom style/token trùng chỉ về token đã có trong `design-system`; đổi design tokens hay theme toàn cục cần người duyệt trước.
 - **Không tự mở rộng phạm vi.** Chỉ refactor đúng vùng người dùng nêu; thấy vùng khác cần dọn → đề
   xuất, không tự lan.
-- **Không push thẳng main.** Mỗi bước refactor = 1 commit; DỪNG cho người **duyệt diff** trước commit.
+- **Không push thẳng main.** Mỗi bước refactor = 1 commit; con người **duyệt diff** trước merge/push
+  (protected branch: mỗi commit).
 - **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — bảng move, báo cáo, commit message — viết
   **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo cáo bằng thứ đếm được (số move, `file:line`, kết quả build/test THẬT).
@@ -89,7 +90,7 @@ component-style (gom về nơi đúng tầng + token design-system), `useEffect`
   component vừa sửa logic/JSX — nếu phát hiện bug lúc dọn, GHI LẠI và xử ở bước riêng (chưa có oracle;
   chạy `workflow-bugfix` để tái hiện rồi `frontend-fix`).
 - Sau **mỗi** bước: `tsc` ✓ + test (gồm characterization) ✓ + build ✓ + lint (gồm boundary nếu có) ✓.
-  Đỏ → sửa hoặc revert **bước đó**, KHÔNG đi tiếp. 1 bước = 1 commit; DỪNG cho người duyệt diff.
+  Đỏ → sửa hoặc revert **bước đó**, KHÔNG đi tiếp. 1 bước = 1 commit.
 
 ### 4. Verify + con người duyệt — CỔNG G3
 - Chạy lại FULL `tsc` + test + lint + build, SO với baseline bước 1 (số pass/fail, lệnh THẬT). Có fail
@@ -97,7 +98,7 @@ component-style (gom về nơi đúng tầng + token design-system), `useEffect`
 - Có `eslint-plugin-boundaries`/Steiger → chạy để chứng minh boundary vẫn nguyên (refactor không rò
   tầng, không cross-import cùng layer, không import sâu bỏ qua public API).
 - So sánh với characterization test: hành vi quan sát được KHÔNG đổi.
-- Con người **duyệt diff** trước khi commit/merge. Nêu residual risk + phần chưa soát.
+- Con người **duyệt diff** trước merge/push (protected branch: mỗi commit). Nêu residual risk + phần chưa soát.
 
 ## Bảng gate
 | # | Gate | Bước | Đỏ thì |
@@ -105,7 +106,7 @@ component-style (gom về nơi đúng tầng + token design-system), `useEffect`
 | G1 | Baseline build/test/lint XANH; vùng thiếu test có characterization render/interaction khoá hành vi | 1 | DỪNG, không refactor trên nền gãy / chưa có lưới an toàn |
 | G2 | Mỗi bước giữ hành vi + tsc/test/lint/build XANH; tách/dời trước, đổi hành vi tách riêng | 3 | Sửa/revert bước đó, không đi tiếp |
 | G3 | Hồi quy so baseline + boundary check (eslint-plugin-boundaries/Steiger) XANH; con người duyệt diff | 4 | Không tuyên bố hoàn tất |
-| G4 | 1 bước = 1 commit, DỪNG duyệt diff, không push main; giữ boundary/kiểu kiến trúc | Xuyên suốt | — |
+| G4 | 1 bước = 1 commit, duyệt diff trước merge/push, không push main; giữ boundary/kiểu kiến trúc | Xuyên suốt | — |
 
 ## Sau khi xong
 Tóm tắt: các move đã áp (+ `file:line`), kết quả `tsc`/test/lint/build so baseline (số THẬT), phần

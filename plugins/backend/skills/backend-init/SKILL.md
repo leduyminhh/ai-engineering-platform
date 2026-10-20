@@ -17,7 +17,7 @@ skeleton, KHÔNG thuộc pipeline nào.
 ## Tiền đề
 - Project mới hoặc chưa có cấu trúc workflow. Nếu cấu trúc đã tồn tại: KHÔNG ghi đè — báo lại.
 - Mọi bối cảnh nằm trong FILE (không dựa vào memory). Con người giữ 2 chốt: chọn phương án +
-  duyệt diff trước commit.
+  duyệt diff trước merge/push (protected branch: mỗi commit).
 
 ## Quy trình
 
@@ -59,7 +59,7 @@ có thì giữ nguyên.
 
 - Cấu trúc đã tồn tại → KHÔNG ghi đè, báo lại; khi copy `templates/` chỉ thêm file chưa có.
 - CHỈ scaffold tài liệu: KHÔNG sinh code skeleton, KHÔNG viết code thực thi.
-- Con người chốt phương án và duyệt diff trước commit.
+- Con người chốt phương án và duyệt diff trước merge/push (protected branch: mỗi commit).
 
 ## Ghi chú
 - Muốn tái cấu trúc kiến trúc mã nguồn về sau → recipe on-demand `backend-migrate-architecture`.

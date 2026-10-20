@@ -20,7 +20,7 @@ gọi khi cần — không thuộc chuỗi bắt buộc.
 - Project **đã chạy `frontend-init`** (có `project-knowledge/`: `architecture.md`, `design-system.md`,
   `component-map.md`, `code-convention.md`, `tech-stack.yml`). Chưa có → đề nghị chạy `frontend-init`
   trước; hoặc chạy với giả định an toàn và **ghi rõ giả định** (fail-loud), không âm thầm bịa chuẩn.
-- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **duyệt diff trước khi commit**.
+- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **duyệt diff trước merge/push** (protected branch: mỗi commit).
 
 ## Quy trình
 
@@ -71,7 +71,7 @@ Theo [references/fidelity-checklist.md](references/fidelity-checklist.md):
 - `tsc` + lint (`eslint-plugin-boundaries` / Steiger của kiến trúc) + build xanh.
 - Fidelity self-check: cấu trúc, token, các state (hover/disabled/loading/empty), a11y cơ bản.
 - Nêu rõ phần **ước lượng** (nhất là từ ảnh) — độ trung thực pixel không tự verify tuyệt đối được.
-- Con người **duyệt diff** trước khi commit.
+- Con người **duyệt diff** trước merge/push (protected branch: mỗi commit).
 
 ## Ranh giới an toàn
 

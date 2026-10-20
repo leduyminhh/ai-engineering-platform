@@ -28,8 +28,8 @@ Có **hai chế độ truy cập, KHÔNG dùng web API**: (a) **chạy scanner t
 **fix-từ-report**: đọc một report bảo mật/chất lượng cũ rồi **áp fix an toàn trong đúng scope** của report.
 
 Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi khi cần ở bất kỳ giai đoạn nào cần kiểm
-chất lượng/bảo mật. Con người giữ chốt: **duyệt diff trước khi commit**. Kiểm quy ước đặt tên và cấu trúc
-thư mục/file (không phải chất lượng hay bảo mật) → `engineering-convention-enforce`.
+chất lượng/bảo mật. Con người giữ chốt: **duyệt diff trước merge/push** (protected branch: mỗi commit).
+Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải chất lượng hay bảo mật) → `engineering-convention-enforce`.
 
 ## Ranh giới an toàn
 
@@ -43,7 +43,8 @@ thư mục/file (không phải chất lượng hay bảo mật) → `engineering
 - **Áp fix** chỉ cho lỗi/vuln **rõ ràng** theo `code-convention`; giữ nguyên hành vi nghiệp vụ. Breaking-change
   thiếu test và các thay đổi bảo mật rủi ro cao (viết lại auth/authorization, vòng đời JWT/session, bump major
   dependency, đổi hành vi API công khai) → **đánh dấu để người quyết**, KHÔNG auto-fix.
-- Không tự bump **major** rủi ro khi thiếu test bảo chứng; không tự commit — con người **duyệt diff** trước.
+- Không tự bump **major** rủi ro khi thiếu test bảo chứng; không tự commit — con người **duyệt diff** trước
+  merge/push (protected branch: mỗi commit).
 - Ngôn ngữ report **đo được** (đếm được, có file:line, có CVE/CVSS, có OWASP/ASVS/CWE); LUÔN nêu **residual
   risk**. KHÔNG tuyên bố "chặn / đảm bảo / loại bỏ / sửa triệt để" lỗ hổng — findings phản ánh thời điểm quét
   với dữ liệu sẵn có, có thể sót.
@@ -86,7 +87,8 @@ thư mục/file (không phải chất lượng hay bảo mật) → `engineering
    Chạy lại build/test/lint (rescan nếu nhanh) xác nhận không vỡ. Xuất report theo
    [references/report-template.md](references/report-template.md): quality-gate status, bảng findings theo
    nguồn/severity/vị trí **+ cột OWASP/ASVS/CWE** cho finding bảo mật, mục **Đã sửa / Hoãn (kèm lý do) /
-   Residual risk**, các bước verify đã chạy, secret đã mask. Con người **duyệt diff** trước khi commit.
+   Residual risk**, các bước verify đã chạy, secret đã mask. Con người **duyệt diff** trước merge/push
+   (protected branch: mỗi commit).
 
 ## Verification (trước khi báo hoàn thành)
 
@@ -96,7 +98,8 @@ thư mục/file (không phải chất lượng hay bảo mật) → `engineering
   bảo mật có evidence + ánh xạ OWASP/ASVS/CWE (khi ánh xạ được).
 - Fix đã áp bám `code-convention`, **trong đúng scope**; build/test/lint xanh, hoặc phần bị bỏ qua đã báo rõ.
 - Report có đủ **Đã sửa / Hoãn (lý do) / Residual risk**; ngôn ngữ đo được, không tuyên bố tuyệt đối.
-- Không token/secret nào lọt vào output (đã mask); con người duyệt diff trước commit.
+- Không token/secret nào lọt vào output (đã mask); con người duyệt diff trước merge/push
+  (protected branch: mỗi commit).
 
 ## Bản đồ tài liệu
 

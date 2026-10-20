@@ -2,7 +2,8 @@
 
 Sau khi thu thập findings từ SonarQube ([sonarqube.md](sonarqube.md)), Black Duck/Trivy
 ([blackduck.md](blackduck.md)) và **review bảo mật source-first** ([security-review-areas.md](security-review-areas.md)),
-chạy một vòng chung để triage và xử lý nhất quán. Con người giữ chốt: **duyệt diff trước khi commit**.
+chạy một vòng chung để triage và xử lý nhất quán. Con người giữ chốt: **duyệt diff trước merge/push**
+(protected branch: mỗi commit).
 
 ## Vòng xử lý
 
@@ -63,6 +64,6 @@ Khi người dùng chỉ tới một report bảo mật/chất lượng đã có
 - **Không** chạy lệnh phá huỷ; không đổi cấu hình server / quality gate profile / rule pack / CI.
 - **Breaking-change thiếu test = KHÔNG auto-fix.** Finding bảo mật nhạy cảm/rủi ro cao = flag cho người.
 - **Scope-bound:** không sửa/đọc ngoài phạm vi người dùng nêu hoặc scope của report.
-- **Không tự commit** — con người **duyệt diff** trước.
+- **Không tự commit** — con người **duyệt diff** trước merge/push (protected branch: mỗi commit).
 - Ngôn ngữ **đo được**; LUÔN nêu **residual risk**. Findings phản ánh thời điểm quét, có thể sót — không
   tuyên bố "chặn / đảm bảo / loại bỏ / sửa triệt để".

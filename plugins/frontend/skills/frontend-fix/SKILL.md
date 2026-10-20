@@ -63,7 +63,8 @@ re-scan Bước 9 sạch.
   `package-lock.json`/`pnpm-lock.yaml`/`yarn.lock`) ĐƯỢC PHÉP khi các file đó nằm trong danh sách và
   finding là CVE của dependency đó. Cần khác → DỪNG và báo.
 - **Tôn trọng boundary.** Sửa trong slice/feature của file được giao; không cross-import ruột feature khác.
-- **Không push thẳng main.** Một fix = 1 commit; DỪNG cho người **duyệt diff** trước commit.
+- **Không push thẳng main.** Một fix = 1 commit; con người **duyệt diff** trước merge/push
+  (protected branch: mỗi commit).
 - **Ngôn ngữ (bắt buộc):** báo cáo, commit message viết **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo bằng oracle đỏ → xanh với lệnh THẬT + exit code, `file:line` đã sửa. KHÔNG dùng
   "đảm bảo / loại bỏ / không còn lỗi". LUÔN nêu **residual risk**.

@@ -21,7 +21,8 @@ nghị đã chạy `backend-init` trước để có cấu trúc workflow, nhưn
 
 ## Ranh giới an toàn (CLAUDE.md)
 Không push thẳng main. Không commit secret (giá trị secret CHỈ nằm trong Vault; file chứa secret
-phải gitignore). Mỗi task = 1 commit, DỪNG cho người duyệt diff trước khi commit. Không chạy lệnh
+phải gitignore). Mỗi task = 1 commit, DỪNG cho người duyệt diff trước khi commit.
+Đây là chốt riêng của skill, áp cả trên feature branch. Không chạy lệnh
 phá huỷ dữ liệu khi chưa duyệt.
 
 **Không đọc GIÁ TRỊ secret (nguyên tắc nền):** agent KHÔNG dùng công cụ Read/Edit/Write/Grep trên `.env*`

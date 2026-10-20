@@ -77,7 +77,8 @@ file/component đề xuất sửa** (đầu vào của `frontend-fix`). Lệnh/c
   bottleneck → chỉ đề xuất danh sách file cho `frontend-fix`.
 - **Hỏi trước khi thêm tool/dependency** (Lighthouse CLI, bundle analyzer, plugin profiler). Chạy như subagent:
   trả `blocked` + câu hỏi, không tự thêm.
-- **Không push thẳng main.** Script đo là artifact; con người **duyệt diff** trước khi commit.
+- **Không push thẳng main.** Script đo là artifact; con người **duyệt diff** trước merge/push
+  (protected branch: mỗi commit).
 - **Ngôn ngữ (bắt buộc):** báo cáo, commit message viết **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo bằng số và lệnh THẬT; không dùng "nhanh hơn rõ rệt", "tối ưu hoàn toàn"; luôn nêu
   **residual risk** (nhiễu máy local, một thiết bị giả lập, lab ≠ người dùng thật).

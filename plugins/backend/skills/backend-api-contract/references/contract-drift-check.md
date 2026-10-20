@@ -48,6 +48,7 @@ sửa code cho khớp, trừ khi người dùng chốt code đúng thì cập nh
 
 ## Sau khi báo
 
-- Người dùng quyết bên nào là chuẩn. Nếu yêu cầu sửa: sửa **một phía** theo quyết định đó, DỪNG cho người duyệt
-  diff (1 việc = 1 commit). Sửa contract theo hướng breaking → bắt buộc bump version + note.
+- Người dùng quyết bên nào là chuẩn. Nếu yêu cầu sửa: sửa **một phía** theo quyết định đó (1 việc = 1 commit);
+  con người duyệt diff trước merge/push (protected branch: mỗi commit). Sửa contract theo hướng breaking → bắt
+  buộc bump version + note.
 - Sinh lại code slice bám contract mới → route sang `backend-implement`.

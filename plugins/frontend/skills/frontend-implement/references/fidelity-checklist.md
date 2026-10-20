@@ -38,4 +38,4 @@ trung thực** cho phần không tự verify được (độ khớp thị giác)
 - [ ] Nêu rõ mọi phần **`[ước lượng]`** (nhất là từ ảnh): khoảng cách/màu/độ đo suy đoán — độ trung thực
       pixel **không tự verify tuyệt đối được**, cần người kiểm mắt.
 - [ ] Liệt kê giả định đã dùng (stack/lib/token thiếu) và điểm cần người xác nhận.
-- [ ] **Con người duyệt diff** trước khi commit (ranh giới an toàn của khung).
+- [ ] **Con người duyệt diff** trước merge/push (protected branch: mỗi commit) — ranh giới an toàn của khung.
