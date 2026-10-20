@@ -138,7 +138,7 @@
 - Modify: `core/skills/artifact-templates/SKILL.md` (thêm dòng mục lục `agent`)
 - Modify: `test/contract/35-artifact-templates.contract.mjs`
 
-- [ ] **Step 1: Viết test đỏ.**
+- [x] **Step 1: Viết test đỏ.**
   - **Bản đã điền mẫu**, với `mode: write`, `tools: [Read, Edit, Write, Bash, Grep, Glob, Skill]`, `writeScope: ["src/**"]`, 2 skill:
     - Qua `checkAgentTools`, `checkAgentDescription`, `checkSourceKeys('agent', …)`.
     - Đúng khung 4 heading agent hiện có (`Vai trò`, `Phạm vi`, `Quy trình`, `Report trả về`).
@@ -147,10 +147,10 @@
     - `Khi được gọi:` trong `## Quy trình`, kèm một bước kiểm chứng (chạy lệnh → sửa → chạy lại).
     - Bảng `## Report trả về` có đủ các dòng `| Kết quả |`, `| Evidence |`, `| File đã đổi |`, `| Rủi ro còn lại |`.
     - Frontmatter có khóa `tools` và `writeScope`.
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only 35-artifact` → FAIL ở block agent.
-- [ ] **Step 3: Viết template** theo khung ở design §3 (dòng Agent). Khối header đặt sau frontmatter; sources: Claude Code subagents; GitHub agents.md (2025-11).
-- [ ] **Step 4: Chạy, xác nhận xanh** — `node test/validate.mjs --only 35-artifact` → 0 fail.
-- [ ] **Step 5: Commit** — `feat(core): add agent template with three-tier boundaries`
+- [x] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only 35-artifact` → FAIL ở block agent.
+- [x] **Step 3: Viết template** theo khung ở design §3 (dòng Agent). Khối header đặt sau frontmatter; sources: Claude Code subagents; GitHub agents.md (2025-11).
+- [x] **Step 4: Chạy, xác nhận xanh** — `node test/validate.mjs --only 35-artifact` → 0 fail.
+- [x] **Step 5: Commit** — `feat(core): add agent template with three-tier boundaries`
 
 ---
 

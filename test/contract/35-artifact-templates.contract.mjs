@@ -1,8 +1,9 @@
 // Contract artifact-templates: helper khối header, mục lục skill core `artifact-templates` và từng template qua validator của chính nó.
 import { TEMPLATES_DIR, templateHeader, stripTemplateHeader, templateIndex } from '../../cli/lib/templates.mjs';
+import { splitList } from '../../cli/lib/plugins.mjs';
 
 export default async function run({ ok, ctx }) {
-  const { fs, path, CORE_DIR, core, plugins, workflows, allAgents, parseFrontmatter, checkWorkflowBody, missingAnchors, checkSourceKeys, checkSkillBody, checkDescription, checkDescriptionStyle } = ctx;
+  const { fs, path, CORE_DIR, core, plugins, workflows, allAgents, parseFrontmatter, checkWorkflowBody, missingAnchors, checkSourceKeys, checkSkillBody, checkDescription, checkDescriptionStyle, checkAgentDescription, checkAgentTools } = ctx;
   const read = (f) => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 
   // 1. UNIT: templateHeader / stripTemplateHeader — một hành vi, nhiều đầu vào.
@@ -100,6 +101,43 @@ export default async function run({ ok, ctx }) {
     }
     ok(/validate[^\n]*→[^\n]*sửa[^\n]*→[^\n]*validate/i.test(raw), 'template skill (thô) có vòng validate → sửa → validate');
     ok(!fs.existsSync(path.join(path.dirname(CORE_DIR), 'templates', 'skills')), 'templates/skills/ đã bị xóa');
+  }
+
+  // 3c. Agent template: bản đã điền qua validator agent; bản thô giữ 3 tầng Phạm vi, Khi được gọi, bảng Report.
+  {
+    const raw = tplOf('agent');
+    ok(raw !== '', 'template agent đọc được qua mục lục');
+    const FILL = {
+      '<plugin>': 'demo', '<slug>': 'agent',
+      '<read-only|write>': 'write',
+      '<Read, Edit, Write, Bash, Grep, Glob, Skill>': 'Read, Edit, Write, Bash, Grep, Glob, Skill',
+      '<skill-1>': 'git-workflow', '<skill-2>': 'principles',
+      '<n>': '30',
+      '<glob/**>': 'src/**',
+      '<Vai trò một câu, ≤ 200 ký tự>': 'Sửa mẫu trong một thư mục được giao',
+      '<điều kiện gọi agent>': 'workflow cần một bước sửa mẫu',
+    }; // placeholder còn lại (đầu vào, bước, dòng Report) điền 'mẫu'.
+    const filled = stripTemplateHeader(raw).replace(/<[^<>\n]+>/g, (p) => FILL[p] ?? 'mẫu');
+    const fm = parseFrontmatter(filled);
+    ok(fm.meta.name === 'demo-agent', 'template agent: frontmatter đọc được ở dòng 1 sau khi bỏ header');
+    ok(parseFrontmatter(raw).meta.name === '<plugin>-<slug>', 'template agent: frontmatter đọc được khi header còn nguyên');
+    const agent = { mode: fm.meta.mode, skills: splitList(fm.meta.skills), tools: splitList(fm.meta.tools), writeScope: splitList(fm.meta.writeScope) };
+    ok(agent.tools.length > 0 && agent.writeScope.length > 0, 'template agent (đã điền): khai tools và writeScope');
+    const tErrs = checkAgentTools(agent);
+    ok(tErrs.length === 0, `template agent (đã điền) PASS checkAgentTools${tErrs.length ? ' — ' + tErrs.join('; ') : ''}`);
+    const dErrs = checkAgentDescription(fm.meta.description ?? '');
+    ok(dErrs.length === 0, `template agent (đã điền) PASS checkAgentDescription${dErrs.length ? ' — ' + dErrs.join('; ') : ''}`);
+    const kErrs = checkSourceKeys('agent', fm.meta);
+    ok(Object.keys(fm.meta).length > 0 && kErrs.length === 0, `template agent: khoá frontmatter trong allowlist${kErrs.length ? ' — ' + kErrs.join('; ') : ''}`);
+    for (const h of ['Vai trò', 'Phạm vi', 'Quy trình', 'Report trả về']) ok(fm.body.includes(`## ${h}`), `template agent (đã điền): có heading "## ${h}"`);
+    const section = (h) => (raw.split(new RegExp(`^## ${h}\s*$`, 'm'))[1] ?? '').split(/^## /m)[0];
+    const scope = section('Phạm vi');
+    for (const t of ['**Luôn làm:**', '**Hỏi trước:**', '**Không bao giờ:**']) ok(scope.includes(t), `template agent: Phạm vi có tầng ${t}`);
+    const proc = section('Quy trình');
+    ok(proc.trimStart().startsWith('Khi được gọi:'), 'template agent: Quy trình mở bằng "Khi được gọi:"');
+    ok(/chạy[^\n]*→[^\n]*sửa[^\n]*→[^\n]*chạy/i.test(proc), 'template agent: Quy trình có bước kiểm chứng chạy → sửa → chạy lại');
+    const rep = section('Report trả về');
+    for (const r of ['Kết quả', 'Evidence', 'File đã đổi', 'Rủi ro còn lại']) ok(rep.includes(`| ${r} |`), `template agent: Report có dòng "| ${r} |"`);
   }
 
   // 4. Chính skill artifact-templates qua validator skill.

@@ -19,6 +19,7 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 |---|---|---|---|
 | workflow | [workflow.template.md](references/workflow.template.md) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
 | skill | [skill.template.md](references/skill.template.md) | `cli/lib/conventions.mjs` → `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys` | Anthropic skill best practices; agentskills.io |
+| agent | [agent.template.md](references/agent.template.md) | `cli/lib/conventions.mjs` → `checkAgentTools`, `checkAgentDescription` | Claude Code subagents; GitHub agents.md (2025-11) |
 
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.
 
@@ -54,3 +55,5 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
   rollback, Definition of Done, `workflow_result`.
 - [references/skill.template.md](references/skill.template.md): khung SKILL.md (frontmatter, checklist quy trình, vòng
   validate → sửa, ranh giới an toàn, Verification, bản đồ tài liệu).
+- [references/agent.template.md](references/agent.template.md): khung agent (frontmatter `tools`/`writeScope`, Phạm vi 3 tầng,
+  `Khi được gọi:` + bước kiểm chứng, bảng Report trả về).
