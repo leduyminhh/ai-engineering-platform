@@ -1,4 +1,4 @@
-// Pin: chuẩn tài liệu superpowers (docs/requests/2026-10-20-superpowers-docs-standard). Task 1: script check-request.mjs (AC4.1–AC4.3). Task 2: baseline (AC1.1–AC1.4).
+// Pin: chuẩn tài liệu superpowers (docs/requests/2026-10-20-superpowers-docs-standard). Task 1: script check-request.mjs (AC4.1–AC4.3). Task 2: baseline (AC1.1–AC1.4). Task 3: skill engineering (AC3.1, AC3.3).
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, pathToFileURL } = ctx;
 
@@ -85,5 +85,23 @@ export default async function run({ ok, ctx }) {
       && sp.includes('never create a second folder'), 'AC1.4: baseline có bảng bộ nhớ + quy tắc resume');
     ok(sp.includes('only when it contains `design.md`') && sp.includes('`artifact-templates`')
       && sp.includes('check-request.mjs'), 'P1/P3: baseline trỏ template core + script kiểm tra');
+  }
+
+  // AC3.1, AC3.3: skill engineering dùng ID AC, không dựng khung plan.md; task-breakdown dùng lại ID của nguồn
+  {
+    const ENG = path.join(REPO_ROOT, 'plugins', 'engineering');
+    const SW = path.join(ENG, 'skills', 'engineering-spec-writing');
+    const r = (p) => fs.readFileSync(p, 'utf8');
+    const analyst = path.join(ENG, 'agents', 'engineering-spec-analyst.md');
+    ok(r(path.join(SW, 'SKILL.md')).includes('`AC<n>.<m>`') && r(path.join(SW, 'SKILL.md')).includes('check-request.mjs'),
+      'AC3.1: spec-writing dùng ID AC + gọi check-request');
+    for (const p of [path.join(SW, 'SKILL.md'), path.join(SW, 'references', 'checklist.md'), analyst]) {
+      ok(!r(p).includes('khung `plan.md`'), `AC3.1: ${path.basename(p)} không còn dựng khung plan.md`);
+    }
+    ok(r(analyst).includes('design.md'), 'AC3.1: spec-analyst liệt kê design.md');
+    const TB = path.join(ENG, 'skills', 'engineering-task-breakdown');
+    ok(r(path.join(TB, 'references', 'analysis.md')).includes('dùng lại nguyên ID'), 'AC3.3: dùng lại ID AC của nguồn');
+    ok(/không có `requirement\.md`.*`design\.md`/s.test(r(path.join(TB, 'SKILL.md'))),
+      'AC3.3: đọc AC từ design.md khi không có requirement.md');
   }
 }

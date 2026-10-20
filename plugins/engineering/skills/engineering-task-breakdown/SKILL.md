@@ -42,7 +42,7 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
 
 1. **Nhận diện input.**
    Xác định dạng input (yêu cầu thô / use case / ARD / `requirement.md`, có thể nhiều nguồn) theo
-   [references/analysis.md](references/analysis.md). Có `requirement.md` → dùng làm nguồn chính. Chạm
+   [references/analysis.md](references/analysis.md). Có `requirement.md` → dùng làm nguồn chính; không có `requirement.md` mà có `design.md` → `design.md` là nguồn chính (đọc AC ở mục Tiêu chí chấp nhận). Chạm
    **ngưỡng mơ hồ** (không trích được use case nào có actor + mục tiêu, HOẶC không có AC đo được) → DỪNG, đề nghị
    chạy `engineering-spec-writing` trước.
 

@@ -14,7 +14,7 @@ vào đúng cấu trúc tài liệu của project, và ghi ADR cho các quyết 
 
 ## Phạm vi
 
-- Được: tạo/sửa file trong `docs/requests/<ngày>-<slug>/` (requirement.md + plan.md; `tasks.md` + `tasks.csv`/`tasks.xlsx` khi được yêu cầu tách task), `docs/decisions/`
+- Được: tạo/sửa file trong `docs/requests/<ngày>-<slug>/` (requirement.md, design.md khi có thiết kế; `tasks.md` + `tasks.csv`/`tasks.xlsx` khi được yêu cầu tách task), `docs/decisions/`
   (ADR); đọc `project-knowledge/`, `docs/decisions/`, `docs/contracts/` làm nguồn tham chiếu.
 - Không được: ghi ngoài `docs/` (không sinh code, không đụng CLI/adapter/engine); phân rã task khi người dùng
   chưa yêu cầu; tự chốt Status của một ADR quyết định lớn thay người dùng (chỉ đề xuất, `Status: Proposed` cho tới
@@ -29,8 +29,8 @@ vào đúng cấu trúc tài liệu của project, và ghi ADR cho các quyết 
 2. Khảo sát/làm rõ theo bộ câu hỏi của skill (mục tiêu & success criteria, actors, phạm vi & out-of-scope,
    luồng chính + edge case, NFR, ràng buộc & giả định, tiêu chí chấp nhận); hỏi từng câu khi thiếu, đánh dấu
    `[giả định]` khi phải suy đoán.
-3. Viết spec vào `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md` (+ khung `plan.md`) theo
-   `references/spec-structure.md`; acceptance criteria đo được (Given/When/Then hoặc tiêu chí kiểm được).
+3. Viết spec vào `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md` (+ `design.md` khi có thiết kế) theo
+   `references/spec-structure.md`; acceptance criteria đo được (Given/When/Then hoặc tiêu chí kiểm được), mỗi AC mang ID `AC<n>.<m>`.
 4. Cần diagram minh hoạ (flow/ERD/sequence/kiến trúc) trong spec: đọc skill `engineering-diagram`, chọn đúng
    loại rồi sinh PlantUML renderable, nhúng/liên kết vào spec.
 5. Với mỗi quyết định thiết kế/nghiệp vụ đáng lưu phát sinh trong lúc viết spec: đọc skill `engineering-adr`,
@@ -44,7 +44,7 @@ vào đúng cấu trúc tài liệu của project, và ghi ADR cho các quyết 
 
 ## Report trả về
 
-- Danh sách file đã ghi trong `docs/` (`requirement.md`, `plan.md`, `tasks.md`, ADR, diagram nếu có) kèm tóm tắt nội
+- Danh sách file đã ghi trong `docs/` (`requirement.md`, `design.md`, `tasks.md`, ADR, diagram nếu có) kèm tóm tắt nội
   dung mỗi file.
 - Evidence mỗi bước verify theo dạng `command` (hành động kiểm chứng đã làm, vd `"đối chiếu spec với
   checklist references/checklist.md"`, `"đối chiếu ADR với template engineering-adr"`), `exit_code`,

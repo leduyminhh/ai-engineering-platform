@@ -194,7 +194,7 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
 - Modify `plugins/engineering/skills/engineering-task-breakdown/SKILL.md:44-45`: khi không có `requirement.md` thì `design.md` là nguồn chính.
 - Modify `test/content/18-superpowers-docs-standard.pin.mjs`.
 
-- [ ] **Step 1: Viết test đỏ.**
+- [x] **Step 1: Viết test đỏ.**
 
   ```js
   const SW = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-spec-writing');
@@ -211,10 +211,10 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
   ok(/không có `requirement\.md`.*`design\.md`/s.test(r(path.join(TB, 'SKILL.md'))), 'AC3.3: đọc AC từ design.md khi không có requirement.md');
   ```
 
-- [ ] **Step 2: Chạy để xác nhận đỏ.** Lệnh: `node test/validate.mjs --only 18-superpowers`. Kết quả mong đợi: FAIL ở AC3.1 và AC3.3.
-- [ ] **Step 3: Sửa các file** theo danh sách Files. Không đụng `description` và trigger.
-- [ ] **Step 4: Chạy để xác nhận xanh.** Lệnh: `node test/validate.mjs --only 18-superpowers --only 40-conv --only 13-task --only 14-task --only 17-legacy`. Kết quả mong đợi: 0 fail.
-- [ ] **Step 5: Commit** — `feat(engineering): use AC ids and drop plan skeleton in spec skills`
+- [x] **Step 2: Chạy để xác nhận đỏ.** Lệnh: `node test/validate.mjs --only 18-superpowers`. Kết quả mong đợi: FAIL ở AC3.1 và AC3.3.
+- [x] **Step 3: Sửa các file** theo danh sách Files. Không đụng `description` và trigger.
+- [x] **Step 4: Chạy để xác nhận xanh.** Lệnh: `node test/validate.mjs --only 18-superpowers --only 40-conv --only 13-task --only 14-task --only 17-legacy`. Kết quả mong đợi: 0 fail.
+- [x] **Step 5: Commit** — `feat(engineering): use AC ids and drop plan skeleton in spec skills`
 
 ---
 
