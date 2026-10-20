@@ -15,7 +15,7 @@ invoke: per-request
 <!-- artifact-template
 type: workflow
 version: 1
-validator: cli/lib/workflows.mjs → checkWorkflowBody, missingAnchors
+validator: cli/lib/workflows.mjs → checkWorkflowBody, missingAnchors (chỉ có trong repo aip)
 sources: Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt)
 Bỏ khối này khi chép template ra dùng.
 -->

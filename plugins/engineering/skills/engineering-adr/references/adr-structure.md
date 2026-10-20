@@ -7,6 +7,11 @@ Bám scaffold `docs/decisions/_TEMPLATE.md` — file này sinh từ template `ad
 `artifact-templates` (một nguồn, không dựng cấu trúc song song). Khung theo **MADR 4.0** (Markdown Architectural
 Decision Records) viết tiếng Việt; mục tùy chọn của MADR (Yếu tố quyết định, Thông tin thêm) có thể bỏ khi trống.
 
+**Project đã có `_TEMPLATE.md` cũ (ví dụ khung ADR cũ từ `aip init --full` bản trước):** `_TEMPLATE.md` có sẵn của
+project thắng — `init` không ghi đè nên file đó là khung project đang dùng. Nếu nó khác `adr.template.md` của
+`artifact-templates`, vẫn viết theo `_TEMPLATE.md` của project, nêu chỗ khác trong báo cáo và gợi ý người dùng cập
+nhật; KHÔNG tự ghi đè `_TEMPLATE.md`. Chỉ khi project chưa có `_TEMPLATE.md` mới dùng khung MADR của core.
+
 ## Các mục của ADR
 
 1. **Tiêu đề** — `# ADR-<số>: <tiêu đề quyết định>`. Tiêu đề là **quyết định**, không phải chủ đề

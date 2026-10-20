@@ -10,7 +10,7 @@ invoke: per-request
 <!-- artifact-template
 type: skill
 version: 2
-validator: cli/lib/conventions.mjs → checkSkillBody, checkDescription, checkDescriptionStyle, checkSourceKeys
+validator: cli/lib/conventions.mjs → checkSkillBody, checkDescription, checkDescriptionStyle, checkSourceKeys (chỉ có trong repo aip)
 sources: Anthropic skill best practices; agentskills.io
 Bỏ khối này khi chép template ra dùng.
 -->

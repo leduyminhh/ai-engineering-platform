@@ -33,6 +33,8 @@ người giữ chốt: **duyệt và chốt Status** trước khi ADR được c
 - **Ghi hệ quả trung thực** — nêu cả tiêu cực + **residual risk**; ngôn ngữ đo được, KHÔNG tuyên bố "đảm bảo /
   loại bỏ / chặn triệt để".
 - Bám `docs/decisions/_TEMPLATE.md` và **convention đánh số** hiện có; KHÔNG dựng cấu trúc tài liệu song song.
+  `_TEMPLATE.md` có sẵn của project thắng template core: nếu khác `adr.template.md` của `artifact-templates` thì nêu
+  trong báo cáo và gợi ý cập nhật, KHÔNG ghi đè (chi tiết ở references/adr-structure.md).
 - Defer `project-knowledge/` (skill init lo); docs-only, không đụng CLI/adapter/engine.
 - Con người **duyệt** ADR và **chốt Status** trước khi coi là quyết định chính thức.
 

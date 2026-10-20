@@ -234,7 +234,7 @@ Scaffold coi là đúng khi:
 ## References
 
 - [ARD.md](ARD.md) — Dependency Rule, DDD tactical, checklist review PR (mục 7).
-- Ghi **lựa chọn kiến trúc này thành ADR** (Nygard) trong `docs/decisions/` — vì sao chọn Hexagonal + DDD cho BC này, phương án đã cân nhắc, hệ quả.
+- Ghi **lựa chọn kiến trúc này thành ADR** (theo `docs/decisions/_TEMPLATE.md`) trong `docs/decisions/` — vì sao chọn Hexagonal + DDD cho BC này, phương án đã cân nhắc, hệ quả.
 - import-linter — <https://import-linter.readthedocs.io>: fitness function ép chiều import (tương đương ArchUnit; Ford/Parsons/Kua, *Building Evolutionary Architectures*).
 
 ## Related

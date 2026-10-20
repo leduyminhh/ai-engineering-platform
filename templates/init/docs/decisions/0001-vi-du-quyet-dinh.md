@@ -25,7 +25,7 @@ build/test/lint rõ, và tách tầng tài liệu khỏi tầng mã nguồn.
 
 Chọn phương án "một root `src/` + mỗi module một thư mục con tự chứa", vì rõ ràng và dễ scope.
 
-- Root mã nguồn: <`src/` hoặc `apps/`+`packages/`>.
+- Root mã nguồn: <`src/`; đổi thành `apps/`+`packages/` nếu project là monorepo>.
 - Mỗi module là thư mục con tự chứa; code dùng chung ở `<root>/shared/`.
 - Module chỉ giao tiếp qua API công khai hoặc shared (no reach-in). Chi tiết: project-knowledge/source-structure.md.
 

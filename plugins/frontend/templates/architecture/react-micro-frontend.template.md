@@ -379,7 +379,7 @@ Scaffold coi là đúng khi:
 
 ## References
 
-- Ghi **lựa chọn Micro-Frontend thành ADR** (Nygard) ở `docs/decisions/`: vì sao tách app + deploy độc lập,
+- Ghi **lựa chọn Micro-Frontend thành ADR** (theo `docs/decisions/_TEMPLATE.md`) ở `docs/decisions/`: vì sao tách app + deploy độc lập,
   phương án cân nhắc (một app FSD vs micro-FE), monorepo vs poly-repo, hệ quả.
 - Module Federation — cơ chế ghép runtime (host `remotes` / remote `exposes` / `shared` singleton). Trên Vite:
   `@module-federation/vite` (chính chủ), `@originjs/vite-plugin-federation` (biến thể cũ); nhánh Rspack/webpack

@@ -30,6 +30,8 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`.
 - Acceptance criteria phải **đo được** (Given/When/Then hoặc tiêu chí kiểm được); ngôn ngữ đo được, KHÔNG
   tuyên bố "đảm bảo / loại bỏ rủi ro / chặn triệt để".
 - Bám scaffold `docs/requests/_TEMPLATE` + `docs/decisions/_TEMPLATE.md`; KHÔNG dựng cấu trúc tài liệu song song.
+  `_TEMPLATE` có sẵn của project thắng template core: nếu khác template của `artifact-templates` thì nêu trong báo cáo
+  và gợi ý cập nhật, KHÔNG ghi đè (chi tiết ở references/spec-structure.md).
 - Defer `project-knowledge/` + `code-convention.md` (skill init lo); docs-only, không đụng CLI/adapter/engine.
 - Con người **duyệt** spec trước khi dùng làm nguồn cho plan/triển khai.
 

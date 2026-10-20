@@ -61,6 +61,11 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
 
 ## Map vào `_TEMPLATE` (requirement.md + plan.md)
 
+**Project đã có `docs/requests/_TEMPLATE/` cũ (ví dụ `plan.md` kiểu Phase từ `aip init --full` bản trước):**
+`_TEMPLATE` có sẵn của project thắng — `init` không ghi đè. Nếu nó khác template của `artifact-templates`, vẫn dựng
+khung theo `_TEMPLATE` của project, nêu chỗ khác trong báo cáo và gợi ý cập nhật; KHÔNG tự ghi đè `_TEMPLATE`.
+Hai gạch dưới đây áp dụng khi project chưa có `_TEMPLATE` hoặc `_TEMPLATE` đã trùng template core.
+
 - **`requirement.md`** giữ 4 heading gốc (`Yêu cầu gốc`, `Bối cảnh`, `Ràng buộc`, `Tiêu chí chấp nhận`) và
   **thêm** các mục 3–11 ở trên dưới heading phù hợp (ví dụ NFR nằm trong `Ràng buộc`; Mục tiêu/Phạm
   vi/Actors/Functional/Điểm chạm data/Rủi ro thêm thành mục mới). Không đổi tên 4 heading gốc.

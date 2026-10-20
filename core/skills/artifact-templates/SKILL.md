@@ -17,9 +17,9 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 
 | Loại | Template | Validator | Nguồn |
 |---|---|---|---|
-| workflow | [workflow.template.md](references/workflow.template.md) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
-| skill | [skill.template.md](references/skill.template.md) | `cli/lib/conventions.mjs` → `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys` | Anthropic skill best practices; agentskills.io |
-| agent | [agent.template.md](references/agent.template.md) | `cli/lib/conventions.mjs` → `checkAgentTools`, `checkAgentDescription` | Claude Code subagents; GitHub agents.md (2025-11) |
+| workflow | [workflow.template.md](references/workflow.template.md) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` (chỉ có trong repo aip) | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
+| skill | [skill.template.md](references/skill.template.md) | `cli/lib/conventions.mjs` → `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys` (chỉ có trong repo aip) | Anthropic skill best practices; agentskills.io |
+| agent | [agent.template.md](references/agent.template.md) | `cli/lib/conventions.mjs` → `checkAgentTools`, `checkAgentDescription` (chỉ có trong repo aip) | Claude Code subagents; GitHub agents.md (2025-11) |
 | requirement | [requirement.template.md](references/requirement.template.md) | chưa có | EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
 | design | [design.template.md](references/design.template.md) | chưa có | superpowers:brainstorming (design doc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
 | plan | [plan.template.md](references/plan.template.md) | chưa có | superpowers:writing-plans (header bắt buộc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
@@ -28,6 +28,8 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | project-knowledge | [project-knowledge/](references/project-knowledge/) | chưa có | Chuyển nguyên từ templates/init/project-knowledge (giữ nội dung); tech-stack.yml không có khối header |
 
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.
+Validator ghi `chỉ có trong repo aip` hoặc `chỉ có khi cài plugin …` thì chỉ chạy được khi file đó tồn tại; không có thì áp
+dòng trên.
 Dòng có Template là thư mục (`project-knowledge/`): mỗi file `.md` bên trong có khối header riêng; `tech-stack.yml` là YAML
 nên không có khối header, nguồn của nó ghi ở cột Nguồn.
 
@@ -37,8 +39,9 @@ nên không có khối header, nguồn của nó ghi ở cột Nguồn.
    tự suy ra khung.
 2. **Mở template** đúng file trong cột Template; chỉ nạp file của loại đang cần.
 3. **Điền** placeholder `<…>` bằng nội dung thật. Giữ nguyên tên heading, tên trường và thứ tự mà validator đọc.
-4. **Chạy validator** ở cột Validator nếu có; lỗi → sửa nội dung rồi chạy lại tới khi sạch. Validator `chưa có` →
-   tự đối chiếu heading với template và nói rõ chưa kiểm bằng máy.
+4. **Chạy validator** ở cột Validator nếu có; lỗi → sửa nội dung rồi chạy lại tới khi sạch. Validator `chưa có`, hoặc
+   validator `chỉ có trong repo aip` mà project hiện tại không có file đó → bỏ qua bước chạy, tự đối chiếu heading và
+   mẫu dòng với template, và nói rõ chưa kiểm bằng máy.
 5. **Bỏ khối `<!-- artifact-template … -->`** khỏi bản đã điền; frontmatter (nếu có) giữ nguyên ở dòng 1.
 
 Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngược lại nằm ở đầu file.
@@ -54,7 +57,7 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
 ## Verification (trước khi báo hoàn thành)
 
 - Artifact đã điền không còn placeholder `<…>` và không còn khối `artifact-template`.
-- Validator của loại đó đã chạy và sạch, hoặc đã ghi rõ loại đó chưa có validator.
+- Validator của loại đó đã chạy và sạch, hoặc đã ghi rõ loại đó chưa có validator hoặc validator không có trong project này.
 - Frontmatter (nếu có) vẫn ở dòng 1 và đọc được.
 
 ## Bản đồ tài liệu

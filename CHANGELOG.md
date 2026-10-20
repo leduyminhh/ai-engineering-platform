@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `core/artifact-templates` skill is the single source of artifact templates, with 9 templates (workflow, skill,
+  agent, requirement, design, plan, task, adr, project-knowledge). `SKILL.md` is the index (type, template,
+  validator, sources); each template starts with an `artifact-template` header block. Validators that live only in
+  this repo are marked as such, and the skill falls back to a manual check when they are absent. The skill is part
+  of the Cowork pack (`plugins/_cowork.json`) because `engineering-task-breakdown` and the ADR/spec skills point to it.
+
 - `core/git-release` skill runs Gitflow release and hotfix locally: `release start|finish`, `hotfix start|finish`,
   semver from Conventional Commits (`scripts/next-version.mjs`, picks the highest semver tag so a tag on the
   production merge commit is found from `develop`), branch roles confirmed at every `start`, promotion through
@@ -100,6 +106,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   appear twice).
 
 ### Changed
+
+- `aip init --full` and the `*-init` skills (backend, frontend, data) read `project-knowledge/`,
+  `docs/requests/_TEMPLATE/` and `docs/decisions/_TEMPLATE.md` from `core/artifact-templates` instead of keeping
+  their own copies under `templates/init`.
+- The ADR template follows MADR 4.0 in Vietnamese (status, date, deciders, context, decision drivers, options,
+  outcome with consequences and confirmation, pros and cons per option) instead of Nygard; `engineering-adr`, the
+  example ADRs and the 9 architecture templates were updated to match.
+- The shared `tasks.md` template of `engineering-task-breakdown` moved to `core/artifact-templates`
+  (`task.template.md`); the BE/FE task templates stay in the skill.
+- Existing projects: `_TEMPLATE` files created by an older `aip init --full` (old-style ADR, Phase-style
+  `plan.md`) are kept because `init` never overwrites. `engineering-adr` and `engineering-spec-writing` follow the
+  project's own `_TEMPLATE`, report where it differs from the core template and suggest updating it.
 
 - Codex skills now install to `<root>/.agents/skills/` (global: `~/.agents/skills/`), the path the current Codex docs
   list; Codex agents stay in `.codex/agents/`. Upgrade note: run `aip update` (add `-g` for a global install) or reinstall — the install

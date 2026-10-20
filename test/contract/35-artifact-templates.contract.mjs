@@ -1,6 +1,7 @@
 // Contract artifact-templates: helper khối header, mục lục skill core `artifact-templates` và từng template qua validator của chính nó.
 import { TEMPLATES_DIR, templateHeader, stripTemplateHeader, templateIndex } from '../../cli/lib/templates.mjs';
 import { splitList } from '../../cli/lib/plugins.mjs';
+import { coworkSkillIds } from '../../cli/lib/pack.mjs';
 
 export default async function run({ ok, ctx }) {
   const { fs, path, pathToFileURL, CORE_DIR, PLUGINS_DIR, core, plugins, workflows, allAgents, parseFrontmatter, checkWorkflowBody, missingAnchors, checkSourceKeys, checkSkillBody, checkDescription, checkDescriptionStyle, checkAgentDescription, checkAgentTools } = ctx;
@@ -141,7 +142,7 @@ export default async function run({ ok, ctx }) {
     const kErrs = checkSourceKeys('agent', fm.meta);
     ok(Object.keys(fm.meta).length > 0 && kErrs.length === 0, `template agent: khoá frontmatter trong allowlist${kErrs.length ? ' — ' + kErrs.join('; ') : ''}`);
     for (const h of ['Vai trò', 'Phạm vi', 'Quy trình', 'Report trả về']) ok(fm.body.includes(`## ${h}`), `template agent (đã điền): có heading "## ${h}"`);
-    const section = (h) => (raw.split(new RegExp(`^## ${h}\s*$`, 'm'))[1] ?? '').split(/^## /m)[0];
+    const section = (h) => (raw.split(new RegExp(`^## ${h}\\s*$`, 'm'))[1] ?? '').split(/^## /m)[0];
     const scope = section('Phạm vi');
     for (const t of ['**Luôn làm:**', '**Hỏi trước:**', '**Không bao giờ:**']) ok(scope.includes(t), `template agent: Phạm vi có tầng ${t}`);
     const proc = section('Quy trình');
@@ -287,5 +288,22 @@ export default async function run({ ok, ctx }) {
       ok(stErrs.length === 0, `artifact-templates: description đúng mẫu${stErrs.length ? ' — ' + stErrs.join('; ') : ''}`);
       ok(s.body.split('\n').length < 500, 'artifact-templates: SKILL.md dưới 500 dòng');
     }
+  }
+
+  // 5. Cowork: zip chỉ chứa skill có trong _cowork.json, nên skill nhắc artifact-templates cần core:artifact-templates đi cùng.
+  {
+    const ids = coworkSkillIds();
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = path.join(dir, e.name);
+      return e.isDirectory() ? walk(p) : (/\.(md|mjs)$/.test(e.name) ? [p] : []);
+    });
+    const dependents = ids.filter((id) => id !== 'core:artifact-templates').filter((id) => {
+      const [plugin, skill] = id.split(':');
+      const dir = plugin === 'core' ? path.join(CORE_DIR, 'skills', skill) : path.join(PLUGINS_DIR, plugin, 'skills', skill);
+      return fs.existsSync(dir) && walk(dir).some((f) => read(f).includes('artifact-templates'));
+    });
+    ok(dependents.length > 0, 'Cowork: có skill nhắc artifact-templates (điều kiện của kiểm tra bên dưới không rỗng)');
+    ok(ids.includes('core:artifact-templates'),
+      `Cowork: core:artifact-templates có trong _cowork.json (cần cho ${dependents.join(', ')})`);
   }
 }

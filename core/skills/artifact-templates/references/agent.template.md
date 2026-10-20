@@ -12,7 +12,7 @@ writeScope:
 <!-- artifact-template
 type: agent
 version: 1
-validator: cli/lib/conventions.mjs → checkAgentTools, checkAgentDescription
+validator: cli/lib/conventions.mjs → checkAgentTools, checkAgentDescription (chỉ có trong repo aip)
 sources: Claude Code subagents; GitHub agents.md (2025-11)
 Bỏ khối này khi chép template ra dùng.
 -->

@@ -338,7 +338,7 @@ Scaffold coi là đúng khi:
 
 ## References
 
-- Ghi **lựa chọn kiến trúc này thành ADR** (Nygard) ở `docs/decisions/` — vì sao Feature-Based, phương án đã
+- Ghi **lựa chọn kiến trúc này thành ADR** (theo `docs/decisions/_TEMPLATE.md`) ở `docs/decisions/` — vì sao Feature-Based, phương án đã
   cân nhắc (Layered nhẹ hơn, FSD nặng hơn), hệ quả.
 - **bulletproof-react** (Alan Alickovic) — mô hình gốc của template này:
   - Repo: <https://github.com/alan2207/bulletproof-react>
