@@ -12,7 +12,7 @@ export default async function run({ ok, ctx }) {
       ...core.stages.map((s) => path.join(CORE_DIR, 'skills', s.id, 'SKILL.md')),
       ...plugins.flatMap((p) => p.stages.map((s) => path.join(PLUGINS_DIR, p.id, 'skills', s.id, 'SKILL.md'))),
       ...(workflows ? workflows.stages.map((s) => path.join(s.dir, 'WORKFLOW.md')) : []),
-      path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md'),
+      path.join(CORE_DIR, 'skills', 'artifact-templates', 'references', 'workflow.template.md'),
     ];
     for (const f of sources) {
       ok(!DEAD.test(fmOf(f)), `${path.relative(REPO_ROOT, f)}: frontmatter không còn pipeline/next/stageNumber`);
@@ -339,7 +339,7 @@ export default async function run({ ok, ctx }) {
       ...plugins.flatMap((p) => p.stages.map((s) => ['skill', path.join(PLUGINS_DIR, p.id, 'skills', s.id, 'SKILL.md')])),
       ...allAgents.map((a) => ['agent', a.file]),
       ...(workflows ? workflows.stages.map((s) => ['workflow', path.join(s.dir, 'WORKFLOW.md')]) : []),
-      ['workflow', path.join(REPO_ROOT, 'templates', 'workflows', 'workflow.template.md')],
+      ['workflow', path.join(CORE_DIR, 'skills', 'artifact-templates', 'references', 'workflow.template.md')],
     ];
     const bad = [];
     for (const [kind, file] of targets) {

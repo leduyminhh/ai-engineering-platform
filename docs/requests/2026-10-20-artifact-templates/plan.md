@@ -66,7 +66,7 @@
   - `export function templateIndex(skillMd: string): Array<{ type: string, file: string, validator: string, sources: string }>`: đọc bảng mục lục `| Loại | Template | Validator | Nguồn |` trong `SKILL.md`. `file` là đường dẫn tương đối trong link, ví dụ `references/workflow.template.md`.
 - Produces (contract 35): duyệt `templateIndex(...)`. Với mỗi dòng, kiểm: file tồn tại, `templateHeader` khác `null`, và `type` trùng cột Loại. Task sau chỉ cần thêm dòng vào mục lục và thêm block kiểm riêng.
 
-- [ ] **Step 1: Viết test đỏ** trong `35-artifact-templates.contract.mjs`:
+- [x] **Step 1: Viết test đỏ** trong `35-artifact-templates.contract.mjs`:
   - **Unit** `templateHeader` và `stripTemplateHeader`, gom thành một test tham số hóa với 4 trường hợp:
     - Header ở đầu file.
     - Header sau frontmatter.
@@ -81,8 +81,8 @@
     - Qua `checkSkillBody`.
     - Qua `checkDescription` (`knownIds` lấy từ `ctx`).
     - Qua `checkDescriptionStyle`.
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only 35-artifact --only 00-unit --only 40-conv --only 50-workflows`. Expected: FAIL vì chưa có `templates.mjs` / `SKILL.md` / file template mới.
-- [ ] **Step 3: Hiện thực.**
+- [x] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only 35-artifact --only 00-unit --only 40-conv --only 50-workflows`. Expected: FAIL vì chưa có `templates.mjs` / `SKILL.md` / file template mới.
+- [x] **Step 3: Hiện thực.**
   - Viết `templates.mjs`.
   - Viết `SKILL.md`:
     - Frontmatter: `name: artifact-templates`, `order: 4`, `title`, `runsIn: plan`, `invoke: per-request`.
@@ -91,8 +91,8 @@
     - Bảng mục lục lúc này chỉ có dòng workflow.
   - `git mv` file template workflow sang `references/` và thêm khối header.
   - Sửa 3 test và CLAUDE.md.
-- [ ] **Step 4: Chạy, xác nhận xanh** — cùng lệnh ở Step 2 → 0 fail.
-- [ ] **Step 5: Commit** — `feat(core): add artifact-templates skill with workflow template`
+- [x] **Step 4: Chạy, xác nhận xanh** — cùng lệnh ở Step 2 → 0 fail.
+- [x] **Step 5: Commit** — `feat(core): add artifact-templates skill with workflow template`
 
 ---
 
