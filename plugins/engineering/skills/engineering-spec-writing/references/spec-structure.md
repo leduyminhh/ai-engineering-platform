@@ -67,6 +67,8 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
 **Project đã có `docs/requests/_TEMPLATE/` cũ (ví dụ `plan.md` kiểu Phase từ `aip init --full` bản trước):**
 `_TEMPLATE` có sẵn của project thắng — `init` không ghi đè. Nếu nó khác template của `artifact-templates`, vẫn dựng
 khung theo `_TEMPLATE` của project, nêu chỗ khác trong báo cáo và gợi ý cập nhật; KHÔNG tự ghi đè `_TEMPLATE`.
+Ngoại lệ `design.md`/`plan.md`: theo baseline `AGENTS.md` — `_TEMPLATE` cũ không có `design.md` thì hai file này theo
+template core, còn `requirement.md` vẫn theo `_TEMPLATE` cũ.
 Hai gạch dưới đây áp dụng khi project chưa có `_TEMPLATE` hoặc `_TEMPLATE` đã trùng template core; `_TEMPLATE` gồm cả
 `design.md` bên cạnh `requirement.md` và `plan.md`.
 

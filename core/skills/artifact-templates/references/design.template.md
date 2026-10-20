@@ -22,6 +22,8 @@ Bỏ khối này khi chép template ra dùng.
 <...>
 ## Ràng buộc
 <...>
+## Không đổi (bugfix)
+<chỉ với bugfix: hành vi phải giữ nguyên; bỏ mục này nếu không phải bugfix>
 ## Kiểm thử
 <AC nào được kiểm ở tầng nào>
 ## Để builder quyết

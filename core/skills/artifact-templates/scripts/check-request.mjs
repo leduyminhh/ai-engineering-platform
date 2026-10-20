@@ -13,7 +13,7 @@ const AC_HEADING = 'tiêu chí chấp nhận';
 
 // Trả về mảng dòng đã chuẩn hóa; dòng trong khối ``` hoặc ~~~ thành '' để giữ nguyên số dòng gốc.
 function linesOf(text) {
-  const raw = text.replace(/^﻿/, '').normalize('NFC').replace(/\r\n?/g, '\n').split('\n');
+  const raw = text.replace(/^\uFEFF/, '').normalize('NFC').replace(/\r\n?/g, '\n').split('\n');
   let fenced = false;
   return raw.map((l) => {
     if (/^\s*(```|~~~)/.test(l)) { fenced = !fenced; return ''; }
