@@ -25,7 +25,8 @@ UI với API thật (tiền đề của e2e xuyên BE); `backend-api-contract` c
   `engineering-spec-writing` trước.
 - Màn hình của luồng đã nối API thật. Chưa nối → xem `frontend-data-integration`; luồng xuyên BE chưa chạy được
   thì dừng ở cổng E1.
-- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **duyệt bảng luồng ở E2** và **duyệt diff trước khi commit**.
+- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **duyệt bảng luồng ở E2** và **duyệt diff trước merge/push**
+  (protected branch: mỗi commit).
 
 ## Phạm vi
 
@@ -42,8 +43,8 @@ UI với API thật (tiền đề của e2e xuyên BE); `backend-api-contract` c
   tài khoản test).
 - KHÔNG tự cài `@playwright/test`, KHÔNG tải browser (`npx playwright install`) khi chưa hỏi (E-r7).
 - KHÔNG tự dựng hạ tầng BE/DB test; thiếu → `not_run` + lý do (cổng E1).
-- Làm trên branch riêng (không `main`/`master`/`dev`/`develop`); dừng cho người duyệt diff trước khi commit
-  (1 task = 1 commit).
+- Làm trên branch riêng (không `main`/`master`/`dev`/`develop`), 1 task = 1 commit; merge/push chỉ sau khi
+  con người duyệt toàn bộ diff branch.
 
 **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — bảng luồng, tiêu đề test, báo cáo, comment trong code sinh
 ra — viết **tiếng Việt CÓ DẤU** (UTF-8). Báo cáo bằng số đo được (lệnh đã chạy, exit code, số test xanh/đỏ); không

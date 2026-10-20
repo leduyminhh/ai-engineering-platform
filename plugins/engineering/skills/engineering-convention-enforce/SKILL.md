@@ -24,7 +24,8 @@ buộc; gọi khi cần ở bất kỳ giai đoạn nào cần kiểm/áp quy ư
 ## Ranh giới an toàn
 
 - **Read-only mặc định** — chỉ đọc + báo cáo; KHÔNG sửa file khi chưa được yêu cầu. Sửa hàng loạt chỉ khi
-  người dùng **yêu cầu rõ**, trong đúng scope đã chốt, và **con người duyệt diff** trước khi commit.
+  người dùng **yêu cầu rõ**, trong đúng scope đã chốt, và **con người duyệt diff** trước merge/push
+  (protected branch: mỗi commit).
 - **Nguồn chuẩn = `project-knowledge/code-convention.md` của project** (+ `source-structure.md` /
   `architecture.md` / lint config nếu có). **KHÔNG tự bịa/chế chuẩn.** Thiếu `code-convention.md` →
   **fail-loud**, đề nghị bổ sung hoặc chạy skill init trước; KHÔNG suy diễn chuẩn rồi âm thầm áp.

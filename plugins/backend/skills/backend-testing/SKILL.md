@@ -28,6 +28,7 @@ framework/DB** (nhanh, nhiều), còn adapter mới cần dependency thật (ít
 - Không đổi hành vi nghiệp vụ để "cho test xanh"; nếu test lộ bug thật → BÁO, để người quyết
   sửa code hay sửa kỳ vọng.
 - Mỗi task = 1 commit, DỪNG cho người **duyệt diff** trước khi commit; không push thẳng main.
+  Đây là chốt riêng của skill, áp cả trên feature branch.
 - **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — tên test, bảng phủ, báo cáo, commit
   message, comment trong file test — viết **tiếng Việt CÓ DẤU** (UTF-8). Comment chỉ giải thích
   *vì sao* (bất biến nghiệp vụ, cạm bẫy dễ tái phạm), không kể lại *cái gì* code đã nói.

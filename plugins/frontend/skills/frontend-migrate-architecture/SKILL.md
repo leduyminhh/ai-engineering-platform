@@ -39,7 +39,8 @@ KHÔNG nằm trong chuỗi bắt buộc; gọi khi cần.
   để biết hiện trạng đã tuyên bố; skill CHỈ cung cấp bộ đích mới, **KHÔNG ép** đổi — con người chốt đích.
 
 ## Ranh giới an toàn (CLAUDE.md)
-Không push thẳng main. Mỗi bước = 1 commit logic, DỪNG cho người duyệt diff trước khi commit. **KHÔNG đổi
+Không push thẳng main. Mỗi bước = 1 commit logic, DỪNG cho người duyệt diff trước khi commit.
+Đây là chốt riêng của skill, áp cả trên feature branch. **KHÔNG đổi
 hành vi nghiệp vụ khi diff không thể hiện — đổi hành vi là bước TÁCH RIÊNG sau migrate.** Không đụng
 secret/config/CI infra ngoài cấu hình lint boundary. Cho phép code cũ/mới cùng tồn tại TẠM (barrel re-export)
 trong lúc migrate để giữ mỗi bước XANH. Defer `design-system.md` + `code-convention.md` của project tuyệt đối.

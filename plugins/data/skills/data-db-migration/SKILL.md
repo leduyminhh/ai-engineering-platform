@@ -34,8 +34,8 @@ hướng dẫn agent, KHÔNG phải công cụ tự chạy migration lên DB.
 - Không sửa file migration đã có trên base branch; không dùng `repair` / `clearChecksums` / `clean` để "cho qua".
 - Thao tác phá huỷ (drop cột/bảng, thu hẹp kiểu) chỉ sau xác nhận tường minh ở C2.
 - Không ghim version công cụ đè BOM khi không có ADR.
-- Làm trên branch riêng (không `main`/`master`/`dev`/`develop`); dừng cho người duyệt diff trước khi commit
-  (1 task = 1 commit).
+- Làm trên branch riêng (không `main`/`master`/`dev`/`develop`), 1 task = 1 commit; merge/push chỉ sau khi
+  con người duyệt toàn bộ diff branch.
 
 **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — bảng kiểm kê, bảng so sánh, kế hoạch migration, ADR, comment
 trong file migration sinh ra, báo cáo — viết **tiếng Việt CÓ DẤU** (UTF-8). Báo cáo bằng số đo được (lệnh đã chạy,
@@ -130,7 +130,8 @@ chạy ngoài transaction, migration bù nếu cần hoàn tác (Flyway forward-
 
 Phần còn lại của thay đổi đi qua skill chuyên trách, theo thứ tự: code dùng cột/bảng mới → `backend-implement`;
 integration test cho repository/query bị đụng → `backend-testing`; review query mới và index (thiếu index, index thừa,
-N+1) cùng SQL bù → `backend-code-review`; commit qua `core:git-workflow` sau khi người dùng duyệt diff.
+N+1) cùng SQL bù → `backend-code-review`; commit qua `core:git-workflow`, duyệt diff trước merge/push
+(protected branch: mỗi commit).
 
 ## Report trả về
 

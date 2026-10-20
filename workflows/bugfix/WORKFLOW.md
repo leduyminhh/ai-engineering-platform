@@ -169,6 +169,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** tóm tắt bug + root cause + fix, đề xuất commit message Conventional Commits (header EN, body
   VI); trình diff cho người dùng duyệt.
 - **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
+  Đây là chốt riêng của workflow, áp cả trên feature branch.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
 - **Gate:** người dùng duyệt diff.
 - **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước tương ứng, không commit tạm.

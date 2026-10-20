@@ -44,7 +44,7 @@ triệt để" — findings phản ánh **thời điểm quét** với dữ li�
 
 ## Cần người quyết
 - <danh sách item Propose/Defer chờ người: hotspot, bảo mật rủi ro cao, breaking-change, bump major, license>
-- Con người DUYỆT DIFF trước khi commit.
+- Con người DUYỆT DIFF trước merge/push (protected branch: mỗi commit).
 ```
 
 ## Quy tắc viết

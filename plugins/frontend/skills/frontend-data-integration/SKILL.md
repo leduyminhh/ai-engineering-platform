@@ -23,7 +23,8 @@ test (msw); `backend-api-contract` chốt và kiểm drift contract.
 - Project **đã chạy `frontend-init`** (có `project-knowledge/`: `architecture.md`, `code-convention.md`,
   `tech-stack.yml`) và đã có component cần nối. Thiếu → đề nghị chạy `frontend-init` / `frontend-implement` trước.
 - Contract OpenAPI đã có ở `docs/contracts/` (thường `openapi.json`). Chưa có → xem cổng I1.
-- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **chọn công cụ ở I2** và **duyệt diff trước khi commit**.
+- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **chọn công cụ ở I2** và **duyệt diff trước merge/push**
+  (protected branch: mỗi commit).
 
 ## Ranh giới an toàn (CLAUDE.md)
 
@@ -37,8 +38,8 @@ test (msw); `backend-api-contract` chốt và kiểm drift contract.
 - KHÔNG quyết định nơi lưu token hay luồng auth/refresh; chỉ map lỗi 401 thành trạng thái UI hoặc lỗi hook trả ra.
 - KHÔNG hardcode API key/base URL vào component hay hook; lấy từ cấu hình môi trường sẵn có của project.
 - KHÔNG thêm e2e (thuộc `frontend-e2e-testing`).
-- Làm trên branch riêng (không `main`/`master`/`dev`/`develop`); dừng cho người duyệt diff trước khi commit
-  (1 task = 1 commit).
+- Làm trên branch riêng (không `main`/`master`/`dev`/`develop`), 1 task = 1 commit; merge/push chỉ sau khi
+  con người duyệt toàn bộ diff branch.
 
 **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — bảng dò công cụ, kế hoạch, báo cáo, comment trong code
 sinh ra — viết **tiếng Việt CÓ DẤU** (UTF-8). Báo cáo bằng số đo được (lệnh đã chạy, exit code, số endpoint đã
@@ -105,7 +106,7 @@ presentational; presentational không biết đến hook hay HTTP.
 - `tsc --noEmit`, lint (gồm `eslint-plugin-boundaries` / Steiger của kiến trúc), build phải xanh.
 - Test bằng msw theo skill `frontend-testing`: mỗi container có test cho loading → success, lỗi 500 và trạng thái
   rỗng. Handler đặt theo endpoint thật ở segment `api` của slice.
-- Con người **duyệt diff** trước khi commit.
+- Con người **duyệt diff** trước merge/push (protected branch: mỗi commit).
 
 **Đỏ khi:** một lệnh đỏ → sửa trong đúng phạm vi; không nới test để qua.
 

@@ -49,4 +49,4 @@ thành thật phần bỏ qua/giả định. Ngôn ngữ đo được — mỗi 
 - [ ] Nêu rõ phần **bỏ qua verify** và lý do (vd CI không đủ hạ tầng boot → chạy phần chạy được + báo scope
       skip; không im lặng coi như đã phủ).
 - [ ] KHÔNG tuyên bố hoàn tất khi build/test/ranh giới chưa xanh.
-- [ ] **Con người duyệt diff** trước khi commit (ranh giới an toàn của khung).
+- [ ] **Con người duyệt diff** trước merge/push (protected branch: mỗi commit) — ranh giới an toàn của khung.

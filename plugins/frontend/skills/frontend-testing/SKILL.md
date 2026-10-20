@@ -28,6 +28,7 @@ trong `ui` ... test được bằng render + props". Test **hành vi người d�
 - Không đổi hành vi UI để "cho test xanh"; nếu test lộ bug thật (a11y, luồng lỗi) → BÁO, để người
   quyết sửa code hay sửa kỳ vọng.
 - Mỗi task = 1 commit, DỪNG cho người **duyệt diff** trước khi commit; không push thẳng main.
+  Đây là chốt riêng của skill, áp cả trên feature branch.
 - **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — mô tả `describe/it`, bảng phủ, báo cáo,
   commit message, comment trong file test — viết **tiếng Việt CÓ DẤU** (UTF-8). Comment chỉ giải
   thích *vì sao* (bất biến, cạm bẫy dễ tái phạm), không kể lại *cái gì* code đã nói.

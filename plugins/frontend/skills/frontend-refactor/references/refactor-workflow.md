@@ -42,8 +42,8 @@ Vòng lặp chính. Mỗi bước:
    Ưu tiên refactoring tự động của IDE (Rename/Extract Component/Extract Function) hơn sửa tay.
 3. Chạy `tsc` + test (gồm characterization) + lint + build. **Đỏ → sửa hoặc `git`-revert BƯỚC ĐÓ**,
    không đi tiếp; không dồn nhiều move rồi mới chạy.
-4. **1 bước = 1 commit.** DỪNG cho người **duyệt diff** trước commit (header ≤72, body tiếng Việt có
-   dấu, nói đúng một move). Không push thẳng main.
+4. **1 bước = 1 commit** (header ≤72, body tiếng Việt có dấu, nói đúng một move). Không push thẳng main;
+   con người **duyệt diff** trước merge/push (protected branch: mỗi commit).
 
 Ranh giới trong G2:
 - Phát hiện bug lúc dọn → GHI LẠI, KHÔNG sửa trong bước refactor (trộn dọn + sửa làm diff khó duyệt và

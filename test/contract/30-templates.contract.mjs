@@ -1,7 +1,7 @@
 // Contract templates: drift guard AGENTS.md và khung init dùng chung giữa CLI lẫn skill *-init.
 import { importsAgentsMd } from '../../cli/lib/managed-block.mjs';
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, PLUGINS_DIR, core, plugins, BUILD, claudeDir, claudeSkillDir } = ctx;
+  const { fs, path, REPO_ROOT, PLUGINS_DIR, core, plugins, BUILD, claudeDir, claudeSkillDir, listFilesRec } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 5. DRIFT GUARD: AGENTS.md (repo) == AGENTS.template.md (nguồn template)
@@ -59,10 +59,23 @@ export default async function run({ ok, ctx }) {
   }
 
   // 5d. DRIFT GUARD: AGENTS.md Safety chuyển chốt duyệt diff sang trước khi tích hợp; bản cũ còn sót ở tầng
-  // core (template init, principles, digest nhúng mọi skill) từng làm agent vẫn dừng ở mỗi commit.
-  for (const rel of ['templates/init/CLAUDE.md', 'core/principles/principles.md', 'adapters/_shared/lib.mjs']) {
-    const text = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
-    ok(!/duyệt diff trước khi\s+commit/i.test(text), `${rel}: không còn rule cũ "duyệt diff trước khi commit"`);
+  // core (template init, principles, digest nhúng mọi skill) và skill plugin từng làm agent vẫn dừng ở mỗi commit.
+  {
+    // Bản cũ có nhiều biến thể: in đậm, xuống dòng giữa câu, "trước commit" thiếu "khi", "DỪNG … duyệt diff".
+    const OLD_RULE = /duyệt[*\s]+diff(?:[*\s]+contract)?[*\s>]*\s+trước(?:\s+khi)?[\s>]+commit|dừng[^.\n]{0,40}duyệt[*\s]+diff/i;
+    for (const rel of ['templates/init/CLAUDE.md', 'core/principles/principles.md', 'adapters/_shared/lib.mjs']) {
+      const text = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
+      ok(!OLD_RULE.test(text), `${rel}: không còn rule cũ "duyệt diff trước khi commit"`);
+    }
+    // Skill giữ chốt dừng riêng có chủ đích cho thao tác rủi ro; skill ngoài danh sách phải theo rule chung.
+    const KEEP_STOP = new Set([
+      'backend/skills/backend-migrate-architecture', 'frontend/skills/frontend-migrate-architecture',
+      'backend/skills/backend-migrate-vault-consul', 'backend/skills/backend-testing', 'frontend/skills/frontend-testing',
+    ]);
+    const stale = listFilesRec(PLUGINS_DIR)
+      .filter((rel) => rel.endsWith('.md') && !KEEP_STOP.has(rel.split('/').slice(0, 3).join('/')))
+      .filter((rel) => OLD_RULE.test(fs.readFileSync(path.join(PLUGINS_DIR, rel), 'utf8')));
+    ok(stale.length === 0, `plugins: không còn rule cũ "duyệt diff trước commit" (${stale.join(', ')})`);
   }
 
   // 6. INIT skills ship AGENTS.template.md (CLI lẫn skill drop ra ./AGENTS.md)

@@ -37,7 +37,8 @@ Báo cáo xếp **fail trước warning trước info**, kèm phần **residual 
   3. **KHÔNG đổi hành vi nghiệp vụ** — enforce chỉ chỉnh tên/vị trí/quy ước, không sửa logic.
   4. Đổi tên/di chuyển phải **cập nhật mọi tham chiếu** (import, path, manifest/test-map) — nếu không chắc quét hết,
      nêu **residual risk** thay vì tuyên bố sạch.
-  5. **Con người duyệt diff** trước khi commit; không tự commit/push (theo ranh giới git của baseline).
+  5. **Con người duyệt diff** trước merge/push (protected branch: mỗi commit); không tự commit/push
+     (commit: nguyên tắc riêng plugin engineering; push: mục Safety của `AGENTS.md`).
 - **KHÔNG đổi convention để hợp thức hoá code.** Nếu code lệch vì *convention nên đổi*, đó là quyết định kiến trúc
   → dừng, trỏ `engineering-adr` để ghi quyết định + cập nhật `code-convention.md`, rồi enforce lại theo chuẩn mới.
 

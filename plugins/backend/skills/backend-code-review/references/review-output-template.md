@@ -50,5 +50,5 @@ việc nên route:
 ---
 
 > **READ-ONLY:** đây là nhận xét để **người quyết** hướng xử lý, mặc định KHÔNG kèm thay đổi code. Chỉ khi
-> người dùng yêu cầu rõ mới áp fix cho finding proven/rõ ràng/đúng scope, và vẫn DỪNG cho người duyệt diff
-> trước commit.
+> người dùng yêu cầu rõ mới áp fix cho finding proven/rõ ràng/đúng scope, và con người vẫn duyệt diff
+> trước merge/push (protected branch: mỗi commit).

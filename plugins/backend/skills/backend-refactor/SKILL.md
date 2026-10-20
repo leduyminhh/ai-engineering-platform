@@ -40,7 +40,8 @@ Dependency Rule của nó — refactor *trong* ranh giới, không dời ranh gi
   convention của project thắng sở thích cá nhân.
 - **Không tự mở rộng phạm vi.** Chỉ refactor đúng vùng người dùng nêu; thấy vùng khác cần dọn →
   đề xuất, không tự lan.
-- **Không push thẳng main.** Mỗi bước refactor = 1 commit; DỪNG cho người **duyệt diff** trước commit.
+- **Không push thẳng main.** Mỗi bước refactor = 1 commit; con người **duyệt diff** trước merge/push
+  (protected branch: mỗi commit).
 - **Ngôn ngữ (bắt buộc):** mọi đầu ra hướng người dùng — bảng move, đề xuất pattern, báo cáo, commit
   message — viết **tiếng Việt CÓ DẤU** (UTF-8).
 - **Ngôn ngữ đo được:** báo cáo bằng thứ đếm được (số move, `file:line`, kết quả build/test THẬT).
@@ -81,7 +82,7 @@ giữ dữ liệu)… Ưu tiên move gỡ được nhiều phức tạp/trùng l
   vừa sửa logic — nếu phát hiện bug lúc dọn, GHI LẠI và xử ở bước riêng (chưa có oracle; chạy
   `workflow-bugfix` để tái hiện rồi `backend-fix`).
 - Sau **mỗi** bước: build ✓ + test (gồm characterization) ✓ + lint ✓. Đỏ → sửa hoặc revert **bước
-  đó**, KHÔNG đi tiếp. 1 bước = 1 commit; DỪNG cho người duyệt diff.
+  đó**, KHÔNG đi tiếp. 1 bước = 1 commit.
 
 ### 4. Design pattern khi cần — HỎI trước khi áp pattern lớn — CỔNG G3
 - Chỉ cân nhắc pattern khi có **áp lực thiết kế cụ thể** (behavior variation, tạo object phức tạp,
@@ -96,7 +97,7 @@ giữ dữ liệu)… Ưu tiên move gỡ được nhiều phức tạp/trùng l
   DỪNG, phân tích, sửa; KHÔNG tuyên bố hoàn tất khi suite chưa xanh.
 - Có ArchUnit/import-linter → chạy để chứng minh boundary vẫn nguyên (refactor không rò tầng).
 - So sánh với characterization test: hành vi quan sát được KHÔNG đổi.
-- Con người **duyệt diff** trước khi commit/merge. Nêu residual risk + phần chưa soát.
+- Con người **duyệt diff** trước merge/push (protected branch: mỗi commit). Nêu residual risk + phần chưa soát.
 
 ## Bảng gate
 | # | Gate | Bước | Đỏ thì |
@@ -105,7 +106,7 @@ giữ dữ liệu)… Ưu tiên move gỡ được nhiều phức tạp/trùng l
 | G2 | Mỗi bước giữ hành vi + build/test/lint XANH; dời tách trước, đổi hành vi tách riêng | 3 | Sửa/revert bước đó, không đi tiếp |
 | G3 | Pattern chỉ khi gỡ phức tạp thật; HỎI duyệt trước pattern lớn; báo cáo pattern + lý do | 4 | Bỏ pattern, chọn move đơn giản hơn |
 | G4 | Hồi quy so baseline + boundary check (ArchUnit/import-linter) XANH; con người duyệt diff | 5 | Không tuyên bố hoàn tất |
-| G5 | 1 bước = 1 commit, DỪNG duyệt diff, không push main; giữ boundary/kiểu kiến trúc | Xuyên suốt | — |
+| G5 | 1 bước = 1 commit, duyệt diff trước merge/push, không push main; giữ boundary/kiểu kiến trúc | Xuyên suốt | — |
 
 ## Sau khi xong
 Tóm tắt: các move đã áp (+ `file:line`), pattern đã dùng (nếu có) kèm lý do, kết quả build/test/lint

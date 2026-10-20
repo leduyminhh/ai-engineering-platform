@@ -88,7 +88,7 @@ mọi đề xuất, bản nháp gửi người dùng, ghi file và commit do ses
    root cause), **dòng thời gian** (bắt đầu → phát hiện → giảm thiểu → khôi phục), **hành động khắc phục**
    đo được (ai/gì/khi nào kiểm được), và **residual risk** (phần chưa verify, giả định, khả năng tái diễn).
    Hành động phòng ngừa cần sửa code → `workflow-bugfix`. Session chính ghi RCA vào `docs/` của project; commit qua
-   `core:git-workflow` sau khi người dùng duyệt diff.
+   `core:git-workflow`, duyệt diff trước merge/push (protected branch: mỗi commit).
 
 ## Verification (trước khi báo hoàn thành)
 

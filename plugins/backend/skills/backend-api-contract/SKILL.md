@@ -27,7 +27,7 @@ slice bám theo nó.
 - Project **đã chạy `backend-init`** (có `project-knowledge/` + `docs/contracts/`). `backend-init` có thể
   đã tạo `docs/contracts/openapi.json` rỗng-hợp-lệ. Chưa có → đề nghị chạy `backend-init` trước, hoặc chạy
   với **giả định an toàn có nhãn** (fail-loud), KHÔNG âm thầm bịa vị trí/định dạng contract.
-- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **duyệt diff contract trước khi commit**.
+- Mọi bối cảnh nằm trong FILE. Con người giữ chốt: **duyệt diff contract trước merge/push** (protected branch: mỗi commit).
 
 ## Ranh giới an toàn (CLAUDE.md)
 
@@ -35,7 +35,8 @@ slice bám theo nó.
   commit, KHÔNG chạy codegen. Sinh controller/`@HttpExchange`/client là việc của `backend-implement` và
   công cụ FE — skill này chỉ chốt contract để hai bên bám theo.
 - **Bước kiểm drift READ-ONLY mặc định.** Đối chiếu contract↔code chỉ **đọc và báo lệch**; chỉ sửa
-  contract hoặc code khi người dùng yêu cầu rõ, và vẫn DỪNG cho người **duyệt diff** (1 việc = 1 commit).
+  contract hoặc code khi người dùng yêu cầu rõ (1 việc = 1 commit), và con người vẫn **duyệt diff** trước
+  merge/push (protected branch: mỗi commit).
 - **Contract là nguồn sự thật FE↔BE.** Khi contract và code lệch nhau, mặc định coi **contract là chuẩn**
   và đề xuất sửa code cho khớp — TRỪ khi người dùng chốt ngược lại (code đúng, contract cũ) thì cập nhật
   contract kèm version. KHÔNG tự chọn bên im lặng.
@@ -117,7 +118,7 @@ Theo [references/contract-drift-check.md](references/contract-drift-check.md) �
 - **Không phát hiện drift trong scope** đã soát — hoặc liệt kê đầy đủ điểm drift còn lại kèm đề xuất.
 - **Breaking change có version + note** (không breaking âm thầm cùng version).
 - Nêu rõ **phần chưa soát + residual risk** (endpoint ngoài scope, hành vi runtime không lộ trong khai báo).
-  Con người **duyệt diff** trước khi commit.
+  Con người **duyệt diff** trước merge/push (protected branch: mỗi commit).
 
 ## Ranh giới
 

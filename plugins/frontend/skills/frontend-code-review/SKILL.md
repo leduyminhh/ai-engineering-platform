@@ -28,7 +28,8 @@ của project, KHÔNG áp gu cá nhân.
 
 ## Ranh giới an toàn (CLAUDE.md)
 - **READ-ONLY mặc định.** Không sửa code, không commit, không đổi cấu hình. Chỉ khi người dùng yêu cầu
-  rõ "sửa luôn" mới áp fix — và vẫn DỪNG cho người **duyệt diff** trước khi commit (1 việc = 1 commit).
+  rõ "sửa luôn" mới áp fix (1 việc = 1 commit) — và con người vẫn **duyệt diff** trước merge/push
+  (protected branch: mỗi commit).
 - **Scope-bound.** Chỉ review **đúng phạm vi người dùng nêu** (diff / PR / module / thư mục). KHÔNG lan
   sang module anh em hay cả repo; code ngoài scope chỉ nhắc khi ảnh hưởng trực tiếp tới phần đang review,
   và nêu rõ là ngoài scope.
@@ -108,7 +109,8 @@ theo `file:line`, rồi kết luận `approve` (0 `blocker`, 0 `major` chưa có
 
 ### 4. Read-only + route — con người duyệt
 - Mặc định **KHÔNG sửa**; giao kết quả cho người quyết. Chỉ áp fix khi người dùng yêu cầu rõ, và chỉ cho
-  finding **proven, rõ ràng, đúng scope** — vẫn DỪNG duyệt diff trước commit.
+  finding **proven, rõ ràng, đúng scope** — con người vẫn duyệt diff trước merge/push
+  (protected branch: mỗi commit).
 - **Route** khi vượt phạm vi review:
   - Cần **quét bảo mật / lỗ hổng phụ thuộc / tool gate (SonarQube, Black Duck, security review)** →
     `engineering-quality-gate`. Skill này KHÔNG tự làm security scan; chỉ nhắc khi thấy dấu hiệu (vd

@@ -25,6 +25,7 @@ chưa chạy `backend-init`). KHÔNG tách microservice, KHÔNG đổi logic ngh
 
 ## Ranh giới an toàn (CLAUDE.md)
 Không push thẳng main. Mỗi task = 1 commit, DỪNG cho người duyệt diff trước khi commit.
+Đây là chốt riêng của skill, áp cả trên feature branch.
 KHÔNG đổi hành vi nghiệp vụ khi diff không thể hiện. Không chạy lệnh phá huỷ dữ liệu khi
 chưa duyệt. Cho phép code cũ/mới cùng tồn tại TẠM trong lúc migrate để giữ mỗi bước XANH.
 
