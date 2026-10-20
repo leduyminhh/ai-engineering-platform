@@ -12,23 +12,67 @@ export const DEFAULT_EXEMPT_AGENTS = ['data-migration-writer'];
 
 // Neo ^ vào đầu từng đoạn lệnh để "echo npm test" hay "cat test/a.js" không bị tính là đã chạy test.
 const DEFAULT_TEST_PATTERNS = [
-  /^(npm|pnpm|yarn|bun)( run)? test(:[\w:-]+)?\b/,
-  /^(npm|pnpm|yarn|bun) run (build|lint|typecheck)\b/,
-  /^(npx|bunx|pnpm (exec|dlx)|yarn) (vitest|jest|mocha|playwright test|tsc|eslint)\b/,
-  /^(vitest|jest|mocha|tsc|eslint|pytest|ruff|mypy)\b/,
-  /^node (--test\b|test[\\/])/,
+  /^(?:\S*[\\/])?(vitest|jest|mocha|tsc|eslint|pytest|ruff|mypy|rspec)(\.(exe|cmd))?(\s|$)/,
+  /^bundle exec rspec\b/,
+  /^node\s+(--test\b|(\.[\\/])?test[\\/])/,
   /^(\.[\\/])?mvnw?(\.cmd)?\b.*\b(test|verify|compile)\b/,
   /^(\.[\\/])?gradlew?(\.bat)?\b.*\b(test|check|build)\b/,
-  /^(python3?|py) -m (pytest|unittest)\b/,
-  /^(uv|poetry) run (pytest|ruff|mypy)\b/,
-  /^(go|cargo|dotnet) test\b/,
+  /^(?:\S*[\\/])?(python3?|py)(\.exe)?\s+(-m\s+(pytest|unittest)\b|\S*manage\.py\s+test\b)/,
+  /^(uv|poetry|pipenv) run (python3? -m )?(pytest|unittest|ruff|mypy)\b/,
+  /^(go (test|build|vet)|cargo (test|build|check|clippy)|dotnet (test|build))\b/,
+  /^make(\s+-\S+)*\s+(test|check)\b/,
 ];
+
+const SCRIPT = /^(test|build|lint|typecheck|type-check|check)(:[\w:-]*)?$/;
+const TOOL = /^(vitest|jest|mocha|playwright test|tsc|eslint)\b/;
+// Tuỳ chọn nhận một giá trị riêng (npm --prefix app, pnpm -C app); '-w' của pnpm là cờ nên không nằm trong tập của pnpm.
+const VALUE_OPTS = { npm: ['--prefix', '-w', '--workspace'], pnpm: ['-C', '--dir', '--filter', '-F'], yarn: ['--cwd'], bun: ['--cwd', '--filter'] };
+
+// Duyệt theo token thay vì regex lồng nhau để thời gian khớp luôn tuyến tính.
+function skipOptions(tokens, i, withValue = []) {
+  while (i < tokens.length && tokens[i].startsWith('-')) i += withValue.includes(tokens[i]) ? 2 : 1;
+  return i;
+}
+
+function isPackageCommand(tokens) {
+  const mgr = tokens[0];
+  const rest = tokens.slice(1);
+  const withValue = VALUE_OPTS[mgr];
+  let i = skipOptions(rest, 0, withValue);
+  if (mgr === 'yarn' && rest[i] === 'workspace') i = skipOptions(rest, i + 2, withValue);
+  const sub = rest[i];
+  if (!sub) return false;
+  if (sub === 'run' || sub === 'run-script') return SCRIPT.test(rest[skipOptions(rest, i + 1, withValue)] || '');
+  if (sub === 'exec' || sub === 'dlx' || sub === 'x') return TOOL.test(rest.slice(skipOptions(rest, i + 1, withValue)).join(' '));
+  if (mgr === 'npm') return sub === 'test' || sub === 't' || sub === 'tst';
+  return SCRIPT.test(sub) || TOOL.test(rest.slice(i).join(' '));
+}
+
+function isNpxCommand(tokens) {
+  const rest = tokens.slice(1);
+  return TOOL.test(rest.slice(skipOptions(rest, 0, ['-p', '--package'])).join(' '));
+}
+
+// Bỏ tiền tố không đổi ý nghĩa lệnh: VAR=x, time, env, timeout <n>.
+function stripPrefixes(seg) {
+  for (let s = seg.trim(); ; ) {
+    const n = s.replace(/^(?:\w+=\S*|time|env|timeout\s+\d+\w*)\s+/, '');
+    if (n === s) return s;
+    s = n;
+  }
+}
 
 export function isTestCommand(command, extra = []) {
   const patterns = [...DEFAULT_TEST_PATTERNS, ...extra];
   return String(command || '').split(/&&|\|\||;|\||\n/)
-    .map((seg) => seg.trim().replace(/^(\w+=\S*\s+)+/, ''))
-    .some((seg) => seg && patterns.some((re) => re.test(seg)));
+    .map(stripPrefixes)
+    .some((seg) => {
+      if (!seg) return false;
+      const tokens = seg.split(/\s+/);
+      if (Object.hasOwn(VALUE_OPTS, tokens[0]) && isPackageCommand(tokens)) return true;
+      if (['npx', 'bunx', 'pnpx'].includes(tokens[0]) && isNpxCommand(tokens)) return true;
+      return patterns.some((re) => re.test(seg));
+    });
 }
 
 function loadConfig(cwd) {
@@ -43,7 +87,8 @@ function parseLine(raw) {
 }
 
 function isPromptLine(o) {
-  if (o?.type !== 'user' || o.isMeta) return false;
+  // isCompactSummary: auto-compact giữa lượt chèn dòng user tóm tắt; coi là prompt mới thì các lần sửa trước đó bị bỏ sót.
+  if (o?.type !== 'user' || o.isMeta || o.isCompactSummary === true) return false;
   const c = o.message?.content;
   return typeof c === 'string' || (Array.isArray(c) && c.some((p) => p?.type !== 'tool_result'));
 }
@@ -103,7 +148,7 @@ export function decide(input, deps = {}) {
     return {
       decision: 'block',
       reason: `Lượt này đã sửa ${edited.length} file code (${edited.slice(0, 3).join(', ')}${edited.length > 3 ? ', …' : ''}) nhưng chưa chạy test/lint/build nào sau lần sửa cuối. `
-        + 'Hãy chạy kiểm tra liên quan và báo kết quả, hoặc nói rõ vì sao bỏ qua. Tắt gate: AIP_STOP_GATE=off hoặc "stopGate": false trong .claude/aip-gate.json.',
+        + 'Hãy chạy kiểm tra liên quan và báo kết quả, hoặc nói rõ vì sao bỏ qua. (Người dùng có thể tắt gate này bằng AIP_STOP_GATE=off hoặc "stopGate": false trong .claude/aip-gate.json.)',
     };
   } catch { return null; }
 }

@@ -315,8 +315,13 @@ export default async function run({ ok, ctx }) {
       'node test/validate.mjs --build', 'mvn -q test', './mvnw verify', 'mvn compile', './gradlew check', 'gradle build', 'pytest -q', 'python -m pytest',
       'python3 -m unittest', 'uv run pytest', 'go test ./...', 'cargo test', 'dotnet test', 'tsc --noEmit', 'npx tsc', 'eslint .', 'npm run lint',
       'pnpm run typecheck', 'npm run build', 'ruff check .', 'mypy src', 'cd app && npm test 2>&1 | tail -5', 'FOO=1 npx vitest run',
+      'npm --prefix app test', 'npm -w pkg test', 'pnpm -C app test', 'pnpm --filter web test', 'yarn workspace web test', 'pnpm vitest run',
+      'npx --yes vitest', 'npx -y tsc', 'npm t', 'npm run type-check', 'npm run check', '.venv/bin/pytest', 'uv run python -m pytest',
+      'python manage.py test', 'time npm test', 'env CI=1 npm test', 'timeout 60 npm test', 'node ./test/x.mjs', 'cargo build', 'cargo check',
+      'cargo clippy', 'go build ./...', 'go vet ./...', 'dotnet build', 'rspec', 'make test', 'make check',
     ];
-    const notTest = ['echo npm test', 'npm install', 'cat test/a.js', 'git status', 'ls tests/', 'node scripts/build.mjs'];
+    const notTest = ['echo npm test', 'npm install', 'cat test/a.js', 'git status', 'ls tests/', 'node scripts/build.mjs', 'npm i -D vitest', 'npm run dev',
+      'pnpm add vitest', 'yarn workspace web add x', 'make install'];
     const badPos = isTest.filter((c) => !gate.isTestCommand(c));
     const badNeg = notTest.filter((c) => gate.isTestCommand(c));
     ok(badPos.length === 0, `AC1.2: isTestCommand nhận đúng lệnh test/lint/build${badPos.length ? ' — sót: ' + badPos.join(' | ') : ''}`);
@@ -348,6 +353,27 @@ export default async function run({ ok, ctx }) {
     const cl = cli('không phải json');
     ok(cl.out === '' && cl.code === 0, 'AC1.5: CLI stdin không phải JSON → stdout rỗng, exit 0');
 
+    const gitDir = fs.mkdtempSync(path.join(ctx.os.tmpdir(), 'aip-gate-'));
+    try {
+      execFileSync('git', ['init', '-q', gitDir]);
+      fs.mkdirSync(path.join(gitDir, '.claude'));
+      fs.mkdirSync(path.join(gitDir, 'src'));
+      const tp = path.join(gitDir, 'transcript.jsonl');
+      fs.writeFileSync(tp, [human('sửa'), edit('a.js')].join('\n'));
+      const cfgPath = path.join(gitDir, '.claude', 'aip-gate.json');
+      const stdinOf = () => JSON.stringify({ hook_event_name: 'Stop', stop_hook_active: false, transcript_path: tp, cwd: path.join(gitDir, 'src') });
+      fs.writeFileSync(cfgPath, String.fromCharCode(0xFEFF) + '{"stopGate": false}');
+      ok(cli(stdinOf()).out === '', 'AC1.4: CLI đọc aip-gate.json có BOM ở gốc git (cwd là thư mục con): stopGate:false → stdout rỗng');
+      fs.writeFileSync(cfgPath, '{}');
+      const on = cli(stdinOf());
+      let onJson = null;
+      try { onJson = JSON.parse(on.out); } catch { /* ok bên dưới báo lỗi */ }
+      ok(on.code === 0 && onJson?.decision === 'block' && typeof onJson.reason === 'string',
+        'AC1.1: CLI in JSON {"decision":"block","reason":…} ra stdout, exit 0');
+    } finally {
+      fs.rmSync(gitDir, { recursive: true, force: true });
+    }
+
     const subDirty = [edit('a.js')].join('\n');
     const subClean = [human('x')].join('\n');
     const sub = (subLines, mainLines) => gate.decide(
@@ -356,13 +382,15 @@ export default async function run({ ok, ctx }) {
     ok(blocked(sub(subDirty, subClean)), 'AC1.6: SubagentStop đọc agent_transcript_path (sub sửa không test) → block, kể cả không có prompt người dùng');
     ok(sub(subClean, subDirty) === null, 'AC1.6: SubagentStop không đọc transcript chính → cho dừng');
 
-    ok(run([human('x'), edit('a.js'), bash('make test')], { cfg: { testCommands: ['^make test\\b', '('] } }) === null,
+    ok(run([human('x'), edit('a.js'), bash('./run-tests.sh')], { cfg: { testCommands: ['^\\./run-tests\\.sh', '('] } }) === null,
       'AC1.7: testCommands bổ sung nhận lệnh, regex sai bị bỏ qua không ném');
-    ok(blocked(run([human('x'), edit('a.js'), bash('make test')])), 'AC1.7: không cấu hình → make test không tính là test');
+    ok(blocked(run([human('x'), edit('a.js'), bash('./run-tests.sh')])), 'AC1.7: không cấu hình → ./run-tests.sh không tính là test');
 
     ok(run([human('a'), edit('a.js'), human('b'), bash('git status')]) === null, 'AC1.8: chỉ xét lượt hiện tại (sửa ở lượt trước không tính)');
     ok(blocked(run([human('a'), edit('a.js'), meta('Base directory for this skill: x'), bash('git status')])),
       'AC1.8: dòng isMeta không mở lượt mới');
+    const compact = line({ type: 'user', isCompactSummary: true, message: { role: 'user', content: 'This session is being continued…' } });
+    ok(blocked(run([human('a'), edit('a.js'), compact, bash('git status')])), 'AC1.8: dòng tóm tắt auto-compact không mở lượt mới');
 
     const subAgent = (agent_type, cfg = null) => gate.decide(
       { hook_event_name: 'SubagentStop', stop_hook_active: false, transcript_path: 'M', agent_transcript_path: 'S', agent_type, cwd: '.' },
