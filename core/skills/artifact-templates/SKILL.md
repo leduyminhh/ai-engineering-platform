@@ -31,7 +31,9 @@ Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi �
 Validator ghi `chỉ có trong repo aip` hoặc `chỉ có khi cài plugin …` thì chỉ chạy được khi file đó tồn tại; không có thì áp
 dòng trên.
 Validator `scripts/check-request.mjs` (requirement, design, plan) nằm ngay trong skill này nên có ở mọi project đã cài core;
-chạy `node <thư-mục-skill>/scripts/check-request.mjs <docs/requests/ngày-slug>` — chỉ cảnh báo, exit 0 khi chạy được, exit 2 khi sai đối số.
+chạy `node <thư-mục-skill>/scripts/check-request.mjs <docs/requests/ngày-slug> [--tests <path>…] [--strict]` — chỉ cảnh báo, exit 0 khi chạy được, exit 2 khi sai đối số; `--strict` đổi thành exit 1 nếu còn cảnh báo.
+W7: AC chưa có file test nào nhắc tới (ID `AC<n>.<m>`, `ac<n>_<m>` hoặc `Ac<n>_<m>` trong nội dung file). Phạm vi test là các file test ghi trong `**Files:**` của plan.md (dòng `- Test:` hoặc đường dẫn kiểu `test/`, `*.test.*`, `*_test.*`); W8: plan có `**Files:**` nhưng không ghi file test nào; W9: file test ghi trong plan chưa tồn tại. Plan không có `**Files:**` thì bỏ qua W7–W9.
+`--tests <path>…` (file hoặc thư mục, quét đệ quy, bỏ `node_modules`, `.git`, `build`, `dist`, `target`, `.venv`) thay phạm vi lấy từ plan.
 Dòng có Template là thư mục (`project-knowledge/`): mỗi file `.md` bên trong có khối header riêng; `tech-stack.yml` là YAML
 nên không có khối header, nguồn của nó ghi ở cột Nguồn.
 
@@ -41,7 +43,7 @@ nên không có khối header, nguồn của nó ghi ở cột Nguồn.
    tự suy ra khung.
 2. **Mở template** đúng file trong cột Template; chỉ nạp file của loại đang cần.
 3. **Điền** placeholder `<…>` bằng nội dung thật. Giữ nguyên tên heading, tên trường và thứ tự mà validator đọc.
-4. **Chạy validator** ở cột Validator nếu có (requirement/design/plan: `node scripts/check-request.mjs <thư-mục-request>`,
+4. **Chạy validator** ở cột Validator nếu có (requirement/design/plan: `node scripts/check-request.mjs <thư-mục-request> [--tests <path>…] [--strict]`,
    thư mục là `docs/requests/<ngày>-<slug>/`); lỗi → sửa nội dung rồi chạy lại tới khi sạch. Validator `chưa có`, hoặc
    validator `chỉ có trong repo aip` mà project hiện tại không có file đó → bỏ qua bước chạy, tự đối chiếu heading và
    mẫu dòng với template, và nói rõ chưa kiểm bằng máy.
@@ -85,4 +87,4 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
 - [references/project-knowledge/](references/project-knowledge/): 5 khung `.md` (`project-overview`, `domain-context`,
   `architecture`, `source-structure`, `code-convention`) và `tech-stack.yml` (không có header) cho `project-knowledge/`.
 - [scripts/check-request.mjs](scripts/check-request.mjs): validator cho requirement/design/plan; kiểm thư mục request (nguồn AC,
-  ID AC, `**Goal:**`/`**Spec:**` của plan, độ phủ AC bởi plan.md/tasks.md), mỗi lỗi một dòng `WARN <file>:<dòng> [<mã>] …`.
+  ID AC, `**Goal:**`/`**Spec:**` của plan, độ phủ AC bởi plan.md/tasks.md, AC chưa có test nhắc tới W7–W9), mỗi lỗi một dòng `WARN <file>:<dòng> [<mã>] …`; `--strict` → exit 1 khi có cảnh báo.

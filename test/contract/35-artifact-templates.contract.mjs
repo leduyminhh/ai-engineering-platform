@@ -306,4 +306,101 @@ export default async function run({ ok, ctx }) {
     ok(ids.includes('core:artifact-templates'),
       `Cowork: core:artifact-templates có trong _cowork.json (cần cho ${dependents.join(', ')})`);
   }
+
+  // 6. check-request.mjs: truy vết AC → test (W7–W9, --tests, --strict).
+  {
+    const cr = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
+    const tick = (p) => '`' + p + '`';
+    const DESIGN = ['# Thiết kế', '## 3. Tiêu chí chấp nhận',
+      '- [ ] **AC1.1** — Given a When b Then c', '- [ ] **AC1.2** — Given c When d Then e', '- [ ] **AC1.10** — Given e When f Then g', ''].join('\n');
+    const FILES = ['**Files:**', `- Modify: ${tick('src/a.mjs:10-20')}`, `- Test: ${tick('test/a.contract.mjs:5')}`, `- Create: ${tick('tests/b_test.py')}`];
+    const planOf = (files) => ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1, AC1.2, AC1.10', '', ...files, ''].join('\n');
+    const PLAN = planOf(FILES);
+    const TESTS = { 'test/a.contract.mjs': "ok(x, 'AC1.10: …')", 'tests/b_test.py': 'def test_ac1_2_rejects(): pass' };
+    const reader = (m) => (p) => (Object.hasOwn(m, p) ? m[p] : null);
+    const check = (plan, m, extra = {}) => cr.checkRequest({ 'design.md': DESIGN, 'plan.md': plan }, { readTest: reader(m), ...extra });
+    const of = (ws, code) => ws.filter((w) => w.code === code);
+    const quiet = (fn) => {
+      const log = console.log; const err = console.error; const out = [];
+      console.log = (...a) => out.push(a.join(' ')); console.error = () => {};
+      try { return { code: fn(), out }; } finally { console.log = log; console.error = err; }
+    };
+
+    const w7 = of(check(PLAN, TESTS), 'W7');
+    ok(w7.length === 1 && w7[0].file === 'design.md' && w7[0].line === 3 && w7[0].msg.includes('AC1.1 '),
+      'AC2.1: AC không có trong file test của plan → W7 tại dòng AC');
+    ok(w7.every((w) => !w.msg.includes('AC1.2') && !w.msg.includes('AC1.10')),
+      'AC2.2: AC1.10 không phủ AC1.1; test_ac1_2_* phủ AC1.2');
+    ok(of(check(PLAN, { ...TESTS, 'tests/b_test.py': 'void testAc1_2Rejects()' }), 'W7').every((w) => !w.msg.includes('AC1.2')),
+      'AC2.2: testAc1_2* phủ AC1.2');
+    ok([...cr.acIdsIn('AC1.2 ac1_2 Ac1.2 AC1.20 xAC3_4')].sort().join() === 'AC1.2,AC1.20,AC3.4',
+      'AC2.2: acIdsIn chuẩn hóa ID, không khớp một phần số');
+
+    const noTest = check(planOf([FILES[0], FILES[1]]), TESTS);
+    ok(of(noTest, 'W8').length === 1 && of(noTest, 'W7').length === 0 && of(noTest, 'W8')[0].line === 6,
+      'AC2.6: plan có **Files:** nhưng không file test → W8, không W7');
+    const w9 = of(check(PLAN, { 'test/a.contract.mjs': TESTS['test/a.contract.mjs'] }), 'W9');
+    ok(w9.length === 1 && w9[0].file === 'plan.md' && w9[0].line === 9 && w9[0].msg.includes('tests/b_test.py'),
+      'AC2.6: file test ghi trong plan chưa tồn tại → W9');
+
+    const pt = (line) => cr.planTestPaths(`**Files:**\n${line}\n`).entries.map((e) => e.path);
+    const cases = [
+      ['- Modify: ', 'src/a.mjs', []], ['- Modify: ', 'src/a.mjs:10-20', []],
+      ['- Create: ', 'test/x.mjs', ['test/x.mjs']], ['- Create: ', 'tests/x.py', ['tests/x.py']],
+      ['- Create: ', 'src/__tests__/x.ts', ['src/__tests__/x.ts']], ['- Create: ', 'spec/x.rb', ['spec/x.rb']],
+      ['- Create: ', 'a.test.ts', ['a.test.ts']], ['- Create: ', 'a.spec.js', ['a.spec.js']],
+      ['- Create: ', 'a_test.go', ['a_test.go']], ['- Create: ', 'test_a.py', ['test_a.py']],
+      ['- Create: ', 'FooTest.java', ['FooTest.java']], ['- Test: ', 'qa/x.feature', ['qa/x.feature']],
+      ['- Test: ', 'qa/x.feature:3-9', ['qa/x.feature']], ['- Create: ', 'test/a.mjs:5-9', ['test/a.mjs']],
+    ];
+    for (const [lead, p, want] of cases) {
+      ok(JSON.stringify(pt(lead + tick(p))) === JSON.stringify(want), `AC2.6: planTestPaths ${lead}${p}`);
+    }
+    const same = cr.planTestPaths(`# P\n**Files:** ${tick('test/a.mjs')}\n`);
+    ok(same.hasFiles && same.entries.length === 1 && same.entries[0].path === 'test/a.mjs' && same.entries[0].line === 2,
+      'AC2.6: planTestPaths nhận file test cùng dòng **Files:**');
+    const none = cr.planTestPaths('# P\n**Goal:** x\n');
+    const noFiles = check('# Plan\n**Goal:** x\n**Spec:** design.md\n**Phủ AC:** AC1.1, AC1.2, AC1.10\n', {});
+    ok(none.hasFiles === false && none.entries.length === 0 && !noFiles.some((w) => ['W7', 'W8', 'W9'].includes(w.code)),
+      'AC2.6: plan không có **Files:** → hasFiles=false, không W7/W8/W9');
+
+    const ov = check(planOf([FILES[0], FILES[1]]), { 'qa/': 'AC1.1 AC1.2 AC1.10' }, { override: ['qa/'] });
+    ok(ov.length === 0, 'AC2.7: override thay phạm vi plan, không W8/W9');
+    ok(of(check(PLAN, { 'qa/': 'AC1.1 AC1.2 AC1.10' }, { override: ['qa/'] }), 'W9').length === 0,
+      'AC2.7: override không đọc danh sách file test của plan');
+
+    const tmp = fs.mkdtempSync(path.join(ctx.os.tmpdir(), 'check-request-tests-'));
+    try {
+      const put = (rel, data) => {
+        const p = path.join(tmp, rel);
+        fs.mkdirSync(path.dirname(p), { recursive: true });
+        fs.writeFileSync(p, data);
+      };
+      fs.mkdirSync(path.join(tmp, '.git'));
+      const dir = path.join(tmp, 'docs', 'requests', 'r');
+      put('docs/requests/r/design.md', DESIGN + '- [ ] **AC2.1** — Given h When i Then j\n');
+      put('docs/requests/r/plan.md', ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1, AC1.2, AC1.10, AC2.1', '', '**Files:**', `- Test: ${tick('test/')}`, ''].join('\n'));
+      put('test/sub/a.mjs', 'AC1.1 AC1.2 AC1.10');
+      for (const f of ['test/node_modules/x.js', 'test/build/y.js']) put(f, 'AC2.1');
+      put('test/bin.dat', Buffer.concat([Buffer.from([0]), Buffer.from('AC2.1')]));
+      const r = quiet(() => cr.main([dir]));
+      const w7s = r.out.filter((l) => l.includes('[W7]'));
+      ok(r.code === 0 && w7s.length === 1 && w7s[0].includes('AC2.1') && r.out.every((l) => !l.includes('[W8]') && !l.includes('[W9]')),
+        'AC2.3: quét thư mục đệ quy, bỏ thư mục loại trừ và file nhị phân');
+
+      ok(quiet(() => cr.main([dir, '--strict'])).code === 1, 'AC2.4: --strict exit 1 khi có cảnh báo');
+      ok(quiet(() => cr.main([dir])).code === 0, 'AC2.4: không cờ → vẫn exit 0 khi có cảnh báo');
+      put('test/sub/c.mjs', 'AC2.1');
+      ok(quiet(() => cr.main([dir, '--strict'])).code === 0, 'AC2.4: --strict exit 0 khi sạch');
+      fs.rmSync(path.join(tmp, 'test', 'sub', 'c.mjs'));
+      put('qa/all.mjs', 'AC1.1 AC1.2 AC1.10 AC2.1');
+      ok(quiet(() => cr.main([dir, '--tests', path.join(tmp, 'qa'), '--strict'])).code === 0,
+        'AC2.7: --tests <path> thay phạm vi plan');
+      for (const bad of [[dir, '--tests'], [dir, '--bogus'], [dir, dir], [dir, '--tests', 'không-có-xyz'], [dir, '--tests', '--strict']]) {
+        ok(quiet(() => cr.main(bad)).code === 2, `AC2.4: đối số sai → exit 2 (${bad.slice(1).join(' ')})`);
+      }
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
 }
