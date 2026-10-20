@@ -129,7 +129,13 @@ export function checkGraph(graph) {
     checkRun(s.run, e);
     if (!isStr(s.next)) e('thiếu next');
     if (!Array.isArray(s.on_fail)) e('on_fail phải là mảng');
-    else s.on_fail.forEach((f, j) => { if (!isObj(f) || !isStr(f.to) || !isStr(f.when)) e(`on_fail[${j}] cần "to" và "when"`); });
+    else {
+      s.on_fail.forEach((f, j) => {
+        if (!isObj(f) || !isStr(f.to) || !isStr(f.when)) e(`on_fail[${j}] cần "to" và "when"`);
+        // Fail không bao giờ dẫn tới hoàn tất; cho phép sẽ để vòng lặp vô hạn lọt qua kiểm reachability tới done.
+        else if (f.to === 'done') e(`on_fail[${j}] không được trỏ tới "done" (dùng "blocked")`);
+      });
+    }
     const g = s.gate;
     if (!isObj(g)) e('thiếu gate');
     else if (g.type === 'human') {

@@ -167,9 +167,12 @@ export default async function run({ ok, ctx }) {
       'on_fail thiếu when': (g) => { delete g.steps[s1].on_fail[0].when; },
       'after trỏ id ngoài bước': (g) => { g.steps[s2].run.skills[0].after = 'ghost'; },
       'after trỏ chính nó': (g) => { g.steps[s2].run.agents[1] = { id: 'a-two', after: 'a-two' }; },
+      'on_fail trỏ tới done': [(g) => { g.steps[s2].on_fail.push({ to: 'done', when: 'x' }); }, 'done'],
     };
-    for (const [name, fn] of Object.entries(schemaCases)) {
-      ok(checkGraph(mut(fn)).length >= 1, `AC1.1: checkGraph báo lỗi schema — ${name}`);
+    for (const [name, c] of Object.entries(schemaCases)) {
+      const [fn, want] = Array.isArray(c) ? c : [c];
+      const errs = checkGraph(mut(fn));
+      ok(errs.length >= 1 && (!want || errs.some((m) => m.includes(want) && m.includes('implement'))), `AC1.1: checkGraph báo lỗi schema — ${name}`);
     }
     ok(checkGraph(mut((g) => { g.steps[s2].run.agents[1] = { id: 'a-two', after: 'a-one' }; })).length === 0,
       'AC1.1: after trỏ id khác cùng bước → hợp lệ');
