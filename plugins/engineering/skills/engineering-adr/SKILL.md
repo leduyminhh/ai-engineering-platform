@@ -1,6 +1,6 @@
 ---
 name: engineering-adr
-description: "Điều phối một quyết định kiến trúc/thiết kế rồi ghi thành ADR chuẩn Nygard vào docs/decisions/, kèm phương án và đánh đổi; con người chốt Status. Dùng khi người dùng muốn \"viết ADR\", \"ghi quyết định kiến trúc\", \"architecture decision record\", \"chọn phương án\", \"lưu lý do quyết định\". Không dùng khi cần đặc tả yêu cầu tính năng → engineering-spec-writing."
+description: "Điều phối một quyết định kiến trúc/thiết kế rồi ghi thành ADR theo MADR 4.0 vào docs/decisions/, kèm phương án và đánh đổi; con người chốt Status. Dùng khi người dùng muốn \"viết ADR\", \"ghi quyết định kiến trúc\", \"architecture decision record\", \"chọn phương án\", \"lưu lý do quyết định\". Không dùng khi cần đặc tả yêu cầu tính năng → engineering-spec-writing."
 order: 5
 title: "ADR — điều phối quyết định kiến trúc + ghi architecture decision record"
 runsIn: plan
@@ -10,7 +10,7 @@ argument-hint: "[quyết định cần chốt]"
 
 # ADR — Architecture Decision Record (skill dùng chung)
 
-Điều phối (facilitate) một **quyết định kiến trúc/thiết kế** rồi ghi thành **ADR chuẩn (Nygard)** vào
+Điều phối (facilitate) một **quyết định kiến trúc/thiết kế** rồi ghi thành **ADR theo MADR 4.0** vào
 `docs/decisions/` của project. Skill này là **hướng dẫn cách agent làm rõ quyết định và viết tài liệu**
 (docs-only recipe), KHÔNG sinh code và KHÔNG tự quyết thay con người.
 
@@ -19,7 +19,7 @@ Một ADR ghi lại: **bối cảnh & lực đẩy (forces)** dẫn tới quyế
 Mục tiêu: giúp teamlead/manager **chốt quyết định có truy vết**, để người sau đọc lại hiểu *vì sao* chọn thế.
 
 Skill này **portable ra mọi provider** (claude/cursor/codex/antigravity) và bám `docs/decisions/_TEMPLATE.md`
-— không dựng cấu trúc song song. KHÔNG thuộc chuỗi pipeline bắt buộc; gọi khi cần ở giai đoạn **plan**. Con
+(sinh từ template `adr.template.md` của skill core `artifact-templates`) — không dựng cấu trúc song song. KHÔNG thuộc chuỗi pipeline bắt buộc; gọi khi cần ở giai đoạn **plan**. Con
 người giữ chốt: **duyệt và chốt Status** trước khi ADR được coi là quyết định chính thức.
 
 ## Ranh giới an toàn
@@ -51,8 +51,9 @@ người giữ chốt: **duyệt và chốt Status** trước khi ADR được c
    **[giả định]**. Với quyết định lớn: đề xuất + phân tích, **không tự chốt thay người dùng**.
 
 2. **Viết ADR.**
-   Theo [references/adr-structure.md](references/adr-structure.md), bám `docs/decisions/_TEMPLATE.md` (Nygard:
-   Title / Status / Context / Decision / Consequences + mục Các lựa chọn đã cân nhắc). Đặt file
+   Theo [references/adr-structure.md](references/adr-structure.md), bám `docs/decisions/_TEMPLATE.md` (MADR 4.0,
+   nguồn: `adr.template.md` của skill `artifact-templates`: Bối cảnh và vấn đề / Yếu tố quyết định / Các phương án /
+   Kết quả quyết định + Hệ quả + Xác nhận / Ưu nhược từng phương án). Đặt file
    `docs/decisions/<số kế tiếp>-<slug>.md` (số 4 chữ số nối tiếp convention; slug ngắn, kebab-case). Đặt
    `Status` phù hợp (Proposed / Accepted / Superseded by ADR-xxxx). **Link** tới spec liên quan
    (`docs/requests/<...>/requirement.md`) và contract/data-model (`docs/contracts/`). Tiếng Việt CÓ DẤU.
@@ -62,7 +63,7 @@ người giữ chốt: **duyệt và chốt Status** trước khi ADR được c
    việc phải làm tiếp. Không thổi phồng lợi ích, không giấu đánh đổi. Dùng ngôn ngữ đo được.
 
 3. **Verify.**
-   Chạy checklist trong [references/adr-structure.md](references/adr-structure.md): đủ các mục Nygard; **≥2
+   Chạy checklist trong [references/adr-structure.md](references/adr-structure.md): đủ các mục MADR của template; **≥2
    phương án** có đánh đổi rõ; **quyết định truy vết được về forces**; hệ quả có cả tiêu cực + residual risk;
    **đánh số đúng nối tiếp** + link spec/contract/data-model đúng; đặt đúng `docs/decisions/`; tiếng Việt có
    dấu. Nêu rõ phần còn thiếu (fail-loud); **con người duyệt và chốt Status**.
@@ -71,7 +72,7 @@ người giữ chốt: **duyệt và chốt Status** trước khi ADR được c
 
 - Đã nạp context, quét `docs/decisions/` và xác định số ADR kế tiếp + quyết định cần ghi; suy đoán đánh dấu
   **[giả định]**.
-- ADR đặt đúng `docs/decisions/<số kế tiếp>-<slug>.md`, bám `_TEMPLATE.md` (đủ mục Nygard).
+- ADR đặt đúng `docs/decisions/<số kế tiếp>-<slug>.md`, bám `_TEMPLATE.md` (đủ mục MADR theo `adr.template.md` của `artifact-templates`).
 - Có **2–4 phương án** thực chất kèm đánh đổi; quyết định + lý do **truy vết được về forces**.
 - Hệ quả ghi **cả tiêu cực + residual risk**; ngôn ngữ đo được, không tuyên bố tuyệt đối.
 - `Status` đặt đúng (Proposed khi chưa chốt); link spec/contract/data-model có khi liên quan.
@@ -89,8 +90,8 @@ người giữ chốt: **duyệt và chốt Status** trước khi ADR được c
 
 Nạp đúng file khi cần, đừng nạp tất cả:
 
-- [references/adr-structure.md](references/adr-structure.md): cấu trúc ADR chuẩn Nygard theo `_TEMPLATE.md`
-  (Title / Status / Context / Decision / Consequences + Các lựa chọn đã cân nhắc), convention **đánh số** nối
+- [references/adr-structure.md](references/adr-structure.md): cấu trúc ADR theo MADR 4.0 (template `adr.template.md` của
+  `artifact-templates`: Bối cảnh và vấn đề / Yếu tố quyết định / Các phương án / Kết quả quyết định / Ưu nhược), convention **đánh số** nối
   tiếp, quy tắc `Status` + supersede, cách **link** spec/contract/data-model, và checklist Definition of Done.
 - [references/decision-facilitation.md](references/decision-facilitation.md): bộ câu hỏi làm rõ **forces** (lực
   đẩy/ràng buộc/mục tiêu), cách khai thác **2–4 phương án** thực chất + **đánh đổi**, tiêu chí chọn, và nguyên

@@ -7,10 +7,13 @@ import { fileURLToPath } from 'node:url';
 export const TEMPLATES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'core', 'skills', 'artifact-templates', 'references');
 
 // File template → đường dẫn sinh ra ở project đích (aip init --full và cây templates/ của skill *-init).
+// Mục kết thúc bằng '/' là thư mục: mọi file bên trong được sinh ra (file .md bỏ khối header, file khác chép nguyên).
 const INIT_DOC_MAP = [
   ['requirement.template.md', 'docs/requests/_TEMPLATE/requirement.md'],
   ['design.template.md', 'docs/requests/_TEMPLATE/design.md'],
   ['plan.template.md', 'docs/requests/_TEMPLATE/plan.md'],
+  ['adr.template.md', 'docs/decisions/_TEMPLATE.md'],
+  ['project-knowledge/', 'project-knowledge/'],
 ];
 
 const INDEX_HEAD = ['Loại', 'Template', 'Validator', 'Nguồn'];
@@ -42,15 +45,21 @@ export function templateIndex(skillMd) {
     if (!l.startsWith('|')) break;
     const [type, tpl, validator, sources] = cells(l);
     const link = tpl.match(/\]\(([^)]+)\)/);
-    rows.push({ type, file: link ? link[1] : tpl, validator, sources });
+    const file = link ? link[1] : tpl;
+    rows.push({ type, file, isDir: file.endsWith('/'), validator, sources });
   }
   return rows;
 }
 
 /** File docs cần sinh ở project đích, nội dung đã bỏ khối header của template. */
 export function initDocFiles() {
-  return INIT_DOC_MAP.map(([file, rel]) => ({
-    rel,
-    content: stripTemplateHeader(fs.readFileSync(path.join(TEMPLATES_DIR, file), 'utf8')),
-  }));
+  const read = (abs) => fs.readFileSync(abs, 'utf8');
+  return INIT_DOC_MAP.flatMap(([file, rel]) => {
+    if (!file.endsWith('/')) return [{ rel, content: stripTemplateHeader(read(path.join(TEMPLATES_DIR, file))) }];
+    const dir = path.join(TEMPLATES_DIR, file);
+    return fs.readdirSync(dir).sort().map((name) => {
+      const text = read(path.join(dir, name));
+      return { rel: rel + name, content: name.endsWith('.md') ? stripTemplateHeader(text) : text };
+    });
+  });
 }

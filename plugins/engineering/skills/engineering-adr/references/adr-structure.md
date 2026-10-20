@@ -1,27 +1,28 @@
-# Cấu trúc ADR chuẩn (Nygard) — viết gì vào mỗi mục
+# Cấu trúc ADR (MADR 4.0) — viết gì vào mỗi mục
 
 ADR (Architecture Decision Record) ghi lại **một quyết định** kiến trúc/thiết kế đáng lưu và **vì sao** chọn
 thế, để người sau đọc lại hiểu bối cảnh. Một ADR = **một quyết định**; nhiều quyết định → nhiều file.
 
-Bám scaffold `docs/decisions/_TEMPLATE.md` và **mở rộng** nó — KHÔNG dựng cấu trúc song song. Cấu trúc dưới đây
-theo mô hình **Nygard** (Michael Nygard, 2011): Title / Status / Context / Decision / Consequences, bổ sung mục
-**Các lựa chọn đã cân nhắc** (Alternatives) mà `_TEMPLATE.md` đã có.
+Bám scaffold `docs/decisions/_TEMPLATE.md` — file này sinh từ template `adr.template.md` của skill core
+`artifact-templates` (một nguồn, không dựng cấu trúc song song). Khung theo **MADR 4.0** (Markdown Architectural
+Decision Records) viết tiếng Việt; mục tùy chọn của MADR (Yếu tố quyết định, Thông tin thêm) có thể bỏ khi trống.
 
 ## Các mục của ADR
 
-1. **Tiêu đề (Title)** — `ADR-<số>: <tiêu đề quyết định>`. Tiêu đề là **quyết định**, không phải chủ đề
+1. **Tiêu đề** — `# ADR-<số>: <tiêu đề quyết định>`. Tiêu đề là **quyết định**, không phải chủ đề
    ("Chọn PostgreSQL cho lưu trữ đơn hàng", KHÔNG "Về cơ sở dữ liệu"). Ngắn, cụ thể, ở dạng khẳng định.
-2. **Trạng thái (Status)** — xem mục "Status + supersede" bên dưới.
-3. **Ngày (Date)** — `yyyy-mm-dd` ngày quyết định (hoặc đề xuất).
-4. **Bối cảnh (Context)** — vấn đề cần quyết + **lực đẩy (forces)**: ràng buộc kỹ thuật/nghiệp vụ, mục tiêu,
-   yếu tố đánh đổi đang tác động. Đây là phần để người sau hiểu *tại sao có quyết định này*. Nêu **sự việc**
-   (khách quan), chưa chọn phương án. Phần suy đoán đánh dấu **[giả định]**.
-5. **Các lựa chọn đã cân nhắc (Alternatives)** — liệt kê **2–4 phương án** thực chất; mỗi phương án ghi **ưu /
-   nhược (đánh đổi)** so với forces. Không đưa "phương án rơm" chỉ để loại. Phương án bị loại vẫn ghi kèm lý do
-   loại để tránh bàn lại về sau.
-6. **Quyết định (Decision)** — chọn phương án nào + **lý do** truy vết được về forces và tiêu chí chọn. Viết
-   dạng khẳng định ("Chúng ta sẽ …"). Lý do phải soi chiếu về Context/Alternatives, không phải sở thích.
-7. **Hệ quả (Consequences)** — xem "Ghi hệ quả trung thực" bên dưới.
+2. **Metadata** — `Trạng thái` (xem "Status + supersede"), `Ngày` (`yyyy-mm-dd`, ngày quyết định hoặc đề xuất),
+   `Người quyết định`; `Tham vấn` / `Thông báo` khi có.
+3. **Bối cảnh và vấn đề** — vấn đề cần quyết + **lực đẩy (forces)**: ràng buộc kỹ thuật/nghiệp vụ, mục tiêu,
+   yếu tố đánh đổi đang tác động. Nêu **sự việc** (khách quan), chưa chọn phương án. Suy đoán đánh dấu **[giả định]**.
+4. **Yếu tố quyết định** (tùy chọn) — các tiêu chí dùng để so phương án; dùng làm mốc truy vết cho lý do chọn.
+5. **Các phương án** — liệt kê **2–4 phương án** thực chất. Không đưa "phương án rơm" chỉ để loại.
+6. **Kết quả quyết định** — `Chọn phương án "…", vì …`, lý do truy vết được về yếu tố quyết định/forces. Gồm:
+   - **Hệ quả** — xem "Ghi hệ quả trung thực" bên dưới.
+   - **Xác nhận** — cách kiểm tra quyết định được tuân thủ (review, test, fitness function); không có thì bỏ mục.
+7. **Ưu nhược từng phương án** — mỗi phương án một mục con với dòng Tốt / Trung tính / Xấu so với yếu tố quyết
+   định. Phương án bị loại vẫn ghi kèm lý do loại để tránh bàn lại về sau.
+8. **Thông tin thêm** (tùy chọn) — link spec/contract liên quan, điều kiện xem lại quyết định.
 
 ## Đánh số (numbering convention)
 
@@ -38,7 +39,7 @@ theo mô hình **Nygard** (Michael Nygard, 2011): Title / Status / Context / Dec
   ở đây khi chưa có xác nhận chốt.
 - **Accepted** — đã chốt và đang áp dụng. Chỉ đặt khi con người xác nhận.
 - **Superseded by ADR-xxxx** — bị một ADR mới thay thế; ghi rõ số ADR thay thế. ADR mới nên link ngược lại ADR
-  cũ trong Context.
+  cũ trong mục Bối cảnh và vấn đề.
 - (Tuỳ project) **Deprecated / Rejected** — nếu convention của project dùng; theo phong cách `docs/decisions/`
   hiện có, không tự thêm trạng thái mới nếu project chưa dùng.
 
@@ -64,34 +65,58 @@ theo mô hình **Nygard** (Michael Nygard, 2011): Title / Status / Context / Dec
 ```markdown
 # ADR-0007: Chọn Redis cho cache session
 
-Status: Proposed
-Date: 2026-09-18
+- Trạng thái: Proposed
+- Ngày: 2026-09-18
+- Người quyết định: Teamlead backend
 
-## Context
+## Bối cảnh và vấn đề
+
 Session hiện lưu in-memory trên từng instance app → mất session khi scale ngang hoặc
 restart. Cần kho session dùng chung, đọc/ghi nhanh (<10ms p99).
 
-## Các lựa chọn đã cân nhắc
-1. **Redis (managed)** — nhanh, TTL sẵn, đã có hạ tầng team quen. Nhược: thêm 1 dependency vận hành.
-2. **DB quan hệ hiện có (bảng session)** — không thêm hạ tầng mới. Nhược: chậm hơn, tăng tải DB chính,
-   phải tự dọn TTL.
+## Yếu tố quyết định
 
-## Decision
-Chúng ta sẽ dùng Redis (managed) cho session cache, vì đáp ứng ngưỡng latency và có TTL
-built-in, giảm code dọn dẹp thủ công so với phương án 2.
+- Độ trễ đọc/ghi p99 dưới 10ms.
+- Ít tải thêm cho DB chính.
 
-## Consequences
-+ Session sống sót qua restart/scale ngang; giảm tải DB chính.
-− Thêm một điểm lỗi hạ tầng (Redis down → fallback cần thiết kế riêng, CHƯA có ở ADR này).
-Residual risk: chưa có kế hoạch fallback khi Redis down — cần ADR/task riêng trước khi lên prod.
+## Các phương án
+
+- Redis (managed)
+- Bảng session trong DB quan hệ hiện có
+
+## Kết quả quyết định
+
+Chọn phương án "Redis (managed)", vì đáp ứng ngưỡng latency và có TTL built-in.
+
+### Hệ quả
+
+- Tốt, vì session sống sót qua restart/scale ngang; giảm tải DB chính.
+- Xấu, vì thêm một điểm lỗi hạ tầng. Residual risk: chưa có kế hoạch fallback khi Redis down, cần ADR/task riêng
+  trước khi lên prod.
+
+### Xác nhận
+
+Load test p99 < 10ms trước khi lên prod.
+
+## Ưu nhược từng phương án
+
+### Redis (managed)
+
+- Tốt, vì nhanh, TTL sẵn, team đã quen.
+- Xấu, vì thêm một dependency vận hành.
+
+### Bảng session trong DB quan hệ hiện có
+
+- Tốt, vì không thêm hạ tầng mới.
+- Xấu, vì chậm hơn, tăng tải DB chính, phải tự dọn TTL.
 ```
 
 ## Checklist (Definition of Done cho ADR)
 
 - [ ] Đặt đúng `docs/decisions/<số kế tiếp>-<slug>.md`; số **nối tiếp** đúng convention (4 chữ số, +1).
-- [ ] Đủ mục Nygard: Title / Status / Ngày / Context / Các lựa chọn đã cân nhắc / Decision / Consequences.
+- [ ] Đủ mục MADR theo `adr.template.md`: metadata (Trạng thái / Ngày / Người quyết định), Bối cảnh và vấn đề, Các phương án, Kết quả quyết định (Hệ quả, Xác nhận), Ưu nhược từng phương án.
 - [ ] Title là **quyết định** cụ thể ở dạng khẳng định.
-- [ ] Context nêu rõ **forces**; suy đoán đánh dấu **[giả định]**.
+- [ ] Bối cảnh và vấn đề nêu rõ **forces**; suy đoán đánh dấu **[giả định]**.
 - [ ] Có **2–4 phương án** thực chất, mỗi phương án có **đánh đổi** (ưu/nhược); không bịa phương án.
 - [ ] Quyết định + lý do **truy vết được** về forces và tiêu chí chọn.
 - [ ] Hệ quả ghi **cả tiêu cực + residual risk** + việc phải làm tiếp; ngôn ngữ đo được, không tuyệt đối.

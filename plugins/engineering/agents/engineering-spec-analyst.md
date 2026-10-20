@@ -19,8 +19,8 @@ vào đúng cấu trúc tài liệu của project, và ghi ADR cho các quyết 
 - Không được: ghi ngoài `docs/` (không sinh code, không đụng CLI/adapter/engine); phân rã task khi người dùng
   chưa yêu cầu; tự chốt Status của một ADR quyết định lớn thay người dùng (chỉ đề xuất, `Status: Proposed` cho tới
   khi người chốt); bịa yêu cầu/phương án khi thiếu thông tin — phải hỏi hoặc đánh dấu `[giả định]`.
-- Bắt buộc: mọi ADR phải theo đúng template Nygard của skill `engineering-adr` (Title/Status/Context/
-  Decision/Consequences + Các lựa chọn đã cân nhắc), đánh số tiếp theo convention `docs/decisions/` hiện có.
+- Bắt buộc: mọi ADR phải theo đúng template MADR 4.0 (`adr.template.md` của skill `artifact-templates`; thủ tục ở skill `engineering-adr`:
+  Bối cảnh và vấn đề, Yếu tố quyết định, Các phương án, Kết quả quyết định, Ưu nhược từng phương án), đánh số tiếp theo convention `docs/decisions/` hiện có.
 
 ## Quy trình
 

@@ -206,7 +206,7 @@
 - Modify: `core/skills/artifact-templates/SKILL.md` (dòng `adr`, `project-knowledge`)
 - Modify: `test/contract/30-templates.contract.mjs` (bỏ `project-knowledge/*` và `docs/decisions/_TEMPLATE.md` khỏi `must`), `test/contract/35-artifact-templates.contract.mjs`, `test/init.test.mjs`
 
-- [ ] **Step 1: Viết test đỏ.**
+- [x] **Step 1: Viết test đỏ.**
   - **Contract 35:**
     - ADR template có đủ các mục: `## Bối cảnh và vấn đề`, `## Yếu tố quyết định`, `## Các phương án`, `## Kết quả quyết định` (kèm `### Hệ quả`, `### Xác nhận`), `## Ưu nhược từng phương án`.
     - Có metadata `Trạng thái`, `Ngày`, `Người quyết định`.
@@ -214,10 +214,10 @@
     - `engineering-adr` (SKILL.md + `adr-structure.md`) và `engineering-spec-analyst.md`: không còn `Nygard`, có chứa `MADR` và `artifact-templates`.
     - 2 ADR ví dụ có heading `## Bối cảnh và vấn đề` và `## Kết quả quyết định`.
   - **`init.test.mjs`:** `init --full` sinh `docs/decisions/_TEMPLATE.md` và `project-knowledge/project-overview.md`, cả hai không chứa khối header.
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/init.test.mjs` và `node test/validate.mjs --build --only 35-artifact --only 30-templates --only conventions` → FAIL.
-- [ ] **Step 3: Hiện thực** theo danh sách Files. Description của `engineering-adr` vẫn phải qua quy ước description (≤ 500 ký tự, trigger cũ giữ nguyên).
-- [ ] **Step 4: Chạy, xác nhận xanh** — cùng lệnh ở Step 2 → 0 fail.
-- [ ] **Step 5: Commit** — `feat(core): add MADR template and move project-knowledge to core`
+- [x] **Step 2: Chạy, xác nhận đỏ** — `node test/init.test.mjs` và `node test/validate.mjs --build --only 35-artifact --only 30-templates --only conventions` → FAIL.
+- [x] **Step 3: Hiện thực** theo danh sách Files. Description của `engineering-adr` vẫn phải qua quy ước description (≤ 500 ký tự, trigger cũ giữ nguyên).
+- [x] **Step 4: Chạy, xác nhận xanh** — cùng lệnh ở Step 2 → 0 fail.
+- [x] **Step 5: Commit** — `feat(core): add MADR template and move project-knowledge to core`
 
 ---
 

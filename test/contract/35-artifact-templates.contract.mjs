@@ -43,16 +43,24 @@ export default async function run({ ok, ctx }) {
     return row ? read(path.join(path.dirname(skillFile), row.file)) : '';
   };
   for (const row of index) {
-    const file = path.join(path.dirname(skillFile), row.file);
-    const exists = fs.existsSync(file);
+    const target = path.join(path.dirname(skillFile), row.file);
+    const exists = fs.existsSync(target);
     ok(exists, `mục lục: ${row.type} → ${row.file} tồn tại`);
     if (!exists) continue;
-    const h = templateHeader(fs.readFileSync(file, 'utf8'));
-    ok(h !== null, `${row.file}: có khối <!-- artifact-template -->`);
-    // Header và mục lục lặp cùng thông tin; kiểm lệch để không trôi dần (bỏ dấu backtick của cột Validator).
-    ok(!!h && h.validator === row.validator.replace(/`/g, '') && h.sources === row.sources, `${row.file}: header validator/sources khớp dòng mục lục`);
-    ok(!!h && h.type === row.type, `${row.file}: header type khớp cột Loại (${row.type})`);
-    ok(!!h && Number.isInteger(h.version) && h.validator !== '' && h.sources !== '', `${row.file}: header đủ version/validator/sources`);
+    // Dòng thư mục (project-knowledge): mọi .md bên trong có header; file khác (tech-stack.yml) không có header, được miễn.
+    const files = row.isDir
+      ? fs.readdirSync(target).filter((n) => n.endsWith('.md')).sort().map((n) => path.join(target, n))
+      : [target];
+    if (row.isDir) ok(files.length > 0, `mục lục: ${row.type} → ${row.file} có ít nhất một file .md`);
+    for (const file of files) {
+      const rel = path.relative(path.dirname(skillFile), file).split(path.sep).join('/');
+      const h = templateHeader(fs.readFileSync(file, 'utf8'));
+      ok(h !== null, `${rel}: có khối <!-- artifact-template -->`);
+      // Header và mục lục lặp cùng thông tin; kiểm lệch để không trôi dần (bỏ dấu backtick của cột Validator).
+      ok(!!h && h.validator === row.validator.replace(/`/g, '') && h.sources === row.sources, `${rel}: header validator/sources khớp dòng mục lục`);
+      ok(!!h && h.type === row.type, `${rel}: header type khớp cột Loại (${row.type})`);
+      ok(!!h && Number.isInteger(h.version) && h.validator !== '' && h.sources !== '', `${rel}: header đủ version/validator/sources`);
+    }
   }
 
   // 3. Workflow template qua validator workflow hiện có.
@@ -172,6 +180,40 @@ export default async function run({ ok, ctx }) {
     const specStructure = read(path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-spec-writing', 'references', 'spec-structure.md'));
     ok(!specStructure.includes('Phase/Task'), 'spec-structure.md: không còn "Phase/Task"');
     ok(specStructure.includes('artifact-templates'), 'spec-structure.md: plan.md trỏ tới template plan của artifact-templates');
+  }
+
+  // 3e. ADR (MADR 4.0, tiếng Việt) + project-knowledge + skill/agent đọc ADR trỏ về template core.
+  {
+    const heads = (t) => t.split('\n').filter((l) => /^#{1,3} /.test(l)).map((l) => l.trimEnd());
+    const adr = tplOf('adr');
+    ok(adr !== '', 'template adr đọc được qua mục lục');
+    for (const h of ['## Bối cảnh và vấn đề', '## Yếu tố quyết định', '## Các phương án', '## Kết quả quyết định', '### Hệ quả', '### Xác nhận', '## Ưu nhược từng phương án']) {
+      ok(heads(adr).includes(h), `template adr: có heading "${h}"`);
+    }
+    for (const m of ['- Trạng thái:', '- Ngày:', '- Người quyết định:']) ok(adr.includes(m), `template adr: có dòng metadata "${m}"`);
+
+    const pkRow = index.find((r) => r.type === 'project-knowledge');
+    ok(!!pkRow && pkRow.isDir === true, 'mục lục: project-knowledge là dòng thư mục');
+    const pkDir = path.join(path.dirname(skillFile), 'references', 'project-knowledge');
+    for (const n of ['project-overview.md', 'domain-context.md', 'architecture.md', 'source-structure.md', 'code-convention.md', 'tech-stack.yml']) {
+      ok(fs.existsSync(path.join(pkDir, n)), `references/project-knowledge/${n} tồn tại`);
+    }
+    ok(fs.existsSync(path.join(pkDir, 'tech-stack.yml')) && templateHeader(fs.readFileSync(path.join(pkDir, 'tech-stack.yml'), 'utf8')) === null, 'tech-stack.yml: không có khối header');
+    ok(skillText.includes('references/project-knowledge/') && skillText.includes('tech-stack.yml'), 'SKILL.md: mục lục và bản đồ tài liệu nhắc project-knowledge/tech-stack.yml');
+
+    for (const rel of ['skills/engineering-adr/SKILL.md', 'skills/engineering-adr/references/adr-structure.md', 'agents/engineering-spec-analyst.md']) {
+      const t = read(path.join(PLUGINS_DIR, 'engineering', rel));
+      ok(!t.includes('Nygard'), `engineering/${rel}: không còn "Nygard"`);
+      ok(t.includes('MADR') && t.includes('artifact-templates'), `engineering/${rel}: nhắc MADR và trỏ tới artifact-templates`);
+    }
+    const initDir = path.join(path.dirname(CORE_DIR), 'templates', 'init');
+    for (const n of ['0001-vi-du-quyet-dinh.md', '0002-code-convention.md']) {
+      const t = read(path.join(initDir, 'docs', 'decisions', n));
+      ok(t.includes('## Bối cảnh và vấn đề') && t.includes('## Kết quả quyết định'), `ADR ví dụ ${n}: theo khung MADR tiếng Việt`);
+    }
+    for (const gone of ['project-knowledge', 'docs/decisions/_TEMPLATE.md']) {
+      ok(!fs.existsSync(path.join(initDir, gone)), `templates/init/${gone} đã bị xóa`);
+    }
   }
 
   // 4. Chính skill artifact-templates qua validator skill.

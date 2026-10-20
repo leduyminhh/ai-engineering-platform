@@ -47,6 +47,18 @@ test("init --full sinh requirement/design/plan _TEMPLATE từ core, đã bỏ kh
   }
 });
 
+test("init --full sinh docs/decisions/_TEMPLATE.md và project-knowledge/ từ core, đã bỏ khối header", () => {
+  const root = tmp();
+  init({ root, full: true });
+  for (const rel of ["docs/decisions/_TEMPLATE.md", "project-knowledge/project-overview.md", "project-knowledge/code-convention.md"]) {
+    const text = read(root, rel);
+    assert.ok(text.length > 0, rel);
+    assert.ok(!text.includes("<!-- artifact-template"), rel);
+  }
+  assert.ok(read(root, "docs/decisions/_TEMPLATE.md").includes("## Bối cảnh và vấn đề"));
+  assert.ok(fs.existsSync(path.join(root, "project-knowledge/tech-stack.yml")));
+});
+
 test("init --full không ghi đè docs/requests/_TEMPLATE/plan.md đã có", () => {
   const root = tmp();
   const old = "# Plan: kiểu cũ\n## Phase 1\n";

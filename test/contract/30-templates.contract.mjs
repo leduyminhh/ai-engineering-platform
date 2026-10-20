@@ -41,11 +41,8 @@ export default async function run({ ok, ctx }) {
     ok(fs.existsSync(T), 'templates/init/ tồn tại');
     const must = [
       'CLAUDE.md', 'CONTRIBUTING.md', 'README.md', 'TODO.md',
-      'project-knowledge/project-overview.md', 'project-knowledge/domain-context.md',
-      'project-knowledge/architecture.md', 'project-knowledge/source-structure.md',
-      'project-knowledge/code-convention.md', 'project-knowledge/tech-stack.yml',
       'docs/contracts/.gitkeep',
-      'docs/decisions/_TEMPLATE.md', 'docs/decisions/0001-vi-du-quyet-dinh.md',
+      'docs/decisions/0001-vi-du-quyet-dinh.md',
       'docs/decisions/0002-code-convention.md', 'src/shared/.gitkeep', 'tests/.gitkeep',
     ];
     for (const rel of must) ok(fs.existsSync(path.join(T, rel)), `templates/init/${rel} tồn tại`);
@@ -100,10 +97,11 @@ export default async function run({ ok, ctx }) {
     }
   }
 
-  // 6c. BUILD: khung docs/requests/_TEMPLATE lấy từ core (không còn trong templates/init), đã bỏ khối header, ở cả 4 tool.
+  // 6c. BUILD: khung docs/requests/_TEMPLATE, docs/decisions/_TEMPLATE.md và project-knowledge/ lấy từ core (không còn trong templates/init), đã bỏ khối header, ở cả 4 tool.
   ok(!fs.existsSync(path.join(REPO_ROOT, 'templates', 'init', 'docs', 'requests', '_TEMPLATE')), 'templates/init/docs/requests/_TEMPLATE/ đã bị xóa');
   if (fs.existsSync(BUILD)) {
     const rels = ['requirement.md', 'design.md', 'plan.md'].map((f) => `docs/requests/_TEMPLATE/${f}`);
+    rels.push('docs/decisions/_TEMPLATE.md', 'project-knowledge/project-overview.md', 'project-knowledge/tech-stack.yml');
     for (const p of plugins) {
       for (const s of p.stages) {
         if (!s.id.endsWith('-init')) continue;
