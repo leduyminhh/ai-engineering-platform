@@ -380,4 +380,15 @@ export default async function run({ ok, ctx }) {
     const dt = Date.now() - t0;
     ok(blocked(bigRes) && dt < 1000, `AC1.1: transcript ~5 MB chỉ parse sau ranh giới lượt → < 1000 ms (đo ${dt} ms)`);
   }
+  {
+    ok(HOOK_EVENTS.includes('Stop') && HOOK_EVENTS.includes('SubagentStop'), 'AC1.9: HOOK_EVENTS có Stop và SubagentStop');
+    const hooks = JSON.parse(fs.readFileSync(path.join(ctx.CORE_DIR, 'hooks', 'hooks.json'), 'utf8')).hooks;
+    const expected = { type: 'command', command: 'node', args: ['${CLAUDE_PLUGIN_ROOT}/hooks/scripts/gate-stop.mjs'], timeout: 10 };
+    ok(['Stop', 'SubagentStop'].every((ev) => hooks[ev]?.length === 1 && hooks[ev][0].hooks?.length === 1
+      && JSON.stringify(hooks[ev][0].hooks[0]) === JSON.stringify(expected)),
+    'AC1.9: hooks.json core đăng ký Stop + SubagentStop gọi gate-stop.mjs');
+    if (fs.existsSync(claudeDir)) {
+      ok(fs.existsSync(path.join(claudeDir, 'plugins', 'core', 'hooks', 'scripts', 'gate-stop.mjs')), 'AC1.9: build claude ship gate-stop.mjs');
+    }
+  }
 }

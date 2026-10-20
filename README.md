@@ -316,7 +316,7 @@ Users then add it with `claude plugin marketplace add <owner>/<repo>@dist`. [Unv
 
 ## Hooks
 
-The `core` plugin ships two Claude Code `PreToolUse` hooks (`core/hooks/`; zero-dependency Node). **They exist only in plugin-mode installs** — skills-mode (flat `.claude/skills/`) installs none, because `${CLAUDE_PLUGIN_ROOT}` only exists for installed plugins. A managed `allowManagedHooksOnly` setting disables plugin hooks that are not force-enabled by the administrator.
+The `core` plugin ships three Claude Code hooks (`core/hooks/`; zero-dependency Node): two `PreToolUse` guards (H1–H5 below) and a `Stop`/`SubagentStop` verification gate (`gate-stop`, below). **They exist only in plugin-mode installs** — skills-mode (flat `.claude/skills/`) installs none, because `${CLAUDE_PLUGIN_ROOT}` only exists for installed plugins. A managed `allowManagedHooksOnly` setting disables plugin hooks that are not force-enabled by the administrator.
 
 | Rule | Tool | Decision | Covers |
 | --- | --- | --- | --- |
@@ -327,6 +327,16 @@ The `core` plugin ships two Claude Code `PreToolUse` hooks (`core/hooks/`; zero-
 | H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root of the target file, not of the session cwd): `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
 
 The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When `guard-bash` cannot parse a command reliably it falls toward `ask` (`guard-files` does not). There is no H4: the ops agents have no Bash tool.
+
+**Stop gate (`gate-stop`).** Registered for `Stop` and `SubagentStop`. It blocks **once** when the current turn edited code files (Edit/Write/MultiEdit/NotebookEdit; docs-only edits such as `.md`/`.mdx`/`.txt`/`.rst`/`.adoc` do not count) but ran no test/lint/typecheck/build command after the last edit. It does not judge whether the result is green or red, only whether a check ran; when `stop_hook_active` is set it lets the agent stop, so the agent can stop after explaining why it skipped the check. Disable it with `AIP_STOP_GATE=off` or `<git-root>/.claude/aip-gate.json` `{"stopGate": false}`. Extra command patterns go in `testCommands` (regexes); `exemptAgents` replaces the default `["data-migration-writer"]` and is matched against the `SubagentStop` `agent_type` with any `<plugin>:` prefix stripped. It fails open like the other scripts. [Unverified] It reads Claude Code's internal transcript JSONL, which is not a documented contract and may change.
+
+```json
+{
+  "stopGate": true,
+  "testCommands": ["^make test\\b"],
+  "exemptAgents": ["data-migration-writer"]
+}
+```
 
 **Limits / residual risk.** The hooks are a regex gate, not a sandbox.
 
