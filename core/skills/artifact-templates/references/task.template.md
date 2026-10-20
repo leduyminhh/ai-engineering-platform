@@ -25,12 +25,15 @@ Bỏ khối này khi chép template ra dùng.
 
 | ID | UC | Loại | Tiêu đề | Size | Phụ thuộc | Owner | Trạng thái | Skill gợi ý |
 |---|---|---|---|---|---|---|---|---|
-| [UC01-BE-01](#uc01-be-01) | UC01 | BE | <tiêu đề ngắn> | S | — |  | Todo | backend-implement |
+| [UC01-CT-01](#uc01-ct-01) | UC01 | CT | <tiêu đề ngắn> | S | — |  | Todo | backend-api-contract |
+| [UC01-BE-01](#uc01-be-01) | UC01 | BE | <tiêu đề ngắn> | S | UC01-CT-01 |  | Todo | backend-implement |
+| [UC01-FE-01](#uc01-fe-01) | UC01 | FE-UI | <tiêu đề ngắn> | S | — |  | Todo | frontend-implement |
+| [UC01-FE-02](#uc01-fe-02) | UC01 | FE-INT | <tiêu đề ngắn> | S | UC01-CT-01, UC01-FE-01 |  | Todo | frontend-data-integration |
 
 ## 4. Thứ tự thực hiện gợi ý
 
-1. Song song: <UC01-CT-01> ∥ <UC01-DB-01>
-2. <UC01-BE-01>
+1. Song song: UC01-CT-01 ∥ UC01-FE-01
+2. Song song: UC01-BE-01 ∥ UC01-FE-02
 
 ## 5. Chi tiết task
 
@@ -42,7 +45,7 @@ Bỏ khối này khi chép template ra dùng.
 | Use case | UC01 — <tên> |
 | Loại | BE |
 | Size | S |
-| Phụ thuộc | UC01-CT-01, UC01-DB-01 |
+| Phụ thuộc | UC01-CT-01 |
 | Owner |  |
 | Trạng thái | Todo |
 | Skill gợi ý | backend-implement |

@@ -232,15 +232,32 @@ export default async function run({ ok, ctx }) {
     const checkScript = path.join(tbDir, 'scripts', 'check-tasks.mjs');
     const tb = await import(pathToFileURL(checkScript).href);
     const items = (p, n) => Array.from({ length: n }, (_, i) => `- **${p}${i + 1}. Mục:** x`).join('\n');
-    // Điền mẫu: placeholder thành 'mẫu'; dòng "mục riêng theo loại" thành khối Backend đủ B1–B10.
-    const filled = stripTemplateHeader(raw)
-      .replace(/^<mục riêng theo loại[^\n]*>$/m, `#### Backend\n\n${items('B', 10)}`)
+    // Điền mẫu UC01: bảng tổng của template có sẵn dòng CT/BE/FE-UI/FE-INT; khối chi tiết BE của template được nhân cho
+    // CT/FE-UI/FE-INT (đổi ID, anchor, Loại) và thêm mục riêng theo loại (B1–B10, F1–F9) để check-tasks đọc đủ 4 task.
+    const body = stripTemplateHeader(raw);
+    const marker = body.match(/^<mục riêng theo loại[^\n]*>$/m)?.[0] ?? '';
+    const bStart = body.indexOf('<a id="uc01-be-01"></a>');
+    ok(marker !== '' && bStart >= 0 && bStart < body.indexOf(marker), 'template task (thô): có khối chi tiết UC01-BE-01 và dòng "mục riêng theo loại"');
+    const beBlock = body.slice(bStart, body.indexOf(marker));
+    const clone = (id, type, tail) => beBlock
+      .replace(/uc01-be-01/g, id.toLowerCase()).replace(/UC01-BE-01/g, id)
+      .replace('| Loại | BE |', `| Loại | ${type} |`) + tail;
+    const feTail = `#### Frontend\n\n${items('F', 9)}\n\n`;
+    const extra = [
+      clone('UC01-CT-01', 'CT', '#### Contract\n\n- **Endpoint cần chốt:** x\n\n'),
+      clone('UC01-FE-01', 'FE-UI', feTail),
+      clone('UC01-FE-02', 'FE-INT', feTail),
+    ].join('');
+    const filled = body
+      .replace(marker, () => `#### Backend\n\n${items('B', 10)}\n\n${extra}`)
       .replace(/<[^<>\n]+>/g, (p) => (/^<a id=|^<\/a>$/.test(p) ? p : 'mẫu'));
-    const res = tb.checkTasks(tb.parseTasks(filled));
-    const probs = [...res.errors, ...res.warnings].map((p) => `${p.code} ${p.msg}`).join(' | ');
-    ok(res.errors.length === 0, `template task (điền mẫu UC01) PASS check-tasks${probs ? ' — ' + probs : ''}`);
     const model = tb.parseTasks(filled);
-    ok(model.useCases.length === 1 && model.tasks.length === 1 && model.details.length === 1, 'template task (điền mẫu): đọc được 1 use case, 1 task, 1 chi tiết');
+    const res = tb.checkTasks(model);
+    const probs = [...res.errors, ...res.warnings].map((p) => `${p.code} ${p.msg}`).join(' | ');
+    ok(res.errors.length === 0 && res.warnings.length === 0, `template task (điền mẫu UC01) PASS check-tasks${probs ? ' — ' + probs : ''}`);
+    ok(model.useCases.length === 1 && model.tasks.length === 4 && model.details.length === 4, 'template task (điền mẫu): đọc được 1 use case, 4 task, 4 chi tiết');
+    ok(JSON.stringify(model.tasks.map((t) => [t.id, t.type])) === JSON.stringify([['UC01-CT-01', 'CT'], ['UC01-BE-01', 'BE'], ['UC01-FE-01', 'FE-UI'], ['UC01-FE-02', 'FE-INT']]),
+      'template task (điền mẫu): bảng tổng có CT, BE, FE-UI, FE-INT với ID khớp Loại');
 
     const skill = read(path.join(tbDir, 'SKILL.md'));
     ok(skill.includes('artifact-templates') && !skill.includes('task-template-common.md'), 'engineering-task-breakdown SKILL.md: trỏ artifact-templates, không còn task-template-common.md');
