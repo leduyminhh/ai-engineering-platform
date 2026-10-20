@@ -1,6 +1,6 @@
 # Thiết kế: gate kiểm chứng (project 2a)
 - Ngày: 2026-10-20
-- Trạng thái: đã duyệt 2026-10-20
+- Trạng thái: đã duyệt 2026-10-20; Task 1–5 xong trên feature/verification-gate; Task 6 (smoke hook Stop + eval, AC3.1–AC3.2) hoãn theo người dùng
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: chuẩn hóa aip theo 9 xu hướng — project 2a (xu hướng 7 "chỗ tắc chuyển sang kiểm chứng"). 2b (workflow graph máy đọc được) làm sau, thiết kế riêng.
 
@@ -33,26 +33,26 @@ Của người viết thiết kế (người dùng kiểm khi đọc):
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given transcript lượt hiện tại có Edit/Write/MultiEdit/NotebookEdit lên file code và không có lệnh test nào sau lần sửa đó, When hook `Stop` chạy với `stop_hook_active = false`, Then stdout là JSON `{"decision":"block","reason":…}`, `reason` tiếng Việt nêu số file và tối đa 3 đường dẫn đã sửa, yêu cầu chạy test liên quan hoặc nêu rõ lý do bỏ qua; exit 0.
-- [ ] **AC1.2** — Given có lệnh Bash/PowerShell khớp mẫu lệnh test chạy **sau** lần sửa code cuối, When hook chạy, Then không in gì và exit 0 (cho dừng), bất kể test xanh hay đỏ.
-- [ ] **AC1.3** — Given lượt hiện tại không sửa file nào, hoặc chỉ sửa file tài liệu (mục Thiết kế §1), When hook chạy, Then cho dừng.
-- [ ] **AC1.4** — Given `stop_hook_active = true`, hoặc biến môi trường `AIP_STOP_GATE=off`, hoặc `.claude/aip-gate.json` ở gốc git có `"stopGate": false`, When hook chạy, Then cho dừng.
-- [ ] **AC1.5** — Given stdin không phải JSON, transcript không tồn tại/không đọc được, hoặc dòng JSONL có cấu trúc lạ, When hook chạy, Then cho dừng và exit 0 (fail-open, không ném lỗi ra phiên).
-- [ ] **AC1.6** — Given sự kiện `SubagentStop`, When hook chạy, Then đọc `agent_transcript_path` (không phải `transcript_path`) và áp cùng quy tắc AC1.1–AC1.5; `decision: "block"` giữ subagent chạy tiếp.
-- [ ] **AC1.10** — Given sự kiện `SubagentStop` có `agent_type` khớp (theo tên agent, bỏ tiền tố `<plugin>:` nếu có) một mục trong `exemptAgents` (mặc định `["data-migration-writer"]`, file cấu hình ghi đè), When hook chạy, Then cho dừng.
-- [ ] **AC1.7** — Given `.claude/aip-gate.json` có `"testCommands": ["<regex>", …]`, When một lệnh khớp regex đó, Then lệnh được tính là lệnh test (cộng thêm vào mẫu mặc định); regex sai cú pháp bị bỏ qua, không làm hỏng hook.
-- [ ] **AC1.8** — Given sửa file trong lượt **trước** prompt người dùng gần nhất và lượt hiện tại không sửa gì, When hook chạy, Then cho dừng.
-- [ ] **AC1.9** — Given `core/hooks/hooks.json`, Then đăng ký `Stop` và `SubagentStop` gọi `node ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/gate-stop.mjs`; `HOOK_EVENTS` trong `cli/lib/conventions.mjs` nhận 2 event này; build Claude ship script; hook không lọt sang codex/cursor/skills-mode (contract `90-hooks` hiện có vẫn xanh).
-- [ ] **AC2.1** — Given thư mục request có AC và `plan.md` có dòng `**Files:**` liệt kê file test, When chạy `check-request.mjs <dir>` và một AC hợp lệ không xuất hiện trong các file test đó, Then in `WARN <file>:<dòng> [W7] <AC> chưa có test nào nhắc tới`. Đường dẫn trong `**Files:**` tính từ gốc git chứa thư mục request.
-- [ ] **AC2.6** — Given `plan.md` có ít nhất một dòng `**Files:**` nhưng không dòng nào chứa file test (file test = mục ghi `Test:` hoặc đường dẫn khớp mẫu test: thư mục `test/`, `tests/`, `__tests__/`, `spec/` hoặc tên `*.test.*`, `*.spec.*`, `*_test.*`, `test_*.py`, `*Test.java`), When chạy script, Then in một cảnh báo W8 "plan.md không ghi file test nào" và bỏ qua W7. File test được ghi nhưng chưa tồn tại → mỗi file một cảnh báo W9.
-- [ ] **AC2.7** — Given cờ `--tests <đường dẫn>…`, Then dùng các đường dẫn này thay cho phạm vi lấy từ `plan.md` và không in W8/W9.
-- [ ] **AC2.2** — Given file test chứa `AC1.2`, `AC1_2` hoặc `ac1_2` (không phân biệt hoa thường, dấu `.` hoặc `_`), Then AC1.2 được tính là có test.
-- [ ] **AC2.3** — Given phạm vi test (từ `plan.md` hoặc `--tests`) có thư mục, Then quét đệ quy, bỏ qua `node_modules`, `.git`, `build`, `dist`, `target`, `.venv`; file nhị phân hoặc không đọc được thì bỏ qua.
-- [ ] **AC2.4** — Given cờ `--strict` và có ít nhất một cảnh báo, Then exit 1; không có cảnh báo thì exit 0. Không có `--strict` thì giữ hành vi cũ: luôn exit 0 (AC4.2 của project 1 không đổi). Đối số sai vẫn exit 2.
-- [ ] **AC2.5** — Given managed block `core/agents/AGENTS.template.md`, Then mục AC có thêm quy ước: test phủ AC ghi ID AC trong tên test hoặc comment (Python dùng `ac1_2`); `AGENTS.md` ở gốc repo giống byte-for-byte template.
+- [x] **AC1.1** — Given transcript lượt hiện tại có Edit/Write/MultiEdit/NotebookEdit lên file code và không có lệnh test nào sau lần sửa đó, When hook `Stop` chạy với `stop_hook_active = false`, Then stdout là JSON `{"decision":"block","reason":…}`, `reason` tiếng Việt nêu số file và tối đa 3 đường dẫn đã sửa, yêu cầu chạy test liên quan hoặc nêu rõ lý do bỏ qua; exit 0.
+- [x] **AC1.2** — Given có lệnh Bash/PowerShell khớp mẫu lệnh test chạy **sau** lần sửa code cuối, When hook chạy, Then không in gì và exit 0 (cho dừng), bất kể test xanh hay đỏ.
+- [x] **AC1.3** — Given lượt hiện tại không sửa file nào, hoặc chỉ sửa file tài liệu (mục Thiết kế §1), When hook chạy, Then cho dừng.
+- [x] **AC1.4** — Given `stop_hook_active = true`, hoặc biến môi trường `AIP_STOP_GATE=off`, hoặc `.claude/aip-gate.json` ở gốc git có `"stopGate": false`, When hook chạy, Then cho dừng.
+- [x] **AC1.5** — Given stdin không phải JSON, transcript không tồn tại/không đọc được, hoặc dòng JSONL có cấu trúc lạ, When hook chạy, Then cho dừng và exit 0 (fail-open, không ném lỗi ra phiên).
+- [x] **AC1.6** — Given sự kiện `SubagentStop`, When hook chạy, Then đọc `agent_transcript_path` (không phải `transcript_path`) và áp cùng quy tắc AC1.1–AC1.5; `decision: "block"` giữ subagent chạy tiếp.
+- [x] **AC1.10** — Given sự kiện `SubagentStop` có `agent_type` khớp (theo tên agent, bỏ tiền tố `<plugin>:` nếu có) một mục trong `exemptAgents` (mặc định `["data-migration-writer"]`, file cấu hình ghi đè), When hook chạy, Then cho dừng.
+- [x] **AC1.7** — Given `.claude/aip-gate.json` có `"testCommands": ["<regex>", …]`, When một lệnh khớp regex đó, Then lệnh được tính là lệnh test (cộng thêm vào mẫu mặc định); regex sai cú pháp bị bỏ qua, không làm hỏng hook.
+- [x] **AC1.8** — Given sửa file trong lượt **trước** prompt người dùng gần nhất và lượt hiện tại không sửa gì, When hook chạy, Then cho dừng.
+- [x] **AC1.9** — Given `core/hooks/hooks.json`, Then đăng ký `Stop` và `SubagentStop` gọi `node ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/gate-stop.mjs`; `HOOK_EVENTS` trong `cli/lib/conventions.mjs` nhận 2 event này; build Claude ship script; hook không lọt sang codex/cursor/skills-mode (contract `90-hooks` hiện có vẫn xanh).
+- [x] **AC2.1** — Given thư mục request có AC và `plan.md` có dòng `**Files:**` liệt kê file test, When chạy `check-request.mjs <dir>` và một AC hợp lệ không xuất hiện trong các file test đó, Then in `WARN <file>:<dòng> [W7] <AC> chưa có test nào nhắc tới`. Đường dẫn trong `**Files:**` tính từ gốc git chứa thư mục request.
+- [x] **AC2.6** — Given `plan.md` có ít nhất một dòng `**Files:**` nhưng không dòng nào chứa file test (file test = mục ghi `Test:` hoặc đường dẫn khớp mẫu test: thư mục `test/`, `tests/`, `__tests__/`, `spec/` hoặc tên `*.test.*`, `*.spec.*`, `*_test.*`, `test_*.py`, `*Test.java`), When chạy script, Then in một cảnh báo W8 "plan.md không ghi file test nào" và bỏ qua W7. File test được ghi nhưng chưa tồn tại → mỗi file một cảnh báo W9.
+- [x] **AC2.7** — Given cờ `--tests <đường dẫn>…`, Then dùng các đường dẫn này thay cho phạm vi lấy từ `plan.md` và không in W8/W9.
+- [x] **AC2.2** — Given file test chứa `AC1.2`, `AC1_2` hoặc `ac1_2` (không phân biệt hoa thường, dấu `.` hoặc `_`), Then AC1.2 được tính là có test.
+- [x] **AC2.3** — Given phạm vi test (từ `plan.md` hoặc `--tests`) có thư mục, Then quét đệ quy, bỏ qua `node_modules`, `.git`, `build`, `dist`, `target`, `.venv`; file nhị phân hoặc không đọc được thì bỏ qua.
+- [x] **AC2.4** — Given cờ `--strict` và có ít nhất một cảnh báo, Then exit 1; không có cảnh báo thì exit 0. Không có `--strict` thì giữ hành vi cũ: luôn exit 0 (AC4.2 của project 1 không đổi). Đối số sai vẫn exit 2.
+- [x] **AC2.5** — Given managed block `core/agents/AGENTS.template.md`, Then mục AC có thêm quy ước: test phủ AC ghi ID AC trong tên test hoặc comment (Python dùng `ac1_2`); `AGENTS.md` ở gốc repo giống byte-for-byte template.
 - [ ] **AC3.1** — Given 3 case trong `evals/`, When agent chạy lần đầu theo checklist trong `evals/README.md` trong trần ngân sách D11, Then README có bảng kết quả: case, ngày, model, số run, tỷ lệ pass, chi phí; các nhãn [Unverified] đã được kiểm qua lần chạy thì bỏ hoặc sửa theo kết quả.
 - [ ] **AC3.2** — Given một case fail, Then phân loại: lỗi do case/grader/lệnh (sửa trong project này) hay do skill (ghi finding vào README, không sửa skill trong project này).
-- [ ] **AC4.1** — `npm test` xanh; version `core` được bump (và plugin khác nếu nội dung của nó đổi); `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
+- [x] **AC4.1** — `npm test` xanh; version `core` được bump (và plugin khác nếu nội dung của nó đổi); `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
 
 ## Thiết kế
 

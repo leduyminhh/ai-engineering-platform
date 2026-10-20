@@ -47,7 +47,7 @@
   - `export const DEFAULT_EXEMPT_AGENTS = ['data-migration-writer']`
   - Chạy như script: đọc stdin JSON, `decide()` khác null thì in `JSON.stringify({ decision: 'block', reason })`, luôn exit 0.
 
-- [ ] **Step 1: Viết test đỏ** — thêm khối mới cuối `90-hooks.contract.mjs`, import `gate-stop.mjs` như khối `guard-bash`. Helper dựng JSONL trong test (không đọc transcript thật):
+- [x] **Step 1: Viết test đỏ** — thêm khối mới cuối `90-hooks.contract.mjs`, import `gate-stop.mjs` như khối `guard-bash`. Helper dựng JSONL trong test (không đọc transcript thật):
 
 ```js
 const line = (o) => JSON.stringify(o);
@@ -77,12 +77,12 @@ Các assertion (mỗi dòng một `ok`, tên bắt đầu bằng ID AC):
 - AC1.10: `SubagentStop` với `agent_type: 'data:data-migration-writer'` và `'data-migration-writer'` → `null`; `agent_type: 'backend:backend-implementer'` → block; `cfg: { exemptAgents: ['backend-implementer'] }` → `backend:backend-implementer` `null` còn `data:data-migration-writer` block (cấu hình ghi đè, không cộng).
 - Hiệu năng: transcript tổng hợp ~5 MB (15 000 dòng assistant `Read` ~300 byte trước `human()`, rồi một sửa) → `decide` < 1000 ms (mục tiêu thiết kế < 300 ms đo tay; ngưỡng test nới để CI Windows không đỏ giả).
 
-- [ ] **Step 2: Chạy test, xác nhận đỏ**
+- [x] **Step 2: Chạy test, xác nhận đỏ**
 
 Run: `node test/validate.mjs --only hooks`
 Expected: FAIL — `Cannot find module …gate-stop.mjs`.
 
-- [ ] **Step 3: Viết `core/hooks/scripts/gate-stop.mjs`**
+- [x] **Step 3: Viết `core/hooks/scripts/gate-stop.mjs`**
 
 Theo luồng §1 của design và khung `guard-files.mjs` (shebang, comment đầu file 1 dòng, `main()` bỏ BOM stdin, khối `if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)` + `try/catch` fail-open + `process.exitCode = 0`). Các quyết định cụ thể:
 - Ranh giới lượt (Stop): duyệt ngược từ cuối file, dừng ở dòng `type === 'user'`, `!isMeta`, và `message.content` là chuỗi hoặc mảng có phần tử `type !== 'tool_result'`; chỉ `JSON.parse` các dòng sau ranh giới. Dòng parse lỗi bị bỏ qua. SubagentStop: xét mọi dòng.
@@ -107,12 +107,12 @@ const DEFAULT_TEST_PATTERNS = [
 - `loadConfig(cwd)` mặc định: `git -C <cwd> rev-parse --show-toplevel` (timeout 3000, như `guard-files`), đọc `<root>/.claude/aip-gate.json`, lỗi bất kỳ → `null`. `testCommands` không phải mảng chuỗi → bỏ qua; từng regex `new RegExp(s)` trong `try`.
 - `reason` tiếng Việt, ngắn: số file đã sửa, tối đa 3 đường dẫn, yêu cầu chạy test/lint/build liên quan hoặc nói rõ vì sao bỏ qua, cách tắt (`AIP_STOP_GATE=off` hoặc `"stopGate": false` trong `.claude/aip-gate.json`).
 
-- [ ] **Step 4: Chạy test, xác nhận xanh**
+- [x] **Step 4: Chạy test, xác nhận xanh**
 
 Run: `node test/validate.mjs --only hooks`
 Expected: mọi dòng của khối mới PASS; các khối `guard-bash`/`guard-files` cũ vẫn PASS. (Khối kiểm `hooks.json` chưa đổi ở task này.)
 
-- [ ] **Step 5: Commit** qua `core:git-workflow` — header `feat(core): add stop gate hook script`.
+- [x] **Step 5: Commit** qua `core:git-workflow` — header `feat(core): add stop gate hook script`.
 
 ### Task 2: Đăng ký hook Stop/SubagentStop và tài liệu
 
@@ -128,29 +128,29 @@ Expected: mọi dòng của khối mới PASS; các khối `guard-bash`/`guard-f
 - Consumes: `core/hooks/scripts/gate-stop.mjs` (Task 1).
 - Produces: `HOOK_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop']`.
 
-- [ ] **Step 1: Viết test đỏ** trong `90-hooks.contract.mjs`:
+- [x] **Step 1: Viết test đỏ** trong `90-hooks.contract.mjs`:
   - `AC1.9: HOOK_EVENTS có Stop và SubagentStop` — `HOOK_EVENTS.includes('Stop') && HOOK_EVENTS.includes('SubagentStop')`.
   - `AC1.9: hooks.json core đăng ký Stop + SubagentStop gọi gate-stop.mjs` — với `hooks = JSON.parse(core/hooks/hooks.json)`, mỗi event `Stop`/`SubagentStop` có đúng một group, `hooks[0]` = `{ type: 'command', command: 'node', args: ['${CLAUDE_PLUGIN_ROOT}/hooks/scripts/gate-stop.mjs'], timeout: 10 }`.
   - `AC1.9: build claude ship gate-stop.mjs` — khi `claudeDir` tồn tại: `plugins/core/hooks/scripts/gate-stop.mjs` có trong build.
   - Các kiểm "không lọt sang codex/cursor" và "skills-mode không cài hook" hiện có giữ nguyên, không viết lại.
 
-- [ ] **Step 2: Chạy test, xác nhận đỏ**
+- [x] **Step 2: Chạy test, xác nhận đỏ**
 
 Run: `node test/validate.mjs --build --only hooks`
 Expected: FAIL ở 3 dòng AC1.9 mới.
 
-- [ ] **Step 3: Sửa code và tài liệu**
+- [x] **Step 3: Sửa code và tài liệu**
   - `hooks.json`: thêm 2 khoá `Stop`, `SubagentStop` đúng đoạn JSON ở design §1 (không `matcher`).
   - `HOOK_EVENTS` như Interfaces.
   - README/README_VI: "hai hook `PreToolUse`" → thêm hook thứ ba `Stop`/`SubagentStop` (`gate-stop`): chặn một lần khi lượt đã sửa file code mà chưa chạy test/lint/typecheck/build sau lần sửa cuối; không phán xanh/đỏ; tắt bằng `AIP_STOP_GATE=off` hoặc `.claude/aip-gate.json` `{"stopGate": false}`; thêm lệnh bằng `testCommands`; miễn agent bằng `exemptAgents` (mặc định `data-migration-writer`); [Unverified] dựa vào cấu trúc transcript nội bộ của Claude Code. Giữ cấu trúc mục hiện có, mỗi README một đoạn ngắn + một ví dụ JSON cấu hình.
   - `CLAUDE.md:64`: thêm `gate-stop.mjs` (Stop/SubagentStop) vào câu Hooks.
 
-- [ ] **Step 4: Chạy test, xác nhận xanh**
+- [x] **Step 4: Chạy test, xác nhận xanh**
 
 Run: `node test/validate.mjs --build --only hooks`
 Expected: PASS toàn bộ khối hooks (gồm `checkHooksJson` báo 0 lỗi cho core).
 
-- [ ] **Step 5: Commit** qua `core:git-workflow` — header `feat(core): register stop gate for Stop and SubagentStop`.
+- [x] **Step 5: Commit** qua `core:git-workflow` — header `feat(core): register stop gate for Stop and SubagentStop`.
 
 ### Task 3: `check-request.mjs` — W7/W8/W9, `--tests`, `--strict`
 
@@ -167,7 +167,7 @@ Expected: PASS toàn bộ khối hooks (gồm `checkHooksJson` báo 0 lỗi cho 
   - `export function checkRequest(texts, { readTest, override } = {})` — `readTest: (relPath: string) => string | null` (null = không tồn tại; thư mục trả nội dung gộp); `override: string[] | undefined`. Không có `readTest` → hành vi cũ W1–W6, các test cũ ở `test/content/18-…pin.mjs` không đổi.
   - `export function main(argv: string[]): 0 | 1 | 2`.
 
-- [ ] **Step 1: Viết test đỏ** — khối mới trong `35-artifact-templates.contract.mjs`, import script qua `pathToFileURL`. Fixture: `design.md` có `AC1.1`, `AC1.2`, `AC1.10` hợp lệ; `plan.md` có `**Goal:**`, `**Spec:**`, `**Phủ AC:** AC1.1, AC1.2, AC1.10` và:
+- [x] **Step 1: Viết test đỏ** — khối mới trong `35-artifact-templates.contract.mjs`, import script qua `pathToFileURL`. Fixture: `design.md` có `AC1.1`, `AC1.2`, `AC1.10` hợp lệ; `plan.md` có `**Goal:**`, `**Spec:**`, `**Phủ AC:** AC1.1, AC1.2, AC1.10` và:
 
 ```text
 **Files:**
@@ -186,23 +186,23 @@ Expected: PASS toàn bộ khối hooks (gồm `checkHooksJson` báo 0 lỗi cho 
   - `AC2.3: quét thư mục đệ quy, bỏ thư mục loại trừ và file nhị phân` — dùng `main()` trên thư mục tạm có `.git/`, `docs/requests/r/design.md` (thêm `AC2.1` vào fixture), `docs/requests/r/plan.md` (`**Phủ AC:**` phủ cả `AC2.1`, ghi `` - Test: `test/` ``), `test/sub/a.mjs` (chứa `AC1.1 AC1.2 AC1.10`), `test/node_modules/x.js`, `test/build/y.js` và `test/bin.dat` (byte `\0` rồi `AC2.1`) cùng chứa `AC2.1`; `main([dir])` → exit 0, output (bắt `console.log`) có đúng một W7 và đó là `AC2.1` — chứng minh cả ba nguồn bị bỏ qua còn thư mục con `sub/` được quét.
   - `AC2.4: --strict exit 1 khi có cảnh báo, 0 khi sạch; không cờ vẫn 0; đối số sai 2` — `main([dir, '--strict'])` với một W7 → 1; sạch → 0; `main([dir])` có W7 → 0; `main([dir, '--tests'])`, `main([dir, '--bogus'])`, `main([dir, dir])`, `main([dir, '--tests', 'không-có'])` → 2.
 
-- [ ] **Step 2: Chạy test, xác nhận đỏ**
+- [x] **Step 2: Chạy test, xác nhận đỏ**
 
 Run: `node test/validate.mjs --only artifact-templates`
 Expected: FAIL — `acIdsIn`/`planTestPaths` không phải function, W7 không xuất hiện.
 
-- [ ] **Step 3: Sửa `check-request.mjs`**
+- [x] **Step 3: Sửa `check-request.mjs`**
   - `planTestPaths`: dòng bắt đầu `**Files:**` (sau `linesOf`, bỏ khối code) mở một vùng gồm chính dòng đó và các dòng `- ` liền sau; trong vùng lấy các đoạn trong backtick. Mục là test khi dòng bắt đầu `- Test:` (không phân biệt hoa thường) hoặc đường dẫn khớp `/(^|\/)(test|tests|__tests__|spec)(\/|$)|\.(test|spec)\.[^/]+$|_test\.[^/]+$|(^|\/)test_[^/]+\.py$|Test\.java$/`. Bỏ trùng theo `path`.
   - `checkRequest`: chỉ khi có `readTest` — `override` có → đọc từng path; không → `planTestPaths(plan.md)`: `!hasFiles` → bỏ qua W7–W9; `hasFiles` mà `entries` rỗng → W8 tại dòng `**Files:**` đầu tiên; entry đọc ra `null` → W9 tại `entry.line`. W7 cho mỗi AC hợp lệ (map `valid`) không nằm trong hợp `acIdsIn` của các nội dung đọc được. Thông điệp: W7 `` `${id} chưa có test nào nhắc tới` ``, W8 `plan.md không ghi file test nào trong **Files:**`, W9 `` `File test ${path} chưa tồn tại` ``.
   - `main`: phân tích `<dir> [--tests <path>…] [--strict]` (`--tests` lấy các đối số tới cờ kế; 0 path, cờ lạ, hơn một thư mục, path `--tests` không tồn tại → usage + 2). Gốc = thư mục tổ tiên gần nhất của `<dir>` có `.git` (file hoặc thư mục), không có → `process.cwd()`; path từ plan resolve theo gốc, path `--tests` theo `process.cwd()`. `readTest` mặc định: không tồn tại → `null`; file → nội dung, bỏ qua (chuỗi rỗng) nếu 8 KB đầu có `\0` hoặc đọc lỗi; thư mục → đệ quy, bỏ thư mục trong Global Constraints, gộp nội dung. Trả `strict && warnings.length ? 1 : 0`. Cập nhật thông báo usage và comment đầu file.
   - `SKILL.md`: cú pháp mới, ý nghĩa W7–W9, `--strict` exit 1.
 
-- [ ] **Step 4: Chạy test, xác nhận xanh**
+- [x] **Step 4: Chạy test, xác nhận xanh**
 
 Run: `node test/validate.mjs --only artifact-templates && node test/validate.mjs --only superpowers-docs-standard`
 Expected: PASS cả khối mới lẫn test W1–W6/exit code cũ ở pin 18.
 
-- [ ] **Step 5: Commit** qua `core:git-workflow` — header `feat(core): warn when acceptance criteria have no test`.
+- [x] **Step 5: Commit** qua `core:git-workflow` — header `feat(core): warn when acceptance criteria have no test`.
 
 ### Task 4: Quy ước gắn ID AC vào test trong baseline và plan template
 
@@ -216,28 +216,28 @@ Expected: PASS cả khối mới lẫn test W1–W6/exit code cũ ở pin 18.
 **Interfaces:**
 - Consumes: cú pháp `check-request.mjs` của Task 3.
 
-- [ ] **Step 1: Viết pin đỏ** `test/content/19-verification-gate.pin.mjs` (khung như pin 18: comment đầu file nêu request, `export default async function run({ ok, ctx })`):
+- [x] **Step 1: Viết pin đỏ** `test/content/19-verification-gate.pin.mjs` (khung như pin 18: comment đầu file nêu request, `export default async function run({ ok, ctx })`):
   - `AC2.5: baseline yêu cầu gắn ID AC vào tên test hoặc comment` — đoạn `### Superpowers workflow defaults` … `### Language` của template chứa `` `ac1_2` ``, `` `- Test:` ``, `--strict`.
   - `AC2.5: plan template ghi file test trong **Files:**` — `plan.template.md` chứa `` - Test: ` ``.
   - Kiểm `AGENTS.md == AGENTS.template.md` đã có ở `test/contract/30-templates.contract.mjs`; không viết lại.
 
-- [ ] **Step 2: Chạy, xác nhận đỏ**
+- [x] **Step 2: Chạy, xác nhận đỏ**
 
 Run: `node test/validate.mjs --only verification-gate`
 Expected: FAIL ở 2 dòng AC2.5.
 
-- [ ] **Step 3: Sửa nội dung** (baseline viết tiếng Anh như phần còn lại của file):
+- [x] **Step 3: Sửa nội dung** (baseline viết tiếng Anh như phần còn lại của file):
   - Sau bullet "Acceptance criteria: …" thêm: test phủ một AC ghi ID của nó trong tên test hoặc comment (`AC1.2`; tên hàm Python dùng `ac1_2`); mỗi task ghi file test trong `**Files:**` dạng `` - Test: `path` ``.
   - Câu "It only warns; it never blocks." → nó cảnh báo cả AC chưa có test nào trong các file test của plan nhắc tới; chỉ cảnh báo (exit 0) trừ khi chạy với `--strict` (exit 1 khi có cảnh báo, dùng cho CI).
   - Chép template sang `AGENTS.md`.
   - `plan.template.md`: `**Files:** <...>` → danh sách theo writing-plans (`` - Create: `…` ``, `` - Modify: `…` ``, `` - Test: `…` ``).
 
-- [ ] **Step 4: Chạy, xác nhận xanh**
+- [x] **Step 4: Chạy, xác nhận xanh**
 
 Run: `node test/validate.mjs --only verification-gate && node test/validate.mjs --only templates && node test/validate.mjs --only superpowers-docs-standard`
 Expected: PASS (gồm drift guard AGENTS.md và pin baseline cũ của project 1).
 
-- [ ] **Step 5: Commit** qua `core:git-workflow` — header `docs(core): require AC ids in tests and test files in plans`.
+- [x] **Step 5: Commit** qua `core:git-workflow` — header `docs(core): require AC ids in tests and test files in plans`.
 
 ### Task 5: Bump version, lock, chạy toàn bộ test
 
@@ -246,11 +246,11 @@ Expected: PASS (gồm drift guard AGENTS.md và pin baseline cũ của project 1
 - Modify: `core/.manifest.json` (`1.7.1` → `1.8.0`), và `.manifest.json` của plugin khác chỉ khi lệnh lock từ chối plugin đó (bump patch)
 - Modify: `plugins/_versions.lock.json`
 
-- [ ] **Step 1:** Bump `core` lên `1.8.0`.
-- [ ] **Step 2:** Run: `npm run build && node cli/lib/versions.mjs --lock` — Expected: exit 0. Nếu lock báo "nội dung build đổi nhưng version chưa bump" cho plugin khác → bump patch plugin đó rồi chạy lại.
-- [ ] **Step 3:** Run: `npm test` — Expected: toàn bộ PASS (validate --build, install, wizard, managed-block, init, pack-guard, args).
-- [ ] **Step 4:** Run: `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-20-verification-gate` — Expected: không có W1–W6, W8, W9; W7 chỉ còn cho `AC3.1`, `AC3.2`, `AC4.1` (kiểm thủ công / bằng `npm test`, không có test nhắc ID). Ghi kết quả vào báo cáo task.
-- [ ] **Step 5: Commit** qua `core:git-workflow` — header `chore(release): bump core for verification gate`.
+- [x] **Step 1:** Bump `core` lên `1.8.0`.
+- [x] **Step 2:** Run: `npm run build && node cli/lib/versions.mjs --lock` — Expected: exit 0. Nếu lock báo "nội dung build đổi nhưng version chưa bump" cho plugin khác → bump patch plugin đó rồi chạy lại.
+- [x] **Step 3:** Run: `npm test` — Expected: toàn bộ PASS (validate --build, install, wizard, managed-block, init, pack-guard, args).
+- [x] **Step 4:** Run: `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-20-verification-gate` — Expected: không có W1–W6, W8, W9; W7 chỉ còn cho `AC3.1`, `AC3.2`, `AC4.1` (kiểm thủ công / bằng `npm test`, không có test nhắc ID). Ghi kết quả vào báo cáo task.
+- [x] **Step 5: Commit** qua `core:git-workflow` — header `chore(release): bump core for verification gate`.
 
 ### Task 6: Smoke test hook Stop và chạy eval lần đầu (thủ công, tốn tiền)
 
