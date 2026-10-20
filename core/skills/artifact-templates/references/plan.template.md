@@ -27,4 +27,5 @@ Bỏ khối này khi chép template ra dùng.
 - Create: `<path>`
 - Modify: `<path>`
 - Test: `<path>`
+
 - [ ] **Step 1:** <...>

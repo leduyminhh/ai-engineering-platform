@@ -127,7 +127,6 @@ export function checkRequest(texts, { readTest, override } = {}) {
       for (const p of override) { const c = readTest(p); if (c !== null) contents.push(c); }
     } else {
       const { hasFiles, entries } = planTestPaths(texts['plan.md'] || '');
-      run = entries.length > 0; // W8 đã nói thiếu file test; thêm W7 cho mọi AC chỉ gây nhiễu
       if (hasFiles && !entries.length) {
         const at = lines['plan.md'].findIndex((l) => l.startsWith('**Files:**'));
         warn('plan.md', at + 1, 'W8', 'plan.md không ghi file test nào trong **Files:**');
@@ -137,6 +136,8 @@ export function checkRequest(texts, { readTest, override } = {}) {
         if (c === null) warn('plan.md', e.line, 'W9', `File test ${e.path} chưa tồn tại`);
         else contents.push(c);
       }
+      // W8/W9 đã báo thiếu file test; lúc lập plan test chưa có nên W7 cho mọi AC chỉ gây nhiễu (và không được xoá **Files:** để im).
+      run = contents.length > 0;
     }
     if (run) {
       const mentioned = new Set(contents.flatMap((c) => [...acIdsIn(c)]));

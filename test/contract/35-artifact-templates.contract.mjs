@@ -342,6 +342,9 @@ export default async function run({ ok, ctx }) {
     const w9 = of(check(PLAN, { 'test/a.contract.mjs': TESTS['test/a.contract.mjs'] }), 'W9');
     ok(w9.length === 1 && w9[0].file === 'plan.md' && w9[0].line === 9 && w9[0].msg.includes('tests/b_test.py'),
       'AC2.6: file test ghi trong plan chưa tồn tại → W9');
+    const planTime = check(PLAN, {});
+    ok(of(planTime, 'W9').length === 2 && of(planTime, 'W7').length === 0,
+      'AC2.6: không file test nào của plan đọc được (lúc lập plan) → W9 từng file, không W7');
 
     const pt = (line) => cr.planTestPaths(`**Files:**\n${line}\n`).entries.map((e) => e.path);
     const cases = [

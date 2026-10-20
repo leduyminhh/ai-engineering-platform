@@ -165,7 +165,9 @@ remove only the prompts after them.
 - After writing `design.md` and again after `plan.md`, run
   `node <artifact-templates skill dir>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/`.
   It also warns about an AC that none of the plan's test files mention. It only warns (exit 0) unless run
-  with `--strict` (exit 1 on any warning, for CI).
+  with `--strict` (exit 1 on any warning, for CI). Right after the plan, W9 (listed test file does not exist
+  yet) is expected and W7 is skipped: never delete `**Files:**` or test entries to silence them. Re-run once
+  the tests are written, and use `--strict` in CI only from then on.
 
 #### Memory and resume
 
