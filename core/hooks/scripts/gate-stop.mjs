@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // Stop/SubagentStop: chặn một lần khi lượt hiện tại đã sửa file code mà chưa chạy test/lint/build nào sau lần sửa cuối.
 import { readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readGateConfig } from './gate-config.mjs';
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SHELL_TOOLS = new Set(['Bash', 'PowerShell']);
@@ -75,13 +75,6 @@ export function isTestCommand(command, extra = []) {
     });
 }
 
-function loadConfig(cwd) {
-  try {
-    const root = execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    return JSON.parse(readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8').replace(/^﻿/, ''));
-  } catch { return null; }
-}
-
 function parseLine(raw) {
   try { return JSON.parse(raw); } catch { return null; }
 }
@@ -108,7 +101,7 @@ function currentTurn(text, wholeFile) {
 
 export function decide(input, deps = {}) {
   try {
-    const { readFile = (p) => readFileSync(p, 'utf8'), loadConfig: load = loadConfig, env = process.env } = deps;
+    const { readFile = (p) => readFileSync(p, 'utf8'), loadConfig: load = readGateConfig, env = process.env } = deps;
     if (input?.stop_hook_active === true || String(env.AIP_STOP_GATE || '').toLowerCase() === 'off') return null;
     const cfg = load(path.resolve(input?.cwd || '.'));
     if (cfg?.stopGate === false) return null;

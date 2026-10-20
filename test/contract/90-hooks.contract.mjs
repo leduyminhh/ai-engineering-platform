@@ -419,4 +419,48 @@ export default async function run({ ok, ctx }) {
       ok(fs.existsSync(path.join(claudeDir, 'plugins', 'core', 'hooks', 'scripts', 'gate-stop.mjs')), 'AC1.9: build claude ship gate-stop.mjs');
     }
   }
+  // Công tắc allowEnvFiles: mở .env theo project, khoá/credentials vẫn bị chặn
+  {
+    const { pathToFileURL, CORE_DIR, os, execFileSync } = ctx;
+    const dir = path.join(CORE_DIR, 'hooks', 'scripts');
+    const bash = await import(pathToFileURL(path.join(dir, 'guard-bash.mjs')).href);
+    const files = await import(pathToFileURL(path.join(dir, 'guard-files.mjs')).href);
+    const on = () => true;
+    const off = () => false;
+    const sh = (command, allowEnv) => bash.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x', allowEnv });
+    ok(sh('cat .env', on) === null && sh('source ./.env.local', on) === null && sh('cat .env', off)?.decision === 'ask',
+      'E1: guard-bash — cờ bật thì .env cho qua, cờ tắt vẫn ask');
+    ok(['cat certs/server.pem', 'cat id_rsa', 'cat credentials.json', 'cat .env && cat ~/.ssh/id_rsa'].every((c) => sh(c, on)?.decision === 'ask')
+      && sh('git push origin main', on)?.decision === 'ask',
+      'E1: guard-bash — cờ bật vẫn ask với khoá/credentials (kể cả đi cùng .env) và push main');
+    let calls = 0;
+    sh('git status && npm test', () => { calls++; return true; });
+    ok(calls === 0, 'E1: guard-bash — lệnh không nhắc file bí mật thì không đọc cấu hình');
+    const fd = (tool_name, tool_input, allowEnv) => files.decide({ tool_name, cwd: '/repo', tool_input }, { scopes: {}, allowEnv, ignoreCase: false });
+    ok(fd('Read', { file_path: '/repo/.env' }, on) === null && fd('Write', { file_path: '/repo/.env.local' }, on) === null
+      && fd('Grep', { pattern: 'x', glob: '.env*' }, on) === null && fd('Read', { file_path: '/repo/.env' }, off)?.decision === 'deny',
+      'E2: guard-files — cờ bật thì Read/Write/Grep .env cho qua, cờ tắt vẫn deny');
+    ok(fd('Read', { file_path: '/repo/server.key' }, on)?.decision === 'deny' && fd('Read', { file_path: '/repo/credentials.json' }, on)?.decision === 'deny'
+      && fd('Grep', { pattern: 'x', glob: '*.pem' }, on)?.decision === 'deny',
+      'E2: guard-files — cờ bật vẫn deny khoá/credentials');
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-allowenv-'));
+    try {
+      const a = path.join(tmp, 'a');
+      const b = path.join(tmp, 'b');
+      const wt = path.join(tmp, 'wt');
+      for (const r of [a, b]) execFileSync('git', ['init', '-q', r]);
+      execFileSync('git', ['-C', a, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init']);
+      fs.mkdirSync(path.join(a, '.claude'));
+      fs.writeFileSync(path.join(a, '.claude', 'aip-gate.json'), '﻿{"allowEnvFiles": true}');
+      execFileSync('git', ['-C', a, 'worktree', 'add', '-q', wt]);
+      const real = (cwd, file) => files.decide({ tool_name: 'Read', cwd, tool_input: { file_path: file } }, { scopes: {} });
+      ok(real(b, path.join(a, '.env')) === null && real(a, path.join(b, '.env'))?.decision === 'deny',
+        'E3: guard-files — cờ đọc theo repo chứa file đích, không theo cwd');
+      ok(real(wt, path.join(wt, '.env')) === null, 'E3: worktree chưa có aip-gate.json theo cờ của repo chính');
+      const shReal = (cwd) => bash.decide({ tool_name: 'Bash', cwd, tool_input: { command: 'cat .env' } }, { currentBranch: () => 'feature/x' });
+      ok(shReal(a) === null && shReal(b)?.decision === 'ask', 'E3: guard-bash — cờ đọc từ aip-gate.json (có BOM) của repo theo cwd');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
 }
