@@ -17,7 +17,8 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 
 | Loại | Template | Validator | Nguồn |
 |---|---|---|---|
-| workflow | [workflow.template.md](references/workflow.template.md) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` | Anthropic building effective agents (workflow patterns); LangGraph interrupt |
+| workflow | [workflow.template.md](references/workflow.template.md) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
+| skill | [skill.template.md](references/skill.template.md) | `cli/lib/conventions.mjs` → `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys` | Anthropic skill best practices; agentskills.io |
 
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.
 
@@ -51,3 +52,5 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
 
 - [references/workflow.template.md](references/workflow.template.md): khung workflow 8 trường mỗi bước, checkpoint,
   rollback, Definition of Done, `workflow_result`.
+- [references/skill.template.md](references/skill.template.md): khung SKILL.md (frontmatter, checklist quy trình, vòng
+  validate → sửa, ranh giới an toàn, Verification, bản đồ tài liệu).

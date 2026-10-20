@@ -48,6 +48,8 @@ export default async function run({ ok, ctx }) {
     if (!exists) continue;
     const h = templateHeader(fs.readFileSync(file, 'utf8'));
     ok(h !== null, `${row.file}: có khối <!-- artifact-template -->`);
+    // Header và mục lục lặp cùng thông tin; kiểm lệch để không trôi dần (bỏ dấu backtick của cột Validator).
+    ok(!!h && h.validator === row.validator.replace(/`/g, '') && h.sources === row.sources, `${row.file}: header validator/sources khớp dòng mục lục`);
     ok(!!h && h.type === row.type, `${row.file}: header type khớp cột Loại (${row.type})`);
     ok(!!h && Number.isInteger(h.version) && h.validator !== '' && h.sources !== '', `${row.file}: header đủ version/validator/sources`);
   }
@@ -62,6 +64,42 @@ export default async function run({ ok, ctx }) {
     const keys = Object.fromEntries(Object.keys(parseFrontmatter(tpl).meta).map((k) => [k, true]));
     const kerrs = checkSourceKeys('workflow', keys);
     ok(Object.keys(keys).length > 0 && kerrs.length === 0, `template workflow: khoá frontmatter trong allowlist${kerrs.length ? ' — ' + kerrs.join('; ') : ''}`);
+  }
+
+  // 3b. Skill template: bản đã điền qua validator skill; bản thô giữ các điểm tiến hoá (checklist, vòng validate, 500 dòng, một tầng).
+  {
+    const raw = tplOf('skill');
+    ok(raw !== '', 'template skill đọc được qua mục lục');
+    const FILL = {
+      '<skill-id>': 'demo-skill',
+      '<Hành động một câu, ≤ 200 ký tự>': 'Soạn bản nháp mẫu cho một tình huống cụ thể.',
+      '<trigger 1>': 'soạn mẫu một', '<trigger 2>': 'soạn mẫu hai', '<trigger 3>': 'soạn mẫu ba',
+      '<tình huống>': 'cần việc khác',
+      '<id-skill-khác>': 'git-workflow',
+      '<n>': '9',
+      '<Tiêu đề skill>': 'Demo Skill — mẫu',
+      '<plan|execute>': 'plan',
+    }; // placeholder còn lại (heading, checklist) điền 'mẫu'.
+    const body = stripTemplateHeader(raw);
+    const filled = body.replace(/<[^<>\n]+>/g, (p) => FILL[p] ?? 'mẫu');
+    const fm = parseFrontmatter(filled);
+    ok(fm.meta.name === 'demo-skill', 'template skill: frontmatter đọc được ở dòng 1 sau khi bỏ header');
+    ok(parseFrontmatter(raw).meta.name === '<skill-id>', 'template skill: frontmatter đọc được khi header còn nguyên');
+    const bodyErrs = checkSkillBody(fm.body);
+    ok(bodyErrs.length === 0, `template skill (đã điền) PASS checkSkillBody${bodyErrs.length ? ' — ' + bodyErrs.join('; ') : ''}`);
+    const ids = new Set([...core.stages.map((x) => x.id), ...plugins.flatMap((p) => p.stages.map((x) => x.id)),
+      ...(workflows ? workflows.stages.map((x) => x.id) : []), ...allAgents.map((a) => a.id)]);
+    const dErrs = checkDescription(fm.meta.description ?? '', ids, fm.meta.name);
+    ok(dErrs.length === 0, `template skill (đã điền) PASS checkDescription${dErrs.length ? ' — ' + dErrs.join('; ') : ''}`);
+    const sErrs = checkDescriptionStyle(fm.meta.description ?? '');
+    ok(sErrs.length === 0, `template skill (đã điền) PASS checkDescriptionStyle${sErrs.length ? ' — ' + sErrs.join('; ') : ''}`);
+    const kErrs = checkSourceKeys('skill', fm.meta);
+    ok(Object.keys(fm.meta).length > 0 && kErrs.length === 0, `template skill: khoá frontmatter trong allowlist${kErrs.length ? ' — ' + kErrs.join('; ') : ''}`);
+    for (const [needle, what] of [['- [ ]', 'checklist trong quy trình'], ['500 dòng', 'giới hạn SKILL.md 500 dòng'], ['một tầng', 'reference sâu một tầng']]) {
+      ok(raw.includes(needle), `template skill (thô) có ${what}`);
+    }
+    ok(/validate[^\n]*→[^\n]*sửa[^\n]*→[^\n]*validate/i.test(raw), 'template skill (thô) có vòng validate → sửa → validate');
+    ok(!fs.existsSync(path.join(path.dirname(CORE_DIR), 'templates', 'skills')), 'templates/skills/ đã bị xóa');
   }
 
   // 4. Chính skill artifact-templates qua validator skill.

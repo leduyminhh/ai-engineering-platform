@@ -110,7 +110,7 @@
 **Interfaces:**
 - Consumes: `templateIndex`, `templateHeader`, `stripTemplateHeader` (Task 1).
 
-- [ ] **Step 1: Viết test đỏ.** Thay mọi placeholder `<…>` bằng giá trị mẫu cố định, dùng một map ngay trong test. Sau đó kiểm:
+- [x] **Step 1: Viết test đỏ.** Thay mọi placeholder `<…>` bằng giá trị mẫu cố định, dùng một map ngay trong test. Sau đó kiểm:
   - Bản đã điền qua `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, và `checkSourceKeys('skill', …)`.
   - Template thô (chưa điền) chứa đủ 4 chuỗi:
     - `- [ ]` (checklist trong quy trình).
@@ -118,14 +118,14 @@
     - `500 dòng`.
     - `một tầng` (reference chỉ sâu một tầng).
   - `templates/skills/` không còn.
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only 35-artifact`. Expected: FAIL ở block skill.
-- [ ] **Step 3: Viết template.**
+- [x] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only 35-artifact`. Expected: FAIL ở block skill.
+- [x] **Step 3: Viết template.**
   - Frontmatter: `name`, `description` (một câu hành động + `Dùng khi …` + `Không dùng khi … → <id>`), `order`, `title`, `runsIn`, `invoke`.
   - Khối header (sources: Anthropic skill best practices; agentskills.io).
   - Heading: `## Quy trình — <tên>` (có checklist và vòng validate), `## Ranh giới an toàn`, `## Verification (trước khi báo hoàn thành)`, `## Bản đồ tài liệu`.
   - Xóa file `.txt`.
-- [ ] **Step 4: Chạy, xác nhận xanh** — `node test/validate.mjs --only 35-artifact --only 40-conv` → 0 fail.
-- [ ] **Step 5: Commit** — `feat(core): add evolved skill template to artifact-templates`
+- [x] **Step 4: Chạy, xác nhận xanh** — `node test/validate.mjs --only 35-artifact --only 40-conv` → 0 fail.
+- [x] **Step 5: Commit** — `feat(core): add evolved skill template to artifact-templates`
 
 ---
 
