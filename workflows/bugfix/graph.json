@@ -83,7 +83,8 @@
       },
       "next": "regression",
       "on_fail": [
-        { "to": "root-cause", "when": "fix không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause" }
+        { "to": "root-cause", "when": "fix không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause" },
+        { "to": "ask_user", "when": "agent trả blocked → hỏi người dùng mở rộng danh sách file rồi gọi lại" }
       ],
       "gate": { "type": "auto" }
     },

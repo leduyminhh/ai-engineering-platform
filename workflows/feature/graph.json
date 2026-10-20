@@ -70,7 +70,8 @@
       },
       "next": "test",
       "on_fail": [
-        { "to": "design-contract", "when": "contract lệch khi nối data → quay lại Bước 3" }
+        { "to": "design-contract", "when": "contract lệch khi nối data → quay lại Bước 3" },
+        { "to": "ask_user", "when": "integrator trả blocked vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại" }
       ],
       "gate": { "type": "auto" }
     },

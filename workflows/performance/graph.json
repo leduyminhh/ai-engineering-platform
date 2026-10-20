@@ -27,7 +27,8 @@
       },
       "next": "profile",
       "on_fail": [
-        { "to": "blocked", "when": "agent trả not_run vì thiếu môi trường local/test hoặc bản build/Chrome → dừng blocked, báo người dùng" }
+        { "to": "blocked", "when": "agent trả not_run vì thiếu môi trường local/test hoặc bản build/Chrome → dừng blocked, báo người dùng" },
+        { "to": "ask_user", "when": "agent trả blocked + câu hỏi → session chính hỏi người dùng, ghi quyết định rồi gọi lại agent" }
       ],
       "gate": { "type": "auto" }
     },
@@ -44,13 +45,14 @@
       },
       "next": "optimize",
       "on_fail": [
-        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 2 đo lại baseline" }
+        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 2 đo lại baseline" },
+        { "to": "ask_user", "when": "người dùng không đồng ý hướng tối ưu, hoặc agent trả blocked + câu hỏi → hỏi người dùng rồi chạy lại bước" }
       ],
       "gate": {
         "type": "human",
         "review": "Bottleneck + giả thuyết kèm evidence",
         "approve": "optimize",
-        "reject": "baseline"
+        "reject": "ask_user"
       }
     },
     {
@@ -65,7 +67,9 @@
         "parallel": true
       },
       "next": "benchmark",
-      "on_fail": [],
+      "on_fail": [
+        { "to": "ask_user", "when": "agent trả blocked → hỏi người dùng mở rộng danh sách file rồi gọi lại" }
+      ],
       "gate": { "type": "auto" }
     },
     {
@@ -83,7 +87,8 @@
       "on_fail": [
         { "to": "profile", "when": "không đạt ngưỡng → báo rõ, quay lại Bước 3 tìm hướng khác" },
         { "to": "blocked", "when": "hoặc dừng theo quyết định người dùng" },
-        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 2 đo lại baseline" }
+        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 2 đo lại baseline" },
+        { "to": "ask_user", "when": "agent trả blocked + câu hỏi → session chính hỏi người dùng, ghi quyết định rồi gọi lại agent" }
       ],
       "gate": { "type": "auto" }
     },
