@@ -30,8 +30,9 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`.
 - Acceptance criteria phải **đo được** (Given/When/Then hoặc tiêu chí kiểm được); ngôn ngữ đo được, KHÔNG
   tuyên bố "đảm bảo / loại bỏ rủi ro / chặn triệt để".
 - Bám scaffold `docs/requests/_TEMPLATE` + `docs/decisions/_TEMPLATE.md`; KHÔNG dựng cấu trúc tài liệu song song.
-  `_TEMPLATE` có sẵn của project thắng template core: nếu khác template của `artifact-templates` thì nêu trong báo cáo
-  và gợi ý cập nhật, KHÔNG ghi đè (chi tiết ở references/spec-structure.md).
+  `_TEMPLATE` có sẵn của project thắng template core cho `requirement.md`: nếu khác template của `artifact-templates`
+  thì nêu trong báo cáo và gợi ý cập nhật, KHÔNG ghi đè; `design.md`/`plan.md` theo template core khi `_TEMPLATE` cũ
+  không có `design.md` (baseline `AGENTS.md`; chi tiết ở references/spec-structure.md).
 - Defer `project-knowledge/` + `code-convention.md` (skill init lo); docs-only, không đụng CLI/adapter/engine.
 - Con người **duyệt** spec trước khi dùng làm nguồn cho plan/triển khai.
 
@@ -50,11 +51,14 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`.
    câu** khi thiếu; xác nhận hiểu đúng; đánh dấu mọi **[giả định]**. KHÔNG bịa để lấp chỗ trống.
 
 3. **Viết spec.**
-   Ghi vào `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md` (+ khung `plan.md`) theo cấu trúc trong
+   Ghi vào `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md` (+ `design.md` khi có thiết kế) theo cấu trúc trong
    [references/spec-structure.md](references/spec-structure.md): bối cảnh/vấn đề, mục tiêu + success criteria
    (ĐO ĐƯỢC), phạm vi/out-of-scope, actors, **functional requirements ở mức FEATURE (không phân rã story)**,
    acceptance criteria, điểm chạm data/contract (link `docs/contracts/` + data-model), rủi ro/giả định/câu
    hỏi mở. Bám scaffold `_TEMPLATE`, mở rộng chứ không thay thế. Tiếng Việt CÓ DẤU.
+   Mỗi acceptance criterion mang ID `AC<n>.<m>` (`<n>` = số thứ tự requirement, `<m>` = số thứ tự AC trong requirement đó,
+   vd `AC1.2`), viết Given/When/Then, để `plan.md` và `tasks.md` phủ/truy vết đúng ID. Skill này KHÔNG dựng `plan.md`
+   (kế hoạch triển khai thuộc bước lập plan sau khi spec được duyệt).
    **Cần diagram trong spec** (flow/ERD/sequence/kiến trúc) → dùng skill **`engineering-diagram`** (cùng
    plugin) để sinh PlantUML renderable, rồi nhúng/liên kết vào spec; skill này không tự vẽ diagram.
 
@@ -66,13 +70,17 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`.
 5. **Verify.**
    Chạy checklist [references/checklist.md](references/checklist.md): đủ mục; mỗi requirement truy vết được
    (nguồn/actor/mục tiêu); acceptance criteria đo được; scope + out-of-scope rõ; rủi ro/giả định/câu hỏi mở
-   liệt kê; ADR ghi cho quyết định lớn; đặt đúng `docs/requests/<ngày>-<slug>/`; tiếng Việt có dấu. Nêu rõ
-   phần còn thiếu (fail-loud); con người **duyệt**.
+   liệt kê; ADR ghi cho quyết định lớn; đặt đúng `docs/requests/<ngày>-<slug>/`; tiếng Việt có dấu. Chạy
+   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/` để soát ID AC
+   và cấu trúc thư mục request. Nêu rõ phần còn thiếu (fail-loud); con người **duyệt**.
 
 ## Verification (trước khi báo hoàn thành)
 
 - Đã nạp context và xác định feature + đối tượng đọc; phần suy đoán đánh dấu **[giả định]**.
 - Spec đặt đúng `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md`, bám scaffold `_TEMPLATE`.
+- Mỗi AC có ID `AC<n>.<m>`; đã chạy `check-request.mjs` của skill `artifact-templates` trên thư mục request
+  (`node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/`) và nêu
+  từng dòng `WARN` còn lại (không có Node → ghi `not_run` kèm lý do).
 - Functional requirements ở **mức feature** (không story); acceptance criteria **đo được**.
 - Điểm chạm data/contract có link; quyết định lớn có ADR ở `docs/decisions/`.
 - Rủi ro / giả định / câu hỏi mở liệt kê rõ; ngôn ngữ đo được, không tuyên bố tuyệt đối.
@@ -96,8 +104,8 @@ Nạp đúng file khi cần, đừng nạp tất cả:
 
 - [references/spec-structure.md](references/spec-structure.md): cấu trúc feature/requirement spec + mỗi mục
   nên có gì; feature-level granularity (không phân rã story); acceptance criteria đo được; phân biệt
-  functional vs NFR; cách link ADR/contract/data-model; cách map vào `requirement.md` + `plan.md` của
-  `_TEMPLATE`.
+  functional vs NFR; cách link ADR/contract/data-model; cách map vào `requirement.md` (+ `design.md` khi
+  có) của `_TEMPLATE`.
 - [references/elicitation.md](references/elicitation.md): bộ câu hỏi khảo sát BA theo nhóm (mục tiêu, actors,
   phạm vi/out-of-scope, luồng + edge case, dữ liệu & tích hợp, NFR, ràng buộc & giả định, tiêu chí chấp
   nhận) + nguyên tắc hỏi từng câu, xác nhận hiểu đúng, đánh dấu giả định.

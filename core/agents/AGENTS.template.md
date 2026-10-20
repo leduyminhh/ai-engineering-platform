@@ -148,6 +148,35 @@ remove only the prompts after them.
 - `finishing-a-development-branch`: default to "Keep the branch as-is"; merge or push only after the
   human confirms.
 
+#### Docs location and format
+
+- Write the `brainstorming` spec to `docs/requests/<yyyy-mm-dd>-<slug>/design.md` and the
+  `writing-plans` plan to `plan.md` in the same folder. This overrides the superpowers default `docs/superpowers/`.
+- Use `docs/requests/_TEMPLATE/` only when it contains `design.md`; otherwise use the templates of
+  the `artifact-templates` skill (a legacy `_TEMPLATE` may still serve `requirement.md`). `aip init` never
+  overwrites it; to get the new templates, delete the old `_TEMPLATE` and re-run `aip init --full`.
+- Acceptance criteria: `AC<n>.<m>` IDs (`<n>` = requirement number), written as Given/When/Then.
+  They live under a heading containing `Tiêu chí chấp nhận`, in `requirement.md` if it exists, otherwise in
+  `design.md`, as bullets `- [ ] **AC<n>.<m>** — Given … When … Then …`. Each plan task lists the ones it
+  covers in a `**Phủ AC:**` line (no leading bullet). A bugfix spec has a `Không đổi` section (behavior that
+  must stay as is).
+- After writing `design.md` and again after `plan.md`, run
+  `node <artifact-templates skill dir>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/`.
+  It only warns; it never blocks.
+
+#### Memory and resume
+
+| Type | Scope | Stored in | Updated by |
+|---|---|---|---|
+| Short-term | One change, spec to merge | `docs/requests/<yyyy-mm-dd>-<slug>/`, ledger `.superpowers/sdd/<plan>/` | Agent, while working |
+| Long-term | Whole project | `project-knowledge/`, `docs/decisions/`, `docs/contracts/`, `AGENTS.md`/`CLAUDE.md` | Human reviewer; agent only proposes |
+
+- Resume a change that already has a folder: read `design.md` + `plan.md`; if a superpowers ledger
+  exists, follow it, otherwise continue from the first unchecked task (`- [ ]`);
+  never create a second folder, design or plan for the same change.
+- Knowledge that outlives the change (architecture decision, convention) → propose it to long-term
+  memory instead of leaving it only in `design.md`.
+
 ### Language
 
 - User-facing output in **Vietnamese** with correct UTF-8 diacritics: PR/MR descriptions, release

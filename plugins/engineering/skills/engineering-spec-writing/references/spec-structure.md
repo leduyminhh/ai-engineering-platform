@@ -44,6 +44,9 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
 - Tránh từ mơ hồ ("nhanh", "thân thiện", "ổn định") — thay bằng số/điều kiện ("p95 < 300ms", "0 lỗi validation
   với input hợp lệ").
 - Mỗi acceptance criterion nên soi chiếu về một functional/NFR ở trên (truy vết được).
+- Mỗi AC mang ID `AC<n>.<m>` (regex `^AC\d+\.\d+$`): `<n>` là số thứ tự requirement, `<m>` là số thứ tự AC trong
+  requirement đó (vd `AC2.1`). ID không trùng và không đánh số lại sau khi đã chia sẻ; `plan.md` (`**Phủ AC:**`) và
+  `tasks.md` dùng lại đúng ID này.
 
 ## Functional vs NFR (phân biệt)
 
@@ -59,17 +62,19 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
   mô tả *điểm chạm* (đọc/ghi cái gì), contract giữ *chi tiết trường/endpoint* — tránh trùng lặp, tránh drift.
 - Khi spec và contract lệch nhau: nêu rõ là câu hỏi mở để con người chốt, không tự sửa contract.
 
-## Map vào `_TEMPLATE` (requirement.md + plan.md)
+## Map vào `_TEMPLATE` (requirement.md + design.md)
 
 **Project đã có `docs/requests/_TEMPLATE/` cũ (ví dụ `plan.md` kiểu Phase từ `aip init --full` bản trước):**
 `_TEMPLATE` có sẵn của project thắng — `init` không ghi đè. Nếu nó khác template của `artifact-templates`, vẫn dựng
 khung theo `_TEMPLATE` của project, nêu chỗ khác trong báo cáo và gợi ý cập nhật; KHÔNG tự ghi đè `_TEMPLATE`.
-Hai gạch dưới đây áp dụng khi project chưa có `_TEMPLATE` hoặc `_TEMPLATE` đã trùng template core.
+Ngoại lệ `design.md`/`plan.md`: theo baseline `AGENTS.md` — `_TEMPLATE` cũ không có `design.md` thì hai file này theo
+template core, còn `requirement.md` vẫn theo `_TEMPLATE` cũ.
+Hai gạch dưới đây áp dụng khi project chưa có `_TEMPLATE` hoặc `_TEMPLATE` đã trùng template core; `_TEMPLATE` gồm cả
+`design.md` bên cạnh `requirement.md` và `plan.md`.
 
 - **`requirement.md`** giữ 4 heading gốc (`Yêu cầu gốc`, `Bối cảnh`, `Ràng buộc`, `Tiêu chí chấp nhận`) và
   **thêm** các mục 3–11 ở trên dưới heading phù hợp (ví dụ NFR nằm trong `Ràng buộc`; Mục tiêu/Phạm
   vi/Actors/Functional/Điểm chạm data/Rủi ro thêm thành mục mới). Không đổi tên 4 heading gốc.
-- **`plan.md`** theo template plan của skill `artifact-templates` (header bắt buộc của `superpowers:writing-plans`,
-  `**Requirement:**`, `**Phủ AC:**` theo Task) — chỉ dựng khung; bước sau phân rã story/task, skill này KHÔNG điền
-  chi tiết task.
-- Đặt cả hai trong `docs/requests/<yyyy-mm-dd>-<slug>/` (slug ngắn, kebab-case, mô tả tính năng).
+- **`design.md`** (khi có thiết kế) theo template design của skill `artifact-templates`; AC nằm ở mục Tiêu chí chấp nhận
+  với ID `AC<n>.<m>`. Skill này KHÔNG dựng `plan.md`: kế hoạch triển khai và phân rã story/task thuộc bước sau.
+- Đặt các file trong `docs/requests/<yyyy-mm-dd>-<slug>/` (slug ngắn, kebab-case, mô tả tính năng).

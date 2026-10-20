@@ -42,12 +42,12 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
 
 1. **Nhận diện input.**
    Xác định dạng input (yêu cầu thô / use case / ARD / `requirement.md`, có thể nhiều nguồn) theo
-   [references/analysis.md](references/analysis.md). Có `requirement.md` → dùng làm nguồn chính. Chạm
+   [references/analysis.md](references/analysis.md). Có `requirement.md` → dùng làm nguồn chính; không có `requirement.md` mà có `design.md` → `design.md` là nguồn chính (đọc AC ở mục Tiêu chí chấp nhận). Chạm
    **ngưỡng mơ hồ** (không trích được use case nào có actor + mục tiêu, HOẶC không có AC đo được) → DỪNG, đề nghị
    chạy `engineering-spec-writing` trước.
 
 2. **Phân tích → bảng Use case. ⏸ Checkpoint 1**
-   Mỗi use case: ID `UC<nn>`, actor, mục tiêu, luồng chính/phụ, AC đo được, NFR, nguồn truy vết. Nguồn mâu thuẫn
+   Mỗi use case: ID `UC<nn>`, actor, mục tiêu, luồng chính/phụ, AC đo được (ID AC của nguồn; tự đánh `AC<uc>.<n>` chỉ khi nguồn chưa có ID), NFR, nguồn truy vết. Nguồn mâu thuẫn
    hoặc thiếu → Câu hỏi mở. Trình bảng Use case + Câu hỏi mở cho teamlead duyệt TRƯỚC khi tách task.
 
 3. **Tách task theo lát dọc.**

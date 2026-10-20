@@ -33,7 +33,8 @@ không đánh dấu xong khi chưa đủ.
 
 ## Đặt đúng chỗ & hình thức
 
-- [ ] Spec nằm ở `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md`; khung `plan.md` đã dựng (chưa cần chi tiết task).
+- [ ] Spec nằm ở `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md` (+ `design.md` khi có); chưa dựng `plan.md`.
+- [ ] Mỗi AC có ID `AC<n>.<m>`, không trùng; `check-request.mjs` của skill `artifact-templates` đã chạy trên thư mục request.
 - [ ] Bám scaffold `_TEMPLATE` (mở rộng, không dựng cấu trúc song song).
 - [ ] **Tiếng Việt CÓ DẤU**, UTF-8; văn phong rõ, không sáo rỗng.
 

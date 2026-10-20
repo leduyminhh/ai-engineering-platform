@@ -30,7 +30,7 @@ Thiếu vài chi tiết (validation cụ thể, mã lỗi) KHÔNG phải ngưỡ
 ```
 
 - ID use case: `UC01`, `UC02`… theo thứ tự xuất hiện trong nguồn chính. `UC00` dành cho nền tảng dùng chung.
-- AC đánh số `AC<uc>.<n>` (vd `AC1.2`) để task truy vết được.
+- Nguồn đã có AC mang ID `AC<n>.<m>` (requirement.md hoặc design.md) → dùng lại nguyên ID, không đánh số lại. Chỉ khi nguồn chưa có ID mới đánh số `AC<uc>.<n>` (vd `AC1.2`).
 - AC viết Given/When/Then hoặc tiêu chí kiểm được có ngưỡng.
 - Cột Nguồn trỏ về vị trí cụ thể trong input (file + mục, hoặc đoạn trích ngắn).
 

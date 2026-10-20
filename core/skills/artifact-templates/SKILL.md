@@ -20,9 +20,9 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | workflow | [workflow.template.md](references/workflow.template.md) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` (chỉ có trong repo aip) | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
 | skill | [skill.template.md](references/skill.template.md) | `cli/lib/conventions.mjs` → `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys` (chỉ có trong repo aip) | Anthropic skill best practices; agentskills.io |
 | agent | [agent.template.md](references/agent.template.md) | `cli/lib/conventions.mjs` → `checkAgentTools`, `checkAgentDescription` (chỉ có trong repo aip) | Claude Code subagents; GitHub agents.md (2025-11) |
-| requirement | [requirement.template.md](references/requirement.template.md) | chưa có | EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
-| design | [design.template.md](references/design.template.md) | chưa có | superpowers:brainstorming (design doc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
-| plan | [plan.template.md](references/plan.template.md) | chưa có | superpowers:writing-plans (header bắt buộc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
+| requirement | [requirement.template.md](references/requirement.template.md) | `scripts/check-request.mjs` | EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
+| design | [design.template.md](references/design.template.md) | `scripts/check-request.mjs` | superpowers:brainstorming (design doc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
+| plan | [plan.template.md](references/plan.template.md) | `scripts/check-request.mjs` | superpowers:writing-plans (header bắt buộc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
 | task | [task.template.md](references/task.template.md) | `check-tasks.mjs` của `engineering-task-breakdown` (chỉ có khi cài plugin `engineering`) | Spec Kit tasks.md; Kiro tasks.md; check-tasks.mjs hiện có |
 | adr | [adr.template.md](references/adr.template.md) | chưa có | MADR 4.0.0 (adr.github.io/madr); Nygard 2011 (Documenting Architecture Decisions) |
 | project-knowledge | [project-knowledge/](references/project-knowledge/) | chưa có | Chuyển nguyên từ templates/init/project-knowledge (giữ nội dung); tech-stack.yml không có khối header |
@@ -30,6 +30,8 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.
 Validator ghi `chỉ có trong repo aip` hoặc `chỉ có khi cài plugin …` thì chỉ chạy được khi file đó tồn tại; không có thì áp
 dòng trên.
+Validator `scripts/check-request.mjs` (requirement, design, plan) nằm ngay trong skill này nên có ở mọi project đã cài core;
+chạy `node <thư-mục-skill>/scripts/check-request.mjs <docs/requests/ngày-slug>` — chỉ cảnh báo, exit 0 khi chạy được, exit 2 khi sai đối số.
 Dòng có Template là thư mục (`project-knowledge/`): mỗi file `.md` bên trong có khối header riêng; `tech-stack.yml` là YAML
 nên không có khối header, nguồn của nó ghi ở cột Nguồn.
 
@@ -39,7 +41,8 @@ nên không có khối header, nguồn của nó ghi ở cột Nguồn.
    tự suy ra khung.
 2. **Mở template** đúng file trong cột Template; chỉ nạp file của loại đang cần.
 3. **Điền** placeholder `<…>` bằng nội dung thật. Giữ nguyên tên heading, tên trường và thứ tự mà validator đọc.
-4. **Chạy validator** ở cột Validator nếu có; lỗi → sửa nội dung rồi chạy lại tới khi sạch. Validator `chưa có`, hoặc
+4. **Chạy validator** ở cột Validator nếu có (requirement/design/plan: `node scripts/check-request.mjs <thư-mục-request>`,
+   thư mục là `docs/requests/<ngày>-<slug>/`); lỗi → sửa nội dung rồi chạy lại tới khi sạch. Validator `chưa có`, hoặc
    validator `chỉ có trong repo aip` mà project hiện tại không có file đó → bỏ qua bước chạy, tự đối chiếu heading và
    mẫu dòng với template, và nói rõ chưa kiểm bằng máy.
 5. **Bỏ khối `<!-- artifact-template … -->`** khỏi bản đã điền; frontmatter (nếu có) giữ nguyên ở dòng 1.
@@ -81,3 +84,5 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
   `Người quyết định`, bối cảnh, yếu tố quyết định, phương án, kết quả + hệ quả + xác nhận, ưu nhược từng phương án).
 - [references/project-knowledge/](references/project-knowledge/): 5 khung `.md` (`project-overview`, `domain-context`,
   `architecture`, `source-structure`, `code-convention`) và `tech-stack.yml` (không có header) cho `project-knowledge/`.
+- [scripts/check-request.mjs](scripts/check-request.mjs): validator cho requirement/design/plan; kiểm thư mục request (nguồn AC,
+  ID AC, `**Goal:**`/`**Spec:**` của plan, độ phủ AC bởi plan.md/tasks.md), mỗi lỗi một dòng `WARN <file>:<dòng> [<mã>] …`.

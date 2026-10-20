@@ -152,7 +152,7 @@ export default async function run({ ok, ctx }) {
     for (const r of ['Kết quả', 'Evidence', 'File đã đổi', 'Rủi ro còn lại']) ok(rep.includes(`| ${r} |`), `template agent: Report có dòng "| ${r} |"`);
   }
 
-  // 3d. Requirement / design / plan: chưa có validator máy (check-request.mjs ở project 1) nên pin heading và mẫu dòng.
+  // 3d. Requirement / design / plan: validator là scripts/check-request.mjs (cảnh báo cấu trúc AC); ở đây pin thêm heading và mẫu dòng.
   {
     const heads = (t) => t.split('\n').filter((l) => /^#{1,3} /.test(l)).map((l) => l.trimEnd());
     const req = tplOf('requirement');

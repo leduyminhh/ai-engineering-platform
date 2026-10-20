@@ -1,7 +1,7 @@
 <!-- artifact-template
 type: requirement
 version: 1
-validator: chưa có
+validator: scripts/check-request.mjs
 sources: EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2
 Bỏ khối này khi chép template ra dùng.
 -->

@@ -1,7 +1,7 @@
 <!-- artifact-template
 type: design
 version: 1
-validator: chưa có
+validator: scripts/check-request.mjs
 sources: superpowers:brainstorming (design doc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2
 Bỏ khối này khi chép template ra dùng.
 -->
@@ -22,6 +22,8 @@ Bỏ khối này khi chép template ra dùng.
 <...>
 ## Ràng buộc
 <...>
+## Không đổi (bugfix)
+<chỉ với bugfix: hành vi phải giữ nguyên; bỏ mục này nếu không phải bugfix>
 ## Kiểm thử
 <AC nào được kiểm ở tầng nào>
 ## Để builder quyết
