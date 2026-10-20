@@ -58,6 +58,13 @@ export default async function run({ ok, ctx }) {
       'templates/init/CLAUDE.md: pointer git-workflow (phẳng + core:git-workflow)');
   }
 
+  // 5d. DRIFT GUARD: AGENTS.md Safety chuyển chốt duyệt diff sang trước khi tích hợp; bản cũ còn sót ở tầng
+  // core (template init, principles, digest nhúng mọi skill) từng làm agent vẫn dừng ở mỗi commit.
+  for (const rel of ['templates/init/CLAUDE.md', 'core/principles/principles.md', 'adapters/_shared/lib.mjs']) {
+    const text = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
+    ok(!/duyệt diff trước khi\s+commit/i.test(text), `${rel}: không còn rule cũ "duyệt diff trước khi commit"`);
+  }
+
   // 6. INIT skills ship AGENTS.template.md (CLI lẫn skill drop ra ./AGENTS.md)
   for (const p of plugins) {
     for (const s of p.stages) {

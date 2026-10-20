@@ -55,16 +55,20 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
    và sinh title + body theo quy ước đó (kèm template/ví dụ khi cần — xem Bản đồ tài liệu).
 6. Ghi toàn bộ message vào file tạm UTF-8, chạy `node <thư mục skill>/scripts/check-commit-message.mjs <file>`
    (hoặc `scripts/test-commit-message-encoding.ps1 -MessageFile <file>` trên PowerShell), kiểm tra pass.
-7. **DỪNG cho người dùng duyệt diff:** trình bày `git status --short` (file đã stage) +
-   toàn bộ nội dung commit message, chờ người dùng xác nhận TRƯỚC khi chạy lệnh commit.
-8. Sau khi xác nhận: commit bằng `git commit -F <file>` (KHÔNG truyền tiếng Việt qua tham
-   số shell). Check ở bước 6 fail: sửa xử lý UTF-8, không được bỏ dấu tiếng Việt để lách.
+7. **DỪNG cho người dùng duyệt diff** khi branch hiện tại là protected (`main`/`master`/`dev`/`develop`)
+   hoặc chưa có plan đã duyệt: trình bày `git status --short` (file đã stage) + toàn bộ nội dung
+   commit message, chờ người dùng xác nhận TRƯỚC khi chạy lệnh commit. Trên feature branch đang
+   chạy plan đã duyệt: commit không dừng; người dùng duyệt toàn bộ diff branch trước merge/push.
+8. Sau khi xác nhận (hoặc khi bước 7 không yêu cầu dừng): commit bằng `git commit -F <file>`
+   (KHÔNG truyền tiếng Việt qua tham số shell). Check ở bước 6 fail: sửa xử lý UTF-8, không được
+   bỏ dấu tiếng Việt để lách.
 9. Chạy verification liên quan khi khả thi.
 10. Sau khi commit: kiểm tra `git log -1 --format=%B` còn đọc được tiếng Việt. Encoding
     hỏng và commit **CHƯA push** → amend ngay để sửa. Đã push rồi → KHÔNG amend (viết đè
     lịch sử đã chia sẻ); tạo commit sửa mới thay thế.
 11. Push branch hiện tại (dùng tracking khi cần) sau khi commit thành công và đã biết
-    branch đích.
+    branch đích. Branch có commit tạo không dừng ở bước 7: chỉ push sau khi người dùng duyệt
+    toàn bộ diff branch và xác nhận.
 12. Khi người dùng muốn publish hoặc luồng tự nhiên tới PR: dùng Pull Request Notes
     Template trong [references/commit-templates.md](references/commit-templates.md),
     ghi rõ migration, testing, risk, notes.
