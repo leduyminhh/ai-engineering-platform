@@ -21,11 +21,11 @@ skeleton, KHÔNG thuộc pipeline nào.
 ## Quy trình
 
 ### 1. Khung chung (idempotent)
-Copy nguyên cây `templates/` (đi kèm skill) vào gốc project, skip file đã có:
+Copy nguyên cây `templates/` (đi kèm skill) vào gốc project, skip file đã có. Template `project-knowledge/`, `docs/requests/_TEMPLATE/` và `docs/decisions/_TEMPLATE.md` do skill core `artifact-templates` cung cấp, đã sinh sẵn vào cây này:
 - `CLAUDE.md`, `CONTRIBUTING.md`, `README.md`, `TODO.md`
 - `project-knowledge/` (project-overview, domain-context, architecture, source-structure,
   code-convention, tech-stack)
-- `docs/requests/_TEMPLATE/` (requirement, plan), `docs/contracts/`
+- `docs/requests/_TEMPLATE/` (requirement, design, plan), `docs/contracts/`
 - `docs/decisions/` (_TEMPLATE, 0001, 0002-code-convention)
 - `src/shared/`, `tests/`
 

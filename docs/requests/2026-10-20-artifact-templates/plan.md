@@ -258,8 +258,8 @@
 - Modify: `plugins/_versions.lock.json` (sinh bằng lệnh)
 - Modify: `CLAUDE.md`, `README.md`, `README_VI.md` (mô tả `templates/` và skill core mới, nếu có nhắc vị trí template cũ)
 
-- [ ] **Step 1: Viết test đỏ** — thêm kiểm "đúng 9 loại" → `node test/validate.mjs --only 35-artifact`. Expected: xanh nếu Task 1–6 đã đủ; đỏ thì ghi loại nào thiếu và quay lại task tương ứng.
-- [ ] **Step 2: Bump version + build + lock** — `npm run build` rồi `node cli/lib/versions.mjs --lock`. Expected: lock ghi version mới, không từ chối. Nếu bị từ chối vì plugin `*-init` đổi hash → bump plugin đó rồi chạy lại.
-- [ ] **Step 3: Chạy toàn bộ** — `npm test` → exit 0; `npm run pack:verify` → pass.
-- [ ] **Step 4: Rà tham chiếu cũ.** Chạy `git grep -n "templates/skills\|templates/workflows\|templates/init/project-knowledge\|_TEMPLATE/requirement.md\|task-template-common" -- . ":!docs/superpowers" ":!docs/requests" ":!CHANGELOG.md"`. Expected: không còn kết quả nào.
-- [ ] **Step 5: Commit** — `chore(release): bump core and engineering for artifact templates`
+- [x] **Step 1: Viết test đỏ** — thêm kiểm "đúng 9 loại" → `node test/validate.mjs --only 35-artifact`. Expected: xanh nếu Task 1–6 đã đủ; đỏ thì ghi loại nào thiếu và quay lại task tương ứng.
+- [x] **Step 2: Bump version + build + lock** — `npm run build` rồi `node cli/lib/versions.mjs --lock`. Expected: lock ghi version mới, không từ chối. Nếu bị từ chối vì plugin `*-init` đổi hash → bump plugin đó rồi chạy lại.
+- [x] **Step 3: Chạy toàn bộ** — `npm test` → exit 0; `npm run pack:verify` → pass.
+- [x] **Step 4: Rà tham chiếu cũ.** Chạy `git grep -n "templates/skills\|templates/workflows\|templates/init/project-knowledge\|_TEMPLATE/requirement.md\|task-template-common" -- . ":!docs/superpowers" ":!docs/requests" ":!CHANGELOG.md"`. Expected: không còn kết quả nào.
+- [x] **Step 5: Commit** — `chore(release): bump core and engineering for artifact templates`
