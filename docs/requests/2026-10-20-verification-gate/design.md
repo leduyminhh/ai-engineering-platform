@@ -90,7 +90,7 @@ Ngữ nghĩa hook đã đối chiếu docs (https://code.claude.com/docs/en/hook
 
 - Cú pháp mới: `node check-request.mjs <thư-mục-request> [--tests <path>…] [--strict]`.
 - Phạm vi test mặc định (D10): gom đường dẫn trong các dòng `**Files:**` của `plan.md` (cùng dòng hoặc danh sách gạch đầu dòng ngay dưới, theo định dạng của `writing-plans`), giữ các file test (AC2.6), resolve từ gốc git chứa thư mục request. `--tests` thay thế phạm vi này (AC2.7).
-- `checkRequest(texts, { testTexts })`: `testTexts` là danh sách nội dung file test; ID tìm bằng `/\bAC(\d+)[._](\d+)\b/gi`, chuẩn hóa về `AC<n>.<m>`. AC hợp lệ (đã qua W3/W4) không có trong tập này → W7 tại dòng AC trong file nguồn.
+- `checkRequest(texts, { testTexts })`: `testTexts` là danh sách nội dung file test; ID tìm bằng `/(?<!\d)AC(\d+)[._](\d+)(?!\d)/gi`, chuẩn hóa về `AC<n>.<m>` (sửa khi lập plan: bản `\b…\b` cũ không khớp `test_ac1_2_x` hay `testAc1_2` vì `_`/chữ liền kề không tạo ranh giới từ). AC hợp lệ (đã qua W3/W4) không có trong tập này → W7 tại dòng AC trong file nguồn.
 - Quét file: hàm `main` đọc đường dẫn, đệ quy thư mục, bỏ qua thư mục ở AC2.3; giữ zero-dep.
 - `--strict`: exit 1 khi có cảnh báo (để CI của project đích dùng được). Mặc định vẫn chỉ cảnh báo.
 - Baseline (`core/agents/AGENTS.template.md`, mục AC): thêm một câu quy ước gắn ID AC vào tên test hoặc comment, và ghi file test vào dòng `**Files:**` của task trong `plan.md`, kèm lệnh kiểm `check-request.mjs <dir>`; đồng bộ `AGENTS.md`.
