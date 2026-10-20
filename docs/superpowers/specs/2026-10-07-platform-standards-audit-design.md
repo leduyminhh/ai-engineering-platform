@@ -1,7 +1,7 @@
 # Kiểm định `ai-engineering-platform` theo chuẩn Claude Code hiện hành + lộ trình nâng cấp
 
 - Ngày: 2026-10-07
-- Trạng thái: **Đã duyệt 2026-10-08** (chủ dự án chấp nhận cả 6 khuyến nghị ở §6); thực thi theo từng phase, mỗi phase một plan riêng
+- Trạng thái: **Đã duyệt 2026-10-08 và đã thực thi Phase 0–3** — merge `c9b59b2` (P0), `c16f77b` (P1), `df7cff8` (P2), `6fd7a26` (P3), sửa BOM hook `34adc68`; đã lên `origin/master` 2026-10-09. Còn mở: chạy eval thật (`evals/`, chạy tay), thử marketplace từ branch `dist`, smoke test hook "ask" dưới `bypassPermissions`, D6 (`isolation: worktree` cho implementer — chờ eval), P3.5 Antigravity skill native (hoãn).
 - Phạm vi: toàn bộ nội dung chiếu ra (36 skill, 18 agent, 13 workflow, templates) và engine (`cli/`, `adapters/`,
   `test/`, CI) — audit trên head `feature/task-breakdown-integration` @ `0693874` (bao gồm `master` `d804d01`).
 - Thước đo: **Claude Code là chính** (tài liệu chính thức fetch ngày 2026-10-07, xem §0.2); Codex/Cursor/Antigravity
