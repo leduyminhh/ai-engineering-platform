@@ -98,7 +98,7 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
 
   - Module pin `test/content/18-superpowers-docs-standard.pin.mjs`. Task 2–4 thêm block vào cùng file này.
 
-- [ ] **Step 1: Viết test đỏ (một test tham số hóa).**
+- [x] **Step 1: Viết test đỏ (một test tham số hóa).**
   - Import script qua `pathToFileURL` (lấy từ `ctx`).
   - Fixture `OK` gồm:
     - `design.md` có `## 3. Tiêu chí chấp nhận`, trong đó có `- [ ] **AC1.1** — Given a When b Then c` và `- [ ] **AC1.2** — Given c When d Then e`. Thêm một khối ```` ```markdown ```` chứa `**AC1.1**`; khối này phải bị bỏ qua.
@@ -122,8 +122,8 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
   ```
 
   - Kiểm CLI (AC4.3): `cr.main([])` → `2`; `cr.main([<đường dẫn chính file pin>])` → `2`.
-- [ ] **Step 2: Chạy để xác nhận đỏ.** Lệnh: `node test/validate.mjs --only 18-superpowers`. Kết quả mong đợi: FAIL (chưa có script).
-- [ ] **Step 3: Hiện thực** theo design §4.5.
+- [x] **Step 2: Chạy để xác nhận đỏ.** Lệnh: `node test/validate.mjs --only 18-superpowers`. Kết quả mong đợi: FAIL (chưa có script).
+- [x] **Step 3: Hiện thực** theo design §4.5.
   - Chuẩn hóa text: bỏ BOM → `normalize('NFC')` → đổi CRLF thành LF. Bỏ qua các dòng nằm trong khối ```, nhưng vẫn giữ số dòng gốc.
   - Mục AC là heading `#{2,4}` có chứa `Tiêu chí chấp nhận`, kéo dài tới heading cùng cấp hoặc cao hơn.
   - ID AC lấy từ `**…**` ở đầu dòng bullet.
@@ -131,8 +131,8 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
     - nằm trong một dòng của plan **bắt đầu bằng** `**Phủ AC:**`, hoặc
     - khớp `AC\d+\.\d+` ở bất kỳ đâu trong `tasks.md`.
   - Phát hiện script được chạy trực tiếp bằng realpath, giống `check-tasks.mjs`.
-- [ ] **Step 4: Chạy để xác nhận xanh.** Lệnh: `node test/validate.mjs --build --only 18-superpowers --only 35-artifact --only 10-source --only 20-build`. Kết quả mong đợi: 0 fail.
-- [ ] **Step 5: Commit** — `feat(core): add check-request script to artifact-templates`
+- [x] **Step 4: Chạy để xác nhận xanh.** Lệnh: `node test/validate.mjs --build --only 18-superpowers --only 35-artifact --only 10-source --only 20-build`. Kết quả mong đợi: 0 fail.
+- [x] **Step 5: Commit** — `feat(core): add check-request script to artifact-templates`
 
 ---
 
