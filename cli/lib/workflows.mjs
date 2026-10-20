@@ -79,6 +79,19 @@ const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isStr = (v) => typeof v === 'string' && v.trim() !== '';
 const itemId = (it) => (isObj(it) ? it.id : it);
 
+// Khóa ngoài schema v1 gần như luôn là lỗi gõ (vd "afer"); im lặng bỏ qua sẽ làm cạnh/điều kiện biến mất khỏi runner.
+const GRAPH_KEYS = {
+  root: ['schema', 'workflow', 'start', 'steps'],
+  step: ['id', 'n', 'title', 'run', 'next', 'on_fail', 'gate'],
+  run: ['session', 'agents', 'skills', 'parallel'],
+  item: ['id', 'when', 'after'],
+  onFail: ['to', 'when'],
+  gate: ['type', 'review', 'approve', 'reject'],
+};
+function unknownKeys(obj, allowed, where, e) {
+  for (const k of Object.keys(obj)) if (!allowed.includes(k)) e(`khóa lạ "${k}" trong ${where}`);
+}
+
 // Cạnh gate.approve/reject được tính riêng để reachability không phụ thuộc việc approve === next đã đúng.
 function edgeTargets(s) {
   const ts = [['next', s.next]];
@@ -89,6 +102,7 @@ function edgeTargets(s) {
 
 function checkRun(run, e) {
   if (!isObj(run)) return e('thiếu run');
+  unknownKeys(run, GRAPH_KEYS.run, 'run', e);
   for (const k of ['session', 'parallel']) if (run[k] !== undefined && typeof run[k] !== 'boolean') e(`run.${k} phải là boolean`);
   const items = [];
   for (const key of ['agents', 'skills']) {
@@ -97,7 +111,10 @@ function checkRun(run, e) {
     for (const it of run[key]) {
       const id = itemId(it);
       if (!isStr(id) || !REF_ID.test(id)) { e(`run.${key} có phần tử sai (cần id hoặc { id, when?, after? })`); continue; }
-      if (isObj(it)) for (const k of ['when', 'after']) if (it[k] !== undefined && !isStr(it[k])) e(`run.${key} "${id}": ${k} phải là chuỗi`);
+      if (isObj(it)) {
+        unknownKeys(it, GRAPH_KEYS.item, `run.${key} "${id}"`, e);
+        for (const k of ['when', 'after']) if (it[k] !== undefined && !isStr(it[k])) e(`run.${key} "${id}": ${k} phải là chuỗi`);
+      }
       items.push(it);
     }
   }
@@ -106,11 +123,27 @@ function checkRun(run, e) {
   for (const it of items) {
     if (isObj(it) && isStr(it.after) && (it.after === it.id || !ids.has(it.after))) e(`after "${it.after}" của "${it.id}" phải là id khác cùng bước`);
   }
+  // Mỗi phần tử có tối đa một `after`, nên đi theo chuỗi là đủ; vòng làm runner chờ nhau mãi.
+  const afterOf = new Map(items.filter((it) => isObj(it) && isStr(it.after) && it.after !== it.id).map((it) => [it.id, it.after]));
+  const reported = new Set();
+  for (const start of afterOf.keys()) {
+    const path = [start];
+    for (let cur = afterOf.get(start); cur !== undefined; cur = afterOf.get(cur)) {
+      if (cur === start) {
+        if (!path.some((p) => reported.has(p))) e(`after tạo vòng: ${[...path, start].join(' → ')}`);
+        path.forEach((p) => reported.add(p));
+        break;
+      }
+      if (path.includes(cur)) break;
+      path.push(cur);
+    }
+  }
 }
 
 export function checkGraph(graph) {
   if (!isObj(graph)) return ['graph: phải là object'];
   const errs = [];
+  unknownKeys(graph, GRAPH_KEYS.root, 'graph', (m) => errs.push(`graph: ${m}`));
   if (graph.schema !== 1) errs.push(`graph: schema phải bằng 1 (đang ${JSON.stringify(graph.schema)})`);
   if (!isStr(graph.workflow)) errs.push('graph: thiếu "workflow"');
   if (!isStr(graph.start)) errs.push('graph: thiếu "start"');
@@ -120,6 +153,7 @@ export function checkGraph(graph) {
     if (!isObj(s)) { errs.push(`bước #${i + 1}: phải là object`); return; }
     const at = isStr(s.id) ? s.id : `#${i + 1}`;
     const e = (m) => errs.push(`bước ${at}: ${m}`);
+    unknownKeys(s, GRAPH_KEYS.step, 'bước', e);
     if (!isStr(s.id) || !STEP_ID.test(s.id)) e(`id ${JSON.stringify(s.id)} không khớp ${STEP_ID}`);
     else if (GRAPH_TERMINALS.includes(s.id)) e('id trùng đích đặc biệt');
     else if (seen.has(s.id)) e('id trùng với bước khác');
@@ -131,12 +165,14 @@ export function checkGraph(graph) {
     if (!Array.isArray(s.on_fail)) e('on_fail phải là mảng');
     else {
       s.on_fail.forEach((f, j) => {
+        if (isObj(f)) unknownKeys(f, GRAPH_KEYS.onFail, `on_fail[${j}]`, e);
         if (!isObj(f) || !isStr(f.to) || !isStr(f.when)) e(`on_fail[${j}] cần "to" và "when"`);
         // Fail không bao giờ dẫn tới hoàn tất; cho phép sẽ để vòng lặp vô hạn lọt qua kiểm reachability tới done.
         else if (f.to === 'done') e(`on_fail[${j}] không được trỏ tới "done" (dùng "blocked")`);
       });
     }
     const g = s.gate;
+    if (isObj(g)) unknownKeys(g, GRAPH_KEYS.gate, 'gate', e);
     if (!isObj(g)) e('thiếu gate');
     else if (g.type === 'human') {
       if (!isStr(g.review)) e('gate human thiếu review');
@@ -206,6 +242,8 @@ export function checkGraphAgainstBody(graph, text) {
       else if (f.to === 'ask_user' && !/hỏi|người dùng/i.test(fail)) e('on_fail → ask_user thiếu chữ "hỏi"/"người dùng" trong Khi fail');
       else if (!GRAPH_TERMINALS.includes(f.to) && !back.has((steps.find((s) => s.id === f.to) || {}).n)) e(`on_fail → ${f.to} thiếu câu "quay lại Bước N" trong Khi fail`);
     }
+    // Văn xuôi nói "hỏi" mà graph không có ask_user thì runner không bao giờ dừng hỏi người dùng.
+    if (/hỏi/i.test(fail) && !onFail.some((f) => f.to === 'ask_user')) e('Khi fail có chữ "hỏi" nhưng on_fail thiếu cạnh ask_user');
     for (const n of back) if (!onFail.some((f) => (byN.get(n) || {}).id === f.to)) e(`văn xuôi "quay lại Bước ${n}" nhưng graph thiếu cạnh on_fail tới bước ${n}`);
   });
   return errs;

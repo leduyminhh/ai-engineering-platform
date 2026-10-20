@@ -151,36 +151,57 @@ export default async function run({ ok, ctx }) {
     ok(checkGraphAgainstBody(base(), prose).length === 0,
       `AC1.1: graph hợp lệ khớp văn xuôi → 0 lỗi${checkGraphAgainstBody(base(), prose).length ? ' — ' + checkGraphAgainstBody(base(), prose).join('; ') : ''}`);
 
+    // Mỗi case: [biến đổi, đoạn thông báo chỉ check đó sinh ra, id bước phải được nêu (nếu có)]. Lỗi dây chuyền
+    // từ check khác không được thoả đoạn thông báo, nên xoá một check sẽ làm đúng case của nó đỏ.
     const schemaCases = {
-      'schema: 2': (g) => { g.schema = 2; },
-      'thiếu workflow': (g) => { delete g.workflow; },
-      'start khác bước n=1': (g) => { g.start = 'implement'; },
-      'id viết hoa': (g) => { g.steps[s1].id = 'Baseline'; },
-      'id trùng': (g) => { g.steps[s2].id = 'baseline'; },
-      'id trùng đích đặc biệt': (g) => { g.steps[s2].id = 'done'; },
-      'n nhảy 1→3': (g) => { g.steps[s2].n = 3; },
-      'title rỗng': (g) => { g.steps[s1].title = ''; },
-      'run rỗng': (g) => { g.steps[s1].run = {}; },
-      'run.agents chứa số': (g) => { g.steps[s2].run.agents = [5]; },
-      'gate.type lạ': (g) => { g.steps[s1].gate.type = 'x'; },
-      'human gate thiếu review': (g) => { delete g.steps[s3].gate.review; },
-      'approve ≠ next': (g) => { g.steps[s3].gate.approve = 'blocked'; },
-      'reject không có trong on_fail': (g) => { g.steps[s3].gate.reject = 'blocked'; },
-      'on_fail thiếu when': (g) => { delete g.steps[s1].on_fail[0].when; },
-      'after trỏ id ngoài bước': (g) => { g.steps[s2].run.skills[0].after = 'ghost'; },
-      'after trỏ chính nó': (g) => { g.steps[s2].run.agents[1] = { id: 'a-two', after: 'a-two' }; },
-      'on_fail trỏ tới done': [(g) => { g.steps[s2].on_fail.push({ to: 'done', when: 'x' }); }, 'done'],
+      'schema: 2': [(g) => { g.schema = 2; }, 'schema phải bằng 1'],
+      'thiếu workflow': [(g) => { delete g.workflow; }, 'thiếu "workflow"'],
+      'start khác bước n=1': [(g) => { g.start = 'implement'; }, 'phải là id của bước n=1'],
+      'id viết hoa': [(g) => { g.steps[s1].id = 'Baseline'; }, 'không khớp'],
+      'id trùng': [(g) => { g.steps[s2].id = 'baseline'; }, 'id trùng với bước khác', 'baseline'],
+      'id trùng đích đặc biệt': [(g) => { g.steps[s2].id = 'done'; }, 'id trùng đích đặc biệt', 'done'],
+      'n nhảy 1→3': [(g) => { g.steps[s2].n = 3; }, 'n phải liên tục', 'implement'],
+      'title rỗng': [(g) => { g.steps[s1].title = ''; }, 'thiếu title', 'baseline'],
+      'run rỗng': [(g) => { g.steps[s1].run = {}; }, 'run cần session', 'baseline'],
+      'run.agents chứa số': [(g) => { g.steps[s2].run.agents = [5]; }, 'run.agents có phần tử sai', 'implement'],
+      'gate.type lạ': [(g) => { g.steps[s1].gate.type = 'x'; }, 'không hợp lệ', 'baseline'],
+      'human gate thiếu review': [(g) => { delete g.steps[s3].gate.review; }, 'thiếu review', 'commit'],
+      'approve ≠ next': [(g) => { g.steps[s3].gate.approve = 'blocked'; }, 'phải bằng next', 'commit'],
+      'reject không có trong on_fail': [(g) => { g.steps[s3].gate.reject = 'blocked'; }, 'phải là một đích của on_fail', 'commit'],
+      'on_fail thiếu when': [(g) => { delete g.steps[s1].on_fail[0].when; }, 'cần "to" và "when"', 'baseline'],
+      'after trỏ id ngoài bước': [(g) => { g.steps[s2].run.skills[0].after = 'ghost'; }, 'phải là id khác cùng bước', 'implement'],
+      'after trỏ chính nó': [(g) => { g.steps[s2].run.agents[1] = { id: 'a-two', after: 'a-two' }; }, 'phải là id khác cùng bước', 'implement'],
+      'after vòng 2 phần tử': [(g) => { g.steps[s2].run.agents = [{ id: 'a-one', after: 'a-two' }, { id: 'a-two', after: 'a-one' }]; }, 'after tạo vòng', 'implement'],
+      'after vòng 3 phần tử': [(g) => {
+        g.steps[s2].run.agents = [{ id: 'a-one', after: 's-one' }, { id: 'a-two', after: 'a-one' }];
+        g.steps[s2].run.skills = [{ id: 's-one', after: 'a-two' }];
+      }, 'after tạo vòng', 'implement'],
+      'on_fail trỏ tới done': [(g) => { g.steps[s2].on_fail.push({ to: 'done', when: 'x' }); }, 'không được trỏ tới "done"', 'implement'],
+      'khóa lạ ở root': [(g) => { g.schmea = 1; }, 'khóa lạ "schmea"'],
+      'khóa lạ ở bước': [(g) => { g.steps[s2].nxt = 'commit'; }, 'khóa lạ "nxt"', 'implement'],
+      'khóa lạ ở run': [(g) => { g.steps[s2].run.agent = 'a-one'; }, 'khóa lạ "agent"', 'implement'],
+      'khóa lạ ở phần tử run': [(g) => { g.steps[s2].run.skills[0].afer = 'a-one'; }, 'khóa lạ "afer"', 'implement'],
+      'khóa lạ ở on_fail': [(g) => { g.steps[s2].on_fail[0].whn = 'x'; }, 'khóa lạ "whn"', 'implement'],
+      'khóa lạ ở gate': [(g) => { g.steps[s3].gate.aprove = 'done'; }, 'khóa lạ "aprove"', 'commit'],
     };
-    for (const [name, c] of Object.entries(schemaCases)) {
-      const [fn, want] = Array.isArray(c) ? c : [c];
+    for (const [name, [fn, want, at]] of Object.entries(schemaCases)) {
       const errs = checkGraph(mut(fn));
-      ok(errs.length >= 1 && (!want || errs.some((m) => m.includes(want) && m.includes('implement'))), `AC1.1: checkGraph báo lỗi schema — ${name}`);
+      ok(errs.some((m) => m.includes(want) && (!at || m.includes(at))), `AC1.1: checkGraph báo lỗi schema — ${name}${errs.length ? '' : ' (không có lỗi nào)'}`);
     }
     ok(checkGraph(mut((g) => { g.steps[s2].run.agents[1] = { id: 'a-two', after: 'a-one' }; })).length === 0,
       'AC1.1: after trỏ id khác cùng bước → hợp lệ');
 
-    const badTarget = checkGraph(mut((g) => { g.steps[s2].next = 'nowhere'; }));
-    ok(badTarget.some((m) => m.includes('implement') && m.includes('nowhere')), 'AC1.2: đích không tồn tại → lỗi nêu bước và đích');
+    // Mỗi cạnh được kiểm riêng; đặt đích sai ở cả cạnh đối ứng (next/approve, on_fail/reject) để lỗi khác không che mất cạnh đang thử.
+    const targetCases = {
+      next: [(g) => { g.steps[s2].next = 'nowhere'; }, 'implement', 'next'],
+      'on_fail[].to': [(g) => { g.steps[s2].on_fail[0].to = 'nowhere'; }, 'implement', 'on_fail'],
+      'gate.approve': [(g) => { g.steps[s3].next = 'nowhere'; g.steps[s3].gate.approve = 'nowhere'; }, 'commit', 'gate.approve'],
+      'gate.reject': [(g) => { g.steps[s3].on_fail[0].to = 'nowhere'; g.steps[s3].gate.reject = 'nowhere'; }, 'commit', 'gate.reject'],
+    };
+    for (const [name, [fn, at, label]] of Object.entries(targetCases)) {
+      const errs = checkGraph(mut(fn));
+      ok(errs.some((m) => m.includes(at) && m.includes(`${label} trỏ tới "nowhere"`)), `AC1.2: đích không tồn tại ở ${name} → lỗi nêu bước và đích`);
+    }
 
     const orphan = checkGraph(mut((g) => {
       g.steps.push({ id: 'extra', n: 4, title: 'Extra', run: { session: true }, next: 'done', on_fail: [], gate: { type: 'auto' } });
@@ -207,6 +228,13 @@ export default async function run({ ok, ctx }) {
       'AC2.4: "quay lại Bước N" ở dòng nối tiếp phải có cạnh');
     ok(bodyErr((g) => { g.steps[s2].on_fail.push({ to: 'blocked', when: 'x' }); }).some((m) => m.includes('implement') && m.includes('blocked')),
       'AC2.4: cạnh không có bằng chứng trong Khi fail → lỗi');
+
+    // Chiều văn xuôi → graph cho ask_user: chữ "hỏi" trong Khi fail bắt buộc có cạnh ask_user.
+    const askProse = prose.replace('đỏ → dừng `blocked`.', 'đỏ → dừng `blocked` hoặc hỏi người dùng.');
+    const withAsk = (g) => g.steps[s1].on_fail.push({ to: 'ask_user', when: 'hỏi người dùng' });
+    ok(checkGraphAgainstBody(base(), askProse).some((m) => m.includes('baseline') && m.includes('ask_user')),
+      'AC2.4: Khi fail có "hỏi" nhưng graph thiếu cạnh ask_user → lỗi');
+    ok(checkGraphAgainstBody(mut(withAsk), askProse).length === 0, 'AC2.4: Khi fail có "hỏi" và graph có ask_user → 0 lỗi');
 
     const lastFail = (to) => [`- **Khi fail:** hỏng → quay lại Bước ${to}.`];
     const prose5 = frame([1, 2, 3, 4].map((n) => mkStep(n, `S${n}`, 'session chính', ['- **Khi fail:** đỏ → dừng `blocked`.']))
