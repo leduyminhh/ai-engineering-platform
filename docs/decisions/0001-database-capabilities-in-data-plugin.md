@@ -4,7 +4,7 @@
 > `workflow-incident`, `workflow-refactor`, `workflow-testing` đã gỡ — workflow giờ chỉ là pipeline nối nhiều năng
 > lực. Gate của chúng chuyển sang skill (`data-db-migration`, `ops-incident-troubleshooting`, `*-testing`,
 > `*-code-review`) và Bước 6 của `workflow-feature`; `workflow-orchestrator` chỉ đường tới skill. Nội dung bên dưới
-> giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
+> giữ nguyên làm hồ sơ lịch sử — xem merge `8e80e8e`.
 
 - Trạng thái: Accepted
 - Ngày: 2026-09-30
@@ -58,7 +58,7 @@ Tích cực:
 - Skill không đổi nội dung thiết kế; chỉ đổi vị trí, tên, `order`/`stageNumber`/tiêu đề và một câu trỏ sang `data-oltp-implement` (nay cùng plugin).
 
 Tiêu cực và rủi ro:
-- Đổi tên skill: các tham chiếu tên cũ trong `docs/superpowers/` là lịch sử, không sửa.
+- Đổi tên skill: các tham chiếu tên cũ trong spec/plan cũ là lịch sử, không sửa (đã gỡ khỏi repo 2026-10-20, còn trong git history).
 - Spec §7.1.10 và §8.1 vẫn dùng tên cũ; đã thêm ghi chú dưới §7.1 để đọc đúng.
 - Plugin `data` là draft nguyên khối. Khi publish, cần mục `data/data-db-migration` trong `plugins/_published.json` hoặc publish cả plugin `data`.
 - Agent `backend-implementer` (plugin `backend`) hiện chỉ khai báo skill `backend-implement,backend-api-contract`. Khi thêm `data-db-migration` vào agent, việc cài skill của plugin khác đi kèm agent là `[Inference]`: chưa kiểm cách installer xử lý, cần kiểm lại ở pha publish.

@@ -146,7 +146,7 @@ package one or more skills) and **workflows** (multi-step recipes that dispatch 
 in sequence, with human checkpoints), plus a **`workflow-orchestrator`** that classifies
 a free-form request into the right workflow. Agents live at `plugins/<id>/agents/<agent-id>.md`;
 workflows live at the repo-level `workflows/<slug>/WORKFLOW.md`, separate from the plugin
-tree because a workflow calls across plugins. Full design: `docs/superpowers/specs/2026-09-25-agents-workflows-design.md`.
+tree because a workflow calls across plugins.
 
 An agent never commits, pushes, or opens a PR, and never dispatches another agent — only a
 workflow (running in the main session) orchestrates and calls `core:git-workflow` after a
@@ -223,7 +223,7 @@ uninstalling drops what no other remaining workflow still needs.
 
 ### Roadmap
 
-Tracked as open gaps in the design spec (`docs/superpowers/specs/2026-09-25-agents-workflows-design.md` §9) — not yet built.
+Open gaps — not yet built.
 
 **Skill gaps** (a step a workflow currently runs inline from the main session, not yet extracted into a reusable skill):
 
@@ -440,7 +440,8 @@ Do not publish from a protected branch — bump/tag on a working branch for revi
 
 - [CHANGELOG.md](CHANGELOG.md) — version history.
 - [MIGRATION.md](MIGRATION.md) — upgrade guide.
-- [docs/superpowers/specs/](docs/superpowers/specs/) — design records.
+- [docs/requests/](docs/requests/) — design and plan per request.
+- [docs/decisions/](docs/decisions/) — ADRs.
 
 ## Change checklist
 

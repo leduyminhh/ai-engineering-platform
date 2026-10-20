@@ -140,8 +140,7 @@ Bên cạnh skill, nền tảng còn chiếu ra **agent** (subagent đảm nhậ
 nhiều skill) và **workflow** (recipe nhiều bước, điều phối agent tuần tự, có checkpoint người
 duyệt), cùng **`workflow-orchestrator`** để phân loại một yêu cầu tự do về đúng workflow. Agent
 nằm ở `plugins/<id>/agents/<agent-id>.md`; workflow nằm ở thư mục cấp repo `workflows/<slug>/WORKFLOW.md`,
-tách khỏi cây plugin vì workflow gọi xuyên nhiều plugin. Thiết kế đầy đủ:
-`docs/superpowers/specs/2026-09-25-agents-workflows-design.md`.
+tách khỏi cây plugin vì workflow gọi xuyên nhiều plugin.
 
 Agent không commit, không push, không tạo PR, và không gọi agent khác — chỉ workflow (chạy ở
 session chính) mới điều phối và gọi `core:git-workflow` sau checkpoint. Mọi báo cáo của agent
@@ -218,7 +217,7 @@ workflow sẽ bỏ luôn phần không còn workflow nào khác cần tới.
 
 ### Roadmap
 
-Theo dõi như gap còn mở trong bản thiết kế (`docs/superpowers/specs/2026-09-25-agents-workflows-design.md` §9) — chưa làm.
+Các gap còn mở — chưa làm.
 
 **Skill gap** (bước hiện workflow làm thẳng ở session chính, chưa tách thành skill tái dùng):
 
@@ -435,7 +434,8 @@ Không phát hành từ nhánh bảo vệ — bump/tag trên nhánh làm việc,
 
 - [CHANGELOG.md](CHANGELOG.md) — lịch sử phiên bản.
 - [MIGRATION.md](MIGRATION.md) — hướng dẫn nâng cấp.
-- [docs/superpowers/specs/](docs/superpowers/specs/) — bản thiết kế.
+- [docs/requests/](docs/requests/) — design và plan theo từng request.
+- [docs/decisions/](docs/decisions/) — ADR.
 
 ## Checklist thay đổi
 
