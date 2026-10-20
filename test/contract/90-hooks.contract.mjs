@@ -284,4 +284,139 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   }
+  {
+    const { pathToFileURL, execFileSync, CORE_DIR } = ctx;
+    const script = path.join(CORE_DIR, 'hooks', 'scripts', 'gate-stop.mjs');
+    const gate = await import(pathToFileURL(script).href);
+    const line = (o) => JSON.stringify(o);
+    const human = (text) => line({ type: 'user', message: { role: 'user', content: text } });
+    const meta = (text) => line({ type: 'user', isMeta: true, message: { role: 'user', content: [{ type: 'text', text }] } });
+    const use = (name, input) => line({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 't' + Math.random(), name, input }] } });
+    const result = () => line({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't', content: 'ok' }] } });
+    const run = (lines, { input = {}, cfg = null, env = {} } = {}) => gate.decide(
+      { hook_event_name: 'Stop', stop_hook_active: false, transcript_path: 'T', cwd: '.', ...input },
+      { readFile: () => lines.join('\n'), loadConfig: () => cfg, env });
+    const edit = (p) => use('Edit', { file_path: p, old_string: 'a', new_string: 'b' });
+    const bash = (command) => use('Bash', { command });
+    const blocked = (r) => r?.decision === 'block';
+
+    const r1 = run([human('sửa'), edit('src/a.js'), edit('src/b.ts'), edit('src/c.py'), edit('src/d.go'), result()]);
+    ok(blocked(r1) && r1.reason.includes('4') && ['src/a.js', 'src/b.ts', 'src/c.py'].every((p) => r1.reason.includes(p)) && !r1.reason.includes('src/d.go'),
+      'AC1.1: sửa 4 file code không test → block, nêu số file và tối đa 3 đường dẫn');
+    ok(blocked(run([human('x'), use('Write', { file_path: 'a.js', content: '' })])), 'AC1.1: Write → block');
+    ok(blocked(run([human('x'), use('MultiEdit', { file_path: 'a.js', edits: [] })])), 'AC1.1: MultiEdit → block');
+    ok(blocked(run([human('x'), use('NotebookEdit', { notebook_path: 'n.ipynb' })])), 'AC1.1: NotebookEdit (notebook_path) → block');
+    ok(blocked(run([human('x'), edit('a.js'), bash('npm test'), edit('b.js')])), 'AC1.1: test chạy trước lần sửa cuối → block');
+
+    ok(run([human('x'), edit('a.js'), bash('npm test')]) === null, 'AC1.2: có test sau lần sửa cuối → cho dừng');
+    ok(run([human('x'), edit('a.js'), use('PowerShell', { command: 'npm test; if ($?) { "ok" }' })]) === null, 'AC1.2: PowerShell chạy test → cho dừng');
+    const isTest = [
+      'npm test', 'pnpm run test', 'yarn test', 'bun test', 'npm run test:unit', 'npx vitest run', 'npx jest', 'npx playwright test', 'node --test',
+      'node test/validate.mjs --build', 'mvn -q test', './mvnw verify', 'mvn compile', './gradlew check', 'gradle build', 'pytest -q', 'python -m pytest',
+      'python3 -m unittest', 'uv run pytest', 'go test ./...', 'cargo test', 'dotnet test', 'tsc --noEmit', 'npx tsc', 'eslint .', 'npm run lint',
+      'pnpm run typecheck', 'npm run build', 'ruff check .', 'mypy src', 'cd app && npm test 2>&1 | tail -5', 'FOO=1 npx vitest run',
+      'npm --prefix app test', 'npm -w pkg test', 'pnpm -C app test', 'pnpm --filter web test', 'yarn workspace web test', 'pnpm vitest run',
+      'npx --yes vitest', 'npx -y tsc', 'npm t', 'npm run type-check', 'npm run check', '.venv/bin/pytest', 'uv run python -m pytest',
+      'python manage.py test', 'time npm test', 'env CI=1 npm test', 'timeout 60 npm test', 'node ./test/x.mjs', 'cargo build', 'cargo check',
+      'cargo clippy', 'go build ./...', 'go vet ./...', 'dotnet build', 'rspec', 'make test', 'make check',
+    ];
+    const notTest = ['echo npm test', 'npm install', 'cat test/a.js', 'git status', 'ls tests/', 'node scripts/build.mjs', 'npm i -D vitest', 'npm run dev',
+      'pnpm add vitest', 'yarn workspace web add x', 'make install'];
+    const badPos = isTest.filter((c) => !gate.isTestCommand(c));
+    const badNeg = notTest.filter((c) => gate.isTestCommand(c));
+    ok(badPos.length === 0, `AC1.2: isTestCommand nhận đúng lệnh test/lint/build${badPos.length ? ' — sót: ' + badPos.join(' | ') : ''}`);
+    ok(badNeg.length === 0, `AC1.2: isTestCommand không nhận lệnh không phải test${badNeg.length ? ' — nhầm: ' + badNeg.join(' | ') : ''}`);
+
+    ok(run([human('x')]) === null, 'AC1.3: không sửa gì → cho dừng');
+    ok(['docs/a.md', 'E:\\repo\\README.MD', 'notes.txt', 'x.rst', 'y.adoc', 'z.mdx'].every((p) => run([human('x'), edit(p)]) === null),
+      'AC1.3: chỉ sửa file tài liệu → cho dừng');
+    ok(blocked(run([human('x'), edit('package.json')])) && blocked(run([human('x'), edit('ci.yml')])), 'AC1.3: sửa cấu hình (json/yml) không test → block');
+
+    const dirty = [human('x'), edit('a.js')];
+    ok(run(dirty, { input: { stop_hook_active: true } }) === null, 'AC1.4: stop_hook_active → cho dừng (chống vòng lặp)');
+    ok(run(dirty, { env: { AIP_STOP_GATE: 'off' } }) === null, 'AC1.4: AIP_STOP_GATE=off → cho dừng');
+    ok(run(dirty, { cfg: { stopGate: false } }) === null, 'AC1.4: stopGate:false trong cấu hình → cho dừng');
+    ok(blocked(run(dirty, { cfg: { stopGate: true } })), 'AC1.4: stopGate:true vẫn block');
+
+    const throws = gate.decide({ hook_event_name: 'Stop', transcript_path: 'T', cwd: '.' },
+      { readFile: () => { throw new Error('ENOENT'); }, loadConfig: () => null, env: {} });
+    ok(throws === null, 'AC1.5: đọc transcript lỗi → cho dừng');
+    ok(run(['not json', '{"type":1}', '[]']) === null, 'AC1.5: JSONL hỏng/lạ → cho dừng');
+    const odd = [human('x'), line({ type: 'assistant', message: { content: 'chuỗi' } }), line({ type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Edit' }] } })];
+    let oddRes;
+    let oddThrew = false;
+    try { oddRes = run(odd); } catch { oddThrew = true; }
+    ok(!oddThrew && oddRes === null, 'AC1.5: content là chuỗi / tool_use thiếu input → không ném, cho dừng');
+    const cli = (stdin) => {
+      try { return { out: execFileSync(process.execPath, [script], { input: stdin, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }), code: 0 }; } catch (e) { return { out: String(e.stdout || ''), code: e.status }; }
+    };
+    const cl = cli('không phải json');
+    ok(cl.out === '' && cl.code === 0, 'AC1.5: CLI stdin không phải JSON → stdout rỗng, exit 0');
+
+    const gitDir = fs.mkdtempSync(path.join(ctx.os.tmpdir(), 'aip-gate-'));
+    try {
+      execFileSync('git', ['init', '-q', gitDir]);
+      fs.mkdirSync(path.join(gitDir, '.claude'));
+      fs.mkdirSync(path.join(gitDir, 'src'));
+      const tp = path.join(gitDir, 'transcript.jsonl');
+      fs.writeFileSync(tp, [human('sửa'), edit('a.js')].join('\n'));
+      const cfgPath = path.join(gitDir, '.claude', 'aip-gate.json');
+      const stdinOf = () => JSON.stringify({ hook_event_name: 'Stop', stop_hook_active: false, transcript_path: tp, cwd: path.join(gitDir, 'src') });
+      fs.writeFileSync(cfgPath, String.fromCharCode(0xFEFF) + '{"stopGate": false}');
+      ok(cli(stdinOf()).out === '', 'AC1.4: CLI đọc aip-gate.json có BOM ở gốc git (cwd là thư mục con): stopGate:false → stdout rỗng');
+      fs.writeFileSync(cfgPath, '{}');
+      const on = cli(stdinOf());
+      let onJson = null;
+      try { onJson = JSON.parse(on.out); } catch { /* ok bên dưới báo lỗi */ }
+      ok(on.code === 0 && onJson?.decision === 'block' && typeof onJson.reason === 'string',
+        'AC1.1: CLI in JSON {"decision":"block","reason":…} ra stdout, exit 0');
+    } finally {
+      fs.rmSync(gitDir, { recursive: true, force: true });
+    }
+
+    const subDirty = [edit('a.js')].join('\n');
+    const subClean = [human('x')].join('\n');
+    const sub = (subLines, mainLines) => gate.decide(
+      { hook_event_name: 'SubagentStop', stop_hook_active: false, transcript_path: 'MAIN', agent_transcript_path: 'SUB', cwd: '.' },
+      { readFile: (p) => (p === 'SUB' ? subLines : mainLines), loadConfig: () => null, env: {} });
+    ok(blocked(sub(subDirty, subClean)), 'AC1.6: SubagentStop đọc agent_transcript_path (sub sửa không test) → block, kể cả không có prompt người dùng');
+    ok(sub(subClean, subDirty) === null, 'AC1.6: SubagentStop không đọc transcript chính → cho dừng');
+
+    ok(run([human('x'), edit('a.js'), bash('./run-tests.sh')], { cfg: { testCommands: ['^\\./run-tests\\.sh', '('] } }) === null,
+      'AC1.7: testCommands bổ sung nhận lệnh, regex sai bị bỏ qua không ném');
+    ok(blocked(run([human('x'), edit('a.js'), bash('./run-tests.sh')])), 'AC1.7: không cấu hình → ./run-tests.sh không tính là test');
+
+    ok(run([human('a'), edit('a.js'), human('b'), bash('git status')]) === null, 'AC1.8: chỉ xét lượt hiện tại (sửa ở lượt trước không tính)');
+    ok(blocked(run([human('a'), edit('a.js'), meta('Base directory for this skill: x'), bash('git status')])),
+      'AC1.8: dòng isMeta không mở lượt mới');
+    const compact = line({ type: 'user', isCompactSummary: true, message: { role: 'user', content: 'This session is being continued…' } });
+    ok(blocked(run([human('a'), edit('a.js'), compact, bash('git status')])), 'AC1.8: dòng tóm tắt auto-compact không mở lượt mới');
+
+    const subAgent = (agent_type, cfg = null) => gate.decide(
+      { hook_event_name: 'SubagentStop', stop_hook_active: false, transcript_path: 'M', agent_transcript_path: 'S', agent_type, cwd: '.' },
+      { readFile: () => edit('a.js'), loadConfig: () => cfg, env: {} });
+    ok(subAgent('data:data-migration-writer') === null && subAgent('data-migration-writer') === null, 'AC1.10: agent migration mặc định được miễn (có/không tiền tố plugin)');
+    ok(blocked(subAgent('backend:backend-implementer')), 'AC1.10: agent khác vẫn bị gate');
+    ok(subAgent('backend:backend-implementer', { exemptAgents: ['backend-implementer'] }) === null
+      && blocked(subAgent('data:data-migration-writer', { exemptAgents: ['backend-implementer'] })), 'AC1.10: exemptAgents ghi đè danh sách mặc định');
+
+    const big = [];
+    for (let i = 0; i < 15000; i++) big.push(use('Read', { file_path: 'src/' + 'x'.repeat(200) + i }));
+    const bigLines = [...big, human('x'), edit('a.js')];
+    const t0 = Date.now();
+    const bigRes = run(bigLines);
+    const dt = Date.now() - t0;
+    ok(blocked(bigRes) && dt < 1000, `AC1.1: transcript ~5 MB chỉ parse sau ranh giới lượt → < 1000 ms (đo ${dt} ms)`);
+  }
+  {
+    ok(HOOK_EVENTS.includes('Stop') && HOOK_EVENTS.includes('SubagentStop'), 'AC1.9: HOOK_EVENTS có Stop và SubagentStop');
+    const hooks = JSON.parse(fs.readFileSync(path.join(ctx.CORE_DIR, 'hooks', 'hooks.json'), 'utf8')).hooks;
+    const expected = { type: 'command', command: 'node', args: ['${CLAUDE_PLUGIN_ROOT}/hooks/scripts/gate-stop.mjs'], timeout: 10 };
+    ok(['Stop', 'SubagentStop'].every((ev) => hooks[ev]?.length === 1 && hooks[ev][0].hooks?.length === 1
+      && JSON.stringify(hooks[ev][0].hooks[0]) === JSON.stringify(expected)),
+    'AC1.9: hooks.json core đăng ký Stop + SubagentStop gọi gate-stop.mjs');
+    if (fs.existsSync(claudeDir)) {
+      ok(fs.existsSync(path.join(claudeDir, 'plugins', 'core', 'hooks', 'scripts', 'gate-stop.mjs')), 'AC1.9: build claude ship gate-stop.mjs');
+    }
+  }
 }

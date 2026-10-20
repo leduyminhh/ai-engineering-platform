@@ -197,7 +197,7 @@ export function checkAgentTools(agent) {
   return errs;
 }
 
-export const HOOK_EVENTS = ['PreToolUse', 'PostToolUse'];
+export const HOOK_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop'];
 const HOOK_SCRIPT_PREFIX = '${CLAUDE_PLUGIN_ROOT}/hooks/';
 const HOOK_TIMEOUT_MAX = 30;
 

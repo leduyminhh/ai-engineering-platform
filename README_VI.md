@@ -309,7 +309,7 @@ Người dùng thêm marketplace bằng `claude plugin marketplace add <owner>/<
 
 ## Hooks
 
-Plugin `core` mang hai hook `PreToolUse` cho Claude Code (`core/hooks/`; Node không phụ thuộc thư viện). **Chỉ có ở cài đặt plugin-mode** — skills-mode (`.claude/skills/` phẳng) không cài hook nào vì `${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài. Cài đặt managed `allowManagedHooksOnly` sẽ tắt hook của plugin nào không được quản trị viên force-enable.
+Plugin `core` mang ba hook cho Claude Code (`core/hooks/`; Node không phụ thuộc thư viện): hai cổng `PreToolUse` (H1–H5 bên dưới) và cổng kiểm chứng `Stop`/`SubagentStop` (`gate-stop`, bên dưới). **Chỉ có ở cài đặt plugin-mode** — skills-mode (`.claude/skills/` phẳng) không cài hook nào vì `${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài. Cài đặt managed `allowManagedHooksOnly` sẽ tắt hook của plugin nào không được quản trị viên force-enable.
 
 | Quy tắc | Tool | Quyết định | Phạm vi |
 | --- | --- | --- | --- |
@@ -320,6 +320,16 @@ Plugin `core` mang hai hook `PreToolUse` cho Claude Code (`core/hooks/`; Node kh
 | H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git của file đích, không phải của cwd phiên): `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
 
 Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường) thoát 0 không quyết định. Khi `guard-bash` không phân tích chắc chắn được lệnh thì nghiêng về `ask` (`guard-files` không có hành vi này). Không có H4: agent ops không có tool Bash.
+
+**Cổng Stop (`gate-stop`).** Đăng ký cho `Stop` và `SubagentStop`. Hook chặn **một lần** khi lượt hiện tại đã sửa file code (Edit/Write/MultiEdit/NotebookEdit; sửa thuần tài liệu như `.md`/`.mdx`/`.txt`/`.rst`/`.adoc` không tính) mà chưa chạy lệnh test/lint/typecheck/build nào sau lần sửa cuối. Hook không phán kết quả xanh hay đỏ, chỉ kiểm có chạy hay chưa; khi có `stop_hook_active` thì cho dừng, nên agent có thể dừng sau khi giải thích vì sao bỏ qua bước kiểm. Tắt bằng `AIP_STOP_GATE=off` hoặc `<git-root>/.claude/aip-gate.json` `{"stopGate": false}`. Chỉ lệnh Bash/PowerShell được tính là lệnh kiểm. Thêm mẫu lệnh qua `testCommands` (regex); mỗi mẫu được so với từng đoạn lệnh (tách theo `&&`, `||`, `;`, `|` và xuống dòng) sau khi bỏ các tiền tố đầu `VAR=x`, `time`, `env`, `timeout <n>`; với `SubagentStop` thì xét toàn bộ transcript của subagent, không chỉ lượt cuối; `exemptAgents` thay thế mặc định `["data-migration-writer"]` và được so với `agent_type` của `SubagentStop` sau khi bỏ tiền tố `<plugin>:`. Hook fail-open như các script khác. [Unverified] Hook đọc transcript JSONL nội bộ của Claude Code, không phải hợp đồng được tài liệu hoá và có thể đổi.
+
+```json
+{
+  "stopGate": true,
+  "testCommands": ["^make test\\b"],
+  "exemptAgents": ["data-migration-writer"]
+}
+```
 
 **Giới hạn / residual risk.** Hook là cổng regex, không phải sandbox.
 

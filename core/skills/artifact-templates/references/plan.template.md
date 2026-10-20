@@ -23,5 +23,9 @@ Bỏ khối này khi chép template ra dùng.
 
 ### Task 1: <tên>
 **Phủ AC:** <AC1.1, AC1.2>
-**Files:** <...>
+**Files:**
+- Create: `<path>`
+- Modify: `<path>`
+- Test: `<path>`
+
 - [ ] **Step 1:** <...>

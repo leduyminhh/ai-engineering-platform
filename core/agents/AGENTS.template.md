@@ -160,9 +160,14 @@ remove only the prompts after them.
   `design.md`, as bullets `- [ ] **AC<n>.<m>** — Given … When … Then …`. Each plan task lists the ones it
   covers in a `**Phủ AC:**` line (no leading bullet). A bugfix spec has a `Không đổi` section (behavior that
   must stay as is).
+- A test that covers an AC names its ID in the test name or a comment (`AC1.2`; Python function names use
+  `ac1_2`). Each plan task lists its test files in `**Files:**` as `- Test:` bullets, the path in backticks.
 - After writing `design.md` and again after `plan.md`, run
   `node <artifact-templates skill dir>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/`.
-  It only warns; it never blocks.
+  It also warns about an AC that none of the plan's test files mention. It only warns (exit 0) unless run
+  with `--strict` (exit 1 on any warning, for CI). Right after the plan, W9 (listed test file does not exist
+  yet) is expected and W7 is skipped: never delete `**Files:**` or test entries to silence them. Re-run once
+  the tests are written, and use `--strict` in CI only from then on.
 
 #### Memory and resume
 
