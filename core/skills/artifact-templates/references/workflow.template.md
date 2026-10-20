@@ -17,6 +17,7 @@ type: workflow
 version: 1
 validator: cli/lib/workflows.mjs → checkWorkflowBody, missingAnchors (chỉ có trong repo aip)
 sources: Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt)
+Workflow pipeline: chép thêm workflow.graph.template.json thành workflows/<slug>/graph.json cạnh WORKFLOW.md.
 Bỏ khối này khi chép template ra dùng.
 -->
 

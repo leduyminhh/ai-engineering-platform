@@ -71,6 +71,9 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
   rollback, Definition of Done, `workflow_result`.
 - [references/workflow.graph.template.json](references/workflow.graph.template.json): khung `graph.json` 2 bước đi kèm workflow
   (luồng máy đọc được: `next`, `on_fail`, gate human); sao thành `workflows/<slug>/graph.json`.
+  Nghĩa schema v1 (đi kèm plugin, không cần đọc spec của repo aip): `done` = hoàn thành; `blocked` = dừng và báo người dùng;
+  `ask_user` = hỏi người dùng rồi chạy lại chính bước đó hoặc bước người dùng chỉ định; `when` = điều kiện dạng văn bản
+  (không phải biểu thức); `after` = id phải xong trước trong cùng bước; `on_fail` không bao giờ trỏ `done`.
 - [references/skill.template.md](references/skill.template.md): khung SKILL.md (frontmatter, checklist quy trình, vòng
   validate → sửa, ranh giới an toàn, Verification, bản đồ tài liệu).
 - [references/agent.template.md](references/agent.template.md): khung agent (frontmatter `tools`/`writeScope`, Phạm vi 3 tầng,
