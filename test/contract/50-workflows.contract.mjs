@@ -1,9 +1,10 @@
 // Contract workflows: drift guard workflow, hard-dependency và script Phase 1.
 import { checkGraph, checkGraphAgainstBody } from '../../cli/lib/workflows.mjs';
 import { readGraph } from '../../cli/lib/plugins.mjs';
+import { stripTemplateHeader } from '../../cli/lib/templates.mjs';
 
 export default async function run({ ok, ctx }) {
-  const { fs, path, os, execFileSync, REPO_ROOT, PLUGINS_DIR, CORE_DIR, missingAnchors, registrySignals, claudeAdapter, core, plugins, allAgents, workflows, BUILD, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, checkDescriptionStyle, notForTargets, claudeDir } = ctx;
+  const { fs, path, os, execFileSync, REPO_ROOT, PLUGINS_DIR, CORE_DIR, missingAnchors, registrySignals, claudeAdapter, core, plugins, allAgents, workflows, BUILD, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, checkDescriptionStyle, notForTargets, claudeDir, listFilesRec } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 27. Chuẩn hoá A4: drift guard workflow ↔ template, Registry ↔ description (spec 2026-10-06 §4.4, §10)
@@ -288,6 +289,42 @@ export default async function run({ ok, ctx }) {
       } finally {
         fs.rmSync(tmp, { recursive: true, force: true });
       }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Workflow graph (project 2b): template graph, tài liệu, ship build
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    const refDir = path.join(CORE_DIR, 'skills', 'artifact-templates', 'references');
+    const tplBody = stripTemplateHeader(fs.readFileSync(path.join(refDir, 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n'));
+    let tErrs;
+    try {
+      const tplGraph = JSON.parse(fs.readFileSync(path.join(refDir, 'workflow.graph.template.json'), 'utf8'));
+      tErrs = [...checkGraph(tplGraph), ...checkGraphAgainstBody(tplGraph, tplBody)];
+    } catch (err) {
+      tErrs = [err.message];
+    }
+    ok(tErrs.length === 0, `AC3.2: template graph hợp lệ và khớp template workflow${tErrs.length ? ' — ' + tErrs.join(' | ') : ''}`);
+
+    const skillMd = fs.readFileSync(path.join(CORE_DIR, 'skills', 'artifact-templates', 'SKILL.md'), 'utf8');
+    const claudeMd = fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
+    const newWf = claudeMd.split('\n').find((l) => l.startsWith('- New workflow')) || '';
+    ok(skillMd.includes('workflow.graph.template.json') && newWf.includes('graph.json'),
+      'AC3.2: SKILL.md artifact-templates và CLAUDE.md nhắc graph.json');
+
+    if (workflows && fs.existsSync(claudeDir)) {
+      const codexDir = path.join(BUILD, 'codex');
+      const same = (built, src) => fs.existsSync(built) && fs.readFileSync(built).equals(fs.readFileSync(src));
+      for (const s of workflows.stages.filter((x) => x.kind === 'workflow')) {
+        const src = path.join(s.dir, 'graph.json');
+        const c = path.join(claudeDir, 'plugins', 'workflows', 'skills', s.id, 'graph.json');
+        const x = path.join(codexDir, 'workflows', 'skills', s.id, 'graph.json');
+        ok(same(c, src) && same(x, src), `AC3.1: build ship graph.json cho Claude và Codex, byte-for-byte — ${s.id}`);
+      }
+      const stray = ['cursor', 'antigravity'].flatMap((p) => (fs.existsSync(path.join(BUILD, p)) ? listFilesRec(path.join(BUILD, p)) : []))
+        .filter((f) => path.basename(f) === 'graph.json');
+      ok(stray.length === 0, `AC3.1: cursor/antigravity không build graph.json${stray.length ? ' — ' + stray.join(', ') : ''}`);
     }
   }
 }

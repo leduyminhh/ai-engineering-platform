@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "workflow": "workflow-<slug>",
+  "start": "step-1",
+  "steps": [
+    {
+      "id": "step-1",
+      "n": 1,
+      "title": "<Tên bước>",
+      "run": { "session": true },
+      "next": "step-2",
+      "on_fail": [
+        { "to": "ask_user", "when": "hỏi lại người dùng" },
+        { "to": "blocked", "when": "dừng workflow" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "step-2",
+      "n": 2,
+      "title": "<Tên bước>",
+      "run": { "session": true },
+      "next": "done",
+      "on_fail": [
+        { "to": "step-1", "when": "người dùng không duyệt → quay lại Bước 1" },
+        { "to": "ask_user", "when": "hoặc hỏi lại người dùng" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "<diff / contract / report>",
+        "approve": "done",
+        "reject": "step-1"
+      }
+    }
+  ]
+}
