@@ -145,7 +145,7 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
 - Modify: `AGENTS.md`, chép y hệt template.
 - Modify: `test/content/18-superpowers-docs-standard.pin.mjs`.
 
-- [ ] **Step 1: Viết test đỏ.**
+- [x] **Step 1: Viết test đỏ.**
 
   ```js
   const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
@@ -160,14 +160,14 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
     && sp.includes('check-request.mjs'), 'P1/P3: baseline trỏ template core + script kiểm tra');
   ```
 
-- [ ] **Step 2: Chạy để xác nhận đỏ.** Lệnh: `node test/validate.mjs --only 18-superpowers`. Kết quả mong đợi: FAIL ở AC1.1, AC1.2, AC1.4.
-- [ ] **Step 3: Thêm hai tiểu mục vào template:** `#### Docs location and format` và `#### Memory and resume`.
+- [x] **Step 2: Chạy để xác nhận đỏ.** Lệnh: `node test/validate.mjs --only 18-superpowers`. Kết quả mong đợi: FAIL ở AC1.1, AC1.2, AC1.4.
+- [x] **Step 3: Thêm hai tiểu mục vào template:** `#### Docs location and format` và `#### Memory and resume`.
   - Nội dung bám design §4.3, §4.6 và quyết định P1, P3.
   - Câu chữ tự do, nhưng phải chứa đủ các chuỗi mà Step 1 kiểm.
   - Ý cần có: chạy `check-request.mjs` của skill `artifact-templates` sau khi viết `design.md` và sau khi viết `plan.md`. Script chỉ cảnh báo, không chặn.
   - Sau đó chép template sang `AGENTS.md`.
-- [ ] **Step 4: Chạy để xác nhận xanh.** Lệnh: `node test/validate.mjs --only 18-superpowers --only 30-templates`. Kết quả mong đợi: 0 fail. Dòng `AGENTS.md == AGENTS.template.md` xanh (AC1.3).
-- [ ] **Step 5: Commit** — `feat(core): set docs location, AC ids and resume rules in baseline`
+- [x] **Step 4: Chạy để xác nhận xanh.** Lệnh: `node test/validate.mjs --only 18-superpowers --only 30-templates`. Kết quả mong đợi: 0 fail. Dòng `AGENTS.md == AGENTS.template.md` xanh (AC1.3).
+- [x] **Step 5: Commit** — `feat(core): set docs location, AC ids and resume rules in baseline`
 
 ---
 

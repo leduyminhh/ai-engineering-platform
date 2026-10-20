@@ -1,4 +1,4 @@
-// Pin: chuẩn tài liệu superpowers (docs/requests/2026-10-20-superpowers-docs-standard). Task 1: script check-request.mjs (AC4.1–AC4.3).
+// Pin: chuẩn tài liệu superpowers (docs/requests/2026-10-20-superpowers-docs-standard). Task 1: script check-request.mjs (AC4.1–AC4.3). Task 2: baseline (AC1.1–AC1.4).
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, pathToFileURL } = ctx;
 
@@ -71,5 +71,19 @@ export default async function run({ ok, ctx }) {
         fs.rmSync(tmp, { recursive: true, force: true });
       }
     }
+  }
+
+  // AC1.1–AC1.4, P1/P3: baseline (mục Superpowers workflow defaults) ghi đè vị trí docs, quy ước AC, bộ nhớ, resume
+  {
+    const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
+    const sp = tpl.slice(tpl.indexOf('### Superpowers workflow defaults'), tpl.indexOf('### Language'));
+    ok(sp.includes('docs/requests/<yyyy-mm-dd>-<slug>/design.md') && sp.includes('`plan.md` in the same folder')
+      && sp.includes('overrides the superpowers default `docs/superpowers/`'), 'AC1.1: baseline ghi đè vị trí docs');
+    ok(sp.includes('`AC<n>.<m>`') && sp.includes('Given/When/Then') && sp.includes('one file per change')
+      && sp.includes('`**Phủ AC:**`') && sp.includes('`Không đổi`'), 'AC1.2: baseline có quy ước AC');
+    ok(sp.includes('| Short-term |') && sp.includes('| Long-term |') && sp.includes('first unchecked task')
+      && sp.includes('never create a second folder'), 'AC1.4: baseline có bảng bộ nhớ + quy tắc resume');
+    ok(sp.includes('only when it contains `design.md`') && sp.includes('`artifact-templates`')
+      && sp.includes('check-request.mjs'), 'P1/P3: baseline trỏ template core + script kiểm tra');
   }
 }
