@@ -102,6 +102,5 @@ Spec approval (`brainstorming`) and plan approval (`writing-plans`) stay human g
 - Execution method: `superpowers:subagent-driven-development`; do not ask again once the plan is approved.
 - Work on a `feature/<slug>` branch and commit each task through `core:git-workflow` without pausing (AGENTS.md Safety).
 - Specs and plans now go to `docs/requests/<yyyy-mm-dd>-<slug>/` (`design.md`, `plan.md`).
-- The 15 older specs in `docs/superpowers/` stay unchanged as history.
 - Before finishing: `npm test`; if projected content changed, bump the owning `.manifest.json` version and run `node cli/lib/versions.mjs --lock`.
 - `finishing-a-development-branch`: default to "Keep the branch as-is"; merge or push only after the human confirms.
