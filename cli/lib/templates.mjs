@@ -1,8 +1,17 @@
 // Đọc template của skill core `artifact-templates`: khối header `<!-- artifact-template … -->` và bảng mục lục.
+import fs from 'node:fs';
 import path from 'node:path';
-import { CORE_DIR } from './plugins.mjs';
+import { fileURLToPath } from 'node:url';
 
-export const TEMPLATES_DIR = path.join(CORE_DIR, 'skills', 'artifact-templates', 'references');
+// Không import plugins.mjs: plugins.mjs dùng initDocFiles(), import vòng sẽ làm TEMPLATES_DIR đọc CORE_DIR khi chưa khởi tạo.
+export const TEMPLATES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'core', 'skills', 'artifact-templates', 'references');
+
+// File template → đường dẫn sinh ra ở project đích (aip init --full và cây templates/ của skill *-init).
+const INIT_DOC_MAP = [
+  ['requirement.template.md', 'docs/requests/_TEMPLATE/requirement.md'],
+  ['design.template.md', 'docs/requests/_TEMPLATE/design.md'],
+  ['plan.template.md', 'docs/requests/_TEMPLATE/plan.md'],
+];
 
 const INDEX_HEAD = ['Loại', 'Template', 'Validator', 'Nguồn'];
 
@@ -36,4 +45,12 @@ export function templateIndex(skillMd) {
     rows.push({ type, file: link ? link[1] : tpl, validator, sources });
   }
   return rows;
+}
+
+/** File docs cần sinh ở project đích, nội dung đã bỏ khối header của template. */
+export function initDocFiles() {
+  return INIT_DOC_MAP.map(([file, rel]) => ({
+    rel,
+    content: stripTemplateHeader(fs.readFileSync(path.join(TEMPLATES_DIR, file), 'utf8')),
+  }));
 }

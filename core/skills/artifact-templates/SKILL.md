@@ -20,6 +20,9 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | workflow | [workflow.template.md](references/workflow.template.md) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
 | skill | [skill.template.md](references/skill.template.md) | `cli/lib/conventions.mjs` → `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys` | Anthropic skill best practices; agentskills.io |
 | agent | [agent.template.md](references/agent.template.md) | `cli/lib/conventions.mjs` → `checkAgentTools`, `checkAgentDescription` | Claude Code subagents; GitHub agents.md (2025-11) |
+| requirement | [requirement.template.md](references/requirement.template.md) | chưa có | EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
+| design | [design.template.md](references/design.template.md) | chưa có | superpowers:brainstorming (design doc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
+| plan | [plan.template.md](references/plan.template.md) | chưa có | superpowers:writing-plans (header bắt buộc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
 
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.
 
@@ -57,3 +60,9 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
   validate → sửa, ranh giới an toàn, Verification, bản đồ tài liệu).
 - [references/agent.template.md](references/agent.template.md): khung agent (frontmatter `tools`/`writeScope`, Phạm vi 3 tầng,
   `Khi được gọi:` + bước kiểm chứng, bảng Report trả về).
+- [references/requirement.template.md](references/requirement.template.md): khung requirement (4 heading gốc, câu
+  `Hệ thống PHẢI`, AC Given/When/Then, mục `Không đổi (bugfix)`).
+- [references/design.template.md](references/design.template.md): khung design (vấn đề, quyết định, thiết kế, ngoài
+  phạm vi, kiểm thử, để builder quyết, rủi ro).
+- [references/plan.template.md](references/plan.template.md): khung plan (header bắt buộc của `superpowers:writing-plans`,
+  `**Requirement:**`, `**Phủ AC:**` theo Task).

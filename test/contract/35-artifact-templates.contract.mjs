@@ -3,7 +3,7 @@ import { TEMPLATES_DIR, templateHeader, stripTemplateHeader, templateIndex } fro
 import { splitList } from '../../cli/lib/plugins.mjs';
 
 export default async function run({ ok, ctx }) {
-  const { fs, path, CORE_DIR, core, plugins, workflows, allAgents, parseFrontmatter, checkWorkflowBody, missingAnchors, checkSourceKeys, checkSkillBody, checkDescription, checkDescriptionStyle, checkAgentDescription, checkAgentTools } = ctx;
+  const { fs, path, CORE_DIR, PLUGINS_DIR, core, plugins, workflows, allAgents, parseFrontmatter, checkWorkflowBody, missingAnchors, checkSourceKeys, checkSkillBody, checkDescription, checkDescriptionStyle, checkAgentDescription, checkAgentTools } = ctx;
   const read = (f) => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 
   // 1. UNIT: templateHeader / stripTemplateHeader — một hành vi, nhiều đầu vào.
@@ -138,6 +138,40 @@ export default async function run({ ok, ctx }) {
     ok(/chạy[^\n]*→[^\n]*sửa[^\n]*→[^\n]*chạy/i.test(proc), 'template agent: Quy trình có bước kiểm chứng chạy → sửa → chạy lại');
     const rep = section('Report trả về');
     for (const r of ['Kết quả', 'Evidence', 'File đã đổi', 'Rủi ro còn lại']) ok(rep.includes(`| ${r} |`), `template agent: Report có dòng "| ${r} |"`);
+  }
+
+  // 3d. Requirement / design / plan: chưa có validator máy (check-request.mjs ở project 1) nên pin heading và mẫu dòng.
+  {
+    const heads = (t) => t.split('\n').filter((l) => /^#{1,3} /.test(l)).map((l) => l.trimEnd());
+    const req = tplOf('requirement');
+    ok(req !== '', 'template requirement đọc được qua mục lục');
+    for (const h of ['Yêu cầu gốc', 'Bối cảnh', 'Ràng buộc', 'Tiêu chí chấp nhận', 'Không đổi (bugfix)']) {
+      ok(heads(req).includes(`## ${h}`), `template requirement: có heading "## ${h}"`);
+    }
+    ok(req.includes('Hệ thống PHẢI'), 'template requirement: câu requirement dạng "Hệ thống PHẢI …"');
+    ok(req.includes('**AC1.1** — Given'), 'template requirement: AC dạng "**AC1.1** — Given … When … Then …"');
+    ok(/Given [^\n]*When [^\n]*Then /.test(req), 'template requirement: dòng AC đủ Given/When/Then');
+
+    const design = tplOf('design');
+    ok(design !== '', 'template design đọc được qua mục lục');
+    for (const h of ['Vấn đề và lý do', 'Quyết định đã chốt', 'Tiêu chí chấp nhận', 'Thiết kế', 'Ngoài phạm vi và anti-goal', 'Ràng buộc', 'Kiểm thử', 'Để builder quyết', 'Rủi ro và câu hỏi mở']) {
+      ok(heads(design).includes(`## ${h}`), `template design: có heading "## ${h}"`);
+    }
+    for (const m of ['- Ngày:', '- Trạng thái:', '- Requirement:']) ok(design.includes(m), `template design: có dòng "${m}"`);
+
+    const plan = tplOf('plan');
+    ok(plan !== '', 'template plan đọc được qua mục lục');
+    ok(plan.includes('REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development'), 'template plan: header bắt buộc của writing-plans');
+    for (const m of ['**Goal:**', '**Architecture:**', '**Tech Stack:**', '**Spec:** design.md', '**Requirement:**', '**Phủ AC:**']) {
+      ok(plan.includes(m), `template plan: có "${m}"`);
+    }
+    for (const h of ['Global Constraints', 'Review Focus']) ok(heads(plan).includes(`## ${h}`), `template plan: có heading "## ${h}"`);
+    ok(/^### Task 1: /m.test(plan), 'template plan: có khung "### Task 1: …"');
+    ok(!/Phase/.test(plan), 'template plan: không còn khung Phase');
+
+    const specStructure = read(path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-spec-writing', 'references', 'spec-structure.md'));
+    ok(!specStructure.includes('Phase/Task'), 'spec-structure.md: không còn "Phase/Task"');
+    ok(specStructure.includes('artifact-templates'), 'spec-structure.md: plan.md trỏ tới template plan của artifact-templates');
   }
 
   // 4. Chính skill artifact-templates qua validator skill.

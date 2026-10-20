@@ -174,7 +174,7 @@
 **Interfaces:**
 - Produces: `initDocFiles()` (dùng lại ở Task 5); kiểu asset `contentAssets` trong stage.
 
-- [ ] **Step 1: Viết test đỏ.**
+- [x] **Step 1: Viết test đỏ.**
   - **Contract 35** kiểm 3 template:
     - requirement: 4 heading gốc, `Hệ thống PHẢI`, mẫu `**AC1.1** — Given … When … Then …`, `## Không đổi (bugfix)`.
     - design: đủ heading theo design project 1 §4.2.
@@ -184,10 +184,10 @@
     - (a) `init --full` trên thư mục trống sinh đủ 3 file `_TEMPLATE`, và không file nào chứa `<!-- artifact-template`.
     - (b) Thư mục đã có `docs/requests/_TEMPLATE/plan.md` → file đó không bị ghi đè và có tên trong `skipped`.
   - **Contract 30, mục 6b** (chạy `--build`): cây `templates/` của skill `*-init` ở cả 4 provider có `docs/requests/_TEMPLATE/design.md`, và file này không chứa khối header.
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/init.test.mjs` và `node test/validate.mjs --build --only 35-artifact --only 30-templates`. Expected: FAIL.
-- [ ] **Step 3: Hiện thực** theo danh sách Files. Nội dung 3 template đúng khung design project 1 §4.2. Khối header không có frontmatter, nên đặt ở đầu file.
-- [ ] **Step 4: Chạy, xác nhận xanh** — cùng lệnh ở Step 2 → 0 fail.
-- [ ] **Step 5: Commit** — `feat(core): serve request templates from artifact-templates`
+- [x] **Step 2: Chạy, xác nhận đỏ** — `node test/init.test.mjs` và `node test/validate.mjs --build --only 35-artifact --only 30-templates`. Expected: FAIL.
+- [x] **Step 3: Hiện thực** theo danh sách Files. Nội dung 3 template đúng khung design project 1 §4.2. Khối header không có frontmatter, nên đặt ở đầu file.
+- [x] **Step 4: Chạy, xác nhận xanh** — cùng lệnh ở Step 2 → 0 fail.
+- [x] **Step 5: Commit** — `feat(core): serve request templates from artifact-templates`
 
 ---
 

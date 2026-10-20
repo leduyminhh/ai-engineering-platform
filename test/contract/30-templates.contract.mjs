@@ -44,8 +44,7 @@ export default async function run({ ok, ctx }) {
       'project-knowledge/project-overview.md', 'project-knowledge/domain-context.md',
       'project-knowledge/architecture.md', 'project-knowledge/source-structure.md',
       'project-knowledge/code-convention.md', 'project-knowledge/tech-stack.yml',
-      'docs/requests/_TEMPLATE/requirement.md',
-      'docs/requests/_TEMPLATE/plan.md', 'docs/contracts/.gitkeep',
+      'docs/contracts/.gitkeep',
       'docs/decisions/_TEMPLATE.md', 'docs/decisions/0001-vi-du-quyet-dinh.md',
       'docs/decisions/0002-code-convention.md', 'src/shared/.gitkeep', 'tests/.gitkeep',
     ];
@@ -96,6 +95,31 @@ export default async function run({ ok, ctx }) {
         for (const [tool, f] of targets) {
           if (!fs.existsSync(path.join(BUILD, tool))) continue;
           ok(fs.existsSync(f), `build ${tool} ${s.id}: ship templates/CLAUDE.md`);
+        }
+      }
+    }
+  }
+
+  // 6c. BUILD: khung docs/requests/_TEMPLATE lấy từ core (không còn trong templates/init), đã bỏ khối header, ở cả 4 tool.
+  ok(!fs.existsSync(path.join(REPO_ROOT, 'templates', 'init', 'docs', 'requests', '_TEMPLATE')), 'templates/init/docs/requests/_TEMPLATE/ đã bị xóa');
+  if (fs.existsSync(BUILD)) {
+    const rels = ['requirement.md', 'design.md', 'plan.md'].map((f) => `docs/requests/_TEMPLATE/${f}`);
+    for (const p of plugins) {
+      for (const s of p.stages) {
+        if (!s.id.endsWith('-init')) continue;
+        const roots = [
+          ['claude', claudeSkillDir(p.id, s.id)],
+          ['codex', path.join(BUILD, 'codex', p.id, 'skills', s.id)],
+          ['antigravity', path.join(BUILD, 'antigravity', p.id, 'docs', 'workflow', s.id)],
+          ['cursor', path.join(BUILD, 'cursor', p.id, '.cursor', 'skills', s.id)],
+        ];
+        for (const [tool, root] of roots) {
+          if (!fs.existsSync(path.join(BUILD, tool))) continue;
+          for (const rel of rels) {
+            const f = path.join(root, 'templates', rel);
+            ok(fs.existsSync(f), `build ${tool} ${s.id}: ship templates/${rel}`);
+            if (fs.existsSync(f)) ok(!fs.readFileSync(f, 'utf8').includes('<!-- artifact-template'), `build ${tool} ${s.id}: templates/${rel} không còn khối header`);
+          }
         }
       }
     }

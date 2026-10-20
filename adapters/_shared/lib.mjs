@@ -82,7 +82,9 @@ export function assetFiles(stage, dir) {
   const files = (stage.fileAssets || []).map((fa) => ({
     path: `${dir}/${fa.name}`, copyFrom: fa.from,
   }));
-  return [...dirs, ...extraDirs, ...files];
+  // Sau extraDirs: file nội dung ghi chồng vào cây đã copyDir (vd templates/docs/requests/_TEMPLATE).
+  const contents = (stage.contentAssets || []).map((ca) => ({ path: `${dir}/${ca.name}`, content: ca.content }));
+  return [...dirs, ...extraDirs, ...contents, ...files];
 }
 
 /**
@@ -100,7 +102,7 @@ export function skillFiles(stage, base, preamble = '', opts = {}) {
  * `references/...` links resolve; stages without assets stay a flat `<id>.md` (minimal churn).
  */
 export function workflowDocPath(stage) {
-  const hasAssets = (stage.assets || []).length || (stage.fileAssets || []).length || (stage.dirAssets || []).length;
+  const hasAssets = (stage.assets || []).length || (stage.fileAssets || []).length || (stage.dirAssets || []).length || (stage.contentAssets || []).length;
   return hasAssets ? `docs/workflow/${stage.id}/SKILL.md` : `docs/workflow/${stage.id}.md`;
 }
 
@@ -196,7 +198,7 @@ export function agentsFiles(plugin, { tool, base, core }) {
     const doc = workflowDocPath(s);
     files.push({ path: `${base}/${doc}`, content: s.body.replace(/^\n+/, '') });
     // ship references/ and fileAssets beside SKILL.md when the stage has assets (doc lives in its own folder)
-    if ((s.assets || []).length || (s.fileAssets || []).length || (s.dirAssets || []).length) files.push(...assetFiles(s, `${base}/${path.dirname(doc)}`));
+    if ((s.assets || []).length || (s.fileAssets || []).length || (s.dirAssets || []).length || (s.contentAssets || []).length) files.push(...assetFiles(s, `${base}/${path.dirname(doc)}`));
   }
   return files;
 }
