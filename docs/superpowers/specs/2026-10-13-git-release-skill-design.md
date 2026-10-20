@@ -1,7 +1,7 @@
 # Thiết kế: skill `core/git-release` (Gitflow release/hotfix) + gỡ `workflow-release`
 
 - **Ngày:** 2026-10-13
-- **Trạng thái:** chờ người dùng review
+- **Trạng thái:** **Đã duyệt và thực thi** — merge vào `master` = `a348e82` (2026-10-13).
 - **Phạm vi:** quy trình release/hotfix chuẩn. Business logic riêng của người dùng: chỉ có chỗ cắm
   (`release-policy.md` §4), diễn giải chi tiết thuộc spec sau.
 

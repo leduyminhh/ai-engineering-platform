@@ -7,7 +7,7 @@
 > giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
 
 - Ngày: 2026-10-06
-- Trạng thái: **Đã thực thi Pha A + B0 + B1 (2026-10-06)**.
+- Trạng thái: **Đã thực thi xong (2026-10-06)** — Pha A + B0 + B1; Pha B kết luận không gộp workflow (§5.3.1). Merge vào `master` = `c8f8542`, minor `0d3f37c`.
 - Phạm vi: toàn bộ `SKILL.md` (35 file: `core/skills/` + `plugins/*/skills/`), `WORKFLOW.md` (13 file trong `workflows/`),
   validator `test/validate.mjs`, loader `cli/lib/plugins.mjs`, adapter dùng chung `adapters/_shared/lib.mjs`.
 - Người duyệt: chủ dự án.

@@ -1,7 +1,7 @@
 # Thiết kế: template chuẩn cho mọi artifact, đặt trong core (project 1b)
 
 - Ngày: 2026-10-20
-- Trạng thái: chờ người dùng duyệt
+- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `c337dbc` (2026-10-20).
 - Requirement: không có
 - Liên quan: project 1 [`../2026-10-20-superpowers-docs-standard/design.md`](../2026-10-20-superpowers-docs-standard/design.md) — tạm dừng ở bước plan; làm sau project này và đọc template từ đây.
 

@@ -7,7 +7,7 @@
 > giữ nguyên làm hồ sơ lịch sử — xem `docs/superpowers/plans/2026-10-12-prune-workflows-to-pipelines.md`.
 
 - Ngày: 2026-09-29
-- Trạng thái: **Đang thực thi** (cập nhật 2026-10-01). P0 xong; P1 xong;
+- Trạng thái: **Đã thực thi** (chốt 2026-10-20; `master` = `321d0c3`, 2026-10-01). Chỉ còn pilot Q6/Q7 — chủ dự án chọn bỏ qua. P0 xong; P1 xong;
   P1c xong (publish không chờ pilot, 2026-09-30); P1b xong (publish không chờ pilot, 2026-10-01); P2 WF3–WF11 xong; P3 xong (G10 backend 2026-09-30, frontend 2026-10-01). Tiến độ và việc còn lại: §13.
 - Phạm vi: đánh giá chất lượng 4 plugin `backend`, `frontend`, `engineering`, `workflows`; định hướng nâng cấp
   theo 3 cấp; thiết kế 3 skill + 2 agent mới đã được chủ dự án chốt:
