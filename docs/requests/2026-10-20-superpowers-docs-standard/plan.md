@@ -269,12 +269,12 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
   - Workflow chuyển hướng sang superpowers khi đã cài.
 - Modify `plugins/_versions.lock.json` (sinh bằng lệnh).
 
-- [ ] **Step 1: Kiểm lại AC2.1–AC2.3 đã đạt ở 1b (P2).** Lệnh: `node test/init.test.mjs` và `node test/validate.mjs --only 35-artifact`. Kết quả mong đợi: 0 fail. Riêng `init --full` phải sinh đủ `docs/requests/_TEMPLATE/{requirement,design,plan}.md`.
-- [ ] **Step 2: Sửa CLAUDE.md, CHANGELOG; bump 3 version.**
-- [ ] **Step 3: Build và lock.** Lệnh: `npm run build`, rồi `node cli/lib/versions.mjs --lock`. Kết quả mong đợi: lock ghi version mới, không bị từ chối.
-- [ ] **Step 4: Chạy toàn bộ.** Lệnh: `npm test < /dev/null` và `npm run pack:verify`. Kết quả mong đợi: exit 0, mọi suite 0 fail.
-- [ ] **Step 5: Dogfood.** Lệnh: `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-20-superpowers-docs-standard`. Kết quả mong đợi: `0 cảnh báo`. Điều kiện:
+- [x] **Step 1: Kiểm lại AC2.1–AC2.3 đã đạt ở 1b (P2).** Lệnh: `node test/init.test.mjs` và `node test/validate.mjs --only 35-artifact`. Kết quả mong đợi: 0 fail. Riêng `init --full` phải sinh đủ `docs/requests/_TEMPLATE/{requirement,design,plan}.md`.
+- [x] **Step 2: Sửa CLAUDE.md, CHANGELOG; bump 3 version.**
+- [x] **Step 3: Build và lock.** Lệnh: `npm run build`, rồi `node cli/lib/versions.mjs --lock`. Kết quả mong đợi: lock ghi version mới, không bị từ chối.
+- [x] **Step 4: Chạy toàn bộ.** Lệnh: `npm test < /dev/null` và `npm run pack:verify`. Kết quả mong đợi: exit 0, mọi suite 0 fail.
+- [x] **Step 5: Dogfood.** Lệnh: `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-20-superpowers-docs-standard`. Kết quả mong đợi: `0 cảnh báo`. Điều kiện:
   - Mọi AC trong design.md đều nằm trong một dòng `**Phủ AC:**` của plan này.
   - AC mẫu trong khối code bị bỏ qua.
-- [ ] **Step 6: Kiểm AC5.1.** Lệnh: `git status --short docs/superpowers`. Kết quả mong đợi: không có file cũ nào bị sửa hay xóa.
-- [ ] **Step 7: Commit** — `chore(release): bump core, engineering, workflows for docs standard`
+- [x] **Step 6: Kiểm AC5.1.** Lệnh: `git status --short docs/superpowers`. Kết quả mong đợi: không có file cũ nào bị sửa hay xóa.
+- [x] **Step 7: Commit** — `chore(release): bump core, engineering, workflows for docs standard`

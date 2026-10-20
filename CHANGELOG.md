@@ -22,6 +22,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `-SNAPSHOT`/`.devN` handling, optional GitHub Release. Every push waits for confirmation.
   `project-knowledge/release-policy.md` holds per-project defaults and a business-rules table.
 
+- AGENTS baseline overrides the docs location: specs and plans go to `docs/requests/<yyyy-mm-dd>-<slug>/`
+  (`requirement.md`, `design.md`, `plan.md`) instead of the superpowers default `docs/superpowers/`, with resume
+  rules for long work. A project `docs/requests/_TEMPLATE/` is used only when it has `design.md`; otherwise the
+  `artifact-templates` templates apply. Core 1.7.0.
+- `core/artifact-templates/scripts/check-request.mjs <dir>` warns when a request folder drifts from the standard
+  (one `WARN <file>:<line> [<code>] <message>` per line, last line `<n> cảnh báo`; exit 2 on bad arguments).
+  It is the validator for the requirement, design and plan templates; sample ACs inside code fences are ignored.
+- Acceptance criteria carry IDs (`AC<n>.<m>`, Given/When/Then); `engineering-spec-writing` writes them and
+  `engineering-task-breakdown` reuses the existing IDs. Each plan task records `**Phủ AC:**`. Engineering 2.2.0.
+- `workflow-feature`, `workflow-bugfix` and the orchestrator route to the superpowers flow
+  (`brainstorming` → `writing-plans` → `subagent-driven-development`) when superpowers is installed; the two
+  workflows run only when it is not. Workflows 3.1.0.
+
 - `aip init [--full]` scaffolds agent instruction files in the current folder for any project type: `AGENTS.md`
   (baseline from `core/agents/AGENTS.template.md`) and `CLAUDE.md` importing `@AGENTS.md`
   (`templates/init-minimal/`). `--full` copies `templates/init/` instead. Existing files are never overwritten;
