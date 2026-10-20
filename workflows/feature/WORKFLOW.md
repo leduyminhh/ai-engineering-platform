@@ -31,6 +31,9 @@ invoke: per-request
 - Artifact phải có sẵn: `project-knowledge/architecture.md` (backend và/hoặc frontend, tuỳ phạm vi);
   `design-system.md` nếu có phần frontend.
 - Baseline: build/test hiện tại của project đang XANH trước khi bắt đầu implement — được đo và ghi số mốc ở Bước 1.
+- Superpowers: project đã cài superpowers thì không chạy workflow này — dùng `superpowers:brainstorming` →
+  `writing-plans` → `subagent-driven-development`, docs ghi vào `docs/requests/<ngày>-<slug>/` theo baseline
+  `AGENTS.md`. Workflow này chỉ chạy khi chưa cài superpowers.
 
 Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.
 

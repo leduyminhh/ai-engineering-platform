@@ -26,6 +26,10 @@ invoke: per-request
 - Artifact phải có sẵn: không có, ngoài chính yêu cầu của người dùng.
 - Baseline: không yêu cầu build/test xanh trước — đó là điều kiện của workflow con được chọn, không phải của
   orchestrator.
+- Routing superpowers: yêu cầu feature/bugfix mà project đã cài superpowers thì điều hướng sang luồng
+  `superpowers:brainstorming` → `writing-plans` → `subagent-driven-development` (docs ghi vào
+  `docs/requests/<ngày>-<slug>/` theo baseline `AGENTS.md`), không chọn `workflow-feature`/`workflow-bugfix`;
+  hai workflow này chỉ chạy khi chưa cài superpowers.
 
 Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.
 

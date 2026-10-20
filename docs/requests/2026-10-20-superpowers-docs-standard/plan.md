@@ -229,7 +229,7 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
   - `workflows/orchestrator/WORKFLOW.md`. Không sửa bảng Registry vì bảng này được parse.
 - Modify: `test/content/18-superpowers-docs-standard.pin.mjs`.
 
-- [ ] **Step 1: Viết test đỏ.**
+- [x] **Step 1: Viết test đỏ.**
 
   ```js
   for (const wf of ['feature', 'bugfix', 'orchestrator']) {
@@ -240,12 +240,12 @@ Mỗi rủi ro dưới đây đều có test ở Task 1.
   }
   ```
 
-- [ ] **Step 2: Chạy để xác nhận đỏ.** Lệnh: `node test/validate.mjs --only 18-superpowers`. Kết quả mong đợi: FAIL ở AC3.2.
-- [ ] **Step 3: Thêm một bullet vào mỗi file.**
+- [x] **Step 2: Chạy để xác nhận đỏ.** Lệnh: `node test/validate.mjs --only 18-superpowers`. Kết quả mong đợi: FAIL ở AC3.2.
+- [x] **Step 3: Thêm một bullet vào mỗi file.**
   - Nội dung: nếu project đã cài superpowers thì dùng `superpowers:brainstorming` → `writing-plans` → `subagent-driven-development`, docs ghi vào `docs/requests/<ngày>-<slug>/` theo baseline.
   - Workflow này chỉ chạy khi chưa cài superpowers.
-- [ ] **Step 4: Chạy để xác nhận xanh.** Lệnh: `node test/validate.mjs --only 18-superpowers --only 50-workflows --only 00-unit`. Kết quả mong đợi: 0 fail.
-- [ ] **Step 5: Commit** — `feat(workflows): route to superpowers when installed`
+- [x] **Step 4: Chạy để xác nhận xanh.** Lệnh: `node test/validate.mjs --only 18-superpowers --only 50-workflows --only 00-unit`. Kết quả mong đợi: 0 fail.
+- [x] **Step 5: Commit** — `feat(workflows): route to superpowers when installed`
 
 ---
 

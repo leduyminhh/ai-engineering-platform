@@ -29,6 +29,9 @@ invoke: per-request
 - Artifact phải có sẵn: không bắt buộc, nhưng có log/stacktrace/bug report giúp thu evidence nhanh hơn.
 - Baseline: xác định được vùng code nghi ngờ (module/service/component); build hiện tại của project XANH
   ngoài phần đang lỗi — được đo và ghi số mốc ở Bước 1.
+- Superpowers: project đã cài superpowers thì không chạy workflow này — dùng `superpowers:brainstorming` →
+  `writing-plans` → `subagent-driven-development`, docs ghi vào `docs/requests/<ngày>-<slug>/` theo baseline
+  `AGENTS.md`. Workflow này chỉ chạy khi chưa cài superpowers.
 
 Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.
 
