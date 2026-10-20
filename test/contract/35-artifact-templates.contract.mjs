@@ -3,7 +3,7 @@ import { TEMPLATES_DIR, templateHeader, stripTemplateHeader, templateIndex } fro
 import { splitList } from '../../cli/lib/plugins.mjs';
 
 export default async function run({ ok, ctx }) {
-  const { fs, path, CORE_DIR, PLUGINS_DIR, core, plugins, workflows, allAgents, parseFrontmatter, checkWorkflowBody, missingAnchors, checkSourceKeys, checkSkillBody, checkDescription, checkDescriptionStyle, checkAgentDescription, checkAgentTools } = ctx;
+  const { fs, path, pathToFileURL, CORE_DIR, PLUGINS_DIR, core, plugins, workflows, allAgents, parseFrontmatter, checkWorkflowBody, missingAnchors, checkSourceKeys, checkSkillBody, checkDescription, checkDescriptionStyle, checkAgentDescription, checkAgentTools } = ctx;
   const read = (f) => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 
   // 1. UNIT: templateHeader / stripTemplateHeader — một hành vi, nhiều đầu vào.
@@ -214,6 +214,42 @@ export default async function run({ ok, ctx }) {
     for (const gone of ['project-knowledge', 'docs/decisions/_TEMPLATE.md']) {
       ok(!fs.existsSync(path.join(initDir, gone)), `templates/init/${gone} đã bị xóa`);
     }
+  }
+
+  // 3f. Task: bản thô giữ khung chung + header task; bản điền mẫu UC01 qua check-tasks.mjs; skill task-breakdown trỏ về core.
+  {
+    const raw = tplOf('task');
+    ok(raw !== '', 'template task đọc được qua mục lục');
+    const tbDir = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-task-breakdown');
+    for (const h of ['## 2. Use case', '## 3. Bảng tổng task', '## 5. Chi tiết task', '## 6. Câu hỏi mở & giả định']) {
+      ok(raw.includes(h), `template task (thô): có heading "${h}"`);
+    }
+    ok(['CT', 'DB', 'BE', 'FE-UI', 'FE-INT', 'E2E'].every((t) => raw.includes(`| \`${t}\` |`)), 'template task (thô): bảng đủ 6 loại task');
+    ok(['**Ngữ cảnh:**', '**Acceptance criteria:**', '**File dự kiến:**', '**Lệnh verify:**', '**DoD:**'].every((m) => raw.includes(m)),
+      'template task (thô): header task đủ Ngữ cảnh/AC/File dự kiến/Lệnh verify/DoD');
+    ok(raw.includes('N/A — <lý do>') && raw.includes('[giả định]') && raw.includes('Chỉ sinh loại cần'), 'template task (thô): quy tắc N/A, [giả định], chỉ sinh loại cần');
+
+    const checkScript = path.join(tbDir, 'scripts', 'check-tasks.mjs');
+    const tb = await import(pathToFileURL(checkScript).href);
+    const items = (p, n) => Array.from({ length: n }, (_, i) => `- **${p}${i + 1}. Mục:** x`).join('\n');
+    // Điền mẫu: placeholder thành 'mẫu'; dòng "mục riêng theo loại" thành khối Backend đủ B1–B10.
+    const filled = stripTemplateHeader(raw)
+      .replace(/^<mục riêng theo loại[^\n]*>$/m, `#### Backend\n\n${items('B', 10)}`)
+      .replace(/<[^<>\n]+>/g, (p) => (/^<a id=|^<\/a>$/.test(p) ? p : 'mẫu'));
+    const res = tb.checkTasks(tb.parseTasks(filled));
+    const probs = [...res.errors, ...res.warnings].map((p) => `${p.code} ${p.msg}`).join(' | ');
+    ok(res.errors.length === 0, `template task (điền mẫu UC01) PASS check-tasks${probs ? ' — ' + probs : ''}`);
+    const model = tb.parseTasks(filled);
+    ok(model.useCases.length === 1 && model.tasks.length === 1 && model.details.length === 1, 'template task (điền mẫu): đọc được 1 use case, 1 task, 1 chi tiết');
+
+    const skill = read(path.join(tbDir, 'SKILL.md'));
+    ok(skill.includes('artifact-templates') && !skill.includes('task-template-common.md'), 'engineering-task-breakdown SKILL.md: trỏ artifact-templates, không còn task-template-common.md');
+    ok(!fs.existsSync(path.join(tbDir, 'references', 'task-template-common.md')), 'engineering-task-breakdown: task-template-common.md đã bị xóa');
+    for (const rel of ['references/output-formats.md', 'references/breakdown-checklist.md', 'references/task-template-backend.md']) {
+      const t = read(path.join(tbDir, rel));
+      ok(!t.includes('task-template-common') && t.includes('artifact-templates'), `engineering-task-breakdown/${rel}: trỏ template task của artifact-templates`);
+    }
+    ok(!read(path.join(tbDir, 'references', 'output-formats.md')).includes('## 6. Câu hỏi mở & giả định'), 'output-formats.md: khung tasks.md chung không còn lặp lại');
   }
 
   // 4. Chính skill artifact-templates qua validator skill.

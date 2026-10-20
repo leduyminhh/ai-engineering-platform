@@ -234,17 +234,17 @@
 - Modify: `core/skills/artifact-templates/SKILL.md` (dòng `task`; validator = `check-tasks.mjs` của `engineering-task-breakdown`, chỉ có khi cài plugin `engineering`)
 - Modify: `test/content/13-task-breakdown.pin.mjs:15-16,42-50` (chuyển các pin của `task-template-common.md` sang `task.template.md` của core), `test/contract/35-artifact-templates.contract.mjs`
 
-- [ ] **Step 1: Viết test đỏ.**
+- [x] **Step 1: Viết test đỏ.**
   - **Contract 35:**
     - Thay placeholder trong `task.template.md` bằng mẫu `UC01` (đủ CT/BE/FE-UI/FE-INT như fixture ở `14-task-breakdown-integration.pin.mjs`).
     - Chạy `checkTasks(parseTasks(…))` → 0 lỗi.
     - Template thô chứa đủ header chung kể trên.
     - `SKILL.md` của task-breakdown chứa `artifact-templates` và không còn `task-template-common.md`.
   - **Pin 13:** trỏ sang file core.
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only 35-artifact --only 13-task --only 14-task` → FAIL.
-- [ ] **Step 3: Hiện thực** theo danh sách Files. `check-tasks.mjs` không sửa.
-- [ ] **Step 4: Chạy, xác nhận xanh** — cùng lệnh ở Step 2 → 0 fail.
-- [ ] **Step 5: Commit** — `feat(core): move shared task template to artifact-templates`
+- [x] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only 35-artifact --only 13-task --only 14-task` → FAIL.
+- [x] **Step 3: Hiện thực** theo danh sách Files. `check-tasks.mjs` không sửa.
+- [x] **Step 4: Chạy, xác nhận xanh** — cùng lệnh ở Step 2 → 0 fail.
+- [x] **Step 5: Commit** — `feat(core): move shared task template to artifact-templates`
 
 ---
 

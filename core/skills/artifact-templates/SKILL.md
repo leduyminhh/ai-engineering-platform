@@ -23,6 +23,7 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | requirement | [requirement.template.md](references/requirement.template.md) | chưa có | EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
 | design | [design.template.md](references/design.template.md) | chưa có | superpowers:brainstorming (design doc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
 | plan | [plan.template.md](references/plan.template.md) | chưa có | superpowers:writing-plans (header bắt buộc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
+| task | [task.template.md](references/task.template.md) | `check-tasks.mjs` của `engineering-task-breakdown` (chỉ có khi cài plugin `engineering`) | Spec Kit tasks.md; Kiro tasks.md; check-tasks.mjs hiện có |
 | adr | [adr.template.md](references/adr.template.md) | chưa có | MADR 4.0.0 (adr.github.io/madr); Nygard 2011 (Documenting Architecture Decisions) |
 | project-knowledge | [project-knowledge/](references/project-knowledge/) | chưa có | Chuyển nguyên từ templates/init/project-knowledge (giữ nội dung); tech-stack.yml không có khối header |
 
@@ -70,6 +71,9 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
   phạm vi, kiểm thử, để builder quyết, rủi ro).
 - [references/plan.template.md](references/plan.template.md): khung plan (header bắt buộc của `superpowers:writing-plans`,
   `**Requirement:**`, `**Phủ AC:**` theo Task).
+- [references/task.template.md](references/task.template.md): khung `tasks.md` chung (Use case, Bảng tổng task, Chi tiết task với
+  header task, Câu hỏi mở); phụ lục có 6 loại task, quy ước ID `UC<nn>-<loại>-<nn>`, mục `CT`/`DB`/`E2E`, quy tắc điền.
+  Template chi tiết BE (B1–B10) và FE (F1–F9) ở skill `engineering-task-breakdown`.
 - [references/adr.template.md](references/adr.template.md): khung ADR theo MADR 4.0 tiếng Việt (metadata `Trạng thái`/`Ngày`/
   `Người quyết định`, bối cảnh, yếu tố quyết định, phương án, kết quả + hệ quả + xác nhận, ưu nhược từng phương án).
 - [references/project-knowledge/](references/project-knowledge/): 5 khung `.md` (`project-overview`, `domain-context`,

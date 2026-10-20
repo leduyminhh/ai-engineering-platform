@@ -52,7 +52,7 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
 
 3. **Tách task theo lát dọc.**
    Với mỗi use case sinh task theo thứ tự `CT → DB → BE → FE-UI → FE-INT → E2E`, chỉ sinh loại cần (bảng loại và
-   điều kiện ở [references/task-template-common.md](references/task-template-common.md)). Phụ thuộc chuẩn:
+   điều kiện ở template `task.template.md` của skill `artifact-templates`, mục Phụ lục). Phụ thuộc chuẩn:
 
    | Task | Phụ thuộc |
    |---|---|
@@ -68,7 +68,7 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
 4. **Điền template + size.**
    Task `BE` theo [references/task-template-backend.md](references/task-template-backend.md); `FE-UI` / `FE-INT`
    theo [references/task-template-frontend.md](references/task-template-frontend.md); header chung + `CT` / `DB` /
-   `E2E` theo task-template-common. Size theo [references/sizing.md](references/sizing.md): S ≤ 0.5 ngày,
+   `E2E` theo template `task.template.md` của skill `artifact-templates`. Size theo [references/sizing.md](references/sizing.md): S ≤ 0.5 ngày,
    M ≤ 2 ngày, L → buộc tách. Mục không áp dụng ghi `N/A — <lý do>`, không bỏ trống.
 
 5. **Kiểm tra. ⏸ Checkpoint 2**
@@ -101,8 +101,8 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
 Nạp đúng file khi cần, đừng nạp tất cả:
 
 - [references/analysis.md](references/analysis.md): nhận diện input, ngưỡng mơ hồ, bảng Use case, nguồn mâu thuẫn.
-- [references/task-template-common.md](references/task-template-common.md): loại task, quy ước ID, header chung,
-  template `CT` / `DB` / `E2E`, quy tắc điền.
+- Template `task.template.md` của skill `artifact-templates` (core): khung `tasks.md`, loại task, quy ước ID, header
+  chung, mục `CT` / `DB` / `E2E`, quy tắc điền.
 - [references/task-template-backend.md](references/task-template-backend.md): Backend cần gì — 10 mục B1–B10 +
   template chép được.
 - [references/task-template-frontend.md](references/task-template-frontend.md): Frontend cần gì — 9 mục F1–F9 +
