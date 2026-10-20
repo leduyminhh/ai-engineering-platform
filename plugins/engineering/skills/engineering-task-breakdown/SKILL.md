@@ -47,7 +47,7 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
    chạy `engineering-spec-writing` trước.
 
 2. **Phân tích → bảng Use case. ⏸ Checkpoint 1**
-   Mỗi use case: ID `UC<nn>`, actor, mục tiêu, luồng chính/phụ, AC đo được, NFR, nguồn truy vết. Nguồn mâu thuẫn
+   Mỗi use case: ID `UC<nn>`, actor, mục tiêu, luồng chính/phụ, AC đo được (ID AC của nguồn; tự đánh `AC<uc>.<n>` chỉ khi nguồn chưa có ID), NFR, nguồn truy vết. Nguồn mâu thuẫn
    hoặc thiếu → Câu hỏi mở. Trình bảng Use case + Câu hỏi mở cho teamlead duyệt TRƯỚC khi tách task.
 
 3. **Tách task theo lát dọc.**

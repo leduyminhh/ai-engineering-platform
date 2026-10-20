@@ -99,7 +99,11 @@ export default async function run({ ok, ctx }) {
       ok(!r(p).includes('khung `plan.md`'), `AC3.1: ${path.basename(p)} không còn dựng khung plan.md`);
     }
     ok(r(analyst).includes('design.md'), 'AC3.1: spec-analyst liệt kê design.md');
+    ok(r(path.join(SW, 'references', 'spec-structure.md')).includes('`^AC\\d+\\.\\d+$`'),
+      'AC3.1: spec-structure ghi đúng regex ID AC (không mất backslash)');
     const TB = path.join(ENG, 'skills', 'engineering-task-breakdown');
+    ok(r(path.join(TB, 'references', 'breakdown-checklist.md')).includes('tự đánh `AC<uc>.<n>` chỉ khi nguồn chưa có ID'),
+      'AC3.3: breakdown-checklist không mâu thuẫn với việc dùng lại ID nguồn');
     ok(r(path.join(TB, 'references', 'analysis.md')).includes('dùng lại nguyên ID'), 'AC3.3: dùng lại ID AC của nguồn');
     ok(/không có `requirement\.md`.*`design\.md`/s.test(r(path.join(TB, 'SKILL.md'))),
       'AC3.3: đọc AC từ design.md khi không có requirement.md');

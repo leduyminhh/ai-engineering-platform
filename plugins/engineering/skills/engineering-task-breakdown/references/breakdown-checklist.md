@@ -8,7 +8,7 @@ mục còn lại kiểm bằng đọc. Không có Node → kiểm tất cả b�
 ## Phủ & truy vết
 
 - [ ] Mọi AC của mọi use case được phủ bởi ≥ 1 task (bảng AC → task trình trong chat ở Checkpoint 2; không bắt buộc ghi vào `tasks.md`) **(script E7)**.
-- [ ] Mọi task có ≥ 1 AC truy vết về `AC<uc>.<n>` **(script E8)**.
+- [ ] Mọi task có ≥ 1 AC truy vết về ID AC của nguồn (tự đánh `AC<uc>.<n>` chỉ khi nguồn chưa có ID) **(script E8)**.
 - [ ] Mọi task có trường Nguồn trỏ về input.
 
 ## Cấu trúc
