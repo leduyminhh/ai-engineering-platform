@@ -2,6 +2,7 @@
 
 - Ngày: 2026-10-20
 - Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `c337dbc` (2026-10-20).
+- Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P1b (xu hướng 5)
 - Requirement: không có
 - Liên quan: project 1 [`../2026-10-20-superpowers-docs-standard/design.md`](../2026-10-20-superpowers-docs-standard/design.md) — tạm dừng ở bước plan; làm sau project này và đọc template từ đây.
 

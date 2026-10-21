@@ -1,8 +1,8 @@
 # Thiết kế: workflow graph máy đọc được (project 2b)
 - Ngày: 2026-10-20
-- Trạng thái: đã duyệt 2026-10-20; triển khai xong trên feature/workflow-graph 2026-10-21
+- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `bb24f03` (2026-10-21).
+- Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P2b (xu hướng 7). Tiền đề cho runner (project 6, repo riêng).
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
-- Thuộc lộ trình: chuẩn hóa aip theo 9 xu hướng — project 2b. Tiền đề cho runner (project 6, repo riêng). 2a (gate kiểm chứng) đã merge `dabc13f`.
 
 ## Vấn đề và lý do
 
