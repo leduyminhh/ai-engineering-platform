@@ -141,8 +141,8 @@
 **Interfaces:**
 - Produces: nhóm có thể mang khoá tuỳ chọn `"omitWhen": "allowEnvFiles"` (giá trị duy nhất hợp lệ); `buildClaudePermissions(policy, { allowEnvFiles }?: { allowEnvFiles?: boolean })` bỏ nhóm có `omitWhen` khớp cờ đang bật; `init` đọc trực tiếp `<root>/.claude/aip-gate.json` (bỏ BOM; chỉ `allowEnvFiles === true` mới bật; thiếu file, JSON hỏng hoặc kiểu khác → tắt), không dùng `gate-config.mjs` vì thư mục đích có thể chưa là git repo.
 
-- [ ] **Step 1: Viết test đỏ** — `AC1.4:` init --full với `aip-gate.json` `{"allowEnvFiles": true}` (và bản có BOM) → `permissions.deny` rỗng và `ask` giữ đủ ba nhóm; với `{"allowEnvFiles": "true"}`, `false`, JSON hỏng, thiếu file → deny giữ quy tắc `.env` như AC1.2; `aip-gate.json` có sẵn không bị sửa; contract: `checkPolicy` chấp nhận `omitWhen: "allowEnvFiles"` và từ chối giá trị khác; `buildClaudePermissions` với `{ allowEnvFiles: true }` bỏ nhóm `secrets`.
-- [ ] **Step 2: Chạy, xác nhận đỏ.** Run: `node test/validate.mjs --build --only permissions` và `node test/init.test.mjs`. Expected: FAIL.
-- [ ] **Step 3: Thêm `"omitWhen": "allowEnvFiles"` vào nhóm `secrets`; cập nhật `checkPolicy`/`buildClaudePermissions`; nối `init`** đọc cờ và truyền vào `buildClaudePermissions`. README EN/VI và CHANGELOG nêu hành vi.
-- [ ] **Step 4: Chạy, xác nhận xanh.** Run: hai lệnh ở Step 2 và `--only agent-permissions`. Expected: PASS.
-- [ ] **Step 5: Bump version nếu `versions.mjs --lock` buộc, chạy `npm test` và `npm run pack:verify`; tick AC1.4; commit** `feat(cli): omit .env rules from generated settings when allowEnvFiles is true`.
+- [x] **Step 1: Viết test đỏ** — `AC1.4:` init --full với `aip-gate.json` `{"allowEnvFiles": true}` (và bản có BOM) → `permissions.deny` rỗng và `ask` giữ đủ ba nhóm; với `{"allowEnvFiles": "true"}`, `false`, JSON hỏng, thiếu file → deny giữ quy tắc `.env` như AC1.2; `aip-gate.json` có sẵn không bị sửa; contract: `checkPolicy` chấp nhận `omitWhen: "allowEnvFiles"` và từ chối giá trị khác; `buildClaudePermissions` với `{ allowEnvFiles: true }` bỏ nhóm `secrets`.
+- [x] **Step 2: Chạy, xác nhận đỏ.** Run: `node test/validate.mjs --build --only permissions` và `node test/init.test.mjs`. Expected: FAIL.
+- [x] **Step 3: Thêm `"omitWhen": "allowEnvFiles"` vào nhóm `secrets`; cập nhật `checkPolicy`/`buildClaudePermissions`; nối `init`** đọc cờ và truyền vào `buildClaudePermissions`. README EN/VI và CHANGELOG nêu hành vi.
+- [x] **Step 4: Chạy, xác nhận xanh.** Run: hai lệnh ở Step 2 và `--only agent-permissions`. Expected: PASS.
+- [x] **Step 5: Bump version nếu `versions.mjs --lock` buộc, chạy `npm test` và `npm run pack:verify`; tick AC1.4; commit** `feat(cli): omit .env rules from generated settings when allowEnvFiles is true`.
