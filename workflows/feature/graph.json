@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "workflow": "workflow-feature",
+  "start": "baseline",
+  "steps": [
+    {
+      "id": "baseline",
+      "n": 1,
+      "title": "Baseline build/test",
+      "run": { "session": true },
+      "next": "requirements",
+      "on_fail": [
+        { "to": "blocked", "when": "baseline đỏ → dừng blocked, đề xuất workflow-bugfix" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "requirements",
+      "n": 2,
+      "title": "Phân tích yêu cầu & phạm vi",
+      "run": { "agents": ["engineering-spec-analyst"] },
+      "next": "design-contract",
+      "on_fail": [
+        { "to": "ask_user", "when": "acceptance criteria mơ hồ/không đo được → hỏi lại người dùng" },
+        { "to": "blocked", "when": "phạm vi có đổi schema → dừng, đề xuất skill data-db-migration" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Acceptance criteria + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có)",
+        "approve": "design-contract",
+        "reject": "ask_user"
+      }
+    },
+    {
+      "id": "design-contract",
+      "n": 3,
+      "title": "Thiết kế & contract",
+      "run": {
+        "agents": [
+          { "id": "backend-implementer", "when": "chỉ khi phạm vi có API" },
+          { "id": "engineering-spec-analyst", "when": "chỉ khi ảnh hưởng kiến trúc" }
+        ],
+        "skills": [
+          { "id": "backend-api-contract", "when": "chỉ khi phạm vi có API" }
+        ],
+        "parallel": true
+      },
+      "next": "implement",
+      "on_fail": [
+        { "to": "ask_user", "when": "contract xung đột với hệ thống hiện có → dừng, hỏi lại người dùng cách xử lý breaking change" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Contract OpenAPI (nếu có) hoặc ghi chú \"không có API\"; ADR (nếu có)",
+        "approve": "implement",
+        "reject": "ask_user"
+      }
+    },
+    {
+      "id": "implement",
+      "n": 4,
+      "title": "Implement",
+      "run": {
+        "agents": [
+          { "id": "backend-implementer", "when": "chỉ phía có đụng theo phạm vi Bước 2" },
+          { "id": "frontend-implementer", "when": "chỉ phía có đụng theo phạm vi Bước 2" },
+          { "id": "frontend-data-integrator", "when": "phạm vi fullstack có contract ở Bước 3", "after": "frontend-implementer" }
+        ],
+        "parallel": true
+      },
+      "next": "test",
+      "on_fail": [
+        { "to": "design-contract", "when": "contract lệch khi nối data → quay lại Bước 3" },
+        { "to": "ask_user", "when": "integrator trả blocked vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "test",
+      "n": 5,
+      "title": "Test",
+      "run": {
+        "agents": [
+          { "id": "backend-test-writer", "when": "chỉ phía có đụng" },
+          { "id": "frontend-test-writer", "when": "chỉ phía có đụng" },
+          { "id": "frontend-e2e-test-writer", "when": "AC dạng luồng UI đầu-cuối" }
+        ],
+        "parallel": true
+      },
+      "next": "review",
+      "on_fail": [
+        { "to": "implement", "when": "test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test)" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "review",
+      "n": 6,
+      "title": "Review",
+      "run": {
+        "agents": ["backend-reviewer", "frontend-reviewer", "engineering-quality-auditor"],
+        "parallel": true
+      },
+      "next": "docs",
+      "on_fail": [
+        { "to": "implement", "when": "còn finding blocker, hoặc drift contract↔code → quay lại Bước 4 sửa code" },
+        { "to": "test", "when": "còn finding blocker → quay lại Bước 5 sửa test" },
+        { "to": "design-contract", "when": "drift contract↔code → quay lại Bước 3 sửa contract" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "docs",
+      "n": 7,
+      "title": "Tài liệu",
+      "run": { "session": true },
+      "next": "commit",
+      "on_fail": [
+        { "to": "ask_user", "when": "không xác định được docs nào bị ảnh hưởng → hỏi lại người dùng" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "commit",
+      "n": 8,
+      "title": "Commit",
+      "run": { "skills": ["git-workflow"] },
+      "next": "done",
+      "on_fail": [
+        { "to": "ask_user", "when": "người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Diff đầy đủ (code + test + docs) + finding major còn lại trong remaining_risks",
+        "approve": "done",
+        "reject": "ask_user"
+      }
+    }
+  ]
+}

@@ -17,7 +17,7 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 
 | Loại | Template | Validator | Nguồn |
 |---|---|---|---|
-| workflow | [workflow.template.md](references/workflow.template.md) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` (chỉ có trong repo aip) | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
+| workflow | [workflow.template.md](references/workflow.template.md) + [workflow.graph.template.json](references/workflow.graph.template.json) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` (chỉ có trong repo aip) | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
 | skill | [skill.template.md](references/skill.template.md) | `cli/lib/conventions.mjs` → `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys` (chỉ có trong repo aip) | Anthropic skill best practices; agentskills.io |
 | agent | [agent.template.md](references/agent.template.md) | `cli/lib/conventions.mjs` → `checkAgentTools`, `checkAgentDescription` (chỉ có trong repo aip) | Claude Code subagents; GitHub agents.md (2025-11) |
 | requirement | [requirement.template.md](references/requirement.template.md) | `scripts/check-request.mjs` | EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
@@ -69,6 +69,11 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
 
 - [references/workflow.template.md](references/workflow.template.md): khung workflow 8 trường mỗi bước, checkpoint,
   rollback, Definition of Done, `workflow_result`.
+- [references/workflow.graph.template.json](references/workflow.graph.template.json): khung `graph.json` 2 bước đi kèm workflow
+  (luồng máy đọc được: `next`, `on_fail`, gate human); sao thành `workflows/<slug>/graph.json`.
+  Nghĩa schema v1 (đi kèm plugin, không cần đọc spec của repo aip): `done` = hoàn thành; `blocked` = dừng và báo người dùng;
+  `ask_user` = hỏi người dùng rồi chạy lại chính bước đó hoặc bước người dùng chỉ định; `when` = điều kiện dạng văn bản
+  (không phải biểu thức); `after` = id phải xong trước trong cùng bước; `on_fail` không bao giờ trỏ `done`.
 - [references/skill.template.md](references/skill.template.md): khung SKILL.md (frontmatter, checklist quy trình, vòng
   validate → sửa, ranh giới an toàn, Verification, bản đồ tài liệu).
 - [references/agent.template.md](references/agent.template.md): khung agent (frontmatter `tools`/`writeScope`, Phạm vi 3 tầng,

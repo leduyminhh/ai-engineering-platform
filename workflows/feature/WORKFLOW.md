@@ -154,7 +154,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Gate:** 0 finding `blocker`; có API thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
   `remaining_risks` để người dùng quyết ở checkpoint Bước 8.
 - **Khi fail:** còn finding `blocker` → quay lại Bước 4/5 sửa, review lại phần đã sửa; drift contract↔code → quay lại
-  Bước 4 sửa code hoặc Bước 3 sửa contract.
+  Bước 4 sửa code hoặc quay lại Bước 3 sửa contract.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence) + số finding còn lại sau
   khi sửa; có API: bảng đối chiếu contract↔code.
 
@@ -180,7 +180,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   Đây là chốt riêng của workflow, áp cả trên feature branch.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
 - **Gate:** người dùng duyệt diff.
-- **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước tương ứng, không commit tạm.
+- **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định, không commit tạm.
 - **Evidence:** hash commit + message.
 
 ## Checkpoint

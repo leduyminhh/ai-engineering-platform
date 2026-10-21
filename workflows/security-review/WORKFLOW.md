@@ -197,7 +197,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   Đây là chốt riêng của workflow, áp cả trên feature branch.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
 - **Gate:** người dùng duyệt diff.
-- **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước tương ứng, không commit tạm.
+- **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định, không commit tạm.
 - **Evidence:** hash commit + message.
 
 ## Checkpoint

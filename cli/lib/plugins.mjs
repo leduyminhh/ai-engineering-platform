@@ -276,6 +276,11 @@ function loadAgents(pluginDir, pluginId) {
   });
 }
 
+export function readGraph(file) {
+  if (!fs.existsSync(file)) return null;
+  try { return readJSON(file); } catch (e) { throw new Error(`${file}: graph.json không phải JSON hợp lệ — ${e.message}`); }
+}
+
 /**
  * Bộ workflow cấp repo (`workflows/<slug>/WORKFLOW.md`), trả object hình dạng plugin như loadCore()
  * để adapter/installer dùng lại đường xử lý skill. Thiếu `workflows/.manifest.json` → null.
@@ -312,6 +317,7 @@ export function loadWorkflows() {
       invoke: meta.invoke || '',
       passthrough: pickPassthrough(meta, ['argument-hint']),
       body,
+      graph: readGraph(path.join(dir, 'graph.json')),
       dir,
       assetsDir: dir,
       assets,

@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "workflow": "workflow-bugfix",
+  "start": "baseline",
+  "steps": [
+    {
+      "id": "baseline",
+      "n": 1,
+      "title": "Baseline build/test",
+      "run": { "session": true },
+      "next": "context",
+      "on_fail": [
+        { "to": "blocked", "when": "build đỏ, hoặc test đỏ ngoài vùng bug → dừng blocked" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "context",
+      "n": 2,
+      "title": "Hiểu bối cảnh",
+      "run": { "session": true },
+      "next": "reproduce",
+      "on_fail": [
+        { "to": "ask_user", "when": "mô tả bug không đủ phân biệt mong đợi vs thực tế → hỏi lại người dùng" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "reproduce",
+      "n": 3,
+      "title": "Tái hiện",
+      "run": {
+        "agents": [
+          { "id": "backend-test-writer", "when": "chỉ phía có lỗi theo Bước 2" },
+          { "id": "frontend-test-writer", "when": "chỉ phía có lỗi theo Bước 2" }
+        ],
+        "parallel": true
+      },
+      "next": "evidence",
+      "on_fail": [
+        { "to": "context", "when": "không tái hiện được bug → quay lại Bước 2 làm rõ bối cảnh" },
+        { "to": "ask_user", "when": "hoặc hỏi người dùng bước tái hiện chính xác hơn" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "evidence",
+      "n": 4,
+      "title": "Thu evidence",
+      "run": { "session": true },
+      "next": "root-cause",
+      "on_fail": [
+        { "to": "ask_user", "when": "không thu được evidence nào → hỏi người dùng cung cấp log/quyền truy cập" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "root-cause",
+      "n": 5,
+      "title": "Root cause",
+      "run": { "session": true },
+      "next": "fix",
+      "on_fail": [
+        { "to": "evidence", "when": "người dùng không đồng ý root cause → quay lại Bước 4 thu thêm evidence" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Giải thích root cause + evidence trích dẫn",
+        "approve": "fix",
+        "reject": "evidence"
+      }
+    },
+    {
+      "id": "fix",
+      "n": 6,
+      "title": "Fix tối thiểu",
+      "run": {
+        "agents": [
+          { "id": "backend-fixer", "when": "chỉ phía có lỗi theo Bước 2" },
+          { "id": "frontend-fixer", "when": "chỉ phía có lỗi theo Bước 2" }
+        ],
+        "parallel": true
+      },
+      "next": "regression",
+      "on_fail": [
+        { "to": "root-cause", "when": "fix không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause" },
+        { "to": "ask_user", "when": "agent trả blocked → hỏi người dùng mở rộng danh sách file rồi gọi lại" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "regression",
+      "n": 7,
+      "title": "Regression",
+      "run": {
+        "agents": [
+          { "id": "backend-test-writer", "when": "phía đã fix" },
+          { "id": "frontend-test-writer", "when": "phía đã fix" }
+        ],
+        "parallel": true
+      },
+      "next": "review",
+      "on_fail": [
+        { "to": "fix", "when": "có test khác đỏ do fix gây ra → quay lại Bước 6 điều chỉnh fix" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "review",
+      "n": 8,
+      "title": "Review",
+      "run": {
+        "agents": ["backend-reviewer", "frontend-reviewer", "engineering-quality-auditor"],
+        "parallel": true
+      },
+      "next": "commit",
+      "on_fail": [
+        { "to": "fix", "when": "còn finding blocker → quay lại Bước 6 sửa, review lại phần đã sửa" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "commit",
+      "n": 9,
+      "title": "Commit",
+      "run": { "skills": ["git-workflow"] },
+      "next": "done",
+      "on_fail": [
+        { "to": "ask_user", "when": "người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Diff fix hoàn chỉnh (code + test)",
+        "approve": "done",
+        "reject": "ask_user"
+      }
+    }
+  ]
+}

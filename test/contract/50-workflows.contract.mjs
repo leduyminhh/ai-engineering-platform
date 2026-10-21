@@ -1,6 +1,10 @@
 // Contract workflows: drift guard workflow, hard-dependency và script Phase 1.
+import { checkGraph, checkGraphAgainstBody } from '../../cli/lib/workflows.mjs';
+import { readGraph } from '../../cli/lib/plugins.mjs';
+import { stripTemplateHeader } from '../../cli/lib/templates.mjs';
+
 export default async function run({ ok, ctx }) {
-  const { fs, path, os, execFileSync, REPO_ROOT, PLUGINS_DIR, CORE_DIR, missingAnchors, registrySignals, claudeAdapter, core, plugins, allAgents, workflows, BUILD, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, checkDescriptionStyle, notForTargets, claudeDir } = ctx;
+  const { fs, path, os, execFileSync, REPO_ROOT, PLUGINS_DIR, CORE_DIR, missingAnchors, registrySignals, claudeAdapter, core, plugins, allAgents, workflows, BUILD, fxPlugin, fxWorkflows, fxCore, fxMk, byPath, checkDescriptionStyle, notForTargets, claudeDir, listFilesRec } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 27. Chuẩn hoá A4: drift guard workflow ↔ template, Registry ↔ description (spec 2026-10-06 §4.4, §10)
@@ -114,6 +118,138 @@ export default async function run({ ok, ctx }) {
       'git-workflow SKILL.md: nêu bản Node (ưu tiên) và bản PowerShell');
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Workflow graph (spec 2026-10-20-workflow-graph): schema, đích/reachability và đối chiếu văn xuôi
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    const mkStep = (n, title, doing, failLines) => [`### Bước ${n} — ${title}`, `- **Thực hiện:** ${doing}`, '- **Đầu vào:** x',
+      '- **Hành động:** x', '- **Ràng buộc:** x', '- **Đầu ra:** x', '- **Gate:** x', ...failLines, '- **Evidence:** x', ''];
+    const frame = (steps) => ['## Các bước', '', ...steps.flat()].join('\n');
+    const prose = frame([
+      mkStep(1, 'Baseline', 'session chính', ['- **Khi fail:** đỏ → dừng `blocked`.']),
+      mkStep(2, 'Implement', 'agent `a-one` ∥ agent `a-two` (skill `s-one`, chỉ khi có API)',
+        ['- **Khi fail:** build lỗi → sửa lại; lệch contract → quay lại', '  Bước 1 sửa.']),
+      mkStep(3, 'Commit ⏸', 'skill `git-workflow`', ['- **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định.']),
+    ]);
+    const base = () => ({
+      schema: 1, workflow: 'workflow-demo', start: 'baseline',
+      steps: [
+        { id: 'baseline', n: 1, title: 'Baseline', run: { session: true }, next: 'implement',
+          on_fail: [{ to: 'blocked', when: 'đỏ' }], gate: { type: 'auto' } },
+        { id: 'implement', n: 2, title: 'Implement',
+          run: { agents: ['a-one', { id: 'a-two' }], skills: [{ id: 's-one', when: 'chỉ khi có API' }], parallel: true },
+          next: 'commit', on_fail: [{ to: 'baseline', when: 'lệch contract' }], gate: { type: 'auto' } },
+        { id: 'commit', n: 3, title: 'Commit', run: { skills: ['git-workflow'] }, next: 'done',
+          on_fail: [{ to: 'ask_user', when: 'người dùng yêu cầu sửa thêm' }],
+          gate: { type: 'human', review: 'Diff', approve: 'done', reject: 'ask_user' } },
+      ],
+    });
+    const mut = (fn) => { const g = base(); fn(g); return g; };
+    const [s1, s2, s3] = [0, 1, 2];
+
+    ok(checkGraph(base()).length === 0, `AC1.1: graph hợp lệ → 0 lỗi${checkGraph(base()).length ? ' — ' + checkGraph(base()).join('; ') : ''}`);
+    ok(checkGraphAgainstBody(base(), prose).length === 0,
+      `AC1.1: graph hợp lệ khớp văn xuôi → 0 lỗi${checkGraphAgainstBody(base(), prose).length ? ' — ' + checkGraphAgainstBody(base(), prose).join('; ') : ''}`);
+
+    // Mỗi case: [biến đổi, đoạn thông báo chỉ check đó sinh ra, id bước phải được nêu (nếu có)]. Lỗi dây chuyền
+    // từ check khác không được thoả đoạn thông báo, nên xoá một check sẽ làm đúng case của nó đỏ.
+    const schemaCases = {
+      'schema: 2': [(g) => { g.schema = 2; }, 'schema phải bằng 1'],
+      'thiếu workflow': [(g) => { delete g.workflow; }, 'thiếu "workflow"'],
+      'start khác bước n=1': [(g) => { g.start = 'implement'; }, 'phải là id của bước n=1'],
+      'id viết hoa': [(g) => { g.steps[s1].id = 'Baseline'; }, 'không khớp'],
+      'id trùng': [(g) => { g.steps[s2].id = 'baseline'; }, 'id trùng với bước khác', 'baseline'],
+      'id trùng đích đặc biệt': [(g) => { g.steps[s2].id = 'done'; }, 'id trùng đích đặc biệt', 'done'],
+      'n nhảy 1→3': [(g) => { g.steps[s2].n = 3; }, 'n phải liên tục', 'implement'],
+      'title rỗng': [(g) => { g.steps[s1].title = ''; }, 'thiếu title', 'baseline'],
+      'run rỗng': [(g) => { g.steps[s1].run = {}; }, 'run cần session', 'baseline'],
+      'run.agents chứa số': [(g) => { g.steps[s2].run.agents = [5]; }, 'run.agents có phần tử sai', 'implement'],
+      'gate.type lạ': [(g) => { g.steps[s1].gate.type = 'x'; }, 'không hợp lệ', 'baseline'],
+      'human gate thiếu review': [(g) => { delete g.steps[s3].gate.review; }, 'thiếu review', 'commit'],
+      'approve ≠ next': [(g) => { g.steps[s3].gate.approve = 'blocked'; }, 'phải bằng next', 'commit'],
+      'reject không có trong on_fail': [(g) => { g.steps[s3].gate.reject = 'blocked'; }, 'phải là một đích của on_fail', 'commit'],
+      'on_fail thiếu when': [(g) => { delete g.steps[s1].on_fail[0].when; }, 'cần "to" và "when"', 'baseline'],
+      'after trỏ id ngoài bước': [(g) => { g.steps[s2].run.skills[0].after = 'ghost'; }, 'phải là id khác cùng bước', 'implement'],
+      'after trỏ chính nó': [(g) => { g.steps[s2].run.agents[1] = { id: 'a-two', after: 'a-two' }; }, 'phải là id khác cùng bước', 'implement'],
+      'after vòng 2 phần tử': [(g) => { g.steps[s2].run.agents = [{ id: 'a-one', after: 'a-two' }, { id: 'a-two', after: 'a-one' }]; }, 'after tạo vòng', 'implement'],
+      'after vòng 3 phần tử': [(g) => {
+        g.steps[s2].run.agents = [{ id: 'a-one', after: 's-one' }, { id: 'a-two', after: 'a-one' }];
+        g.steps[s2].run.skills = [{ id: 's-one', after: 'a-two' }];
+      }, 'after tạo vòng', 'implement'],
+      'on_fail trỏ tới done': [(g) => { g.steps[s2].on_fail.push({ to: 'done', when: 'x' }); }, 'không được trỏ tới "done"', 'implement'],
+      'khóa lạ ở root': [(g) => { g.schmea = 1; }, 'khóa lạ "schmea"'],
+      'khóa lạ ở bước': [(g) => { g.steps[s2].nxt = 'commit'; }, 'khóa lạ "nxt"', 'implement'],
+      'khóa lạ ở run': [(g) => { g.steps[s2].run.agent = 'a-one'; }, 'khóa lạ "agent"', 'implement'],
+      'khóa lạ ở phần tử run': [(g) => { g.steps[s2].run.skills[0].afer = 'a-one'; }, 'khóa lạ "afer"', 'implement'],
+      'khóa lạ ở on_fail': [(g) => { g.steps[s2].on_fail[0].whn = 'x'; }, 'khóa lạ "whn"', 'implement'],
+      'khóa lạ ở gate': [(g) => { g.steps[s3].gate.aprove = 'done'; }, 'khóa lạ "aprove"', 'commit'],
+    };
+    for (const [name, [fn, want, at]] of Object.entries(schemaCases)) {
+      const errs = checkGraph(mut(fn));
+      ok(errs.some((m) => m.includes(want) && (!at || m.includes(at))), `AC1.1: checkGraph báo lỗi schema — ${name}${errs.length ? '' : ' (không có lỗi nào)'}`);
+    }
+    ok(checkGraph(mut((g) => { g.steps[s2].run.agents[1] = { id: 'a-two', after: 'a-one' }; })).length === 0,
+      'AC1.1: after trỏ id khác cùng bước → hợp lệ');
+
+    // Mỗi cạnh được kiểm riêng; đặt đích sai ở cả cạnh đối ứng (next/approve, on_fail/reject) để lỗi khác không che mất cạnh đang thử.
+    const targetCases = {
+      next: [(g) => { g.steps[s2].next = 'nowhere'; }, 'implement', 'next'],
+      'on_fail[].to': [(g) => { g.steps[s2].on_fail[0].to = 'nowhere'; }, 'implement', 'on_fail'],
+      'gate.approve': [(g) => { g.steps[s3].next = 'nowhere'; g.steps[s3].gate.approve = 'nowhere'; }, 'commit', 'gate.approve'],
+      'gate.reject': [(g) => { g.steps[s3].on_fail[0].to = 'nowhere'; g.steps[s3].gate.reject = 'nowhere'; }, 'commit', 'gate.reject'],
+    };
+    for (const [name, [fn, at, label]] of Object.entries(targetCases)) {
+      const errs = checkGraph(mut(fn));
+      ok(errs.some((m) => m.includes(at) && m.includes(`${label} trỏ tới "nowhere"`)), `AC1.2: đích không tồn tại ở ${name} → lỗi nêu bước và đích`);
+    }
+
+    const orphan = checkGraph(mut((g) => {
+      g.steps.push({ id: 'extra', n: 4, title: 'Extra', run: { session: true }, next: 'done', on_fail: [], gate: { type: 'auto' } });
+    }));
+    ok(orphan.some((m) => m.includes('extra')), 'AC1.3: bước mồ côi bị báo kèm id');
+    const loop = checkGraph(mut((g) => { g.steps[s3].next = 'implement'; g.steps[s3].gate.approve = 'implement'; }));
+    ok(loop.some((m) => m.includes('implement')) && loop.some((m) => m.includes('commit')), 'AC1.3: vòng không lối ra tới done bị báo');
+
+    const bodyErr = (fn) => checkGraphAgainstBody(mut(fn), prose);
+    ok(bodyErr((g) => { g.steps.pop(); }).length >= 1, 'AC2.1: số bước lệch văn xuôi → lỗi');
+    ok(bodyErr((g) => { g.steps[s2].title = 'Khác'; }).some((m) => m.includes('implement')), 'AC2.1: tên bước lệch văn xuôi → lỗi nêu bước');
+    ok(bodyErr((g) => { g.steps[s3].gate = { type: 'auto' }; }).some((m) => m.includes('commit')), 'AC2.2: ⏸ nhưng gate auto → lỗi');
+    ok(bodyErr((g) => { g.steps[s1].gate = { type: 'human', review: 'x', approve: 'implement', reject: 'blocked' }; }).some((m) => m.includes('baseline')),
+      'AC2.2: gate human nhưng không ⏸ → lỗi');
+    const runCases = {
+      'thiếu agent a-two': (g) => { g.steps[s2].run.agents = ['a-one']; },
+      'thừa skill s-two': (g) => { g.steps[s2].run.skills.push('s-two'); },
+      'session chính nhưng session: false': (g) => { g.steps[s1].run.session = false; },
+      'có ∥ nhưng parallel: false': (g) => { g.steps[s2].run.parallel = false; },
+    };
+    for (const [name, fn] of Object.entries(runCases)) ok(bodyErr(fn).length >= 1, `AC2.3: run lệch văn xuôi — ${name}`);
+
+    ok(bodyErr((g) => { g.steps[s2].on_fail = []; }).some((m) => m.includes('Bước 1')),
+      'AC2.4: "quay lại Bước N" ở dòng nối tiếp phải có cạnh');
+    ok(bodyErr((g) => { g.steps[s2].on_fail.push({ to: 'blocked', when: 'x' }); }).some((m) => m.includes('implement') && m.includes('blocked')),
+      'AC2.4: cạnh không có bằng chứng trong Khi fail → lỗi');
+
+    // Chiều văn xuôi → graph cho ask_user: chữ "hỏi" trong Khi fail bắt buộc có cạnh ask_user.
+    const askProse = prose.replace('đỏ → dừng `blocked`.', 'đỏ → dừng `blocked` hoặc hỏi người dùng.');
+    const withAsk = (g) => g.steps[s1].on_fail.push({ to: 'ask_user', when: 'hỏi người dùng' });
+    ok(checkGraphAgainstBody(base(), askProse).some((m) => m.includes('baseline') && m.includes('ask_user')),
+      'AC2.4: Khi fail có "hỏi" nhưng graph thiếu cạnh ask_user → lỗi');
+    ok(checkGraphAgainstBody(mut(withAsk), askProse).length === 0, 'AC2.4: Khi fail có "hỏi" và graph có ask_user → 0 lỗi');
+
+    const lastFail = (to) => [`- **Khi fail:** hỏng → quay lại Bước ${to}.`];
+    const prose5 = frame([1, 2, 3, 4].map((n) => mkStep(n, `S${n}`, 'session chính', ['- **Khi fail:** đỏ → dừng `blocked`.']))
+      .concat([mkStep(5, 'S5', 'session chính', lastFail('3/4'))]));
+    const graph5 = (targets) => ({
+      schema: 1, workflow: 'workflow-five', start: 's1',
+      steps: [1, 2, 3, 4, 5].map((n) => ({
+        id: `s${n}`, n, title: `S${n}`, run: { session: true }, next: n === 5 ? 'done' : `s${n + 1}`,
+        on_fail: n === 5 ? targets.map((t) => ({ to: t, when: 'x' })) : [{ to: 'blocked', when: 'x' }], gate: { type: 'auto' },
+      })),
+    });
+    ok(checkGraphAgainstBody(graph5(['s3', 's4']), prose5).length === 0, 'AC2.4: "quay lại Bước 3/4" có cạnh tới cả hai → 0 lỗi');
+    ok(checkGraphAgainstBody(graph5(['s3']), prose5).some((m) => m.includes('Bước 4')), 'AC2.4: "quay lại Bước 3/4" thiếu cạnh tới một bước → lỗi nhắc bước đó');
+  }
+
   // Phase 2 Task 4: gate đầu cho risk cao, argument-hint, description đúng mẫu
   if (workflows) {
     const snap = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'test', 'fixtures', 'workflow-not-for-ids.json'), 'utf8'));
@@ -151,6 +287,72 @@ export default async function run({ ok, ctx }) {
           ok(s.body.includes(`\`references/${f}\``), `${s.id}: WORKFLOW.md trỏ tới references/${f}`);
         }
       }
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Workflow graph (project 2b): graph.json cho pipeline workflow, khớp văn xuôi
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    if (workflows) {
+      const pipelines = workflows.stages.filter((s) => s.kind === 'workflow');
+      for (const s of pipelines) {
+        ok(s.graph != null && s.graph.workflow === s.id, `AC1.1: ${s.id} có graph.json với graph.workflow = id`);
+        if (!s.graph) continue;
+        const gErrs = checkGraph(s.graph);
+        ok(gErrs.length === 0, `AC1.1/AC1.2/AC1.3: ${s.id} graph hợp lệ${gErrs.length ? ' — ' + gErrs.join(' | ') : ''}`);
+        const pErrs = checkGraphAgainstBody(s.graph, s.body);
+        ok(pErrs.length === 0, `AC2.1–AC2.4: ${s.id} graph khớp văn xuôi${pErrs.length ? ' — ' + pErrs.join(' | ') : ''}`);
+      }
+      for (const s of workflows.stages) {
+        ok(!s.body.includes('quay lại bước tương ứng'), `AC2.5: ${s.id} không còn "quay lại bước tương ứng"`);
+      }
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-graph-'));
+      try {
+        const bad = path.join(tmp, 'graph.json');
+        fs.writeFileSync(bad, '{"schema":');
+        let msg = '';
+        try { readGraph(bad); } catch (e) { msg = e.message; }
+        ok(msg.includes(bad) && msg.includes('graph.json không phải JSON hợp lệ'), 'AC1.1: readGraph — JSON hỏng ném lỗi có đường dẫn file');
+        ok(readGraph(path.join(tmp, 'khong-ton-tai.json')) === null, 'AC1.1: readGraph — không có file → null');
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Workflow graph (project 2b): template graph, tài liệu, ship build
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    const refDir = path.join(CORE_DIR, 'skills', 'artifact-templates', 'references');
+    const tplBody = stripTemplateHeader(fs.readFileSync(path.join(refDir, 'workflow.template.md'), 'utf8').replace(/\r\n/g, '\n'));
+    let tErrs;
+    try {
+      const tplGraph = JSON.parse(fs.readFileSync(path.join(refDir, 'workflow.graph.template.json'), 'utf8'));
+      tErrs = [...checkGraph(tplGraph), ...checkGraphAgainstBody(tplGraph, tplBody)];
+    } catch (err) {
+      tErrs = [err.message];
+    }
+    ok(tErrs.length === 0, `AC3.2: template graph hợp lệ và khớp template workflow${tErrs.length ? ' — ' + tErrs.join(' | ') : ''}`);
+
+    const skillMd = fs.readFileSync(path.join(CORE_DIR, 'skills', 'artifact-templates', 'SKILL.md'), 'utf8');
+    const claudeMd = fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
+    const newWf = claudeMd.split('\n').find((l) => l.startsWith('- New workflow')) || '';
+    ok(skillMd.includes('workflow.graph.template.json') && newWf.includes('graph.json'),
+      'AC3.2: SKILL.md artifact-templates và CLAUDE.md nhắc graph.json');
+
+    if (workflows && fs.existsSync(claudeDir)) {
+      const codexDir = path.join(BUILD, 'codex');
+      const same = (built, src) => fs.existsSync(built) && fs.readFileSync(built).equals(fs.readFileSync(src));
+      for (const s of workflows.stages.filter((x) => x.kind === 'workflow')) {
+        const src = path.join(s.dir, 'graph.json');
+        const c = path.join(claudeDir, 'plugins', 'workflows', 'skills', s.id, 'graph.json');
+        const x = path.join(codexDir, 'workflows', 'skills', s.id, 'graph.json');
+        ok(same(c, src) && same(x, src), `AC3.1: build ship graph.json cho Claude và Codex, byte-for-byte — ${s.id}`);
+      }
+      const stray = ['cursor', 'antigravity'].flatMap((p) => (fs.existsSync(path.join(BUILD, p)) ? listFilesRec(path.join(BUILD, p)) : []))
+        .filter((f) => path.basename(f) === 'graph.json');
+      ok(stray.length === 0, `AC3.1: cursor/antigravity không build graph.json${stray.length ? ' — ' + stray.join(', ') : ''}`);
     }
   }
 }

@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "workflow": "workflow-performance",
+  "start": "metric-goal",
+  "steps": [
+    {
+      "id": "metric-goal",
+      "n": 1,
+      "title": "Metric & mục tiêu",
+      "run": { "session": true },
+      "next": "baseline",
+      "on_fail": [
+        { "to": "ask_user", "when": "người dùng chưa nêu rõ mục tiêu → hỏi lại ngưỡng cụ thể" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "baseline",
+      "n": 2,
+      "title": "Baseline",
+      "run": {
+        "agents": [
+          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 1" },
+          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 1" }
+        ],
+        "parallel": true
+      },
+      "next": "profile",
+      "on_fail": [
+        { "to": "blocked", "when": "agent trả not_run vì thiếu môi trường local/test hoặc bản build/Chrome → dừng blocked, báo người dùng" },
+        { "to": "ask_user", "when": "agent trả blocked + câu hỏi → session chính hỏi người dùng, ghi quyết định rồi gọi lại agent" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "profile",
+      "n": 3,
+      "title": "Profile & giả thuyết",
+      "run": {
+        "agents": [
+          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 1" },
+          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 1" }
+        ],
+        "parallel": true
+      },
+      "next": "optimize",
+      "on_fail": [
+        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 2 đo lại baseline" },
+        { "to": "ask_user", "when": "người dùng không đồng ý hướng tối ưu, hoặc agent trả blocked + câu hỏi → hỏi người dùng rồi chạy lại bước" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Bottleneck + giả thuyết kèm evidence",
+        "approve": "optimize",
+        "reject": "ask_user"
+      }
+    },
+    {
+      "id": "optimize",
+      "n": 4,
+      "title": "Tối ưu",
+      "run": {
+        "agents": [
+          { "id": "backend-fixer", "when": "chỉ phía có đụng" },
+          { "id": "frontend-fixer", "when": "chỉ phía có đụng" }
+        ],
+        "parallel": true
+      },
+      "next": "benchmark",
+      "on_fail": [
+        { "to": "ask_user", "when": "agent trả blocked → hỏi người dùng mở rộng danh sách file rồi gọi lại" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "benchmark",
+      "n": 5,
+      "title": "Benchmark & so sánh",
+      "run": {
+        "agents": [
+          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 1" },
+          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 1" }
+        ],
+        "parallel": true
+      },
+      "next": "review",
+      "on_fail": [
+        { "to": "profile", "when": "không đạt ngưỡng → báo rõ, quay lại Bước 3 tìm hướng khác" },
+        { "to": "blocked", "when": "hoặc dừng theo quyết định người dùng" },
+        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 2 đo lại baseline" },
+        { "to": "ask_user", "when": "agent trả blocked + câu hỏi → session chính hỏi người dùng, ghi quyết định rồi gọi lại agent" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "review",
+      "n": 6,
+      "title": "Review",
+      "run": {
+        "agents": [
+          { "id": "backend-reviewer", "when": "chỉ phía có đụng" },
+          { "id": "frontend-reviewer", "when": "chỉ phía có đụng" }
+        ],
+        "parallel": true
+      },
+      "next": "commit",
+      "on_fail": [
+        { "to": "optimize", "when": "có finding blocker → quay lại Bước 4 sửa, review lại" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "commit",
+      "n": 7,
+      "title": "Commit",
+      "run": { "skills": ["git-workflow"] },
+      "next": "done",
+      "on_fail": [
+        { "to": "ask_user", "when": "người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "Diff",
+        "approve": "done",
+        "reject": "ask_user"
+      }
+    }
+  ]
+}
