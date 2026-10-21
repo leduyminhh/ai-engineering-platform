@@ -31,18 +31,18 @@ Của người dùng (2026-10-21): để tôi tự đề xuất thiết kế P4,
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given `core/permissions/policy.json`, Then có bốn nhóm `secrets`, `git_push`, `network`, `production_deploy`, mỗi nhóm có hành động `deny` hoặc `ask` và danh sách quy tắc không rỗng, và mọi quy tắc khớp một trong các dạng đã chốt (`Read(<path>)`, `Bash(<lệnh> *)`, `WebFetch`, `mcp__<server>__*`).
-- [ ] **AC1.2** — Given `aip init --full` ở thư mục trống, Then có `.claude/settings.json` hợp lệ JSON với `permissions.deny` chứa quy tắc nhóm `secrets` và `permissions.ask` chứa quy tắc ba nhóm còn lại.
-- [ ] **AC1.3** — Given `.claude/settings.json` đã tồn tại, When chạy `aip init --full`, Then file giữ nguyên byte-for-byte và kết quả báo bỏ qua kèm đường dẫn chính sách.
-- [ ] **AC2.1** — Given `core/hooks/hooks.json`, Then có mục `PreToolUse` với matcher `mcp__.*` trỏ tới `guard-mcp.mjs`.
-- [ ] **AC2.2** — Given không có `mcpAllow`/`mcpDeny` trong `aip-gate.json`, When hook nhận một tool `mcp__x__y`, Then không có quyết định (cho qua).
-- [ ] **AC2.3** — Given `mcpAllow = ["a"]`, When hook nhận `mcp__b__t`, Then trả `permissionDecision: deny` kèm lý do; nhận `mcp__a__t` hoặc `mcp__plugin_p_a__t` khi cấu hình `plugin:p:a`, Then cho qua.
-- [ ] **AC2.4** — Given `mcpDeny = ["a"]` và `mcpAllow = ["a"]`, When hook nhận `mcp__a__t`, Then `deny` (deny thắng allow).
-- [ ] **AC2.5** — Given đầu vào hỏng (JSON sai, thiếu tên tool, `aip-gate.json` sai), Then hook không làm hỏng phiên (fail-open, exit 0).
-- [ ] **AC3.1** — Given baseline `core/agents/AGENTS.template.md`, Then có mục `Agents in CI` nêu `--permission-mode dontAsk`, `--allowedTools`, `--max-turns`, `--max-budget-usd`, `--bare`, ghim action theo SHA; `AGENTS.md` giữ byte-for-byte giống template.
-- [ ] **AC3.2** — Given `README.md` và `README_VI.md`, Then có mục công thức CI, mục chính sách quyền (Claude-only, vì sao chưa có Cursor/Codex/Antigravity) và khoá `mcpAllow`/`mcpDeny` của `aip-gate.json`; `CLAUDE.md` mô tả `guard-mcp` và `core/permissions/policy.json`.
-- [ ] **AC4.1** — Given repo sau thay đổi, Then có `docs/specs/hooks-gates/spec.md` với yêu cầu `hooks-gates/R1…` cho `guard-mcp`, `mcpAllow`/`mcpDeny` và deny thắng allow; `docs/specs/README.md` vẫn liệt kê đủ 7 năng lực; `check-request.mjs` trên request này không có W10–W14.
-- [ ] **AC5.1** — `npm test` xanh; bump version `core` (và plugin/workflow mà `versions.mjs --lock` buộc phải bump); `node cli/lib/versions.mjs --lock` cập nhật; `npm run pack:verify` xanh (chính sách và hook nằm trong `core/` nên đi theo gói npm).
+- [x] **AC1.1** — Given `core/permissions/policy.json`, Then có bốn nhóm `secrets`, `git_push`, `network`, `production_deploy`, mỗi nhóm có hành động `deny` hoặc `ask` và danh sách quy tắc không rỗng, và mọi quy tắc khớp một trong các dạng đã chốt (`Read(<path>)`, `Bash(<lệnh> *)`, `WebFetch`, `mcp__<server>__*`).
+- [x] **AC1.2** — Given `aip init --full` ở thư mục trống, Then có `.claude/settings.json` hợp lệ JSON với `permissions.deny` chứa quy tắc nhóm `secrets` và `permissions.ask` chứa quy tắc ba nhóm còn lại.
+- [x] **AC1.3** — Given `.claude/settings.json` đã tồn tại, When chạy `aip init --full`, Then file giữ nguyên byte-for-byte và kết quả báo bỏ qua kèm đường dẫn chính sách.
+- [x] **AC2.1** — Given `core/hooks/hooks.json`, Then có mục `PreToolUse` với matcher `mcp__.*` trỏ tới `guard-mcp.mjs`.
+- [x] **AC2.2** — Given không có `mcpAllow`/`mcpDeny` trong `aip-gate.json`, When hook nhận một tool `mcp__x__y`, Then không có quyết định (cho qua).
+- [x] **AC2.3** — Given `mcpAllow = ["a"]`, When hook nhận `mcp__b__t`, Then trả `permissionDecision: deny` kèm lý do; nhận `mcp__a__t` hoặc `mcp__plugin_p_a__t` khi cấu hình `plugin:p:a`, Then cho qua.
+- [x] **AC2.4** — Given `mcpDeny = ["a"]` và `mcpAllow = ["a"]`, When hook nhận `mcp__a__t`, Then `deny` (deny thắng allow).
+- [x] **AC2.5** — Given đầu vào hỏng (JSON sai, thiếu tên tool, `aip-gate.json` sai), Then hook không làm hỏng phiên (fail-open, exit 0).
+- [x] **AC3.1** — Given baseline `core/agents/AGENTS.template.md`, Then có mục `Agents in CI` nêu `--permission-mode dontAsk`, `--allowedTools`, `--max-turns`, `--max-budget-usd`, `--bare`, ghim action theo SHA; `AGENTS.md` giữ byte-for-byte giống template.
+- [x] **AC3.2** — Given `README.md` và `README_VI.md`, Then có mục công thức CI, mục chính sách quyền (Claude-only, vì sao chưa có Cursor/Codex/Antigravity) và khoá `mcpAllow`/`mcpDeny` của `aip-gate.json`; `CLAUDE.md` mô tả `guard-mcp` và `core/permissions/policy.json`.
+- [x] **AC4.1** — Given repo sau thay đổi, Then có `docs/specs/hooks-gates/spec.md` với yêu cầu `hooks-gates/R1…` cho `guard-mcp`, `mcpAllow`/`mcpDeny` và deny thắng allow; `docs/specs/README.md` vẫn liệt kê đủ 7 năng lực; `check-request.mjs` trên request này không có W10–W14.
+- [x] **AC5.1** — `npm test` xanh; bump version `core` (và plugin/workflow mà `versions.mjs --lock` buộc phải bump); `node cli/lib/versions.mjs --lock` cập nhật; `npm run pack:verify` xanh (chính sách và hook nằm trong `core/` nên đi theo gói npm).
 
 ## Ảnh hưởng spec
 - hooks-gates: thêm R1, thêm R2, thêm R3
