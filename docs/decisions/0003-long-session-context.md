@@ -1,6 +1,6 @@
 # ADR-0003: Kiểm soát context phiên chạy dài bằng file bàn giao và giảm số lượt
 
-- Trạng thái: Proposed
+- Trạng thái: Accepted (2026-10-21)
 - Ngày: 2026-10-21
 
 Nguồn quyết định: người dùng yêu cầu (qua phiên content-automation-platform, 2026-10-21) ghi vấn đề phiên chạy dài ngốn hạn mức vào engineering platform để nâng cấp luồng làm việc.
@@ -39,15 +39,13 @@ Liên kết:
 Chọn B:
 - Quy tắc mềm trong baseline (mở rộng sau khi thiết kế được duyệt): báo cáo dài ghi vào file và tin một dòng; kết quả công cụ ở phiên điều phối luôn có giới hạn; chạy foreground khi bước kế phụ thuộc kết quả; phiên con chỉ báo khi xong cả gói, bị chặn hoặc cần người dùng quyết; xoay phiên theo ngưỡng mềm (~40%) và cứng (~60%) [Inference] bằng file `handoff.md`; phiên rảnh quá 1 giờ thì mở phiên mới từ `handoff.md`; ghi % context ở mỗi cổng phase; giữ phần nạp cố định gọn.
 - Chuẩn hoá `handoff.md` (template trong `artifact-templates`) đặt trong thư mục request đang chạy.
-- Hook `SessionStart` (nạp `handoff.md`, cảnh báo khi resume phiên nguội) là đề xuất tuỳ chọn, mặc định tắt, người dùng chọn.
+- Hook `SessionStart` (nạp `handoff.md`, cảnh báo khi resume phiên nguội) bật mặc định; tắt bằng `handoffInject`/`resumeWarn` trong `.claude/aip-gate.json`.
 - Cấu hình nén (`autoCompactWindow`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW`) chỉ ghi thành hướng dẫn kèm đánh đổi; aip không ghi settings người dùng.
-
-Chưa hiện thực gì cho tới khi người dùng duyệt thiết kế.
 
 ## Hệ quả
 
 - Project cài aip nhận quy tắc phiên dài qua managed block mà không phải nhắc lại trong từng CLAUDE.md.
 - Cần thêm template `handoff.md` và mở rộng mục baseline "Model and session routing"; core được bump khi hiện thực.
-- Nếu người dùng chọn hook: cần thêm `SessionStart` vào `HOOK_EVENTS` và `checkHooksJson`, thêm cấu hình trong `.claude/aip-gate.json`.
+- Hook: đã thêm `SessionStart` vào `HOOK_EVENTS` và `checkHooksJson`, thêm cấu hình trong `.claude/aip-gate.json`.
 - Rủi ro: ngưỡng 40%/60% chưa kiểm thực nghiệm; chạy foreground có thể làm phiên đứng chờ lâu; xoay phiên bằng file mất sắc thái hội thoại nếu `handoff.md` thiếu chi tiết.
 - Cần kiểm lại tên trường hook, tên setting và con số TTL khi Claude Code đổi tài liệu; trọng số cache read trong hạn mức gói chưa kiểm được [Unverified].
