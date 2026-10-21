@@ -89,7 +89,8 @@ export function codexAgentToml(agent) {
     `description = ${tomlBasic(agent.description)}`,
     `sandbox_mode = ${tomlBasic(CODEX_SANDBOX[agent.mode])}`,
   ];
-  if (agent.effort && CODEX_EFFORT.has(agent.effort)) lines.push(`model_reasoning_effort = ${tomlBasic(agent.effort)}`);
+  // Effort đi kèm tầng model Claude (sonnet/opus) không mang sang model Codex; chỉ ghi khi agent không khai model.
+  if (!agent.model && agent.effort && CODEX_EFFORT.has(agent.effort)) lines.push(`model_reasoning_effort = ${tomlBasic(agent.effort)}`);
   const note = `> Dùng skill: ${agent.skills.map((s) => `\`${s.split('/')[1]}\``).join(', ')}.\n${principlesDigest({ provider: 'codex' })}`;
   lines.push(`developer_instructions = ${tomlMultiline(`${note}\n\n${agent.body.replace(/^\n+/, '')}`)}`);
   return lines.join('\n') + '\n';

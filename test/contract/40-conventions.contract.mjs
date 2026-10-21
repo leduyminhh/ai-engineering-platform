@@ -398,6 +398,15 @@ export default async function run({ ok, ctx }) {
       }
       ok(missing.length === 0 && leaked.length === 0,
         `AC1.3: build Claude mang model, provider khác không đổi${missing.length ? ' — thiếu: ' + missing.join(', ') : ''}${leaked.length ? ' — lọt: ' + leaked.slice(0, 3).join(', ') : ''}`);
+      const noEffort = allAgents
+        .filter((a) => !/^effort: highs*$/m.test(fs.readFileSync(path.join(BUILD, 'claude', 'plugins', a.plugin, 'agents', `${a.id}.md`), 'utf8')))
+        .map((a) => a.id);
+      const codexDir = path.join(BUILD, 'codex');
+      const codexEffort = fs.existsSync(codexDir)
+        ? listFilesRec(codexDir).filter((f) => /.(toml|md)$/.test(f) && fs.readFileSync(path.join(codexDir, f), 'utf8').includes('model_reasoning_effort'))
+        : [];
+      ok(noEffort.length === 0 && codexEffort.length === 0,
+        `AC1.3: Claude mang effort high, Codex không nhận model_reasoning_effort${noEffort.length ? ' — thiếu effort: ' + noEffort.join(', ') : ''}${codexEffort.length ? ' — lọt: ' + codexEffort.slice(0, 3).join(', ') : ''}`);
     }
   }
 }
