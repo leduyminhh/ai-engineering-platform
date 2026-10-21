@@ -12,7 +12,8 @@
 
 - Zero-dep; UTF-8 không BOM, LF; comment code tiếng Việt chỉ nêu *vì sao*; baseline viết tiếng Anh; README.md tiếng Anh, README_VI.md tiếng Việt có dấu.
 - Giá trị `model` hợp lệ: `sonnet`, `opus`, `haiku`, `fable`, `inherit`, hoặc model ID khớp `/^claude-[a-z0-9.-]+$/`. `inherit` chỉ hợp lệ khi body agent chứa chữ `inherit` (lý do ghi trong body).
-- Cả 16 agent trong `plugins/*/agents/*.md` dùng `model: sonnet` (design §3); không agent nào đặt `opus`/`haiku` cứng.
+- Cả 16 agent trong `plugins/*/agents/*.md` dùng `model: sonnet` + `effort: high` (design §3, quyết định người dùng 2026-10-21); không agent nào đặt `opus`/`haiku` cứng.
+- Ràng buộc effort theo model trong `checkAgentModel`: `sonnet` → `effort` bắt buộc `high`; `opus` → `effort` thiếu hoặc `medium`/`high`; `haiku`/`fable`/`inherit`/model ID → không ràng buộc.
 - `AGENTS.md` gốc giống byte-for-byte `core/agents/AGENTS.template.md`.
 - Mọi con số trong mục baseline (TTL 1 giờ/5 phút, hệ số ~4×/~15×, thứ tự chọn model) có link nguồn chính thức như trong design §"Sự thật đã kiểm", hoặc nhãn [Unverified].
 - Không đặt `CLAUDE_CODE_SUBAGENT_MODEL` thay người dùng (D6); không thêm hook (D7).
@@ -69,6 +70,22 @@
 - [ ] **Step 3: Viết nội dung** — mục baseline theo đủ 12 quy tắc ở design §2 (chọn model, xoay phiên, giao tiếp giữa phiên, theo dõi, song song) cộng bảng tầng việc → model gọn từ §1, câu ngắn, link nguồn tại chỗ có số liệu; chép sang `AGENTS.md`. README: một đoạn ngắn trong mục cài đặt/cấu hình Claude: đặt `{"env": {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}}` trong `~/.claude/settings.json` làm lưới an toàn cho subagent ngoài plugin; thứ tự ưu tiên: tham số lúc gọi → frontmatter `model` → biến môi trường → model phiên chính; aip không tự ghi settings.
 - [ ] **Step 4: Chạy, xác nhận xanh** — `--only model-session-routing`, `--only templates`, `--only superpowers-docs-standard`, `--only verification-gate`.
 - [ ] **Step 5: Commit** — `docs(core): add model and session routing rules to baseline`.
+
+### Task 2b: Effort cho agent và baseline (bổ sung 2026-10-21)
+
+**Phủ AC:** AC1.1, AC1.2, AC2.1
+**Files:**
+- Modify: `plugins/*/agents/*.md` (16 file thêm `effort: high` sau `model`), `core/skills/artifact-templates/references/agent.template.md`
+- Modify: `cli/lib/conventions.mjs` (`checkAgentModel` kiểm effort theo Global Constraints)
+- Modify: `core/agents/AGENTS.template.md` + `AGENTS.md` (quy tắc effort trong mục Model and session routing, link prompt-caching)
+- Test: `test/contract/40-conventions.contract.mjs`
+- Test: `test/content/20-model-session-routing.pin.mjs`
+
+- [ ] **Step 1: Test đỏ** — mở rộng ca tham số `AC1.2`: sonnet thiếu effort → lỗi; sonnet `medium` → lỗi; opus `low` → lỗi; opus `medium` và `high` → hợp lệ; haiku không effort → hợp lệ. `AC1.1`: cả 16 agent `effort === 'high'`. Pin `AC2.1`: mục baseline nhắc `effort`, `medium`, `high`.
+- [ ] **Step 2: Chạy, xác nhận đỏ** — `--build --only conventions`, `--only model-session-routing`.
+- [ ] **Step 3: Viết code + nội dung**, chép template sang `AGENTS.md`.
+- [ ] **Step 4: Chạy, xác nhận xanh** — cùng lệnh + `--only artifact-templates`, `--only templates`.
+- [ ] **Step 5: Commit** — `feat(agents): set effort per model tier`.
 
 ### Task 3: Bump version, lock, toàn bộ test
 

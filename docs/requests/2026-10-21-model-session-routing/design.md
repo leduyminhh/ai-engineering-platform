@@ -47,6 +47,7 @@ Của người dùng (2026-10-21):
 - Giảm opus, dùng haiku cho việc máy móc, sonnet cho việc có logic.
 - Cần bộ quy tắc điều hướng chuẩn để đưa vào engineering platform.
 - Bỏ phần hỏi đáp, người viết thiết kế tự quyết phần còn lại (người dùng kiểm khi đọc).
+- Effort (2026-10-21): Opus mặc định `medium`, chỉ lên `high` cho việc nặng (debug nguyên nhân gốc khó, thiết kế, review bảo mật, review toàn phase); Sonnet mặc định `high`; Haiku để mặc định. Đổi effort giữ cache trên model 5.5 ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)) nên được nâng/hạ giữa phiên khi loại việc đổi; đổi model thì không. 16 agent `model: sonnet` khai thêm `effort: high`.
 
 Của người viết thiết kế:
 - **D1. Chọn model ở thời điểm tạo phiên hoặc gọi subagent, không đổi model giữa phiên đang có context.** Muốn hạ model cho phần việc kế thì bàn giao sang phiên mới. Lý do: đổi model tính lại toàn bộ request.
@@ -59,8 +60,8 @@ Của người viết thiết kế:
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given mọi file `plugins/*/agents/*.md`, Then mỗi file có khoá `model` trong frontmatter với giá trị theo bảng §3.
-- [ ] **AC1.2** — Given một agent nguồn thiếu `model`, When chạy `node test/validate.mjs`, Then báo lỗi nêu tên agent; giá trị ngoài `sonnet|opus|haiku|fable|inherit` và không khớp mẫu model ID `claude-*` cũng báo lỗi.
+- [ ] **AC1.1** — Given mọi file `plugins/*/agents/*.md`, Then mỗi file có khoá `model` và `effort` trong frontmatter với giá trị theo bảng §3 (`sonnet` + `high`).
+- [ ] **AC1.2** — Given một agent nguồn thiếu `model`, When chạy `node test/validate.mjs`, Then báo lỗi nêu tên agent; giá trị ngoài `sonnet|opus|haiku|fable|inherit` và không khớp mẫu model ID `claude-*` cũng báo lỗi; agent `model: sonnet` thiếu `effort` hoặc `effort` khác `high` báo lỗi; agent `model: opus` có `effort` khác `medium`/`high` báo lỗi.
 - [ ] **AC1.3** — Given build Claude, Then file agent sinh ra mang đúng khoá `model` của nguồn; build Codex/Cursor/Antigravity không đổi hành vi so với trước (khoá không hỗ trợ được bỏ như hiện tại).
 - [ ] **AC2.1** — Given `core/agents/AGENTS.template.md`, Then managed block có mục `### Model and session routing` với các quy tắc §2 (chọn model theo tầng, không đổi model giữa phiên, xoay phiên theo gói việc, giao tiếp giữa phiên, cron); `AGENTS.md` ở gốc repo giống byte-for-byte template.
 - [ ] **AC2.2** — Given mục §2, Then mọi con số (TTL, hệ số giá, thứ tự chọn model) có link nguồn chính thức hoặc nhãn [Unverified].
@@ -84,6 +85,7 @@ Của người viết thiết kế:
 Chọn model:
 1. Chọn model và effort khi tạo phiên hoặc gọi subagent. Không đổi model trên phiên đang có context; muốn đổi thì bàn giao sang phiên mới.
 2. Subagent ghi model đã dùng trong báo cáo. Mỗi lần lên `opus` ghi một dòng lý do.
+2b. Effort: Opus mặc định `medium`, lên `high` chỉ cho debug nguyên nhân gốc khó, thiết kế, review bảo mật, review toàn phase; Sonnet mặc định `high`; Haiku để mặc định. Đổi effort giữ cache trên model 5.5 nên nâng/hạ giữa phiên khi loại việc đổi; đổi model thì không (quyết định người dùng 2026-10-21).
 
 Xoay phiên:
 3. Một phiên làm một gói việc (một phase, một nhánh). Xong gói, hoặc context vượt ~40% cửa sổ, thì ghi điểm bàn giao vào ledger/run-log (nhánh, hash, việc dở, câu hỏi chờ) rồi mở phiên mới.
@@ -107,6 +109,7 @@ Song song:
 
 | Agent | Model | Ghi chú |
 |---|---|---|
+| (mọi agent dưới đây) | — | khai thêm `effort: high` (quyết định người dùng 2026-10-21) |
 | `backend-implementer`, `frontend-implementer`, `frontend-data-integrator` | `sonnet` | |
 | `backend-fixer`, `frontend-fixer` | `sonnet` | |
 | `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer` | `sonnet` | |
