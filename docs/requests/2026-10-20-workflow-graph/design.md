@@ -1,6 +1,6 @@
 # Thiết kế: workflow graph máy đọc được (project 2b)
 - Ngày: 2026-10-20
-- Trạng thái: đã duyệt 2026-10-20
+- Trạng thái: đã duyệt 2026-10-20; triển khai xong trên feature/workflow-graph 2026-10-21
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: chuẩn hóa aip theo 9 xu hướng — project 2b. Tiền đề cho runner (project 6, repo riêng). 2a (gate kiểm chứng) đã merge `dabc13f`.
 
@@ -30,17 +30,17 @@ Của người viết thiết kế (người dùng kiểm khi đọc):
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given `workflows/<slug>/graph.json` của 4 workflow pipeline, Then mỗi file hợp lệ theo schema §1: `schema: 1`, `workflow` trùng `name` trong frontmatter, `start` là id của bước 1, mỗi bước có `id` (kebab-case, duy nhất), `n`, `title`, `run`, `next`, `on_fail`, `gate`.
-- [ ] **AC1.2** — Given một graph, Then mọi đích (`next`, `on_fail[].to`, `gate.approve`, `gate.reject`) là id bước có thật hoặc `done`/`blocked`/`ask_user`; sai → lỗi nêu bước và đích.
-- [ ] **AC1.3** — Given một graph, Then mọi bước tới được từ `start`, và từ mọi bước tới được `done` (không ngõ cụt, không bước mồ côi).
-- [ ] **AC2.1** — Given `WORKFLOW.md` và `graph.json` cùng workflow, Then số bước và thứ tự `n` khớp `parseSteps`; `title` khớp tên bước (bỏ ⏸).
-- [ ] **AC2.2** — Given bước có ⏸ trong `WORKFLOW.md`, Then `gate.type = "human"` có `review`, `approve`, `reject`; bước không ⏸ có `gate.type = "auto"`. Lệch hai chiều → lỗi.
-- [ ] **AC2.3** — Given trường **Thực hiện** của bước, Then tập id trong `run.agents` và `run.skills` bằng đúng tập `stepRefs` trích được; "session chính" ↔ `run.session = true`; có ∥ ↔ `run.parallel = true`; mọi `after` trỏ tới id cùng bước.
-- [ ] **AC2.4** — Given trường **Khi fail** của bước k chứa "quay lại Bước N" hoặc "quay về Bước N", Then `on_fail` của bước k có cạnh tới bước N. Mỗi cạnh `on_fail` phải có bằng chứng trong **Khi fail** theo D9 (bước N / `blocked`-"dừng" / "hỏi"-"người dùng chỉ định"); thiếu → lỗi (đồ thị không được tự thêm hành vi).
-- [ ] **AC2.5** — Given 4 bước commit đang ghi "quay lại bước tương ứng", Then sửa thành "quay lại bước người dùng chỉ định" và graph có `reject: "ask_user"`; chỗ mơ hồ khác phát hiện khi viết graph được sửa theo cùng cách và liệt kê ở plan.
-- [ ] **AC3.1** — Given `npm run build`, Then `build/claude/plugins/workflows/skills/<id>/graph.json` và bản Codex tương ứng tồn tại, giống byte-for-byte nguồn; cursor/antigravity không có.
-- [ ] **AC3.2** — Given template workflow (`core/skills/artifact-templates/references/workflow.template.md`) và CLAUDE.md mục "New workflow", Then có hướng dẫn tạo `graph.json` kèm workflow mới; có template `graph.template.json` (hoặc khối mẫu) trong `artifact-templates`; contract fail nếu workflow pipeline thiếu `graph.json`.
-- [ ] **AC4.1** — `npm test` xanh; bump `workflows` (và `core` vì template đổi, cộng plugin khác nếu lock đòi); `plugins/_versions.lock.json` cập nhật.
+- [x] **AC1.1** — Given `workflows/<slug>/graph.json` của 4 workflow pipeline, Then mỗi file hợp lệ theo schema §1: `schema: 1`, `workflow` trùng `name` trong frontmatter, `start` là id của bước 1, mỗi bước có `id` (kebab-case, duy nhất), `n`, `title`, `run`, `next`, `on_fail`, `gate`.
+- [x] **AC1.2** — Given một graph, Then mọi đích (`next`, `on_fail[].to`, `gate.approve`, `gate.reject`) là id bước có thật hoặc `done`/`blocked`/`ask_user`; sai → lỗi nêu bước và đích.
+- [x] **AC1.3** — Given một graph, Then mọi bước tới được từ `start`, và từ mọi bước tới được `done` (không ngõ cụt, không bước mồ côi).
+- [x] **AC2.1** — Given `WORKFLOW.md` và `graph.json` cùng workflow, Then số bước và thứ tự `n` khớp `parseSteps`; `title` khớp tên bước (bỏ ⏸).
+- [x] **AC2.2** — Given bước có ⏸ trong `WORKFLOW.md`, Then `gate.type = "human"` có `review`, `approve`, `reject`; bước không ⏸ có `gate.type = "auto"`. Lệch hai chiều → lỗi.
+- [x] **AC2.3** — Given trường **Thực hiện** của bước, Then tập id trong `run.agents` và `run.skills` bằng đúng tập `stepRefs` trích được; "session chính" ↔ `run.session = true`; có ∥ ↔ `run.parallel = true`; mọi `after` trỏ tới id cùng bước.
+- [x] **AC2.4** — Given trường **Khi fail** của bước k chứa "quay lại Bước N" hoặc "quay về Bước N", Then `on_fail` của bước k có cạnh tới bước N. Mỗi cạnh `on_fail` phải có bằng chứng trong **Khi fail** theo D9 (bước N / `blocked`-"dừng" / "hỏi"-"người dùng chỉ định"); thiếu → lỗi (đồ thị không được tự thêm hành vi).
+- [x] **AC2.5** — Given 4 bước commit đang ghi "quay lại bước tương ứng", Then sửa thành "quay lại bước người dùng chỉ định" và graph có `reject: "ask_user"`; chỗ mơ hồ khác phát hiện khi viết graph được sửa theo cùng cách và liệt kê ở plan.
+- [x] **AC3.1** — Given `npm run build`, Then `build/claude/plugins/workflows/skills/<id>/graph.json` và bản Codex tương ứng tồn tại, giống byte-for-byte nguồn; cursor/antigravity không có.
+- [x] **AC3.2** — Given template workflow (`core/skills/artifact-templates/references/workflow.template.md`) và CLAUDE.md mục "New workflow", Then có hướng dẫn tạo `graph.json` kèm workflow mới; có template `graph.template.json` (hoặc khối mẫu) trong `artifact-templates`; contract fail nếu workflow pipeline thiếu `graph.json`.
+- [x] **AC4.1** — `npm test` xanh; bump `workflows` (và `core` vì template đổi, cộng plugin khác nếu lock đòi); `plugins/_versions.lock.json` cập nhật.
 
 ## Thiết kế
 

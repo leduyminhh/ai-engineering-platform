@@ -45,7 +45,7 @@
   - `export function checkGraph(graph: object): string[]` — lỗi schema (AC1.1), đích sai (AC1.2), reachability (AC1.3). Mỗi lỗi nêu id bước.
   - `export function checkGraphAgainstBody(graph: object, text: string): string[]` — đối chiếu với `WORKFLOW.md` body (AC2.1–AC2.4). Không kiểm `graph.workflow` (contract Task 2 so với frontmatter).
 
-- [ ] **Step 1: Viết test đỏ** — khối mới trong `50-workflows.contract.mjs`, import 2 helper trực tiếp từ `../../cli/lib/workflows.mjs`. Fixture văn xuôi 3 bước (đủ 8 trường mỗi bước, không cần pass `checkWorkflowBody`):
+- [x] **Step 1: Viết test đỏ** — khối mới trong `50-workflows.contract.mjs`, import 2 helper trực tiếp từ `../../cli/lib/workflows.mjs`. Fixture văn xuôi 3 bước (đủ 8 trường mỗi bước, không cần pass `checkWorkflowBody`):
   - Bước 1 "Baseline": `- **Thực hiện:** session chính`, `- **Khi fail:** đỏ → dừng \`blocked\`.`
   - Bước 2 "Implement": `- **Thực hiện:** agent \`a-one\` ∥ agent \`a-two\` (skill \`s-one\`, chỉ khi có API)`, `- **Khi fail:** build lỗi → sửa lại; lệch contract → quay lại` + dòng nối tiếp `  Bước 1 sửa.`
   - Bước 3 "Commit ⏸": `- **Thực hiện:** skill \`git-workflow\``, `- **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định.`
@@ -63,13 +63,13 @@
   - `AC2.4: cạnh không có bằng chứng → lỗi` — thêm `{ to: 'blocked', when: 'x' }` vào bước 2 (văn xuôi bước 2 không có "dừng"/"blocked") → lỗi.
   - `AC2.4: "quay lại Bước 4/5" cần cạnh tới cả hai` — fixture riêng nhỏ: văn xuôi 5 bước tối thiểu, bước 5 Khi fail "quay lại Bước 3/4"; graph chỉ có cạnh tới bước 3 → lỗi nhắc bước 4 (Review Focus).
 
-- [ ] **Step 2: Chạy, xác nhận đỏ** — Run: `node test/validate.mjs --only workflows` — Expected: FAIL, `checkGraph is not a function` (hoặc import lỗi).
+- [x] **Step 2: Chạy, xác nhận đỏ** — Run: `node test/validate.mjs --only workflows` — Expected: FAIL, `checkGraph is not a function` (hoặc import lỗi).
 
-- [ ] **Step 3: Viết 2 helper** trong `cli/lib/workflows.mjs` (thuần, không đọc đĩa). Trích trường của bước bằng cùng cách `stepRefs` trích **Thực hiện** (từ bullet `- **<Trường>:**` tới bullet cột 0 kế tiếp) — tách hàm nội bộ dùng chung `fieldText(body, field)` và cho `stepRefs` dùng lại. Reachability: BFS từ `start` qua `next`, `on_fail[].to`, `gate.approve/reject` (bỏ đích đặc biệt); "tới được `done`" = BFS ngược từ các bước có cạnh tới `done`. Title so với `parseSteps(...).title` đã bỏ hậu tố ` ⏸`. Bằng chứng cạnh theo regex ở Global Constraints.
+- [x] **Step 3: Viết 2 helper** trong `cli/lib/workflows.mjs` (thuần, không đọc đĩa). Trích trường của bước bằng cùng cách `stepRefs` trích **Thực hiện** (từ bullet `- **<Trường>:**` tới bullet cột 0 kế tiếp) — tách hàm nội bộ dùng chung `fieldText(body, field)` và cho `stepRefs` dùng lại. Reachability: BFS từ `start` qua `next`, `on_fail[].to`, `gate.approve/reject` (bỏ đích đặc biệt); "tới được `done`" = BFS ngược từ các bước có cạnh tới `done`. Title so với `parseSteps(...).title` đã bỏ hậu tố ` ⏸`. Bằng chứng cạnh theo regex ở Global Constraints.
 
-- [ ] **Step 4: Chạy, xác nhận xanh** — Run: `node test/validate.mjs --only workflows` — Expected: PASS toàn bộ, test cũ của `stepRefs` vẫn xanh.
+- [x] **Step 4: Chạy, xác nhận xanh** — Run: `node test/validate.mjs --only workflows` — Expected: PASS toàn bộ, test cũ của `stepRefs` vẫn xanh.
 
-- [ ] **Step 5: Commit** — `feat(workflows): add graph schema and prose cross-check helpers`.
+- [x] **Step 5: Commit** — `feat(workflows): add graph schema and prose cross-check helpers`.
 
 ### Task 2: `graph.json` cho 4 workflow + loader + làm rõ văn xuôi
 
@@ -84,24 +84,24 @@
 - Consumes: `checkGraph`, `checkGraphAgainstBody` (Task 1).
 - Produces: `export function readGraph(file: string): object | null` trong `cli/lib/plugins.mjs` — không có file → `null`; JSON hỏng → `throw new Error(\`${file}: graph.json không phải JSON hợp lệ — ${e.message}\`)`. `loadWorkflows()` gắn `stage.graph = readGraph(path.join(dir, 'graph.json'))`; `graph.json` vẫn nằm trong `fileAssets` (để ship).
 
-- [ ] **Step 1: Viết test đỏ** trong `50-workflows.contract.mjs`:
+- [x] **Step 1: Viết test đỏ** trong `50-workflows.contract.mjs`:
   - `AC1.1: mọi workflow pipeline có graph.json` — với mỗi `workflows.stages` có `kind === 'workflow'`: `stage.graph` khác null; `stage.graph.workflow === stage.id`; orchestrator không bắt buộc.
   - `AC1.1/AC1.2/AC1.3: <id> graph hợp lệ` — `checkGraph(stage.graph)` rỗng (in lỗi trong message khi đỏ).
   - `AC2.1–AC2.4: <id> graph khớp văn xuôi` — `checkGraphAgainstBody(stage.graph, stage.body)` rỗng.
   - `AC2.5: không còn "quay lại bước tương ứng"` — không body workflow nào chứa chuỗi đó.
   - `readGraph`: file tạm chứa `{"schema":` → ném lỗi có đường dẫn file; file không tồn tại → `null` (Review Focus).
 
-- [ ] **Step 2: Chạy, xác nhận đỏ** — Run: `node test/validate.mjs --only workflows` — Expected: FAIL ở các dòng mới.
+- [x] **Step 2: Chạy, xác nhận đỏ** — Run: `node test/validate.mjs --only workflows` — Expected: FAIL ở các dòng mới.
 
-- [ ] **Step 3: Sửa văn xuôi (AC2.5)** — 4 bước commit: "quay lại bước tương ứng" → "quay lại bước người dùng chỉ định". Chỗ mơ hồ khác phát hiện khi viết graph: sửa tối thiểu cùng kiểu, và liệt kê từng chỗ (file:dòng, trước → sau) trong báo cáo task. Không đổi nghiệp vụ.
+- [x] **Step 3: Sửa văn xuôi (AC2.5)** — 4 bước commit: "quay lại bước tương ứng" → "quay lại bước người dùng chỉ định". Chỗ mơ hồ khác phát hiện khi viết graph: sửa tối thiểu cùng kiểu, và liệt kê từng chỗ (file:dòng, trước → sau) trong báo cáo task. Không đổi nghiệp vụ.
 
-- [ ] **Step 4: Viết `readGraph` + gắn vào `loadWorkflows`.**
+- [x] **Step 4: Viết `readGraph` + gắn vào `loadWorkflows`.**
 
-- [ ] **Step 5: Viết 4 `graph.json`** — đọc từng bước; id kebab-case tiếng Anh ngắn theo việc của bước; `run` theo trường **Thực hiện** (điều kiện "chỉ khi…", "chỉ phía…" vào `when`, "chạy **sau** khi…" vào `after`); `on_fail` theo **Khi fail** (mỗi cạnh `when` là câu ngắn trích ý); gate human lấy `review` từ cột "Người duyệt xem gì" của bảng Checkpoint; bước cuối `next: "done"`. JSON 2 khoảng trắng thụt lề, LF, có newline cuối file.
+- [x] **Step 5: Viết 4 `graph.json`** — đọc từng bước; id kebab-case tiếng Anh ngắn theo việc của bước; `run` theo trường **Thực hiện** (điều kiện "chỉ khi…", "chỉ phía…" vào `when`, "chạy **sau** khi…" vào `after`); `on_fail` theo **Khi fail** (mỗi cạnh `when` là câu ngắn trích ý); gate human lấy `review` từ cột "Người duyệt xem gì" của bảng Checkpoint; bước cuối `next: "done"`. JSON 2 khoảng trắng thụt lề, LF, có newline cuối file.
 
-- [ ] **Step 6: Chạy, xác nhận xanh** — Run: `node test/validate.mjs --build --only workflows` rồi `node test/validate.mjs --only content` — Expected: PASS (pin cũ trỏ văn xuôi workflow vẫn xanh; nếu một pin nhắc nguyên câu đã sửa ở Step 3 thì cập nhật pin đó và ghi vào báo cáo).
+- [x] **Step 6: Chạy, xác nhận xanh** — Run: `node test/validate.mjs --build --only workflows` rồi `node test/validate.mjs --only content` — Expected: PASS (pin cũ trỏ văn xuôi workflow vẫn xanh; nếu một pin nhắc nguyên câu đã sửa ở Step 3 thì cập nhật pin đó và ghi vào báo cáo).
 
-- [ ] **Step 7: Commit** — `feat(workflows): add machine-readable graph for pipeline workflows`.
+- [x] **Step 7: Commit** — `feat(workflows): add machine-readable graph for pipeline workflows`.
 
 ### Task 3: Template graph, tài liệu, ship build
 
@@ -116,22 +116,22 @@
 **Interfaces:**
 - Consumes: `checkGraph`, `checkGraphAgainstBody` (Task 1); `stripTemplateHeader` từ `cli/lib/templates.mjs`.
 
-- [ ] **Step 1: Viết test đỏ** trong `50-workflows.contract.mjs`:
+- [x] **Step 1: Viết test đỏ** trong `50-workflows.contract.mjs`:
   - `AC3.2: template graph hợp lệ và khớp template workflow` — `checkGraph(tplGraph)` rỗng và `checkGraphAgainstBody(tplGraph, stripTemplateHeader(workflowTemplate))` rỗng.
   - `AC3.2: SKILL.md artifact-templates và CLAUDE.md nhắc graph.json` — `SKILL.md` chứa `workflow.graph.template.json`; `CLAUDE.md` bullet "New workflow" chứa `graph.json`.
   - `AC3.1: build ship graph.json cho Claude và Codex, byte-for-byte` — khi `claudeDir` tồn tại: với mỗi workflow pipeline, `build/claude/plugins/workflows/skills/<id>/graph.json` và `build/codex/workflows/skills/<id>/graph.json` tồn tại và bằng nguồn; không có `graph.json` nào dưới `build/cursor` hay `build/antigravity`.
 
-- [ ] **Step 2: Chạy, xác nhận đỏ** — Run: `node test/validate.mjs --build --only workflows` — Expected: FAIL ở dòng AC3.2 (dòng AC3.1 có thể đã xanh nhờ `fileAssets` — ghi rõ trong báo cáo).
+- [x] **Step 2: Chạy, xác nhận đỏ** — Run: `node test/validate.mjs --build --only workflows` — Expected: FAIL ở dòng AC3.2 (dòng AC3.1 có thể đã xanh nhờ `fileAssets` — ghi rõ trong báo cáo).
 
-- [ ] **Step 3: Viết nội dung**
+- [x] **Step 3: Viết nội dung**
   - Template workflow Bước 2 ⏸: **Khi fail** `…` → `người dùng không duyệt → quay lại Bước 1 hoặc hỏi lại người dùng.` (để gate human có đích `reject`).
   - `workflow.graph.template.json`: graph 2 bước khớp template (`workflow: "workflow-<slug>"`; bước 1 `run: { session: true }`, on_fail `ask_user` + `blocked`; bước 2 human gate `reject` về bước 1, `approve: "done"`).
   - SKILL.md: ô Template dòng `workflow` thành `[workflow.template.md](references/workflow.template.md) + [workflow.graph.template.json](references/workflow.graph.template.json)` (link đầu vẫn là file có header, `templateIndex` chỉ đọc link đầu; không đổi cột Validator/Nguồn); thêm một bullet Bản đồ tài liệu cho file graph.
   - CLAUDE.md: bullet "New workflow" thêm: kèm `workflows/<slug>/graph.json` từ `workflow.graph.template.json`, được `checkGraph`/`checkGraphAgainstBody` kiểm; câu `loadWorkflows()` nhắc `graph`.
 
-- [ ] **Step 4: Chạy, xác nhận xanh** — Run: `node test/validate.mjs --build --only workflows && node test/validate.mjs --only artifact-templates` — Expected: PASS.
+- [x] **Step 4: Chạy, xác nhận xanh** — Run: `node test/validate.mjs --build --only workflows && node test/validate.mjs --only artifact-templates` — Expected: PASS.
 
-- [ ] **Step 5: Commit** — `feat(core): add workflow graph template and docs`.
+- [x] **Step 5: Commit** — `feat(core): add workflow graph template and docs`.
 
 ### Task 4: Bump version, lock, toàn bộ test
 
@@ -140,8 +140,8 @@
 - Modify: `workflows/.manifest.json` (`3.1.2` → `3.2.0`), `core/.manifest.json` (`1.8.1` → `1.8.3`), manifest plugin khác chỉ khi lock từ chối (bump patch)
 - Modify: `plugins/_versions.lock.json`
 
-- [ ] **Step 1:** Bump như trên. (`1.8.3`, không phải `1.8.2`: nhánh `feature/core-allow-env-files` chưa merge đã dùng `1.8.2`.)
-- [ ] **Step 2:** Run: `npm run build && node cli/lib/versions.mjs --lock` — Expected: exit 0 (lock từ chối plugin nào → bump patch plugin đó, chạy lại).
-- [ ] **Step 3:** Run: `npm test` — Expected: toàn bộ PASS.
-- [ ] **Step 4:** Run: `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-20-workflow-graph` — Expected: chỉ W7 cho `AC4.1` (kiểm bằng chính `npm test`), không W8/W9.
-- [ ] **Step 5: Commit** — `chore(release): bump workflows and core for workflow graph`.
+- [x] **Step 1:** Bump như trên. (`1.8.3`, không phải `1.8.2`: nhánh `feature/core-allow-env-files` chưa merge đã dùng `1.8.2`.)
+- [x] **Step 2:** Run: `npm run build && node cli/lib/versions.mjs --lock` — Expected: exit 0 (lock từ chối plugin nào → bump patch plugin đó, chạy lại).
+- [x] **Step 3:** Run: `npm test` — Expected: toàn bộ PASS.
+- [x] **Step 4:** Run: `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-20-workflow-graph` — Expected: chỉ W7 cho `AC4.1` (kiểm bằng chính `npm test`), không W8/W9.
+- [x] **Step 5: Commit** — `chore(release): bump workflows and core for workflow graph`.
