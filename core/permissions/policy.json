@@ -3,6 +3,7 @@
   "groups": {
     "secrets": {
       "action": "deny",
+      "omitWhen": "allowEnvFiles",
       "rules": ["Read(.env)", "Read(.env.local)", "Read(.env.production)", "Read(.env.development)"]
     },
     "git_push": {

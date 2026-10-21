@@ -72,4 +72,19 @@ export default async function run({ ok }) {
     try { buildClaudePermissions(bad); } catch (e) { msg = `${e.constructor.name}: ${e.message}`; }
     ok(/^Error: .*allow/.test(msg), 'AC1.1: buildClaudePermissions action lạ → Error rõ ràng');
   }
+  // AC1.4: omitWhen và cờ allowEnvFiles
+  {
+    const withOmit = (v) => mutate((p) => { p.groups.secrets.omitWhen = v; });
+    ok(checkPolicy(withOmit('allowEnvFiles')).length === 0, 'AC1.4: checkPolicy chấp nhận omitWhen "allowEnvFiles"');
+    for (const v of ['other', true, 1, null, '']) ok(checkPolicy(withOmit(v)).length >= 1, `AC1.4: checkPolicy từ chối omitWhen ${JSON.stringify(v)}`);
+    ok(checkPolicy(loadPolicy(POLICY_PATH)).length === 0 && loadPolicy(POLICY_PATH).groups.secrets.omitWhen === 'allowEnvFiles', 'AC1.4: policy.json gắn omitWhen cho nhóm secrets');
+    const p = withOmit('allowEnvFiles');
+    p.groups.secrets.rules = ['Read(.env)'];
+    p.groups.network.rules = ['WebFetch'];
+    const on = buildClaudePermissions(p, { allowEnvFiles: true });
+    ok(Array.isArray(on.permissions.deny) && on.permissions.deny.length === 0 && on.permissions.ask.includes('WebFetch'), 'AC1.4: buildClaudePermissions {allowEnvFiles:true} bỏ nhóm secrets, deny là mảng rỗng');
+    for (const opts of [undefined, {}, { allowEnvFiles: false }]) {
+      ok(buildClaudePermissions(p, opts).permissions.deny.includes('Read(.env)'), `AC1.4: buildClaudePermissions giữ secrets với ${JSON.stringify(opts)}`);
+    }
+  }
 }

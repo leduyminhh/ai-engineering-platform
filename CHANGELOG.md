@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `aip init --full` omits the `.env` (`secrets`) rules from the generated `.claude/settings.json` when `.claude/aip-gate.json` has
+  `allowEnvFiles: true` (strict `true`, checked once at generation; policy groups gain an optional `omitWhen: "allowEnvFiles"`).
 - Claude Code projects now get a generated `.claude/settings.json` (permissions only) on `aip init --full`, and only when the
   file is absent; an existing file is never modified and `aip init` warns with the path of the policy file (`core/permissions/policy.json`).
 - Living-spec review fixes (core 1.10.1; backend 1.8.17 and frontend 1.10.16 re-bumped for the baseline text): W13 now resolves the specs folder next to the request folder (nested layouts such

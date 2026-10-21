@@ -15,6 +15,9 @@ const RULE_PATTERNS = [
   /^mcp__[A-Za-z0-9_-]+__\*$/,
 ];
 
+// Cờ duy nhất một nhóm được phép dùng để tự bỏ khỏi file sinh ra.
+const OMIT_FLAG = 'allowEnvFiles';
+
 export function loadPolicy(file = POLICY_PATH) {
   return JSON.parse(fs.readFileSync(file, 'utf8').replace(/^﻿/, ''));
 }
@@ -35,6 +38,7 @@ export function checkPolicy(policy) {
   for (const [name, action] of Object.entries(REQUIRED_GROUPS)) {
     const g = policy.groups[name];
     if (!g) { errs.push(`thiếu nhóm: ${name}`); continue; }
+    if (Object.hasOwn(g, 'omitWhen') && g.omitWhen !== OMIT_FLAG) errs.push(`${name}: omitWhen chỉ nhận "${OMIT_FLAG}", đang là ${JSON.stringify(g.omitWhen)}`);
     if (g.action !== action) errs.push(`${name}: action phải là ${action}, đang là ${JSON.stringify(g.action)}`);
     if (!Array.isArray(g.rules) || g.rules.length === 0) { errs.push(`${name}: rules rỗng`); continue; }
     for (const r of g.rules) if (!isValidRule(r)) errs.push(`${name}: quy tắc không hợp lệ ${JSON.stringify(r)}`);
@@ -42,9 +46,10 @@ export function checkPolicy(policy) {
   return errs;
 }
 
-export function buildClaudePermissions(policy) {
+export function buildClaudePermissions(policy, flags = {}) {
   const out = { deny: new Set(), ask: new Set() };
   for (const g of Object.values(policy.groups)) {
+    if (g.omitWhen === OMIT_FLAG && flags[OMIT_FLAG] === true) continue;
     if (!Object.hasOwn(out, g.action)) throw new Error(`policy: action phải là deny hoặc ask, đang là ${JSON.stringify(g.action)}`);
     for (const r of g.rules) out[g.action].add(r);
   }

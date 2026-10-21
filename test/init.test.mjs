@@ -109,6 +109,30 @@ test("AC1.2: init --full sinh .claude/settings.json: deny = nhóm secrets, ask =
   assert.deepEqual(permissions.ask, [...groups.git_push.rules, ...groups.network.rules, ...groups.production_deploy.rules]);
 });
 
+const GATE_CASES = [
+  ['true', '{"allowEnvFiles": true}', true],
+  ['true có BOM', '﻿{"allowEnvFiles": true}', true],
+  ['chuỗi "true"', '{"allowEnvFiles": "true"}', false],
+  ['false', '{"allowEnvFiles": false}', false],
+  ['số 1', '{"allowEnvFiles": 1}', false],
+  ['JSON hỏng', '{allowEnvFiles: ', false],
+  ['thiếu file', null, false],
+];
+for (const [name, content, omit] of GATE_CASES) {
+  test(`AC1.4: init --full với aip-gate.json allowEnvFiles ${name} → ${omit ? "bỏ" : "giữ"} quy tắc .env`, () => {
+    const root = tmp();
+    const gate = path.join(root, ".claude", "aip-gate.json");
+    if (content != null) { fs.mkdirSync(path.dirname(gate), { recursive: true }); fs.writeFileSync(gate, content); }
+    init({ root, full: true });
+    const { groups } = loadPolicy();
+    const { permissions } = JSON.parse(read(root, ".claude/settings.json"));
+    assert.deepEqual(permissions.deny, omit ? [] : groups.secrets.rules);
+    assert.deepEqual(permissions.ask, [...groups.git_push.rules, ...groups.network.rules, ...groups.production_deploy.rules]);
+    if (content != null) assert.equal(fs.readFileSync(gate, "utf8"), content);
+    else assert.ok(!fs.existsSync(gate));
+  });
+}
+
 test("AC1.3: init --full không đọc/sửa .claude/settings.json đã có (JSON hợp lệ hoặc chuỗi rác)", () => {
   for (const old of ['{"permissions":{"allow":["Bash(ls *)"]}}\n', "không phải json {{{"]) {
     const root = tmp();

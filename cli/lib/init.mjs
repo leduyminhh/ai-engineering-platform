@@ -21,6 +21,14 @@ function listFiles(dir, base = dir) {
   return out.sort();
 }
 
+// Đọc trực tiếp vì thư mục đích có thể chưa là git repo; chỉ `true` đúng kiểu mới bật (khớp hook), mọi lỗi → tắt.
+function readAllowEnvFiles(root) {
+  try {
+    const raw = fs.readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8').replace(/^﻿/, '');
+    return JSON.parse(raw)?.allowEnvFiles === true;
+  } catch { return false; }
+}
+
 /**
  * Copy khung vào root, KHÔNG ghi đè file đã có (chạy lại an toàn).
  * @returns {{root:string, created:string[], skipped:string[], warnings:string[]}}
@@ -31,7 +39,7 @@ export function init({ root, full = false }) {
   plan.push(['AGENTS.md', { from: AGENTS_TEMPLATE }]);
   if (full) {
     for (const f of initDocFiles()) plan.push([f.rel, { content: f.content }]);
-    plan.push(['.claude/settings.json', { content: JSON.stringify(buildClaudePermissions(loadPolicy()), null, 2) + '\n' }]);
+    plan.push(['.claude/settings.json', { content: JSON.stringify(buildClaudePermissions(loadPolicy(), { allowEnvFiles: readAllowEnvFiles(root) }), null, 2) + '\n' }]);
   }
   const created = [], skipped = [], warnings = [];
   for (const [rel, src] of plan) {
