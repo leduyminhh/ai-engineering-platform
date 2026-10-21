@@ -1,6 +1,6 @@
 # Thiết kế: kiểm soát context của phiên chạy dài
 - Ngày: 2026-10-21
-- Trạng thái: bản nháp, chờ người dùng duyệt (chưa hiện thực gì)
+- Trạng thái: đã duyệt 2026-10-21, đang hiện thực theo plan.md
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - ADR liên quan: [ADR-0003](../../decisions/0003-long-session-context.md) (Proposed); nối tiếp [ADR-0002](../../decisions/0002-model-and-session-routing.md).
 - Nguồn quan sát: phiên điều phối của `content-automation-platform` ngày 2026-10-21 (số đo của chính phiên đó, ghi lại nguyên văn bên dưới).
@@ -26,7 +26,11 @@ Người dùng báo các phiên chạy dài, nhất là phiên root điều ph�
 | Lời gọi công cụ của root | 74K | 20% | brief `SendMessage` 32K (81 tin ~400 token/tin) |
 | Lời của root | 55K | 15% | 245 khối ~225 token/khối; báo cáo cuối lượt dài nhất |
 
-Phát hiện thêm: transcript lưu một số mục assistant hai lần, nên đo trên file thô cao gần gấp đôi; công cụ đo phải loại trùng theo id.
+Phát hiện thêm (đã kiểm trên transcript thật):
+- (a) Các entry assistant dùng chung `message.id` là các block tách rời (`thinking`, `text`, `tool_use`), nội dung bổ sung nhau, không phải bản trùng: phiên `14f90af6` có 241 entry / 97 `message.id` / 0 khối trùng nội dung. Vì vậy **không** loại trùng theo `message.id` (làm vậy mất nội dung).
+- (b) Cách đo đúng: dung lượng lấy từ `message.usage` (context một lượt = `input_tokens + cache_read_input_tokens + cache_creation_input_tokens`); nội dung đếm theo `tool_use.id` / `tool_result.tool_use_id`.
+- (c) `attachment` là nhóm riêng và chiếm phần lớn: phiên `cbf9fb34` có `prompt_snapshot` 42%, `skill_listing` 21%, `instructions` 8%, `nested_memory` 7%, `total_tokens_reminder` 581 lần ≈ 5%.
+- (d) Dung lượng đầu phiên là 61K–85K token trên 6 phiên dài nhất, đỉnh 965K ở lượt 295, khớp `get_usage`.
 
 **Kết luận từ số đo:** nguồn tăng chính là sự kiện tự động (thông báo phiên con, nạp lại file hướng dẫn) cộng kết quả công cụ dài, không phải lời của root. Chi phí lớn nhất không phải độ lớn context mà **số lượt**, vì mỗi lượt đọc lại toàn bộ context. Hướng giải nhắm vào: (a) giảm số lần phiên kết thúc lượt chỉ để chờ nền, (b) giới hạn kích thước kết quả công cụ, (c) giảm phần nạp lại mỗi lần, (d) xoay phiên bằng file bàn giao thay vì để context phình.
 
@@ -44,11 +48,15 @@ Phát hiện thêm: transcript lưu một số mục assistant hai lần, nên �
 Chưa kiểm được:
 - [Unverified] trọng số cache read trong hạn mức gói (tài liệu chỉ nói đọc lại "theo giá cache" và vẫn "tính vào usage").
 - [Unverified] tài liệu chính thức không mô tả quy trình bàn giao phiên.
-- [Unverified] phần chênh 578K (`get_usage`) so với ~363K (đo transcript).
 
 ## Quyết định đã chốt
 
 Của người dùng (qua phiên content-automation, 2026-10-21): ghi vấn đề vào platform để nâng cấp luồng làm việc; chỉ viết tài liệu, chưa hiện thực; subagent không dùng opus.
+
+Người dùng đã trả lời ba câu hỏi mở (2026-10-21):
+1. Bật mặc định cả hai hook H-A và H-B.
+2. `autoCompactWindow` không hạ mặc định, chỉ hướng dẫn kèm đánh đổi (giữ D7).
+3. Công cụ đo transcript làm trong aip (`aip stats`).
 
 Của người viết thiết kế (người dùng kiểm khi đọc; mỗi mục ghi **mềm** = quy tắc trong baseline, **hook** = đề xuất hook, người dùng chọn):
 
@@ -59,7 +67,7 @@ Của người viết thiết kế (người dùng kiểm khi đọc; mỗi mụ
 - **D5. Xoay phiên theo ngưỡng** (mềm). Ngưỡng mềm ~40% cửa sổ: xong gói hiện tại rồi bàn giao; ngưỡng cứng ~60%: bàn giao ngay. [Inference] Hai ngưỡng đến từ phiên gốc, chưa kiểm thực nghiệm; người dùng chỉnh được. Đo bằng `/usage` hoặc statusline `context_window.used_percentage`, nên chỉ có người hoặc statusline đọc được, hook không đọc được (xem D8).
 - **D6. Root theo "kỷ nguyên"** (mềm). Một root mỗi phase (hoặc mỗi ngày làm việc), không để một root sống nhiều ngày. Root mới đọc `handoff.md` và run-log của kỷ nguyên trước.
 - **D7. Chính sách nén** (mềm + quyết định của người dùng). Chủ động `/compact <trọng tâm>` ở chỗ nghỉ tự nhiên khi cache còn ấm (dưới 1 giờ); thêm mục "Compact instructions" cho vai root vào CLAUDE.md của project điều phối. Hạ `autoCompactWindow` (vd 400–500K) so với giữ ~967K: **được** là trần mỗi request thấp hơn, tránh các lượt 700K+; **mất** là nén nhiều lần hơn, mỗi lần nén là một request lớn và mất chi tiết. Khuyến nghị: không hạ chung; xoay phiên bằng D4–D6 là đường chính, hạ cửa sổ chỉ như lưới an toàn nếu người dùng muốn. Đây là cấu hình người dùng (settings/env), aip không ghi thay (giống D6 của ADR-0002).
-- **D8. Hook — người dùng chọn** (không bật mặc định trong design này):
+- **D8. Hook — bật mặc định, tắt bằng `handoffInject`/`resumeWarn`:**
   - **H-A (đề xuất):** hook `SessionStart` đọc `handoff.md` của request đang chạy và chèn vào context khi `source` là `startup`, `clear` hoặc `compact` (giới hạn 10.000 ký tự). Cần `--plugin core` cài dạng plugin.
   - **H-B (đề xuất):** hook `SessionStart` khi `source` là `resume` và `prompt_cache_likely_expired` là true thì nhắc "phiên nguội, đọc lại toàn bộ context không cache (~`estimated_cache_write_usd` USD); cân nhắc mở phiên mới từ `handoff.md`". Dùng dữ liệu có sẵn trong input hook (v2.1.251 trở lên).
   - **H-C (không đề xuất):** hook `Stop` ước lượng dung lượng từ `transcript_path` để nhắc bàn giao. Lý do: chưa có trường dung lượng, transcript ghi trễ, mục assistant lưu trùng làm số đo lệch gần 2×; dễ báo sai.
@@ -81,7 +89,7 @@ Của người viết thiết kế (người dùng kiểm khi đọc; mỗi mụ
 - [ ] **AC3.1** — Given người dùng chọn hook H-A, When một phiên khởi động (`startup`, `clear` hoặc `compact`) trong project có `handoff.md` của request đang chạy, Then hook in ra tối đa 10.000 ký tự nội dung `handoff.md` qua `additionalContext`; không có file thì không in gì; lỗi bất kỳ thì exit 0 không chặn (fail-open như các hook hiện có).
 - [ ] **AC3.2** — Given người dùng chọn hook H-B, When `SessionStart` có `source: "resume"` và `prompt_cache_likely_expired: true`, Then hook in một dòng cảnh báo có `estimated_cache_write_usd`; khi `prompt_cache_likely_expired` là false hoặc thiếu trường thì không in gì.
 - [ ] **AC4.1** — Given baseline và template run-log, Then có quy tắc ghi `used_percentage` (hoặc `/usage`) của từng phiên vào run-log ở mỗi cổng phase.
-- [ ] **AC4.2** — Given công cụ đo transcript (nếu người dùng chọn làm), When chạy trên transcript có mục assistant lưu trùng, Then số token chỉ tính một lần cho mỗi id và báo cáo thành phần (nhắc nhở hệ thống, kết quả công cụ, lời gọi công cụ, lời của root) khớp tổng.
+- [ ] **AC4.2** — Given công cụ đo transcript (nếu người dùng chọn làm), When chạy trên transcript có entry assistant dùng chung `message.id`, Then mọi block đều được tính (không loại trùng theo `message.id`); `tool_result` trùng `tool_use_id` chỉ tính một lần; dung lượng mỗi lượt lấy từ `usage`; báo cáo tách nhóm `attachment` khỏi `tool_result` và tổng các nhóm khớp tổng nội dung.
 - [ ] **AC5.1** — Given README EN/VI, Then có đoạn nói về `autoCompactWindow` / `CLAUDE_CODE_AUTO_COMPACT_WINDOW` và đánh đổi (D7), nêu rõ aip không ghi settings của người dùng.
 - [ ] **AC6.1** — `npm test` xanh khi hiện thực; version `core` được bump; `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
 
