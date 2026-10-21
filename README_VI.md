@@ -251,7 +251,7 @@ Mọi lệnh chạy `node cli/index.mjs`.
 ```bash
 aip                 # menu wizard: init | install | uninstall | update | build
 aip --all           # wizard liệt kê MỌI skill kể cả draft + mọi workflow (cài từ source)
-aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md import @AGENTS.md; --full thêm khung templates/init; bỏ qua file đã có
+aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md import @AGENTS.md; --full thêm khung templates/init và .claude/settings.json (chính sách quyền, chỉ khi chưa có); bỏ qua file đã có
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
 aip uninstall [--provider ...] [--plugin ...] [--skill <a,b>] [-g] [--yes]   # alias: remove
 aip build     --provider all|<p>...   # cờ alias: --target
@@ -313,7 +313,7 @@ Người dùng thêm marketplace bằng `claude plugin marketplace add <owner>/<
 
 ## Hooks
 
-Plugin `core` mang bốn hook cho Claude Code (`core/hooks/`; Node không phụ thuộc thư viện): hai cổng `PreToolUse` (H1–H5 bên dưới), cổng kiểm chứng `Stop`/`SubagentStop` (`gate-stop`, bên dưới) và hook `SessionStart` (`session-start`, bên dưới). **Chỉ có ở cài đặt plugin-mode** — skills-mode (`.claude/skills/` phẳng) không cài hook nào vì `${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài. Cài đặt managed `allowManagedHooksOnly` sẽ tắt hook của plugin nào không được quản trị viên force-enable.
+Plugin `core` mang năm hook cho Claude Code (`core/hooks/`; Node không phụ thuộc thư viện): ba cổng `PreToolUse` (`guard-bash` và `guard-files`: H1–H5 bên dưới; `guard-mcp`, bên dưới), cổng kiểm chứng `Stop`/`SubagentStop` (`gate-stop`, bên dưới) và hook `SessionStart` (`session-start`, bên dưới). **Chỉ có ở cài đặt plugin-mode** — skills-mode (`.claude/skills/` phẳng) không cài hook nào vì `${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài. Cài đặt managed `allowManagedHooksOnly` sẽ tắt hook của plugin nào không được quản trị viên force-enable.
 
 | Quy tắc | Tool | Quyết định | Phạm vi |
 | --- | --- | --- | --- |
@@ -327,6 +327,10 @@ Plugin `core` mang bốn hook cho Claude Code (`core/hooks/`; Node không phụ 
 Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường) thoát 0 không quyết định. Khi `guard-bash` không phân tích chắc chắn được lệnh thì nghiêng về `ask` (`guard-files` không có hành vi này). Không có H4: agent ops không có tool Bash.
 
 **Công tắc theo project `allowEnvFiles`.** Đặt `{"allowEnvFiles": true}` trong `<git-root>/.claude/aip-gate.json` thì H3 không hỏi/chặn file env (`.env*`, `*.env`, `.envrc`) trong project đó nữa; file khoá và `credentials*` vẫn bị chặn, kể cả khi lệnh nhắc tới chúng cùng file env, còn H1/H2/H5 giữ nguyên. File được đọc ở gốc worktree trước, rồi tới gốc repo chính, nên worktree tạo trước khi file được commit vẫn theo project. `guard-files` đọc công tắc theo repo chứa file đích (không theo cwd của phiên); `guard-bash` đọc theo cwd của phiên. Không có file, JSON hỏng hoặc giá trị khác `true` thì giữ mặc định. Quy tắc file bí mật trong baseline vẫn áp cho agent; công tắc chỉ bỏ lời hỏi của hook.
+
+**Cổng MCP (`guard-mcp`).** Hook `PreToolUse` với matcher `mcp__.*`; đọc hai mảng chuỗi trong `<git-root>/.claude/aip-gate.json`: `mcpAllow` và `mcpDeny`. Tên server là `<server>` hoặc `plugin:<plugin>:<server>`; tool `mcp__<server>__<tool>` ánh xạ về dạng thứ nhất, `mcp__plugin_<plugin>_<server>__<tool>` về dạng thứ hai. Server nằm trong `mcpDeny` bị chặn; khi `mcpAllow` không rỗng thì server ngoài danh sách bị chặn; `mcpDeny` thắng `mcpAllow`. Phần tử được cắt khoảng trắng hai đầu và so khớp phân biệt hoa thường; danh sách không phải mảng chuỗi bị bỏ qua (coi như không khai báo), mảng mà mọi phần tử đều sai hoặc rỗng cũng coi như không khai báo. Không có khoá, sai kiểu, hoặc lỗi nội bộ thì không đổi gì (fail-open, exit 0, không in gì). Danh sách được đọc từ repository của cwd phiên làm việc. Ví dụ: `{"mcpAllow": ["github", "plugin:acme:docs"], "mcpDeny": ["shell"]}`. [Unverified] `deny` của hook giữ nguyên ở mọi chế độ quyền và dạng tên tool MCP của plugin lấy từ tổng hợp thứ cấp của tài liệu Claude Code; đối chiếu [hooks](https://code.claude.com/docs/en/hooks) trước khi dựa vào. Đây là cổng theo tên và còn residual risk: server trong `.mcp.json` của project có thể dùng lại một tên được phép, và `aip-gate.json` là nội dung repository mà một pull request có thể sửa; trong CI nên dùng `--bare` hoặc `--strict-mcp-config`. Tên plugin không được chứa `_` (bộ phân tích tách tại `_` đầu tiên sau `plugin_`; server như vậy bị chặn theo `mcpAllow`), và server thường tên đúng `plugin_acme_docs` bị phân loại thành `plugin:acme:docs`. [Unverified] Tool của connector xuất hiện dạng `mcp__claude_ai_<server>__<tool>` nên tên cổng sẽ là `claude_ai_<server>`; xác nhận trong tài liệu [hooks](https://code.claude.com/docs/en/hooks).
+
+**Chính sách quyền.** `core/permissions/policy.json` giữ các nhóm quy tắc chuẩn: `secrets` (`deny`) và `git_push`, `network`, `production_deploy` (`ask`). `aip init --full` ghi `.claude/settings.json` với `permissions.deny` và `permissions.ask` dựng từ chính sách **chỉ khi file chưa tồn tại**; không bao giờ sửa file có sẵn (file có sẵn được giữ nguyên và `aip init` in cảnh báo nêu `core/permissions/policy.json` để bạn so sánh và tự thêm quy tắc) và không ghi ở scope global. Chỉ dành cho Claude: Cursor, Codex và Antigravity chưa nhận file quyền vì định dạng quyền và MCP của chúng chưa xác minh hoặc bị báo là không đáng tin (ví dụ quy tắc `Mcp(...)` của Cursor bị báo là không khớp, danh sách allow của Antigravity bị báo là không được tôn trọng). Codex vẫn nhận `sandbox_mode` theo `mode` của agent. Các quy tắc `secrets` là `Read(.env)`, `Read(.env.local)`, `Read(.env.production)` và `Read(.env.development)`; theo [tài liệu permissions](https://code.claude.com/docs/en/permissions), tên file trần theo ngữ nghĩa gitignore và khớp ở mọi độ sâu nên file lồng như `apps/api/.env` cũng được chặn. Biến thể khác (ví dụ `.env.staging`, `.envrc`) không được phủ, còn `.env.example`, `.env.sample`, `.env.template` vẫn đọc được như ở hook H3. Quy tắc Read chỉ best-effort với công cụ file có sẵn, không áp cho `cat` trong Bash. Khi `.claude/aip-gate.json` có `allowEnvFiles: true` tại thời điểm init (đúng giá trị `true`; chuỗi, `false`, thiếu file hoặc JSON hỏng đều không tính), `aip init --full` không sinh các quy tắc `secrets` (`.env`). Cờ chỉ được kiểm tra một lần lúc sinh file; bật/tắt sau đó thì phải tự sửa `.claude/settings.json`, vì quy tắc `secrets` chặn đọc `.env` độc lập với hook. Các quy tắc `ask` là lớp thứ hai sau `guard-bash`: [Inference] `Bash(git push *)` không khớp `git -C . push …`, H1 vẫn bắt lệnh này.
 
 **Cổng Stop (`gate-stop`).** Đăng ký cho `Stop` và `SubagentStop`. Hook chặn **một lần** khi lượt hiện tại đã sửa file code (Edit/Write/MultiEdit/NotebookEdit; sửa thuần tài liệu như `.md`/`.mdx`/`.txt`/`.rst`/`.adoc` không tính) mà chưa chạy lệnh test/lint/typecheck/build nào sau lần sửa cuối. Hook không phán kết quả xanh hay đỏ, chỉ kiểm có chạy hay chưa; khi có `stop_hook_active` thì cho dừng, nên agent có thể dừng sau khi giải thích vì sao bỏ qua bước kiểm. Tắt bằng `AIP_STOP_GATE=off` hoặc `<git-root>/.claude/aip-gate.json` `{"stopGate": false}`. Chỉ lệnh Bash/PowerShell được tính là lệnh kiểm. Thêm mẫu lệnh qua `testCommands` (regex); mỗi mẫu được so với từng đoạn lệnh (tách theo `&&`, `||`, `;`, `|` và xuống dòng) sau khi bỏ các tiền tố đầu `VAR=x`, `time`, `env`, `timeout <n>`; với `SubagentStop` thì xét toàn bộ transcript của subagent, không chỉ lượt cuối; `exemptAgents` thay thế mặc định `["data-migration-writer"]` và được so với `agent_type` của `SubagentStop` sau khi bỏ tiền tố `<plugin>:`. Hook fail-open như các script khác. [Unverified] Hook đọc transcript JSONL nội bộ của Claude Code, không phải hợp đồng được tài liệu hoá và có thể đổi.
 
@@ -356,7 +360,22 @@ Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường
 - cờ `--autocompact`;
 - biến môi trường `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, có ưu tiên cao nhất (hậu tố `k`/`M` được nhận từ Claude Code v2.1.304 [Unverified]).
 
-**aip không ghi settings của bạn** (aip does not write your settings). Đây là cấu hình của bạn; `aip` không đặt và không sửa nó. [Unverified] Lưu ý: khi đặt `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `used_percentage` của statusline vẫn đo trên cửa sổ đầy, nên không còn chỉ đúng lúc nén sắp chạy.
+**aip không ghi settings của bạn** (aip does not write your settings). Đây là cấu hình của bạn (giá trị cài đặt compaction, không phải file quyền `.claude/settings.json` mà `aip init --full` tạo khi chưa có); `aip` không đặt và không sửa nó. [Unverified] Lưu ý: khi đặt `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `used_percentage` của statusline vẫn đo trên cửa sổ đầy, nên không còn chỉ đúng lúc nén sắp chạy.
+
+**Agent trong CI.** Công thức tối thiểu cho `claude -p` (xem mục baseline `Agents in CI`); các khẳng định về Claude Code dưới đây là [Unverified], tóm tắt từ [headless](https://code.claude.com/docs/en/headless) và [permissions](https://code.claude.com/docs/en/permissions):
+
+```bash
+claude -p "Review the diff and report findings" \
+  --permission-mode dontAsk \
+  --allowedTools "Read" "Grep" "Bash(git diff *)" \
+  --max-turns 20 --max-budget-usd 2 \
+  --bare
+```
+
+- `--permission-mode dontAsk` biến mọi hành động không được phép thành từ chối thay vì hộp hỏi không ai trả lời; liệt kê tường minh điều được phép bằng `--allowedTools`; giới hạn lượt chạy bằng `--max-turns` và `--max-budget-usd`.
+- Dùng `--bare` khi không cần plugin và hook. Không có `--bare`, `-p` nạp hook và `.mcp.json` của project mà không hỏi tin cậy, nên một pull request không đáng tin có thể mang theo hook và MCP server riêng.
+- Ghim action bên thứ ba theo commit SHA đầy đủ, cấp token chỉ đọc cho job, và chạy mọi workflow có thể push trong môi trường được bảo vệ, cần người duyệt (required reviewers).
+- aip không thêm file workflow vào `templates/init`.
 
 **Giới hạn / residual risk.** Hook là cổng regex, không phải sandbox.
 

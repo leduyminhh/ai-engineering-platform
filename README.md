@@ -257,7 +257,7 @@ Every command runs `node cli/index.mjs`.
 ```bash
 aip                 # menu wizard: init | install | uninstall | update | build
 aip --all           # wizard listing EVERY skill incl. drafts + all workflows (source installs)
-aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md importing @AGENTS.md; --full adds templates/init; skips existing files
+aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md importing @AGENTS.md; --full adds templates/init and .claude/settings.json (permission policy, only if missing); skips existing files
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
 aip uninstall [--provider ...] [--plugin ...] [--skill <a,b>] [-g] [--yes]   # alias: remove
 aip build     --provider all|<p>...   # alias flag: --target
@@ -320,7 +320,7 @@ Users then add it with `claude plugin marketplace add <owner>/<repo>@dist`. [Unv
 
 ## Hooks
 
-The `core` plugin ships four Claude Code hooks (`core/hooks/`; zero-dependency Node): two `PreToolUse` guards (H1–H5 below), a `Stop`/`SubagentStop` verification gate (`gate-stop`, below) and a `SessionStart` hook (`session-start`, below). **They exist only in plugin-mode installs** — skills-mode (flat `.claude/skills/`) installs none, because `${CLAUDE_PLUGIN_ROOT}` only exists for installed plugins. A managed `allowManagedHooksOnly` setting disables plugin hooks that are not force-enabled by the administrator.
+The `core` plugin ships five Claude Code hooks (`core/hooks/`; zero-dependency Node): three `PreToolUse` guards (`guard-bash` and `guard-files`: H1–H5 below; `guard-mcp`, below), a `Stop`/`SubagentStop` verification gate (`gate-stop`, below) and a `SessionStart` hook (`session-start`, below). **They exist only in plugin-mode installs** — skills-mode (flat `.claude/skills/`) installs none, because `${CLAUDE_PLUGIN_ROOT}` only exists for installed plugins. A managed `allowManagedHooksOnly` setting disables plugin hooks that are not force-enabled by the administrator.
 
 | Rule | Tool | Decision | Covers |
 | --- | --- | --- | --- |
@@ -334,6 +334,10 @@ The `core` plugin ships four Claude Code hooks (`core/hooks/`; zero-dependency N
 The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When `guard-bash` cannot parse a command reliably it falls toward `ask` (`guard-files` does not). There is no H4: the ops agents have no Bash tool.
 
 **Per-project switch `allowEnvFiles`.** With `{"allowEnvFiles": true}` in `<git-root>/.claude/aip-gate.json`, H3 no longer asks or denies for env files (`.env*`, `*.env`, `.envrc`) in that project; key files and `credentials*` stay blocked, also when a command names them next to an env file, and H1/H2/H5 are unchanged. The file is read from the worktree root first, then from the main repository root, so a worktree created before the file was committed follows the project. `guard-files` reads the switch from the repository that holds the target file (not the session cwd); `guard-bash` reads it from the session cwd. Missing file, invalid JSON or any value other than `true` keeps the default. The baseline rule about secret files still applies to the agent; the switch only removes the hook prompt.
+
+**MCP gate (`guard-mcp`).** A `PreToolUse` hook with matcher `mcp__.*`; it reads two arrays of strings from `<git-root>/.claude/aip-gate.json`: `mcpAllow` and `mcpDeny`. A server is named `<server>` or `plugin:<plugin>:<server>`; the tool `mcp__<server>__<tool>` maps to the first form and `mcp__plugin_<plugin>_<server>__<tool>` to the second. A server listed in `mcpDeny` is denied; when `mcpAllow` is non-empty, a server outside it is denied; `mcpDeny` wins over `mcpAllow`. Entries are trimmed and compared case-sensitively; a list that is not an array of strings is ignored (treated as absent), and an array whose entries are all invalid or empty counts as absent. Without the keys, with a wrong type, or on any internal error nothing changes (fail-open, exit 0, no output). The list is read from the repository of the session cwd. Example: `{"mcpAllow": ["github", "plugin:acme:docs"], "mcpDeny": ["shell"]}`. [Unverified] A hook `deny` holds in every permission mode and the plugin MCP tool name form comes from a secondary summary of the Claude Code docs; check [hooks](https://code.claude.com/docs/en/hooks) before relying on it. This is a name-based gate with residual risk: a project `.mcp.json` server can reuse an allowed name, and `aip-gate.json` is repository content that a pull request can edit; for CI prefer `--bare` or `--strict-mcp-config`. A plugin name must not contain `_` (the parser splits at the first `_` after `plugin_`; such a server fails closed under `mcpAllow`), and a plain server literally named `plugin_acme_docs` is classified as `plugin:acme:docs`. [Unverified] Connector tools appear as `mcp__claude_ai_<server>__<tool>`, so the gate name would be `claude_ai_<server>`; confirm in the [hooks](https://code.claude.com/docs/en/hooks) docs.
+
+**Permission policy.** `core/permissions/policy.json` holds the standard rule groups: `secrets` (`deny`) and `git_push`, `network`, `production_deploy` (`ask`). `aip init --full` writes `.claude/settings.json` with `permissions.deny` and `permissions.ask` built from it **only when the file does not exist**; it never edits an existing one (the existing file is left untouched and `aip init` prints a warning that names `core/permissions/policy.json` so you can compare and add rules yourself), and nothing is written at global scope. It is Claude-only: Cursor, Codex and Antigravity get no permission file yet because their permission and MCP formats are unverified or reported unreliable (for example Cursor `Mcp(...)` rules reported as not matching, an Antigravity allow list reported as ignored). Codex keeps getting `sandbox_mode` from the agent `mode`. The `secrets` rules are `Read(.env)`, `Read(.env.local)`, `Read(.env.production)` and `Read(.env.development)`; per the [permissions docs](https://code.claude.com/docs/en/permissions) a bare filename follows gitignore semantics and matches at any depth, so nested files such as `apps/api/.env` are covered. Other variants (for example `.env.staging`, `.envrc`) are not covered, and `.env.example`, `.env.sample` and `.env.template` stay readable, as in hook H3. Read rules are best-effort for built-in file tools, not for `cat` in Bash. When `.claude/aip-gate.json` has `allowEnvFiles: true` at init time (strictly `true`; a string, `false`, a missing file or broken JSON do not count), `aip init --full` leaves the `secrets` (`.env`) rules out of the generated file. The flag is checked only once, at generation time; if you flip it later, edit `.claude/settings.json` by hand, because the `secrets` rules deny reading `.env` independently of the hook. The `ask` rules are a second layer behind `guard-bash`: [Inference] `Bash(git push *)` does not match `git -C . push …`, which H1 still catches.
 
 **Stop gate (`gate-stop`).** Registered for `Stop` and `SubagentStop`. It blocks **once** when the current turn edited code files (Edit/Write/MultiEdit/NotebookEdit; docs-only edits such as `.md`/`.mdx`/`.txt`/`.rst`/`.adoc` do not count) but ran no test/lint/typecheck/build command after the last edit. It does not judge whether the result is green or red, only whether a check ran; when `stop_hook_active` is set it lets the agent stop, so the agent can stop after explaining why it skipped the check. Disable it with `AIP_STOP_GATE=off` or `<git-root>/.claude/aip-gate.json` `{"stopGate": false}`. Only Bash/PowerShell commands count as a check. Extra command patterns go in `testCommands` (regexes); each is matched per command segment (split on `&&`, `||`, `;`, `|` and newlines) after leading `VAR=x`, `time`, `env` and `timeout <n>` are stripped; for `SubagentStop` the whole subagent transcript is checked, not just the last turn; `exemptAgents` replaces the default `["data-migration-writer"]` and is matched against the `SubagentStop` `agent_type` with any `<plugin>:` prefix stripped. It fails open like the other scripts. [Unverified] It reads Claude Code's internal transcript JSONL, which is not a documented contract and may change.
 
@@ -363,7 +367,22 @@ The scripts fail open: an internal error (empty stdin, broken JSON, missing fiel
 - the `--autocompact` flag;
 - the `CLAUDE_CODE_AUTO_COMPACT_WINDOW` environment variable, which has the highest priority (`k`/`M` suffixes are accepted from Claude Code v2.1.304 [Unverified]).
 
-**aip does not write your settings.** This is your configuration; `aip` neither sets nor changes it. [Unverified] Caveat: when `CLAUDE_CODE_AUTO_COMPACT_WINDOW` is set, the statusline `used_percentage` is still measured against the full window, so it no longer shows when compaction is about to run.
+**aip does not write your settings.** This is your configuration (the compaction setting values, not the `.claude/settings.json` permissions file that `aip init --full` creates when missing); `aip` neither sets nor changes it. [Unverified] Caveat: when `CLAUDE_CODE_AUTO_COMPACT_WINDOW` is set, the statusline `used_percentage` is still measured against the full window, so it no longer shows when compaction is about to run.
+
+**Agents in CI.** A minimal recipe for `claude -p` (see the baseline section `Agents in CI`); facts about Claude Code below are [Unverified] summaries of [headless](https://code.claude.com/docs/en/headless) and [permissions](https://code.claude.com/docs/en/permissions):
+
+```bash
+claude -p "Review the diff and report findings" \
+  --permission-mode dontAsk \
+  --allowedTools "Read" "Grep" "Bash(git diff *)" \
+  --max-turns 20 --max-budget-usd 2 \
+  --bare
+```
+
+- `--permission-mode dontAsk` turns every non-allowed action into a denial instead of a prompt nobody can answer; list what is allowed explicitly with `--allowedTools`; cap the run with `--max-turns` and `--max-budget-usd`.
+- Use `--bare` when plugins and hooks are not needed. Without it, `-p` loads the project's hooks and `.mcp.json` without a trust prompt, so an untrusted pull request can bring its own hooks and MCP servers.
+- Pin third-party actions to a full commit SHA, give the job read-only tokens, and run any workflow that can push in a protected environment with required reviewers.
+- aip adds no workflow file to `templates/init`.
 
 **Limits / residual risk.** The hooks are a regex gate, not a sandbox.
 

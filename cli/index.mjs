@@ -189,6 +189,7 @@ LỆNH
   init                      tạo file chỉ dẫn agent ở thư mục hiện tại: AGENTS.md (baseline) + CLAUDE.md
                             (import @AGENTS.md); bỏ qua file đã có, không cài skill. --full: thêm khung
                             templates/init (project-knowledge/, docs/, src/, tests/...)
+                            và .claude/settings.json (chính sách quyền, chỉ khi chưa có)
   install                   cài workflow (không cờ → wizard step-by-step; có --provider/--plugin → non-interactive)
                             (symlink tới build/, tự cập nhật khi rebuild; tự copy nếu
                             môi trường/npm không hỗ trợ link)
@@ -218,7 +219,7 @@ TÙY CHỌN
                             (đăng ký marketplace + namespaced <id>:<skill>) thay vì copy skills phẳng
                             vào .claude/skills/. Cần có CLI "claude" trên PATH. provider khác giữ skills.
   --target <tool|all>       (chỉ cho 'build') adapter cần build
-  --full                    (chỉ cho 'init') tạo cả khung templates/init, không chỉ AGENTS.md + CLAUDE.md
+  --full                    (chỉ cho 'init') tạo cả khung templates/init và .claude/settings.json, không chỉ AGENTS.md + CLAUDE.md
   -g, --global              scope = toàn máy (~); KHÔNG cờ này = project (thư mục hiện tại)
   -h, --help                hiện trợ giúp
 

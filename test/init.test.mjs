@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { init } from "../cli/lib/init.mjs";
 import { initDocFiles } from "../cli/lib/templates.mjs";
 import { BEGIN, importsAgentsMd } from "../cli/lib/managed-block.mjs";
+import { loadPolicy } from "../cli/lib/permissions.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dirs = [];
@@ -33,7 +34,7 @@ test("init mặc định chỉ tạo AGENTS.md có khối baseline + CLAUDE.md i
 test("init --full tạo cả khung templates/init + AGENTS.md", () => {
   const root = tmp();
   const r = init({ root, full: true });
-  const expected = [...listFiles(path.join(REPO, "templates", "init")), ...initDocFiles().map((f) => f.rel), "AGENTS.md"].sort();
+  const expected = [...listFiles(path.join(REPO, "templates", "init")), ...initDocFiles().map((f) => f.rel), ".claude/settings.json", "AGENTS.md"].sort();
   assert.deepEqual([...r.created].sort(), expected);
 });
 
@@ -97,6 +98,59 @@ test("init không ghi đè file đã có, cảnh báo khi CLAUDE.md có sẵn ch
     assert.deepEqual(r.skipped, ["CLAUDE.md"]);
     assert.equal(r.warnings.length, warns, JSON.stringify(claude));
   }
+});
+
+test("AC1.2: init --full sinh .claude/settings.json: deny = nhóm secrets, ask = ba nhóm còn lại", () => {
+  const root = tmp();
+  init({ root, full: true });
+  const { groups } = loadPolicy();
+  const { permissions } = JSON.parse(read(root, ".claude/settings.json"));
+  assert.deepEqual(permissions.deny, groups.secrets.rules);
+  assert.deepEqual(permissions.ask, [...groups.git_push.rules, ...groups.network.rules, ...groups.production_deploy.rules]);
+});
+
+const GATE_CASES = [
+  ['true', '{"allowEnvFiles": true}', true],
+  ['true có BOM', '﻿{"allowEnvFiles": true}', true],
+  ['chuỗi "true"', '{"allowEnvFiles": "true"}', false],
+  ['false', '{"allowEnvFiles": false}', false],
+  ['số 1', '{"allowEnvFiles": 1}', false],
+  ['JSON hỏng', '{allowEnvFiles: ', false],
+  ['thiếu file', null, false],
+];
+for (const [name, content, omit] of GATE_CASES) {
+  test(`AC1.4: init --full với aip-gate.json allowEnvFiles ${name} → ${omit ? "bỏ" : "giữ"} quy tắc .env`, () => {
+    const root = tmp();
+    const gate = path.join(root, ".claude", "aip-gate.json");
+    if (content != null) { fs.mkdirSync(path.dirname(gate), { recursive: true }); fs.writeFileSync(gate, content); }
+    init({ root, full: true });
+    const { groups } = loadPolicy();
+    const { permissions } = JSON.parse(read(root, ".claude/settings.json"));
+    assert.deepEqual(permissions.deny, omit ? [] : groups.secrets.rules);
+    assert.deepEqual(permissions.ask, [...groups.git_push.rules, ...groups.network.rules, ...groups.production_deploy.rules]);
+    if (content != null) assert.equal(fs.readFileSync(gate, "utf8"), content);
+    else assert.ok(!fs.existsSync(gate));
+  });
+}
+
+test("AC1.3: init --full không đọc/sửa .claude/settings.json đã có (JSON hợp lệ hoặc chuỗi rác)", () => {
+  for (const old of ['{"permissions":{"allow":["Bash(ls *)"]}}\n', "không phải json {{{"]) {
+    const root = tmp();
+    fs.mkdirSync(path.join(root, ".claude"), { recursive: true });
+    fs.writeFileSync(path.join(root, ".claude/settings.json"), old);
+    const r = init({ root, full: true });
+    assert.equal(read(root, ".claude/settings.json"), old);
+    assert.ok(r.skipped.includes(".claude/settings.json"));
+    assert.ok(!r.created.includes(".claude/settings.json"));
+    assert.ok(r.warnings.some((w) => w.includes(".claude/settings.json") && w.includes("core/permissions/policy.json")));
+  }
+});
+
+test("AC1.3: init --full tạo mới .claude/settings.json thì không cảnh báo chính sách", () => {
+  const root = tmp();
+  const r = init({ root, full: true });
+  assert.ok(r.created.includes(".claude/settings.json"));
+  assert.ok(!r.warnings.some((w) => w.includes("policy.json")));
 });
 
 test("init rồi install claude core: baseline nằm ở AGENTS.md đúng 1 lần, không chép vào CLAUDE.md", async () => {
