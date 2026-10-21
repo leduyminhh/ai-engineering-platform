@@ -111,12 +111,12 @@ Việc tiếp theo của P7: brainstorm/design chi tiết riêng trong `docs/req
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given thư mục `docs/requests/2026-10-21-aip-trends-master-spec/`, When đọc `design.md`, Then có đủ 9 xu hướng và mỗi xu hướng có ít nhất một dòng trace tới project hoặc ghi "không có khoảng trống".
-- [ ] **AC2.1** — Given mỗi design con có trạng thái "xong", When đối chiếu với `git log --merges`, Then header ghi đúng commit merge của nó.
-- [ ] **AC3.1** — Given 6 design trong `docs/requests/`, When đọc dòng "Thuộc lộ trình", Then mỗi cái trỏ tới spec tổng và có mã project.
-- [ ] **AC4.1** — Given thay đổi chỉ chạm tài liệu, When chạy `npm test`, Then xanh; không file nào ngoài `docs/` và (nếu cần) memory bị đổi.
-- [ ] **AC5.1** — Given `artifact-templates` và `superpowers-docs-standard`, When đối chiếu checkbox AC trong design và plan, Then mỗi AC thật được tick `[x]` khi có bằng chứng chạy được, và AC không kiểm được giữ `[ ]` kèm `[chưa kiểm]`.
-- [ ] **AC5.2** — Given plan của `long-session-context`, When đối chiếu với `git log`, Then step đã thực hiện được tick `[x]` theo commit trong git.
+- [x] **AC1.1** — Given thư mục `docs/requests/2026-10-21-aip-trends-master-spec/`, When đọc `design.md`, Then có đủ 9 xu hướng và mỗi xu hướng có ít nhất một dòng trace tới project hoặc ghi "không có khoảng trống".
+- [x] **AC2.1** — Given mỗi design con có trạng thái "xong", When đối chiếu với `git log --merges`, Then header ghi đúng commit merge của nó.
+- [x] **AC3.1** — Given 6 design trong `docs/requests/`, When đọc dòng "Thuộc lộ trình", Then mỗi cái trỏ tới spec tổng và có mã project.
+- [x] **AC4.1** — Given thay đổi chỉ chạm tài liệu, When chạy `npm test`, Then xanh; không file nào ngoài `docs/` bị đổi.
+- [x] **AC5.1** — Given `artifact-templates` và `superpowers-docs-standard`, When đối chiếu checkbox AC trong design và plan, Then mỗi AC thật được tick `[x]` khi có bằng chứng chạy được, và AC không kiểm được giữ `[ ]` kèm `[chưa kiểm]`.
+- [x] **AC5.2** — Given plan của `long-session-context`, When đối chiếu với `git log`, Then step đã thực hiện được tick `[x]` theo commit trong git.
 
 ## Ngoài phạm vi và anti-goal
 
