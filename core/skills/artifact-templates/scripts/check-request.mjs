@@ -79,6 +79,7 @@ export function parseImpact(lines) {
   lines.forEach((l, i) => {
     const h = l.match(/^(#{1,6})\s+(.*)$/);
     if (h) {
+      if (h[1].length > 2) return;
       inside = h[1].length === 2 && h[2].toLowerCase().includes('ảnh hưởng spec');
       if (inside && !res.found) { res.found = true; res.line = i + 1; }
       return;
@@ -94,7 +95,36 @@ export function parseImpact(lines) {
   return res;
 }
 
-export function checkRequest(texts, { readTest, override, readSpec } = {}) {
+const CAP_RE = /^[a-z0-9][a-z0-9-]*$/;
+const REQ_ID_RE = /^[a-z0-9][a-z0-9-]*\/R\d+$/;
+
+// Đọc spec sống: yêu cầu nằm trong H2 "Yêu cầu"; link lấy toàn file vì bảng Lịch sử cũng trỏ về request. Dòng lạ (Cập nhật:, ghi chú) bị bỏ qua.
+export function parseSpec(text, folder) {
+  const lines = linesOf(text);
+  const reqs = new Map();
+  const problems = [];
+  const links = [];
+  let inReq = false;
+  lines.forEach((l, i) => {
+    const line = i + 1;
+    for (const m of l.matchAll(/\]\(([^)\s]+)\)/g)) {
+      if (!/^#|^[a-z][a-z0-9+.-]*:/i.test(m[1])) links.push({ line, href: m[1] });
+    }
+    const h = l.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { inReq = h[1].length === 2 && h[2].trim().toLowerCase() === 'yêu cầu'; return; }
+    if (!inReq) return;
+    const m = l.match(/^\s*[-*]\s+(~~)?\*\*([^*]+)\*\*/);
+    if (!m) return;
+    const id = m[2].trim();
+    if (!REQ_ID_RE.test(id)) { problems.push({ line, msg: `ID "${id}" sai định dạng, cần <năng-lực>/R<n>` }); return; }
+    if (id.split('/')[0] !== folder) problems.push({ line, msg: `ID "${id}" có tiền tố khác tên thư mục "${folder}"` });
+    if (reqs.has(id)) { problems.push({ line, msg: `ID "${id}" trùng với dòng ${reqs.get(id).line}` }); return; }
+    reqs.set(id, { line, removed: !!m[1] && l.includes('đã bỏ bởi') });
+  });
+  return { reqs, problems, links };
+}
+
+export function checkRequest(texts, { readTest, override, readSpec, linkExists } = {}) {
   const warnings = [];
   const warn = (file, line, code, msg) => warnings.push({ file, line, code, msg });
   const lines = {};
@@ -172,6 +202,32 @@ export function checkRequest(texts, { readTest, override, readSpec } = {}) {
     const imp = parseImpact(lines['design.md']);
     if (!imp.found) warn('design.md', 1, 'W10', 'design.md thiếu mục "## Ảnh hưởng spec" (liệt kê năng lực bị ảnh hưởng hoặc "Không ảnh hưởng: <lý do>")');
     else if (!imp.entries.length && !imp.none?.reason) warn('design.md', imp.line, 'W10', 'Mục "Ảnh hưởng spec" cần ít nhất một dòng "- <năng-lực>: thêm|đổi|bỏ R<n>" hoặc "Không ảnh hưởng: <lý do>" với lý do không rỗng');
+    // Mỗi spec đọc và kiểm W14 một lần dù nhiều mục nhắc tới; tên sai định dạng không bao giờ tới readSpec để không đọc ngoài docs/specs.
+    const cache = new Map();
+    const load = (cap) => {
+      if (cache.has(cap)) return cache.get(cap);
+      const text = readSpec(cap);
+      const spec = typeof text === 'string' ? parseSpec(text, cap) : null;
+      cache.set(cap, spec);
+      if (spec) {
+        const file = `specs/${cap}/spec.md`;
+        for (const p of spec.problems) warn(file, p.line, 'W14', p.msg);
+        if (linkExists) for (const k of spec.links) if (!linkExists(k.href.replace(/[#?].*$/, ''), cap)) warn(file, k.line, 'W14', `Link "${k.href}" không tồn tại`);
+      }
+      return spec;
+    };
+    for (const e of imp.entries) {
+      if (!CAP_RE.test(e.cap)) { warn('design.md', e.line, 'W11', `Tên năng lực "${e.cap}" không hợp lệ, cần khớp ^[a-z0-9][a-z0-9-]*$`); continue; }
+      const spec = load(e.cap);
+      if (!spec) { warn('design.md', e.line, 'W11', `Không có spec cho năng lực "${e.cap}" (docs/specs/${e.cap}/spec.md)`); continue; }
+      for (const it of e.items) {
+        if (it.action === 'thêm') continue;
+        const id = `${e.cap}/R${it.n}`;
+        const r = spec.reqs.get(id);
+        if (!r) warn('design.md', e.line, 'W12', `${it.action} R${it.n}: spec không có ${id}`);
+        else if (it.action === 'bỏ' && !r.removed) warn('design.md', e.line, 'W12', `bỏ R${it.n}: ${id} chưa được gạch ngang kèm "đã bỏ bởi" trong spec`);
+      }
+    }
   }
   return warnings;
 }
@@ -249,7 +305,14 @@ export function main(argv) {
     if (!fs.existsSync(p)) continue;
     try { texts[f] = fs.readFileSync(p, 'utf8'); } catch (e) { console.error(`Không đọc được ${p}: ${e.message}`); return 2; }
   }
-  const warnings = checkRequest(texts, { readTest: readTestFrom(projectRoot(dir)), override, readSpec: () => null });
+  const specsDir = path.resolve(dir, '..', '..', 'specs');
+  const readSpec = (cap) => {
+    const p = path.resolve(specsDir, cap, 'spec.md');
+    if (path.relative(specsDir, p).startsWith('..')) return null;
+    try { return fs.readFileSync(p, 'utf8'); } catch { return null; }
+  };
+  const linkExists = (href, cap) => fs.existsSync(path.resolve(specsDir, cap, href));
+  const warnings = checkRequest(texts, { readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists });
   for (const w of warnings) console.log(`WARN ${w.file}:${w.line} [${w.code}] ${w.msg}`);
   console.log(`${warnings.length} cảnh báo`);
   return strict && warnings.length ? 1 : 0;
