@@ -40,7 +40,7 @@ Số liệu thị phần/khảo sát của từng nguồn không chép vào đâ
 
 ### 2. Trace xu hướng → project → trạng thái
 
-Trạng thái "xong" lấy từ merge commit trong git log và memory; chưa kiểm lại từng AC trong code.
+Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của P1b và P1 đã được kiểm lại ở Task 3 (commit `aa8276e`), các project còn lại chưa kiểm lại AC trong code.
 
 | # | Đã làm | Còn hở |
 |---|---|---|
@@ -56,7 +56,7 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; chưa ki�
 
 ### 3. Chỉ mục project
 
-Đánh số P5a/P5b là **quyết định của tôi** (người dùng chưa duyệt): hai việc này làm sau khi lộ trình ngày 2026-10-20 được đặt, nên gán vào project 5 (chi phí/model) và xu hướng 5.
+Đánh số P5a/P5b là **quyết định của tôi** (người dùng chưa duyệt): hai việc này làm sau khi lộ trình ngày 2026-10-20 được đặt; P5a (theo dõi chi phí) gán vào xu hướng 9, P5b (xử lý phiên dài/context) gán vào xu hướng 5.
 
 | Project | Slug / vị trí | Trạng thái | Merge |
 |---|---|---|---|
@@ -144,6 +144,7 @@ Chỉ tài liệu: AC1.1–AC3.1 và AC5.1–AC5.2 kiểm bằng đọc đối c
 ## Rủi ro và câu hỏi mở
 
 - [Unverified] Cột "Đã làm" dựa vào merge commit và memory; chưa kiểm AC từng project trong code.
+- Bốn dấu tick dựa trên đối chiếu ý định tại thời điểm merge hoặc suy từ plan, không phải lệnh chạy hôm nay: artifact-templates AC1.1 (tại `c337dbc` `references/` có đúng 9 mục; nay thêm handoff và graph JSON); docs-standard AC2.1 (đường dẫn `templates/init/docs/requests/_TEMPLATE/` không tồn tại tại `6913753`, design chuyển sang sinh từ core — bằng chứng nay: `cli/lib/templates.mjs`, `test/init.test.mjs`); docs-standard AC5.1 (tại `6913753` `docs/superpowers/` còn nguyên; sau đó xóa có chủ đích ở `c201ec9`); các bước "xác nhận đỏ" trong plan của long-session-context (tick theo task, không tái hiện được trạng thái đỏ). Nếu muốn đọc nghiêm, hoàn lại bốn mục này về `[ ]` kèm `[chưa kiểm]`.
 - Câu hỏi mở 1: thứ tự phần còn lại có đổi (4 trước 6) không?
 - Câu hỏi mở 2: cách đánh số P5a/P5b/P5c có chấp nhận không?
 - Câu hỏi mở 3: I-2 và Task 6 giữ là việc hoãn, hay chốt hẳn một hướng?
