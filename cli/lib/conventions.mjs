@@ -221,7 +221,7 @@ export function checkAgentModel(agent) {
   return [];
 }
 
-export const HOOK_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop'];
+export const HOOK_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop', 'SessionStart'];
 const HOOK_SCRIPT_PREFIX = '${CLAUDE_PLUGIN_ROOT}/hooks/';
 const HOOK_TIMEOUT_MAX = 30;
 

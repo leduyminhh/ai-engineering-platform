@@ -22,6 +22,8 @@ import { PROVIDERS, scopeRoot } from './lib/paths.mjs';
 import { runWizard } from './lib/wizard.mjs';
 import { WizardUnavailable } from './lib/prompt.mjs';
 import { parse } from './lib/args.mjs';
+import os from 'node:os';
+import { findTranscripts, projectSlug, statsForFile } from './lib/transcript-stats.mjs';
 
 const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -144,6 +146,32 @@ async function wizardFlow(action, opts = {}) {
   }
 }
 
+function reportStats({ session, json }) {
+  const cwd = process.cwd();
+  if (session) {
+    const s = statsForFile(session);
+    if (json) { console.log(JSON.stringify(s, null, 2)); return; }
+    const total = Object.values(s.chars).reduce((a, b) => a + b, 0) || 1;
+    console.log(`Lượt: ${s.turns} | đầu: ${s.firstCtx} | đỉnh: ${s.peakCtx} (lượt ${s.peakTurn}) | cuối: ${s.lastCtx} (token)`);
+    console.log('Ký tự theo nhóm:');
+    for (const [k, v] of Object.entries(s.chars)) console.log(`  ${k.padEnd(14)} ${String(v).padStart(10)}  ${(v * 100 / total).toFixed(1)}%`);
+    for (const [title, m] of [['tool_result theo tool', s.toolResultByTool], ['attachment theo loại', s.attachmentByType]]) {
+      console.log(`${title}:`);
+      for (const [k, v] of Object.entries(m).sort((a, b) => b[1] - a[1])) console.log(`  ${k.padEnd(28)} ${v}`);
+    }
+    return;
+  }
+  const files = findTranscripts({ home: os.homedir(), cwd });
+  if (!files.length) { console.log(`Không tìm thấy transcript cho ${projectSlug(cwd)}`); return; }
+  const rows = files.map((f) => {
+    // Một file không đọc được không được làm hỏng cả bảng.
+    try { return { name: path.basename(f, '.jsonl'), ...statsForFile(f) }; } catch { return null; }
+  }).filter(Boolean).sort((a, b) => b.peakCtx - a.peakCtx).slice(0, 10);
+  if (json) { console.log(JSON.stringify(rows, null, 2)); return; }
+  console.log(`${'Phiên'.padEnd(38)} ${'lượt'.padStart(5)} ${'đầu'.padStart(8)} ${'đỉnh'.padStart(8)} ${'cuối'.padStart(8)}`);
+  for (const r of rows) console.log(`${r.name.padEnd(38)} ${String(r.turns).padStart(5)} ${String(r.firstCtx).padStart(8)} ${String(r.peakCtx).padStart(8)} ${String(r.lastCtx).padStart(8)}`);
+}
+
 function buildHelp() {
   let plugins;
   try { plugins = knownPluginIds(); } catch { plugins = []; }
@@ -171,6 +199,9 @@ LỆNH
   build                     chỉ build ra build/<tool>/ (không cài)
   pack                      đóng gói skill Cowork ra build/cowork/<skill>.zip (theo plugins/_cowork.json);
                             upload từng .zip vào Cowork qua Customize → Skills (tự chạy kèm khi install claude)
+  stats                     đo context từ transcript Claude Code của project này (bảng phiên theo đỉnh context);
+                            --session <file.jsonl>: phân rã một phiên; --json: in JSON thô. [Unverified] layout
+                            <home>/.claude/projects/<slug>/*.jsonl là nội bộ của Claude Code, không phải hợp đồng công khai
   list                      liệt kê adapter + plugin tìm được
   help                      hiện trợ giúp này (hoặc -h, --help)
 
@@ -260,6 +291,8 @@ async function main() {
       return reportUpdate(update({ scope: args.scope, providers: args.provider, plugins: args.plugin, skills: args.skill }));
     case 'check':
       return reportCheck(check({ scope: args.scope, doctor: true }));
+    case 'stats':
+      return reportStats({ session: args.session, json: args.json });
     case 'pack': {
       console.log('Đóng gói skill cho Cowork…');
       return reportPack(pack());

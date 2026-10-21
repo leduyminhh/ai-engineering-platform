@@ -216,8 +216,13 @@ model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
 **Rotating sessions**
 
 4. One session handles one work package (a phase, a branch). When the package is done, or context passes ~40%
-   of the window, write a handoff (branch, hash, unfinished work, pending questions) to the ledger/run-log and
-   open a new session. [Inference] The 40% threshold is a team heuristic, not an official figure.
+   of the window (soft) or ~60% (hard), write the handoff to `handoff.md` (template in `core:artifact-templates`:
+   branch, hash, unfinished work, pending questions) and open a new session. [Inference] The 40% and 60%
+   thresholds are team heuristics, not official figures.
+   Only a human or the statusline can read the percentage (`context_window.used_percentage`); a hook cannot.
+   The common hook input fields carry no context size ([hooks](https://code.claude.com/docs/en/hooks#common-input-fields),
+   [statusline](https://code.claude.com/docs/en/statusline)). Only SessionStart on resume/fork gets `context_tokens`;
+   [Inference] that is a token count, not the percentage.
 5. Keep the orchestrating session's context small: read summaries, give long log/diff reading to `haiku` subagents.
 6. Use `/clear` between unrelated tasks; run `/compact <focus>` only at a natural pause. Compaction drops the
    cache; the main session's TTL is 1 hour on a subscription (within plan usage), subagents' default is 5 minutes
@@ -243,6 +248,21 @@ model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
     Tightly coupled coding runs sequentially in one session. An agent uses ~4× the tokens of chat and a
     multi-agent system ~15× ([multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system));
     agent teams ~7× ([costs](https://code.claude.com/docs/en/costs)).
+
+**Long sessions**
+
+14. A child session writes its long report to a file and sends the parent one line with the path and the
+    conclusion. The orchestrating session never reads long diffs or logs itself; a `haiku` subagent reads and
+    returns the summary.
+15. Every command in the orchestrating session bounds its output (`--stat`, `head`, column filters); list
+    sessions by name or id rather than a full listing; never repeat `get_usage`/`list_events` within one gate.
+16. When the next step depends on a subagent's result, run it in the foreground instead of ending the turn to
+    wait for a background notification.
+17. A session idle longer than the prompt-cache TTL (1 hour for the main session on a subscription,
+    [prompt-caching](https://code.claude.com/docs/en/prompt-caching#cache-lifetime)) is cheaper to replace than
+    to wake: open a new session from `handoff.md`. Never switch model mid-session (rule 1).
+18. Record each session's context usage (`/usage` or the statusline's `used_percentage`) in the run-log at every
+    phase gate.
 
 [Unverified] How much a cache read weighs against a subscription's usage limit is not documented; the rules above
 still hold because they cut the number of turns on large contexts.

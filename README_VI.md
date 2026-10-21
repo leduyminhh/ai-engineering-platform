@@ -100,7 +100,7 @@ npx ai-engineering-platform install --provider all --yes
 | Đường dẫn | Vai trò |
 | --- | --- |
 | `plugins/` | Nguồn năng lực: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, cùng `_marketplace.json` và `_cowork.json`. |
-| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, `skills/git-release/` và `skills/artifact-templates/` (9 template artifact), và `hooks/` an toàn (chỉ plugin-mode). |
+| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, `skills/git-release/` và `skills/artifact-templates/` (10 template artifact), và `hooks/` an toàn (chỉ plugin-mode). |
 | `evals/` | Case `claude plugin eval` theo plugin (chạy tay; không ship; `npm test` chỉ kiểm cấu trúc). |
 | `templates/` | `init/` khung project (do skill `*-init` drop ra); `project-knowledge/`, `docs/requests/_TEMPLATE/` và `docs/decisions/_TEMPLATE.md` sinh từ `core/skills/artifact-templates/`. |
 | `adapters/` | Chiếu theo provider (`<provider>/adapter.mjs`), auto-discover. `_shared/lib.mjs` chứa logic dùng chung. |
@@ -259,6 +259,7 @@ aip check     [-g]
 aip update    [-g]        # git pull + build lại + cài lại các install đã ghi
 aip pack                  # đóng gói skill Cowork -> build/cowork/<skill>.zip
 aip list                  # adapter + plugin phát hiện được
+aip stats     [--session <path>] [--json]   # kích thước context của một phiên Claude Code từ transcript
 ```
 
 - **Scope**: `project` (mặc định, cwd) hoặc `global` (`-g` / `--scope global`, thư mục home).
@@ -281,6 +282,7 @@ aip list                  # adapter + plugin phát hiện được
   không tắt wizard; lệnh non-interactive `aip install --plugin all` vốn đã cài tất cả.
 - **Uninstall** (alias `remove`) chỉ gỡ path đã track (không đụng target của link), prune thư mục
   rỗng, và đếm-tham-chiếu khối managed dùng chung.
+- **`aip stats`** đọc các transcript Claude Code của project hiện tại. Không cờ thì in bảng 10 phiên đầu theo đỉnh context (số lượt, đầu, đỉnh, cuối); `--session <path>` in phân rã đầy đủ một phiên; `--json` in JSON thô. [Unverified] Lệnh dựa vào layout `~/.claude/projects/<slug>/*.jsonl`, vốn là nội bộ của Claude Code, không phải hợp đồng công khai. Lệnh chỉ đọc, không ghi gì.
 - Provider cài mặc định: `claude`, `cursor`, `codex`. `antigravity` có build nhưng chỉ cài
   khi gọi tường minh (`--provider antigravity`).
 
@@ -311,7 +313,7 @@ Người dùng thêm marketplace bằng `claude plugin marketplace add <owner>/<
 
 ## Hooks
 
-Plugin `core` mang ba hook cho Claude Code (`core/hooks/`; Node không phụ thuộc thư viện): hai cổng `PreToolUse` (H1–H5 bên dưới) và cổng kiểm chứng `Stop`/`SubagentStop` (`gate-stop`, bên dưới). **Chỉ có ở cài đặt plugin-mode** — skills-mode (`.claude/skills/` phẳng) không cài hook nào vì `${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài. Cài đặt managed `allowManagedHooksOnly` sẽ tắt hook của plugin nào không được quản trị viên force-enable.
+Plugin `core` mang bốn hook cho Claude Code (`core/hooks/`; Node không phụ thuộc thư viện): hai cổng `PreToolUse` (H1–H5 bên dưới), cổng kiểm chứng `Stop`/`SubagentStop` (`gate-stop`, bên dưới) và hook `SessionStart` (`session-start`, bên dưới). **Chỉ có ở cài đặt plugin-mode** — skills-mode (`.claude/skills/` phẳng) không cài hook nào vì `${CLAUDE_PLUGIN_ROOT}` chỉ tồn tại với plugin đã cài. Cài đặt managed `allowManagedHooksOnly` sẽ tắt hook của plugin nào không được quản trị viên force-enable.
 
 | Quy tắc | Tool | Quyết định | Phạm vi |
 | --- | --- | --- | --- |
@@ -319,6 +321,7 @@ Plugin `core` mang ba hook cho Claude Code (`core/hooks/`; Node không phụ thu
 | H2 | Bash, PowerShell | deny | `git commit -m` có ký tự non-ASCII — dùng `git commit -F <file>` (xem skill `git-workflow`) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | file bí mật: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, khoá riêng `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (kể cả `_sk` và hậu tố bất kỳ khác `.pub`), và chỉ `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` (có giải symlink và NTFS stream; [Unverified] tên ngắn 8.3). `.env.example`/`.env.sample`/`.env.template` và `*.pub` được phép |
 | H3 | Bash, PowerShell | ask | lệnh nhắc tới file bí mật |
+| SS | SessionStart | context | `startup`/`clear`/`compact`: nạp `handoff.md` dùng được mới nhất; `resume`/`fork` phiên đã nguội: một dòng cảnh báo chi phí (xem `session-start` bên dưới) |
 | H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git của file đích, không phải của cwd phiên): `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
 
 Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường) thoát 0 không quyết định. Khi `guard-bash` không phân tích chắc chắn được lệnh thì nghiêng về `ask` (`guard-files` không có hành vi này). Không có H4: agent ops không có tool Bash.
@@ -334,6 +337,26 @@ Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường
   "exemptAgents": ["data-migration-writer"]
 }
 ```
+
+**Khởi động phiên (`session-start`).** Đăng ký cho `SessionStart`; bật mặc định. Hook có hai chế độ. (1) `source` là `startup`, `clear` hoặc `compact`: nạp nội dung file handoff làm ngữ cảnh bổ sung, kèm đường dẫn tương đối ở đầu và cắt tối đa 9.000 ký tự (Claude Code giới hạn ngữ cảnh hook ở 10.000). Thứ tự tìm file: `handoffPath` trong cấu hình (resolve theo cwd của phiên), `docs/requests/*/handoff.md` sửa gần nhất, rồi `.claude/handoff.md`. File cũ hơn `handoffMaxAgeHours` (mặc định 24), hoặc rỗng, hoặc còn là template chưa điền thì bị bỏ qua. (2) `source` là `resume` hoặc `fork` khi cache prompt có khả năng đã hết hạn: thêm một dòng nêu số token không cache và chi phí ước tính khi Claude Code cung cấp, và trỏ tới file handoff nếu có file dùng được. Tắt bằng `{"handoffInject": false}` (chế độ 1) và/hoặc `{"resumeWarn": false}` (chế độ 2) trong `<git-root>/.claude/aip-gate.json`. Hook fail-open như các script khác.
+
+```json
+{
+  "handoffInject": true,
+  "resumeWarn": true,
+  "handoffPath": "docs/requests/my-feature/handoff.md",
+  "handoffMaxAgeHours": 24
+}
+```
+
+**Cửa sổ nén (`autoCompactWindow`).** Auto-compaction chạy khi đạt một ngưỡng token. Với model có cửa sổ 1M token, mặc định là khoảng 967K. Hạ ngưỡng này làm trần kích thước mỗi request thấp hơn, nhưng nén sẽ chạy nhiều lần hơn và mỗi lần nén làm mất chi tiết của hội thoại trước đó. Đánh đổi này do bạn quyết định. Có bốn cách đặt:
+
+- `/autocompact <100k–1M>` trong phiên;
+- `autoCompactWindow` trong settings của Claude Code;
+- cờ `--autocompact`;
+- biến môi trường `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, có ưu tiên cao nhất (hậu tố `k`/`M` được nhận từ Claude Code v2.1.304 [Unverified]).
+
+**aip không ghi settings của bạn** (aip does not write your settings). Đây là cấu hình của bạn; `aip` không đặt và không sửa nó. [Unverified] Lưu ý: khi đặt `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `used_percentage` của statusline vẫn đo trên cửa sổ đầy, nên không còn chỉ đúng lúc nén sắp chạy.
 
 **Giới hạn / residual risk.** Hook là cổng regex, không phải sandbox.
 
