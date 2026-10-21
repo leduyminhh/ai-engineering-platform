@@ -42,15 +42,15 @@
 **Interfaces:**
 - Produces: `export function checkAgentModel(agent: { id, model, body }): string[]` — rỗng khi hợp lệ; thông điệp nêu id agent.
 
-- [ ] **Step 1: Viết test đỏ** — trong `40-conventions.contract.mjs` (tìm chỗ đang chạy `checkAgentTools` trên mọi agent và đặt cạnh đó):
+- [x] **Step 1: Viết test đỏ** — trong `40-conventions.contract.mjs` (tìm chỗ đang chạy `checkAgentTools` trên mọi agent và đặt cạnh đó):
   - `AC1.2: checkAgentModel` tham số hoá: hợp lệ — `sonnet`, `opus`, `haiku`, `fable`, `claude-sonnet-5-5`, `inherit` với body chứa "inherit vì …"; lỗi — thiếu (`null`), `''`, `Sonnet`, `gpt-4o`, `inherit` với body không nhắc inherit. Mỗi lỗi chứa id agent.
   - `AC1.1: mọi agent nguồn khai model hợp lệ` — `checkAgentModel` rỗng cho mọi agent trong `ctx.allAgents`, và `model === 'sonnet'` cho cả 16.
   - `AC1.3: build Claude mang model, provider khác không đổi` — khi có build: mỗi agent Claude sinh ra (`build/claude/plugins/<plugin>/agents/<id>.md`) có dòng `model: sonnet`; không file nào dưới `build/codex`, `build/cursor`, `build/antigravity` chứa dòng bắt đầu `model:` hoặc `model =`.
   - Template agent: thêm kiểm `checkAgentModel` cạnh `checkAgentTools` ở `35-artifact-templates.contract.mjs:138` (tên `AC1.1: template agent khai model`).
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --build --only conventions` và `--only artifact-templates`.
-- [ ] **Step 3: Viết `checkAgentModel`, thêm `model: sonnet` vào 16 agent + template agent.**
-- [ ] **Step 4: Chạy, xác nhận xanh** — cùng lệnh Step 2.
-- [ ] **Step 5: Commit** — `feat(agents): declare model for every plugin agent`.
+- [x] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --build --only conventions` và `--only artifact-templates`.
+- [x] **Step 3: Viết `checkAgentModel`, thêm `model: sonnet` vào 16 agent + template agent.**
+- [x] **Step 4: Chạy, xác nhận xanh** — cùng lệnh Step 2.
+- [x] **Step 5: Commit** — `feat(agents): declare model for every plugin agent`.
 
 ### Task 2: Mục baseline "Model and session routing" + README
 
@@ -61,15 +61,15 @@
 - Modify: `README.md`, `README_VI.md` (đoạn `CLAUDE_CODE_SUBAGENT_MODEL`)
 - Test: `test/content/20-model-session-routing.pin.mjs`
 
-- [ ] **Step 1: Viết pin đỏ** `test/content/20-model-session-routing.pin.mjs` (khung như `19-verification-gate.pin.mjs`):
+- [x] **Step 1: Viết pin đỏ** `test/content/20-model-session-routing.pin.mjs` (khung như `19-verification-gate.pin.mjs`):
   - `AC2.1: baseline có mục Model and session routing` — đoạn từ `### Model and session routing` tới heading `###` kế tiếp tồn tại trong template và nhắc: `haiku`, `sonnet`, `opus`, "new session" (bàn giao thay vì đổi model), `/clear`, `/compact`, cron ≥ 15 phút, và không gửi tin chỉ để báo nhận.
   - `AC2.2: số liệu có nguồn` — đoạn đó chứa `code.claude.com/docs/en/prompt-caching`, `code.claude.com/docs/en/sub-agents`, `code.claude.com/docs/en/costs`.
   - `AC3.1: README hướng dẫn CLAUDE_CODE_SUBAGENT_MODEL` — cả `README.md` và `README_VI.md` chứa `CLAUDE_CODE_SUBAGENT_MODEL` và `"env"`.
   - Drift `AGENTS.md == template` đã có ở `30-templates.contract.mjs`; không viết lại.
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only model-session-routing`.
-- [ ] **Step 3: Viết nội dung** — mục baseline theo đủ 13 quy tắc ở design §2 (chọn model, xoay phiên, giao tiếp giữa phiên, theo dõi, song song) cộng bảng tầng việc → model gọn từ §1, câu ngắn, link nguồn tại chỗ có số liệu; chép sang `AGENTS.md`. README: một đoạn ngắn trong mục cài đặt/cấu hình Claude: đặt `{"env": {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}}` trong `~/.claude/settings.json` làm lưới an toàn cho subagent ngoài plugin; thứ tự ưu tiên: tham số lúc gọi → frontmatter `model` → biến môi trường → model phiên chính; aip không tự ghi settings.
-- [ ] **Step 4: Chạy, xác nhận xanh** — `--only model-session-routing`, `--only templates`, `--only superpowers-docs-standard`, `--only verification-gate`.
-- [ ] **Step 5: Commit** — `docs(core): add model and session routing rules to baseline`.
+- [x] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only model-session-routing`.
+- [x] **Step 3: Viết nội dung** — mục baseline theo đủ 13 quy tắc ở design §2 (chọn model, xoay phiên, giao tiếp giữa phiên, theo dõi, song song) cộng bảng tầng việc → model gọn từ §1, câu ngắn, link nguồn tại chỗ có số liệu; chép sang `AGENTS.md`. README: một đoạn ngắn trong mục cài đặt/cấu hình Claude: đặt `{"env": {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}}` trong `~/.claude/settings.json` làm lưới an toàn cho subagent ngoài plugin; thứ tự ưu tiên: tham số lúc gọi → frontmatter `model` → biến môi trường → model phiên chính; aip không tự ghi settings.
+- [x] **Step 4: Chạy, xác nhận xanh** — `--only model-session-routing`, `--only templates`, `--only superpowers-docs-standard`, `--only verification-gate`.
+- [x] **Step 5: Commit** — `docs(core): add model and session routing rules to baseline`.
 
 ### Task 2b: Effort cho agent và baseline (bổ sung 2026-10-21)
 
@@ -81,11 +81,11 @@
 - Test: `test/contract/40-conventions.contract.mjs`
 - Test: `test/content/20-model-session-routing.pin.mjs`
 
-- [ ] **Step 1: Test đỏ** — mở rộng ca tham số `AC1.2`: sonnet thiếu effort → lỗi; sonnet `medium` → lỗi; opus `low` → lỗi; opus `medium` và `high` → hợp lệ; haiku không effort → hợp lệ. `AC1.1`: cả 16 agent `effort === 'high'`. Pin `AC2.1`: mục baseline nhắc `effort`, `medium`, `high`.
-- [ ] **Step 2: Chạy, xác nhận đỏ** — `--build --only conventions`, `--only model-session-routing`.
-- [ ] **Step 3: Viết code + nội dung**, chép template sang `AGENTS.md`.
-- [ ] **Step 4: Chạy, xác nhận xanh** — cùng lệnh + `--only artifact-templates`, `--only templates`.
-- [ ] **Step 5: Commit** — `feat(agents): set effort per model tier`.
+- [x] **Step 1: Test đỏ** — mở rộng ca tham số `AC1.2`: sonnet thiếu effort → lỗi; sonnet `medium` → lỗi; opus `low` → lỗi; opus `medium` và `high` → hợp lệ; haiku không effort → hợp lệ. `AC1.1`: cả 16 agent `effort === 'high'`. Pin `AC2.1`: mục baseline nhắc `effort`, `medium`, `high`.
+- [x] **Step 2: Chạy, xác nhận đỏ** — `--build --only conventions`, `--only model-session-routing`.
+- [x] **Step 3: Viết code + nội dung**, chép template sang `AGENTS.md`.
+- [x] **Step 4: Chạy, xác nhận xanh** — cùng lệnh + `--only artifact-templates`, `--only templates`.
+- [x] **Step 5: Commit** — `feat(agents): set effort per model tier`.
 
 ### Task 3: Bump version, lock, toàn bộ test
 
@@ -94,8 +94,8 @@
 - Modify: `core/.manifest.json` (patch), `.manifest.json` của mọi plugin có agent đổi (`backend`, `frontend`, `engineering`, `data`, `ops` — patch), plugin khác chỉ khi lock từ chối
 - Modify: `plugins/_versions.lock.json`
 
-- [ ] **Step 1:** Bump patch như trên.
-- [ ] **Step 2:** `npm run build && node cli/lib/versions.mjs --lock` — exit 0.
-- [ ] **Step 3:** `npm test` — toàn bộ PASS.
-- [ ] **Step 4:** `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-21-model-session-routing` — chỉ W7 cho AC4.1.
-- [ ] **Step 5: Commit** — `chore(release): bump versions for model and session routing`.
+- [x] **Step 1:** Bump patch như trên.
+- [x] **Step 2:** `npm run build && node cli/lib/versions.mjs --lock` — exit 0.
+- [x] **Step 3:** `npm test` — toàn bộ PASS.
+- [x] **Step 4:** `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-21-model-session-routing` — chỉ W7 cho AC4.1.
+- [x] **Step 5: Commit** — `chore(release): bump versions for model and session routing`.

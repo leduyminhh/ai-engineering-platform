@@ -1,6 +1,6 @@
 # Thiết kế: điều hướng model, phiên và subagent
 - Ngày: 2026-10-21
-- Trạng thái: đã duyệt 2026-10-21
+- Trạng thái: đã duyệt 2026-10-21; triển khai xong trên feature/model-session-routing
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - ADR liên quan: [ADR-0002](../../decisions/0002-model-and-session-routing.md) (Đề xuất)
 - Nguồn quan sát: phiên điều phối của `content-automation-platform` ngày 2026-10-20 → 2026-10-21 (1 phiên gốc + 3 phiên con + tới 6 subagent song song).
@@ -60,13 +60,13 @@ Của người viết thiết kế:
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given mọi file `plugins/*/agents/*.md`, Then mỗi file có khoá `model` và `effort` trong frontmatter với giá trị theo bảng §3 (`sonnet` + `high`).
-- [ ] **AC1.2** — Given một agent nguồn thiếu `model`, When chạy `node test/validate.mjs`, Then báo lỗi nêu tên agent; giá trị ngoài `sonnet|opus|haiku|fable|inherit` và không khớp mẫu model ID `claude-*` cũng báo lỗi; agent `model: sonnet` thiếu `effort` hoặc `effort` khác `high` báo lỗi; agent `model: opus` có `effort` khác `medium`/`high` báo lỗi.
-- [ ] **AC1.3** — Given build Claude, Then file agent sinh ra mang đúng khoá `model` của nguồn; build Codex/Cursor/Antigravity không đổi hành vi so với trước (khoá không hỗ trợ được bỏ như hiện tại); Codex không nhận `model_reasoning_effort` từ effort của tầng model Claude.
-- [ ] **AC2.1** — Given `core/agents/AGENTS.template.md`, Then managed block có mục `### Model and session routing` với các quy tắc §2 (chọn model theo tầng, không đổi model giữa phiên, xoay phiên theo gói việc, giao tiếp giữa phiên, cron); `AGENTS.md` ở gốc repo giống byte-for-byte template.
-- [ ] **AC2.2** — Given mục §2, Then mọi con số (TTL, hệ số giá, thứ tự chọn model) có link nguồn chính thức hoặc nhãn [Unverified].
-- [ ] **AC3.1** — Given `README.md` và `README_VI.md`, Then có đoạn hướng dẫn `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` (đặt ở `env` của settings người dùng) và giải thích thứ tự ưu tiên model của subagent.
-- [ ] **AC4.1** — `npm test` xanh; version `core` và các plugin có agent đổi được bump; `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
+- [x] **AC1.1** — Given mọi file `plugins/*/agents/*.md`, Then mỗi file có khoá `model` và `effort` trong frontmatter với giá trị theo bảng §3 (`sonnet` + `high`).
+- [x] **AC1.2** — Given một agent nguồn thiếu `model`, When chạy `node test/validate.mjs`, Then báo lỗi nêu tên agent; giá trị ngoài `sonnet|opus|haiku|fable|inherit` và không khớp mẫu model ID `claude-*` cũng báo lỗi; agent `model: sonnet` thiếu `effort` hoặc `effort` khác `high` báo lỗi; agent `model: opus` có `effort` khác `medium`/`high` báo lỗi.
+- [x] **AC1.3** — Given build Claude, Then file agent sinh ra mang đúng khoá `model` của nguồn; build Codex/Cursor/Antigravity không đổi hành vi so với trước (khoá không hỗ trợ được bỏ như hiện tại); Codex không nhận `model_reasoning_effort` từ effort của tầng model Claude.
+- [x] **AC2.1** — Given `core/agents/AGENTS.template.md`, Then managed block có mục `### Model and session routing` với các quy tắc §2 (chọn model theo tầng, không đổi model giữa phiên, xoay phiên theo gói việc, giao tiếp giữa phiên, cron); `AGENTS.md` ở gốc repo giống byte-for-byte template.
+- [x] **AC2.2** — Given mục §2, Then mọi con số (TTL, hệ số giá, thứ tự chọn model) có link nguồn chính thức hoặc nhãn [Unverified].
+- [x] **AC3.1** — Given `README.md` và `README_VI.md`, Then có đoạn hướng dẫn `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` (đặt ở `env` của settings người dùng) và giải thích thứ tự ưu tiên model của subagent.
+- [x] **AC4.1** — `npm test` xanh; version `core` và các plugin có agent đổi được bump; `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
 
 ## Thiết kế
 
