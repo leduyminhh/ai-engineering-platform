@@ -467,6 +467,16 @@ export default async function run({ ok, ctx }) {
     ok(start(viaCfg, { cfg: { handoffPath: 'notes/h.md' } })?.additionalContext.includes('CFG'), 'AC3.1: handoffPath được ưu tiên hơn tự tìm');
     ok(start({ '.claude/handoff.md': { text: body('FALLBACK'), mtime: T0 } })?.additionalContext.includes('FALLBACK'), 'AC3.1: fallback .claude/handoff.md');
 
+    // Regression: bản chép nguyên template chưa điền không được coi là handoff thật
+    const tpl = fs.readFileSync(path.join(CORE_DIR, 'skills', 'artifact-templates', 'references', 'handoff.template.md'), 'utf8').replace(/^<!--[\s\S]*?-->\s*/, '');
+    const blank = { 'docs/requests/a/handoff.md': { text: tpl, mtime: T0 } };
+    ok(tpl.includes('<') && start(blank) === null && start({ '.claude/handoff.md': { text: '﻿' + tpl, mtime: T0 } }) === null,
+      'AC3.1: handoff.template.md chưa điền (còn <…>, bullet rỗng) → null');
+    ok(start(blank, { source: 'resume', extra: { prompt_cache_likely_expired: true } })?.additionalContext.includes('handoff.md') === false
+      && start(one, { source: 'resume', nowMs: T0 + 25 * HOUR, extra: { prompt_cache_likely_expired: true } })?.additionalContext.includes('handoff.md') === false
+      && start(one, { source: 'resume', extra: { prompt_cache_likely_expired: true } })?.additionalContext.includes('handoff.md') === true,
+      'AC3.2: dòng resume không trỏ tới handoff rỗng hoặc quá tuổi');
+
     const cold = { prompt_cache_likely_expired: true, context_tokens: 182340, estimated_cache_write_usd: 1.1396 };
     for (const source of ['resume', 'fork']) {
       const r = start(one, { source, extra: cold });

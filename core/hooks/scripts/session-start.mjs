@@ -34,6 +34,22 @@ function findHandoff(cwd, cfg, d) {
   return exists(fallback) ? fallback : null;
 }
 
+// Template chưa điền chỉ còn heading, `<…>`, nhãn và dấu list rỗng; các phần đó không tính vào nội dung thật.
+function substantive(text) {
+  return text.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>\n]*>/g, '').replace(/^#.*$/gm, '')
+    .replace(/\*\*[^*\n]*\*\*:?/g, '').replace(/``/g, '').replace(/^\s*(?:[-*+]|\d+\.)\s*$/gm, '').trim();
+}
+
+// Handoff dùng được = tồn tại, chưa quá tuổi và đã điền; dùng chung cho nạp ngữ cảnh và dòng cảnh báo resume.
+function usableHandoff(cwd, cfg, d) {
+  const file = findHandoff(cwd, cfg, d);
+  if (!file) return null;
+  const maxAge = Number.isFinite(cfg?.handoffMaxAgeHours) ? cfg.handoffMaxAgeHours : DEFAULT_MAX_AGE_HOURS;
+  if (d.now() - d.statSync(file).mtimeMs > maxAge * HOUR_MS) return null;
+  const text = String(d.readFile(file)).replace(/^\uFEFF/, '');
+  return substantive(text).length < MIN_CHARS ? null : { file, text };
+}
+
 function resumeLine(input, handoff, cwd) {
   const parts = ['Phiên nguội: mở lại tốn'];
   const tokens = input.context_tokens;
@@ -54,16 +70,13 @@ export function decide(input, deps = {}) {
     const source = input?.source;
     if (source === 'resume' || source === 'fork') {
       if (cfg?.resumeWarn === false || input.prompt_cache_likely_expired !== true) return null;
-      return { additionalContext: resumeLine(input, findHandoff(cwd, cfg, d), cwd) };
+      return { additionalContext: resumeLine(input, (() => { try { return usableHandoff(cwd, cfg, d)?.file; } catch { return null; } })(), cwd) };
     }
     if (source !== 'startup' && source !== 'clear' && source !== 'compact') return null;
     if (cfg?.handoffInject === false) return null;
-    const file = findHandoff(cwd, cfg, d);
-    if (!file) return null;
-    const maxAge = Number.isFinite(cfg?.handoffMaxAgeHours) ? cfg.handoffMaxAgeHours : DEFAULT_MAX_AGE_HOURS;
-    if (d.now() - d.statSync(file).mtimeMs > maxAge * HOUR_MS) return null;
-    const text = String(d.readFile(file)).replace(/^﻿/, '');
-    if (text.replace(/^#.*$/gm, '').trim().length < MIN_CHARS) return null;
+    const h = usableHandoff(cwd, cfg, d);
+    if (!h) return null;
+    const { file, text } = h;
     const rel = path.relative(cwd, file).split(path.sep).join('/');
     return { additionalContext: `Handoff của phiên trước (${rel}):\n${text}`.slice(0, MAX_CHARS) };
   } catch { return null; }
@@ -72,7 +85,7 @@ export function decide(input, deps = {}) {
 function main() {
   let input;
   // Pipe từ PowerShell 5.1 chèn BOM vào đầu stdin; JSON.parse lỗi sẽ làm hook im lặng cho qua.
-  try { input = JSON.parse(readFileSync(0, 'utf8').replace(/^﻿/, '')); } catch { return; }
+  try { input = JSON.parse(readFileSync(0, 'utf8').replace(/^\uFEFF/, '')); } catch { return; }
   const r = decide(input);
   if (!r) return;
   process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: r.additionalContext } }));
