@@ -70,6 +70,24 @@ test("init --full không ghi đè docs/requests/_TEMPLATE/plan.md đã có", () 
   assert.ok(r.created.includes("docs/requests/_TEMPLATE/design.md"));
 });
 
+test("AC2.2: init --full sinh docs/specs/_TEMPLATE.md từ core, đã bỏ khối header", () => {
+  const root = tmp();
+  init({ root, full: true });
+  const text = read(root, "docs/specs/_TEMPLATE.md");
+  assert.ok(text.includes("## Yêu cầu"));
+  assert.ok(!text.includes("<!-- artifact-template"));
+});
+
+test("AC2.2: init --full không ghi đè docs/specs/_TEMPLATE.md đã có", () => {
+  const root = tmp();
+  const old = "# Spec cũ\n";
+  fs.mkdirSync(path.join(root, "docs/specs"), { recursive: true });
+  fs.writeFileSync(path.join(root, "docs/specs/_TEMPLATE.md"), old);
+  const r = init({ root, full: true });
+  assert.equal(read(root, "docs/specs/_TEMPLATE.md"), old);
+  assert.ok(r.skipped.includes("docs/specs/_TEMPLATE.md"));
+});
+
 test("init không ghi đè file đã có, cảnh báo khi CLAUDE.md có sẵn chưa import", () => {
   for (const [claude, warns] of [["# Rule cũ\n", 1], ["@AGENTS.md\n# Rule cũ\n", 0]]) {
     const root = tmp();
