@@ -67,7 +67,7 @@
   - `AC3.1: README hướng dẫn CLAUDE_CODE_SUBAGENT_MODEL` — cả `README.md` và `README_VI.md` chứa `CLAUDE_CODE_SUBAGENT_MODEL` và `"env"`.
   - Drift `AGENTS.md == template` đã có ở `30-templates.contract.mjs`; không viết lại.
 - [ ] **Step 2: Chạy, xác nhận đỏ** — `node test/validate.mjs --only model-session-routing`.
-- [ ] **Step 3: Viết nội dung** — mục baseline theo đủ 12 quy tắc ở design §2 (chọn model, xoay phiên, giao tiếp giữa phiên, theo dõi, song song) cộng bảng tầng việc → model gọn từ §1, câu ngắn, link nguồn tại chỗ có số liệu; chép sang `AGENTS.md`. README: một đoạn ngắn trong mục cài đặt/cấu hình Claude: đặt `{"env": {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}}` trong `~/.claude/settings.json` làm lưới an toàn cho subagent ngoài plugin; thứ tự ưu tiên: tham số lúc gọi → frontmatter `model` → biến môi trường → model phiên chính; aip không tự ghi settings.
+- [ ] **Step 3: Viết nội dung** — mục baseline theo đủ 13 quy tắc ở design §2 (chọn model, xoay phiên, giao tiếp giữa phiên, theo dõi, song song) cộng bảng tầng việc → model gọn từ §1, câu ngắn, link nguồn tại chỗ có số liệu; chép sang `AGENTS.md`. README: một đoạn ngắn trong mục cài đặt/cấu hình Claude: đặt `{"env": {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}}` trong `~/.claude/settings.json` làm lưới an toàn cho subagent ngoài plugin; thứ tự ưu tiên: tham số lúc gọi → frontmatter `model` → biến môi trường → model phiên chính; aip không tự ghi settings.
 - [ ] **Step 4: Chạy, xác nhận xanh** — `--only model-session-routing`, `--only templates`, `--only superpowers-docs-standard`, `--only verification-gate`.
 - [ ] **Step 5: Commit** — `docs(core): add model and session routing rules to baseline`.
 

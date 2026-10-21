@@ -62,7 +62,7 @@ Của người viết thiết kế:
 
 - [ ] **AC1.1** — Given mọi file `plugins/*/agents/*.md`, Then mỗi file có khoá `model` và `effort` trong frontmatter với giá trị theo bảng §3 (`sonnet` + `high`).
 - [ ] **AC1.2** — Given một agent nguồn thiếu `model`, When chạy `node test/validate.mjs`, Then báo lỗi nêu tên agent; giá trị ngoài `sonnet|opus|haiku|fable|inherit` và không khớp mẫu model ID `claude-*` cũng báo lỗi; agent `model: sonnet` thiếu `effort` hoặc `effort` khác `high` báo lỗi; agent `model: opus` có `effort` khác `medium`/`high` báo lỗi.
-- [ ] **AC1.3** — Given build Claude, Then file agent sinh ra mang đúng khoá `model` của nguồn; build Codex/Cursor/Antigravity không đổi hành vi so với trước (khoá không hỗ trợ được bỏ như hiện tại).
+- [ ] **AC1.3** — Given build Claude, Then file agent sinh ra mang đúng khoá `model` của nguồn; build Codex/Cursor/Antigravity không đổi hành vi so với trước (khoá không hỗ trợ được bỏ như hiện tại); Codex không nhận `model_reasoning_effort` từ effort của tầng model Claude.
 - [ ] **AC2.1** — Given `core/agents/AGENTS.template.md`, Then managed block có mục `### Model and session routing` với các quy tắc §2 (chọn model theo tầng, không đổi model giữa phiên, xoay phiên theo gói việc, giao tiếp giữa phiên, cron); `AGENTS.md` ở gốc repo giống byte-for-byte template.
 - [ ] **AC2.2** — Given mục §2, Then mọi con số (TTL, hệ số giá, thứ tự chọn model) có link nguồn chính thức hoặc nhãn [Unverified].
 - [ ] **AC3.1** — Given `README.md` và `README_VI.md`, Then có đoạn hướng dẫn `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` (đặt ở `env` của settings người dùng) và giải thích thứ tự ưu tiên model của subagent.
@@ -125,7 +125,7 @@ Bảng phủ đủ 16 file trong `plugins/*/agents/` (đếm 2026-10-21). Agent 
 ## Để lại cho builder
 
 - Vị trí chính xác của kiểm tra `model` trong `test/validate.mjs` và thông điệp lỗi.
-- Câu chữ tiếng Anh của mục baseline §2, miễn giữ đủ 12 quy tắc và link nguồn.
+- Câu chữ tiếng Anh của mục baseline §2, miễn giữ đủ 13 quy tắc và link nguồn.
 - Có cần cập nhật skill `workflow-orchestrator` / `workflow-feature` để nhắc `model` khi gọi Agent hay không (khuyến nghị: một dòng trỏ về mục baseline).
 
 ## Rủi ro

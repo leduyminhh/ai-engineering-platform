@@ -207,8 +207,8 @@ Soft guidance (no hook). Facts are from the official docs: [prompt-caching](http
    it mid-session when the kind of work changes ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
 3. Subagents report the model they used. Every step up to `opus` gets a one-line reason.
 
-   Subagent model order: call-time parameter → frontmatter `model` → `CLAUDE_CODE_SUBAGENT_MODEL` → main session
-   model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
+Subagent model order: call-time parameter → frontmatter `model` → `CLAUDE_CODE_SUBAGENT_MODEL` → main session
+model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
 
 **Rotating sessions**
 
