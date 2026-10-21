@@ -1,6 +1,6 @@
 # ADR-0002: Chọn model theo tầng việc và cố định model theo phiên
 
-- Trạng thái: Proposed
+- Trạng thái: Accepted (2026-10-21)
 - Ngày: 2026-10-21
 
 Nguồn quyết định: người dùng yêu cầu giảm opus, dùng haiku cho việc máy móc, sonnet cho việc có logic, và cần bộ quy tắc điều hướng chuẩn cho engineering platform (2026-10-21).

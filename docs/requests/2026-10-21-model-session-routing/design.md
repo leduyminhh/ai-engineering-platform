@@ -2,7 +2,7 @@
 - Ngày: 2026-10-21
 - Trạng thái: đã duyệt 2026-10-21; triển khai xong trên feature/model-session-routing
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
-- ADR liên quan: [ADR-0002](../../decisions/0002-model-and-session-routing.md) (Đề xuất)
+- ADR liên quan: [ADR-0002](../../decisions/0002-model-and-session-routing.md) (Accepted)
 - Nguồn quan sát: phiên điều phối của `content-automation-platform` ngày 2026-10-20 → 2026-10-21 (1 phiên gốc + 3 phiên con + tới 6 subagent song song).
 
 ## Vấn đề và lý do
