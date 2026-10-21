@@ -145,4 +145,87 @@ export default async function run({ ok, ctx }) {
       ok(/\[W12\]/.test(out) && /\[W11\]/.test(out) && /\[W14\]/.test(out) && !/W10/.test(out), 'AC3.2: CLI đọc specs tại ../../specs (W11 cho y, W12 và W14 cho x)');
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   }
+
+  // W13 qua checkRequest: changedSpecs là Set tên năng lực đã đổi kể từ base ref; null = không chạy.
+  {
+    const design = (...imp) => ['# D', '## Tiêu chí chấp nhận', '- [ ] **AC1.1** — a', '', '## Ảnh hưởng spec', ...imp, ''].join('\n');
+    const w13 = (imp, changedSpecs) => cr.checkRequest({ 'design.md': design(...imp) }, {
+      readSpec: (cap) => spec(REQ(`${cap}/R1`)), changedSpecs,
+    }).filter((w) => w.code === 'W13');
+    const cases = [
+      { name: 'set rỗng, đổi R1 → W13', imp: ['- x: đổi R1'], set: new Set(), want: 1 },
+      { name: 'set có x → không W13', imp: ['- x: đổi R1'], set: new Set(['x']), want: 0 },
+      { name: 'null → không W13', imp: ['- x: đổi R1'], set: null, want: 0 },
+      { name: 'undefined → không W13', imp: ['- x: đổi R1'], set: undefined, want: 0 },
+      { name: 'Không ảnh hưởng → không W13', imp: ['Không ảnh hưởng: docs'], set: new Set(), want: 0 },
+      { name: 'hai mục, một đã đổi → một W13', imp: ['- x: đổi R1', '- y: đổi R1'], set: new Set(['x']), want: 1 },
+    ];
+    for (const c of cases) ok(w13(c.imp, c.set).length === c.want, `AC3.4: W13 — ${c.name}`);
+    const one = w13(['- x: đổi R1', '- y: đổi R1'], new Set(['x']))[0];
+    ok(one && one.file === 'design.md' && one.line === 7 && one.msg.includes('y'), 'AC3.4: W13 nêu đúng dòng và năng lực chưa đổi');
+  }
+
+  // W13 qua CLI trong repo git tạm.
+  {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const { execFileSync } = await import('node:child_process');
+    const git = (cwd, ...a) => execFileSync('git', a, { cwd, stdio: 'pipe' });
+    const runMain = (argv) => {
+      const lines = [];
+      const [log, err] = [console.log, console.error];
+      console.log = (m) => lines.push(String(m));
+      console.error = () => {};
+      let code;
+      try { code = cr.main(argv); } finally { console.log = log; console.error = err; }
+      return { code, out: lines.join('\n') };
+    };
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'living-git-'));
+    const plain = fs.mkdtempSync(path.join(os.tmpdir(), 'living-nogit-'));
+    try {
+      const setup = (root) => {
+        const req = path.join(root, 'docs', 'requests', 'r1');
+        for (const c of ['x', 'y']) fs.mkdirSync(path.join(root, 'docs', 'specs', c), { recursive: true });
+        fs.mkdirSync(req, { recursive: true });
+        fs.writeFileSync(path.join(req, 'design.md'), '# D\n## Tiêu chí chấp nhận\n- [ ] **AC1.1** — a\n## Ảnh hưởng spec\n- x: đổi R1\n');
+        fs.writeFileSync(path.join(root, 'docs', 'specs', 'x', 'spec.md'), spec(REQ('x/R1')));
+        return req;
+      };
+      const req = setup(tmp);
+      git(tmp, 'init', '-q');
+      git(tmp, 'config', 'user.name', 'T');
+      git(tmp, 'config', 'user.email', 't@example.com');
+      git(tmp, 'config', 'commit.gpgsign', 'false');
+      git(tmp, 'add', '-A');
+      git(tmp, 'commit', '-q', '-m', 'init');
+      const w13 = (argv) => /\[W13\]/.test(runMain(argv).out);
+
+      ok(w13([req, '--base', 'HEAD']), 'AC3.4: CLI --base HEAD, spec không đổi → W13');
+      ok(!w13([req]), 'AC3.4: CLI không --base → không W13');
+      fs.appendFileSync(path.join(tmp, 'docs', 'specs', 'x', 'spec.md'), '\nghi chú\n');
+      ok(!w13([req, '--base', 'HEAD']), 'AC3.4: CLI spec đã sửa (chưa commit) → không W13');
+      git(tmp, 'checkout', '-q', '--', '.');
+      ok(w13([req, '--base', 'HEAD']), 'AC3.4: CLI spec hoàn lại → W13');
+      // Spec mới chưa track vẫn tính là đã đổi.
+      fs.writeFileSync(path.join(req, 'design.md'), '# D\n## Tiêu chí chấp nhận\n- [ ] **AC1.1** — a\n## Ảnh hưởng spec\n- y: thêm R1\n');
+      fs.writeFileSync(path.join(tmp, 'docs', 'specs', 'y', 'spec.md'), spec(REQ('y/R1')));
+      ok(!w13([req, '--base', 'HEAD']), 'AC3.4: CLI spec mới chưa track → không W13');
+      fs.writeFileSync(path.join(req, 'design.md'), '# D\n## Tiêu chí chấp nhận\n- [ ] **AC1.1** — a\n## Ảnh hưởng spec\n- x: đổi R1\n');
+      ok(w13([req, '--base', 'HEAD']), 'AC3.4: CLI chỉ y mới, x không đổi → W13 cho x');
+
+      const bad = runMain([req, '--base', 'khong-ton-tai-ref']);
+      ok(bad.code === 0 && !/W13/.test(bad.out), 'AC3.4: CLI ref không tồn tại → không crash, không W13');
+
+      const preq = setup(plain);
+      const ng = runMain([preq, '--base', 'HEAD']);
+      ok(ng.code === 0 && !/W13/.test(ng.out), 'AC3.4: CLI thư mục không phải git → không crash, không W13');
+
+      ok(runMain([req, '--base']).code === 2, 'AC3.4: --base thiếu giá trị → exit 2');
+      ok(runMain([req, '--base', '--strict']).code === 2, 'AC3.4: --base nhận giá trị bắt đầu bằng "-" → exit 2');
+      ok(runMain([req, '--base', '--output=x']).code === 2, 'AC3.4: ref dạng option git bị từ chối → exit 2');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+      fs.rmSync(plain, { recursive: true, force: true });
+    }
+  }
 }

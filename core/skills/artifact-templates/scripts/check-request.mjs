@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới và mục "Ảnh hưởng spec" của design.md (W10).
-// Cách dùng: <thư-mục> [--tests <path>…] [--strict]. Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
+// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới và mục "Ảnh hưởng spec" của design.md (W10–W14).
+// Cách dùng: <thư-mục> [--tests <path>…] [--base <ref>] [--strict]. --base <ref> bật W13 (spec bị ảnh hưởng chưa đổi kể từ ref). Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -124,7 +125,7 @@ export function parseSpec(text, folder) {
   return { reqs, problems, links };
 }
 
-export function checkRequest(texts, { readTest, override, readSpec, linkExists } = {}) {
+export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs } = {}) {
   const warnings = [];
   const warn = (file, line, code, msg) => warnings.push({ file, line, code, msg });
   const lines = {};
@@ -220,6 +221,8 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists }
       if (!CAP_RE.test(e.cap)) { warn('design.md', e.line, 'W11', `Tên năng lực "${e.cap}" không hợp lệ, cần khớp ^[a-z0-9][a-z0-9-]*$`); continue; }
       const spec = load(e.cap);
       if (!spec) { warn('design.md', e.line, 'W11', `Không có spec cho năng lực "${e.cap}" (docs/specs/${e.cap}/spec.md)`); continue; }
+      // Chỉ chạy khi caller cấp changedSpecs (null = không có git/base ref hợp lệ → bỏ qua).
+      if (changedSpecs && !changedSpecs.has(e.cap)) warn('design.md', e.line, 'W13', `Năng lực "${e.cap}" được khai báo bị ảnh hưởng nhưng docs/specs/${e.cap}/spec.md chưa đổi kể từ base ref`);
       for (const it of e.items) {
         if (it.action === 'thêm') continue;
         const id = `${e.cap}/R${it.n}`;
@@ -233,11 +236,25 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists }
 }
 
 // Gốc project = tổ tiên gần nhất có .git (file hay thư mục); path trong plan được resolve theo gốc này.
-function projectRoot(dir) {
+function projectRoot(dir, fallback = process.cwd()) {
   for (let d = path.resolve(dir); ; d = path.dirname(d)) {
     if (fs.existsSync(path.join(d, '.git'))) return d;
-    if (path.dirname(d) === d) return process.cwd();
+    if (path.dirname(d) === d) return fallback;
   }
+}
+
+// Tập năng lực có docs/specs/<cap>/spec.md đổi (kể cả file mới chưa track) kể từ ref; mọi lỗi git → null để W13 im lặng.
+function changedSpecsSince(dir, ref) {
+  const root = projectRoot(dir, null);
+  if (!root) return null;
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  try {
+    const out = (...args) => git(...args).split(/\r?\n/);
+    const names = [...out('diff', '--name-only', ref, '--', 'docs/specs'), ...out('ls-files', '--others', '--exclude-standard', '--', 'docs/specs')];
+    const caps = new Set();
+    for (const n of names) { const m = n.trim().match(/^docs\/specs\/([^/]+)\/spec\.md$/); if (m) caps.add(m[1]); }
+    return caps;
+  } catch { return null; }
 }
 
 // Trả '' cho file nhị phân hoặc đọc lỗi để không làm hỏng cả lượt kiểm; null chỉ khi path không tồn tại.
@@ -266,14 +283,23 @@ function readTestFrom(root) {
 }
 
 export function main(argv) {
-  const usage = () => { console.error('Cách dùng: node check-request.mjs <thư-mục-request> [--tests <path>…] [--strict]'); return 2; };
+  const usage = () => { console.error('Cách dùng: node check-request.mjs <thư-mục-request> [--tests <path>…] [--base <ref>] [--strict]'); return 2; };
   let dir;
   let strict = false;
   let tests;
   let collecting = false;
   let since = 0;
-  for (const a of argv) {
-    if (a === '--tests') {
+  let base;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--base') {
+      if (collecting && !since) return usage();
+      collecting = false;
+      // ref không được bắt đầu bằng '-' để git không đọc nó như một option.
+      const v = argv[++i];
+      if (v === undefined || v === '' || v.startsWith('-') || base !== undefined) return usage();
+      base = v;
+    } else if (a === '--tests') {
       if (collecting && !since) return usage();
       tests ??= [];
       collecting = true;
@@ -312,7 +338,7 @@ export function main(argv) {
     try { return fs.readFileSync(p, 'utf8'); } catch { return null; }
   };
   const linkExists = (href, cap) => fs.existsSync(path.resolve(specsDir, cap, href));
-  const warnings = checkRequest(texts, { readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists });
+  const warnings = checkRequest(texts, { readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base) });
   for (const w of warnings) console.log(`WARN ${w.file}:${w.line} [${w.code}] ${w.msg}`);
   console.log(`${warnings.length} cảnh báo`);
   return strict && warnings.length ? 1 : 0;
