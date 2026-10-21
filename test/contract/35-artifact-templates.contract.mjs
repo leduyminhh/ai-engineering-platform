@@ -39,9 +39,9 @@ export default async function run({ ok, ctx }) {
   const skillText = fs.existsSync(skillFile) ? read(skillFile) : '';
   const index = templateIndex(skillText);
   ok(index.length > 0, 'mục lục artifact-templates có ít nhất một dòng');
-  const TYPES = ['skill', 'agent', 'workflow', 'requirement', 'design', 'plan', 'task', 'adr', 'project-knowledge'];
+  const TYPES = ['skill', 'agent', 'workflow', 'requirement', 'design', 'plan', 'task', 'adr', 'project-knowledge', 'handoff'];
   ok(JSON.stringify(index.map((r) => r.type).sort()) === JSON.stringify([...TYPES].sort()),
-    `mục lục artifact-templates có đúng 9 loại (đang có: ${index.map((r) => r.type).join(', ')})`);
+    `mục lục artifact-templates có đúng 10 loại (đang có: ${index.map((r) => r.type).join(', ')})`);
   const tplOf = (type) => {
     const row = index.find((r) => r.type === type);
     return row ? read(path.join(path.dirname(skillFile), row.file)) : '';

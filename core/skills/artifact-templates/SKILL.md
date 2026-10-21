@@ -25,6 +25,7 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | plan | [plan.template.md](references/plan.template.md) | `scripts/check-request.mjs` | superpowers:writing-plans (header bắt buộc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
 | task | [task.template.md](references/task.template.md) | `check-tasks.mjs` của `engineering-task-breakdown` (chỉ có khi cài plugin `engineering`) | Spec Kit tasks.md; Kiro tasks.md; check-tasks.mjs hiện có |
 | adr | [adr.template.md](references/adr.template.md) | chưa có | MADR 4.0.0 (adr.github.io/madr); Nygard 2011 (Documenting Architecture Decisions) |
+| handoff | [handoff.template.md](references/handoff.template.md) | chưa có | docs/requests/2026-10-21-long-session-context/design.md (D4); Claude Code prompt-caching (session rotation) |
 | project-knowledge | [project-knowledge/](references/project-knowledge/) | chưa có | Chuyển nguyên từ templates/init/project-knowledge (giữ nội dung); tech-stack.yml không có khối header |
 
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.
@@ -89,6 +90,7 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
   Template chi tiết BE (B1–B10) và FE (F1–F9) ở skill `engineering-task-breakdown`.
 - [references/adr.template.md](references/adr.template.md): khung ADR theo MADR 4.0 tiếng Việt (metadata `Trạng thái`/`Ngày`/
   `Người quyết định`, bối cảnh, yếu tố quyết định, phương án, kết quả + hệ quả + xác nhận, ưu nhược từng phương án).
+- [references/handoff.template.md](references/handoff.template.md): khung bàn giao phiên (nhánh + HEAD, đã xong, đang dở, bước kế, câu hỏi chờ, ràng buộc, run-log, context từng phiên) cho việc xoay phiên không kế thừa hội thoại.
 - [references/project-knowledge/](references/project-knowledge/): 5 khung `.md` (`project-overview`, `domain-context`,
   `architecture`, `source-structure`, `code-convention`) và `tech-stack.yml` (không có header) cho `project-knowledge/`.
 - [scripts/check-request.mjs](scripts/check-request.mjs): validator cho requirement/design/plan; kiểm thư mục request (nguồn AC,
