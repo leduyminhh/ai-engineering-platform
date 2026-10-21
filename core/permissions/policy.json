@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "groups": {
+    "secrets": {
+      "action": "deny",
+      "rules": ["Read(./.env)", "Read(./.env.*)"]
+    },
+    "git_push": {
+      "action": "ask",
+      "rules": ["Bash(git push *)"]
+    },
+    "network": {
+      "action": "ask",
+      "rules": ["WebFetch", "Bash(curl *)", "Bash(wget *)"]
+    },
+    "production_deploy": {
+      "action": "ask",
+      "rules": ["Bash(kubectl apply *)", "Bash(terraform apply *)", "Bash(helm upgrade *)"]
+    }
+  }
+}
