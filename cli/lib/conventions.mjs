@@ -211,7 +211,7 @@ export function checkAgentModel(agent) {
   return [`${id}: model "${m}" không hợp lệ (cần ${MODEL_ALIASES.join('/')}/inherit hoặc ID dạng claude-...)`];
 }
 
-export const HOOK_EVENTS =['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop'];
+export const HOOK_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop'];
 const HOOK_SCRIPT_PREFIX = '${CLAUDE_PLUGIN_ROOT}/hooks/';
 const HOOK_TIMEOUT_MAX = 30;
 

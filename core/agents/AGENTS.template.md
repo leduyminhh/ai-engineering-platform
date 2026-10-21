@@ -213,7 +213,7 @@ Soft guidance (no hook). Facts are from the official docs: [prompt-caching](http
    open a new session. [Inference] The 40% threshold is a team heuristic, not an official figure.
 4. Keep the orchestrating session's context small: read summaries, give long log/diff reading to `haiku` subagents.
 5. Use `/clear` between unrelated tasks; run `/compact <focus>` only at a natural pause. Compaction drops the
-   cache; the main session's TTL is 1 hour, subagents' default is 5 minutes
+   cache; the main session's TTL is 1 hour on a subscription, subagents' default is 5 minutes
    ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
 
 **Messages between sessions**
