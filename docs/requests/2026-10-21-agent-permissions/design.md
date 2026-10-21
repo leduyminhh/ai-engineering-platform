@@ -18,7 +18,7 @@ Hệ quả: với Claude, hook plugin là chỗ ép buộc duy nhất đi cùng 
 
 ## Quyết định đã chốt
 
-Của người dùng (2026-10-21): để tôi tự đề xuất thiết kế P4, rồi duyệt design; chốt `git_push` và `network` đặt mức `ask`; P4c (quét plugin bên thứ ba) làm sau P6. Phần còn lại dưới đây là đề xuất của tôi được duyệt cùng. Giữ nguyên các quyết định cũ: Claude first, provider khác best-effort; aip chỉ chuẩn hóa và phân phối, zero-dep, không tự chạy agent.
+Của người dùng (2026-10-21): để tôi tự đề xuất thiết kế P4, rồi duyệt design; chốt `git_push` và `network` đặt mức `ask`; P4c (quét plugin bên thứ ba) làm sau P6; `aip init --full` bỏ các quy tắc `.env` khi `<root>/.claude/aip-gate.json` có `allowEnvFiles: true` (chốt sau review cuối). Phần còn lại dưới đây là đề xuất của tôi được duyệt cùng. Giữ nguyên các quyết định cũ: Claude first, provider khác best-effort; aip chỉ chuẩn hóa và phân phối, zero-dep, không tự chạy agent.
 
 Đề xuất của tôi:
 - **Phạm vi P4 chỉ gồm P4a (chính sách quyền cho Claude + cổng MCP) và P4b (công thức CI, chỉ tài liệu).** Hai phần nữa tách riêng, chưa thiết kế: P4c (quét plugin/skill bên thứ ba) và P4d (sinh cấu hình MCP). Lý do P4d chưa làm: chưa có capability nào của aip cần MCP server (YAGNI).
@@ -34,6 +34,7 @@ Của người dùng (2026-10-21): để tôi tự đề xuất thiết kế P4,
 - [x] **AC1.1** — Given `core/permissions/policy.json`, Then có bốn nhóm `secrets`, `git_push`, `network`, `production_deploy`, mỗi nhóm có hành động `deny` hoặc `ask` và danh sách quy tắc không rỗng, và mọi quy tắc khớp một trong các dạng đã chốt (`Read(<path>)`, `Bash(<lệnh> *)`, `WebFetch`, `mcp__<server>__*`).
 - [x] **AC1.2** — Given `aip init --full` ở thư mục trống, Then có `.claude/settings.json` hợp lệ JSON với `permissions.deny` chứa quy tắc nhóm `secrets` và `permissions.ask` chứa quy tắc ba nhóm còn lại.
 - [x] **AC1.3** — Given `.claude/settings.json` đã tồn tại, When chạy `aip init --full`, Then file giữ nguyên byte-for-byte và kết quả báo bỏ qua kèm đường dẫn chính sách.
+- [ ] **AC1.4** — Given `<root>/.claude/aip-gate.json` có `allowEnvFiles` đúng giá trị `true` (cùng quy tắc với hook: giá trị khác `true`, file thiếu hoặc JSON hỏng đều không tính), When chạy `aip init --full` mà `.claude/settings.json` chưa có, Then `permissions.deny` không chứa các quy tắc của nhóm `secrets` (quy tắc `.env`); khi không bật cờ thì giữ nguyên như AC1.2.
 - [x] **AC2.1** — Given `core/hooks/hooks.json`, Then có mục `PreToolUse` với matcher `mcp__.*` trỏ tới `guard-mcp.mjs`.
 - [x] **AC2.2** — Given không có `mcpAllow`/`mcpDeny` trong `aip-gate.json`, When hook nhận một tool `mcp__x__y`, Then không có quyết định (cho qua).
 - [x] **AC2.3** — Given `mcpAllow = ["a"]`, When hook nhận `mcp__b__t`, Then trả `permissionDecision: deny` kèm lý do; nhận `mcp__a__t` hoặc `mcp__plugin_p_a__t` khi cấu hình `plugin:p:a`, Then cho qua.
