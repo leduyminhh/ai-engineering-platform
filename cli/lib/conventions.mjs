@@ -197,7 +197,21 @@ export function checkAgentTools(agent) {
   return errs;
 }
 
-export const HOOK_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop'];
+const MODEL_ALIASES = ['sonnet', 'opus', 'haiku', 'fable'];
+
+// Mọi agent phải chọn model có chủ đích; inherit chỉ hợp lệ khi body nêu lý do, tránh để mặc định chạy ngầm.
+export function checkAgentModel(agent) {
+  const m = agent.model;
+  const id = agent.id;
+  if (!m) return [`${id}: thiếu khoá model`];
+  if (m === 'inherit') {
+    return /inherit/.test(agent.body || '') ? [] : [`${id}: model inherit nhưng body không nêu lý do (thiếu từ "inherit")`];
+  }
+  if (MODEL_ALIASES.includes(m) || /^claude-[a-z0-9.-]+$/.test(m)) return [];
+  return [`${id}: model "${m}" không hợp lệ (cần ${MODEL_ALIASES.join('/')}/inherit hoặc ID dạng claude-...)`];
+}
+
+export const HOOK_EVENTS =['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop'];
 const HOOK_SCRIPT_PREFIX = '${CLAUDE_PLUGIN_ROOT}/hooks/';
 const HOOK_TIMEOUT_MAX = 30;
 

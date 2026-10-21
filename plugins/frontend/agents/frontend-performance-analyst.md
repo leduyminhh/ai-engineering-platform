@@ -2,6 +2,7 @@
 name: frontend-performance-analyst
 description: "Phân tích hiệu năng frontend: đo ≥3 lần median LCP/TBT/CLS + bundle hoặc profile bottleneck, chỉ ghi perf/, bench/, config đo, chạy local/test, theo skill frontend-performance. Dùng khi workflow-performance cần Baseline, Profile hoặc Benchmark phía frontend."
 mode: write
+model: sonnet
 skills: "frontend-performance"
 ---
 

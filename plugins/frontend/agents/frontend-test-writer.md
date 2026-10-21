@@ -2,6 +2,7 @@
 name: frontend-test-writer
 description: "Test writer frontend: chỉ viết test React/TypeScript (Testing Library, hook, msw, characterization) đúng tầng kiến trúc, không đụng code production, theo skill frontend-testing. Dùng khi workflow cần thêm/sửa test frontend."
 mode: write
+model: sonnet
 skills: "frontend-testing"
 writeScope:
   - "**/__tests__/**"

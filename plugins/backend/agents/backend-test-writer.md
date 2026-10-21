@@ -2,6 +2,7 @@
 name: backend-test-writer
 description: "Test writer backend: chỉ viết test (unit, integration, web slice, characterization) đúng tầng kiến trúc, không đụng code production, theo skill backend-testing. Dùng khi workflow cần thêm/sửa test backend."
 mode: write
+model: sonnet
 skills: "backend-testing"
 writeScope:
   - "**/test/**"

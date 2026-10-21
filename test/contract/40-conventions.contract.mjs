@@ -347,4 +347,52 @@ export default async function run({ ok, ctx }) {
     }
     ok(targets.length > 0 && bad.length === 0, `mọi skill/agent/workflow nguồn chỉ dùng khoá frontmatter trong allowlist${bad.length ? ' — ' + bad.slice(0, 3).join('; ') : ''}`);
   }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Model routing: mọi agent khai model hợp lệ, chỉ Claude chiếu model
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    const { checkAgentModel } = ctx;
+    const withInherit = 'Dùng inherit vì agent cần theo model của phiên cha.';
+    const cases = [
+      [{ id: 'a-sonnet', model: 'sonnet', body: '' }, true],
+      [{ id: 'a-opus', model: 'opus', body: '' }, true],
+      [{ id: 'a-haiku', model: 'haiku', body: '' }, true],
+      [{ id: 'a-fable', model: 'fable', body: '' }, true],
+      [{ id: 'a-id', model: 'claude-sonnet-5-5', body: '' }, true],
+      [{ id: 'a-inherit-ok', model: 'inherit', body: withInherit }, true],
+      [{ id: 'a-null', model: null, body: '' }, false],
+      [{ id: 'a-empty', model: '', body: '' }, false],
+      [{ id: 'a-case', model: 'Sonnet', body: '' }, false],
+      [{ id: 'a-foreign', model: 'gpt-4o', body: '' }, false],
+      [{ id: 'a-inherit-bad', model: 'inherit', body: 'Không nhắc gì.' }, false],
+    ];
+    for (const [agent, valid] of cases) {
+      const errs = checkAgentModel(agent);
+      ok(valid ? errs.length === 0 : errs.length > 0 && errs.every((e) => e.includes(agent.id)),
+        `AC1.2: checkAgentModel ${valid ? 'chấp nhận' : 'từ chối'} model=${JSON.stringify(agent.model)}${agent.model === 'inherit' ? ` (body ${valid ? 'có' : 'không có'} inherit)` : ''}${errs.length ? ' — ' + errs.join('; ') : ''}`);
+    }
+
+    const badAgents = allAgents.filter((a) => checkAgentModel(a).length || a.model !== 'sonnet').map((a) => a.id);
+    ok(allAgents.length === 16 && badAgents.length === 0,
+      `AC1.1: mọi agent nguồn khai model hợp lệ (sonnet cho cả 16)${badAgents.length ? ' — lỗi: ' + badAgents.join(', ') : ''}`);
+
+    if (fs.existsSync(path.join(BUILD, 'claude'))) {
+      const missing = allAgents
+        .filter((a) => !new RegExp('^model: sonnet\\s*$', 'm').test(fs.readFileSync(path.join(BUILD, 'claude', 'plugins', a.plugin, 'agents', `${a.id}.md`), 'utf8')))
+        .map((a) => a.id);
+      const leaked = [];
+      for (const prov of ['codex', 'cursor', 'antigravity']) {
+        const dir = path.join(BUILD, prov);
+        if (!fs.existsSync(dir)) continue;
+        for (const f of listFilesRec(dir)) {
+          // Template agent được chép nguyên văn làm tài liệu tham chiếu, không phải agent sinh ra.
+          if (!/\.(md|toml|mdc)$/.test(f) || f.includes('artifact-templates/')) continue;
+          if (/^model\s*(:|=)/m.test(fs.readFileSync(path.join(dir, f), 'utf8'))) leaked.push(`${prov}/${f}`);
+        }
+      }
+      ok(missing.length === 0 && leaked.length === 0,
+        `AC1.3: build Claude mang model, provider khác không đổi${missing.length ? ' — thiếu: ' + missing.join(', ') : ''}${leaked.length ? ' — lọt: ' + leaked.slice(0, 3).join(', ') : ''}`);
+    }
+  }
 }

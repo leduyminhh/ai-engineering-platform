@@ -2,6 +2,7 @@
 name: backend-fixer
 description: "Sửa code backend: áp fix tối thiểu cho một oracle (test đỏ, finding đã validate, bước tái hiện thủ công) trong danh sách file cho phép, không đụng test, theo skill backend-fix. Dùng khi workflow bugfix/security-review/performance cần bước sửa có khoá phạm vi."
 mode: write
+model: sonnet
 skills: "backend-fix"
 ---
 

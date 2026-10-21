@@ -2,6 +2,7 @@
 name: backend-implementer
 description: "Hiện thực backend: sinh một vertical slice (aggregate, use-case, port, adapter) theo kiến trúc đã chọn và chốt API contract khi có endpoint, theo skill backend-implement. Dùng khi workflow cần hiện thực một slice backend cụ thể."
 mode: write
+model: sonnet
 skills: "backend-implement,backend-api-contract"
 ---
 

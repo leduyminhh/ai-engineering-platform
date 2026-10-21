@@ -2,6 +2,7 @@
 name: <plugin>-<slug>
 description: "<Vai trò một câu, ≤ 200 ký tự>. Dùng khi <điều kiện gọi agent>."
 mode: <read-only|write>
+model: sonnet
 tools: <Read, Edit, Write, Bash, Grep, Glob, Skill>
 skills: "<skill-1>,<skill-2>"
 maxTurns: <n>

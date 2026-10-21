@@ -2,6 +2,7 @@
 name: frontend-implementer
 description: "Hiện thực frontend: chuyển thiết kế (HTML/CSS, Figma, ảnh) thành React component TypeScript bám kiến trúc UI và design-system, build/tsc/lint xanh, theo skill frontend-implement. Dùng khi workflow cần hiện thực một component/màn hình từ thiết kế."
 mode: write
+model: sonnet
 skills: "frontend-implement"
 ---
 
