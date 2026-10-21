@@ -2,6 +2,8 @@
 name: backend-performance-analyst
 description: "Phân tích hiệu năng backend: đo ≥3 lần (p95 load test, Score JMH, median pytest-benchmark) hoặc profile bottleneck, chỉ ghi perf/, bench/, config đo, local/test, theo skill backend-performance. Dùng khi workflow-performance cần Baseline/Profile/Benchmark."
 mode: write
+model: sonnet
+effort: high
 skills: "backend-performance"
 ---
 

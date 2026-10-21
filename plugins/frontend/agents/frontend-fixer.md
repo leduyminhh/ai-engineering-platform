@@ -2,6 +2,8 @@
 name: frontend-fixer
 description: "Sửa code frontend: áp fix tối thiểu cho một oracle (test đỏ, finding đã validate, bước tái hiện thủ công) trong file cho phép, không đụng test, theo skill frontend-fix. Dùng khi workflow bugfix/security-review/performance cần bước sửa có khoá phạm vi."
 mode: write
+model: sonnet
+effort: high
 skills: "frontend-fix"
 ---
 

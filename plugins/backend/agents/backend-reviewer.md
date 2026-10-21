@@ -2,6 +2,8 @@
 name: backend-reviewer
 description: "Reviewer backend: chỉ đọc diff/module Java/Spring, Python và kiểm drift contract↔code, trả finding có severity + file:line theo skill backend-code-review. Dùng khi workflow cần review phần backend."
 mode: read-only
+model: sonnet
+effort: high
 tools: Read, Grep, Glob, Bash, Skill
 skills: "backend-code-review,backend-api-contract"
 ---

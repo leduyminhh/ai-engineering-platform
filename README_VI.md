@@ -297,6 +297,8 @@ Có hai cách đưa nội dung Claude vào một project:
 
 Không cài cùng một plugin ở cả hai chế độ: mỗi skill sẽ hiện hai lần. `aip install` ở skills-mode nay cảnh báo khi `claude plugin list` cho thấy plugin được chọn đã cài từ marketplace này (bỏ qua khi đặt `AIE_INSTALL_ROOT`, và bỏ qua im lặng khi không có `claude` trên PATH).
 
+Lưới an toàn model cho subagent: agent của plugin đã khai `model: sonnet`. Với subagent ngoài plugin, đặt `{"env": {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}}` trong `~/.claude/settings.json`. Thứ tự ưu tiên model của subagent ([sub-agents](https://code.claude.com/docs/en/sub-agents)): tham số lúc gọi → frontmatter `model` → biến môi trường `CLAUDE_CODE_SUBAGENT_MODEL` → model của phiên chính. `aip` không bao giờ tự ghi settings của người dùng.
+
 Phát hành marketplace từ một branch git (maintainer; cần git >= 2.42 cho `git worktree add --orphan`):
 
 ```bash

@@ -304,6 +304,8 @@ Two ways to get the Claude content into a project:
 
 Do not install the same plugin in both modes: every skill would appear twice. `aip install` in skills-mode now warns when `claude plugin list` shows a selected plugin already installed from this marketplace (the check is skipped when `AIE_INSTALL_ROOT` is set, and silently when `claude` is not on PATH).
 
+Subagent model safety net: plugin agents already declare `model: sonnet`. For subagents outside the plugin, set `{"env": {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}}` in `~/.claude/settings.json`. Subagent model precedence ([sub-agents](https://code.claude.com/docs/en/sub-agents)): call-time parameter → frontmatter `model` → `CLAUDE_CODE_SUBAGENT_MODEL` → main-session model. `aip` never writes your user settings.
+
 Publishing the marketplace from a git branch (maintainer; needs git >= 2.42 for `git worktree add --orphan`):
 
 ```bash

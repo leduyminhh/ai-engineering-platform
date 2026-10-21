@@ -2,7 +2,7 @@
 import { parseOnly } from '../harness.mjs';
 
 export default async function run({ ok, ctx }) {
-  const { fs, path, loadPlugins, loadCore, loadWorkflows, splitList, REPO_ROOT, CORE_DIR, checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, claudeAdapter, codexAdapter, tomlBasic, tomlMultiline, frontmatter, core, plugins, workflows, fxPlugin, fxWorkflows, fxCore, fxMk, byPath } = ctx;
+  const { fs, path, loadPlugins, loadCore, loadWorkflows, splitList, REPO_ROOT, CORE_DIR, checkWorkflowBody, stepRefs, parseRegistry, expandWorkflowDeps, missingDeps, RISKS, claudeAdapter, codexAdapter, tomlBasic, tomlMultiline, codexAgentToml, frontmatter, core, plugins, workflows, fxPlugin, fxWorkflows, fxCore, fxMk, byPath } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 0. UNIT: loader agent + workflows
@@ -120,6 +120,11 @@ export default async function run({ ok, ctx }) {
       'codex agent: sandbox_mode + effort');
     ok(toml.includes('developer_instructions = """') && toml.includes('`fx-review`'), 'codex agent: developer_instructions + pointer skill');
     ok(!toml.includes('model ='), 'codex agent: KHÔNG map model');
+    {
+      const base = { id: 'fx-x', description: 'd', mode: 'read-only', skills: ['fx/fx-review'], body: 'b', effort: 'high' };
+      ok(!codexAgentToml({ ...base, model: 'sonnet' }).includes('model_reasoning_effort'), 'codex agent: model sonnet + effort không ghi model_reasoning_effort');
+      ok(codexAgentToml({ ...base, model: 'inherit' }).includes('model_reasoning_effort = "high"'), 'codex agent: model inherit + effort vẫn giữ model_reasoning_effort');
+    }
     ok(toml.includes('name = "fx_reviewer"'), 'codex agent: name đổi `-` → `_` (convention tài liệu subagents)');
     const wfMd = (out.get('workflows/skills/workflow-demo/SKILL.md') || {}).content || '';
     ok(wfMd.includes('name: workflow-demo') && wfMd.includes('Cách dispatch trên Codex'), 'codex workflows: SKILL.md + preamble Codex');
