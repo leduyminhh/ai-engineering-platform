@@ -1,4 +1,4 @@
-// Contract spec sống: parseImpact (mục "Ảnh hưởng spec" của design.md) và cảnh báo W10 của check-request.mjs.
+// Contract spec sống: parseImpact, parseSpec, cảnh báo W10–W14 và tuỳ chọn --base của check-request.mjs.
 export default async function run({ ok, ctx }) {
   const { path, pathToFileURL, CORE_DIR } = ctx;
   const cr = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
@@ -31,6 +31,11 @@ export default async function run({ ok, ctx }) {
         name: 'không có heading',
         text: '# D\n## Thiết kế\n- a: thêm R1\n',
         want: { found: false, line: 0, none: null, entries: [] },
+      },
+      {
+        name: 'tên năng lực bọc backtick',
+        text: '## Ảnh hưởng spec\n- `hooks-gates`: thêm R1\n',
+        want: { found: true, line: 1, none: null, entries: [{ cap: 'hooks-gates', items: [{ action: 'thêm', n: 1 }], line: 2 }] },
       },
       {
         name: 'heading không phân biệt hoa thường, dừng ở heading kế',
@@ -78,11 +83,12 @@ export default async function run({ ok, ctx }) {
     ok(JSON.stringify(good.reqs) === JSON.stringify(['x/R1:5:false', 'x/R2:6:true']) && good.problems === 0, 'AC3.5: parseSpec đọc yêu cầu thường và yêu cầu đã bỏ');
     ok(ps(spec(REQ('x/R1'), REQ('x/R1'))).problems === 1, 'AC3.5: parseSpec báo ID trùng');
     ok(ps(spec(REQ('X/r1'))).problems === 1, 'AC3.5: parseSpec báo ID sai định dạng');
+    ok(ps(spec(REQ('x/R01'))).problems === 1, 'AC3.5: parseSpec báo ID có số 0 đứng đầu');
     ok(ps(spec(REQ('y/R1'))).problems === 1, 'AC3.5: parseSpec báo tiền tố khác tên thư mục');
     ok(ps('# S\n\nCập nhật: 2026-10-21\n' + spec(REQ('x/R1'))).problems === 0, 'AC3.5: parseSpec bỏ qua dòng lạ như Cập nhật');
     ok(ps('# S\n## Khác\n- **zzz** — x\n## Yêu cầu\n' + REQ('x/R1') + '\n').problems === 0, 'AC3.5: parseSpec chỉ đọc vùng H2 Yêu cầu');
     const plain = spec(REQ('x/R1'), DEL('x/R2'));
-    ok(JSON.stringify(ps('﻿' + plain.replace(/\n/g, '\r\n'))) === JSON.stringify(ps(plain)), 'AC3.3: spec CRLF và BOM parse như LF');
+    ok(JSON.stringify(ps('﻿' + plain.replace(/\n/g, '\r\n'))) === JSON.stringify(ps(plain)), 'AC3.5: spec CRLF và BOM parse như LF');
     const l = cr.parseSpec('[a](a.md) [b](http://e.com) [c](#x) [d](../d.md#f)\n', 'x').links.map((k) => k.href);
     ok(JSON.stringify(l) === JSON.stringify(['a.md', '../d.md#f']), 'AC3.5: parseSpec chỉ lấy link tương đối');
   }
@@ -158,6 +164,7 @@ export default async function run({ ok, ctx }) {
       { name: 'null → không W13', imp: ['- x: đổi R1'], set: null, want: 0 },
       { name: 'undefined → không W13', imp: ['- x: đổi R1'], set: undefined, want: 0 },
       { name: 'Không ảnh hưởng → không W13', imp: ['Không ảnh hưởng: docs'], set: new Set(), want: 0 },
+      { name: 'cùng năng lực ở hai dòng → một W13', imp: ['- x: đổi R1', '- x: đổi R1'], set: new Set(), want: 1 },
       { name: 'hai mục, một đã đổi → một W13', imp: ['- x: đổi R1', '- y: đổi R1'], set: new Set(['x']), want: 1 },
     ];
     for (const c of cases) ok(w13(c.imp, c.set).length === c.want, `AC3.4: W13 — ${c.name}`);
@@ -219,6 +226,15 @@ export default async function run({ ok, ctx }) {
       const preq = setup(plain);
       const ng = runMain([preq, '--base', 'HEAD']);
       ok(ng.code === 0 && !/W13/.test(ng.out), 'AC3.4: CLI thư mục không phải git → không crash, không W13');
+
+      // Bố cục lồng (repo/pkg/docs/...): pathspec của git phải theo thư mục specs thật, không theo <git-root>/docs/specs.
+      const nest = path.join(tmp, 'pkg');
+      const nreq = setup(nest);
+      git(tmp, 'add', '-A');
+      git(tmp, 'commit', '-q', '-m', 'nested');
+      ok(w13([nreq, '--base', 'HEAD']), 'AC3.4: CLI bố cục lồng, spec không đổi → W13');
+      fs.appendFileSync(path.join(nest, 'docs', 'specs', 'x', 'spec.md'), '\nghi chú\n');
+      ok(!w13([nreq, '--base', 'HEAD']), 'AC3.4: CLI bố cục lồng, spec đã sửa → không W13');
 
       ok(runMain([req, '--base']).code === 2, 'AC3.4: --base thiếu giá trị → exit 2');
       ok(runMain([req, '--base', '--strict']).code === 2, 'AC3.4: --base nhận giá trị bắt đầu bằng "-" → exit 2');

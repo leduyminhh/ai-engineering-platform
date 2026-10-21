@@ -91,13 +91,13 @@ export function parseImpact(lines) {
     const m = l.match(/^\s*[-*]\s+([^:\s][^:]*?)\s*:\s*(.*)$/);
     if (!m) return;
     const items = [...m[2].matchAll(/(thêm|đổi|bỏ)\s+R(\d+)/gi)].map((x) => ({ action: x[1].toLowerCase(), n: Number(x[2]) }));
-    res.entries.push({ cap: m[1], items, line: i + 1 });
+    res.entries.push({ cap: m[1].replace(/^`+|`+$/g, ''), items, line: i + 1 });
   });
   return res;
 }
 
 const CAP_RE = /^[a-z0-9][a-z0-9-]*$/;
-const REQ_ID_RE = /^[a-z0-9][a-z0-9-]*\/R\d+$/;
+const REQ_ID_RE = /^[a-z0-9][a-z0-9-]*\/R[1-9]\d*$/;
 
 // Đọc spec sống: yêu cầu nằm trong H2 "Yêu cầu"; link lấy toàn file vì bảng Lịch sử cũng trỏ về request. Dòng lạ (Cập nhật:, ghi chú) bị bỏ qua.
 export function parseSpec(text, folder) {
@@ -217,12 +217,13 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
       }
       return spec;
     };
+    const staleReported = new Set();
     for (const e of imp.entries) {
       if (!CAP_RE.test(e.cap)) { warn('design.md', e.line, 'W11', `Tên năng lực "${e.cap}" không hợp lệ, cần khớp ^[a-z0-9][a-z0-9-]*$`); continue; }
       const spec = load(e.cap);
       if (!spec) { warn('design.md', e.line, 'W11', `Không có spec cho năng lực "${e.cap}" (docs/specs/${e.cap}/spec.md)`); continue; }
       // Chỉ chạy khi caller cấp changedSpecs (null = không có git/base ref hợp lệ → bỏ qua).
-      if (changedSpecs && !changedSpecs.has(e.cap)) warn('design.md', e.line, 'W13', `Năng lực "${e.cap}" được khai báo bị ảnh hưởng nhưng docs/specs/${e.cap}/spec.md chưa đổi kể từ base ref`);
+      if (changedSpecs && !changedSpecs.has(e.cap) && !staleReported.has(e.cap) && staleReported.add(e.cap)) warn('design.md', e.line, 'W13', `Năng lực "${e.cap}" được khai báo bị ảnh hưởng nhưng docs/specs/${e.cap}/spec.md chưa đổi kể từ base ref`);
       for (const it of e.items) {
         if (it.action === 'thêm') continue;
         const id = `${e.cap}/R${it.n}`;
@@ -243,16 +244,24 @@ function projectRoot(dir, fallback = process.cwd()) {
   }
 }
 
-// Tập năng lực có docs/specs/<cap>/spec.md đổi (kể cả file mới chưa track) kể từ ref; mọi lỗi git → null để W13 im lặng.
-function changedSpecsSince(dir, ref) {
+// Tập năng lực có <specsDir>/<cap>/spec.md đổi (kể cả file mới chưa track) kể từ ref; mọi lỗi git → null để W13 im lặng.
+// Pathspec lấy theo specsDir thật (readSpec cũng resolve ở đó) nên bố cục lồng repo/pkg/docs/... không bị W13 giả.
+function changedSpecsSince(dir, ref, specsDir) {
   const root = projectRoot(dir, null);
   if (!root) return null;
+  const rel = path.relative(root, specsDir).split(path.sep).join('/');
+  if (!rel || rel.startsWith('..')) return null;
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
   try {
     const out = (...args) => git(...args).split(/\r?\n/);
-    const names = [...out('diff', '--name-only', ref, '--', 'docs/specs'), ...out('ls-files', '--others', '--exclude-standard', '--', 'docs/specs')];
+    const names = [...out('diff', '--name-only', ref, '--', rel), ...out('ls-files', '--others', '--exclude-standard', '--', rel)];
     const caps = new Set();
-    for (const n of names) { const m = n.trim().match(/^docs\/specs\/([^/]+)\/spec\.md$/); if (m) caps.add(m[1]); }
+    const prefix = `${rel}/`;
+    for (const n of names) {
+      const p = n.trim();
+      const m = p.startsWith(prefix) && p.slice(prefix.length).match(/^([^/]+)\/spec\.md$/);
+      if (m) caps.add(m[1]);
+    }
     return caps;
   } catch { return null; }
 }
@@ -338,7 +347,7 @@ export function main(argv) {
     try { return fs.readFileSync(p, 'utf8'); } catch { return null; }
   };
   const linkExists = (href, cap) => fs.existsSync(path.resolve(specsDir, cap, href));
-  const warnings = checkRequest(texts, { readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base) });
+  const warnings = checkRequest(texts, { readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
   for (const w of warnings) console.log(`WARN ${w.file}:${w.line} [${w.code}] ${w.msg}`);
   console.log(`${warnings.length} cảnh báo`);
   return strict && warnings.length ? 1 : 0;
