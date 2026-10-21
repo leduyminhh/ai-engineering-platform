@@ -289,7 +289,7 @@ aip stats     [--session <path>] [--json]   # context size of a Claude Code sess
   switch off the wizard; non-interactive `aip install --plugin all` already installs everything.
 - **Uninstall** (alias `remove`) removes only tracked paths (never link targets),
   prunes emptied directories, and reference-counts the shared managed block.
-- **`aip stats`** reads a Claude Code transcript (the newest session of the current project, or `--session <path>`) and reports context size per turn; `--json` prints machine-readable output. [Unverified] It relies on the layout `~/.claude/projects/<slug>/*.jsonl`, which is internal to Claude Code and not a public contract. It only reads; it writes nothing.
+- **`aip stats`** reads the Claude Code transcripts of the current project. Without flags it prints a table of the top 10 sessions sorted by peak context (turns, first, peak, last); `--session <path>` prints the full breakdown of one session; `--json` prints raw JSON. [Unverified] It relies on the layout `~/.claude/projects/<slug>/*.jsonl`, which is internal to Claude Code and not a public contract. It only reads; it writes nothing.
 - Providers installed by default: `claude`, `cursor`, `codex`. `antigravity` builds
   but installs only when named explicitly (`--provider antigravity`).
 
@@ -361,9 +361,9 @@ The scripts fail open: an internal error (empty stdin, broken JSON, missing fiel
 - `/autocompact <100k–1M>` in a session;
 - `autoCompactWindow` in your Claude Code settings;
 - the `--autocompact` flag;
-- the `CLAUDE_CODE_AUTO_COMPACT_WINDOW` environment variable, which has the highest priority (`k`/`M` suffixes are accepted from Claude Code v2.1.304).
+- the `CLAUDE_CODE_AUTO_COMPACT_WINDOW` environment variable, which has the highest priority (`k`/`M` suffixes are accepted from Claude Code v2.1.304 [Unverified]).
 
-**aip does not write your settings.** This is your configuration; `aip` neither sets nor changes it. Caveat: when `CLAUDE_CODE_AUTO_COMPACT_WINDOW` is set, the statusline `used_percentage` is still measured against the full window, so it no longer shows when compaction is about to run.
+**aip does not write your settings.** This is your configuration; `aip` neither sets nor changes it. [Unverified] Caveat: when `CLAUDE_CODE_AUTO_COMPACT_WINDOW` is set, the statusline `used_percentage` is still measured against the full window, so it no longer shows when compaction is about to run.
 
 **Limits / residual risk.** The hooks are a regex gate, not a sandbox.
 

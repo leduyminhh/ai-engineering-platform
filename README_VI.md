@@ -282,7 +282,7 @@ aip stats     [--session <path>] [--json]   # kích thước context của một
   không tắt wizard; lệnh non-interactive `aip install --plugin all` vốn đã cài tất cả.
 - **Uninstall** (alias `remove`) chỉ gỡ path đã track (không đụng target của link), prune thư mục
   rỗng, và đếm-tham-chiếu khối managed dùng chung.
-- **`aip stats`** đọc transcript của Claude Code (phiên mới nhất của project hiện tại, hoặc `--session <path>`) và báo kích thước context theo từng lượt; `--json` in đầu ra cho máy đọc. [Unverified] Lệnh dựa vào layout `~/.claude/projects/<slug>/*.jsonl`, vốn là nội bộ của Claude Code, không phải hợp đồng công khai. Lệnh chỉ đọc, không ghi gì.
+- **`aip stats`** đọc các transcript Claude Code của project hiện tại. Không cờ thì in bảng 10 phiên đầu theo đỉnh context (số lượt, đầu, đỉnh, cuối); `--session <path>` in phân rã đầy đủ một phiên; `--json` in JSON thô. [Unverified] Lệnh dựa vào layout `~/.claude/projects/<slug>/*.jsonl`, vốn là nội bộ của Claude Code, không phải hợp đồng công khai. Lệnh chỉ đọc, không ghi gì.
 - Provider cài mặc định: `claude`, `cursor`, `codex`. `antigravity` có build nhưng chỉ cài
   khi gọi tường minh (`--provider antigravity`).
 
@@ -354,9 +354,9 @@ Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường
 - `/autocompact <100k–1M>` trong phiên;
 - `autoCompactWindow` trong settings của Claude Code;
 - cờ `--autocompact`;
-- biến môi trường `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, có ưu tiên cao nhất (hậu tố `k`/`M` được nhận từ Claude Code v2.1.304).
+- biến môi trường `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, có ưu tiên cao nhất (hậu tố `k`/`M` được nhận từ Claude Code v2.1.304 [Unverified]).
 
-**aip không ghi settings của bạn** (aip does not write your settings). Đây là cấu hình của bạn; `aip` không đặt và không sửa nó. Lưu ý: khi đặt `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `used_percentage` của statusline vẫn đo trên cửa sổ đầy, nên không còn chỉ đúng lúc nén sắp chạy.
+**aip không ghi settings của bạn** (aip does not write your settings). Đây là cấu hình của bạn; `aip` không đặt và không sửa nó. [Unverified] Lưu ý: khi đặt `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `used_percentage` của statusline vẫn đo trên cửa sổ đầy, nên không còn chỉ đúng lúc nén sắp chạy.
 
 **Giới hạn / residual risk.** Hook là cổng regex, không phải sandbox.
 

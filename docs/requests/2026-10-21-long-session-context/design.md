@@ -1,6 +1,6 @@
 # Thiết kế: kiểm soát context của phiên chạy dài
 - Ngày: 2026-10-21
-- Trạng thái: đã duyệt 2026-10-21, đang hiện thực theo plan.md
+- Trạng thái: đã hiện thực, chờ merge
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - ADR liên quan: [ADR-0003](../../decisions/0003-long-session-context.md) (Proposed); nối tiếp [ADR-0002](../../decisions/0002-model-and-session-routing.md).
 - Nguồn quan sát: phiên điều phối của `content-automation-platform` ngày 2026-10-21 (số đo của chính phiên đó, ghi lại nguyên văn bên dưới).
@@ -69,7 +69,7 @@ Của người viết thiết kế (người dùng kiểm khi đọc; mỗi mụ
 - **D7. Chính sách nén** (mềm + quyết định của người dùng). Chủ động `/compact <trọng tâm>` ở chỗ nghỉ tự nhiên khi cache còn ấm (dưới 1 giờ); thêm mục "Compact instructions" cho vai root vào CLAUDE.md của project điều phối. Hạ `autoCompactWindow` (vd 400–500K) so với giữ ~967K: **được** là trần mỗi request thấp hơn, tránh các lượt 700K+; **mất** là nén nhiều lần hơn, mỗi lần nén là một request lớn và mất chi tiết. Khuyến nghị: không hạ chung; xoay phiên bằng D4–D6 là đường chính, hạ cửa sổ chỉ như lưới an toàn nếu người dùng muốn. Đây là cấu hình người dùng (settings/env), aip không ghi thay (giống D6 của ADR-0002).
 - **D8. Hook — bật mặc định, tắt bằng `handoffInject`/`resumeWarn`:**
   - **H-A:** hook `SessionStart` đọc `handoff.md` của request đang chạy và chèn vào context khi `source` là `startup`, `clear` hoặc `compact` (giới hạn 10.000 ký tự). Cần `--plugin core` cài dạng plugin.
-  - **H-B:** hook `SessionStart` khi `source` là `resume` và `prompt_cache_likely_expired` là true thì nhắc "phiên nguội, đọc lại toàn bộ context không cache (~`estimated_cache_write_usd` USD); cân nhắc mở phiên mới từ `handoff.md`". Dùng dữ liệu có sẵn trong input hook (v2.1.251 trở lên).
+  - **H-B:** hook `SessionStart` khi `source` là `resume` hoặc `fork` và `prompt_cache_likely_expired` là true thì nhắc "phiên nguội, đọc lại toàn bộ context không cache (~`estimated_cache_write_usd` USD); cân nhắc mở phiên mới từ `handoff.md`". Dùng dữ liệu có sẵn trong input hook (v2.1.251 trở lên).
   - **H-C (không đề xuất):** hook `Stop` ước lượng dung lượng từ `transcript_path` để nhắc bàn giao. Lý do: chưa có trường dung lượng, transcript ghi trễ; dễ báo sai.
   - **H-D (không đề xuất):** `PreCompact` chặn nén tự động. Lý do: chặn thì phiên tiếp tục phình; không có tác dụng giữ được thông tin.
 - **D9. Cache khi phiên rảnh** (mềm). Phiên lớn rảnh quá 1 giờ thì thà mở phiên mới từ `handoff.md` hơn là đánh thức; không đổi model giữa phiên (ADR-0002 D1).
@@ -82,16 +82,16 @@ Của người viết thiết kế (người dùng kiểm khi đọc; mỗi mụ
 
 (Áp cho lần hiện thực sau khi người dùng duyệt; mỗi AC kiểm được bằng đọc file hoặc test nội dung.)
 
-- [ ] **AC1.1** — Given `core/agents/AGENTS.template.md`, When hiện thực xong, Then mục "Model and session routing" (hoặc mục kế bên) có các quy tắc D1–D3 và D9: báo cáo dài ghi file + tin một dòng, kết quả công cụ có giới hạn, chỉ báo khi xong/chặn/cần quyết, chạy foreground khi bước kế phụ thuộc, phiên rảnh quá 1 giờ thì mở phiên mới; `AGENTS.md` gốc giống byte-for-byte template.
-- [ ] **AC1.2** — Given mục baseline ở AC1.1, Then mọi con số (TTL, ngưỡng 40%/60%, hệ số token) có link nguồn chính thức trong "Sự thật đã kiểm" hoặc nhãn [Unverified]/[Inference].
-- [ ] **AC2.1** — Given template `handoff.md` trong `core/skills/artifact-templates/references/`, When mở, Then có các mục: nhánh, hash HEAD, đã xong, đang dở, bước kế, câu hỏi chờ người dùng, ràng buộc, đường dẫn run-log; có khối header `<!-- artifact-template -->` và nằm trong mục lục của skill (kiểm bằng contract hiện có của `artifact-templates`).
-- [ ] **AC2.2** — Given baseline, Then quy tắc xoay phiên (D4–D6) nêu ngưỡng mềm và cứng, nêu rằng chỉ người hoặc statusline đọc được % context (hook không đọc được), và trỏ tới `handoff.md`.
-- [ ] **AC3.1** — Given hook `SessionStart` bật mặc định, When một phiên khởi động (`startup`, `clear` hoặc `compact`) trong project có `handoff.md` của request đang chạy, Then hook in ra tối đa 10.000 ký tự nội dung `handoff.md` qua `additionalContext`; không có file thì không in gì; lỗi bất kỳ thì exit 0 không chặn (fail-open như các hook hiện có).
-- [ ] **AC3.2** — Given hook `SessionStart` bật mặc định, When `SessionStart` có `source: "resume"` và `prompt_cache_likely_expired: true`, Then hook in một dòng cảnh báo có `estimated_cache_write_usd`; khi `prompt_cache_likely_expired` là false hoặc thiếu trường thì không in gì.
-- [ ] **AC4.1** — Given baseline và template run-log, Then có quy tắc ghi `used_percentage` (hoặc `/usage`) của từng phiên vào run-log ở mỗi cổng phase.
-- [ ] **AC4.2** — Given công cụ đo transcript, When chạy trên transcript có entry assistant dùng chung `message.id`, Then mọi block đều được tính (không loại trùng theo `message.id`); `tool_result` trùng `tool_use_id` chỉ tính một lần; dung lượng mỗi lượt lấy từ `usage`; báo cáo tách nhóm `attachment` khỏi `tool_result` và tổng các nhóm khớp tổng nội dung.
-- [ ] **AC5.1** — Given README EN/VI, Then có đoạn nói về `autoCompactWindow` / `CLAUDE_CODE_AUTO_COMPACT_WINDOW` và đánh đổi (D7), nêu rõ aip không ghi settings của người dùng.
-- [ ] **AC6.1** — `npm test` xanh khi hiện thực; version `core` được bump; `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
+- [x] **AC1.1** — Given `core/agents/AGENTS.template.md`, When hiện thực xong, Then mục "Model and session routing" (hoặc mục kế bên) có các quy tắc D1–D3 và D9: báo cáo dài ghi file + tin một dòng, kết quả công cụ có giới hạn, chỉ báo khi xong/chặn/cần quyết, chạy foreground khi bước kế phụ thuộc, phiên rảnh quá 1 giờ thì mở phiên mới; `AGENTS.md` gốc giống byte-for-byte template.
+- [x] **AC1.2** — Given mục baseline ở AC1.1, Then mọi con số (TTL, ngưỡng 40%/60%, hệ số token) có link nguồn chính thức trong "Sự thật đã kiểm" hoặc nhãn [Unverified]/[Inference].
+- [x] **AC2.1** — Given template `handoff.md` trong `core/skills/artifact-templates/references/`, When mở, Then có các mục: nhánh, hash HEAD, đã xong, đang dở, bước kế, câu hỏi chờ người dùng, ràng buộc, đường dẫn run-log; có khối header `<!-- artifact-template -->` và nằm trong mục lục của skill (kiểm bằng contract hiện có của `artifact-templates`).
+- [x] **AC2.2** — Given baseline, Then quy tắc xoay phiên (D4–D6) nêu ngưỡng mềm và cứng, nêu rằng chỉ người hoặc statusline đọc được % context (hook không đọc được), và trỏ tới `handoff.md`.
+- [x] **AC3.1** — Given hook `SessionStart` bật mặc định, When một phiên khởi động (`startup`, `clear` hoặc `compact`) trong project có `handoff.md` của request đang chạy, Then hook in ra tối đa 10.000 ký tự nội dung `handoff.md` qua `additionalContext`; không có file thì không in gì; lỗi bất kỳ thì exit 0 không chặn (fail-open như các hook hiện có).
+- [x] **AC3.2** — Given hook `SessionStart` bật mặc định, When `SessionStart` có `source: "resume"` và `prompt_cache_likely_expired: true`, Then hook in một dòng cảnh báo có `estimated_cache_write_usd`; khi `prompt_cache_likely_expired` là false hoặc thiếu trường thì không in gì.
+- [x] **AC4.1** — Given baseline và template run-log, Then có quy tắc ghi `used_percentage` (hoặc `/usage`) của từng phiên vào run-log ở mỗi cổng phase.
+- [x] **AC4.2** — Given công cụ đo transcript, When chạy trên transcript có entry assistant dùng chung `message.id`, Then mọi block đều được tính (không loại trùng theo `message.id`); `tool_result` trùng `tool_use_id` chỉ tính một lần; dung lượng mỗi lượt lấy từ `usage`; báo cáo tách nhóm `attachment` khỏi `tool_result` và tổng các nhóm khớp tổng nội dung.
+- [x] **AC5.1** — Given README EN/VI, Then có đoạn nói về `autoCompactWindow` / `CLAUDE_CODE_AUTO_COMPACT_WINDOW` và đánh đổi (D7), nêu rõ aip không ghi settings của người dùng.
+- [x] **AC6.1** — `npm test` xanh khi hiện thực; version `core` được bump; `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
 
 ## Thiết kế
 
@@ -111,11 +111,11 @@ Mục baseline mở rộng, giữ ngắn (dưới ~25 dòng thêm) và không l�
 
 ### §3. Hook (bật mặc định)
 
-Cùng khung với `gate-stop.mjs`: script Node trong `core/hooks/scripts/`, đăng ký `SessionStart` trong `hooks.json`, export hàm `decide()` thuần để test, fail-open, không ghi file, đọc cấu hình từ `<git-root>/.claude/aip-gate.json` qua `gate-config.mjs` (khoá mới `handoffInject`, `resumeWarn`: bật mặc định, đặt `false` để tắt). `checkHooksJson` và `HOOK_EVENTS` cần nhận `SessionStart`.
+Cùng khung với `gate-stop.mjs`: script Node trong `core/hooks/scripts/`, đăng ký `SessionStart` trong `hooks.json`, export hàm `decide()` thuần để test, fail-open, không ghi file, đọc cấu hình từ `<git-root>/.claude/aip-gate.json` qua `gate-config.mjs` (khoá mới `handoffInject`, `resumeWarn`: bật mặc định, đặt `false` để tắt; `handoffPath`: đường dẫn `handoff.md` tuỳ chọn, tương đối với cwd; `handoffMaxAgeHours`: tuổi tối đa của file, mặc định 24 giờ, quá tuổi thì không nạp). `checkHooksJson` và `HOOK_EVENTS` cần nhận `SessionStart`.
 
 ## Ngoài phạm vi và anti-goal
 
-Ngoài phạm vi: hiện thực bất kỳ thứ gì (chờ duyệt); đổi hành vi app Claude Desktop (tự đánh thức phiên gốc khi phiên con xong lượt) — chỉ giảm số lần phiên con kết thúc lượt; hook `Stop`/`PreCompact` đo hay chặn context.
+Ngoài phạm vi: đổi hành vi app Claude Desktop (tự đánh thức phiên gốc khi phiên con xong lượt) — chỉ giảm số lần phiên con kết thúc lượt; hook `Stop`/`PreCompact` đo hay chặn context.
 
 Anti-goal (thất bại dù chạy được):
 - Quy tắc làm phiên chậm hơn: bắt ghi file bàn giao quá thường xuyên khiến thêm lượt, tốn hơn lợi.
@@ -125,7 +125,7 @@ Anti-goal (thất bại dù chạy được):
 
 ## Ràng buộc
 
-- Chưa hiện thực: chỉ file docs trong lần này (design + ADR-0003); không đụng `core/`, `plugins/`, `AGENTS.md`.
+- Đã hiện thực trong `core/` (baseline, template `handoff.md`, hook `SessionStart`) và CLI `aip stats`.
 - Khi hiện thực: zero-dep, Node 20+, UTF-8 không BOM, LF; baseline tiếng Anh; comment code tiếng Việt chỉ nêu *vì sao*; đổi nội dung chiếu thì bump version plugin sở hữu và chạy `versions.mjs --lock`.
 
 ## Để lại cho builder
