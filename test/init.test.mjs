@@ -118,13 +118,15 @@ test("AC1.3: init --full không đọc/sửa .claude/settings.json đã có (JSO
     assert.equal(read(root, ".claude/settings.json"), old);
     assert.ok(r.skipped.includes(".claude/settings.json"));
     assert.ok(!r.created.includes(".claude/settings.json"));
+    assert.ok(r.warnings.some((w) => w.includes(".claude/settings.json") && w.includes("core/permissions/policy.json")));
   }
 });
 
-test("init không --full không tạo .claude/settings.json", () => {
+test("AC1.3: init --full tạo mới .claude/settings.json thì không cảnh báo chính sách", () => {
   const root = tmp();
-  init({ root });
-  assert.ok(!fs.existsSync(path.join(root, ".claude/settings.json")));
+  const r = init({ root, full: true });
+  assert.ok(r.created.includes(".claude/settings.json"));
+  assert.ok(!r.warnings.some((w) => w.includes("policy.json")));
 });
 
 test("init rồi install claude core: baseline nằm ở AGENTS.md đúng 1 lần, không chép vào CLAUDE.md", async () => {

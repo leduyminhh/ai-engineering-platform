@@ -46,5 +46,8 @@ export function init({ root, full = false }) {
   if (skipped.includes('CLAUDE.md') && !importsAgentsMd(fs.readFileSync(claudeMd, 'utf8'))) {
     warnings.push('CLAUDE.md đã có nhưng chưa import AGENTS.md — thêm dòng `@AGENTS.md` ở đầu file để Claude Code nạp baseline.');
   }
+  if (skipped.includes('.claude/settings.json')) {
+    warnings.push('.claude/settings.json đã có nên giữ nguyên; chính sách chuẩn nằm ở core/permissions/policy.json (so sánh và tự thêm quy tắc nếu cần).');
+  }
   return { root, created, skipped, warnings };
 }

@@ -3,7 +3,7 @@
   "groups": {
     "secrets": {
       "action": "deny",
-      "rules": ["Read(./.env)", "Read(./.env.*)"]
+      "rules": ["Read(.env)", "Read(.env.local)", "Read(.env.production)", "Read(.env.development)"]
     },
     "git_push": {
       "action": "ask",

@@ -39,6 +39,13 @@ export default async function run({ ok, ctx }) {
     ['AC2.5: tên tool hỏng mcp__', { mcpAllow: ['a'] }, 'mcp__', false],
     ['AC2.5: tên tool thiếu phần tool mcp__a', { mcpDeny: ['a'] }, 'mcp__a', false],
     ['AC2.5: tool không phải MCP', { mcpAllow: ['a'] }, 'Bash', false],
+    ['AC2.3: server thường tên plugin_acme_docs bị phân loại plugin:acme:docs nên không khớp tên trần', { mcpAllow: ['plugin_acme_docs'] }, 'mcp__plugin_acme_docs__t', true],
+    ['AC2.3: tên plugin chứa "_" (giới hạn đã nêu): fail-closed với mcpAllow', { mcpAllow: ['plugin:my_plugin:docs'] }, 'mcp__plugin_my_plugin_docs__t', true],
+    ['AC2.3: phần tử có khoảng trắng hai đầu vẫn khớp (mcpAllow)', { mcpAllow: [' a '] }, 'mcp__a__t', false],
+    ['AC2.4: phần tử có khoảng trắng hai đầu vẫn khớp (mcpDeny)', { mcpDeny: ['  a  '] }, 'mcp__a__t', true],
+    ['AC2.5: phần tử chỉ có khoảng trắng bị bỏ → mcpAllow coi như không khai báo', { mcpAllow: ['  '] }, 'mcp__b__t', false],
+    ['AC2.3: tên phân biệt hoa thường (mcpAllow)', { mcpAllow: ['A'] }, 'mcp__a__t', true],
+    ['AC2.4: tên phân biệt hoa thường (mcpDeny không chặn khác hoa thường)', { mcpDeny: ['A'] }, 'mcp__a__t', false],
   ];
   for (const [name, cfg, tool, deny] of table) {
     const r = call(tool, cfg);
@@ -63,6 +70,10 @@ export default async function run({ ok, ctx }) {
     ok(out.hookSpecificOutput?.hookEventName === 'PreToolUse' && out.hookSpecificOutput?.permissionDecision === 'deny'
       && /b/.test(out.hookSpecificOutput?.permissionDecisionReason || ''), 'AC2.3: CLI BOM stdin + aip-gate.json có BOM trong git repo → in JSON deny');
     ok(run(JSON.stringify({ tool_name: 'mcp__a__t', cwd: repo }), repo) === '', 'AC2.3: CLI server được phép → không in gì');
+    fs.writeFileSync(path.join(repo, '.claude', 'aip-gate.json'), JSON.stringify({ mcpDeny: ['b'] }));
+    const deny = JSON.parse(run(JSON.stringify({ tool_name: 'mcp__b__t', cwd: repo }), repo) || '{}');
+    ok(deny.hookSpecificOutput?.permissionDecision === 'deny' && /mcpDeny/.test(deny.hookSpecificOutput?.permissionDecisionReason || ''), 'AC2.4: CLI mcpDeny trong git repo → in JSON deny');
+    ok(run(JSON.stringify({ tool_name: 'mcp__a__t', cwd: repo }), repo) === '', 'AC2.4: CLI mcpDeny không chặn server khác → không in gì');
     ok(run(payload(plain), plain) === '', 'AC2.2: CLI thư mục không phải git → không in gì');
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });

@@ -10,9 +10,9 @@ export default async function run({ ok, ctx }) {
     const i = tpl.indexOf('### Agents in CI');
     const sec = i < 0 ? '' : flat(tpl.slice(i, tpl.indexOf('\n### ', i + 5)));
     const need = ['claude -p', '--permission-mode dontAsk', '--allowedTools', '--max-turns', '--max-budget-usd', '--bare', 'commit SHA', 'read-only', 'required reviewers'];
-    ok(i >= 0 && need.every((w) => sec.includes(w)), 'AC3.1: baseline có mục Agents in CI với dontAsk, allowedTools, max-turns, max-budget-usd, bare, SHA, token chỉ đọc, required reviewers');
-    ok(i >= 0 && i < tpl.indexOf('### Model and session routing'), 'AC3.1: mục Agents in CI nằm cạnh Model and session routing');
-    ok(read('AGENTS.md') === tpl, 'AC3.1: AGENTS.md giống template từng byte');
+    ok(i >= 0 && need.every((w) => sec.includes(w)), 'P4 AC3.1: baseline có mục Agents in CI với dontAsk, allowedTools, max-turns, max-budget-usd, bare, SHA, token chỉ đọc, required reviewers');
+    ok(i >= 0 && i < tpl.indexOf('### Model and session routing'), 'P4 AC3.1: mục Agents in CI nằm cạnh Model and session routing');
+    ok(read('AGENTS.md') === tpl, 'P4 AC3.1: AGENTS.md giống template từng byte');
   }
 
   // AC3.2: README EN/VI có công thức CI, guard-mcp, chính sách quyền — mỗi từ khoá neo vào đúng đoạn, không khớp toàn file
@@ -29,16 +29,16 @@ export default async function run({ ok, ctx }) {
       const src = read(f);
       const ci = flat(upTo(src, ciLead, ciEnd));
       ok(['claude -p', '--permission-mode dontAsk', '--allowedTools', '--max-turns', '--max-budget-usd', '--bare', 'commit SHA'].every((w) => ci.includes(w)),
-        `AC3.2: ${f} có công thức CI cho claude -p trong mục Agents in CI`);
+        `P4 AC3.2: ${f} có công thức CI cho claude -p trong mục Agents in CI`);
       const mcp = flat(para(src, mcpLead));
       ok(['mcpAllow', 'mcpDeny', 'plugin:<plugin>:<server>', 'fail-open'].every((w) => mcp.includes(w)),
-        `AC3.2: ${f} mô tả guard-mcp với mcpAllow/mcpDeny trong đoạn riêng`);
+        `P4 AC3.2: ${f} mô tả guard-mcp với mcpAllow/mcpDeny trong đoạn riêng`);
       const pol = flat(para(src, polLead));
       ok(['core/permissions/policy.json', '.claude/settings.json', 'Cursor', 'Codex', 'Antigravity', 'allowEnvFiles'].every((w) => pol.includes(w)),
-        `AC3.2: ${f} có mục chính sách quyền (policy.json, settings.json, Cursor/Codex/Antigravity)`);
+        `P4 AC3.2: ${f} có mục chính sách quyền (policy.json, settings.json, Cursor/Codex/Antigravity)`);
     }
     const c = flat(read('CLAUDE.md'));
     ok(c.includes('guard-mcp.mjs') && c.includes('mcpAllow') && c.includes('mcpDeny') && c.includes('permissions/policy.json'),
-      'AC3.2: CLAUDE.md mô tả guard-mcp và permissions/policy.json');
+      'P4 AC3.2: CLAUDE.md mô tả guard-mcp và permissions/policy.json');
   }
 }

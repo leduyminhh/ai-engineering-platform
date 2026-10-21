@@ -10,7 +10,7 @@ const REQUIRED_GROUPS = { secrets: 'deny', git_push: 'ask', network: 'ask', prod
 // Chỉ các dạng quy tắc đã đối chiếu tài liệu; ký tự điều khiển bị loại để một quy tắc không thể chứa quy tắc khác.
 const RULE_PATTERNS = [
   /^Read\([^()\x00-\x1f\x7f]+\)$/,
-  /^Bash\([^()\x00-\x1f*]*[^()\x00-\x1f* ] \*\)$/,
+  /^Bash\([^()\x00-\x1f\x7f*]*[^()\x00-\x1f\x7f* ] \*\)$/,
   /^WebFetch$/,
   /^mcp__[A-Za-z0-9_-]+__\*$/,
 ];

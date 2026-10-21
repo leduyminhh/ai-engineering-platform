@@ -12,10 +12,10 @@ export function parseMcpTool(name) {
   return { server: p ? `plugin:${p[1]}:${p[2]}` : m[1] };
 }
 
-// Chỉ nhận mảng chuỗi; phần tử sai kiểu bị bỏ, mảng rỗng sau lọc coi như không khai báo.
+// Chỉ nhận mảng chuỗi; phần tử sai kiểu bị bỏ, khoảng trắng hai đầu được cắt (phân biệt hoa thường), mảng rỗng sau lọc coi như không khai báo.
 function nameList(v) {
   if (!Array.isArray(v)) return null;
-  const s = v.filter((x) => typeof x === 'string' && x);
+  const s = v.filter((x) => typeof x === 'string').map((x) => x.trim()).filter(Boolean);
   return s.length ? s : null;
 }
 

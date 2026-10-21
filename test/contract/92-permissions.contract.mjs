@@ -13,14 +13,17 @@ export default async function run({ ok }) {
     const policy = loadPolicy(POLICY_PATH);
     const errs = checkPolicy(policy);
     ok(errs.length === 0, `AC1.1: policy.json hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
+    const secrets = policy.groups.secrets.rules;
+    ok(secrets.every((r) => !r.includes('*') && !/example|sample|template/i.test(r)), 'AC1.1: quy tắc secrets không dùng ký tự đại diện, không chặn .env.example/.sample/.template (hook H3 cho phép đọc)');
+    ok(secrets.includes('Read(.env)'), 'AC1.1: secrets chặn .env ở mọi độ sâu (tên trần theo cú pháp gitignore)');
     ok(Object.entries(GROUPS).every(([n, a]) => policy.groups[n]?.action === a), 'AC1.1: đủ bốn nhóm với action đúng');
   }
 
   // AC1.1: isValidRule — một hành vi, nhiều đầu vào
   const ruleCases = [
-    ['Read(./.env)', true], ['Read(./.env.*)', true], ['Bash(git push *)', true], ['WebFetch', true], ['mcp__x__*', true], ['mcp__my_server__*', true],
+    ['Read(./.env)', true], ['Read(.env)', true], ['Read(.env.local)', true], ['Read(./.env.*)', true], ['Bash(git push *)', true], ['WebFetch', true], ['mcp__x__*', true], ['mcp__my_server__*', true],
     ['', false], ['Bash(git push*)', false], ['Read()', false], ['mcp__x', false], ['Read(./.env)\nBash(ls *)', false], ['WebFetch(domain:x)', false], ['Bash( *)', false],
-    [' Read(./.env)', false], ['Read(./.env) ', false], ['mcp__a-b__*', true], ['Read(./ab)', false],
+    [' Read(./.env)', false], ['Read(./.env) ', false], ['mcp__a-b__*', true], ['Read(./a\x7fb)', false], ['Bash(git\x7f push *)', false],
   ];
   for (const [rule, expected] of ruleCases) ok(isValidRule(rule) === expected, `AC1.1: isValidRule(${JSON.stringify(rule)}) = ${expected}`);
   ok(isValidRule(undefined) === false && isValidRule(7) === false, 'AC1.1: isValidRule không phải chuỗi → false');
