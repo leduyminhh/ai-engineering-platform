@@ -1,4 +1,7 @@
 // Contract permissions: chính sách quyền chuẩn của core và bộ dựng khối `permissions` cho Claude.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { POLICY_PATH, loadPolicy, checkPolicy, isValidRule, buildClaudePermissions } from '../../cli/lib/permissions.mjs';
 
 export default async function run({ ok }) {
@@ -17,6 +20,7 @@ export default async function run({ ok }) {
   const ruleCases = [
     ['Read(./.env)', true], ['Read(./.env.*)', true], ['Bash(git push *)', true], ['WebFetch', true], ['mcp__x__*', true], ['mcp__my_server__*', true],
     ['', false], ['Bash(git push*)', false], ['Read()', false], ['mcp__x', false], ['Read(./.env)\nBash(ls *)', false], ['WebFetch(domain:x)', false], ['Bash( *)', false],
+    [' Read(./.env)', false], ['Read(./.env) ', false], ['mcp__a-b__*', true], ['Read(./ab)', false],
   ];
   for (const [rule, expected] of ruleCases) ok(isValidRule(rule) === expected, `AC1.1: isValidRule(${JSON.stringify(rule)}) = ${expected}`);
   ok(isValidRule(undefined) === false && isValidRule(7) === false, 'AC1.1: isValidRule không phải chuỗi → false');
@@ -31,9 +35,21 @@ export default async function run({ ok }) {
     ['rules rỗng', mutate((p) => { p.groups.network.rules = []; })],
     ['quy tắc sai cú pháp', mutate((p) => { p.groups.network.rules = ['Bash(curl*)']; })],
     ['không phải object', null],
+    ['nhóm kế thừa từ Object', mutate((p) => { Object.defineProperty(p.groups, 'constructor', { value: { action: 'ask', rules: ['WebFetch'] }, enumerable: true }); })],
+    ['version sai', mutate((p) => { p.version = 2; })],
   ];
   for (const [name, p] of policyCases) ok(checkPolicy(p).length >= 1, `AC1.1: checkPolicy báo lỗi — ${name}`);
   ok(checkPolicy(good()).length === 0, 'AC1.1: checkPolicy chính sách hợp lệ → không lỗi');
+
+  // AC1.1: loadPolicy bỏ BOM đầu file
+  {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-pol-'));
+    try {
+      const file = path.join(dir, 'policy.json');
+      fs.writeFileSync(file, '﻿' + JSON.stringify(good()));
+      ok(checkPolicy(loadPolicy(file)).length === 0, 'AC1.1: loadPolicy đọc được file có BOM');
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  }
 
   // AC1.1: buildClaudePermissions
   {
@@ -47,5 +63,10 @@ export default async function run({ ok }) {
       deny: ['Read(./.env)', 'Read(./.env.*)'],
       ask: ['Bash(git push *)', 'WebFetch', 'Bash(curl *)', 'Bash(kubectl apply *)'],
     } }), 'AC1.1: buildClaudePermissions gom deny/ask đúng thứ tự, không trùng');
+    const bad = good();
+    bad.groups.network.action = 'allow';
+    let msg = '';
+    try { buildClaudePermissions(bad); } catch (e) { msg = `${e.constructor.name}: ${e.message}`; }
+    ok(/^Error: .*allow/.test(msg), 'AC1.1: buildClaudePermissions action lạ → Error rõ ràng');
   }
 }

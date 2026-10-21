@@ -18,8 +18,9 @@ export default async function run({ ok, ctx }) {
   // AC3.2: README EN/VI có công thức CI, guard-mcp, chính sách quyền — mỗi từ khoá neo vào đúng đoạn, không khớp toàn file
   {
     // Từ dấu mở đoạn tới dòng trống kế tiếp; riêng mục CI kéo dài tới đoạn in đậm kế tiếp (có khối code và danh sách).
-    const para = (s, lead) => { const i = s.indexOf(lead); return i < 0 ? '' : s.slice(i, s.indexOf('\n\n', i)); };
-    const upTo = (s, lead, end) => { const i = s.indexOf(lead); return i < 0 ? '' : s.slice(i, s.indexOf(end, i + lead.length)); };
+    const must = (i, what) => { if (i < 0) throw new Error(`23-agent-permissions.pin: không thấy mốc ${what}`); return i; };
+    const para = (s, lead) => { const i = must(s.indexOf(lead), lead); const j = s.indexOf('\n\n', i); return s.slice(i, j < 0 ? undefined : j); };
+    const upTo = (s, lead, end) => { const i = must(s.indexOf(lead), lead); return s.slice(i, must(s.indexOf(end, i + lead.length), end)); };
     const cases = [
       ['README.md', '**Agents in CI.**', '**MCP gate (`guard-mcp`).**', '**Permission policy.**', '**Limits / residual risk.**'],
       ['README_VI.md', '**Agent trong CI.**', '**Cổng MCP (`guard-mcp`).**', '**Chính sách quyền.**', '**Giới hạn / residual risk.**'],

@@ -9,14 +9,14 @@ const REQUIRED_GROUPS = { secrets: 'deny', git_push: 'ask', network: 'ask', prod
 
 // Chỉ các dạng quy tắc đã đối chiếu tài liệu; ký tự điều khiển bị loại để một quy tắc không thể chứa quy tắc khác.
 const RULE_PATTERNS = [
-  /^Read\([^()\x00-\x1f]+\)$/,
+  /^Read\([^()\x00-\x1f\x7f]+\)$/,
   /^Bash\([^()\x00-\x1f*]*[^()\x00-\x1f* ] \*\)$/,
   /^WebFetch$/,
   /^mcp__[A-Za-z0-9_-]+__\*$/,
 ];
 
 export function loadPolicy(file = POLICY_PATH) {
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  return JSON.parse(fs.readFileSync(file, 'utf8').replace(/^﻿/, ''));
 }
 
 export function isValidRule(rule) {
@@ -25,11 +25,12 @@ export function isValidRule(rule) {
 
 export function checkPolicy(policy) {
   const errs = [];
+  if (policy && typeof policy === 'object' && policy.version !== 1) errs.push(`policy: version phải là 1, đang là ${JSON.stringify(policy.version)}`);
   if (!policy || typeof policy !== 'object' || !policy.groups || typeof policy.groups !== 'object') {
     return ['policy: thiếu đối tượng groups'];
   }
   for (const name of Object.keys(policy.groups)) {
-    if (!(name in REQUIRED_GROUPS)) errs.push(`nhóm lạ: ${name}`);
+    if (!Object.hasOwn(REQUIRED_GROUPS, name)) errs.push(`nhóm lạ: ${name}`);
   }
   for (const [name, action] of Object.entries(REQUIRED_GROUPS)) {
     const g = policy.groups[name];
@@ -44,7 +45,7 @@ export function checkPolicy(policy) {
 export function buildClaudePermissions(policy) {
   const out = { deny: new Set(), ask: new Set() };
   for (const g of Object.values(policy.groups)) {
-    if (!out[g.action]) continue;
+    if (!Object.hasOwn(out, g.action)) throw new Error(`policy: action phải là deny hoặc ask, đang là ${JSON.stringify(g.action)}`);
     for (const r of g.rules) out[g.action].add(r);
   }
   return { permissions: { deny: [...out.deny], ask: [...out.ask] } };

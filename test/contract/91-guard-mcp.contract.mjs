@@ -17,6 +17,8 @@ export default async function run({ ok, ctx }) {
 
   ok(parseMcpTool('mcp__a__t')?.server === 'a' && parseMcpTool('mcp__plugin_p_a__t')?.server === 'plugin:p:a'
     && parseMcpTool('mcp__my_server__t')?.server === 'my_server', 'parseMcpTool: server thường, plugin, có dấu gạch dưới');
+  ok(parseMcpTool('mcp__a__b__c')?.server === 'a' && parseMcpTool('mcp__plugin_p_my_server__t')?.server === 'plugin:p:my_server'
+    && parseMcpTool('mcp__plugin_x__t')?.server === 'plugin_x', 'AC2.3: parseMcpTool tool chứa __, server plugin có dấu gạch dưới, plugin thiếu phần server → tên thường');
   ok(['mcp__', 'mcp__a', 'mcp____t', 'Bash', ''].every((n) => parseMcpTool(n) === null), 'AC2.5: parseMcpTool tên hỏng/không phải MCP → null');
 
   ok(call('mcp__a__t', null) === null && call('mcp__a__t', {}) === null, 'AC2.2: không cấu hình (null, {}) → không quyết định');
@@ -46,7 +48,7 @@ export default async function run({ ok, ctx }) {
   ok(reason.includes('b') && /mcpAllow/.test(reason), 'AC2.3: lý do nêu server bị chặn và khoá cần sửa');
   ok(/mcpDeny/.test(call('mcp__a__t', { mcpDeny: ['a'] })?.reason || ''), 'AC2.4: lý do deny nêu mcpDeny');
 
-  const run = (stdin, cwd) => execFileSync('node', [script], { input: stdin, encoding: 'utf8', cwd });
+  const run = (stdin, cwd) => execFileSync('node', [script], { input: stdin, encoding: 'utf8', cwd, stdio: ['pipe', 'pipe', 'ignore'] });
   ok(run('') === '' && run('nope') === '' && run('{}') === '', 'AC2.5: CLI input rỗng/hỏng/{} → exit 0, không in gì');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-mcp-'));
   try {
