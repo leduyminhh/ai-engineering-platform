@@ -1,11 +1,11 @@
 {
   "backend": {
-    "version": "1.8.13",
-    "hash": "a65974de64944792f9865a89bb0a5124693028ddb8a61342cfaab4b21b66f74b"
+    "version": "1.8.14",
+    "hash": "61956fc0377530207d55fb27c2d514ad0652928a31b2cfda9fd3c4a796140376"
   },
   "core": {
-    "version": "1.8.7",
-    "hash": "e8f1e741d60e6886548e9b6deb8a91ddd743c01fa6fb06a0a0810345a112cd4f"
+    "version": "1.8.8",
+    "hash": "2e4058641a0086da75a7a7db6b3e29df7c41c7b5de5d8f0175cc178783492d2b"
   },
   "data": {
     "version": "1.6.6",
@@ -16,8 +16,8 @@
     "hash": "fe0904be4d7ba1fec31801072c31e0f9689b36098301d71cd26b7cfbc966974d"
   },
   "frontend": {
-    "version": "1.10.12",
-    "hash": "7d83de8eeeab6acc5d9ac4962bc9459c33ea8a5de0d37d162e0022aa7a3e11c5"
+    "version": "1.10.13",
+    "hash": "a3214252209143c3ee786384a9a5f410d605d693c744a72416e1b8bed42f8574"
   },
   "ops": {
     "version": "2.0.3",
