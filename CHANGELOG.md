@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Living specs per capability (core 1.10.0; backend 1.8.16 and frontend 1.10.15 bumped because the projected
+  baseline text changed): a `spec` template under `artifact-templates` (`docs/specs/<capability>/spec.md`, requirement
+  IDs `<capability>/R<n>`, history table), `aip init --full` writes `docs/specs/_TEMPLATE.md`, and the design template
+  gains a `## Ảnh hưởng spec` section. `check-request.mjs` adds warnings W10-W14 (missing impact section, unknown
+  capability, unmatched requirement ID, spec unchanged since base, malformed spec) and `--base <ref>` for W13. The AGENTS
+  baseline gets a spec-merge step before `finishing-a-development-branch`; `docs/specs/README.md` lists the 7 aip
+  capabilities (no `spec.md` yet).
+
 - Long-session context support (core 1.9.0): a handoff template under `artifact-templates`, a `SessionStart` hook
   (`session-start`) that injects the newest usable `handoff.md` on `startup`/`clear`/`compact` and warns on `resume`/`fork`
   of a cold session (config keys `handoffInject`, `resumeWarn`, `handoffPath`, `handoffMaxAgeHours`), `aip stats
