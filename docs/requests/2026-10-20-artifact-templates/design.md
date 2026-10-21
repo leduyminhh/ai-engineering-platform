@@ -33,25 +33,25 @@
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given `core/skills/artifact-templates/`, Then có `SKILL.md` và đủ 9 template trong `references/` (project-knowledge là thư mục con giữ các file hiện có).
-- [ ] **AC1.2** — Given `SKILL.md` của skill, Then có bảng mục lục: mỗi loại → file template → validator (hoặc "chưa có") → nguồn tham chiếu; skill qua mọi validator skill hiện có (khung H2, description, frontmatter).
-- [ ] **AC1.3** — Given mỗi file template, Then mở đầu bằng khối chú thích `<!-- artifact-template … -->` có `type`, `version`, `validator`, `sources`, và ghi rõ khối này bị bỏ khi chép ra dùng.
-- [ ] **AC2.1** — Given `agent.template.md` sau khi điền mẫu (fixture trong test), Then qua `checkAgentTools`, `checkAgentDescription`, `checkSourceKeys('agent', …)` và kiểm khung 4 heading agent hiện có.
-- [ ] **AC2.2** — Given `agent.template.md`, Then `Phạm vi` có 3 tầng `Luôn làm` / `Hỏi trước` / `Không bao giờ`; `Quy trình` mở bằng `Khi được gọi:` và có bước kiểm chứng; `Report trả về` là bảng với các dòng `Kết quả`, `Evidence`, `File đã đổi`, `Rủi ro còn lại`; frontmatter mẫu khai `tools` và `writeScope`.
-- [ ] **AC2.3** — Given `skill.template.md` sau khi điền mẫu, Then qua `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys('skill', …)`; template có chỗ cho checklist quy trình, vòng validate → sửa, và ghi giới hạn SKILL.md dưới 500 dòng, reference sâu một tầng.
-- [ ] **AC2.4** — Given `workflow.template.md` sau khi điền mẫu, Then qua `checkWorkflowBody` + dòng neo khung hiện có (`WF_ANCHORS`, 8 trường/bước). Khung bước không đổi trong project này.
-- [ ] **AC2.5** — Given `task.template.md` sau khi điền mẫu dạng `tasks.md`, Then `check-tasks.mjs` (`parseTasks` + `checkTasks`) trả 0 lỗi.
-- [ ] **AC2.6** — Given `requirement.template.md`, Then giữ 4 heading gốc (`Yêu cầu gốc`, `Bối cảnh`, `Ràng buộc`, `Tiêu chí chấp nhận`), câu requirement dạng `Hệ thống PHẢI …`, AC dạng `**AC<n>.<m>** — Given … When … Then …`, có mục `Không đổi (bugfix)`.
-- [ ] **AC2.7** — Given `design.template.md` và `plan.template.md`, Then đúng khung trong design project 1 §4.2 (plan mở bằng header bắt buộc của `superpowers:writing-plans`, có `**Phủ AC:**`).
-- [ ] **AC2.8** — Given `adr.template.md`, Then có các mục theo MADR 4.0 viết tiếng Việt: Bối cảnh và vấn đề, Yếu tố quyết định, Các phương án, Kết quả quyết định (Hệ quả, Xác nhận), Ưu nhược từng phương án; metadata `Trạng thái`, `Ngày`, `Người quyết định`.
-- [ ] **AC3.1** — Given `aip init --full` ở thư mục trống, Then `docs/requests/_TEMPLATE/` (requirement, design, plan), `docs/decisions/_TEMPLATE.md` và `project-knowledge/` được sinh từ `core/skills/artifact-templates/references/` (khối chú thích bị bỏ), không còn từ `templates/init/docs/…` / `templates/init/project-knowledge/`.
-- [ ] **AC3.2** — Given các skill `*-init`, Then cây `templates` ship kèm vẫn đủ file như trước (nội dung docs/project-knowledge lấy từ nguồn mới).
-- [ ] **AC3.3** — Given repo sau thay đổi, Then `templates/skills/skill.template.txt`, `templates/workflows/workflow.template.md`, `templates/init/docs/requests/_TEMPLATE/`, `templates/init/docs/decisions/_TEMPLATE.md`, `templates/init/project-knowledge/` không còn; mọi chỗ tham chiếu (CLAUDE.md, README, test, `plugins.mjs`, `init.mjs`) trỏ nguồn mới.
-- [ ] **AC3.4** — Given `engineering-adr` (SKILL.md, description, `references/adr-structure.md`) và agent `engineering-spec-analyst`, Then mô tả ADR theo MADR 4.0, trỏ tới template `adr.template.md` của skill core `artifact-templates`; không còn yêu cầu "đủ mục Nygard".
-- [ ] **AC3.5** — Given `engineering-spec-writing/references/spec-structure.md`, Then mục "Map vào `_TEMPLATE`" mô tả `plan.md` theo template plan của core (header `writing-plans`), không còn "khung Phase/Task".
-- [ ] **AC3.6** — Given `engineering-task-breakdown`, Then khung `tasks.md` chung (output-formats §3 + `task-template-common.md`) chỉ còn ở `task.template.md` của core; skill trỏ tới đó; template chi tiết BE (B1–B10) / FE (F1–F9) vẫn ở skill; `check-tasks.mjs` không đổi.
-- [ ] **AC3.7** — Given `templates/init/docs/decisions/0001-…`, `0002-…`, Then viết theo khung MADR 4.0 tiếng Việt.
-- [ ] **AC4.1** — `npm test` xanh; bump version `core` và `engineering`; `node cli/lib/versions.mjs --lock` cập nhật; `npm run pack:verify` xanh.
+- [x] **AC1.1** — Given `core/skills/artifact-templates/`, Then có `SKILL.md` và đủ 9 template trong `references/` (project-knowledge là thư mục con giữ các file hiện có).
+- [x] **AC1.2** — Given `SKILL.md` của skill, Then có bảng mục lục: mỗi loại → file template → validator (hoặc "chưa có") → nguồn tham chiếu; skill qua mọi validator skill hiện có (khung H2, description, frontmatter).
+- [x] **AC1.3** — Given mỗi file template, Then mở đầu bằng khối chú thích `<!-- artifact-template … -->` có `type`, `version`, `validator`, `sources`, và ghi rõ khối này bị bỏ khi chép ra dùng.
+- [x] **AC2.1** — Given `agent.template.md` sau khi điền mẫu (fixture trong test), Then qua `checkAgentTools`, `checkAgentDescription`, `checkSourceKeys('agent', …)` và kiểm khung 4 heading agent hiện có.
+- [x] **AC2.2** — Given `agent.template.md`, Then `Phạm vi` có 3 tầng `Luôn làm` / `Hỏi trước` / `Không bao giờ`; `Quy trình` mở bằng `Khi được gọi:` và có bước kiểm chứng; `Report trả về` là bảng với các dòng `Kết quả`, `Evidence`, `File đã đổi`, `Rủi ro còn lại`; frontmatter mẫu khai `tools` và `writeScope`.
+- [x] **AC2.3** — Given `skill.template.md` sau khi điền mẫu, Then qua `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys('skill', …)`; template có chỗ cho checklist quy trình, vòng validate → sửa, và ghi giới hạn SKILL.md dưới 500 dòng, reference sâu một tầng.
+- [x] **AC2.4** — Given `workflow.template.md` sau khi điền mẫu, Then qua `checkWorkflowBody` + dòng neo khung hiện có (`WF_ANCHORS`, 8 trường/bước). Khung bước không đổi trong project này.
+- [x] **AC2.5** — Given `task.template.md` sau khi điền mẫu dạng `tasks.md`, Then `check-tasks.mjs` (`parseTasks` + `checkTasks`) trả 0 lỗi.
+- [x] **AC2.6** — Given `requirement.template.md`, Then giữ 4 heading gốc (`Yêu cầu gốc`, `Bối cảnh`, `Ràng buộc`, `Tiêu chí chấp nhận`), câu requirement dạng `Hệ thống PHẢI …`, AC dạng `**AC<n>.<m>** — Given … When … Then …`, có mục `Không đổi (bugfix)`.
+- [x] **AC2.7** — Given `design.template.md` và `plan.template.md`, Then đúng khung trong design project 1 §4.2 (plan mở bằng header bắt buộc của `superpowers:writing-plans`, có `**Phủ AC:**`).
+- [x] **AC2.8** — Given `adr.template.md`, Then có các mục theo MADR 4.0 viết tiếng Việt: Bối cảnh và vấn đề, Yếu tố quyết định, Các phương án, Kết quả quyết định (Hệ quả, Xác nhận), Ưu nhược từng phương án; metadata `Trạng thái`, `Ngày`, `Người quyết định`.
+- [x] **AC3.1** — Given `aip init --full` ở thư mục trống, Then `docs/requests/_TEMPLATE/` (requirement, design, plan), `docs/decisions/_TEMPLATE.md` và `project-knowledge/` được sinh từ `core/skills/artifact-templates/references/` (khối chú thích bị bỏ), không còn từ `templates/init/docs/…` / `templates/init/project-knowledge/`.
+- [x] **AC3.2** — Given các skill `*-init`, Then cây `templates` ship kèm vẫn đủ file như trước (nội dung docs/project-knowledge lấy từ nguồn mới).
+- [x] **AC3.3** — Given repo sau thay đổi, Then `templates/skills/skill.template.txt`, `templates/workflows/workflow.template.md`, `templates/init/docs/requests/_TEMPLATE/`, `templates/init/docs/decisions/_TEMPLATE.md`, `templates/init/project-knowledge/` không còn; mọi chỗ tham chiếu (CLAUDE.md, README, test, `plugins.mjs`, `init.mjs`) trỏ nguồn mới.
+- [x] **AC3.4** — Given `engineering-adr` (SKILL.md, description, `references/adr-structure.md`) và agent `engineering-spec-analyst`, Then mô tả ADR theo MADR 4.0, trỏ tới template `adr.template.md` của skill core `artifact-templates`; không còn yêu cầu "đủ mục Nygard".
+- [x] **AC3.5** — Given `engineering-spec-writing/references/spec-structure.md`, Then mục "Map vào `_TEMPLATE`" mô tả `plan.md` theo template plan của core (header `writing-plans`), không còn "khung Phase/Task".
+- [x] **AC3.6** — Given `engineering-task-breakdown`, Then khung `tasks.md` chung (output-formats §3 + `task-template-common.md`) chỉ còn ở `task.template.md` của core; skill trỏ tới đó; template chi tiết BE (B1–B10) / FE (F1–F9) vẫn ở skill; `check-tasks.mjs` không đổi.
+- [x] **AC3.7** — Given `templates/init/docs/decisions/0001-…`, `0002-…`, Then viết theo khung MADR 4.0 tiếng Việt.
+- [x] **AC4.1** — `npm test` xanh; bump version `core` và `engineering`; `node cli/lib/versions.mjs --lock` cập nhật; `npm run pack:verify` xanh.
 
 ## Thiết kế
 

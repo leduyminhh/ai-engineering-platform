@@ -33,21 +33,21 @@ Cơ sở kỹ thuật cho D2 (đã đọc trong superpowers 7.0.0 tại cache pl
 
 AC của thiết kế này viết theo đúng quy ước mới (mục 4.2).
 
-- [ ] **AC1.1** — Given managed block trong `core/agents/AGENTS.template.md`, When đọc mục `Superpowers workflow defaults`, Then có quy định: spec của `brainstorming` ghi vào `docs/requests/<yyyy-mm-dd>-<slug>/design.md`, plan của `writing-plans` ghi vào `plan.md` cùng thư mục, và quy định này ghi đè mặc định `docs/superpowers/`.
-- [ ] **AC1.2** — Given cùng mục đó, Then có quy ước: AC dạng `AC<n>.<m>` + Given/When/Then, mỗi thay đổi chỉ một nơi chứa AC, mỗi task trong plan ghi các AC nó phủ, spec bugfix có mục "Không đổi".
-- [ ] **AC1.4** — Given cùng mục đó, Then có (a) bảng hai loại bộ nhớ như mục 4.6, (b) quy tắc resume: một thay đổi đã có thư mục `docs/requests/<…>/` thì tiếp tục từ task đầu tiên chưa tick trong `plan.md` (và ledger superpowers nếu có), không tạo thư mục hay plan mới.
-- [ ] **AC1.3** — Given `AGENTS.md` ở gốc repo aip, Then nội dung giống byte-for-byte `core/agents/AGENTS.template.md` (ràng buộc sẵn có, vẫn phải giữ).
-- [ ] **AC2.1** — Given `templates/init/docs/requests/_TEMPLATE/`, Then có đủ `requirement.md`, `design.md`, `plan.md` theo khung ở mục 4.2.
-- [ ] **AC2.2** — Given `_TEMPLATE/plan.md`, Then mở bằng đúng header mà `writing-plans` yêu cầu và có chỗ ghi `Phủ AC` cho mỗi task.
-- [ ] **AC2.3** — Given `_TEMPLATE/requirement.md`, Then giữ nguyên 4 heading gốc (`Yêu cầu gốc`, `Bối cảnh`, `Ràng buộc`, `Tiêu chí chấp nhận`) và thêm mục `Không đổi (bugfix)`.
-- [ ] **AC3.1** — Given skill `engineering-spec-writing`, When viết spec, Then AC trong `requirement.md` có ID `AC<n>.<m>`; skill không còn dựng khung `plan.md` kiểu Phase.
-- [ ] **AC3.2** — Given `workflow-feature` và `workflow-bugfix`, Then phần điều kiện tiên quyết ghi rõ: project đã cài superpowers → dùng luồng superpowers (D1); bảng routing của `workflows/orchestrator/WORKFLOW.md` ghi cùng ý. Description giữ nguyên các nhánh `→ <id>` hiện có (validator `cli/lib/conventions.mjs` chỉ nhận id có trong repo).
-- [ ] **AC3.3** — Given nguồn yêu cầu đã có AC mang ID `AC<n>.<m>`, When `engineering-task-breakdown` phân rã, Then `tasks.md` dùng lại đúng các ID đó; skill chỉ tự đánh số `AC<uc>.<n>` khi nguồn chưa có ID.
-- [ ] **AC4.1** — Given một thư mục request hợp lệ, When chạy script kiểm tra (mục 4.5), Then không có cảnh báo và exit 0.
-- [ ] **AC4.2** — Given thư mục request có lỗi (không có nguồn AC, AC trùng ID, AC sai định dạng, AC nằm ở cả `requirement.md` lẫn `design.md`, `plan.md` thiếu dòng `**Goal:**`/`**Spec:**`, có `plan.md` hoặc `tasks.md` nhưng một AC không được task nào phủ), When chạy script, Then in một dòng cảnh báo cho mỗi lỗi dạng `WARN <file>:<dòng> <mô tả>` và exit 0.
-- [ ] **AC4.3** — Given đối số sai (không có đường dẫn, đường dẫn không tồn tại), When chạy script, Then in cách dùng và exit 2.
-- [ ] **AC5.1** — Given repo aip sau thay đổi, Then 15 spec và các plan cũ trong `docs/superpowers/` giữ nguyên; `CLAUDE.md` của repo trỏ tới vị trí mới cho việc từ nay.
-- [ ] **AC5.2** — `npm test` xanh; version của `core`, `engineering`, `workflows` được bump; `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
+- [x] **AC1.1** — Given managed block trong `core/agents/AGENTS.template.md`, When đọc mục `Superpowers workflow defaults`, Then có quy định: spec của `brainstorming` ghi vào `docs/requests/<yyyy-mm-dd>-<slug>/design.md`, plan của `writing-plans` ghi vào `plan.md` cùng thư mục, và quy định này ghi đè mặc định `docs/superpowers/`.
+- [x] **AC1.2** — Given cùng mục đó, Then có quy ước: AC dạng `AC<n>.<m>` + Given/When/Then, mỗi thay đổi chỉ một nơi chứa AC, mỗi task trong plan ghi các AC nó phủ, spec bugfix có mục "Không đổi".
+- [x] **AC1.4** — Given cùng mục đó, Then có (a) bảng hai loại bộ nhớ như mục 4.6, (b) quy tắc resume: một thay đổi đã có thư mục `docs/requests/<…>/` thì tiếp tục từ task đầu tiên chưa tick trong `plan.md` (và ledger superpowers nếu có), không tạo thư mục hay plan mới.
+- [x] **AC1.3** — Given `AGENTS.md` ở gốc repo aip, Then nội dung giống byte-for-byte `core/agents/AGENTS.template.md` (ràng buộc sẵn có, vẫn phải giữ).
+- [x] **AC2.1** — Given `templates/init/docs/requests/_TEMPLATE/`, Then có đủ `requirement.md`, `design.md`, `plan.md` theo khung ở mục 4.2.
+- [x] **AC2.2** — Given `_TEMPLATE/plan.md`, Then mở bằng đúng header mà `writing-plans` yêu cầu và có chỗ ghi `Phủ AC` cho mỗi task.
+- [x] **AC2.3** — Given `_TEMPLATE/requirement.md`, Then giữ nguyên 4 heading gốc (`Yêu cầu gốc`, `Bối cảnh`, `Ràng buộc`, `Tiêu chí chấp nhận`) và thêm mục `Không đổi (bugfix)`.
+- [x] **AC3.1** — Given skill `engineering-spec-writing`, When viết spec, Then AC trong `requirement.md` có ID `AC<n>.<m>`; skill không còn dựng khung `plan.md` kiểu Phase.
+- [x] **AC3.2** — Given `workflow-feature` và `workflow-bugfix`, Then phần điều kiện tiên quyết ghi rõ: project đã cài superpowers → dùng luồng superpowers (D1); bảng routing của `workflows/orchestrator/WORKFLOW.md` ghi cùng ý. Description giữ nguyên các nhánh `→ <id>` hiện có (validator `cli/lib/conventions.mjs` chỉ nhận id có trong repo).
+- [x] **AC3.3** — Given nguồn yêu cầu đã có AC mang ID `AC<n>.<m>`, When `engineering-task-breakdown` phân rã, Then `tasks.md` dùng lại đúng các ID đó; skill chỉ tự đánh số `AC<uc>.<n>` khi nguồn chưa có ID.
+- [x] **AC4.1** — Given một thư mục request hợp lệ, When chạy script kiểm tra (mục 4.5), Then không có cảnh báo và exit 0.
+- [x] **AC4.2** — Given thư mục request có lỗi (không có nguồn AC, AC trùng ID, AC sai định dạng, AC nằm ở cả `requirement.md` lẫn `design.md`, `plan.md` thiếu dòng `**Goal:**`/`**Spec:**`, có `plan.md` hoặc `tasks.md` nhưng một AC không được task nào phủ), When chạy script, Then in một dòng cảnh báo cho mỗi lỗi dạng `WARN <file>:<dòng> <mô tả>` và exit 0.
+- [x] **AC4.3** — Given đối số sai (không có đường dẫn, đường dẫn không tồn tại), When chạy script, Then in cách dùng và exit 2.
+- [x] **AC5.1** — Given repo aip sau thay đổi, Then 15 spec và các plan cũ trong `docs/superpowers/` giữ nguyên; `CLAUDE.md` của repo trỏ tới vị trí mới cho việc từ nay.
+- [x] **AC5.2** — `npm test` xanh; version của `core`, `engineering`, `workflows` được bump; `plugins/_versions.lock.json` cập nhật bằng `node cli/lib/versions.mjs --lock`.
 
 ## 4. Thiết kế
 
