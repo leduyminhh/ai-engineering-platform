@@ -78,6 +78,15 @@ export default async function run({ ok, ctx }) {
     ok(/^- ~~\*\*<năng-lực>\/R2\*\* — .*~~ đã bỏ bởi \[<slug>\]\(.*\)/m.test(tpl), 'AC1.2: spec.template.md có dòng yêu cầu bị bỏ mẫu');
   }
 
+  {
+    const tpl = tplOf('design');
+    ok(/^## Ảnh hưởng spec\s*$/m.test(tpl), 'AC2.1: design.template.md có mục ## Ảnh hưởng spec');
+    ok(tpl.indexOf('## Thiết kế') < tpl.indexOf('## Ảnh hưởng spec') && tpl.indexOf('## Ảnh hưởng spec') < tpl.indexOf('## Ngoài phạm vi'),
+      'AC2.1: mục Ảnh hưởng spec nằm sau ## Thiết kế');
+    ok(/^- <năng-lực>: thêm R<n>, đổi R<m>, bỏ R<k>/m.test(tpl) && /^Không ảnh hưởng: <lý do>/m.test(tpl),
+      'AC2.1: design.template.md có cả hai dạng mẫu');
+  }
+
   // 3. Workflow template qua validator workflow hiện có.
   {
     const tpl = tplOf('workflow');
@@ -395,7 +404,8 @@ export default async function run({ ok, ctx }) {
       };
       fs.mkdirSync(path.join(tmp, '.git'));
       const dir = path.join(tmp, 'docs', 'requests', 'r');
-      put('docs/requests/r/design.md', DESIGN + '- [ ] **AC2.1** — Given h When i Then j\n');
+      // main cấp readSpec nên W10 chạy; fixture có mục ảnh hưởng để các kiểm --strict vẫn chỉ nói về W7–W9.
+      put('docs/requests/r/design.md', DESIGN + '- [ ] **AC2.1** — Given h When i Then j\n## Ảnh hưởng spec\nKhông ảnh hưởng: fixture\n');
       put('docs/requests/r/plan.md', ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1, AC1.2, AC1.10, AC2.1', '', '**Files:**', `- Test: ${tick('test/')}`, ''].join('\n'));
       put('test/sub/a.mjs', 'AC1.1 AC1.2 AC1.10');
       for (const f of ['test/node_modules/x.js', 'test/build/y.js']) put(f, 'AC2.1');
