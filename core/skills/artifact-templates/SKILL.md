@@ -32,10 +32,11 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.
 Validator ghi `chỉ có trong repo aip` hoặc `chỉ có khi cài plugin …` thì chỉ chạy được khi file đó tồn tại; không có thì áp
 dòng trên.
-Validator `scripts/check-request.mjs` (requirement, design, plan) nằm ngay trong skill này nên có ở mọi project đã cài core;
-chạy `node <thư-mục-skill>/scripts/check-request.mjs <docs/requests/ngày-slug> [--tests <path>…] [--strict]` — chỉ cảnh báo, exit 0 khi chạy được, exit 2 khi sai đối số; `--strict` đổi thành exit 1 nếu còn cảnh báo.
+Validator `scripts/check-request.mjs` (requirement, design, plan, và spec sống qua mục `Ảnh hưởng spec`) nằm ngay trong skill này nên có ở mọi project đã cài core;
+chạy `node <thư-mục-skill>/scripts/check-request.mjs <docs/requests/ngày-slug> [--tests <path>…] [--base <ref>] [--strict]` — chỉ cảnh báo, exit 0 khi chạy được, exit 2 khi sai đối số; `--strict` đổi thành exit 1 nếu còn cảnh báo.
 W7: AC chưa có file test nào nhắc tới (ID `AC<n>.<m>`, `ac<n>_<m>` hoặc `Ac<n>_<m>` trong nội dung file). Phạm vi test là các file test ghi trong `**Files:**` của plan.md (dòng `- Test:` hoặc đường dẫn kiểu `test/`, `*.test.*`, `*_test.*`); W8: plan có `**Files:**` nhưng không ghi file test nào; W9: file test ghi trong plan chưa tồn tại. Plan không có `**Files:**` thì bỏ qua W7–W9. Ngay sau khi lập plan, các file test chưa được viết nên W9 là bình thường và W7 được bỏ qua (khi không đọc được file test nào của plan); không xoá `**Files:**` hay mục test để cho im. Chạy lại sau khi test đã viết xong; `--strict` trong CI chỉ dùng từ lúc đó.
 `--tests <path>…` (file hoặc thư mục, quét đệ quy, bỏ `node_modules`, `.git`, `build`, `dist`, `target`, `.venv`) thay phạm vi lấy từ plan.
+W10–W14 kiểm spec sống (`docs/specs/<năng-lực>/spec.md`): W10 design thiếu hoặc rỗng mục `## Ảnh hưởng spec`; W11 tên năng lực không hợp lệ hoặc spec không tồn tại; W12 ID `<năng-lực>/R<n>` không có trong spec, hoặc `bỏ` mà dòng chưa đánh dấu `đã bỏ`; W13 (chỉ với `--base <ref>`) spec bị ảnh hưởng không đổi so với ref; W14 cấu trúc/liên kết của spec sai. Vẫn chỉ cảnh báo.
 Dòng có Template là thư mục (`project-knowledge/`): mỗi file `.md` bên trong có khối header riêng; `tech-stack.yml` là YAML
 nên không có khối header, nguồn của nó ghi ở cột Nguồn.
 
@@ -96,4 +97,4 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
 - [references/project-knowledge/](references/project-knowledge/): 5 khung `.md` (`project-overview`, `domain-context`,
   `architecture`, `source-structure`, `code-convention`) và `tech-stack.yml` (không có header) cho `project-knowledge/`.
 - [scripts/check-request.mjs](scripts/check-request.mjs): validator cho requirement/design/plan; kiểm thư mục request (nguồn AC,
-  ID AC, `**Goal:**`/`**Spec:**` của plan, độ phủ AC bởi plan.md/tasks.md, AC chưa có test nhắc tới W7–W9), mỗi lỗi một dòng `WARN <file>:<dòng> [<mã>] …`; `--strict` → exit 1 khi có cảnh báo.
+  ID AC, `**Goal:**`/`**Spec:**` của plan, độ phủ AC bởi plan.md/tasks.md, AC chưa có test nhắc tới W7–W9, ảnh hưởng spec W10–W14, `--base <ref>`), mỗi lỗi một dòng `WARN <file>:<dòng> [<mã>] …`; `--strict` → exit 1 khi có cảnh báo.

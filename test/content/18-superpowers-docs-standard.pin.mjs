@@ -127,4 +127,27 @@ export default async function run({ ok, ctx }) {
     ok(step1.includes('dòng `superpowers:brainstorming` ở mục "Yêu cầu chạy trực tiếp bằng skill"') && step1.includes('ngoài tín hiệu sự cố và dòng `superpowers:brainstorming`'),
       'AC3.2: Bước 1 xét dòng superpowers trước Registry và loại khỏi tie-break ưu tiên Registry');
   }
+
+  // AC4.1: baseline có bước gộp spec sống trước khi kết thúc nhánh + bảng bộ nhớ dài hạn có docs/specs/
+  {
+    const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
+    const i = tpl.indexOf('#### Docs location and format');
+    const docs = tpl.slice(i, tpl.indexOf('#### Memory and resume', i)).replace(/\s+/g, ' ');
+    ok(docs.includes('docs/specs/<capability>/spec.md') && docs.includes('Ảnh hưởng spec') && docs.includes('history table')
+      && docs.includes('docs/specs/README.md') && docs.includes('check-request.mjs') && docs.includes('--base <ref>')
+      && docs.indexOf('docs/specs/<capability>/spec.md') < docs.indexOf('finishing-a-development-branch'),
+    'AC4.1: baseline có bước gộp spec sống trước finishing-a-development-branch');
+    const longRow = tpl.split('\n').find((l) => l.startsWith('| Long-term |')) ?? '';
+    ok(longRow.includes('docs/specs/'), 'AC4.1: bảng bộ nhớ ghi spec sống ở dòng Long-term');
+  }
+
+  // AC5.1: docs/specs/README.md liệt kê 7 năng lực, chưa có spec.md nào
+  {
+    const dir = path.join(REPO_ROOT, 'docs', 'specs');
+    const readme = fs.existsSync(path.join(dir, 'README.md')) ? fs.readFileSync(path.join(dir, 'README.md'), 'utf8') : '';
+    const names = ['projection', 'install-lifecycle', 'hooks-gates', 'workflows', 'artifact-templates', 'baseline', 'cli-wizard'];
+    ok(names.every((n) => readme.includes(`\`${n}\``) && readme.includes(`docs/specs/${n}/spec.md`)), 'AC5.1: docs/specs/README.md liệt kê đủ 7 năng lực kèm đường dẫn dự kiến');
+    const specs = fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory() && fs.existsSync(path.join(dir, d.name, 'spec.md'))) : [];
+    ok(specs.length === 0, 'AC5.1: chưa có spec.md nào dưới docs/specs');
+  }
 }

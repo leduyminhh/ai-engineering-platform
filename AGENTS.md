@@ -168,13 +168,17 @@ remove only the prompts after them.
   with `--strict` (exit 1 on any warning, for CI). Right after the plan, W9 (listed test file does not exist
   yet) is expected and W7 is skipped: never delete `**Files:**` or test entries to silence them. Re-run once
   the tests are written, and use `--strict` in CI only from then on.
+- Merge step: update `docs/specs/<capability>/spec.md` as the design's `## Ảnh hưởng spec` section says
+  (add, edit or strike through requirements `<capability>/R<n>`, add a row to the spec's history table; if you
+  created a new capability, also add it to `docs/specs/README.md`), then run `check-request.mjs` (with
+  `--base <ref>` in CI). Do this before `finishing-a-development-branch`.
 
 #### Memory and resume
 
 | Type | Scope | Stored in | Updated by |
 |---|---|---|---|
 | Short-term | One change, spec to merge | `docs/requests/<yyyy-mm-dd>-<slug>/`, ledger `.superpowers/sdd/<plan>/` | Agent, while working |
-| Long-term | Whole project | `project-knowledge/`, `docs/decisions/`, `docs/contracts/`, `AGENTS.md`/`CLAUDE.md` | Human reviewer; agent only proposes |
+| Long-term | Whole project | `project-knowledge/`, `docs/decisions/`, `docs/contracts/`, `docs/specs/`, `AGENTS.md`/`CLAUDE.md` | Human reviewer; agent only proposes |
 
 - Resume a change that already has a folder: read `design.md` + `plan.md`; if a superpowers ledger
   exists, follow it, otherwise continue from the first unchecked task (`- [ ]`);
