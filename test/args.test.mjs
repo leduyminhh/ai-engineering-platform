@@ -20,6 +20,7 @@ ok(!parse(['install']).all, 'mặc định không có all');
 ok(parse(['install', '--all', '--provider', 'claude']).explicit === true, '--all + --provider vẫn explicit (non-interactive)');
 ok(parse(['install', '--provider', 'claude']).provider === 'claude', 'không hồi quy: --provider');
 ok(parse(['init', '--full']).full === true && !parse(['init']).full, '--full chỉ bật khi có cờ');
+ok(parse(['stats', '--session', 'a.jsonl', '--json']).session === 'a.jsonl' && parse(['stats', '--json']).json === true && !parse(['stats']).json, 'stats: --session/--json được parse');
 
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }
 console.log(`args.test: ${pass} pass`);

@@ -11,6 +11,7 @@ _aip() {
     'check:Kiểm tra đã cài gì ở scope'
     'list:Liệt kê adapter + plugin'
     'update:git pull + build lại + cài lại'
+    'stats:Đo context từ transcript Claude Code'
     'help:Trợ giúp'
   )
 
