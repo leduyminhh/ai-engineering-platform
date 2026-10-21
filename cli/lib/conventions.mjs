@@ -205,13 +205,20 @@ export function checkAgentModel(agent) {
   const m = agent.model;
   const id = agent.id;
   if (!m) return [`${id}: thiếu khoá model`];
+  if (agent.effort !== undefined && agent.effort !== null && !EFFORTS.includes(agent.effort)) {
+    return [`${id}: effort "${agent.effort}" không hợp lệ (cần ${EFFORTS.join('/')})`];
+  }
   if (m === 'inherit') {
     return /inherit/.test(agent.body || '') ? [] : [`${id}: model inherit nhưng body không nêu lý do (thiếu từ "inherit")`];
   }
-  if (m === 'sonnet') return agent.effort === 'high' ? [] : [`${id}: model sonnet cần effort: high`];
-  if (m === 'opus') return !agent.effort || ['medium', 'high'].includes(agent.effort) ? [] : [`${id}: model opus chỉ nhận effort medium hoặc high`];
-  if (MODEL_ALIASES.includes(m) || /^claude-[a-z0-9.-]+$/.test(m)) return [];
-  return [`${id}: model "${m}" không hợp lệ (cần ${MODEL_ALIASES.join('/')}/inherit hoặc ID dạng claude-...)`];
+  const isAlias = MODEL_ALIASES.includes(m);
+  if (!isAlias && !/^claude-[a-z0-9.-]+$/.test(m)) {
+    return [`${id}: model "${m}" không hợp lệ (cần ${MODEL_ALIASES.join('/')}/inherit hoặc ID dạng claude-...)`];
+  }
+  const tier = isAlias ? m : (m.match(/^claude-(opus|sonnet)-/) || [])[1];
+  if (tier === 'sonnet') return agent.effort === 'high' ? [] : [`${id}: model sonnet cần effort: high`];
+  if (tier === 'opus') return !agent.effort || ['medium', 'high'].includes(agent.effort) ? [] : [`${id}: model opus chỉ nhận effort medium hoặc high`];
+  return [];
 }
 
 export const HOOK_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop', 'SubagentStop'];

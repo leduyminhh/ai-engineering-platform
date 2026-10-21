@@ -13,6 +13,9 @@ export default async function run({ ok, ctx }) {
     && ['`haiku`', '`sonnet`', '`opus`', 'new session', '`/clear`', '`/compact', '15 minutes', 'acknowledg'].every((s) => sec.includes(s)),
     'AC2.1: baseline có mục Model and session routing');
 
+  ok(ctx.allAgents.length > 0 && ctx.allAgents.every((a) => a.model === 'sonnet' && a.effort === 'high'),
+    `AC1.1: mọi agent hiện có khai model sonnet + effort high${ctx.allAgents.filter((a) => a.model !== 'sonnet' || a.effort !== 'high').map((a) => ' ' + a.id).join('')}`);
+
   ok(['`effort`', '`medium`', '`high`'].every((s) => sec.includes(s)),
     'AC2.1: mục baseline nêu quy tắc effort (opus mặc định medium, sonnet high)');
 

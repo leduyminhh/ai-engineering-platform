@@ -364,7 +364,14 @@ export default async function run({ ok, ctx }) {
       [{ id: 'a-sonnet-medium', model: 'sonnet', effort: 'medium', body: '' }, false],
       [{ id: 'a-opus-low', model: 'opus', effort: 'low', body: '' }, false],
       [{ id: 'a-fable', model: 'fable', body: '' }, true],
-      [{ id: 'a-id', model: 'claude-sonnet-5-5', body: '' }, true],
+      [{ id: 'a-id', model: 'claude-haiku-4-5', body: '' }, true],
+      [{ id: 'a-id-sonnet', model: 'claude-sonnet-5-5', effort: 'high', body: '' }, true],
+      [{ id: 'a-id-sonnet-noeffort', model: 'claude-sonnet-5-5', body: '' }, false],
+      [{ id: 'a-id-opus-low', model: 'claude-opus-4-7', effort: 'low', body: '' }, false],
+      [{ id: 'a-id-opus-medium', model: 'claude-opus-4-7', effort: 'medium', body: '' }, true],
+      [{ id: 'a-haiku-xhigh', model: 'haiku', effort: 'xhigh', body: '' }, true],
+      [{ id: 'a-haiku-bad-effort', model: 'haiku', effort: 'turbo', body: '' }, false],
+      [{ id: 'a-inherit-bad-effort', model: 'inherit', effort: 'turbo', body: withInherit }, false],
       [{ id: 'a-inherit-ok', model: 'inherit', body: withInherit }, true],
       [{ id: 'a-null', model: null, body: '' }, false],
       [{ id: 'a-empty', model: '', body: '' }, false],
@@ -378,9 +385,9 @@ export default async function run({ ok, ctx }) {
         `AC1.2: checkAgentModel ${valid ? 'chấp nhận' : 'từ chối'} model=${JSON.stringify(agent.model)}${agent.effort ? ` effort=${agent.effort}` : ''}${agent.model === 'inherit' ? ` (body ${valid ? 'có' : 'không có'} inherit)` : ''}${errs.length ? ' — ' + errs.join('; ') : ''}`);
     }
 
-    const badAgents = allAgents.filter((a) => checkAgentModel(a).length || a.model !== 'sonnet' || a.effort !== 'high').map((a) => a.id);
-    ok(allAgents.length === 16 && badAgents.length === 0,
-      `AC1.1: mọi agent nguồn khai model hợp lệ (sonnet + effort high cho cả 16)${badAgents.length ? ' — lỗi: ' + badAgents.join(', ') : ''}`);
+    const badAgents = allAgents.filter((a) => checkAgentModel(a).length).map((a) => a.id);
+    ok(allAgents.length > 0 && badAgents.length === 0,
+      `mọi agent nguồn khai model hợp lệ${badAgents.length ? ' — lỗi: ' + badAgents.join(', ') : ''}`);
 
     if (fs.existsSync(path.join(BUILD, 'claude'))) {
       const missing = allAgents
