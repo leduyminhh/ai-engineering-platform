@@ -419,6 +419,66 @@ export default async function run({ ok, ctx }) {
       ok(fs.existsSync(path.join(claudeDir, 'plugins', 'core', 'hooks', 'scripts', 'gate-stop.mjs')), 'AC1.9: build claude ship gate-stop.mjs');
     }
   }
+  // SessionStart: nạp handoff khi mở phiên mới, cảnh báo khi resume phiên nguội cache
+  {
+    ok(HOOK_EVENTS.includes('SessionStart'), 'AC3.1: HOOK_EVENTS có SessionStart');
+    const { pathToFileURL, CORE_DIR } = ctx;
+    const ss = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'session-start.mjs')).href);
+    const HOUR = 3600000;
+    const T0 = Date.UTC(2026, 0, 10);
+    const abs = (p) => path.resolve('/repo', p);
+    const body = (extra = '') => `# Bàn giao\nNhánh: feature/x. Việc đang làm: hoàn thiện hook SessionStart, còn lại bước đăng ký event và test. ${extra}`;
+    // files: { 'đường/dẫn/tương-đối': { text, mtime } } — giả lập đĩa, không chạm đĩa thật
+    const fake = (files, cfg = null, nowMs = T0 + HOUR) => {
+      const m = new Map(Object.entries(files).map(([k, v]) => [abs(k), v]));
+      return {
+        readFile: (p) => { const f = m.get(p); if (!f) throw new Error('ENOENT'); if (f.throws) throw new Error('EIO'); return f.text; },
+        existsSync: (p) => m.has(p) || [...m.keys()].some((k) => path.dirname(k) === p || path.dirname(path.dirname(k)) === p),
+        statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
+        readdirSync: (p) => [...new Set([...m.keys()].filter((k) => path.dirname(path.dirname(k)) === p).map((k) => path.basename(path.dirname(k))))],
+        now: () => nowMs,
+        loadConfig: () => cfg,
+      };
+    };
+    const start = (files, { source = 'startup', cfg = null, nowMs, extra = {} } = {}) =>
+      ss.decide({ hook_event_name: 'SessionStart', source, cwd: '/repo', ...extra }, fake(files, cfg, nowMs));
+    const one = { 'docs/requests/2026-01-01-a/handoff.md': { text: body(), mtime: T0 } };
+
+    ok(start(one)?.additionalContext?.includes('feature/x'), 'AC3.1: startup có handoff → chèn nội dung');
+    ok(['clear', 'compact'].every((source) => start(one, { source })?.additionalContext?.includes('feature/x')), 'AC3.1: clear/compact cũng nạp handoff');
+    ok(start({}) === null, 'AC3.1: không có handoff → null');
+    ok(start(one, { nowMs: T0 + 25 * HOUR }) === null && start(one, { nowMs: T0 + 25 * HOUR, cfg: { handoffMaxAgeHours: 48 } }) !== null,
+      'AC3.1: handoff cũ hơn handoffMaxAgeHours → null (mặc định 24, ghi đè được)');
+    const long = { 'docs/requests/2026-01-01-a/handoff.md': { text: '# Bàn giao\n' + 'x'.repeat(20000), mtime: T0 } };
+    ok(start(long)?.additionalContext.length === 9000, 'AC3.1: nội dung dài bị cắt còn 9000 ký tự');
+    ok(start({ 'docs/requests/a/handoff.md': { text: '# Bàn giao\n## Mục tiêu\n\n', mtime: T0 } }) === null
+      && start({ 'docs/requests/a/handoff.md': { text: '', mtime: T0 } }) === null, 'AC3.1: handoff rỗng hoặc chỉ có placeholder → null');
+    const two = {
+      'docs/requests/2026-01-01-a/handoff.md': { text: body('CU'), mtime: T0 },
+      'docs/requests/2026-02-02-z/handoff.md': { text: body('MOI'), mtime: T0 + HOUR / 2 },
+    };
+    const picked = start(two)?.additionalContext || '';
+    ok(picked.includes('MOI') && !picked.includes('CU') && picked.includes('2026-02-02-z'), 'AC3.1: nhiều request → chọn mtime mới nhất, ghi đường dẫn tương đối');
+    ok(start(one, { source: 'resume', extra: { prompt_cache_likely_expired: false } }) === null, 'AC3.1: source resume không nạp handoff');
+    ok(start(one, { cfg: { handoffInject: false } }) === null, 'AC3.1: handoffInject false → null');
+    ok(start(one, { cfg: { handoffInject: true } }) !== null, 'AC3.1: handoffInject true vẫn nạp');
+    ok(start({ 'docs/requests/a/handoff.md': { throws: true, mtime: T0 } }) === null, 'AC3.1: lỗi đọc file → null');
+    const viaCfg = { 'notes/h.md': { text: body('CFG'), mtime: T0 }, ...one };
+    ok(start(viaCfg, { cfg: { handoffPath: 'notes/h.md' } })?.additionalContext.includes('CFG'), 'AC3.1: handoffPath được ưu tiên hơn tự tìm');
+    ok(start({ '.claude/handoff.md': { text: body('FALLBACK'), mtime: T0 } })?.additionalContext.includes('FALLBACK'), 'AC3.1: fallback .claude/handoff.md');
+
+    const cold = { prompt_cache_likely_expired: true, context_tokens: 182340, estimated_cache_write_usd: 1.1396 };
+    for (const source of ['resume', 'fork']) {
+      const r = start(one, { source, extra: cold });
+      ok(r && r.additionalContext.includes('182340') && r.additionalContext.includes('1.1396') && !r.additionalContext.includes('\n'),
+        `AC3.2: ${source} + cache nguội → một dòng có token và estimated_cache_write_usd`);
+    }
+    ok(start(one, { source: 'resume', extra: { prompt_cache_likely_expired: false } }) === null
+      && start(one, { source: 'resume' }) === null, 'AC3.2: prompt_cache_likely_expired false hoặc thiếu → null');
+    ok(start(one, { source: 'resume', extra: cold, cfg: { resumeWarn: false } }) === null, 'AC3.2: resumeWarn false → null');
+    ok(!String(start({}, { source: 'resume', extra: { prompt_cache_likely_expired: true } })?.additionalContext).match(/undefined|NaN/),
+      'AC3.2: thiếu số liệu thì bỏ phần đó, không bịa');
+  }
   // Công tắc allowEnvFiles: mở .env theo project, khoá/credentials vẫn bị chặn
   {
     const { pathToFileURL, CORE_DIR, os, execFileSync } = ctx;
