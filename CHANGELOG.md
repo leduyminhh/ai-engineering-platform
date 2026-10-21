@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Long-session context support (core 1.9.0): a handoff template under `artifact-templates`, a `SessionStart` hook
+  (`session-start`) that injects the newest usable `handoff.md` on `startup`/`clear`/`compact` and warns on `resume`/`fork`
+  of a cold session (config keys `handoffInject`, `resumeWarn`, `handoffPath`, `handoffMaxAgeHours`), `aip stats
+  [--session <path>] [--json]` to measure context size from Claude Code transcripts, and long-session rules in the
+  AGENTS baseline. README documents the `autoCompactWindow` trade-off; aip does not write user settings.
+
 - `core/artifact-templates` skill is the single source of artifact templates, with 9 templates (workflow, skill,
   agent, requirement, design, plan, task, adr, project-knowledge). `SKILL.md` is the index (type, template,
   validator, sources); each template starts with an `artifact-template` header block. Validators that live only in

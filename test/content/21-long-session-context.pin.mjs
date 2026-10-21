@@ -1,4 +1,4 @@
-// Pin: long-session context rules (docs/requests/2026-10-21-long-session-context). Task 5: baseline (AC1.1, AC1.2, AC2.2, AC4.1).
+// Pin: long-session context rules (docs/requests/2026-10-21-long-session-context). Task 5: baseline (AC1.1, AC1.2, AC2.2, AC4.1); Task 6: README + script test (AC5.1, AC6.1).
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT } = ctx;
   const read = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8');
@@ -24,4 +24,13 @@ export default async function run({ ok, ctx }) {
 
   const norm = (s) => s.replace(/\r\n/g, '\n');
   ok(norm(read('AGENTS.md')) === norm(tpl), 'AC1.1: AGENTS.md == AGENTS.template.md');
+
+  for (const f of ['README.md', 'README_VI.md']) {
+    const t = read(f);
+    ok(t.includes('autoCompactWindow') && t.includes('CLAUDE_CODE_AUTO_COMPACT_WINDOW'),
+      `AC5.1: ${f} nêu cách đặt cửa sổ nén`);
+  }
+
+  ok(String(JSON.parse(read('package.json')).scripts.test).includes('transcript-stats.test.mjs'),
+    'AC6.1: npm test chạy transcript-stats.test.mjs');
 }

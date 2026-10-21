@@ -265,6 +265,7 @@ aip check     [-g]
 aip update    [-g]        # git pull + rebuild + reinstall tracked installs
 aip pack                  # bundle Cowork skills -> build/cowork/<skill>.zip
 aip list                  # discovered adapters + plugins
+aip stats     [--session <path>] [--json]   # context size of a Claude Code session from its transcript
 ```
 
 - **Scope**: `project` (default, cwd) or `global` (`-g` / `--scope global`, home dir).
@@ -288,6 +289,7 @@ aip list                  # discovered adapters + plugins
   switch off the wizard; non-interactive `aip install --plugin all` already installs everything.
 - **Uninstall** (alias `remove`) removes only tracked paths (never link targets),
   prunes emptied directories, and reference-counts the shared managed block.
+- **`aip stats`** reads a Claude Code transcript (the newest session of the current project, or `--session <path>`) and reports context size per turn; `--json` prints machine-readable output. [Unverified] It relies on the layout `~/.claude/projects/<slug>/*.jsonl`, which is internal to Claude Code and not a public contract. It only reads; it writes nothing.
 - Providers installed by default: `claude`, `cursor`, `codex`. `antigravity` builds
   but installs only when named explicitly (`--provider antigravity`).
 
@@ -318,7 +320,7 @@ Users then add it with `claude plugin marketplace add <owner>/<repo>@dist`. [Unv
 
 ## Hooks
 
-The `core` plugin ships three Claude Code hooks (`core/hooks/`; zero-dependency Node): two `PreToolUse` guards (H1–H5 below) and a `Stop`/`SubagentStop` verification gate (`gate-stop`, below). **They exist only in plugin-mode installs** — skills-mode (flat `.claude/skills/`) installs none, because `${CLAUDE_PLUGIN_ROOT}` only exists for installed plugins. A managed `allowManagedHooksOnly` setting disables plugin hooks that are not force-enabled by the administrator.
+The `core` plugin ships four Claude Code hooks (`core/hooks/`; zero-dependency Node): two `PreToolUse` guards (H1–H5 below), a `Stop`/`SubagentStop` verification gate (`gate-stop`, below) and a `SessionStart` hook (`session-start`, below). **They exist only in plugin-mode installs** — skills-mode (flat `.claude/skills/`) installs none, because `${CLAUDE_PLUGIN_ROOT}` only exists for installed plugins. A managed `allowManagedHooksOnly` setting disables plugin hooks that are not force-enabled by the administrator.
 
 | Rule | Tool | Decision | Covers |
 | --- | --- | --- | --- |
@@ -326,6 +328,7 @@ The `core` plugin ships three Claude Code hooks (`core/hooks/`; zero-dependency 
 | H2 | Bash, PowerShell | deny | `git commit -m` with non-ASCII text — use `git commit -F <file>` (see the `git-workflow` skill) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | secret files: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private keys `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (also `_sk` and any non-`.pub` suffix), and `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` only (symlinks and NTFS streams are resolved; [Unverified] 8.3 short names). `.env.example`/`.env.sample`/`.env.template` and `*.pub` are allowed |
 | H3 | Bash, PowerShell | ask | a command that names a secret file |
+| SS | SessionStart | context | `startup`/`clear`/`compact`: injects the newest usable `handoff.md`; `resume`/`fork` of a cold session: one-line cost warning (see `session-start` below) |
 | H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root of the target file, not of the session cwd): `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
 
 The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When `guard-bash` cannot parse a command reliably it falls toward `ask` (`guard-files` does not). There is no H4: the ops agents have no Bash tool.
@@ -341,6 +344,26 @@ The scripts fail open: an internal error (empty stdin, broken JSON, missing fiel
   "exemptAgents": ["data-migration-writer"]
 }
 ```
+
+**Session start (`session-start`).** Registered for `SessionStart`; on by default. It has two modes. (1) `source` = `startup`, `clear` or `compact`: it injects the content of a handoff file as additional context, prefixed with its relative path and capped at 9,000 characters (Claude Code limits hook context to 10,000). The file is looked up in this order: `handoffPath` from the config (resolved against the session cwd), the most recently modified `docs/requests/*/handoff.md`, then `.claude/handoff.md`. A file older than `handoffMaxAgeHours` (default 24), or one that is empty or still the unfilled template, is ignored. (2) `source` = `resume` or `fork` when the prompt cache is likely expired: it adds one line with the uncached token count and estimated cost when Claude Code supplies them, and points at the handoff file if a usable one exists. Turn it off with `{"handoffInject": false}` (mode 1) and/or `{"resumeWarn": false}` (mode 2) in `<git-root>/.claude/aip-gate.json`. It fails open like the other scripts.
+
+```json
+{
+  "handoffInject": true,
+  "resumeWarn": true,
+  "handoffPath": "docs/requests/my-feature/handoff.md",
+  "handoffMaxAgeHours": 24
+}
+```
+
+**Compaction window (`autoCompactWindow`).** Auto-compaction triggers at a token threshold. For a model with a 1M-token window the default is about 967K. Lowering it caps the size of every request, but compaction then runs more often and each compaction loses detail from the earlier conversation. That trade-off is yours to make. There are four ways to set it:
+
+- `/autocompact <100k–1M>` in a session;
+- `autoCompactWindow` in your Claude Code settings;
+- the `--autocompact` flag;
+- the `CLAUDE_CODE_AUTO_COMPACT_WINDOW` environment variable, which has the highest priority (`k`/`M` suffixes are accepted from Claude Code v2.1.304).
+
+**aip does not write your settings.** This is your configuration; `aip` neither sets nor changes it. Caveat: when `CLAUDE_CODE_AUTO_COMPACT_WINDOW` is set, the statusline `used_percentage` is still measured against the full window, so it no longer shows when compaction is about to run.
 
 **Limits / residual risk.** The hooks are a regex gate, not a sandbox.
 
