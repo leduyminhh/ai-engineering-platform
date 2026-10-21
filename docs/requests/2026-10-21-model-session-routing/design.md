@@ -47,7 +47,7 @@ Của người dùng (2026-10-21):
 - Giảm opus, dùng haiku cho việc máy móc, sonnet cho việc có logic.
 - Cần bộ quy tắc điều hướng chuẩn để đưa vào engineering platform.
 - Bỏ phần hỏi đáp, người viết thiết kế tự quyết phần còn lại (người dùng kiểm khi đọc).
-- Effort (2026-10-21): Opus mặc định `medium`, chỉ lên `high` cho việc nặng (debug nguyên nhân gốc khó, thiết kế, review bảo mật, review toàn phase); Sonnet mặc định `high`; Haiku để mặc định. Đổi effort giữ cache trên model 5.5 ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)) nên được nâng/hạ giữa phiên khi loại việc đổi; đổi model thì không. 16 agent `model: sonnet` khai thêm `effort: high`.
+- Effort (2026-10-21), mặc định của chúng ta chứ không phải mặc định sản phẩm: `opus` → `medium` (trùng mặc định sản phẩm 5.5), chỉ lên `high` cho việc nặng (debug nguyên nhân gốc khó, thiết kế, review bảo mật, review toàn phase, qua tham số lúc gọi); `sonnet` → `high` (mặc định sản phẩm là `medium`); `haiku` → mặc định sản phẩm. Đổi effort giữ cache trên model 5.5 ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)) nên được nâng/hạ giữa phiên khi loại việc đổi; đổi model thì không. 16 agent `model: sonnet` khai thêm `effort: high`.
 
 Của người viết thiết kế:
 - **D1. Chọn model ở thời điểm tạo phiên hoặc gọi subagent, không đổi model giữa phiên đang có context.** Muốn hạ model cho phần việc kế thì bàn giao sang phiên mới. Lý do: đổi model tính lại toàn bộ request.
@@ -76,7 +76,7 @@ Của người viết thiết kế:
 |---|---|---|---|
 | Subagent máy móc | docs, run-log, ledger, cập nhật bảng tiến độ; sửa lint/format; đổi tên, chép file; mock data, mockup HTML; chạy script kiểm (vd `check-request.mjs`); đọc và tóm tắt log test; merge không conflict; tìm kiếm rộng trong repo | `haiku` (tham số lúc gọi) | haiku làm sai một lần → `sonnet` |
 | Subagent có logic | implement, viết test, fixer, reviewer thường, spec/plan, giải conflict có ngữ nghĩa | `sonnet` (frontmatter) | sonnet thất bại hai lần cùng việc → `opus`, ghi lý do |
-| Subagent chuyên sâu | review bảo mật, review toàn phase trước cổng cuối, debug nguyên nhân gốc (race, migration, saga) | `sonnet` | như trên, hoặc người dùng cho phép |
+| Subagent chuyên sâu | review toàn phase, review bảo mật trước release, debug nguyên nhân gốc khó (race, migration, saga), thiết kế | `sonnet`; `opus` bằng tham số lúc gọi (effort `high`) cho review toàn phase, review bảo mật trước release, debug nguyên nhân gốc khó (không đặt trong frontmatter) | như trên, hoặc người dùng cho phép |
 | Phiên thực thi (một phase / một nhánh) | điều phối subagent của một gói việc | `sonnet`, chọn lúc tạo phiên | gói chủ yếu là thiết kế hoặc debug khó → `opus` lúc tạo phiên |
 | Phiên điều phối gốc | giao việc giữa các phiên, gom câu hỏi cho người dùng | `opus` | — |
 
@@ -85,7 +85,7 @@ Của người viết thiết kế:
 Chọn model:
 1. Chọn model và effort khi tạo phiên hoặc gọi subagent. Không đổi model trên phiên đang có context; muốn đổi thì bàn giao sang phiên mới.
 2. Subagent ghi model đã dùng trong báo cáo. Mỗi lần lên `opus` ghi một dòng lý do.
-2b. Effort: Opus mặc định `medium`, lên `high` chỉ cho debug nguyên nhân gốc khó, thiết kế, review bảo mật, review toàn phase; Sonnet mặc định `high`; Haiku để mặc định. Đổi effort giữ cache trên model 5.5 nên nâng/hạ giữa phiên khi loại việc đổi; đổi model thì không (quyết định người dùng 2026-10-21).
+2b. Effort (mặc định của chúng ta, không phải mặc định sản phẩm): `opus` → `medium` (trùng mặc định sản phẩm 5.5), `high` chỉ cho việc nặng ở hàng subagent chuyên sâu; `sonnet` → `high` (mặc định sản phẩm là `medium`); `haiku` → mặc định sản phẩm. Đổi effort giữ cache trên model 5.5 (Claude Code dùng API key hoặc subscription; ngoại lệ xem prompt-caching) nên nâng/hạ giữa phiên khi loại việc đổi; đổi model thì không (quyết định người dùng 2026-10-21).
 
 Xoay phiên:
 3. Một phiên làm một gói việc (một phase, một nhánh). Xong gói, hoặc context vượt ~40% cửa sổ, thì ghi điểm bàn giao vào ledger/run-log (nhánh, hash, việc dở, câu hỏi chờ) rồi mở phiên mới.

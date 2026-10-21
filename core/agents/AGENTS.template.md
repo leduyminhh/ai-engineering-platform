@@ -184,6 +184,8 @@ remove only the prompts after them.
 
 ### Model and session routing
 
+(Claude Code. Other tools: apply the session and messaging rules; ignore model names.)
+
 Soft guidance (no hook). Facts are from the official docs: [prompt-caching](https://code.claude.com/docs/en/prompt-caching),
 [sub-agents](https://code.claude.com/docs/en/sub-agents), [costs](https://code.claude.com/docs/en/costs),
 [multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system).
@@ -192,7 +194,7 @@ Soft guidance (no hook). Facts are from the official docs: [prompt-caching](http
 |---|---|---|---|
 | Mechanical subagent | docs, run-log/ledger updates, lint/format fixes, renames, mock data, running check scripts, summarizing test logs, conflict-free merges, broad repo search | `haiku` (call-time parameter) | `haiku` got it wrong once → `sonnet` |
 | Logic subagent | implement, write tests, fix, regular review, spec/plan, semantic conflicts | `sonnet` (frontmatter) | `sonnet` failed twice on the same task → `opus` |
-| Deep subagent | security review, whole-phase review before the final gate, root-cause debugging | `sonnet` | as above, or the user allows it |
+| Deep subagent | whole-phase review, pre-release security review, hard root-cause debugging, design | `sonnet`; `opus` via call-time parameter (effort `high`) for whole-phase review, pre-release security review, hard root-cause debugging | as above, or the user allows it |
 | Execution session (one phase/branch) | orchestrates the subagents of one work package | `sonnet`, chosen at session creation | design-heavy or hard-debug package → `opus` at creation |
 | Root orchestration session | hands work between sessions, batches questions for the user | `opus` | — |
 
@@ -201,10 +203,11 @@ Soft guidance (no hook). Facts are from the official docs: [prompt-caching](http
 1. Choose model and effort when creating a session or calling a subagent. Never switch model on a session that
    already has context; to change it, hand off to a new session. Each model has its own cache, so a switch
    recomputes the whole request ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
-2. Set `effort` together with the model. `opus` defaults to `medium`; use `high` only for heavy work (hard
-   root-cause debugging, design, security review, whole-phase review). `sonnet` defaults to `high`. Leave `haiku`
-   at its default. Unlike a model switch, changing `effort` keeps the prompt cache on 5.5 models, so raise or lower
-   it mid-session when the kind of work changes ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
+2. Set `effort` together with the model. Our defaults: `opus` → `medium` (same as the 5.5 product default),
+   `high` only for the heavy work named in the deep-subagent row; `sonnet` → `high` (the product default is
+   `medium`); `haiku` → product default. Unlike a model switch, changing `effort` keeps the prompt cache on 5.5
+   models (Claude Code with an API key or subscription; see prompt-caching for exceptions), so raise or lower it
+   mid-session when the kind of work changes ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
 3. Subagents report the model they used. Every step up to `opus` gets a one-line reason.
 
 Subagent model order: call-time parameter → frontmatter `model` → `CLAUDE_CODE_SUBAGENT_MODEL` → main session
@@ -217,7 +220,7 @@ model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
    open a new session. [Inference] The 40% threshold is a team heuristic, not an official figure.
 5. Keep the orchestrating session's context small: read summaries, give long log/diff reading to `haiku` subagents.
 6. Use `/clear` between unrelated tasks; run `/compact <focus>` only at a natural pause. Compaction drops the
-   cache; the main session's TTL is 1 hour on a subscription, subagents' default is 5 minutes
+   cache; the main session's TTL is 1 hour on a subscription (within plan usage), subagents' default is 5 minutes
    ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
 
 **Messages between sessions**

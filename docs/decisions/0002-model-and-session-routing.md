@@ -37,13 +37,13 @@ Chọn B. Mọi agent của plugin khai `model` (mặc định `sonnet`); việc
 
 C chỉ ghi thành hướng dẫn trong README (người dùng tự đặt). D để sau.
 
-Quyết định về effort (người dùng, 2026-10-21): `opus` mặc định `medium`, chỉ dùng `high` cho việc nặng (debug nguyên nhân gốc khó, thiết kế, security review, review toàn phase); `sonnet` dùng `high`; `haiku` giữ mặc định. Agent của plugin khai `effort: high`; agent Codex không nhận reasoning effort từ giá trị này.
+Quyết định về effort (người dùng, 2026-10-21): `opus` mặc định `medium`, chỉ dùng `high` cho việc nặng (debug nguyên nhân gốc khó, thiết kế, security review, review toàn phase); `sonnet` dùng `high` (mặc định sản phẩm là `medium`, đây là chính sách của chúng ta); `haiku` giữ mặc định. Agent của plugin khai `effort: high`; agent Codex không nhận reasoning effort từ giá trị này.
 
 ## Hệ quả
 
 - Agent của plugin chạy Sonnet kể cả khi phiên chính chạy Opus.
 - Project cài aip nhận quy tắc phiên qua managed block, không phải nhắc lại trong từng `CLAUDE.md`.
 - Agent mới thêm vào plugin phải khai `model`, nếu không `validate.mjs` báo lỗi.
-- Rủi ro: Sonnet có thể bỏ sót lỗi tinh vi ở review; quy tắc nâng `opus` cho review toàn phase và bảo mật trước release bù lại.
+- Rủi ro: Sonnet có thể bỏ sót lỗi tinh vi ở review; quy tắc nâng `opus` (bằng tham số lúc gọi, effort `high`, không đặt trong frontmatter) cho review toàn phase, review bảo mật trước release và debug nguyên nhân gốc khó bù lại.
 - Đổi `effort` giữa phiên vẫn giữ prompt cache trên model 5.5, còn đổi model thì không ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)); nên chỉnh effort theo loại việc thay vì đổi model.
 - Cần kiểm lại con số TTL, hệ số giá khi Claude Code đổi tài liệu; trọng số cache read trong hạn mức gói chưa kiểm được [Unverified].
