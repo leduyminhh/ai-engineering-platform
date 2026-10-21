@@ -217,8 +217,12 @@ model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
 
 4. One session handles one work package (a phase, a branch). When the package is done, or context passes ~40%
    of the window (soft) or ~60% (hard), write the handoff to `handoff.md` (template in `core:artifact-templates`:
-   branch, hash, unfinished work, pending questions) and open a new session. [Inference] The 40% and 60% thresholds are team heuristics, not official figures.
-   Only a human or the statusline can read the percentage (`context_window.used_percentage`, [statusline](https://code.claude.com/docs/en/statusline)); a hook cannot, because no hook input carries the context size ([hooks](https://code.claude.com/docs/en/hooks#common-input-fields)).
+   branch, hash, unfinished work, pending questions) and open a new session. [Inference] The 40% and 60%
+   thresholds are team heuristics, not official figures.
+   Only a human or the statusline can read the percentage (`context_window.used_percentage`); a hook cannot.
+   The common hook input fields carry no context size ([hooks](https://code.claude.com/docs/en/hooks#common-input-fields),
+   [statusline](https://code.claude.com/docs/en/statusline)). Only SessionStart on resume/fork gets `context_tokens`;
+   [Inference] that is a token count, not the percentage.
 5. Keep the orchestrating session's context small: read summaries, give long log/diff reading to `haiku` subagents.
 6. Use `/clear` between unrelated tasks; run `/compact <focus>` only at a natural pause. Compaction drops the
    cache; the main session's TTL is 1 hour on a subscription (within plan usage), subagents' default is 5 minutes

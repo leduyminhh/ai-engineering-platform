@@ -9,7 +9,9 @@ export default async function run({ ok, ctx }) {
   const next = rest.indexOf('\n### ');
   const sec = start < 0 ? '' : tpl.slice(start, next < 0 ? tpl.length : start + 5 + next);
 
-  ok(['handoff.md', 'foreground', 'one line', '1 hour', 'statusline'].every((s) => sec.includes(s)),
+  ok(['handoff.md', 'foreground', '1 hour', 'statusline', 'sends the parent one line', 'bounds its output',
+    'instead of ending the turn', 'cheaper to replace than', 'open a new session from `handoff.md`',
+    'Record each session'].every((s) => sec.includes(s)),
     'AC1.1: mục có quy tắc phiên dài');
 
   ok(['[Inference]', '[Unverified]', 'code.claude.com/docs/en/prompt-caching'].every((s) => sec.includes(s)),
