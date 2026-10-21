@@ -59,7 +59,7 @@
 
 **Interfaces:**
 - Produces: `export function parseImpact(lines: string[]): { found: boolean, line: number, none: { reason: string } | null, entries: Array<{ cap: string, items: Array<{ action: 'thêm'|'đổi'|'bỏ', n: number }>, line: number }> }` (`lines` từ `linesOf`; `line` là số dòng 1-based của heading, 0 nếu không thấy).
-- Produces: `checkRequest(texts, { readTest, override, readSpec, changedSpecs })` — Task này chỉ thêm W10 và nhận tham số `readSpec`; kiểu `readSpec(cap: string) => { text: string, linkExists(href: string): boolean } | null` được dùng ở Task 3.
+- Produces: `checkRequest(texts, { readTest, override, readSpec, changedSpecs })` — Task này chỉ thêm W10 và nhận tham số `readSpec`; kiểu `readSpec(cap: string) => string | null` (kèm tuỳ chọn riêng `linkExists(href, cap) => boolean`) được dùng ở Task 3.
 
 - [x] **Step 1: Viết test đỏ** trong module mới `36-living-spec.contract.mjs` (`export default async function run({ ok, ctx })`, theo mẫu import của contract 35): bảng tham số hóa cho `parseImpact` (dòng `- hooks-gates: thêm R12, đổi R3`, dòng `Không ảnh hưởng: lý do`, `Không ảnh hưởng:` rỗng, mục trong code fence, không có heading); `AC3.1:` `checkRequest` với `readSpec` có cấp: design thiếu mục → đúng một W10; design có `Không ảnh hưởng: x` → không W10; `Không ảnh hưởng:` rỗng → W10; không cấp `readSpec` → không W10. `AC2.1:` `design.template.md` chứa `## Ảnh hưởng spec` và cả hai dạng mẫu (đặt trong contract 35 cạnh các kiểm template khác).
 - [x] **Step 2: Chạy, xác nhận đỏ.** Run: `node test/validate.mjs --build --only living` và `--only artifact`. Expected: FAIL (hàm chưa có).
@@ -78,12 +78,12 @@
 
 **Interfaces:**
 - Consumes: `parseImpact`, `readSpec`, `linesOf` (Task 2).
-- Produces: `export function parseSpec(text: string, folder: string): { reqs: Map<string, { line: number, removed: boolean }>, problems: Array<{ line: number, msg: string }>, links: Array<{ line: number, href: string }> }`; `main` cấp `readSpec` thật theo `path.resolve(dir, '..', '..', 'specs')`.
+- Produces: `export function parseSpec(text: string, folder: string): { reqs: Map<string, { line: number, removed: boolean }>, problems: Array<{ line: number, msg: string }>, links: Array<{ line: number, href: string }> }`; `main` cấp `readSpec(cap) => string | null` và `linkExists(href, cap)` thật theo `path.resolve(dir, '..', '..', 'specs')`.
 
 - [x] **Step 1: Viết test đỏ** (tham số hóa theo fixture văn bản spec/design, không chạm đĩa): `parseSpec` đọc đúng yêu cầu thường, yêu cầu `~~…~~ đã bỏ bởi`, và báo `problems` cho ID sai định dạng, ID trùng, tiền tố khác `folder`; `AC3.2:` năng lực không tồn tại (`readSpec` → null) → W11; tên `../x`, `a/b` → W11 và `readSpec` không được gọi; `AC3.3:` `đổi R3` mà spec không có `x/R3` → W12; `bỏ R3` mà dòng chưa `đã bỏ` → W12; `đổi R1` khi spec chỉ có `x/R10` → W12; `thêm R9` không kiểm; `AC3.5:` mỗi `problems` của `parseSpec` ra một W14, link trong bảng Lịch sử mà `linkExists` trả false → W14; spec CRLF/BOM parse như nhau. Một test CLI end-to-end trên thư mục tạm (`docs/requests/r1/design.md` + `docs/specs/x/spec.md`) kiểm main đọc đúng đường dẫn `../../specs`.
 - [x] **Step 2: Chạy, xác nhận đỏ.** Run: `node test/validate.mjs --build --only living`. Expected: FAIL.
 - [x] **Step 3: Viết `parseSpec`** (heading H2 `Yêu cầu` giới hạn vùng yêu cầu; dòng yêu cầu khớp `^\s*[-*]\s+(~~)?\*\*([^*]+)\*\*`; `removed` khi dòng bắt đầu `~~` và chứa `đã bỏ bởi`; `links` lấy mọi `](href)` tương đối trong toàn file, bỏ `http(s):` và `#`).
-- [x] **Step 4: Thêm W11/W12/W14 vào `checkRequest`** cho từng `entry` của `parseImpact`; mỗi spec chỉ đọc và kiểm W14 một lần dù nhiều mục. Trong `main`, `readSpec(cap)` đọc `specs/<cap>/spec.md` (UTF-8, bỏ BOM) và `linkExists(href)` resolve theo thư mục chứa spec.
+- [x] **Step 4: Thêm W11/W12/W14 vào `checkRequest`** cho từng `entry` của `parseImpact`; mỗi spec chỉ đọc và kiểm W14 một lần dù nhiều mục. Trong `main`, `readSpec(cap)` đọc `specs/<cap>/spec.md` (UTF-8, bỏ BOM) và `linkExists(href, cap)` resolve theo thư mục chứa spec.
 - [x] **Step 5: Chạy, xác nhận xanh.** Run: `node test/validate.mjs --build --only living` rồi `--only artifact`. Expected: PASS.
 - [x] **Step 6: Commit** `feat(core): validate impacted specs with W11, W12 and W14`.
 
@@ -109,7 +109,7 @@
 **Files:**
 - Modify: `core/agents/AGENTS.template.md` (mục `#### Docs location and format`, bảng `#### Memory and resume`), `AGENTS.md` (chép byte-for-byte), `CLAUDE.md`, `README.md`, `README_VI.md`, `core/skills/artifact-templates/SKILL.md` (đoạn mô tả W-code)
 - Create: `docs/specs/README.md`
-- Test: `test/content/18-superpowers-docs-standard.pin.mjs`, `test/contract/70-bytes.contract.mjs`
+- Test: `test/content/22-living-spec.pin.mjs`, `test/contract/70-bytes.contract.mjs`
 
 **Interfaces:**
 - Consumes: định dạng mục `Ảnh hưởng spec` và W10–W14 (Task 2–4).
