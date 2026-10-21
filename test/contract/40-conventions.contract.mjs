@@ -355,9 +355,14 @@ export default async function run({ ok, ctx }) {
     const { checkAgentModel } = ctx;
     const withInherit = 'Dùng inherit vì agent cần theo model của phiên cha.';
     const cases = [
-      [{ id: 'a-sonnet', model: 'sonnet', body: '' }, true],
+      [{ id: 'a-sonnet', model: 'sonnet', effort: 'high', body: '' }, true],
       [{ id: 'a-opus', model: 'opus', body: '' }, true],
+      [{ id: 'a-opus-medium', model: 'opus', effort: 'medium', body: '' }, true],
+      [{ id: 'a-opus-high', model: 'opus', effort: 'high', body: '' }, true],
       [{ id: 'a-haiku', model: 'haiku', body: '' }, true],
+      [{ id: 'a-sonnet-noeffort', model: 'sonnet', body: '' }, false],
+      [{ id: 'a-sonnet-medium', model: 'sonnet', effort: 'medium', body: '' }, false],
+      [{ id: 'a-opus-low', model: 'opus', effort: 'low', body: '' }, false],
       [{ id: 'a-fable', model: 'fable', body: '' }, true],
       [{ id: 'a-id', model: 'claude-sonnet-5-5', body: '' }, true],
       [{ id: 'a-inherit-ok', model: 'inherit', body: withInherit }, true],
@@ -370,12 +375,12 @@ export default async function run({ ok, ctx }) {
     for (const [agent, valid] of cases) {
       const errs = checkAgentModel(agent);
       ok(valid ? errs.length === 0 : errs.length > 0 && errs.every((e) => e.includes(agent.id)),
-        `AC1.2: checkAgentModel ${valid ? 'chấp nhận' : 'từ chối'} model=${JSON.stringify(agent.model)}${agent.model === 'inherit' ? ` (body ${valid ? 'có' : 'không có'} inherit)` : ''}${errs.length ? ' — ' + errs.join('; ') : ''}`);
+        `AC1.2: checkAgentModel ${valid ? 'chấp nhận' : 'từ chối'} model=${JSON.stringify(agent.model)}${agent.effort ? ` effort=${agent.effort}` : ''}${agent.model === 'inherit' ? ` (body ${valid ? 'có' : 'không có'} inherit)` : ''}${errs.length ? ' — ' + errs.join('; ') : ''}`);
     }
 
-    const badAgents = allAgents.filter((a) => checkAgentModel(a).length || a.model !== 'sonnet').map((a) => a.id);
+    const badAgents = allAgents.filter((a) => checkAgentModel(a).length || a.model !== 'sonnet' || a.effort !== 'high').map((a) => a.id);
     ok(allAgents.length === 16 && badAgents.length === 0,
-      `AC1.1: mọi agent nguồn khai model hợp lệ (sonnet cho cả 16)${badAgents.length ? ' — lỗi: ' + badAgents.join(', ') : ''}`);
+      `AC1.1: mọi agent nguồn khai model hợp lệ (sonnet + effort high cho cả 16)${badAgents.length ? ' — lỗi: ' + badAgents.join(', ') : ''}`);
 
     if (fs.existsSync(path.join(BUILD, 'claude'))) {
       const missing = allAgents

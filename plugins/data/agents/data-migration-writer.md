@@ -3,6 +3,7 @@ name: data-migration-writer
 description: "Người viết migration: chỉ tạo file migration schema mới và sửa file do chính lượt này tạo (Flyway/Liquibase/Alembic, expand/migrate/contract), không kết nối DB hay chạy, theo skill data-db-migration. Dùng khi cần giao file migration theo kế hoạch C2."
 mode: write
 model: sonnet
+effort: high
 skills: "data-db-migration"
 ---
 

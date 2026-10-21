@@ -137,7 +137,7 @@ export default async function run({ ok, ctx }) {
     ok(agent.tools.length > 0 && agent.writeScope.length > 0, 'template agent (đã điền): khai tools và writeScope');
     const tErrs = checkAgentTools(agent);
     ok(tErrs.length === 0, `template agent (đã điền) PASS checkAgentTools${tErrs.length ? ' — ' + tErrs.join('; ') : ''}`);
-    const mErrs = ctx.checkAgentModel({ id: 'demo-agent', model: fm.meta.model || null, body: fm.body || '' });
+    const mErrs = ctx.checkAgentModel({ id: 'demo-agent', model: fm.meta.model || null, effort: fm.meta.effort || null, body: fm.body || '' });
     ok(mErrs.length === 0, `AC1.1: template agent khai model${mErrs.length ? ' — ' + mErrs.join('; ') : ''}`);
     const dErrs = checkAgentDescription(fm.meta.description ?? '');
     ok(dErrs.length === 0, `template agent (đã điền) PASS checkAgentDescription${dErrs.length ? ' — ' + dErrs.join('; ') : ''}`);

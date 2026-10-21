@@ -13,6 +13,9 @@ export default async function run({ ok, ctx }) {
     && ['`haiku`', '`sonnet`', '`opus`', 'new session', '`/clear`', '`/compact', '15 minutes', 'acknowledg'].every((s) => sec.includes(s)),
     'AC2.1: baseline có mục Model and session routing');
 
+  ok(['`effort`', '`medium`', '`high`'].every((s) => sec.includes(s)),
+    'AC2.1: mục baseline nêu quy tắc effort (opus mặc định medium, sonnet high)');
+
   ok(['code.claude.com/docs/en/prompt-caching', 'code.claude.com/docs/en/sub-agents', 'code.claude.com/docs/en/costs',
     'anthropic.com/engineering/multi-agent-research-system'].every((s) => sec.includes(s)),
     'AC2.2: số liệu có nguồn');

@@ -3,6 +3,7 @@ name: frontend-data-integrator
 description: "Data integrator frontend: nối UI React đã dựng với API thật theo contract OpenAPI (type sinh từ contract, data hook ở container/page), lệch contract thì dừng, theo skill frontend-data-integration. Dùng khi workflow cần nối data cho màn hình đã có."
 mode: write
 model: sonnet
+effort: high
 skills: "frontend-data-integration"
 ---
 

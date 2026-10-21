@@ -199,6 +199,7 @@ export function checkAgentTools(agent) {
 
 const MODEL_ALIASES = ['sonnet', 'opus', 'haiku', 'fable'];
 
+// Effort theo bậc model: sonnet cố định high, opus mặc định medium (high cho việc nặng) để giữ chi phí có kiểm soát.
 // Mọi agent phải chọn model có chủ đích; inherit chỉ hợp lệ khi body nêu lý do, tránh để mặc định chạy ngầm.
 export function checkAgentModel(agent) {
   const m = agent.model;
@@ -207,6 +208,8 @@ export function checkAgentModel(agent) {
   if (m === 'inherit') {
     return /inherit/.test(agent.body || '') ? [] : [`${id}: model inherit nhưng body không nêu lý do (thiếu từ "inherit")`];
   }
+  if (m === 'sonnet') return agent.effort === 'high' ? [] : [`${id}: model sonnet cần effort: high`];
+  if (m === 'opus') return !agent.effort || ['medium', 'high'].includes(agent.effort) ? [] : [`${id}: model opus chỉ nhận effort medium hoặc high`];
   if (MODEL_ALIASES.includes(m) || /^claude-[a-z0-9.-]+$/.test(m)) return [];
   return [`${id}: model "${m}" không hợp lệ (cần ${MODEL_ALIASES.join('/')}/inherit hoặc ID dạng claude-...)`];
 }

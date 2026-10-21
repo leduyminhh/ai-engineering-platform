@@ -201,38 +201,42 @@ Soft guidance (no hook). Facts are from the official docs: [prompt-caching](http
 1. Choose model and effort when creating a session or calling a subagent. Never switch model on a session that
    already has context; to change it, hand off to a new session. Each model has its own cache, so a switch
    recomputes the whole request ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
-2. Subagents report the model they used. Every step up to `opus` gets a one-line reason.
+2. Set `effort` together with the model. `opus` defaults to `medium`; use `high` only for heavy work (hard
+   root-cause debugging, design, security review, whole-phase review). `sonnet` defaults to `high`. Leave `haiku`
+   at its default. Unlike a model switch, changing `effort` keeps the prompt cache on 5.5 models, so raise or lower
+   it mid-session when the kind of work changes ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
+3. Subagents report the model they used. Every step up to `opus` gets a one-line reason.
 
    Subagent model order: call-time parameter → frontmatter `model` → `CLAUDE_CODE_SUBAGENT_MODEL` → main session
    model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
 
 **Rotating sessions**
 
-3. One session handles one work package (a phase, a branch). When the package is done, or context passes ~40%
+4. One session handles one work package (a phase, a branch). When the package is done, or context passes ~40%
    of the window, write a handoff (branch, hash, unfinished work, pending questions) to the ledger/run-log and
    open a new session. [Inference] The 40% threshold is a team heuristic, not an official figure.
-4. Keep the orchestrating session's context small: read summaries, give long log/diff reading to `haiku` subagents.
-5. Use `/clear` between unrelated tasks; run `/compact <focus>` only at a natural pause. Compaction drops the
+5. Keep the orchestrating session's context small: read summaries, give long log/diff reading to `haiku` subagents.
+6. Use `/clear` between unrelated tasks; run `/compact <focus>` only at a natural pause. Compaction drops the
    cache; the main session's TTL is 1 hour on a subscription, subagents' default is 5 minutes
    ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
 
 **Messages between sessions**
 
-6. Do not send a message only to announce a rule or check in; fold it into the brief of the next task.
-7. A child session reports only when: a queued task is done, it is blocked, or the user must decide. Never send an
+7. Do not send a message only to announce a rule or check in; fold it into the brief of the next task.
+8. A child session reports only when: a queued task is done, it is blocked, or the user must decide. Never send an
    acknowledgement ("received", "rule noted").
-8. One message batches several small results. Long output goes in a file (run-log); the message points to it.
-9. Brief a child session with a queue of 2–3 chained tasks so it never idles between them.
+9. One message batches several small results. Long output goes in a file (run-log); the message points to it.
+10. Brief a child session with a queue of 2–3 chained tasks so it never idles between them.
 
 **Monitoring**
 
-10. Do not poll child sessions with dense cron; rely on the event that a child finished its turn. For a safety
+11. Do not poll child sessions with dense cron; rely on the event that a child finished its turn. For a safety
     net, use an interval of at least 15 minutes (each check re-reads the whole context).
-11. Check quota (`/usage`) at each phase gate, not every turn.
+12. Check quota (`/usage`) at each phase gate, not every turn.
 
 **Parallelism**
 
-12. Run sessions or subagents in parallel only when the tasks are independent in files and each is large enough.
+13. Run sessions or subagents in parallel only when the tasks are independent in files and each is large enough.
     Tightly coupled coding runs sequentially in one session. An agent uses ~4× the tokens of chat and a
     multi-agent system ~15× ([multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system));
     agent teams ~7× ([costs](https://code.claude.com/docs/en/costs)).
