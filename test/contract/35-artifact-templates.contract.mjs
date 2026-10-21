@@ -39,9 +39,9 @@ export default async function run({ ok, ctx }) {
   const skillText = fs.existsSync(skillFile) ? read(skillFile) : '';
   const index = templateIndex(skillText);
   ok(index.length > 0, 'mục lục artifact-templates có ít nhất một dòng');
-  const TYPES = ['skill', 'agent', 'workflow', 'requirement', 'design', 'plan', 'task', 'adr', 'project-knowledge', 'handoff'];
+  const TYPES = ['skill', 'agent', 'workflow', 'requirement', 'design', 'plan', 'task', 'adr', 'project-knowledge', 'handoff', 'spec'];
   ok(JSON.stringify(index.map((r) => r.type).sort()) === JSON.stringify([...TYPES].sort()),
-    `mục lục artifact-templates có đúng 10 loại (đang có: ${index.map((r) => r.type).join(', ')})`);
+    `mục lục artifact-templates có đúng 11 loại (đang có: ${index.map((r) => r.type).join(', ')})`);
   const tplOf = (type) => {
     const row = index.find((r) => r.type === type);
     return row ? read(path.join(path.dirname(skillFile), row.file)) : '';
@@ -65,6 +65,26 @@ export default async function run({ ok, ctx }) {
       ok(!!h && h.type === row.type, `${rel}: header type khớp cột Loại (${row.type})`);
       ok(!!h && Number.isInteger(h.version) && h.validator !== '' && h.sources !== '', `${rel}: header đủ version/validator/sources`);
     }
+  }
+
+  {
+    const row = index.find((r) => r.type === 'spec');
+    ok(!!row && row.validator.includes('check-request.mjs'), 'AC1.1: mục lục có dòng spec với validator check-request.mjs');
+    const tpl = tplOf('spec');
+    for (const h of ['Mục đích', 'Phạm vi', 'Yêu cầu', 'Lịch sử']) {
+      ok(new RegExp(`^## ${h}\\s*$`, 'm').test(tpl), `AC1.2: spec.template.md có mục ## ${h}`);
+    }
+    ok(/^- \*\*<năng-lực>\/R1\*\* — .*Nguồn: \[<slug>\]\(.*\) \(thêm\)/m.test(tpl), 'AC1.2: spec.template.md có dòng yêu cầu mẫu');
+    ok(/^- ~~\*\*<năng-lực>\/R2\*\* — .*~~ đã bỏ bởi \[<slug>\]\(.*\)/m.test(tpl), 'AC1.2: spec.template.md có dòng yêu cầu bị bỏ mẫu');
+  }
+
+  {
+    const tpl = tplOf('design');
+    ok(/^## Ảnh hưởng spec\s*$/m.test(tpl), 'AC2.1: design.template.md có mục ## Ảnh hưởng spec');
+    ok(tpl.indexOf('## Thiết kế') < tpl.indexOf('## Ảnh hưởng spec') && tpl.indexOf('## Ảnh hưởng spec') < tpl.indexOf('## Ngoài phạm vi'),
+      'AC2.1: mục Ảnh hưởng spec nằm sau ## Thiết kế');
+    ok(/^- <năng-lực>: thêm R<n>, đổi R<m>, bỏ R<k>/m.test(tpl) && /^Không ảnh hưởng: <lý do>/m.test(tpl),
+      'AC2.1: design.template.md có cả hai dạng mẫu');
   }
 
   // 3. Workflow template qua validator workflow hiện có.
@@ -384,7 +404,8 @@ export default async function run({ ok, ctx }) {
       };
       fs.mkdirSync(path.join(tmp, '.git'));
       const dir = path.join(tmp, 'docs', 'requests', 'r');
-      put('docs/requests/r/design.md', DESIGN + '- [ ] **AC2.1** — Given h When i Then j\n');
+      // main cấp readSpec nên W10 chạy; fixture có mục ảnh hưởng để các kiểm --strict vẫn chỉ nói về W7–W9.
+      put('docs/requests/r/design.md', DESIGN + '- [ ] **AC2.1** — Given h When i Then j\n## Ảnh hưởng spec\nKhông ảnh hưởng: fixture\n');
       put('docs/requests/r/plan.md', ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1, AC1.2, AC1.10, AC2.1', '', '**Files:**', `- Test: ${tick('test/')}`, ''].join('\n'));
       put('test/sub/a.mjs', 'AC1.1 AC1.2 AC1.10');
       for (const f of ['test/node_modules/x.js', 'test/build/y.js']) put(f, 'AC2.1');

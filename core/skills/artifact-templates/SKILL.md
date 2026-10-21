@@ -26,15 +26,17 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | task | [task.template.md](references/task.template.md) | `check-tasks.mjs` của `engineering-task-breakdown` (chỉ có khi cài plugin `engineering`) | Spec Kit tasks.md; Kiro tasks.md; check-tasks.mjs hiện có |
 | adr | [adr.template.md](references/adr.template.md) | chưa có | MADR 4.0.0 (adr.github.io/madr); Nygard 2011 (Documenting Architecture Decisions) |
 | handoff | [handoff.template.md](references/handoff.template.md) | chưa có | docs/requests/2026-10-21-long-session-context/design.md (D4); Claude Code prompt-caching (session rotation) |
+| spec | [spec.template.md](references/spec.template.md) | `scripts/check-request.mjs` | docs/requests/2026-10-21-living-spec/design.md (P7); Kiro specs; GitHub Spec Kit; Thoughtworks Technology Radar "spec-anchored" |
 | project-knowledge | [project-knowledge/](references/project-knowledge/) | chưa có | Chuyển nguyên từ templates/init/project-knowledge (giữ nội dung); tech-stack.yml không có khối header |
 
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.
 Validator ghi `chỉ có trong repo aip` hoặc `chỉ có khi cài plugin …` thì chỉ chạy được khi file đó tồn tại; không có thì áp
 dòng trên.
-Validator `scripts/check-request.mjs` (requirement, design, plan) nằm ngay trong skill này nên có ở mọi project đã cài core;
-chạy `node <thư-mục-skill>/scripts/check-request.mjs <docs/requests/ngày-slug> [--tests <path>…] [--strict]` — chỉ cảnh báo, exit 0 khi chạy được, exit 2 khi sai đối số; `--strict` đổi thành exit 1 nếu còn cảnh báo.
+Validator `scripts/check-request.mjs` (requirement, design, plan, và spec sống qua mục `Ảnh hưởng spec`) nằm ngay trong skill này nên có ở mọi project đã cài core;
+chạy `node <thư-mục-skill>/scripts/check-request.mjs <docs/requests/ngày-slug> [--tests <path>…] [--base <ref>] [--strict]` — chỉ cảnh báo, exit 0 khi chạy được, exit 2 khi sai đối số; `--strict` đổi thành exit 1 nếu còn cảnh báo.
 W7: AC chưa có file test nào nhắc tới (ID `AC<n>.<m>`, `ac<n>_<m>` hoặc `Ac<n>_<m>` trong nội dung file). Phạm vi test là các file test ghi trong `**Files:**` của plan.md (dòng `- Test:` hoặc đường dẫn kiểu `test/`, `*.test.*`, `*_test.*`); W8: plan có `**Files:**` nhưng không ghi file test nào; W9: file test ghi trong plan chưa tồn tại. Plan không có `**Files:**` thì bỏ qua W7–W9. Ngay sau khi lập plan, các file test chưa được viết nên W9 là bình thường và W7 được bỏ qua (khi không đọc được file test nào của plan); không xoá `**Files:**` hay mục test để cho im. Chạy lại sau khi test đã viết xong; `--strict` trong CI chỉ dùng từ lúc đó.
 `--tests <path>…` (file hoặc thư mục, quét đệ quy, bỏ `node_modules`, `.git`, `build`, `dist`, `target`, `.venv`) thay phạm vi lấy từ plan.
+W10–W14 kiểm spec sống (`docs/specs/<năng-lực>/spec.md`): W10 design thiếu hoặc rỗng mục `## Ảnh hưởng spec`; W11 tên năng lực không hợp lệ hoặc spec không tồn tại; W12 ID `<năng-lực>/R<n>` không có trong spec, hoặc `bỏ` mà dòng chưa gạch `~~` kèm `đã bỏ bởi`; W13 (chỉ với `--base <ref>`) spec bị ảnh hưởng không đổi so với ref; W14 cấu trúc/liên kết của spec sai. Vẫn chỉ cảnh báo.
 Dòng có Template là thư mục (`project-knowledge/`): mỗi file `.md` bên trong có khối header riêng; `tech-stack.yml` là YAML
 nên không có khối header, nguồn của nó ghi ở cột Nguồn.
 
@@ -44,7 +46,7 @@ nên không có khối header, nguồn của nó ghi ở cột Nguồn.
    tự suy ra khung.
 2. **Mở template** đúng file trong cột Template; chỉ nạp file của loại đang cần.
 3. **Điền** placeholder `<…>` bằng nội dung thật. Giữ nguyên tên heading, tên trường và thứ tự mà validator đọc.
-4. **Chạy validator** ở cột Validator nếu có (requirement/design/plan: `node scripts/check-request.mjs <thư-mục-request> [--tests <path>…] [--strict]`,
+4. **Chạy validator** ở cột Validator nếu có (requirement/design/plan: `node scripts/check-request.mjs <thư-mục-request> [--tests <path>…] [--base <ref>] [--strict]`,
    thư mục là `docs/requests/<ngày>-<slug>/`); lỗi → sửa nội dung rồi chạy lại. Với W7/W9 do file test chưa tồn tại (lúc mới lập plan) thì giữ nguyên `**Files:**` và chạy lại sau khi viết test, không xoá mục để cho sạch. Validator `chưa có`, hoặc
    validator `chỉ có trong repo aip` mà project hiện tại không có file đó → bỏ qua bước chạy, tự đối chiếu heading và
    mẫu dòng với template, và nói rõ chưa kiểm bằng máy.
@@ -91,7 +93,8 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
 - [references/adr.template.md](references/adr.template.md): khung ADR theo MADR 4.0 tiếng Việt (metadata `Trạng thái`/`Ngày`/
   `Người quyết định`, bối cảnh, yếu tố quyết định, phương án, kết quả + hệ quả + xác nhận, ưu nhược từng phương án).
 - [references/handoff.template.md](references/handoff.template.md): khung bàn giao phiên (nhánh + HEAD, đã xong, đang dở, bước kế, câu hỏi chờ, ràng buộc, run-log, context từng phiên) cho việc xoay phiên không kế thừa hội thoại.
+- [references/spec.template.md](references/spec.template.md): khung spec sống theo năng lực (`docs/specs/<năng-lực>/spec.md`: mục đích, phạm vi, yêu cầu `<năng-lực>/R<n>` kèm dòng yêu cầu bị bỏ, lịch sử).
 - [references/project-knowledge/](references/project-knowledge/): 5 khung `.md` (`project-overview`, `domain-context`,
   `architecture`, `source-structure`, `code-convention`) và `tech-stack.yml` (không có header) cho `project-knowledge/`.
 - [scripts/check-request.mjs](scripts/check-request.mjs): validator cho requirement/design/plan; kiểm thư mục request (nguồn AC,
-  ID AC, `**Goal:**`/`**Spec:**` của plan, độ phủ AC bởi plan.md/tasks.md, AC chưa có test nhắc tới W7–W9), mỗi lỗi một dòng `WARN <file>:<dòng> [<mã>] …`; `--strict` → exit 1 khi có cảnh báo.
+  ID AC, `**Goal:**`/`**Spec:**` của plan, độ phủ AC bởi plan.md/tasks.md, AC chưa có test nhắc tới W7–W9, ảnh hưởng spec W10–W14, `--base <ref>`), mỗi lỗi một dòng `WARN <file>:<dòng> [<mã>] …`; `--strict` → exit 1 khi có cảnh báo.

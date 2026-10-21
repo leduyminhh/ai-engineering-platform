@@ -13,6 +13,7 @@ const INIT_DOC_MAP = [
   ['design.template.md', 'docs/requests/_TEMPLATE/design.md'],
   ['plan.template.md', 'docs/requests/_TEMPLATE/plan.md'],
   ['adr.template.md', 'docs/decisions/_TEMPLATE.md'],
+  ['spec.template.md', 'docs/specs/_TEMPLATE.md'],
   ['project-knowledge/', 'project-knowledge/'],
 ];
 

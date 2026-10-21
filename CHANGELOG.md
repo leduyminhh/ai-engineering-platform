@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Living-spec review fixes (core 1.10.1; backend 1.8.17 and frontend 1.10.16 re-bumped for the baseline text): W13 now resolves the specs folder next to the request folder (nested layouts such
+  as `repo/pkg/docs/...` no longer report a false W13), reports W13 once per capability, `R01` is flagged as W14, and a
+  backtick-wrapped capability name in `## Ảnh hưởng spec` is accepted. The baseline documents the `## Ảnh hưởng spec`
+  section. Request folders written before living specs have no such section and now get W10, so `--strict` over them exits 1.
+
 ### Added
+
+- Living specs per capability (core 1.10.0; backend 1.8.16 and frontend 1.10.15 bumped because they embed the projected
+  baseline and the init templates `_TEMPLATE/design.md` and `docs/specs/_TEMPLATE.md`): a `spec` template under `artifact-templates` (`docs/specs/<capability>/spec.md`, requirement
+  IDs `<capability>/R<n>`, history table), `aip init --full` writes `docs/specs/_TEMPLATE.md`, and the design template
+  gains a `## Ảnh hưởng spec` section. `check-request.mjs` adds warnings W10-W14 (missing impact section, unknown
+  capability, unmatched requirement ID, spec unchanged since base, malformed spec) and `--base <ref>` for W13. The AGENTS
+  baseline gets a spec-merge step before `finishing-a-development-branch`; `docs/specs/README.md` lists the 7 aip
+  capabilities (no `spec.md` yet).
 
 - Long-session context support (core 1.9.0): a handoff template under `artifact-templates`, a `SessionStart` hook
   (`session-start`) that injects the newest usable `handoff.md` on `startup`/`clear`/`compact` and warns on `resume`/`fork`

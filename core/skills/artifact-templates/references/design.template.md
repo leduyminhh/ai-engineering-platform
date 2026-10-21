@@ -18,6 +18,10 @@ Bỏ khối này khi chép template ra dùng.
 <chỉ khi không có requirement.md; cùng định dạng AC như requirement.md>
 ## Thiết kế
 <...>
+## Ảnh hưởng spec
+<chọn một trong hai dạng, bỏ dạng không dùng; hành động ∈ thêm|đổi|bỏ>
+- <năng-lực>: thêm R<n>, đổi R<m>, bỏ R<k>
+Không ảnh hưởng: <lý do>
 ## Ngoài phạm vi và anti-goal
 <...>
 ## Ràng buộc
