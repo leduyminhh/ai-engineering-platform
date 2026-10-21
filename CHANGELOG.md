@@ -9,12 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Claude Code projects now get a generated `.claude/settings.json` (permissions only) on `aip init --full`, and only when the
+  file is absent; an existing file is never modified and the skip message names the policy file.
 - Living-spec review fixes (core 1.10.1; backend 1.8.17 and frontend 1.10.16 re-bumped for the baseline text): W13 now resolves the specs folder next to the request folder (nested layouts such
   as `repo/pkg/docs/...` no longer report a false W13), reports W13 once per capability, `R01` is flagged as W14, and a
   backtick-wrapped capability name in `## Ảnh hưởng spec` is accepted. The baseline documents the `## Ảnh hưởng spec`
   section. Request folders written before living specs have no such section and now get W10, so `--strict` over them exits 1.
 
 ### Added
+
+- Agent permissions and MCP gate (core 1.11.0; backend 1.8.18 and frontend 1.10.17 bumped because they embed the projected
+  AGENTS baseline and init templates): permission policy `core/permissions/policy.json` (groups `secrets` deny, `git_push`,
+  `network`, `production_deploy` ask; Claude-only), `aip init --full` writes `.claude/settings.json` from it only when missing,
+  a `guard-mcp` PreToolUse hook with `mcpAllow`/`mcpDeny` in `.claude/aip-gate.json` (deny wins, fail-open, plugin servers as
+  `plugin:<plugin>:<server>`), an `Agents in CI` section in the AGENTS baseline, README EN/VI sections for the CI recipe,
+  permission policy and MCP gate, and the first living spec `docs/specs/hooks-gates/spec.md` (R1-R3).
 
 - Living specs per capability (core 1.10.0; backend 1.8.16 and frontend 1.10.15 bumped because they embed the projected
   baseline and the init templates `_TEMPLATE/design.md` and `docs/specs/_TEMPLATE.md`): a `spec` template under `artifact-templates` (`docs/specs/<capability>/spec.md`, requirement
