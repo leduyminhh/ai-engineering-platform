@@ -1,6 +1,6 @@
 # Thiết kế: spec sống theo năng lực (project P7)
 - Ngày: 2026-10-21
-- Trạng thái: đã duyệt 2026-10-21
+- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `d774be4` (2026-10-21).
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P7 (xu hướng 4, 5)
 

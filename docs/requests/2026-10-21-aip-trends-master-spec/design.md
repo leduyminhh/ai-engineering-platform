@@ -47,8 +47,8 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 1 | không có khoảng trống lớn | — |
 | 2 | quyết định Claude first | — |
 | 3 | P1 | — |
-| 4 | P1, P2a | AC kiểm thủ công cho `--strict` (I-2); spec sống sau merge (P7) |
-| 5 | P1b, P5b | kiểm theo agentskills.io; cấu hình MCP; rule theo đường dẫn file; tri thức sau merge nằm ở một nơi (P7) |
+| 4 | P1, P2a, P7 | AC kiểm thủ công cho `--strict` (I-2) |
+| 5 | P1b, P5b, P7 | kiểm theo agentskills.io; cấu hình MCP; rule theo đường dẫn file |
 | 6 | chưa | P3 |
 | 7 | P2a, P2b | Task 6 (smoke hook Stop + eval); quy tắc review PR do agent tạo; eval trong CI |
 | 8 | hook guard, `writeScope`, `allowEnvFiles` | P4: hook chỉ có ở plugin mode, quy tắc agent trong CI, kiểm skill bên thứ ba |
@@ -70,7 +70,7 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 4 | MCP + permission trong adapter | chưa brainstorm | — |
 | 5c | theo dõi chi phí | chưa brainstorm | — |
 | 6 | runner LangGraph (repo riêng) | chưa brainstorm; tiền đề 2b đã có | — |
-| 7 | spec sống `docs/specs/` | thiết kế đã duyệt 2026-10-21 (mục 6); chưa có design/plan riêng | — |
+| 7 | `2026-10-21-living-spec` | xong | `d774be4` |
 
 Thứ tự đề xuất cho phần còn lại: giữ thứ tự cũ (6 → 3 → 4 → 5c). [Đoán] 4 có thể nên lên trước 6 vì runner chạy agent không người giám sát; để người dùng quyết ở "Câu hỏi mở".
 
@@ -94,7 +94,7 @@ Chỉ sửa header, dòng lộ trình và ký tự checkbox; không đổi nội
 - 2a I-2: cách đánh dấu AC kiểm thủ công để `--strict` bỏ qua W7. Chờ người dùng quyết.
 - Backlog (chỉ tham khảo, từ memory): key passthrough → `metadata` theo namespace; org defaults nhiều lớp; agent server headless làm động cơ runner; agent Maintenance/Docs sync; đa repo.
 
-### 6. P7 — spec sống (thiết kế đã duyệt 2026-10-21)
+### 6. P7 — spec sống (xong, merge `d774be4`)
 
 Vấn đề: mỗi request chỉ có `design.md` + `plan.md` và là bộ nhớ ngắn hạn; sau merge, hành vi của một năng lực rải trong nhiều design cũ. Gốc là quyết định của P1 (superpowers sinh đúng hai file; aip không sửa plugin). Hướng giải: **giữ superpowers nguyên, aip chỉ thêm spec sống**, tác động qua baseline, template và validator.
 
@@ -107,7 +107,10 @@ Vấn đề: mỗi request chỉ có `design.md` + `plan.md` và là bộ nhớ 
 - Khởi tạo: không viết lại các request cũ; spec sống của một năng lực tạo khi request kế tiếp chạm tới nó (tôi chọn). `aip init --full` tạo sẵn `docs/specs/`.
 - Không làm: đưa `tasks.md` lại luồng; bắt `requirement.md`; spec-as-source (sinh code từ spec).
 
-Việc tiếp theo của P7: brainstorm/design chi tiết riêng trong `docs/requests/<ngày>-<slug>/`, không làm trong spec tổng.
+Thiết kế chi tiết và hiện thực nằm ở [`../2026-10-21-living-spec/design.md`](../2026-10-21-living-spec/design.md).
+
+## Ảnh hưởng spec
+Không ảnh hưởng: spec tổng chỉ trace lộ trình, chưa có spec sống nào trong docs/specs.
 
 ## Tiêu chí chấp nhận
 
@@ -120,7 +123,7 @@ Việc tiếp theo của P7: brainstorm/design chi tiết riêng trong `docs/req
 
 ## Ngoài phạm vi và anti-goal
 
-- Không thiết kế hay hiện thực project 3, 4, 5c, 6; mỗi cái brainstorm riêng. P7 chỉ ghi hướng đã duyệt ở mục 6; thiết kế chi tiết và hiện thực làm riêng.
+- Không thiết kế hay hiện thực project 3, 4, 5c, 6; mỗi cái brainstorm riêng. P7 đã có design và hiện thực riêng (mục 6).
 - Không viết lại nội dung kỹ thuật, AC hay quyết định của design con.
 - Không bump version plugin (không đổi nội dung được chiếu).
 - Anti-goal: spec tổng thành một bản sao thứ hai của memory. Memory chỉ giữ con trỏ tới spec, không lặp bảng trạng thái.
