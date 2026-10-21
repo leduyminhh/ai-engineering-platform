@@ -28,19 +28,19 @@ Của tôi (chưa duyệt, ghi là lựa chọn của tôi):
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given `core/skills/artifact-templates/`, Then có `references/spec.template.md` mở bằng khối `<!-- artifact-template … -->` (`type: spec`, `validator: scripts/check-request.mjs`, `sources`), và bảng mục lục trong `SKILL.md` có dòng loại `spec`.
-- [ ] **AC1.2** — Given `spec.template.md`, Then có các mục `Mục đích`, `Phạm vi`, `Yêu cầu`, `Lịch sử`; dòng yêu cầu mẫu dạng `- **<năng-lực>/R1** — … Nguồn: [<slug>](…) (thêm)` và dòng mẫu yêu cầu bị bỏ dạng `- ~~**<năng-lực>/R2** — …~~ đã bỏ bởi [<slug>](…)`.
-- [ ] **AC2.1** — Given `design.template.md`, Then có mục `## Ảnh hưởng spec` với hai dạng: `- <năng-lực>: thêm|đổi|bỏ R<n>` hoặc `Không ảnh hưởng: <lý do>`.
-- [ ] **AC2.2** — Given `aip init --full` ở thư mục trống, Then có `docs/specs/_TEMPLATE.md` lấy từ `spec.template.md`, và `aip init` không ghi đè file đã có.
-- [ ] **AC3.1** — Given `design.md` không có mục `Ảnh hưởng spec`, When chạy `check-request.mjs`, Then có cảnh báo `W10`, exit 0 (exit 1 khi `--strict`).
-- [ ] **AC3.2** — Given mục `Ảnh hưởng spec` nêu năng lực `x` mà `docs/specs/x/spec.md` không tồn tại (suy từ `<request>/../../specs`), Then cảnh báo `W11`.
-- [ ] **AC3.3** — Given mục nêu `đổi R<n>` hoặc `bỏ R<n>` mà spec không có ID `x/R<n>`, hoặc `bỏ` mà dòng đó chưa gạch ngang kèm "đã bỏ", Then cảnh báo `W12`.
-- [ ] **AC3.4** — Given `--base <ref>` và `design.md` khai báo ảnh hưởng mà `docs/specs/x/spec.md` không đổi so với `<ref>`, Then cảnh báo `W13`; không có `--base` thì không chạy kiểm này.
-- [ ] **AC3.5** — Given một spec được `design.md` tham chiếu, Then cảnh báo `W14` khi ID sai định dạng `<năng-lực>/R<n>`, ID trùng, tên năng lực không khớp thư mục chứa, hoặc link request trong bảng Lịch sử không tồn tại.
-- [ ] **AC4.1** — Given baseline `core/agents/AGENTS.template.md`, Then mục `Docs location and format` có bước gộp spec trước `finishing-a-development-branch`: cập nhật `docs/specs/<năng-lực>/spec.md` theo `Ảnh hưởng spec`, thêm dòng vào Lịch sử, chạy `check-request.mjs`; và bảng bộ nhớ ghi spec sống là bộ nhớ dài hạn. `AGENTS.md` giữ byte-for-byte giống template.
-- [ ] **AC4.2** — Given `CLAUDE.md` và README (EN/VI) của repo, Then mô tả `docs/specs/`, loại template `spec` và các cảnh báo W10–W14 ở đúng chỗ đã nêu về `check-request.mjs`.
-- [ ] **AC5.1** — Given repo aip, Then có `docs/specs/README.md` liệt kê 7 năng lực, mỗi năng lực một dòng mô tả và đường dẫn dự kiến; chưa có `spec.md` nào.
-- [ ] **AC6.1** — `npm test` xanh; bump version `core` (và plugin/workflow nào có nội dung chiếu đổi); `node cli/lib/versions.mjs --lock` cập nhật; `npm run pack:verify` xanh.
+- [x] **AC1.1** — Given `core/skills/artifact-templates/`, Then có `references/spec.template.md` mở bằng khối `<!-- artifact-template … -->` (`type: spec`, `validator: scripts/check-request.mjs`, `sources`), và bảng mục lục trong `SKILL.md` có dòng loại `spec`.
+- [x] **AC1.2** — Given `spec.template.md`, Then có các mục `Mục đích`, `Phạm vi`, `Yêu cầu`, `Lịch sử`; dòng yêu cầu mẫu dạng `- **<năng-lực>/R1** — … Nguồn: [<slug>](…) (thêm)` và dòng mẫu yêu cầu bị bỏ dạng `- ~~**<năng-lực>/R2** — …~~ đã bỏ bởi [<slug>](…)`.
+- [x] **AC2.1** — Given `design.template.md`, Then có mục `## Ảnh hưởng spec` với hai dạng: `- <năng-lực>: thêm|đổi|bỏ R<n>` hoặc `Không ảnh hưởng: <lý do>`.
+- [x] **AC2.2** — Given `aip init --full` ở thư mục trống, Then có `docs/specs/_TEMPLATE.md` lấy từ `spec.template.md`, và `aip init` không ghi đè file đã có.
+- [x] **AC3.1** — Given `design.md` không có mục `Ảnh hưởng spec`, When chạy `check-request.mjs`, Then có cảnh báo `W10`, exit 0 (exit 1 khi `--strict`).
+- [x] **AC3.2** — Given mục `Ảnh hưởng spec` nêu năng lực `x` mà `docs/specs/x/spec.md` không tồn tại (suy từ `<request>/../../specs`), Then cảnh báo `W11`.
+- [x] **AC3.3** — Given mục nêu `đổi R<n>` hoặc `bỏ R<n>` mà spec không có ID `x/R<n>`, hoặc `bỏ` mà dòng đó chưa gạch ngang kèm "đã bỏ", Then cảnh báo `W12`.
+- [x] **AC3.4** — Given `--base <ref>` và `design.md` khai báo ảnh hưởng mà `docs/specs/x/spec.md` không đổi so với `<ref>`, Then cảnh báo `W13`; không có `--base` thì không chạy kiểm này.
+- [x] **AC3.5** — Given một spec được `design.md` tham chiếu, Then cảnh báo `W14` khi ID sai định dạng `<năng-lực>/R<n>`, ID trùng, tên năng lực không khớp thư mục chứa, hoặc link request trong bảng Lịch sử không tồn tại.
+- [x] **AC4.1** — Given baseline `core/agents/AGENTS.template.md`, Then mục `Docs location and format` có bước gộp spec trước `finishing-a-development-branch`: cập nhật `docs/specs/<năng-lực>/spec.md` theo `Ảnh hưởng spec`, thêm dòng vào Lịch sử, chạy `check-request.mjs`; và bảng bộ nhớ ghi spec sống là bộ nhớ dài hạn. `AGENTS.md` giữ byte-for-byte giống template.
+- [x] **AC4.2** — Given `CLAUDE.md` và README (EN/VI) của repo, Then mô tả `docs/specs/`, loại template `spec` và các cảnh báo W10–W14 ở đúng chỗ đã nêu về `check-request.mjs`.
+- [x] **AC5.1** — Given repo aip, Then có `docs/specs/README.md` liệt kê 7 năng lực, mỗi năng lực một dòng mô tả và đường dẫn dự kiến; chưa có `spec.md` nào.
+- [x] **AC6.1** — `npm test` xanh; bump version `core` (và plugin/workflow nào có nội dung chiếu đổi); `node cli/lib/versions.mjs --lock` cập nhật; `npm run pack:verify` xanh.
 
 ## Thiết kế
 
@@ -63,6 +63,10 @@ Mục `#### Docs location and format` thêm bước gộp spec (AC4.1) và bản
 ### 5. Khởi tạo cho aip
 
 `docs/specs/README.md` do người viết (AC5.1), không nằm trong template của `aip init`.
+
+## Ảnh hưởng spec
+
+Không ảnh hưởng: P7 tạo cơ chế spec sống, chưa có spec.md nào; docs/specs/README.md chỉ liệt kê năng lực.
 
 ## Ngoài phạm vi và anti-goal
 
