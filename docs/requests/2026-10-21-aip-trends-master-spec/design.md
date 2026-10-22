@@ -50,8 +50,8 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 4 | P1, P2a, P7 | AC kiểm thủ công cho `--strict` (I-2) |
 | 5 | P1b, P5b, P7 | kiểm theo agentskills.io; sinh cấu hình MCP (P4d, chưa cần: chưa capability nào dùng MCP server); rule theo đường dẫn file |
 | 6 | P3 | còn hở: P6b runner (chưa hiện thực; repo `aip-runner` chưa tạo) |
-| 7 | P2a, P2b, P6a (công thức CI chỉ đọc `templates/ci/claude-review.example.yml`; xong trên nhánh, chờ merge) | Task 6 (smoke hook Stop + eval); quy tắc review PR do agent tạo; eval trong CI |
-| 8 | hook guard, `writeScope`, `allowEnvFiles`, P4 (chính sách quyền, `guard-mcp`, mục baseline `Agents in CI`), P6a (công thức CI review chỉ đọc; xong trên nhánh, chờ merge) | hook chỉ có ở plugin mode (P4 không đổi); quyền chỉ cho Claude (Cursor/Codex/Antigravity chưa có định dạng đã xác minh); kiểm skill bên thứ ba (P4c, sau P6) |
+| 7 | P2a, P2b, P6a (công thức CI chỉ đọc `templates/ci/claude-review.example.yml`; đã merge master ebfef4a) | Task 6 (smoke hook Stop + eval); quy tắc review PR do agent tạo; eval trong CI |
+| 8 | hook guard, `writeScope`, `allowEnvFiles`, P4 (chính sách quyền, `guard-mcp`, mục baseline `Agents in CI`), P6a (công thức CI review chỉ đọc; đã merge master ebfef4a) | hook chỉ có ở plugin mode (P4 không đổi); quyền chỉ cho Claude (Cursor/Codex/Antigravity chưa có định dạng đã xác minh); kiểm skill bên thứ ba (P4c, sau P6) |
 | 9 | P5a, P5c | — (P5c: `aip stats --usage`; tiền là bộ đếm `cost-state` của Claude Code, không có bảng giá, không dự đoán hạn mức) |
 
 ### 3. Chỉ mục project
@@ -73,7 +73,7 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 6b | runner LangGraph (repo `aip-runner` riêng) | thiết kế sơ bộ trong design P6; chưa hiện thực; M0 spike trước | — |
 | 7 | `2026-10-21-living-spec` | xong | `d774be4` |
 
-Thứ tự thực tế: 4 đã làm trước 6 (runner chạy agent không người giám sát). P3 và P5c đã làm xong và merge. Còn lại: 6a xong trên nhánh, chờ merge; 6b chưa hiện thực; 4c sau 6.
+Thứ tự thực tế: 4 đã làm trước 6 (runner chạy agent không người giám sát). P3 và P5c đã làm xong và merge. Còn lại: 6a đã merge master ebfef4a; 6b chưa hiện thực; 4c sau 6.
 
 ### 4. Dọn trạng thái các design
 
