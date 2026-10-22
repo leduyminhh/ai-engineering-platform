@@ -29,6 +29,14 @@ ok(parse(['stats', '--session', 'a.jsonl', '--json']).session === 'a.jsonl' && p
   const d = parse(['stats']);
   ok(d.usage === undefined && d.since === undefined, 'P5c AC2.2: stats thường không có usage/since');
 }
+{
+  for (const sub of ['full', 'ask', 'status']) {
+    const a = parse(['mode', sub]);
+    ok(eq(a._, ['mode', sub]) && !a.explicit && a.scope === 'project', `P4e AC2.4: mode ${sub} được parse, không đặt explicit`);
+  }
+  ok(parse(['mode', 'full', '-g']).scope === 'global', 'P4e AC2.4: -g vẫn được parse (index.mjs từ chối)');
+  ok(eq(parse(['install'])._, ['install']) && parse(['install']).mode === 'skills', 'P4e AC2.4: lệnh hiện có không đổi');
+}
 
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }
 console.log(`args.test: ${pass} pass`);

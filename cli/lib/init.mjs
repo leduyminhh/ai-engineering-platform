@@ -22,7 +22,7 @@ function listFiles(dir, base = dir) {
 }
 
 // Đọc trực tiếp vì thư mục đích có thể chưa là git repo; chỉ `true` đúng kiểu mới bật (khớp hook), mọi lỗi → tắt.
-function readAllowEnvFiles(root) {
+export function readAllowEnvFiles(root) {
   try {
     const raw = fs.readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8').replace(/^﻿/, '');
     return JSON.parse(raw)?.allowEnvFiles === true;

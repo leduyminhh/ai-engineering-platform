@@ -18,6 +18,7 @@ import path from 'node:path';
 import { install, uninstall, update, check, knownPluginIds } from './lib/install.mjs';
 import { pack } from './lib/pack.mjs';
 import { init } from './lib/init.mjs';
+import { runMode, modeRoot } from './lib/mode.mjs';
 import { PROVIDERS, scopeRoot } from './lib/paths.mjs';
 import { runWizard } from './lib/wizard.mjs';
 import { WizardUnavailable } from './lib/prompt.mjs';
@@ -227,6 +228,9 @@ LỆNH
                             --usage [--since <số ngày|yyyy-mm-dd>]: token + tiền theo model/phiên/subagent (mặc định 7 ngày; yyyy-mm-dd = 0h UTC;
                             bảng chỉ có tỷ lệ subagent, tách theo từng agent nằm ở --json);
                             tiền là cost-state của Claude Code cho cả phiên, không phải hóa đơn [Unverified]
+  mode <full|ask|status>    chế độ quyền của project (chỉ project, không nhận -g): full = ghi mode=full vào
+                            .claude/aip-gate.json (hook bỏ xác nhận khi phiên chạy bypassPermissions); ask = bỏ khóa mode
+                            và sinh lại .claude/settings.json chuẩn nếu là bản full do aip sinh; status = xem hiện trạng
   list                      liệt kê adapter + plugin tìm được
   help                      hiện trợ giúp này (hoặc -h, --help)
 
@@ -298,6 +302,16 @@ async function main() {
     case 'init': {
       if (args.scope === 'global') throw new Error('init chỉ áp dụng cho project (thư mục hiện tại), không nhận -g');
       return reportInit(init({ root: scopeRoot('project'), full: args.full }));
+    }
+    case 'mode': {
+      const sub = args._[1];
+      if (args.scope === 'global') { console.error('aip mode chỉ áp dụng cho phạm vi project (thư mục hiện tại), không nhận -g.'); process.exitCode = 2; return; }
+      if (!['full', 'ask', 'status'].includes(sub) || args._.length > 2) {
+        console.error('Cách dùng: aip mode full|ask|status' + (sub ? ' (giá trị không hợp lệ: "' + args._.slice(1).join(' ') + '")' : ''));
+        process.exitCode = 2; return;
+      }
+      process.exitCode = runMode(sub, { root: modeRoot(process.cwd()) });
+      return;
     }
     case 'list':
       return runBuild(['--list']);
