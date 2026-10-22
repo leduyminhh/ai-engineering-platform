@@ -384,6 +384,26 @@ claude -p "Review the diff and report findings" \
 - Pin third-party actions to a full commit SHA, give the job read-only tokens, and run any workflow that can push in a protected environment with required reviewers.
 - aip adds no workflow file to `templates/init`.
 
+**Parallel agents.** A convention for running several agents at once, one worktree each (see the baseline section `Parallel agents`). aip does not run agents: it ships the convention and one check script; Claude Code creates the worktrees. Only an agent's `writeScope` plus the `guard-files` hook enforce write scope; the rest is soft guidance, and Bash can still write elsewhere.
+
+1. Split the plan into independent tasks. In `plan.md` give each task a `**Files:**` list and a `**Song song:** <group>` line; tasks of one group run together. Check the split with `node core/skills/artifact-templates/scripts/check-partition.mjs <request-dir>` (warnings P1 overlapping files, P2 forbidden shared files; `--strict` exits 1).
+2. From the integration branch `feature/<slug>`, create one worktree per task, at most 3 at once: `claude --worktree <slug>-t<n>` gives branch `worktree-<slug>-t<n>` in `.claude/worktrees/<slug>-t<n>/`. By default Claude Code cuts it from the default branch; set `worktree.baseRef` to `"head"` in the Claude Code settings (`{"worktree": {"baseRef": "head"}}`; which settings file is [Unverified], the docs only say "settings") (or create it with `git worktree add`) so it starts at the integration branch tip. Add `.claude/worktrees/` to `.gitignore`.
+3. Hand each agent its task and file set. Shared files (version bump, `versions.mjs --lock`, living spec, README) are touched once, by the main session, after merging.
+4. In the integration branch merge each task branch with `git merge --no-ff worktree-<slug>-t<n>`, in task order, and run the touched components' tests after each merge. A conflict outside the declared file sets is a split error: stop and report. A human reviews the whole integration branch; there are no per-agent PRs.
+5. Clean up with `git worktree remove <path>` only for merged, clean worktrees. Never `rm -rf` a worktree holding a junction from Git Bash on Windows; use Node `fs.rmSync` if you must delete by hand. A `claude -p` session does not clean up its worktree.
+
+| Status | Claim (source) |
+| --- | --- |
+| [Verified] | `claude --worktree <name>` creates `.claude/worktrees/<name>/` on branch `worktree-<name>`; the base is the default branch unless `worktree.baseRef` is `"head"`; a clean unnamed session removes its worktree on exit, a named one prompts first; `claude -p` never cleans up ([worktrees](https://code.claude.com/docs/en/worktrees)). |
+| [Verified] | Subagents with `isolation: worktree` use `.claude/worktrees/` and are removed when they make no changes; commands aimed at the main checkout are blocked; `${CLAUDE_PROJECT_DIR}` stays at the main checkout while hook input `cwd` is the worktree; gitignored files such as `.env` are absent unless listed in `.worktreeinclude` ([worktrees](https://code.claude.com/docs/en/worktrees)). |
+| [Unverified: secondary summary of the official page, not re-read] | `WorktreeCreate`/`WorktreeRemove` hooks exist; PreToolUse hooks run inside subagents ([hooks](https://code.claude.com/docs/en/hooks)). |
+| [Unverified: secondary summary of the official page, not re-read] | At most 20 concurrent subagents by default ([sub-agents](https://code.claude.com/docs/en/sub-agents)); agent teams are experimental, off by default, recommended at 3-5 teammates and cost noticeably more ([agent-teams](https://code.claude.com/docs/en/agent-teams), [costs](https://code.claude.com/docs/en/costs)). |
+| [Unverified] | `isolation: worktree` on a plugin-provided agent (the sub-agents page does not list `isolation` among ignored plugin fields, but does not say it works), and in headless/SDK runs. |
+| [Unverified] | The branch name and path of a subagent worktree; the "one branch, one worktree" rule in Claude Code docs (it is git behavior, [Inference]); an official one-PR-per-agent recommendation. |
+| [Inference] | The cap of 3 agents is a conservative heuristic, not an official limit. |
+
+`.claude/aip-gate.json` is usually gitignored, so a worktree does not have it: the hooks read the worktree root first, then the main repository root, and `guard-files` anchors `writeScope` at the worktree root. Do not copy it with `.worktreeinclude`.
+
 **Limits / residual risk.** The hooks are a regex gate, not a sandbox.
 
 - Not caught: `bash -c "…"` / `eval`, escaped refs such as `ma\in`, `$'…'` literals, and secret files outside the list above (for example `credentials.csv`, `credentials.xml`, `credentials.toml`).

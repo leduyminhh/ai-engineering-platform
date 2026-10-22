@@ -377,6 +377,26 @@ claude -p "Review the diff and report findings" \
 - Ghim action bên thứ ba theo commit SHA đầy đủ, cấp token chỉ đọc cho job, và chạy mọi workflow có thể push trong môi trường được bảo vệ, cần người duyệt (required reviewers).
 - aip không thêm file workflow vào `templates/init`.
 
+**Agent song song.** Quy ước chạy nhiều agent cùng lúc, mỗi agent một worktree (xem mục baseline `Parallel agents`). aip không tự chạy agent: aip chỉ phân phối quy ước và một script kiểm tra; Claude Code tạo worktree. Chỉ `writeScope` của agent cộng với hook `guard-files` mới ép phạm vi ghi; phần còn lại là hướng dẫn mềm, và Bash vẫn ghi được ở nơi khác.
+
+1. Chia plan thành các task độc lập. Trong `plan.md` mỗi task có danh sách `**Files:**` và một dòng `**Song song:** <nhóm>`; các task cùng nhóm chạy cùng lúc. Kiểm bằng `node core/skills/artifact-templates/scripts/check-partition.mjs <thư-mục-request>` (cảnh báo P1 file giao nhau, P2 file chung bị cấm; `--strict` exit 1).
+2. Từ nhánh tích hợp `feature/<slug>`, tạo mỗi task một worktree, tối đa 3 cùng lúc: `claude --worktree <slug>-t<n>` cho nhánh `worktree-<slug>-t<n>` tại `.claude/worktrees/<slug>-t<n>/`. Mặc định Claude Code cắt từ default branch; đặt `worktree.baseRef` là `"head"` trong cài đặt Claude Code (`{"worktree": {"baseRef": "head"}}`; file cài đặt cụ thể là [Unverified], tài liệu chỉ nói "settings") (hoặc tạo bằng `git worktree add`) để bắt đầu từ đỉnh nhánh tích hợp. Thêm `.claude/worktrees/` vào `.gitignore`.
+3. Giao cho mỗi agent task và tập file của nó. File chung (bump version, `versions.mjs --lock`, spec sống, README) chỉ được chạm một lần, ở phiên chính, sau khi gộp.
+4. Ở nhánh tích hợp, gộp từng nhánh task bằng `git merge --no-ff worktree-<slug>-t<n>` theo thứ tự task, chạy test của các thành phần bị chạm sau mỗi lần gộp. Xung đột ngoài tập file đã khai báo là lỗi chia việc: dừng và báo. Con người duyệt toàn bộ nhánh tích hợp; không có PR riêng cho từng agent.
+5. Dọn bằng `git worktree remove <path>`, chỉ với worktree đã gộp và sạch. Không `rm -rf` worktree có junction từ Git Bash trên Windows; nếu phải xoá tay thì dùng Node `fs.rmSync`. Phiên `claude -p` không tự dọn worktree.
+
+| Trạng thái | Nhận định (nguồn) |
+| --- | --- |
+| [Verified] | `claude --worktree <name>` tạo `.claude/worktrees/<name>/` trên nhánh `worktree-<name>`; base là default branch trừ khi `worktree.baseRef` là `"head"`; phiên không đặt tên và sạch thì tự xoá worktree khi thoát, phiên có tên thì hỏi trước; `claude -p` không bao giờ tự dọn ([worktrees](https://code.claude.com/docs/en/worktrees)). |
+| [Verified] | Subagent có `isolation: worktree` dùng `.claude/worktrees/` và bị xoá khi không có thay đổi; lệnh trỏ về main checkout bị chặn; `${CLAUDE_PROJECT_DIR}` vẫn là main checkout còn `cwd` trong đầu vào hook là worktree; file gitignored như `.env` không có trong worktree trừ khi liệt kê trong `.worktreeinclude` ([worktrees](https://code.claude.com/docs/en/worktrees)). |
+| [Unverified: tóm tắt thứ cấp của trang chính thức, chưa đọc lại] | Hook `WorktreeCreate`/`WorktreeRemove` tồn tại; hook PreToolUse chạy trong subagent ([hooks](https://code.claude.com/docs/en/hooks)). |
+| [Unverified: tóm tắt thứ cấp của trang chính thức, chưa đọc lại] | Mặc định tối đa 20 subagent đồng thời ([sub-agents](https://code.claude.com/docs/en/sub-agents)); agent teams là experimental, tắt mặc định, khuyến nghị 3-5 teammate và tốn chi phí hơn rõ rệt ([agent-teams](https://code.claude.com/docs/en/agent-teams), [costs](https://code.claude.com/docs/en/costs)). |
+| [Unverified] | `isolation: worktree` với agent do plugin cung cấp (trang sub-agents không liệt `isolation` trong các trường bị bỏ qua của agent plugin nhưng cũng không nói là có hiệu lực), và khi chạy headless/SDK. |
+| [Unverified] | Tên nhánh và đường dẫn worktree của subagent; ràng buộc "một nhánh một worktree" trong tài liệu Claude Code (đó là hành vi của git, [Inference]); khuyến nghị chính thức một PR cho mỗi agent. |
+| [Inference] | Trần 3 agent là heuristic thận trọng, không phải giới hạn chính thức. |
+
+`.claude/aip-gate.json` thường bị gitignore nên worktree không có file này: hook đọc gốc worktree trước rồi tới gốc repo chính, và `guard-files` neo `writeScope` theo gốc worktree. Đừng sao chép file này bằng `.worktreeinclude`.
+
 **Giới hạn / residual risk.** Hook là cổng regex, không phải sandbox.
 
 - Không bắt được: `bash -c "…"` / `eval`, ref bị escape như `ma\in`, literal `$'…'`, và file bí mật ngoài danh sách trên (ví dụ `credentials.csv`, `credentials.xml`, `credentials.toml`).
