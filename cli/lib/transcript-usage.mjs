@@ -1,6 +1,10 @@
 // Phân tích lượt dùng token từ transcript JSONL của Claude Code. Zero-dependency.
 // [Unverified] Layout dòng transcript (assistant.usage, cost-state) là nội bộ của Claude Code, không phải hợp đồng công khai.
 
+import fs from 'node:fs';
+import path from 'node:path';
+import { findTranscripts } from './transcript-stats.mjs';
+
 export const LARGE_CACHE_CREATE = 10000;
 export const IDLE_GAP_MS = 60 * 60 * 1000;
 
@@ -138,5 +142,138 @@ export function buildSessionUsage(sessionId, parts, opts = {}) {
     bySubagent,
     subagentShare: total === 0 ? 0 : sub / total,
     signals,
+  };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function parseSince(value, nowMs) {
+  if (value === undefined) return nowMs - 7 * DAY_MS;
+  if (typeof value !== 'string') return null;
+  if (/^\d+$/.test(value)) {
+    const n = Number(value);
+    return n > 0 ? nowMs - n * DAY_MS : null;
+  }
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const ms = Date.UTC(y, mo - 1, d);
+  // Date.UTC tự cuộn ngày không tồn tại (02-30 → 03-02), nên so lại từng thành phần.
+  const back = new Date(ms);
+  return back.getUTCFullYear() === y && back.getUTCMonth() === mo - 1 && back.getUTCDate() === d ? ms : null;
+}
+
+const readLines = (file) => {
+  try { return fs.readFileSync(file, 'utf8').split('\n'); } catch { return null; }
+};
+
+// Chỉ đọc khóa agentType: các trường khác của meta (vd. description) có thể chứa nội dung hội thoại.
+function readAgentType(metaFile) {
+  try {
+    const t = JSON.parse(fs.readFileSync(metaFile, 'utf8'))?.agentType;
+    return typeof t === 'string' && t !== '' ? t : null;
+  } catch { return null; }
+}
+
+export function loadSessionUsage({ home, cwd, sinceMs }) {
+  const groups = new Map(); // sessionId -> parts[]
+  const push = (id, part) => { if (!groups.has(id)) groups.set(id, []); groups.get(id).push(part); };
+
+  for (const file of findTranscripts({ home, cwd })) {
+    const lines = readLines(file);
+    if (lines === null) continue;
+    const base = path.basename(file);
+    const stem = base.replace(/\.jsonl$/, '');
+    const parsed = parseUsageLines(lines);
+    const sessionId = parsed.sessionId ?? stem;
+    push(sessionId, { agent: null, file: base, parsed });
+
+    const subDir = path.join(path.dirname(file), stem, 'subagents');
+    let names;
+    try { names = fs.readdirSync(subDir); } catch { continue; }
+    for (const n of names.sort()) {
+      const m = /^agent-(.+)\.jsonl$/.exec(n);
+      if (!m) continue;
+      const subLines = readLines(path.join(subDir, n));
+      if (subLines === null) continue;
+      const agent = readAgentType(path.join(subDir, `agent-${m[1]}.meta.json`)) ?? m[1];
+      push(sessionId, { agent, file: n, parsed: parseUsageLines(subLines) });
+    }
+  }
+
+  const out = [];
+  for (const [id, parts] of groups) {
+    const s = buildSessionUsage(id, parts, { sinceMs });
+    if (s) out.push(s);
+  }
+  return out;
+}
+
+const sessionTokens = (s) => tokensOf(s.main) + Object.values(s.bySubagent).reduce((a, u) => a + tokensOf(u), 0);
+const addInto = (acc, u) => { for (const k of USAGE_KEYS) acc[k] += u[k]; acc.turns += u.turns; };
+
+export function buildUsageReport(sessions, { sinceMs, top = 5 }) {
+  const totals = emptyUsage();
+  let costUsd = null;
+  let unknownModelCost = false;
+  let subTokens = 0;
+  const byModel = new Map();
+  const bySubagent = new Map();
+  const signals = { modelSwitches: { count: 0, tokens: 0 }, idleGaps: { count: 0, tokens: 0 }, cacheHeavy: { count: 0, tokens: 0 } };
+
+  for (const s of sessions) {
+    if (s.costUsd !== null) costUsd = (costUsd ?? 0) + s.costUsd;
+    if (s.unknownModelCost) unknownModelCost = true;
+    for (const [model, u] of Object.entries(s.byModel)) {
+      const acc = byModel.get(model) ?? { ...emptyUsage(), costUsd: null };
+      addInto(acc, u);
+      if (u.costUsd !== null) acc.costUsd = (acc.costUsd ?? 0) + u.costUsd;
+      byModel.set(model, acc);
+      addInto(totals, u);
+    }
+    for (const [agent, u] of Object.entries(s.bySubagent)) {
+      const acc = bySubagent.get(agent) ?? emptyUsage();
+      addInto(acc, u);
+      bySubagent.set(agent, acc);
+      subTokens += tokensOf(u);
+    }
+    for (const k of Object.keys(signals)) {
+      signals[k].count += s.signals[k].count;
+      signals[k].tokens += s.signals[k].tokens;
+    }
+  }
+
+  const grand = tokensOf(totals);
+  const cacheReadPct = (u) => {
+    const d = u.input + u.cacheRead + u.cacheCreate;
+    return d === 0 ? 0 : u.cacheRead / d;
+  };
+
+  return {
+    sinceMs,
+    sessions: sessions.length,
+    totals: { ...totals, costUsd, unknownModelCost, subagentShare: grand === 0 ? 0 : subTokens / grand },
+    byModel: [...byModel.entries()]
+      .map(([model, u]) => ({
+        model, turns: u.turns, input: u.input, cacheRead: u.cacheRead, cacheCreate: u.cacheCreate,
+        cacheCreate1h: u.cacheCreate1h, cacheCreate5m: u.cacheCreate5m, output: u.output,
+        cacheReadPct: cacheReadPct(u), costUsd: u.costUsd,
+      }))
+      .sort((a, b) => tokensOf(b) - tokensOf(a)),
+    bySubagent: [...bySubagent.entries()]
+      .map(([agent, u]) => ({ agent, turns: u.turns, input: u.input, cacheRead: u.cacheRead, cacheCreate: u.cacheCreate, output: u.output }))
+      .sort((a, b) => tokensOf(b) - tokensOf(a)),
+    signals,
+    top: [...sessions]
+      .sort((a, b) => {
+        if ((a.costUsd === null) !== (b.costUsd === null)) return a.costUsd === null ? 1 : -1;
+        if (a.costUsd !== b.costUsd) return b.costUsd - a.costUsd;
+        return sessionTokens(b) - sessionTokens(a);
+      })
+      .slice(0, top)
+      .map((s) => ({
+        sessionId: s.sessionId, costUsd: s.costUsd, turns: s.main.turns + Object.values(s.bySubagent).reduce((a, u) => a + u.turns, 0),
+        subagentShare: s.subagentShare, files: [...s.files], signals: s.signals, unknownModelCost: s.unknownModelCost,
+      })),
   };
 }

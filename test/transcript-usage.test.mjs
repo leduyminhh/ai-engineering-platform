@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 // Unit test cho transcript-usage — fixture JSONL dựng tại chỗ, không cần transcript thật. Zero-dependency.
 // Chạy: node test/transcript-usage.test.mjs
-import { parseUsageLines, buildSessionUsage, LARGE_CACHE_CREATE, IDLE_GAP_MS } from '../cli/lib/transcript-usage.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { parseUsageLines, buildSessionUsage, parseSince, loadSessionUsage, buildUsageReport, LARGE_CACHE_CREATE, IDLE_GAP_MS } from '../cli/lib/transcript-usage.mjs';
+import { projectSlug } from '../cli/lib/transcript-stats.mjs';
 
 let pass = 0;
 const fails = [];
@@ -136,6 +140,71 @@ s = buildSessionUsage('s1', [part(null, [asst(null, 'x', u(1, 0, 0))]), part(nul
 ok(s.main.turns === 2 && s.main.input === 3, 'P5c AC1.2: turn không có message.id ở hai part không bị gộp');
 s = buildSessionUsage('s1', [part('reviewer', [turn('a1', 'opus', u(1, 0, 0), 0)], 'r1.jsonl'), part('reviewer', [turn('a2', 'sonnet', u(1, 0, 0), 1)], 'r2.jsonl')]);
 ok(s.signals.modelSwitches.count === 0 && s.bySubagent.reviewer.turns === 2, 'P5c AC1.4: hai lần chạy cùng tên agent khác model không tính đổi model, vẫn gộp theo tên');
+
+// ---- parseSince / loadSessionUsage / buildUsageReport ----
+const NOW = Date.parse('2026-10-22T12:00:00.000Z');
+const DAY = 86400000;
+for (const [input, want] of [
+  [undefined, NOW - 7 * DAY], ['3', NOW - 3 * DAY], ['2026-10-01', Date.UTC(2026, 9, 1)],
+  ['0', null], ['-3', null], ['abc', null], ['2026-13-40', null], ['2026-02-30', null],
+]) ok(parseSince(input, NOW) === want, `P5c AC2.1: parseSince(${input}) = ${want}`);
+
+const home = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-usage-'));
+try {
+  const cwd = 'E:\\proj';
+  const dir = path.join(home, '.claude', 'projects', projectSlug(cwd));
+  const w = (rel, lines) => { const f = path.join(dir, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, Array.isArray(lines) ? lines.join('\n') : lines); };
+  const sess = (id) => (o) => ({ ...JSON.parse(o), sessionId: id });
+  const L = (id, ...lines) => lines.map((l) => j(sess(id)(l)));
+  w('sA.jsonl', L('sA', turn('m1', 'opus', u(10, 0, 0, 10)), cost(2, { modelUsage: { opus: { costUSD: 2 } } })));
+  w('sA/subagents/agent-aaa.jsonl', L('sA', turn('a1', 'sonnet', u(30, 0, 0, 10))));
+  w('sA/subagents/agent-aaa.meta.json', j({ agentType: 'reviewer', description: 'SECRET-DESC-XYZ' }));
+  w('sA/subagents/agent-bbb.jsonl', L('sA', turn('b1', 'sonnet', u(5, 0, 0, 0))));
+  w('sA/subagents/agent-bbb.meta.json', '{not json SECRET-DESC-XYZ');
+  w('sA/subagents/agent-ccc.jsonl', L('sA', turn('c1', 'sonnet', u(5, 0, 0, 0))));
+  w('sB1.jsonl', L('sB', turn('x1', 'opus', u(1, 0, 0, 1)), cost(1)));
+  w('sB2.jsonl', L('sB', turn('x2', 'opus', u(1, 0, 0, 1)), cost(3)));
+  w('old.jsonl', L('sOld', asst('o1', 'opus', u(1, 0, 0, 1), { timestamp: '2020-01-01T00:00:00.000Z' })));
+  w('broken.jsonl', '{garbage');
+
+  const since = T0 - DAY;
+  const got = loadSessionUsage({ home, cwd, sinceMs: since });
+  const byId = Object.fromEntries(got.map((x) => [x.sessionId, x]));
+  ok(got.length === 2 && byId.sA && byId.sB, 'P5c AC1.1: hai phiên, bỏ phiên ngoài cửa sổ và file hỏng');
+  ok(byId.sB.costUsd === 3 && byId.sB.files.length === 2, 'P5c AC1.1: phiên chia hai file không đếm đôi tiền');
+  ok(Object.keys(byId.sA.bySubagent).sort().join() === 'bbb,ccc,reviewer', 'P5c AC1.3: tên agent từ agentType, rơi về id khi meta hỏng/thiếu');
+  ok(byId.sA.main.input === 10 && byId.sA.subagentShare === 50 / 70, 'P5c AC1.3: tách main và subagent từ đĩa');
+  ok(loadSessionUsage({ home, cwd, sinceMs: null }).length === 3, 'P5c AC1.1: sinceMs null lấy cả phiên cũ');
+  ok(loadSessionUsage({ home, cwd: 'E:\\none', sinceMs: null }).length === 0, 'P5c AC1.1: không có thư mục project → []');
+
+  const rep = buildUsageReport(got, { sinceMs: since });
+  ok(rep.sessions === 2 && rep.totals.turns === 6, 'P5c AC2.1: số phiên và lượt');
+  ok(rep.totals.input === 52 && rep.totals.output === 22, 'P5c AC2.1: tổng token');
+  ok(rep.totals.costUsd === 5, 'P5c AC2.1: tổng tiền cộng mỗi phiên một lần');
+  ok(!JSON.stringify(rep).includes('SECRET-DESC-XYZ'), 'P5c AC2.1: description của meta không lọt vào báo cáo');
+  ok(rep.byModel[0].model === 'sonnet' && rep.byModel[0].turns === 3, 'P5c AC2.1: byModel sắp theo token giảm dần');
+  ok(rep.bySubagent.some((a) => a.agent === 'reviewer' && a.input === 30), 'P5c AC2.1: bySubagent có reviewer');
+} finally { fs.rmSync(home, { recursive: true, force: true }); }
+
+{
+  const mk = (id, costUsd, input) => ({
+    sessionId: id, files: [`${id}.jsonl`], costUsd, unknownModelCost: false, firstTs: T0, lastTs: T0,
+    byModel: { m: { input, cacheRead: input, cacheCreate: input, cacheCreate1h: 0, cacheCreate5m: 0, output: 0, turns: 1, costUsd } },
+    main: { input, cacheRead: input, cacheCreate: input, cacheCreate1h: 0, cacheCreate5m: 0, output: 0, turns: 1 },
+    bySubagent: {}, subagentShare: 0,
+    signals: { modelSwitches: { count: 0, tokens: 0 }, idleGaps: { count: 0, tokens: 0 }, cacheHeavy: { count: 0, tokens: 0 } },
+  });
+  const ss = [mk('p', null, 1), mk('q', 5, 1), mk('r', 9, 1), mk('s', null, 50), mk('t', 1, 1), mk('u', 2, 1), mk('v', 3, 1)];
+  const snapshot = JSON.stringify(ss);
+  const r7 = buildUsageReport(ss, { sinceMs: null });
+  ok(r7.top.length === 5 && r7.top.map((x) => x.sessionId).join() === 'r,q,v,u,t', 'P5c AC2.1: top 5 sắp tiền giảm dần');
+  ok(buildUsageReport(ss, { sinceMs: null, top: 7 }).top.slice(5).map((x) => x.sessionId).join() === 's,p', 'P5c AC2.1: phiên không tiền xếp sau, theo token');
+  ok(JSON.stringify(ss) === snapshot, 'P5c AC2.1: không sửa đầu vào');
+  ok(r7.byModel[0].cacheReadPct === 1 / 3 && r7.totals.costUsd === 20, 'P5c AC2.1: cacheReadPct và tổng tiền bỏ phiên null');
+  const e = buildUsageReport([], { sinceMs: T0 + DAY });
+  ok(e.sessions === 0 && e.byModel.length === 0 && e.totals.costUsd === null && e.top.length === 0 && e.totals.subagentShare === 0,
+    'P5c AC2.1: không phiên nào → báo cáo rỗng, costUsd null');
+}
 
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }
 console.log(`transcript-usage.test: ${pass} pass`);
