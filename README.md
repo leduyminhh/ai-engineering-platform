@@ -421,7 +421,7 @@ claude -p "Review the diff and report findings" \
 
 [`templates/ci/claude-review.example.yml`](templates/ci/claude-review.example.yml) is a read-only pull request review for GitHub Actions: it runs an aip review skill through `anthropics/claude-code-action` and writes the result to the job summary. It is an example to copy: `aip init` does not copy it, so copy it yourself into `.github/workflows/`. Claude Code facts below are [Unverified] summaries of [github-actions](https://code.claude.com/docs/en/github-actions) and [headless](https://code.claude.com/docs/en/headless).
 
-Before use: replace each `<full-40-char-commit-sha>` with the SHA of a release you reviewed, add the repository secret `ANTHROPIC_API_KEY`, and set `plugin_marketplaces` to the Git URL of your `dist` branch (`node cli/dist.mjs`).
+Before use: replace each `<full-40-char-commit-sha>` with the SHA of a release you reviewed, add the repository secret `ANTHROPIC_API_KEY`, and set `plugin_marketplaces` to the Git URL of a repository that holds the marketplace: push the `dist` branch output (`node cli/dist.mjs`) as the default branch of a repository of your own (or use a repository whose root holds `.claude-plugin/marketplace.json`). [Unverified] whether the Action accepts a `#branch` or `--branch` form.
 
 What the example sets (a reduction of risk, not a guarantee):
 
@@ -431,9 +431,11 @@ What the example sets (a reduction of risk, not a guarantee):
 
 Limits:
 
-- Same-repository branches only: the `if` skips fork pull requests, and GitHub withholds secrets from fork runs.
+- Same-repository branches only: the `if` skips fork pull requests, and [Unverified] GitHub usually withholds secrets from fork runs ([github-actions](https://code.claude.com/docs/en/github-actions)).
 - [Unverified] `claude -p` without `--bare` loads the project's hooks and `.mcp.json` with no trust prompt (headless doc), while the Action doc says that for pull request runs it restores `.claude/`, `.mcp.json` and similar files from the base branch. Run only on trusted branches.
+- [Inference] `pull_request` runs the workflow as it exists on the merge ref, so a same-repository pull request author can edit the workflow file and the root `CLAUDE.md`/`AGENTS.md`; the fixed prompt only protects against content interpolation, not against an author who already has write access.
 - Pull request content (diff, comments) is untrusted input. A read-only reviewer can still be prompt-injected, so do not add tools to it.
+- [Speculation] A prompt-injected reviewer with `Read` might echo environment secrets into the job summary; whether GitHub masks them there is unchecked. Use a dedicated API key with a low spending limit.
 - [Unverified] The Action's default GitHub App authentication may need `id-token: write`; the example deliberately does not grant it, so check before raising permissions.
 - [Unverified] `Bash(git diff *)` could in principle write a file through `git diff --output=<file>`; not tested.
 - P6b (`aip-runner`, LangGraph, separate repository) is a preliminary design and is not implemented.

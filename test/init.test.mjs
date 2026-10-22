@@ -160,7 +160,6 @@ for (const full of [false, true]) {
     const r = init({ root, full });
     assert.ok(r.created.every((f) => !f.startsWith(".github/") && !f.includes("claude-review")));
     assert.ok(!fs.existsSync(path.join(root, ".github")));
-    assert.ok(fs.existsSync(path.join(REPO, "templates/ci/claude-review.example.yml")));
   });
 }
 

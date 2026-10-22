@@ -1,18 +1,18 @@
 # Ví dụ CI: review PR chỉ đọc bằng skill aip, kết quả ra job summary (không đăng bình luận lên PR).
 # Đây là mẫu để sao chép và chỉnh, aip không tự cài vào workflow của bạn.
-# Các tên đầu vào bên dưới đối chiếu tài liệu ngày 2026-10-22:
+# Các tên đầu vào bên dưới đối chiếu gián tiếp qua tóm tắt tài liệu ngày 2026-10-22 (chưa đọc trực tiếp từng trang):
 # https://code.claude.com/docs/en/github-actions và https://code.claude.com/docs/en/headless
 # [Unverified] Tên đầu vào của Action có thể đổi theo phiên bản; hãy kiểm lại với action.yml trước khi dùng.
 name: claude-review
 
 on:
-  # Dùng pull_request, không dùng pull_request_target: PR từ fork không được chạy với secret của repo.
+  # Dùng pull_request, không dùng pull_request_target: PR từ fork không nên chạy với secret của repo. [Unverified] GitHub thường không đưa secret cho lần chạy từ fork (xem https://code.claude.com/docs/en/github-actions).
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
 
 jobs:
   review:
-    # Chỉ chạy PR cùng repo vì secret ANTHROPIC_API_KEY không có sẵn cho PR từ fork.
+    # Chỉ chạy PR cùng repo vì [Unverified] secret ANTHROPIC_API_KEY thường không có sẵn cho PR từ fork (xem https://code.claude.com/docs/en/github-actions).
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     # Chỉ đọc. [Unverified] Action có thể đòi thêm `id-token: write` cho xác thực GitHub App mặc định;
@@ -32,8 +32,9 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ github.token }}
-          # Marketplace `ai-engineering-platform` build bằng `node cli/dist.mjs` thành nhánh `dist`;
-          # điền URL Git của nhánh `dist` bạn đã đẩy lên (giá trị dưới là chỗ giữ).
+          # Marketplace `ai-engineering-platform` build bằng `node cli/dist.mjs` thành nhánh `dist` (một nhánh cục bộ, không phải URL);
+          # đẩy đầu ra đó làm nhánh mặc định của một repo riêng của bạn (hoặc repo có `.claude-plugin/marketplace.json` ở gốc),
+          # rồi điền URL Git của repo ĐÓ (giá trị dưới là chỗ giữ). [Unverified] Action có nhận dạng `#branch`/`--branch` hay không.
           plugin_marketplaces: https://example.com/your-org/ai-engineering-platform.git
           plugins: backend@ai-engineering-platform
           # [Unverified] display_report chỉ thấy trong action.yml, chưa thấy trong ví dụ của tài liệu.

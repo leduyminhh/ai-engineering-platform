@@ -82,8 +82,6 @@ export default async function run({ ok, ctx }) {
     for (const w of ['track_progress', 'use_sticky_comment', 'mcp__github_inline_comment', 'gh pr comment', 'gh pr review', 'gh api']) {
       if (c.includes(w)) v.push(`có ${w}`);
     }
-    for (const p of blocks(c, 'permissions')) if (/:\s*write\b|write-all/.test(p)) v.push('quyền write trong permissions');
-    if (/(issues|pull-requests|contents):\s*write/.test(c)) v.push('quyền write');
     if (!/display_report:\s*true/.test(c) && !/actions\/upload-artifact@/.test(c)) v.push('thiếu display_report/upload-artifact');
     return v;
   };
@@ -93,7 +91,7 @@ export default async function run({ ok, ctx }) {
   const good = run3(yml);
   ok(exists && good.ac12.length === 0, `P6a AC1.2: on pull_request (không _target), permissions chỉ contents+pull-requests read, mọi uses ghim SHA ${good.ac12.join('; ')}`);
   ok(exists && good.ac13.length === 0, `P6a AC1.3: claude_args dontAsk + max-turns + max-budget + allowedTools trong tập; prompt mở bằng /plugin:skill, không nội suy event ${good.ac13.join('; ')}`);
-  ok(exists && good.ac14.length === 0, `P6a AC1.4: không bình luận/ghi PR, không quyền write, có job summary hoặc artifact ${good.ac14.join('; ')}`);
+  ok(exists && good.ac14.length === 0, `P6a AC1.4: không bình luận/ghi PR, có job summary hoặc artifact ${good.ac14.join('; ')}`);
   if (!exists) return;
 
   // Đối chứng: mỗi biến thể phá đúng một quy tắc của file tốt; AC nào không được nêu phải vẫn sạch.
@@ -103,8 +101,8 @@ export default async function run({ ok, ctx }) {
   const mutants = [
     ['(a) thêm Edit vào allowedTools', sub(TOOLS_END, 'Bash(git log *),Edit"'), { ac13: 'allowedTools ngoài tập: Edit' }],
     ['(b) thêm Bash(*)', sub(TOOLS_END, 'Bash(git log *),Bash(*)"'), { ac13: 'allowedTools ngoài tập: Bash(*)' }],
-    ['(c) contents: write', sub('contents: read', 'contents: write'), { ac12: 'permissions sai', ac14: 'quyền write' }],
-    ['(d) id-token: write', sub('      pull-requests: read\n', '      pull-requests: read\n      id-token: write\n'), { ac12: 'permissions sai', ac14: 'quyền write' }],
+    ['(c) contents: write', sub('contents: read', 'contents: write'), { ac12: 'permissions sai' }],
+    ['(d) id-token: write', sub('      pull-requests: read\n', '      pull-requests: read\n      id-token: write\n'), { ac12: 'permissions sai' }],
     ['(e) prompt nội suy body', sub('HEAD^1..HEAD"', 'HEAD^1..HEAD ${{ github.event.pull_request.body }}"'), { ac13: 'prompt chứa title/body/head.ref' }],
     ['(e2) prompt nội suy ${{ khác', sub('HEAD^1..HEAD"', 'HEAD^1..HEAD ${{ github.sha }}"'), { ac13: 'prompt chứa ${{' }],
     ['(f) pull_request_target là khóa thật', sub('  pull_request:\n', '  pull_request_target:\n  pull_request:\n'), { ac12: 'pull_request_target' }],
@@ -113,8 +111,8 @@ export default async function run({ ok, ctx }) {
     ['(h2) cờ --tools', sub('--max-budget-usd 2', '--max-budget-usd 2 --tools "Edit"'), { ac13: 'có cờ --tools' }],
     ['(i) track_progress', sub('display_report: true\n', 'display_report: true\n          track_progress: true\n'), { ac14: 'có track_progress' }],
     ['(i2) gh pr comment', sub('    steps:\n', '    steps:\n      - run: gh pr comment 1 --body x\n'), { ac14: 'có gh pr comment' }],
-    ['(j) khối permissions thứ hai ở cấp workflow', sub('\njobs:\n', '\npermissions:\n  contents: write\n\njobs:\n'), { ac12: 'permissions sai', ac14: 'quyền write' }],
-    ['(k) write-all', sub('contents: read', 'write-all'), { ac12: 'permissions sai', ac14: 'quyền write' }],
+    ['(j) khối permissions thứ hai ở cấp workflow', sub('\njobs:\n', '\npermissions:\n  contents: write\n\njobs:\n'), { ac12: 'permissions sai' }],
+    ['(k) write-all', sub('contents: read', 'write-all'), { ac12: 'permissions sai' }],
   ];
   for (const [name, mutate, expect] of mutants) {
     let r;

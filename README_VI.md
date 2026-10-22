@@ -414,7 +414,7 @@ claude -p "Review the diff and report findings" \
 
 [`templates/ci/claude-review.example.yml`](templates/ci/claude-review.example.yml) là ví dụ review pull request chỉ đọc cho GitHub Actions: chạy một skill review của aip qua `anthropics/claude-code-action` và ghi kết quả ra job summary. Đây là mẫu để chép: `aip init` không sao chép nó, nên bạn tự chép vào `.github/workflows/`. Các khẳng định về Claude Code dưới đây là [Unverified], tóm tắt từ [github-actions](https://code.claude.com/docs/en/github-actions) và [headless](https://code.claude.com/docs/en/headless).
 
-Trước khi dùng: thay mỗi `<full-40-char-commit-sha>` bằng SHA của release bạn đã rà soát, thêm secret repository `ANTHROPIC_API_KEY`, và đặt `plugin_marketplaces` là URL Git của nhánh `dist` (`node cli/dist.mjs`).
+Trước khi dùng: thay mỗi `<full-40-char-commit-sha>` bằng SHA của release bạn đã rà soát, thêm secret repository `ANTHROPIC_API_KEY`, và đặt `plugin_marketplaces` là URL Git của một repository chứa marketplace: đẩy đầu ra nhánh `dist` (`node cli/dist.mjs`) làm nhánh mặc định của một repository riêng của bạn (hoặc dùng repository có `.claude-plugin/marketplace.json` ở gốc). [Unverified] chưa rõ Action có nhận dạng `#branch` hoặc `--branch` hay không.
 
 Ví dụ đặt sẵn những điều sau (giảm rủi ro, không phải bảo đảm):
 
@@ -424,9 +424,11 @@ Ví dụ đặt sẵn những điều sau (giảm rủi ro, không phải bảo 
 
 Giới hạn:
 
-- Chỉ nhánh cùng repository: `if` bỏ qua pull request từ fork, và GitHub không đưa secret cho lần chạy từ fork.
+- Chỉ nhánh cùng repository: `if` bỏ qua pull request từ fork, và [Unverified] GitHub thường không đưa secret cho lần chạy từ fork ([github-actions](https://code.claude.com/docs/en/github-actions)).
 - [Unverified] `claude -p` không có `--bare` nạp hook và `.mcp.json` của project mà không hỏi tin cậy (tài liệu headless), còn tài liệu Action nói với pull request nó khôi phục `.claude/`, `.mcp.json` và file tương tự từ nhánh base. Chỉ chạy trên nhánh tin cậy.
+- [Inference] `pull_request` chạy workflow đúng như nó tồn tại trên merge ref, nên tác giả pull request cùng repository có thể sửa file workflow và `CLAUDE.md`/`AGENTS.md` ở gốc; prompt cố định chỉ chống nội suy nội dung, không chống tác giả vốn đã có quyền ghi.
 - Nội dung pull request (diff, comment) là đầu vào không tin cậy. Reviewer chỉ đọc vẫn có thể bị prompt injection, nên đừng cấp thêm tool cho nó.
+- [Speculation] Reviewer bị prompt injection có `Read` có thể in secret trong môi trường ra job summary; chưa kiểm GitHub có che chúng ở đó hay không. Dùng một API key riêng có hạn mức thấp.
 - [Unverified] Xác thực GitHub App mặc định của Action có thể cần `id-token: write`; ví dụ cố ý không cấp, hãy tự kiểm trước khi nâng quyền.
 - [Unverified] `Bash(git diff *)` về nguyên tắc có thể ghi file qua `git diff --output=<file>`; chưa kiểm thử.
 - P6b (`aip-runner`, LangGraph, repository riêng) là thiết kế sơ bộ và chưa hiện thực.
