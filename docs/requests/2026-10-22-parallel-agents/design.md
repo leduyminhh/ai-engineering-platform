@@ -1,6 +1,6 @@
 # Thiết kế: nhiều agent song song, mỗi agent một worktree (project P3)
 - Ngày: 2026-10-22
-- Trạng thái: đã duyệt 2026-10-22
+- Trạng thái: đã duyệt 2026-10-22; đã thực thi trên feature/p3-parallel-agents (chưa merge)
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P3 (xu hướng 6)
 
@@ -48,15 +48,15 @@ Của người dùng (2026-10-22, trả lời năm câu hỏi mở): (1) gộp q
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given baseline `core/agents/AGENTS.template.md`, Then có mục `Parallel agents` (tiếng Anh, ngắn) nêu: tên nhánh `worktree-<slug>-t<n>` và thư mục `.claude/worktrees/`, tập file ghi không giao nhau, bước chạm file chung làm một lần ở phiên chính, gộp `merge --no-ff` về nhánh tích hợp rồi người duyệt cả nhánh, tối đa 3 agent song song, không `rm -rf` worktree có junction; `AGENTS.md` giữ byte-for-byte giống template.
-- [ ] **AC1.2** — Given `README.md` và `README_VI.md`, Then có mục "Parallel agents" / "Agent song song" gồm công thức từng bước (tạo worktree, giao task, gộp, dọn), bảng điều đã [Verified]/[Unverified] ở mục trên, và nói rõ aip không tự chạy agent; `CLAUDE.md` nhắc quy ước và script chia việc.
-- [ ] **AC2.1** — Given một `plan.md` có hai task cùng nhóm `**Song song:** A` mà `**Files:**` giao nhau, When chạy `check-partition.mjs` trên thư mục request, Then in cảnh báo `P1` nêu hai task và file trùng; không giao nhau thì không cảnh báo; vẫn chỉ cảnh báo, `--strict` mới exit 1.
-- [ ] **AC2.2** — Given task nhóm song song ghi file chung bị cấm (`plugins/_versions.lock.json`, `*/.manifest.json`, `docs/specs/**`, `README*.md`), Then cảnh báo `P2` (các file này làm ở phiên chính sau gộp).
-- [ ] **AC2.3** — Given `plan.md` không có dòng `**Song song:**` hoặc thiếu `**Files:**`, Then không cảnh báo và exit 0 (tính năng chọn tham gia, không phá request cũ).
-- [ ] **AC3.1** — Given một worktree thật tạo bằng `git worktree add` và `.claude/aip-gate.json` chỉ có ở repo chính, When gọi `readGateConfig` từ thư mục trong worktree, Then trả cấu hình của repo chính; khi worktree có file riêng, Then dùng file của worktree.
-- [ ] **AC3.2** — Given agent có `writeScope` và đường dẫn đích nằm trong một worktree, When `guard-files` quyết định, Then phạm vi neo theo gốc git của worktree (ghi trong scope được, ngoài scope bị `deny`).
-- [ ] **AC4.1** — Given repo sau thay đổi, Then `docs/specs/hooks-gates/spec.md` có `hooks-gates/R4` (đọc `aip-gate.json` trong worktree) và `R5` (neo `writeScope` theo gốc worktree); `check-request.mjs` trên request này không có W10–W14.
-- [ ] **AC5.1** — `npm test` xanh; bump version `core` (và thành phần `versions.mjs --lock` buộc phải bump); `node cli/lib/versions.mjs --lock` cập nhật; `npm run pack:verify` xanh (script mới nằm trong `core/` nên đi theo gói npm).
+- [x] **AC1.1** — Given baseline `core/agents/AGENTS.template.md`, Then có mục `Parallel agents` (tiếng Anh, ngắn) nêu: tên nhánh `worktree-<slug>-t<n>` và thư mục `.claude/worktrees/`, tập file ghi không giao nhau, bước chạm file chung làm một lần ở phiên chính, gộp `merge --no-ff` về nhánh tích hợp rồi người duyệt cả nhánh, tối đa 3 agent song song, không `rm -rf` worktree có junction; `AGENTS.md` giữ byte-for-byte giống template.
+- [x] **AC1.2** — Given `README.md` và `README_VI.md`, Then có mục "Parallel agents" / "Agent song song" gồm công thức từng bước (tạo worktree, giao task, gộp, dọn), bảng điều đã [Verified]/[Unverified] ở mục trên, và nói rõ aip không tự chạy agent; `CLAUDE.md` nhắc quy ước và script chia việc.
+- [x] **AC2.1** — Given một `plan.md` có hai task cùng nhóm `**Song song:** A` mà `**Files:**` giao nhau, When chạy `check-partition.mjs` trên thư mục request, Then in cảnh báo `P1` nêu hai task và file trùng; không giao nhau thì không cảnh báo; vẫn chỉ cảnh báo, `--strict` mới exit 1.
+- [x] **AC2.2** — Given task nhóm song song ghi file chung bị cấm (`plugins/_versions.lock.json`, `*/.manifest.json`, `docs/specs/**`, `README*.md`), Then cảnh báo `P2` (các file này làm ở phiên chính sau gộp).
+- [x] **AC2.3** — Given `plan.md` không có dòng `**Song song:**` hoặc thiếu `**Files:**`, Then không cảnh báo và exit 0 (tính năng chọn tham gia, không phá request cũ).
+- [x] **AC3.1** — Given một worktree thật tạo bằng `git worktree add` và `.claude/aip-gate.json` chỉ có ở repo chính, When gọi `readGateConfig` từ thư mục trong worktree, Then trả cấu hình của repo chính; khi worktree có file riêng, Then dùng file của worktree.
+- [x] **AC3.2** — Given agent có `writeScope` và đường dẫn đích nằm trong một worktree, When `guard-files` quyết định, Then phạm vi neo theo gốc git của worktree (ghi trong scope được, ngoài scope bị `deny`).
+- [x] **AC4.1** — Given repo sau thay đổi, Then `docs/specs/hooks-gates/spec.md` có `hooks-gates/R4` (đọc `aip-gate.json` trong worktree) và `R5` (neo `writeScope` theo gốc worktree); `check-request.mjs` trên request này không có W10–W14.
+- [x] **AC5.1** — `npm test` xanh; bump version `core` (và thành phần `versions.mjs --lock` buộc phải bump); `node cli/lib/versions.mjs --lock` cập nhật; `npm run pack:verify` xanh (script mới nằm trong `core/` nên đi theo gói npm).
 
 ## Ảnh hưởng spec
 - hooks-gates: thêm R4, thêm R5
