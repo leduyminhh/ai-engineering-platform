@@ -89,5 +89,16 @@ README EN/VI và `CLAUDE.md` mô tả cờ mới; spec sống `cli-wizard` đư�
 - [Unverified] Layout transcript và ý nghĩa của `cost-state` là nội bộ Claude Code và có thể đổi; mọi con số ghi rõ nguồn và có thể sai lệch hóa đơn.
 - [Unverified] Trường tên agent trong `agent-<id>.meta.json` và cấu trúc giá trị trong `modelUsage` chưa được kiểm; builder đọc một file thật (chỉ khóa) trước khi hiện thực.
 - [Inference] `cost-state` tích lũy theo phiên gốc có thể đã gồm cả chi phí subagent; nếu vậy "tiền của subagent" không tách được từ `cost-state`, chỉ tách được token. Builder cần kiểm bằng một phiên có subagent và ghi kết luận vào design.
+
+### Kết quả kiểm trực tiếp (2026-10-22)
+
+Builder đọc một phiên thật có 8 subagent, chỉ khóa và số, không đọc nội dung. [Unverified] vì layout là nội bộ Claude Code.
+
+- `agent-<id>.meta.json` có khóa: `agentType` (chuỗi, ví dụ `general-purpose`), `description`, `toolUseId`, `spawnDepth`, `requestShape`, `requestNonInteractive`, `model`. Tên agent lấy từ `agentType`; không đọc `description` (có thể mang nội dung hội thoại). Thiếu meta hoặc thiếu `agentType` thì dùng `agentId`.
+- Dòng trong `subagents/agent-*.jsonl` có `isSidechain: true`, `agentId`, `timestamp`, và `sessionId` bằng sessionId của phiên gốc.
+- `cost-state` có khóa `sessionId`, `totalCostUSD`, `modelUsage`, `hasUnknownModelCost`, `totalDuration`, `startTime`..., và KHÔNG có `timestamp`. `modelUsage[<model>]` = `{ inputTokens, outputTokens, thinkingTokens, cacheReadInputTokens, cacheCreationInputTokens, webSearchRequests, costUSD }`.
+- Câu hỏi cost-state có gồm subagent: [Inference] CÓ. Ở phiên đó, `cacheReadInputTokens` của model sonnet trong `modelUsage` trùng khít tổng `cache_read_input_tokens` của 8 transcript subagent (11992206), còn phiên chính chỉ dùng opus. Hệ quả: tiền không tách được giữa phiên chính và subagent; chỉ tách được token. Bảng báo tiền cả phiên (gồm subagent), phần subagent báo bằng token.
+- Hệ quả hiện thực: `modelUsage[<model>].costUSD` dùng làm cột tiền theo model (số của Claude Code, không tính lại). `--since` lọc token theo `timestamp` của dòng; tiền là tổng tích lũy cả phiên, không chia theo cửa sổ, nên phiên có ít nhất một lượt trong cửa sổ được tính trọn tiền (đầu ra ghi rõ).
+
 - Câu hỏi mở 1: có cần cửa sổ thời gian khác 7 ngày làm mặc định không.
 - Câu hỏi mở 2: khi `cost-state` thiếu, hiển thị `—` hay ước tính từ token (đề xuất: `—`, không ước tính).
