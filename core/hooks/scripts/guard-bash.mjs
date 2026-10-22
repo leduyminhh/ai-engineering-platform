@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed, readGate, effectiveMode, fullKeep } from './gate-config.mjs';
+import { envFilesAllowed, readGate, effectiveMode, fullKeep, classifyPath, allowedRoots } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 const SECRET = /(^|[\s'"=/\\<(])(\.env(rc)?(\.(?!(example|sample|template)\b)[\w.-]+)?|(?!process\.env(?![\w.-]))[\w.-]+\.env|[\w.-]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub\b)[\w.-]+)?|credentials(\.(json|ya?ml))?)(?=$|[\s'";&|)<>])/i;
@@ -130,7 +130,7 @@ const CD_CMDS = new Set(['cd', 'chdir', 'pushd', 'push-location', 'set-location'
 const POP_CMDS = new Set(['popd', 'pop-location']);
 
 // Theo dõi thư mục làm việc qua các đoạn theo thứ tự: `cd repo && git push` phải tra nhánh của repo, không phải của cwd phiên.
-function withDirs(segs, cwd) {
+function trackDirs(segs, cwd) {
   let dir = cwd;
   let unres = false;
   let cdSeen = false;
@@ -148,7 +148,82 @@ function withDirs(segs, cwd) {
       unres = true;
     }
     return { t, gc: gitCmd(t), dir, unres };
-  }).filter((x) => x.gc);
+  });
+}
+
+function withDirs(segs, cwd) {
+  return trackDirs(segs, cwd).filter((x) => x.gc);
+}
+
+// H6 là heuristic đọc token, không phải sandbox: biến, subshell, script con vẫn có thể ghi ra ngoài root mà không bị thấy.
+const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'mv', 'move', 'move-item', 'cp', 'copy', 'copy-item', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content']);
+const LAST_ONLY = new Set(['cp', 'copy', 'copy-item']);
+const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content']);
+const SKIP_FIRST = new Set(['chmod', 'chown']);
+const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
+const SHELLS = new Set(['bash', 'sh', 'zsh', 'pwsh', 'powershell']);
+const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
+const REDIRECT = /^(\d*|&)(>>?|>\|)([\s\S]*)$/;
+const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul)$/i;
+const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
+const GLOB = /[*?[]/;
+
+const cmdName = (x) => String(x).split(/[\\/]/).pop().toLowerCase().replace(/\.exe$/, '');
+
+function classifyTarget(p, dir, unres, roots) {
+  if (NULL_DEVICE.test(p)) return null;
+  const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
+  if (!absolute && (unres || /[$~`]/.test(p))) return 'unknown';
+  if (GLOB.test(p)) {
+    const parts = p.split(/[\\/]/);
+    const first = parts.findIndex((x) => x !== '');
+    const g = parts.findIndex((x) => GLOB.test(x));
+    if (g <= first) return 'unknown';
+    return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots);
+  }
+  return classifyPath(p, dir, roots);
+}
+
+// Trả 'deny' | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
+function confineSegment(t, dir, unres, roots) {
+  const rest = [];
+  const targets = [];
+  for (let i = 0; i < t.length; i++) {
+    const m = REDIRECT.exec(t[i]);
+    if (!m) { rest.push(t[i]); continue; }
+    // `2>&1` bị parse() tách ở `&` thành `2>` + `1`: đích thiếu hoặc bắt đầu bằng `&` là dup fd, không phải file.
+    const target = m[3] || (i + 1 < t.length ? t[++i] : '');
+    if (target && !target.startsWith('&')) targets.push(target);
+  }
+  let k = 0;
+  while (k < rest.length && (/^\w+=/.test(rest[k]) || cmdName(rest[k]) === 'sudo')) k++;
+  const name = k < rest.length ? cmdName(rest[k]) : '';
+  const args = rest.slice(k + 1);
+  let ask = false;
+  if (SHELLS.has(name) && args.some((a) => /^-(c|command)$/i.test(a)) && WRITE_IN_STRING.test(args.join(' '))) ask = true;
+  if (name === 'eval' && WRITE_IN_STRING.test(args.join(' '))) ask = true;
+  if (WRITE_CMDS.has(name)) {
+    let pos = [];
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) targets.push(args[++i]); continue; }
+      if (a.startsWith('-')) continue;
+      if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
+      if (name === 'rmdir' && /^\/[sq]$/i.test(a)) continue;
+      pos.push(a);
+    }
+    if (SKIP_FIRST.has(name)) pos = pos.slice(1);
+    if (LAST_ONLY.has(name)) pos = pos.slice(-1);
+    if (FIRST_ONLY.has(name)) pos = pos.slice(0, 1);
+    targets.push(...pos);
+  }
+  let unknown = false;
+  for (const p of targets) {
+    const c = classifyTarget(p, dir, unres, roots);
+    if (c === 'outside') return 'deny';
+    if (c === 'unknown') unknown = true;
+  }
+  return unknown || ask ? 'ask' : null;
 }
 
 // PowerShell: backtick là ký tự escape/nối dòng, không phải dấu tách lệnh; chuẩn hoá trước khi tách để `ma`in` hay nối dòng không che push.
@@ -184,7 +259,7 @@ function hasCommitWithMessageFlag(cmd) {
   return false;
 }
 
-export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config } = {}) {
+export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
   const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw;
@@ -192,7 +267,14 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   // Kiểm rẻ (permission_mode) trước; chỉ đọc cấu hình (tốn lời gọi git) khi một nhánh H1–H3 thật sự cần quyết định.
   const bypass = input?.permission_mode === 'bypassPermissions';
   let cfg;
-  const gate = () => (cfg === undefined ? (cfg = config !== undefined ? config : (readGate(cwd)?.config ?? null)) : cfg);
+  let rg;
+  const readOnce = () => (rg === undefined ? (rg = readGate(cwd)) : rg);
+  const gate = () => (cfg === undefined ? (cfg = config !== undefined ? config : (readOnce()?.config ?? null)) : cfg);
+  // Không có gốc git (chỉ xảy ra khi cấu hình được truyền thẳng) thì coi cwd là root để không chặn nhầm mọi đường dẫn.
+  const rootsOf = () => {
+    const base = repoRoot ? [path.resolve(repoRoot)] : (readOnce()?.roots ?? []);
+    return allowedRoots({ roots: base.length ? base : [path.resolve(cwd)], config: gate() }, input);
+  };
   const full = () => bypass && effectiveMode(gate(), input) === 'full';
   const { segs, unclosed } = parse(cmd);
   const parsed = withDirs(segs, cwd);
@@ -204,6 +286,16 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   for (const { t, gc, dir, unres } of [...parsed, ...naive]) {
     const why = gc.sub === 'push' ? pushReason(t, gc, dir, currentBranch, unres) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
+  }
+  if (bypass && full()) {
+    const roots = rootsOf();
+    let ask = false;
+    for (const { t, dir, unres } of [...trackDirs(segs, cwd), ...trackDirs(naiveSegments(cmd), cwd)]) {
+      const r = confineSegment(t, dir, unres, roots);
+      if (r === 'deny') return { decision: 'deny', reason: 'Chế độ full: lệnh ghi/xoá đường dẫn ngoài root của project. Thêm thư mục vào "fullRoots" trong .claude/aip-gate.json nếu thật sự cần.' };
+      if (r === 'ask') ask = true;
+    }
+    if (ask) return { decision: 'ask', reason: 'Chế độ full: lệnh ghi/xoá có đường dẫn không xác định được (biến, ~, glob đầu đường dẫn, bash -c) — cần người dùng xác nhận.' };
   }
   const hits = (re) => re.test(cmd) || re.test(raw);
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.

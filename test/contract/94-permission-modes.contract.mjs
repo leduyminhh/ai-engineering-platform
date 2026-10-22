@@ -156,5 +156,37 @@ export default async function run({ ok, ctx }) {
   } finally {
     fs.rmSync(tmp6, { recursive: true, force: true });
   }
+
+  // H6 của guard-bash: nhốt lệnh ghi/xoá trong root khi full hiệu lực.
+  const tmp7 = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e-h6b-')));
+  try {
+    const proj = path.join(tmp7, 'proj').replaceAll('\\', '/');
+    const extra7 = path.join(tmp7, 'extra').replaceAll('\\', '/');
+    const scratch = path.join(tmp7, 'scratch').replaceAll('\\', '/');
+    const h6b = (command, { config = { mode: 'full' }, pm = 'bypassPermissions' } = {}) => bash.decide(
+      { tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: pm, scratchpad_dir: scratch },
+      { currentBranch: () => 'feature/x', allowEnv: () => false, config, repoRoot: proj });
+    const table = {
+      deny: ['rm -rf ../x', 'rm /etc/x', 'mv a /tmp/b', 'echo x > /tmp/y', 'del C:\\Windows\\x', 'cd /tmp && rm x', 'rm a; rm /etc/b',
+        'rm -rf $X; rm /etc/b', 'cp a /tmp/b', 'rm /etc/x "unclosed', 'rm a; rm /etc/b && echo "$(x'],
+      ask: ['rm -rf $X', 'rm -rf ~', 'rm -rf *', 'bash -c "rm /x"'],
+      pass: ['rm -rf build', 'mv a b', 'echo x > out.txt', 'cp /etc/hosts here.txt', 'echo x > /dev/null', 'cmd 2>&1', 'echo x >>out.log',
+        'ls /tmp', 'echo x > "x y"', 'rm -rf src/*.js', 'rd /s /q build', 'touch a 2>/dev/null', `mv a ${scratch}/b`, 'cd sub && rm x'],
+    };
+    for (const [want, cmds] of Object.entries(table)) {
+      for (const c of cmds) {
+        const d = h6b(c);
+        const got = d ? d.decision : 'pass';
+        ok(got === want, `P4e AC1.7: guard-bash "${c}" → ${want} (got ${got})`);
+      }
+    }
+    ok(h6b('rm /etc/x', { pm: 'default' }) === null && h6b('rm /etc/x', { config: { mode: 'ask' } }) === null,
+      'P4e AC1.7: full không hiệu lực → rm /etc/x không bị H6');
+    ok(h6b(`rm ${extra7}/x`, { config: { mode: 'full', fullRoots: [extra7] } }) === null, 'P4e AC1.7: fullRoots mở rộng root cho lệnh bash');
+    ok(h6b('git push origin main')?.decision === 'ask' && h6b('git push origin main; rm /etc/x')?.decision === 'ask',
+      'P4e AC1.7: H1 (push) đứng trước H6');
+  } finally {
+    fs.rmSync(tmp7, { recursive: true, force: true });
+  }
 }
 
