@@ -1,6 +1,6 @@
 # Thiết kế: nhiều agent song song, mỗi agent một worktree (project P3)
 - Ngày: 2026-10-22
-- Trạng thái: chờ duyệt (câu hỏi mở đã trả lời 2026-10-22)
+- Trạng thái: đã duyệt 2026-10-22
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P3 (xu hướng 6)
 
