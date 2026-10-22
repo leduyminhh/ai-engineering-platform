@@ -129,7 +129,7 @@
 - [x] **Step 3:** Run `npm run pack:verify`. Expected: exit 0.
 - [x] **Step 4:** Run `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-21-agent-permissions --tests test/contract/92-permissions.contract.mjs test/contract/91-guard-mcp.contract.mjs test/contract/90-hooks.contract.mjs test/init.test.mjs test/content/23-agent-permissions.pin.mjs`. Expected: W7 chỉ cho AC không có test (AC3.2, AC4.1, AC5.1 là AC đọc/cổng); báo từng cái.
 - [x] **Step 5:** Tick AC1.1–AC5.1 trong `design.md` khi có bằng chứng từ các bước trên (AC không chứng minh được giữ `[ ]` kèm `[chưa kiểm]`); tick các step đã làm trong plan này trừ Step 6; commit `chore(core): bump core and lock versions` rồi `docs(requests): mark agent permissions AC done and tick plan`.
-- [ ] **Step 6:** Dừng, báo người dùng nhánh `feature/p4-permissions-mcp` để duyệt diff; không merge, không push.
+- [x] **Step 6:** Dừng, báo người dùng nhánh `feature/p4-permissions-mcp` để duyệt diff; không merge, không push.
 
 ### Task 7: `allowEnvFiles` bỏ quy tắc `.env` khỏi settings sinh ra
 
