@@ -19,9 +19,11 @@ function parse(cmd) {
   let toks = [];
   let cur = '';
   let has = false;
+  let qp = Infinity;
   let q = null;
   let op = '';
-  const endTok = () => { if (has) toks.push(cur); cur = ''; has = false; };
+  // qpos: vị trí ký tự nháy đầu tiên trong token, để H6 chỉ tìm `>` ở phần không nằm trong nháy.
+  const endTok = () => { if (has) { toks.push(cur); (toks.qpos ??= []).push(qp); } cur = ''; has = false; qp = Infinity; };
   const endSeg = () => { endTok(); if (toks.length) { toks.op = op; op = ''; segs.push(toks); } toks = []; };
   for (let i = 0; i < cmd.length; i++) {
     const c = cmd[i];
@@ -32,7 +34,7 @@ function parse(cmd) {
       continue;
     }
     if (c === '\\' && (cmd[i + 1] === "'" || cmd[i + 1] === '"')) { cur += cmd[i + 1]; has = true; i++; continue; }
-    if (c === '"' || c === "'") { q = c; has = true; continue; }
+    if (c === '"' || c === "'") { if (qp === Infinity) qp = cur.length; q = c; has = true; continue; }
     if (c === '\n') { endSeg(); if (op !== '||' && op !== '|') op = ';'; continue; }
     if (/\s/.test(c)) { endTok(); continue; }
     if (';&|()`'.includes(c)) {
@@ -56,7 +58,9 @@ function naiveSegments(cmd) {
   let op = '';
   cmd.split(/(&&|\|\||;|\n|\|)/).forEach((x, k) => {
     if (k % 2) { if (op !== '||' && op !== '|') op = x; return; }
-    const t = (x.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((w) => w.replace(/^(["'])(.*)\1$/s, '$2'));
+    const words = x.match(/"[^"]*"|'[^']*'|\S+/g) || [];
+    const t = words.map((w) => w.replace(/^(["'])(.*)\1$/s, '$2'));
+    t.qpos = words.map((w) => { const p = w.search(/["']/); return p < 0 ? Infinity : p; });
     if (t.length) { t.op = op; op = ''; out.push(t); }
   });
   return out;
@@ -163,7 +167,6 @@ const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'pwsh', 'powershell']);
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
-const REDIRECT = /^(\d*|&)(>>?|>\|)([\s\S]*)$/;
 const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul)$/i;
 const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
 const GLOB = /[*?[]/;
@@ -189,10 +192,15 @@ function confineSegment(t, dir, unres, roots) {
   const rest = [];
   const targets = [];
   for (let i = 0; i < t.length; i++) {
-    const m = REDIRECT.exec(t[i]);
-    if (!m) { rest.push(t[i]); continue; }
+    // Chỉ tìm `>` ở phần token trước ký tự nháy đầu: `awk '$1>2'` hay `"a > b"` là dữ liệu, còn `a>/tmp/x` là chuyển hướng.
+    const tok = t[i];
+    const at = tok.slice(0, t.qpos?.[i] ?? Infinity).indexOf('>');
+    if (at < 0) { rest.push(tok); continue; }
+    const left = tok.slice(0, at);
+    if (!/^(\d+|&)?$/.test(left)) rest.push(left);
+    const after = at + (tok[at + 1] === '>' || tok[at + 1] === '|' ? 2 : 1);
     // `2>&1` bị parse() tách ở `&` thành `2>` + `1`: đích thiếu hoặc bắt đầu bằng `&` là dup fd, không phải file.
-    const target = m[3] || (i + 1 < t.length ? t[++i] : '');
+    const target = tok.slice(after) || (i + 1 < t.length ? t[++i] : '');
     if (target && !target.startsWith('&')) targets.push(target);
   }
   let k = 0;
