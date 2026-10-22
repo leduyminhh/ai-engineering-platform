@@ -17,5 +17,7 @@ export default async function run({ ok, ctx }) {
   }
 
   const line = read('CLAUDE.md').split('\n').find((l) => l.startsWith('aip stats ')) ?? '';
-  ok(line.includes('--usage') && line.includes('--since'), 'P5c AC3.1: CLAUDE.md dòng lệnh aip stats có --usage và --since');
+  // Nhãn [Unverified] phải nằm trong ngoặc cuối, cùng chỗ với cost-state, không chỉ xuất hiện đâu đó trên dòng.
+  const unv = line.slice(line.lastIndexOf('('));
+  ok(['--usage', '--since'].every((w) => line.includes(w)) && unv.includes('cost-state') && unv.includes('[Unverified]'), 'P5c AC3.1: CLAUDE.md dòng lệnh aip stats có --usage, --since và nhãn [Unverified] cho cả cost-state');
 }
