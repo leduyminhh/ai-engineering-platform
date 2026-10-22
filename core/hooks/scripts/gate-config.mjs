@@ -32,8 +32,7 @@ export function readGateConfig(dir) {
 
 // `full` chỉ hiệu lực khi cả cấu hình lẫn phiên đều đồng ý: bypassPermissions do người dùng bật, không do repo tự quyết.
 export function effectiveMode(config, input) {
-  return config && typeof config === 'object' && config.mode === 'full'
-    && input && typeof input === 'object' && input.permission_mode === 'bypassPermissions' ? 'full' : 'ask';
+  return input?.permission_mode === 'bypassPermissions' && config && typeof config === 'object' && config.mode === 'full' ? 'full' : 'ask';
 }
 
 export function fullKeep(config) {

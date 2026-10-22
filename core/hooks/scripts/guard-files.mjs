@@ -79,16 +79,18 @@ export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase =
   const file = ti?.file_path || ti?.notebook_path || (input?.tool_name === 'Grep' ? ti?.path : undefined);
   const cwd = path.resolve(input?.cwd || '.');
   // Cấu hình theo repo chứa file đích (như allowEnv), không theo cwd.
-  const isFull = (dir) => effectiveMode(config === undefined ? readGate(dir)?.config : config, input) === 'full';
-  if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob) && !isFull(path.resolve(cwd, String(ti.path || '.')))
-    && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(path.resolve(cwd, String(ti.path || '.'))))) return SECRET_DENY;
+  // Kiểm permission_mode trước để phiên thường không tốn lệnh git khi đọc cấu hình.
+  const isFull = (dir) => input?.permission_mode === 'bypassPermissions'
+    && effectiveMode(config === undefined ? readGate(dir)?.config : config, input) === 'full';
+  if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob)
+    && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(path.resolve(cwd, String(ti.path || '.'))))
+    && !isFull(path.resolve(cwd, String(ti.path || '.')))) return SECRET_DENY;
   if (!file) return null;
   const target = path.resolve(cwd, String(file));
   // Chuẩn hoá về "/" để cùng một regex/glob chạy đúng trên Windows (dấu "\" và ký tự ổ đĩa).
   const abs = target.replace(/\\/g, '/');
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
-  // full bỏ cả hai nhánh bí mật; writeScope (H5) bên dưới không đổi.
-  if (!isFull(path.dirname(target)) && isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target)))) return SECRET_DENY;
+  if (isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target))) && !isFull(path.dirname(target))) return SECRET_DENY;
   if (!WRITE_TOOLS.has(input.tool_name)) return null;
   const agent = String(input.agent_type || '').split(':').pop();
   const table = scopes || loadScopes();
