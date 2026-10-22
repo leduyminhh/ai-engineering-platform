@@ -59,6 +59,15 @@ export default async function run({ ok, ctx }) {
     if (!/--max-turns \d+/.test(args)) v.push('thiếu --max-turns');
     if (!/--max-budget-usd \d+(\.\d+)?/.test(args)) v.push('thiếu --max-budget-usd');
     if (/(^|\s)--tools\b/.test(args)) v.push('có cờ --tools');
+    // Bí danh --allowed-tools và các cờ nạp cấu hình/thư mục ngoài làm lệch tập công cụ đã kiểm.
+    if (/(^|\s)--allowed-tools\b/.test(args)) v.push('có cờ --allowed-tools');
+    for (const flag of ['--settings', '--mcp-config', '--add-dir']) {
+      if (new RegExp(`(^|\\s)${flag}\\b`).test(args)) v.push(`có cờ ${flag}`);
+    }
+    const modes = args.match(/--permission-mode\s+\S+/g) ?? [];
+    if (modes.length !== 1) v.push('cần đúng một --permission-mode');
+    else if (modes[0].split(/\s+/)[1] !== 'dontAsk') v.push(`--permission-mode không phải dontAsk: ${modes[0]}`);
+    if (/^\s+settings:/m.test(blocks(c, 'with').join('\n'))) v.push('có đầu vào settings');
     if ((args.match(/--allowedTools\b/g) ?? []).length !== 1) v.push('cần đúng một --allowedTools');
     const m = args.match(/--allowedTools\s+"([^"]*)"/);
     if (!m) v.push('thiếu --allowedTools dạng "..."');
@@ -109,6 +118,13 @@ export default async function run({ ok, ctx }) {
     ['(g) uses ghim @v4', sub('actions/checkout@<full-40-char-commit-sha>', 'actions/checkout@v4'), { ac12: 'uses không ghim SHA' }],
     ['(h) cờ --allowedTools thứ hai', sub('--max-budget-usd 2', '--max-budget-usd 2 --allowedTools "Edit"'), { ac13: 'cần đúng một --allowedTools' }],
     ['(h2) cờ --tools', sub('--max-budget-usd 2', '--max-budget-usd 2 --tools "Edit"'), { ac13: 'có cờ --tools' }],
+    ['(h3) bí danh --allowed-tools', sub('--max-budget-usd 2', '--max-budget-usd 2 --allowed-tools "Edit"'), { ac13: 'có cờ --allowed-tools' }],
+    ['(h4) --permission-mode thứ hai', sub('--max-budget-usd 2', '--max-budget-usd 2 --permission-mode acceptEdits'), { ac13: 'cần đúng một --permission-mode' }],
+    ['(h5) --permission-mode khác dontAsk', sub('--permission-mode dontAsk', '--permission-mode acceptEdits'), { ac13: '--permission-mode không phải dontAsk' }],
+    ['(h6) đầu vào settings', sub('          plugins: backend@ai-engineering-platform\n', '          plugins: backend@ai-engineering-platform\n          settings: \'{"permissions":{"allow":["Bash(*)"]}}\'\n'), { ac13: 'có đầu vào settings' }],
+    ['(h7) --settings trong claude_args', sub('--max-budget-usd 2', '--max-budget-usd 2 --settings x.json'), { ac13: 'có cờ --settings' }],
+    ['(h8) --mcp-config trong claude_args', sub('--max-budget-usd 2', '--max-budget-usd 2 --mcp-config x.json'), { ac13: 'có cờ --mcp-config' }],
+    ['(h9) --add-dir trong claude_args', sub('--max-budget-usd 2', '--max-budget-usd 2 --add-dir ..'), { ac13: 'có cờ --add-dir' }],
     ['(i) track_progress', sub('display_report: true\n', 'display_report: true\n          track_progress: true\n'), { ac14: 'có track_progress' }],
     ['(i2) gh pr comment', sub('    steps:\n', '    steps:\n      - run: gh pr comment 1 --body x\n'), { ac14: 'có gh pr comment' }],
     ['(j) khối permissions thứ hai ở cấp workflow', sub('\njobs:\n', '\npermissions:\n  contents: write\n\njobs:\n'), { ac12: 'permissions sai' }],

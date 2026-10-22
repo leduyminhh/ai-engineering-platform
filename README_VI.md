@@ -412,7 +412,7 @@ claude -p "Review the diff and report findings" \
 
 ## Chạy review trong CI
 
-[`templates/ci/claude-review.example.yml`](templates/ci/claude-review.example.yml) là ví dụ review pull request chỉ đọc cho GitHub Actions: chạy một skill review của aip qua `anthropics/claude-code-action` và ghi kết quả ra job summary. Đây là mẫu để chép: `aip init` không sao chép nó, nên bạn tự chép vào `.github/workflows/`. Các khẳng định về Claude Code dưới đây là [Unverified], tóm tắt từ [github-actions](https://code.claude.com/docs/en/github-actions) và [headless](https://code.claude.com/docs/en/headless).
+[`templates/ci/claude-review.example.yml`](templates/ci/claude-review.example.yml) là ví dụ review pull request chỉ đọc cho GitHub Actions: chạy một skill review của aip qua `anthropics/claude-code-action` và ghi kết quả ra job summary. Đây là mẫu để chép: `aip init` không sao chép nó, nên bạn tự chép vào `.github/workflows/`. Các khẳng định về Claude Code dưới đây đã được đối chiếu ngày 2026-10-22 với [github-actions](https://code.claude.com/docs/en/github-actions), [headless](https://code.claude.com/docs/en/headless), [action.yml](https://github.com/anthropics/claude-code-action/blob/main/action.yml), [usage.md](https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md) và [security.md](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) của Action; mục đánh dấu [Unverified] hoặc [Inference] chưa được xác nhận.
 
 Trước khi dùng: thay mỗi `<full-40-char-commit-sha>` bằng SHA của release bạn đã rà soát, thêm secret repository `ANTHROPIC_API_KEY`, và đặt `plugin_marketplaces` là URL Git của một repository chứa marketplace: đẩy đầu ra nhánh `dist` (`node cli/dist.mjs`) làm nhánh mặc định của một repository riêng của bạn (hoặc dùng repository có `.claude-plugin/marketplace.json` ở gốc). [Unverified] chưa rõ Action có nhận dạng `#branch` hoặc `--branch` hay không.
 
@@ -424,12 +424,14 @@ Ví dụ đặt sẵn những điều sau (giảm rủi ro, không phải bảo 
 
 Giới hạn:
 
-- Chỉ nhánh cùng repository: `if` bỏ qua pull request từ fork, và [Unverified] GitHub thường không đưa secret cho lần chạy từ fork ([github-actions](https://code.claude.com/docs/en/github-actions)).
-- [Unverified] `claude -p` không có `--bare` nạp hook và `.mcp.json` của project mà không hỏi tin cậy (tài liệu headless), còn tài liệu Action nói với pull request nó khôi phục `.claude/`, `.mcp.json` và file tương tự từ nhánh base. Chỉ chạy trên nhánh tin cậy.
-- [Inference] `pull_request` chạy workflow đúng như nó tồn tại trên merge ref, nên tác giả pull request cùng repository có thể sửa file workflow và `CLAUDE.md`/`AGENTS.md` ở gốc; prompt cố định chỉ chống nội suy nội dung, không chống tác giả vốn đã có quyền ghi.
+- Chỉ nhánh cùng repository: `if` bỏ qua pull request từ fork; theo [github-actions](https://code.claude.com/docs/en/github-actions), trên repository công khai GitHub không đưa secret cho lần chạy từ pull request của fork (hành vi với repository riêng không được khẳng định ở đây).
+- `display_report: true` ghi vào Step Summary đầu ra do Claude tạo từ diff của pull request; [action.yml](https://github.com/anthropics/claude-code-action/blob/main/action.yml) (mặc định `false`) cảnh báo chỉ dùng với đầu vào tin cậy. Giới hạn nhánh cùng repository không làm nội dung diff thành tin cậy. Xóa dòng đó nếu bạn không muốn hiển thị đầu ra này.
+- Theo tài liệu headless, `claude -p` không có `--bare` nạp hook và `.mcp.json` của project mà không hỏi tin cậy, còn [security.md](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) nói với pull request Action khôi phục `.claude/`, `.mcp.json`, `CLAUDE.md` và vài đường dẫn khác từ nhánh base. Chỉ chạy trên nhánh tin cậy.
+- [Inference] `pull_request` chạy workflow đúng như nó tồn tại trên merge ref, nên tác giả pull request cùng repository có thể sửa file workflow. [security.md](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) liệt kê `CLAUDE.md` trong phần khôi phục từ nhánh base nhưng không liệt kê `AGENTS.md`; vì `CLAUDE.md` gốc trong project aip import `@AGENTS.md`, [Inference] tác giả sửa `AGENTS.md` có thể điều hướng chỉ dẫn của reviewer. Prompt cố định chỉ xử lý việc nội suy nội dung, không xử lý tác giả vốn đã có quyền ghi.
 - Nội dung pull request (diff, comment) là đầu vào không tin cậy. Reviewer chỉ đọc vẫn có thể bị prompt injection, nên đừng cấp thêm tool cho nó.
 - [Speculation] Reviewer bị prompt injection có `Read` có thể in secret trong môi trường ra job summary; chưa kiểm GitHub có che chúng ở đó hay không. Dùng một API key riêng có hạn mức thấp.
-- [Unverified] Xác thực GitHub App mặc định của Action có thể cần `id-token: write`; ví dụ cố ý không cấp, hãy tự kiểm trước khi nâng quyền.
+- [github-actions](https://code.claude.com/docs/en/github-actions) nói `id-token: write` là bắt buộc cho xác thực GitHub App mặc định của Action, còn [usage.md](https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md) nói `github_token` chỉ cần với GitHub App tùy chỉnh. Ví dụ truyền `github.token` và không cấp `id-token`; [Inference] đó là lý do. [Unverified] chưa chạy thử cấu hình này; nếu xác thực lỗi, bạn tự quyết có nâng quyền hay không.
+- `backend-code-review` có thể hỏi người dùng khi thiếu phạm vi review; dưới `dontAsk` trong CI không ai trả lời được.
 - [Unverified] `Bash(git diff *)` về nguyên tắc có thể ghi file qua `git diff --output=<file>`; chưa kiểm thử.
 - P6b (`aip-runner`, LangGraph, repository riêng) là thiết kế sơ bộ và chưa hiện thực.
 
