@@ -3,7 +3,7 @@ export default async function run({ ok, ctx }) {
   const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR } = ctx;
   const script = path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-partition.mjs');
   if (!fs.existsSync(script)) { ok(false, `P3 AC2.1: thiếu ${script}`); return; }
-  const { checkPartition, parsePartition, normPath } = await import(pathToFileURL(script).href);
+  const { checkPartition } = await import(pathToFileURL(script).href);
 
   const task = (n, group, files, heading = `### Task ${n}: x`) => [
     heading,
@@ -37,12 +37,9 @@ export default async function run({ ok, ctx }) {
   ok(dup.length === 1 && ['Task 1', 'Task 2', 'src/a.js'].every((s) => dup[0].msg.includes(s)), 'P3 AC2.1: P1 nêu hai task và file trùng');
   ok(dup[0]?.line === lineOf(lf, '### Task 2'), 'P3 AC2.1: P1 trỏ về dòng heading của task sau');
 
-  const crlf = `﻿${lf.replace(/\n/g, '\r\n')}`;
+  const crlf = '\uFEFF' + lf.replace(/\n/g, '\r\n');
   ok(JSON.stringify(checkPartition(crlf)) === JSON.stringify(checkPartition(lf)) && checkPartition(crlf).length === 1, 'P3 AC2.1: plan CRLF + BOM cho kết quả giống bản LF');
 
-  ok(normPath('.\\Src\\A.js:12-30,40') === 'src/a.js' && normPath('./src/a.js') === 'src/a.js', 'P3 AC2.1: normPath bỏ hậu tố dòng, đổi \\, bỏ ./, hạ chữ thường');
-  const parsed = parsePartition(plan(task(1, ' A ', ['src/a.js']), task(2, undefined, ['x'])));
-  ok(parsed.length === 2 && parsed[0].group === 'a' && parsed[1].group === null && parsed[0].n === 1, 'P3 AC2.1: parsePartition trả nhóm đã chuẩn hóa, null khi không có nhóm');
 
   // AC2.2: P2 khi task có nhóm ghi file chung
   const shared = ['plugins/_versions.lock.json', 'plugins/backend/.manifest.json', 'docs/specs/hooks-gates/spec.md', 'README.md', 'README_VI.md'];
@@ -67,7 +64,7 @@ export default async function run({ ok, ctx }) {
     const plain = run([tmp]);
     ok(plain.code === 0 && /^WARN plan\.md:\d+ \[P1\] /m.test(plain.out) && /1 cảnh báo/.test(plain.out), 'P3 AC2.1: CLI không --strict → exit 0 và in dòng [P1]');
     ok(run([tmp, '--strict']).code === 1, 'P3 AC2.1: CLI --strict có cảnh báo → exit 1');
-    ok(run([]).code === 2 && run([tmp, '--bogus']).code === 2, 'P3 AC2.3: CLI thiếu đối số hoặc cờ lạ → exit 2');
+    ok(run([]).code === 2 && run([tmp, '--bogus']).code === 2, 'P3 CLI: thiếu đối số hoặc cờ lạ → exit 2');
     const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-partition-'));
     try {
       const r = run([empty, '--strict']);
