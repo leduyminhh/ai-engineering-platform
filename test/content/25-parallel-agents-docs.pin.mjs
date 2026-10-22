@@ -30,4 +30,27 @@ export default async function run({ ok, ctx }) {
     const claude = flat(read('CLAUDE.md'));
     ok(['check-partition.mjs', 'Parallel agents', 'worktree-<slug>-t<n>'].every((w) => claude.includes(w)), 'P3 AC1.2: CLAUDE.md nhắc check-partition.mjs, Parallel agents và worktree-<slug>-t<n>');
   }
+
+  // AC4.1: spec sống hooks-gates có R4, R5 (link tới design của request), hai dòng Lịch sử mới; specs/README vẫn đủ 7 năng lực
+  {
+    const spec = read('docs', 'specs', 'hooks-gates', 'spec.md');
+    const link = '2026-10-22-parallel-agents/design.md';
+    const req = spec.slice(spec.indexOf('## Yêu cầu'), spec.indexOf('## Lịch sử'));
+    const hist = spec.slice(spec.indexOf('## Lịch sử'));
+    for (const id of ['hooks-gates/R4', 'hooks-gates/R5']) {
+      const line = req.split('\n').find((l) => l.includes(`**${id}**`)) ?? '';
+      ok(line.includes(link), `P3 AC4.1: mục Yêu cầu có dòng **${id}** liên kết tới design của request`);
+      ok(hist.split('\n').some((l) => l.includes(id) && l.includes(link) && l.includes('2026-10-22')), `P3 AC4.1: bảng Lịch sử có dòng ${id} ngày 2026-10-22`);
+    }
+    const readme = read('docs', 'specs', 'README.md');
+    ok(['projection', 'install-lifecycle', 'hooks-gates', 'workflows', 'artifact-templates', 'baseline', 'cli-wizard'].every((c) => readme.includes('`' + c + '`')), 'P3 AC4.1: docs/specs/README.md vẫn liệt kê đủ 7 năng lực');
+  }
+
+  // AC5.1: core đã bump từ 1.11.1 (script check-partition và baseline đổi nội dung) và lock khớp manifest
+  {
+    const ver = JSON.parse(read('core', '.manifest.json')).version;
+    const lock = JSON.parse(read('plugins', '_versions.lock.json')).core?.version;
+    const cmp = (a, b) => a.split('.').map(Number).reduce((d, n, i) => d || n - Number(b.split('.')[i]), 0);
+    ok(cmp(ver, '1.12.0') >= 0 && lock === ver, 'P3 AC5.1: core >= 1.12.0 và plugins/_versions.lock.json khớp core/.manifest.json');
+  }
 }
