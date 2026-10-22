@@ -51,7 +51,7 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 5 | P1b, P5b, P7 | kiểm theo agentskills.io; sinh cấu hình MCP (P4d, chưa cần: chưa capability nào dùng MCP server); rule theo đường dẫn file |
 | 6 | P3 | còn hở: P6b runner (chưa hiện thực; repo `aip-runner` chưa tạo) |
 | 7 | P2a, P2b, P6a (công thức CI chỉ đọc `templates/ci/claude-review.example.yml`; đã merge master ebfef4a) | Task 6 (smoke hook Stop + eval); quy tắc review PR do agent tạo; eval trong CI |
-| 8 | hook guard, `writeScope`, `allowEnvFiles`, P4 (chính sách quyền, `guard-mcp`, mục baseline `Agents in CI`), P6a (công thức CI review chỉ đọc; đã merge master ebfef4a) | hook chỉ có ở plugin mode (P4 không đổi); quyền chỉ cho Claude (Cursor/Codex/Antigravity chưa có định dạng đã xác minh); kiểm skill bên thứ ba (P4c, sau P6) |
+| 8 | hook guard, `writeScope`, `allowEnvFiles`, P4 (chính sách quyền, `guard-mcp`, mục baseline `Agents in CI`), P4e (chế độ quyền `ask`/`full` theo project; đã triển khai trên nhánh, chờ duyệt diff), P6a (công thức CI review chỉ đọc; đã merge master ebfef4a) | hook chỉ có ở plugin mode (P4 không đổi); quyền chỉ cho Claude (Cursor/Codex/Antigravity chưa có định dạng đã xác minh); kiểm skill bên thứ ba (P4c, sau P6) |
 | 9 | P5a, P5c | — (P5c: `aip stats --usage`; tiền là bộ đếm `cost-state` của Claude Code, không có bảng giá, không dự đoán hạn mức) |
 
 ### 3. Chỉ mục project
@@ -69,6 +69,7 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 3 | `2026-10-22-parallel-agents` | xong | `480edd2` |
 | 4 | `2026-10-21-agent-permissions` | xong (P4a + P4b; P4c quét plugin bên thứ ba làm sau P6; P4d sinh cấu hình MCP chưa cần) | `e363048` |
 | 5c | `2026-10-22-cost-tracking` | xong | `4186bf4` |
+| 4e | `2026-10-22-permission-modes` (xu hướng 8; `aip mode full/ask/status`, `mode` + `fullKeep` + `fullRoots` trong `aip-gate.json`) | đã triển khai trên nhánh `claude/p4e-permission-modes-4cca67`, chờ duyệt diff | — |
 | 6a | `2026-10-21-ci-runner` (file ví dụ CI + README) | design đã duyệt 2026-10-22; xong trên nhánh `claude/p6a-ci-review-66c184`, chờ merge | — |
 | 6b | runner LangGraph (repo `aip-runner` riêng) | thiết kế sơ bộ trong design P6; chưa hiện thực; M0 spike trước | — |
 | 7 | `2026-10-21-living-spec` | xong | `d774be4` |
