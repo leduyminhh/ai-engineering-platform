@@ -1,6 +1,6 @@
 # Thiết kế: nhiều agent song song, mỗi agent một worktree (project P3)
 - Ngày: 2026-10-22
-- Trạng thái: đã duyệt 2026-10-22 (người dùng: "Oke duyệt"; năm câu hỏi mở giữ theo đề xuất)
+- Trạng thái: chờ duyệt (câu hỏi mở đã trả lời 2026-10-22)
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P3 (xu hướng 6)
 
@@ -28,7 +28,9 @@ Hệ quả cho thiết kế: aip không cần chế cơ chế tạo worktree. Cl
 
 Của người dùng (đã chốt trước, không bàn lại): Claude first, provider khác best-effort; aip chỉ chuẩn hóa và phân phối, không tự chạy agent, zero-dep; superpowers là quy trình chính, aip không sửa plugin superpowers; giữ router + supervisor, không làm swarm; fan-out/fan-in kiểu `Send` chỉ là ý tưởng tham khảo.
 
-**Đề xuất của tôi (chưa ai duyệt)** — phiên này chạy không có người dùng nên tôi tự đề xuất; mọi mục dưới là đề xuất:
+Của người dùng (2026-10-22, trả lời năm câu hỏi mở): (1) gộp qua **một PR cuối** từ nhánh tích hợp, không PR từng agent; (2) **làm** `check-partition.mjs` (chỉ cảnh báo); (3) trần 3 agent song song là thoải mái, hợp hạn mức; (4) "oke" cho đề xuất của design: chưa tạo spec sống `baseline` trong request này, chỉ thêm `hooks-gates/R4`, `R5` (đây là cách hiểu của tôi về lời "oke", người dùng chưa nói rõ hơn); (5) làm **từng bước một**, không chạy song song nhiều project.
+
+**Đề xuất của tôi (người dùng chưa duyệt chính thức design và plan)** — các mục dưới do tôi tự đề xuất; các mục khớp (1)–(4) ở trên đã được người dùng xác nhận:
 - **Phạm vi P3 = P3a + P3b, không có P3c.** P3a: quy ước + tài liệu (baseline, README). P3b: kiểm chia việc không chồng file (script chỉ cảnh báo) + test hook trong worktree. Không thêm lệnh `aip` mới, không sinh file cho provider khác (Cursor/Codex/Antigravity chỉ best-effort, không có tài liệu worktree nào được xác minh).
 - **Một phiên chính điều phối (supervisor), mỗi agent làm một task trong worktree riêng.** Phiên chính chia task, giao, nhận kết quả, gộp. Không có agent nói chuyện ngang hàng với nhau (không swarm).
 - **Quy ước nhánh/thư mục.** Nhánh tích hợp là `feature/<slug>` (đã là quy ước hiện có). Mỗi agent làm trên `worktree-<slug>-t<n>` (`<n>` = số task trong `plan.md`), tại `.claude/worktrees/<slug>-t<n>/` — tức dùng đúng mặc định của `claude --worktree <slug>-t<n>`, không đặt thư mục riêng. Nhánh task cắt từ **tip nhánh tích hợp** (`baseRef: "head"` khi chạy trong nhánh tích hợp), không từ default branch, để agent thấy các task đã gộp trước đó.
@@ -42,7 +44,7 @@ Của người dùng (đã chốt trước, không bàn lại): Claude first, pr
 - **Cách tạo worktree thuộc phiên chính, không thuộc agent plugin.** Không đặt `isolation: worktree` mặc định cho 16 agent hiện có vì [Unverified] chưa biết nó có hiệu lực với agent plugin; để M0 (spike) của P6b hoặc builder kiểm. Nếu hiệu lực, có thể bật theo agent ở bước sau.
 - **Dogfood trong repo này.** Chính quy trình đang dùng (phiên lộ trình chạy worktree `.claude/worktrees/…`) là bản thử đầu. Phát hiện cần xử lý: `.gitignore` của repo chỉ chặn `.worktrees/`, không chặn `.claude/worktrees/` — builder kiểm `git status` của checkout chính; nếu hiện là untracked thì thêm dòng ignore (một dòng, ngoài ràng buộc "surgical" nếu `git status` sạch).
 - **Quan hệ với runner P6b (M4).** M4 dùng đúng quy ước này (tên nhánh/thư mục, chia việc, gộp về nhánh tích hợp); runner tự tạo worktree bằng git, không cần hook `WorktreeCreate`. P3 không phụ thuộc P6b; P6b M4 phụ thuộc P3. Câu hỏi [Unverified] về `isolation: worktree` trong headless của P6 giữ ở M0, P3 không cần trả lời nó.
-- **Dogfood spec sống P7.** Request này thêm hai yêu cầu vào `docs/specs/hooks-gates/spec.md` (hành vi hook trong worktree). Quy ước baseline và script chia việc chưa có spec sống (`baseline`, `artifact-templates` chưa tồn tại); theo quy tắc P7 spec tạo khi request chạm tới, nhưng request này chỉ *thêm mục baseline*, không đổi hành vi có kiểm — tôi để hai năng lực đó cho request sau. [Đoán] Có thể người dùng muốn tạo spec `baseline` luôn ở đây; xem câu hỏi mở.
+- **Dogfood spec sống P7.** Request này thêm hai yêu cầu vào `docs/specs/hooks-gates/spec.md` (hành vi hook trong worktree). Quy ước baseline và script chia việc chưa có spec sống (`baseline`, `artifact-templates` chưa tồn tại); theo quy tắc P7 spec tạo khi request chạm tới, nhưng request này chỉ *thêm mục baseline*, không đổi hành vi có kiểm — tôi để hai năng lực đó cho request sau. Người dùng đã đồng ý để spec `baseline` cho request sau (cách hiểu của tôi về "oke").
 
 ## Tiêu chí chấp nhận
 
@@ -110,8 +112,4 @@ Thêm hai yêu cầu vào `hooks-gates/spec.md` theo template, kèm dòng lịch
 - [Inference] `.claude/aip-gate.json` thường gitignore nên không có trong worktree; fallback gốc repo chính (code `gate-config.mjs`) che được, nhưng chỉ khi `--git-common-dir` trỏ đúng repo chính (worktree tạo bằng `git worktree`); worktree của clone riêng không dùng được fallback.
 - [Inference] Nhiều agent song song làm tăng chi phí và rate limit theo số phiên; baseline chỉ khuyến nghị trần 3, không ép; P5c (theo dõi chi phí) có ích hơn khi P3 dùng nhiều.
 - [Inference] Soft guidance không ngăn agent không có `writeScope` ghi ngoài tập file; chỉ `writeScope` + `guard-files` ép buộc, và Bash vẫn ghi được ở nơi khác (đã nêu ở CLAUDE.md).
-- Câu hỏi mở 1: gộp một PR cuối từ nhánh tích hợp (đề xuất) hay PR từng agent?
-- Câu hỏi mở 2: có làm `check-partition.mjs` (đề xuất: có, cảnh báo) hay chỉ viết quy ước?
-- Câu hỏi mở 3: trần khuyến nghị 3 agent song song có hợp lý với hạn mức/tài khoản của bạn không?
-- Câu hỏi mở 4: tạo spec sống `baseline` luôn trong request này, hay để request sau?
-- Câu hỏi mở 5: thứ tự sau P3 — P5c, P4c hay duyệt/hiện thực P6?
+- Còn mở: thứ tự sau P3 đã chốt là làm từng bước một; việc chọn P5c, P4c hay P6 làm tiếp quyết định sau khi P3 xong.
