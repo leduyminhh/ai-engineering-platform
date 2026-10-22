@@ -198,6 +198,18 @@ remove only the prompts after them.
 - Pin third-party actions to a full commit SHA; give the job read-only tokens.
 - Any workflow that can push runs in a protected environment with required reviewers.
 
+### Parallel agents
+
+(Claude Code worktrees. Soft guidance; only an agent's `writeScope` plus the `guard-files` hook enforce write scope.)
+
+- Parallelize only independent tasks whose write sets are disjoint; declare each set in `plan.md` (`**Files:**`, `**Song song:**`).
+- Branch `worktree-<slug>-t<n>` in `.claude/worktrees/<slug>-t<n>/`, cut from the tip of the integration branch `feature/<slug>`.
+- Touch shared files (version bump, lock, living spec, README) once, in the main session, after merging.
+- The main session merges with `merge --no-ff` into the integration branch and runs the touched components' tests after each merge.
+- A conflict outside the declared write sets: stop and report. A human reviews the whole integration branch; no per-agent PRs.
+- [Inference] Keep to at most 3 agents at once (heuristic, not an official limit).
+- Clean up with `git worktree remove`, only for worktrees that are merged and clean; never `rm -rf` a worktree holding a junction on Windows.
+
 ### Model and session routing
 
 (Claude Code. Other tools: apply the session and messaging rules; ignore model names.)
