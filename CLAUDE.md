@@ -13,7 +13,7 @@ There is no application runtime to start — the deliverable is the CLI and the 
 Node.js 20+ required.
 
 ```bash
-npm test            # validate --build + install + wizard + managed-block + init + pack-guard + args + transcript-stats tests (CI: matrix ubuntu/windows × Node 20/24 + claude plugin validate --strict)
+npm test            # validate --build + install + wizard + managed-block + init + pack-guard + args + transcript-stats + transcript-usage tests (CI: matrix ubuntu/windows × Node 20/24 + claude plugin validate --strict)
 npm run build       # node cli/build.mjs --target all   -> build/<provider>/
 npm run list        # list discovered adapters + plugins
 npm run validate    # node test/validate.mjs (source + build-output contract)
@@ -48,7 +48,7 @@ aip build     --provider all
 aip check     [-g]
 aip update    [-g]          # git pull + rebuild + reinstall tracked installs
 aip list
-aip stats [--session <path>] [--json]   # context size per Claude Code session, from ~/.claude/projects transcripts (layout is [Unverified], internal to Claude Code)
+aip stats [--session <path>] [--json] [--usage [--since <days|yyyy-mm-dd>]]   # context size per Claude Code session, or token + cost per model (--usage; money = Claude Code cost-state, no price table), from ~/.claude/projects transcripts (layout and the meaning of cost-state are [Unverified], internal to Claude Code)
 ```
 
 Every command runs `node cli/index.mjs` — no tsc/dist. `node cli/dist.mjs [--dry-run]` is separate: it builds a local `dist` git branch holding `build/claude` (minus `drafts/`) for `claude plugin marketplace add <owner>/<repo>@dist`; it never pushes and needs git >= 2.42 (`git worktree add --orphan`).

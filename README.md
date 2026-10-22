@@ -265,7 +265,7 @@ aip check     [-g]
 aip update    [-g]        # git pull + rebuild + reinstall tracked installs
 aip pack                  # bundle Cowork skills -> build/cowork/<skill>.zip
 aip list                  # discovered adapters + plugins
-aip stats     [--session <path>] [--json]   # context size of a Claude Code session from its transcript
+aip stats     [--session <path>] [--json] [--usage [--since <days|yyyy-mm-dd>]]   # context size, or token + cost per model, from the transcript
 ```
 
 - **Scope**: `project` (default, cwd) or `global` (`-g` / `--scope global`, home dir).
@@ -289,7 +289,7 @@ aip stats     [--session <path>] [--json]   # context size of a Claude Code sess
   switch off the wizard; non-interactive `aip install --plugin all` already installs everything.
 - **Uninstall** (alias `remove`) removes only tracked paths (never link targets),
   prunes emptied directories, and reference-counts the shared managed block.
-- **`aip stats`** reads the Claude Code transcripts of the current project. Without flags it prints a table of the top 10 sessions sorted by peak context (turns, first, peak, last); `--session <path>` prints the full breakdown of one session; `--json` prints raw JSON. [Unverified] It relies on the layout `~/.claude/projects/<slug>/*.jsonl`, which is internal to Claude Code and not a public contract. It only reads; it writes nothing.
+- **`aip stats`** reads the Claude Code transcripts of the current project. Without flags it prints a table of the top 10 sessions sorted by peak context (turns, first, peak, last); `--session <path>` prints the full breakdown of one session; `--json` prints raw JSON. `--usage [--since <days|yyyy-mm-dd>]` (default 7 days, filtered by each line's timestamp) aggregates tokens and money per model, main session vs subagents, plus cache signals (model switches, idle gaps over 60 minutes before a large cache write, cache writes above 50% of context). Money comes from the `cost-state` records that Claude Code writes: it covers the whole session including subagents, is not split by the `--since` window, and can differ from invoices. aip has no price table (no price list of its own) and does not predict plan limits; a session without `cost-state` shows `—` for money. [Unverified] It relies on the layout `~/.claude/projects/<slug>/*.jsonl` and on the meaning of `cost-state`, both internal to Claude Code and not a public contract. The table shows only the subagent share; the per-agent breakdown is in `--json`. `--since yyyy-mm-dd` means 00:00 UTC of that day. Each `message.id` is counted once across the whole project, including fork/resume copies; a session that lost such turns is marked in the table (money from `cost-state` is not reduced). It only reads, never prints conversation content, and writes nothing.
 - Providers installed by default: `claude`, `cursor`, `codex`. `antigravity` builds
   but installs only when named explicitly (`--provider antigravity`).
 
