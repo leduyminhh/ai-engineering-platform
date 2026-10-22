@@ -118,4 +118,43 @@ export default async function run({ ok, ctx }) {
     ok(bdec('git commit -m "có dấu"', fullCfg, pm)?.decision === 'deny', `P4e AC1.5: guard-bash permission_mode=${pm} → commit non-ASCII vẫn deny`);
     ok(bdec('git push origin main', fullCfg, pm)?.decision === 'ask', `P4e AC1.5: guard-bash permission_mode=${pm} → push main vẫn ask`);
   }
+
+  // H6: nhốt công cụ file trong root khi full hiệu lực.
+  const tmp6 = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e-h6-')));
+  try {
+    const slash6 = (x) => x.replaceAll('\\', '/');
+    const proj = slash6(path.join(tmp6, 'proj'));
+    const extra = slash6(path.join(tmp6, 'extra'));
+    const scratch = slash6(path.join(tmp6, 'scratch'));
+    const elsewhere = slash6(path.join(tmp6, 'elsewhere'));
+    const cfg6 = { mode: 'full', fullRoots: [extra] };
+    const h6 = (tool, file, { config = cfg6, pm = 'bypassPermissions', cwd = proj } = {}) => files.decide(
+      { tool_name: tool, tool_input: { file_path: file }, cwd, permission_mode: pm, scratchpad_dir: scratch },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config });
+    for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+      for (const f of [`${proj}/a.txt`, `${proj}/x/../b.txt`, `${scratch}/t`, `${extra}/z.txt`]) {
+        ok(h6(tool, f) === null, `P4e AC1.6: ${tool} trong root cho qua: ${f.slice(tmp6.length)}`);
+      }
+      for (const f of [`${proj}/../c.txt`, '/etc/x', 'C:\\Windows\\x', '\\\\srv\\share\\x']) {
+        const d = h6(tool, f);
+        ok(d?.decision === 'deny' && d.reason.includes('fullRoots'), `P4e AC1.6: ${tool} ngoài root → deny nhắc fullRoots: ${f.slice(-12)}`);
+      }
+    }
+    ok(h6('Write', 'rel.txt', { cwd: elsewhere })?.decision === 'deny', 'P4e AC1.6: cwd ngoài root + đường dẫn tương đối → deny');
+    for (const tool of ['Read', 'Grep']) {
+      ok(h6(tool, `${proj}/a.txt`) === null && h6(tool, `${extra}/a.txt`) === null, `P4e AC1.6: ${tool} trong root → cho qua`);
+      ok(h6(tool, '/etc/x')?.decision === 'ask' && h6(tool, `${proj}/../c.txt`)?.decision === 'ask', `P4e AC1.6: ${tool} ngoài root → ask`);
+    }
+    ok(files.decide({ tool_name: 'Grep', tool_input: { glob: '*.js' }, cwd: proj, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: proj, config: cfg6 }) === null,
+      'P4e AC1.6: Grep thiếu path → bỏ qua H6');
+    ok(h6('Write', '$HOME/x')?.decision === 'ask' && h6('Read', '~/x')?.decision === 'ask', 'P4e AC1.6: đường dẫn có $ hoặc ~ → ask');
+    ok(h6('Write', '/etc/x', { pm: 'default' }) === null && h6('Write', '/etc/x', { config: { mode: 'ask' } }) === null
+      && h6('Write', '/etc/x', { config: {} }) === null, 'P4e AC1.6: full không hiệu lực → không có H6');
+    ok(h6('Bash', '/etc/x') === null, 'P4e AC1.6: công cụ ngoài Read/Grep/ghi → không có H6');
+    ok(h6('Write', `${proj}/../.env`)?.decision === 'deny' && h6('Read', `${proj}/.env`) === null,
+      'P4e AC1.6: full bỏ qua secret nhưng .env ngoài root vẫn bị H6 chặn, trong root cho qua');
+  } finally {
+    fs.rmSync(tmp6, { recursive: true, force: true });
+  }
 }
+

@@ -50,3 +50,23 @@ export function fullRoots(config) {
 export function envFilesAllowed(dir) {
   return readGateConfig(dir)?.allowEnvFiles === true;
 }
+
+const norm = (x) => {
+  const n = x.replace(/\\/g, '/').replace(/\/+$/, '');
+  return process.platform === 'win32' ? n.toLowerCase() : n;
+};
+
+// Ổ đĩa/UNC trên nền không phải win32 không resolve được thành đường dẫn thật nên luôn coi là ngoài root.
+// Không realpath: symlink trong root trỏ ra ngoài không bị phát hiện (ghi nhận ở Rủi ro của design).
+export function classifyPath(p, cwd, roots) {
+  const s = String(p ?? '');
+  if (!s || /[$~`]/.test(s)) return 'unknown';
+  if (process.platform !== 'win32' && (/^[A-Za-z]:[\\/]/.test(s) || s.startsWith('\\\\'))) return 'outside';
+  const abs = norm(path.resolve(cwd, s.replace(/\\/g, '/')));
+  return roots.some((r) => { const n = norm(path.resolve(r)); return abs === n || abs.startsWith(`${n}/`); }) ? 'inside' : 'outside';
+}
+
+export function allowedRoots(gate, input) {
+  const sp = input?.scratchpad_dir;
+  return [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config)];
+}
