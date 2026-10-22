@@ -58,3 +58,81 @@ export function parseUsageLines(lines) {
 
   return { sessionId, turns: [...turns.values()], costStates };
 }
+
+const USAGE_KEYS = ['input', 'cacheRead', 'cacheCreate', 'cacheCreate1h', 'cacheCreate5m', 'output'];
+const emptyUsage = () => ({ input: 0, cacheRead: 0, cacheCreate: 0, cacheCreate1h: 0, cacheCreate5m: 0, output: 0, turns: 0 });
+const addTurn = (acc, t) => {
+  for (const k of USAGE_KEYS) acc[k] += t.usage[k];
+  acc.turns++;
+};
+const tokensOf = (u) => u.input + u.cacheRead + u.cacheCreate + u.output;
+
+export function buildSessionUsage(sessionId, parts, opts = {}) {
+  // Cùng message.id có thể nằm ở nhiều file (resume/fork); chuỗi của lần xuất hiện đầu được giữ.
+  const merged = new Map();
+  for (const p of parts) {
+    for (const t of p.parsed.turns) {
+      const prev = merged.get(t.id);
+      if (!prev) {
+        merged.set(t.id, { ...t, usage: { ...t.usage }, agent: p.agent });
+        continue;
+      }
+      for (const k of USAGE_KEYS) prev.usage[k] = Math.max(prev.usage[k], t.usage[k]);
+      if (t.ts !== null && (prev.ts === null || t.ts < prev.ts)) prev.ts = t.ts;
+    }
+  }
+
+  let turns = [...merged.values()];
+  if (typeof opts.sinceMs === 'number') turns = turns.filter((t) => t.ts !== null && t.ts >= opts.sinceMs);
+  if (turns.length === 0) return null;
+
+  // cost-state là bộ đếm tích lũy nên bản lớn nhất mới đủ. Không tách tiền subagent vì cost-state
+  // của phiên gốc đã gồm subagent [Inference] (kết luận ở design).
+  let best = null;
+  for (const p of parts) for (const c of p.parsed.costStates) if (!best || c.totalCostUSD > best.totalCostUSD) best = c;
+
+  const byModel = {};
+  const main = emptyUsage();
+  const bySubagent = {};
+  const chains = new Map();
+  const signals = { modelSwitches: { count: 0, tokens: 0 }, idleGaps: { count: 0, tokens: 0 }, cacheHeavy: { count: 0, tokens: 0 } };
+  let firstTs = null;
+  let lastTs = null;
+
+  for (const t of turns) {
+    byModel[t.model] ??= { ...emptyUsage(), costUsd: best?.modelUsage[t.model]?.costUSD ?? null };
+    addTurn(byModel[t.model], t);
+    if (t.agent === null) addTurn(main, t);
+    else addTurn((bySubagent[t.agent] ??= emptyUsage()), t);
+    if (t.ts !== null) {
+      if (firstTs === null || t.ts < firstTs) firstTs = t.ts;
+      if (lastTs === null || t.ts > lastTs) lastTs = t.ts;
+    }
+
+    const prev = chains.get(t.agent);
+    chains.set(t.agent, t);
+    const { input, cacheRead, cacheCreate } = t.usage;
+    if (prev && prev.model !== t.model) { signals.modelSwitches.count++; signals.modelSwitches.tokens += cacheCreate; }
+    if (t.agent === null && prev && prev.ts !== null && t.ts !== null
+      && t.ts - prev.ts > IDLE_GAP_MS && cacheCreate >= LARGE_CACHE_CREATE) {
+      signals.idleGaps.count++; signals.idleGaps.tokens += cacheCreate;
+    }
+    if (cacheCreate * 2 > input + cacheRead + cacheCreate) { signals.cacheHeavy.count++; signals.cacheHeavy.tokens += cacheCreate; }
+  }
+
+  const total = tokensOf(main) + Object.values(bySubagent).reduce((a, u) => a + tokensOf(u), 0);
+  const sub = total - tokensOf(main);
+  return {
+    sessionId,
+    files: parts.map((p) => p.file),
+    costUsd: best ? best.totalCostUSD : null,
+    unknownModelCost: best ? best.hasUnknownModelCost : false,
+    firstTs,
+    lastTs,
+    byModel,
+    main,
+    bySubagent,
+    subagentShare: total === 0 ? 0 : sub / total,
+    signals,
+  };
+}
