@@ -382,7 +382,7 @@ claude -p "Review the diff and report findings" \
 - `--permission-mode dontAsk` turns every non-allowed action into a denial instead of a prompt nobody can answer; list what is allowed explicitly with `--allowedTools`; cap the run with `--max-turns` and `--max-budget-usd`.
 - Use `--bare` when plugins and hooks are not needed. Without it, `-p` loads the project's hooks and `.mcp.json` without a trust prompt, so an untrusted pull request can bring its own hooks and MCP servers.
 - Pin third-party actions to a full commit SHA, give the job read-only tokens, and run any workflow that can push in a protected environment with required reviewers.
-- aip adds no workflow file to `templates/init`.
+- aip adds no workflow file to `templates/init`. A read-only pull request review example is described in [Run reviews in CI](#run-reviews-in-ci).
 
 **Parallel agents.** A convention for running several agents at once, one worktree each (see the baseline section `Parallel agents`). aip does not run agents: it ships the convention and one check script; Claude Code creates the worktrees. Only an agent's `writeScope` plus the `guard-files` hook enforce write scope; the rest is soft guidance, and Bash can still write elsewhere.
 
@@ -416,6 +416,27 @@ claude -p "Review the diff and report findings" \
 - Known false positives, all on the safe side: `.env.local.example`, public `*.pem` certificates, files such as `src/id_rsa.go`, Bash commands that merely mention `import.meta.env` or `config.env`, `grep -rn credentials src` (ask), `node -e "console.log(o.key)"` (ask), and `git commit -F -` heredoc bodies that mention `.env` (ask). The Read deny also hits committed `.env.development`/`.env.production`/`.env.test` (Vite/Next).
 
 **Turning hooks off temporarily.** Disable or uninstall the `core` plugin: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; the command exists in `claude plugin --help`), and `claude plugin enable core@ai-engineering-platform` to restore it. [Inference] Disabling `core` also disables its skills. [Unverified] whether `/hooks` inside a session can switch a single plugin hook off. [Unverified] Every domain plugin declares `dependencies: ["core"]`; how Claude Code treats those dependents when `core` is disabled or uninstalled (refuse, cascade, or leave them running without core) was not checked — run `claude plugin disable` and read its output before relying on it.
+
+## Run reviews in CI
+
+[`templates/ci/claude-review.example.yml`](templates/ci/claude-review.example.yml) is a read-only pull request review for GitHub Actions: it runs an aip review skill through `anthropics/claude-code-action` and writes the result to the job summary. It is an example to copy: `aip init` does not copy it, so copy it yourself into `.github/workflows/`. Claude Code facts below are [Unverified] summaries of [github-actions](https://code.claude.com/docs/en/github-actions) and [headless](https://code.claude.com/docs/en/headless).
+
+Before use: replace each `<full-40-char-commit-sha>` with the SHA of a release you reviewed, add the repository secret `ANTHROPIC_API_KEY`, and set `plugin_marketplaces` to the Git URL of your `dist` branch (`node cli/dist.mjs`).
+
+What the example sets (a reduction of risk, not a guarantee):
+
+- Trigger `pull_request`, never `pull_request_target`; permissions `contents: read` and `pull-requests: read` only; every action pinned to a full commit SHA.
+- `--permission-mode dontAsk`, an explicit `--allowedTools` list (read tools plus `git diff`/`git log`), and `--max-turns` / `--max-budget-usd` caps.
+- A fixed prompt that interpolates nothing from the pull request; output goes to the job summary and the job posts no comments.
+
+Limits:
+
+- Same-repository branches only: the `if` skips fork pull requests, and GitHub withholds secrets from fork runs.
+- [Unverified] `claude -p` without `--bare` loads the project's hooks and `.mcp.json` with no trust prompt (headless doc), while the Action doc says that for pull request runs it restores `.claude/`, `.mcp.json` and similar files from the base branch. Run only on trusted branches.
+- Pull request content (diff, comments) is untrusted input. A read-only reviewer can still be prompt-injected, so do not add tools to it.
+- [Unverified] The Action's default GitHub App authentication may need `id-token: write`; the example deliberately does not grant it, so check before raising permissions.
+- [Unverified] `Bash(git diff *)` could in principle write a file through `git diff --output=<file>`; not tested.
+- P6b (`aip-runner`, LangGraph, separate repository) is a preliminary design and is not implemented.
 
 ## Eval
 
