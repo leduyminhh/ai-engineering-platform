@@ -375,7 +375,7 @@ claude -p "Review the diff and report findings" \
 - `--permission-mode dontAsk` biến mọi hành động không được phép thành từ chối thay vì hộp hỏi không ai trả lời; liệt kê tường minh điều được phép bằng `--allowedTools`; giới hạn lượt chạy bằng `--max-turns` và `--max-budget-usd`.
 - Dùng `--bare` khi không cần plugin và hook. Không có `--bare`, `-p` nạp hook và `.mcp.json` của project mà không hỏi tin cậy, nên một pull request không đáng tin có thể mang theo hook và MCP server riêng.
 - Ghim action bên thứ ba theo commit SHA đầy đủ, cấp token chỉ đọc cho job, và chạy mọi workflow có thể push trong môi trường được bảo vệ, cần người duyệt (required reviewers).
-- aip không thêm file workflow vào `templates/init`.
+- aip không thêm file workflow vào `templates/init`. Ví dụ review pull request chỉ đọc được mô tả ở [Chạy review trong CI](#chạy-review-trong-ci).
 
 **Agent song song.** Quy ước chạy nhiều agent cùng lúc, mỗi agent một worktree (xem mục baseline `Parallel agents`). aip không tự chạy agent: aip chỉ phân phối quy ước và một script kiểm tra; Claude Code tạo worktree. Chỉ `writeScope` của agent cộng với hook `guard-files` mới ép phạm vi ghi; phần còn lại là hướng dẫn mềm, và Bash vẫn ghi được ở nơi khác.
 
@@ -409,6 +409,31 @@ claude -p "Review the diff and report findings" \
 - Dương tính giả đã biết, đều nghiêng về an toàn: `.env.local.example`, chứng chỉ `*.pem` công khai, file như `src/id_rsa.go`, lệnh Bash chỉ nhắc `import.meta.env` hoặc `config.env`, `grep -rn credentials src` (ask), `node -e "console.log(o.key)"` (ask), và thân commit dạng heredoc `git commit -F -` có nhắc `.env` (ask). Deny của Read cũng trúng `.env.development`/`.env.production`/`.env.test` đã commit (Vite/Next).
 
 **Tắt hook tạm thời.** Disable hoặc gỡ plugin `core`: `claude plugin disable core@ai-engineering-platform` (`--scope user|project|local`; lệnh có trong `claude plugin --help`), bật lại bằng `claude plugin enable core@ai-engineering-platform`. [Inference] Tắt `core` cũng tắt luôn skill của nó. [Unverified] chưa xác nhận `/hooks` trong phiên có tắt được riêng một hook của plugin hay không. [Unverified] Mọi plugin domain khai báo `dependencies: ["core"]`; chưa kiểm Claude Code xử lý các plugin phụ thuộc đó thế nào khi `core` bị disable hoặc gỡ (từ chối, kéo theo, hay vẫn chạy thiếu core) — chạy `claude plugin disable` và đọc kết quả trước khi dựa vào.
+
+## Chạy review trong CI
+
+[`templates/ci/claude-review.example.yml`](templates/ci/claude-review.example.yml) là ví dụ review pull request chỉ đọc cho GitHub Actions: chạy một skill review của aip qua `anthropics/claude-code-action` và ghi kết quả ra job summary. Đây là mẫu để chép: `aip init` không sao chép nó, nên bạn tự chép vào `.github/workflows/`. Các khẳng định về Claude Code dưới đây đã được đối chiếu ngày 2026-10-22 với [github-actions](https://code.claude.com/docs/en/github-actions), [headless](https://code.claude.com/docs/en/headless), [action.yml](https://github.com/anthropics/claude-code-action/blob/main/action.yml), [usage.md](https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md) và [security.md](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) của Action; mục đánh dấu [Unverified] hoặc [Inference] chưa được xác nhận.
+
+Trước khi dùng: thay mỗi `<full-40-char-commit-sha>` bằng SHA của release bạn đã rà soát, thêm secret repository `ANTHROPIC_API_KEY`, và đặt `plugin_marketplaces` là URL Git của một repository chứa marketplace: đẩy đầu ra nhánh `dist` (`node cli/dist.mjs`) làm nhánh mặc định của một repository riêng của bạn (hoặc dùng repository có `.claude-plugin/marketplace.json` ở gốc). [Unverified] chưa rõ Action có nhận dạng `#branch` hoặc `--branch` hay không.
+
+Ví dụ đặt sẵn những điều sau (giảm rủi ro, không phải bảo đảm):
+
+- Trigger `pull_request`, không bao giờ `pull_request_target`; quyền chỉ `contents: read` và `pull-requests: read`; mọi action ghim commit SHA đầy đủ.
+- `--permission-mode dontAsk`, danh sách `--allowedTools` tường minh (tool đọc cùng `git diff`/`git log`), và trần `--max-turns` / `--max-budget-usd`.
+- Prompt cố định, không nội suy gì từ pull request; đầu ra là job summary và job không đăng bình luận.
+
+Giới hạn:
+
+- Chỉ nhánh cùng repository: `if` bỏ qua pull request từ fork; theo [github-actions](https://code.claude.com/docs/en/github-actions), trên repository công khai GitHub không đưa secret cho lần chạy từ pull request của fork (hành vi với repository riêng không được khẳng định ở đây).
+- `display_report: true` ghi vào Step Summary đầu ra do Claude tạo từ diff của pull request; [action.yml](https://github.com/anthropics/claude-code-action/blob/main/action.yml) (mặc định `false`) cảnh báo chỉ dùng với đầu vào tin cậy. Giới hạn nhánh cùng repository không làm nội dung diff thành tin cậy. Xóa dòng đó nếu bạn không muốn hiển thị đầu ra này.
+- Theo tài liệu headless, `claude -p` không có `--bare` nạp hook và `.mcp.json` của project mà không hỏi tin cậy, còn [security.md](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) nói với pull request Action khôi phục `.claude/`, `.mcp.json`, `CLAUDE.md` và vài đường dẫn khác từ nhánh base. Chỉ chạy trên nhánh tin cậy.
+- [Inference] `pull_request` chạy workflow đúng như nó tồn tại trên merge ref, nên tác giả pull request cùng repository có thể sửa file workflow. [security.md](https://github.com/anthropics/claude-code-action/blob/main/docs/security.md) liệt kê `CLAUDE.md` trong phần khôi phục từ nhánh base nhưng không liệt kê `AGENTS.md`; vì `CLAUDE.md` gốc trong project aip import `@AGENTS.md`, [Inference] tác giả sửa `AGENTS.md` có thể điều hướng chỉ dẫn của reviewer. Prompt cố định chỉ xử lý việc nội suy nội dung, không xử lý tác giả vốn đã có quyền ghi.
+- Nội dung pull request (diff, comment) là đầu vào không tin cậy. Reviewer chỉ đọc vẫn có thể bị prompt injection, nên đừng cấp thêm tool cho nó.
+- [Speculation] Reviewer bị prompt injection có `Read` có thể in secret trong môi trường ra job summary; chưa kiểm GitHub có che chúng ở đó hay không. Dùng một API key riêng có hạn mức thấp.
+- [github-actions](https://code.claude.com/docs/en/github-actions) nói `id-token: write` là bắt buộc cho xác thực GitHub App mặc định của Action, còn [usage.md](https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md) nói `github_token` chỉ cần với GitHub App tùy chỉnh. Ví dụ truyền `github.token` và không cấp `id-token`; [Inference] đó là lý do. [Unverified] chưa chạy thử cấu hình này; nếu xác thực lỗi, bạn tự quyết có nâng quyền hay không.
+- `backend-code-review` có thể hỏi người dùng khi thiếu phạm vi review; dưới `dontAsk` trong CI không ai trả lời được.
+- [Unverified] `Bash(git diff *)` về nguyên tắc có thể ghi file qua `git diff --output=<file>`; chưa kiểm thử.
+- P6b (`aip-runner`, LangGraph, repository riêng) là thiết kế sơ bộ và chưa hiện thực.
 
 ## Eval
 

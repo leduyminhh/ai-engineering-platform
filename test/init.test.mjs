@@ -153,6 +153,16 @@ test("AC1.3: init --full tạo mới .claude/settings.json thì không cảnh b�
   assert.ok(!r.warnings.some((w) => w.includes("policy.json")));
 });
 
+// Workflow CI mẫu chỉ là tài liệu để người dùng tự chép; init chạm .github/ sẽ âm thầm bật CI review trên repo đích.
+for (const full of [false, true]) {
+  test(`P6a AC1.1: init${full ? " --full" : ""} không tạo file nào dưới .github/ và không sao chép templates/ci`, () => {
+    const root = tmp();
+    const r = init({ root, full });
+    assert.ok(r.created.every((f) => !f.startsWith(".github/") && !f.includes("claude-review")));
+    assert.ok(!fs.existsSync(path.join(root, ".github")));
+  });
+}
+
 test("init rồi install claude core: baseline nằm ở AGENTS.md đúng 1 lần, không chép vào CLAUDE.md", async () => {
   const root = tmp();
   init({ root });

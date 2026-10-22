@@ -1,0 +1,53 @@
+# Ví dụ CI: review PR chỉ đọc bằng skill aip, kết quả ra job summary (không đăng bình luận lên PR).
+# Đây là mẫu để sao chép và chỉnh, aip không tự cài vào workflow của bạn.
+# Các tên đầu vào bên dưới đối chiếu ngày 2026-10-22 với action.yml (https://github.com/anthropics/claude-code-action/blob/main/action.yml),
+# https://code.claude.com/docs/en/github-actions và https://code.claude.com/docs/en/headless.
+# [Unverified] Tên đầu vào của Action có thể đổi theo phiên bản; hãy kiểm lại với action.yml trước khi dùng.
+name: claude-review
+
+on:
+  # Dùng pull_request, không dùng pull_request_target: PR từ fork không nên chạy với secret của repo. Tài liệu github-actions nêu: trên repository công khai, GitHub không đưa secret cho lần chạy từ pull request của fork (https://code.claude.com/docs/en/github-actions).
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+jobs:
+  review:
+    # Chỉ chạy PR cùng repo, khớp ví dụ của tài liệu github-actions (repository công khai không đưa secret cho PR từ fork; hành vi với repository riêng không được khẳng định ở đây).
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    # Chỉ đọc. Tài liệu github-actions nói `id-token: write` cần cho xác thực GitHub App mặc định của Action;
+    # ví dụ này truyền github_token (xem bên dưới) và cố ý không cấp id-token. [Unverified] cấu hình này chạy được hay không chưa thử;
+    # nếu Action báo lỗi xác thực, bạn tự quyết có nâng quyền hay không.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # Thay <full-40-char-commit-sha> bằng SHA đầy đủ 40 ký tự của release bạn đã rà soát; không dùng tag trôi.
+      - uses: actions/checkout@<full-40-char-commit-sha>
+        with:
+          # Hai commit đủ để HEAD^1..HEAD là diff của PR trên merge ref mà pull_request checkout.
+          fetch-depth: 2
+          persist-credentials: false
+
+      - uses: anthropics/claude-code-action@<full-40-char-commit-sha>
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # usage.md: github_token chỉ cần khi dùng GitHub App tùy chỉnh; bỏ trống thì Action dùng Claude GitHub App và cần `id-token: write`.
+          # [Inference] vì vậy ví dụ này, truyền github.token, không cấp id-token (xem ghi chú permissions phía trên).
+          github_token: ${{ github.token }}
+          # Marketplace `ai-engineering-platform` build bằng `node cli/dist.mjs` thành nhánh `dist` (một nhánh cục bộ, không phải URL);
+          # đẩy đầu ra đó làm nhánh mặc định của một repo riêng của bạn (hoặc repo có `.claude-plugin/marketplace.json` ở gốc),
+          # rồi điền URL Git của repo ĐÓ (giá trị dưới là chỗ giữ). [Unverified] Action có nhận dạng `#branch`/`--branch` hay không.
+          plugin_marketplaces: https://example.com/your-org/ai-engineering-platform.git
+          plugins: backend@ai-engineering-platform
+          # display_report (mặc định false, theo action.yml) ghi đầu ra do Claude tạo vào Step Summary; action.yml cảnh báo chỉ dùng với đầu vào tin cậy.
+          # Diff của PR vẫn là nội dung không tin cậy: giới hạn PR cùng repo ở trên không làm nội dung đó thành tin cậy. Bạn tự cân nhắc trước khi bật.
+          # https://github.com/anthropics/claude-code-action/blob/main/action.yml
+          display_report: true
+          # Prompt cố định, không nội suy title/body/head.ref của PR để tránh prompt injection từ người mở PR.
+          prompt: "/backend:backend-code-review HEAD^1..HEAD"
+          # Tài liệu headless (https://code.claude.com/docs/en/headless): `/skill-name` trong chuỗi prompt của `-p` được Claude Code mở rộng trước khi chạy.
+          # --allowedTools là danh sách cho phép tối thiểu để đọc diff. [Unverified] Chưa rõ có cần thêm `Skill` vào danh sách này hay không;
+          # nếu cần, bạn tự thêm sau khi kiểm và chấp nhận phần rủi ro tăng thêm.
+          # [Unverified] --max-budget-usd là cờ print-mode, chưa thấy trong ví dụ của Action nên chỉ là truyền tiếp.
+          claude_args: --permission-mode dontAsk --allowedTools "Read,Grep,Glob,Bash(git diff *),Bash(git log *)" --max-turns 20 --max-budget-usd 2
