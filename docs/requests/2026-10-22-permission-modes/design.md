@@ -1,6 +1,6 @@
 # Thiết kế: hai chế độ quyền theo project, `ask` mặc định và `full` (project P4e)
 - Ngày: 2026-10-22
-- Trạng thái: chờ duyệt
+- Trạng thái: đã duyệt 2026-10-22
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P4e (xu hướng 8)
 
@@ -19,13 +19,16 @@ Một hook thử ghi các khóa của stdin PreToolUse vào file (không ghi n�
 - **Hook của plugin (`--plugin-dir`), chế độ bypass:** có `permission_mode: "bypassPermissions"`; chế độ mặc định: `permission_mode: "default"`. Một phiên bypass tương tác do người dùng tự chạy cho cùng kết quả.
 - **Các khóa của stdin PreToolUse:** `session_id`, `transcript_path`, `cwd`, `scratchpad_dir`, `permission_mode`, `effort`, `hook_event_name`, `tool_name`, `tool_input`, `tool_use_id` (và `prompt_id` ở chế độ `-p`); phiên chính không có `agent_type`.
 - **Hook trả `permissionDecision: "ask"` trong bypass (`-p`):** lệnh `echo ... > file` **không chạy** và file không xuất hiện; mô hình trả lời "blocked". Kết luận: `ask` của hook được tôn trọng trong bypass; trong chế độ `-p` không có ai trả lời nên bị từ chối. [Unverified] chưa thử bằng tay trong phiên tương tác để xem có hiện hộp xác nhận hay không.
-- **Chưa kiểm:** `permission_mode` trong hook chạy bên trong subagent, và khi người dùng đổi chế độ giữa phiên (Shift+Tab).
+- **Hook trong subagent (spike P4e, 2026-10-22, Claude Code 2.1.306, `claude -p --permission-mode bypassPermissions`, hook khai trong settings, trần 0,2 USD):** lệnh Bash do subagent `general-purpose` chạy có stdin với `permission_mode: "bypassPermissions"`, `scratchpad_dir`, thêm `agent_id` và `agent_type`; phiên chính gọi Agent tool không có `agent_type`. Kết luận: `full` hiệu lực cả trong subagent. Phiên dừng vì vượt trần ngân sách sau lệnh Bash đó.
+- **Chưa kiểm:** `permission_mode` khi người dùng đổi chế độ giữa phiên (Shift+Tab; không tự động hóa được trong `-p`), và hook của plugin bên trong subagent (chỉ thử hook khai trong settings).
 
 ## Quyết định đã chốt
 
 Của người dùng (2026-10-22): hai chế độ. (1) `full`: bypass đầy đủ lệnh như xóa, truy cập env, secret. (2) `ask`: không tự động truy cập, phải chấp nhận như hiện tại. Mặc định global là `ask`; chỉ project con có cấu hình `.claude` mới vào `full`, bằng lệnh `aip mode full`; **và** chỉ phiên chạy ở chế độ bypass mới được toàn quyền trong thư mục đó. Bổ sung 2026-10-22: trong `full` chỉ được thao tác trong `root/*` của project (ngoài root không được ghi hay xóa); chấp nhận việc Windows native không có sandbox; cách xử lý đánh đổi ở phiên không bypass do tôi đề xuất (mục dưới).
 
-Đề xuất của tôi (chưa ai duyệt):
+Người dùng duyệt 2026-10-22: câu hỏi mở 1 = vẫn hỏi (`fullKeep` mặc định `["push"]`), câu hỏi mở 2 = giữ H5 trong `full`; các đề xuất còn lại của design được duyệt cùng.
+
+Đề xuất của tôi (đã duyệt):
 - **Cấu hình:** khóa `mode` trong `<git-root>/.claude/aip-gate.json`, giá trị `"ask"` (mặc định, thiếu khóa = `ask`) hoặc `"full"`. Không có cấu hình thừa kế từ thư mục cha.
 - **Chế độ hiệu lực `full`** chỉ khi **cả hai** đúng: `mode === "full"` trong cấu hình project, và stdin của hook có `permission_mode === "bypassPermissions"`. Thiếu trường hoặc giá trị khác ⇒ chạy như `ask`. Hook chạy trong subagent chưa kiểm nên mặc định rơi về `ask` nếu thiếu trường.
 - **Hành vi hook khi `full` hiệu lực:**
@@ -105,11 +108,10 @@ AC1.x: hook (đơn vị, bảng tham số) và CLI hook qua `execFileSync` với
 
 ## Rủi ro và câu hỏi mở
 
-- [Unverified] `permission_mode` trong hook chạy bên trong subagent và khi người dùng đổi chế độ giữa phiên; nếu thiếu thì rơi về `ask` (an toàn nhưng làm `full` không hiệu lực trong subagent). Builder nên thêm một spike nhỏ để kiểm.
+- [Unverified] `permission_mode` khi người dùng đổi chế độ giữa phiên (spike 2026-10-22 đã xác nhận trong subagent với hook khai trong settings); nếu thiếu thì rơi về `ask`.
 - [Unverified] `ask` của hook trong bypass chỉ được kiểm ở chế độ `-p` (bị từ chối vì không có ai trả lời); chưa xác nhận hộp xác nhận hiện trong phiên tương tác.
 - [Inference] Phiên không bypass trong project `full` mất các quy tắc `ask` của policy (xem Đánh đổi); chủ project có thể chạy `aip mode ask` để lấy lại.
 - Hook chỉ có ở plugin mode (skills-mode không cài hook); chế độ `full` không có tác dụng với Cursor/Codex/Antigravity.
 - [Inference] Heuristic nhốt trong `root/*` có thể chặn nhầm (đường dẫn cần ghi ngoài root hợp lệ → thêm vào `fullRoots`) và bỏ sót (lệnh qua `bash -c`, biến môi trường, symlink trỏ ra ngoài chưa được resolve; builder quyết có `realpath` hay không và ghi vào design).
 - [Unverified] `scratchpad_dir` luôn có trong stdin của PreToolUse (đã thấy ở cả bốn phiên thử, kể cả plugin hook) nhưng chưa kiểm với subagent; thiếu thì chỉ còn gốc project và `fullRoots`.
-- Câu hỏi mở 1: `fullKeep` mặc định giữ push lên nhánh bảo vệ và force push ở mức hỏi, hay mở hết (đề xuất: giữ hỏi).
-- Câu hỏi mở 2: H5 (`writeScope`) vẫn giữ trong `full` (đề xuất: giữ).
+- Đã chốt: `fullKeep` mặc định giữ hỏi push nhánh bảo vệ và force push; H5 giữ trong `full`.
