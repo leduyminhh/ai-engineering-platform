@@ -4,7 +4,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { envFilesAllowed } from './gate-config.mjs';
+import { envFilesAllowed, effectiveMode, readGate } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
@@ -74,18 +74,21 @@ function globNamesSecret(glob, probes = SECRET_PROBES) {
 
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
-export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed } = {}) {
+export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config } = {}) {
   const ti = input?.tool_input;
   const file = ti?.file_path || ti?.notebook_path || (input?.tool_name === 'Grep' ? ti?.path : undefined);
   const cwd = path.resolve(input?.cwd || '.');
-  if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob)
+  // Cấu hình theo repo chứa file đích (như allowEnv), không theo cwd.
+  const isFull = (dir) => effectiveMode(config === undefined ? readGate(dir)?.config : config, input) === 'full';
+  if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob) && !isFull(path.resolve(cwd, String(ti.path || '.')))
     && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(path.resolve(cwd, String(ti.path || '.'))))) return SECRET_DENY;
   if (!file) return null;
   const target = path.resolve(cwd, String(file));
   // Chuẩn hoá về "/" để cùng một regex/glob chạy đúng trên Windows (dấu "\" và ký tự ổ đĩa).
   const abs = target.replace(/\\/g, '/');
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
-  if (isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target)))) return SECRET_DENY;
+  // full bỏ cả hai nhánh bí mật; writeScope (H5) bên dưới không đổi.
+  if (!isFull(path.dirname(target)) && isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target)))) return SECRET_DENY;
   if (!WRITE_TOOLS.has(input.tool_name)) return null;
   const agent = String(input.agent_type || '').split(':').pop();
   const table = scopes || loadScopes();
