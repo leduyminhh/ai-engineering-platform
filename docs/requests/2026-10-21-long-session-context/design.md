@@ -79,6 +79,8 @@ Của người viết thiết kế (người dùng kiểm khi đọc; mỗi mụ
 - **D12. Giới hạn song song** (mềm). 2–3 phiên cùng lúc, chỉ khi các việc độc lập về file — đã có ở ADR-0002 §2 mục 12; chỉ liên kết.
 - **D13. Phạm vi.** Mở rộng mục "Model and session routing" của baseline sau khi thiết kế được duyệt, không sửa `AGENTS.md` hay code ngay (theo yêu cầu tại thời điểm viết design, nay đã duyệt 2026-10-21).
 
+## Ảnh hưởng spec
+Không ảnh hưởng: design viết trước khi có spec sống (P7) trong cùng ngày; hành vi của nó chưa được ghi vào `docs/specs`, sẽ ghi khi một request kế tiếp chạm tới năng lực đó.
 ## Tiêu chí chấp nhận
 
 (Áp cho lần hiện thực sau khi người dùng duyệt; mỗi AC kiểm được bằng đọc file hoặc test nội dung.)

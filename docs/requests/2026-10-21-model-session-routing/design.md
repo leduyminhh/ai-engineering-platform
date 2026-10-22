@@ -59,6 +59,8 @@ Của người viết thiết kế:
 - **D6. Không đặt `CLAUDE_CODE_SUBAGENT_MODEL` thay người dùng.** aip không quản settings người dùng. README hướng dẫn cách đặt (`sonnet`) như lưới an toàn cho subagent ngoài plugin.
 - **D7. Không thêm hook `PreModelSwitch` trong project này.** Claude Code đã tự hỏi lại khi cache còn ấm ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)). Để sau nếu quan sát thấy vẫn đổi nhầm.
 
+## Ảnh hưởng spec
+Không ảnh hưởng: design viết trước khi có spec sống (P7) trong cùng ngày; hành vi của nó chưa được ghi vào `docs/specs`, sẽ ghi khi một request kế tiếp chạm tới năng lực đó.
 ## Tiêu chí chấp nhận
 
 - [x] **AC1.1** — Given mọi file `plugins/*/agents/*.md`, Then mỗi file có khoá `model` và `effort` trong frontmatter với giá trị theo bảng §3 (`sonnet` + `high`).
