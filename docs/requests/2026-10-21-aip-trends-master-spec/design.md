@@ -68,12 +68,12 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 5b | `2026-10-21-long-session-context` | xong | `aadc6c2` (docs sync `9f31280`) |
 | 3 | `2026-10-22-parallel-agents` | xong | `480edd2` |
 | 4 | `2026-10-21-agent-permissions` | xong (P4a + P4b; P4c quét plugin bên thứ ba làm sau P6; P4d sinh cấu hình MCP chưa cần) | `e363048` |
-| 5c | `2026-10-22-cost-tracking` | xong trên nhánh `claude/p5c-cost-tracking-3161b4`, chờ merge, hash ghi khi merge | — |
+| 5c | `2026-10-22-cost-tracking` | xong, merge vào `master` = `4186bf4` | — |
 | 6a | `2026-10-21-ci-runner` (file ví dụ CI + README) | design viết xong, hoãn chờ duyệt; nhánh `feature/p6-ci-runner` (`5b195fc`) | — |
 | 6b | runner LangGraph (repo `aip-runner` riêng) | thiết kế sơ bộ trong design P6; chưa hiện thực; M0 spike trước | — |
 | 7 | `2026-10-21-living-spec` | xong | `d774be4` |
 
-Thứ tự thực tế: 4 đã làm trước 6 (runner chạy agent không người giám sát). P3 và P5c đã làm xong (P5c chờ merge). Còn lại: 6a (chờ duyệt); 4c sau 6.
+Thứ tự thực tế: 4 đã làm trước 6 (runner chạy agent không người giám sát). P3 và P5c đã làm xong và merge. Còn lại: 6a (chờ duyệt); 4c sau 6.
 
 ### 4. Dọn trạng thái các design
 

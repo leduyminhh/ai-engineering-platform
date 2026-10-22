@@ -1,6 +1,6 @@
 # Thiết kế: theo dõi mức dùng và chi phí từ transcript (project P5c)
 - Ngày: 2026-10-22
-- Trạng thái: đã duyệt 2026-10-22; hoàn thành trên nhánh claude/p5c-cost-tracking-3161b4, chờ duyệt diff và merge
+- Trạng thái: đã duyệt 2026-10-22; đã thực thi; merge vào `master` = `4186bf4`
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P5c (xu hướng 9)
 
