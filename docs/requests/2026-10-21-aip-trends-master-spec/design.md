@@ -49,10 +49,10 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 3 | P1 | — |
 | 4 | P1, P2a, P7 | AC kiểm thủ công cho `--strict` (I-2) |
 | 5 | P1b, P5b, P7 | kiểm theo agentskills.io; sinh cấu hình MCP (P4d, chưa cần: chưa capability nào dùng MCP server); rule theo đường dẫn file |
-| 6 | chưa | P3 |
+| 6 | P3 | — |
 | 7 | P2a, P2b | Task 6 (smoke hook Stop + eval); quy tắc review PR do agent tạo; eval trong CI; công thức CI chỉ đọc (P6a, design hoãn chờ duyệt) |
 | 8 | hook guard, `writeScope`, `allowEnvFiles`, P4 (chính sách quyền, `guard-mcp`, mục baseline `Agents in CI`) | hook chỉ có ở plugin mode (P4 không đổi); quyền chỉ cho Claude (Cursor/Codex/Antigravity chưa có định dạng đã xác minh); kiểm skill bên thứ ba (P4c, sau P6) |
-| 9 | P5a | theo dõi chi phí (`aip stats` mới đo context) |
+| 9 | P5a, P5c | — (P5c: `aip stats --usage`; tiền là bộ đếm `cost-state` của Claude Code, không có bảng giá, không dự đoán hạn mức) |
 
 ### 3. Chỉ mục project
 
@@ -66,14 +66,14 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 2b | `2026-10-20-workflow-graph` | xong | `bb24f03` |
 | 5a | `2026-10-21-model-session-routing` | xong | `4cb06ab` |
 | 5b | `2026-10-21-long-session-context` | xong | `aadc6c2` (docs sync `9f31280`) |
-| 3 | agent song song / worktree | chưa brainstorm | — |
+| 3 | `2026-10-22-parallel-agents` | xong | `480edd2` |
 | 4 | `2026-10-21-agent-permissions` | xong (P4a + P4b; P4c quét plugin bên thứ ba làm sau P6; P4d sinh cấu hình MCP chưa cần) | `e363048` |
-| 5c | theo dõi chi phí | chưa brainstorm | — |
+| 5c | `2026-10-22-cost-tracking` | xong trên nhánh `claude/p5c-cost-tracking-3161b4`, chờ merge, hash ghi khi merge | — |
 | 6a | `2026-10-21-ci-runner` (file ví dụ CI + README) | design viết xong, hoãn chờ duyệt; nhánh `feature/p6-ci-runner` (`5b195fc`) | — |
 | 6b | runner LangGraph (repo `aip-runner` riêng) | thiết kế sơ bộ trong design P6; chưa hiện thực; M0 spike trước | — |
 | 7 | `2026-10-21-living-spec` | xong | `d774be4` |
 
-Thứ tự thực tế: 4 đã làm trước 6 (runner chạy agent không người giám sát). Còn lại: 6a (chờ duyệt) → 3 → 5c; 4c sau 6.
+Thứ tự thực tế: 4 đã làm trước 6 (runner chạy agent không người giám sát). P3 và P5c đã làm xong (P5c chờ merge). Còn lại: 6a (chờ duyệt); 4c sau 6.
 
 ### 4. Dọn trạng thái các design
 

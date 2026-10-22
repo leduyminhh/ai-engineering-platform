@@ -259,7 +259,7 @@ aip check     [-g]
 aip update    [-g]        # git pull + build lại + cài lại các install đã ghi
 aip pack                  # đóng gói skill Cowork -> build/cowork/<skill>.zip
 aip list                  # adapter + plugin phát hiện được
-aip stats     [--session <path>] [--json]   # kích thước context của một phiên Claude Code từ transcript
+aip stats     [--session <path>] [--json] [--usage [--since <số ngày|yyyy-mm-dd>]]   # kích thước context, hoặc token + tiền theo model, từ transcript
 ```
 
 - **Scope**: `project` (mặc định, cwd) hoặc `global` (`-g` / `--scope global`, thư mục home).
@@ -282,7 +282,7 @@ aip stats     [--session <path>] [--json]   # kích thước context của một
   không tắt wizard; lệnh non-interactive `aip install --plugin all` vốn đã cài tất cả.
 - **Uninstall** (alias `remove`) chỉ gỡ path đã track (không đụng target của link), prune thư mục
   rỗng, và đếm-tham-chiếu khối managed dùng chung.
-- **`aip stats`** đọc các transcript Claude Code của project hiện tại. Không cờ thì in bảng 10 phiên đầu theo đỉnh context (số lượt, đầu, đỉnh, cuối); `--session <path>` in phân rã đầy đủ một phiên; `--json` in JSON thô. [Unverified] Lệnh dựa vào layout `~/.claude/projects/<slug>/*.jsonl`, vốn là nội bộ của Claude Code, không phải hợp đồng công khai. Lệnh chỉ đọc, không ghi gì.
+- **`aip stats`** đọc các transcript Claude Code của project hiện tại. Không cờ thì in bảng 10 phiên đầu theo đỉnh context (số lượt, đầu, đỉnh, cuối); `--session <path>` in phân rã đầy đủ một phiên; `--json` in JSON thô. `--usage [--since <số ngày|yyyy-mm-dd>]` (mặc định 7 ngày, lọc theo timestamp của từng dòng) tổng hợp token và tiền theo model, phiên chính so với subagent, kèm tín hiệu cache (đổi model, khoảng nghỉ trên 60 phút trước lượt ghi cache lớn, lượt ghi cache trên 50% context). Tiền lấy từ bản ghi `cost-state` do Claude Code ghi: tính cho cả phiên gồm subagent, không chia theo cửa sổ `--since`, và có thể lệch hóa đơn. aip không có bảng giá (không tự giữ bảng giá) và không dự đoán hạn mức gói; phiên thiếu `cost-state` hiển thị `—` cho tiền. [Unverified] Lệnh dựa vào layout `~/.claude/projects/<slug>/*.jsonl` và ý nghĩa của `cost-state`, đều là nội bộ của Claude Code, không phải hợp đồng công khai. Lệnh chỉ đọc, không in nội dung hội thoại và không ghi gì.
 - Provider cài mặc định: `claude`, `cursor`, `codex`. `antigravity` có build nhưng chỉ cài
   khi gọi tường minh (`--provider antigravity`).
 

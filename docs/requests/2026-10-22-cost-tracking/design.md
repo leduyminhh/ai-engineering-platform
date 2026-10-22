@@ -1,6 +1,6 @@
 # Thiết kế: theo dõi mức dùng và chi phí từ transcript (project P5c)
 - Ngày: 2026-10-22
-- Trạng thái: đã duyệt 2026-10-22
+- Trạng thái: đã duyệt 2026-10-22; hoàn thành trên nhánh claude/p5c-cost-tracking-3161b4, chờ duyệt diff và merge
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P5c (xu hướng 9)
 
@@ -29,17 +29,17 @@ Của người dùng (2026-10-22): "bỏ qua câu hỏi, tự đề xuất" cho 
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given các dòng transcript có `cost-state` với `totalCostUSD` tăng dần trong cùng `sessionId`, When tổng hợp phiên, Then tiền của phiên bằng `totalCostUSD` lớn nhất; phiên không có `cost-state` có tiền `null` (hiển thị `—`); `hasUnknownModelCost: true` được ghi nhận.
-- [ ] **AC1.2** — Given dòng `assistant` có `message.id` lặp (nhiều block cùng một lượt), When cộng token theo model, Then mỗi `message.id` chỉ được tính một lần (lấy giá trị lớn nhất mỗi trường `usage`); dòng không có `usage` hoặc `model` `<synthetic>` không vào bảng token theo model.
-- [ ] **AC1.3** — Given thư mục `<sessionId>/subagents/` có `agent-<id>.jsonl` (và `agent-<id>.meta.json` hoặc không), When tổng hợp, Then token của subagent được gộp theo tên agent từ meta (không có meta thì theo `agentId`) và tách khỏi phiên chính, kèm phần trăm trên tổng.
-- [ ] **AC1.4** — Given chuỗi lượt có đổi model, khoảng nghỉ trên 60 phút trước một lượt tạo cache lớn, hoặc lượt có cache tạo chiếm trên 50% context, When tổng hợp, Then các tín hiệu tương ứng được đếm kèm số token liên quan; chuỗi không có hiện tượng nào cho tất cả bằng 0.
-- [ ] **AC2.1** — Given `aip stats --usage [--since <số ngày|yyyy-mm-dd>] [--json]`, Then in bảng tổng theo model và 5 phiên tốn nhất trong khoảng thời gian (mặc định 7 ngày; theo `timestamp` của dòng), và `--json` in đối tượng cùng nội dung có khóa ổn định; `--since` sai định dạng thì in cách dùng và exit 2.
-- [ ] **AC2.2** — Given `parse()` của `cli/lib/args.mjs`, Then `--usage` và `--since` được đọc đúng (kiểm qua kết quả `parse()`, không dựng tay args); `--usage` kết hợp với `--session` bị từ chối với thông báo rõ; hành vi của `aip stats` cũ không đổi.
-- [ ] **AC2.3** — Given một transcript fixture chứa chuỗi nội dung nhận diện được (văn bản người dùng, kết quả công cụ), When chạy `--usage` (bảng và `--json`), Then đầu ra không chứa các chuỗi đó, và lệnh không ghi file nào (kiểm thư mục chỉ-đọc hoặc so danh sách file trước/sau).
-- [ ] **AC3.1** — Given `README.md` và `README_VI.md`, Then mục `aip stats` có `--usage`/`--since`, nêu rằng tiền lấy từ `cost-state` của Claude Code (không có bảng giá của aip, không dự đoán hạn mức), nhãn `[Unverified]` cho layout nội bộ và cho ý nghĩa của `cost-state`, và `CLAUDE.md` mô tả cờ mới trong dòng lệnh `aip stats`.
-- [ ] **AC4.1** — Given repo sau thay đổi, Then `docs/specs/cli-wizard/spec.md` tồn tại với `cli-wizard/R1…` cho `aip stats --usage` (tổng hợp theo model, chỉ đọc không in nội dung, tiền từ `cost-state`); `docs/specs/README.md` giữ đủ 7 năng lực; `check-request.mjs` trên request này không có W10–W14.
-- [ ] **AC5.1** — Given spec tổng `docs/requests/2026-10-21-aip-trends-master-spec/design.md` và design P3 `docs/requests/2026-10-22-parallel-agents/design.md`, Then spec tổng ghi P3 xong (merge `480edd2`) và P5c xong (kèm hash khi đã merge), bảng trace xu hướng 6 và 9 khớp; header design P3 ghi merge `480edd2`.
-- [ ] **AC6.1** — `npm test` xanh; không đổi nội dung plugin nên không bump version trừ khi `versions.mjs --lock` buộc; `npm run pack:verify` xanh.
+- [x] **AC1.1** — Given các dòng transcript có `cost-state` với `totalCostUSD` tăng dần trong cùng `sessionId`, When tổng hợp phiên, Then tiền của phiên bằng `totalCostUSD` lớn nhất; phiên không có `cost-state` có tiền `null` (hiển thị `—`); `hasUnknownModelCost: true` được ghi nhận.
+- [x] **AC1.2** — Given dòng `assistant` có `message.id` lặp (nhiều block cùng một lượt), When cộng token theo model, Then mỗi `message.id` chỉ được tính một lần (lấy giá trị lớn nhất mỗi trường `usage`); dòng không có `usage` hoặc `model` `<synthetic>` không vào bảng token theo model.
+- [x] **AC1.3** — Given thư mục `<sessionId>/subagents/` có `agent-<id>.jsonl` (và `agent-<id>.meta.json` hoặc không), When tổng hợp, Then token của subagent được gộp theo tên agent từ meta (không có meta thì theo `agentId`) và tách khỏi phiên chính, kèm phần trăm trên tổng.
+- [x] **AC1.4** — Given chuỗi lượt có đổi model, khoảng nghỉ trên 60 phút trước một lượt tạo cache lớn, hoặc lượt có cache tạo chiếm trên 50% context, When tổng hợp, Then các tín hiệu tương ứng được đếm kèm số token liên quan; chuỗi không có hiện tượng nào cho tất cả bằng 0.
+- [x] **AC2.1** — Given `aip stats --usage [--since <số ngày|yyyy-mm-dd>] [--json]`, Then in bảng tổng theo model và 5 phiên tốn nhất trong khoảng thời gian (mặc định 7 ngày; theo `timestamp` của dòng), và `--json` in đối tượng cùng nội dung có khóa ổn định; `--since` sai định dạng thì in cách dùng và exit 2.
+- [x] **AC2.2** — Given `parse()` của `cli/lib/args.mjs`, Then `--usage` và `--since` được đọc đúng (kiểm qua kết quả `parse()`, không dựng tay args); `--usage` kết hợp với `--session` bị từ chối với thông báo rõ; hành vi của `aip stats` cũ không đổi.
+- [x] **AC2.3** — Given một transcript fixture chứa chuỗi nội dung nhận diện được (văn bản người dùng, kết quả công cụ), When chạy `--usage` (bảng và `--json`), Then đầu ra không chứa các chuỗi đó, và lệnh không ghi file nào (kiểm thư mục chỉ-đọc hoặc so danh sách file trước/sau).
+- [x] **AC3.1** — Given `README.md` và `README_VI.md`, Then mục `aip stats` có `--usage`/`--since`, nêu rằng tiền lấy từ `cost-state` của Claude Code (không có bảng giá của aip, không dự đoán hạn mức), nhãn `[Unverified]` cho layout nội bộ và cho ý nghĩa của `cost-state`, và `CLAUDE.md` mô tả cờ mới trong dòng lệnh `aip stats`.
+- [x] **AC4.1** — Given repo sau thay đổi, Then `docs/specs/cli-wizard/spec.md` tồn tại với `cli-wizard/R1…` cho `aip stats --usage` (tổng hợp theo model, chỉ đọc không in nội dung, tiền từ `cost-state`); `docs/specs/README.md` giữ đủ 7 năng lực; `check-request.mjs` trên request này không có W10–W14.
+- [x] **AC5.1** — Given spec tổng `docs/requests/2026-10-21-aip-trends-master-spec/design.md` và design P3 `docs/requests/2026-10-22-parallel-agents/design.md`, Then spec tổng ghi P3 xong (merge `480edd2`) và P5c xong (kèm hash khi đã merge), bảng trace xu hướng 6 và 9 khớp; header design P3 ghi merge `480edd2`.
+- [x] **AC6.1** — `npm test` xanh; không đổi nội dung plugin nên không bump version trừ khi `versions.mjs --lock` buộc; `npm run pack:verify` xanh.
 
 ## Ảnh hưởng spec
 - cli-wizard: thêm R1, thêm R2, thêm R3
