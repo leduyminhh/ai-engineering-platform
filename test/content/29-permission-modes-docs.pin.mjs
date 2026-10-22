@@ -27,11 +27,15 @@ export default async function run({ ok, ctx }) {
   for (const [file, lead] of cases) {
     const text = raw(file);
     const sec = para(text, lead);
+    const warn = file === 'README.md'
+      ? [['project settings.json cannot turn bypass on', 'cannot turn bypass on'], ['deletion of an important path may still prompt', 'delete on an important path may still prompt']]
+      : [['settings.json của project không bật được bypass', 'không bật được bypass'], ['lệnh xóa ở đường dẫn quan trọng vẫn có thể hỏi', 'đường dẫn quan trọng vẫn có thể hỏi']];
+    for (const [what, phrase] of warn) ok(sec.includes(phrase), `P4e AC3.2: ${file} mục chế độ quyền có cảnh báo: ${what}`);
     const need = ['aip mode', 'bypassPermissions', 'fullKeep', 'fullRoots', '[Unverified]', 'Windows', 'sandbox'];
     ok(sec !== '' && need.every((w) => sec.includes(w)), `P4e AC3.2: ${file} mục chế độ quyền nêu ${need.join(', ')}`);
     ok(/^aip mode\s+full\|ask\|status/m.test(text), `P4e AC3.2: ${file} danh sách lệnh CLI có aip mode full|ask|status`);
     // Dòng giới hạn cũ về ask trong bypass phải ghi nhận kết quả đã kiểm (claude -p) và vẫn gắn nhãn cho phần tương tác.
-    const old = text.split('\n').find((l) => l.startsWith('- ') && l.includes('bypassPermissions') && l.includes('Limits') === false && l.includes('[Unverified]') && l.includes('claude -p')) ?? '';
+    const old = text.split('\n').find((l) => l.startsWith('- ') && l.includes('bypassPermissions') && l.includes('[Unverified]') && l.includes('claude -p')) ?? '';
     ok(old !== '', `P4e AC3.2: ${file} dòng [Unverified] về ask trong bypass ghi kết quả đã kiểm bằng claude -p`);
   }
 
