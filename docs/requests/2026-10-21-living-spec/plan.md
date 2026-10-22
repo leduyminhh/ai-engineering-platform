@@ -134,4 +134,4 @@
 - [x] **Step 3:** Run `npm run pack:verify`. Expected: exit 0.
 - [x] **Step 4:** Run `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-10-21-living-spec`. Expected: không W4; W10–W14 chỉ có W10 (design P7 không có mục `Ảnh hưởng spec` — chấp nhận, request này mở đầu cơ chế) — nếu muốn sạch, thêm mục `## Ảnh hưởng spec` với `Không ảnh hưởng: P7 tạo cơ chế, chưa có spec sống nào` vào `design.md` của request này và chạy lại (khuyến nghị).
 - [x] **Step 5:** Tick AC1.1–AC6.1 trong `design.md` của request này khi có bằng chứng từ các bước trên; commit `chore(core): bump core to 1.10.0 and lock versions`.
-- [ ] **Step 6:** Dừng, báo người dùng nhánh `feature/living-spec` để duyệt diff; không merge, không push.
+- [x] **Step 6:** Dừng, báo người dùng nhánh `feature/living-spec` để duyệt diff; không merge, không push.

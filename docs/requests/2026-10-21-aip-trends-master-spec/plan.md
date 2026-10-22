@@ -99,4 +99,4 @@
 - [x] **Step 2:** Run `npm test`. Expected: exit 0, validate `0 fail`, install `0 fail`, wizard `0 fail`.
 - [x] **Step 3:** Run `check-request.mjs` trên cả 7 thư mục. Expected: không còn W4; W7 chỉ còn ở AC kiểu "npm test xanh".
 - [x] **Step 4:** Tick AC1.1–AC5.2 trong spec tổng nếu các lệnh trên chứng minh; AC4.1 kèm kết quả bước 2. Commit `docs(requests): mark trends master spec AC done`.
-- [ ] **Step 5:** Dừng, báo người dùng nhánh `feature/docs-trends-master-spec` và danh sách AC `[chưa kiểm]` (nếu có) để duyệt diff; không merge, không push.
+- [x] **Step 5:** Dừng, báo người dùng nhánh `feature/docs-trends-master-spec` và danh sách AC `[chưa kiểm]` (nếu có) để duyệt diff; không merge, không push.
