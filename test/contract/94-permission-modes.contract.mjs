@@ -188,5 +188,26 @@ export default async function run({ ok, ctx }) {
   } finally {
     fs.rmSync(tmp7, { recursive: true, force: true });
   }
-}
 
+  // Hook thay cho quy tắc ask của settings.json: chỉ khi project full mà phiên không bypass.
+  for (const c of ['git push origin feature/x', 'git -C . push origin feature/x', 'curl http://x', '/usr/bin/CURL.exe http://x', 'wget x', 'kubectl apply -f x', 'terraform apply', 'helm upgrade r c', 'FOO=1 sudo curl http://x', 'ls && curl http://x', 'echo "a; curl x']) {
+    for (const pm of ['default', undefined]) {
+      ok(bdec(c, fullCfg, pm)?.decision === 'ask', `P4e AC1.8: full + permission_mode=${pm} → ask: ${c}`);
+    }
+  }
+  const askReason = bdec('curl http://x', fullCfg, 'default')?.reason ?? '';
+  ok(askReason.includes('aip mode ask') && askReason.includes('--permission-mode bypassPermissions'), 'P4e AC1.8: lý do nhắc aip mode ask và bypassPermissions');
+  ok(bdec('ls', fullCfg, 'default') === null && bdec('echo curl', fullCfg, 'default') === null, 'P4e AC1.8: lệnh thường không bị ask');
+  for (const cfgX of [{}, { mode: 'ask' }, null]) {
+    ok(bdec('curl http://x', cfgX, 'default') === null, `P4e AC1.8: config ${JSON.stringify(cfgX)} → không có ask của hook`);
+  }
+  ok(bdec('curl http://x', fullCfg, 'bypassPermissions') === null, 'P4e AC1.8: full hiệu lực → tắt ask của hook');
+
+  const { loadPolicy } = await import(pathToFileURL(path.join(CORE_DIR, '..', 'cli', 'lib', 'permissions.mjs')).href);
+  const pol = loadPolicy();
+  const askGroups = ['git_push', 'network', 'production_deploy'].flatMap((g) => pol.groups[g].rules);
+  const bashPrefixes = askGroups.map((r) => /^Bash\((.+) \*\)$/.exec(r)?.[1]).filter(Boolean).sort();
+  const nonBash = askGroups.filter((r) => !/^Bash\(.+ \*\)$/.test(r));
+  ok(JSON.stringify(bashPrefixes) === JSON.stringify([...bash.ASK_COMMANDS].sort()), 'P4e AC1.9: ASK_COMMANDS bằng tiền tố Bash trong policy.json');
+  ok(JSON.stringify(nonBash) === JSON.stringify(['WebFetch']), 'P4e AC1.9: quy tắc không phải Bash của ba nhóm chỉ có WebFetch (loại có chủ đích)');
+}

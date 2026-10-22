@@ -245,6 +245,25 @@ function defaultBranch(cwd) {
   } catch { return null; }
 }
 
+// Phải khớp các quy tắc Bash(<tiền tố> *) nhóm git_push/network/production_deploy trong core/permissions/policy.json (test AC1.9 đối chiếu).
+export const ASK_COMMANDS = ['git push', 'curl', 'wget', 'kubectl apply', 'terraform apply', 'helm upgrade'];
+
+// Đoạn lệnh có bắt đầu bằng một tiền tố ASK_COMMANDS không (bỏ qua VAR=x và sudo đứng trước).
+function matchesAsk(t) {
+  let k = 0;
+  while (k < t.length && (/^\w+=/.test(t[k]) || cmdName(t[k]) === 'sudo')) k++;
+  if (k >= t.length) return false;
+  const name = cmdName(t[k]);
+  const rest = t.slice(k);
+  return ASK_COMMANDS.some((e) => {
+    const [head, sub] = e.split(' ');
+    if (name !== head) return false;
+    if (!sub) return true;
+    if (head === 'git') return gitCmd(rest)?.sub === sub;
+    return rest.slice(1).find((x) => !x.startsWith('-')) === sub;
+  });
+}
+
 const NON_ASCII = /[^\x00-\x7F]/;
 const DENY_COMMIT = { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
 
@@ -304,6 +323,11 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
       if (r === 'ask') ask = true;
     }
     if (ask) return { decision: 'ask', reason: 'Chế độ full: lệnh ghi/xoá có đường dẫn không xác định được (biến, ~, glob đầu đường dẫn, bash -c) — cần người dùng xác nhận.' };
+  }
+  // Phiên không bypass trong project full: settings.json không còn quy tắc ask nào chắc chắn áp dụng nên hook hỏi thay.
+  // Chỉ đọc cấu hình sau khi một đoạn khớp tiền tố, để lệnh thường không tốn lời gọi git.
+  if (!bypass && [...segs, ...naiveSegments(cmd)].some(matchesAsk) && gate()?.mode === 'full') {
+    return { decision: 'ask', reason: 'Chế độ full: phiên không bypass nên lệnh push/mạng/deploy production cần người dùng xác nhận. Chạy `aip mode ask` hoặc khởi động với `--permission-mode bypassPermissions` nếu muốn đổi.' };
   }
   const hits = (re) => re.test(cmd) || re.test(raw);
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
