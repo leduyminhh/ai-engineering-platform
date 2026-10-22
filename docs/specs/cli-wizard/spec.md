@@ -13,7 +13,7 @@ CLI `aip` và wizard là cửa vào của người dùng; năng lực này gồm
 
 ## Yêu cầu
 
-- **cli-wizard/R1** — `aip stats --usage` đọc transcript Claude Code của project hiện tại, tổng hợp token theo model (mỗi `message.id` một lần), tách phiên chính và subagent; chỉ đọc. `--since` lọc theo `timestamp` của từng dòng, mặc định 7 ngày, giá trị sai định dạng thì exit 2. Nguồn: [2026-10-22-cost-tracking](../../requests/2026-10-22-cost-tracking/design.md) (thêm)
+- **cli-wizard/R1** — `aip stats --usage` đọc transcript Claude Code của project hiện tại, tổng hợp token theo model (mỗi `message.id` một lần trên toàn project (kể cả bản sao fork/resume)), tách phiên chính và subagent; chỉ đọc. `--since` lọc theo `timestamp` của từng dòng, mặc định 7 ngày, giá trị sai định dạng thì exit 2. Nguồn: [2026-10-22-cost-tracking](../../requests/2026-10-22-cost-tracking/design.md) (thêm)
 - **cli-wizard/R2** — Tiền lấy từ bản ghi `cost-state` của Claude Code (giá trị `totalCostUSD` lớn nhất của phiên), aip không có bảng giá và không dự đoán hạn mức; phiên thiếu `cost-state` hiển thị `—`. Nguồn: [2026-10-22-cost-tracking](../../requests/2026-10-22-cost-tracking/design.md) (thêm)
 - **cli-wizard/R3** — `aip stats --usage` (bảng và `--json`) không in nội dung hội thoại (chỉ số, tên model, `sessionId`, tên agent, tên file) và không ghi file nào. Nguồn: [2026-10-22-cost-tracking](../../requests/2026-10-22-cost-tracking/design.md) (thêm)
 

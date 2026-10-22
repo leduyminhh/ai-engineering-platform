@@ -25,6 +25,7 @@ ok(parse(['stats', '--session', 'a.jsonl', '--json']).session === 'a.jsonl' && p
   const a = parse(['stats', '--usage', '--since', '3', '--json']);
   ok(a.usage === true && a.since === '3' && a.json === true && !a.explicit, 'P5c AC2.2: --usage --since <v> --json được parse, không đặt explicit');
   ok(parse(['stats', '--usage', '--since=2026-10-01']).since === '2026-10-01', 'P5c AC2.2: --since=<v> được parse');
+  ok(parse(['stats', '--usage', '--since']).since === '' && parse(['stats', '--usage', '--since=']).since === '', 'P5c AC2.2: --since thiếu giá trị → chuỗi rỗng (để parseSince từ chối)');
   const d = parse(['stats']);
   ok(d.usage === undefined && d.since === undefined, 'P5c AC2.2: stats thường không có usage/since');
 }

@@ -224,7 +224,8 @@ LỆNH
   stats                     đo context từ transcript Claude Code của project này (bảng phiên theo đỉnh context);
                             --session <file.jsonl>: phân rã một phiên; --json: in JSON thô. [Unverified] layout
                             <home>/.claude/projects/<slug>/*.jsonl là nội bộ của Claude Code, không phải hợp đồng công khai
-                            --usage [--since <số ngày|yyyy-mm-dd>]: token + tiền theo model/phiên/subagent (mặc định 7 ngày);
+                            --usage [--since <số ngày|yyyy-mm-dd>]: token + tiền theo model/phiên/subagent (mặc định 7 ngày; yyyy-mm-dd = 0h UTC;
+                            bảng chỉ có tỷ lệ subagent, tách theo từng agent nằm ở --json);
                             tiền là cost-state của Claude Code cho cả phiên, không phải hóa đơn [Unverified]
   list                      liệt kê adapter + plugin tìm được
   help                      hiện trợ giúp này (hoặc -h, --help)

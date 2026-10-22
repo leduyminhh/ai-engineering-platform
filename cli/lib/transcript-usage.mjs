@@ -142,6 +142,7 @@ export function buildSessionUsage(sessionId, parts, opts = {}) {
     bySubagent,
     subagentShare: total === 0 ? 0 : sub / total,
     signals,
+    sharedTurns: opts.sharedTurns ?? 0,
   };
 }
 
@@ -179,7 +180,7 @@ export function loadSessionUsage({ home, cwd, sinceMs }) {
   const groups = new Map(); // sessionId -> parts[]
   const push = (id, part) => { if (!groups.has(id)) groups.set(id, []); groups.get(id).push(part); };
 
-  for (const file of findTranscripts({ home, cwd })) {
+  for (const file of findTranscripts({ home, cwd }).sort()) {
     const lines = readLines(file);
     if (lines === null) continue;
     const base = path.basename(file);
@@ -201,9 +202,32 @@ export function loadSessionUsage({ home, cwd, sinceMs }) {
     }
   }
 
-  const out = [];
+  // Bản sao fork/resume lặp cùng message.id ở file của phiên khác: mỗi id chỉ thuộc một phiên (sớm nhất,
+  // hòa thì phiên đến trước), phiên còn lại bỏ lượt đó để tổng token không đếm đôi.
+  const owner = new Map(); // message.id -> { sessionId, ts }
+  const earlier = (a, b) => b !== null && (a === null || b < a);
   for (const [id, parts] of groups) {
-    const s = buildSessionUsage(id, parts, { sinceMs });
+    for (const p of parts) for (const t of p.parsed.turns) {
+      if (t.id.startsWith('anon-')) continue;
+      const cur = owner.get(t.id);
+      if (!cur) owner.set(t.id, { sessionId: id, ts: t.ts });
+      else if (cur.sessionId === id) { if (earlier(cur.ts, t.ts)) cur.ts = t.ts; }
+      else if (earlier(cur.ts, t.ts)) owner.set(t.id, { sessionId: id, ts: t.ts });
+    }
+  }
+
+  const out = [];
+  for (const [id, rawParts] of groups) {
+    const dropped = new Set();
+    const parts = rawParts.map((p) => ({
+      ...p,
+      parsed: { ...p.parsed, turns: p.parsed.turns.filter((t) => {
+        if (t.id.startsWith('anon-') || owner.get(t.id).sessionId === id) return true;
+        dropped.add(t.id);
+        return false;
+      }) },
+    }));
+    const s = buildSessionUsage(id, parts, { sinceMs, sharedTurns: dropped.size });
     if (s) out.push(s);
   }
   return out;
@@ -215,6 +239,7 @@ const addInto = (acc, u) => { for (const k of USAGE_KEYS) acc[k] += u[k]; acc.tu
 export function buildUsageReport(sessions, { sinceMs, top = 5 }) {
   const totals = emptyUsage();
   let costUsd = null;
+  let sessionsWithoutCost = 0;
   let unknownModelCost = false;
   let subTokens = 0;
   const byModel = new Map();
@@ -223,6 +248,7 @@ export function buildUsageReport(sessions, { sinceMs, top = 5 }) {
 
   for (const s of sessions) {
     if (s.costUsd !== null) costUsd = (costUsd ?? 0) + s.costUsd;
+    else sessionsWithoutCost++;
     if (s.unknownModelCost) unknownModelCost = true;
     for (const [model, u] of Object.entries(s.byModel)) {
       const acc = byModel.get(model) ?? { ...emptyUsage(), costUsd: null };
@@ -252,7 +278,7 @@ export function buildUsageReport(sessions, { sinceMs, top = 5 }) {
   return {
     sinceMs,
     sessions: sessions.length,
-    totals: { ...totals, costUsd, unknownModelCost, subagentShare: grand === 0 ? 0 : subTokens / grand },
+    totals: { ...totals, costUsd, sessionsWithoutCost, unknownModelCost, subagentShare: grand === 0 ? 0 : subTokens / grand },
     byModel: [...byModel.entries()]
       .map(([model, u]) => ({
         model, turns: u.turns, input: u.input, cacheRead: u.cacheRead, cacheCreate: u.cacheCreate,
@@ -273,7 +299,7 @@ export function buildUsageReport(sessions, { sinceMs, top = 5 }) {
       .slice(0, top)
       .map((s) => ({
         sessionId: s.sessionId, costUsd: s.costUsd, turns: s.main.turns + Object.values(s.bySubagent).reduce((a, u) => a + u.turns, 0),
-        subagentShare: s.subagentShare, files: [...s.files], signals: s.signals, unknownModelCost: s.unknownModelCost,
+        subagentShare: s.subagentShare, files: [...s.files], sharedTurns: s.sharedTurns ?? 0, signals: s.signals, unknownModelCost: s.unknownModelCost,
       })),
   };
 }

@@ -10,7 +10,8 @@ export function formatUsageReport(r) {
   const t = r.totals;
   const since = r.sinceMs === null ? 'toàn bộ' : `từ ${new Date(r.sinceMs).toISOString().slice(0, 10)}`;
   const unknown = t.unknownModelCost ? ' (có model chưa rõ giá)' : '';
-  out.push(`Phiên: ${r.sessions} (${since}) | tiền: ${money(t.costUsd)}${unknown} | subagent: ${pct(t.subagentShare)} token`);
+  const noCost = t.sessionsWithoutCost > 0 ? ` (${t.sessionsWithoutCost} phiên thiếu cost-state)` : '';
+  out.push(`Phiên: ${r.sessions} (${since}) | tiền: ${money(t.costUsd)}${noCost}${unknown} | subagent: ${pct(t.subagentShare)} token`);
 
   out.push('');
   out.push(`${'Model'.padEnd(30)} ${'lượt'.padStart(6)} ${'input'.padStart(10)} ${'cache đọc'.padStart(12)} ${'cache tạo'.padStart(12)} ${'output'.padStart(10)} ${'%đọc'.padStart(6)} ${'tiền'.padStart(9)}`);
@@ -26,10 +27,11 @@ export function formatUsageReport(r) {
   out.push(`${'Top phiên'.padEnd(38)} ${'tiền'.padStart(9)} ${'lượt'.padStart(6)} ${'subagent'.padStart(9)} ${'tín hiệu'.padStart(9)}`);
   for (const p of r.top) {
     const sig = p.signals.modelSwitches.count + p.signals.idleGaps.count + p.signals.cacheHeavy.count;
-    const label = p.unknownModelCost ? `${p.sessionId} *` : p.sessionId;
+    const label = `${p.sessionId}${p.unknownModelCost ? ' *' : ''}${p.sharedTurns > 0 ? ' †' : ''}`;
     out.push(`${label.padEnd(38)} ${n(money(p.costUsd), 9)} ${n(p.turns, 6)} ${n(pct(p.subagentShare), 9)} ${n(sig, 9)}`);
   }
   if (r.top.some((p) => p.unknownModelCost)) out.push('  * có model chưa rõ giá');
+  if (r.top.some((p) => p.sharedTurns > 0)) out.push('  † phiên fork/resume: tiền cost-state có thể trùng với phiên gốc');
 
   out.push('');
   out.push('[Unverified] Tiền là cost-state của Claude Code cho cả phiên (gồm cả subagent), không chia theo cửa sổ --since, không phải hóa đơn.');

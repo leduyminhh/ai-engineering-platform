@@ -20,7 +20,7 @@ export function parse(argv) {
     else if (v === '--session') a.session = argv[++i];
     else if (v.startsWith('--session=')) a.session = v.slice(10);
     else if (v === '--usage') a.usage = true;
-    else if (v === '--since') a.since = argv[++i];
+    else if (v === '--since') a.since = argv[++i] ?? '';
     else if (v.startsWith('--since=')) a.since = v.slice(8);
     else if (v === '--json') a.json = true;
     else if (v === '--as-plugin') { a.mode = 'plugin'; a.explicit = true; } // claude: cài như plugin (qua `claude` CLI)
