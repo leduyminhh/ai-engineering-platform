@@ -24,6 +24,8 @@ import { WizardUnavailable } from './lib/prompt.mjs';
 import { parse } from './lib/args.mjs';
 import os from 'node:os';
 import { findTranscripts, projectSlug, statsForFile } from './lib/transcript-stats.mjs';
+import { parseSince, loadSessionUsage, buildUsageReport } from './lib/transcript-usage.mjs';
+import { formatUsageReport } from './lib/usage-report.mjs';
 
 const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -172,6 +174,25 @@ function reportStats({ session, json }) {
   for (const r of rows) console.log(`${r.name.padEnd(38)} ${String(r.turns).padStart(5)} ${String(r.firstCtx).padStart(8)} ${String(r.peakCtx).padStart(8)} ${String(r.lastCtx).padStart(8)}`);
 }
 
+// Trả exit code thay vì tự thoát để lỗi cách dùng (2) tách khỏi lỗi chung (1) của main().
+function reportUsage({ since, json, now = Date.now() }) {
+  const sinceMs = parseSince(since, now);
+  if (sinceMs === null) {
+    console.error('--since không hợp lệ. Dùng: --since <số ngày|yyyy-mm-dd> (vd --since 3, --since 2026-10-01).');
+    return 2;
+  }
+  const cwd = process.cwd();
+  const sessions = loadSessionUsage({ home: os.homedir(), cwd, sinceMs });
+  if (!sessions.length && !findTranscripts({ home: os.homedir(), cwd }).length) {
+    console.log(`Không tìm thấy transcript cho ${projectSlug(cwd)}`);
+    return 0;
+  }
+  const report = buildUsageReport(sessions, { sinceMs });
+  if (json) console.log(JSON.stringify(report, null, 2));
+  else for (const line of formatUsageReport(report)) console.log(line);
+  return 0;
+}
+
 function buildHelp() {
   let plugins;
   try { plugins = knownPluginIds(); } catch { plugins = []; }
@@ -203,6 +224,8 @@ LỆNH
   stats                     đo context từ transcript Claude Code của project này (bảng phiên theo đỉnh context);
                             --session <file.jsonl>: phân rã một phiên; --json: in JSON thô. [Unverified] layout
                             <home>/.claude/projects/<slug>/*.jsonl là nội bộ của Claude Code, không phải hợp đồng công khai
+                            --usage [--since <số ngày|yyyy-mm-dd>]: token + tiền theo model/phiên/subagent (mặc định 7 ngày);
+                            tiền là cost-state của Claude Code cho cả phiên, không phải hóa đơn [Unverified]
   list                      liệt kê adapter + plugin tìm được
   help                      hiện trợ giúp này (hoặc -h, --help)
 
@@ -292,8 +315,13 @@ async function main() {
       return reportUpdate(update({ scope: args.scope, providers: args.provider, plugins: args.plugin, skills: args.skill }));
     case 'check':
       return reportCheck(check({ scope: args.scope, doctor: true }));
-    case 'stats':
+    case 'stats': {
+      const usageErr = args.usage && args.session ? '--usage không dùng chung với --session (--usage đọc mọi phiên của project).'
+        : (!args.usage && args.since !== undefined) ? '--since chỉ dùng kèm --usage.' : null;
+      if (usageErr) { console.error(usageErr); process.exitCode = 2; return; }
+      if (args.usage) { process.exitCode = reportUsage({ since: args.since, json: args.json }); return; }
       return reportStats({ session: args.session, json: args.json });
+    }
     case 'pack': {
       console.log('Đóng gói skill cho Cowork…');
       return reportPack(pack());

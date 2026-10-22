@@ -4,6 +4,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { parseUsageLines, buildSessionUsage, parseSince, loadSessionUsage, buildUsageReport, LARGE_CACHE_CREATE, IDLE_GAP_MS } from '../cli/lib/transcript-usage.mjs';
 import { projectSlug } from '../cli/lib/transcript-stats.mjs';
 
@@ -204,6 +206,65 @@ try {
   const e = buildUsageReport([], { sinceMs: T0 + DAY });
   ok(e.sessions === 0 && e.byModel.length === 0 && e.totals.costUsd === null && e.top.length === 0 && e.totals.subagentShare === 0,
     'P5c AC2.1: không phiên nào → báo cáo rỗng, costUsd null');
+}
+
+// ---- CLI: aip stats --usage (chạy tiến trình thật, HOME/USERPROFILE trỏ thư mục tạm) ----
+{
+  const CLI = fileURLToPath(new URL('../cli/index.mjs', import.meta.url));
+  const tmpHome = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-usage-cli-')));
+  try {
+    const proj = path.join(tmpHome, 'proj');
+    fs.mkdirSync(proj);
+    const dir = path.join(tmpHome, '.claude', 'projects', projectSlug(proj));
+    const w = (rel, lines) => { const f = path.join(dir, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, lines.join('\n')); };
+    const nowIso = new Date().toISOString();
+    const a = (id, model, usage, sid) => j({ type: 'assistant', timestamp: nowIso, sessionId: sid, message: { id, model, usage } });
+    w('c1.jsonl', [
+      j({ type: 'user', sessionId: 'c1', message: { content: 'SECRET-USER-TEXT' } }),
+      a('m1', 'claude-fixture-9', { input_tokens: 10, cache_read_input_tokens: 30, cache_creation_input_tokens: 5, output_tokens: 7 }, 'c1'),
+      j({ type: 'user', sessionId: 'c1', message: { content: [{ type: 'tool_result', content: 'SECRET-TOOL-OUT' }] } }),
+      j({ type: 'cost-state', sessionId: 'c1', totalCostUSD: 1.234, hasUnknownModelCost: true, modelUsage: { 'claude-fixture-9': { costUSD: 1.234 } } }),
+    ]);
+    w('c1/subagents/agent-zzz.jsonl', [a('s1', 'claude-fixture-9', { input_tokens: 4, output_tokens: 1 }, 'c1')]);
+    w('c1/subagents/agent-zzz.meta.json', [j({ agentType: 'fixture-agent', description: 'SECRET-META-DESC' })]);
+    w('c2.jsonl', [a('m2', 'claude-fixture-9', { input_tokens: 1, output_tokens: 1 }, 'c2')]);
+
+    const run = (...args) => {
+      try {
+        const out = execFileSync(process.execPath, [CLI, 'stats', ...args], { cwd: proj, encoding: 'utf8', stdio: 'pipe', env: { ...process.env, HOME: tmpHome, USERPROFILE: tmpHome } });
+        return { code: 0, out, err: '' };
+      } catch (e) { return { code: e.status, out: String(e.stdout ?? ''), err: String(e.stderr ?? '') }; }
+    };
+    const listing = (root) => fs.readdirSync(root, { recursive: true }).map(String).sort().join('\n');
+
+    const before = listing(tmpHome);
+    const t = run('--usage');
+    ok(t.code === 0 && t.out.includes('claude-fixture-9') && t.out.includes('$1.23') && t.out.includes('—'), 'P5c AC2.1: bảng có tên model, tiền $x.xx và — cho phiên không có cost-state');
+    ok(t.out.includes('có model chưa rõ giá') && t.out.includes('cost-state') && t.out.includes('[Unverified]'), 'P5c AC2.1: nhãn model chưa rõ giá và dòng chú thích cost-state [Unverified]');
+    const jr = run('--usage', '--json');
+    let rep = null;
+    try { rep = JSON.parse(jr.out); } catch { /* để ok() bên dưới báo lỗi */ }
+    ok(rep && ['sinceMs', 'sessions', 'totals', 'byModel', 'bySubagent', 'signals', 'top'].every((k) => k in rep) && rep.sessions === 2, 'P5c AC2.1: --json parse được và đủ khóa UsageReport');
+    ok(run('--usage', '--since', '1').code === 0 && run('--usage', '--since=2020-01-01').code === 0, 'P5c AC2.2: --since dạng số ngày và yyyy-mm-dd được nhận');
+
+    const bad = run('--usage', '--since', 'abc');
+    ok(bad.code === 2 && bad.err.includes('--since'), 'P5c AC2.2: --since sai định dạng → exit 2, stderr nêu --since');
+    const sess = run('--usage', '--session', 'x');
+    ok(sess.code === 2 && sess.err.includes('--session'), 'P5c AC2.2: --usage kèm --session → exit 2');
+    const lone = run('--since', '3');
+    ok(lone.code === 2 && lone.err.includes('--usage'), 'P5c AC2.2: --since không kèm --usage → exit 2');
+    const old = run();
+    ok(old.code === 0 && old.out.includes('Phiên') && !old.out.includes('Unverified'), 'P5c AC2.2: stats không cờ vẫn in bảng context cũ');
+
+    const all = [t.out, jr.out].join('\n');
+    ok(!/SECRET-(USER-TEXT|TOOL-OUT|META-DESC)/.test(all) && all.includes('fixture-agent'), 'P5c AC2.3: không in nội dung hội thoại/mô tả meta, chỉ tên agent');
+    ok(listing(tmpHome) === before, 'P5c AC2.3: chỉ đọc, không tạo/xóa file trong HOME');
+
+    const empty = path.join(tmpHome, 'empty');
+    fs.mkdirSync(empty);
+    const none = (() => { try { return { code: 0, out: execFileSync(process.execPath, [CLI, 'stats', '--usage'], { cwd: empty, encoding: 'utf8', stdio: 'pipe', env: { ...process.env, HOME: tmpHome, USERPROFILE: tmpHome } }) }; } catch (e) { return { code: e.status, out: '' }; } })();
+    ok(none.code === 0 && none.out.includes('Không tìm thấy transcript'), 'P5c AC2.2: không có transcript → thông báo, exit 0');
+  } finally { fs.rmSync(tmpHome, { recursive: true, force: true }); }
 }
 
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }

@@ -21,6 +21,13 @@ ok(parse(['install', '--all', '--provider', 'claude']).explicit === true, '--all
 ok(parse(['install', '--provider', 'claude']).provider === 'claude', 'không hồi quy: --provider');
 ok(parse(['init', '--full']).full === true && !parse(['init']).full, '--full chỉ bật khi có cờ');
 ok(parse(['stats', '--session', 'a.jsonl', '--json']).session === 'a.jsonl' && parse(['stats', '--json']).json === true && !parse(['stats']).json, 'stats: --session/--json được parse');
+{
+  const a = parse(['stats', '--usage', '--since', '3', '--json']);
+  ok(a.usage === true && a.since === '3' && a.json === true && !a.explicit, 'P5c AC2.2: --usage --since <v> --json được parse, không đặt explicit');
+  ok(parse(['stats', '--usage', '--since=2026-10-01']).since === '2026-10-01', 'P5c AC2.2: --since=<v> được parse');
+  const d = parse(['stats']);
+  ok(d.usage === undefined && d.since === undefined, 'P5c AC2.2: stats thường không có usage/since');
+}
 
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }
 console.log(`args.test: ${pass} pass`);
