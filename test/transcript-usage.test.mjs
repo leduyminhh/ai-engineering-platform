@@ -131,5 +131,11 @@ ok(s.main.turns === 1 && s.firstTs === T0 + 10 * 60000, 'P5c AC1.1: sinceMs bỏ
 ok(buildSessionUsage('s1', sp, { sinceMs: T0 + 60 * 60000 }) === null, 'P5c AC1.1: sinceMs loại hết lượt → null');
 ok(buildSessionUsage('s1', sp, { sinceMs: null }).main.turns === 3, 'P5c AC1.1: sinceMs null không lọc');
 
+// Regression: id-less turn ở hai part không gộp; hai lần chạy cùng tên agent không thành một chuỗi
+s = buildSessionUsage('s1', [part(null, [asst(null, 'x', u(1, 0, 0))]), part(null, [asst(null, 'x', u(2, 0, 0))], 'fork.jsonl')]);
+ok(s.main.turns === 2 && s.main.input === 3, 'P5c AC1.2: turn không có message.id ở hai part không bị gộp');
+s = buildSessionUsage('s1', [part('reviewer', [turn('a1', 'opus', u(1, 0, 0), 0)], 'r1.jsonl'), part('reviewer', [turn('a2', 'sonnet', u(1, 0, 0), 1)], 'r2.jsonl')]);
+ok(s.signals.modelSwitches.count === 0 && s.bySubagent.reviewer.turns === 2, 'P5c AC1.4: hai lần chạy cùng tên agent khác model không tính đổi model, vẫn gộp theo tên');
+
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }
 console.log(`transcript-usage.test: ${pass} pass`);

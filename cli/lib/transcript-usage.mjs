@@ -70,17 +70,19 @@ const tokensOf = (u) => u.input + u.cacheRead + u.cacheCreate + u.output;
 export function buildSessionUsage(sessionId, parts, opts = {}) {
   // Cùng message.id có thể nằm ở nhiều file (resume/fork); chuỗi của lần xuất hiện đầu được giữ.
   const merged = new Map();
-  for (const p of parts) {
+  parts.forEach((p, idx) => {
     for (const t of p.parsed.turns) {
-      const prev = merged.get(t.id);
+      // Id giả anon-N được đánh số riêng từng lần parse nên không được gộp chéo giữa các part.
+      const key = t.id.startsWith('anon-') ? `${idx}:${t.id}` : t.id;
+      const prev = merged.get(key);
       if (!prev) {
-        merged.set(t.id, { ...t, usage: { ...t.usage }, agent: p.agent });
+        merged.set(key, { ...t, usage: { ...t.usage }, agent: p.agent, part: idx });
         continue;
       }
       for (const k of USAGE_KEYS) prev.usage[k] = Math.max(prev.usage[k], t.usage[k]);
       if (t.ts !== null && (prev.ts === null || t.ts < prev.ts)) prev.ts = t.ts;
     }
-  }
+  });
 
   let turns = [...merged.values()];
   if (typeof opts.sinceMs === 'number') turns = turns.filter((t) => t.ts !== null && t.ts >= opts.sinceMs);
@@ -109,8 +111,10 @@ export function buildSessionUsage(sessionId, parts, opts = {}) {
       if (lastTs === null || t.ts > lastTs) lastTs = t.ts;
     }
 
-    const prev = chains.get(t.agent);
-    chains.set(t.agent, t);
+    // Chuỗi = toàn bộ phiên chính, hoặc đúng một lần chạy subagent (theo part); hai lần chạy cùng tên agent không nối nhau.
+    const chainKey = t.agent === null ? 'main' : `part:${t.part}`;
+    const prev = chains.get(chainKey);
+    chains.set(chainKey, t);
     const { input, cacheRead, cacheCreate } = t.usage;
     if (prev && prev.model !== t.model) { signals.modelSwitches.count++; signals.modelSwitches.tokens += cacheCreate; }
     if (t.agent === null && prev && prev.ts !== null && t.ts !== null
