@@ -16,3 +16,6 @@
 
 # Kết quả chạy eval (sinh ra, không commit)
 evals/**/results/
+
+# Worktree của Claude Code
+.claude/worktrees/

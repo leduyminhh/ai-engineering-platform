@@ -18,6 +18,7 @@ export function normPath(p) {
 }
 
 // Mục có '*' hoặc kết thúc bằng '/' là tiền tố; mục còn lại phải khớp nguyên đường dẫn.
+// Glob bắt đầu bằng '*' (vd **/x.test.js) có tiền tố rỗng nên trùng mọi đường dẫn: chấp nhận dương tính giả vì chỉ là cảnh báo.
 const asPrefix = (p) => (p.includes('*') ? p.slice(0, p.indexOf('*')) : p.endsWith('/') ? p : null);
 
 export function pathsOverlap(a, b) {

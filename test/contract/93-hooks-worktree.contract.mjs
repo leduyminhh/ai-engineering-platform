@@ -46,16 +46,20 @@ export default async function run({ ok, ctx }) {
     ok(own && own.stopGate === true, 'P3 AC3.1: worktree có file riêng thì dùng file của worktree');
 
     // Repo độc lập cùng worktree của nó không chung git-common-dir với repo chính → không được mượn cấu hình repo chính.
-    const other = path.join(tmp, 'other');
-    const otherWt = path.join(tmp, 'other-wt');
+    // Thư mục cha của repo độc lập (không phải repo) cũng có aip-gate.json: không được leo lên đó.
+    const holder = path.join(tmp, 'holder');
+    writeGate(holder, { stopGate: false });
+    const other = path.join(holder, 'other');
+    const otherWt = path.join(holder, 'other-wt');
     makeRepo(other);
     git(other, 'worktree', 'add', '-q', otherWt, '-b', 'other-branch');
     worktrees.push([other, otherWt]);
     ok(readGateConfig(other) === null, 'P3 AC3.1: repo độc lập (không chung git-common-dir) không lấy cấu hình repo khác');
-    ok(readGateConfig(otherWt) === null, 'P3 AC3.1: worktree của repo độc lập không lấy cấu hình repo khác');
+    ok(readGateConfig(otherWt) === null, 'P3 AC3.1: worktree của repo độc lập không lấy cấu hình repo khác hay thư mục cha');
 
+    // cwd là repo chính: kết quả chỉ đúng khi gitRoot suy ra gốc worktree từ file đích.
     const scopes = { tester: ['test/**'] };
-    const write = (file) => decide({ tool_name: 'Write', cwd: wt, agent_type: 'p:tester', tool_input: { file_path: file } }, { scopes });
+    const write = (file) => decide({ tool_name: 'Write', cwd: main, agent_type: 'p:tester', tool_input: { file_path: file } }, { scopes });
     ok(write(path.join(wt, 'test', 'a.test.js')) === null, 'P3 AC3.2: writeScope neo theo gốc worktree: file trong phạm vi được ghi');
     ok(write(path.join(wt, 'src', 'a.js'))?.decision === 'deny', 'P3 AC3.2: writeScope neo theo gốc worktree: file ngoài phạm vi bị deny');
   } finally {
