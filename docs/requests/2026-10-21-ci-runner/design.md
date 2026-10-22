@@ -1,6 +1,6 @@
 # Thiết kế: chạy agent không người canh — công thức CI và runner (project P6)
 - Ngày: 2026-10-21
-- Trạng thái: đã duyệt 2026-10-22 (người dùng duyệt design P6 và giao phiên điều phối chạy P6a; P6b chỉ là thiết kế sơ bộ, không hiện thực)
+- Trạng thái: đã duyệt 2026-10-22; P6a đã hiện thực trên nhánh claude/p6a-ci-review-66c184, chờ merge; P6b chưa hiện thực
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P6 (xu hướng 6, 7, 8)
 
@@ -33,13 +33,13 @@ Của người dùng (2026-10-21): "bỏ qua câu hỏi và để tôi tự đ�
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given gói npm, Then `templates/ci/claude-review.example.yml` tồn tại, nằm trong tập file `pack:verify` cho phép, và `aip init --full` không tạo file nào dưới `.github/` (kiểm bằng test init hiện có thêm một khẳng định).
-- [ ] **AC1.2** — Given `claude-review.example.yml`, Then trigger là `pull_request` và không có `pull_request_target`; `permissions` chỉ gồm `contents: read` và `pull-requests: read`; mọi `uses:` ghim theo SHA hoặc là chỗ giữ `<full-40-char-commit-sha>`.
-- [ ] **AC1.3** — Given file đó, Then `claude_args` chứa `--permission-mode dontAsk`, `--allowedTools` với danh sách tường minh chỉ gồm tool chỉ đọc, `--max-turns` và `--max-budget-usd`; prompt gọi một skill reviewer của aip dạng `/plugin:skill` và không chứa biểu thức `${{ github.event.pull_request.title }}`, `.body` hay `.head.ref`.
-- [ ] **AC1.4** — Given file đó, Then không có bước đăng bình luận hay ghi vào PR; đầu ra là job summary hoặc artifact.
-- [ ] **AC2.1** — Given `README.md` và `README_VI.md`, Then có mục "Run reviews in CI" / "Chạy review trong CI" nêu file ví dụ, việc người dùng tự chép, các điều kiện an toàn trên và giới hạn (chỉ đọc, chưa đăng bình luận, nội dung PR là đầu vào không tin cậy), và nêu rằng P6b (runner) là repo riêng chưa hiện thực.
-- [ ] **AC3.1** — Given spec tổng `docs/requests/2026-10-21-aip-trends-master-spec/design.md`, Then P4 ghi xong (merge `e363048`) và P6 có hai dòng P6a, P6b với trạng thái đúng; bảng trace xu hướng 6, 7, 8 phản ánh P4 và P6a.
-- [ ] **AC4.1** — `npm test` xanh; không đổi nội dung plugin nên không bump version trừ khi `versions.mjs --lock` buộc; `npm run pack:verify` xanh.
+- [x] **AC1.1** — Given gói npm, Then `templates/ci/claude-review.example.yml` tồn tại, nằm trong tập file `pack:verify` cho phép, và `aip init --full` không tạo file nào dưới `.github/` (kiểm bằng test init hiện có thêm một khẳng định).
+- [x] **AC1.2** — Given `claude-review.example.yml`, Then trigger là `pull_request` và không có `pull_request_target`; `permissions` chỉ gồm `contents: read` và `pull-requests: read`; mọi `uses:` ghim theo SHA hoặc là chỗ giữ `<full-40-char-commit-sha>`.
+- [x] **AC1.3** — Given file đó, Then `claude_args` chứa `--permission-mode dontAsk`, `--allowedTools` với danh sách tường minh chỉ gồm tool chỉ đọc, `--max-turns` và `--max-budget-usd`; prompt gọi một skill reviewer của aip dạng `/plugin:skill` và không chứa biểu thức `${{ github.event.pull_request.title }}`, `.body` hay `.head.ref`.
+- [x] **AC1.4** — Given file đó, Then không có bước đăng bình luận hay ghi vào PR; đầu ra là job summary hoặc artifact.
+- [x] **AC2.1** — Given `README.md` và `README_VI.md`, Then có mục "Run reviews in CI" / "Chạy review trong CI" nêu file ví dụ, việc người dùng tự chép, các điều kiện an toàn trên và giới hạn (chỉ đọc, chưa đăng bình luận, nội dung PR là đầu vào không tin cậy), và nêu rằng P6b (runner) là repo riêng chưa hiện thực.
+- [x] **AC3.1** — Given spec tổng `docs/requests/2026-10-21-aip-trends-master-spec/design.md`, Then P4 ghi xong (merge `e363048`) và P6 có hai dòng P6a, P6b với trạng thái đúng; bảng trace xu hướng 6, 7, 8 phản ánh P4 và P6a.
+- [x] **AC4.1** — `npm test` xanh; không đổi nội dung plugin nên không bump version trừ khi `versions.mjs --lock` buộc; `npm run pack:verify` xanh.
 
 ## Ảnh hưởng spec
 Không ảnh hưởng: P6a chỉ thêm file ví dụ và tài liệu, P6b nằm ở repo riêng; chưa có hành vi mới của năng lực nào trong `docs/specs`.
