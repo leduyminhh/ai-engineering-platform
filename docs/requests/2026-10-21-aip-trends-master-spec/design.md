@@ -48,15 +48,15 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 2 | quyết định Claude first | — |
 | 3 | P1 | — |
 | 4 | P1, P2a, P7 | AC kiểm thủ công cho `--strict` (I-2) |
-| 5 | P1b, P5b, P7 | kiểm theo agentskills.io; cấu hình MCP; rule theo đường dẫn file |
+| 5 | P1b, P5b, P7 | kiểm theo agentskills.io; sinh cấu hình MCP (P4d, chưa cần: chưa capability nào dùng MCP server); rule theo đường dẫn file |
 | 6 | chưa | P3 |
-| 7 | P2a, P2b | Task 6 (smoke hook Stop + eval); quy tắc review PR do agent tạo; eval trong CI |
-| 8 | hook guard, `writeScope`, `allowEnvFiles` | P4: hook chỉ có ở plugin mode, quy tắc agent trong CI, kiểm skill bên thứ ba |
+| 7 | P2a, P2b | Task 6 (smoke hook Stop + eval); quy tắc review PR do agent tạo; eval trong CI; công thức CI chỉ đọc (P6a, design hoãn chờ duyệt) |
+| 8 | hook guard, `writeScope`, `allowEnvFiles`, P4 (chính sách quyền, `guard-mcp`, mục baseline `Agents in CI`) | hook chỉ có ở plugin mode (P4 không đổi); quyền chỉ cho Claude (Cursor/Codex/Antigravity chưa có định dạng đã xác minh); kiểm skill bên thứ ba (P4c, sau P6) |
 | 9 | P5a | theo dõi chi phí (`aip stats` mới đo context) |
 
 ### 3. Chỉ mục project
 
-Đánh số P5a/P5b là **quyết định của tôi** (người dùng chưa duyệt): hai việc này làm sau khi lộ trình ngày 2026-10-20 được đặt; P5a (theo dõi chi phí) gán vào xu hướng 9, P5b (xử lý phiên dài/context) gán vào xu hướng 5.
+Đánh số P5a/P5b là **quyết định của tôi** (người dùng chưa duyệt): hai việc này làm sau khi lộ trình ngày 2026-10-20 được đặt; P5a (điều hướng model và phiên, thuộc chi phí/model) gán vào xu hướng 9, P5b (xử lý phiên dài/context) gán vào xu hướng 5.
 
 | Project | Slug / vị trí | Trạng thái | Merge |
 |---|---|---|---|
@@ -67,12 +67,13 @@ Trạng thái "xong" lấy từ merge commit trong git log và memory; AC của 
 | 5a | `2026-10-21-model-session-routing` | xong | `4cb06ab` |
 | 5b | `2026-10-21-long-session-context` | xong | `aadc6c2` (docs sync `9f31280`) |
 | 3 | agent song song / worktree | chưa brainstorm | — |
-| 4 | MCP + permission trong adapter | chưa brainstorm | — |
+| 4 | `2026-10-21-agent-permissions` | xong (P4a + P4b; P4c quét plugin bên thứ ba làm sau P6; P4d sinh cấu hình MCP chưa cần) | `e363048` |
 | 5c | theo dõi chi phí | chưa brainstorm | — |
-| 6 | runner LangGraph (repo riêng) | chưa brainstorm; tiền đề 2b đã có | — |
+| 6a | `2026-10-21-ci-runner` (file ví dụ CI + README) | design viết xong, hoãn chờ duyệt; nhánh `feature/p6-ci-runner` (`5b195fc`) | — |
+| 6b | runner LangGraph (repo `aip-runner` riêng) | thiết kế sơ bộ trong design P6; chưa hiện thực; M0 spike trước | — |
 | 7 | `2026-10-21-living-spec` | xong | `d774be4` |
 
-Thứ tự đề xuất cho phần còn lại: giữ thứ tự cũ (6 → 3 → 4 → 5c). [Đoán] 4 có thể nên lên trước 6 vì runner chạy agent không người giám sát; để người dùng quyết ở "Câu hỏi mở".
+Thứ tự thực tế: 4 đã làm trước 6 (runner chạy agent không người giám sát). Còn lại: 6a (chờ duyệt) → 3 → 5c; 4c sau 6.
 
 ### 4. Dọn trạng thái các design
 
@@ -92,6 +93,7 @@ Chỉ sửa header, dòng lộ trình và ký tự checkbox; không đổi nội
 
 - 2a Task 6: smoke hook Stop + eval thật (~0,5 USD/case, chạy tay). Hoãn vì `claude` CLI trong sandbox Bash báo "Not logged in".
 - 2a I-2: cách đánh dấu AC kiểm thủ công để `--strict` bỏ qua W7. Chờ người dùng quyết.
+- Xác nhận 2026-10-22: cả hai việc hoãn của 2a vẫn mở. Task 6 cần phiên `claude` đã đăng nhập (tốn tiền); I-2 cần người dùng chọn cách đánh dấu. Không việc nào do spec này giải quyết.
 - Backlog (chỉ tham khảo, từ memory): key passthrough → `metadata` theo namespace; org defaults nhiều lớp; agent server headless làm động cơ runner; agent Maintenance/Docs sync; đa repo.
 
 ### 6. P7 — spec sống (xong, merge `d774be4`)
