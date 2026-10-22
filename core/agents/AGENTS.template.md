@@ -119,6 +119,10 @@ invariants (idempotency, outbox, retention), schema/contract tests, and regressi
   force-push, history rewrite) without explicit confirmation.
 - **Don't read, print, or modify secret files** (`.env`, `*.env`, credentials, `*.jks`/`*.keystore`,
   key material).
+- **`full` permission mode is an owner opt-in.** When `.claude/aip-gate.json` has `mode: "full"` and the
+  session runs in `bypassPermissions`, the project owner allowed unattended access inside that project:
+  the hook confirmations for deletion and secret files are dropped, but a push to a protected branch
+  still needs confirmation unless `fullKeep` is changed.
 - **Stop for human diff review before integrating.** On a feature branch, commit each task without
   pausing (1 task = 1 commit); the human reviews the whole branch diff before merge or push. On a
   protected branch, stop before every commit.
