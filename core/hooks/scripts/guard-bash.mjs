@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed } from './gate-config.mjs';
+import { envFilesAllowed, readGate, effectiveMode, fullKeep } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 const SECRET = /(^|[\s'"=/\\<(])(\.env(rc)?(\.(?!(example|sample|template)\b)[\w.-]+)?|(?!process\.env(?![\w.-]))[\w.-]+\.env|[\w.-]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub\b)[\w.-]+)?|credentials(\.(json|ya?ml))?)(?=$|[\s'";&|)<>])/i;
@@ -184,25 +184,30 @@ function hasCommitWithMessageFlag(cmd) {
   return false;
 }
 
-export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed } = {}) {
+export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
   const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw;
   const cwd = input?.cwd || '.';
+  // Kiểm rẻ (permission_mode) trước; chỉ đọc cấu hình (tốn lời gọi git) khi một nhánh H1–H3 thật sự cần quyết định.
+  const bypass = input?.permission_mode === 'bypassPermissions';
+  let cfg;
+  const gate = () => (cfg === undefined ? (cfg = config !== undefined ? config : (readGate(cwd)?.config ?? null)) : cfg);
+  const full = () => bypass && effectiveMode(gate(), input) === 'full';
   const { segs, unclosed } = parse(cmd);
   const parsed = withDirs(segs, cwd);
-  if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m)))) return DENY_COMMIT;
+  if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;
   // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → hỏi người dùng (ask) khi có dấu bất kỳ.
-  if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd)) return ASK_UNPARSABLE;
+  if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd) && !full()) return ASK_UNPARSABLE;
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
   const naive = withDirs(naiveSegments(cmd), cwd);
   for (const { t, gc, dir, unres } of [...parsed, ...naive]) {
     const why = gc.sub === 'push' ? pushReason(t, gc, dir, currentBranch, unres) : null;
-    if (why) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
+    if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
   }
   const hits = (re) => re.test(cmd) || re.test(raw);
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
-  if (hits(SECRET) && (hits(KEY_SECRET) || !allowEnv(cwd))) return { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
+  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
   return null;
 }
 

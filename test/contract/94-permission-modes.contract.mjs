@@ -100,4 +100,22 @@ export default async function run({ ok, ctx }) {
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
+
+  const bash = await load('guard-bash.mjs');
+  const bdec = (command, config, pm) => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: '.', ...(pm ? { permission_mode: pm } : {}) },
+    { currentBranch: () => 'main', allowEnv: () => false, config });
+  const fullCfg = { mode: 'full' };
+  for (const c of ['rm -rf x', 'cat .env', 'curl http://x', 'git commit -m "có dấu"']) {
+    ok(bdec(c, fullCfg, 'bypassPermissions') === null, `P4e AC1.2: guard-bash full cho qua: ${c}`);
+  }
+  ok(bdec('git commit -m "có dấu', fullCfg, 'bypassPermissions') === null, 'P4e AC1.2: full bỏ cả ASK_UNPARSABLE');
+  for (const c of ['git push origin main', 'git push --force']) {
+    ok(bdec(c, fullCfg, 'bypassPermissions')?.decision === 'ask', `P4e AC1.2: full vẫn hỏi push (fullKeep mặc định): ${c}`);
+    ok(bdec(c, { mode: 'full', fullKeep: [] }, 'bypassPermissions') === null, `P4e AC1.2: fullKeep rỗng bỏ H1: ${c}`);
+  }
+  for (const pm of ['default', undefined]) {
+    ok(bdec('cat .env', fullCfg, pm)?.decision === 'ask', `P4e AC1.5: guard-bash permission_mode=${pm} → .env vẫn ask`);
+    ok(bdec('git commit -m "có dấu"', fullCfg, pm)?.decision === 'deny', `P4e AC1.5: guard-bash permission_mode=${pm} → commit non-ASCII vẫn deny`);
+    ok(bdec('git push origin main', fullCfg, pm)?.decision === 'ask', `P4e AC1.5: guard-bash permission_mode=${pm} → push main vẫn ask`);
+  }
 }
