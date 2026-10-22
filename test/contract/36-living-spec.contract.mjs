@@ -244,4 +244,39 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(plain, { recursive: true, force: true });
     }
   }
+
+  // W10-legacy: thư mục request trước ngày P7 (hoặc không có tiền tố ngày) được miễn W10.
+  {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const noSection = ['# D', '## Tiêu chí chấp nhận', '- [ ] **AC1.1** — a', ''].join('\n');
+    const pure = (design, opts) => cr.checkRequest({ 'design.md': design }, { readSpec: () => null, ...opts }).map((w) => w.code);
+    ok(!pure(noSection, { legacy: true }).includes('W10'), 'W10-legacy: legacy true, thiếu mục → không W10');
+    ok(pure(noSection + '## Ảnh hưởng spec\n- ghost: thêm R1\n', { legacy: true }).includes('W11'),
+      'W10-legacy: legacy true vẫn báo W11 khi design có mục ảnh hưởng');
+    ok(pure(noSection, {}).includes('W10') && pure(noSection, { legacy: false }).includes('W10'),
+      'W10-legacy: không có legacy hoặc legacy false → vẫn W10');
+    ok(cr.SPEC_SINCE === '2026-10-21', 'W10-legacy: SPEC_SINCE là 2026-10-21');
+
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'living-legacy-'));
+    try {
+      const runCli = (name, strict) => {
+        const req = path.join(tmp, 'docs', 'requests', name);
+        fs.mkdirSync(req, { recursive: true });
+        fs.writeFileSync(path.join(req, 'design.md'), noSection);
+        const lines = [];
+        const orig = console.log;
+        console.log = (m) => lines.push(String(m));
+        let code;
+        try { code = cr.main(strict ? [req, '--strict'] : [req]); } finally { console.log = orig; }
+        return { code, out: lines.join('\n') };
+      };
+      const old = runCli('2026-10-20-x', true);
+      ok(!/W10/.test(old.out) && old.code === 0, 'W10-legacy: CLI thư mục 2026-10-20 → không W10, --strict exit 0');
+      const cur = runCli('2026-10-21-y', true);
+      ok(/\[W10\]/.test(cur.out) && cur.code === 1, 'W10-legacy: CLI thư mục 2026-10-21 (biên, không legacy) → W10, --strict exit 1');
+      const undated = runCli('legacy-z', false);
+      ok(!/W10/.test(undated.out), 'W10-legacy: CLI thư mục không có tiền tố ngày → không W10');
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }
 }

@@ -96,6 +96,9 @@ export function parseImpact(lines) {
   return res;
 }
 
+// Ngày P7 (spec sống) thêm mục "Ảnh hưởng spec"; thư mục request dated trước ngày này không có mục đó nên không bị W10.
+export const SPEC_SINCE = '2026-10-21';
+
 const CAP_RE = /^[a-z0-9][a-z0-9-]*$/;
 const REQ_ID_RE = /^[a-z0-9][a-z0-9-]*\/R[1-9]\d*$/;
 
@@ -125,7 +128,7 @@ export function parseSpec(text, folder) {
   return { reqs, problems, links };
 }
 
-export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs } = {}) {
+export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs, legacy } = {}) {
   const warnings = [];
   const warn = (file, line, code, msg) => warnings.push({ file, line, code, msg });
   const lines = {};
@@ -201,7 +204,7 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
   // Chỉ chạy khi caller cấp readSpec, để lời gọi cũ giữ nguyên hành vi W1–W9.
   if (readSpec && lines['design.md']) {
     const imp = parseImpact(lines['design.md']);
-    if (!imp.found) warn('design.md', 1, 'W10', 'design.md thiếu mục "## Ảnh hưởng spec" (liệt kê năng lực bị ảnh hưởng hoặc "Không ảnh hưởng: <lý do>")');
+    if (legacy === true) { /* thư mục request cũ: miễn W10 */ } else if (!imp.found) warn('design.md', 1, 'W10', 'design.md thiếu mục "## Ảnh hưởng spec" (liệt kê năng lực bị ảnh hưởng hoặc "Không ảnh hưởng: <lý do>")');
     else if (!imp.entries.length && !imp.none?.reason) warn('design.md', imp.line, 'W10', 'Mục "Ảnh hưởng spec" cần ít nhất một dòng "- <năng-lực>: thêm|đổi|bỏ R<n>" hoặc "Không ảnh hưởng: <lý do>" với lý do không rỗng');
     // Mỗi spec đọc và kiểm W14 một lần dù nhiều mục nhắc tới; tên sai định dạng không bao giờ tới readSpec để không đọc ngoài docs/specs.
     const cache = new Map();
@@ -347,7 +350,10 @@ export function main(argv) {
     try { return fs.readFileSync(p, 'utf8'); } catch { return null; }
   };
   const linkExists = (href, cap) => fs.existsSync(path.resolve(specsDir, cap, href));
-  const warnings = checkRequest(texts, { readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
+  // Thư mục không có tiền tố ngày coi là cũ (không rõ tuổi thì không cảnh báo).
+  const dated = path.basename(path.resolve(dir)).match(/^(\d{4}-\d{2}-\d{2})-/);
+  const legacy = !dated || dated[1] < SPEC_SINCE;
+  const warnings = checkRequest(texts, { legacy, readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
   for (const w of warnings) console.log(`WARN ${w.file}:${w.line} [${w.code}] ${w.msg}`);
   console.log(`${warnings.length} cảnh báo`);
   return strict && warnings.length ? 1 : 0;

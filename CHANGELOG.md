@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `check-request.mjs` skips W10 for request folders dated before 2026-10-21 (`SPEC_SINCE`) and for folders without a date prefix, so
+  `--strict` in CI no longer fails on request folders written before living specs (core 1.12.1). W11-W14 still run on any design that lists impact entries.
 - `aip init --full` omits the `.env` (`secrets`) rules from the generated `.claude/settings.json` when `.claude/aip-gate.json` has
   `allowEnvFiles: true` (strict `true`, checked once at generation; policy groups gain an optional `omitWhen: "allowEnvFiles"`).
 - Claude Code projects now get a generated `.claude/settings.json` (permissions only) on `aip init --full`, and only when the
@@ -16,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Living-spec review fixes (core 1.10.1; backend 1.8.17 and frontend 1.10.16 re-bumped for the baseline text): W13 now resolves the specs folder next to the request folder (nested layouts such
   as `repo/pkg/docs/...` no longer report a false W13), reports W13 once per capability, `R01` is flagged as W14, and a
   backtick-wrapped capability name in `## Ảnh hưởng spec` is accepted. The baseline documents the `## Ảnh hưởng spec`
-  section. Request folders written before living specs have no such section and now get W10, so `--strict` over them exits 1.
+  section. W10 applies only to request folders named `<yyyy-mm-dd>-<slug>` dated 2026-10-21 or later; older or undated folders have no such section and are skipped.
 
 ### Added
 
