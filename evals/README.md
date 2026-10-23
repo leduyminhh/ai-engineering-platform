@@ -18,23 +18,15 @@ Bộ case kiểm hành vi của plugin: Claude có chọn đúng skill với cá
 - `case.yaml` + `scaffold.sh`: case backend và workflows dùng để dựng file mẫu có lỗi (Java N+1; JS áp mã giảm giá ném TypeError). Script chỉ dùng heredoc Bash, không cần mạng.
 - Contract cấu trúc: `test/contract/95-evals.contract.mjs` (chạy trong `npm test`, không gọi model).
 
-## Chạy tay
+## Chạy bằng runner
 
-Điều kiện: plugin đã được cài ở chế độ plugin (không phải skills phẳng) để `claude plugin eval` tìm theo tên `<id>@ai-engineering-platform`; chế độ plugin được chọn bằng `--as-plugin` (xem README gốc); `--plugin` nhận một id mỗi lần nên cài từng plugin một lệnh, hoặc `--plugin all`.
-
-```bash
-npm run build
-aip install --provider claude --as-plugin --plugin engineering -g --yes
-aip install --provider claude --as-plugin --plugin backend -g --yes
-aip install --provider claude --as-plugin --plugin workflows -g --yes
-```
-
-Từ thư mục gốc repo (mỗi plugin một lệnh; `<id>` là `engineering`, `backend` hoặc `workflows`):
+Một lệnh cho một plugin (không cần `aip install -g`): runner build nếu thiếu `build/claude/plugins/<id>`, sao chép sang thư mục tạm, bỏ khoá `dependencies` khỏi `plugin.json`, chép `evals/<id>` vào đó, chạy `claude plugin eval` với `--no-publish --trust-plugin --allow-tools Write Edit --keep-temp`, chép trace từng lượt vào `evals/<id>/results/traces/`, in bảng theo grader và nhánh, rồi dọn thư mục tạm (gồm `claude-eval-*`).
 
 ```bash
-mkdir -p evals/<id>/results
-claude plugin eval <id>@ai-engineering-platform --eval-dir evals/<id> --ablation none --runs 3 --threshold 0.8 --max-cost-usd 5 --no-publish --json evals/<id>/results/latest.json
+node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd> [--runs 3] [--scaffold]
 ```
+
+`--scaffold` bắt buộc với `backend` và `workflows` (xem bảng bên dưới). Kết quả ghi ở `evals/<id>/results/latest.json`.
 
 Cờ thêm theo từng case (cờ `--allow-tools` và `--scaffold` áp cho mọi case trong lượt chạy đó):
 
