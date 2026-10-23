@@ -45,6 +45,7 @@ workflow.
 
 ## Report trả về
 
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - Oracle trước/sau, ghi theo loại: (a) `command`, `exit_code`, `status` đỏ → xanh; (b)/(e) ghi `file:line` đã sửa
   cho finding, review/re-scan lại do bước sau của workflow; (c) build/test trước/sau + evidence profile đã dùng;
   (d) kết quả chạy lại bước tái hiện trước/sau.

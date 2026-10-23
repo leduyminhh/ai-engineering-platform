@@ -37,6 +37,7 @@ Implementer backend: nhận một use-case/feature/contract được giao, sinh 
 
 ## Report trả về
 
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - `workflow_result`-style: slice đã sinh (aggregate/use-case/port/adapter, `file:line` các điểm chính), file
   contract đã cập nhật (nếu có).
 - Evidence lệnh đã chạy (`command`, `exit_code`, `status`, `summary`) cho build + test; không chạy được →

@@ -40,6 +40,7 @@ thủ quy ước đặt tên/cấu trúc của project, cho một scope được
 
 ## Report trả về
 
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - Danh sách finding theo contract đầu ra trong skill `core:principles` (`severity`, `category`, `location`, `evidence`, `impact`,
   `recommendation`, `confidence`) cho cả quality-gate lẫn convention-enforce, có cột OWASP/ASVS/CWE cho
   finding bảo mật khi ánh xạ được.

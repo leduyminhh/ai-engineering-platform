@@ -37,6 +37,7 @@ Viết đúng các file migration mới thể hiện kế hoạch schema đã đ
 5. Báo cáo; không chạy gì ngoài đọc file và lệnh git chỉ-đọc.
 
 ## Report trả về
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - Công cụ, version, engine đã nhận diện; thư mục migration; danh sách file migration mới (`file`) kèm pha
   (expand / migrate data / contract) mỗi file thuộc về.
 - `compensating_sql`: SQL bù dạng văn bản, đủ để áp nguyên văn (công cụ forward-only), hoặc "không có / công cụ có rollback".

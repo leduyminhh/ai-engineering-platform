@@ -35,6 +35,7 @@ không kết luận tối ưu có hiệu quả ngoài bảng số.
 5. Báo cáo.
 
 ## Report trả về
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - `measure`: bảng điều kiện đo + bảng số (thống kê chính theo P3: p95 load test / `Score` JMH / `median`
   pytest-benchmark, + độ lệch; load test ghi thêm p50/p99, throughput, error rate) + lệnh chạy.
 - `profile`: bottleneck + evidence (`file:line`, số đo, trích flame/EXPLAIN) + giả thuyết + danh sách file/hàm đề

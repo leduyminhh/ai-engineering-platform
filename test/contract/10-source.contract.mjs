@@ -96,6 +96,8 @@ export default async function run({ ok, ctx }) {
     if (a.model) ok(MODELS.includes(a.model), `agent ${a.id}: model hợp lệ (=${a.model})`);
     if (a.effort) ok(EFFORTS.includes(a.effort), `agent ${a.id}: effort hợp lệ (=${a.effort})`);
     for (const h of AGENT_HEADINGS) ok(a.body.includes(`## ${h}`), `agent ${a.id}: có heading "## ${h}"`);
+    const rep = (a.body.split(/^## Report trả về\s*$/m)[1] ?? '').split(/^## /m)[0];
+    ok(rep.includes('agent_result'), `SWC AC1.2: agent ${a.id}: Report trả về trỏ tới agent_result`);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
