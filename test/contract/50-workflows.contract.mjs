@@ -1,5 +1,5 @@
 // Contract workflows: drift guard workflow, hard-dependency và script Phase 1.
-import { checkGraph, checkGraphAgainstBody } from '../../cli/lib/workflows.mjs';
+import { checkGraph, checkGraphAgainstBody, workflowGraphErrors } from '../../cli/lib/workflows.mjs';
 import { readGraph } from '../../cli/lib/plugins.mjs';
 import { stripTemplateHeader } from '../../cli/lib/templates.mjs';
 
@@ -334,6 +334,14 @@ export default async function run({ ok, ctx }) {
       for (const s of workflows.stages) {
         ok(!s.body.includes('quay lại bước tương ứng'), `AC2.5: ${s.id} không còn "quay lại bước tương ứng"`);
       }
+      ok(workflowGraphErrors(workflows).length === 0, 'SWC AC3.3: workflowGraphErrors trên workflow thật → 0 lỗi');
+      const badWf = { stages: [
+        { id: 'workflow-x', body: '', graph: { schema: 2 } },
+        { id: 'workflow-orchestrator', body: '', graph: null },
+      ] };
+      const wErrs = workflowGraphErrors(badWf);
+      ok(wErrs.length > 0 && wErrs.every((m) => m.startsWith('workflow-x: ')),
+        'SWC AC3.1: workflowGraphErrors gắn id workflow vào lỗi graph, bỏ qua stage không có graph');
       const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-graph-'));
       try {
         const bad = path.join(tmp, 'graph.json');

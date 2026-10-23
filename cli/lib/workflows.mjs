@@ -261,6 +261,13 @@ export function checkGraphAgainstBody(graph, text) {
   return errs;
 }
 
+// Build gọi hàm này để graph sai dừng ngay ở `aip build`, không chỉ trong test của repo.
+export function workflowGraphErrors(workflows) {
+  return (workflows ? workflows.stages : [])
+    .filter((s) => s.graph)
+    .flatMap((s) => [...checkGraph(s.graph), ...checkGraphAgainstBody(s.graph, s.body)].map((m) => `${s.id}: ${m}`));
+}
+
 export function parseRegistry(text) {
   const rows = [];
   for (const line of (section(text, 'Registry') || '').split('\n')) {

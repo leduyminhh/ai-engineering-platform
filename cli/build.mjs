@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { loadPlugins, loadMarketplace, loadCore, loadWorkflows, loadPublished, REPO_ROOT } from './lib/plugins.mjs';
+import { workflowGraphErrors } from './lib/workflows.mjs';
 import { writeFiles, ensureDir, rmrf } from './lib/write.mjs';
 import { writeWizardReport } from './lib/report.mjs';
 
@@ -95,6 +96,12 @@ async function main() {
 
   if (targets.length === 0) {
     console.error(`[lỗi] Không tìm thấy adapter "${args.target}". Có: ${adapters.map((a) => a.name).join(', ')}`);
+    process.exit(1);
+  }
+
+  const graphErrs = workflowGraphErrors(workflows);
+  if (graphErrs.length) {
+    console.error(`[lỗi] graph.json không hợp lệ:\n  ${graphErrs.join('\n  ')}`);
     process.exit(1);
   }
 
