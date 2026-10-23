@@ -395,6 +395,30 @@ export default async function run({ ok, ctx }) {
     ok(fs.existsSync(path.join(subHost, '.claude', 'aip-gate.json')) && bashAt(subHost, 'cat .env')?.decision === 'ask',
       'P4e2 AC1.2: .claude là submodule mà repo con theo dõi aip-gate.json → không full');
 
+    // Submodule `.claude` chứa symlink đã commit tới cấu hình full chưa theo dõi của project khác: repo sở hữu `.claude` mới là nơi hỏi.
+    const trusted = mk('sub-link-trusted');
+    const subSrc3 = path.join(tmpT, 'sub-src3');
+    fs.mkdirSync(subSrc3, { recursive: true });
+    gitT(subSrc3, 'init', '-q');
+    gitT(subSrc3, 'config', 'user.name', 'aip-test');
+    gitT(subSrc3, 'config', 'user.email', 'aip-test@example.com');
+    fs.writeFileSync(path.join(subSrc3, 'README.md'), 'x');
+    gitT(subSrc3, 'add', 'README.md');
+    commitLink(subSrc3, 'aip-gate.json', '../../sub-link-trusted/.claude/aip-gate.json');
+    const subLinkHost = path.join(tmpT, 'sub-link-host');
+    fs.mkdirSync(subLinkHost, { recursive: true });
+    gitT(subLinkHost, 'init', '-q');
+    gitT(subLinkHost, 'config', 'user.name', 'aip-test');
+    gitT(subLinkHost, 'config', 'user.email', 'aip-test@example.com');
+    gitT(subLinkHost, '-c', 'protocol.file.allow=always', '-c', 'core.symlinks=true', 'submodule', 'add', '-q', subSrc3, '.claude');
+    gitT(subLinkHost, 'commit', '-q', '-m', 'sub');
+    if (!fs.lstatSync(path.join(subLinkHost, '.claude', 'aip-gate.json')).isSymbolicLink()) {
+      console.log('  [bỏ qua] P4e2 AC1.8: hệ thống không tạo được symlink thật (thiếu quyền)');
+    } else {
+      ok(asFull(trusted).bashEnv && bashAt(subLinkHost, 'cat .env')?.decision === 'ask',
+        'P4e2 AC1.8: .claude là submodule chứa symlink đã commit tới cấu hình full chưa theo dõi của project khác → không full');
+    }
+
     // AC1.3: đếm lời gọi `run` qua seam `tracked`.
     const counted = () => { let n = 0; const run = () => { n++; throw Object.assign(new Error('x'), { status: 1 }); }; return { count: () => n, tracked: (f) => gateTracked(f, { run }) }; };
     for (const [name, pm, cfgMode] of [['không bypass + full', 'default', 'full'], ['bypass + ask', bp, 'ask'], ['bypass + thiếu mode', bp, undefined]]) {

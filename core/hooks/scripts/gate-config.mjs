@@ -71,7 +71,7 @@ export function gateTracked(file, { run = lsFiles } = {}) {
   let linkedDir = false;
   try { linkedDir = lstatSync(path.dirname(file)).isSymbolicLink(); } catch { /* realpath bên dưới sẽ báo null */ }
   // `.claude` là link: ls-files không báo lỗi mà trả exit 1 cho đường dẫn xuyên link, nên hỏi chính mục `.claude`; link chưa commit ⇒ không đoán được ⇒ null.
-  const logical = linkedDir ? (ask(root, '.claude') === true ? true : null) : ask(root, `.claude/${path.basename(file)}`);
+  const logical = linkedDir ? (ask(root, '.claude') === true ? true : null) : ask(path.dirname(file), path.basename(file));
   let real;
   try { const rp = realpathSync.native(file); real = ask(path.dirname(rp), path.basename(rp)); } catch { real = null; }
   const res = logical === true || real === true ? true : logical === null || real === null ? null : false;

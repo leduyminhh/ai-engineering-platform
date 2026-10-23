@@ -114,7 +114,7 @@ const GIT_LABEL = {
   tracked: 'aip-gate.json được theo dõi bởi git ⇒ full bị bỏ qua',
   ignored: 'aip-gate.json không theo dõi, đã gitignore',
   open: 'aip-gate.json không theo dõi, chưa gitignore',
-  unknown: 'không xác định (không có git hoặc ngoài repo)',
+  unknown: 'không xác định (không có git, ngoài repo, hoặc đường dẫn là symlink chưa commit) ⇒ full bị bỏ qua',
 };
 
 const dump = (obj) => JSON.stringify(obj, null, 2) + '\n';
