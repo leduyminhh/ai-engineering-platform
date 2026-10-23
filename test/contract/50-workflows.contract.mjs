@@ -325,6 +325,7 @@ export default async function run({ ok, ctx }) {
       for (const s of pipelines) {
         ok(s.graph != null && s.graph.workflow === s.id, `AC1.1: ${s.id} có graph.json với graph.workflow = id`);
         if (!s.graph) continue;
+        // SWC AC3.3: graph thật (đủ max_attempts: 2 ở cạnh quay ngược) phải qua checkGraph.
         const gErrs = checkGraph(s.graph);
         ok(gErrs.length === 0, `AC1.1/AC1.2/AC1.3: ${s.id} graph hợp lệ${gErrs.length ? ' — ' + gErrs.join(' | ') : ''}`);
         const pErrs = checkGraphAgainstBody(s.graph, s.body);

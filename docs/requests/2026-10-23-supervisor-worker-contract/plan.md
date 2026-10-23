@@ -46,8 +46,7 @@ mọi agent trỏ tới `agent_result`. Không có runtime nào mới.
 **Phủ AC:** AC3.1, AC3.2, AC3.3
 **Files:**
 - Modify: `cli/lib/workflows.mjs` (`GRAPH_KEYS.onFail`, `checkGraph`)
-- Modify: `workflows/bugfix/graph.json`, `workflows/feature/graph.json`, `workflows/performance/graph.json`,
-  `workflows/security-review/graph.json`
+- Modify: `workflows/bugfix/graph.json`, `workflows/feature/graph.json`, `workflows/performance/graph.json`, `workflows/security-review/graph.json`
 - Test: `test/contract/50-workflows.contract.mjs`
 
 **Interfaces:**
@@ -108,9 +107,7 @@ mọi agent trỏ tới `agent_result`. Không có runtime nào mới.
 **Files:**
 - Modify: `core/principles/workflow-output-contract.md`
 - Modify: `cli/lib/workflows.mjs` (`WF_ANCHORS`)
-- Modify: `core/skills/artifact-templates/references/workflow.template.md`, `workflows/bugfix/WORKFLOW.md`,
-  `workflows/feature/WORKFLOW.md`, `workflows/performance/WORKFLOW.md`, `workflows/security-review/WORKFLOW.md`,
-  `workflows/orchestrator/WORKFLOW.md`
+- Modify: `core/skills/artifact-templates/references/workflow.template.md`, `workflows/bugfix/WORKFLOW.md`, `workflows/feature/WORKFLOW.md`, `workflows/performance/WORKFLOW.md`, `workflows/security-review/WORKFLOW.md`, `workflows/orchestrator/WORKFLOW.md`
 - Test: `test/contract/50-workflows.contract.mjs`
 
 **Interfaces:**
@@ -172,9 +169,7 @@ mọi agent trỏ tới `agent_result`. Không có runtime nào mới.
 ### Task 4: Bump version, build, lock và chạy full suite
 **Phủ AC:** AC3.3
 **Files:**
-- Modify: `core/.manifest.json`, `workflows/.manifest.json`, `plugins/backend/.manifest.json`,
-  `plugins/frontend/.manifest.json`, `plugins/data/.manifest.json`, `plugins/engineering/.manifest.json`,
-  `plugins/ops/.manifest.json`, `plugins/_versions.lock.json`
+- Modify: `core/.manifest.json`, `workflows/.manifest.json`, `plugins/backend/.manifest.json`, `plugins/frontend/.manifest.json`, `plugins/data/.manifest.json`, `plugins/engineering/.manifest.json`, `plugins/ops/.manifest.json`, `plugins/_versions.lock.json`
 - Test: `test/validate.mjs`
 
 - [ ] **Step 1: Bump version** tính từ giá trị đang có trên nhánh:
