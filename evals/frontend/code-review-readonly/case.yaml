@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: code-review-readonly
+description: Component React có lỗi key thiếu, ảnh thiếu alt và effect fetch thiếu cleanup; agent không được sửa file.
+context:
+  scaffold_script: scaffold.sh

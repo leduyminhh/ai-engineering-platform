@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: db-migration-change
+description: Project Spring + Flyway có bảng users; agent phải viết migration an toàn theo expand/contract và không tự chạy lên DB.
+context:
+  scaffold_script: scaffold.sh
