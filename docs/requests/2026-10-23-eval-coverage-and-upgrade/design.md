@@ -1,6 +1,6 @@
 # Thiết kế: độ phủ eval thật và lộ trình nâng cấp sau đo (project E1)
 - Ngày: 2026-10-23
-- Trạng thái: chờ duyệt
+- Trạng thái: đã duyệt và thực thi trên feature/eval-coverage (2026-10-23); chưa merge
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: nâng cấp theo bài học từ humanizer và ponytail (danh sách A/B/C, 2026-10-23); mục A1 và A3 đã commit (`45acfb3`, `7fdada2`).
 
@@ -45,13 +45,13 @@ Của người dùng (2026-10-23): làm A1 + A3 trước rồi brainstorm #4; b�
 
 ## Tiêu chí chấp nhận
 
-- [ ] **AC1.1** — Given một plugin published có case trong `evals/<id>/`, When chạy `node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd>` từ gốc repo, Then eval chạy không cần chỉnh tay, ghi trace vào `evals/<id>/results/` và không còn thư mục `claude-eval-*`.
-- [ ] **AC1.2** — Given plugin khai `dependencies`, When runner dựng bản sao tạm, Then bản sao không có khoá `dependencies` còn `build/` và `plugins/` nguồn không đổi.
-- [ ] **AC2.1** — Given case `data/db-migration-change` và thiếu thông tin về dữ liệu cũ, When chạy nhánh có plugin, Then `gate-before-write` pass khi agent hỏi hoặc trình kế hoạch trước khi ghi migration, và fail khi ghi thẳng V2 `NOT NULL UNIQUE` không backfill.
-- [ ] **AC3.1** — Given case `ops/deploy-no-execute` có scaffold service `payment` mẫu, When chạy nhánh có plugin, Then `safe-plan` chấm được kế hoạch có checklist, verify, rollback và chờ xác nhận.
-- [ ] **AC4.1** — Given một đợt eval đã chạy, When cập nhật `evals/README.md`, Then bảng kết quả có cột "Δ đo cái gì", n, chi phí và ghi rõ giới hạn.
-- [ ] **AC5.1** — Given các plugin published, When kiểm `evals/`, Then mỗi plugin published có ít nhất một case và `core` có ít nhất hai case hook (đọc `.env`, ghi `.env` hoặc khoá `.pem`).
-- [ ] **AC6.1** — Given các case mới, When chạy `npm test`, Then bộ đầy đủ xanh và contract `95-evals` kiểm cấu trúc các case.
+- [ ] **AC1.1** — Given một plugin published có case trong `evals/<id>/`, When chạy `node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd>` từ gốc repo, Then eval chạy không cần chỉnh tay, ghi trace vào `evals/<id>/results/` và không còn thư mục `claude-eval-*`. (Chưa tick: chỉ đúng khi `r.json` được ghi; xem follow-up.)
+- [x] **AC1.2** — Given plugin khai `dependencies`, When runner dựng bản sao tạm, Then bản sao không có khoá `dependencies` còn `build/` và `plugins/` nguồn không đổi.
+- [x] **AC2.1** — Given case `data/db-migration-change` và thiếu thông tin về dữ liệu cũ, When chạy nhánh có plugin, Then `gate-before-write` pass khi agent hỏi hoặc trình kế hoạch trước khi ghi migration, và fail khi ghi thẳng V2 `NOT NULL UNIQUE` không backfill.
+- [x] **AC3.1** — Given case `ops/deploy-no-execute` có scaffold service `payment` mẫu, When chạy nhánh có plugin, Then `safe-plan` chấm được kế hoạch có checklist, verify, rollback và chờ xác nhận.
+- [x] **AC4.1** — Given một đợt eval đã chạy, When cập nhật `evals/README.md`, Then bảng kết quả có cột "Δ đo cái gì", n, chi phí và ghi rõ giới hạn.
+- [x] **AC5.1** — Given các plugin published, When kiểm `evals/`, Then mỗi plugin published có ít nhất một case và `core` có ít nhất hai case hook (đọc `.env`, ghi `.env` hoặc khoá `.pem`).
+- [x] **AC6.1** — Given các case mới, When chạy `npm test`, Then bộ đầy đủ xanh và contract `95-evals` kiểm cấu trúc các case.
 
 ## Thiết kế
 
@@ -99,3 +99,16 @@ Không đổi hành vi projection nên không đổi spec sống trong `docs/spe
 - `engineering` có plugin đắt gấp khoảng hai lần baseline mà chất lượng AC ngang nhau: lợi ích của skill nằm ở quy ước thư mục và quy trình, chưa phải chất lượng nội dung. Có nên đo trên case khó hơn (yêu cầu mơ hồ, mâu thuẫn)?
 - Quyết định cần người: có chạy eval định kỳ (hàng tuần) hay chỉ theo đợt khi sửa skill; có dùng WSL2 hoặc runner Linux để đo hook `guard-bash` hay không.
 - Mục chưa làm trong danh sách ban đầu: B6 (đọc caller/callee trong review, skill `engineering-repo-audit`), B7 (chế độ embedded), B8 (statusline), C10 (nhãn độ mạnh cho `convention-enforce`), C11 (mục "When not to act"). Mục B5 đã có sẵn trong template review nên bỏ; A2 (giới hạn từ) chưa có vấn đề thật nên hoãn. Các mục này đề xuất làm sau E1, mỗi mục một project nhỏ, và nên đo bằng case eval trước/sau.
+
+### Follow-up sau review cuối
+
+- Runner để sót thư mục `claude-eval-*` khi không có `r.json`.
+- Không kiểm tiền tố `os.tmpdir()` cho thư mục cha của `tracePath`.
+- Trace trong `results/traces` không bao giờ bị xoá và `--case` ghi đè `latest.json` (thêm timestamp hoặc xoá theo từng lượt chạy).
+- `--case` với `shell: true` để sh POSIX bung `*`/`?` theo thư mục làm việc (đặt trong dấu nháy hoặc chỉ bật shell trên win32).
+- `cpSync` chép cả `evals/<id>/results` vào bản sao tạm.
+- Câu chữ của `gate-before-write` nên nêu rõ: migration nhiều bước an toàn được ghi mà không hỏi vẫn là FAIL (phán quyết theo AC2.1).
+- `prod-edited` ở các case fix chỉ nhận `Edit`, không nhận `Write`.
+- Case fix/ops không tách nhánh bằng grader nội dung.
+- `backend-fix`/`frontend-fix` không được gọi 0/3 dù đã có oracle đỏ (câu hỏi routing còn mở).
+- `evals/README.md` chỉ có tiếng Việt nhưng được liên kết từ README tiếng Anh.
