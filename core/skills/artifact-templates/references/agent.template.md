@@ -52,6 +52,8 @@ Khi được gọi:
 
 ## Report trả về
 
+Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
+
 | Trường | Nội dung |
 |---|---|
 | Kết quả | <done / blocked / not_run + một câu> |

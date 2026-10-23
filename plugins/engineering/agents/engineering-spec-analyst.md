@@ -46,6 +46,7 @@ vào đúng cấu trúc tài liệu của project, và ghi ADR cho các quyết 
 
 ## Report trả về
 
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - Danh sách file đã ghi trong `docs/` (`requirement.md`, `design.md`, `tasks.md`, ADR, diagram nếu có) kèm tóm tắt nội
   dung mỗi file.
 - Evidence mỗi bước verify theo dạng `command` (hành động kiểm chứng đã làm, vd `"đối chiếu spec với

@@ -47,6 +47,7 @@ pyramid của skill `frontend-testing`.
 
 ## Report trả về
 
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - Test đã thêm/sửa (số lượng + tầng + `file:line`); với test tái hiện bug, nêu rõ trạng thái đỏ và lý do đỏ.
 - Evidence lệnh đã chạy (`command`, `exit_code`, `status`, `summary`); không chạy được → `not_run` + `reason`.
 - `remaining_risks`: state/nhánh chưa phủ, phần bỏ qua vì thiếu handler msw, giả định khi thiếu thông tin.

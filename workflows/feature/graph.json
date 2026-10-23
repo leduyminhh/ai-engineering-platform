@@ -70,7 +70,7 @@
       },
       "next": "test",
       "on_fail": [
-        { "to": "design-contract", "when": "contract lệch khi nối data → quay lại Bước 3" },
+        { "to": "design-contract", "when": "contract lệch khi nối data → quay lại Bước 3", "max_attempts": 2 },
         { "to": "ask_user", "when": "integrator trả blocked vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại" }
       ],
       "gate": { "type": "auto" }
@@ -89,7 +89,7 @@
       },
       "next": "review",
       "on_fail": [
-        { "to": "implement", "when": "test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test)" }
+        { "to": "implement", "when": "test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test)", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },
@@ -103,9 +103,9 @@
       },
       "next": "docs",
       "on_fail": [
-        { "to": "implement", "when": "còn finding blocker, hoặc drift contract↔code → quay lại Bước 4 sửa code" },
-        { "to": "test", "when": "còn finding blocker → quay lại Bước 5 sửa test" },
-        { "to": "design-contract", "when": "drift contract↔code → quay lại Bước 3 sửa contract" }
+        { "to": "implement", "when": "còn finding blocker, hoặc drift contract↔code → quay lại Bước 4 sửa code", "max_attempts": 2 },
+        { "to": "test", "when": "còn finding blocker → quay lại Bước 5 sửa test", "max_attempts": 2 },
+        { "to": "design-contract", "when": "drift contract↔code → quay lại Bước 3 sửa contract", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },

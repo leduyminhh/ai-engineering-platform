@@ -40,6 +40,7 @@ Incident investigator: triage một sự cố production được giao, khoanh v
 
 ## Report trả về
 
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - RCA đầy đủ: triệu chứng, dòng thời gian, nguyên nhân gốc (phân biệt trigger vs root cause), hành động
   khắc phục đề xuất, phòng ngừa.
 - Evidence dạng `command` (hành động quan sát đã làm, vd `"đọc log/metric/trace khung <thời gian>"`),

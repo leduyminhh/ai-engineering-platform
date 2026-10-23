@@ -1,5 +1,5 @@
 // Contract workflows: drift guard workflow, hard-dependency và script Phase 1.
-import { checkGraph, checkGraphAgainstBody } from '../../cli/lib/workflows.mjs';
+import { checkGraph, checkGraphAgainstBody, workflowGraphErrors } from '../../cli/lib/workflows.mjs';
 import { readGraph } from '../../cli/lib/plugins.mjs';
 import { stripTemplateHeader } from '../../cli/lib/templates.mjs';
 
@@ -16,6 +16,10 @@ export default async function run({ ok, ctx }) {
     ok(missingAnchors(tpl27.replace('Thiếu điều kiện nào → dừng', 'Thiếu điều kiện → dừng')).length === 1,
       'missingAnchors: lệch một chữ → báo thiếu');
     ok(missingAnchors(tpl27.replace(/\n/g, '\r\n')).length === 0, 'missingAnchors: chấp nhận CRLF');
+    const oc27 = fs.readFileSync(path.join(CORE_DIR, 'principles', 'workflow-output-contract.md'), 'utf8').replace(/\r\n/g, '\n');
+    const ar27 = oc27.split('agent_result:\n')[1] || '';
+    ok(/^\s+status:/m.test(ar27.split('```')[0]),
+      'SWC AC1.1: contract có agent_result với status');
     const fx27 = registrySignals(['## Registry', '| id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |', '|---|---|---|---|---|',
       '| `workflow-x` | "a b", stacktrace, "c" | low | — | x |', '## Khác'].join('\n'));
     ok(JSON.stringify(fx27.get('workflow-x')) === '["a b","c"]', 'registrySignals: chỉ lấy cụm trong ngoặc kép');
@@ -138,7 +142,7 @@ export default async function run({ ok, ctx }) {
           on_fail: [{ to: 'blocked', when: 'đỏ' }], gate: { type: 'auto' } },
         { id: 'implement', n: 2, title: 'Implement',
           run: { agents: ['a-one', { id: 'a-two' }], skills: [{ id: 's-one', when: 'chỉ khi có API' }], parallel: true },
-          next: 'commit', on_fail: [{ to: 'baseline', when: 'lệch contract' }], gate: { type: 'auto' } },
+          next: 'commit', on_fail: [{ to: 'baseline', when: 'lệch contract', max_attempts: 2 }], gate: { type: 'auto' } },
         { id: 'commit', n: 3, title: 'Commit', run: { skills: ['git-workflow'] }, next: 'done',
           on_fail: [{ to: 'ask_user', when: 'người dùng yêu cầu sửa thêm' }],
           gate: { type: 'human', review: 'Diff', approve: 'done', reject: 'ask_user' } },
@@ -190,6 +194,29 @@ export default async function run({ ok, ctx }) {
     }
     ok(checkGraph(mut((g) => { g.steps[s2].run.agents[1] = { id: 'a-two', after: 'a-one' }; })).length === 0,
       'AC1.1: after trỏ id khác cùng bước → hợp lệ');
+
+    const attemptCases = {
+      'AC3.1: quay ngược thiếu max_attempts': [(g) => { delete g.steps[s2].on_fail[0].max_attempts; }, 'thiếu max_attempts', 'implement'],
+      'AC3.1: tự trỏ thiếu max_attempts': [(g) => { g.steps[s2].on_fail.push({ to: 'implement', when: 'x' }); }, 'thiếu max_attempts', 'implement'],
+      'AC3.1: max_attempts = 0': [(g) => { g.steps[s2].on_fail[0].max_attempts = 0; }, 'số nguyên ≥ 1', 'implement'],
+      'AC3.1: max_attempts = 1.5': [(g) => { g.steps[s2].on_fail[0].max_attempts = 1.5; }, 'số nguyên ≥ 1', 'implement'],
+      'AC3.1: max_attempts = "2"': [(g) => { g.steps[s2].on_fail[0].max_attempts = '2'; }, 'số nguyên ≥ 1', 'implement'],
+      'AC3.2: max_attempts ở cạnh tới ask_user': [(g) => { g.steps[s3].on_fail[0].max_attempts = 2; }, 'chỉ dùng cho cạnh quay ngược', 'commit'],
+      'AC3.2: max_attempts ở cạnh tiến': [(g) => { g.steps[s1].on_fail.push({ to: 'implement', when: 'x', max_attempts: 2 }); }, 'chỉ dùng cho cạnh quay ngược', 'baseline'],
+      'AC3.2: max_attempts ở cạnh human reject': [(g) => {
+        g.steps[s3].gate.reject = 'implement';
+        g.steps[s3].on_fail = [{ to: 'implement', when: 'x', max_attempts: 2 }];
+      }, 'chỉ dùng cho cạnh quay ngược', 'commit'],
+      'AC3.2: human, cạnh quay ngược khác reject': [(g) => { g.steps[s3].on_fail.push({ to: 'baseline', when: 'x' }); }, 'thiếu max_attempts', 'commit'],
+    };
+    for (const [name, [fn, want, at]] of Object.entries(attemptCases)) {
+      const errs = checkGraph(mut(fn));
+      ok(errs.some((m) => m.includes(want) && m.includes(at)), `SWC ${name}${errs.length ? '' : ' (không có lỗi nào)'}`);
+    }
+    ok(checkGraph(mut((g) => { g.steps[s3].gate.reject = 'implement'; g.steps[s3].on_fail = [{ to: 'implement', when: 'x' }]; })).length === 0,
+      'SWC AC3.2: human reject không có max_attempts → hợp lệ');
+    ok(!checkGraph(mut((g) => { g.steps[s2].on_fail[0].to = 'nowhere'; })).some((m) => m.includes('max_attempts')),
+      'SWC AC3.1: đích không tồn tại không kéo theo lỗi max_attempts');
 
     // Mỗi cạnh được kiểm riêng; đặt đích sai ở cả cạnh đối ứng (next/approve, on_fail/reject) để lỗi khác không che mất cạnh đang thử.
     const targetCases = {
@@ -298,6 +325,7 @@ export default async function run({ ok, ctx }) {
       for (const s of pipelines) {
         ok(s.graph != null && s.graph.workflow === s.id, `AC1.1: ${s.id} có graph.json với graph.workflow = id`);
         if (!s.graph) continue;
+        // SWC AC3.3: graph thật (đủ max_attempts: 2 ở cạnh quay ngược) phải qua checkGraph.
         const gErrs = checkGraph(s.graph);
         ok(gErrs.length === 0, `AC1.1/AC1.2/AC1.3: ${s.id} graph hợp lệ${gErrs.length ? ' — ' + gErrs.join(' | ') : ''}`);
         const pErrs = checkGraphAgainstBody(s.graph, s.body);
@@ -306,6 +334,14 @@ export default async function run({ ok, ctx }) {
       for (const s of workflows.stages) {
         ok(!s.body.includes('quay lại bước tương ứng'), `AC2.5: ${s.id} không còn "quay lại bước tương ứng"`);
       }
+      ok(workflowGraphErrors(workflows).length === 0, 'SWC AC3.3: workflowGraphErrors trên workflow thật → 0 lỗi');
+      const badWf = { stages: [
+        { id: 'workflow-x', body: '', graph: { schema: 2 } },
+        { id: 'workflow-orchestrator', body: '', graph: null },
+      ] };
+      const wErrs = workflowGraphErrors(badWf);
+      ok(wErrs.length > 0 && wErrs.every((m) => m.startsWith('workflow-x: ')),
+        'SWC AC3.1: workflowGraphErrors gắn id workflow vào lỗi graph, bỏ qua stage không có graph');
       const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-graph-'));
       try {
         const bad = path.join(tmp, 'graph.json');

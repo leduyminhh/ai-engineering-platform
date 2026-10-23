@@ -90,7 +90,7 @@
       },
       "next": "fix",
       "on_fail": [
-        { "to": "validate-findings", "when": "test đã viết đúng mà vẫn xanh → nghi false positive, quay lại Bước 4 validate lại" }
+        { "to": "validate-findings", "when": "test đã viết đúng mà vẫn xanh → nghi false positive, quay lại Bước 4 validate lại", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },
@@ -118,7 +118,7 @@
       "run": { "agents": ["engineering-quality-auditor"] },
       "next": "commit",
       "on_fail": [
-        { "to": "fix", "when": "finding đã sửa vẫn còn xuất hiện → quay lại Bước 8 sửa lại cho đúng" }
+        { "to": "fix", "when": "finding đã sửa vẫn còn xuất hiện → quay lại Bước 8 sửa lại cho đúng", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },

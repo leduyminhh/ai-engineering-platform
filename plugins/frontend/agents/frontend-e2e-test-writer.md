@@ -33,6 +33,7 @@ Viết và ổn định e2e test cho các luồng đã được duyệt, làm l�
 
 ## Report trả về
 
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - Bảng test ↔ AC (`file:line`); test giữ đỏ vì bug thật + lý do + đường dẫn trace.
 - Evidence theo contract đầu ra trong `core:principles` (`command`, `exit_code`, `status`, `summary`); không chạy
   được → `not_run` + `reason`.

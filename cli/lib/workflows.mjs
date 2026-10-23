@@ -14,6 +14,7 @@ export const WF_ANCHORS = [
   '| Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |',
   '| Tình huống | Hành động |',
   'Trả về đúng khối sau; mục nào không chạy được ghi `status: not_run` kèm `reason`.',
+  'Supervisor (session chính) kiểm `agent_result` của worker và giới hạn retry theo contract đầu ra (`core:principles`).',
 ];
 
 function section(text, heading) {
@@ -85,7 +86,7 @@ const GRAPH_KEYS = {
   step: ['id', 'n', 'title', 'run', 'next', 'on_fail', 'gate'],
   run: ['session', 'agents', 'skills', 'parallel'],
   item: ['id', 'when', 'after'],
-  onFail: ['to', 'when'],
+  onFail: ['to', 'when', 'max_attempts'],
   gate: ['type', 'review', 'approve', 'reject'],
 };
 function unknownKeys(obj, allowed, where, e) {
@@ -149,6 +150,7 @@ export function checkGraph(graph) {
   if (!isStr(graph.start)) errs.push('graph: thiếu "start"');
   if (!Array.isArray(graph.steps) || !graph.steps.length) return [...errs, 'graph: "steps" phải là mảng không rỗng'];
   const seen = new Set();
+  const nOf = new Map(graph.steps.filter(isObj).map((s) => [s.id, s.n]));
   graph.steps.forEach((s, i) => {
     if (!isObj(s)) { errs.push(`bước #${i + 1}: phải là object`); return; }
     const at = isStr(s.id) ? s.id : `#${i + 1}`;
@@ -169,6 +171,16 @@ export function checkGraph(graph) {
         if (!isObj(f) || !isStr(f.to) || !isStr(f.when)) e(`on_fail[${j}] cần "to" và "when"`);
         // Fail không bao giờ dẫn tới hoàn tất; cho phép sẽ để vòng lặp vô hạn lọt qua kiểm reachability tới done.
         else if (f.to === 'done') e(`on_fail[${j}] không được trỏ tới "done" (dùng "blocked")`);
+        // Đích không tồn tại đã có lỗi riêng ở vòng reachability; không báo thêm max_attempts.
+        if (!isObj(f) || !isStr(f.to) || f.to === 'done' || !(GRAPH_TERMINALS.includes(f.to) || nOf.has(f.to))) return;
+        // Cạnh gate.reject được miễn trần: người dùng đã nằm trong vòng và tự quyết định có quay lại hay không.
+        const g = s.gate;
+        const exempt = GRAPH_TERMINALS.includes(f.to) || (isObj(g) && g.type === 'human' && f.to === g.reject);
+        const back = !exempt && nOf.has(f.to) && nOf.get(f.to) <= s.n;
+        const has = f.max_attempts !== undefined;
+        if (back && !has) e(`on_fail[${j}] quay ngược tới "${f.to}" thiếu max_attempts`);
+        else if (has && !back) e(`on_fail[${j}] max_attempts chỉ dùng cho cạnh quay ngược`);
+        else if (has && !(Number.isInteger(f.max_attempts) && f.max_attempts >= 1)) e(`on_fail[${j}] max_attempts phải là số nguyên ≥ 1`);
       });
     }
     const g = s.gate;
@@ -247,6 +259,13 @@ export function checkGraphAgainstBody(graph, text) {
     for (const n of back) if (!onFail.some((f) => (byN.get(n) || {}).id === f.to)) e(`văn xuôi "quay lại Bước ${n}" nhưng graph thiếu cạnh on_fail tới bước ${n}`);
   });
   return errs;
+}
+
+// Build gọi hàm này để graph sai dừng ngay ở `aip build`, không chỉ trong test của repo.
+export function workflowGraphErrors(workflows) {
+  return (workflows ? workflows.stages : [])
+    .filter((s) => s.graph)
+    .flatMap((s) => [...checkGraph(s.graph), ...checkGraphAgainstBody(s.graph, s.body)].map((m) => `${s.id}: ${m}`));
 }
 
 export function parseRegistry(text) {

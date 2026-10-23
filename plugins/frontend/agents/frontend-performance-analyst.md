@@ -33,6 +33,7 @@ skills: "frontend-performance"
 5. Báo cáo.
 
 ## Report trả về
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - `measure`: bảng điều kiện đo + bảng số (median LCP/TBT/CLS, kích thước bundle, độ lệch) + lệnh chạy; nêu rõ số lab, không
   phải INP.
 - `profile`: bottleneck + evidence (số đo, `file:line` hoặc tên chunk/component) + giả thuyết + danh sách file/hàm đề xuất

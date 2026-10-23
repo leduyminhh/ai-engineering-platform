@@ -38,7 +38,7 @@
       },
       "next": "evidence",
       "on_fail": [
-        { "to": "context", "when": "không tái hiện được bug → quay lại Bước 2 làm rõ bối cảnh" },
+        { "to": "context", "when": "không tái hiện được bug → quay lại Bước 2 làm rõ bối cảnh", "max_attempts": 2 },
         { "to": "ask_user", "when": "hoặc hỏi người dùng bước tái hiện chính xác hơn" }
       ],
       "gate": { "type": "auto" }
@@ -83,7 +83,7 @@
       },
       "next": "regression",
       "on_fail": [
-        { "to": "root-cause", "when": "fix không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause" },
+        { "to": "root-cause", "when": "fix không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause", "max_attempts": 2 },
         { "to": "ask_user", "when": "agent trả blocked → hỏi người dùng mở rộng danh sách file rồi gọi lại" }
       ],
       "gate": { "type": "auto" }
@@ -101,7 +101,7 @@
       },
       "next": "review",
       "on_fail": [
-        { "to": "fix", "when": "có test khác đỏ do fix gây ra → quay lại Bước 6 điều chỉnh fix" }
+        { "to": "fix", "when": "có test khác đỏ do fix gây ra → quay lại Bước 6 điều chỉnh fix", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },
@@ -115,7 +115,7 @@
       },
       "next": "commit",
       "on_fail": [
-        { "to": "fix", "when": "còn finding blocker → quay lại Bước 6 sửa, review lại phần đã sửa" }
+        { "to": "fix", "when": "còn finding blocker → quay lại Bước 6 sửa, review lại phần đã sửa", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },

@@ -29,6 +29,51 @@ Dùng cho reviewer, quality-auditor. Severity giữ thang của skill `*-code-re
   confidence: high      # high | medium | low
 ```
 
+## Agent result
+
+Mọi worker agent kết thúc bằng khối này; `status` là bắt buộc:
+
+```yaml
+agent_result:
+  agent: <agent-id>
+  status: completed     # completed | failed | blocked
+  summary: "<1–3 câu>"
+  changes: { added: [], modified: [], deleted: [] }
+  validation: [ <evidence> ]
+  findings: [ <finding> ]
+  questions: []         # câu hỏi cho người dùng/bước gọi; không rỗng thường đi kèm status: blocked
+  remaining_risks: []
+```
+
+## Kiểm đầu ra worker
+
+Supervisor là session chính (orchestrator hoặc workflow đang chạy). Mỗi lần nhận `agent_result`, áp các luật
+sau trước khi đi `next`:
+
+- Có `status`.
+- Mỗi finding có `location` không rỗng và có `evidence`. `location` là `file:line` khi finding gắn với code;
+  với log, số đo hoặc tài liệu thì là tham chiếu tới nguồn đó.
+- `status: completed` thì không có `validation` nào ở trạng thái `failed`.
+- Mọi file trong `changes` thuộc danh sách file đã giao (với agent có danh sách).
+
+Kết quả không đạt bất kỳ luật nào là **đầu ra hỏng**. Xử lý theo loại kết quả:
+
+- **Đầu ra hỏng** → giao lại cho chính worker đó, kèm luật bị vi phạm, tối đa 2 lần. Không đi theo cạnh nào
+  của graph. Hết ngưỡng → `ask_user`.
+- **`status: blocked`** → `ask_user` ngay, không retry (đi cạnh `on_fail` tới `ask_user`/`blocked` nếu bước có); chuyển `questions[]` của worker cho người dùng.
+- **`status: failed`**, hoặc đầu ra hợp lệ nhưng gate trượt → đi cạnh `on_fail` khớp `when`, tính lượt theo
+  mục "Retry có ngưỡng".
+
+## Retry có ngưỡng
+
+- Cạnh `on_fail` quay ngược khai báo `max_attempts` trong `graph.json`; mỗi cạnh quay ngược được đi tối đa
+  `max_attempts` lần trong một lần chạy workflow. `graph.json` nằm cùng thư mục với `SKILL.md`/`WORKFLOW.md`
+  của workflow; không đọc được hoặc cạnh thiếu `max_attempts` thì Supervisor dùng 2.
+- Bộ đếm tính riêng cho từng cạnh và không reset khi workflow đi tiếp. Supervisor tự đếm trong hội thoại,
+  không ghi file state.
+- Lần thứ `max_attempts + 1` cần đi cạnh đó → chuyển sang `ask_user`, kèm lý do trượt của từng lượt.
+- Cạnh `gate.reject` của gate `human` và cạnh tới `blocked`/`ask_user` không có `max_attempts`.
+
 ## Result contract
 
 Mọi workflow kết thúc bằng:

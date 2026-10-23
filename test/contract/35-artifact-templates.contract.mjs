@@ -172,6 +172,7 @@ export default async function run({ ok, ctx }) {
     ok(/chạy[^\n]*→[^\n]*sửa[^\n]*→[^\n]*chạy/i.test(proc), 'template agent: Quy trình có bước kiểm chứng chạy → sửa → chạy lại');
     const rep = section('Report trả về');
     for (const r of ['Kết quả', 'Evidence', 'File đã đổi', 'Rủi ro còn lại']) ok(rep.includes(`| ${r} |`), `template agent: Report có dòng "| ${r} |"`);
+    ok(rep.includes('agent_result'), 'SWC AC1.2: template agent: Report trỏ tới agent_result');
   }
 
   // 3d. Requirement / design / plan: validator là scripts/check-request.mjs (cảnh báo cấu trúc AC); ở đây pin thêm heading và mẫu dòng.

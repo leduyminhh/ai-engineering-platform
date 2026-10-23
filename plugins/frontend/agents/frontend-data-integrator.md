@@ -30,6 +30,7 @@ Hiện thực tầng data cho component đã có, bám contract làm nguồn s�
 
 ## Report trả về
 
+- Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
 - File đã thêm/sửa theo tầng; endpoint ↔ hook ↔ container.
 - Evidence theo contract đầu ra trong `core:principles`; phần không chạy được → `not_run` + `reason`.
 - `remaining_risks`: endpoint chưa nối, trạng thái chưa có test msw, giả định về xử lý lỗi/auth.
