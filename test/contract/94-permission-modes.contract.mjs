@@ -172,9 +172,9 @@ export default async function run({ ok, ctx }) {
     const proj = path.join(tmp7, 'proj').replaceAll('\\', '/');
     const extra7 = path.join(tmp7, 'extra').replaceAll('\\', '/');
     const scratch = path.join(tmp7, 'scratch').replaceAll('\\', '/');
-    const h6b = (command, { config = { mode: 'full' }, pm = 'bypassPermissions' } = {}) => bash.decide(
+    const h6b = (command, { config = { mode: 'full' }, pm = 'bypassPermissions', allowEnv = false } = {}) => bash.decide(
       { tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: pm, scratchpad_dir: scratch },
-      { currentBranch: () => 'feature/x', allowEnv: () => false, config, repoRoot: proj });
+      { currentBranch: () => 'feature/x', allowEnv: () => allowEnv, config, repoRoot: proj });
     const table = {
       deny: ['echo a>/tmp/x', 'echo a>>/tmp/x', 'cmd 2>/tmp/x', 'echo a>"/tmp/x y"', 'rm -rf ../x', 'rm /etc/x', 'mv a /tmp/b', 'echo x > /tmp/y', 'del C:\\Windows\\x', 'cd /tmp && rm x', 'rm a; rm /etc/b',
         'rm -rf $X; rm /etc/b', 'cp a /tmp/b', 'rm /etc/x "unclosed', 'rm a; rm /etc/b && echo "$(x'],
@@ -205,6 +205,18 @@ export default async function run({ ok, ctx }) {
         const d = h6b(c);
         const got = d ? d.decision : 'pass';
         ok(got === want, `P4e AC1.10: guard-bash full, bí mật "${c}" → ${want} (got ${got})`);
+      }
+    }
+    // N1: allowEnvFiles bật thì .env mở như ở ask (kể cả ngoài root); khoá vẫn chỉ mở trong root.
+    const envTable = {
+      ask: ['cat ~/.ssh/id_rsa', 'cat ../x/server.pem', 'cat /etc/ssl/server.key'],
+      pass: ['cat .env', 'cat ./config/.env.local', 'cat ../other/.env', 'cat ./key.pem'],
+    };
+    for (const [want, cmds] of Object.entries(envTable)) {
+      for (const c of cmds) {
+        const d = h6b(c, { allowEnv: true });
+        const got = d ? d.decision : 'pass';
+        ok(got === want, `P4e AC1.10: full + allowEnvFiles "${c}" → ${want} (got ${got})`);
       }
     }
     ok(h6b('cat ~/.ssh/id_rsa', { pm: 'default' })?.decision === 'ask' && h6b('cat .env', { pm: 'default' })?.decision === 'ask',

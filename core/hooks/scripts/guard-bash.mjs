@@ -377,7 +377,11 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const secretAsk = { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
   if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk;
   // Ở full, bí mật chỉ mở trong root của project: đường dẫn bí mật nằm ngoài root hoặc không xác định được vẫn hỏi (khớp guard-files).
-  if (hits(SECRET) && full() && secretOutsideRoots([segs, naiveSegments(cmd)], cwd, rootsOf(), hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET)) return secretAsk;
+  if (hits(SECRET) && full()) {
+    // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
+    const secretRe = hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET;
+    if (hits(secretRe) && secretOutsideRoots([segs, naiveSegments(cmd)], cwd, rootsOf(), secretRe)) return secretAsk;
+  }
   return null;
 }
 
