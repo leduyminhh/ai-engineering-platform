@@ -1,7 +1,7 @@
 # Thiết kế: chuẩn hóa docs/spec cho luồng superpowers (project 1/5)
 
 - Ngày: 2026-10-20
-- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `6913753` (2026-10-20).
+- Trạng thái: merged — master `6913753` (2026-10-20).
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P1 (xu hướng 3, 4)
 - Phụ thuộc: project 1b [`../2026-10-20-artifact-templates/design.md`](../2026-10-20-artifact-templates/design.md) làm trước. Template requirement/design/plan (§4.2, AC2.x) sẽ lấy từ skill core `artifact-templates` thay vì `templates/init/docs/requests/_TEMPLATE/`; plan của project này cập nhật sau khi 1b xong.
 

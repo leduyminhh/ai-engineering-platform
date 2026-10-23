@@ -1,6 +1,6 @@
 # Thiết kế: chạy agent không người canh — công thức CI và runner (project P6)
 - Ngày: 2026-10-21
-- Trạng thái: đã duyệt 2026-10-22; P6a đã merge master ebfef4a; P6b chưa hiện thực
+- Trạng thái: in-progress — duyệt 2026-10-22; P6a đã merge master ebfef4a; P6b chưa hiện thực
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P6 (xu hướng 6, 7, 8)
 

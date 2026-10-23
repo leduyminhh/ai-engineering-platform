@@ -8,7 +8,7 @@ Bỏ khối này khi chép template ra dùng.
 
 # Thiết kế: <tên>
 - Ngày: <yyyy-mm-dd>
-- Trạng thái: <chờ duyệt | đã duyệt>
+- Trạng thái: <draft | approved | in-progress | merged | abandoned> — <ghi chú, vd hash merge>
 - Requirement: <link requirement.md, hoặc "không có">
 ## Vấn đề và lý do
 <...>

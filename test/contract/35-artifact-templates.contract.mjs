@@ -431,4 +431,22 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   }
+
+  // 7. check-request.mjs: trạng thái request (W15–W16), một hành vi nhiều đầu vào.
+  {
+    const cr = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
+    const cases = [
+      { name: 'merged còn plan.md → W16', status: 'merged — master `abc1234`', plan: true, code: 'W16' },
+      { name: 'abandoned còn plan.md → W16', status: 'abandoned', plan: true, code: 'W16' },
+      { name: 'merged đã xoá plan.md → sạch', status: 'merged', plan: false, code: null },
+      { name: 'in-progress còn plan.md → sạch', status: 'in-progress — chờ duyệt', plan: true, code: null },
+      { name: 'giá trị cũ không thuộc tập → W15', status: 'đã duyệt', plan: false, code: 'W15' },
+    ];
+    for (const c of cases) {
+      const texts = { 'design.md': ['# T', `- Trạng thái: ${c.status}`, '## 3. Tiêu chí chấp nhận', '- [ ] **AC1.1** — Given a When b Then c', ''].join('\n') };
+      if (c.plan) texts['plan.md'] = ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1', ''].join('\n');
+      const codes = cr.checkRequest(texts).map((w) => w.code).filter((k) => k === 'W15' || k === 'W16');
+      ok(c.code ? codes.length === 1 && codes[0] === c.code : codes.length === 0, `check-request trạng thái: ${c.name}`);
+    }
+  }
 }

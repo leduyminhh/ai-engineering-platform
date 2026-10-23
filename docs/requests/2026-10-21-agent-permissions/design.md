@@ -1,6 +1,6 @@
 # Thiết kế: quyền cho agent và cổng MCP (project P4)
 - Ngày: 2026-10-21
-- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `e363048` (2026-10-21).
+- Trạng thái: merged — master `e363048` (2026-10-21).
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P4 (xu hướng 8, 5)
 

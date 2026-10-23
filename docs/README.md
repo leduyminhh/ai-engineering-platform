@@ -7,9 +7,16 @@ or PR. Do not use it as a dumping ground for generated reports.
 
 ## Structure
 
-| Folder | What it owns |
-| --- | --- |
-| `superpowers/specs/` | Design specs from structured development work — durable design decisions and implementation boundaries. |
+| Folder | What it owns | Lifetime |
+| --- | --- | --- |
+| `specs/<capability>/spec.md` | Living spec: current behavior of one capability, with `R<n>` IDs. | Long-term |
+| `decisions/` | ADRs: why a design was chosen. | Long-term |
+| `requests/<yyyy-mm-dd>-<slug>/` | `design.md` (+ `plan.md` while the work is in progress) of one change. The `Trạng thái` line in `design.md` records its state. | Short-term |
+
+## Request lifecycle
+
+- `plan.md` is an execution checklist: delete it once the change is merged.
+- `design.md` stays while a spec or ADR still links to it as a source; move durable content into `specs/` or `decisions/`.
 
 ## What belongs here
 

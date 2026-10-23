@@ -99,6 +99,9 @@ export function parseImpact(lines) {
 // Ngày P7 (spec sống) thêm mục "Ảnh hưởng spec"; thư mục request dated trước ngày này không có mục đó nên không bị W10.
 export const SPEC_SINCE = '2026-10-21';
 
+// Vòng đời một request: token đầu của dòng "- Trạng thái:" trong design.md.
+export const STATUSES = ['draft', 'approved', 'in-progress', 'merged', 'abandoned'];
+
 const CAP_RE = /^[a-z0-9][a-z0-9-]*$/;
 const REQ_ID_RE = /^[a-z0-9][a-z0-9-]*\/R[1-9]\d*$/;
 
@@ -234,6 +237,15 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
         if (!r) warn('design.md', e.line, 'W12', `${it.action} R${it.n}: spec không có ${id}`);
         else if (it.action === 'bỏ' && !r.removed) warn('design.md', e.line, 'W12', `bỏ R${it.n}: ${id} chưa được gạch ngang kèm "đã bỏ bởi" trong spec`);
       }
+    }
+  }
+  // Chỉ kiểm khi design.md có dòng "- Trạng thái:" để design cũ (không có dòng này) không bị cảnh báo hàng loạt.
+  if (lines['design.md']) {
+    const at = lines['design.md'].findIndex((l) => /^-\s+Trạng thái\s*:/.test(l));
+    if (at >= 0) {
+      const status = lines['design.md'][at].replace(/^-\s+Trạng thái\s*:\s*/, '').split(/[\s—–]/)[0].toLowerCase();
+      if (!STATUSES.includes(status)) warn('design.md', at + 1, 'W15', `Trạng thái "${status}" không hợp lệ, cần một trong: ${STATUSES.join(' | ')}`);
+      else if ((status === 'merged' || status === 'abandoned') && typeof texts['plan.md'] === 'string') warn('plan.md', 1, 'W16', `Request đã ${status}: xoá plan.md (checklist thực thi, không còn giá trị)`);
     }
   }
   return warnings;
