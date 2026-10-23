@@ -107,3 +107,44 @@ test("P4e AC2.1: CLI từ chối -g và giá trị lạ", () => {
   assert.equal(run("full").status, 0);
   assert.equal(JSON.parse(fs.readFileSync(gatePath(root), "utf8")).mode, "full");
 });
+
+test("P4e AC2.4: full lần hai với settings dạng rỗng là already-full, không báo sửa tay", () => {
+  const r = applyFull({ mode: "full" }, EMPTY, { allowEnvFiles: false });
+  assert.equal(r.settingsAction, "already-full");
+  assert.equal(r.settingsText, EMPTY);
+  const root = tmp();
+  put(setPath(root), gen());
+  runMode("full", { root, out: () => {} });
+  const lines = [];
+  runMode("full", { root, out: (l) => lines.push(l) });
+  assert.ok(!lines.join("\n").includes("sửa tay"));
+  assert.equal(fs.readFileSync(setPath(root), "utf8"), EMPTY);
+});
+
+test("P4e AC2.5: trong worktree, aip mode theo đúng thứ tự đọc của hook (worktree rồi repo chính)", () => {
+  const main = fs.realpathSync.native(tmp());
+  const git = (cwd, ...a) => execFileSync("git", ["-c", "commit.gpgsign=false", ...a], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+  git(main, "config", "user.name", "t");
+  git(main, "config", "user.email", "t@example.com");
+  put(path.join(main, "README.md"), "x");
+  git(main, "add", "README.md");
+  git(main, "commit", "-q", "-m", "init");
+  const wt = path.join(path.dirname(main), `${path.basename(main)}-wt`);
+  dirs.push(wt);
+  git(main, "worktree", "add", "-q", wt, "-b", "p4e-mode-wt");
+  put(gatePath(main), JSON.stringify({ mode: "full", mcpDeny: ["evil"] }));
+  const run = (sub) => { const l = []; runMode(sub, { root: wt, out: (x) => l.push(x) }); return l.join("\n"); };
+
+  assert.match(run("status"), /Chế độ: full/);
+  assert.match(run("status"), /repo chính/);
+
+  run("ask");
+  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mcpDeny: ["evil"] });
+  assert.match(run("status"), /Chế độ: ask/);
+  assert.equal(JSON.parse(fs.readFileSync(gatePath(main), "utf8")).mode, "full", "file repo chính không bị sửa");
+
+  fs.rmSync(gatePath(wt));
+  const msg = run("full");
+  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mode: "full", mcpDeny: ["evil"] });
+  assert.match(msg, /che file/);
+});

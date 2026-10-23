@@ -14,7 +14,7 @@ function readJson(root) {
 // Gốc worktree trước rồi tới gốc repo chính: worktree con tạo trước khi commit file cấu hình vẫn theo project.
 // Thư mục có thể chưa tồn tại (Write tạo mới) nên đi lên thư mục cha gần nhất đã có.
 // `roots` gồm gốc worktree và gốc repo chính (loại trùng) để hook `full` biết file đích thuộc project nào.
-export function readGate(dir) {
+export function resolveGate(dir) {
   let d = path.resolve(dir || '.');
   while (!existsSync(d) && path.dirname(d) !== d) d = path.dirname(d);
   let top;
@@ -22,8 +22,14 @@ export function readGate(dir) {
   let main = null;
   try { main = path.dirname(git(d, ['rev-parse', '--path-format=absolute', '--git-common-dir'])); } catch { /* chỉ còn gốc worktree */ }
   const roots = [...new Set([top, main].filter(Boolean).map((r) => path.resolve(r)))];
-  const config = readJson(top) ?? (main ? readJson(main) : null);
-  return config ? { config, roots } : null;
+  const own = readJson(top);
+  const config = own ?? (main ? readJson(main) : null);
+  return { config, roots, top: path.resolve(top), main: main ? path.resolve(main) : null, source: own ? 'worktree' : (config ? 'main' : null) };
+}
+
+export function readGate(dir) {
+  const g = resolveGate(dir);
+  return g?.config ? { config: g.config, roots: g.roots } : null;
 }
 
 export function readGateConfig(dir) {
@@ -38,7 +44,9 @@ export function effectiveMode(config, input) {
 export function fullKeep(config) {
   const v = config?.fullKeep;
   if (!Array.isArray(v)) return ['push'];
-  return v.filter((x) => x === 'push');
+  const known = v.filter((x) => x === 'push');
+  // Mảng rỗng tường minh là mở hết; mảng có phần tử nhưng không nhận ra cái nào (vd gõ "Push") là lỗi gõ nên giữ mặc định an toàn.
+  return v.length && !known.length ? ['push'] : known;
 }
 
 export function fullRoots(config) {
@@ -51,6 +59,16 @@ export function envFilesAllowed(dir) {
   return readGateConfig(dir)?.allowEnvFiles === true;
 }
 
+// Git Bash/Cygwin đưa đường dẫn kiểu /e/x hay /cygdrive/e/x; Node trên Windows sẽ hiểu thành E:\e\x (sai ổ) nếu không đổi trước.
+export function normalizeMsysPath(p, platform = process.platform) {
+  if (platform !== 'win32' || typeof p !== 'string') return p;
+  const m = /^\/(?:cygdrive\/)?([A-Za-z])(?:\/(.*))?$/s.exec(p);
+  return m ? `${m[1].toUpperCase()}:/${m[2] ?? ''}` : p;
+}
+
+// Chỉ `~` đứng đầu mới được shell bung thành home; `~` giữa tên (tên rút gọn 8.3 như LDMLE~1) là ký tự thường.
+export const hasUnresolvedRef = (s) => /[$`]/.test(s) || s.startsWith('~');
+
 const norm = (x) => {
   const n = x.replace(/\\/g, '/').replace(/\/+$/, '');
   return process.platform === 'win32' ? n.toLowerCase() : n;
@@ -59,8 +77,8 @@ const norm = (x) => {
 // Ổ đĩa/UNC trên nền không phải win32 không resolve được thành đường dẫn thật nên luôn coi là ngoài root.
 // Không realpath: symlink trong root trỏ ra ngoài không bị phát hiện (ghi nhận ở Rủi ro của design).
 export function classifyPath(p, cwd, roots) {
-  const s = String(p ?? '');
-  if (!s || /[$~`]/.test(s)) return 'unknown';
+  const s = normalizeMsysPath(String(p ?? ''));
+  if (!s || hasUnresolvedRef(s)) return 'unknown';
   if (process.platform !== 'win32' && (/^[A-Za-z]:[\\/]/.test(s) || s.startsWith('\\\\'))) return 'outside';
   const abs = norm(path.resolve(cwd, s.replace(/\\/g, '/')));
   return roots.some((r) => { const n = norm(path.resolve(r)); return abs === n || abs.startsWith(`${n}/`); }) ? 'inside' : 'outside';

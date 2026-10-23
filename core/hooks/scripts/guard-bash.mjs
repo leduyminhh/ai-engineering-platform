@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed, readGate, effectiveMode, fullKeep, classifyPath, allowedRoots } from './gate-config.mjs';
+import { envFilesAllowed, readGate, effectiveMode, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 const SECRET = /(^|[\s'"=/\\<(])(\.env(rc)?(\.(?!(example|sample|template)\b)[\w.-]+)?|(?!process\.env(?![\w.-]))[\w.-]+\.env|[\w.-]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub\b)[\w.-]+)?|credentials(\.(json|ya?ml))?)(?=$|[\s'";&|)<>])/i;
@@ -120,8 +120,8 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false) {
   const specs = pos.slice(1);
   if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return 'push dạng force/xoá/mirror/all';
   // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
-  const unresolvable = cdUnresolved || gc.dirs.some((d) => /[$~`]/.test(d));
-  const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs) : cwd;
+  const unresolvable = cdUnresolved || gc.dirs.some(hasUnresolvedRef);
+  const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs.map((d) => normalizeMsysPath(d))) : cwd;
   const refs = specs.map((r) => r.split(':').pop().replace(/^refs\/heads\//, ''));
   const wantsHead = (refs.length ? refs : ['HEAD']).some((r) => r === 'HEAD' || r === '@');
   if (unresolvable && wantsHead) return 'push không xác định được nhánh hiện tại (đường dẫn -C/cd chứa biến/~)';
@@ -145,8 +145,8 @@ function trackDirs(segs, cwd) {
     if (CD_CMDS.has(name)) {
       cdSeen = true;
       const arg = t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
-      if (arg === undefined || /[$~`]|^-$/.test(arg)) unres = true;
-      else { dir = path.resolve(dir, arg); if (path.isAbsolute(arg)) unres = false; }
+      if (arg === undefined || hasUnresolvedRef(arg) || arg === '-') unres = true;
+      else { const a = normalizeMsysPath(arg); dir = path.resolve(dir, a); if (path.isAbsolute(a)) unres = false; }
     } else if (POP_CMDS.has(name)) {
       cdSeen = true;
       unres = true;
@@ -167,16 +167,45 @@ const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'pwsh', 'powershell']);
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
-const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul)$/i;
+const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul|\$null)$/i;
 const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
 const GLOB = /[*?[]/;
 
 const cmdName = (x) => String(x).split(/[\\/]/).pop().toLowerCase().replace(/\.exe$/, '');
 
-function classifyTarget(p, dir, unres, roots) {
+// Bỏ tiền tố bọc lệnh (VAR=x, sudo, timeout, nohup, nice, env, command, exec) và trả chỉ số của lệnh thật.
+function cmdIndex(t) {
+  let k = 0;
+  while (k < t.length) {
+    const n = cmdName(t[k]);
+    if (/^\w+=/.test(t[k]) || ['sudo', 'nohup', 'command', 'exec'].includes(n)) { k++; continue; }
+    if (n === 'timeout') {
+      k++;
+      while (k < t.length && t[k].startsWith('-')) k += /^(-s|-k|--signal|--kill-after)$/.test(t[k]) ? 2 : 1;
+      if (k < t.length && /^\d+(\.\d+)?[smhd]?$/.test(t[k])) k++;
+      continue;
+    }
+    if (n === 'nice') {
+      k++;
+      if (t[k] === '-n' || t[k] === '--adjustment') k += 2;
+      else if (k < t.length && /^(-\d+|--adjustment=\S+)$/.test(t[k])) k++;
+      continue;
+    }
+    if (n === 'env') {
+      k++;
+      while (k < t.length && (t[k].startsWith('-') || /^\w+=/.test(t[k]))) k += /^(-u|-C|--unset|--chdir)$/.test(t[k]) ? 2 : 1;
+      continue;
+    }
+    break;
+  }
+  return k;
+}
+
+function classifyTarget(raw, dir, unres, roots) {
+  const p = normalizeMsysPath(raw);
   if (NULL_DEVICE.test(p)) return null;
   const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
-  if (!absolute && (unres || /[$~`]/.test(p))) return 'unknown';
+  if (!absolute && (unres || hasUnresolvedRef(p))) return 'unknown';
   if (GLOB.test(p)) {
     const parts = p.split(/[\\/]/);
     const first = parts.findIndex((x) => x !== '');
@@ -203,8 +232,7 @@ function confineSegment(t, dir, unres, roots) {
     const target = tok.slice(after) || (i + 1 < t.length ? t[++i] : '');
     if (target && !target.startsWith('&')) targets.push(target);
   }
-  let k = 0;
-  while (k < rest.length && (/^\w+=/.test(rest[k]) || cmdName(rest[k]) === 'sudo')) k++;
+  const k = cmdIndex(rest);
   const name = k < rest.length ? cmdName(rest[k]) : '';
   const args = rest.slice(k + 1);
   let ask = false;
@@ -234,6 +262,22 @@ function confineSegment(t, dir, unres, roots) {
   return unknown || ask ? 'ask' : null;
 }
 
+// Token (hoặc phần tách theo khoảng trắng trong chuỗi nháy) khớp mẫu bí mật → lấy phần sau `=`/`@`/`<`/`(` làm đường dẫn rồi phân loại theo cwd đã theo dõi.
+// Không tách được token bí mật nào dù regex khớp cả lệnh thì coi là không chắc ⇒ hỏi.
+function secretOutsideRoots(lists, cwd, roots, re) {
+  let found = false;
+  for (const { t, dir, unres } of lists.flatMap((l) => trackDirs(l, cwd))) {
+    for (const tok of t.flatMap((x) => x.split(/\s+/))) {
+      if (!re.test(tok)) continue;
+      found = true;
+      const p = tok.slice(Math.max(tok.lastIndexOf('='), tok.lastIndexOf('@'), tok.lastIndexOf('<'), tok.lastIndexOf('(')) + 1);
+      const c = classifyTarget(p, dir, unres, roots);
+      if (c === 'outside' || c === 'unknown') return true;
+    }
+  }
+  return !found;
+}
+
 // PowerShell: backtick là ký tự escape/nối dòng, không phải dấu tách lệnh; chuẩn hoá trước khi tách để `ma`in` hay nối dòng không che push.
 function psNormalize(cmd) {
   return cmd.replace(/`\r?\n/g, ' ').replace(/`([\s\S])/g, (_, c) => (c === '"' || c === "'" ? '\\' + c : c));
@@ -250,8 +294,7 @@ export const ASK_COMMANDS = ['git push', 'curl', 'wget', 'kubectl apply', 'terra
 
 // Đoạn lệnh có bắt đầu bằng một tiền tố ASK_COMMANDS không (bỏ qua VAR=x và sudo đứng trước).
 function matchesAsk(t) {
-  let k = 0;
-  while (k < t.length && (/^\w+=/.test(t[k]) || cmdName(t[k]) === 'sudo')) k++;
+  const k = cmdIndex(t);
   if (k >= t.length) return false;
   const name = cmdName(t[k]);
   const rest = t.slice(k);
@@ -331,7 +374,10 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   }
   const hits = (re) => re.test(cmd) || re.test(raw);
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
-  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
+  const secretAsk = { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
+  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk;
+  // Ở full, bí mật chỉ mở trong root của project: đường dẫn bí mật nằm ngoài root hoặc không xác định được vẫn hỏi (khớp guard-files).
+  if (hits(SECRET) && full() && secretOutsideRoots([segs, naiveSegments(cmd)], cwd, rootsOf(), hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET)) return secretAsk;
   return null;
 }
 

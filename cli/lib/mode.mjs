@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { buildClaudePermissions, loadPolicy } from './permissions.mjs';
-import { readAllowEnvFiles } from './init.mjs';
+import { resolveGate } from '../../core/hooks/scripts/gate-config.mjs';
 
 const EMPTY_PERMISSIONS = JSON.stringify({ permissions: { deny: [], ask: [] } }, null, 2) + '\n';
 
@@ -36,6 +36,7 @@ function leftoverIn(settingsText) {
 export function applyFull(gate, settingsText, { allowEnvFiles }) {
   const next = { ...(gate || {}), mode: 'full' };
   if (settingsText == null) return { gate: next, settingsText: null, settingsAction: 'absent', leftoverRules: [] };
+  if (stripBom(settingsText) === EMPTY_PERMISSIONS) return { gate: next, settingsText, settingsAction: 'already-full', leftoverRules: [] };
   if (stripBom(settingsText) === generated(allowEnvFiles)) {
     return { gate: next, settingsText: EMPTY_PERMISSIONS, settingsAction: 'replaced', leftoverRules: [] };
   }
@@ -71,6 +72,20 @@ function gitRoot(cwd) {
 /** Gốc project = toplevel git của cwd; ngoài repo dùng chính cwd, không thừa kế thư mục cha. */
 export function modeRoot(cwd = process.cwd()) { return path.resolve(gitRoot(cwd)); }
 
+// Cùng thứ tự với hook (readGate): file của worktree trước, thiếu thì lấy file của repo chính.
+function locateGate(root) {
+  const own = path.join(root, '.claude', 'aip-gate.json');
+  const ownRaw = readText(own);
+  if (ownRaw != null) return { file: own, raw: ownRaw, source: 'own' };
+  const main = resolveGate(root)?.main;
+  if (main && path.resolve(main).toLowerCase() !== path.resolve(root).toLowerCase()) {
+    const file = path.join(main, '.claude', 'aip-gate.json');
+    const raw = readText(file);
+    if (raw != null) return { file, raw, source: 'main' };
+  }
+  return { file: own, raw: null, source: null };
+}
+
 function readText(file) {
   try { return fs.readFileSync(file, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
 }
@@ -95,18 +110,19 @@ export function runMode(sub, { root, out = console.log }) {
   const settingsFile = path.join(root, '.claude', 'settings.json');
 
   let gate = null;
-  const gateRaw = readText(gateFile);
+  const found = locateGate(root);
+  const gateRaw = found.raw;
   if (gateRaw != null) {
-    try { gate = JSON.parse(stripBom(gateRaw)); } catch (e) { out(`Lỗi: ${gateFile} không phải JSON hợp lệ (${e.message}).`); return 1; }
-    if (gate === null || typeof gate !== 'object' || Array.isArray(gate)) { out(`Lỗi: ${gateFile} phải là một đối tượng JSON.`); return 1; }
+    try { gate = JSON.parse(stripBom(gateRaw)); } catch (e) { out(`Lỗi: ${found.file} không phải JSON hợp lệ (${e.message}).`); return 1; }
+    if (gate === null || typeof gate !== 'object' || Array.isArray(gate)) { out(`Lỗi: ${found.file} phải là một đối tượng JSON.`); return 1; }
   }
   const settingsText = readText(settingsFile);
-  const allowEnvFiles = readAllowEnvFiles(root);
+  const allowEnvFiles = gate?.allowEnvFiles === true;
 
   if (sub === 'status') {
     const s = statusOf(gate, settingsText);
     out(`Chế độ: ${s.mode}${gate?.mode === undefined ? ' (mặc định, aip-gate.json không có khóa mode)' : ''}`);
-    out(`Nguồn: ${gateRaw == null ? 'không có' : gateFile}`);
+    out(`Nguồn: ${gateRaw == null ? 'không có' : found.source === 'main' ? `${found.file} (repo chính; worktree này chưa có aip-gate.json)` : found.file}`);
     out(`settings.json: ${SETTINGS_LABEL[s.settings]}`);
     for (const r of s.leftoverRules) out(`  - ${r}`);
     return 0;
@@ -118,6 +134,8 @@ export function runMode(sub, { root, out = console.log }) {
     if (r.settingsAction === 'replaced') writeText(settingsFile, r.settingsText);
     out(`✓ mode=full tại ${root}`);
     if (r.settingsAction === 'replaced') out('  settings.json: đã thay bằng quy tắc rỗng (bản do aip sinh).');
+    if (r.settingsAction === 'already-full') out('  settings.json: đã ở dạng full (quy tắc rỗng), giữ nguyên.');
+    if (found.source === 'main') out(`  ghi ${gateFile}: cấu hình lấy từ repo chính, file của worktree này che file của repo chính từ giờ.`);
     if (r.settingsAction === 'kept-custom') {
       out('  ⚠ settings.json đã sửa tay nên giữ nguyên; deny/ask vẫn chặn kể cả khi bypass.');
       if (r.leftoverRules.length) {
@@ -135,6 +153,7 @@ export function runMode(sub, { root, out = console.log }) {
   if (gateRaw != null) writeText(gateFile, dump(r.gate));
   if (r.settingsAction === 'regenerated') writeText(settingsFile, r.settingsText);
   out(`✓ mode=ask tại ${root}`);
+  if (found.source === 'main') out(`  ghi ${gateFile} (không có khóa mode): file này che file aip-gate.json của repo chính cho worktree này.`);
   if (r.settingsAction === 'regenerated') out('  settings.json: đã sinh lại policy chuẩn.');
   if (r.settingsAction === 'kept') out('  settings.json: giữ nguyên (không phải bản full do aip sinh).');
   return 0;

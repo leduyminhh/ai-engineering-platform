@@ -4,7 +4,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { envFilesAllowed, effectiveMode, readGate, classifyPath, allowedRoots } from './gate-config.mjs';
+import { envFilesAllowed, effectiveMode, readGate, classifyPath, allowedRoots, normalizeMsysPath } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
@@ -100,7 +100,7 @@ export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase =
     && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(path.resolve(cwd, String(ti.path || '.'))))
     && !isFull(path.resolve(cwd, String(ti.path || '.')))) return SECRET_DENY;
   if (!file) return null;
-  const target = path.resolve(cwd, String(file));
+  const target = path.resolve(cwd, normalizeMsysPath(String(file)));
   // Chuẩn hoá về "/" để cùng một regex/glob chạy đúng trên Windows (dấu "\" và ký tự ổ đĩa).
   const abs = target.replace(/\\/g, '/');
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
