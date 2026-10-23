@@ -348,12 +348,10 @@ export default async function run({ ok, ctx }) {
       const fe = fullEffective({ config: { mode: 'full' }, file: 'x' }, { permission_mode: bp }, { tracked: () => gt });
       ok(gt === wantTracked[name] && fe === (name === 'exit 1'), `P4e2 AC1.4: ${name} → gateTracked=${wantTracked[name]}, full ${name === 'exit 1' ? 'hiệu lực' : 'không hiệu lực'}`);
     }
-    // Ca thật: PATH không có git → hook không tìm được cấu hình, bí mật vẫn hỏi.
-    const bin = path.dirname(process.execPath);
-    const env = { ...process.env, PATH: bin, Path: bin };
-    const hookIn = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .env' }, cwd: untrackedRepo, permission_mode: bp });
-    const out = execFileSync(process.execPath, [path.join(scripts, 'guard-bash.mjs')], { input: hookIn, env, encoding: 'utf8' });
-    ok(JSON.parse(out || '{}').hookSpecificOutput?.permissionDecision === 'ask', 'P4e2 AC1.4: PATH không có git → full không hiệu lực (cat .env hỏi)');
+    // Ca thật: git ls-files trả exit 128 (ngoài repo) với run mặc định.
+    const nonRepo = path.join(tmpT, 'non-repo');
+    fs.mkdirSync(path.join(nonRepo, '.claude'), { recursive: true });
+    ok(gateTracked(path.join(nonRepo, '.claude', 'aip-gate.json')) === null, 'P4e2 AC1.4: git thật exit 128 (ngoài repo) → gateTracked null');
 
     // AC1.5: worktree — kiểm đúng file thực sự cấp cấu hình.
     const mainRepo = mk('wtmain');
@@ -377,6 +375,15 @@ export default async function run({ ok, ctx }) {
     const c6 = counted();
     ok(bashAt(trackedRepo, 'git push origin feature/x', 'default', { tracked: c6.tracked })?.decision === 'ask' && c6.count() === 0,
       'P4e2 AC1.6: full được theo dõi + phiên không bypass → git push vẫn ask, không spawn ls-files');
+
+    // AC1.3: phiên không bypass không đọc cấu hình gate (không spawn git nào, kể cả rev-parse).
+    let reads = 0;
+    const reader = () => { reads++; return null; };
+    bashAt(trackedRepo, 'cat .env', 'default', { reader });
+    for (const [tool, file] of [['Read', sl(path.join(trackedRepo, '.env'))], ['Write', sl(path.join(trackedRepo, '.env'))], ['Grep', undefined]]) {
+      files.decide({ tool_name: tool, tool_input: tool === 'Grep' ? { glob: '.env*' } : { file_path: file }, cwd: trackedRepo, permission_mode: 'default' }, { scopes: {}, allowEnv: () => false, reader });
+    }
+    ok(reads === 0, 'P4e2 AC1.3: phiên không bypass → guard-bash/guard-files không đọc cấu hình gate');
   } finally {
     fs.rmSync(tmpT, { recursive: true, force: true });
   }

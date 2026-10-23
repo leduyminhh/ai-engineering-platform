@@ -329,7 +329,7 @@ function hasCommitWithMessageFlag(cmd) {
   return false;
 }
 
-export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked } = {}) {
+export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked, reader = readGate } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
   const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw;
@@ -338,7 +338,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const bypass = input?.permission_mode === 'bypassPermissions';
   let cfg;
   let rg;
-  const readOnce = () => (rg === undefined ? (rg = readGate(cwd)) : rg);
+  const readOnce = () => (rg === undefined ? (rg = reader(cwd)) : rg);
   const gate = () => (cfg === undefined ? (cfg = config !== undefined ? config : (readOnce()?.config ?? null)) : cfg);
   // Không có gốc git (chỉ xảy ra khi cấu hình được truyền thẳng) thì coi cwd là root để không chặn nhầm mọi đường dẫn.
   const rootsOf = () => {
@@ -346,7 +346,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     return allowedRoots({ roots: base.length ? base : [path.resolve(cwd)], config: gate() }, input);
   };
   let fe;
-  const full = () => (fe === undefined ? (fe = fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
+  // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
+  const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
   const { segs, unclosed } = parse(cmd);
   const parsed = withDirs(segs, cwd);
   if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;

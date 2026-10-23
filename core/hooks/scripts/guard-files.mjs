@@ -75,12 +75,12 @@ function globNamesSecret(glob, probes = SECRET_PROBES) {
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
 // H6: chỉ khi full hiệu lực. Kiểm permission_mode trước để phiên thường không tốn lệnh git đọc cấu hình.
-function confine(input, file, cwd, { repoRoot, config, tracked }) {
+function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGate }) {
   if (input?.permission_mode !== 'bypassPermissions') return null;
   const tool = input.tool_name;
   const write = WRITE_TOOLS.has(tool);
   if (!write && tool !== 'Read' && tool !== 'Grep') return null;
-  const gate = config === undefined ? readGate(cwd) : { config, roots: repoRoot ? [path.resolve(repoRoot)] : (readGate(cwd)?.roots ?? []) };
+  const gate = config === undefined ? reader(cwd) : { config, roots: repoRoot ? [path.resolve(repoRoot)] : (reader(cwd)?.roots ?? []) };
   if (!fullEffective(gate, input, { tracked })) return null;
   const where = classifyPath(String(file), cwd, allowedRoots(gate, input));
   if (where === 'inside') return null;
@@ -88,13 +88,14 @@ function confine(input, file, cwd, { repoRoot, config, tracked }) {
   return { decision: write && where === 'outside' ? 'deny' : 'ask', reason };
 }
 
-export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked } = {}) {
+export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked, reader = readGate } = {}) {
   const ti = input?.tool_input;
   const file = ti?.file_path || ti?.notebook_path || (input?.tool_name === 'Grep' ? ti?.path : undefined);
   const cwd = path.resolve(input?.cwd || '.');
   // Cấu hình theo repo chứa file đích (như allowEnv), không theo cwd.
   // Kiểm permission_mode trước để phiên thường không tốn lệnh git khi đọc cấu hình.
-  const isFull = (dir) => fullEffective(config === undefined ? readGate(dir) : { config }, input, { tracked });
+  // Bypass kiểm trước readGate: phiên thường không tốn lệnh git nào.
+  const isFull = (dir) => input?.permission_mode === 'bypassPermissions' && fullEffective(config === undefined ? reader(dir) : { config }, input, { tracked });
   if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob)
     && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(path.resolve(cwd, String(ti.path || '.'))))
     && !isFull(path.resolve(cwd, String(ti.path || '.')))) return SECRET_DENY;
@@ -104,7 +105,7 @@ export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase =
   const abs = target.replace(/\\/g, '/');
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
   if (isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target))) && !isFull(path.dirname(target))) return SECRET_DENY;
-  const confined = confine(input, file, cwd, { repoRoot, config, tracked });
+  const confined = confine(input, file, cwd, { repoRoot, config, tracked, reader });
   if (confined) return confined;
   if (!WRITE_TOOLS.has(input.tool_name)) return null;
   const agent = String(input.agent_type || '').split(':').pop();
