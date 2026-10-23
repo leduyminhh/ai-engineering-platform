@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed, readGate, effectiveMode, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef } from './gate-config.mjs';
+import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 const SECRET = /(^|[\s'"=/\\<(])(\.env(rc)?(\.(?!(example|sample|template)\b)[\w.-]+)?|(?!process\.env(?![\w.-]))[\w.-]+\.env|[\w.-]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub\b)[\w.-]+)?|credentials(\.(json|ya?ml))?)(?=$|[\s'";&|)<>])/i;
@@ -329,7 +329,7 @@ function hasCommitWithMessageFlag(cmd) {
   return false;
 }
 
-export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot } = {}) {
+export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
   const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw;
@@ -345,7 +345,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const base = repoRoot ? [path.resolve(repoRoot)] : (readOnce()?.roots ?? []);
     return allowedRoots({ roots: base.length ? base : [path.resolve(cwd)], config: gate() }, input);
   };
-  const full = () => bypass && effectiveMode(gate(), input) === 'full';
+  let fe;
+  const full = () => (fe === undefined ? (fe = fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
   const { segs, unclosed } = parse(cmd);
   const parsed = withDirs(segs, cwd);
   if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;

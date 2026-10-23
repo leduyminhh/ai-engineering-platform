@@ -24,12 +24,13 @@ export function resolveGate(dir) {
   const roots = [...new Set([top, main].filter(Boolean).map((r) => path.resolve(r)))];
   const own = readJson(top);
   const config = own ?? (main ? readJson(main) : null);
-  return { config, roots, top: path.resolve(top), main: main ? path.resolve(main) : null, source: own ? 'worktree' : (config ? 'main' : null) };
+  const file = config ? path.resolve(own ? top : main, '.claude', 'aip-gate.json') : null;
+  return { config, roots, file, top: path.resolve(top), main: main ? path.resolve(main) : null, source: own ? 'worktree' : (config ? 'main' : null) };
 }
 
 export function readGate(dir) {
   const g = resolveGate(dir);
-  return g?.config ? { config: g.config, roots: g.roots } : null;
+  return g?.config ? { config: g.config, roots: g.roots, file: g.file } : null;
 }
 
 export function readGateConfig(dir) {
@@ -39,6 +40,29 @@ export function readGateConfig(dir) {
 // `full` chỉ hiệu lực khi cả cấu hình lẫn phiên đều đồng ý: bypassPermissions do người dùng bật, không do repo tự quyết.
 export function effectiveMode(config, input) {
   return input?.permission_mode === 'bypassPermissions' && config && typeof config === 'object' && config.mode === 'full' ? 'full' : 'ask';
+}
+
+const trackedCache = new Map();
+const lsFiles = (dir) => execFileSync('git', ['-C', dir, 'ls-files', '--error-unmatch', '--', '.claude/aip-gate.json'], { timeout: 3000, stdio: ['ignore', 'ignore', 'ignore'] });
+
+// true/false khi git trả đúng exit 0/1; mọi kết quả khác (128, không có git, quá giờ) là null.
+// Có `run` (seam test) thì bỏ qua cache để đếm lời gọi xác định.
+export function gateTracked(file, { run = lsFiles } = {}) {
+  const useCache = run === lsFiles;
+  if (useCache && trackedCache.has(file)) return trackedCache.get(file);
+  let st;
+  try { const r = run(path.dirname(path.dirname(file))); st = typeof r === 'number' ? r : 0; } catch (e) { st = e?.status; }
+  const res = st === 0 ? true : st === 1 ? false : null;
+  if (useCache) trackedCache.set(file, res);
+  return res;
+}
+
+// Repo không đáng tin tự cấp `full`: file cấu hình đã commit đến từ clone nên bị bỏ qua; exit lạ ⇒ không full (hỏi thừa là hướng an toàn).
+// Kiểm rẻ trước để phiên thường và project `ask` không tốn lần spawn git nào. Cấu hình tiêm (không có `file`) coi là đáng tin.
+export function fullEffective(gate, input, { tracked = gateTracked } = {}) {
+  if (input?.permission_mode !== 'bypassPermissions') return false;
+  if (effectiveMode(gate?.config, input) !== 'full') return false;
+  return gate.file ? tracked(gate.file) === false : true;
 }
 
 export function fullKeep(config) {

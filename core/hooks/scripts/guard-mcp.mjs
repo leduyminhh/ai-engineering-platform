@@ -2,7 +2,7 @@
 // PreToolUse(mcp__.*): chặn tool của server MCP theo mcpAllow/mcpDeny trong <git-root>/.claude/aip-gate.json.
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { readGateConfig, effectiveMode } from './gate-config.mjs';
+import { readGate, fullEffective } from './gate-config.mjs';
 
 // mcp__<server>__<tool> → server; mcp__plugin_<plugin>_<server>__<tool> → "plugin:<plugin>:<server>" (tên plugin không chứa "_").
 export function parseMcpTool(name) {
@@ -19,16 +19,17 @@ function nameList(v) {
   return s.length ? s : null;
 }
 
-export function decide(input, { config } = {}) {
+export function decide(input, { config, tracked } = {}) {
   const t = parseMcpTool(input?.tool_name);
   if (!t) return null;
-  const cfg = config === undefined ? readGateConfig(input?.cwd) : config;
+  const gate = config === undefined ? readGate(input?.cwd) : { config };
+  const cfg = gate?.config;
   if (!cfg || typeof cfg !== 'object') return null;
   const deny = nameList(cfg.mcpDeny);
   const allow = nameList(cfg.mcpAllow);
   if (deny?.includes(t.server)) return { decision: 'deny', reason: `Server MCP "${t.server}" nằm trong mcpDeny của .claude/aip-gate.json — gỡ khỏi mcpDeny nếu cần dùng.` };
   // full hiệu lực chỉ mở mcpAllow; mcpDeny là chặn tường minh của người dùng nên vẫn giữ.
-  if (allow && effectiveMode(cfg, input) !== 'full' && !allow.includes(t.server)) return { decision: 'deny', reason: `Server MCP "${t.server}" không nằm trong mcpAllow của .claude/aip-gate.json — thêm vào mcpAllow nếu cần dùng.` };
+  if (allow && !fullEffective(gate, input, { tracked }) && !allow.includes(t.server)) return { decision: 'deny', reason: `Server MCP "${t.server}" không nằm trong mcpAllow của .claude/aip-gate.json — thêm vào mcpAllow nếu cần dùng.` };
   return null;
 }
 

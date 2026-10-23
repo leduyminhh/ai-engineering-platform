@@ -275,4 +275,109 @@ export default async function run({ ok, ctx }) {
   const nonBash = askGroups.filter((r) => !/^Bash\(.+ \*\)$/.test(r));
   ok(JSON.stringify(bashPrefixes) === JSON.stringify([...bash.ASK_COMMANDS].sort()), 'P4e AC1.9: ASK_COMMANDS bằng tiền tố Bash trong policy.json');
   ok(JSON.stringify(nonBash) === JSON.stringify(['WebFetch']), 'P4e AC1.9: quy tắc không phải Bash của ba nhóm chỉ có WebFetch (loại có chủ đích)');
+
+  // I4: file cấu hình được git theo dõi thì `full` bị bỏ qua (repo không đáng tin tự cấp full).
+  const { gateTracked, fullEffective } = await load('gate-config.mjs');
+  const tmpT = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e2-')));
+  try {
+    const sl = (x) => x.replaceAll('\\', '/');
+    const gitT = (cwd, ...args) => execFileSync('git', ['-c', 'commit.gpgsign=false', ...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    const mk = (name, { track, ignore } = {}) => {
+      const dir = path.join(tmpT, name);
+      fs.mkdirSync(path.join(dir, '.claude'), { recursive: true });
+      gitT(dir, 'init', '-q');
+      gitT(dir, 'config', 'user.name', 'aip-test');
+      gitT(dir, 'config', 'user.email', 'aip-test@example.com');
+      fs.writeFileSync(path.join(dir, 'README.md'), 'x');
+      if (ignore) fs.writeFileSync(path.join(dir, '.gitignore'), '.claude/aip-gate.json\n');
+      fs.writeFileSync(path.join(dir, '.claude', 'aip-gate.json'), JSON.stringify({ mode: 'full', mcpAllow: ['a'] }));
+      gitT(dir, 'add', 'README.md');
+      if (track) gitT(dir, 'add', '-f', '.claude/aip-gate.json');
+      gitT(dir, 'commit', '-q', '-m', 'init', '--allow-empty');
+      return dir;
+    };
+    const bp = 'bypassPermissions';
+    const bashAt = (dir, command, pm = bp, extra = {}) => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: dir, permission_mode: pm }, { currentBranch: () => 'feature/x', allowEnv: () => false, ...extra });
+    const fileAt = (dir, tool, file, pm = bp) => files.decide({ tool_name: tool, tool_input: { file_path: file }, cwd: dir, permission_mode: pm }, { scopes: {}, allowEnv: () => false });
+    const mcpAt = (dir, pm = bp) => mcp.decide({ tool_name: 'mcp__b__t', cwd: dir, permission_mode: pm });
+    // Một bảng cho cả ba hook: [mô tả, hàm quyết định trả `true` khi hành xử như full].
+    const asFull = (dir) => ({
+      bashEnv: bashAt(dir, 'cat .env') === null,
+      bashH6: bashAt(dir, 'rm /etc/x') === null,
+      writeEnv: fileAt(dir, 'Write', sl(path.join(dir, '.env'))) === null,
+      writeOutside: fileAt(dir, 'Write', sl(path.join(tmpT, 'ngoai.txt'))) === null,
+      mcp: mcpAt(dir) === null,
+    });
+
+    const trackedRepo = mk('tracked', { track: true });
+    const untrackedRepo = mk('untracked');
+    const ignoredRepo = mk('ignored', { ignore: true });
+    const t = asFull(trackedRepo);
+    ok(!t.bashEnv && t.bashH6 && bashAt(trackedRepo, 'cat .env')?.decision === 'ask' && bashAt(trackedRepo, 'rm /etc/x') === null
+      && fileAt(trackedRepo, 'Write', sl(path.join(trackedRepo, '.env')))?.decision === 'deny'
+      && !t.mcp && mcpAt(trackedRepo)?.decision === 'deny' && t.writeOutside,
+      'P4e2 AC1.1: file cấu hình được theo dõi → ba hook chạy như ask (bí mật hỏi/chặn, mcpAllow chặn, H6 tắt)');
+    for (const [name, repo] of [['chưa add', untrackedRepo], ['gitignore', ignoredRepo]]) {
+      const u = asFull(repo);
+      ok(u.bashEnv && !u.bashH6 && u.writeEnv && !u.writeOutside && u.mcp
+        && bashAt(repo, 'rm /etc/x')?.decision === 'deny' && fileAt(repo, 'Write', sl(path.join(tmpT, 'ngoai.txt')))?.decision === 'deny',
+        `P4e2 AC1.2: file cấu hình chưa theo dõi (${name}) → full hiệu lực như P4e`);
+    }
+
+    // AC1.3: đếm lời gọi `run` qua seam `tracked`.
+    const counted = () => { let n = 0; const run = () => { n++; throw Object.assign(new Error('x'), { status: 1 }); }; return { count: () => n, tracked: (f) => gateTracked(f, { run }) }; };
+    for (const [name, pm, cfgMode] of [['không bypass + full', 'default', 'full'], ['bypass + ask', bp, 'ask'], ['bypass + thiếu mode', bp, undefined]]) {
+      const dir = mk(`cnt-${name.length}-${cfgMode}`);
+      fs.writeFileSync(path.join(dir, '.claude', 'aip-gate.json'), JSON.stringify(cfgMode ? { mode: cfgMode } : {}));
+      const c = counted();
+      bashAt(dir, 'cat .env', pm, { tracked: c.tracked });
+      files.decide({ tool_name: 'Write', tool_input: { file_path: sl(path.join(dir, 'a')) }, cwd: dir, permission_mode: pm }, { scopes: {}, tracked: c.tracked });
+      mcp.decide({ tool_name: 'mcp__b__t', cwd: dir, permission_mode: pm }, { tracked: c.tracked });
+      ok(c.count() === 0, `P4e2 AC1.3: ${name} → 0 lần spawn git ls-files`);
+    }
+    const c1 = counted();
+    const d1 = bashAt(untrackedRepo, 'git commit -m "có dấu"; rm /etc/x; cat .env', bp, { tracked: c1.tracked });
+    ok(d1?.decision === 'deny' && c1.count() === 1, 'P4e2 AC1.3: bypass + full → đúng 1 lần spawn dù decide gọi full() nhiều lần');
+
+    // AC1.4: kết quả git khác exit 0/1 → không full.
+    const fakeRun = { 'exit 0': () => 0, 'exit 1': () => { throw Object.assign(new Error('x'), { status: 1 }); }, 'exit 128': () => { throw Object.assign(new Error('x'), { status: 128 }); },
+      'ném lỗi': () => { throw new Error('ENOENT'); }, 'exit lạ': () => { throw Object.assign(new Error('x'), { status: 7 }); } };
+    const wantTracked = { 'exit 0': true, 'exit 1': false, 'exit 128': null, 'ném lỗi': null, 'exit lạ': null };
+    for (const [name, run] of Object.entries(fakeRun)) {
+      const gt = gateTracked(path.join(untrackedRepo, '.claude', 'aip-gate.json'), { run });
+      const fe = fullEffective({ config: { mode: 'full' }, file: 'x' }, { permission_mode: bp }, { tracked: () => gt });
+      ok(gt === wantTracked[name] && fe === (name === 'exit 1'), `P4e2 AC1.4: ${name} → gateTracked=${wantTracked[name]}, full ${name === 'exit 1' ? 'hiệu lực' : 'không hiệu lực'}`);
+    }
+    // Ca thật: PATH không có git → hook không tìm được cấu hình, bí mật vẫn hỏi.
+    const bin = path.dirname(process.execPath);
+    const env = { ...process.env, PATH: bin, Path: bin };
+    const hookIn = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .env' }, cwd: untrackedRepo, permission_mode: bp });
+    const out = execFileSync(process.execPath, [path.join(scripts, 'guard-bash.mjs')], { input: hookIn, env, encoding: 'utf8' });
+    ok(JSON.parse(out || '{}').hookSpecificOutput?.permissionDecision === 'ask', 'P4e2 AC1.4: PATH không có git → full không hiệu lực (cat .env hỏi)');
+
+    // AC1.5: worktree — kiểm đúng file thực sự cấp cấu hình.
+    const mainRepo = mk('wtmain');
+    const wtTracked = path.join(tmpT, 'wt-tracked');
+    gitT(mainRepo, 'worktree', 'add', '-q', wtTracked, '-b', 'wt-a');
+    fs.mkdirSync(path.join(wtTracked, '.claude'), { recursive: true });
+    fs.writeFileSync(path.join(wtTracked, '.claude', 'aip-gate.json'), JSON.stringify({ mode: 'full' }));
+    gitT(wtTracked, 'add', '-f', '.claude/aip-gate.json');
+    gitT(wtTracked, 'commit', '-q', '-m', 'cfg');
+    ok(bashAt(wtTracked, 'cat .env')?.decision === 'ask', 'P4e2 AC1.5: file worktree được theo dõi → ask dù file repo chính không theo dõi');
+    const wtNoFile = path.join(tmpT, 'wt-nofile');
+    gitT(mainRepo, 'worktree', 'add', '-q', wtNoFile, '-b', 'wt-b');
+    ok(bashAt(wtNoFile, 'cat .env') === null, 'P4e2 AC1.5: chỉ file repo chính, không theo dõi → full');
+    const mainTracked = mk('wtmain2', { track: true });
+    const wtB = path.join(tmpT, 'wt-b2');
+    gitT(mainTracked, 'worktree', 'add', '-q', wtB, '-b', 'wt-c');
+    fs.rmSync(path.join(wtB, '.claude'), { recursive: true, force: true });
+    ok(bashAt(wtB, 'cat .env')?.decision === 'ask', 'P4e2 AC1.5: chỉ file repo chính và được theo dõi → ask');
+
+    // AC1.6: nhánh ask dự phòng của phiên không bypass không đổi và không gọi git ls-files.
+    const c6 = counted();
+    ok(bashAt(trackedRepo, 'git push origin feature/x', 'default', { tracked: c6.tracked })?.decision === 'ask' && c6.count() === 0,
+      'P4e2 AC1.6: full được theo dõi + phiên không bypass → git push vẫn ask, không spawn ls-files');
+  } finally {
+    fs.rmSync(tmpT, { recursive: true, force: true });
+  }
 }
