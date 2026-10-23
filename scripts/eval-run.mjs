@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Chạy `claude plugin eval` một lệnh cho một plugin đã build. Zero-dependency.
-// Dùng: node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd> [--runs 3] [--scaffold]
+// Dùng: node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd> [--runs 3] [--scaffold] [--case <glob>]
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,14 +16,15 @@ export function stripDependencies(pluginJson) {
 }
 
 export function parseArgs(argv) {
-  const out = { plugin: null, runs: 3, maxCostUsd: null, scaffold: false };
+  const out = { plugin: null, runs: 3, maxCostUsd: null, scaffold: false, case: null };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--scaffold') out.scaffold = true;
-    else if (k === '--plugin' || k === '--runs' || k === '--max-cost-usd') {
+    else if (k === '--plugin' || k === '--case' || k === '--runs' || k === '--max-cost-usd') {
       const v = argv[++i];
       if (v === undefined || v.startsWith('--')) throw new Error(`${k} thiếu giá trị`);
       if (k === '--plugin') out.plugin = v;
+      else if (k === '--case') out.case = v;
       else {
         const n = Number(v);
         if (!Number.isFinite(n) || n <= 0) throw new Error(`${k} phải là số dương: ${v}`);
@@ -74,7 +75,7 @@ function run() {
     fs.writeFileSync(pj, JSON.stringify(stripDependencies(JSON.parse(fs.readFileSync(pj, 'utf8'))), null, 2) + '\n');
 
     const args = ['plugin', 'eval', '.', '--eval-dir', 'evals', '--runs', String(a.runs), '--keep-temp',
-      '--max-cost-usd', String(a.maxCostUsd), '--no-publish', ...(a.scaffold ? ['--scaffold'] : []),
+      '--max-cost-usd', String(a.maxCostUsd), '--no-publish', ...(a.scaffold ? ['--scaffold'] : []), ...(a.case ? ['--case', a.case] : []),
       '--allow-tools', 'Write', 'Edit', '--trust-plugin', '--json', 'r.json'];
     const r = spawnSync('claude', args, { cwd: work, stdio: 'inherit', shell: true });
     const rj = path.join(work, 'r.json');
