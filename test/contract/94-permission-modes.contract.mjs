@@ -324,6 +324,33 @@ export default async function run({ ok, ctx }) {
         `P4e2 AC1.2: file cấu hình chưa theo dõi (${name}) → full hiệu lực như P4e`);
     }
 
+    // Hồi quy: tên khác hoa/thường đã commit, và .claude là submodule mà repo con theo dõi file — full phải không hiệu lực.
+    const caseRepo = mk('case-tracked');
+    gitT(caseRepo, 'config', 'core.ignorecase', 'true');
+    fs.renameSync(path.join(caseRepo, '.claude', 'aip-gate.json'), path.join(caseRepo, '.claude', 'AIP-GATE.json'));
+    gitT(caseRepo, 'add', '-f', '.claude/AIP-GATE.json');
+    gitT(caseRepo, 'commit', '-q', '-m', 'cfg');
+    ok(bashAt(caseRepo, 'cat .env')?.decision === 'ask', 'P4e2 AC1.2: file cấu hình đã commit với tên khác hoa/thường (core.ignorecase) → không full');
+
+    const subHost = path.join(tmpT, 'sub-host');
+    fs.mkdirSync(subHost, { recursive: true });
+    gitT(subHost, 'init', '-q');
+    gitT(subHost, 'config', 'user.name', 'aip-test');
+    gitT(subHost, 'config', 'user.email', 'aip-test@example.com');
+    // Submodule đặt tại `.claude`, repo con theo dõi aip-gate.json ngay ở gốc của nó.
+    const subSrc2 = path.join(tmpT, 'sub-src2');
+    fs.mkdirSync(subSrc2, { recursive: true });
+    gitT(subSrc2, 'init', '-q');
+    gitT(subSrc2, 'config', 'user.name', 'aip-test');
+    gitT(subSrc2, 'config', 'user.email', 'aip-test@example.com');
+    fs.writeFileSync(path.join(subSrc2, 'aip-gate.json'), JSON.stringify({ mode: 'full' }));
+    gitT(subSrc2, 'add', 'aip-gate.json');
+    gitT(subSrc2, 'commit', '-q', '-m', 'init');
+    gitT(subHost, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', subSrc2, '.claude');
+    gitT(subHost, 'commit', '-q', '-m', 'sub');
+    ok(fs.existsSync(path.join(subHost, '.claude', 'aip-gate.json')) && bashAt(subHost, 'cat .env')?.decision === 'ask',
+      'P4e2 AC1.2: .claude là submodule mà repo con theo dõi aip-gate.json → không full');
+
     // AC1.3: đếm lời gọi `run` qua seam `tracked`.
     const counted = () => { let n = 0; const run = () => { n++; throw Object.assign(new Error('x'), { status: 1 }); }; return { count: () => n, tracked: (f) => gateTracked(f, { run }) }; };
     for (const [name, pm, cfgMode] of [['không bypass + full', 'default', 'full'], ['bypass + ask', bp, 'ask'], ['bypass + thiếu mode', bp, undefined]]) {
@@ -510,8 +537,9 @@ export default async function run({ ok, ctx }) {
     }
     ok(fdec('Read', `${ro}/a.txt`, { pm: 'default' }) === null && fdec('Read', '/etc/x', { config: { mode: 'full' } })?.decision === 'ask',
       'P4e2 AC3.1: ngoài mọi root vẫn ask');
-    // .env dưới root chỉ-đọc: full vốn đã bỏ H3 (secret) nên Read qua, ghi vẫn deny.
-    ok(fdec('Read', `${ro}/.env`) === null && fdec('Write', `${ro}/.env`)?.decision === 'deny', 'P4e2 AC3.1: .env dưới root chỉ-đọc theo luật secret của full');
+    // Root chỉ-đọc không miễn đường dẫn bí mật: đọc .env/khoá ngoài project vẫn hỏi như luật secret của full (guard-bash cũng hỏi), ghi vẫn deny.
+    ok(fdec('Read', `${ro}/.env`)?.decision === 'ask' && fdec('Grep', `${ro}/x.pem`)?.decision === 'ask' && fdec('Write', `${ro}/.env`)?.decision === 'deny',
+      'P4e2 AC3.1: .env/khoá dưới root chỉ-đọc không được miễn ask');
     const bdec = (command, config = full) => bashMod.decide(
       { tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: 'bypassPermissions' },
       { currentBranch: () => 'feature/x', allowEnv: () => false, config, repoRoot: proj });
@@ -530,7 +558,7 @@ export default async function run({ ok, ctx }) {
     ok(defaultReadRoots({}, { CLAUDE_CONFIG_DIR: alt }, home)[0] === path.join(alt, 'plugins')
       && defaultReadRoots({}, { CLAUDE_CONFIG_DIR: 'rel' }, home)[0] === want[0], 'P4e2 AC3.2: CLAUDE_CONFIG_DIR tuyệt đối thì dùng, tương đối thì bỏ');
     // Root mặc định lấy $HOME thật nên test dùng input chỉ đọc qua os.homedir().
-    const realCfg = sl(path.join(os.homedir(), '.claude'));
+    const realCfg = sl(typeof process.env.CLAUDE_CONFIG_DIR === 'string' && path.isAbsolute(process.env.CLAUDE_CONFIG_DIR) ? process.env.CLAUDE_CONFIG_DIR : path.join(os.homedir(), '.claude'));
     const real = (file, sessionId = sid) => files.decide(
       { tool_name: 'Read', tool_input: { file_path: file }, cwd: proj, permission_mode: 'bypassPermissions', session_id: sessionId },
       { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } });
@@ -538,7 +566,9 @@ export default async function run({ ok, ctx }) {
     ok(real(`${realCfg}/projects/E--any-proj/${sid}/tool-results/t.txt`) === null, 'P4e2 AC3.2: Read tool-results của phiên này → không quyết định');
     ok(real(`${realCfg}/projects/E--any-proj/other-sess/tool-results/t.txt`)?.decision === 'ask'
       && real(`${realCfg}/projects/a/b/${sid}/tool-results/t.txt`)?.decision === 'ask'
-      && real(`${realCfg}/settings.json`)?.decision === 'ask', 'P4e2 AC3.2: phiên khác, thêm đoạn, hay file khác dưới config dir → ask');
+      && real(`${realCfg}/settings.json`)?.decision === 'ask'
+      && real(`${realCfg}/plugins-evil/x`)?.decision === 'ask'
+      && real(`${realCfg}/plugins/../settings.json`)?.decision === 'ask', 'P4e2 AC3.2: phiên khác, thêm đoạn, file khác, root cùng tiền tố hay ".." dưới config dir → ask');
     ok(files.decide({ tool_name: 'Write', tool_input: { file_path: `${realCfg}/plugins/x` }, cwd: proj, permission_mode: 'bypassPermissions', session_id: sid },
       { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } })?.decision === 'deny', 'P4e2 AC3.2: ghi vào cây plugins → deny');
     // scratchpad_dir từ stdin vẫn là root ghi được, không bị root chỉ-đọc ảnh hưởng.

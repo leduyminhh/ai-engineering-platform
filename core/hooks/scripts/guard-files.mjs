@@ -75,7 +75,7 @@ function globNamesSecret(glob, probes = SECRET_PROBES) {
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
 // H6: chỉ khi full hiệu lực. Kiểm permission_mode trước để phiên thường không tốn lệnh git đọc cấu hình.
-function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGate }) {
+function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGate, secret = false }) {
   if (input?.permission_mode !== 'bypassPermissions') return null;
   const tool = input.tool_name;
   const write = WRITE_TOOLS.has(tool);
@@ -84,8 +84,8 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   if (!fullEffective(gate, input, { tracked })) return null;
   const where = classifyPath(String(file), cwd, allowedRoots(gate, input));
   if (where === 'inside') return null;
-  // Root chỉ-đọc không nằm trong allowedRoots nên lệnh ghi vẫn rơi xuống deny bên dưới.
-  if (!write && inReadRoot(String(file), cwd, [...fullReadRoots(gate.config), ...defaultReadRoots(input)])) return null;
+  // Root chỉ-đọc không nằm trong allowedRoots nên lệnh ghi vẫn rơi xuống deny bên dưới; đường dẫn bí mật không được miễn.
+  if (!write && !secret && inReadRoot(String(file), cwd, [...fullReadRoots(gate.config), ...defaultReadRoots(input)])) return null;
   const reason = `Chế độ full chỉ cho phép thao tác trong root của project; đường dẫn ${where === 'unknown' ? 'không xác định được' : 'nằm ngoài root'}. Cần mở rộng → thêm vào "fullRoots" trong .claude/aip-gate.json.`;
   return { decision: write && where === 'outside' ? 'deny' : 'ask', reason };
 }
@@ -107,7 +107,7 @@ export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase =
   const abs = target.replace(/\\/g, '/');
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
   if (isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target))) && !isFull(path.dirname(target))) return SECRET_DENY;
-  const confined = confine(input, file, cwd, { repoRoot, config, tracked, reader });
+  const confined = confine(input, file, cwd, { repoRoot, config, tracked, reader, secret: isSecretPath(abs, target) });
   if (confined) return confined;
   if (!WRITE_TOOLS.has(input.tool_name)) return null;
   const agent = String(input.agent_type || '').split(':').pop();

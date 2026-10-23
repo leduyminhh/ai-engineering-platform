@@ -234,3 +234,14 @@ test("P4e2 AC2.5: settings.json hoặc aip-gate.json là thư mục, hoặc JSON
   assert.equal(runMode("status", { root, out: () => assert.fail("stdout"), err: (l) => err.push(l) }), 1);
   assert.match(err.join("\n"), /JSON/);
 });
+
+test("P4e2 AC4.5: git không chạy được (run trả null) → status 'không xác định', full không cảnh báo đã theo dõi", () => {
+  const root = tmp();
+  put(gatePath(root), JSON.stringify({ mode: "full" }));
+  const lines = [];
+  runMode("status", { root, out: (l) => lines.push(l), run: () => null });
+  assert.match(lines.join("\n"), /git: không xác định/);
+  const full = [];
+  runMode("full", { root, out: (l) => full.push(l), run: () => null });
+  assert.ok(!full.join("\n").includes("được git theo dõi"));
+});

@@ -1,5 +1,5 @@
 // Đọc <git-root>/.claude/aip-gate.json cho các hook của core; không phải hook, chỉ được import.
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
@@ -53,15 +53,21 @@ export function effectiveMode(config, input) {
 }
 
 const trackedCache = new Map();
-const lsFiles = (dir) => execFileSync('git', ['-C', dir, 'ls-files', '--error-unmatch', '--', '.claude/aip-gate.json'], { timeout: 3000, stdio: ['ignore', 'ignore', 'ignore'] });
+export const lsFiles = (dir, spec) => { execFileSync('git', ['-C', dir, 'ls-files', '--error-unmatch', '--', spec], { timeout: 3000, stdio: ['ignore', 'ignore', 'ignore'] }); return 0; };
 
-// true/false khi git trả đúng exit 0/1; mọi kết quả khác (128, không có git, quá giờ) là null.
+// true/false khi git trả đúng exit 0/1; mọi kết quả khác (128, không có git, quá giờ, run trả không phải số) là null.
+// Hỏi repo thật sự chứa file (realpath: .claude có thể là symlink hay submodule) bằng pathspec icase: FS không phân biệt hoa thường
+// còn pathspec thì có, nên AIP-GATE.json đã commit vẫn được hook đọc mà ls-files thường báo chưa theo dõi.
 // Có `run` (seam test) thì bỏ qua cache để đếm lời gọi xác định.
 export function gateTracked(file, { run = lsFiles } = {}) {
   const useCache = run === lsFiles;
   if (useCache && trackedCache.has(file)) return trackedCache.get(file);
   let st;
-  try { const r = run(path.dirname(path.dirname(file))); st = typeof r === 'number' ? r : 0; } catch (e) { st = e?.status; }
+  try {
+    const rp = realpathSync.native(file);
+    const r = run(path.dirname(rp), `:(icase)${path.basename(rp)}`);
+    st = typeof r === 'number' ? r : null;
+  } catch (e) { st = e?.status; }
   const res = st === 0 ? true : st === 1 ? false : null;
   if (useCache) trackedCache.set(file, res);
   return res;

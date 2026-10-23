@@ -29,7 +29,7 @@ export function decide(input, { config, tracked } = {}) {
   const allow = nameList(cfg.mcpAllow);
   if (deny?.includes(t.server)) return { decision: 'deny', reason: `Server MCP "${t.server}" nằm trong mcpDeny của .claude/aip-gate.json — gỡ khỏi mcpDeny nếu cần dùng.` };
   // full hiệu lực chỉ mở mcpAllow; mcpDeny là chặn tường minh của người dùng nên vẫn giữ.
-  if (allow && !fullEffective(gate, input, { tracked }) && !allow.includes(t.server)) return { decision: 'deny', reason: `Server MCP "${t.server}" không nằm trong mcpAllow của .claude/aip-gate.json — thêm vào mcpAllow nếu cần dùng.` };
+  if (allow && !allow.includes(t.server) && !fullEffective(gate, input, { tracked })) return { decision: 'deny', reason: `Server MCP "${t.server}" không nằm trong mcpAllow của .claude/aip-gate.json — thêm vào mcpAllow nếu cần dùng.` };
   return null;
 }
 

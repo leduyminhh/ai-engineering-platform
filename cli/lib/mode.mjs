@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { buildClaudePermissions, loadPolicy } from './permissions.mjs';
-import { resolveGate, gateTracked } from '../../core/hooks/scripts/gate-config.mjs';
+import { resolveGate, gateTracked, lsFiles } from '../../core/hooks/scripts/gate-config.mjs';
 
 const EMPTY_PERMISSIONS = JSON.stringify({ permissions: { deny: [], ask: [] } }, null, 2) + '\n';
 
@@ -101,9 +101,9 @@ const gitExit = (dir, args) => {
 };
 
 /** 'tracked' | 'ignored' | 'open' (chưa theo dõi, chưa ignore) | 'unknown'. */
-export function gitStateOf(file) {
-  // Truyền `run` riêng để bỏ qua cache của gateTracked: trạng thái git có thể đổi giữa hai lần gọi trong một tiến trình.
-  const tracked = gateTracked(file, { run: (dir) => gitExit(dir, ['ls-files', '--error-unmatch', '--', '.claude/aip-gate.json']) });
+export function gitStateOf(file, { run = (dir, spec) => lsFiles(dir, spec) } = {}) {
+  // `run` là hàm bọc riêng nên gateTracked bỏ qua cache: trạng thái git có thể đổi giữa hai lần gọi trong một tiến trình.
+  const tracked = gateTracked(file, { run });
   if (tracked === null) return 'unknown';
   if (tracked) return 'tracked';
   const ig = gitExit(path.dirname(path.dirname(file)), ['check-ignore', '-q', '--', '.claude/aip-gate.json']);
@@ -127,11 +127,11 @@ const SETTINGS_LABEL = {
   absent: 'không có file',
 };
 
-export function runMode(sub, { root, out = console.log, err = console.error }) {
-  try { return runModeUnsafe(sub, { root, out, err }); } catch (e) { err(`Lỗi: ${e.message}`); return 1; }
+export function runMode(sub, { root, out = console.log, err = console.error, run }) {
+  try { return runModeUnsafe(sub, { root, out, err, run }); } catch (e) { err(`Lỗi: ${e.message}`); return 1; }
 }
 
-function runModeUnsafe(sub, { root, out, err }) {
+function runModeUnsafe(sub, { root, out, err, run }) {
   const gateFile = path.join(root, '.claude', 'aip-gate.json');
   const settingsFile = path.join(root, '.claude', 'settings.json');
 
@@ -151,7 +151,7 @@ function runModeUnsafe(sub, { root, out, err }) {
     out(`Nguồn: ${gateRaw == null ? 'không có' : found.source === 'main' ? `${found.file} (repo chính; worktree này chưa có aip-gate.json)` : found.file}`);
     out(`settings.json: ${SETTINGS_LABEL[s.settings]}`);
     for (const r of s.leftoverRules) out(`  - ${r}`);
-    out(`git: ${GIT_LABEL[gitStateOf(found.file)]}`);
+    out(`git: ${GIT_LABEL[gitStateOf(found.file, run && { run })]}`);
     return 0;
   }
 
@@ -160,7 +160,7 @@ function runModeUnsafe(sub, { root, out, err }) {
     writeText(gateFile, dump(r.gate));
     if (r.settingsAction === 'replaced') writeText(settingsFile, r.settingsText);
     out(`✓ mode=full tại ${root}`);
-    const gs = gitStateOf(gateFile);
+    const gs = gitStateOf(gateFile, run && { run });
     if (gs === 'tracked') {
       out('  ⚠ aip-gate.json đang được git theo dõi nên full bị bỏ qua (repo clone không tự cấp được full). Gỡ theo dõi: git rm --cached .claude/aip-gate.json');
     } else if (gs === 'open') {
