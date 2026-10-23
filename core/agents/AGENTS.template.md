@@ -121,9 +121,9 @@ invariants (idempotency, outbox, retention), schema/contract tests, and regressi
   key material).
 - **`full` permission mode is an owner opt-in.** When `.claude/aip-gate.json` has `mode: "full"` and the
   session runs in `bypassPermissions`, the project owner allowed unattended access inside that project:
-  the `settings.json` `ask` rules (deletion, network, deploy) and the hook confirmations for secret files
-  are dropped, writes stay confined to the project roots (heuristic, not a sandbox), and a push to a
-  protected branch still needs confirmation unless `fullKeep` is changed.
+  the `settings.json` `ask` rules (push, network, deploy), its `deny` rules for secrets (such as `.env`
+  reads) and the hook confirmations for secret files inside the project are dropped, writes stay confined to the project roots (heuristic, not a
+  sandbox), and a push to a protected branch still needs confirmation unless `fullKeep` is changed.
 - **Stop for human diff review before integrating.** On a feature branch, commit each task without
   pausing (1 task = 1 commit); the human reviews the whole branch diff before merge or push. On a
   protected branch, stop before every commit.
