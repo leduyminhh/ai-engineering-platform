@@ -194,6 +194,8 @@ Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối; agent khôn
 
 ## Xử lý lỗi & rollback
 
+Supervisor (session chính) kiểm `agent_result` của worker và giới hạn retry theo contract đầu ra (`core:principles`).
+
 | Tình huống | Hành động |
 |---|---|
 | Build fail | Chẩn đoán → sửa → build lại |

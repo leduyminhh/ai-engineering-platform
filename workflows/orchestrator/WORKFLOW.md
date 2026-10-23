@@ -162,6 +162,8 @@ commit.
 
 ## Xử lý lỗi & rollback
 
+Supervisor (session chính) kiểm `agent_result` của worker và giới hạn retry theo contract đầu ra (`core:principles`).
+
 | Tình huống | Hành động |
 |---|---|
 | Build fail (trong workflow con) | Workflow con tự xử lý theo bảng lỗi của nó; orchestrator chỉ dừng chain nếu workflow con báo `failed`/`blocked` |

@@ -16,6 +16,10 @@ export default async function run({ ok, ctx }) {
     ok(missingAnchors(tpl27.replace('Thiếu điều kiện nào → dừng', 'Thiếu điều kiện → dừng')).length === 1,
       'missingAnchors: lệch một chữ → báo thiếu');
     ok(missingAnchors(tpl27.replace(/\n/g, '\r\n')).length === 0, 'missingAnchors: chấp nhận CRLF');
+    const oc27 = fs.readFileSync(path.join(CORE_DIR, 'principles', 'workflow-output-contract.md'), 'utf8').replace(/\r\n/g, '\n');
+    const ar27 = oc27.split('agent_result:\n')[1] || '';
+    ok(/^\s+status:/m.test(ar27.split('```')[0]),
+      'SWC AC1.1: contract có agent_result với status');
     const fx27 = registrySignals(['## Registry', '| id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |', '|---|---|---|---|---|',
       '| `workflow-x` | "a b", stacktrace, "c" | low | — | x |', '## Khác'].join('\n'));
     ok(JSON.stringify(fx27.get('workflow-x')) === '["a b","c"]', 'registrySignals: chỉ lấy cụm trong ngoặc kép');

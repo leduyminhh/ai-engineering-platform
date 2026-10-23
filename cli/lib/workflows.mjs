@@ -14,6 +14,7 @@ export const WF_ANCHORS = [
   '| Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |',
   '| Tình huống | Hành động |',
   'Trả về đúng khối sau; mục nào không chạy được ghi `status: not_run` kèm `reason`.',
+  'Supervisor (session chính) kiểm `agent_result` của worker và giới hạn retry theo contract đầu ra (`core:principles`).',
 ];
 
 function section(text, heading) {
