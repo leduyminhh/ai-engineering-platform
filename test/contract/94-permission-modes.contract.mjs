@@ -324,6 +324,50 @@ export default async function run({ ok, ctx }) {
         `P4e2 AC1.2: file cấu hình chưa theo dõi (${name}) → full hiệu lực như P4e`);
     }
 
+    // Symlink đã commit: file hay thư mục `.claude` là link tới đích chưa theo dõi vẫn là cấu hình đến từ clone ⇒ không full.
+    // Tạo link bằng plumbing để không phụ thuộc quyền symlink của Windows; checkout lại để hook thấy link thật nếu hệ thống cho phép.
+    const commitLink = (dir, rel, target) => {
+      const blob = execFileSync('git', ['hash-object', '-w', '--stdin'], { cwd: dir, input: target }).toString().trim();
+      gitT(dir, 'update-index', '--add', '--cacheinfo', `120000,${blob},${rel}`);
+      gitT(dir, 'commit', '-q', '-m', `link ${rel}`);
+      gitT(dir, '-c', 'core.symlinks=true', 'checkout', '-f', '--', rel);
+      return fs.lstatSync(path.join(dir, rel)).isSymbolicLink();
+    };
+    const linkRepo = (name, rel, target, setup) => {
+      const dir = path.join(tmpT, name);
+      fs.mkdirSync(dir, { recursive: true });
+      gitT(dir, 'init', '-q');
+      gitT(dir, 'config', 'user.name', 'aip-test');
+      gitT(dir, 'config', 'user.email', 'aip-test@example.com');
+      fs.writeFileSync(path.join(dir, 'README.md'), 'x');
+      gitT(dir, 'add', 'README.md');
+      setup(dir);
+      return { dir, isLink: commitLink(dir, rel, target) };
+    };
+    const cfgJson = JSON.stringify({ mode: 'full' });
+    const linkCases = [
+      ['file symlink → đích gitignore', '.claude/aip-gate.json', '../local/gate.json', (d) => {
+        fs.mkdirSync(path.join(d, '.claude'), { recursive: true });
+        fs.mkdirSync(path.join(d, 'local'), { recursive: true });
+        fs.writeFileSync(path.join(d, 'local', 'gate.json'), cfgJson);
+        fs.writeFileSync(path.join(d, '.gitignore'), 'local/\n');
+        gitT(d, 'add', '.gitignore');
+      }],
+      ['.claude là symlink thư mục', '.claude', 'cfgdir', (d) => {
+        fs.mkdirSync(path.join(d, 'cfgdir'), { recursive: true });
+        fs.writeFileSync(path.join(d, 'cfgdir', 'aip-gate.json'), cfgJson);
+        fs.writeFileSync(path.join(d, '.gitignore'), 'cfgdir/\n');
+        gitT(d, 'add', '.gitignore');
+      }],
+    ];
+    for (const [name, rel, target, setup] of linkCases) {
+      const { dir, isLink } = linkRepo(`link-${linkCases.findIndex((c) => c[0] === name)}`, rel, target, setup);
+      if (!isLink) { console.log(`  [bỏ qua] P4e2 AC1.7: ${name} — hệ thống không tạo được symlink thật (thiếu quyền)`); continue; }
+      ok(bashAt(dir, 'cat .env')?.decision === 'ask', `P4e2 AC1.7: ${name} → không full`);
+    }
+    // Hồi quy: file thường chưa theo dõi + gitignore vẫn full (kiểm hai đường dẫn không làm hỏng ca hợp lệ).
+    ok(bashAt(ignoredRepo, 'cat .env') === null, 'P4e2 AC1.7: file thường gitignore → full vẫn hiệu lực');
+
     // Hồi quy: tên khác hoa/thường đã commit, và .claude là submodule mà repo con theo dõi file — full phải không hiệu lực.
     const caseRepo = mk('case-tracked');
     gitT(caseRepo, 'config', 'core.ignorecase', 'true');
@@ -364,7 +408,7 @@ export default async function run({ ok, ctx }) {
     }
     const c1 = counted();
     const d1 = bashAt(untrackedRepo, 'git commit -m "có dấu"; rm /etc/x; cat .env', bp, { tracked: c1.tracked });
-    ok(d1?.decision === 'deny' && c1.count() === 1, 'P4e2 AC1.3: bypass + full → đúng 1 lần spawn dù decide gọi full() nhiều lần');
+    ok(d1?.decision === 'deny' && c1.count() === 2, 'P4e2 AC1.3: bypass + full → một lần giải quyết (đường dẫn logic + thật = 2 lời gọi) dù decide gọi full() nhiều lần');
 
     // AC1.4: kết quả git khác exit 0/1 → không full.
     const fakeRun = { 'exit 0': () => 0, 'exit 1': () => { throw Object.assign(new Error('x'), { status: 1 }); }, 'exit 128': () => { throw Object.assign(new Error('x'), { status: 128 }); },
