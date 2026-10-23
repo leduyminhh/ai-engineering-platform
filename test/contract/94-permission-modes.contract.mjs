@@ -446,4 +446,40 @@ export default async function run({ ok, ctx }) {
   } finally {
     fs.rmSync(tmp8, { recursive: true, force: true });
   }
+
+  // Minor còn lại của guard-bash: chmod mode, bash -lc, chuyển hướng nối chuỗi, cờ toàn cục có giá trị, push qua wrapper.
+  const tmp9 = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e2-minor-')));
+  try {
+    const proj = path.join(tmp9, 'proj').replaceAll('\\', '/');
+    const dec = (command, pm, branch = 'feature/x') => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: pm },
+      { currentBranch: () => branch, allowEnv: () => false, config: { mode: 'full' }, repoRoot: proj });
+    const table = {
+      deny: ['chmod -x /etc/x', 'chmod -R 755 /etc/x', 'chmod u-x /etc/x', 'chmod +x /etc/x', 'chown -R root /etc/x', 'chmod -w -- /etc/x', 'echo a>b>/tmp/x', 'echo a>b>>/tmp/x', 'echo a>/tmp/x>b'],
+      ask: ['bash -lc "rm /x"', 'sh -ic "rm /x"', 'bash -c "rm /x"'],
+      pass: ['chmod +x run.sh', 'chmod -x run.sh', 'chmod -R 755 build', 'echo a>b>c', 'bash -lc "ls"'],
+    };
+    for (const [want, cmds] of Object.entries(table)) {
+      for (const c of cmds) {
+        const d = dec(c, 'bypassPermissions');
+        const got = d ? d.decision : 'pass';
+        ok(got === want, `P4e2 AC2.4: full + bypass "${c}" → ${want} (got ${got})`);
+      }
+    }
+    for (const c of ['kubectl -n x apply -f y', 'kubectl --namespace x apply -f y', 'kubectl --context c -n x apply -f y', 'helm -n x upgrade r c', 'helm --kube-context c upgrade r c', 'kubectl --kubeconfig k -s https://h apply -f y']) {
+      ok(dec(c, 'default')?.decision === 'ask', `P4e2 AC2.4: full + không bypass "${c}" → ask`);
+    }
+    for (const c of ['kubectl get pods', 'kubectl -n x get pods', 'helm -n x list']) {
+      ok(dec(c, 'default') === null, `P4e2 AC2.4: full + không bypass "${c}" → không quyết định`);
+    }
+
+    // H1 phải thấy push qua wrapper (env -S, sudo, nice) cả khi full hiệu lực.
+    for (const c of ['env -S "git push origin main"', 'sudo --user=root git push origin main', 'nice -n5 git push origin main', 'sudo git push --force origin x', 'env A=1 git push origin HEAD:main']) {
+      for (const pm of ['bypassPermissions', 'default']) {
+        ok(dec(c, pm)?.decision === 'ask', `P4e2 AC2.4: push qua wrapper (${pm}) "${c}" → ask`);
+      }
+    }
+    ok(dec('env -S "git push origin feature/x"', 'bypassPermissions') === null, 'P4e2 AC2.4: push nhánh thường qua wrapper khi full + bypass → không quyết định');
+  } finally {
+    fs.rmSync(tmp9, { recursive: true, force: true });
+  }
 }

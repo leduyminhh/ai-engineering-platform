@@ -154,7 +154,9 @@ function trackDirs(segs, cwd, msys = true) {
       cdSeen = true;
       unres = true;
     }
-    return { t, gc: gitCmd(t), dir, unres };
+    // u: lệnh đã bỏ tiền tố bọc (env -S, sudo, nice…) để H1 thấy `git push` thật.
+    const u = unwrap(t)[0];
+    return { t, u, gc: gitCmd(u), dir, unres };
   });
 }
 
@@ -244,27 +246,34 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   for (let i = 0; i < t.length; i++) {
     // Chỉ tìm `>` ở phần token trước ký tự nháy đầu: `awk '$1>2'` hay `"a > b"` là dữ liệu, còn `a>/tmp/x` là chuyển hướng.
     const tok = t[i];
-    const at = tok.slice(0, t.qpos?.[i] ?? Infinity).indexOf('>');
+    const head = tok.slice(0, t.qpos?.[i] ?? Infinity);
+    let at = head.indexOf('>');
     if (at < 0) { rest.push(tok); continue; }
     const left = tok.slice(0, at);
     if (!/^(\d+|&)?$/.test(left)) rest.push(left);
-    const after = at + (tok[at + 1] === '>' || tok[at + 1] === '|' ? 2 : 1);
-    // `2>&1` bị parse() tách ở `&` thành `2>` + `1`: đích thiếu hoặc bắt đầu bằng `&` là dup fd, không phải file.
-    const target = tok.slice(after) || (i + 1 < t.length ? t[++i] : '');
-    if (target && !target.startsWith('&')) targets.push(target);
+    // Chuyển hướng nối chuỗi `a>b>/tmp/x`: mỗi `>` mở một đích ghi.
+    while (at >= 0) {
+      const after = at + (tok[at + 1] === '>' || tok[at + 1] === '|' ? 2 : 1);
+      const nx = head.indexOf('>', after);
+      // `2>&1` bị parse() tách ở `&` thành `2>` + `1`: đích thiếu hoặc bắt đầu bằng `&` là dup fd, không phải file.
+      const target = tok.slice(after, nx < 0 ? undefined : nx) || (nx < 0 && i + 1 < t.length ? t[++i] : '');
+      if (target && !target.startsWith('&')) targets.push(target);
+      at = nx;
+    }
   }
   const [tk, k] = unwrap(rest);
   const name = k < tk.length ? cmdName(tk[k]) : '';
   const args = tk.slice(k + 1);
   let ask = false;
-  if (SHELLS.has(name) && args.some((a) => /^-(c|command)$/i.test(a)) && WRITE_IN_STRING.test(args.join(' '))) ask = true;
+  if (SHELLS.has(name) && args.some((a) => /^(-[a-z]*c|-command)$/i.test(a)) && WRITE_IN_STRING.test(args.join(' '))) ask = true;
   if (name === 'eval' && WRITE_IN_STRING.test(args.join(' '))) ask = true;
   if (WRITE_CMDS.has(name)) {
     let pos = [];
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) targets.push(args[++i]); continue; }
-      if (a.startsWith('-')) continue;
+      // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
+      if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
       if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
       if (name === 'rmdir' && /^\/[sq]$/i.test(a)) continue;
       pos.push(a);
@@ -311,6 +320,8 @@ function defaultBranch(cwd) {
 }
 
 // Phải khớp các quy tắc Bash(<tiền tố> *) nhóm git_push/network/production_deploy trong core/permissions/policy.json (test AC1.9 đối chiếu).
+const KUBE_VALUE_FLAGS = new Set(['-n', '--namespace', '--context', '--kube-context', '--kubeconfig', '-s', '--server', '--cluster', '--user']);
+
 export const ASK_COMMANDS = ['git push', 'curl', 'wget', 'kubectl apply', 'terraform apply', 'helm upgrade'];
 
 // Đoạn lệnh có bắt đầu bằng một tiền tố ASK_COMMANDS không (bỏ qua VAR=x và sudo đứng trước).
@@ -324,7 +335,11 @@ function matchesAsk(orig) {
     if (name !== head) return false;
     if (!sub) return true;
     if (head === 'git') return gitCmd(rest)?.sub === sub;
-    return rest.slice(1).find((x) => !x.startsWith('-')) === sub;
+    const args = rest.slice(1);
+    let i = 0;
+    // kubectl/helm: cờ toàn cục có giá trị đứng trước subcommand (`kubectl -n x apply`).
+    while (i < args.length && args[i].startsWith('-')) i += KUBE_VALUE_FLAGS.has(args[i]) ? 2 : 1;
+    return args[i] === sub;
   });
 }
 
@@ -372,16 +387,16 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
   const { segs, unclosed } = parse(cmd);
   const parsed = withDirs(segs, cwd, msys);
-  if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;
+  if (parsed.some(({ u, gc }) => gc.sub === 'commit' && commitMessages(u, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;
   // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → hỏi người dùng (ask) khi có dấu bất kỳ.
   if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd) && !full()) return ASK_UNPARSABLE;
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
   const naive = withDirs(naiveSegments(cmd), cwd, msys);
-  for (const { t, gc, dir, unres } of [...parsed, ...naive]) {
-    const why = gc.sub === 'push' ? pushReason(t, gc, dir, currentBranch, unres, msys) : null;
+  for (const { u, gc, dir, unres } of [...parsed, ...naive]) {
+    const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
   }
-  if (bypass && full()) {
+  if (full()) {
     const roots = rootsOf();
     let ask = false;
     for (const { t, dir, unres } of [...trackDirs(segs, cwd, msys), ...trackDirs(naiveSegments(cmd), cwd, msys)]) {
