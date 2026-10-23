@@ -188,3 +188,49 @@ test("P4e2 AC1.7: aip mode cảnh báo theo trạng thái git của aip-gate.jso
   assert.match(run("status", outside), /git: .*không xác định/);
   assert.match(run("full", outside), /✓ mode=full/);
 });
+
+test("P4e2 AC2.3: file worktree hỏng che repo chính; aip mode báo lỗi ra stderr, exit 1, không ghi file", () => {
+  const main = fs.realpathSync.native(tmp());
+  const git = (cwd, ...a) => execFileSync("git", ["-c", "commit.gpgsign=false", ...a], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+  git(main, "config", "user.name", "t");
+  git(main, "config", "user.email", "t@example.com");
+  put(path.join(main, "README.md"), "x");
+  git(main, "add", "README.md");
+  git(main, "commit", "-q", "-m", "init");
+  const wt = path.join(path.dirname(main), `${path.basename(main)}-bad`);
+  dirs.push(wt);
+  git(main, "worktree", "add", "-q", wt, "-b", "p4e2-bad-wt");
+  const mainGate = JSON.stringify({ mode: "full" });
+  put(gatePath(main), mainGate);
+  for (const bad of ["{ not json", "[]", "null"]) {
+    put(gatePath(wt), bad);
+    for (const sub of ["status", "full", "ask"]) {
+      const r = spawnSync("node", [CLI, "mode", sub], { cwd: wt, encoding: "utf8" });
+      assert.equal(r.status, 1, `${sub} với ${bad}`);
+      assert.match(r.stderr, /aip-gate\.json/);
+      assert.equal(r.stdout, "");
+      assert.equal(fs.readFileSync(gatePath(wt), "utf8"), bad);
+      assert.equal(fs.readFileSync(gatePath(main), "utf8"), mainGate);
+    }
+  }
+});
+
+test("P4e2 AC2.5: settings.json hoặc aip-gate.json là thư mục, hoặc JSON hỏng ⇒ stderr, exit 1, không ném", () => {
+  for (const target of [setPath, gatePath]) {
+    const root = tmp();
+    fs.mkdirSync(target(root), { recursive: true });
+    for (const sub of ["status", "full", "ask"]) {
+      const err = [];
+      const out = [];
+      assert.equal(runMode(sub, { root, out: (l) => out.push(l), err: (l) => err.push(l) }), 1, `${sub} ${path.basename(target(root))}`);
+      assert.match(err.join("\n"), /Lỗi/);
+      assert.deepEqual(out, []);
+    }
+    assert.ok(fs.statSync(target(root)).isDirectory());
+  }
+  const root = tmp();
+  put(gatePath(root), "{ not json");
+  const err = [];
+  assert.equal(runMode("status", { root, out: () => assert.fail("stdout"), err: (l) => err.push(l) }), 1);
+  assert.match(err.join("\n"), /JSON/);
+});

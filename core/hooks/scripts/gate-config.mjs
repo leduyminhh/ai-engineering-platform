@@ -7,8 +7,14 @@ function git(dir, args) {
   return execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
 
-function readJson(root) {
-  try { return JSON.parse(readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8').replace(/^﻿/, '')); } catch { return null; }
+// null = file thiếu hẳn; { invalid } = tồn tại nhưng không đọc/parse được hoặc không phải đối tượng; { config } = hợp lệ.
+function readState(root) {
+  let raw;
+  try { raw = readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8'); } catch (e) { return e?.code === 'ENOENT' ? null : { invalid: true }; }
+  try {
+    const config = JSON.parse(raw.replace(/^﻿/, ''));
+    return config && typeof config === 'object' && !Array.isArray(config) ? { config } : { invalid: true };
+  } catch { return { invalid: true }; }
 }
 
 // Gốc worktree trước rồi tới gốc repo chính: worktree con tạo trước khi commit file cấu hình vẫn theo project.
@@ -22,10 +28,13 @@ export function resolveGate(dir) {
   let main = null;
   try { main = path.dirname(git(d, ['rev-parse', '--path-format=absolute', '--git-common-dir'])); } catch { /* chỉ còn gốc worktree */ }
   const roots = [...new Set([top, main].filter(Boolean).map((r) => path.resolve(r)))];
-  const own = readJson(top);
-  const config = own ?? (main ? readJson(main) : null);
+  const own = readState(top);
+  const base = { roots, top: path.resolve(top), main: main ? path.resolve(main) : null };
+  // File worktree hỏng vẫn che file repo chính: rơi về repo chính sẽ cấp `full` từ một cấu hình mà người dùng đã cố ghi đè.
+  if (own?.invalid) return { ...base, config: null, file: path.resolve(top, '.claude', 'aip-gate.json'), source: 'worktree-invalid' };
+  const config = own?.config ?? (main ? readState(main)?.config : null) ?? null;
   const file = config ? path.resolve(own ? top : main, '.claude', 'aip-gate.json') : null;
-  return { config, roots, file, top: path.resolve(top), main: main ? path.resolve(main) : null, source: own ? 'worktree' : (config ? 'main' : null) };
+  return { ...base, config, file, source: own ? 'worktree' : (config ? 'main' : null) };
 }
 
 export function readGate(dir) {

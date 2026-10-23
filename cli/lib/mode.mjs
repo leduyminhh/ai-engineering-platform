@@ -87,7 +87,7 @@ function locateGate(root) {
 }
 
 function readText(file) {
-  try { return fs.readFileSync(file, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
+  try { return fs.readFileSync(file, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; e.message = `không đọc được ${file}: ${e.message}`; throw e; }
 }
 
 function writeText(file, text) {
@@ -127,7 +127,11 @@ const SETTINGS_LABEL = {
   absent: 'không có file',
 };
 
-export function runMode(sub, { root, out = console.log }) {
+export function runMode(sub, { root, out = console.log, err = console.error }) {
+  try { return runModeUnsafe(sub, { root, out, err }); } catch (e) { err(`Lỗi: ${e.message}`); return 1; }
+}
+
+function runModeUnsafe(sub, { root, out, err }) {
   const gateFile = path.join(root, '.claude', 'aip-gate.json');
   const settingsFile = path.join(root, '.claude', 'settings.json');
 
@@ -135,8 +139,8 @@ export function runMode(sub, { root, out = console.log }) {
   const found = locateGate(root);
   const gateRaw = found.raw;
   if (gateRaw != null) {
-    try { gate = JSON.parse(stripBom(gateRaw)); } catch (e) { out(`Lỗi: ${found.file} không phải JSON hợp lệ (${e.message}).`); return 1; }
-    if (gate === null || typeof gate !== 'object' || Array.isArray(gate)) { out(`Lỗi: ${found.file} phải là một đối tượng JSON.`); return 1; }
+    try { gate = JSON.parse(stripBom(gateRaw)); } catch (e) { err(`Lỗi: ${found.file} không phải JSON hợp lệ (${e.message}).`); return 1; }
+    if (gate === null || typeof gate !== 'object' || Array.isArray(gate)) { err(`Lỗi: ${found.file} phải là một đối tượng JSON.`); return 1; }
   }
   const settingsText = readText(settingsFile);
   const allowEnvFiles = gate?.allowEnvFiles === true;

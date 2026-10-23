@@ -384,6 +384,24 @@ export default async function run({ ok, ctx }) {
       files.decide({ tool_name: tool, tool_input: tool === 'Grep' ? { glob: '.env*' } : { file_path: file }, cwd: trackedRepo, permission_mode: 'default' }, { scopes: {}, allowEnv: () => false, reader });
     }
     ok(reads === 0, 'P4e2 AC1.3: phiên không bypass → guard-bash/guard-files không đọc cấu hình gate');
+
+    // AC2.3: file worktree hỏng che file repo chính (không rơi về `full` của repo chính); file thiếu hẳn vẫn rơi về repo chính.
+    const { resolveGate } = await load('gate-config.mjs');
+    const mainInv = mk('wtinvmain');
+    const broken = { 'JSON hỏng': '{ not json', null: 'null', mảng: '[]', số: '3', chuỗi: '"full"', rỗng: '' };
+    for (const [i, [name, content]] of Object.entries(broken).entries()) {
+      const wtInv = path.join(tmpT, `wt-inv-${i}`);
+      gitT(mainInv, 'worktree', 'add', '-q', wtInv, '-b', `wt-inv-${i}`);
+      fs.mkdirSync(path.join(wtInv, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(wtInv, '.claude', 'aip-gate.json'), content);
+      const g = resolveGate(wtInv);
+      ok(g.config === null && g.source === 'worktree-invalid' && g.file === path.join(fs.realpathSync.native(wtInv), '.claude', 'aip-gate.json'),
+        `P4e2 AC2.3: file worktree ${name} → config null, nguồn worktree-invalid, không rơi về repo chính`);
+      ok(bashAt(wtInv, 'cat .env')?.decision === 'ask', `P4e2 AC2.3: file worktree ${name} → hook chạy như không có cấu hình (không full)`);
+    }
+    const wtMissing = path.join(tmpT, 'wt-inv-missing');
+    gitT(mainInv, 'worktree', 'add', '-q', wtMissing, '-b', 'wt-inv-missing');
+    ok(resolveGate(wtMissing).source === 'main', 'P4e2 AC2.3: file worktree thiếu hẳn → vẫn rơi về repo chính');
   } finally {
     fs.rmSync(tmpT, { recursive: true, force: true });
   }
