@@ -109,8 +109,9 @@ const norm = (x) => {
 
 // Ổ đĩa/UNC trên nền không phải win32 không resolve được thành đường dẫn thật nên luôn coi là ngoài root.
 // Không realpath: symlink trong root trỏ ra ngoài không bị phát hiện (ghi nhận ở Rủi ro của design).
-export function classifyPath(p, cwd, roots) {
-  const s = normalizeMsysPath(String(p ?? ''));
+// msys=false: đường dẫn từ PowerShell, không đổi /e/x.
+export function classifyPath(p, cwd, roots, msys = true) {
+  const s = msys ? normalizeMsysPath(String(p ?? '')) : String(p ?? '');
   if (!s || hasUnresolvedRef(s)) return 'unknown';
   if (process.platform !== 'win32' && (/^[A-Za-z]:[\\/]/.test(s) || s.startsWith('\\\\'))) return 'outside';
   const abs = norm(path.resolve(cwd, s.replace(/\\/g, '/')));

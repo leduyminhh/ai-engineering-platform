@@ -405,4 +405,45 @@ export default async function run({ ok, ctx }) {
   } finally {
     fs.rmSync(tmpT, { recursive: true, force: true });
   }
+
+  // N2/N3 (phase 2): wrapper nice/env -S/sudo và PowerShell không đổi /e/x.
+  const tmp8 = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e2-wrap-')));
+  try {
+    const proj = path.join(tmp8, 'proj').replaceAll('\\', '/');
+    const wrap = (command, pm) => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: pm },
+      { currentBranch: () => 'feature/x', allowEnv: () => false, config: { mode: 'full' }, repoRoot: proj });
+    const wrappers = [(c) => `nice -n5 ${c}`, (c) => `nice -n 5 ${c}`, (c) => `nice --10 ${c}`, (c) => `nice -5 ${c}`, (c) => `nice --adjustment 5 ${c}`, (c) => `nice --adjustment=5 ${c}`,
+      (c) => `env -S "${c}"`, (c) => `env --split-string "${c}"`, (c) => `env -S"${c}"`, (c) => `env -u X -S "A=1 ${c}"`, (c) => `sudo -u root ${c}`, (c) => `sudo --user=root ${c}`,
+      (c) => `sudo -E ${c}`, (c) => `sudo -g adm -n ${c}`, (c) => `sudo -nu root ${c}`, (c) => `sudo -C 3 -h host ${c}`, (c) => `sudo --prompt x -- ${c}`, (c) => `sudo nice -n5 env -S "${c}"`];
+    for (const w of wrappers) {
+      const out = w('rm /etc/x');
+      ok(wrap(out, 'bypassPermissions')?.decision === 'deny', `P4e2 AC2.1: full + bypass "${out}" → deny`);
+      ok(wrap(w('rm x'), 'bypassPermissions') === null, `P4e2 AC2.1: full + bypass "${w('rm x')}" → không quyết định`);
+      ok(wrap(w('curl x'), 'default')?.decision === 'ask', `P4e2 AC2.1: full + không bypass "${w('curl x')}" → ask`);
+      ok(wrap(w('ls x'), 'default') === null, `P4e2 AC2.1: full + không bypass "${w('ls x')}" → không quyết định`);
+    }
+
+    // N3: chỉ có nghĩa trên win32 (Git Bash /d/x ≠ PowerShell /d/x).
+    if (process.platform === 'win32') {
+      const drive = proj[0].toLowerCase();
+      const msys = `/${drive}${proj.slice(2)}`;
+      const dec = (tool, command, extra = {}) => bash.decide({ tool_name: tool, tool_input: { command }, cwd: proj, permission_mode: 'bypassPermissions' },
+        { currentBranch: () => 'feature/x', allowEnv: () => false, config: { mode: 'full' }, repoRoot: proj, ...extra });
+      ok(dec('PowerShell', `Remove-Item ${msys}/a`)?.decision === 'deny' && dec('Bash', `rm ${msys}/a`) === null,
+        'P4e2 AC2.2: đích ghi /d/x — PowerShell giải theo ổ hiện tại (ngoài root), Bash giải thành D:/x (trong root)');
+      ok(dec('PowerShell', `cd ${msys}/sub; Remove-Item a`)?.decision === 'deny' && dec('Bash', `cd ${msys}/sub && rm a`) === null,
+        'P4e2 AC2.2: cd /d/x — PowerShell không đổi, Bash đổi');
+      ok(dec('PowerShell', `Get-Content ${msys}/.env`)?.decision === 'ask' && dec('Bash', `cat ${msys}/.env`) === null,
+        'P4e2 AC2.2: đường dẫn secret /d/x — PowerShell không đổi, Bash đổi');
+      const dirs = { PowerShell: [], Bash: [] };
+      for (const tool of ['PowerShell', 'Bash']) dec(tool, `git -C ${msys} push origin HEAD`, { currentBranch: (d) => { dirs[tool].push(d); return 'feature/x'; } });
+      ok(path.resolve(dirs.Bash[0]).toLowerCase() === path.resolve(proj).toLowerCase() && path.resolve(dirs.PowerShell[0]).toLowerCase() !== path.resolve(proj).toLowerCase(),
+        'P4e2 AC2.2: git -C /d/x — PowerShell không đổi, Bash đổi');
+      const roots = [path.resolve(proj)];
+      ok(classifyPath(`${msys}/a`, proj, roots) === 'inside' && classifyPath(`${msys}/a`, proj, roots, false) === 'outside',
+        'P4e2 AC2.2: classifyPath(msys=false) không đổi /d/x');
+    }
+  } finally {
+    fs.rmSync(tmp8, { recursive: true, force: true });
+  }
 }

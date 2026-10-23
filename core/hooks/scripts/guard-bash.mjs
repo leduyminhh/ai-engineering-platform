@@ -99,7 +99,7 @@ function commitMessages(t, from) {
   return msgs;
 }
 
-function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false) {
+function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true) {
   let force = false;
   const pos = [];
   const args = t.slice(gc.i + 1);
@@ -121,7 +121,7 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false) {
   if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return 'push dạng force/xoá/mirror/all';
   // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
   const unresolvable = cdUnresolved || gc.dirs.some(hasUnresolvedRef);
-  const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs.map((d) => normalizeMsysPath(d))) : cwd;
+  const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs.map((d) => np(d, msys))) : cwd;
   const refs = specs.map((r) => r.split(':').pop().replace(/^refs\/heads\//, ''));
   const wantsHead = (refs.length ? refs : ['HEAD']).some((r) => r === 'HEAD' || r === '@');
   if (unresolvable && wantsHead) return 'push không xác định được nhánh hiện tại (đường dẫn -C/cd chứa biến/~)';
@@ -130,11 +130,14 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false) {
   return hit ? `push vào nhánh bảo vệ "${hit}"` : null;
 }
 
+// Git Bash đổi /e/x thành E:/x; PowerShell giải /e/x theo ổ hiện tại (E:\e\x) nên không được đổi.
+const np = (p, msys) => (msys ? normalizeMsysPath(p) : p);
+
 const CD_CMDS = new Set(['cd', 'chdir', 'pushd', 'push-location', 'set-location', 'sl']);
 const POP_CMDS = new Set(['popd', 'pop-location']);
 
 // Theo dõi thư mục làm việc qua các đoạn theo thứ tự: `cd repo && git push` phải tra nhánh của repo, không phải của cwd phiên.
-function trackDirs(segs, cwd) {
+function trackDirs(segs, cwd, msys = true) {
   let dir = cwd;
   let unres = false;
   let cdSeen = false;
@@ -146,7 +149,7 @@ function trackDirs(segs, cwd) {
       cdSeen = true;
       const arg = t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
       if (arg === undefined || hasUnresolvedRef(arg) || arg === '-') unres = true;
-      else { const a = normalizeMsysPath(arg); dir = path.resolve(dir, a); if (path.isAbsolute(a)) unres = false; }
+      else { const a = np(arg, msys); dir = path.resolve(dir, a); if (path.isAbsolute(a)) unres = false; }
     } else if (POP_CMDS.has(name)) {
       cdSeen = true;
       unres = true;
@@ -155,8 +158,8 @@ function trackDirs(segs, cwd) {
   });
 }
 
-function withDirs(segs, cwd) {
-  return trackDirs(segs, cwd).filter((x) => x.gc);
+function withDirs(segs, cwd, msys = true) {
+  return trackDirs(segs, cwd, msys).filter((x) => x.gc);
 }
 
 // H6 là heuristic đọc token, không phải sandbox: biến, subshell, script con vẫn có thể ghi ra ngoài root mà không bị thấy.
@@ -173,12 +176,22 @@ const GLOB = /[*?[]/;
 
 const cmdName = (x) => String(x).split(/[\\/]/).pop().toLowerCase().replace(/\.exe$/, '');
 
-// Bỏ tiền tố bọc lệnh (VAR=x, sudo, timeout, nohup, nice, env, command, exec) và trả chỉ số của lệnh thật.
-function cmdIndex(t) {
+const SUDO_VALUE_OPT = /^(-[A-Za-z]*[ughpCrtUDRT]|--(user|group|host|prompt|chdir|role|type|other-user|close-from))$/;
+const ENV_SPLIT = /^(-S|--split-string=?)([\s\S]*)$/;
+
+// Bỏ tiền tố bọc lệnh (VAR=x, sudo, timeout, nohup, nice, env, command, exec); trả [token, chỉ số lệnh thật].
+// `env -S "<chuỗi>"` được tách bằng chính parse() và ghép vào token để H6 và matchesAsk thấy lệnh thật.
+function unwrap(tokens) {
+  let t = tokens;
   let k = 0;
   while (k < t.length) {
     const n = cmdName(t[k]);
-    if (/^\w+=/.test(t[k]) || ['sudo', 'nohup', 'command', 'exec'].includes(n)) { k++; continue; }
+    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec'].includes(n)) { k++; continue; }
+    if (n === 'sudo') {
+      k++;
+      while (k < t.length && t[k].startsWith('-')) k += SUDO_VALUE_OPT.test(t[k]) ? 2 : 1;
+      continue;
+    }
     if (n === 'timeout') {
       k++;
       while (k < t.length && t[k].startsWith('-')) k += /^(-s|-k|--signal|--kill-after)$/.test(t[k]) ? 2 : 1;
@@ -187,22 +200,30 @@ function cmdIndex(t) {
     }
     if (n === 'nice') {
       k++;
-      if (t[k] === '-n' || t[k] === '--adjustment') k += 2;
-      else if (k < t.length && /^(-\d+|--adjustment=\S+)$/.test(t[k])) k++;
+      if (/^(-n|--adjustment)$/.test(t[k])) k += 2;
+      else if (/^(-n-?\d+|--?\d+|--adjustment=\S+)$/.test(t[k])) k++;
       continue;
     }
     if (n === 'env') {
       k++;
-      while (k < t.length && (t[k].startsWith('-') || /^\w+=/.test(t[k]))) k += /^(-u|-C|--unset|--chdir)$/.test(t[k]) ? 2 : 1;
+      while (k < t.length && (t[k].startsWith('-') || /^\w+=/.test(t[k]))) {
+        const m = ENV_SPLIT.exec(t[k]);
+        if (m) {
+          const used = m[2] || t[k + 1] === undefined ? 1 : 2;
+          t = [...t.slice(0, k), ...parse(m[2] || t[k + 1] || '').segs.flat(), ...t.slice(k + used)];
+          continue;
+        }
+        k += /^(-u|-C|--unset|--chdir)$/.test(t[k]) ? 2 : 1;
+      }
       continue;
     }
     break;
   }
-  return k;
+  return [t, k];
 }
 
-function classifyTarget(raw, dir, unres, roots) {
-  const p = normalizeMsysPath(raw);
+function classifyTarget(raw, dir, unres, roots, msys = true) {
+  const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
   const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
   if (!absolute && (unres || hasUnresolvedRef(p))) return 'unknown';
@@ -211,13 +232,13 @@ function classifyTarget(raw, dir, unres, roots) {
     const first = parts.findIndex((x) => x !== '');
     const g = parts.findIndex((x) => GLOB.test(x));
     if (g <= first) return 'unknown';
-    return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots);
+    return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots, msys);
   }
-  return classifyPath(p, dir, roots);
+  return classifyPath(p, dir, roots, msys);
 }
 
 // Trả 'deny' | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
-function confineSegment(t, dir, unres, roots) {
+function confineSegment(t, dir, unres, roots, msys = true) {
   const rest = [];
   const targets = [];
   for (let i = 0; i < t.length; i++) {
@@ -232,9 +253,9 @@ function confineSegment(t, dir, unres, roots) {
     const target = tok.slice(after) || (i + 1 < t.length ? t[++i] : '');
     if (target && !target.startsWith('&')) targets.push(target);
   }
-  const k = cmdIndex(rest);
-  const name = k < rest.length ? cmdName(rest[k]) : '';
-  const args = rest.slice(k + 1);
+  const [tk, k] = unwrap(rest);
+  const name = k < tk.length ? cmdName(tk[k]) : '';
+  const args = tk.slice(k + 1);
   let ask = false;
   if (SHELLS.has(name) && args.some((a) => /^-(c|command)$/i.test(a)) && WRITE_IN_STRING.test(args.join(' '))) ask = true;
   if (name === 'eval' && WRITE_IN_STRING.test(args.join(' '))) ask = true;
@@ -255,7 +276,7 @@ function confineSegment(t, dir, unres, roots) {
   }
   let unknown = false;
   for (const p of targets) {
-    const c = classifyTarget(p, dir, unres, roots);
+    const c = classifyTarget(p, dir, unres, roots, msys);
     if (c === 'outside') return 'deny';
     if (c === 'unknown') unknown = true;
   }
@@ -264,14 +285,14 @@ function confineSegment(t, dir, unres, roots) {
 
 // Token (hoặc phần tách theo khoảng trắng trong chuỗi nháy) khớp mẫu bí mật → lấy phần sau `=`/`@`/`<`/`(` làm đường dẫn rồi phân loại theo cwd đã theo dõi.
 // Không tách được token bí mật nào dù regex khớp cả lệnh thì coi là không chắc ⇒ hỏi.
-function secretOutsideRoots(lists, cwd, roots, re) {
+function secretOutsideRoots(lists, cwd, roots, re, msys = true) {
   let found = false;
-  for (const { t, dir, unres } of lists.flatMap((l) => trackDirs(l, cwd))) {
+  for (const { t, dir, unres } of lists.flatMap((l) => trackDirs(l, cwd, msys))) {
     for (const tok of t.flatMap((x) => x.split(/\s+/))) {
       if (!re.test(tok)) continue;
       found = true;
       const p = tok.slice(Math.max(tok.lastIndexOf('='), tok.lastIndexOf('@'), tok.lastIndexOf('<'), tok.lastIndexOf('(')) + 1);
-      const c = classifyTarget(p, dir, unres, roots);
+      const c = classifyTarget(p, dir, unres, roots, msys);
       if (c === 'outside' || c === 'unknown') return true;
     }
   }
@@ -293,8 +314,8 @@ function defaultBranch(cwd) {
 export const ASK_COMMANDS = ['git push', 'curl', 'wget', 'kubectl apply', 'terraform apply', 'helm upgrade'];
 
 // Đoạn lệnh có bắt đầu bằng một tiền tố ASK_COMMANDS không (bỏ qua VAR=x và sudo đứng trước).
-function matchesAsk(t) {
-  const k = cmdIndex(t);
+function matchesAsk(orig) {
+  const [t, k] = unwrap(orig);
   if (k >= t.length) return false;
   const name = cmdName(t[k]);
   const rest = t.slice(k);
@@ -334,6 +355,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (!raw) return null;
   const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw;
   const cwd = input?.cwd || '.';
+  const msys = input?.tool_name !== 'PowerShell';
   // Kiểm rẻ (permission_mode) trước; chỉ đọc cấu hình (tốn lời gọi git) khi một nhánh H1–H3 thật sự cần quyết định.
   const bypass = input?.permission_mode === 'bypassPermissions';
   let cfg;
@@ -349,21 +371,21 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
   const { segs, unclosed } = parse(cmd);
-  const parsed = withDirs(segs, cwd);
+  const parsed = withDirs(segs, cwd, msys);
   if (parsed.some(({ t, gc }) => gc.sub === 'commit' && commitMessages(t, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;
   // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → hỏi người dùng (ask) khi có dấu bất kỳ.
   if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd) && !full()) return ASK_UNPARSABLE;
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
-  const naive = withDirs(naiveSegments(cmd), cwd);
+  const naive = withDirs(naiveSegments(cmd), cwd, msys);
   for (const { t, gc, dir, unres } of [...parsed, ...naive]) {
-    const why = gc.sub === 'push' ? pushReason(t, gc, dir, currentBranch, unres) : null;
+    const why = gc.sub === 'push' ? pushReason(t, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
   }
   if (bypass && full()) {
     const roots = rootsOf();
     let ask = false;
-    for (const { t, dir, unres } of [...trackDirs(segs, cwd), ...trackDirs(naiveSegments(cmd), cwd)]) {
-      const r = confineSegment(t, dir, unres, roots);
+    for (const { t, dir, unres } of [...trackDirs(segs, cwd, msys), ...trackDirs(naiveSegments(cmd), cwd, msys)]) {
+      const r = confineSegment(t, dir, unres, roots, msys);
       if (r === 'deny') return { decision: 'deny', reason: 'Chế độ full: lệnh ghi/xoá đường dẫn ngoài root của project. Thêm thư mục vào "fullRoots" trong .claude/aip-gate.json nếu thật sự cần.' };
       if (r === 'ask') ask = true;
     }
@@ -382,7 +404,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (hits(SECRET) && full()) {
     // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
     const secretRe = hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET;
-    if (hits(secretRe) && secretOutsideRoots([segs, naiveSegments(cmd)], cwd, rootsOf(), secretRe)) return secretAsk;
+    if (hits(secretRe) && secretOutsideRoots([segs, naiveSegments(cmd)], cwd, rootsOf(), secretRe, msys)) return secretAsk;
   }
   return null;
 }
