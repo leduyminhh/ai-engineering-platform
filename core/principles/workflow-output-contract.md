@@ -60,14 +60,15 @@ Kết quả không đạt bất kỳ luật nào là **đầu ra hỏng**. Xử 
 
 - **Đầu ra hỏng** → giao lại cho chính worker đó, kèm luật bị vi phạm, tối đa 2 lần. Không đi theo cạnh nào
   của graph. Hết ngưỡng → `ask_user`.
-- **`status: blocked`** → đi cạnh `on_fail` hiện có (thường là `ask_user`) ngay, không retry.
+- **`status: blocked`** → `ask_user` ngay, không retry (đi cạnh `on_fail` tới `ask_user`/`blocked` nếu bước có); chuyển `questions[]` của worker cho người dùng.
 - **`status: failed`**, hoặc đầu ra hợp lệ nhưng gate trượt → đi cạnh `on_fail` khớp `when`, tính lượt theo
   mục "Retry có ngưỡng".
 
 ## Retry có ngưỡng
 
 - Cạnh `on_fail` quay ngược khai báo `max_attempts` trong `graph.json`; mỗi cạnh quay ngược được đi tối đa
-  `max_attempts` lần trong một lần chạy workflow.
+  `max_attempts` lần trong một lần chạy workflow. `graph.json` nằm cùng thư mục với `SKILL.md`/`WORKFLOW.md`
+  của workflow; không đọc được hoặc cạnh thiếu `max_attempts` thì Supervisor dùng 2.
 - Bộ đếm tính riêng cho từng cạnh và không reset khi workflow đi tiếp. Supervisor tự đếm trong hội thoại,
   không ghi file state.
 - Lần thứ `max_attempts + 1` cần đi cạnh đó → chuyển sang `ask_user`, kèm lý do trượt của từng lượt.
