@@ -4,7 +4,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { envFilesAllowed, fullEffective, readGate, classifyPath, allowedRoots, normalizeMsysPath } from './gate-config.mjs';
+import { envFilesAllowed, fullEffective, readGate, classifyPath, allowedRoots, normalizeMsysPath, fullReadRoots, defaultReadRoots, inReadRoot } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
@@ -84,6 +84,8 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   if (!fullEffective(gate, input, { tracked })) return null;
   const where = classifyPath(String(file), cwd, allowedRoots(gate, input));
   if (where === 'inside') return null;
+  // Root chỉ-đọc không nằm trong allowedRoots nên lệnh ghi vẫn rơi xuống deny bên dưới.
+  if (!write && inReadRoot(String(file), cwd, [...fullReadRoots(gate.config), ...defaultReadRoots(input)])) return null;
   const reason = `Chế độ full chỉ cho phép thao tác trong root của project; đường dẫn ${where === 'unknown' ? 'không xác định được' : 'nằm ngoài root'}. Cần mở rộng → thêm vào "fullRoots" trong .claude/aip-gate.json.`;
   return { decision: write && where === 'outside' ? 'deny' : 'ask', reason };
 }

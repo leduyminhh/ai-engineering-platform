@@ -1,6 +1,6 @@
 # Thiết kế: chế độ quyền giai đoạn 2 — chặn `full` từ file được git theo dõi, vá minor, root chỉ-đọc (project P4e-2)
 - Ngày: 2026-10-23
-- Trạng thái: đã duyệt 2026-10-23 (cả phép đo I5: nhánh A)
+- Trạng thái: đã duyệt 2026-10-23 (cả phép đo I5: nhánh A); phép đo I5 đã chạy 2026-10-23, kết quả ở mục "Kết quả phép đo I5"
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: tiếp nối [P4e](../2026-10-22-permission-modes/design.md) (đã merge master c149703, chưa push)
 
@@ -37,9 +37,17 @@ Tất cả là đề xuất của tôi, chờ duyệt cùng design.
 ### I5 (cổng bằng phép đo)
 
 - **R-I5.1: root chỉ-đọc.** Khóa mới `fullReadRoots` (mảng đường dẫn tuyệt đối, mặc định rỗng) cộng các mặc định được chốt sau phép đo. Trong `full`: Read/Grep dưới root chỉ-đọc ⇒ không quyết định; Write/Edit/MultiEdit/NotebookEdit dưới đó vẫn `deny`; `guard-bash` H6 coi chúng là ngoài root cho lệnh ghi/xóa (không bao giờ ghi). Nhắc secret (H3 trong `full`) áp như cũ.
-- **R-I5.2: phép đo `claude -p` (cần người dùng đồng ý, trần `--max-budget-usd 0.2`, khoảng 0,12–0,2 USD).** Hook khai bằng `--settings` chỉ ghi `tool_name` và các khóa đường dẫn (`file_path`, `path`, `notebook_path`) vào file ngoài repo, không ghi nội dung. Prompt yêu cầu: (a) chạy một lệnh Bash in đủ lớn để Claude Code lưu kết quả tràn ra file rồi Read đúng đường dẫn đó; (b) gọi một skill của plugin đã cài và Read một file được skill tham chiếu. Ghi vào design: các thư mục thực tế được đọc, phiên bản Claude Code, chi phí. Chưa chạy; kết quả quyết định mặc định của R-I5.1.
+- **R-I5.2: phép đo `claude -p` (cần người dùng đồng ý, trần `--max-budget-usd 0.2`, khoảng 0,12–0,2 USD).** Hook khai bằng `--settings` chỉ ghi `tool_name` và các khóa đường dẫn (`file_path`, `path`, `notebook_path`) vào file ngoài repo, không ghi nội dung. Prompt yêu cầu: (a) chạy một lệnh Bash in đủ lớn để Claude Code lưu kết quả tràn ra file rồi Read đúng đường dẫn đó; (b) gọi một skill của plugin đã cài và Read một file được skill tham chiếu. Ghi vào design: các thư mục thực tế được đọc, phiên bản Claude Code, chi phí. Đã chạy, kết quả ở mục "Kết quả phép đo I5" bên dưới.
 - **Nhánh A (người dùng đồng ý phép đo):** chốt mặc định root chỉ-đọc theo kết quả đo, cài đặt AC3.1–AC3.3.
 - **Nhánh B (người dùng từ chối):** không viết mã I5; chỉ ghi tài liệu hướng dẫn thêm các thư mục đó vào `fullRoots` (cho phép ghi) và nói rõ rủi ro; AC3.x bỏ. Chi phí nếu chọn B: chạy không người canh có thể bị từ chối Read ngoài root cho tới khi chủ project tự thêm `fullRoots` (rộng hơn mức cần: cho cả ghi).
+
+#### Kết quả phép đo I5
+
+- Ngày 2026-10-23, Claude Code 2.1.308, model sonnet, `claude -p --permission-mode bypassPermissions --settings <hook> --max-budget-usd 0.2` chạy từ thư mục tạm ngoài repo; hook chỉ ghi tên công cụ, khóa đường dẫn, `cwd`, `scratchpad_dir`, `permission_mode`. Chi phí 0,1677 USD, một phiên (Bash, Skill, Read, Read).
+- Kết quả Bash dài hơn 30k ký tự bị tràn ra file; Claude Code sau đó Read đúng file đó tại `<config dir>/projects/<cwd, mọi ký tự không phải chữ-số đổi thành '-'>/<session_id>/tool-results/<id>.txt` (`<config dir>` là `~/.claude`). `scratchpad_dir` trên stdin là thư mục khác (`<tmp>/claude/<cwd đã làm sạch>/<session_id>/scratchpad`), nên tool-results không nằm trong root scratchpad. Read này mang `permission_mode` bypassPermissions.
+- Skill `core:git-workflow` được gọi; Read tiếp theo trúng một file của skill ở thư mục nguồn marketplace-từ-thư-mục của plugin (ngoài cwd của phiên). Layout cache `<config dir>/plugins/cache/<marketplace>/<plugin>/<version>/skills/...` chỉ thấy ở base dir skill của phiên chính, không nằm trong phép đo.
+- Chưa đo: cách xử lý `CLAUDE_CONFIG_DIR`, vị trí `session_id`/tool-results của subagent, các kiểu cài khác (`--plugin-dir`).
+- **Mặc định root chỉ-đọc chốt (nhánh A), khi `full` hiệu lực:** (1) `<cfgdir>/plugins` (cả cây); (2) `<cfgdir>/projects/<đúng một đoạn>/<session_id>/tool-results` (chỉ phiên này; cần `session_id` là chuỗi không rỗng, không có dấu phân cách; không wildcard qua phiên khác). `<cfgdir>` là `CLAUDE_CONFIG_DIR` nếu đặt và tuyệt đối [Unverified: Claude Code có tôn trọng biến này], không thì `~/.claude`. Nguồn marketplace-từ-thư-mục ngoài project không được mặc định: chủ project thêm vào `fullReadRoots`.
 
 ## Tiêu chí chấp nhận
 
@@ -56,8 +64,8 @@ Tất cả là đề xuất của tôi, chờ duyệt cùng design.
 - [ ] **AC2.4** — Given `full` hiệu lực, `chmod -x /etc/x` ⇒ `deny`, `chmod +x run.sh` (trong root) ⇒ không quyết định; `bash -lc "rm /x"` ⇒ `ask`; `echo a>b>/tmp/x` ⇒ `deny`; Given project `full` phiên không bypass, `kubectl -n x apply -f y` và `helm -n x upgrade r c` ⇒ `ask`.
 - [ ] **AC2.5** — Given `.claude/settings.json` là một thư mục, When `aip mode status|full|ask`, Then thông báo lỗi rõ trên stderr và exit 1 (không ném); lỗi JSON của `aip mode` đi ra stderr.
 - [ ] **AC3.1** *(nhánh A)* — Given `full` hiệu lực và `fullReadRoots: ["<dir>"]`, When Read/Grep vào đường dẫn dưới `<dir>`, Then không có quyết định; Write/Edit/MultiEdit/NotebookEdit dưới `<dir>` ⇒ `deny`; `guard-bash` `rm <dir>/x` ⇒ `deny`; `fullReadRoots` sai kiểu bị bỏ.
-- [ ] **AC3.2** *(nhánh A)* — Given phép đo đã chạy, Then design này ghi các thư mục thực tế (đường dẫn tổng quát, không nội dung), phiên bản Claude Code, chi phí, và mặc định root chỉ-đọc khớp kết quả đo (có test cho mặc định, tính cả `CLAUDE_CONFIG_DIR` nếu đo cho thấy cần).
-- [ ] **AC3.3** *(nhánh B, thay AC3.1–3.2)* — Given người dùng từ chối phép đo, Then không có mã I5; README EN/VI ghi cách thêm thư mục của Claude Code vào `fullRoots`, rủi ro ghi rộng hơn mức cần và vị trí `[Unverified]`.
+- [ ] **AC3.2** *(nhánh A)* — Given phép đo đã chạy, Then design này ghi các thư mục thực tế (đường dẫn tổng quát, không nội dung), phiên bản Claude Code, chi phí, và hai root chỉ-đọc mặc định khớp kết quả đo — `<cfgdir>/plugins` và `<cfgdir>/projects/*/<session_id>/tool-results` (chỉ phiên này) — có test cho cả hai, cho `session_id` không hợp lệ và cho `CLAUDE_CONFIG_DIR`.
+- ~~**AC3.3** *(nhánh B)*~~ — không áp dụng: đã chọn nhánh A, AC bị bỏ.
 - [ ] **AC4.1** — Given `README.md` và `README_VI.md`, Then mục chế độ quyền có: điều kiện thứ ba "file không được git theo dõi" kèm cách xử lý (gỡ khỏi index, gitignore), các wrapper nay được phủ và danh sách vẫn không phát hiện, `PowerShell` không đổi `/e/x`, hành vi worktree + JSON hỏng, minor hoãn còn lại, kết quả phép đo hoặc hướng dẫn `fullRoots`; đoạn rủi ro I4 cũ được thay bằng quy tắc mới; `CLAUDE.md` nhắc điều kiện theo dõi git; pin theo đoạn neo, nhãn tiền tố `P4e2`.
 - [ ] **AC4.2** — Given repo sau thay đổi, Then `docs/specs/hooks-gates/spec.md` đổi R6 (thêm điều kiện không được theo dõi), đổi R7 (wrapper, PowerShell), thêm R9 (cấu hình hỏng của worktree che repo chính), thêm R10 (root chỉ-đọc, nhánh A) và `docs/specs/cli-wizard/spec.md` đổi R4 (cảnh báo/trạng thái git, stderr); `AGENTS.md` không đổi; `check-request.mjs` (kể cả `--base master`) không có W10–W14.
 - [ ] **AC5.1** — `npm test` và `npm run pack:verify` xanh; bump version `core` một lần ở task cuối (backend/frontend chỉ khi `versions.mjs --lock` buộc).

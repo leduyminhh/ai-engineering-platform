@@ -482,4 +482,69 @@ export default async function run({ ok, ctx }) {
   } finally {
     fs.rmSync(tmp9, { recursive: true, force: true });
   }
+  // I5: root chỉ-đọc cho file của Claude Code ở full.
+  {
+    const { fullReadRoots, defaultReadRoots } = await load('gate-config.mjs');
+    const bashMod = await load('guard-bash.mjs');
+    const home = path.resolve('/home/u');
+    const sl = (x) => x.replaceAll('\\', '/');
+    const cfgDir = sl(path.join(home, '.claude'));
+    const sid = 'sess-1';
+    const tr = `${cfgDir}/projects/E--proj-x/${sid}/tool-results`;
+    const proj = sl(path.resolve('/tmp/p4e2-i5-proj'));
+    const ro = sl(path.resolve('/opt/p4e2-ro'));
+    const full = { mode: 'full', fullReadRoots: [ro] };
+    const fdec = (tool, file, { config = full, pm = 'bypassPermissions', cwd = proj } = {}) => files.decide(
+      { tool_name: tool, tool_input: { file_path: file }, cwd, permission_mode: pm, session_id: sid },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config });
+
+    ok(JSON.stringify(fullReadRoots({ fullReadRoots: [ro, 'rel', 3] })) === JSON.stringify([path.resolve(ro)])
+      && fullReadRoots({}).length === 0 && fullReadRoots(null).length === 0 && fullReadRoots({ fullReadRoots: 'x' }).length === 0,
+      'P4e2 AC3.1: fullReadRoots chỉ giữ đường dẫn tuyệt đối, mặc định []');
+    for (const tool of ['Read', 'Grep']) {
+      ok(fdec(tool, `${ro}/a.txt`) === null, `P4e2 AC3.1: ${tool} dưới fullReadRoots → không quyết định`);
+      ok(fdec(tool, `${ro}/../other/a.txt`)?.decision === 'ask', `P4e2 AC3.1: ${tool} thoát khỏi root chỉ-đọc bằng ".." → ask`);
+    }
+    for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+      ok(fdec(tool, `${ro}/a.txt`)?.decision === 'deny', `P4e2 AC3.1: ${tool} dưới fullReadRoots → deny`);
+    }
+    ok(fdec('Read', `${ro}/a.txt`, { pm: 'default' }) === null && fdec('Read', '/etc/x', { config: { mode: 'full' } })?.decision === 'ask',
+      'P4e2 AC3.1: ngoài mọi root vẫn ask');
+    // .env dưới root chỉ-đọc: full vốn đã bỏ H3 (secret) nên Read qua, ghi vẫn deny.
+    ok(fdec('Read', `${ro}/.env`) === null && fdec('Write', `${ro}/.env`)?.decision === 'deny', 'P4e2 AC3.1: .env dưới root chỉ-đọc theo luật secret của full');
+    const bdec = (command, config = full) => bashMod.decide(
+      { tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: 'bypassPermissions' },
+      { currentBranch: () => 'feature/x', allowEnv: () => false, config, repoRoot: proj });
+    for (const c of [`rm ${ro}/x`, `echo a > ${ro}/x`, `mv a ${ro}/b`]) {
+      ok(bdec(c)?.decision === 'deny', `P4e2 AC3.1: guard-bash ghi/xoá dưới fullReadRoots → deny: ${c}`);
+    }
+
+    const env0 = {};
+    const want = [`${cfgDir}/plugins`, `${cfgDir}/projects/*/${sid}/tool-results`].map((x) => path.resolve(x));
+    ok(JSON.stringify(defaultReadRoots({ session_id: sid }, env0, home)) === JSON.stringify(want), 'P4e2 AC3.2: hai root mặc định (plugins, tool-results của phiên)');
+    ok(JSON.stringify(defaultReadRoots({}, env0, home)) === JSON.stringify([want[0]]), 'P4e2 AC3.2: thiếu session_id → chỉ root plugins');
+    for (const bad of ['', '.', '..', 'a/b', 'a\\b', '*', 5, null]) {
+      ok(defaultReadRoots({ session_id: bad }, env0, home).length === 1, `P4e2 AC3.2: session_id không hợp lệ bị bỏ: ${JSON.stringify(bad)}`);
+    }
+    const alt = path.resolve('/alt/cfg');
+    ok(defaultReadRoots({}, { CLAUDE_CONFIG_DIR: alt }, home)[0] === path.join(alt, 'plugins')
+      && defaultReadRoots({}, { CLAUDE_CONFIG_DIR: 'rel' }, home)[0] === want[0], 'P4e2 AC3.2: CLAUDE_CONFIG_DIR tuyệt đối thì dùng, tương đối thì bỏ');
+    // Root mặc định lấy $HOME thật nên test dùng input chỉ đọc qua os.homedir().
+    const realCfg = sl(path.join(os.homedir(), '.claude'));
+    const real = (file, sessionId = sid) => files.decide(
+      { tool_name: 'Read', tool_input: { file_path: file }, cwd: proj, permission_mode: 'bypassPermissions', session_id: sessionId },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } });
+    ok(real(`${realCfg}/plugins/cache/m/p/1.0.0/skills/s/SKILL.md`) === null, 'P4e2 AC3.2: Read cây plugins mặc định → không quyết định');
+    ok(real(`${realCfg}/projects/E--any-proj/${sid}/tool-results/t.txt`) === null, 'P4e2 AC3.2: Read tool-results của phiên này → không quyết định');
+    ok(real(`${realCfg}/projects/E--any-proj/other-sess/tool-results/t.txt`)?.decision === 'ask'
+      && real(`${realCfg}/projects/a/b/${sid}/tool-results/t.txt`)?.decision === 'ask'
+      && real(`${realCfg}/settings.json`)?.decision === 'ask', 'P4e2 AC3.2: phiên khác, thêm đoạn, hay file khác dưới config dir → ask');
+    ok(files.decide({ tool_name: 'Write', tool_input: { file_path: `${realCfg}/plugins/x` }, cwd: proj, permission_mode: 'bypassPermissions', session_id: sid },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } })?.decision === 'deny', 'P4e2 AC3.2: ghi vào cây plugins → deny');
+    // scratchpad_dir từ stdin vẫn là root ghi được, không bị root chỉ-đọc ảnh hưởng.
+    const scratch = sl(path.resolve('/tmp/p4e2-i5-scratch'));
+    ok(files.decide({ tool_name: 'Write', tool_input: { file_path: `${scratch}/t` }, cwd: proj, permission_mode: 'bypassPermissions', scratchpad_dir: scratch },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } }) === null, 'P4e2 AC3.2: scratchpad_dir vẫn ghi được');
+  }
+
 }

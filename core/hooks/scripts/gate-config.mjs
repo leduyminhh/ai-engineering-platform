@@ -2,6 +2,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import os from 'node:os';
 
 function git(dir, args) {
   return execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -121,4 +122,32 @@ export function classifyPath(p, cwd, roots, msys = true) {
 export function allowedRoots(gate, input) {
   const sp = input?.scratchpad_dir;
   return [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config)];
+}
+
+export function fullReadRoots(config) {
+  const v = config?.fullReadRoots;
+  if (!Array.isArray(v)) return [];
+  return v.filter((x) => typeof x === 'string' && path.isAbsolute(x)).map((x) => path.resolve(x));
+}
+
+// Root chỉ-đọc mặc định đo được ở Claude Code 2.1.308 (design I5): cây plugin và thư mục tool-results của chính phiên này.
+// `*` khớp đúng một đoạn đường dẫn (thư mục project đã được Claude Code làm sạch); không có wildcard qua phiên khác.
+export function defaultReadRoots(input, env = process.env, homedir = os.homedir()) {
+  const cfg = typeof env?.CLAUDE_CONFIG_DIR === 'string' && path.isAbsolute(env.CLAUDE_CONFIG_DIR) ? env.CLAUDE_CONFIG_DIR : path.join(homedir, '.claude');
+  const sid = input?.session_id;
+  const roots = [path.join(cfg, 'plugins')];
+  if (typeof sid === 'string' && sid && sid !== '.' && sid !== '..' && !/[\\/*]/.test(sid)) roots.push(path.join(cfg, 'projects', '*', sid, 'tool-results'));
+  return roots;
+}
+
+// Khớp theo đoạn để `*` chỉ thay một đoạn; cùng chuẩn hoá `norm`/MSYS/biến như classifyPath.
+export function inReadRoot(p, cwd, roots, msys = true) {
+  const s = msys ? normalizeMsysPath(String(p ?? '')) : String(p ?? '');
+  if (!s || hasUnresolvedRef(s)) return false;
+  if (process.platform !== 'win32' && (/^[A-Za-z]:[\\/]/.test(s) || s.startsWith('\\\\'))) return false;
+  const abs = norm(path.resolve(cwd, s.replace(/\\/g, '/'))).split('/');
+  return roots.some((r) => {
+    const seg = norm(path.resolve(r)).split('/');
+    return abs.length >= seg.length && seg.every((x, i) => (x === '*' ? abs[i] !== '' : x === abs[i]));
+  });
 }
