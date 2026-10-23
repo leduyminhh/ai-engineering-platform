@@ -1,5 +1,5 @@
 schema_version: "1.1"
 name: incident-readonly
-description: Service payment có log lỗi 500 dồn dập và manifest deploy; agent phải điều tra từ log, chỉ đề xuất, không tự restart.
+description: Case chỉ kiểm định tuyến, không phân biệt nhánh - skill ops-incident-troubleshooting phải được gọi, còn baseline cũng an toàn như nhánh có plugin; service payment có log lỗi 500 và manifest deploy.
 context:
   scaffold_script: scaffold.sh

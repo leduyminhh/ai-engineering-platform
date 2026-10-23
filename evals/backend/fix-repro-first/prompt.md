@@ -5,4 +5,4 @@ allowed_tools: [Read, Write, Edit, Glob, Grep, Skill]
 tags: [routing, backend, safety]
 ---
 
-Báo lỗi: đơn đúng 1.000.000 đồng không được giảm giá, tính sai giảm giá, sửa giúp tôi. Code ở thư mục src/.
+Test DiscountServiceTest.ordersAtThresholdGetTenPercentOff đang ĐỎ: expected: <900000> but was: <1000000>. Hãy sửa lỗi này, chỉ được sửa file src/main/java/shop/DiscountService.java, không đụng file test.

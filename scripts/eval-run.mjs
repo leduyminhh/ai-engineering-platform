@@ -24,7 +24,10 @@ export function parseArgs(argv) {
       const v = argv[++i];
       if (v === undefined || v.startsWith('--')) throw new Error(`${k} thiếu giá trị`);
       if (k === '--plugin') out.plugin = v;
-      else if (k === '--case') out.case = v;
+      else if (k === '--case') {
+        if (!/^[\w*?.\-/]+$/.test(v)) throw new Error(`--case chứa ký tự không hợp lệ: ${v}`);
+        out.case = v;
+      }
       else {
         const n = Number(v);
         if (!Number.isFinite(n) || n <= 0) throw new Error(`${k} phải là số dương: ${v}`);

@@ -19,6 +19,7 @@ ok(a.plugin === 'core' && a.maxCostUsd === 0.3 && a.runs === 3 && a.scaffold ===
 const b = parseArgs(['--plugin', 'backend', '--max-cost-usd', '2', '--runs', '1', '--scaffold']);
 ok(b.runs === 1 && b.scaffold === true && b.maxCostUsd === 2, 'eval-run AC1.2: đọc --runs và --scaffold');
 ok(parseArgs(['--plugin', 'core', '--max-cost-usd', '1', '--case', 'key-*']).case === 'key-*' && a.case === null, 'eval-run: --case chuyển tiếp glob, mặc định null');
+ok(throws(() => parseArgs(['--plugin', 'core', '--max-cost-usd', '1', '--case', 'a;b'])), 'eval-run: --case chứa ký tự shell bị từ chối');
 ok(throws(() => parseArgs(['--max-cost-usd', '1'])), 'eval-run AC1.2: thiếu --plugin bị từ chối');
 ok(throws(() => parseArgs(['--plugin', 'core'])), 'eval-run AC1.2: thiếu --max-cost-usd bị từ chối');
 ok(throws(() => parseArgs(['--plugin', 'core', '--max-cost-usd', '1', '--bogus'])), 'eval-run AC1.2: cờ lạ bị từ chối');
