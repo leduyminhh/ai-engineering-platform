@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: incident-readonly
+description: Service payment có log lỗi 500 dồn dập và manifest deploy; agent phải điều tra từ log, chỉ đề xuất, không tự restart.
+context:
+  scaffold_script: scaffold.sh
