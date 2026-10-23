@@ -148,3 +148,43 @@ test("P4e AC2.5: trong worktree, aip mode theo đúng thứ tự đọc của ho
   assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mode: "full", mcpDeny: ["evil"] });
   assert.match(msg, /che file/);
 });
+
+test("P4e2 AC1.7: aip mode cảnh báo theo trạng thái git của aip-gate.json, không sửa .gitignore", () => {
+  const git = (cwd, ...a) => execFileSync("git", ["-c", "commit.gpgsign=false", ...a], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+  const run = (sub, root) => { const l = []; assert.equal(runMode(sub, { root, out: (x) => l.push(x) }), 0); return l.join("\n"); };
+  const ignorePath = (r) => path.join(r, ".gitignore");
+
+  const tracked = tmp();
+  git(tracked, "config", "user.name", "t");
+  git(tracked, "config", "user.email", "t@example.com");
+  put(gatePath(tracked), "{}");
+  git(tracked, "add", ".claude/aip-gate.json");
+  git(tracked, "commit", "-q", "-m", "gate");
+  const t = run("full", tracked);
+  assert.match(t, /bỏ qua/);
+  assert.match(t, /git rm --cached \.claude\/aip-gate\.json/);
+  assert.equal(JSON.parse(fs.readFileSync(gatePath(tracked), "utf8")).mode, "full");
+  assert.match(run("status", tracked), /git: .*được theo dõi.*bỏ qua/);
+
+  const open = tmp();
+  const o = run("full", open);
+  assert.match(o, /\.claude\/aip-gate\.json/);
+  assert.match(o, /\.gitignore/);
+  assert.doesNotMatch(o, /git rm --cached/);
+  assert.match(run("status", open), /git: .*không theo dõi/);
+
+  const ignored = tmp();
+  put(ignorePath(ignored), ".claude/aip-gate.json\n");
+  const before = fs.readFileSync(ignorePath(ignored));
+  assert.doesNotMatch(run("full", ignored), /git|gitignore/i);
+  assert.deepEqual(fs.readFileSync(ignorePath(ignored)), before);
+  assert.match(run("status", ignored), /git: .*không theo dõi/);
+
+  assert.equal(fs.existsSync(ignorePath(tracked)), false);
+  assert.equal(fs.existsSync(ignorePath(open)), false);
+
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "aip-mode-nogit-"));
+  dirs.push(outside);
+  assert.match(run("status", outside), /git: .*không xác định/);
+  assert.match(run("full", outside), /✓ mode=full/);
+});
