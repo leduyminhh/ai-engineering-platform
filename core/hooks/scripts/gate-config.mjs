@@ -1,14 +1,21 @@
 // Đọc <git-root>/.claude/aip-gate.json cho các hook của core; không phải hook, chỉ được import.
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync, lstatSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import os from 'node:os';
 
 function git(dir, args) {
   return execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
 
-function readJson(root) {
-  try { return JSON.parse(readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8').replace(/^﻿/, '')); } catch { return null; }
+// null = file thiếu hẳn; { invalid } = tồn tại nhưng không đọc/parse được hoặc không phải đối tượng; { config } = hợp lệ.
+function readState(root) {
+  let raw;
+  try { raw = readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8'); } catch (e) { return e?.code === 'ENOENT' ? null : { invalid: true }; }
+  try {
+    const config = JSON.parse(raw.replace(/^﻿/, ''));
+    return config && typeof config === 'object' && !Array.isArray(config) ? { config } : { invalid: true };
+  } catch { return { invalid: true }; }
 }
 
 // Gốc worktree trước rồi tới gốc repo chính: worktree con tạo trước khi commit file cấu hình vẫn theo project.
@@ -22,14 +29,18 @@ export function resolveGate(dir) {
   let main = null;
   try { main = path.dirname(git(d, ['rev-parse', '--path-format=absolute', '--git-common-dir'])); } catch { /* chỉ còn gốc worktree */ }
   const roots = [...new Set([top, main].filter(Boolean).map((r) => path.resolve(r)))];
-  const own = readJson(top);
-  const config = own ?? (main ? readJson(main) : null);
-  return { config, roots, top: path.resolve(top), main: main ? path.resolve(main) : null, source: own ? 'worktree' : (config ? 'main' : null) };
+  const own = readState(top);
+  const base = { roots, top: path.resolve(top), main: main ? path.resolve(main) : null };
+  // File worktree hỏng vẫn che file repo chính: rơi về repo chính sẽ cấp `full` từ một cấu hình mà người dùng đã cố ghi đè.
+  if (own?.invalid) return { ...base, config: null, file: path.resolve(top, '.claude', 'aip-gate.json'), source: 'worktree-invalid' };
+  const config = own?.config ?? (main ? readState(main)?.config : null) ?? null;
+  const file = config ? path.resolve(own ? top : main, '.claude', 'aip-gate.json') : null;
+  return { ...base, config, file, source: own ? 'worktree' : (config ? 'main' : null) };
 }
 
 export function readGate(dir) {
   const g = resolveGate(dir);
-  return g?.config ? { config: g.config, roots: g.roots } : null;
+  return g?.config ? { config: g.config, roots: g.roots, file: g.file } : null;
 }
 
 export function readGateConfig(dir) {
@@ -39,6 +50,41 @@ export function readGateConfig(dir) {
 // `full` chỉ hiệu lực khi cả cấu hình lẫn phiên đều đồng ý: bypassPermissions do người dùng bật, không do repo tự quyết.
 export function effectiveMode(config, input) {
   return input?.permission_mode === 'bypassPermissions' && config && typeof config === 'object' && config.mode === 'full' ? 'full' : 'ask';
+}
+
+const trackedCache = new Map();
+export const lsFiles = (dir, spec) => { execFileSync('git', ['-C', dir, 'ls-files', '--error-unmatch', '--', spec], { timeout: 3000, stdio: ['ignore', 'ignore', 'ignore'] }); return 0; };
+
+// true/false khi git trả đúng exit 0/1; mọi kết quả khác (128, không có git, quá giờ, run trả không phải số) là null.
+// Hỏi repo thật sự chứa file (realpath: .claude có thể là symlink hay submodule) bằng pathspec icase: FS không phân biệt hoa thường
+// còn pathspec thì có, nên AIP-GATE.json đã commit vẫn được hook đọc mà ls-files thường báo chưa theo dõi.
+// Symlink: file hay `.claude` là link đã commit thì đích có thể chưa theo dõi nên kiểm cả đường dẫn logic lẫn đường dẫn thật;
+// một trong hai theo dõi ⇒ true, không xác định được ⇒ null. Tối đa 2 lời gọi git mỗi file.
+// Có `run` (seam test) thì bỏ qua cache để đếm lời gọi xác định.
+export function gateTracked(file, { run = lsFiles } = {}) {
+  const useCache = run === lsFiles;
+  if (useCache && trackedCache.has(file)) return trackedCache.get(file);
+  const ask = (dir, name) => {
+    try { const r = run(dir, `:(icase)${name}`); return r === 0 ? true : r === 1 ? false : null; } catch (e) { return e?.status === 1 ? false : null; }
+  };
+  const root = path.dirname(path.dirname(file));
+  let linkedDir = false;
+  try { linkedDir = lstatSync(path.dirname(file)).isSymbolicLink(); } catch { /* realpath bên dưới sẽ báo null */ }
+  // `.claude` là link: ls-files không báo lỗi mà trả exit 1 cho đường dẫn xuyên link, nên hỏi chính mục `.claude`; link chưa commit ⇒ không đoán được ⇒ null.
+  const logical = linkedDir ? (ask(root, '.claude') === true ? true : null) : ask(path.dirname(file), path.basename(file));
+  let real;
+  try { const rp = realpathSync.native(file); real = ask(path.dirname(rp), path.basename(rp)); } catch { real = null; }
+  const res = logical === true || real === true ? true : logical === null || real === null ? null : false;
+  if (useCache) trackedCache.set(file, res);
+  return res;
+}
+
+// Repo không đáng tin tự cấp `full`: file cấu hình đã commit đến từ clone nên bị bỏ qua; exit lạ ⇒ không full (hỏi thừa là hướng an toàn).
+// Kiểm rẻ trước để phiên thường và project `ask` không tốn lần spawn git nào. Cấu hình tiêm (không có `file`) coi là đáng tin.
+export function fullEffective(gate, input, { tracked = gateTracked } = {}) {
+  if (input?.permission_mode !== 'bypassPermissions') return false;
+  if (effectiveMode(gate?.config, input) !== 'full') return false;
+  return gate.file ? tracked(gate.file) === false : true;
 }
 
 export function fullKeep(config) {
@@ -76,8 +122,9 @@ const norm = (x) => {
 
 // Ổ đĩa/UNC trên nền không phải win32 không resolve được thành đường dẫn thật nên luôn coi là ngoài root.
 // Không realpath: symlink trong root trỏ ra ngoài không bị phát hiện (ghi nhận ở Rủi ro của design).
-export function classifyPath(p, cwd, roots) {
-  const s = normalizeMsysPath(String(p ?? ''));
+// msys=false: đường dẫn từ PowerShell, không đổi /e/x.
+export function classifyPath(p, cwd, roots, msys = true) {
+  const s = msys ? normalizeMsysPath(String(p ?? '')) : String(p ?? '');
   if (!s || hasUnresolvedRef(s)) return 'unknown';
   if (process.platform !== 'win32' && (/^[A-Za-z]:[\\/]/.test(s) || s.startsWith('\\\\'))) return 'outside';
   const abs = norm(path.resolve(cwd, s.replace(/\\/g, '/')));
@@ -87,4 +134,32 @@ export function classifyPath(p, cwd, roots) {
 export function allowedRoots(gate, input) {
   const sp = input?.scratchpad_dir;
   return [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config)];
+}
+
+export function fullReadRoots(config) {
+  const v = config?.fullReadRoots;
+  if (!Array.isArray(v)) return [];
+  return v.filter((x) => typeof x === 'string' && path.isAbsolute(x)).map((x) => path.resolve(x));
+}
+
+// Root chỉ-đọc mặc định đo được ở Claude Code 2.1.308 (design I5): cây plugin và thư mục tool-results của chính phiên này.
+// `*` khớp đúng một đoạn đường dẫn (thư mục project đã được Claude Code làm sạch); không có wildcard qua phiên khác.
+export function defaultReadRoots(input, env = process.env, homedir = os.homedir()) {
+  const cfg = typeof env?.CLAUDE_CONFIG_DIR === 'string' && path.isAbsolute(env.CLAUDE_CONFIG_DIR) ? env.CLAUDE_CONFIG_DIR : path.join(homedir, '.claude');
+  const sid = input?.session_id;
+  const roots = [path.join(cfg, 'plugins')];
+  if (typeof sid === 'string' && sid && sid !== '.' && sid !== '..' && !/[\\/*]/.test(sid)) roots.push(path.join(cfg, 'projects', '*', sid, 'tool-results'));
+  return roots;
+}
+
+// Khớp theo đoạn để `*` chỉ thay một đoạn; cùng chuẩn hoá `norm`/MSYS/biến như classifyPath.
+export function inReadRoot(p, cwd, roots, msys = true) {
+  const s = msys ? normalizeMsysPath(String(p ?? '')) : String(p ?? '');
+  if (!s || hasUnresolvedRef(s)) return false;
+  if (process.platform !== 'win32' && (/^[A-Za-z]:[\\/]/.test(s) || s.startsWith('\\\\'))) return false;
+  const abs = norm(path.resolve(cwd, s.replace(/\\/g, '/'))).split('/');
+  return roots.some((r) => {
+    const seg = norm(path.resolve(r)).split('/');
+    return abs.length >= seg.length && seg.every((x, i) => (x === '*' ? abs[i] !== '' : x === abs[i]));
+  });
 }

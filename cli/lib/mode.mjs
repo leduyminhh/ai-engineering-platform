@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { buildClaudePermissions, loadPolicy } from './permissions.mjs';
-import { resolveGate } from '../../core/hooks/scripts/gate-config.mjs';
+import { resolveGate, gateTracked, lsFiles } from '../../core/hooks/scripts/gate-config.mjs';
 
 const EMPTY_PERMISSIONS = JSON.stringify({ permissions: { deny: [], ask: [] } }, null, 2) + '\n';
 
@@ -87,13 +87,35 @@ function locateGate(root) {
 }
 
 function readText(file) {
-  try { return fs.readFileSync(file, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
+  try { return fs.readFileSync(file, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; e.message = `không đọc được ${file}: ${e.message}`; throw e; }
 }
 
 function writeText(file, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, text, 'utf8');
 }
+
+// Exit 0/1 là đáp án của git; mọi kết quả khác (không có git, ngoài repo, quá giờ) là null.
+const gitExit = (dir, args) => {
+  try { execFileSync('git', ['-C', dir, ...args], { timeout: 3000, stdio: 'ignore' }); return 0; } catch (e) { return e?.status ?? null; }
+};
+
+/** 'tracked' | 'ignored' | 'open' (chưa theo dõi, chưa ignore) | 'unknown'. */
+export function gitStateOf(file, { run = (dir, spec) => lsFiles(dir, spec) } = {}) {
+  // `run` là hàm bọc riêng nên gateTracked bỏ qua cache: trạng thái git có thể đổi giữa hai lần gọi trong một tiến trình.
+  const tracked = gateTracked(file, { run });
+  if (tracked === null) return 'unknown';
+  if (tracked) return 'tracked';
+  const ig = gitExit(path.dirname(path.dirname(file)), ['check-ignore', '-q', '--', '.claude/aip-gate.json']);
+  return ig === 0 ? 'ignored' : ig === 1 ? 'open' : 'unknown';
+}
+
+const GIT_LABEL = {
+  tracked: 'aip-gate.json được theo dõi bởi git ⇒ full bị bỏ qua',
+  ignored: 'aip-gate.json không theo dõi, đã gitignore',
+  open: 'aip-gate.json không theo dõi, chưa gitignore',
+  unknown: 'không xác định (không có git, ngoài repo, hoặc đường dẫn là symlink chưa commit) ⇒ full bị bỏ qua',
+};
 
 const dump = (obj) => JSON.stringify(obj, null, 2) + '\n';
 
@@ -105,7 +127,11 @@ const SETTINGS_LABEL = {
   absent: 'không có file',
 };
 
-export function runMode(sub, { root, out = console.log }) {
+export function runMode(sub, { root, out = console.log, err = console.error, run }) {
+  try { return runModeUnsafe(sub, { root, out, err, run }); } catch (e) { err(`Lỗi: ${e.message}`); return 1; }
+}
+
+function runModeUnsafe(sub, { root, out, err, run }) {
   const gateFile = path.join(root, '.claude', 'aip-gate.json');
   const settingsFile = path.join(root, '.claude', 'settings.json');
 
@@ -113,8 +139,8 @@ export function runMode(sub, { root, out = console.log }) {
   const found = locateGate(root);
   const gateRaw = found.raw;
   if (gateRaw != null) {
-    try { gate = JSON.parse(stripBom(gateRaw)); } catch (e) { out(`Lỗi: ${found.file} không phải JSON hợp lệ (${e.message}).`); return 1; }
-    if (gate === null || typeof gate !== 'object' || Array.isArray(gate)) { out(`Lỗi: ${found.file} phải là một đối tượng JSON.`); return 1; }
+    try { gate = JSON.parse(stripBom(gateRaw)); } catch (e) { err(`Lỗi: ${found.file} không phải JSON hợp lệ (${e.message}).`); return 1; }
+    if (gate === null || typeof gate !== 'object' || Array.isArray(gate)) { err(`Lỗi: ${found.file} phải là một đối tượng JSON.`); return 1; }
   }
   const settingsText = readText(settingsFile);
   const allowEnvFiles = gate?.allowEnvFiles === true;
@@ -125,6 +151,7 @@ export function runMode(sub, { root, out = console.log }) {
     out(`Nguồn: ${gateRaw == null ? 'không có' : found.source === 'main' ? `${found.file} (repo chính; worktree này chưa có aip-gate.json)` : found.file}`);
     out(`settings.json: ${SETTINGS_LABEL[s.settings]}`);
     for (const r of s.leftoverRules) out(`  - ${r}`);
+    out(`git: ${GIT_LABEL[gitStateOf(found.file, run && { run })]}`);
     return 0;
   }
 
@@ -133,6 +160,12 @@ export function runMode(sub, { root, out = console.log }) {
     writeText(gateFile, dump(r.gate));
     if (r.settingsAction === 'replaced') writeText(settingsFile, r.settingsText);
     out(`✓ mode=full tại ${root}`);
+    const gs = gitStateOf(gateFile, run && { run });
+    if (gs === 'tracked') {
+      out('  ⚠ aip-gate.json đang được git theo dõi nên full bị bỏ qua (repo clone không tự cấp được full). Gỡ theo dõi: git rm --cached .claude/aip-gate.json');
+    } else if (gs === 'open') {
+      out('  ⚠ aip-gate.json chưa được gitignore; nếu bị commit, full sẽ bị bỏ qua. Thêm dòng này vào .gitignore: .claude/aip-gate.json (aip không tự sửa .gitignore).');
+    }
     if (r.settingsAction === 'replaced') out('  settings.json: đã thay bằng quy tắc rỗng (bản do aip sinh).');
     if (r.settingsAction === 'already-full') out('  settings.json: đã ở dạng full (quy tắc rỗng), giữ nguyên.');
     if (found.source === 'main') out(`  ghi ${gateFile}: cấu hình lấy từ repo chính, file của worktree này che file của repo chính từ giờ.`);

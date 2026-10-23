@@ -275,4 +275,374 @@ export default async function run({ ok, ctx }) {
   const nonBash = askGroups.filter((r) => !/^Bash\(.+ \*\)$/.test(r));
   ok(JSON.stringify(bashPrefixes) === JSON.stringify([...bash.ASK_COMMANDS].sort()), 'P4e AC1.9: ASK_COMMANDS bằng tiền tố Bash trong policy.json');
   ok(JSON.stringify(nonBash) === JSON.stringify(['WebFetch']), 'P4e AC1.9: quy tắc không phải Bash của ba nhóm chỉ có WebFetch (loại có chủ đích)');
+
+  // I4: file cấu hình được git theo dõi thì `full` bị bỏ qua (repo không đáng tin tự cấp full).
+  const { gateTracked, fullEffective } = await load('gate-config.mjs');
+  const tmpT = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e2-')));
+  try {
+    const sl = (x) => x.replaceAll('\\', '/');
+    const gitT = (cwd, ...args) => execFileSync('git', ['-c', 'commit.gpgsign=false', ...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    const mk = (name, { track, ignore } = {}) => {
+      const dir = path.join(tmpT, name);
+      fs.mkdirSync(path.join(dir, '.claude'), { recursive: true });
+      gitT(dir, 'init', '-q');
+      gitT(dir, 'config', 'user.name', 'aip-test');
+      gitT(dir, 'config', 'user.email', 'aip-test@example.com');
+      fs.writeFileSync(path.join(dir, 'README.md'), 'x');
+      if (ignore) fs.writeFileSync(path.join(dir, '.gitignore'), '.claude/aip-gate.json\n');
+      fs.writeFileSync(path.join(dir, '.claude', 'aip-gate.json'), JSON.stringify({ mode: 'full', mcpAllow: ['a'] }));
+      gitT(dir, 'add', 'README.md');
+      if (track) gitT(dir, 'add', '-f', '.claude/aip-gate.json');
+      gitT(dir, 'commit', '-q', '-m', 'init', '--allow-empty');
+      return dir;
+    };
+    const bp = 'bypassPermissions';
+    const bashAt = (dir, command, pm = bp, extra = {}) => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: dir, permission_mode: pm }, { currentBranch: () => 'feature/x', allowEnv: () => false, ...extra });
+    const fileAt = (dir, tool, file, pm = bp) => files.decide({ tool_name: tool, tool_input: { file_path: file }, cwd: dir, permission_mode: pm }, { scopes: {}, allowEnv: () => false });
+    const mcpAt = (dir, pm = bp) => mcp.decide({ tool_name: 'mcp__b__t', cwd: dir, permission_mode: pm });
+    // Một bảng cho cả ba hook: [mô tả, hàm quyết định trả `true` khi hành xử như full].
+    const asFull = (dir) => ({
+      bashEnv: bashAt(dir, 'cat .env') === null,
+      bashH6: bashAt(dir, 'rm /etc/x') === null,
+      writeEnv: fileAt(dir, 'Write', sl(path.join(dir, '.env'))) === null,
+      writeOutside: fileAt(dir, 'Write', sl(path.join(tmpT, 'ngoai.txt'))) === null,
+      mcp: mcpAt(dir) === null,
+    });
+
+    const trackedRepo = mk('tracked', { track: true });
+    const untrackedRepo = mk('untracked');
+    const ignoredRepo = mk('ignored', { ignore: true });
+    const t = asFull(trackedRepo);
+    ok(!t.bashEnv && t.bashH6 && bashAt(trackedRepo, 'cat .env')?.decision === 'ask' && bashAt(trackedRepo, 'rm /etc/x') === null
+      && fileAt(trackedRepo, 'Write', sl(path.join(trackedRepo, '.env')))?.decision === 'deny'
+      && !t.mcp && mcpAt(trackedRepo)?.decision === 'deny' && t.writeOutside,
+      'P4e2 AC1.1: file cấu hình được theo dõi → ba hook chạy như ask (bí mật hỏi/chặn, mcpAllow chặn, H6 tắt)');
+    for (const [name, repo] of [['chưa add', untrackedRepo], ['gitignore', ignoredRepo]]) {
+      const u = asFull(repo);
+      ok(u.bashEnv && !u.bashH6 && u.writeEnv && !u.writeOutside && u.mcp
+        && bashAt(repo, 'rm /etc/x')?.decision === 'deny' && fileAt(repo, 'Write', sl(path.join(tmpT, 'ngoai.txt')))?.decision === 'deny',
+        `P4e2 AC1.2: file cấu hình chưa theo dõi (${name}) → full hiệu lực như P4e`);
+    }
+
+    // Symlink đã commit: file hay thư mục `.claude` là link tới đích chưa theo dõi vẫn là cấu hình đến từ clone ⇒ không full.
+    // Tạo link bằng plumbing để không phụ thuộc quyền symlink của Windows; checkout lại để hook thấy link thật nếu hệ thống cho phép.
+    const commitLink = (dir, rel, target) => {
+      const blob = execFileSync('git', ['hash-object', '-w', '--stdin'], { cwd: dir, input: target }).toString().trim();
+      gitT(dir, 'update-index', '--add', '--cacheinfo', `120000,${blob},${rel}`);
+      gitT(dir, 'commit', '-q', '-m', `link ${rel}`);
+      gitT(dir, '-c', 'core.symlinks=true', 'checkout', '-f', '--', rel);
+      return fs.lstatSync(path.join(dir, rel)).isSymbolicLink();
+    };
+    const linkRepo = (name, rel, target, setup) => {
+      const dir = path.join(tmpT, name);
+      fs.mkdirSync(dir, { recursive: true });
+      gitT(dir, 'init', '-q');
+      gitT(dir, 'config', 'user.name', 'aip-test');
+      gitT(dir, 'config', 'user.email', 'aip-test@example.com');
+      fs.writeFileSync(path.join(dir, 'README.md'), 'x');
+      gitT(dir, 'add', 'README.md');
+      setup(dir);
+      return { dir, isLink: commitLink(dir, rel, target) };
+    };
+    const cfgJson = JSON.stringify({ mode: 'full' });
+    const linkCases = [
+      ['file symlink → đích gitignore', '.claude/aip-gate.json', '../local/gate.json', (d) => {
+        fs.mkdirSync(path.join(d, '.claude'), { recursive: true });
+        fs.mkdirSync(path.join(d, 'local'), { recursive: true });
+        fs.writeFileSync(path.join(d, 'local', 'gate.json'), cfgJson);
+        fs.writeFileSync(path.join(d, '.gitignore'), 'local/\n');
+        gitT(d, 'add', '.gitignore');
+      }],
+      ['.claude là symlink thư mục', '.claude', 'cfgdir', (d) => {
+        fs.mkdirSync(path.join(d, 'cfgdir'), { recursive: true });
+        fs.writeFileSync(path.join(d, 'cfgdir', 'aip-gate.json'), cfgJson);
+        fs.writeFileSync(path.join(d, '.gitignore'), 'cfgdir/\n');
+        gitT(d, 'add', '.gitignore');
+      }],
+    ];
+    for (const [name, rel, target, setup] of linkCases) {
+      const { dir, isLink } = linkRepo(`link-${linkCases.findIndex((c) => c[0] === name)}`, rel, target, setup);
+      if (!isLink) { console.log(`  [bỏ qua] P4e2 AC1.7: ${name} — hệ thống không tạo được symlink thật (thiếu quyền)`); continue; }
+      ok(bashAt(dir, 'cat .env')?.decision === 'ask', `P4e2 AC1.7: ${name} → không full`);
+    }
+    // Hồi quy: file thường chưa theo dõi + gitignore vẫn full (kiểm hai đường dẫn không làm hỏng ca hợp lệ).
+    ok(bashAt(ignoredRepo, 'cat .env') === null, 'P4e2 AC1.7: file thường gitignore → full vẫn hiệu lực');
+
+    // Hồi quy: tên khác hoa/thường đã commit, và .claude là submodule mà repo con theo dõi file — full phải không hiệu lực.
+    const caseRepo = mk('case-tracked');
+    gitT(caseRepo, 'config', 'core.ignorecase', 'true');
+    fs.renameSync(path.join(caseRepo, '.claude', 'aip-gate.json'), path.join(caseRepo, '.claude', 'AIP-GATE.json'));
+    gitT(caseRepo, 'add', '-f', '.claude/AIP-GATE.json');
+    gitT(caseRepo, 'commit', '-q', '-m', 'cfg');
+    ok(bashAt(caseRepo, 'cat .env')?.decision === 'ask', 'P4e2 AC1.2: file cấu hình đã commit với tên khác hoa/thường (core.ignorecase) → không full');
+
+    const subHost = path.join(tmpT, 'sub-host');
+    fs.mkdirSync(subHost, { recursive: true });
+    gitT(subHost, 'init', '-q');
+    gitT(subHost, 'config', 'user.name', 'aip-test');
+    gitT(subHost, 'config', 'user.email', 'aip-test@example.com');
+    // Submodule đặt tại `.claude`, repo con theo dõi aip-gate.json ngay ở gốc của nó.
+    const subSrc2 = path.join(tmpT, 'sub-src2');
+    fs.mkdirSync(subSrc2, { recursive: true });
+    gitT(subSrc2, 'init', '-q');
+    gitT(subSrc2, 'config', 'user.name', 'aip-test');
+    gitT(subSrc2, 'config', 'user.email', 'aip-test@example.com');
+    fs.writeFileSync(path.join(subSrc2, 'aip-gate.json'), JSON.stringify({ mode: 'full' }));
+    gitT(subSrc2, 'add', 'aip-gate.json');
+    gitT(subSrc2, 'commit', '-q', '-m', 'init');
+    gitT(subHost, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', subSrc2, '.claude');
+    gitT(subHost, 'commit', '-q', '-m', 'sub');
+    ok(fs.existsSync(path.join(subHost, '.claude', 'aip-gate.json')) && bashAt(subHost, 'cat .env')?.decision === 'ask',
+      'P4e2 AC1.2: .claude là submodule mà repo con theo dõi aip-gate.json → không full');
+
+    // Submodule `.claude` chứa symlink đã commit tới cấu hình full chưa theo dõi của project khác: repo sở hữu `.claude` mới là nơi hỏi.
+    const trusted = mk('sub-link-trusted');
+    const subSrc3 = path.join(tmpT, 'sub-src3');
+    fs.mkdirSync(subSrc3, { recursive: true });
+    gitT(subSrc3, 'init', '-q');
+    gitT(subSrc3, 'config', 'user.name', 'aip-test');
+    gitT(subSrc3, 'config', 'user.email', 'aip-test@example.com');
+    fs.writeFileSync(path.join(subSrc3, 'README.md'), 'x');
+    gitT(subSrc3, 'add', 'README.md');
+    commitLink(subSrc3, 'aip-gate.json', '../../sub-link-trusted/.claude/aip-gate.json');
+    const subLinkHost = path.join(tmpT, 'sub-link-host');
+    fs.mkdirSync(subLinkHost, { recursive: true });
+    gitT(subLinkHost, 'init', '-q');
+    gitT(subLinkHost, 'config', 'user.name', 'aip-test');
+    gitT(subLinkHost, 'config', 'user.email', 'aip-test@example.com');
+    gitT(subLinkHost, '-c', 'protocol.file.allow=always', '-c', 'core.symlinks=true', 'submodule', 'add', '-q', subSrc3, '.claude');
+    gitT(subLinkHost, 'commit', '-q', '-m', 'sub');
+    if (!fs.lstatSync(path.join(subLinkHost, '.claude', 'aip-gate.json')).isSymbolicLink()) {
+      console.log('  [bỏ qua] P4e2 AC1.8: hệ thống không tạo được symlink thật (thiếu quyền)');
+    } else {
+      ok(asFull(trusted).bashEnv && bashAt(subLinkHost, 'cat .env')?.decision === 'ask',
+        'P4e2 AC1.8: .claude là submodule chứa symlink đã commit tới cấu hình full chưa theo dõi của project khác → không full');
+    }
+
+    // AC1.3: đếm lời gọi `run` qua seam `tracked`.
+    const counted = () => { let n = 0; const run = () => { n++; throw Object.assign(new Error('x'), { status: 1 }); }; return { count: () => n, tracked: (f) => gateTracked(f, { run }) }; };
+    for (const [name, pm, cfgMode] of [['không bypass + full', 'default', 'full'], ['bypass + ask', bp, 'ask'], ['bypass + thiếu mode', bp, undefined]]) {
+      const dir = mk(`cnt-${name.length}-${cfgMode}`);
+      fs.writeFileSync(path.join(dir, '.claude', 'aip-gate.json'), JSON.stringify(cfgMode ? { mode: cfgMode } : {}));
+      const c = counted();
+      bashAt(dir, 'cat .env', pm, { tracked: c.tracked });
+      files.decide({ tool_name: 'Write', tool_input: { file_path: sl(path.join(dir, 'a')) }, cwd: dir, permission_mode: pm }, { scopes: {}, tracked: c.tracked });
+      mcp.decide({ tool_name: 'mcp__b__t', cwd: dir, permission_mode: pm }, { tracked: c.tracked });
+      ok(c.count() === 0, `P4e2 AC1.3: ${name} → 0 lần spawn git ls-files`);
+    }
+    const c1 = counted();
+    const d1 = bashAt(untrackedRepo, 'git commit -m "có dấu"; rm /etc/x; cat .env', bp, { tracked: c1.tracked });
+    ok(d1?.decision === 'deny' && c1.count() === 2, 'P4e2 AC1.3: bypass + full → một lần giải quyết (đường dẫn logic + thật = 2 lời gọi) dù decide gọi full() nhiều lần');
+
+    // AC1.4: kết quả git khác exit 0/1 → không full.
+    const fakeRun = { 'exit 0': () => 0, 'exit 1': () => { throw Object.assign(new Error('x'), { status: 1 }); }, 'exit 128': () => { throw Object.assign(new Error('x'), { status: 128 }); },
+      'ném lỗi': () => { throw new Error('ENOENT'); }, 'exit lạ': () => { throw Object.assign(new Error('x'), { status: 7 }); } };
+    const wantTracked = { 'exit 0': true, 'exit 1': false, 'exit 128': null, 'ném lỗi': null, 'exit lạ': null };
+    for (const [name, run] of Object.entries(fakeRun)) {
+      const gt = gateTracked(path.join(untrackedRepo, '.claude', 'aip-gate.json'), { run });
+      const fe = fullEffective({ config: { mode: 'full' }, file: 'x' }, { permission_mode: bp }, { tracked: () => gt });
+      ok(gt === wantTracked[name] && fe === (name === 'exit 1'), `P4e2 AC1.4: ${name} → gateTracked=${wantTracked[name]}, full ${name === 'exit 1' ? 'hiệu lực' : 'không hiệu lực'}`);
+    }
+    // Ca thật: git ls-files trả exit 128 (ngoài repo) với run mặc định.
+    const nonRepo = path.join(tmpT, 'non-repo');
+    fs.mkdirSync(path.join(nonRepo, '.claude'), { recursive: true });
+    ok(gateTracked(path.join(nonRepo, '.claude', 'aip-gate.json')) === null, 'P4e2 AC1.4: git thật exit 128 (ngoài repo) → gateTracked null');
+
+    // AC1.5: worktree — kiểm đúng file thực sự cấp cấu hình.
+    const mainRepo = mk('wtmain');
+    const wtTracked = path.join(tmpT, 'wt-tracked');
+    gitT(mainRepo, 'worktree', 'add', '-q', wtTracked, '-b', 'wt-a');
+    fs.mkdirSync(path.join(wtTracked, '.claude'), { recursive: true });
+    fs.writeFileSync(path.join(wtTracked, '.claude', 'aip-gate.json'), JSON.stringify({ mode: 'full' }));
+    gitT(wtTracked, 'add', '-f', '.claude/aip-gate.json');
+    gitT(wtTracked, 'commit', '-q', '-m', 'cfg');
+    ok(bashAt(wtTracked, 'cat .env')?.decision === 'ask', 'P4e2 AC1.5: file worktree được theo dõi → ask dù file repo chính không theo dõi');
+    const wtNoFile = path.join(tmpT, 'wt-nofile');
+    gitT(mainRepo, 'worktree', 'add', '-q', wtNoFile, '-b', 'wt-b');
+    ok(bashAt(wtNoFile, 'cat .env') === null, 'P4e2 AC1.5: chỉ file repo chính, không theo dõi → full');
+    const mainTracked = mk('wtmain2', { track: true });
+    const wtB = path.join(tmpT, 'wt-b2');
+    gitT(mainTracked, 'worktree', 'add', '-q', wtB, '-b', 'wt-c');
+    fs.rmSync(path.join(wtB, '.claude'), { recursive: true, force: true });
+    ok(bashAt(wtB, 'cat .env')?.decision === 'ask', 'P4e2 AC1.5: chỉ file repo chính và được theo dõi → ask');
+
+    // AC1.6: nhánh ask dự phòng của phiên không bypass không đổi và không gọi git ls-files.
+    const c6 = counted();
+    ok(bashAt(trackedRepo, 'git push origin feature/x', 'default', { tracked: c6.tracked })?.decision === 'ask' && c6.count() === 0,
+      'P4e2 AC1.6: full được theo dõi + phiên không bypass → git push vẫn ask, không spawn ls-files');
+
+    // AC1.3: phiên không bypass không đọc cấu hình gate (không spawn git nào, kể cả rev-parse).
+    let reads = 0;
+    const reader = () => { reads++; return null; };
+    bashAt(trackedRepo, 'cat .env', 'default', { reader });
+    for (const [tool, file] of [['Read', sl(path.join(trackedRepo, '.env'))], ['Write', sl(path.join(trackedRepo, '.env'))], ['Grep', undefined]]) {
+      files.decide({ tool_name: tool, tool_input: tool === 'Grep' ? { glob: '.env*' } : { file_path: file }, cwd: trackedRepo, permission_mode: 'default' }, { scopes: {}, allowEnv: () => false, reader });
+    }
+    ok(reads === 0, 'P4e2 AC1.3: phiên không bypass → guard-bash/guard-files không đọc cấu hình gate');
+
+    // AC2.3: file worktree hỏng che file repo chính (không rơi về `full` của repo chính); file thiếu hẳn vẫn rơi về repo chính.
+    const { resolveGate } = await load('gate-config.mjs');
+    const mainInv = mk('wtinvmain');
+    const broken = { 'JSON hỏng': '{ not json', null: 'null', mảng: '[]', số: '3', chuỗi: '"full"', rỗng: '' };
+    for (const [i, [name, content]] of Object.entries(broken).entries()) {
+      const wtInv = path.join(tmpT, `wt-inv-${i}`);
+      gitT(mainInv, 'worktree', 'add', '-q', wtInv, '-b', `wt-inv-${i}`);
+      fs.mkdirSync(path.join(wtInv, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(wtInv, '.claude', 'aip-gate.json'), content);
+      const g = resolveGate(wtInv);
+      ok(g.config === null && g.source === 'worktree-invalid' && g.file === path.join(fs.realpathSync.native(wtInv), '.claude', 'aip-gate.json'),
+        `P4e2 AC2.3: file worktree ${name} → config null, nguồn worktree-invalid, không rơi về repo chính`);
+      ok(bashAt(wtInv, 'cat .env')?.decision === 'ask', `P4e2 AC2.3: file worktree ${name} → hook chạy như không có cấu hình (không full)`);
+    }
+    const wtMissing = path.join(tmpT, 'wt-inv-missing');
+    gitT(mainInv, 'worktree', 'add', '-q', wtMissing, '-b', 'wt-inv-missing');
+    ok(resolveGate(wtMissing).source === 'main', 'P4e2 AC2.3: file worktree thiếu hẳn → vẫn rơi về repo chính');
+  } finally {
+    fs.rmSync(tmpT, { recursive: true, force: true });
+  }
+
+  // N2/N3 (phase 2): wrapper nice/env -S/sudo và PowerShell không đổi /e/x.
+  const tmp8 = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e2-wrap-')));
+  try {
+    const proj = path.join(tmp8, 'proj').replaceAll('\\', '/');
+    const wrap = (command, pm) => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: pm },
+      { currentBranch: () => 'feature/x', allowEnv: () => false, config: { mode: 'full' }, repoRoot: proj });
+    const wrappers = [(c) => `nice -n5 ${c}`, (c) => `nice -n 5 ${c}`, (c) => `nice --10 ${c}`, (c) => `nice -5 ${c}`, (c) => `nice --adjustment 5 ${c}`, (c) => `nice --adjustment=5 ${c}`,
+      (c) => `env -S "${c}"`, (c) => `env --split-string "${c}"`, (c) => `env -S"${c}"`, (c) => `env -u X -S "A=1 ${c}"`, (c) => `sudo -u root ${c}`, (c) => `sudo --user=root ${c}`,
+      (c) => `sudo -E ${c}`, (c) => `sudo -g adm -n ${c}`, (c) => `sudo -nu root ${c}`, (c) => `sudo -C 3 -h host ${c}`, (c) => `sudo --prompt x -- ${c}`, (c) => `sudo nice -n5 env -S "${c}"`];
+    for (const w of wrappers) {
+      const out = w('rm /etc/x');
+      ok(wrap(out, 'bypassPermissions')?.decision === 'deny', `P4e2 AC2.1: full + bypass "${out}" → deny`);
+      ok(wrap(w('rm x'), 'bypassPermissions') === null, `P4e2 AC2.1: full + bypass "${w('rm x')}" → không quyết định`);
+      ok(wrap(w('curl x'), 'default')?.decision === 'ask', `P4e2 AC2.1: full + không bypass "${w('curl x')}" → ask`);
+      ok(wrap(w('ls x'), 'default') === null, `P4e2 AC2.1: full + không bypass "${w('ls x')}" → không quyết định`);
+    }
+
+    // N3: chỉ có nghĩa trên win32 (Git Bash /d/x ≠ PowerShell /d/x).
+    if (process.platform === 'win32') {
+      const drive = proj[0].toLowerCase();
+      const msys = `/${drive}${proj.slice(2)}`;
+      const dec = (tool, command, extra = {}) => bash.decide({ tool_name: tool, tool_input: { command }, cwd: proj, permission_mode: 'bypassPermissions' },
+        { currentBranch: () => 'feature/x', allowEnv: () => false, config: { mode: 'full' }, repoRoot: proj, ...extra });
+      ok(dec('PowerShell', `Remove-Item ${msys}/a`)?.decision === 'deny' && dec('Bash', `rm ${msys}/a`) === null,
+        'P4e2 AC2.2: đích ghi /d/x — PowerShell giải theo ổ hiện tại (ngoài root), Bash giải thành D:/x (trong root)');
+      ok(dec('PowerShell', `cd ${msys}/sub; Remove-Item a`)?.decision === 'deny' && dec('Bash', `cd ${msys}/sub && rm a`) === null,
+        'P4e2 AC2.2: cd /d/x — PowerShell không đổi, Bash đổi');
+      ok(dec('PowerShell', `Get-Content ${msys}/.env`)?.decision === 'ask' && dec('Bash', `cat ${msys}/.env`) === null,
+        'P4e2 AC2.2: đường dẫn secret /d/x — PowerShell không đổi, Bash đổi');
+      const dirs = { PowerShell: [], Bash: [] };
+      for (const tool of ['PowerShell', 'Bash']) dec(tool, `git -C ${msys} push origin HEAD`, { currentBranch: (d) => { dirs[tool].push(d); return 'feature/x'; } });
+      ok(path.resolve(dirs.Bash[0]).toLowerCase() === path.resolve(proj).toLowerCase() && path.resolve(dirs.PowerShell[0]).toLowerCase() !== path.resolve(proj).toLowerCase(),
+        'P4e2 AC2.2: git -C /d/x — PowerShell không đổi, Bash đổi');
+      const roots = [path.resolve(proj)];
+      ok(classifyPath(`${msys}/a`, proj, roots) === 'inside' && classifyPath(`${msys}/a`, proj, roots, false) === 'outside',
+        'P4e2 AC2.2: classifyPath(msys=false) không đổi /d/x');
+    }
+  } finally {
+    fs.rmSync(tmp8, { recursive: true, force: true });
+  }
+
+  // Minor còn lại của guard-bash: chmod mode, bash -lc, chuyển hướng nối chuỗi, cờ toàn cục có giá trị, push qua wrapper.
+  const tmp9 = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e2-minor-')));
+  try {
+    const proj = path.join(tmp9, 'proj').replaceAll('\\', '/');
+    const dec = (command, pm, branch = 'feature/x') => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: pm },
+      { currentBranch: () => branch, allowEnv: () => false, config: { mode: 'full' }, repoRoot: proj });
+    const table = {
+      deny: ['chmod -x /etc/x', 'chmod -R 755 /etc/x', 'chmod u-x /etc/x', 'chmod +x /etc/x', 'chown -R root /etc/x', 'chmod -w -- /etc/x', 'echo a>b>/tmp/x', 'echo a>b>>/tmp/x', 'echo a>/tmp/x>b'],
+      ask: ['bash -lc "rm /x"', 'sh -ic "rm /x"', 'bash -c "rm /x"'],
+      pass: ['chmod +x run.sh', 'chmod -x run.sh', 'chmod -R 755 build', 'echo a>b>c', 'bash -lc "ls"'],
+    };
+    for (const [want, cmds] of Object.entries(table)) {
+      for (const c of cmds) {
+        const d = dec(c, 'bypassPermissions');
+        const got = d ? d.decision : 'pass';
+        ok(got === want, `P4e2 AC2.4: full + bypass "${c}" → ${want} (got ${got})`);
+      }
+    }
+    for (const c of ['kubectl -n x apply -f y', 'kubectl --namespace x apply -f y', 'kubectl --context c -n x apply -f y', 'helm -n x upgrade r c', 'helm --kube-context c upgrade r c', 'kubectl --kubeconfig k -s https://h apply -f y']) {
+      ok(dec(c, 'default')?.decision === 'ask', `P4e2 AC2.4: full + không bypass "${c}" → ask`);
+    }
+    for (const c of ['kubectl get pods', 'kubectl -n x get pods', 'helm -n x list']) {
+      ok(dec(c, 'default') === null, `P4e2 AC2.4: full + không bypass "${c}" → không quyết định`);
+    }
+
+    // H1 phải thấy push qua wrapper (env -S, sudo, nice) cả khi full hiệu lực.
+    for (const c of ['env -S "git push origin main"', 'sudo --user=root git push origin main', 'nice -n5 git push origin main', 'sudo git push --force origin x', 'env A=1 git push origin HEAD:main']) {
+      for (const pm of ['bypassPermissions', 'default']) {
+        ok(dec(c, pm)?.decision === 'ask', `P4e2 AC2.4: push qua wrapper (${pm}) "${c}" → ask`);
+      }
+    }
+    ok(dec('env -S "git push origin feature/x"', 'bypassPermissions') === null, 'P4e2 AC2.4: push nhánh thường qua wrapper khi full + bypass → không quyết định');
+  } finally {
+    fs.rmSync(tmp9, { recursive: true, force: true });
+  }
+  // I5: root chỉ-đọc cho file của Claude Code ở full.
+  {
+    const { fullReadRoots, defaultReadRoots } = await load('gate-config.mjs');
+    const bashMod = await load('guard-bash.mjs');
+    const home = path.resolve('/home/u');
+    const sl = (x) => x.replaceAll('\\', '/');
+    const cfgDir = sl(path.join(home, '.claude'));
+    const sid = 'sess-1';
+    const tr = `${cfgDir}/projects/E--proj-x/${sid}/tool-results`;
+    const proj = sl(path.resolve('/tmp/p4e2-i5-proj'));
+    const ro = sl(path.resolve('/opt/p4e2-ro'));
+    const full = { mode: 'full', fullReadRoots: [ro] };
+    const fdec = (tool, file, { config = full, pm = 'bypassPermissions', cwd = proj } = {}) => files.decide(
+      { tool_name: tool, tool_input: { file_path: file }, cwd, permission_mode: pm, session_id: sid },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config });
+
+    ok(JSON.stringify(fullReadRoots({ fullReadRoots: [ro, 'rel', 3] })) === JSON.stringify([path.resolve(ro)])
+      && fullReadRoots({}).length === 0 && fullReadRoots(null).length === 0 && fullReadRoots({ fullReadRoots: 'x' }).length === 0,
+      'P4e2 AC3.1: fullReadRoots chỉ giữ đường dẫn tuyệt đối, mặc định []');
+    for (const tool of ['Read', 'Grep']) {
+      ok(fdec(tool, `${ro}/a.txt`) === null, `P4e2 AC3.1: ${tool} dưới fullReadRoots → không quyết định`);
+      ok(fdec(tool, `${ro}/../other/a.txt`)?.decision === 'ask', `P4e2 AC3.1: ${tool} thoát khỏi root chỉ-đọc bằng ".." → ask`);
+    }
+    for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+      ok(fdec(tool, `${ro}/a.txt`)?.decision === 'deny', `P4e2 AC3.1: ${tool} dưới fullReadRoots → deny`);
+    }
+    ok(fdec('Read', `${ro}/a.txt`, { pm: 'default' }) === null && fdec('Read', '/etc/x', { config: { mode: 'full' } })?.decision === 'ask',
+      'P4e2 AC3.1: ngoài mọi root vẫn ask');
+    // Root chỉ-đọc không miễn đường dẫn bí mật: đọc .env/khoá ngoài project vẫn hỏi như luật secret của full (guard-bash cũng hỏi), ghi vẫn deny.
+    ok(fdec('Read', `${ro}/.env`)?.decision === 'ask' && fdec('Grep', `${ro}/x.pem`)?.decision === 'ask' && fdec('Write', `${ro}/.env`)?.decision === 'deny',
+      'P4e2 AC3.1: .env/khoá dưới root chỉ-đọc không được miễn ask');
+    const bdec = (command, config = full) => bashMod.decide(
+      { tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: 'bypassPermissions' },
+      { currentBranch: () => 'feature/x', allowEnv: () => false, config, repoRoot: proj });
+    for (const c of [`rm ${ro}/x`, `echo a > ${ro}/x`, `mv a ${ro}/b`]) {
+      ok(bdec(c)?.decision === 'deny', `P4e2 AC3.1: guard-bash ghi/xoá dưới fullReadRoots → deny: ${c}`);
+    }
+
+    const env0 = {};
+    const want = [`${cfgDir}/plugins`, `${cfgDir}/projects/*/${sid}/tool-results`].map((x) => path.resolve(x));
+    ok(JSON.stringify(defaultReadRoots({ session_id: sid }, env0, home)) === JSON.stringify(want), 'P4e2 AC3.2: hai root mặc định (plugins, tool-results của phiên)');
+    ok(JSON.stringify(defaultReadRoots({}, env0, home)) === JSON.stringify([want[0]]), 'P4e2 AC3.2: thiếu session_id → chỉ root plugins');
+    for (const bad of ['', '.', '..', 'a/b', 'a\\b', '*', 5, null]) {
+      ok(defaultReadRoots({ session_id: bad }, env0, home).length === 1, `P4e2 AC3.2: session_id không hợp lệ bị bỏ: ${JSON.stringify(bad)}`);
+    }
+    const alt = path.resolve('/alt/cfg');
+    ok(defaultReadRoots({}, { CLAUDE_CONFIG_DIR: alt }, home)[0] === path.join(alt, 'plugins')
+      && defaultReadRoots({}, { CLAUDE_CONFIG_DIR: 'rel' }, home)[0] === want[0], 'P4e2 AC3.2: CLAUDE_CONFIG_DIR tuyệt đối thì dùng, tương đối thì bỏ');
+    // Root mặc định lấy $HOME thật nên test dùng input chỉ đọc qua os.homedir().
+    const realCfg = sl(typeof process.env.CLAUDE_CONFIG_DIR === 'string' && path.isAbsolute(process.env.CLAUDE_CONFIG_DIR) ? process.env.CLAUDE_CONFIG_DIR : path.join(os.homedir(), '.claude'));
+    const real = (file, sessionId = sid) => files.decide(
+      { tool_name: 'Read', tool_input: { file_path: file }, cwd: proj, permission_mode: 'bypassPermissions', session_id: sessionId },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } });
+    ok(real(`${realCfg}/plugins/cache/m/p/1.0.0/skills/s/SKILL.md`) === null, 'P4e2 AC3.2: Read cây plugins mặc định → không quyết định');
+    ok(real(`${realCfg}/projects/E--any-proj/${sid}/tool-results/t.txt`) === null, 'P4e2 AC3.2: Read tool-results của phiên này → không quyết định');
+    ok(real(`${realCfg}/projects/E--any-proj/other-sess/tool-results/t.txt`)?.decision === 'ask'
+      && real(`${realCfg}/projects/a/b/${sid}/tool-results/t.txt`)?.decision === 'ask'
+      && real(`${realCfg}/settings.json`)?.decision === 'ask'
+      && real(`${realCfg}/plugins-evil/x`)?.decision === 'ask'
+      && real(`${realCfg}/plugins/../settings.json`)?.decision === 'ask', 'P4e2 AC3.2: phiên khác, thêm đoạn, file khác, root cùng tiền tố hay ".." dưới config dir → ask');
+    ok(files.decide({ tool_name: 'Write', tool_input: { file_path: `${realCfg}/plugins/x` }, cwd: proj, permission_mode: 'bypassPermissions', session_id: sid },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } })?.decision === 'deny', 'P4e2 AC3.2: ghi vào cây plugins → deny');
+    // scratchpad_dir từ stdin vẫn là root ghi được, không bị root chỉ-đọc ảnh hưởng.
+    const scratch = sl(path.resolve('/tmp/p4e2-i5-scratch'));
+    ok(files.decide({ tool_name: 'Write', tool_input: { file_path: `${scratch}/t` }, cwd: proj, permission_mode: 'bypassPermissions', scratchpad_dir: scratch },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } }) === null, 'P4e2 AC3.2: scratchpad_dir vẫn ghi được');
+  }
+
 }
