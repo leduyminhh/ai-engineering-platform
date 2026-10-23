@@ -74,6 +74,7 @@ Ghi chú:
 
 - Năm case đầu chạy ngày đầu, không ghi chi phí từng case: khoảng 0,06–0,46 USD một lượt, tổng các lượt trong ngày khoảng 12 USD (gồm các lượt data/ops trước khi sửa case). Dòng data và ops là kết quả sau khi sửa case; lần đo đầu của chúng (data −0,33, ops 0) là lỗi thiết kế case nên không dùng.
 - Δ KHÔNG phải bằng chứng chất lượng ở: review backend/frontend (đo định dạng nhãn; model trần cũng tìm đúng lỗi), engineering (đo quy ước thư mục; model trần cũng viết AC tốt), hai case ops và hai case fix (grader nội dung không tách nhánh; chỉ `skill-used` khác, và nó là chỉ báo routing).
+- `data/db-migration-change`: Δ `expand-contract` +1/3 ở n=3 là yếu (một lượt); tín hiệu chính là `gate-before-write`.
 - Δ có nội dung hành vi hoặc hook: `workflows/bugfix-routes`, `data/db-migration-change` (`gate-before-write`), ba case `core/*`.
 - `backend/code-review-readonly`: một lượt kiểm lại riêng (1 lượt, `--ablation none`) từng đỏ `finding-label`, nên 1,00 có thể lạc quan; chưa rõ nguyên nhân vì đầu ra lượt đó đã bị xoá. Regex chỉ đòi ÍT NHẤT MỘT dòng bảng có `file:line` kèm nhãn, không kiểm mọi finding.
 
