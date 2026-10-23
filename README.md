@@ -462,16 +462,15 @@ Limits:
 
 ## Eval
 
-`evals/<plugin>/<case>/` holds 3 `claude plugin eval` cases (`engineering/spec-writing-routes`, `backend/code-review-readonly`, `workflows/bugfix-routes`). They live at repo level and are not shipped in plugins or the npm package. `npm test` only checks their structure; **running them is manual, calls a model on your account and costs money**, so they are not part of `npm test` or CI.
+`evals/<plugin>/<case>/` holds 12 `claude plugin eval` cases across `backend`, `frontend`, `engineering`, `workflows`, `core`, `data` and `ops`. They live at repo level and are not shipped in plugins or the npm package. `npm test` only checks their structure; **running them calls a model on your account and costs money**, so they are not part of `npm test` or CI.
 
-Run from the repo root:
+Run one plugin from the repo root (the runner strips the plugin's `dependencies` in a temp copy, because plugins with `dependencies` are not loaded when evaluated from a path [Inference: cause not confirmed]):
 
 ```bash
-aip install --provider claude --as-plugin --plugin engineering -g --yes
-claude plugin eval engineering@ai-engineering-platform --eval-dir evals/engineering --ablation none --runs 3 --threshold 0.8 --max-cost-usd 5 --no-publish --allow-tools Write Edit
+node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd> [--runs 3] [--scaffold] [--case <glob>]
 ```
 
-[Unverified] No case has been run end to end yet; follow the first-run checklist and per-plugin flags in [evals/README.md](evals/README.md) (start with `--case <name> --runs 1 --max-cost-usd 0.5`).
+One measured run on 2026-10-23 (n=3–5 per arm, Windows) is in the results table of [evals/README.md](evals/README.md). Δ is a signal, not statistics; several Δ measure format or convention, not quality, and `guard-bash`/`guard-mcp`/`gate-stop` cannot be evaluated on Windows (Bash). See that file for flags, the case list and limits.
 
 ## Provider Outputs
 

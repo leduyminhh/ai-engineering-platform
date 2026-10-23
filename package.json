@@ -15,7 +15,7 @@
     "list": "node cli/build.mjs --list",
     "validate": "node test/validate.mjs",
     "overlap": "node test/overlap.mjs",
-    "test": "node test/validate.mjs --build && node test/install.test.mjs && node test/wizard.test.mjs && node test/managed-block.test.mjs && node test/init.test.mjs && node test/pack-guard.test.mjs && node test/args.test.mjs && node test/transcript-stats.test.mjs && node test/transcript-usage.test.mjs && node test/mode.test.mjs",
+    "test": "node test/validate.mjs --build && node test/install.test.mjs && node test/wizard.test.mjs && node test/managed-block.test.mjs && node test/init.test.mjs && node test/pack-guard.test.mjs && node test/args.test.mjs && node test/transcript-stats.test.mjs && node test/transcript-usage.test.mjs && node test/mode.test.mjs && node test/eval-run.test.mjs",
     "pack:verify": "node cli/lib/pack-guard.mjs",
     "pack:show": "node cli/lib/pack-guard.mjs --show",
     "prepack": "node cli/lib/pack-guard.mjs"
