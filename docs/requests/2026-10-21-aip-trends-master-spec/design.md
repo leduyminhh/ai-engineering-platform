@@ -1,6 +1,6 @@
 # Thiết kế: spec tổng lộ trình chuẩn hóa aip theo 9 xu hướng
 - Ngày: 2026-10-21
-- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `b2399e7` (2026-10-21); tài liệu sống: cập nhật theo từng project (mục 3). Còn mở: P6b (runner, repo riêng), P4c, hai việc hoãn của 2a (mục 5).
+- Trạng thái: in-progress — merge master `b2399e7` (2026-10-21); tài liệu sống: cập nhật theo từng project (mục 3). Còn mở: P6b (runner, repo riêng), P4c, hai việc hoãn của 2a (mục 5).
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 
 ## Vấn đề và lý do

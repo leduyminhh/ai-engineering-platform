@@ -1,6 +1,6 @@
 # Thiết kế: Supervisor kiểm đầu ra worker và retry có ngưỡng
 - Ngày: 2026-10-23
-- Trạng thái: đã duyệt
+- Trạng thái: merged — master `b8b2cb7` (2026-10-23)
 - Requirement: không có
 
 ## Vấn đề và lý do

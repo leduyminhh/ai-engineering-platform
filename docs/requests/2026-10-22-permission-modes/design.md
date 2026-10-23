@@ -1,6 +1,6 @@
 # Thiết kế: hai chế độ quyền theo project, `ask` mặc định và `full` (project P4e)
 - Ngày: 2026-10-22
-- Trạng thái: đã triển khai trên nhánh, chờ duyệt diff (2026-10-22)
+- Trạng thái: in-progress — đã triển khai trên nhánh, chờ duyệt diff (2026-10-22)
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P4e (xu hướng 8)
 

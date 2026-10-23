@@ -7,9 +7,16 @@ dùng làm nơi đổ report sinh tự động.
 
 ## Cấu trúc
 
-| Thư mục | Vai trò |
-| --- | --- |
-| `superpowers/specs/` | Bản thiết kế từ quá trình phát triển có cấu trúc — quyết định thiết kế và ranh giới hiện thực cần truy vết lâu dài. |
+| Thư mục | Vai trò | Vòng đời |
+| --- | --- | --- |
+| `specs/<năng-lực>/spec.md` | Spec sống: hành vi hiện tại của một năng lực, có ID `R<n>`. | Dài hạn |
+| `decisions/` | ADR: vì sao chọn thiết kế đó. | Dài hạn |
+| `requests/<yyyy-mm-dd>-<slug>/` | `design.md` (và `plan.md` khi đang làm) của một thay đổi. Dòng `Trạng thái` trong `design.md` ghi tình trạng. | Ngắn hạn |
+
+## Vòng đời request
+
+- `plan.md` là checklist thực thi: xoá sau khi thay đổi đã merge.
+- `design.md` giữ lại khi còn spec hoặc ADR link tới làm nguồn; phần dài hạn chuyển vào `specs/` hoặc `decisions/`.
 
 ## Thuộc về đây
 

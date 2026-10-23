@@ -1,6 +1,6 @@
 # Thiết kế: điều hướng model, phiên và subagent
 - Ngày: 2026-10-21
-- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `4cb06ab` (2026-10-21).
+- Trạng thái: merged — master `4cb06ab` (2026-10-21).
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P5a (xu hướng 9)
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - ADR liên quan: [ADR-0002](../../decisions/0002-model-and-session-routing.md) (Accepted)

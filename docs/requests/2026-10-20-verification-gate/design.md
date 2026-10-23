@@ -1,6 +1,6 @@
 # Thiết kế: gate kiểm chứng (project 2a)
 - Ngày: 2026-10-20
-- Trạng thái: đã duyệt 2026-10-20; Task 1–5 xong trên feature/verification-gate; Task 6 (smoke hook Stop + eval, AC3.1–AC3.2) hoãn theo người dùng; merge `dabc13f`; việc hoãn ghi ở mục 5 của spec tổng
+- Trạng thái: in-progress — duyệt 2026-10-20; Task 1–5 xong trên feature/verification-gate; Task 6 (smoke hook Stop + eval, AC3.1–AC3.2) hoãn theo người dùng; merge `dabc13f`; việc hoãn ghi ở mục 5 của spec tổng
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P2a (xu hướng 7)
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 

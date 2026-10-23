@@ -1,6 +1,6 @@
 # Thiết kế: nhiều agent song song, mỗi agent một worktree (project P3)
 - Ngày: 2026-10-22
-- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `480edd2` (2026-10-22).
+- Trạng thái: merged — master `480edd2` (2026-10-22).
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P3 (xu hướng 6)
 

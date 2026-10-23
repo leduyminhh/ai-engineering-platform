@@ -1,6 +1,6 @@
 # Thiết kế: kiểm soát context của phiên chạy dài
 - Ngày: 2026-10-21
-- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `aadc6c2` (2026-10-21).
+- Trạng thái: merged — master `aadc6c2` (2026-10-21).
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P5b (xu hướng 5)
 - Requirement: không có (AC nằm ở mục Tiêu chí chấp nhận bên dưới)
 - ADR liên quan: [ADR-0003](../../decisions/0003-long-session-context.md) (Accepted); nối tiếp [ADR-0002](../../decisions/0002-model-and-session-routing.md).

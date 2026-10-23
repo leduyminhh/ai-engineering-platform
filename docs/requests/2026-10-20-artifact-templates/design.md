@@ -1,7 +1,7 @@
 # Thiết kế: template chuẩn cho mọi artifact, đặt trong core (project 1b)
 
 - Ngày: 2026-10-20
-- Trạng thái: **Đã duyệt và thực thi** — merge vào `master` = `c337dbc` (2026-10-20).
+- Trạng thái: merged — master `c337dbc` (2026-10-20).
 - Thuộc lộ trình: [spec tổng](../2026-10-21-aip-trends-master-spec/design.md) — project P1b (xu hướng 5)
 - Requirement: không có
 - Liên quan: project 1 [`../2026-10-20-superpowers-docs-standard/design.md`](../2026-10-20-superpowers-docs-standard/design.md) — đã merge `6913753` (2026-10-20); project 1 đọc template từ đây.
