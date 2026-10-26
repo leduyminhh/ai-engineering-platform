@@ -416,6 +416,9 @@ export default async function run({ ok, ctx }) {
     ok(/hỏi người dùng một lần trước khi tạo (git )?worktree/i.test(gw) && !/trừ khi người dùng yêu cầu tường minh/.test(gw),
       'AC4.2: git-workflow — hỏi một lần trước khi tạo worktree, bỏ câu "chỉ khi yêu cầu tường minh"');
     ok(gw.includes('.claude/worktrees/'), 'AC4.2: git-workflow — giữ quy ước .claude/worktrees/');
+    const bc = fs.readFileSync(path.join(REPO_ROOT, 'core', 'skills', 'git-workflow', 'references', 'branch-convention.md'), 'utf8').replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
+    ok(/hỏi người dùng một lần trước khi tạo/i.test(bc) && bc.includes('.claude/worktrees/') && !/worktree trừ khi người dùng yêu cầu tường minh/.test(bc),
+      'AC4.2: branch-convention — mục worktree khớp SKILL (hỏi một lần, .claude/worktrees/), không còn "trừ khi yêu cầu tường minh"');
     ok(gw.includes('plan-execution/references/finish.md'), 'AC4.2: git-workflow — mục kết thúc nhánh trỏ plan-execution/references/finish.md');
     ok(/không push khi chưa xác nhận branch/.test(gw) && /Co-Authored-By/.test(gw) && /commit -F/.test(gw), 'AC4.1: git-workflow — giữ ranh giới push/Co-Authored-By/commit -F');
   }
