@@ -290,4 +290,52 @@ export default async function run({ ok, ctx }) {
     ok(/không (merge|push)[^.]*chưa chọn/.test(fin) && /merge xong[^.]*(chạy lại|test lại)/.test(fin) && /xác nhận rõ/.test(fin), 'AC4.2: không merge/push khi chưa chọn; test lại sau merge; xoá nhánh chỉ khi xác nhận rõ');
     ok(/rulings/.test(fin) && /Ruling:/.test(fin), 'AC4.3: kết thúc gom mọi Ruling: vào rulings của workflow_result');
   }
+
+  // AC3.4, AC3.2, AC4.3: contract đầu ra mở rộng cho vòng task (trường mới, vòng sửa riêng, re-review có phạm vi, ánh xạ blocked)
+  {
+    const oc = fs.readFileSync(path.join(REPO_ROOT, 'core', 'principles', 'workflow-output-contract.md'), 'utf8').replace(/\r\n/g, '\n');
+    const flat = oc.replace(/\s+/g, ' ');
+    const heads = oc.split(/^## /m).slice(1);
+    const section = (title) => {
+      const s = heads.find((h) => h.split('\n')[0].trim() === title);
+      return s ? s.replace(/\s+/g, ' ') : '';
+    };
+
+    // AC3.4, AC4.3: trường mới của agent_result và workflow_result; mọi trường plan-execution tham chiếu đều có định nghĩa
+    const ar = (oc.split('agent_result:\n')[1] || '').split('```')[0];
+    ok(/^\s+tdd:\s*\{[^}]*red[^}]*green/m.test(ar) && /^\s+report_file:/m.test(ar) && /^\s+commits:/m.test(ar),
+      'AC3.4: agent_result có tdd {red, green}, report_file, commits');
+    const wr = (oc.split('workflow_result:\n')[1] || '').split('```')[0];
+    ok(/^\s+rulings:/m.test(wr), 'AC4.3: workflow_result có rulings');
+    ok(/rulings[^.]*Ruling:|Ruling:[^.]*rulings/.test(flat), 'AC4.3: rulings liệt kê mọi dòng Ruling: trong ledger');
+    for (const f of ['spec_verdict', 'compliant', 'issues', 'cannot_verify', 'verdicts', 'new_breakage', 'observations_outside_diff', 'ruling_review', 'declined_to_judge']) {
+      ok(flat.includes(f), `AC3.4: contract định nghĩa "${f}" (plan-execution tham chiếu)`);
+    }
+
+    // AC3.4: luật kiểm đầu ra mới + ánh xạ trạng thái cho vòng task
+    const out = section('Kiểm đầu ra worker');
+    ok(/kind: BE/.test(out) && /tdd\.red/.test(out) && /tdd\.green/.test(out) && /đầu ra hỏng/.test(out), 'AC3.4: task kind: BE thiếu tdd.red/tdd.green → đầu ra hỏng');
+    ok(/spec_verdict/.test(out) && /findings/.test(out), 'AC3.4: task-review thiếu spec_verdict hoặc findings → đầu ra hỏng');
+    ok(/remaining_risks/.test(out) && /xong kèm lo ngại/.test(out), 'AC3.4: remaining_risks không rỗng = xong kèm lo ngại');
+    ok(/spec\/plan/.test(out) && /Ruling:/.test(out) && /không dùng vòng task/.test(out) && /ask_user/.test(out),
+      'AC3.4: blocked + questions → trả lời từ spec/plan, ghi Ruling:; luật ask_user ngay giữ cho workflow không dùng vòng task');
+
+    // AC3.2: vòng sửa của vòng task (D5) — bộ đếm riêng, hai con số đo hai thứ khác nhau
+    const fix = section('Vòng sửa của vòng task');
+    ok(/tối đa 3 vòng/.test(fix) && /đặt lại mỗi task/.test(fix) && /bộ đếm riêng/.test(fix) && /không phải cạnh[^.]*graph\.json/.test(fix),
+      'AC3.2: tối đa 3 vòng/task, bộ đếm riêng, đặt lại mỗi task, không phải cạnh graph.json');
+    ok(/Retry có ngưỡng/.test(fix) && /mặc định 2/.test(fix) && /đo hai thứ khác nhau/.test(fix),
+      'AC3.2: cạnh lùi theo "Retry có ngưỡng" (mặc định 2); hai con số đo hai thứ khác nhau');
+    ok(/sau vòng 3[^.]*không còn vòng nào/i.test(fix) && /Ruling:/.test(fix), 'AC3.2: sau vòng 3 không còn vòng nào, finding còn mở ghi Ruling:');
+
+    // AC3.2: re-review có phạm vi
+    const rr = section('Re-review có phạm vi');
+    ok(/chỉ xét diff của vòng sửa/.test(rr) && /NOT ADDRESSED/.test(rr) && /(?<!NOT )ADDRESSED/.test(rr) && /ngoài diff[^.]*không kéo dài vòng/.test(rr),
+      'AC3.2: re-review chỉ xét diff của vòng sửa, ADDRESSED/NOT ADDRESSED từng finding, quan sát ngoài diff không kéo dài vòng');
+
+    // giữ mục cũ
+    for (const h of ['Evidence', 'Finding', 'Agent result', 'Kiểm đầu ra worker', 'Retry có ngưỡng', 'Result contract', 'Quy tắc chung']) {
+      ok(section(h).length > 0, `AC3.4: giữ mục "${h}"`);
+    }
+  }
 }
