@@ -269,7 +269,20 @@ export default async function run({ ok, ctx }) {
     const tr = prompt('task-review');
     ok(['Missing', 'Extra', 'Misunderstood', 'spec_verdict', 'cannot_verify'].every((w) => tr.includes(w)), 'AC3.1: task-review.md yêu cầu Missing/Extra/Misunderstood + spec_verdict');
     const rr = prompt('re-review');
-    ok(rr.includes('ADDRESSED') && rr.includes('NOT ADDRESSED'), 'AC3.2: re-review.md yêu cầu ADDRESSED / NOT ADDRESSED');
+    ok(/(?<!NOT )ADDRESSED/.test(rr) && rr.includes('NOT ADDRESSED'), 'AC3.2: re-review.md yêu cầu ADDRESSED đứng riêng và NOT ADDRESSED');
+
+    // AC3.1: mọi lệnh review-package ghi package vào .sdd/ của request bằng --out (không đổ diff vào context, không lọt vào commit)
+    {
+      const cmds = (loop + ' ' + fr + ' ' + rr).match(/review-package\.mjs <[^`]*/g) || [];
+      ok(cmds.length >= 4 && cmds.every((c) => c.includes('--out <requestDir>/.sdd/')), 'AC3.1: mọi lệnh review-package (task, re-review, review cuối) có --out <requestDir>/.sdd/…');
+    }
+
+    // AC3.2: task qua breaker vẫn có dòng complete sau các Ruling:; hoãn blocker/major ghi trong Ruling: kèm mức gốc
+    ok(/Ruling:[^]*Task <n>: complete \(commits <a>\.\.<b>, <k> ruled\)/.test(loop), 'AC3.2: sau Ruling: cho mọi finding còn mở có dòng "Task <n>: complete (…, <k> ruled)"');
+    ok(/Ruling:[^.]*mức gốc/.test(loop) && /minor \(deferred\)[^.]*chỉ[^.]*minor`\/`nit/.test(loop), 'AC3.2: blocker/major hoãn ghi trong Ruling: kèm mức gốc; minor (deferred) chỉ cho minor/nit');
+
+    // AC3.1: model mặc định nằm trong skill, không phụ thuộc trường Model của plan
+    ok(!/\*\*Model:\*\*/.test(prompt('implementer')) && /implementer[^.]*sonnet/.test(skill) && /vòng 3[^.]*opus/.test(skill), 'AC3.1: model mặc định (implementer sonnet; vòng 3 và review cuối opus) nằm trong SKILL, không dùng trường **Model:**');
 
     // kết thúc nhánh
     ok(/merge local/.test(fin) && /push \+ PR/.test(fin) && /giữ nguyên/.test(fin) && /mặc định[^.]*giữ nguyên/.test(fin), 'AC4.2: kết thúc nhánh đúng 3 lựa chọn, mặc định giữ nguyên');

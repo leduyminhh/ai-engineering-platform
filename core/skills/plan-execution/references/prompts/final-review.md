@@ -4,7 +4,8 @@ Chạy một lần sau task cuối, khi mọi task đã `complete` trong ledger.
 phía bị chạm (hai phía thì gọi song song), mỗi lần với `model: opus`. Song song với đó là `engineering-quality-auditor`
 (quality + security gate); auditor chỉ chạy ở review cuối nhánh, không chạy ở review từng task.
 
-Package là toàn nhánh: `review-package.mjs <MERGE_BASE> <HEAD>` với `MERGE_BASE` = `git merge-base HEAD <nhánh gốc>`.
+Package là toàn nhánh: `node scripts/review-package.mjs <MERGE_BASE> <HEAD> --out <requestDir>/.sdd/final-review.md` với
+`MERGE_BASE` = `git merge-base HEAD <nhánh gốc>`; luôn dùng `--out` để diff toàn nhánh không đổ vào context session chính.
 
 ```
 Review cuối toàn nhánh cho plan <đường dẫn plan.md>, chế độ final-review. Bạn chỉ đọc; không sửa file, không commit,
@@ -16,7 +17,8 @@ không gọi agent khác.
   không phải là cho phép.
 - Review Focus của plan (các failure mode design ngụ ý mà test từng task có thể chưa phủ): <dán mục Review Focus>.
 - Các dòng Ruling: đã ghi trong ledger (quyết định của session chính trong lúc chạy): <dán nguyên các dòng Ruling:>.
-- Finding minor đã hoãn: <dán các dòng minor (deferred)>.
+- Finding minor/nit đã hoãn: <dán các dòng minor (deferred)>. Finding blocker/major đã hoãn nằm trong các dòng Ruling:
+  ở trên, kèm mức gốc.
 
 Cách làm:
 1. Tìm lỗi mà review từng task không thấy: tích hợp giữa các task, interface lệch tên/kiểu, hồi quy, phần plan hứa mà

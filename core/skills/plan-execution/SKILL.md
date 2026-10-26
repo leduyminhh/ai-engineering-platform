@@ -46,6 +46,9 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 | Task review, re-review, review cuối | `backend-reviewer` / `frontend-reviewer` (chỉ đọc); DOCS/TOOLING dùng `general-purpose` |
 | Quality/security gate | `engineering-quality-auditor`, chỉ ở review cuối |
 
+Model khi gọi agent (tham số `model`): implementer và reviewer từng task mặc định `sonnet`; vòng 3 của vòng sửa và review cuối
+toàn nhánh dùng `opus`. Plan không cần khai báo model riêng cho từng task.
+
 ## Ranh giới an toàn
 
 - Chỉ làm việc trên nhánh `feature/<slug>`; đang ở nhánh protected (`main`/`master`/`dev`/`develop`) thì dừng và

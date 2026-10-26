@@ -1,7 +1,7 @@
 # Mẫu prompt: giao task cho implementer
 
 Session chính điền các `<…>` rồi gửi. Gọi agent domain theo `kind` của task (bảng ở `engineering-plan-writing`), tham số
-`model` theo trường `**Model:**` của task, mặc định `sonnet`. Không dán lịch sử hội thoại hay nội dung task vào prompt:
+`model` mặc định `sonnet`; vòng sửa 3 dùng `opus` (xem `task-loop.md`). Không dán lịch sử hội thoại hay nội dung task vào prompt:
 brief đã nằm trong file.
 
 ```

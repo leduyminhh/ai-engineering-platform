@@ -35,7 +35,9 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    và so với `Expected:` của plan; báo cáo "xanh" của agent chỉ là đầu vào, không phải bằng chứng.
 6. **Commit**: session chính commit sau mỗi task qua `git-workflow`; agent không tự commit. Một task có ≥ 1 commit; vòng
    sửa sinh thêm commit, không amend hay squash. Ghi `head` = `git rev-parse HEAD` sau commit.
-7. **Task review**: `node scripts/review-package.mjs <BASE> <head> --out .sdd/task-<n>-review.md`, rồi gọi
+7. **Task review**: `node scripts/review-package.mjs <BASE> <head> --out <requestDir>/.sdd/task-<n>-review.md`
+   (`<requestDir>` là thư mục request đã tạo `.sdd/` bằng `ledger.mjs`; luôn dùng `--out` để diff không đổ vào context
+   của session chính và file nằm trong `.sdd/` đã được git bỏ qua), rồi gọi
    `backend-reviewer`/`frontend-reviewer` (task `DOCS`/`TOOLING`: `general-purpose` nạp skill review phù hợp) bằng
    `prompts/task-review.md`. Reviewer trả **cả hai**: `spec_verdict` (Missing / Extra / Misunderstood) và finding chất
    lượng; thiếu một trong hai là đầu ra hỏng. Task có chuỗi hai agent (vd FE-UI) chỉ review một lần, sau cả hai.
@@ -43,8 +45,11 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    tiếp. Chỉ finding `blocker`/`major` hoặc `spec_verdict` khác `compliant` mới vào vòng sửa; `minor`/`nit` ghi vào
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Mục plan bắt buộc mà thiếu vẫn là
    `major`. Không tự sửa finding: sửa do agent.
-9. **Ghi ledger** khi review sạch: `node scripts/ledger.mjs <requestDir> "Task <n>: complete (commits <a>..<b>, review clean)"`,
-   với `<a>` = BASE và `<b>` = `head` cuối cùng. Chỉ ghi khi đã có evidence test và review sạch.
+9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
+   - review sạch: `node scripts/ledger.mjs <requestDir> "Task <n>: complete (commits <a>..<b>, review clean)"`;
+   - qua breaker (còn finding mở sau vòng 3, đã phán hết): các dòng `Ruling:` của task đứng trước, rồi
+     `Task <n>: complete (commits <a>..<b>, <k> ruled)` với `<k>` là số finding đã phán. Không có dòng complete thì lần
+     làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này.
 
 ## Vòng sửa
 
@@ -56,8 +61,8 @@ lần sửa + một lần re-review có phạm vi.
   sửa, session chính phán và ghi `Ruling:`; không được âm thầm bỏ finding.
 - **Vòng 3**: gọi agent mới (cùng loại agent domain, hoặc `*-fixer` vì khoá theo danh sách file) với `model: opus`, đưa
   brief + báo cáo trước + finding còn mở.
-- **Re-review**: `FIX_BASE` = `git rev-parse HEAD` trước khi sửa; gom `review-package.mjs <FIX_BASE> <head>` và gọi
-  reviewer bằng `prompts/re-review.md`. Re-review chỉ xét diff của vòng sửa, trả `ADDRESSED` hoặc `NOT ADDRESSED` cho từng
+- **Re-review**: `FIX_BASE` = `git rev-parse HEAD` trước khi sửa; gom `node scripts/review-package.mjs <FIX_BASE> <head> --out <requestDir>/.sdd/task-<n>-fix<vòng>-review.md`
+  và gọi reviewer bằng `prompts/re-review.md`. Re-review chỉ xét diff của vòng sửa, trả `ADDRESSED` hoặc `NOT ADDRESSED` cho từng
   finding cộng breakage mới trong diff đó. Quan sát ngoài diff ghi vào ledger, không kéo dài vòng.
 - Mỗi vòng sửa chỉ chạy test hẹp phủ phần vừa sửa. Bugfix có regression test thì kiểm đỏ→xanh: hoàn tác bản sửa phải
   làm test đỏ, khôi phục thì xanh.
@@ -69,12 +74,16 @@ agent plugin không nhận `model` → dùng `general-purpose` với `model: opu
 
 ## Breaker và `Ruling:`
 
-Hết vòng 3 mà còn finding mở, session chính phán từng finding: hoãn (`minor (deferred)`), chấp nhận có điều kiện, hoặc
-dừng. Mỗi quyết định ghi một dòng:
+Hết vòng 3 mà còn finding mở, session chính phán từng finding: hoãn, chấp nhận có điều kiện, hoặc dừng. Mỗi quyết
+định ghi một dòng:
 
 ```
 Ruling: <quyết định> — <lý do> — <chi phí nếu sai>
 ```
+
+Finding `blocker`/`major` mà hoãn hoặc chấp nhận phải ghi trong `Ruling:` kèm mức gốc (vd `major: …`) để review cuối nhìn
+thấy; nhãn `minor (deferred)` chỉ dành cho finding `minor`/`nit`. Phán xong hết finding thì ghi dòng
+`Task <n>: complete (commits <a>..<b>, <k> ruled)` (bước 9) và chạy tiếp task sau.
 
 **Dừng hỏi người dùng, không ghi `Ruling:` rồi chạy tiếp**, khi finding hoặc tình huống thuộc một trong:
 
@@ -110,7 +119,8 @@ từng file và reviewer kiểm **mỗi file có hunk tương ứng**; file nào
 # Ledger — plan: <đường dẫn plan.md>
 Task <n>: complete (commits <a>..<b>, review clean)
 Ruling: <quyết định> — <lý do> — <chi phí nếu sai>
-minor (deferred): <finding> — task <n>
+Task <m>: complete (commits <a>..<b>, <k> ruled)
+minor (deferred): <finding minor/nit> — task <n>
 Plan: complete
 ```
 
