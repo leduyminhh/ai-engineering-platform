@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Làm rõ yêu cầu chuyển về session chính (engineering 2.3.0): `engineering-spec-writing` hỏi từng câu, playback từng phần, đề xuất 2–3 hướng kèm khuyến nghị và đánh đổi, xếp cỡ việc (việc rõ và nhỏ, thay đổi nhỏ, dự án) và chạy builder check một lần trước checkpoint. Khi người dùng bỏ qua làm rõ, agent tự chọn hướng và ghi đó là quyết định của agent. `engineering-spec-analyst` chỉ ghi tài liệu, không hỏi người dùng.
+- `workflow-feature` (workflows 3.4.0) thêm Bước 2 Làm rõ & cỡ việc, Bước 3 Tài liệu và Bước 4 Plan trước khi implement; các bước sau dịch sang 5–9 (Implement, Test, Review, Tài liệu, Commit). Ba bước mới có checkpoint người duyệt.
 - `check-request.mjs` skips W10 for request folders dated before 2026-10-21 (`SPEC_SINCE`) and for folders without a date prefix, so
   `--strict` in CI no longer fails on request folders written before living specs (core 1.12.1). W11-W14 still run on any design that lists impact entries.
 - `aip init --full` omits the `.env` (`secrets`) rules from the generated `.claude/settings.json` when `.claude/aip-gate.json` has
@@ -22,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Giai đoạn P1 của workflow tự đủ (core 1.15.0; engineering 2.3.0; workflows 3.4.0): `check-request.mjs` thêm W17 (Task trong `plan.md` thiếu dòng `**Kind:**`) và W18 (Kind ngoài tập `BE|FE-UI|FE-INT|E2E|DB|CT|DOCS|TOOLING`); `plan.template.md` có dòng `**Kind:**` cho mỗi task.
+- Skill mới `engineering-plan-writing` (engineering 2.3.0): lập `plan.md` thực thi từ design đã duyệt (bản đồ file, task theo kind, Interfaces, Global Constraints, Review Focus), tự soát rồi chạy `check-request.mjs`.
 - Agent permissions and MCP gate (core 1.11.1; backend 1.8.18 and frontend 1.10.17 bumped because their `backend-init`/`frontend-init`
   skills embed only the projected AGENTS baseline `AGENTS.template.md`): permission policy `core/permissions/policy.json` (groups `secrets` deny, `git_push`,
   `network`, `production_deploy` ask; Claude-only), `aip init --full` writes `.claude/settings.json` from it only when missing,
