@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `workflow-performance` (workflows 3.6.3; backend 1.10.2 và frontend 1.12.2 đổi tham chiếu số bước) thêm Bước 1 Baseline build/test: session chính chạy build + test vùng sẽ đụng và ghi số mốc (lệnh, exit code, pass/fail); đỏ thì dừng `blocked` và đề xuất `workflow-bugfix`. Các bước sau dịch sang 2–8; bước đo cũ đổi tên "Baseline hiệu năng" (Bước 3); Gate bước Tối ưu so build/test với số mốc Bước 1.
 - Làm rõ yêu cầu chuyển về session chính (engineering 2.3.0): `engineering-spec-writing` hỏi từng câu, playback từng phần, đề xuất 2–3 hướng kèm khuyến nghị và đánh đổi, xếp cỡ việc (việc rõ và nhỏ, thay đổi nhỏ, dự án) và chạy builder check một lần trước checkpoint. Khi người dùng bỏ qua làm rõ, agent tự chọn hướng và ghi đó là quyết định của agent. `engineering-spec-analyst` chỉ ghi tài liệu, không hỏi người dùng.
 - `workflow-feature` (workflows 3.4.0) thêm Bước 2 Làm rõ & cỡ việc, Bước 3 Tài liệu và Bước 4 Plan trước khi implement; các bước sau dịch sang 5–9 (Implement, Test, Review, Tài liệu, Commit). Ba bước mới có checkpoint người duyệt.
 - `check-request.mjs` skips W10 for request folders dated before 2026-10-21 (`SPEC_SINCE`) and for folders without a date prefix, so
@@ -25,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Giai đoạn P4 của workflow tự đủ — vòng lặp có giới hạn, review correctness và baseline build/test (backend 1.11.0; frontend 1.13.0; workflows 3.7.0):
+  - `workflow-security-review` Bước 9 (re-scan) thêm `backend-reviewer` ∥ `frontend-reviewer` (chỉ phía có sửa) review correctness song song với `engineering-quality-auditor`; gate thêm 0 finding `blocker` từ reviewer, blocker của reviewer quay lại Bước 8.
+  - `workflow-performance` thêm Bước 1 "Baseline build/test": session chính chạy build + test vùng sẽ đụng và ghi số mốc (lệnh, exit code, pass/fail); đỏ thì dừng `blocked` và đề xuất `workflow-bugfix`. Các bước sau dịch sang 2–8; bước đo hiệu năng cũ đổi tên "Baseline hiệu năng" (Bước 3); Gate Bước 5 Tối ưu so với số mốc Bước 1.
+  - Mọi vòng sửa/đo lại trong thân và bảng lỗi của workflow có giới hạn "tối đa N rồi hỏi người dùng" thay vì lặp tới khi xanh; contract test AC6.1 kiểm mọi workflow.
+  - `workflow-security-review` Bước 8 và `workflow-performance` Bước 5 tách hai loại `blocked` của fixer: hết phạm vi file (người dùng mở rộng danh sách rồi gọi lại) và đã thất bại lần sửa thứ 3 (`ask_user` kèm lý do từng lần); bản sửa hỏng phải revert trước khi thử lại.
+  - `workflow-orchestrator` bỏ dòng Supervisor, cột `Nối tiếp` và logic chuỗi workflow, vì Registry không có cặp nào; `cli/lib/workflows.mjs`: `parseRegistry` bỏ trường `next`, `missingAnchors` miễn neo Supervisor cho orchestrator.
 - Giai đoạn P3 của workflow tự đủ — điều tra và sửa lỗi có kỷ luật (backend 1.10.0; frontend 1.12.0; workflows 3.6.0):
   - `workflow-bugfix` Bước 3 thử viết script hoặc test tự động ít nhất một lần trước khi chấp nhận tái hiện thủ công; lý do không viết được phải đi kèm evidence. Bug race/timing dùng test chờ theo điều kiện, không sleep cứng, không nới timeout.
   - Bước 4 xem thay đổi gần đây của vùng nghi ngờ và so với code tương tự đang đúng; log tạm chỉ được chèn sau khi ghi mốc `git status --porcelain`, và phải gỡ hết trước Bước 5.
