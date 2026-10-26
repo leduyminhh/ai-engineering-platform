@@ -224,4 +224,57 @@ export default async function run({ ok, ctx }) {
       }
     }
   }
+
+  // AC3.1, AC3.2, AC3.5, AC4.1, AC4.2, AC4.3: skill core plan-execution (giao thức vòng task, 4 prompt, kết thúc nhánh)
+  {
+    const dir = path.join(REPO_ROOT, 'core', 'skills', 'plan-execution');
+    const rd = (...p) => (fs.existsSync(path.join(dir, ...p)) ? fs.readFileSync(path.join(dir, ...p), 'utf8').replace(/\r\n/g, '\n') : '');
+    const flat = (t) => t.replace(/\s+/g, ' ');
+    const skillRaw = rd('SKILL.md');
+    const skill = flat(skillRaw);
+    const loop = flat(rd('references', 'task-loop.md'));
+    const fin = flat(rd('references', 'finish.md'));
+    const prompt = (n) => flat(rd('references', 'prompts', n + '.md'));
+
+    ok(skillRaw.length > 0, 'AC3.1: plan-execution/SKILL.md tồn tại');
+    ok(/^## Quy trình/m.test(skillRaw) && /^## Ranh giới an toàn/m.test(skillRaw), 'AC3.1: SKILL có H2 Quy trình và Ranh giới an toàn');
+    ok(/^order: 5\s*$/m.test(skillRaw), 'AC3.1: SKILL core order 5');
+
+    // vòng task: BASE trước khi giao việc, review-package, spec_verdict, commit do session chính
+    const all = skill + ' ' + loop;
+    ok(/BASE/.test(all) && /git rev-parse HEAD/.test(all) && /trước khi giao/.test(all), 'AC3.1: ghi BASE (git rev-parse HEAD) trước khi giao việc');
+    ok(all.includes('review-package') && all.includes('task-brief') && all.includes('ledger'), 'AC3.1: vòng task dùng task-brief, review-package, ledger');
+    ok(all.includes('spec_verdict') && all.includes('engineering-plan-writing'), 'AC3.1: task review trả spec_verdict; kind trỏ engineering-plan-writing');
+    ok(/session chính commit/.test(all) && all.includes('git-workflow') && /agent không tự commit/.test(all), 'AC4.1: session chính commit qua git-workflow, agent không tự commit');
+    for (const f of ['Task <n>: complete', 'Ruling:', 'Plan: complete', '# Ledger']) ok(all.includes(f), `AC3.3: ledger nhắc "${f}"`);
+
+    // vòng sửa: tối đa 3, vòng 3 opus, re-review có phạm vi, 4 loại dừng
+    ok(/tối đa 3 vòng/.test(loop) && /vòng 3/.test(loop) && /opus/.test(loop) && /đặt lại/.test(loop), 'AC3.2: tối đa 3 vòng/task, đặt lại mỗi task, vòng 3 agent mới opus');
+    ok(/SendMessage/.test(loop) && /ADDRESSED/.test(loop) && /chỉ[^.]*diff của vòng sửa/.test(loop), 'AC3.2: vòng 1–2 SendMessage; re-review chỉ diff của vòng sửa');
+    ok(/sau vòng 3[^.]*(không còn|hết)/.test(loop) && /Ruling:/.test(loop), 'AC3.2: hết vòng 3 không còn vòng nào, ghi Ruling:');
+    for (const stop of ['không đảo ngược', 'bảo mật', 'ngoài repo', 'mọi hướng đều là đoán', 'schema DB']) {
+      ok(loop.includes(stop), `AC3.2: loại dừng hỏi người dùng nhắc "${stop}"`);
+    }
+
+    // review cuối nhánh
+    const fr = prompt('final-review');
+    ok(/toàn nhánh/.test(all) && /opus/.test(fr + ' ' + loop) && /Review Focus/.test(fr) && /minor/.test(fr) && /Ruling:/.test(fr),
+      'AC3.5: review cuối toàn nhánh chạy opus, nhận Review Focus + Ruling: + minor đã hoãn');
+    ok(/engineering-quality-auditor[^.]*chỉ[^.]*review cuối|chỉ[^.]*review cuối[^.]*engineering-quality-auditor/.test(all),
+      'AC3.5: engineering-quality-auditor chỉ chạy ở review cuối');
+    ok(/một lần sửa/.test(loop + ' ' + fr) && /một lần re-review/.test(loop + ' ' + fr), 'AC3.5: review cuối chỉ một lần sửa + một lần re-review');
+
+    // 4 prompt
+    for (const n of ['implementer', 'task-review', 're-review', 'final-review']) ok(prompt(n).length > 0, `AC3.1: có prompts/${n}.md`);
+    const tr = prompt('task-review');
+    ok(['Missing', 'Extra', 'Misunderstood', 'spec_verdict', 'cannot_verify'].every((w) => tr.includes(w)), 'AC3.1: task-review.md yêu cầu Missing/Extra/Misunderstood + spec_verdict');
+    const rr = prompt('re-review');
+    ok(rr.includes('ADDRESSED') && rr.includes('NOT ADDRESSED'), 'AC3.2: re-review.md yêu cầu ADDRESSED / NOT ADDRESSED');
+
+    // kết thúc nhánh
+    ok(/merge local/.test(fin) && /push \+ PR/.test(fin) && /giữ nguyên/.test(fin) && /mặc định[^.]*giữ nguyên/.test(fin), 'AC4.2: kết thúc nhánh đúng 3 lựa chọn, mặc định giữ nguyên');
+    ok(/docs\/specs/.test(fin) && /check-request\.mjs/.test(fin) && /full suite/.test(fin), 'AC4.2: finish cập nhật spec sống, chạy check-request.mjs và full suite');
+    ok(/không (merge|push)[^.]*chưa chọn/.test(fin) && /merge xong[^.]*(chạy lại|test lại)/.test(fin) && /xác nhận rõ/.test(fin), 'AC4.2: không merge/push khi chưa chọn; test lại sau merge; xoá nhánh chỉ khi xác nhận rõ');
+    ok(/rulings/.test(fin) && /Ruling:/.test(fin), 'AC4.3: kết thúc gom mọi Ruling: vào rulings của workflow_result');
+  }
 }
