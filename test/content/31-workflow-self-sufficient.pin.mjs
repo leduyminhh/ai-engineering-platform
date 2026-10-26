@@ -34,4 +34,26 @@ export default async function run({ ok, ctx }) {
     ok(tpl.includes('**Kind:**') && tpl.includes('**Interfaces:**') && tpl.includes('Consumes') && tpl.includes('Produces'),
       'AC2.1: task mẫu có **Kind:** và **Interfaces:** (Consumes/Produces)');
   }
+
+  // AC2.1, AC2.2, AC2.3, AC1.4: skill engineering-plan-writing + quan hệ với task-breakdown
+  {
+    const dir = path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-plan-writing');
+    const read = (...p) => (fs.existsSync(path.join(dir, ...p)) ? fs.readFileSync(path.join(dir, ...p), 'utf8') : '');
+    const skill = read('SKILL.md');
+    ok(skill.length > 0, 'AC2.1: engineering-plan-writing/SKILL.md tồn tại');
+    for (const phrase of ['Bản đồ file', 'Global Constraints', 'Review Focus', '**Interfaces:**', '**Kind:**', 'check-request.mjs']) {
+      ok(skill.includes(phrase), `AC2.1: SKILL plan-writing nhắc "${phrase}"`);
+    }
+    ok(/thay đổi nhỏ[^\n]*(không|bỏ)[^\n]*plan\.md/.test(skill), 'AC1.4: SKILL nói cỡ "thay đổi nhỏ" không có plan.md');
+    ok(read('references', 'plan-structure.md').length > 0, 'AC2.1: có references/plan-structure.md');
+
+    const self = read('references', 'self-review.md');
+    const items = (self.match(/^[1-9]\. /gm) || []).join('');
+    ok(items === '1. 2. 3. 4. 5. ', 'AC2.2: self-review.md có đúng 5 mục đánh số 1.–5.');
+    ok(self.includes('check-request.mjs'), 'AC2.2: self-review chạy check-request.mjs sau 5 mục');
+
+    const tb = fs.readFileSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-task-breakdown', 'SKILL.md'), 'utf8');
+    ok(tb.includes('ID task') && tb.includes('một checkpoint'),
+      'AC2.3: task-breakdown nói task trong plan.md trỏ ID task của tasks.md, một checkpoint chung');
+  }
 }

@@ -86,6 +86,12 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
    `tasks.xlsx` hoặc `tasks.csv` theo [references/output-formats.md](references/output-formats.md) §4 (CSV ưu tiên
    `check-tasks.mjs --csv`). `plan.md` đã có → chỉ thêm 1 dòng link tới `tasks.md`.
 
+## Quan hệ với plan.md
+
+`tasks.md` là bảng việc để giao cho người; `plan.md` (skill `engineering-plan-writing`) là kế hoạch thực thi cho agent.
+Khi cả hai cùng có, task trong `plan.md` trỏ ID task của `tasks.md` (`UC01-BE-01`…) thay vì chia lại, và hai file dùng
+một checkpoint duyệt chung: Checkpoint 2 ở đây duyệt luôn bản tách task lẫn `plan.md`, không hỏi người duyệt hai lần.
+
 ## Verification (trước khi báo hoàn thành)
 
 - Đã nạp context; phần suy đoán đánh dấu **[giả định]**; teamlead đã duyệt Checkpoint 1 và Checkpoint 2.
