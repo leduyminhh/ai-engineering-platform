@@ -1,6 +1,6 @@
 // Pin: workflow tự đủ (docs/requests/2026-10-26-workflow-self-sufficient). Task 1: check-request kiểm kind của task + plan template (AC2.1).
 export default async function run({ ok, ctx }) {
-  const { fs, path, REPO_ROOT, pathToFileURL } = ctx;
+  const { fs, path, os, REPO_ROOT, pathToFileURL } = ctx;
 
   // AC2.1: check-request kiểm dòng **Kind:** của từng task trong plan.md
   {
@@ -155,5 +155,73 @@ export default async function run({ ok, ctx }) {
     const g = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'graph.json'), 'utf8'));
     ok(g.steps.slice(0, 4).map((s) => s.id).join(',') === 'baseline,clarify,documents,plan', 'AC1.1: graph id bước 1–4 là baseline, clarify, documents, plan');
     ok(g.steps.slice(1, 4).every((s) => s.gate.type === 'human' && s.gate.reject === 'ask_user'), 'AC1.1: graph bước 2–4 gate human, reject → ask_user');
+  }
+
+  // AC3.6, AC3.3: script plan-execution (task-brief, review-package, ledger)
+  {
+    const sdir = path.join(REPO_ROOT, 'core', 'skills', 'plan-execution', 'scripts');
+    const load = async (n) => {
+      const f = path.join(sdir, n);
+      if (!fs.existsSync(f)) { ok(false, `AC3.6: thiếu ${n}`); return null; }
+      return import(pathToFileURL(f).href);
+    };
+    const tb = await load('task-brief.mjs');
+    const rp = await load('review-package.mjs');
+    const lg = await load('ledger.mjs');
+
+    if (tb) {
+      const plan = '# Plan\n\n```\n### Task 1: giả trong code\n```\n\n### Task 1: a\nnội dung 1\n\n```md\n## Không phải heading\n```\ncòn task 1\n\n### Task 2: b\nnội dung 2\n**Kind:** BE\n\n## Phụ lục\nngoài\n\n### Task 3: c\nnội dung 3\n';
+      const t2 = tb.extractTask(plan, 2);
+      ok(t2 === '### Task 2: b\nnội dung 2\n**Kind:** BE\n', 'AC3.6: extractTask lấy đúng task 2, dừng ở heading ## kế tiếp');
+      ok(tb.extractTask(plan, 9) === null, 'AC3.6: extractTask trả null khi không có task');
+      const t1 = tb.extractTask(plan, 1);
+      ok(t1.startsWith('### Task 1: a') && t1.includes('còn task 1') && t1.includes('## Không phải heading') && !t1.includes('Task 2'),
+        'AC3.6: extractTask bỏ qua heading trong khối code (cả "### Task 1:" lẫn "##") và giữ nguyên khối đó');
+      ok(tb.extractTask(plan.replace(/\n/g, '\r\n'), 2).startsWith('### Task 2: b'), 'AC3.6: extractTask chịu CRLF');
+    }
+
+    if (rp) {
+      const mk = (ancestor) => (args) => {
+        if (args[0] === 'merge-base') { if (!ancestor) throw new Error('exit 1'); return ''; }
+        if (args[0] === 'log') return 'abc1234 feat: x\n';
+        if (args.includes('--stat')) return ' a.js | 2 +-\n';
+        return 'diff --git a/a.js b/a.js\n';
+      };
+      let msg = '';
+      try { rp.buildPackage({ base: 'a', head: 'a', run: mk(true) }); } catch (e) { msg = e.message; }
+      ok(msg !== '', 'AC3.6: buildPackage ném lỗi khi base == head');
+      msg = '';
+      try { rp.buildPackage({ base: 'a', head: 'b', run: mk(false) }); } catch (e) { msg = e.message; }
+      ok(msg !== '', 'AC3.6: buildPackage ném lỗi khi base không là tổ tiên của head');
+      const pkg = rp.buildPackage({ base: 'a', head: 'b', run: mk(true) });
+      ok(pkg.includes('abc1234 feat: x') && pkg.includes('a.js | 2 +-') && pkg.includes('diff --git a/a.js'),
+        'AC3.6: buildPackage gồm commit list, stat và diff');
+      const calls = [];
+      rp.buildPackage({ base: 'a', head: 'b', run: (args) => { calls.push(args.join(' ')); return mk(true)(args); } });
+      ok(calls.some((c) => c.includes('-U10') && c.includes('a..b')) && calls.some((c) => c.startsWith('merge-base --is-ancestor a b')),
+        'AC3.6: buildPackage gọi diff -U10 theo base..head và merge-base --is-ancestor');
+    }
+
+    if (lg) {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ledger-'));
+      try {
+        const file = lg.ensureWorkspace(tmp);
+        ok(file === path.join(tmp, '.sdd', 'progress.md'), 'AC3.3: ensureWorkspace trả đường dẫn .sdd/progress.md');
+        ok(fs.readFileSync(path.join(tmp, '.sdd', '.gitignore'), 'utf8') === '*\n', 'AC3.3: .sdd/.gitignore chứa "*"');
+        ok(lg.ensureWorkspace(tmp) === file, 'AC3.3: ensureWorkspace chạy lại không lỗi');
+        ok(lg.readTail(file, 100) === null, 'AC3.3: readTail trả null khi ledger chưa có');
+        lg.appendLedger(file, '# Ledger — plan: plan.md');
+        lg.appendLedger(file, 'Task 1: complete (commits a..b, review clean)');
+        ok(fs.readFileSync(file, 'utf8') === '# Ledger — plan: plan.md\nTask 1: complete (commits a..b, review clean)\n', 'AC3.3: appendLedger ghi mỗi dòng kết thúc bằng LF');
+        const all = lg.readTail(file, 1000);
+        ok(all.includes('Task 1: complete'), 'AC3.3: readTail trả nội dung khi plan chưa xong');
+        const tail = lg.readTail(file, 20);
+        ok(tail.length <= 20 && tail.endsWith('review clean)\n'), 'AC3.3: readTail trả tối đa max ký tự cuối');
+        lg.appendLedger(file, 'Plan: complete');
+        ok(lg.readTail(file, 1000) === null, 'AC3.3: readTail trả null khi có dòng "Plan: complete"');
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
+    }
   }
 }
