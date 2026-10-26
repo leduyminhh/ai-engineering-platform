@@ -249,8 +249,10 @@ baseline R8 mặc định quy trình là workflow aip; hooks-gates R11 `session-
 - Feature thật dùng để chạy thử ở P6 (chọn từ follow-up đang mở, chủ repo duyệt).
 
 ## Rủi ro và câu hỏi mở
-- [Unverified] Tiếp tục một subagent plugin bằng `SendMessage` và chỉ định `model` khi gọi agent plugin. Mặc định dùng
-  agent mới nhận brief + report + finding cho vòng sửa; phương án khi không chỉ định được model ở D15.
+- Đã kiểm 2026-10-26 (Task 6): gọi `Agent` với `subagent_type: backend:backend-reviewer`, `model: opus` chạy được;
+  agent tự báo "Claude Opus 5.5 — claude-opus-5-5" (tự báo theo thông tin hệ thống của agent, không phải log máy chủ).
+  Vì vậy review cuối và vòng sửa 3 gọi thẳng agent domain với `model: opus`; phương án dự phòng D15 chỉ dùng khi lời
+  gọi lỗi. Tiếp tục subagent bằng `SendMessage` đã chạy được trong phiên thực thi plan này (vòng sửa Task 3).
 - [Inference] Số 3 vòng sửa/task và bộ đếm tổng 3 lần ở bugfix chưa đo; điều chỉnh sau eval.
 - [Inference] Vòng task tốn thêm một reviewer cho mỗi task; chi phí thật chỉ biết sau P6.
 - [Inference] Model có làm đúng khâu làm rõ ở session chính khi hướng dẫn nằm trong skill thay vì trong superpowers hay
