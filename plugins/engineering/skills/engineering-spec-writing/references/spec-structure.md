@@ -69,7 +69,8 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
 
 - **Vấn đề và lý do** — ý định và vì sao làm, goal/non-goal.
 - **Quyết định đã chốt** — chỉ những gì người dùng đã đồng ý trong hội thoại (hoặc duyệt ở checkpoint), gồm hướng đã
-  chọn trong 2–3 hướng đã đề xuất kèm đánh đổi và lý do khuyến nghị.
+  chọn trong 2–3 hướng đã đề xuất kèm đánh đổi và lý do khuyến nghị. **Các hướng bị loại** cũng ghi vào `design.md`
+  (mỗi hướng một dòng đánh đổi và lý do loại), không chỉ hướng được chọn.
 - **Quyết định của agent** — mọi lựa chọn agent tự đưa ra (người dùng bỏ qua phần hỏi, hoặc câu nhỏ từ builder
   check), mỗi dòng kèm lý do ngắn. Không trộn vào "Quyết định đã chốt"; duyệt design là duyệt cả các quyết định này.
 - **Ngoài phạm vi và anti-goal** — điều chủ đích không làm và điều tuyệt đối không được làm (vd không đổi API công khai).

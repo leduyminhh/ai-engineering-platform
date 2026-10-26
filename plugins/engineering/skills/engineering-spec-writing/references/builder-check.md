@@ -22,6 +22,8 @@ Chỉ session chính chạy bước này (spec-analyst không có tool gọi sub
 4. Có câu thuộc nhóm "của người dùng" → hỏi **trong đúng một tin nhắn** (đánh số, mỗi câu kèm mặc định đề xuất để
    người dùng chỉ cần "đồng ý" hoặc sửa). Đây là vòng hỏi **duy nhất** của bước kiểm; không chạy lại builder check sau
    khi nhận trả lời, chỉ cập nhật tài liệu. Không có câu nào → báo ngắn rằng builder check không còn câu hỏi.
+   **Ngoại lệ — người dùng đã bỏ qua phần hỏi:** không hỏi gì; nhóm "của người dùng" cũng ghi là **quyết định của agent**
+   kèm mặc định đã chọn, và nêu nổi bật ở checkpoint để người dùng sửa khi duyệt.
 5. **Không có tool subagent** → session chính tự đọc tài liệu theo đúng prompt dưới đây, đóng vai builder, rồi phân
    3 nhóm như trên và ghi rõ trong báo cáo là đã tự đọc.
 

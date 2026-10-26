@@ -12,8 +12,8 @@
     "hash": "c429c7a574982612e7125bd0c90cafe84ceb96426310335cc897c17eb270d236"
   },
   "engineering": {
-    "version": "2.2.6",
-    "hash": "4298204fbab0539f914bc6f5e86edf6d6f9a11b036d7991e97fad9db7b93fecf"
+    "version": "2.2.7",
+    "hash": "893f82227c91744194712e4933194664d079fa6e2a32f34b14a8797d397e831b"
   },
   "frontend": {
     "version": "1.10.23",

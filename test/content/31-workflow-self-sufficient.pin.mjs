@@ -73,16 +73,37 @@ export default async function run({ ok, ctx }) {
     ok(/khuyến nghị/.test(skill) && /đánh đổi/.test(skill), 'AC1.1: SKILL đề xuất kèm 1 khuyến nghị và đánh đổi');
     ok(/sau (khi )?playback/.test(skill) && /lệch có chủ đích/.test(skill),
       'AC1.1: SKILL đặt đề xuất sau playback và ghi đây là lệch có chủ đích');
-    ok(/việc rõ và nhỏ/i.test(skill) && /thay đổi nhỏ/i.test(skill) && /dự án/i.test(skill), 'AC1.4: SKILL nêu đủ ba cỡ việc');
+    const sizeOf = (name) => read(sw, 'SKILL.md').split('\n').find((l) => l.includes('- **' + name + '**')) || '';
+    ok(/không chạy workflow/.test(sizeOf('Việc rõ và nhỏ')), 'AC1.4: dòng cỡ "Việc rõ và nhỏ" → không chạy workflow');
+    ok(['requirement.md', 'design.md', 'plan.md'].every((f) => sizeOf('Dự án').includes('`' + f + '`')) && /gate/.test(sizeOf('Dự án')),
+      'AC1.4: dòng cỡ "Dự án" → requirement.md + design.md + plan.md, mỗi file một gate');
     const sizeLine = read(sw, 'SKILL.md').split('\n').find((l) => /\*\*Thay đổi nhỏ\*\*/.test(l)) || '';
     ok(/requirement\.md/.test(sizeLine) && /không có `design\.md`/.test(sizeLine) && /không có `plan\.md`/.test(sizeLine),
       'AC1.4: cỡ "thay đổi nhỏ" chỉ requirement.md, không design.md/plan.md');
-    ok(/bỏ qua → chuyển thẳng[^]*không hỏi thêm câu nào/.test(skill), 'AC1.2: bỏ qua phần hỏi → viết thẳng, không hỏi thêm câu nào trước checkpoint');
+    ok(/bỏ qua → bỏ bước 3–4[^]*không hỏi thêm câu nào/.test(skill), 'AC1.2: bỏ qua phần hỏi → viết thẳng, không hỏi thêm câu nào trước checkpoint');
     ok(/không có tool subagent[^.]*(tự đọc|tự đóng vai)/i.test(skill), 'AC1.3: không có tool subagent → tự đọc như builder');
+    // AC1.2: bỏ qua phần hỏi thì builder check cũng không hỏi; AC1.1: design.md vẫn có 2–3 hướng, agent tự chọn
+    const skillRaw = read(sw, 'SKILL.md');
+    const between = (from, to) => skillRaw.split(from)[1]?.split(to)[0] || '';
+    const step9 = between('9. **Builder check', '10. **Verify');
+    ok(/bỏ qua phần hỏi/.test(step9) && /không hỏi/.test(step9) && /quyết định của agent/.test(step9) && /nổi bật/.test(step9),
+      'AC1.2: SKILL bước 9 — đã bỏ qua phần hỏi thì không hỏi, nhóm của người dùng thành quyết định của agent, nêu nổi bật ở checkpoint');
+    ok(/người dùng đã bỏ qua phần hỏi[^]*không hỏi gì[^]*quyết định của agent[^]*nổi bật/.test(read(sw, 'references', 'builder-check.md')),
+      'AC1.2: builder-check.md có ngoại lệ bỏ qua phần hỏi (không hỏi, quyết định của agent, nêu nổi bật)');
+    const step5 = between('5. **Đề xuất', '6. **Xếp cỡ');
+    ok(/hướng bị loại/.test(step5) && /tự chọn/.test(step5) && /không dừng chờ chọn/.test(step5),
+      'AC1.1: SKILL bước 5 — ghi cả hướng bị loại; bỏ qua phần hỏi thì agent tự chọn, không dừng chờ');
+    const step2 = between('2. **Cổng', '3. **Hỏi từng câu');
+    ok(/tự chọn hướng/.test(step2) && /2–3 hướng/.test(step2) && !/bước 5–7/.test(step2),
+      'AC1.1: SKILL bước 2 — bỏ qua phần hỏi: agent tự chọn hướng, vẫn ghi 2–3 hướng');
+    const verif = between('## Verification', '## Ghi chú');
+    ok(/2–3 hướng/.test(verif) && /không bỏ phần này/.test(verif), 'AC1.1: Verification không miễn 2–3 hướng khi bỏ qua phần hỏi');
 
     const bc = flat(read(sw, 'references', 'builder-check.md'));
     ok(bc.length > 0, 'AC1.3: có references/builder-check.md');
-    ok(/đã trả lời/i.test(bc) && /nhỏ/i.test(bc) && /của người dùng/i.test(bc), 'AC1.3: builder-check phân 3 nhóm (đã trả lời / nhỏ / của người dùng)');
+    const bcRow = (name) => read(sw, 'references', 'builder-check.md').split('\n').find((l) => l.trim().startsWith('| **' + name + '**')) || '';
+    ok(bcRow('Đã trả lời').includes('Ghi vào tài liệu') && /quyết định của agent/.test(bcRow('Nhỏ')) && /hỏi/.test(bcRow('Của người dùng')),
+      'AC1.3: builder-check có đủ 3 hàng nhóm (đã trả lời / nhỏ / của người dùng) với cách xử lý tương ứng');
     ok(/không được hỏi/i.test(bc) && /xếp hạng/i.test(bc) && /một tin nhắn/.test(bc), 'AC1.3: builder-check cấm hỏi người viết, xếp hạng, gom một tin nhắn');
     ok(bc.includes('quyết định của agent'), 'AC1.3: câu nhỏ tự quyết được ghi "quyết định của agent"');
 
@@ -91,6 +112,7 @@ export default async function run({ ok, ctx }) {
     ok(!/một cụm nhỏ/.test(el), 'AC1.1: elicitation bỏ chỉ dẫn hỏi theo cụm/bảng câu hỏi');
 
     const sstr = flat(read(sw, 'references', 'spec-structure.md'));
+    ok(/hướng bị loại.{0,80}ghi vào `design\.md`/i.test(sstr), 'AC1.1: spec-structure ghi cả hướng bị loại vào design.md');
     ok(/đã chốt/i.test(sstr) && /quyết định của agent/i.test(sstr) && /để builder quyết/i.test(sstr) && /anti-goal/i.test(sstr),
       'AC1.1: spec-structure hướng dẫn điền design.md (đã chốt / quyết định của agent / để builder quyết / anti-goal)');
     ok(/builder check/.test(flat(read(sw, 'references', 'checklist.md'))), 'AC1.3: checklist có mục builder check');

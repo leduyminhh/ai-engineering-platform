@@ -55,8 +55,10 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    Tự hỏi: mình đã biết gì về điều người dùng muốn và vì sao? Yêu cầu đã đủ rõ và nhỏ (một sửa đổi có kết quả quan sát
    được, không có quyết định thiết kế) → **không chạy workflow**, làm thẳng. Ngược lại, tin nhắn đầu tiên gồm đúng
    hai phần: một dòng nói rằng người dùng có thể **bỏ qua phần hỏi** bất cứ lúc nào, và một câu mở gợi họ kể tình huống
-   thật. Người dùng chọn bỏ qua → chuyển thẳng sang bước 5–7 mà **không hỏi thêm câu nào** trước checkpoint, viết
-   tài liệu với mọi lựa chọn đánh dấu **quyết định của agent** (chỉ nêu riêng lựa chọn công nghệ/nền tảng quan trọng).
+   thật. Người dùng chọn bỏ qua → bỏ bước 3–4, **không hỏi thêm câu nào** trước checkpoint (kể cả ở builder check, bước 9):
+   agent **tự chọn hướng ở bước 5** (vẫn ghi 2–3 hướng + khuyến nghị + đánh đổi, không dừng chờ chọn), xếp cỡ việc
+   rồi viết tài liệu (bước 6–8) với mọi lựa chọn đánh dấu **quyết định của agent**, nêu nổi bật ở checkpoint (chỉ
+   nêu riêng lựa chọn công nghệ/nền tảng quan trọng) để người dùng sửa khi duyệt.
 
 3. **Hỏi từng câu.**
    Mỗi tin nhắn kết thúc bằng **một câu hỏi**, không kèm danh sách ví dụ; câu mở trước, chỉ đưa lựa chọn khi
@@ -72,8 +74,9 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
 
 5. **Đề xuất 2–3 hướng + 1 khuyến nghị + đánh đổi** — đặt **sau playback**, khi mô tả đã được xác nhận.
    Tự nghĩ rộng riêng tư, bỏ hướng yếu; chỉ trình 2–3 hướng thật sự khác nhau, mỗi hướng một dòng đánh đổi, nêu **một
-   khuyến nghị** và lý do. Người dùng chốt hướng → ghi vào `design.md` (mục Quyết định đã chốt); người dùng không
-   chốt thì ghi **quyết định của agent**. Đây là **lệch có chủ đích** so với cách "không đưa lựa chọn sớm" của
+   khuyến nghị** và lý do. Cả hướng được chọn lẫn các hướng bị loại (kèm đánh đổi và lý do) đều ghi vào `design.md`. Người dùng chốt hướng →
+   mục Quyết định đã chốt; người dùng bỏ qua phần hỏi hoặc không chốt → agent tự chọn theo khuyến nghị, ghi
+   **quyết định của agent**, không dừng chờ chọn. Đây là **lệch có chủ đích** so với cách "không đưa lựa chọn sớm" của
    brainstorming trong superpowers (chủ repo yêu cầu có đề xuất); giữ thứ tự "hỏi mô tả trước, đề xuất sau" và đừng
    sửa lại theo cách đó. Cần diagram (flow/ERD/sequence/kiến trúc) → skill **`engineering-diagram`**; chỉ đưa hình khi
    nhìn tốt hơn đọc.
@@ -108,7 +111,8 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    [references/builder-check.md](references/builder-check.md): không được hỏi người viết, chỉ liệt kê câu hỏi còn cần mà đoán
    sai sẽ hỏng, xếp hạng. Session chính phân kết quả thành 3 nhóm: **đã trả lời** (ghi vào tài liệu) / **nhỏ** (tự quyết,
    ghi **quyết định của agent**) / **của người dùng** — chỉ nhóm này đi hỏi, **gom vào đúng một tin nhắn**, đây là vòng
-   hỏi duy nhất của bước kiểm. **Không có tool subagent** → session chính tự đọc tài liệu như builder theo cùng prompt.
+   hỏi duy nhất của bước kiểm. Người dùng đã **bỏ qua phần hỏi** → không hỏi: nhóm "của người dùng" cũng ghi là
+   **quyết định của agent** kèm mặc định đã chọn và nêu nổi bật ở checkpoint. **Không có tool subagent** → session chính tự đọc tài liệu như builder theo cùng prompt.
 
 10. **Verify.**
     Chạy checklist [references/checklist.md](references/checklist.md): đủ mục; mỗi requirement truy vết được
@@ -120,8 +124,8 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
 ## Verification (trước khi báo hoàn thành)
 
 - Đã nạp context và xác định feature + đối tượng đọc; phần suy đoán đánh dấu **[giả định]**.
-- Đã qua cổng "đủ thông tin"; lựa chọn của agent ghi **quyết định của agent**; có 2–3 hướng + 1 khuyến nghị (trừ khi
-  người dùng bỏ qua phần hỏi hoặc việc ở cỡ thay đổi nhỏ).
+- Đã qua cổng "đủ thông tin"; lựa chọn của agent ghi **quyết định của agent**; `design.md` (cỡ dự án) ghi 2–3 hướng + 1 khuyến nghị + đánh đổi, gồm cả hướng bị loại — khi người dùng bỏ qua phần hỏi
+  thì ghi là **quyết định của agent**, không bỏ phần này; cỡ thay đổi nhỏ không có `design.md`.
 - Đã chạy đúng một lần builder check; câu hỏi còn lại của người dùng gom trong một tin nhắn.
 - Spec đặt đúng `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md`, bám scaffold `_TEMPLATE`.
 - Mỗi AC có ID `AC<n>.<m>`; đã chạy `check-request.mjs` của skill `artifact-templates` trên thư mục request
