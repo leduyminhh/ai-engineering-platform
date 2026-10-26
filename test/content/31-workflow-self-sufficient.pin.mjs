@@ -346,6 +346,7 @@ export default async function run({ ok, ctx }) {
     ok(/task `kind: BE` trong vòng task/.test(be) && /test lõi/.test(be) && /đỏ đúng lý do/.test(be) && /tdd: { red, green }/.test(be) && /tdd\.red/.test(be) && /tdd\.green/.test(be),
       'AC3.4: backend-implementer — task kind: BE trong vòng task: test lõi đỏ đúng lý do trước, báo tdd.red/tdd.green');
     ok(/ngoài vòng task[^.]*không ép/.test(be), 'AC3.4: backend-implementer — không ép TDD khi được gọi ngoài vòng task');
+    ok(!/xanh ở bước [0-9]/.test(be), 'AC3.4: backend-implementer — gọi bước chạy build + test theo tên, không theo số (số bước của agent khác SKILL)');
     const skill = rd('backend', 'skills', 'backend-implement', 'SKILL.md');
     ok(/kind: BE/.test(skill) && /đỏ đúng lý do/.test(skill) && /tdd\.red/.test(skill) && /tdd\.green/.test(skill),
       'AC3.4: backend-implement SKILL — bước test đỏ trước và báo tdd khi task kind: BE trong vòng task');

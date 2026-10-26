@@ -31,7 +31,7 @@ Implementer backend: nhận một use-case/feature/contract được giao, sinh 
 3. Khi được giao task `kind: BE` trong vòng task: viết test lõi (unit mock/fake port) cho use-case TRƯỚC, chạy và
    thấy đỏ đúng lý do (thất bại vì chưa có hành vi, không phải lỗi setup/compile ngoài ý muốn); ghi lệnh + kết
    quả làm `tdd.red`. Được gọi ngoài vòng task (workflow khác không truyền `kind: BE`) thì không ép bước này,
-   chỉ cần test lõi xanh ở bước 5.
+   chỉ cần test lõi xanh ở bước chạy build + test.
 4. Sinh slice đúng tầng/module theo blueprint, map ở biên bằng mapper thủ công, transaction ở use-case.
 5. Nếu slice có endpoint: đọc skill `backend-api-contract`, đối chiếu/cập nhật `docs/contracts/` cho khớp
    slice vừa sinh (contract là nguồn sự thật FE↔BE).
