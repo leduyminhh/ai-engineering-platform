@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Giai đoạn P3 của workflow tự đủ — điều tra và sửa lỗi có kỷ luật (backend 1.10.0; frontend 1.12.0; workflows 3.6.0):
+  - `workflow-bugfix` Bước 3 thử viết script hoặc test tự động ít nhất một lần trước khi chấp nhận tái hiện thủ công; lý do không viết được phải đi kèm evidence. Bug race/timing dùng test chờ theo điều kiện, không sleep cứng, không nới timeout.
+  - Bước 4 xem thay đổi gần đây của vùng nghi ngờ và so với code tương tự đang đúng; log tạm chỉ được chèn sau khi ghi mốc `git status --porcelain`, và phải gỡ hết trước Bước 5.
+  - Bước 5 phát biểu giả thuyết "X là nguyên nhân vì Y" kèm cách kiểm, truy ngược tới nguồn thay vì dừng ở chỗ lỗi nổ, rồi đối chiếu lý do đỏ của test với root cause; test đỏ lệch root cause quay lại Bước 3.
+  - Bước 6 có bộ đếm tổng 3 lần sửa thất bại qua mọi cạnh: đủ 3 lần thì dừng `ask_user` với câu hỏi kiến trúc, không thử lần 4. Bản sửa hỏng được revert trước khi thử lại, và session chính tự chạy lại oracle rồi ghi exit code thay vì chỉ tin báo cáo của fixer.
+  - `backend-fix`, `frontend-fix` và agent `backend-fixer`, `frontend-fixer`: mỗi lượt chỉ áp một thay đổi gắn với một giả thuyết (chế độ `performance` là một thay đổi tối ưu mỗi lượt). Chỉ revert phần thay đổi của bản sửa hỏng, không `git reset --hard`; báo số lần thử và giả thuyết của từng lần; trả `blocked` ở lần thất bại thứ 3.
+  - Pin test `test/content/31-workflow-self-sufficient.pin.mjs` ghim các quy tắc trên.
 - Giai đoạn P2 của workflow tự đủ — vòng task (core 1.16.0; backend 1.9.0; frontend 1.11.0; engineering 2.4.0; workflows 3.5.0):
   - Skill core mới `plan-execution`: giao thức vòng task (brief, giao agent theo `kind`, review từng task kèm `spec_verdict`, sửa tối đa 3 vòng với vòng 3 chạy opus, `Ruling:`, ledger, review cuối, kết thúc nhánh với 3 lựa chọn) cùng 3 script Node `task-brief`, `review-package`, `ledger`.
   - Contract đầu ra của agent mở rộng: `tdd`, `spec_verdict`, `rulings` và re-review có phạm vi.
