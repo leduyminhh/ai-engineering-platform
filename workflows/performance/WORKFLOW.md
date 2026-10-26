@@ -84,8 +84,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   trường (không có baseline thì không tối ưu); agent FE trả `not_run` vì không dựng được bản build hoặc không có
   Chrome → dừng `blocked`, báo người dùng; agent trả `blocked` + câu hỏi → session chính hỏi người dùng, ghi
   quyết định vào bảng điều kiện (hàng Config tool đo nếu liên quan), gọi lại agent; độ lệch vượt ngưỡng P3 → tăng
-  số lần lặp hoặc cô lập nhiễu, đo lại; nếu độ lệch vượt ngưỡng P3 do hai pha đo chồng nhau trên cùng máy → đo lại
-  từng phía tuần tự; diff ngoài phạm vi (ngoài `perf/`, `bench/`, hợp hai bảng Config tool đo) → revert phần lệch,
+  số lần lặp hoặc cô lập nhiễu rồi đo lại, tối đa 2 lần đo lại, vẫn vượt → `ask_user` hỏi người dùng; nếu độ lệch
+  vượt ngưỡng P3 do hai pha đo chồng nhau trên cùng máy → đo lại từng phía tuần tự, vẫn trong giới hạn tối đa 2 lần đo lại; diff ngoài phạm vi (ngoài `perf/`, `bench/`, hợp hai bảng Config tool đo) → revert phần lệch,
   không nhận (mỗi agent chỉ revert file của phía mình, không đụng file của phía kia).
 - **Evidence:** report của agent (bảng điều kiện, bảng số, lệnh chạy) + danh sách file thay đổi so với mốc đầu
   bước + `git hash-object` của script và file bảng điều kiện **của từng phía** (BE và FE) sau khi chốt (mốc bất
@@ -139,8 +139,11 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) ⊆ danh sách file của Bước
   4 và không chứa file test/fixture/snapshot/mock; file test đã bẩn trong mốc (nếu có) không đổi nội dung
   (`git hash-object` trước/sau).
-- **Khi fail:** agent trả `blocked` → người dùng mở rộng danh sách (ghi bổ sung vào Đầu ra Bước 4) → gọi lại;
-  build/test đỏ → sửa hoặc revert thay đổi, không giữ thay đổi đỏ; diff lệch danh sách → revert phần lệch, không
+- **Khi fail:** agent trả `blocked` có hai loại. Hết phạm vi file (cần file ngoài danh sách) → người dùng mở rộng
+  danh sách (ghi bổ sung vào Đầu ra Bước 4) → gọi lại. Đã thất bại lần sửa thứ 3 (kèm các giả thuyết đã loại) →
+  `ask_user` kèm lý do từng lần, không gọi lại tự động. Build/test đỏ → revert thay đổi đỏ (chỉ thay đổi của bản
+  tối ưu đó trong danh sách file, giữ nguyên file test đã bẩn, không `reset --hard`) rồi thử một thay đổi khác,
+  tối đa 3 lần thất bại rồi `ask_user`, không giữ thay đổi đỏ; diff lệch danh sách → revert phần lệch, không
   nhận.
 - **Evidence:** report của agent (lệnh build/test + exit code) + danh sách file thay đổi hoặc mới trong bước so
   với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn (nếu có).
@@ -167,7 +170,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `git ls-files --others --exclude-standard`) chỉ gồm danh sách file Bước 5, cộng file ở hợp của hai bảng Config
   tool đo (một mốc, diff chứa file của cả hai phía).
 - **Khi fail:** không đạt ngưỡng → báo rõ, quay lại Bước 4 tìm hướng khác hoặc dừng theo quyết định người dùng;
-  điều kiện lệch Bước 3 → chạy lại đúng điều kiện; nhiễu vượt ngưỡng → đo lại, nếu do hai pha đo chồng nhau trên cùng máy → đo lại từng phía tuần tự; agent trả `blocked` + câu hỏi →
+  điều kiện lệch Bước 3 → chạy lại đúng điều kiện; nhiễu vượt ngưỡng → đo lại, tối đa 2 lần rồi `ask_user` hỏi người dùng, nếu do hai pha đo chồng nhau trên cùng máy → đo lại từng phía tuần tự, vẫn trong giới hạn tối đa 2 lần đo lại; agent trả `blocked` + câu hỏi →
   session chính hỏi người dùng, ghi quyết định vào report Bước 6, gọi lại agent; quyết định làm đổi điều kiện đo
   (môi trường, dữ liệu seed, tải, warm-up, số lần lặp, config tool đo) → quay lại Bước 3 đo lại baseline.
 - **Evidence:** report của agent (bảng baseline vs sau + lệnh đo) + `git hash-object` hiện tại của script,
@@ -213,8 +216,8 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Tình huống | Hành động |
 |---|---|
 | Baseline build/test đỏ (Bước 1) | Dừng `blocked`, báo người dùng, đề xuất `workflow-bugfix`; không tối ưu trên nền đỏ |
-| Build fail | Chẩn đoán → sửa → build lại |
-| Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
+| Build fail | Chẩn đoán → sửa → build lại, tối đa 3 lần thất bại ở Bước 5 rồi `ask_user` |
+| Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại, tối đa 3 lần thất bại ở Bước 5 rồi `ask_user` |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` (Bước 7) | Quay lại Bước 5 sửa, review lại |
 | Không có số đo trước/sau trên cùng điều kiện | Dừng `blocked`, không kết luận về hiệu năng |

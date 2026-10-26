@@ -139,8 +139,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Gate:** mỗi test regression đỏ đúng lý do lỗ hổng, không đỏ vì lỗi của chính test; so với trạng thái ghi
   lại ở đầu bước (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only` và
   `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test).
-- **Khi fail:** test xanh trên code chưa sửa (không bắt được lỗ hổng) hoặc đỏ vì lỗi test → sửa test, chạy lại;
-  không nới assertion. Test đã viết đúng mà vẫn xanh → nghi finding là false positive, quay lại Bước 4 validate
+- **Khi fail:** test xanh trên code chưa sửa (không bắt được lỗ hổng) hoặc đỏ vì lỗi test → sửa test, chạy lại,
+  tối đa 2 lần rồi `ask_user` hỏi người dùng; không nới assertion. Test đã viết đúng mà vẫn xanh → nghi finding là false positive, quay lại Bước 4 validate
   lại.
 - **Evidence:** lệnh chạy test + exit code khác 0 + đoạn lỗi giải thích lý do đỏ; danh sách file thay đổi hoặc
   mới trong bước so với trạng thái đầu bước.
@@ -167,9 +167,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   file thay đổi hoặc mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) ⊆
   danh sách file của Bước 5 và không chứa file test/fixture/snapshot/mock; file test đã bẩn trong mốc (test của
   Bước 7) không đổi nội dung (`git hash-object` trước/sau).
-- **Khi fail:** agent trả `blocked` → người dùng mở rộng danh sách (ghi bổ sung vào Đầu ra Bước 5) → gọi lại; sửa
-  xong vẫn đỏ → chẩn đoán lại, sửa tiếp trong danh sách, không bỏ qua; diff lệch danh sách → revert phần lệch,
-  không nhận.
+- **Khi fail:** agent trả `blocked` có hai loại. Hết phạm vi file (cần file ngoài danh sách) → người dùng mở rộng
+  danh sách (ghi bổ sung vào Đầu ra Bước 5) → gọi lại. Đã thất bại lần sửa thứ 3 của một finding (kèm các giả
+  thuyết đã loại) → `ask_user` kèm lý do từng lần, không gọi lại tự động. Sửa xong vẫn đỏ → revert bản sửa hỏng
+  trước khi thử lại (chỉ các thay đổi của bản sửa đó trong danh sách file, giữ nguyên file test đã bẩn, không
+  `reset --hard`), thử một thay đổi khác; tối đa 3 lần sửa thất bại cho một finding rồi `ask_user`, không bỏ qua;
+  diff lệch danh sách → revert phần lệch, không nhận.
 - **Evidence:** report của agent (lệnh build/test + exit code 0, test regression đã từ đỏ sang xanh) + danh sách
   file thay đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn;
   finding không có test: `file:line` đã sửa (re-scan Bước 9 xác nhận).
@@ -224,8 +227,8 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Tình huống | Hành động |
 |---|---|
 | Baseline đỏ (Bước 1) | Dừng `blocked`, không tiếp tục trên baseline đỏ; đề xuất workflow-bugfix |
-| Build fail | Chẩn đoán → sửa → build lại |
-| Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
+| Build fail | Chẩn đoán → sửa → build lại, tối đa 3 lần sửa thất bại cho một finding (Bước 8), rồi `ask_user` |
+| Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại, tối đa 3 lần sửa thất bại cho một finding (Bước 8), rồi `ask_user` |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro rõ ràng |
 | Phát hiện secret chưa mask an toàn (Bước 3) | Dừng, báo người dùng xử lý thủ công secret trước khi tiếp tục |

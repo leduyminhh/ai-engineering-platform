@@ -226,7 +226,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `rulings`, lựa chọn của người dùng cùng việc đã làm theo lựa chọn đó.
 - **Gate:** docs/spec sống đã cập nhật hoặc ghi "không ảnh hưởng"; `check-request.mjs` không còn cảnh báo chưa xử lý;
   full suite xanh; người dùng đã duyệt diff cả nhánh và chọn một trong 3 lựa chọn.
-- **Khi fail:** full suite đỏ → dừng, sửa trong phạm vi plan rồi chạy lại, hoặc báo `blocked`; không xác định được docs
+- **Khi fail:** full suite đỏ → dừng, sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked`; không xác định được docs
   nào bị ảnh hưởng → hỏi lại người dùng; người dùng yêu cầu sửa thêm sau khi xem diff → quay lại Bước 5, tối đa 2 lần
   rồi hỏi người dùng.
 - **Evidence:** output `check-request.mjs` (số cảnh báo); lệnh full suite + exit code + số liệu; danh sách file docs và
@@ -259,7 +259,7 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Việc rõ và nhỏ (Bước 2) | Không chạy workflow; làm thẳng và báo người dùng |
 | `check-request.mjs` còn cảnh báo ngoài W9 (Bước 4) | Sửa `plan.md`; lỗi ở tài liệu → quay lại Bước 3, tối đa 2 lần rồi hỏi người dùng |
 | Finding `blocker` sau review cuối (Bước 6) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
-| Full suite đỏ (Bước 7) | Dừng, không đưa 3 lựa chọn; sửa trong phạm vi plan rồi chạy lại, hoặc báo `blocked` |
+| Full suite đỏ (Bước 7) | Dừng, không đưa 3 lựa chọn; sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
 | Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy skill `data-db-migration` trước rồi quay lại feature |
 
 Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).

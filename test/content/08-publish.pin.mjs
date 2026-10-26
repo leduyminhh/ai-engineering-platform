@@ -61,9 +61,6 @@ export default async function run({ ok, ctx }) {
     ok(feat19 && ['frontend-data-integrator', 'frontend-e2e-test-writer'].every((a) => feat19.agents.includes(a)),
       'workflow-feature: frontmatter agents có frontend-data-integrator, frontend-e2e-test-writer');
     ok(parseSteps(feat19?.body ?? '').length === 7, 'workflow-feature: 7 bước (làm rõ, tài liệu, plan, vòng task, review cuối, kết thúc nhánh)');
-    const orch19 = workflows.stages.find((s) => s.kind === 'orchestrator');
-    const featRow19 = parseRegistry(orch19?.body ?? '').rows.find((r) => r.id === 'workflow-feature');
-    ok(featRow19 && featRow19.next.length === 0, 'orchestrator: workflow-feature không nối tiếp workflow-docs (Bước 7 đã làm docs)');
     for (const f of ['README.md', 'README_VI.md']) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
       const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';

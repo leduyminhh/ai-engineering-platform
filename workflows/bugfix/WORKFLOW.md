@@ -216,8 +216,8 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Tình huống | Hành động |
 |---|---|
 | Baseline đỏ (Bước 1) | Build đỏ, hoặc test đỏ ngoài vùng bug → dừng `blocked`, báo người dùng; test đỏ trong vùng bug là bình thường và được ghi vào số mốc |
-| Build fail | Chẩn đoán → sửa → build lại |
-| Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại |
+| Build fail | Chẩn đoán → sửa → build lại, tính vào bộ đếm 3 lần sửa thất bại của Bước 6; đủ 3 lần → `ask_user` |
+| Test fail | Phân tích failure → sửa code (không xoá/nới test) → chạy lại, tính vào bộ đếm 3 lần sửa thất bại của Bước 6; đủ 3 lần → `ask_user` |
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro |
 | Cấm: sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh | Từ chối sửa, quay lại Bước 3/4 thu thêm evidence |

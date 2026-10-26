@@ -272,11 +272,10 @@ export function parseRegistry(text) {
   const rows = [];
   for (const line of (section(text, 'Registry') || '').split('\n')) {
     const cells = line.split('|').slice(1, -1).map((c) => c.trim());
-    if (cells.length < 5) continue;
+    if (cells.length < 4) continue;
     const id = cells[0].replace(/`/g, '');
     if (!id.startsWith('workflow-')) continue;
-    const next = [...cells[3].matchAll(/`(workflow-[a-z0-9-]+)`/g)].map((m) => m[1]);
-    rows.push({ id, risk: cells[2].replace(/`/g, ''), next });
+    rows.push({ id, risk: cells[2].replace(/`/g, '') });
   }
   const pri = text.split('\n').find((l) => l.startsWith('**Thứ tự ưu tiên:**')) || '';
   const priority = [...pri.matchAll(/`(workflow-[a-z0-9-]+)`/g)].map((m) => m[1]);
@@ -310,16 +309,17 @@ export function missingDeps(skills, catalogIds) {
   return [...skills].filter((s) => !catalogIds.has(s)).sort();
 }
 
-export function missingAnchors(text) {
+// Orchestrator không giao agent nên không có dòng Supervisor kiểm agent_result.
+export function missingAnchors(text, { kind = 'workflow' } = {}) {
   const lines = new Set(text.split('\n').map((l) => l.trimEnd()));
-  return WF_ANCHORS.filter((a) => !lines.has(a));
+  return WF_ANCHORS.filter((a) => !lines.has(a) && !(kind === 'orchestrator' && a.startsWith('Supervisor (session chính)')));
 }
 
 export function registrySignals(text) {
   const out = new Map();
   for (const line of (section(text, 'Registry') || '').split('\n')) {
     const cells = line.split('|').slice(1, -1).map((c) => c.trim());
-    if (cells.length < 5) continue;
+    if (cells.length < 4) continue;
     const id = cells[0].replace(/`/g, '');
     if (!id.startsWith('workflow-')) continue;
     out.set(id, [...cells[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]));

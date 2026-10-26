@@ -13,5 +13,5 @@ Bổ sung cho bảng "Xử lý lỗi & rollback" trong `WORKFLOW.md`; trường 
 | Hết 3 vòng sửa mà task còn finding mở (Bước 5) | Session chính phán từng finding, ghi `Ruling:` và chạy tiếp; thuộc loại dừng của `plan-execution` (không đảo ngược, bảo mật, tác động ngoài repo, schema DB, plan hỏng) thì hỏi người dùng |
 | Mất BASE hoặc ledger sau khi compact (Bước 5) | Lấy `<b>` của dòng `Task <n-1>: complete` gần nhất trong ledger, đối chiếu `git log`; làm tiếp từ task chưa `complete` |
 | Còn `blocker` sau một lần sửa và một re-review (Bước 6) | Quay lại Bước 5 thêm task sửa, tối đa 2 lần rồi hỏi người dùng; không mở làn sửa thứ hai |
-| Full suite đỏ (Bước 7 ⏸) | Dừng, không đưa 3 lựa chọn; sửa trong phạm vi plan rồi chạy lại, hoặc báo `blocked` |
+| Full suite đỏ (Bước 7 ⏸) | Dừng, không đưa 3 lựa chọn; sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
 | Người dùng không duyệt diff cả nhánh (Bước 7 ⏸) | Không merge, không push; giữ nguyên nhánh, quay lại Bước 5 với task sửa theo yêu cầu (tối đa 2 lần) |

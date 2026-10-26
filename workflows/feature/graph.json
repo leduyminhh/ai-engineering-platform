@@ -121,7 +121,7 @@
       "run": { "session": true, "skills": ["plan-execution", "git-workflow"] },
       "next": "done",
       "on_fail": [
-        { "to": "blocked", "when": "full suite đỏ → dừng, sửa trong phạm vi plan rồi chạy lại, hoặc báo blocked" },
+        { "to": "blocked", "when": "full suite đỏ → dừng, sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo blocked" },
         { "to": "task-loop", "when": "người dùng yêu cầu sửa thêm sau khi xem diff → quay lại Bước 5", "max_attempts": 2 },
         { "to": "ask_user", "when": "không xác định được docs nào bị ảnh hưởng → hỏi lại người dùng" }
       ],

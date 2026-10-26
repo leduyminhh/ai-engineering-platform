@@ -57,14 +57,12 @@ export default async function run({ ok, ctx }) {
     ok(JSON.stringify(wrapped[0].skills) === '["backend-refactor"]', 'stepRefs: bắt skill ở dòng nối, bỏ skill ở trường kế tiếp');
 
     const reg = parseRegistry([
-      '## Registry', '| id | Tín hiệu | Risk | Nối tiếp | Không dùng khi |', '|---|---|---|---|---|',
-      '| `workflow-incident` | prod down | critical | `workflow-bugfix`, `workflow-docs` | x |',
-      '| `workflow-docs` | readme | low | — | x |',
+      '## Registry', '| id | Tín hiệu | Risk | Không dùng khi |', '|---|---|---|---|',
+      '| `workflow-incident` | prod down | critical | x |',
+      '| `workflow-docs` | readme | low | x |',
       '**Thứ tự ưu tiên:** `workflow-incident` > `workflow-docs`', '## Khác',
     ].join('\n'));
     ok(reg.rows.length === 2 && reg.rows[0].risk === 'critical', 'parseRegistry: đọc dòng + risk');
-    ok(JSON.stringify(reg.rows[0].next) === '["workflow-bugfix","workflow-docs"]' && reg.rows[1].next.length === 0,
-      'parseRegistry: đọc cột Nối tiếp ("—" = rỗng)');
     ok(JSON.stringify(reg.priority) === '["workflow-incident","workflow-docs"]', 'parseRegistry: đọc thứ tự ưu tiên');
 
     const model = {
