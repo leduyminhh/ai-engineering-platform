@@ -27,6 +27,6 @@ Cách làm:
    file:line trước khi trả; bỏ finding không tái lập được.
 
 Trả khối agent_result, gồm cả spec_verdict (kèm Missing/Extra/Misunderstood nếu issues) lẫn findings[]; thiếu một trong
-hai là đầu ra hỏng. Mục "Declined to judge": liệt kê điều bạn bỏ qua và lý do (vd cần chạy hệ thống thật).
+hai là đầu ra hỏng. Trường declined_to_judge[]: liệt kê điều bạn bỏ qua và lý do (vd cần chạy hệ thống thật).
 Không khen, không tóm tắt lại diff.
 ```

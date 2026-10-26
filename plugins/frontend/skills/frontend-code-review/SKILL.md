@@ -89,6 +89,11 @@ của project, KHÔNG áp gu cá nhân.
 - **Test coverage** — component/hook mới có test hành vi (render + interaction) cho nhánh mới + case biên
   (loading/error/empty); thiếu test cho code có rủi ro là một finding.
 
+- **Spec** (khi được giao brief/AC của một task, vd từ vòng task của `plan-execution`) — trục spec: đối chiếu diff với
+  brief + AC, gắn từng mục **Missing** (brief có, diff không làm; task gom nhiều file thì mỗi file phải có hunk),
+  **Extra** (diff làm điều brief không yêu cầu hoặc sửa file ngoài danh sách) hoặc **Misunderstood** (có làm nhưng
+  hiểu sai ý). Plan/spec im lặng về một điều không có nghĩa là cho phép. Không có brief thì bỏ trục này, không tự suy.
+
 ### 2. Phân loại severity + evidence + đề xuất fix
 Mỗi finding gồm: **severity** (blocker / major / minor / nit), **`file:line`**, **trục**, **rationale**
 (vì sao là vấn đề — kèm kịch bản tương tác→hành vi sai nếu là lỗi correctness/a11y), **nhãn proven/suspected**,
@@ -106,6 +111,12 @@ và **phần chưa soát + residual risk**. Ngôn ngữ đo được.
 
 **Kết luận PR fullstack:** khi chạy cùng skill review phía kia, session chính gộp finding của hai báo cáo, bỏ trùng
 theo `file:line`, rồi kết luận `approve` (0 `blocker`, 0 `major` chưa có người chấp nhận) hoặc `request-changes`.
+
+### 3b. Re-review có phạm vi (sau vòng sửa)
+Khi được giao finding của lần review trước kèm diff của vòng sửa: chỉ xét **diff của vòng sửa**, không review lại cả
+scope ban đầu. Mỗi finding nhận đúng một nhãn **ADDRESSED** (xử lý đúng nguyên nhân, nêu hunk làm bằng chứng) hoặc
+**NOT ADDRESSED** (không xử lý, xử lý một phần hoặc sai hướng); breakage mới do chính diff sửa gây ra là finding mới;
+quan sát ngoài diff ghi riêng, không thành finding và không kéo dài vòng. Thang severity giữ nguyên.
 
 ### 4. Read-only + route — con người duyệt
 - Mặc định **KHÔNG sửa**; giao kết quả cho người quyết. Chỉ áp fix khi người dùng yêu cầu rõ, và chỉ cho

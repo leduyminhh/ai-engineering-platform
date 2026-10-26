@@ -369,4 +369,39 @@ export default async function run({ ok, ctx }) {
       ok(/không tự commit/i.test(rd(...f)), `AC3.4: ${f[2]} — không tự commit`);
     }
   }
+
+  // AC3.1, AC3.2, AC3.5: reviewer 3 chế độ, skill code-review có trục spec, auditor chỉ chạy ở review cuối nhánh, prompt dùng declined_to_judge[]
+  {
+    const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
+    for (const side of ['backend', 'frontend']) {
+      const raw = fs.readFileSync(path.join(REPO_ROOT, 'plugins', side, 'agents', side + '-reviewer.md'), 'utf8');
+      const t = raw.replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
+      const n = side + '-reviewer';
+      ok(/^tools: Read, Grep, Glob, Bash, Skill$/m.test(raw) && /^model: sonnet$/m.test(raw) && /^effort: high$/m.test(raw),
+        `AC3.1: ${n} — giữ nguyên tools/model/effort`);
+      ok(['task-review', 're-review', 'final-review'].every((m) => t.includes('`' + m + '`')), `AC3.1: ${n} — có 3 chế độ task-review, re-review, final-review`);
+      ok(/ngoài vòng task[^.]*như cũ/.test(t), `AC3.1: ${n} — gọi ngoài vòng task giữ chế độ review hiện tại`);
+      ok(/không chạy lại suite/i.test(t) && /test hẹp/.test(t) && /nêu (rõ )?tên/.test(t) && /review-package/.test(t),
+        `AC3.1: ${n} — task-review không chạy lại suite, chỉ test hẹp nêu tên, đọc diff từ review-package`);
+      ok(/spec_verdict/.test(t) && /Missing/.test(t) && /Extra/.test(t) && /Misunderstood/.test(t), `AC3.1: ${n} — task-review trả spec_verdict với Missing/Extra/Misunderstood`);
+      ok(/chỉ diff của vòng sửa/.test(t) && /NOT ADDRESSED/.test(t) && /new_breakage/.test(t) && /observations_outside_diff/.test(t),
+        `AC3.2: ${n} — re-review chỉ diff vòng sửa, ADDRESSED/NOT ADDRESSED, new_breakage, observations_outside_diff`);
+      ok(/final-review[^.]*toàn nhánh/.test(t) && /được chạy suite/.test(t) && /ruling_review/.test(t) && /declined_to_judge/.test(t),
+        `AC3.1: ${n} — final-review toàn nhánh, được chạy suite, ruling_review, declined_to_judge`);
+
+      const sk = rd('plugins', side, 'skills', side + '-code-review', 'SKILL.md');
+      ok(/Missing/.test(sk) && /Extra/.test(sk) && /Misunderstood/.test(sk) && /trục spec/.test(sk), `AC3.1: ${side}-code-review — có trục spec Missing/Extra/Misunderstood`);
+      ok(/re-review/i.test(sk) && /diff của vòng sửa/.test(sk), `AC3.2: ${side}-code-review — mô tả re-review có phạm vi`);
+      ok(/blocker \/ major \/ minor \/ nit/.test(sk), `AC3.1: ${side}-code-review — giữ thang severity blocker/major/minor/nit`);
+    }
+
+    const qa = rd('plugins', 'engineering', 'agents', 'engineering-quality-auditor.md');
+    ok(/vòng task/.test(qa) && /review cuối nhánh/.test(qa) && /không (chạy )?theo từng task/.test(qa), 'AC3.5: quality-auditor — từ vòng task chỉ chạy ở review cuối nhánh, không theo từng task');
+
+    for (const f of ['task-review.md', 'final-review.md']) {
+      const pr = rd('core', 'skills', 'plan-execution', 'references', 'prompts', f);
+      ok(pr.includes('declined_to_judge[]') && !/Declined to judge/.test(pr), `AC3.1: prompt ${f} — dùng tên trường declined_to_judge[] theo contract`);
+    }
+    ok(/agent_result:[^.]*declined_to_judge\[\]/.test(rd('core', 'skills', 'plan-execution', 'references', 'prompts', 'final-review.md')), 'AC3.1: final-review trả declined_to_judge[] trong agent_result');
+  }
 }
