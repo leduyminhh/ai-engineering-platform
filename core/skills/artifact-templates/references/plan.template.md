@@ -2,13 +2,13 @@
 type: plan
 version: 1
 validator: scripts/check-request.mjs
-sources: superpowers:writing-plans (header bắt buộc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2
+sources: skill core plan-execution (header trỏ cách thực thi plan); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2; docs/requests/2026-10-23-workflow-self-sufficient/design.md (R7)
 Bỏ khối này khi chép template ra dùng.
 -->
 
 # <Tên> Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** thực thi plan này bằng skill `plan-execution` (bản cài plugin: `core:plan-execution`), từng task theo vòng task. Step dùng checkbox (`- [ ]`) để theo dõi.
 
 **Goal:** <...>
 **Architecture:** <...>

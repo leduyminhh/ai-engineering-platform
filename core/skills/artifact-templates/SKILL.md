@@ -20,9 +20,9 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | workflow | [workflow.template.md](references/workflow.template.md) + [workflow.graph.template.json](references/workflow.graph.template.json) | `cli/lib/workflows.mjs` → `checkWorkflowBody`, `missingAnchors` (chỉ có trong repo aip) | Anthropic building effective agents (workflow patterns); LangGraph interrupt (checkpoint người duyệt) |
 | skill | [skill.template.md](references/skill.template.md) | `cli/lib/conventions.mjs` → `checkSkillBody`, `checkDescription`, `checkDescriptionStyle`, `checkSourceKeys` (chỉ có trong repo aip) | Anthropic skill best practices; agentskills.io |
 | agent | [agent.template.md](references/agent.template.md) | `cli/lib/conventions.mjs` → `checkAgentTools`, `checkAgentDescription` (chỉ có trong repo aip) | Claude Code subagents; GitHub agents.md (2025-11) |
-| requirement | [requirement.template.md](references/requirement.template.md) | `scripts/check-request.mjs` | EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
-| design | [design.template.md](references/design.template.md) | `scripts/check-request.mjs` | superpowers:brainstorming (design doc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
-| plan | [plan.template.md](references/plan.template.md) | `scripts/check-request.mjs` | superpowers:writing-plans (header bắt buộc); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2 |
+| requirement | [requirement.template.md](references/requirement.template.md) | `scripts/check-request.mjs` | EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2; docs/requests/2026-10-23-workflow-self-sufficient/design.md (R7) |
+| design | [design.template.md](references/design.template.md) | `scripts/check-request.mjs` | docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2; docs/requests/2026-10-23-workflow-self-sufficient/design.md (R7) |
+| plan | [plan.template.md](references/plan.template.md) | `scripts/check-request.mjs` | skill core plan-execution (header trỏ cách thực thi plan); docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2; docs/requests/2026-10-23-workflow-self-sufficient/design.md (R7) |
 | task | [task.template.md](references/task.template.md) | `check-tasks.mjs` của `engineering-task-breakdown` (chỉ có khi cài plugin `engineering`) | Spec Kit tasks.md; Kiro tasks.md; check-tasks.mjs hiện có |
 | adr | [adr.template.md](references/adr.template.md) | chưa có | MADR 4.0.0 (adr.github.io/madr); Nygard 2011 (Documenting Architecture Decisions) |
 | handoff | [handoff.template.md](references/handoff.template.md) | chưa có | docs/requests/2026-10-21-long-session-context/design.md (D4); Claude Code prompt-caching (session rotation) |
@@ -86,7 +86,7 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
   `Hệ thống PHẢI`, AC Given/When/Then, mục `Không đổi (bugfix)`).
 - [references/design.template.md](references/design.template.md): khung design (vấn đề, quyết định, thiết kế, ngoài
   phạm vi, kiểm thử, để builder quyết, rủi ro).
-- [references/plan.template.md](references/plan.template.md): khung plan (header bắt buộc của `superpowers:writing-plans`,
+- [references/plan.template.md](references/plan.template.md): khung plan (header "For agentic workers" trỏ skill `plan-execution`,
   `**Requirement:**`, `**Phủ AC:**` theo Task).
 - [references/task.template.md](references/task.template.md): khung `tasks.md` chung (Use case, Bảng tổng task, Chi tiết task với
   header task, Câu hỏi mở); phụ lục có 6 loại task, quy ước ID `UC<nn>-<loại>-<nn>`, mục `CT`/`DB`/`E2E`, quy tắc điền.

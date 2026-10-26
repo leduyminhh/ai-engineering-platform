@@ -2,7 +2,7 @@
 type: requirement
 version: 1
 validator: scripts/check-request.mjs
-sources: EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2
+sources: EARS (Mavin et al. 2009); Gherkin Given-When-Then; docs/requests/2026-10-20-superpowers-docs-standard/design.md §4.2; docs/requests/2026-10-23-workflow-self-sufficient/design.md (R7)
 Bỏ khối này khi chép template ra dùng.
 -->
 
