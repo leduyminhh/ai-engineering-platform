@@ -580,4 +580,51 @@ export default async function run({ ok, ctx }) {
       for (const g of ['F1', 'F2', 'F3', 'F4', 'F5']) ok(rawSkill.includes(`| ${g} `), `AC5.3: ${p}-fix — bảng gate giữ ${g}`);
     }
   }
+
+  // AC6.2: workflow-security-review Bước 9 — reviewer correctness song song với auditor re-scan; vẫn 10 bước
+  {
+    const sdir = path.join(REPO_ROOT, 'workflows', 'security-review');
+    const wf = fs.readFileSync(path.join(sdir, 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n');
+    const matrix = fs.readFileSync(path.join(sdir, 'references', 'error-matrix.md'), 'utf8').replace(/\r\n/g, '\n');
+    const flatS = (t) => t.replace(/\s+/g, ' ');
+    const secs = wf.split(/^### Bước /m).slice(1).map((x) => ({ head: x.split('\n')[0], body: x }));
+    const field = (n, name) => flatS((secs[n - 1].body.split(`- **${name}:**`)[1] || '').split(/\n- \*\*/)[0]);
+    ok(secs.length === 10 && secs[8].head.includes('Re-scan'), 'AC6.2: workflow-security-review vẫn 10 bước, Bước 9 là Re-scan');
+
+    const agentsLine = (wf.match(/^agents: "([^"]*)"/m) || [])[1] || '';
+    ok(['backend-reviewer', 'frontend-reviewer', 'engineering-quality-auditor'].every((a) => agentsLine.split(',').includes(a)),
+      'AC6.2: frontmatter agents có backend-reviewer, frontend-reviewer và auditor');
+    ok(flatS(wf.split('## Điều kiện tiên quyết')[1].split('## Các bước')[0]).includes('`backend-reviewer`'), 'AC6.2: Điều kiện tiên quyết nêu hai reviewer');
+
+    const run9 = field(9, 'Thực hiện');
+    ok(run9.includes('agent `backend-reviewer`') && run9.includes('agent `frontend-reviewer`') && run9.includes('agent `engineering-quality-auditor`') && run9.includes('∥') && /chỉ phía có sửa/.test(run9),
+      'AC6.2: Bước 9 — reviewer ∥ auditor, reviewer chỉ phía có sửa');
+    ok(/correctness/.test(field(9, 'Hành động')) && /kiến trúc/.test(field(9, 'Hành động')), 'AC6.2: Bước 9 — reviewer review correctness/kiến trúc của bản sửa');
+    ok(/reviewer[^.;]*finding `blocker`/.test(field(9, 'Gate')) || /finding `blocker`[^.;]*reviewer/.test(field(9, 'Gate')), 'AC6.2: Gate Bước 9 — 0 finding blocker từ reviewer');
+    ok(/reviewer/.test(field(9, 'Khi fail')) && /Bước 8/.test(field(9, 'Khi fail')), 'AC6.2: Khi fail Bước 9 — blocker của reviewer → quay Bước 8');
+    ok(/reviewer/.test(field(9, 'Evidence')), 'AC6.2: Evidence Bước 9 có danh sách finding của reviewer');
+    ok(/reviewer/.test(flatS(wf.split('## Definition of Done')[1].split('## Report cuối')[0])), 'AC6.2: DoD nêu review correctness của reviewer');
+    const cp = wf.split('## Checkpoint')[1].split('## Xử lý lỗi')[0];
+    ok(cp.split('\n').filter((l) => l.startsWith('|')).length === 5, 'AC6.2: bảng Checkpoint không đổi (3 hàng dữ liệu)');
+    for (const [name, text] of [['WORKFLOW.md', wf], ['error-matrix.md', matrix]]) {
+      ok(text.split('\n').filter((l) => l.startsWith('|')).some((l) => /reviewer/i.test(l) && /blocker/.test(l) && /Bước 8/.test(l)),
+        `AC6.2: ${name} — hàng reviewer báo blocker (Bước 9) → Bước 8`);
+    }
+
+    const wfLib = await import(pathToFileURL(path.join(REPO_ROOT, 'cli', 'lib', 'workflows.mjs')).href);
+    const g = JSON.parse(fs.readFileSync(path.join(sdir, 'graph.json'), 'utf8'));
+    const rs = g.steps.find((x) => x.id === 're-scan');
+    const ids = (rs?.run?.agents || []).map((a) => (typeof a === 'string' ? a : a.id));
+    ok([...ids].sort().join(',') === 'backend-reviewer,engineering-quality-auditor,frontend-reviewer' && rs.run.parallel === true, 'AC6.2: graph re-scan chạy 3 agent song song');
+    ok((rs.run.agents || []).filter((a) => a.id && /chỉ phía có sửa/.test(a.when || '')).map((a) => a.id).join(',') === 'backend-reviewer,frontend-reviewer',
+      'AC6.2: graph — reviewer có when "chỉ phía có sửa"');
+    const back = (rs.on_fail || []).find((f) => f.to === 'fix');
+    ok(back?.max_attempts === 2 && /reviewer/.test(back.when) && /blocker/.test(back.when), 'AC6.2: graph — cạnh re-scan → fix gồm blocker của reviewer, giữ max_attempts 2');
+    ok(g.steps.length === 10 && wfLib.checkGraph(g).length === 0 && wfLib.checkGraphAgainstBody(g, wf).length === 0, 'AC6.2: graph security-review qua checkGraph và checkGraphAgainstBody');
+    for (const f of ['README.md', 'README_VI.md']) {
+      const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
+      const row = (agent) => rd.split('\n').find((l) => l.startsWith(`| \`${agent}\` |`)) ?? '';
+      ok(row('backend-reviewer').includes('WF06') && row('frontend-reviewer').includes('WF06'), `AC6.2: ${f} — bảng agent nêu WF06 cho hai reviewer`);
+    }
+  }
 }

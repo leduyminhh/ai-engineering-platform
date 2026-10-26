@@ -7,7 +7,7 @@ kind: workflow
 tier: 1
 risk: high
 argument-hint: "[phạm vi | PR]"
-agents: "engineering-quality-auditor,backend-test-writer,frontend-test-writer,backend-fixer,frontend-fixer"
+agents: "engineering-quality-auditor,backend-test-writer,frontend-test-writer,backend-fixer,frontend-fixer,backend-reviewer,frontend-reviewer"
 requires: "core/git-workflow"
 runsIn: execute
 invoke: per-request
@@ -27,7 +27,8 @@ invoke: per-request
 ## Điều kiện tiên quyết
 
 - Skill/agent đã cài: `engineering-quality-auditor`, `backend-test-writer`, `frontend-test-writer`,
-  `backend-fixer`, `frontend-fixer` (test-writer và fixer chỉ phía có finding cần sửa), skill `core/git-workflow`.
+  `backend-fixer`, `frontend-fixer`, `backend-reviewer`, `frontend-reviewer` (test-writer, fixer và reviewer chỉ phía có
+  finding cần sửa), skill `core/git-workflow`.
 - Artifact phải có sẵn: không bắt buộc, nhưng danh sách dependency (`package.json`/`pom.xml`/…) giúp scan
   dependency nhanh hơn.
 - Baseline: build/test hiện tại của phạm vi review đang XANH trước khi bắt đầu (để phân biệt lỗi bảo mật với
@@ -175,16 +176,22 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 9 — Re-scan
 
-- **Thực hiện:** agent `engineering-quality-auditor`
+- **Thực hiện:** agent `engineering-quality-auditor` ∥ agent `backend-reviewer` ∥ agent `frontend-reviewer` (reviewer chỉ phía có sửa)
 - **Đầu vào:** code đã sửa từ Bước 8 + danh sách finding đã chọn sửa từ Bước 5
-- **Hành động:** scan lại đúng vùng đã sửa để xác nhận finding đã chọn không còn; kiểm tra không phát sinh
-  finding mới trong vùng vừa sửa.
+- **Hành động:** auditor scan lại đúng vùng đã sửa để xác nhận finding đã chọn không còn và không phát sinh
+  finding mới trong vùng vừa sửa; song song, reviewer review correctness/kiến trúc của bản sửa (logic đúng,
+  không làm hỏng hành vi hiện có, không che triệu chứng). Reviewer gọi ngoài vòng task nên review như thông
+  thường, trả finding theo contract đầu ra (`core:principles`).
 - **Ràng buộc:** không tự đóng finding khi chưa scan lại xác nhận; finding chấp nhận rủi ro ở Bước 5 giữ
-  nguyên trạng thái, không tính là blocker còn lại.
-- **Đầu ra:** báo cáo finding đã sửa không còn xuất hiện; danh sách finding còn lại (nếu có) + trạng thái.
-- **Gate:** finding đã sửa không còn; 0 finding `blocker` hoặc blocker được chấp nhận rõ ràng.
-- **Khi fail:** finding đã sửa vẫn còn xuất hiện → quay lại Bước 8 sửa lại cho đúng.
-- **Evidence:** danh sách finding sau re-scan + đối chiếu với danh sách đã sửa ở Bước 5.
+  nguyên trạng thái, không tính là blocker còn lại; reviewer chỉ đọc, không tự sửa code.
+- **Đầu ra:** báo cáo finding đã sửa không còn xuất hiện; danh sách finding còn lại (nếu có) + trạng thái; danh
+  sách finding của reviewer theo severity.
+- **Gate:** finding đã sửa không còn; 0 finding `blocker` (từ auditor và từ reviewer) hoặc blocker được chấp nhận
+  rõ ràng.
+- **Khi fail:** finding đã sửa vẫn còn xuất hiện, hoặc reviewer báo finding `blocker` → quay lại Bước 8 sửa lại
+  cho đúng (oracle = finding còn lại đã validate hoặc finding blocker của reviewer `file:line`).
+- **Evidence:** danh sách finding sau re-scan + đối chiếu với danh sách đã sửa ở Bước 5 + danh sách finding của
+  reviewer (severity/category/location/evidence/confidence).
 
 ### Bước 10 — Commit ⏸
 
@@ -222,6 +229,7 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Yêu cầu mơ hồ | Dừng, hỏi lại người dùng |
 | Finding `blocker` | Chặn hoàn thành cho tới khi sửa hoặc người dùng chấp nhận rủi ro rõ ràng |
 | Phát hiện secret chưa mask an toàn (Bước 3) | Dừng, báo người dùng xử lý thủ công secret trước khi tiếp tục |
+| Reviewer báo finding `blocker` về bản sửa (Bước 9) | Quay lại Bước 8 sửa theo finding đó, re-scan và review lại; tối đa 2 lần quay lại |
 | Người dùng chưa quyết định remediation (sau Bước 5 ⏸) | Dừng, chờ xác nhận, không tự sửa |
 | Người dùng chưa rotate secret bị lộ (sau Bước 6 ⏸) | Dừng, coi secret là đã lộ, không đóng finding, ghi vào `remaining_risks` |
 
@@ -244,7 +252,7 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
 - [ ] Secret bị lộ đã được người dùng rotate, hoặc không áp dụng — evidence: Bước 6
 - [ ] Test regression đỏ đúng lý do trước khi sửa (hoặc "không áp dụng" kèm lý do) — evidence: Bước 7
 - [ ] Build/test xanh sau khi sửa, gồm test regression — evidence: Bước 8
-- [ ] Re-scan xác nhận finding đã sửa không còn — evidence: Bước 9
+- [ ] Re-scan xác nhận finding đã sửa không còn và reviewer không báo `blocker` về correctness của bản sửa — evidence: Bước 9
 - [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 10
 - [ ] Mọi gate có evidence `passed`
 - [ ] 0 finding `blocker` (hoặc blocker được người dùng chấp nhận rõ ràng, ghi trong `remaining_risks`)

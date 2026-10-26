@@ -115,10 +115,17 @@
       "id": "re-scan",
       "n": 9,
       "title": "Re-scan",
-      "run": { "agents": ["engineering-quality-auditor"] },
+      "run": {
+        "agents": [
+          "engineering-quality-auditor",
+          { "id": "backend-reviewer", "when": "chỉ phía có sửa" },
+          { "id": "frontend-reviewer", "when": "chỉ phía có sửa" }
+        ],
+        "parallel": true
+      },
       "next": "commit",
       "on_fail": [
-        { "to": "fix", "when": "finding đã sửa vẫn còn xuất hiện → quay lại Bước 8 sửa lại cho đúng", "max_attempts": 2 }
+        { "to": "fix", "when": "finding đã sửa vẫn còn xuất hiện, hoặc reviewer báo finding blocker → quay lại Bước 8 sửa lại cho đúng", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },

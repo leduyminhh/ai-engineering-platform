@@ -163,7 +163,7 @@ and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mo
 | --- | --- | --- | --- | --- |
 | `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01 |
 | `backend-test-writer` | backend | write | backend-testing | WF02, WF06 |
-| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (drift check) | WF01, WF02, WF09 |
+| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (drift check) | WF01, WF02, WF06, WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
 | `backend-performance-analyst` | backend | write | backend-performance | WF09 |
 | `data-migration-writer` | data | write | data-db-migration | skill data-db-migration |
@@ -171,7 +171,7 @@ and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mo
 | `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF06 |
 | `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01 |
-| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01, WF02, WF09 |
+| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01, WF02, WF06, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
 | `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
 | `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (audit mode) | WF01, WF02, WF06 |
