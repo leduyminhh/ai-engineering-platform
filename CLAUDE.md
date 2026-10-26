@@ -99,12 +99,12 @@ Every lifecycle command takes a scope: **project** (default, cwd) or **global** 
 - Source files are UTF-8 **without BOM**, LF line endings.
 - Content spans `core` (principles + `git-workflow`, `git-release`, `artifact-templates`, `plan-execution` (task-loop protocol with 3 Node scripts `task-brief`/`review-package`/`ledger`), 4 skills) and 5 plugins under `plugins/`: `backend` (10 skills published incl. `backend-fix`, `backend-performance`, gated per-skill in `plugins/_published.json`), `frontend` (10 skills published incl. `frontend-fix`, `frontend-data-integration`, `frontend-e2e-testing`, `frontend-performance`, gated per-skill in `plugins/_published.json`), `engineering` (8 skills, incl. `engineering-plan-writing`), `ops` (3 skills) are **published** (offered by the wizard when run from source; not shipped in the npm package, which is core only); `data` is **partly published** (`data-db-migration` published — gated per-skill in `plugins/_published.json` and offered by the wizard; the 4 `data-oltp-*`/`data-olap-*` skills stay **draft**: build/validate and install via explicit `--plugin`/`--skill` or `aip --all` (skills mode only), not offered by default). Cross-plugin **workflows + the orchestrator** live in the repo-level `workflows/` (4 pipeline workflows; a capability-only task belongs in a skill, which the orchestrator routes to); domain **agents** live in `plugins/<id>/agents/`. There is no mandatory pipeline; every skill and workflow is invoked on demand.
 
-## Superpowers workflow defaults
+## Workflow defaults
 
-Spec approval (`brainstorming`) and plan approval (`writing-plans`) stay human gates; these defaults remove only the prompts after them.
+Spec/design approval and plan approval stay human gates; these defaults remove only the prompts after them.
 
-- Execution method: `superpowers:subagent-driven-development`; do not ask again once the plan is approved.
+- Route by request: a feature → `workflow-feature`; a bugfix → `workflow-bugfix`. Execute an approved plan with skill `plan-execution`; do not ask again how to execute once the plan is approved.
 - Work on a `feature/<slug>` branch and commit each task through `core:git-workflow` without pausing (AGENTS.md Safety).
-- Specs and plans now go to `docs/requests/<yyyy-mm-dd>-<slug>/` (`design.md`, `plan.md`).
+- Specs and plans go to `docs/requests/<yyyy-mm-dd>-<slug>/` (`design.md`, `plan.md`); the ledger is `.sdd/progress.md` in that folder.
 - Before finishing: `npm test`; if projected content changed, bump the owning `.manifest.json` version and run `node cli/lib/versions.mjs --lock`.
-- `finishing-a-development-branch`: default to "Keep the branch as-is"; merge or push only after the human confirms.
+- Finishing the branch: default to "Keep the branch as-is"; merge or push only after the human confirms.

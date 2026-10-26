@@ -125,7 +125,7 @@ invariants (idempotency, outbox, retention), schema/contract tests, and regressi
   reads) and the hook confirmations for secret files inside the project are dropped, writes stay confined to the project roots (heuristic, not a
   sandbox), and a push to a protected branch still needs confirmation unless `fullKeep` is changed.
 - **Stop for human diff review before integrating.** On a feature branch, commit each task without
-  pausing (1 task = 1 commit); the human reviews the whole branch diff before merge or push. On a
+  pausing (each task ends with at least one commit; fix rounds may add more); the human reviews the whole branch diff before merge or push. On a
   protected branch, stop before every commit.
 - **Don't add `Co-authored-by` / `Co-Authored-By` lines** (or assistant attribution) to commit
   messages, PR bodies, or tag/release notes.
@@ -141,22 +141,26 @@ to the most specific skill and **say so**.
 > The catalog path is **tool-specific**, defined by the provider (e.g. Codex:
 > `.codex/workflows/commands.md`). Other tools ignore this line.
 
-### Superpowers workflow defaults (if the superpowers skills are installed)
+### Workflow defaults
 
-Spec approval (`brainstorming`) and plan approval (`writing-plans`) stay human gates; these defaults
-remove only the prompts after them.
+Spec/design approval and plan approval stay human gates; these defaults remove only the prompts after
+them. They apply when the aip workflows and skills are installed.
 
-- Execution: `subagent-driven-development` (`executing-plans` when no subagent tool exists); do not
-  ask again once the plan is approved.
-- Commit each task on a feature branch without pausing (see **Safety**).
+- Route by request: a feature → `workflow-feature`; a bugfix → `workflow-bugfix`. Clarification and
+  `design.md` come from `workflow-feature` steps 2–3 (skill `engineering-spec-writing`); the plan comes
+  from skill `engineering-plan-writing`.
+- Execution: skill `plan-execution` (a task loop with a review per task); do not ask again how to
+  execute once the plan is approved.
+- Commit each task on a feature branch without pausing (see **Safety**); the human reviews the whole
+  branch diff before merge or push.
 - Before finishing, run the full suites of every touched component (see **Testing**).
-- `finishing-a-development-branch`: default to "Keep the branch as-is"; merge or push only after the
-  human confirms.
+- Finishing the branch: default to "Keep the branch as-is"; merge or push only after the human
+  confirms.
 
 #### Docs location and format
 
-- Write the `brainstorming` spec to `docs/requests/<yyyy-mm-dd>-<slug>/design.md` and the
-  `writing-plans` plan to `plan.md` in the same folder. This overrides the superpowers default `docs/superpowers/`.
+- Write the spec to `docs/requests/<yyyy-mm-dd>-<slug>/design.md` (skill `engineering-spec-writing`)
+  and the plan to `plan.md` in the same folder (skill `engineering-plan-writing`).
 - Use `docs/requests/_TEMPLATE/` only when it contains `design.md`; otherwise use the templates of
   the `artifact-templates` skill (a legacy `_TEMPLATE` may still serve `requirement.md`). `aip init` never
   overwrites it; to get the new templates, delete the old `_TEMPLATE` and re-run `aip init --full`.
@@ -179,17 +183,17 @@ remove only the prompts after them.
 - Merge step: update `docs/specs/<capability>/spec.md` as the design's `## Ảnh hưởng spec` section says
   (add, edit or strike through requirements `<capability>/R<n>`, add a row to the spec's history table; if you
   created a new capability, also add it to `docs/specs/README.md`), then run `check-request.mjs` (with
-  `--base <ref>` in CI). Do this before `finishing-a-development-branch`.
+  `--base <ref>` in CI). Do this before finishing the branch (`plan-execution`).
 
 #### Memory and resume
 
 | Type | Scope | Stored in | Updated by |
 |---|---|---|---|
-| Short-term | One change, spec to merge | `docs/requests/<yyyy-mm-dd>-<slug>/`, ledger `.superpowers/sdd/<plan>/` | Agent, while working |
+| Short-term | One change, spec to merge | `docs/requests/<yyyy-mm-dd>-<slug>/`, ledger `.sdd/progress.md` in that folder | Agent, while working |
 | Long-term | Whole project | `project-knowledge/`, `docs/decisions/`, `docs/contracts/`, `docs/specs/`, `AGENTS.md`/`CLAUDE.md` | Human reviewer; agent only proposes |
 
-- Resume a change that already has a folder: read `design.md` + `plan.md`; if a superpowers ledger
-  exists, follow it, otherwise continue from the first unchecked task (`- [ ]`);
+- Resume a change that already has a folder: read `design.md`, `plan.md` and the ledger; continue from
+  the first task with no `complete` line (the `session-start` hook injects the ledger tail);
   never create a second folder, design or plan for the same change.
 - Knowledge that outlives the change (architecture decision, convention) → propose it to long-term
   memory instead of leaving it only in `design.md`.

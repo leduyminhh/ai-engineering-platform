@@ -672,4 +672,31 @@ export default async function run({ ok, ctx }) {
     const hits = files.filter((f) => /superpowers/i.test(fs.readFileSync(f, 'utf8')));
     ok(hits.length === 0, 'AC7.1: không file workflows/**/*.md nào chứa superpowers' + (hits.length ? ' — ' + hits.join(', ') : ''));
   }
+
+  // AC7.1: không còn chuỗi superpowers trong nội dung chiếu ra (R15: đường dẫn docs/requests/<…>superpowers<…> được phép)
+  {
+    const skip = new Set(['node_modules', '.git']);
+    const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (skip.has(e.name) ? [] : e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+    const files = ['workflows', 'plugins', 'core', 'templates'].flatMap((d) => walk(path.join(REPO_ROOT, d)))
+      .concat(['AGENTS.md', 'CLAUDE.md'].map((f) => path.join(REPO_ROOT, f)))
+      .filter((f) => /\.(md|mjs|json|ya?ml|txt|toml)$/i.test(f));
+    const oldRequestPath = /docs\/requests\/[^\s`)"'|]*superpowers[^\s`)"'|]*/gi;
+    const hits = files.filter((f) => /superpowers/i.test(fs.readFileSync(f, 'utf8').replace(oldRequestPath, '')));
+    ok(hits.length === 0, 'AC7.1: không file nào trong workflows/plugins/core/templates/AGENTS.md/CLAUDE.md còn chứa superpowers' + (hits.length ? ' — ' + hits.map((f) => path.relative(REPO_ROOT, f)).join(', ') : ''));
+  }
+
+  // AC7.2: baseline có mục Workflow defaults trỏ workflow-feature, workflow-bugfix, plan-execution; Safety "mỗi task ≥ 1 commit"
+  {
+    const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
+    const i = tpl.indexOf('### Workflow defaults');
+    ok(i !== -1, 'AC7.2: baseline có mục "### Workflow defaults"');
+    const sec = tpl.slice(i, tpl.indexOf('### Agents in CI'));
+    ok(sec.includes('workflow-feature') && sec.includes('workflow-bugfix') && sec.includes('plan-execution')
+      && sec.includes('engineering-spec-writing') && sec.includes('engineering-plan-writing'), 'AC7.2: mục trỏ workflow-feature, workflow-bugfix, plan-execution và skill spec/plan');
+    ok(sec.includes('.sdd/progress.md') && !sec.includes('.superpowers') && /Keep the branch as-is/.test(sec),
+      'AC7.2: ledger .sdd/progress.md; kết thúc nhánh mặc định giữ nhánh');
+    ok(/each task ends with at least one commit/.test(tpl) && !/1 task = 1 commit/.test(tpl), 'AC7.2: Safety ghi mỗi task kết thúc bằng ≥ 1 commit');
+    const claude = fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
+    ok(/## Workflow defaults/.test(claude) && claude.includes('plan-execution') && claude.includes('workflow-feature'), 'AC7.2: CLAUDE.md gốc có mục Workflow defaults dùng workflow aip');
+  }
 }
