@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Giai đoạn P2 của workflow tự đủ — vòng task (core 1.16.0; backend 1.9.0; frontend 1.11.0; engineering 2.4.0; workflows 3.5.0):
+  - Skill core mới `plan-execution`: giao thức vòng task (brief, giao agent theo `kind`, review từng task kèm `spec_verdict`, sửa tối đa 3 vòng với vòng 3 chạy opus, `Ruling:`, ledger, review cuối, kết thúc nhánh với 3 lựa chọn) cùng 3 script Node `task-brief`, `review-package`, `ledger`.
+  - Contract đầu ra của agent mở rộng: `tdd`, `spec_verdict`, `rulings` và re-review có phạm vi.
+  - `backend-implementer` tự làm TDD; `backend-test-writer` có luật chất lượng test. Reviewer có 3 chế độ review.
+  - `git-workflow`: commit theo task và hỏi trước khi dùng worktree.
+  - `workflow-feature`: Bước 5 Vòng task, Bước 6 Review cuối, Bước 7 Kết thúc nhánh; feature backend do `backend-implementer` làm cả test, `backend-test-writer` còn dùng ở bugfix và security-review.
+  - Hook `session-start` nạp ledger `docs/requests/*/.sdd/progress.md` (tối đa 2000 ký tự, chung ngân sách 9000 ký tự với handoff); khoá `ledgerInject: false` trong `.claude/aip-gate.json` để tắt.
 - Giai đoạn P1 của workflow tự đủ (core 1.15.0; engineering 2.3.0; workflows 3.4.0): `check-request.mjs` thêm W17 (Task trong `plan.md` thiếu dòng `**Kind:**`) và W18 (Kind ngoài tập `BE|FE-UI|FE-INT|E2E|DB|CT|DOCS|TOOLING`); `plan.template.md` có dòng `**Kind:**` cho mỗi task.
 - Skill mới `engineering-plan-writing` (engineering 2.3.0): lập `plan.md` thực thi từ design đã duyệt (bản đồ file, task theo kind, Interfaces, Global Constraints, Review Focus), tự soát rồi chạy `check-request.mjs`.
 - Agent permissions and MCP gate (core 1.11.1; backend 1.8.18 and frontend 1.10.17 bumped because their `backend-init`/`frontend-init`

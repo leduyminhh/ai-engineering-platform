@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 End users do not need to clone the repo — the `ai-engineering-platform` package is published
 to the npm registry, and both `aip` and `ai-engineering-platform` bins point to the same CLI.
 
-> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` skills
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates`). Plugins (`backend`, `frontend`, `engineering`,
+> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` skills
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution`). Plugins (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) and workflows are **not** in the package; install them from source:
 > `git clone` + `npm link` (see [Quickstart](#quickstart)), then `aip install --plugin all`, or
 > `aip --all` to open the wizard with every skill including drafts.
@@ -162,7 +162,7 @@ and `write` → `disallowedTools: Agent`; Codex maps `read-only` → `sandbox_mo
 | Agent id | Plugin | Mode | Skills packaged | Used in |
 | --- | --- | --- | --- | --- |
 | `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01 |
-| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF06 |
+| `backend-test-writer` | backend | write | backend-testing | WF02, WF06 |
 | `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (drift check) | WF01, WF02, WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
 | `backend-performance-analyst` | backend | write | backend-performance | WF09 |
@@ -189,7 +189,7 @@ orchestrator's confirmation strictness.
 
 | Code | id | Tier | Risk | Replaces (old plan) | Agents |
 | --- | --- | --- | --- | --- | --- |
-| WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, FE data-integrator, BE/FE test-writer, FE e2e-test-writer, BE/FE reviewer, quality-auditor |
+| WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, FE data-integrator, FE test-writer, FE e2e-test-writer, BE/FE reviewer, quality-auditor |
 | WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE fixer, BE/FE reviewer, quality-auditor |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, frontend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
