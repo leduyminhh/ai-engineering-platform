@@ -68,12 +68,15 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (chỉ phía có lỗi theo Bước 2)
 - **Đầu vào:** mô tả "mong đợi vs thực tế" từ Bước 2
-- **Hành động:** viết failing test tái hiện đúng bug (đỏ đúng lý do bug, không đỏ vì lỗi viết test); nếu
-  không viết được test tự động, thực hiện bước tái hiện thủ công và ghi lại evidence quan sát được.
+- **Hành động:** viết failing test tái hiện đúng bug (đỏ đúng lý do bug, không đỏ vì lỗi viết test). Trước khi
+  chấp nhận tái hiện thủ công, phải thử viết script hoặc test tự động ít nhất một lần; tái hiện thủ công là
+  phương án cuối, ghi lý do không viết được script/test cùng evidence quan sát được.
 - **Ràng buộc:** không sửa code production ở bước này; không viết test phụ thuộc thứ tự/thời gian thực/mạng
-  thật.
+  thật; bug dạng race/timing thì test chờ theo điều kiện, không sleep cứng, không nới timeout (test-strategy §5
+  của `backend-testing`/`frontend-testing`).
 - **Đầu ra:** failing test đỏ, hoặc log bước tái hiện thủ công.
-- **Gate:** failing test đỏ đúng lý do, hoặc bước tái hiện thủ công có evidence; so với trạng thái ghi lại ở
+- **Gate:** failing test đỏ đúng lý do, hoặc bước tái hiện thủ công có evidence và lý do không viết được
+  script/test; so với trạng thái ghi lại ở
   đầu bước (`git status --porcelain`), các file thay đổi hoặc mới trong bước (`git diff --name-only` và
   `git ls-files --others --exclude-standard`) chỉ gồm file test (và fixture/mock của test).
 - **Khi fail:** không tái hiện được bug → quay lại Bước 2 làm rõ thêm bối cảnh, hoặc hỏi người dùng bước tái
@@ -86,28 +89,40 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** session chính
 - **Đầu vào:** failing test/bước tái hiện từ Bước 3
 - **Hành động:** thu log/stacktrace/metric/truy vấn DB liên quan trực tiếp tới lỗi; đối chiếu với thời điểm
-  tái hiện.
-- **Ràng buộc:** không mask sai lệch hoặc bỏ qua log gây khó hiểu; không suy diễn khi chưa có evidence.
+  tái hiện. Xem thay đổi gần đây của vùng nghi ngờ (`git log`/`git diff` trên file liên quan, thay đổi
+  dependency, config) làm một loại evidence. Tìm một đoạn code tương tự đang chạy đúng và nêu khác biệt với
+  đoạn lỗi; không có thì ghi lý do không có. Cần thêm dữ liệu thì được chèn log tạm (instrumentation) chỉ khi đã
+  ghi mốc `git status --porcelain` ở đầu bước; gỡ hết log tạm trước khi sang Bước 5.
+- **Ràng buộc:** không mask sai lệch hoặc bỏ qua log gây khó hiểu; không suy diễn khi chưa có evidence; log tạm
+  chỉ để thu evidence, không lọt sang Bước 5–6.
 - **Đầu ra:** tập evidence gắn với lỗi.
-- **Gate:** ≥1 evidence (log/stacktrace/metric/DB) gắn với lỗi.
-- **Khi fail:** không thu được evidence nào → hỏi người dùng cung cấp log/quyền truy cập cần thiết.
-- **Evidence:** trích đoạn log/stacktrace/metric/DB kèm timestamp khớp lần tái hiện ở Bước 3.
+- **Gate:** ≥1 evidence (log/stacktrace/metric/DB/thay đổi gần đây) gắn với lỗi; diff sạch so với mốc đầu bước
+  (`git diff --name-only` và `git ls-files --others --exclude-standard` không có thay đổi mới — log tạm đã gỡ).
+- **Khi fail:** không thu được evidence nào → hỏi người dùng cung cấp log/quyền truy cập cần thiết; còn log tạm
+  chưa gỡ → gỡ hết rồi kiểm lại gate, không sang Bước 5.
+- **Evidence:** trích đoạn log/stacktrace/metric/DB kèm timestamp khớp lần tái hiện ở Bước 3; kết quả
+  `git log`/`git diff` của thay đổi gần đây; code tương tự đang đúng + khác biệt (hoặc lý do không có); mốc
+  `git status --porcelain` đầu bước và kết quả so sánh cuối bước.
 
 ### Bước 5 — Root cause ⏸
 
 - **Thực hiện:** session chính
 - **Đầu vào:** failing test (Bước 3) + evidence (Bước 4)
-- **Hành động:** xây dựng chuỗi nhân quả từ evidence tới hành vi lỗi quan sát được; trình bày cho người dùng
-  để xác nhận trước khi fix.
+- **Hành động:** phát biểu một giả thuyết "X là nguyên nhân vì Y" kèm cách kiểm (quan sát hoặc phép đo nào xác
+  nhận/bác bỏ nó); xây dựng chuỗi nhân quả từ evidence tới hành vi lỗi quan sát được, truy ngược từ chỗ nổ lỗi
+  từng cấp (giá trị này do ai gọi/truyền vào) tới nguồn; đối chiếu lý do đỏ của test Bước 3 với root cause đã
+  nêu; trình bày cho người dùng để xác nhận trước khi fix.
 - **Ràng buộc:** không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
-  evidence hỗ trợ.
+  evidence hỗ trợ; không dừng ở chỗ lỗi nổ khi nguồn nằm ở nơi khác.
 - **Đầu ra:** giải thích root cause, có trích dẫn evidence; **danh sách file/module được sửa** suy từ chuỗi nhân
-  quả (đầu vào cho Bước 6), người dùng xác nhận cùng root cause.
-- **Gate:** giải thích nhân quả khớp evidence, người dùng đồng ý; có danh sách file được sửa.
+  quả, gồm nguồn (không chỉ chỗ nổ lỗi) — đầu vào cho Bước 6; người dùng xác nhận cùng root cause.
+- **Gate:** giải thích nhân quả khớp evidence, lý do đỏ của test Bước 3 khớp root cause, người dùng đồng ý; có
+  danh sách file được sửa.
 - **Khi fail:** người dùng không đồng ý root cause → quay lại Bước 4 thu thêm evidence hoặc xem lại giả
-  thuyết.
-- **Evidence:** đoạn giải thích root cause + trích dẫn evidence tương ứng + danh sách file được sửa + xác nhận
-  của người dùng.
+  thuyết; lý do đỏ của test Bước 3 lệch root cause (test đỏ vì triệu chứng hoặc lỗi khác) → quay lại Bước 3 sửa
+  test.
+- **Evidence:** đoạn giải thích root cause + giả thuyết và cách kiểm + trích dẫn evidence tương ứng + chuỗi truy
+  ngược tới nguồn + đối chiếu lý do đỏ của test Bước 3 + danh sách file được sửa + xác nhận của người dùng.
 
 ### Bước 6 — Fix tối thiểu
 
@@ -118,7 +133,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   = finding đã xác nhận (`file:line`) do người dùng chốt; gate xanh = reviewer review lại phần đã sửa.
 - **Hành động:** session chính ghi mốc `git status --porcelain` (+ `git hash-object` file test đang bẩn) TRƯỚC khi
   dispatch agent; agent sửa đúng nguyên nhân gốc theo skill `backend-fix`/`frontend-fix` (chế độ `bug`), phạm vi
-  thay đổi tối thiểu trong danh sách file; chạy lại failing test của Bước 3 và build/lint của module đụng. Danh
+  thay đổi tối thiểu trong danh sách file, mỗi lần chỉ một thay đổi; chạy lại failing test của Bước 3 và build/lint của module đụng. Danh
   sách file là hợp của hai phía; mỗi agent chỉ đối chiếu phần thuộc phía mình.
 - **Ràng buộc:** cấm sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh; cấm chỉ sửa triệu chứng (che
   lỗi mà không sửa nguyên nhân); cấm xoá/nới điều kiện test cho qua; không sửa ngoài danh sách file — cần mở
@@ -131,11 +146,17 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   (`git status --porcelain`), file thay đổi hoặc mới trong bước (`git diff --name-only` và
   `git ls-files --others --exclude-standard`) ⊆ danh sách file của Bước 5 và không chứa file
   test/fixture/snapshot/mock; file test đã bẩn trong mốc (test của Bước 3 / Bước 7) không đổi nội dung
-  (`git hash-object` trước/sau).
+  (`git hash-object` trước/sau); session chính tự chạy lại lệnh oracle của Bước 3 và ghi exit code, không chỉ
+  tin report của fixer.
 - **Khi fail:** agent trả `blocked` → người dùng mở rộng danh sách (ghi bổ sung vào Đầu ra Bước 5) → gọi lại; fix
   không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause; diff lệch danh sách
-  → revert phần lệch, không nhận.
-- **Evidence:** report của agent (lệnh chạy lại đúng test của Bước 3, exit code đỏ → 0) + danh sách file thay
+  → revert phần lệch, không nhận. Bản sửa hỏng phải revert trước khi thử lại (chỉ các thay đổi của bản sửa đó
+  trong danh sách file, giữ nguyên file test đã bẩn, không `reset --hard`). Bộ đếm chung: mỗi lần sửa thất bại
+  (oracle vẫn đỏ 6→5, regression đỏ 7→6, finding `blocker` 8→6) cộng vào một tổng duy nhất, không đặt lại giữa
+  các cạnh; đủ tổng 3 lần sửa thất bại → dừng `ask_user`, không thử lần 4, hỏi người dùng câu hỏi kiến trúc:
+  mỗi lần sửa có lộ coupling/shared state mới không, có cần refactor lớn không.
+- **Evidence:** report của agent (lệnh chạy lại đúng test của Bước 3, exit code đỏ → 0) + exit code do session
+  chính tự chạy lại oracle + số lần sửa thất bại đã cộng dồn + danh sách file thay
   đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn; oracle
   tái hiện thủ công: kết quả chạy lại bước tái hiện; quay lại từ Bước 8: `file:line` finding đã sửa.
 
@@ -202,6 +223,10 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Cấm: sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh | Từ chối sửa, quay lại Bước 3/4 thu thêm evidence |
 | Cấm: chỉ sửa triệu chứng (che lỗi, không sửa nguyên nhân) | Từ chối, quay lại Bước 5 xác định lại root cause |
 | Cấm: xoá/nới điều kiện test cho qua | Từ chối, quay lại Bước 6 sửa đúng code |
+| Lần sửa thứ 3 thất bại (Bước 6, tổng qua mọi cạnh 6→5, 7→6, 8→6) | Dừng `ask_user`, không thử lần 4; hỏi câu hỏi kiến trúc: mỗi lần sửa lộ coupling/shared state mới không, cần refactor lớn không |
+| Log tạm chưa gỡ (Bước 4) | Gỡ hết, kiểm lại gate diff sạch so với mốc đầu bước; không sang Bước 5 |
+| Test đỏ lệch root cause (Bước 5) | Quay lại Bước 3 sửa test cho đỏ đúng lý do root cause đã xác nhận |
+| Bug race/timing (Bước 3, 6) | Test chờ theo điều kiện, không sleep cứng, không nới timeout/retry; không tái hiện ổn định → hỏi người dùng |
 
 Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
 
@@ -215,9 +240,9 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
 - [ ] Baseline build/test đã đo, số mốc đã ghi — evidence: Bước 1
 - [ ] Hành vi mong đợi vs thực tế + phía BE/FE ghi rõ — evidence: Bước 2
 - [ ] Failing test tái hiện đúng bug — evidence: Bước 3
-- [ ] ≥1 evidence gắn với lỗi — evidence: Bước 4
+- [ ] ≥1 evidence gắn với lỗi, diff sạch so với mốc đầu bước (log tạm đã gỡ) — evidence: Bước 4
 - [ ] Root cause được người dùng xác nhận — evidence: Bước 5
-- [ ] Failing test chuyển xanh sau fix — evidence: Bước 6
+- [ ] Failing test chuyển xanh sau fix, session chính đã tự chạy lại oracle và ghi exit code — evidence: Bước 6
 - [ ] Toàn bộ test suite pass (không regression) — evidence: Bước 7
 - [ ] Người dùng đã duyệt diff và commit đã tạo — evidence: Bước 9
 - [ ] Mọi gate có evidence `passed`

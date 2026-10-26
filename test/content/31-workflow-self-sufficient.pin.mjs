@@ -481,4 +481,77 @@ export default async function run({ ok, ctx }) {
     ok(gw.includes('plan-execution/references/finish.md'), 'AC4.2: git-workflow — mục kết thúc nhánh trỏ plan-execution/references/finish.md');
     ok(/không push khi chưa xác nhận branch/.test(gw) && /Co-Authored-By/.test(gw) && /commit -F/.test(gw), 'AC4.1: git-workflow — giữ ranh giới push/Co-Authored-By/commit -F');
   }
+
+  // AC5.1–AC5.5: workflow-bugfix Bước 3–6 (kỹ thuật điều tra, trần số lần sửa thất bại) — vẫn đúng 9 bước
+  {
+    const bfDir = path.join(REPO_ROOT, 'workflows', 'bugfix');
+    const wf = fs.readFileSync(path.join(bfDir, 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n');
+    const matrix = fs.readFileSync(path.join(bfDir, 'references', 'error-matrix.md'), 'utf8').replace(/\r\n/g, '\n');
+    const flatB = (t) => t.replace(/\s+/g, ' ');
+    const secs = wf.split(/^### Bước /m).slice(1).map((s) => ({ head: s.split('\n')[0], body: s }));
+    const field = (n, name) => flatB((secs[n - 1].body.split(`- **${name}:**`)[1] || '').split(/\n- \*\*/)[0]);
+    ok(secs.length === 9, 'AC5.1: workflow-bugfix vẫn đúng 9 bước');
+
+    // AC5.1: Bước 3 — thử script/test trước khi chấp nhận tái hiện thủ công
+    ok(/thử viết (script|test)[^.;]*một lần/.test(field(3, 'Hành động')) && /phương án cuối/.test(field(3, 'Hành động')) && /lý do/.test(field(3, 'Hành động')),
+      'AC5.1: Bước 3 — thử viết script/test một lần trước; tái hiện thủ công là phương án cuối kèm lý do');
+    ok(/chờ theo điều kiện/.test(field(3, 'Ràng buộc')) && /sleep cứng/.test(field(3, 'Ràng buộc')),
+      'AC5.1: Bước 3 — bug race/timing chờ theo điều kiện, không sleep cứng');
+
+    // AC5.1, AC5.2: Bước 4 — thay đổi gần đây, code tương tự đang đúng, log tạm có mốc và gate diff sạch
+    const a4 = field(4, 'Hành động');
+    ok(/git log/.test(a4) && /git diff/.test(a4) && /thay đổi gần đây/.test(a4) && /dependency/.test(a4) && /config/.test(a4),
+      'AC5.1: Bước 4 — xem thay đổi gần đây của vùng nghi ngờ (git log/git diff, dependency, config) làm một loại evidence');
+    ok(/code tương tự đang chạy đúng/.test(a4) && /khác biệt/.test(a4) && /lý do không có/.test(a4),
+      'AC5.1: Bước 4 — tìm code tương tự đang chạy đúng, nêu khác biệt hoặc ghi lý do không có');
+    ok(/log tạm/.test(a4) && a4.includes('git status --porcelain') && /đầu bước/.test(a4) && /gỡ hết/.test(a4),
+      'AC5.2: Bước 4 — log tạm chỉ khi ghi mốc git status --porcelain đầu bước và gỡ hết trước Bước 5');
+    ok(/diff sạch so với mốc đầu bước/.test(field(4, 'Gate')) && /≥1 evidence/.test(field(4, 'Gate')),
+      'AC5.2: Gate Bước 4 — diff sạch so với mốc đầu bước, vẫn ≥1 evidence');
+    ok(/mốc/.test(field(4, 'Evidence')) && /thay đổi gần đây/.test(field(4, 'Evidence')), 'AC5.2: Evidence Bước 4 ghi mốc và thay đổi gần đây');
+
+    // AC5.5: Bước 5 — giả thuyết + cách kiểm, truy ngược tới nguồn, đối chiếu lý do đỏ với root cause
+    const a5 = field(5, 'Hành động');
+    ok(/giả thuyết/.test(a5) && /cách kiểm/.test(a5), 'AC5.5: Bước 5 — ghi một giả thuyết kèm cách kiểm');
+    ok(/truy ngược/.test(a5) && /nguồn/.test(a5) && /gồm nguồn/.test(field(5, 'Đầu ra')),
+      'AC5.5: Bước 5 — truy ngược từ chỗ nổ lỗi tới nguồn; danh sách file gồm nguồn, không chỉ chỗ nổ');
+    ok(/lý do đỏ/.test(a5) && /root cause/.test(a5) && /quay lại Bước 3/.test(field(5, 'Khi fail')),
+      'AC5.5: Bước 5 — đối chiếu lý do đỏ của test Bước 3 với root cause; lệch thì quay lại Bước 3');
+    ok(/lý do đỏ/.test(field(5, 'Gate')), 'AC5.5: Gate Bước 5 có đối chiếu lý do đỏ');
+
+    // AC5.3, AC5.4: Bước 6 — bộ đếm tổng 3 lần, revert, một thay đổi mỗi lần, session chính chạy lại oracle
+    const f6 = field(6, 'Khi fail'), a6 = field(6, 'Hành động'), g6 = field(6, 'Gate');
+    ok(/tổng[^.;]*3 lần sửa thất bại/.test(f6) && /6→5/.test(f6) && /7→6/.test(f6) && /8→6/.test(f6) && /ask_user/.test(f6) && /kiến trúc/.test(f6),
+      'AC5.3: Bước 6 — tổng 3 lần sửa thất bại (qua 6→5, 7→6, 8→6) → ask_user kèm câu hỏi kiến trúc');
+    ok(/coupling/.test(f6) && /shared state/.test(f6) && /refactor/.test(f6), 'AC5.3: câu hỏi kiến trúc nhắc coupling/shared state/refactor lớn');
+    ok(/revert/.test(f6) && /một thay đổi/.test(a6), 'AC5.3: Bước 6 — bản sửa hỏng phải revert trước khi thử lại; mỗi lần một thay đổi');
+    ok(/tự chạy lại/.test(g6) && /oracle/.test(g6) && /Bước 3/.test(g6) && /exit code/.test(g6) && /không chỉ tin report/.test(g6),
+      'AC5.4: Gate Bước 6 — session chính tự chạy lại lệnh oracle của Bước 3 và ghi exit code, không chỉ tin report fixer');
+    ok(/exit code/.test(field(6, 'Evidence')) && /session chính/.test(field(6, 'Evidence')), 'AC5.4: Evidence Bước 6 có exit code do session chính chạy lại');
+
+    // graph: cạnh ask_user cho tổng 3 lần, cạnh Bước 5 → Bước 3, giữ max_attempts cũ, qua checkGraph/checkGraphAgainstBody
+    const wfLib = await import(pathToFileURL(path.join(REPO_ROOT, 'cli', 'lib', 'workflows.mjs')).href);
+    const g = JSON.parse(fs.readFileSync(path.join(bfDir, 'graph.json'), 'utf8'));
+    const byId = Object.fromEntries(g.steps.map((s) => [s.id, s]));
+    ok(g.steps.length === 9, 'AC5.3: graph bugfix vẫn 9 bước');
+    ok(wfLib.checkGraph(g).length === 0 && wfLib.checkGraphAgainstBody(g, wf).length === 0, 'AC5.3: graph bugfix qua checkGraph và checkGraphAgainstBody');
+    const askFix = (byId.fix?.on_fail || []).filter((f) => f.to === 'ask_user');
+    ok(askFix.some((f) => /3 lần/.test(f.when) && /kiến trúc/.test(f.when)), 'AC5.3: graph Bước 6 có cạnh ask_user cho tổng 3 lần sửa thất bại');
+    const edge = (from, to) => (byId[from]?.on_fail || []).find((f) => f.to === to);
+    ok(edge('fix', 'root-cause')?.max_attempts === 2 && edge('regression', 'fix')?.max_attempts === 2 && edge('review', 'fix')?.max_attempts === 2,
+      'AC5.3: giữ max_attempts 2 của các cạnh lùi về Bước 6 và 5');
+    ok(edge('root-cause', 'reproduce')?.max_attempts === 2, 'AC5.5: graph có cạnh Bước 5 → Bước 3 (lý do đỏ lệch root cause) với max_attempts 2');
+
+    // AC5.2–AC5.5: bảng xử lý lỗi + error-matrix có 4 hàng mới
+    const tableRows = (t) => t.split('\n').filter((l) => l.startsWith('|'));
+    for (const [name, text] of [['WORKFLOW.md', wf], ['error-matrix.md', matrix]]) {
+      const rows = tableRows(text).map(flatB);
+      const has = (re) => rows.some((r) => re.test(r));
+      ok(has(/lần sửa thứ 3[^|]*\|[^|]*ask_user[^|]*kiến trúc/i), `AC5.3: ${name} — hàng lần sửa thứ 3 thất bại → ask_user kiến trúc`);
+      ok(has(/log tạm chưa gỡ[^|]*\|[^|]*gỡ/i), `AC5.2: ${name} — hàng log tạm chưa gỡ`);
+      ok(has(/lệch root cause[^|]*\|[^|]*Bước 3/), `AC5.5: ${name} — hàng test đỏ lệch root cause → Bước 3`);
+      ok(has(/race|timing/) && has(/chờ theo điều kiện/), `AC5.1: ${name} — hàng bug race/timing chờ theo điều kiện`);
+    }
+    ok(wf.includes('superpowers:brainstorming'), 'AC5.1: dòng Superpowers ở Điều kiện tiên quyết còn nguyên (Task 23 xử lý)');
+  }
 }
