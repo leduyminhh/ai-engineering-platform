@@ -523,6 +523,18 @@ export default async function run({ ok, ctx }) {
     ok(bad.includes('HANDOFF') && !bad.includes('Ledger'), 'AC3.3: ledger không đọc được → bỏ qua, vẫn trả handoff');
     const big = start({ [LEDGER]: { text: 'a'.repeat(5000) + 'CUOI', mtime: T0 } })?.additionalContext || '';
     ok(big.length <= 2000 && big.endsWith('CUOI'), 'AC3.3: phần ledger ≤ 2000 ký tự và giữ phần đuôi');
+    const longHandoff = { 'docs/requests/2026-01-01-a/handoff.md': { text: '# Bàn giao\n' + 'x'.repeat(20000), mtime: T0 } };
+    const budget = start({ ...longHandoff, [LEDGER]: { text: 'a'.repeat(5000) + 'CUOI', mtime: T0 } })?.additionalContext || '';
+    ok(budget.length <= 9000 && budget.includes('Ledger (') && budget.endsWith('CUOI'),
+      'AC3.3: handoff dài + ledger dài → tổng ≤ 9000, handoff nhường chỗ, ledger còn nguyên');
+    ok(start(longHandoff)?.additionalContext.length === 9000, 'AC3.3: không có ledger → handoff vẫn đúng 9000');
+    const hBad = start({ 'docs/requests/2026-01-01-a/handoff.md': { throws: true, mtime: T0 }, [LEDGER]: { text: 'LEDGER_OK', mtime: T0 } })?.additionalContext || '';
+    ok(hBad.includes('LEDGER_OK') && !hBad.includes('Handoff'), 'AC3.3: handoff không đọc được → vẫn trả ledger');
+    const fallback = start({
+      [LEDGER]: { text: 'CU_OK', mtime: T0 },
+      'docs/requests/2026-02-02-z/.sdd/progress.md': { throws: true, mtime: T0 + 1 },
+    })?.additionalContext || '';
+    ok(fallback.includes('CU_OK') && fallback.includes('2026-01-01-a'), 'AC3.3: ledger mới nhất hỏng → rơi sang ledger kế tiếp');
     const newest = start({
       [LEDGER]: { text: 'CU', mtime: T0 },
       'docs/requests/2026-02-02-z/.sdd/progress.md': { text: 'MOI', mtime: T0 + 1 },

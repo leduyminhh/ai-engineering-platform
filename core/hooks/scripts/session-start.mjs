@@ -5,11 +5,11 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readGateConfig } from './gate-config.mjs';
 
-// Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc.
-const MAX_CHARS = 9000;
+// Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Handoff và ledger chia chung ngân sách này.
+const MAX_TOTAL = 9000;
 // Chặn file rỗng hoặc chỉ còn khung heading của template.
 const MIN_CHARS = 80;
-// Giới hạn riêng của phần ledger, không trừ vào MAX_CHARS của handoff.
+// Trần của riêng phần ledger; handoff nhường phần còn lại của MAX_TOTAL.
 const LEDGER_MAX_CHARS = 2000;
 const LEDGER_DONE_RE = /^Plan: complete\s*$/m;
 const DEFAULT_MAX_AGE_HOURS = 24;
@@ -66,7 +66,7 @@ function ledgerSection(cwd, d) {
   }
   for (const { p } of cands.sort((a, b) => b.t - a.t)) {
     try {
-      const text = String(d.readFile(p)).replace(/^﻿/, '');
+      const text = String(d.readFile(p)).replace(/^\uFEFF/, '');
       if (LEDGER_DONE_RE.test(text)) continue;
       const head = `Ledger (${path.relative(cwd, p).split(path.sep).join('/')}):\n`;
       return head + text.slice(Math.max(0, text.length - (LEDGER_MAX_CHARS - head.length)));
@@ -98,16 +98,19 @@ export function decide(input, deps = {}) {
       return { additionalContext: resumeLine(input, (() => { try { return usableHandoff(cwd, cfg, d)?.file; } catch { return null; } })(), cwd) };
     }
     if (source !== 'startup' && source !== 'clear' && source !== 'compact') return null;
+    let ledger = null;
+    if (cfg?.ledgerInject !== false) {
+      try { ledger = ledgerSection(cwd, d); } catch { /* ledger hỏng không được chặn handoff */ }
+    }
     const parts = [];
     if (cfg?.handoffInject !== false) {
       try {
         const h = usableHandoff(cwd, cfg, d);
-        if (h) parts.push(`Handoff của phiên trước (${path.relative(cwd, h.file).split(path.sep).join('/')}):\n${h.text}`.slice(0, MAX_CHARS));
+        const room = MAX_TOTAL - (ledger ? ledger.length + 2 : 0);
+        if (h) parts.push(`Handoff của phiên trước (${path.relative(cwd, h.file).split(path.sep).join('/')}):\n${h.text}`.slice(0, room));
       } catch { /* handoff hỏng không được chặn ledger */ }
     }
-    if (cfg?.ledgerInject !== false) {
-      try { const l = ledgerSection(cwd, d); if (l) parts.push(l); } catch { /* ledger hỏng không được chặn handoff */ }
-    }
+    if (ledger) parts.push(ledger);
     return parts.length ? { additionalContext: parts.join('\n\n') } : null;
   } catch { return null; }
 }
