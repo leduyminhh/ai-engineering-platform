@@ -404,4 +404,19 @@ export default async function run({ ok, ctx }) {
     }
     ok(/agent_result:[^.]*declined_to_judge\[\]/.test(rd('core', 'skills', 'plan-execution', 'references', 'prompts', 'final-review.md')), 'AC3.1: final-review trả declined_to_judge[] trong agent_result');
   }
+
+  // AC4.1, AC4.2: git-workflow cho vòng task — commit theo task không dừng trên feature, worktree hỏi một lần, kết thúc nhánh trỏ finish.md
+  {
+    const gw = fs.readFileSync(path.join(REPO_ROOT, 'core', 'skills', 'git-workflow', 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
+    ok(/feature[^.]*plan đã duyệt[^.]*commit[^.]*không dừng/.test(gw) && /session chính/.test(gw),
+      'AC4.1: git-workflow — session chính commit theo task không dừng trên nhánh feature chạy plan đã duyệt');
+    ok(/mỗi task ít nhất 1 commit/.test(gw) && /vòng sửa[^.]*thêm commit/.test(gw), 'AC4.1: git-workflow — mỗi task ít nhất 1 commit, vòng sửa có thể thêm commit');
+    ok(/không amend[^.]*squash[^.]*chưa[^.]*xác nhận/.test(gw), 'AC4.1: git-workflow — không amend/squash khi người dùng chưa xác nhận');
+    ok(/protected[^.]*dừng[^.]*trước mỗi commit/.test(gw), 'AC4.1: git-workflow — nhánh protected vẫn dừng trước mỗi commit');
+    ok(/hỏi người dùng một lần trước khi tạo (git )?worktree/i.test(gw) && !/trừ khi người dùng yêu cầu tường minh/.test(gw),
+      'AC4.2: git-workflow — hỏi một lần trước khi tạo worktree, bỏ câu "chỉ khi yêu cầu tường minh"');
+    ok(gw.includes('.claude/worktrees/'), 'AC4.2: git-workflow — giữ quy ước .claude/worktrees/');
+    ok(gw.includes('plan-execution/references/finish.md'), 'AC4.2: git-workflow — mục kết thúc nhánh trỏ plan-execution/references/finish.md');
+    ok(/không push khi chưa xác nhận branch/.test(gw) && /Co-Authored-By/.test(gw) && /commit -F/.test(gw), 'AC4.1: git-workflow — giữ ranh giới push/Co-Authored-By/commit -F');
+  }
 }
