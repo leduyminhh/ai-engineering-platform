@@ -27,8 +27,20 @@ pyramid của skill `frontend-testing`.
   runner (Vitest/Jest) + coverage của project để lấy evidence.
 - Không được: sửa code production để "cho test xanh"; gọi API thật trong test (chỉ mock mạng qua msw, không
   mock `fetch`/`axios` thủ công rải rác); sinh test phụ thuộc thứ tự chạy/timer thực/mạng thật.
+- Không tự commit: session chính commit sau khi nhận kết quả.
 - Khi test phát hiện bug thật (UI, luồng lỗi, a11y): giữ nguyên test đỏ đúng lý do bug, KHÔNG tự sửa code,
   báo rõ để người quyết.
+
+## Luật chất lượng test
+
+- Trước khi viết mỗi test, nêu thay đổi production nào sẽ làm test này fail; không nêu được thì test không bắt
+  lỗi thật, bỏ hoặc viết lại.
+- Giá trị mong đợi là literal viết tay, không tính bằng chính code đang test (không gọi lại hàm production để
+  dựng expected).
+- Không assert vào mock vừa cấu hình: test hành vi quan sát được (kết quả, trạng thái, request ra), không phải
+  việc mock trả đúng thứ vừa được dặn.
+- Chờ theo điều kiện (`findBy*`/`waitFor` trên điều kiện hiển thị, fake timer có kiểm soát), không sleep cứng; timeout cố định chỉ khi chính hành vi thời gian
+  là đối tượng test, và phải ghi lý do.
 
 ## Quy trình
 

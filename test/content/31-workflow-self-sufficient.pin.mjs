@@ -338,4 +338,34 @@ export default async function run({ ok, ctx }) {
       ok(section(h).length > 0, `AC3.4: giữ mục "${h}"`);
     }
   }
+
+  // AC3.4: implementer/test-writer — BE tự đỏ→xanh báo tdd, FE-UI để test-writer làm trong cùng task, 3 luật chất lượng test, không tự commit
+  {
+    const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, 'plugins', ...p), 'utf8').replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
+    const be = rd('backend', 'agents', 'backend-implementer.md');
+    ok(/task `kind: BE` trong vòng task/.test(be) && /test lõi/.test(be) && /đỏ đúng lý do/.test(be) && /tdd: { red, green }/.test(be) && /tdd\.red/.test(be) && /tdd\.green/.test(be),
+      'AC3.4: backend-implementer — task kind: BE trong vòng task: test lõi đỏ đúng lý do trước, báo tdd.red/tdd.green');
+    ok(/ngoài vòng task[^.]*không ép/.test(be), 'AC3.4: backend-implementer — không ép TDD khi được gọi ngoài vòng task');
+    const skill = rd('backend', 'skills', 'backend-implement', 'SKILL.md');
+    ok(/kind: BE/.test(skill) && /đỏ đúng lý do/.test(skill) && /tdd\.red/.test(skill) && /tdd\.green/.test(skill),
+      'AC3.4: backend-implement SKILL — bước test đỏ trước và báo tdd khi task kind: BE trong vòng task');
+
+    const fi = rd('frontend', 'agents', 'frontend-implementer.md');
+    ok(/`frontend-test-writer`[^.]*cùng task/.test(fi) && /không cần `tdd`/.test(fi) && /không (viết|sinh) test nghiệp vụ/i.test(fi),
+      'AC3.4: frontend-implementer — không viết test nghiệp vụ; frontend-test-writer viết trong cùng task; không cần tdd');
+
+    for (const f of [['backend', 'agents', 'backend-test-writer.md'], ['frontend', 'agents', 'frontend-test-writer.md']]) {
+      const t = rd(...f);
+      const n = f[2];
+      ok(/thay đổi production[^.]*fail/.test(t), `AC3.4: ${n} — trước khi viết nêu thay đổi production nào làm test fail`);
+      ok(/literal/.test(t) && /không tính bằng chính code đang test/.test(t), `AC3.4: ${n} — giá trị mong đợi là literal, không tính bằng code đang test`);
+      ok(/không assert[^.]*mock/i.test(t), `AC3.4: ${n} — không assert vào mock vừa cấu hình`);
+      ok(/chờ theo điều kiện/i.test(t) && /sleep cứng/.test(t), `AC3.4: ${n} — chờ theo điều kiện, không sleep cứng`);
+    }
+
+    for (const f of [['backend', 'agents', 'backend-implementer.md'], ['backend', 'agents', 'backend-test-writer.md'],
+      ['frontend', 'agents', 'frontend-implementer.md'], ['frontend', 'agents', 'frontend-test-writer.md'], ['frontend', 'agents', 'frontend-data-integrator.md']]) {
+      ok(/không tự commit/i.test(rd(...f)), `AC3.4: ${f[2]} — không tự commit`);
+    }
+  }
 }

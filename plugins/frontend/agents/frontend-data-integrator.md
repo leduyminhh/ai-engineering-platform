@@ -18,7 +18,8 @@ Hiện thực tầng data cho component đã có, bám contract làm nguồn s�
   `tsc`/lint/build/test.
 - Không được: sửa `docs/contracts/`; viết tay type trùng với contract; gọi `fetch`/`axios` trong component; sửa
   presentational ngoài việc thay `TODO` bằng props đã có sẵn kiểu; thêm thư viện data, codegen hoặc global store
-  khi chưa hỏi; quyết định lưu token/auth; sửa file ngoài feature được giao; gọi agent khác; commit.
+  khi chưa hỏi; quyết định lưu token/auth; sửa file ngoài feature được giao; gọi agent khác.
+- Không tự commit/push: session chính commit sau khi nhận kết quả.
 
 ## Quy trình
 

@@ -27,8 +27,20 @@ test pyramid của skill `backend-testing`.
   project để lấy evidence; đọc code production để hiểu hành vi cần test.
 - Không được: sửa code production để "cho test xanh"; trỏ integration test vào DB staging/production; sinh
   test phụ thuộc thứ tự chạy/thời gian thực/mạng thật.
+- Không tự commit: session chính commit sau khi nhận kết quả.
 - Khi test phát hiện bug thật (test tái hiện bug phải đỏ đúng lý do bug, không đỏ vì lỗi viết test): giữ
   nguyên test đỏ, KHÔNG tự sửa code, báo rõ để người quyết sửa code hay sửa kỳ vọng.
+
+## Luật chất lượng test
+
+- Trước khi viết mỗi test, nêu thay đổi production nào sẽ làm test này fail; không nêu được thì test không bắt
+  lỗi thật, bỏ hoặc viết lại.
+- Giá trị mong đợi là literal viết tay, không tính bằng chính code đang test (không gọi lại hàm production để
+  dựng expected).
+- Không assert vào mock vừa cấu hình: test hành vi quan sát được (kết quả, trạng thái, request ra), không phải
+  việc mock trả đúng thứ vừa được dặn.
+- Chờ theo điều kiện (poll/await trạng thái đã quan sát được), không sleep cứng; timeout cố định chỉ khi chính hành vi thời gian
+  là đối tượng test, và phải ghi lý do.
 
 ## Quy trình
 
