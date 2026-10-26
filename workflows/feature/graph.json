@@ -81,7 +81,7 @@
       "run": {
         "session": true,
         "agents": [
-          { "id": "backend-implementer", "when": "task kind BE hoặc CT" },
+          { "id": "backend-implementer", "when": "task kind BE" },
           { "id": "frontend-implementer", "when": "task kind FE-UI" },
           { "id": "frontend-test-writer", "when": "task kind FE-UI", "after": "frontend-implementer" },
           { "id": "frontend-data-integrator", "when": "task kind FE-INT" },

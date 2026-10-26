@@ -147,8 +147,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `FE-UI` → `frontend-implementer` rồi `frontend-test-writer` viết test trong cùng task; `FE-INT` →
   `frontend-data-integrator` (sau `FE-UI`; type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); `E2E` →
   `frontend-e2e-test-writer` cho AC luồng UI đầu-cuối trong bảng ứng viên e2e (3–5 luồng, mỗi test map 1 AC, chạy
-  `--repeat-each=3`); `CT` → `backend-implementer` với skill `backend-api-contract`; `DOCS`/`TOOLING` → session chính tự
-  làm. Session chính kiểm `agent_result`, tự chạy test hẹp, rồi commit theo task qua `git-workflow` không dừng (agent
+  `--repeat-each=3`); `DOCS`/`TOOLING` → session chính tự làm; task `CT` đã chốt contract ở Bước 3 nên được đánh `Done` từ
+  Bước 3 và vòng task bỏ qua, task `DB` đã áp qua `data-db-migration` trước feature nên cũng bỏ qua. Session chính kiểm `agent_result`, tự chạy test hẹp, rồi commit theo task qua `git-workflow` không dừng (agent
   không commit). Task review: reviewer chế độ `task-review` trả `spec_verdict` + finding, không chạy lại suite. Finding
   `blocker`/`major` hoặc `spec_verdict` khác `compliant` vào vòng sửa, tối đa 3 vòng mỗi task (vòng 3 agent mới chạy
   opus; mỗi vòng một re-review có phạm vi); hết vòng còn finding thì session chính phán và ghi `Ruling:`, thuộc loại dừng
@@ -163,7 +163,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** code + test của từng task, mỗi task ≥ 1 commit trên nhánh `feature/`, ledger cập nhật.
 - **Gate:** mọi task có dòng `Task <n>: complete` kèm evidence test (lệnh + exit code); mỗi acceptance criterion ≥ 1 test
   (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào `remaining_risks`); task `BE` có `tdd.red` và `tdd.green`; không
-  còn finding `blocker` mở mà chưa có `Ruling:`; mọi file đổi của task nằm trong `**Files:**`; so với trạng thái ghi lại
+  còn finding `blocker` mở mà chưa có `Ruling:`; build/`tsc`/lint của phía có đụng xanh; task `FE-INT`: type khớp contract; mọi file đổi của task nằm trong
+  `**Files:**`; so với trạng thái ghi lại
   ở đầu bước test (`git status --porcelain` trước lượt của `frontend-test-writer` hoặc `frontend-e2e-test-writer`), các
   file thay đổi hoặc mới trong lượt đó (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm
   file test (và fixture/mock của test; e2e: thư mục `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục
@@ -175,14 +176,15 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   nối data → quay lại Bước 3; integrator trả `blocked` vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại;
   plan hỏng đến mức mọi hướng đều là đoán → hỏi người dùng.
 - **Evidence:** ledger `.sdd/progress.md` (các dòng `Task <n>: complete` và `Ruling:`) + `git log` commit theo task; lệnh
-  test + exit code + số liệu (`X tests, X passed`); task `BE`: `tdd.red`/`tdd.green`; e2e: lệnh Playwright + kết quả hoặc
+  build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0; task `FE-INT`: bằng chứng type sinh từ contract;
+  lệnh test + exit code + số liệu (`X tests, X passed`); task `BE`: `tdd.red`/`tdd.green`; e2e: lệnh Playwright + kết quả hoặc
   `not_run` + lý do; report của integrator (endpoint ↔ hook ↔ container) khi fullstack có contract; danh sách file thay
   đổi hoặc mới của lượt test so với trạng thái đầu bước.
 
 ### Bước 6 — Review cuối
 
-- **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` (chỉ phía có đụng, chạy `model: opus`) ∥ agent
-  `engineering-quality-auditor`
+- **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` (chỉ phía có đụng; reviewer chạy `model: opus`) ∥ agent
+  `engineering-quality-auditor` (model mặc định)
 - **Đầu vào:** toàn nhánh `MERGE_BASE..HEAD` (gom bằng `plan-execution` `scripts/review-package.mjs --out`), Review Focus
   của `plan.md`, các dòng `Ruling:` và `minor (deferred)` trong ledger, contract (nếu có)
 - **Hành động:** theo mẫu `final-review.md` của `plan-execution`: reviewer tìm lỗi mà review từng task không

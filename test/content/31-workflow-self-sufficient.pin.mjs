@@ -177,6 +177,17 @@ export default async function run({ ok, ctx }) {
       'AC3.5: Bước 6 reviewer opus + engineering-quality-auditor, một lần sửa + một re-review');
     ok(/drift/.test(s6) && /authorization/.test(s6) && /input validation/.test(s6),
       'AC3.5: Bước 6 giữ kiểm drift contract↔code, authorization và input validation khi có API');
+    // I1: CT chốt ở Bước 3, vòng task bỏ qua — WORKFLOW và task-breakdown.md thống nhất
+    ok(/task `CT` đã chốt contract ở Bước 3[^.;]*đánh `Done` từ Bước 3[^.;]*vòng task bỏ qua/.test(flatW(field(secs[4], 'Hành động'))) && !/`CT` → /.test(s5),
+      'AC3.1: Bước 5 — task CT đã Done từ Bước 3, vòng task bỏ qua, không giao agent cho CT');
+    const tbk = flatW(fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'references', 'task-breakdown.md'), 'utf8'));
+    ok(/`CT` làm ở Bước 3/.test(tbk) && !/`CT` →/.test(tbk), 'AC3.1: task-breakdown.md — CT làm ở Bước 3, thống nhất với WORKFLOW');
+    // I2: gate build/tsc/lint + type khớp contract khi FE-INT
+    const g5 = field(secs[4], 'Gate'), e5 = field(secs[4], 'Evidence');
+    ok(/build\/`tsc`\/lint[^;]*xanh/.test(g5) && /`FE-INT`: type khớp contract/.test(g5) && /exit code 0/.test(e5) && /`FE-INT`/.test(e5),
+      'AC3.1: Bước 5 Gate/Evidence — build/tsc/lint xanh, FE-INT type khớp contract');
+    ok(/reviewer chạy `model: opus`/.test(field(secs[5], 'Thực hiện')) && /model mặc định/.test(field(secs[5], 'Thực hiện')),
+      'AC3.5: Bước 6 — opus cho reviewer domain, auditor model mặc định');
     ok(!/engineering-quality-auditor/.test(s5), 'AC3.5: engineering-quality-auditor chỉ ở Bước 6, không ở vòng task');
     const s7 = flatW(secs[6].body);
     ok(s7.includes('docs/specs/') && s7.includes('check-request.mjs') && /full suite/i.test(s7),
