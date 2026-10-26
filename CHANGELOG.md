@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `workflow-performance` (workflows 3.6.2; backend 1.10.1 và frontend 1.12.1 đổi tham chiếu số bước) thêm Bước 1 Baseline build/test: session chính chạy build + test vùng sẽ đụng và ghi số mốc (lệnh, exit code, pass/fail); đỏ thì dừng `blocked` và đề xuất `workflow-bugfix`. Các bước sau dịch sang 2–8; bước đo cũ đổi tên "Baseline hiệu năng" (Bước 3); Gate bước Tối ưu so build/test với số mốc Bước 1.
+- `workflow-performance` (workflows 3.6.3; backend 1.10.2 và frontend 1.12.2 đổi tham chiếu số bước) thêm Bước 1 Baseline build/test: session chính chạy build + test vùng sẽ đụng và ghi số mốc (lệnh, exit code, pass/fail); đỏ thì dừng `blocked` và đề xuất `workflow-bugfix`. Các bước sau dịch sang 2–8; bước đo cũ đổi tên "Baseline hiệu năng" (Bước 3); Gate bước Tối ưu so build/test với số mốc Bước 1.
 - Làm rõ yêu cầu chuyển về session chính (engineering 2.3.0): `engineering-spec-writing` hỏi từng câu, playback từng phần, đề xuất 2–3 hướng kèm khuyến nghị và đánh đổi, xếp cỡ việc (việc rõ và nhỏ, thay đổi nhỏ, dự án) và chạy builder check một lần trước checkpoint. Khi người dùng bỏ qua làm rõ, agent tự chọn hướng và ghi đó là quyết định của agent. `engineering-spec-analyst` chỉ ghi tài liệu, không hỏi người dùng.
 - `workflow-feature` (workflows 3.4.0) thêm Bước 2 Làm rõ & cỡ việc, Bước 3 Tài liệu và Bước 4 Plan trước khi implement; các bước sau dịch sang 5–9 (Implement, Test, Review, Tài liệu, Commit). Ba bước mới có checkpoint người duyệt.
 - `check-request.mjs` skips W10 for request folders dated before 2026-10-21 (`SPEC_SINCE`) and for folders without a date prefix, so

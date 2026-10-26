@@ -1,7 +1,7 @@
 {
   "backend": {
-    "version": "1.10.1",
-    "hash": "3a87466e4567792a585e371c52ddf533809aac22f53b6b689dadf885527092e3"
+    "version": "1.10.2",
+    "hash": "8efca1cf86c88d29a001e1379d9f138e65de6cde726c07c548b3ef49592fc855"
   },
   "core": {
     "version": "1.16.0",
@@ -16,15 +16,15 @@
     "hash": "03616ff48dbcd9a74c4ef3d5532a4e3b83025f9f0d533b03871dcb3bbc67ae41"
   },
   "frontend": {
-    "version": "1.12.1",
-    "hash": "352968d24e1223221447a902959d2de30cb87de4a027d4b2a03746ae3f6fa9bf"
+    "version": "1.12.2",
+    "hash": "5fbbcffec81a63f1fc3d80eea062935dac482709e6d41c5acc167d296be31f28"
   },
   "ops": {
     "version": "2.0.4",
     "hash": "b759fd6753c663812e05fc194915f1e655c2e2b20e34e613ff1061630cd2a521"
   },
   "workflows": {
-    "version": "3.6.2",
-    "hash": "4985842fc0cb9330d3b2c5a653d9ec78f5af659ec36bbf7a11be1d1e552eb5df"
+    "version": "3.6.3",
+    "hash": "f9d01f7b7c5426fda872bade753940d329f2dbc29284576cef0920f452197b85"
   }
 }

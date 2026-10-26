@@ -40,12 +40,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả vấn đề hiệu năng của người dùng
-- **Hành động:** chạy build và test của vùng sẽ đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+- **Hành động:** chạy build và test theo lệnh của project, phạm vi là suite của project hoặc phần liên quan đến luồng
+  người dùng mô tả (vùng đụng chỉ chốt được ở Bước 4); ghi số mốc (lệnh, exit code, số test
   pass/fail) làm baseline cho các bước sau — Gate bước Tối ưu so với số mốc này.
 - **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
-- **Gate:** build xanh; test của vùng sẽ đụng xanh, số mốc đã ghi.
-- **Khi fail:** build đỏ hoặc test đỏ trong vùng sẽ đụng → dừng `blocked`, báo người dùng và đề xuất
+- **Gate:** build xanh; test trong phạm vi đã chạy xanh, số mốc đã ghi.
+- **Khi fail:** build đỏ hoặc test đỏ trong phạm vi đã chạy → dừng `blocked`, báo người dùng và đề xuất
   `workflow-bugfix` trước; không tối ưu trên nền đỏ, không sửa lẫn hai việc.
 - **Evidence:** lệnh build/test + exit code + số liệu pass/fail.
 
@@ -136,7 +137,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** code đã tối ưu, build/test xanh so với số mốc Bước 1.
 - **Gate:** build/test xanh, không kém số mốc Bước 1 (cùng lệnh; không thêm test đỏ so với số mốc); so với trạng thái ghi lại ở đầu bước (`git status --porcelain`), file thay đổi hoặc
   mới trong bước (`git diff --name-only` và `git ls-files --others --exclude-standard`) ⊆ danh sách file của Bước
-  3 và không chứa file test/fixture/snapshot/mock; file test đã bẩn trong mốc (nếu có) không đổi nội dung
+  4 và không chứa file test/fixture/snapshot/mock; file test đã bẩn trong mốc (nếu có) không đổi nội dung
   (`git hash-object` trước/sau).
 - **Khi fail:** agent trả `blocked` → người dùng mở rộng danh sách (ghi bổ sung vào Đầu ra Bước 4) → gọi lại;
   build/test đỏ → sửa hoặc revert thay đổi, không giữ thay đổi đỏ; diff lệch danh sách → revert phần lệch, không

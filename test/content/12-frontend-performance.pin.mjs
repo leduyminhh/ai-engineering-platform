@@ -127,7 +127,7 @@ export default async function run({ ok, ctx }) {
       'workflow-performance Bước 4: output build profile (dist-profile/) xoá sau khi profile hoặc .gitignore, nếu không thì blocked');
     ok(field23(fS3.body, 'Gate').includes('assets-baseline.txt') && field23(fS5.body, 'Gate').includes('assets-baseline.txt')
       && field23(fS5.body, 'Evidence').includes('assets-baseline.txt'),
-      'workflow-performance Bước 4 và 5: hash assets-baseline.txt (FE) nằm trong Gate/Evidence');
+      'workflow-performance Bước 4 và 6: hash assets-baseline.txt (FE) nằm trong Gate/Evidence');
     ok(field23(fS2.body, 'Evidence').includes('giá trị hash') && field23(fS2.body, 'Evidence').includes('không có thẩm quyền'),
       'workflow-performance Bước 3: session chính ghi GIÁ TRỊ hash vào Evidence; file hashes chỉ là bản sao tiện lợi, không có thẩm quyền');
     for (const [n, s] of [[3, fS2], [4, fS3], [6, fS5]]) {
@@ -137,7 +137,7 @@ export default async function run({ ok, ctx }) {
     ok(field23(fS2.body, 'Hành động').includes('phía kia') && field23(fS2.body, 'Khi fail').includes('phía kia'),
       'workflow-performance Bước 3: agent chỉ tự đối chiếu phía mình, không revert file của phía kia');
     ok(field23(fS2.body, 'Khi fail').includes('đo lại từng phía tuần tự') && field23(fS5.body, 'Khi fail').includes('đo lại từng phía tuần tự'),
-      'workflow-performance Bước 3 và 5: nhiễu do hai pha đo chồng nhau trên cùng máy → đo lại từng phía tuần tự');
+      'workflow-performance Bước 3 và 6: nhiễu do hai pha đo chồng nhau trên cùng máy → đo lại từng phía tuần tự');
     ok(step23(pf23, 4).checkpoint && step23(pf23, 8).checkpoint && parseSteps(pf23?.body ?? '').length === 8,
       'workflow-performance: 8 bước, ⏸ ở Bước 4 và 8');
     ok(pf23 && ['backend-performance-analyst', 'frontend-performance-analyst', 'backend-fixer', 'frontend-fixer', 'backend-reviewer', 'frontend-reviewer']

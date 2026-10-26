@@ -25,7 +25,7 @@ Không để trống, không ghi "như cũ".
 | Số lần lặp | ≥ 3 | Mỗi lần chạy lại từ cùng trạng thái cache |
 | Công cụ + phiên bản | Lighthouse, Chrome, Node + phiên bản thật (lệnh in version) | Không ghi phiên bản đoán; lấy từ output lệnh |
 | Ngưỡng độ lệch | 10% giữa các lần (mặc định) cho median LCP/TBT | Project ghi đè tại đây nếu máy nhiễu hơn/ít hơn |
-| Config tool đo | file config ngoài `perf/`/`bench/` người dùng đã duyệt được đổi (vd `package.json` script đo, `.gitignore`); không có → ghi "không có" | Gate diff Bước 3/4/5 so với danh sách này; file ngoài danh sách → revert, không nhận |
+| Config tool đo | file config ngoài `perf/`/`bench/` người dùng đã duyệt được đổi (vd `package.json` script đo, `.gitignore`); không có → ghi "không có" | Gate diff Bước 3/4/6 so với danh sách này; file ngoài danh sách → revert, không nhận |
 
 Bảng + script đo chốt ở cuối Bước 3. Artifact của Bước 3: script đo, bảng điều kiện, `assets-baseline.txt`
 (`serve-production-build.md`) và các file ở hàng Config tool đo. **Session chính** tự chạy `git hash-object` cho từng artifact đó và ghi các giá trị hash vào Evidence/report

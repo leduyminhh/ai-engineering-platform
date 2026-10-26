@@ -644,6 +644,8 @@ export default async function run({ ok, ctx }) {
     ok(/build xanh/.test(field(1, 'Gate')) && /blocked/.test(field(1, 'Khi fail')) && /workflow-bugfix/.test(field(1, 'Khi fail')),
       'AC6.3: Bước 1 Gate build xanh; đỏ → dừng blocked, đề xuất workflow-bugfix');
     ok(/Bước 1/.test(field(5, 'Gate')) && /số mốc/.test(field(5, 'Gate')), 'AC6.3: Gate bước Tối ưu so build/test với số mốc Bước 1');
+    ok(/danh sách file của Bước 4/.test(field(5, 'Gate')) && !/danh sách file của Bước 3/.test(field(5, 'Gate')), 'AC6.3: Gate Bước 5 so diff với danh sách file của Bước 4 (Profile)');
+    ok(/suite của project/.test(field(1, 'Hành động')) && /Bước 4/.test(field(1, 'Hành động')), 'AC6.3: Bước 1 nói rõ phạm vi lệnh test (suite project hoặc phần liên quan luồng, vùng đụng chốt ở Bước 4)');
     ok(/Baseline build\/test[^\n]*Bước 1/.test(wf.split('## Definition of Done')[1].split('## Report cuối')[0]), 'AC6.3: DoD có dòng baseline build/test — evidence Bước 1');
     const cp = wf.split('## Checkpoint')[1].split('## Xử lý lỗi')[0];
     ok(cp.includes('| 4 |') && cp.includes('| 8 |') && !cp.includes('| 3 |') && !cp.includes('| 7 |'), 'AC6.3: Checkpoint ở Bước 4 (Profile) và Bước 8 (Commit)');
