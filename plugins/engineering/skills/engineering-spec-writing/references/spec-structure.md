@@ -62,6 +62,23 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
   mô tả *điểm chạm* (đọc/ghi cái gì), contract giữ *chi tiết trường/endpoint* — tránh trùng lặp, tránh drift.
 - Khi spec và contract lệch nhau: nêu rõ là câu hỏi mở để con người chốt, không tự sửa contract.
 
+## Điền `design.md` (cỡ dự án)
+
+`design.md` là tài liệu mà một người xây giỏi đọc xong có thể lập plan mà không phải hỏi lại. Cỡ "thay đổi nhỏ" không có
+`design.md` (xem [SKILL.md](../SKILL.md) bước 6). Khung theo template design của `artifact-templates`; nội dung từng mục:
+
+- **Vấn đề và lý do** — ý định và vì sao làm, goal/non-goal.
+- **Quyết định đã chốt** — chỉ những gì người dùng đã đồng ý trong hội thoại (hoặc duyệt ở checkpoint), gồm hướng đã
+  chọn trong 2–3 hướng đã đề xuất kèm đánh đổi và lý do khuyến nghị.
+- **Quyết định của agent** — mọi lựa chọn agent tự đưa ra (người dùng bỏ qua phần hỏi, hoặc câu nhỏ từ builder
+  check), mỗi dòng kèm lý do ngắn. Không trộn vào "Quyết định đã chốt"; duyệt design là duyệt cả các quyết định này.
+- **Ngoài phạm vi và anti-goal** — điều chủ đích không làm và điều tuyệt đối không được làm (vd không đổi API công khai).
+- **Ràng buộc** — giới hạn kỹ thuật/thời gian người xây phải tuân.
+- **Để builder quyết** — chi tiết triển khai giao cho người xây (tên hàm, cấu trúc nội bộ…) để builder check bỏ qua.
+- **Rủi ro và câu hỏi mở** — kèm **[giả định]** chưa xác nhận.
+
+Quyết định lớn (khó đảo ngược, ảnh hưởng nhiều nơi) → ADR qua `engineering-adr`, `design.md` chỉ link.
+
 ## Map vào `_TEMPLATE` (requirement.md + design.md)
 
 **Project đã có `docs/requests/_TEMPLATE/` cũ (ví dụ `plan.md` kiểu Phase từ `aip init --full` bản trước):**

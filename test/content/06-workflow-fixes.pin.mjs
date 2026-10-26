@@ -45,9 +45,9 @@ export default async function run({ ok, ctx }) {
       'S5: engineering-quality-gate trỏ sang engineering-convention-enforce');
     // S6: thủ tục ghi ADR nằm ở engineering-adr; spec-writing chỉ trỏ sang, không lặp lại thủ tục.
     const specSkill = engRead('engineering-spec-writing/SKILL.md');
-    const specStep4 = (specSkill.split('4. **Ghi ADR')[1] ?? '').split('5. **Verify')[0];
+    const specStep4 = (specSkill.split('**Ghi ADR')[1] ?? '').split('**Builder check')[0];
     ok(specStep4.includes('engineering-adr') && !specStep4.includes('<số kế tiếp>'),
-      'S6: engineering-spec-writing bước 4 trỏ sang engineering-adr, không còn thủ tục đánh số ADR');
+      'S6: engineering-spec-writing bước Ghi ADR trỏ sang engineering-adr, không còn thủ tục đánh số ADR');
 
     // WF10: orchestrator từng không chỉ đường tới skill không có workflow (chuỗi db-change → api → feature đi theo workflow đã gỡ).
     const orch16 = wf16('workflow-orchestrator');
