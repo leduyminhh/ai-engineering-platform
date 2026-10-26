@@ -1,4 +1,4 @@
-// Pin: chuẩn tài liệu superpowers (docs/requests/2026-10-20-superpowers-docs-standard). Task 1: script check-request.mjs (AC4.1–AC4.3). Task 2: baseline (AC1.1–AC1.4). Task 3: skill engineering (AC3.1, AC3.3). Task 4: workflow (AC3.2).
+// Pin: chuẩn tài liệu superpowers (docs/requests/2026-10-20-superpowers-docs-standard). Task 1: script check-request.mjs (AC4.1–AC4.3). Task 2: baseline (AC1.1–AC1.4). Task 3: skill engineering (AC3.1, AC3.3).
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, pathToFileURL } = ctx;
 
@@ -107,24 +107,5 @@ export default async function run({ ok, ctx }) {
     ok(r(path.join(TB, 'references', 'analysis.md')).includes('dùng lại nguyên ID'), 'AC3.3: dùng lại ID AC của nguồn');
     ok(/không có `requirement\.md`.*`design\.md`/s.test(r(path.join(TB, 'SKILL.md'))),
       'AC3.3: đọc AC từ design.md khi không có requirement.md');
-  }
-
-  // AC3.2: workflow feature/bugfix/orchestrator nêu nhánh superpowers (D1) trong điều kiện tiên quyết
-  for (const wf of ['feature', 'bugfix', 'orchestrator']) {
-    const t = fs.readFileSync(path.join(REPO_ROOT, 'workflows', wf, 'WORKFLOW.md'), 'utf8');
-    const i = t.indexOf('## Điều kiện tiên quyết');
-    const pre = t.slice(i, t.indexOf('\n## ', i + 5));
-    ok(pre.includes('superpowers:brainstorming') && pre.includes('docs/requests/') && pre.includes('trừ khi người dùng chỉ định rõ'),
-      `AC3.2: ${wf} nêu nhánh superpowers (định nghĩa "đã cài" + ngoại lệ người dùng chỉ định) trong điều kiện tiên quyết`);
-  }
-  // AC3.2: orchestrator thực sự route sang superpowers ở Bước 1 (bảng skill trực tiếp xét trước Registry + ngoại lệ tie-break), không chỉ nêu ở điều kiện tiên quyết
-  {
-    const o = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'orchestrator', 'WORKFLOW.md'), 'utf8').replace(/\s+/g, ' ');
-    const direct = o.split('## Yêu cầu chạy trực tiếp bằng skill')[1]?.split('## Các bước')[0] ?? '';
-    const step1 = o.split('### Bước 1')[1]?.split('### Bước 2')[0] ?? '';
-    ok(/\| [^|]*xét TRƯỚC Registry[^|]*\| `superpowers:brainstorming`/.test(direct) && direct.includes('danh sách skill khả dụng'),
-      'AC3.2: bảng skill trực tiếp có dòng superpowers:brainstorming (xét trước Registry, điều kiện đã cài)');
-    ok(step1.includes('dòng `superpowers:brainstorming` ở mục "Yêu cầu chạy trực tiếp bằng skill"') && step1.includes('ngoài tín hiệu sự cố và dòng `superpowers:brainstorming`'),
-      'AC3.2: Bước 1 xét dòng superpowers trước Registry và loại khỏi tie-break ưu tiên Registry');
   }
 }

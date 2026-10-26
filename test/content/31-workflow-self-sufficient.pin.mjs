@@ -552,7 +552,6 @@ export default async function run({ ok, ctx }) {
       ok(has(/lệch root cause[^|]*\|[^|]*Bước 3/), `AC5.5: ${name} — hàng test đỏ lệch root cause → Bước 3`);
       ok(has(/race|timing/) && has(/chờ theo điều kiện/), `AC5.1: ${name} — hàng bug race/timing chờ theo điều kiện`);
     }
-    ok(wf.includes('superpowers:brainstorming'), 'AC5.1: dòng Superpowers ở Điều kiện tiên quyết còn nguyên (Task 23 xử lý)');
   }
 
   // AC5.3: *-fix + *-fixer — một thay đổi mỗi lượt, revert bản sửa hỏng trước khi thử lại, báo số lần thử + giả thuyết; danh sách che triệu chứng và F1–F5 giữ nguyên
@@ -663,5 +662,14 @@ export default async function run({ ok, ctx }) {
     const back = g.steps.flatMap((x) => (x.on_fail || []).filter((f) => idx(f.to) !== -1 && idx(f.to) <= idx(x.id)));
     ok(back.length > 0 && back.every((f) => f.max_attempts === 2), 'AC6.3: mọi cạnh lùi của graph performance giữ max_attempts 2');
     ok(wfLib.checkGraph(g).length === 0 && wfLib.checkGraphAgainstBody(g, wf).length === 0, 'AC6.3: graph performance qua checkGraph và checkGraphAgainstBody');
+  }
+
+  // AC7.1: workflows/ không còn nhánh superpowers (grep toàn repo là việc của Task 25)
+  {
+    const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+    const files = walk(path.join(REPO_ROOT, 'workflows')).filter((f) => f.endsWith('.md'));
+    ok(files.length >= 5, 'AC7.1: tìm thấy các WORKFLOW.md để kiểm');
+    const hits = files.filter((f) => /superpowers/i.test(fs.readFileSync(f, 'utf8')));
+    ok(hits.length === 0, 'AC7.1: không file workflows/**/*.md nào chứa superpowers' + (hits.length ? ' — ' + hits.join(', ') : ''));
   }
 }

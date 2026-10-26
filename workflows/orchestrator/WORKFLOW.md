@@ -26,11 +26,6 @@ invoke: per-request
 - Artifact phải có sẵn: không có, ngoài chính yêu cầu của người dùng.
 - Baseline: không yêu cầu build/test xanh trước — đó là điều kiện của workflow con được chọn, không phải của
   orchestrator.
-- Routing superpowers: yêu cầu feature/bugfix mà đã cài superpowers (`superpowers:brainstorming` có trong danh
-  sách skill khả dụng) thì điều hướng sang luồng `superpowers:brainstorming` → `writing-plans` →
-  `subagent-driven-development` (docs ghi vào `docs/requests/<ngày>-<slug>/` theo baseline `AGENTS.md`), không
-  chọn `workflow-feature`/`workflow-bugfix`, trừ khi người dùng chỉ định rõ workflow này; hai workflow chỉ chạy
-  khi chưa cài superpowers hoặc khi được chỉ định rõ.
 
 Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay.
 
@@ -54,7 +49,6 @@ chọn workflow: chỉ nêu skill cần gọi và kết thúc (không phải l�
 | Tín hiệu | Skill |
 |---|---|
 | "prod down", "sự cố", "alert", "incident" (xét TRƯỚC Registry) | `ops-incident-troubleshooting` (plugin `ops`) |
-| Tín hiệu feature/bugfix (như cột `Tín hiệu` của `workflow-feature`/`workflow-bugfix`) VÀ `superpowers:brainstorming` có trong danh sách skill khả dụng, người dùng không chỉ định rõ workflow (xét TRƯỚC Registry, sau tín hiệu sự cố) | `superpowers:brainstorming` — nêu luồng `brainstorming` → `writing-plans` → `subagent-driven-development` rồi dừng ở Bước 1 (skill ngoài bộ này, không cần cài thêm bằng `aip`) |
 | "review", "PR#", "diff" | `backend-code-review` / `frontend-code-review` theo phía của diff; PR fullstack gọi cả hai |
 | "refactor", "tái cấu trúc" | `backend-refactor` / `frontend-refactor`; "đổi kiến trúc" → `backend-migrate-architecture` / `frontend-migrate-architecture` |
 | "viết test", "tăng coverage", "test strategy", "kiểm thử" | `backend-testing` / `frontend-testing`; luồng UI đầu-cuối → `frontend-e2e-testing` |
@@ -76,11 +70,11 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả yêu cầu của người dùng
-- **Hành động:** tín hiệu sự cố production và dòng `superpowers:brainstorming` ở mục "Yêu cầu chạy trực tiếp bằng skill"
-  được xét TRƯỚC Registry (sự cố trước); khớp thì nêu skill và dừng. Sau đó so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; loại dòng mà
+- **Hành động:** tín hiệu sự cố production ở mục "Yêu cầu chạy trực tiếp bằng skill" được xét TRƯỚC Registry;
+  khớp thì nêu skill và dừng. Sau đó so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; loại dòng mà
   yêu cầu rơi vào cột `Không dùng khi` (chuyển sang workflow cột đó chỉ tới); nếu vẫn khớp nhiều dòng, áp dụng **Thứ tự ưu tiên**
   để rút về tối đa 2 ứng viên. Yêu cầu khớp mục "Yêu cầu chạy trực tiếp bằng skill"
-  thì nêu skill cần gọi và dừng; khớp cả Registry lẫn mục đó (ngoài tín hiệu sự cố và dòng `superpowers:brainstorming`, vd "review bảo mật PR#12")
+  thì nêu skill cần gọi và dừng; khớp cả Registry lẫn mục đó (ngoài tín hiệu sự cố, vd "review bảo mật PR#12")
   thì ưu tiên workflow trong Registry vì workflow đã gồm năng lực của skill.
 - **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry và mục "Yêu cầu chạy trực tiếp bằng skill"; không
   đoán khi tín hiệu quá yếu — nêu rõ vì sao chọn.
