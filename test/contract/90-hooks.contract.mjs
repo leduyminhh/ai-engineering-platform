@@ -433,9 +433,9 @@ export default async function run({ ok, ctx }) {
       const m = new Map(Object.entries(files).map(([k, v]) => [abs(k), v]));
       return {
         readFile: (p) => { const f = m.get(p); if (!f) throw new Error('ENOENT'); if (f.throws) throw new Error('EIO'); return f.text; },
-        existsSync: (p) => m.has(p) || [...m.keys()].some((k) => path.dirname(k) === p || path.dirname(path.dirname(k)) === p),
+        existsSync: (p) => m.has(p) || [...m.keys()].some((k) => k.startsWith(p + path.sep)),
         statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
-        readdirSync: (p) => [...new Set([...m.keys()].filter((k) => path.dirname(path.dirname(k)) === p).map((k) => path.basename(path.dirname(k))))],
+        readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => nowMs,
         loadConfig: () => cfg,
       };
@@ -488,6 +488,47 @@ export default async function run({ ok, ctx }) {
     ok(start(one, { source: 'resume', extra: cold, cfg: { resumeWarn: false } }) === null, 'AC3.2: resumeWarn false → null');
     ok(!String(start({}, { source: 'resume', extra: { prompt_cache_likely_expired: true } })?.additionalContext).match(/undefined|NaN/),
       'AC3.2: thiếu số liệu thì bỏ phần đó, không bịa');
+  }
+  // SessionStart nạp đuôi ledger của plan đang chạy (D6), sau phần handoff
+  {
+    const { pathToFileURL, CORE_DIR } = ctx;
+    const ss = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'session-start.mjs')).href);
+    const HOUR = 3600000;
+    const T0 = Date.UTC(2026, 0, 10);
+    const abs = (p) => path.resolve('/repo', p);
+    const fake = (files, cfg = null) => {
+      const m = new Map(Object.entries(files).map(([k, v]) => [abs(k), v]));
+      return {
+        readFile: (p) => { const f = m.get(p); if (!f) throw new Error('ENOENT'); if (f.throws) throw new Error('EIO'); return f.text; },
+        existsSync: (p) => m.has(p) || [...m.keys()].some((k) => k.startsWith(p + path.sep)),
+        statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
+        readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
+        now: () => T0 + HOUR,
+        loadConfig: () => cfg,
+      };
+    };
+    const start = (files, cfg = null) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd: '/repo' }, fake(files, cfg));
+    const LEDGER = 'docs/requests/2026-01-01-a/.sdd/progress.md';
+    const handoff = { 'docs/requests/2026-01-01-a/handoff.md': { text: '# Bàn giao\nNhánh: feature/x. Việc đang làm: hoàn thiện hook SessionStart, còn lại bước đăng ký event và test. HANDOFF', mtime: T0 } };
+    const open = { [LEDGER]: { text: 'Task 1: complete\nTask 2: dang lam\n', mtime: T0 } };
+
+    ok(start(open)?.additionalContext.startsWith('Ledger (docs/requests/2026-01-01-a/.sdd/progress.md):') && start(open).additionalContext.includes('Task 2'),
+      'AC3.3: ledger chưa xong, không có handoff → chỉ nạp ledger');
+    const both = start({ ...handoff, ...open })?.additionalContext || '';
+    ok(both.includes('HANDOFF') && both.indexOf('Ledger (') > both.indexOf('HANDOFF'), 'AC3.3: ledger nối sau handoff');
+    ok(start({ [LEDGER]: { text: 'Task 1: complete\nPlan: complete\n', mtime: T0 } }) === null, 'AC3.3: ledger có Plan: complete → không nạp');
+    ok(start(open, { ledgerInject: false }) === null && start({ ...handoff, ...open }, { ledgerInject: false })?.additionalContext.includes('Ledger') === false,
+      'AC3.3: ledgerInject false → không nạp ledger');
+    const bad = start({ ...handoff, [LEDGER]: { throws: true, mtime: T0 } })?.additionalContext || '';
+    ok(bad.includes('HANDOFF') && !bad.includes('Ledger'), 'AC3.3: ledger không đọc được → bỏ qua, vẫn trả handoff');
+    const big = start({ [LEDGER]: { text: 'a'.repeat(5000) + 'CUOI', mtime: T0 } })?.additionalContext || '';
+    ok(big.length <= 2000 && big.endsWith('CUOI'), 'AC3.3: phần ledger ≤ 2000 ký tự và giữ phần đuôi');
+    const newest = start({
+      [LEDGER]: { text: 'CU', mtime: T0 },
+      'docs/requests/2026-02-02-z/.sdd/progress.md': { text: 'MOI', mtime: T0 + 1 },
+      'docs/requests/2026-03-03-y/.sdd/progress.md': { text: 'Plan: complete\n', mtime: T0 + 2 },
+    })?.additionalContext || '';
+    ok(newest.includes('MOI') && !newest.includes('CU'), 'AC3.3: chọn ledger chưa xong có mtime mới nhất, bỏ qua ledger đã xong mới hơn');
   }
   // Công tắc allowEnvFiles: mở .env theo project, khoá/credentials vẫn bị chặn
   {

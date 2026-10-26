@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// SessionStart: nạp handoff.md khi mở phiên mới (startup/clear/compact) và cảnh báo khi resume/fork phiên đã nguội cache.
+// SessionStart: nạp handoff.md và đuôi ledger của plan đang chạy khi mở phiên mới (startup/clear/compact) và cảnh báo khi resume/fork phiên đã nguội cache.
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -9,6 +9,9 @@ import { readGateConfig } from './gate-config.mjs';
 const MAX_CHARS = 9000;
 // Chặn file rỗng hoặc chỉ còn khung heading của template.
 const MIN_CHARS = 80;
+// Giới hạn riêng của phần ledger, không trừ vào MAX_CHARS của handoff.
+const LEDGER_MAX_CHARS = 2000;
+const LEDGER_DONE_RE = /^Plan: complete\s*$/m;
 const DEFAULT_MAX_AGE_HOURS = 24;
 const HOUR_MS = 3600000;
 
@@ -50,6 +53,28 @@ function usableHandoff(cwd, cfg, d) {
   return substantive(text).length < MIN_CHARS ? null : { file, text };
 }
 
+// Ledger chưa xong có mtime mới nhất; file hỏng hoặc đã `Plan: complete` bị bỏ qua. Chép nhỏ thay vì import
+// skill plan-execution để hook tự đứng, không phụ thuộc bố cục thư mục của bản build.
+function ledgerSection(cwd, d) {
+  const reqDir = path.join(cwd, 'docs', 'requests');
+  const cands = [];
+  for (const name of d.readdirSync(reqDir)) {
+    try {
+      const p = path.join(reqDir, String(name), '.sdd', 'progress.md');
+      if (d.existsSync(p)) cands.push({ p, t: d.statSync(p).mtimeMs });
+    } catch { /* mục không đọc được: bỏ qua */ }
+  }
+  for (const { p } of cands.sort((a, b) => b.t - a.t)) {
+    try {
+      const text = String(d.readFile(p)).replace(/^﻿/, '');
+      if (LEDGER_DONE_RE.test(text)) continue;
+      const head = `Ledger (${path.relative(cwd, p).split(path.sep).join('/')}):\n`;
+      return head + text.slice(Math.max(0, text.length - (LEDGER_MAX_CHARS - head.length)));
+    } catch { /* ledger hỏng: thử ledger kế tiếp */ }
+  }
+  return null;
+}
+
 function resumeLine(input, handoff, cwd) {
   const parts = ['Phiên nguội: mở lại tốn'];
   const tokens = input.context_tokens;
@@ -73,12 +98,17 @@ export function decide(input, deps = {}) {
       return { additionalContext: resumeLine(input, (() => { try { return usableHandoff(cwd, cfg, d)?.file; } catch { return null; } })(), cwd) };
     }
     if (source !== 'startup' && source !== 'clear' && source !== 'compact') return null;
-    if (cfg?.handoffInject === false) return null;
-    const h = usableHandoff(cwd, cfg, d);
-    if (!h) return null;
-    const { file, text } = h;
-    const rel = path.relative(cwd, file).split(path.sep).join('/');
-    return { additionalContext: `Handoff của phiên trước (${rel}):\n${text}`.slice(0, MAX_CHARS) };
+    const parts = [];
+    if (cfg?.handoffInject !== false) {
+      try {
+        const h = usableHandoff(cwd, cfg, d);
+        if (h) parts.push(`Handoff của phiên trước (${path.relative(cwd, h.file).split(path.sep).join('/')}):\n${h.text}`.slice(0, MAX_CHARS));
+      } catch { /* handoff hỏng không được chặn ledger */ }
+    }
+    if (cfg?.ledgerInject !== false) {
+      try { const l = ledgerSection(cwd, d); if (l) parts.push(l); } catch { /* ledger hỏng không được chặn handoff */ }
+    }
+    return parts.length ? { additionalContext: parts.join('\n\n') } : null;
   } catch { return null; }
 }
 
