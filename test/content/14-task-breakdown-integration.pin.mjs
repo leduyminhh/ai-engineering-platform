@@ -30,15 +30,15 @@ export default async function run({ ok, ctx }) {
   {
     const wf = wfText('feature');
     const step = (n) => wf.split(/^### Bước /m).find((s) => s.startsWith(`${n} `)) || '';
-    ok(wf.includes('engineering-task-breakdown') && step(2).includes('`tasks.md`'),
-      'workflow-feature: Bước 2 tuỳ chọn tách task bằng engineering-task-breakdown');
+    ok(wf.includes('engineering-task-breakdown') && step(2).includes('`tasks.md`') && step(3).includes('`tasks.md`'),
+      'workflow-feature: Bước 2 hỏi tách task, Bước 3 ghi tasks.md bằng engineering-task-breakdown');
     ok(!wf.includes('không phân rã story/task chi tiết'), 'workflow-feature: bỏ câu cấm phân rã task');
-    ok(step(4).includes('`tasks.md`') && wf.includes('`FE-INT` → `frontend-data-integrator`'),
-      'workflow-feature: Bước 4 giao implementer theo từng task');
+    ok(step(5).includes('`tasks.md`') && wf.includes('`FE-INT` → `frontend-data-integrator`'),
+      'workflow-feature: Bước 5 giao implementer theo từng task');
     const featBody = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'WORKFLOW.md'), 'utf8');
-    ok(step(2).includes('`references/task-breakdown.md`') && step(4).includes('`references/task-breakdown.md`') && featBody.includes('`references/task-breakdown.md`'),
-      'workflow-feature: Bước 2 và Bước 4 trong WORKFLOW.md vẫn trỏ tới references/task-breakdown.md');
-    ok(/^### Bước 8 — Commit ⏸$/m.test(wf), 'workflow-feature: không đánh số lại bước');
+    ok(step(2).includes('`references/task-breakdown.md`') && step(3).includes('`references/task-breakdown.md`') && step(5).includes('`references/task-breakdown.md`') && featBody.includes('`references/task-breakdown.md`'),
+      'workflow-feature: Bước 2, 3 và 5 trong WORKFLOW.md vẫn trỏ tới references/task-breakdown.md');
+    ok(/^### Bước 9 — Commit ⏸$/m.test(wf), 'workflow-feature: Commit ⏸ là Bước 9 sau khi thêm làm rõ, tài liệu, plan');
     const ag = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'agents', 'engineering-spec-analyst.md'), 'utf8');
     ok(/^skills: "engineering-spec-writing,engineering-adr,engineering-diagram,engineering-task-breakdown"$/m.test(ag),
       'engineering-spec-analyst: skills có engineering-task-breakdown');

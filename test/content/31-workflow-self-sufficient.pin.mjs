@@ -126,4 +126,34 @@ export default async function run({ ok, ctx }) {
     ok(/status: blocked/.test(agent) && /questions\[\]/.test(agent), 'AC1.5: thiếu thông tin → trả status: blocked + questions[]');
     ok(/writeScope:\s*\n\s*- docs\/\*\*/.test(agentRaw), 'AC1.5: giữ writeScope docs/**');
   }
+
+  // AC1.1, AC1.3, AC1.4, AC2.2: workflow-feature Bước 1–4 mới (làm rõ ở session chính → tài liệu → plan)
+  {
+    const wfRaw = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n');
+    const flatW = (t) => t.replace(/\s+/g, ' ');
+    const secs = wfRaw.split(/^### Bước /m).slice(1).map((s) => ({ head: s.split('\n')[0], body: s }));
+    const heads = secs.slice(0, 4).map((s) => s.head).join('|');
+    ok(heads === '1 — Baseline build/test|2 — Làm rõ & cỡ việc ⏸|3 — Tài liệu ⏸|4 — Plan ⏸',
+      'AC1.1: workflow-feature 4 bước đầu là Baseline, Làm rõ & cỡ việc ⏸, Tài liệu ⏸, Plan ⏸');
+    ok(secs.length === 9 && secs[8].head === '9 — Commit ⏸', 'AC1.1: workflow-feature có 9 bước, Commit ⏸ ở Bước 9');
+    const field = (s, name) => flatW((s.body.split(`- **${name}:**`)[1] || '').split(/\n- \*\*/)[0]);
+    const doing2 = field(secs[1], 'Thực hiện');
+    ok(/session chính/.test(doing2) && doing2.includes('`engineering-spec-writing`'),
+      'AC1.1: Bước 2 do session chính chạy skill engineering-spec-writing');
+    ok(!/agent `engineering-spec-analyst`/.test(doing2), 'AC1.1: Bước 2 không giao agent hỏi người dùng');
+    const s3 = field(secs[2], 'Thực hiện') + ' ' + field(secs[2], 'Hành động');
+    ok(s3.includes('engineering-spec-analyst') && /builder check/.test(s3),
+      'AC1.3: Bước 3 spec-analyst ghi tài liệu, session chính chạy builder check');
+    ok(/design\.md/.test(s3) && /cỡ dự án/.test(s3), 'AC1.4: Bước 3 chỉ viết design.md khi cỡ dự án');
+    const s4 = secs[3].body;
+    ok(s4.includes('check-request.mjs') && s4.includes('`engineering-plan-writing`') && /thay đổi nhỏ/.test(s4) && /bỏ qua/.test(s4),
+      'AC2.2: Bước 4 theo engineering-plan-writing, chạy check-request.mjs, bỏ qua khi cỡ thay đổi nhỏ');
+    ok(/W9/.test(field(secs[3], 'Gate')), 'AC2.2: Gate Bước 4 cho phép riêng cảnh báo W9');
+    ok(secs[1].body.includes('data-db-migration') && secs[1].body.includes('ứng viên e2e'),
+      'AC1.1: Bước 2 giữ dừng khi đổi schema → data-db-migration và bảng ứng viên e2e');
+
+    const g = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'graph.json'), 'utf8'));
+    ok(g.steps.slice(0, 4).map((s) => s.id).join(',') === 'baseline,clarify,documents,plan', 'AC1.1: graph id bước 1–4 là baseline, clarify, documents, plan');
+    ok(g.steps.slice(1, 4).every((s) => s.gate.type === 'human' && s.gate.reject === 'ask_user'), 'AC1.1: graph bước 2–4 gate human, reject → ask_user');
+  }
 }

@@ -8,57 +8,75 @@
       "n": 1,
       "title": "Baseline build/test",
       "run": { "session": true },
-      "next": "requirements",
+      "next": "clarify",
       "on_fail": [
         { "to": "blocked", "when": "baseline đỏ → dừng blocked, đề xuất workflow-bugfix" }
       ],
       "gate": { "type": "auto" }
     },
     {
-      "id": "requirements",
+      "id": "clarify",
       "n": 2,
-      "title": "Phân tích yêu cầu & phạm vi",
-      "run": { "agents": ["engineering-spec-analyst"] },
-      "next": "design-contract",
+      "title": "Làm rõ & cỡ việc",
+      "run": { "session": true, "skills": ["engineering-spec-writing"] },
+      "next": "documents",
       "on_fail": [
-        { "to": "ask_user", "when": "acceptance criteria mơ hồ/không đo được → hỏi lại người dùng" },
+        { "to": "ask_user", "when": "thông tin còn mơ hồ/không đo được sau khi hỏi → hỏi lại người dùng, không tự suy diễn tiếp" },
         { "to": "blocked", "when": "phạm vi có đổi schema → dừng, đề xuất skill data-db-migration" }
       ],
       "gate": {
         "type": "human",
-        "review": "Acceptance criteria + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có)",
-        "approve": "design-contract",
+        "review": "Hướng đã chọn (kèm hướng bị loại) + cỡ việc + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có) + quyết định tách task",
+        "approve": "documents",
         "reject": "ask_user"
       }
     },
     {
-      "id": "design-contract",
+      "id": "documents",
       "n": 3,
-      "title": "Thiết kế & contract",
+      "title": "Tài liệu",
       "run": {
+        "session": true,
         "agents": [
-          { "id": "backend-implementer", "when": "chỉ khi phạm vi có API" },
-          { "id": "engineering-spec-analyst", "when": "chỉ khi ảnh hưởng kiến trúc" }
+          "engineering-spec-analyst",
+          { "id": "backend-implementer", "when": "chỉ khi phạm vi có API", "after": "engineering-spec-analyst" }
         ],
         "skills": [
           { "id": "backend-api-contract", "when": "chỉ khi phạm vi có API" }
-        ],
-        "parallel": true
+        ]
       },
-      "next": "implement",
+      "next": "plan",
       "on_fail": [
-        { "to": "ask_user", "when": "contract xung đột với hệ thống hiện có → dừng, hỏi lại người dùng cách xử lý breaking change" }
+        { "to": "ask_user", "when": "AC không đo được, agent blocked mà session chính không tự trả lời được, hoặc contract xung đột → hỏi người dùng" },
+        { "to": "clarify", "when": "tài liệu cho thấy hướng hoặc cỡ việc đã duyệt sai → quay lại Bước 2", "max_attempts": 2 }
       ],
       "gate": {
         "type": "human",
-        "review": "Contract OpenAPI (nếu có) hoặc ghi chú \"không có API\"; ADR (nếu có)",
+        "review": "requirement.md (+ design.md cỡ dự án) + kết quả builder check; contract OpenAPI (nếu có) hoặc ghi chú \"không có API\"; ADR (nếu có)",
+        "approve": "plan",
+        "reject": "ask_user"
+      }
+    },
+    {
+      "id": "plan",
+      "n": 4,
+      "title": "Plan",
+      "run": { "session": true, "skills": ["engineering-plan-writing"] },
+      "next": "implement",
+      "on_fail": [
+        { "to": "documents", "when": "check-request.mjs còn cảnh báo ngoài W9 mà lỗi nằm ở tài liệu → quay lại Bước 3", "max_attempts": 2 },
+        { "to": "ask_user", "when": "plan còn điểm mơ hồ về phạm vi hay thứ tự → hỏi người dùng ở checkpoint" }
+      ],
+      "gate": {
+        "type": "human",
+        "review": "plan.md + output check-request.mjs (cỡ dự án; cỡ thay đổi nhỏ bỏ qua bước này)",
         "approve": "implement",
         "reject": "ask_user"
       }
     },
     {
       "id": "implement",
-      "n": 4,
+      "n": 5,
       "title": "Implement",
       "run": {
         "agents": [
@@ -70,14 +88,14 @@
       },
       "next": "test",
       "on_fail": [
-        { "to": "design-contract", "when": "contract lệch khi nối data → quay lại Bước 3", "max_attempts": 2 },
+        { "to": "documents", "when": "contract lệch khi nối data → quay lại Bước 3", "max_attempts": 2 },
         { "to": "ask_user", "when": "integrator trả blocked vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại" }
       ],
       "gate": { "type": "auto" }
     },
     {
       "id": "test",
-      "n": 5,
+      "n": 6,
       "title": "Test",
       "run": {
         "agents": [
@@ -89,13 +107,13 @@
       },
       "next": "review",
       "on_fail": [
-        { "to": "implement", "when": "test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test)", "max_attempts": 2 }
+        { "to": "implement", "when": "test đỏ do lỗi code thật → quay lại Bước 5 sửa code (không xoá/nới test)", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },
     {
       "id": "review",
-      "n": 6,
+      "n": 7,
       "title": "Review",
       "run": {
         "agents": ["backend-reviewer", "frontend-reviewer", "engineering-quality-auditor"],
@@ -103,15 +121,15 @@
       },
       "next": "docs",
       "on_fail": [
-        { "to": "implement", "when": "còn finding blocker, hoặc drift contract↔code → quay lại Bước 4 sửa code", "max_attempts": 2 },
-        { "to": "test", "when": "còn finding blocker → quay lại Bước 5 sửa test", "max_attempts": 2 },
-        { "to": "design-contract", "when": "drift contract↔code → quay lại Bước 3 sửa contract", "max_attempts": 2 }
+        { "to": "implement", "when": "còn finding blocker, hoặc drift contract↔code → quay lại Bước 5 sửa code", "max_attempts": 2 },
+        { "to": "test", "when": "còn finding blocker → quay lại Bước 6 sửa test", "max_attempts": 2 },
+        { "to": "documents", "when": "drift contract↔code → quay lại Bước 3 sửa contract", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },
     {
       "id": "docs",
-      "n": 7,
+      "n": 8,
       "title": "Tài liệu",
       "run": { "session": true },
       "next": "commit",
@@ -122,7 +140,7 @@
     },
     {
       "id": "commit",
-      "n": 8,
+      "n": 9,
       "title": "Commit",
       "run": { "skills": ["git-workflow"] },
       "next": "done",
