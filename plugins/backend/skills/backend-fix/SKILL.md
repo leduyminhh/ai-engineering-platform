@@ -36,7 +36,7 @@ KHÔNG dùng skill này khi: cần viết feature mới (→ `backend-implement`
 |---|---|---|
 | `bug` | failing test tái hiện bug (bugfix Bước 3) | test đó xanh |
 | `security` | regression test đỏ (security-review Bước 7) + finding đã chọn | test đó xanh; không che triệu chứng |
-| `performance` | giả thuyết bottleneck đã xác nhận + file/hàm (performance Bước 3); **không có test đỏ** | build/test hiện có xanh. Skill **không tự tuyên bố nhanh hơn** — số đo trước/sau là việc của Bước 5 (Benchmark) của workflow |
+| `performance` | giả thuyết bottleneck đã xác nhận + file/hàm (performance Bước 4); **không có test đỏ** | build/test hiện có xanh. Skill **không tự tuyên bố nhanh hơn** — số đo trước/sau là việc của Bước 6 (Benchmark) của workflow |
 
 **Oracle chấp nhận:** (a) test đỏ chạy được (mặc định bug/security); (b) khi quay lại từ bước review/re-scan:
 finding đã validate (`file:line`) do người dùng xác nhận, gate xanh = review/re-scan lại; (c) chế độ

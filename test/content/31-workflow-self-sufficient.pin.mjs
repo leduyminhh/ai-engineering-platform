@@ -627,4 +627,39 @@ export default async function run({ ok, ctx }) {
       ok(row('backend-reviewer').includes('WF06') && row('frontend-reviewer').includes('WF06'), `AC6.2: ${f} — bảng agent nêu WF06 cho hai reviewer`);
     }
   }
+
+  // AC6.3: workflow-performance có Bước 1 baseline build/test (số mốc) trước khi tối ưu; các bước sau dịch +1
+  {
+    const pdir = path.join(REPO_ROOT, 'workflows', 'performance');
+    const wf = fs.readFileSync(path.join(pdir, 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n');
+    const matrix = fs.readFileSync(path.join(pdir, 'references', 'error-matrix.md'), 'utf8').replace(/\r\n/g, '\n');
+    const flatS = (t) => t.replace(/\s+/g, ' ');
+    const secs = wf.split(/^### Bước /m).slice(1).map((x) => ({ head: x.split('\n')[0], body: x }));
+    const field = (n, name) => flatS((secs[n - 1].body.split(`- **${name}:**`)[1] || '').split(/\n- \*\*/)[0]);
+    ok(secs.length === 8 && secs[0].head.includes('Baseline build/test') && secs[1].head.includes('Metric') && secs[2].head.includes('Baseline hiệu năng')
+      && secs[3].head.includes('Profile') && secs[4].head.includes('Tối ưu') && secs[5].head.includes('Benchmark') && secs[7].head.includes('Commit'),
+      'AC6.3: workflow-performance có 8 bước, Bước 1 là Baseline build/test, Bước 3 là Baseline hiệu năng');
+    ok(/^- \*\*Thực hiện:\*\* session chính/m.test(secs[0].body) && /exit code/.test(field(1, 'Hành động')) && /pass\/fail/.test(field(1, 'Hành động')),
+      'AC6.3: Bước 1 do session chính chạy build + test, ghi số mốc (lệnh, exit code, pass/fail)');
+    ok(/build xanh/.test(field(1, 'Gate')) && /blocked/.test(field(1, 'Khi fail')) && /workflow-bugfix/.test(field(1, 'Khi fail')),
+      'AC6.3: Bước 1 Gate build xanh; đỏ → dừng blocked, đề xuất workflow-bugfix');
+    ok(/Bước 1/.test(field(5, 'Gate')) && /số mốc/.test(field(5, 'Gate')), 'AC6.3: Gate bước Tối ưu so build/test với số mốc Bước 1');
+    ok(/Baseline build\/test[^\n]*Bước 1/.test(wf.split('## Definition of Done')[1].split('## Report cuối')[0]), 'AC6.3: DoD có dòng baseline build/test — evidence Bước 1');
+    const cp = wf.split('## Checkpoint')[1].split('## Xử lý lỗi')[0];
+    ok(cp.includes('| 4 |') && cp.includes('| 8 |') && !cp.includes('| 3 |') && !cp.includes('| 7 |'), 'AC6.3: Checkpoint ở Bước 4 (Profile) và Bước 8 (Commit)');
+    ok(/sau Bước 4 ⏸/.test(matrix) && /sau Bước 8 ⏸/.test(matrix) && !/sau Bước 3 ⏸|sau Bước 7 ⏸/.test(matrix), 'AC6.3: error-matrix đánh số lại (Profile ⏸ Bước 4, Commit ⏸ Bước 8)');
+    ok(/Baseline build\/test đỏ/.test(wf.split('## Xử lý lỗi')[1]), 'AC6.3: bảng Xử lý lỗi có hàng baseline build/test đỏ');
+
+    const wfLib = await import(pathToFileURL(path.join(REPO_ROOT, 'cli', 'lib', 'workflows.mjs')).href);
+    const g = JSON.parse(fs.readFileSync(path.join(pdir, 'graph.json'), 'utf8'));
+    ok(g.steps.map((x) => x.id).join(',') === 'baseline-build,metric-goal,baseline,profile,optimize,benchmark,review,commit' && g.start === 'baseline-build'
+      && g.steps.every((x, i) => x.n === i + 1), 'AC6.3: graph performance 8 bước, start baseline-build, n liên tục');
+    const bb = g.steps[0];
+    ok(bb.run?.session === true && bb.next === 'metric-goal' && (bb.on_fail || []).some((f) => f.to === 'blocked'),
+      'AC6.3: graph baseline-build chạy ở session chính, next metric-goal, lỗi → blocked');
+    const idx = (id) => g.steps.findIndex((y) => y.id === id);
+    const back = g.steps.flatMap((x) => (x.on_fail || []).filter((f) => idx(f.to) !== -1 && idx(f.to) <= idx(x.id)));
+    ok(back.length > 0 && back.every((f) => f.max_attempts === 2), 'AC6.3: mọi cạnh lùi của graph performance giữ max_attempts 2');
+    ok(wfLib.checkGraph(g).length === 0 && wfLib.checkGraphAgainstBody(g, wf).length === 0, 'AC6.3: graph performance qua checkGraph và checkGraphAgainstBody');
+  }
 }

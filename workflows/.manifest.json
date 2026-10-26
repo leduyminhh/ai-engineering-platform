@@ -2,6 +2,6 @@
   "id": "workflows",
   "name": "Engineering Workflows",
   "description": "Bộ 4 workflow pipeline (feature, bugfix, security review, performance) + orchestrator chọn workflow hoặc chỉ đường tới skill theo yêu cầu. Mỗi workflow nối nhiều năng lực qua các bước có gate, evidence và checkpoint người duyệt; việc chỉ cần một năng lực gọi thẳng skill. Plugin bắt buộc: core, backend, frontend, engineering.",
-  "version": "3.6.1",
+  "version": "3.6.2",
   "hardDependencies": ["core", "backend", "frontend", "engineering"]
 }

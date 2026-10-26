@@ -20,8 +20,8 @@ export default async function run({ ok, ctx }) {
         `${p}-fix: description nêu oracle và ranh giới với ${p}-implement / ${p}-refactor`);
       for (const g of ['F1', 'F2', 'F3', 'F4', 'F5']) ok(s.includes(`| ${g} `), `${p}-fix: bảng gate có ${g}`);
       for (const m of ['`bug`', '`security`', '`performance`']) ok(s.includes(m), `${p}-fix: có chế độ ${m}`);
-      ok(flat18(s).includes('không tự tuyên bố nhanh hơn') && flat18(s).includes('Bước 5'),
-        `${p}-fix: chế độ performance không tự tuyên bố nhanh hơn, số đo thuộc Bước 5 của workflow`);
+      ok(flat18(s).includes('không tự tuyên bố nhanh hơn') && flat18(s).includes('Bước 6'),
+        `${p}-fix: chế độ performance không tự tuyên bố nhanh hơn, số đo thuộc Bước 6 của workflow`);
       ok(s.includes('blocked') && flat18(s).includes('không tự mở'),
         `${p}-fix: cần sửa ngoài danh sách → blocked, không tự mở phạm vi`);
       ok(/^\| F3 \| Không sửa[^\n]*test[^\n]*fixture[^\n]*snapshot/m.test(s),
@@ -83,11 +83,11 @@ export default async function run({ ok, ctx }) {
     fixStepOk('workflow-bugfix', 5, 6, /^Root cause/, /^Fix tối thiểu/);
     ok(parseSteps(wf18('workflow-bugfix')?.body ?? '').length === 9, 'workflow-bugfix: vẫn 9 bước');
     fixStepOk('workflow-security-review', 5, 8, /^Kế hoạch remediation/, /^Sửa/);
-    fixStepOk('workflow-performance', 3, 4, /^Profile & giả thuyết/, /^Tối ưu/);
-    ok(parseSteps(wf18('workflow-performance')?.body ?? '').length === 7, 'workflow-performance: vẫn 7 bước');
-    // spec 2026-09-30 §3.3: chế độ performance không có oracle đỏ — bước phải nói rõ số đo thuộc Bước 5.
-    ok(flat18(step18(wf18('workflow-performance'), 4).body).includes('Bước 5'),
-      'workflow-performance Bước 4: không kết luận hiệu năng, số đo thuộc Bước 5');
+    fixStepOk('workflow-performance', 4, 5, /^Profile & giả thuyết/, /^Tối ưu/);
+    ok(parseSteps(wf18('workflow-performance')?.body ?? '').length === 8, 'workflow-performance: 8 bước');
+    // spec 2026-09-30 §3.3: chế độ performance không có oracle đỏ — bước phải nói rõ số đo thuộc Bước 6.
+    ok(flat18(step18(wf18('workflow-performance'), 5).body).includes('Bước 6'),
+      'workflow-performance Bước 5: không kết luận hiệu năng, số đo thuộc Bước 6');
     for (const f of ['README.md', 'README_VI.md']) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
       const row = (agent) => rd.split('\n').find((l) => l.startsWith(`| \`${agent}\` |`)) ?? '';
@@ -111,7 +111,7 @@ export default async function run({ ok, ctx }) {
       ok(s.includes('hash-object'), `${p}-fix: F5 kiểm hash-object file test đã bẩn trong mốc`);
       ok(s.includes('NÂNG version'), `${p}-fix: nêu rõ được NÂNG version dependency đã có khi finding là CVE`);
     }
-    for (const [id, n] of [['workflow-bugfix', 6], ['workflow-security-review', 8], ['workflow-performance', 4]]) {
+    for (const [id, n] of [['workflow-bugfix', 6], ['workflow-security-review', 8], ['workflow-performance', 5]]) {
       const st = step18(wf18(id), n);
       const field = (name) => flat18((st.body.split(`**${name}:**`)[1] ?? '').split('\n- **')[0]);
       ok(field('Gate').includes('hash-object') && field('Gate').includes('mock'),
