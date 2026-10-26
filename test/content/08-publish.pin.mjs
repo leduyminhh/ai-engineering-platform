@@ -47,23 +47,23 @@ export default async function run({ ok, ctx }) {
       ok(offWf19.includes(`workflows/${w}`), `offeredCatalog: vẫn offer workflows/${w} (closure agent frontend đã publish)`);
     }
     const feat19 = wf19('workflow-feature');
-    const fS2 = step19(feat19, 2), fS4 = step19(feat19, 5), fS5 = step19(feat19, 6);
+    const fS2 = step19(feat19, 2), fS4 = step19(feat19, 5), fS5 = fS4; // Bước 5 mới gộp implement + test trong vòng task
     ok(/^Làm rõ/.test(fS2.title) && flat19(fS2.body).includes('schema') && flat19(fS2.body).includes('`data-db-migration`'),
       'workflow-feature Bước 2: phạm vi có đổi schema → dừng, đề xuất skill data-db-migration trước');
     // Integrator nối vào component do implementer dựng, nên phải chạy SAU, không song song.
-    ok(/^Implement/.test(fS4.title) && field19(fS4.body, 'Thực hiện').includes('agent `frontend-data-integrator`')
-      && field19(fS4.body, 'Thực hiện').includes('sau khi') && !flat19(fS4.body).includes('Gap G1'),
-      'workflow-feature Bước 5: frontend-data-integrator chạy sau frontend-implementer (fullstack), bỏ Gap G1');
-    ok(/^Test/.test(fS5.title) && field19(fS5.body, 'Thực hiện').includes('agent `frontend-e2e-test-writer`'),
-      'workflow-feature Bước 6: có frontend-e2e-test-writer cho AC dạng luồng UI');
+    ok(/^Vòng task/.test(fS4.title) && field19(fS4.body, 'Thực hiện').includes('agent `frontend-data-integrator`')
+      && field19(fS4.body, 'Hành động').includes('`FE-INT` → `frontend-data-integrator` (sau `FE-UI`') && !flat19(fS4.body).includes('Gap G1'),
+      'workflow-feature Bước 5: frontend-data-integrator chạy sau task FE-UI (fullstack), bỏ Gap G1');
+    ok(field19(fS5.body, 'Thực hiện').includes('agent `frontend-e2e-test-writer`') && field19(fS5.body, 'Hành động').includes('`E2E` → `frontend-e2e-test-writer`'),
+      'workflow-feature Bước 5: có frontend-e2e-test-writer cho AC dạng luồng UI (task kind E2E)');
     ok(field19(fS5.body, 'Gate').includes('playwright.config') && flat19(fS5.body).includes('not_run'),
-      'workflow-feature Bước 6: Gate cho phép e2e/ + playwright.config.*; e2e thiếu BE/DB test → not_run hợp lệ');
+      'workflow-feature Bước 5: Gate cho phép e2e/ + playwright.config.*; e2e thiếu BE/DB test → not_run hợp lệ');
     ok(feat19 && ['frontend-data-integrator', 'frontend-e2e-test-writer'].every((a) => feat19.agents.includes(a)),
       'workflow-feature: frontmatter agents có frontend-data-integrator, frontend-e2e-test-writer');
-    ok(parseSteps(feat19?.body ?? '').length === 9, 'workflow-feature: 9 bước (làm rõ, tài liệu, plan đứng trước implement)');
+    ok(parseSteps(feat19?.body ?? '').length === 7, 'workflow-feature: 7 bước (làm rõ, tài liệu, plan, vòng task, review cuối, kết thúc nhánh)');
     const orch19 = workflows.stages.find((s) => s.kind === 'orchestrator');
     const featRow19 = parseRegistry(orch19?.body ?? '').rows.find((r) => r.id === 'workflow-feature');
-    ok(featRow19 && featRow19.next.length === 0, 'orchestrator: workflow-feature không nối tiếp workflow-docs (Bước 8 đã làm docs)');
+    ok(featRow19 && featRow19.next.length === 0, 'orchestrator: workflow-feature không nối tiếp workflow-docs (Bước 7 đã làm docs)');
     for (const f of ['README.md', 'README_VI.md']) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
       const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
@@ -77,14 +77,14 @@ export default async function run({ ok, ctx }) {
     ok(field19(fS2.body, 'Hành động').includes('e2e'),
       'workflow-feature Bước 2: Hành động đánh dấu AC cần e2e (bảng luồng → AC → lý do)');
     ok(field19(fS5.body, 'Đầu vào').includes('E2'),
-      'workflow-feature Bước 6: Đầu vào nhận bảng ứng viên e2e đã duyệt ở Bước 2 (duyệt E2)');
-    for (const [name, s] of [['workflow-feature Bước 6', fS5]]) {
+      'workflow-feature Bước 5: Đầu vào nhận bảng ứng viên e2e đã duyệt ở Bước 2 (duyệt E2)');
+    for (const [name, s] of [['workflow-feature Bước 5', fS5]]) {
       const g = field19(s.body, 'Gate');
       ok(g.includes('.gitignore') && g.includes('E-r7'),
         `${name}: Gate cho phép dòng .gitignore của Playwright và package.json/lockfile chỉ khi đã duyệt (E-r7)`);
     }
     // Dọn minor đã park: Đầu ra/Evidence e2e của testing Bước 4, integrator blocked ở feature Bước 4, E-r7 gồm script.
-    for (const [name, s] of [['workflow-feature Bước 6', fS5]]) {
+    for (const [name, s] of [['workflow-feature Bước 5', fS5]]) {
       ok(field19(s.body, 'Gate').includes('script chạy e2e cũng cần duyệt'),
         `${name}: Gate E-r7 gồm cả việc thêm script chạy e2e vào package.json (cần duyệt như E-r7)`);
     }

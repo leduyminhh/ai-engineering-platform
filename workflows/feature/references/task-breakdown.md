@@ -22,10 +22,12 @@ lượt 2 tách task, ghi `tasks.md` cùng thư mục `requirement.md`, trả b�
 `plan.md` không chia lại task: mỗi task của plan trỏ ID task của `tasks.md` (`engineering-plan-writing`, mục "Quan hệ
 với tasks.md").
 
-## Bước 5 — Giao task khi implement
+## Bước 5 — Vòng task trỏ tới ID task
 
-Giao từng task theo thứ tự phụ thuộc (nhóm song song chạy song song): `BE` → `backend-implementer`, `FE-UI` →
-`frontend-implementer`, `FE-INT` → `frontend-data-integrator`; mỗi agent nhận "task `<ID>` trong `tasks.md`", task
-xong thì session chính cập nhật cột Trạng thái. Task loại khác không giao ở bước này: `CT` làm ở Bước 3 (session
-chính đặt `Done` khi đạt Gate Bước 3); `DB` đã chạy qua skill `data-db-migration` trước feature (chưa áp → dừng như
-Bước 2); `E2E` giao cho agent e2e của Bước 6.
+`plan-execution` chạy từng task của `plan.md`; mỗi task trỏ ID task của `tasks.md`, nên agent nhận "task `<ID>` trong
+`tasks.md`" cùng brief của task trong `plan.md`. `**Kind:**` của task quyết định agent (bảng "Kind và chuỗi agent" của
+`engineering-plan-writing`): `BE` → `backend-implementer`, `FE-UI` → `frontend-implementer` rồi `frontend-test-writer`,
+`FE-INT` → `frontend-data-integrator`, `E2E` → `frontend-e2e-test-writer`. Task xong (`Task <n>: complete` trong ledger) thì
+session chính cập nhật cột Trạng thái của `tasks.md`. Task loại khác không đi qua vòng giao agent: `CT` làm ở Bước 3
+(session chính đặt `Done` khi đạt Gate Bước 3); `DB` đã chạy qua skill `data-db-migration` trước feature (chưa áp → dừng
+như Bước 2). Cỡ "thay đổi nhỏ" không có `tasks.md`.

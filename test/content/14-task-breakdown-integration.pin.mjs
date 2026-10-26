@@ -38,7 +38,7 @@ export default async function run({ ok, ctx }) {
     const featBody = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'WORKFLOW.md'), 'utf8');
     ok(step(2).includes('`references/task-breakdown.md`') && step(3).includes('`references/task-breakdown.md`') && step(5).includes('`references/task-breakdown.md`') && featBody.includes('`references/task-breakdown.md`'),
       'workflow-feature: Bước 2, 3 và 5 trong WORKFLOW.md vẫn trỏ tới references/task-breakdown.md');
-    ok(/^### Bước 9 — Commit ⏸$/m.test(wf), 'workflow-feature: Commit ⏸ là Bước 9 sau khi thêm làm rõ, tài liệu, plan');
+    ok(/^### Bước 7 — Kết thúc nhánh ⏸$/m.test(wf) && !/^### Bước [89] /m.test(wf), 'workflow-feature: Kết thúc nhánh ⏸ là Bước 7, không còn Bước 8–9 (làm rõ, tài liệu, plan, vòng task, review cuối đứng trước)');
     const ag = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'agents', 'engineering-spec-analyst.md'), 'utf8');
     ok(/^skills: "engineering-spec-writing,engineering-adr,engineering-diagram,engineering-task-breakdown"$/m.test(ag),
       'engineering-spec-analyst: skills có engineering-task-breakdown');

@@ -135,7 +135,6 @@ export default async function run({ ok, ctx }) {
     const heads = secs.slice(0, 4).map((s) => s.head).join('|');
     ok(heads === '1 — Baseline build/test|2 — Làm rõ & cỡ việc ⏸|3 — Tài liệu ⏸|4 — Plan ⏸',
       'AC1.1: workflow-feature 4 bước đầu là Baseline, Làm rõ & cỡ việc ⏸, Tài liệu ⏸, Plan ⏸');
-    ok(secs.length === 9 && secs[8].head === '9 — Commit ⏸', 'AC1.1: workflow-feature có 9 bước, Commit ⏸ ở Bước 9');
     const field = (s, name) => flatW((s.body.split(`- **${name}:**`)[1] || '').split(/\n- \*\*/)[0]);
     const doing2 = field(secs[1], 'Thực hiện');
     ok(/session chính/.test(doing2) && doing2.includes('`engineering-spec-writing`'),
@@ -155,6 +154,55 @@ export default async function run({ ok, ctx }) {
     const g = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'graph.json'), 'utf8'));
     ok(g.steps.slice(0, 4).map((s) => s.id).join(',') === 'baseline,clarify,documents,plan', 'AC1.1: graph id bước 1–4 là baseline, clarify, documents, plan');
     ok(g.steps.slice(1, 4).every((s) => s.gate.type === 'human' && s.gate.reject === 'ask_user'), 'AC1.1: graph bước 2–4 gate human, reject → ask_user');
+  }
+
+  // AC3.1, AC3.5, AC4.1, AC4.2, AC4.3: workflow-feature đúng 7 bước (Bước 5–7 mới: vòng task, review cuối, kết thúc nhánh)
+  {
+    const wfRaw = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n');
+    const flatW = (t) => t.replace(/\s+/g, ' ');
+    const secs = wfRaw.split(/^### Bước /m).slice(1).map((s) => ({ head: s.split('\n')[0], body: s }));
+    ok(secs.map((s) => s.head).join('|') === '1 — Baseline build/test|2 — Làm rõ & cỡ việc ⏸|3 — Tài liệu ⏸|4 — Plan ⏸|5 — Vòng task|6 — Review cuối|7 — Kết thúc nhánh ⏸',
+      'AC3.1: workflow-feature đúng 7 bước, Bước 5–7 là Vòng task, Review cuối, Kết thúc nhánh ⏸');
+    const field = (s, name) => flatW((s.body.split(`- **${name}:**`)[1] || '').split(/\n- \*\*/)[0]);
+    const s5 = flatW(secs[4].body);
+    ok(s5.includes('`plan-execution`') && s5.includes('.sdd/progress.md') && /ledger/.test(s5),
+      'AC3.1: Bước 5 chạy skill plan-execution và nhắc ledger .sdd/progress.md');
+    ok(/spec_verdict/.test(s5) && /tối đa 3 vòng/.test(s5) && /commit/.test(field(secs[4], 'Hành động')),
+      'AC3.1: Bước 5 review từng task trả spec_verdict, sửa tối đa 3 vòng, session chính commit theo task');
+    ok(/thay đổi nhỏ/.test(s5) && /task id `1`/.test(s5) && /requirement\.md/.test(s5),
+      'AC3.1: Bước 5 cỡ thay đổi nhỏ chạy một task, brief là requirement.md');
+    ok(/`E2E`/.test(s5) && s5.includes('frontend-e2e-test-writer'), 'AC3.1: Bước 5 giữ e2e cho AC luồng UI qua task kind E2E');
+    const s6 = flatW(secs[5].body);
+    ok(/opus/.test(s6) && s6.includes('`engineering-quality-auditor`') && /một lần sửa/.test(s6) && /re-review/.test(s6),
+      'AC3.5: Bước 6 reviewer opus + engineering-quality-auditor, một lần sửa + một re-review');
+    ok(/drift/.test(s6) && /authorization/.test(s6) && /input validation/.test(s6),
+      'AC3.5: Bước 6 giữ kiểm drift contract↔code, authorization và input validation khi có API');
+    ok(!/engineering-quality-auditor/.test(s5), 'AC3.5: engineering-quality-auditor chỉ ở Bước 6, không ở vòng task');
+    const s7 = flatW(secs[6].body);
+    ok(s7.includes('docs/specs/') && s7.includes('check-request.mjs') && /full suite/i.test(s7),
+      'AC4.2: Bước 7 cập nhật spec sống, chạy check-request.mjs và full suite');
+    ok(/merge local/.test(s7) && /push \+ PR/.test(s7) && /giữ nguyên/.test(s7) && /mặc định/.test(s7) && /không merge/i.test(s7),
+      'AC4.2: Bước 7 đưa 3 lựa chọn, mặc định giữ nguyên, không merge/push khi chưa chọn');
+    ok(/duyệt diff cả nhánh/.test(s7), 'AC4.2: Bước 7 là chỗ người dùng duyệt diff cả nhánh');
+    ok(!/không tự commit khi người dùng chưa duyệt diff/.test(wfRaw) && !/Bước [89]\b/.test(wfRaw),
+      'AC4.1: workflow-feature bỏ chốt "không commit khi chưa duyệt diff" và không còn Bước 8–9');
+    ok(/^  rulings: \[\]/m.test(wfRaw.split('## Report cuối')[1] || ''), 'AC4.3: Report cuối có rulings: []');
+    ok(/acceptance criteria từ Bước 3/.test(wfRaw) && !/acceptance criteria từ Bước 2/.test(wfRaw), 'AC3.1: tham chiếu acceptance criteria trỏ Bước 3');
+
+    const fm = wfRaw.split('---')[1];
+    const desc = (fm.match(/^description: "(.*)"$/m) || [])[1] || '';
+    ok(desc.length > 0 && desc.length <= 500 && /làm rõ/.test(desc) && /tài liệu/.test(desc) && /plan/.test(desc) && /vòng task/.test(desc) && /review cuối/.test(desc),
+      'AC3.1: description ≤ 500 ký tự, nêu làm rõ → tài liệu → plan → vòng task → review cuối');
+    ok(/^requires: "[^"]*core\/plan-execution/m.test(fm), 'AC3.1: requires có core/plan-execution');
+
+    const g = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'graph.json'), 'utf8'));
+    ok(g.steps.map((s) => s.id).join(',') === 'baseline,clarify,documents,plan,task-loop,final-review,finish', 'AC3.1: graph id 7 bước');
+    const byId = Object.fromEntries(g.steps.map((s) => [s.id, s]));
+    ok(byId['task-loop']?.gate.type === 'auto' && byId['final-review']?.gate.type === 'auto' && byId.finish?.gate.type === 'human' && byId.finish?.gate.reject === 'ask_user',
+      'AC4.2: graph gate human chỉ ở finish (reject → ask_user)');
+    const back = byId['final-review']?.on_fail.find((f) => f.to === 'task-loop');
+    ok(!!back && back.max_attempts === 2, 'AC3.5: cạnh lùi final-review → task-loop có max_attempts 2');
+    ok(!!byId['task-loop']?.run.skills.includes('plan-execution'), 'AC3.1: graph task-loop chạy skill plan-execution');
   }
 
   // AC3.6, AC3.3: script plan-execution (task-brief, review-package, ledger)
