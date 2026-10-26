@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Giai đoạn P5 của workflow tự đủ — ghi quyết định và spec sống (chỉ tài liệu, không đổi nội dung chiếu ra):
+  - ADR-0004 (`Proposed`, chủ repo chốt) ghi việc workflow aip thay superpowers làm quy trình chính và đảo quyết định cũ của `docs/requests/2026-10-22-parallel-agents/design.md`.
+  - Spec sống: `workflows` đổi R3 (bộ đếm vòng sửa riêng của vòng task) và thêm R7–R10; `artifact-templates` đổi R4 và thêm R9 (`**Kind:**`, W17/W18); `baseline` đổi R2, R3 và thêm R8; `hooks-gates` thêm R11 (`session-start` nạp ledger, khoá `ledgerInject`, chung ngân sách 9000 ký tự với handoff).
+  - README, README_VI và CLAUDE.md nhắc `plan-execution`, ledger/`ledgerInject`, luồng 7 bước của `workflow-feature` và mã cảnh báo W1–W18.
 - Giai đoạn P4 của workflow tự đủ — vòng lặp có giới hạn, review correctness và baseline build/test (backend 1.11.0; frontend 1.13.0; workflows 3.7.0):
   - `workflow-security-review` Bước 9 (re-scan) thêm `backend-reviewer` ∥ `frontend-reviewer` (chỉ phía có sửa) review correctness song song với `engineering-quality-auditor`; gate thêm 0 finding `blocker` từ reviewer, blocker của reviewer quay lại Bước 8.
   - `workflow-performance` thêm Bước 1 "Baseline build/test": session chính chạy build + test vùng sẽ đụng và ghi số mốc (lệnh, exit code, pass/fail); đỏ thì dừng `blocked` và đề xuất `workflow-bugfix`. Các bước sau dịch sang 2–8; bước đo hiệu năng cũ đổi tên "Baseline hiệu năng" (Bước 3); Gate Bước 5 Tối ưu so với số mốc Bước 1.
