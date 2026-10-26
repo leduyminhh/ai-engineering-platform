@@ -554,4 +554,30 @@ export default async function run({ ok, ctx }) {
     }
     ok(wf.includes('superpowers:brainstorming'), 'AC5.1: dòng Superpowers ở Điều kiện tiên quyết còn nguyên (Task 23 xử lý)');
   }
+
+  // AC5.3: *-fix + *-fixer — một thay đổi mỗi lượt, revert bản sửa hỏng trước khi thử lại, báo số lần thử + giả thuyết; danh sách che triệu chứng và F1–F5 giữ nguyên
+  {
+    const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, 'plugins', ...p), 'utf8').replace(/\r\n/g, '\n');
+    const flat = (t) => t.replace(/\s+/g, ' ');
+    const symptoms = {
+      backend: ['@SuppressWarnings', '@Disabled', 'pytest.skip', 'xfail', 'nới timeout/retry', 'except: pass'],
+      frontend: ['@ts-ignore', 'eslint-disable', '(`-u`)', 'it.skip', 'nới `waitFor` timeout', 'key={index}'],
+    };
+    for (const p of ['backend', 'frontend']) {
+      const rawSkill = rd(p, 'skills', `${p}-fix`, 'SKILL.md');
+      const s = flat(rawSkill);
+      const a = flat(rd(p, 'agents', `${p}-fixer.md`));
+      for (const [n, t] of [[`${p}-fix`, s], [`${p}-fixer`, a]]) {
+        ok(/một thay đổi mỗi lượt/i.test(t) && /giả thuyết/.test(t), `AC5.3: ${n} — một thay đổi mỗi lượt, gắn với một giả thuyết`);
+        ok(/revert bản sửa hỏng trước khi thử lại/i.test(t) && /(?:không|KHÔNG) dùng `git reset --hard`/.test(t) && /file test đã bẩn[^.]*giữ nguyên/.test(t),
+          `AC5.3: ${n} — revert bản sửa hỏng trước khi thử lại, chỉ phần của bản sửa, không git reset --hard, giữ file test đã bẩn`);
+        ok(/số lần thử/.test(t) && /giả thuyết đang kiểm/.test(t), `AC5.3: ${n} — báo số lần thử và giả thuyết đang kiểm`);
+      }
+      ok(/chế độ `performance`[^.]*một thay đổi tối ưu/.test(s), `AC5.3: ${p}-fix — chế độ performance: một thay đổi tối ưu mỗi lượt`);
+      ok(/`summary`/.test(a) && /remaining_risks/.test(a) && /không thêm trường/.test(a),
+        `AC5.3: ${p}-fixer — số lần thử + giả thuyết đặt vào summary/remaining_risks của agent_result, không thêm trường contract`);
+      for (const sym of symptoms[p]) ok(rawSkill.includes(sym), `AC5.3: ${p}-fix — danh sách che triệu chứng giữ nguyên "${sym}"`);
+      for (const g of ['F1', 'F2', 'F3', 'F4', 'F5']) ok(rawSkill.includes(`| ${g} `), `AC5.3: ${p}-fix — bảng gate giữ ${g}`);
+    }
+  }
 }

@@ -57,6 +57,9 @@ re-scan Bước 9 sạch.
 - **Sửa nguyên nhân, không che triệu chứng.** Cấm: `try/catch` nuốt exception hoặc `except: pass`;
   `@Disabled`/`@Ignore`/`pytest.skip`/`xfail` mới; nới timeout/retry để qua; hạ mức log hoặc bỏ log thay vì sửa
   lỗ hổng; `@SuppressWarnings` mới; đổi assert trong test.
+- **Một thay đổi mỗi lượt, revert bản sửa hỏng.** Mỗi lượt thử áp đúng một thay đổi gắn với một giả thuyết nguyên
+  nhân (chi tiết ở Bước 2); bản sửa làm oracle còn đỏ hoặc làm build/test đỏ phải revert trước khi thử lại, không
+  chồng thêm thay đổi lên trên.
 - **Không đổi thứ ngoài code.** Không sửa `docs/contracts/`, không thêm/sửa migration. KHÔNG THÊM dependency
   mới. NÂNG version một dependency đã có (sửa manifest `pom.xml`/`build.gradle`/`pyproject.toml` + lockfile
   tương ứng nếu có, vd `poetry.lock`) ĐƯỢC PHÉP khi các file đó nằm trong danh sách và finding là CVE của
@@ -87,6 +90,19 @@ re-scan Bước 9 sạch.
 ### 2. Sửa tối thiểu trong danh sách — CỔNG F2, F3, F4
 - Sửa đúng nguyên nhân gốc, ít thay đổi nhất làm oracle xanh. Không "nhân tiện" dọn code (đó là
   `backend-refactor`, lượt khác).
+- **Một thay đổi mỗi lượt.** Trước khi sửa, ghi giả thuyết đang kiểm: "X là nguyên nhân vì Y" (`bug`), finding
+  đã chọn (`security`) hoặc giả thuyết bottleneck có evidence profile (`performance`). Mỗi lượt thử áp đúng một
+  thay đổi cho giả thuyết đó; chế độ `performance` là một thay đổi tối ưu mỗi lượt. Không chồng nhiều fix vào cùng
+  lượt: oracle xanh cũng không biết thay đổi nào có tác dụng, đỏ cũng không biết thay đổi nào hỏng.
+- **Revert bản sửa hỏng trước khi thử lại.** Bản sửa hỏng (oracle còn đỏ, regression đỏ, build/lint đỏ do chính
+  nó) phải được gỡ trước lượt kế, nếu không lượt sau chồng lên một thay đổi đã biết là sai. Chỉ gỡ phần thay đổi
+  của chính bản sửa đó, trong danh sách file: dùng `git diff <file>` để thấy đúng phần đó rồi hoàn lại; KHÔNG dùng
+  `git reset --hard`, `git checkout .` hay `git stash` toàn cây; file test đã bẩn trong mốc (test oracle) giữ
+  nguyên nội dung (`git hash-object` khớp mốc). Sau revert chạy lại oracle loại (a)/(d): phải đỏ đúng lý do như
+  lúc đầu, rồi mới thử giả thuyết mới.
+- **Đếm lần thử.** Số lần thử = số lần sửa thất bại bước gọi báo (nếu có) + các lượt của lượt giao này. Bộ đếm
+  tổng do bước gọi giữ (`workflow-bugfix` Bước 6 đủ 3 lần thất bại thì hỏi người dùng về kiến trúc); chạm lần
+  thất bại thứ 3 thì trả `blocked` kèm các giả thuyết đã loại, không tự thử lần 4.
 - Cần chạm file ngoài danh sách → DỪNG, trả `blocked` + danh sách file đề nghị thêm.
 - Tự soát: có dòng nào thuộc danh sách "che triệu chứng" ở Ranh giới an toàn không → gỡ.
 
@@ -97,7 +113,8 @@ re-scan Bước 9 sạch.
   `git ls-files --others --exclude-standard`, trừ đi những gì đã có trong mốc) ⊆ danh sách file; không có file
   test/fixture/snapshot/mock mới hay đổi; file test ĐÃ BẨN trong mốc (test oracle) phải giữ nguyên nội dung
   (`git hash-object <file>` trước/sau bằng nhau).
-- Chưa xanh → sửa tiếp trong danh sách; hết cách → `blocked`, nêu vì sao.
+- Chưa xanh → revert bản sửa hỏng (Bước 2), thử một thay đổi cho giả thuyết khác trong danh sách; hết cách →
+  `blocked`, nêu vì sao.
 
 ## Bảng gate
 | # | Gate | Bước | Đỏ thì |
@@ -106,9 +123,11 @@ re-scan Bước 9 sạch.
 | F2 | Chỉ sửa file trong danh sách được giao | 2 | `blocked` + file đề nghị thêm; không tự mở |
 | F3 | Không sửa/xoá/nới file test, fixture, snapshot, mock | 2 | Gỡ thay đổi đó; test sai thật → báo test-writer |
 | F4 | Không che triệu chứng (danh sách ở Ranh giới an toàn) | 2 | Gỡ, sửa lại nguyên nhân |
-| F5 | Oracle xanh (bug/security) / build-test hiện có xanh (performance) + build/lint/test xanh; diff so mốc ⊆ danh sách, không đổi file test (kể cả oracle đã bẩn) | 3 | Sửa tiếp trong danh sách; hết cách → `blocked` |
+| F5 | Oracle xanh (bug/security) / build-test hiện có xanh (performance) + build/lint/test xanh; diff so mốc ⊆ danh sách, không đổi file test (kể cả oracle đã bẩn) | 3 | Revert bản sửa hỏng, thử một thay đổi khác trong danh sách; hết cách → `blocked` |
 
 ## Sau khi xong
 Báo: oracle trước/sau (`command`, `exit_code`); file đã sửa (`file:line`) và xác nhận ⊆ danh sách; kết quả
 build/lint THẬT; **residual risk** (giả định về nguyên nhân, chỗ cùng pattern chưa sửa vì ngoài phạm vi, phần
 chỉ kiểm bằng đọc). Cần dọn code sau fix → route `backend-refactor`; cần thêm test → route `backend-testing`.
+Báo thêm: **số lần thử** và **giả thuyết đang kiểm** của từng lần (giả thuyết, thay đổi đã áp, kết quả oracle,
+đã revert chưa); giả thuyết chưa được oracle xác nhận ghi vào residual risk.
