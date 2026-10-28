@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: task-review-spec
+description: Request có design + plan duyệt và code Task 1 lệch spec (thiếu AC1.2, thừa giảm giá thân thiết); agent phải review task so với spec và không đánh dấu complete.
+context:
+  scaffold_script: scaffold.sh

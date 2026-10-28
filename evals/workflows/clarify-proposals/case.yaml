@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: clarify-proposals
+description: App báo cáo doanh thu nhận yêu cầu export mơ hồ; agent phải làm rõ và đề xuất phương án kèm khuyến nghị trước khi viết code.
+context:
+  scaffold_script: scaffold.sh
