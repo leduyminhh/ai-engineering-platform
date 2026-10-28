@@ -76,9 +76,9 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    Tự nghĩ rộng riêng tư, bỏ hướng yếu; chỉ trình 2–3 hướng thật sự khác nhau, mỗi hướng một dòng đánh đổi, nêu **một
    khuyến nghị** và lý do. Cả hướng được chọn lẫn các hướng bị loại (kèm đánh đổi và lý do) đều ghi vào `design.md`. Người dùng chốt hướng →
    mục Quyết định đã chốt; người dùng bỏ qua phần hỏi hoặc không chốt → agent tự chọn theo khuyến nghị, ghi
-   **quyết định của agent**, không dừng chờ chọn. Đây là **lệch có chủ đích** so với cách "không đưa lựa chọn sớm"
-   (chủ repo yêu cầu có đề xuất); giữ thứ tự "hỏi mô tả trước, đề xuất sau" và đừng
-   sửa lại theo cách đó. Cần diagram (flow/ERD/sequence/kiến trúc) → skill **`engineering-diagram`**; chỉ đưa hình khi
+   **quyết định của agent**, không dừng chờ chọn. Đây là **lệch có chủ đích**: cách làm thường gặp là không đưa lựa
+   chọn sớm, còn ở đây chủ repo yêu cầu có đề xuất. Giữ thứ tự "hỏi mô tả trước, đề xuất sau" và đừng bỏ bước đề
+   xuất này. Cần diagram (flow/ERD/sequence/kiến trúc) → skill **`engineering-diagram`**; chỉ đưa hình khi
    nhìn tốt hơn đọc.
 
 6. **Xếp cỡ việc** (xác nhận lại ở đây; nếu việc lớn lên giữa chừng thì dừng, nâng cỡ).

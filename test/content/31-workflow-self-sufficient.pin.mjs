@@ -1,6 +1,13 @@
 // Pin: workflow tự đủ (docs/requests/2026-10-26-workflow-self-sufficient). Task 1: check-request kiểm kind của task + plan template (AC2.1).
 export default async function run({ ok, ctx }) {
   const { fs, path, os, REPO_ROOT, pathToFileURL } = ctx;
+  // Quét nội dung không lọc theo đuôi file; file nhị phân (có NUL hoặc không phải UTF-8 hợp lệ) trả null để bỏ qua.
+  const utf8 = new TextDecoder('utf-8', { fatal: true });
+  const readUtf8 = (f) => {
+    const buf = fs.readFileSync(f);
+    if (buf.includes(0)) return null;
+    try { return utf8.decode(buf); } catch { return null; }
+  };
 
   // AC2.1: check-request kiểm dòng **Kind:** của từng task trong plan.md
   {
@@ -177,11 +184,13 @@ export default async function run({ ok, ctx }) {
       'AC3.5: Bước 6 reviewer opus + engineering-quality-auditor, một lần sửa + một re-review');
     ok(/drift/.test(s6) && /authorization/.test(s6) && /input validation/.test(s6),
       'AC3.5: Bước 6 giữ kiểm drift contract↔code, authorization và input validation khi có API');
-    // I1: CT chốt ở Bước 3, vòng task bỏ qua — WORKFLOW và task-breakdown.md thống nhất
-    ok(/task `CT` đã chốt contract ở Bước 3[^.;]*đánh `Done` từ Bước 3[^.;]*vòng task bỏ qua/.test(flatW(field(secs[4], 'Hành động'))) && !/`CT` → /.test(s5),
-      'AC3.1: Bước 5 — task CT đã Done từ Bước 3, vòng task bỏ qua, không giao agent cho CT');
+    // I1 (R17): plan của workflow-feature không chứa task CT/DB (đã xử lý ở Bước 2–3) — WORKFLOW, task-breakdown.md, plan-structure.md thống nhất
+    ok(/plan không chứa task `CT`\/`DB`[^.;]*Bước 2–3/i.test(flatW(field(secs[4], 'Hành động'))) && !/`CT` → /.test(s5) && !/vòng task bỏ qua/.test(s5),
+      'AC3.1: Bước 5 — plan không chứa task CT/DB (đã xử lý ở Bước 2–3), không có cơ chế "bỏ qua"');
     const tbk = flatW(fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'feature', 'references', 'task-breakdown.md'), 'utf8'));
-    ok(/`CT` làm ở Bước 3/.test(tbk) && !/`CT` →/.test(tbk), 'AC3.1: task-breakdown.md — CT làm ở Bước 3, thống nhất với WORKFLOW');
+    ok(/plan không chứa task `CT`\/`DB`/i.test(tbk) && !/`CT` →/.test(tbk) && !/đặt `Done`/.test(tbk), 'AC3.1: task-breakdown.md — plan không chứa task CT/DB, thống nhất với WORKFLOW');
+    const ps = flatW(fs.readFileSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-plan-writing', 'references', 'plan-structure.md'), 'utf8'));
+    ok(/workflow-feature[^.]*không tạo task[^.]*`CT`[^.]*`DB`/.test(ps), 'AC3.1: plan-structure.md — trong workflow-feature không tạo task CT/DB');
     // I2: gate build/tsc/lint + type khớp contract khi FE-INT
     const g5 = field(secs[4], 'Gate'), e5 = field(secs[4], 'Evidence');
     ok(/build\/`tsc`\/lint[^;]*xanh/.test(g5) && /`FE-INT`: type khớp contract/.test(g5) && /exit code 0/.test(e5) && /`FE-INT`/.test(e5),
@@ -240,8 +249,9 @@ export default async function run({ ok, ctx }) {
     }
 
     if (rp) {
-      const mk = (ancestor) => (args) => {
-        if (args[0] === 'merge-base') { if (!ancestor) throw new Error('exit 1'); return ''; }
+      // status: mã exit của git như execFileSync gắn vào lỗi; 1 = không là tổ tiên, 128 = ref không tồn tại/git lỗi.
+      const mk = (ancestor, status = 1) => (args) => {
+        if (args[0] === 'merge-base') { if (!ancestor) throw Object.assign(new Error('exit ' + status), { status }); return ''; }
         if (args[0] === 'log') return 'abc1234 feat: x\n';
         if (args.includes('--stat')) return ' a.js | 2 +-\n';
         return 'diff --git a/a.js b/a.js\n';
@@ -251,7 +261,10 @@ export default async function run({ ok, ctx }) {
       ok(msg !== '', 'AC3.6: buildPackage ném lỗi khi base == head');
       msg = '';
       try { rp.buildPackage({ base: 'a', head: 'b', run: mk(false) }); } catch (e) { msg = e.message; }
-      ok(msg !== '', 'AC3.6: buildPackage ném lỗi khi base không là tổ tiên của head');
+      ok(/không là tổ tiên/.test(msg), 'AC3.6: buildPackage báo "không là tổ tiên" khi merge-base exit 1');
+      msg = '';
+      try { rp.buildPackage({ base: 'a', head: 'nope', run: mk(false, 128) }); } catch (e) { msg = e.message; }
+      ok(/ref không tồn tại/.test(msg) && !/không là tổ tiên/.test(msg), 'AC3.6: merge-base lỗi khác exit 1 → báo ref không tồn tại/git lỗi, không báo "không là tổ tiên"');
       const pkg = rp.buildPackage({ base: 'a', head: 'b', run: mk(true) });
       ok(pkg.includes('abc1234 feat: x') && pkg.includes('a.js | 2 +-') && pkg.includes('diff --git a/a.js'),
         'AC3.6: buildPackage gồm commit list, stat và diff');
@@ -678,11 +691,19 @@ export default async function run({ ok, ctx }) {
     const skip = new Set(['node_modules', '.git']);
     const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (skip.has(e.name) ? [] : e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
     const files = ['workflows', 'plugins', 'core', 'templates'].flatMap((d) => walk(path.join(REPO_ROOT, d)))
-      .concat(['AGENTS.md', 'CLAUDE.md'].map((f) => path.join(REPO_ROOT, f)))
-      .filter((f) => /\.(md|mjs|json|ya?ml|txt|toml)$/i.test(f));
+      .concat(['AGENTS.md', 'CLAUDE.md'].map((f) => path.join(REPO_ROOT, f)));
     const oldRequestPath = /docs\/requests\/[^\s`)"'|]*superpowers[^\s`)"'|]*/gi;
-    const hits = files.filter((f) => /superpowers/i.test(fs.readFileSync(f, 'utf8').replace(oldRequestPath, '')));
+    const hits = files.filter((f) => /superpowers/i.test((readUtf8(f) ?? '').replace(oldRequestPath, '')));
     ok(hits.length === 0, 'AC7.1: không file nào trong workflows/plugins/core/templates/AGENTS.md/CLAUDE.md còn chứa superpowers' + (hits.length ? ' — ' + hits.map((f) => path.relative(REPO_ROOT, f)).join(', ') : ''));
+  }
+
+  // AC3.1 (I2, I3): nội dung chiếu ra không chứa lệnh repo-only `node core/skills/…` hay `node scripts/…` mơ hồ thư mục chạy
+  {
+    const skip = new Set(['node_modules', '.git']);
+    const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (skip.has(e.name) ? [] : e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+    const files = ['workflows', 'plugins', path.join('core', 'skills')].flatMap((d) => walk(path.join(REPO_ROOT, d)));
+    const hits = files.filter((f) => /node (core\/skills\/|scripts\/)/.test(readUtf8(f) ?? ''));
+    ok(hits.length === 0, 'AC3.1: workflows/plugins/core/skills không chứa "node core/skills/" hay "node scripts/"' + (hits.length ? ' — ' + hits.map((f) => path.relative(REPO_ROOT, f)).join(', ') : ''));
   }
 
   // AC7.2: baseline có mục Workflow defaults trỏ workflow-feature, workflow-bugfix, plan-execution; Safety "mỗi task ≥ 1 commit"

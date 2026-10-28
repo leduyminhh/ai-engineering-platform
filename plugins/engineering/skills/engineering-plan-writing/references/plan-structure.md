@@ -39,6 +39,10 @@ W18 khi kind ngoài tập. Kind quyết định chuỗi agent:
 
 Task trộn hai phía (vd BE + FE-UI) → tách thành hai task, mỗi task một kind.
 
+Trong `workflow-feature` không tạo task kind `CT` hay `DB`: contract đã chốt ở Bước 3, đổi schema đã dừng ở Bước 2 để chạy
+`data-db-migration`. Plan trỏ ID `tasks.md` thì task `CT`/`DB` của `tasks.md` đã `Done` ở Bước 3 hoặc ngoài workflow nên
+không đưa vào plan.
+
 ## Interfaces
 
 Implementer chỉ thấy task của mình, nên mỗi task ghi `**Interfaces:**` với **chữ ký chính xác**:

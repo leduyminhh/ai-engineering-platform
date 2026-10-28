@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Làm rõ yêu cầu chuyển về session chính (engineering 2.3.0): `engineering-spec-writing` hỏi từng câu, playback từng phần, đề xuất 2–3 hướng kèm khuyến nghị và đánh đổi, xếp cỡ việc (việc rõ và nhỏ, thay đổi nhỏ, dự án) và chạy builder check một lần trước checkpoint. Khi người dùng bỏ qua làm rõ, agent tự chọn hướng và ghi đó là quyết định của agent. `engineering-spec-analyst` chỉ ghi tài liệu, không hỏi người dùng.
-- `workflow-feature` (workflows 3.4.0) thêm Bước 2 Làm rõ & cỡ việc, Bước 3 Tài liệu và Bước 4 Plan trước khi implement; các bước sau dịch sang 5–9 (Implement, Test, Review, Tài liệu, Commit). Ba bước mới có checkpoint người duyệt.
+- `workflow-feature` (workflows 3.4.0) thêm Bước 2 Làm rõ & cỡ việc, Bước 3 Tài liệu và Bước 4 Plan trước khi implement; ba bước mới có checkpoint người duyệt. Đây là trạng thái trung gian; các bước sau đã được thay bằng Bước 5 Vòng task, Bước 6 Review cuối, Bước 7 Kết thúc nhánh (tổng 7 bước, xem mục `plan-execution` bên dưới).
 - `check-request.mjs` skips W10 for request folders dated before 2026-10-21 (`SPEC_SINCE`) and for folders without a date prefix, so
   `--strict` in CI no longer fails on request folders written before living specs (core 1.12.1). W11-W14 still run on any design that lists impact entries.
 - `aip init --full` omits the `.env` (`secrets`) rules from the generated `.claude/settings.json` when `.claude/aip-gate.json` has

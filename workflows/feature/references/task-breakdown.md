@@ -28,6 +28,6 @@ với tasks.md").
 `tasks.md`" cùng brief của task trong `plan.md`. `**Kind:**` của task quyết định agent (bảng "Kind và chuỗi agent" của
 `engineering-plan-writing`): `BE` → `backend-implementer`, `FE-UI` → `frontend-implementer` rồi `frontend-test-writer`,
 `FE-INT` → `frontend-data-integrator`, `E2E` → `frontend-e2e-test-writer`. Task xong (`Task <n>: complete` trong ledger) thì
-session chính cập nhật cột Trạng thái của `tasks.md`. Task loại khác không đi qua vòng giao agent: `CT` làm ở Bước 3
-(session chính đặt `Done` khi đạt Gate Bước 3); `DB` đã chạy qua skill `data-db-migration` trước feature (chưa áp → dừng
-như Bước 2). Cỡ "thay đổi nhỏ" không có `tasks.md`.
+session chính cập nhật cột Trạng thái của `tasks.md`. Plan không chứa task `CT`/`DB` (đã xử lý ở Bước 2–3): task `CT`
+của `tasks.md` xong khi đạt Gate Bước 3, task `DB` chạy qua skill `data-db-migration` ngoài workflow (chưa áp → dừng như
+Bước 2), nên cả hai không vào `plan.md`. Cỡ "thay đổi nhỏ" không có `tasks.md`.

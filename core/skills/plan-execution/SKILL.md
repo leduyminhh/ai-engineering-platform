@@ -13,8 +13,10 @@ Giao thức để **session chính** thực thi một `plan.md` đã duyệt mà
 đầy đủ (brief → implement → review task → sửa → commit → ledger), cả plan kết thúc bằng một lần review toàn nhánh rồi
 mới tới bước kết thúc nhánh. Session chính là người điều phối; mọi việc viết code, viết test và review do agent domain
 làm, kết quả trả theo contract đầu ra (`core:principles`). Điều kiện chạy: có `plan.md` đã duyệt trong
-`docs/requests/<ngày>-<slug>/` và đang ở nhánh `feature/<slug>`; cỡ "thay đổi nhỏ" không có `plan.md` thì chạy một task duy
-nhất, task id là `1`, brief là `requirement.md`, ledger vẫn ghi để làm tiếp được.
+`docs/requests/<ngày>-<slug>/` và đang ở nhánh `feature/<slug>`; cỡ "thay đổi nhỏ" không có `plan.md` thì brief là
+`requirement.md` và kind lấy theo phạm vi đã chốt khi làm rõ (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối API
+thật): một task duy nhất, task id `1`; phạm vi fullstack → hai task, `1` là `BE` rồi `2` là phía FE. Ledger vẫn ghi để làm
+tiếp được.
 
 Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứng do `engineering-plan-writing` định nghĩa (bảng
 "Kind và chuỗi agent" trong `references/plan-structure.md` của skill đó) — không lặp lại ở đây.
@@ -22,7 +24,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 ## Quy trình
 
 1. **Chuẩn bị.** Đọc `plan.md` một lần (bản đồ file, Global Constraints, Review Focus, `**Interfaces:**` của từng task).
-   Chạy `node scripts/ledger.mjs <requestDir> "# Ledger — plan: <đường dẫn plan.md>"` để tạo `.sdd/` và dòng đầu ledger;
+   Chạy `node <thư mục skill plan-execution>/scripts/ledger.mjs <requestDir> "# Ledger — plan: <đường dẫn plan.md>"` để tạo `.sdd/` và dòng đầu ledger;
    ledger đã có thì đọc phần cuối và làm tiếp từ task chưa `complete`, không làm lại task đã xong. Bước này đồng thời
    rà trước các cặp task chung file hoặc nối interface (xem `references/task-loop.md`, mục "Rà plan trước khi chạy").
 2. **Vòng task**, lần lượt từng task chưa `complete`, theo `references/task-loop.md`:
@@ -45,6 +47,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 | Implement, viết test | agent domain theo `kind` |
 | Task review, re-review, review cuối | `backend-reviewer` / `frontend-reviewer` (chỉ đọc); DOCS/TOOLING dùng `general-purpose` |
 | Quality/security gate | `engineering-quality-auditor`, chỉ ở review cuối |
+| Chế độ dự phòng khi không có tool subagent | session chính tự làm theo brief và tự review bằng `prompts/task-review.md`, ghi "tự review" vào ledger (`references/task-loop.md`, mục "Review cuối và các điểm cố định") |
 
 Model khi gọi agent (tham số `model`): implementer và reviewer từng task mặc định `sonnet`; vòng 3 của vòng sửa và review cuối
 toàn nhánh dùng `opus`. Plan không cần khai báo model riêng cho từng task.

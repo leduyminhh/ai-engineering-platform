@@ -1,7 +1,7 @@
 # Mẫu prompt: re-review sau vòng sửa
 
 Dùng đúng loại reviewer đã review task. Phạm vi chỉ là diff của vòng sửa: `FIX_BASE` là `git rev-parse HEAD` ghi trước khi
-sửa, nên package là `node scripts/review-package.mjs <FIX_BASE> <head> --out <requestDir>/.sdd/<tên-file>`.
+sửa, nên package là `node <thư mục skill plan-execution>/scripts/review-package.mjs <FIX_BASE> <head> --out <requestDir>/.sdd/<tên-file>`.
 
 ```
 Re-review Task <n>, vòng sửa <1|2|3>. Bạn chỉ đọc; không sửa file, không commit, không gọi agent khác.

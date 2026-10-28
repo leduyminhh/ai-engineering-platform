@@ -61,7 +61,8 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
    commit message, chờ người dùng xác nhận TRƯỚC khi chạy lệnh commit. Nhánh protected luôn dừng
    trước mỗi commit. Trên nhánh feature đang chạy plan đã duyệt: session chính commit theo từng
    task qua skill này, không dừng; mỗi task ít nhất 1 commit (vòng sửa có thể thêm commit); không
-   amend/squash khi người dùng chưa xác nhận (ngoại lệ duy nhất: sửa encoding ở bước 10). Người
+   amend/squash khi người dùng chưa xác nhận (ngoại lệ duy nhất: sửa encoding ở bước 10). Cỡ
+   "thay đổi nhỏ" không có `plan.md`: `requirement.md` đã duyệt được tính là plan đã duyệt. Người
    dùng duyệt toàn bộ diff branch trước merge/push.
 8. Sau khi xác nhận (hoặc khi bước 7 không yêu cầu dừng): commit bằng `git commit -F <file>`
    (KHÔNG truyền tiếng Việt qua tham số shell). Check ở bước 6 fail: sửa xử lý UTF-8, không được

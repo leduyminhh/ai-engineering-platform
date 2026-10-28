@@ -113,9 +113,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** session chính, theo skill `engineering-plan-writing`
 - **Đầu vào:** `requirement.md` + `design.md` (+ `tasks.md` nếu có) + contract từ Bước 3 + baseline Bước 1
 - **Hành động:** cỡ "thay đổi nhỏ" → bỏ qua bước này, ghi rõ "bỏ qua: cỡ thay đổi nhỏ, không có `plan.md`" và sang
-  Bước 5 với một task duy nhất (brief là `requirement.md`, task id `1`). Cỡ dự án: viết `plan.md` theo skill (bản đồ
+  Bước 5 không có plan (brief là `requirement.md`, số task và kind theo Bước 5). Cỡ dự án: viết `plan.md` theo skill (bản đồ
   file, Global Constraints, task có Kind/Interfaces/Phủ AC, Review Focus), tự soát 5 mục, rồi chạy
-  `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Có `tasks.md` →
+  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Có `tasks.md` →
   task trong `plan.md` trỏ ID task của `tasks.md`, và Checkpoint 2 của `engineering-task-breakdown` được duyệt cùng
   `plan.md` (không hỏi hai lần).
 - **Ràng buộc:** chỉ ghi `plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
@@ -143,13 +143,15 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `FE-UI` → `frontend-implementer` rồi `frontend-test-writer` viết test trong cùng task; `FE-INT` →
   `frontend-data-integrator` (sau `FE-UI`; type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); `E2E` →
   `frontend-e2e-test-writer` cho AC luồng UI đầu-cuối trong bảng ứng viên e2e (3–5 luồng, mỗi test map 1 AC, chạy
-  `--repeat-each=3`); `DOCS`/`TOOLING` → session chính tự làm; task `CT` đã chốt contract ở Bước 3 nên được đánh `Done` từ
-  Bước 3 và vòng task bỏ qua, task `DB` đã áp qua `data-db-migration` trước feature nên cũng bỏ qua. Session chính kiểm `agent_result`, tự chạy test hẹp, rồi commit theo task qua `git-workflow` không dừng (agent
+  `--repeat-each=3`); `DOCS`/`TOOLING` → session chính tự làm. Plan không chứa task `CT`/`DB` (đã xử lý ở Bước 2–3: contract chốt ở
+  Bước 3, đổi schema đã dừng ở Bước 2 sang `data-db-migration`). Session chính kiểm `agent_result`, tự chạy test hẹp, rồi commit theo task qua `git-workflow` không dừng (agent
   không commit). Task review: reviewer chế độ `task-review` trả `spec_verdict` + finding, không chạy lại suite. Finding
   `blocker`/`major` hoặc `spec_verdict` khác `compliant` vào vòng sửa, tối đa 3 vòng mỗi task (vòng 3 agent mới chạy
   opus; mỗi vòng một re-review có phạm vi); hết vòng còn finding thì session chính phán và ghi `Ruling:`, thuộc loại dừng
-  của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": chạy một
-  task duy nhất, task id `1`. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5.
+  của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là
+  `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
+  API thật); phạm vi backend hoặc frontend chạy một task duy nhất, task id `1`; phạm vi fullstack chạy hai task, `1` là
+  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5.
 - **Ràng buộc:** chỉ sửa file trong `**Files:**` của task; không giả lập data ẩn; không sửa code production để "cho test
   xanh", không xoá hay nới test, không viết test phụ thuộc thứ tự/thời gian thực/mạng thật; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator chưa có codegen/thư viện data → dừng, đề
@@ -209,7 +211,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** nhánh đã qua review cuối + ledger + mục `## Ảnh hưởng spec` của `design.md`
 - **Hành động:** theo `finish.md` (của `plan-execution`): cập nhật docs bị ảnh hưởng (README/API docs/ADR/`project-knowledge/`); cập nhật spec
   sống `docs/specs/<capability>/spec.md` theo `## Ảnh hưởng spec` (không ảnh hưởng thì ghi lý do); chạy
-  `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (thêm `--base <nhánh
+  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (thêm `--base <nhánh
   gốc>` khi có spec sống); bump version/lock theo quy ước dự án nếu cần; chạy full suite của mọi component bị chạm và
   component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings`; trình diff cả nhánh để người dùng duyệt và đưa
   đúng 3 lựa chọn: merge local / push + PR / giữ nguyên (mặc định); ghi `Plan: complete` vào ledger sau khi việc của lựa

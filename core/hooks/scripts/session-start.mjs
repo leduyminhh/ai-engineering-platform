@@ -53,15 +53,18 @@ function usableHandoff(cwd, cfg, d) {
   return substantive(text).length < MIN_CHARS ? null : { file, text };
 }
 
-// Ledger chưa xong có mtime mới nhất; file hỏng hoặc đã `Plan: complete` bị bỏ qua. Chép nhỏ thay vì import
-// skill plan-execution để hook tự đứng, không phụ thuộc bố cục thư mục của bản build.
-function ledgerSection(cwd, d) {
+// Ledger chưa xong có mtime mới nhất; file hỏng, đã `Plan: complete` hoặc cũ hơn handoffMaxAgeHours (plan bỏ dở) bị bỏ qua.
+// Chép nhỏ thay vì import skill plan-execution để hook tự đứng, không phụ thuộc bố cục thư mục của bản build.
+function ledgerSection(cwd, cfg, d) {
   const reqDir = path.join(cwd, 'docs', 'requests');
+  const maxAge = Number.isFinite(cfg?.handoffMaxAgeHours) ? cfg.handoffMaxAgeHours : DEFAULT_MAX_AGE_HOURS;
   const cands = [];
   for (const name of d.readdirSync(reqDir)) {
     try {
       const p = path.join(reqDir, String(name), '.sdd', 'progress.md');
-      if (d.existsSync(p)) cands.push({ p, t: d.statSync(p).mtimeMs });
+      if (!d.existsSync(p)) continue;
+      const t = d.statSync(p).mtimeMs;
+      if (d.now() - t <= maxAge * HOUR_MS) cands.push({ p, t });
     } catch { /* mục không đọc được: bỏ qua */ }
   }
   for (const { p } of cands.sort((a, b) => b.t - a.t)) {
@@ -100,7 +103,7 @@ export function decide(input, deps = {}) {
     if (source !== 'startup' && source !== 'clear' && source !== 'compact') return null;
     let ledger = null;
     if (cfg?.ledgerInject !== false) {
-      try { ledger = ledgerSection(cwd, d); } catch { /* ledger hỏng không được chặn handoff */ }
+      try { ledger = ledgerSection(cwd, cfg, d); } catch { /* ledger hỏng không được chặn handoff */ }
     }
     const parts = [];
     if (cfg?.handoffInject !== false) {

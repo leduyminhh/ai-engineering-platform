@@ -17,7 +17,7 @@ phát hiện thì sửa `plan.md` rồi đọc lại mục đó.
 Sau 5 mục, chạy script tất định:
 
 ```bash
-node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/
+node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/
 ```
 
 Đường dẫn script theo nơi skill `artifact-templates` được cài. Script chỉ cảnh báo (exit 0). Ngay sau khi viết plan,

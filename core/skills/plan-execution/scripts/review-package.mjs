@@ -16,8 +16,10 @@ export function buildPackage({ base, head, run = git }) {
     if (!ref || ref.startsWith('-')) throw new Error(`Ref không hợp lệ: "${ref}"`);
   }
   if (base === head) throw new Error('base và head trùng nhau: không có gì để review');
-  try { run(['merge-base', '--is-ancestor', base, head]); } catch {
-    throw new Error(`${base} không là tổ tiên của ${head}`);
+  try { run(['merge-base', '--is-ancestor', base, head]); } catch (e) {
+    // --is-ancestor: exit 1 = không là tổ tiên; mã khác (128…) = ref không tồn tại hoặc git lỗi.
+    if (e?.status === 1) throw new Error(`${base} không là tổ tiên của ${head}`);
+    throw new Error(`Không kiểm được ${base}..${head}: ref không tồn tại hoặc git lỗi (${String(e?.message ?? e).trim()})`);
   }
   const range = `${base}..${head}`;
   return [

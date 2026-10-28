@@ -2,7 +2,8 @@
 
 Session chính chạy giao thức này cho từng task của `plan.md`, lần lượt, không song song trong cùng một cây làm việc.
 Định dạng trường (`agent_result`, `spec_verdict`, `tdd`, finding, `rulings`) theo contract đầu ra (`core:principles`).
-Lệnh `scripts/…` chạy bằng `node` từ thư mục skill này.
+Mọi lệnh chạy từ gốc project: `node <thư mục skill plan-execution>/scripts/<script>.mjs …`; `<requestDir>` và đường dẫn
+`plan.md` tương đối theo gốc project.
 
 ## Rà plan trước khi chạy
 
@@ -17,7 +18,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 
 1. **Ghi BASE** bằng `git rev-parse HEAD` trước khi giao việc. Không dùng `HEAD~1`. Mất BASE sau khi compact thì lấy
    `<b>` của dòng `Task <n-1>: complete` gần nhất trong ledger và đối chiếu `git log`.
-2. **Cắt brief**: `node scripts/task-brief.mjs <plan.md> <n>` ghi `task-<n>-brief.md` vào `.sdd/` cạnh plan và in đường
+2. **Cắt brief**: `node <thư mục skill plan-execution>/scripts/task-brief.mjs <plan.md> <n>` ghi `task-<n>-brief.md` vào `.sdd/` cạnh plan và in đường
    dẫn. Brief là nguyên văn mục `### Task <n>`; không tóm tắt lại, không chép nội dung task vào context của session chính.
 3. **Giao việc** theo `kind` (chuỗi agent: `engineering-plan-writing`) bằng mẫu `prompts/implementer.md`. Prompt giao việc
    chỉ gồm một dòng bối cảnh, đường dẫn brief, `Produces` của task trước mà task này dùng, và model; không dán lịch sử
@@ -35,7 +36,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    và so với `Expected:` của plan; báo cáo "xanh" của agent chỉ là đầu vào, không phải bằng chứng.
 6. **Commit**: session chính commit sau mỗi task qua `git-workflow`; agent không tự commit. Một task có ≥ 1 commit; vòng
    sửa sinh thêm commit, không amend hay squash. Ghi `head` = `git rev-parse HEAD` sau commit.
-7. **Task review**: `node scripts/review-package.mjs <BASE> <head> --out <requestDir>/.sdd/task-<n>-review.md`
+7. **Task review**: `node <thư mục skill plan-execution>/scripts/review-package.mjs <BASE> <head> --out <requestDir>/.sdd/task-<n>-review.md`
    (`<requestDir>` là thư mục request đã tạo `.sdd/` bằng `ledger.mjs`; luôn dùng `--out` để diff không đổ vào context
    của session chính và file nằm trong `.sdd/` đã được git bỏ qua), rồi gọi
    `backend-reviewer`/`frontend-reviewer` (task `DOCS`/`TOOLING`: `general-purpose` nạp skill review phù hợp) bằng
@@ -46,7 +47,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Mục plan bắt buộc mà thiếu vẫn là
    `major`. Không tự sửa finding: sửa do agent.
 9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
-   - review sạch: `node scripts/ledger.mjs <requestDir> "Task <n>: complete (commits <a>..<b>, review clean)"`;
+   - review sạch: `node <thư mục skill plan-execution>/scripts/ledger.mjs <requestDir> "Task <n>: complete (commits <a>..<b>, review clean)"`;
    - qua breaker (còn finding mở sau vòng 3, đã phán hết): các dòng `Ruling:` của task đứng trước, rồi
      `Task <n>: complete (commits <a>..<b>, <k> ruled)` với `<k>` là số finding đã phán. Không có dòng complete thì lần
      làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này.
@@ -61,7 +62,7 @@ lần sửa + một lần re-review có phạm vi.
   sửa, session chính phán và ghi `Ruling:`; không được âm thầm bỏ finding.
 - **Vòng 3**: gọi agent mới (cùng loại agent domain, hoặc `*-fixer` vì khoá theo danh sách file) với `model: opus`, đưa
   brief + báo cáo trước + finding còn mở.
-- **Re-review**: `FIX_BASE` = `git rev-parse HEAD` trước khi sửa; gom `node scripts/review-package.mjs <FIX_BASE> <head> --out <requestDir>/.sdd/task-<n>-fix<vòng>-review.md`
+- **Re-review**: `FIX_BASE` = `git rev-parse HEAD` trước khi sửa; gom `node <thư mục skill plan-execution>/scripts/review-package.mjs <FIX_BASE> <head> --out <requestDir>/.sdd/task-<n>-fix<vòng>-review.md`
   và gọi reviewer bằng `prompts/re-review.md`. Re-review chỉ xét diff của vòng sửa, trả `ADDRESSED` hoặc `NOT ADDRESSED` cho từng
   finding cộng breakage mới trong diff đó. Quan sát ngoài diff ghi vào ledger, không kéo dài vòng.
 - Mỗi vòng sửa chỉ chạy test hẹp phủ phần vừa sửa. Bugfix có regression test thì kiểm đỏ→xanh: hoàn tác bản sửa phải

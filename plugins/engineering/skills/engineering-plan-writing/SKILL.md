@@ -21,7 +21,7 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
 ## Ranh giới an toàn
 
 - **Docs-only** — chỉ ghi `docs/requests/<ngày>-<slug>/plan.md`; KHÔNG sinh mã nguồn, KHÔNG sửa `design.md`.
-- Cỡ "thay đổi nhỏ" không có `plan.md`: một task duy nhất, brief là `requirement.md`, task id là `1`. Gặp yêu cầu cỡ này → dừng, không tạo `plan.md`.
+- Cỡ "thay đổi nhỏ" không có `plan.md`: brief là `requirement.md`, số task và kind do `plan-execution` chốt theo phạm vi. Gặp yêu cầu cỡ này → dừng, không tạo `plan.md`.
 - KHÔNG bịa yêu cầu hay AC mới; plan chỉ phủ AC đã có ở `design.md`/`requirement.md`. Thiếu → báo, không tự thêm.
 - KHÔNG chép thân hàm vào plan (xem [references/plan-structure.md](references/plan-structure.md) mục "Độ mịn").
 - `plan.md` đã tồn tại → hỏi trước khi ghi đè.
@@ -43,8 +43,7 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
 5. **Có `tasks.md`?** Task trong `plan.md` trỏ ID task của `tasks.md` thay vì chia lại, và hai file dùng chung một
    checkpoint duyệt. Không có `tasks.md` → plan tự chia task, không bắt buộc tạo `tasks.md`.
 6. **Tự soát.** Chạy 5 mục trong [references/self-review.md](references/self-review.md), sửa tại chỗ, rồi chạy
-   `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (đường dẫn script theo
-   nơi skill `artifact-templates` được cài). Còn cảnh báo ngoài W9 → sửa `plan.md`; không xoá `**Files:**`/test để
+   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Còn cảnh báo ngoài W9 → sửa `plan.md`; không xoá `**Files:**`/test để
    tắt cảnh báo.
 7. **Checkpoint plan ⏸.** Trình plan + kết quả tự soát cho người duyệt. Câu hỏi còn lại gom vào một tin nhắn.
 

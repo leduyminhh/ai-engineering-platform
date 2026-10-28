@@ -541,6 +541,10 @@ export default async function run({ ok, ctx }) {
       'docs/requests/2026-03-03-y/.sdd/progress.md': { text: 'Plan: complete\n', mtime: T0 + 2 },
     })?.additionalContext || '';
     ok(newest.includes('MOI') && !newest.includes('CU'), 'AC3.3: chọn ledger chưa xong có mtime mới nhất, bỏ qua ledger đã xong mới hơn');
+    // now = T0 + 1h; ledger sửa lúc T0 - 30h → 31h tuổi
+    const stale = { [LEDGER]: { text: 'Task 1: complete\n', mtime: T0 - 30 * HOUR } };
+    ok(start(stale) === null && start(stale, { handoffMaxAgeHours: 48 })?.additionalContext.includes('Task 1'),
+      'AC3.3: ledger cũ hơn handoffMaxAgeHours (mặc định 24) → không nạp; nới khoá thì nạp');
   }
   // Công tắc allowEnvFiles: mở .env theo project, khoá/credentials vẫn bị chặn
   {

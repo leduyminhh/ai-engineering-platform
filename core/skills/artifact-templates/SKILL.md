@@ -47,7 +47,7 @@ nên không có khối header, nguồn của nó ghi ở cột Nguồn.
    tự suy ra khung.
 2. **Mở template** đúng file trong cột Template; chỉ nạp file của loại đang cần.
 3. **Điền** placeholder `<…>` bằng nội dung thật. Giữ nguyên tên heading, tên trường và thứ tự mà validator đọc.
-4. **Chạy validator** ở cột Validator nếu có (requirement/design/plan: `node scripts/check-request.mjs <thư-mục-request> [--tests <path>…] [--base <ref>] [--strict]`,
+4. **Chạy validator** ở cột Validator nếu có (requirement/design/plan: `node <thư mục skill artifact-templates>/scripts/check-request.mjs <thư-mục-request> [--tests <path>…] [--base <ref>] [--strict]`,
    thư mục là `docs/requests/<ngày>-<slug>/`); lỗi → sửa nội dung rồi chạy lại. Với W7/W9 do file test chưa tồn tại (lúc mới lập plan) thì giữ nguyên `**Files:**` và chạy lại sau khi viết test, không xoá mục để cho sạch. Validator `chưa có`, hoặc
    validator `chỉ có trong repo aip` mà project hiện tại không có file đó → bỏ qua bước chạy, tự đối chiếu heading và
    mẫu dòng với template, và nói rõ chưa kiểm bằng máy.

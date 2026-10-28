@@ -4,7 +4,7 @@ Chạy một lần sau task cuối, khi mọi task đã `complete` trong ledger.
 phía bị chạm (hai phía thì gọi song song), mỗi lần với `model: opus`. Song song với đó là `engineering-quality-auditor`
 (quality + security gate); auditor chỉ chạy ở review cuối nhánh, không chạy ở review từng task.
 
-Package là toàn nhánh: `node scripts/review-package.mjs <MERGE_BASE> <HEAD> --out <requestDir>/.sdd/final-review.md` với
+Package là toàn nhánh: `node <thư mục skill plan-execution>/scripts/review-package.mjs <MERGE_BASE> <HEAD> --out <requestDir>/.sdd/final-review.md` với
 `MERGE_BASE` = `git merge-base HEAD <nhánh gốc>`; luôn dùng `--out` để diff toàn nhánh không đổ vào context session chính.
 
 ```
