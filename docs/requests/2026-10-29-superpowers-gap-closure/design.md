@@ -1,6 +1,6 @@
 # Thiết kế: bổ sung bootstrap, TDD, debug, worktree và thực thi plan inline
 - Ngày: 2026-10-29
-- Trạng thái: approved — người dùng duyệt design và plan ngày 2026-10-29 ("Duyệt plan, thực thi đi")
+- Trạng thái: merged — 6821140 (merge local --no-ff vào master ngày 2026-10-29, đã lên origin); eval AC6.1 hoãn theo quyết định của người dùng
 - Requirement: không có
 ## Vấn đề và lý do
 So sánh với `superpowers` 7.0.0 (bản cài trên máy) cho thấy `aip` đủ khung quy trình nhưng mỏng ở lớp kỷ luật hành vi:
