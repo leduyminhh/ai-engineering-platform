@@ -1,7 +1,7 @@
 {
   "id": "engineering",
   "name": "Engineering Practices",
-  "description": "Capability xuyên suốt (opt-in, không thuộc core), 8 skill, con người duyệt diff/spec/diagram. Skill: engineering-quality-gate, engineering-spec-writing, engineering-task-breakdown (kiểm tasks.md bằng check-tasks.mjs), engineering-plan-writing (lập plan.md thực thi, tự soát 5 mục), engineering-diagram, engineering-adr, engineering-convention-enforce, engineering-release-notes.",
+  "description": "Capability xuyên suốt (opt-in, không thuộc core), 9 skill, con người duyệt diff/spec/diagram. Skill: engineering-quality-gate, engineering-spec-writing, engineering-task-breakdown (kiểm tasks.md bằng check-tasks.mjs), engineering-plan-writing (lập plan.md thực thi, tự soát 5 mục), engineering-diagram, engineering-adr, engineering-convention-enforce, engineering-release-notes, engineering-repo-audit (soát toàn repo chỉ đọc, xếp hạng điểm nóng).",
   "keywords": [
     "engineering",
     "spec",
@@ -9,5 +9,5 @@
     "quality",
     "release"
   ],
-  "version": "2.5.2"
+  "version": "2.6.0"
 }

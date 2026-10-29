@@ -77,7 +77,7 @@ export default async function run({ ok, ctx }) {
     }
     ok(new Set(refRel).size === refRel.length, `${p.id}: tên file trong references/ không trùng giữa các skill`);
 
-    // Link references/ trong SKILL.md phải tồn tại; file .md cấp đầu của references/ mà SKILL.md không trỏ tới thì model không bao giờ mở nó (thư mục con được trỏ theo thư mục).
+    // AC1.1 (engineering-repo-audit) và mọi skill: link references/ trong SKILL.md phải tồn tại; file .md cấp đầu của references/ mà SKILL.md không trỏ tới thì model không bao giờ mở nó (thư mục con được trỏ theo thư mục).
     for (const s of p.stages) {
       const refDir = path.join(dir, 'skills', s.id, 'references');
       const linked = new Set([...s.body.matchAll(/\]\(references\/([^)#\s]+)\)/g)].map((m) => m[1]));

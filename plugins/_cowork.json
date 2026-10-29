@@ -31,6 +31,7 @@
     "engineering:engineering-adr",
     "engineering:engineering-convention-enforce",
     "engineering:engineering-task-breakdown",
+    "engineering:engineering-repo-audit",
     "ops:ops-deploy-release",
     "ops:ops-incident-troubleshooting",
     "ops:ops-observability",
