@@ -6,7 +6,7 @@ _aip_completions() {
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-  local commands="install uninstall build check list update stats help"
+  local commands="install uninstall build check list update stats statusline help"
   local providers="all claude cursor codex antigravity"
   local plugins="all backend frontend data engineering ops"
 

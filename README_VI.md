@@ -263,6 +263,7 @@ aip pack                  # đóng gói skill Cowork -> build/cowork/<skill>.zip
 aip list                  # adapter + plugin phát hiện được
 aip mode      full|ask|status   # chế độ quyền theo project (chỉ phạm vi project); xem Hooks > Chế độ quyền
 aip stats     [--session <path>] [--json] [--usage [--since <số ngày|yyyy-mm-dd>]]   # kích thước context, hoặc token + tiền theo model, từ transcript
+aip statusline [--soft <n>] [--hard <n>] [--no-color]   # một dòng trạng thái từ JSON của Claude Code trên stdin; xem bên dưới
 ```
 
 - **Scope**: `project` (mặc định, cwd) hoặc `global` (`-g` / `--scope global`, thư mục home).
@@ -286,6 +287,7 @@ aip stats     [--session <path>] [--json] [--usage [--since <số ngày|yyyy-mm-
 - **Uninstall** (alias `remove`) chỉ gỡ path đã track (không đụng target của link), prune thư mục
   rỗng, và đếm-tham-chiếu khối managed dùng chung.
 - **`aip stats`** đọc các transcript Claude Code của project hiện tại. Không cờ thì in bảng 10 phiên đầu theo đỉnh context (số lượt, đầu, đỉnh, cuối); `--session <path>` in phân rã đầy đủ một phiên; `--json` in JSON thô. `--usage [--since <số ngày|yyyy-mm-dd>]` (mặc định 7 ngày, lọc theo timestamp của từng dòng) tổng hợp token và tiền theo model, phiên chính so với subagent, kèm tín hiệu cache (đổi model, khoảng nghỉ trên 60 phút trước lượt ghi cache lớn, lượt ghi cache trên 50% context). Tiền lấy từ bản ghi `cost-state` do Claude Code ghi: tính cho cả phiên gồm subagent, không chia theo cửa sổ `--since`, và có thể lệch hóa đơn. aip không có bảng giá (không tự giữ bảng giá) và không dự đoán hạn mức gói; phiên thiếu `cost-state` hiển thị `—` cho tiền. [Unverified] Lệnh dựa vào layout `~/.claude/projects/<slug>/*.jsonl` và ý nghĩa của `cost-state`, đều là nội bộ của Claude Code, không phải hợp đồng công khai. Bảng chỉ hiện tỷ lệ subagent; phân rã theo từng agent nằm ở `--json`. `--since yyyy-mm-dd` nghĩa là 0h UTC của ngày đó. Mỗi `message.id` chỉ tính một lần trên toàn project, kể cả bản sao fork/resume; phiên bị bỏ lượt như vậy được đánh dấu trong bảng (tiền từ `cost-state` không bị trừ). Lệnh chỉ đọc, không in nội dung hội thoại và không ghi gì.
+- **`aip statusline`** đọc JSON Claude Code gửi cho lệnh `statusLine` và in một dòng: model, context % (cảnh báo từ `--soft`, mặc định 40, và khẩn cấp từ `--hard`, mặc định 60, là hai ngưỡng xoay phiên của baseline), số phút cache prompt còn ấm, tiền phiên và hạn mức 5 giờ. Lệnh chỉ dùng các trường Claude Code đã gửi sẵn, không đọc transcript. Bạn tự thêm vào `settings.json`: `{"statusLine":{"type":"command","command":"aip statusline","refreshInterval":60}}` (`refreshInterval` giữ số phút của cache chạy khi phiên rảnh). Màu theo `NO_COLOR` hoặc `--no-color`. [Unverified] chưa quan sát trong phiên Claude Code thật; ngưỡng 40/60 là heuristic chưa kiểm của baseline.
 - Provider cài mặc định: `claude`, `cursor`, `codex`. `antigravity` có build nhưng chỉ cài
   khi gọi tường minh (`--provider antigravity`).
 

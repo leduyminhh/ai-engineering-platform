@@ -12,6 +12,7 @@ _aip() {
     'list:Liệt kê adapter + plugin'
     'update:git pull + build lại + cài lại'
     'stats:Đo context từ transcript Claude Code'
+    'statusline:Dòng trạng thái context + cache cho Claude Code'
     'help:Trợ giúp'
   )
 

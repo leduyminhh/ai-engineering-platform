@@ -27,6 +27,7 @@ import os from 'node:os';
 import { findTranscripts, projectSlug, statsForFile } from './lib/transcript-stats.mjs';
 import { parseSince, loadSessionUsage, buildUsageReport } from './lib/transcript-usage.mjs';
 import { formatUsageReport } from './lib/usage-report.mjs';
+import { renderStatusline, parseThresholds } from './lib/statusline.mjs';
 
 const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -228,6 +229,9 @@ LỆNH
                             --usage [--since <số ngày|yyyy-mm-dd>]: token + tiền theo model/phiên/subagent (mặc định 7 ngày; yyyy-mm-dd = 0h UTC;
                             bảng chỉ có tỷ lệ subagent, tách theo từng agent nằm ở --json);
                             tiền là cost-state của Claude Code cho cả phiên, không phải hóa đơn [Unverified]
+  statusline                đọc JSON của Claude Code từ stdin, in một dòng trạng thái (model, context % kèm nhắc bàn giao,
+                            cache còn ấm bao lâu, tiền phiên, hạn mức 5h); --soft <n> --hard <n> (mặc định 40/60), --no-color.
+                            Cấu hình: {"statusLine":{"type":"command","command":"aip statusline","refreshInterval":60}}
   mode <full|ask|status>    chế độ quyền của project (chỉ project, không nhận -g): full = ghi mode=full vào
                             .claude/aip-gate.json (hook bỏ xác nhận khi phiên chạy bypassPermissions); ask = bỏ khóa mode
                             và sinh lại .claude/settings.json chuẩn nếu là bản full do aip sinh; status = xem hiện trạng
@@ -336,6 +340,15 @@ async function main() {
       if (usageErr) { console.error(usageErr); process.exitCode = 2; return; }
       if (args.usage) { process.exitCode = reportUsage({ since: args.since, json: args.json }); return; }
       return reportStats({ session: args.session, json: args.json });
+    }
+    case 'statusline': {
+      const th = parseThresholds({ soft: args.soft, hard: args.hard });
+      if (th.error) { console.error(th.error); process.exitCode = 2; return; }
+      // Statusline không được làm vỡ giao diện: stdin rỗng, hỏng hoặc đang là TTY đều cho dòng rỗng và mã 0.
+      let input = null;
+      if (!process.stdin.isTTY) { try { input = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { /* dòng rỗng */ } }
+      console.log(renderStatusline(input, { soft: th.soft, hard: th.hard, color: !args.noColor && !process.env.NO_COLOR }));
+      return;
     }
     case 'pack': {
       console.log('Đóng gói skill cho Cowork…');
