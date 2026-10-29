@@ -24,7 +24,7 @@ Skill này là kỷ luật làm việc, không phải chiến lược test: ch�
 3. **Chạy và thấy đỏ đúng lý do.** Đỏ vì hành vi chưa có, không phải vì lỗi cú pháp, import hay setup. Ghi lệnh, exit code
    và thông báo lỗi (task `kind: BE` ghi vào `tdd.red`).
 4. **Viết code tối thiểu** cho test xanh. Không thêm hành vi chưa có test.
-5. **Chạy lại đúng lệnh đó và thấy xanh** → `tdd.green`; chạy thêm test hẹp của vùng bị chạm.
+5. **Chạy lại đúng lệnh đó và thấy xanh** (task `kind: BE` ghi vào `tdd.green`); chạy thêm test hẹp của vùng bị chạm.
 6. **Refactor khi đang xanh**, chạy lại sau mỗi bước nhỏ.
 7. **Sửa bug:** test tái hiện bug phải đỏ trước. Sau khi sửa phải xanh; xác nhận bằng cách tạm vô hiệu hoá đúng đoạn
    vừa sửa (test đỏ lại) rồi khôi phục (test xanh). Không dùng `git checkout` hay `git reset` lên file chưa commit để hoàn tác:

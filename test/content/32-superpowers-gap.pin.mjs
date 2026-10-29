@@ -87,6 +87,28 @@ export default async function run({ ok, ctx }) {
     ok(/`tdd\.red`/.test(be) && /`tdd\.green`/.test(be) && /tdd: \{ red, green \}/.test(be), 'AC2.2: backend-implement giữ nguyên định dạng tdd.red/tdd.green');
   }
 
+  // AC3.1, AC3.2: engineering-debugging có bốn pha và liên kết đủ bốn tài liệu; bugfix và orchestrator trỏ tới nó có điều kiện
+  {
+    const dbg = read('plugins', 'engineering', 'skills', 'engineering-debugging', 'SKILL.md');
+    const procedure = dbg.slice(dbg.indexOf('## Quy trình — bốn pha'), dbg.indexOf('## Dấu hiệu đang đoán'));
+    ok(['Điều tra', 'So sánh mẫu', 'Giả thuyết và kiểm', 'Sửa'].every((phase, i) => procedure.includes(`${i + 1}. **${phase}.**`)),
+      'AC3.1: mục Quy trình của engineering-debugging có đủ bốn pha theo thứ tự');
+    for (const ref of ['root-cause-tracing', 'defense-in-depth', 'condition-based-waiting', 'polluter-bisect']) {
+      ok(dbg.includes(`references/${ref}.md`) && fs.existsSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-debugging', 'references', `${ref}.md`)),
+        `AC3.1: SKILL.md liên kết references/${ref}.md và file tồn tại`);
+    }
+    const bugfix = read('workflows', 'bugfix', 'WORKFLOW.md');
+    for (const step of [4, 5]) {
+      const section = bugfix.slice(bugfix.indexOf(`### Bước ${step} `), bugfix.indexOf(`### Bước ${step + 1} `));
+      ok(/`engineering-debugging` \(khi skill đã cài\)/.test(section), `AC3.2: workflow-bugfix Bước ${step} trỏ tới engineering-debugging có điều kiện`);
+    }
+    const orchestrator = read('workflows', 'orchestrator', 'WORKFLOW.md');
+    const direct = orchestrator.slice(orchestrator.indexOf('## Yêu cầu chạy trực tiếp bằng skill'), orchestrator.indexOf('## Các bước'));
+    ok(/\|[^|\n]*"test flaky"[^|\n]*\|\s*`engineering-debugging`/.test(direct), 'AC3.2: orchestrator định tuyến "test flaky" tới engineering-debugging trong bảng skill trực tiếp');
+    const registry = orchestrator.slice(orchestrator.indexOf('## Registry'), orchestrator.indexOf('## Yêu cầu chạy trực tiếp bằng skill'));
+    ok(!registry.includes('engineering-debugging'), 'AC3.2: engineering-debugging không nằm trong Registry (không phải workflow)');
+  }
+
   // AC4.1: git-worktree theo quy ước baseline, dọn chỉ bằng git worktree remove khi đã merge và sạch, cấm rm -rf
   {
     const t = read('core', 'skills', 'git-worktree', 'SKILL.md');

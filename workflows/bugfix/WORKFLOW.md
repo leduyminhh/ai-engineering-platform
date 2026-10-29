@@ -88,7 +88,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   tái hiện. Xem thay đổi gần đây của vùng nghi ngờ (`git log`/`git diff` trên file liên quan, thay đổi
   dependency, config) làm một loại evidence. Tìm một đoạn code tương tự đang chạy đúng và nêu khác biệt với
   đoạn lỗi; không có thì ghi lý do không có. Cần thêm dữ liệu thì được chèn log tạm (instrumentation) chỉ khi đã
-  ghi mốc `git status --porcelain` ở đầu bước; gỡ hết log tạm trước khi sang Bước 5.
+  ghi mốc `git status --porcelain` ở đầu bước; gỡ hết log tạm trước khi sang Bước 5. Kỹ thuật truy vết và chờ theo điều kiện: skill `engineering-debugging` (khi skill đã cài).
 - **Ràng buộc:** không mask sai lệch hoặc bỏ qua log gây khó hiểu; không suy diễn khi chưa có evidence; log tạm
   chỉ để thu evidence, không lọt sang Bước 5–6.
 - **Đầu ra:** tập evidence gắn với lỗi.
@@ -107,7 +107,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** phát biểu một giả thuyết "X là nguyên nhân vì Y" kèm cách kiểm (quan sát hoặc phép đo nào xác
   nhận/bác bỏ nó); xây dựng chuỗi nhân quả từ evidence tới hành vi lỗi quan sát được, truy ngược từ chỗ nổ lỗi
   từng cấp (giá trị này do ai gọi/truyền vào) tới nguồn; đối chiếu lý do đỏ của test Bước 3 với root cause đã
-  nêu; trình bày cho người dùng để xác nhận trước khi fix.
+  nêu; trình bày cho người dùng để xác nhận trước khi fix. Quy trình bốn pha và cách truy ngược: skill `engineering-debugging` (khi skill đã cài).
 - **Ràng buộc:** không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
   evidence hỗ trợ; không dừng ở chỗ lỗi nổ khi nguồn nằm ở nơi khác.
 - **Đầu ra:** giải thích root cause, có trích dẫn evidence; **danh sách file/module được sửa** suy từ chuỗi nhân
