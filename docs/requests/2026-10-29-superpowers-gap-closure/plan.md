@@ -83,13 +83,13 @@
 **Files:**
 - Create: `core/skills/plan-execution/references/inline.md`
 - Modify: `core/skills/plan-execution/SKILL.md`, `core/skills/plan-execution/references/task-loop.md`, `core/skills/plan-execution/scripts/ledger.mjs`, `test/content/32-superpowers-gap.pin.mjs`, `core/.manifest.json`, `plugins/_versions.lock.json`
-- Test: `test/contract/00-unit.contract.mjs`, `test/content/32-superpowers-gap.pin.mjs`
+- Test: `test/content/32-superpowers-gap.pin.mjs`
 
 **Interfaces:**
 - Consumes: không có
 - Produces: `validateLine(line: string): string | null` xuất từ `ledger.mjs` (`null` = hợp lệ, chuỗi = lý do từ chối); `main` trả exit 2 và không ghi khi bị từ chối; tệp `references/inline.md`
 
-- [ ] **Step 1: Unit test đỏ.** Trong `00-unit.contract.mjs` thêm một test tham số hoá cho `validateLine` (AC5.2): từ chối `Task 2: complete (commits a..b, inline)` và `… inline, tests: npm test exit 1)`; chấp nhận `… inline, tests: npm test exit 0)`, `Task 2: complete (commits a..b, review clean)`, `Ruling: …`, `minor (deferred): …`, `Plan: complete`. Chạy `node test/validate.mjs --build --only unit`. Mong đợi: fail vì chưa có `validateLine`.
+- [ ] **Step 1: Unit test đỏ.** Trong `32-superpowers-gap.pin.mjs` thêm các ca cho `validateLine` (AC5.2): từ chối `Task 2: complete (commits a..b, inline)` và `… inline, tests: npm test exit 1)`; chấp nhận `… inline, tests: npm test exit 0)`, `Task 2: complete (commits a..b, review clean)`, `Ruling: …`, `minor (deferred): …`, `Plan: complete`. Chạy `node test/validate.mjs --build --only superpowers-gap`. Mong đợi: fail vì chưa có `validateLine`.
 - [ ] **Step 2: Cài `validateLine`** và gọi nó trong `main` trước `appendLedger`; thêm chú thích lý do (dòng inline là bằng chứng duy nhất vì không có review từng task).
 - [ ] **Step 3: Viết `inline.md`** theo design; sửa `SKILL.md` (liên kết, điều kiện bật, câu "không hỏi lại cách thực thi") và thay đoạn dự phòng trong `task-loop.md` bằng con trỏ tới `inline.md`; thêm vào pin các kiểm AC5.1.
 - [ ] **Step 4: Chiếu.** Bump `core` (minor), `npm run build`, `node cli/lib/versions.mjs --lock`, `node test/validate.mjs --build`. Mong đợi: 0 fail.

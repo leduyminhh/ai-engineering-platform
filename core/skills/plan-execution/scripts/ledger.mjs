@@ -8,12 +8,17 @@ import { pathToFileURL } from 'node:url';
 
 const DONE_RE = /^Plan: complete\s*$/m;
 // Chế độ inline không có review từng task, nên dòng complete là bằng chứng duy nhất: bắt buộc mang lệnh test và exit 0.
-const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b/;
+const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b/i;
 const INLINE_EVIDENCE_RE = /\btests: \S.* exit 0\b/;
+const EXIT_FAILED_RE = /\bexit [1-9]/;
 
-// null = hợp lệ; chuỗi = lý do từ chối. Chỉ dòng `Task <n>: complete` ở chế độ inline bị kiểm, mọi dòng khác đi qua như cũ.
 export function validateLine(line) {
-  if (INLINE_COMPLETE_RE.test(line) && !INLINE_EVIDENCE_RE.test(line)) return 'dòng Task <n>: complete ở chế độ inline phải có "tests: <lệnh> exit 0"';
+  // Đối số nhiều dòng được kiểm từng dòng: một dòng hợp lệ không được che dòng inline thiếu evidence.
+  for (const l of line.split(/\r?\n/)) {
+    if (INLINE_COMPLETE_RE.test(l) && !(INLINE_EVIDENCE_RE.test(l) && !EXIT_FAILED_RE.test(l))) {
+      return 'dòng Task <n>: complete ở chế độ inline phải có "tests: <lệnh> exit 0" và không kèm exit khác 0';
+    }
+  }
   return null;
 }
 

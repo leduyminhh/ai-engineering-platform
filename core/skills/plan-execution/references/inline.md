@@ -10,7 +10,7 @@ review cuối.
 - session không có tool subagent. Không bịa lệnh giao việc: chạy plan tại chỗ.
 
 Không hỏi người dùng chọn cách thực thi. Plan đã duyệt thì mặc định là vòng task có subagent (`AGENTS.md`, mục Workflow
-defaults); inline chỉ bật theo một trong hai điều kiện trên. Task phần lớn độc lập, như điều kiện của vòng task thường.
+defaults); inline chỉ bật theo một trong hai điều kiện trên.
 
 Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <người dùng chọn | không có tool subagent> — <chi phí nếu sai>`.
 
@@ -19,7 +19,9 @@ Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <ngư�
 1. Ghi BASE bằng `git rev-parse HEAD`; cắt brief bằng `scripts/task-brief.mjs`; chỉ đọc brief của task này.
 2. Làm theo step trong brief: test đỏ (chạy, thấy đỏ đúng lý do) → code → test xanh. Task `DOCS`/`TOOLING` không có test
    sản phẩm thì dùng lệnh kiểm chứng ghi trong task.
-3. Chạy lệnh test hẹp của task, đọc đủ output và exit code. Không chạy full suite ở từng task.
+3. Chạy lệnh test hẹp của task, đọc đủ output và exit code. Không chạy full suite ở từng task. Vì không có review từng
+   task, tự đối chiếu `git diff --name-only <BASE>..HEAD` với `**Files:**` của task: file ngoài danh sách là lệch plan, hoàn
+   tác hoặc ghi `Ruling:`.
 4. Commit qua `git-workflow`, một task ít nhất một commit.
 5. Ghi ledger:
    `node <thư mục skill plan-execution>/scripts/ledger.mjs <requestDir> "Task <n>: complete (commits <a>..<b>, inline, tests: <lệnh> exit 0)"`.
@@ -35,7 +37,8 @@ không ghi là quyết định bí mật. Chạy liên tục giữa các task; c
   (model opus) cùng `engineering-quality-auditor`; một lần sửa và một re-review có phạm vi như vòng task thường.
 - **Không có tool subagent**: session chính tự review theo `prompts/final-review.md`, đọc diff qua
   `scripts/review-package.mjs --out` thay vì dựa vào trí nhớ. Ghi `Ruling: review cuối là tự review — không có tool subagent —
-  không có góc nhìn thứ hai` vào ledger và đưa mục này vào `remaining_risks` khi trình người dùng.
+  không có góc nhìn thứ hai` vào ledger và đưa mục này vào `remaining_risks` khi trình người dùng. Finding `blocker`/`major`
+  tự tìm ra thì sửa một lượt rồi tự đọc lại đúng phần diff vừa sửa; không có làn sửa thứ hai.
 
 Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một lần, ba lựa chọn, `Plan: complete`.
 

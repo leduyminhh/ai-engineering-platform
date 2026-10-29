@@ -52,7 +52,7 @@ So sánh với `superpowers` 7.0.0 (bản cài trên máy) cho thấy `aip` đ�
 - AC1.1, AC1.2: `decide()` của `session-start` trong `test/contract/90-hooks.contract.mjs` (tham số hoá theo `source` và cấu hình).
 - AC1.3, AC2.1, AC3.1, AC4.1: contract chung hiện có (`10-source`, `40-conventions`, `80-frontmatter`, kiểm link `references/`); phần nội dung đặc thù (dòng `SUBAGENT-STOP`, quy ước tên worktree) gom vào một pin `test/content/32-superpowers-gap.pin.mjs`.
 - AC2.2, AC3.2, AC5.1: cùng pin đó (mục dẫn chiếu giữa các tài liệu); `graph.json` do `50-workflows.contract.mjs` kiểm.
-- AC5.2: unit test `validateLine` trong `test/contract/00-unit.contract.mjs`.
+- AC5.2: unit test `validateLine` trong `test/content/32-superpowers-gap.pin.mjs` (không phải `00-unit.contract.mjs`: file đó tự mô tả là không đọc script core thật, còn pin `31-workflow-self-sufficient` đã có tiền lệ import `ledger.mjs`).
 - AC6.1: ba case eval `core/bootstrap-skill-first`, `engineering/tdd-red-first`, `engineering/debugging-root-cause-first`; chạy tay, không nằm trong `npm test`.
 ## Để builder quyết
 - Danh sách chính xác "dấu hiệu tự biện minh" trong `using-aip` (viết theo tình huống thật của dự án, không dịch bảng của superpowers).

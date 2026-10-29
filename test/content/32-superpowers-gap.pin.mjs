@@ -31,6 +31,9 @@ export default async function run({ ok, ctx }) {
       'Task 2: complete (commits a..b, inline, tests: npm test exit 1)',
       'Task 2: complete (commits a..b, inline, tests: exit 0)',
       'Task 2: complete (commits a..b, inline, tests: npm test exit 10)',
+      'Task 2: complete (commits a..b, INLINE)',
+      'Task 2: complete (commits a..b, inline, tests: a exit 1; b exit 0)',
+      'Task 2: complete (commits a..b, review clean)\nTask 3: complete (commits c..d, inline)',
     ];
     const accept = [
       'Task 2: complete (commits a..b, inline, tests: npm test exit 0)',
@@ -41,10 +44,9 @@ export default async function run({ ok, ctx }) {
       'Plan: complete',
       '# Ledger — plan: docs/requests/x/plan.md',
     ];
-    ok(typeof lg.validateLine === 'function' && reject.every((l) => typeof lg.validateLine(l) === 'string' && lg.validateLine(l)),
-      'AC5.2: validateLine từ chối dòng inline thiếu hoặc sai evidence (exit khác 0, thiếu lệnh)');
-    ok(typeof lg.validateLine === 'function' && accept.every((l) => lg.validateLine(l) === null),
-      'AC5.2: validateLine chấp nhận dòng inline đủ evidence và mọi dòng ledger không phải complete inline');
+    const verdict = (l) => (typeof lg.validateLine === 'function' ? lg.validateLine(l) : undefined);
+    for (const l of reject) ok(typeof verdict(l) === 'string' && verdict(l) !== '', `AC5.2: validateLine từ chối ${JSON.stringify(l)}`);
+    for (const l of accept) ok(verdict(l) === null, `AC5.2: validateLine chấp nhận ${JSON.stringify(l)}`);
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ledger-inline-'));
     try {
       const file = path.join(tmp, '.sdd', 'progress.md');

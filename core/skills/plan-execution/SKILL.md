@@ -12,7 +12,7 @@ invoke: per-request
 Giao thức để **session chính** thực thi một `plan.md` đã duyệt mà không phụ thuộc skill ngoài bộ: mỗi task đi một vòng
 đầy đủ (brief → implement → review task → sửa → commit → ledger), cả plan kết thúc bằng một lần review toàn nhánh rồi
 mới tới bước kết thúc nhánh. Session chính là người điều phối; mọi việc viết code, viết test và review do agent domain
-làm, kết quả trả theo contract đầu ra (`core:principles`). Điều kiện chạy: có `plan.md` đã duyệt trong
+làm (trừ chế độ inline, xem `references/inline.md`), kết quả trả theo contract đầu ra (`core:principles`). Điều kiện chạy: có `plan.md` đã duyệt trong
 `docs/requests/<ngày>-<slug>/` và đang ở nhánh `feature/<slug>`; cỡ "thay đổi nhỏ" không có `plan.md` thì brief là
 `requirement.md` và kind lấy theo phạm vi đã chốt khi làm rõ (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối API
 thật): một task duy nhất, task id `1`; phạm vi fullstack → hai task, `1` là `BE` rồi `2` là phía FE. Ledger vẫn ghi để làm
