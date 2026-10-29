@@ -1,5 +1,5 @@
 schema_version: "1.1"
 name: debugging-root-cause-first
-description: Báo cáo in tổng sai khi có đơn hủy, nguyên nhân nằm ở nơi dựng dữ liệu chứ không ở chỗ in; agent phải truy ngược về nguồn bằng evidence và chưa sửa vì người dùng chỉ hỏi nguyên nhân.
+description: Báo cáo in tổng sai khi có đơn hủy do lệch tên trường giữa hai file; agent phải nêu giả thuyết kèm bằng chứng đọc từ code và chưa sửa vì người dùng chỉ hỏi nguyên nhân.
 context:
   scaffold_script: scaffold.sh
