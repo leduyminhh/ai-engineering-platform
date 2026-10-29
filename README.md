@@ -103,7 +103,7 @@ npx ai-engineering-platform install --provider all --yes
 | Path | Owns |
 | --- | --- |
 | `plugins/` | Canonical capability source: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, plus `_marketplace.json` and `_cowork.json`. |
-| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (task-loop protocol, 3 Node scripts) and `skills/artifact-templates/` (the 11 artifact templates, incl. `spec` for living specs in `docs/specs/`; `check-request.mjs` warns W1–W18) recipes, and the safety `hooks/` (plugin-mode only). |
+| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (task-loop protocol, 3 Node scripts), `skills/using-aip/`, `skills/git-worktree/` and `skills/artifact-templates/` (the 11 artifact templates, incl. `spec` for living specs in `docs/specs/`; `check-request.mjs` warns W1–W18) recipes, and the safety `hooks/` (plugin-mode only). |
 | `evals/` | `claude plugin eval` cases per plugin (manual run; not shipped; `npm test` checks structure only). |
 | `templates/` | `init/` project scaffold (dropped by `*-init` skills); `project-knowledge/`, `docs/requests/_TEMPLATE/` and `docs/decisions/_TEMPLATE.md` are generated from `core/skills/artifact-templates/`. |
 | `adapters/` | Per-provider projection (`<provider>/adapter.mjs`), auto-discovered. `_shared/lib.mjs` holds the cross-tool logic. |

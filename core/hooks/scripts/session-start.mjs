@@ -19,7 +19,7 @@ const HOUR_MS = 3600000;
 const BOOTSTRAP = 'AIP — quy tắc nền của phiên này. Nếu có khả năng, dù nhỏ, một skill áp dụng cho việc đang làm thì gọi skill đó trước khi trả lời, '
   + 'hỏi lại hay đọc code; skill `using-aip` nêu thứ tự ưu tiên và các dấu hiệu tự biện minh để bỏ qua skill. '
   + 'Yêu cầu của người dùng và quy tắc project (CLAUDE.md, AGENTS.md) ưu tiên hơn skill. '
-  + 'Agent worker được giao một task cụ thể thì bỏ qua đoạn này. Chỉ bỏ qua skill khi người dùng nói rõ.';
+  + 'Skill đã đọc mà không áp dụng thì nói một dòng rồi bỏ qua; ngoài ra chỉ bỏ qua khi người dùng nói rõ. Agent worker được giao một task cụ thể thì bỏ qua đoạn này.';
 
 function findHandoff(cwd, cfg, d) {
   const exists = (p) => { try { return d.existsSync(p); } catch { return false; } };
@@ -113,11 +113,12 @@ export function decide(input, deps = {}) {
     }
     const parts = [];
     // Bootstrap đứng đầu và trừ khỏi ngân sách chung để tổng không vượt MAX_TOTAL.
-    if (cfg?.bootstrapInject !== false) parts.push(BOOTSTRAP);
+    const boot = cfg?.bootstrapInject !== false;
+    if (boot) parts.push(BOOTSTRAP);
     if (cfg?.handoffInject !== false) {
       try {
         const h = usableHandoff(cwd, cfg, d);
-        const room = MAX_TOTAL - (ledger ? ledger.length + 2 : 0) - (parts.length ? BOOTSTRAP.length + 2 : 0);
+        const room = MAX_TOTAL - (ledger ? ledger.length + 2 : 0) - (boot ? BOOTSTRAP.length + 2 : 0);
         if (h) parts.push(`Handoff của phiên trước (${path.relative(cwd, h.file).split(path.sep).join('/')}):\n${h.text}`.slice(0, room));
       } catch { /* handoff hỏng không được chặn ledger */ }
     }
