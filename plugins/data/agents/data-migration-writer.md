@@ -22,6 +22,7 @@ Viết đúng các file migration mới thể hiện kế hoạch schema đã đ
 - Bắt buộc: cần quyết định của người dùng (không nhận diện được công cụ, engine không phải PostgreSQL, major version
   Spring Boot khác 3, thao tác phá huỷ chưa được xác nhận ở kế hoạch, số dòng bảng bị đụng chưa biết) → trả
   `status: blocked` + `questions[]`, không tự làm.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 1. Đọc skill `data-db-migration` (chế độ `change`); nhận kế hoạch đã duyệt (các pha expand / migrate data / contract

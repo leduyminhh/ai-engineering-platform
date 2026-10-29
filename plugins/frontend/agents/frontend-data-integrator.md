@@ -20,6 +20,7 @@ Hiện thực tầng data cho component đã có, bám contract làm nguồn s�
   presentational ngoài việc thay `TODO` bằng props đã có sẵn kiểu; thêm thư viện data, codegen hoặc global store
   khi chưa hỏi; quyết định lưu token/auth; sửa file ngoài feature được giao; gọi agent khác.
 - Không tự commit/push: session chính commit sau khi nhận kết quả.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

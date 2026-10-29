@@ -41,6 +41,7 @@ test pyramid của skill `backend-testing`.
   việc mock trả đúng thứ vừa được dặn.
 - Chờ theo điều kiện (poll/await trạng thái đã quan sát được), không sleep cứng; timeout cố định chỉ khi chính hành vi thời gian
   là đối tượng test, và phải ghi lý do.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

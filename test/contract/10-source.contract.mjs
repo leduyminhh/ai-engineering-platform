@@ -105,6 +105,11 @@ export default async function run({ ok, ctx }) {
   const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
   const AGENT_HEADINGS = ['Vai trò', 'Phạm vi', 'Quy trình', 'Report trả về'];
   ok(new Set(allAgents.map((a) => a.id)).size === allAgents.length, 'agents: id duy nhất toàn cục');
+  // EMB AC1.1: quy tắc chế độ nhúng có một nguồn duy nhất trong contract đầu ra.
+  const embText = fs.readFileSync(path.join(CORE_DIR, 'principles', 'workflow-output-contract.md'), 'utf8').replace(/\r\n/g, '\n');
+  const emb = (embText.split(/^## Chế độ nhúng\s*$/m)[1] ?? '').split(/^## /m)[0];
+  ok(emb.includes('blocked') && emb.includes('questions[]') && emb.includes('⏸') && /commit/.test(emb) && emb.includes('agent_result') && /không nới an toàn/.test(emb),
+    'EMB AC1.1: contract đầu ra có mục "Chế độ nhúng" nêu đủ sáu quy tắc và không nới an toàn');
   for (const a of allAgents) {
     ok(path.basename(a.file, '.md') === a.id, `agent ${a.id}: name == tên file`);
     ok(a.id.startsWith(`${a.plugin}-`) && !a.id.includes(':'), `agent ${a.id}: prefix "${a.plugin}-", không chứa ":"`);
@@ -117,6 +122,7 @@ export default async function run({ ok, ctx }) {
     for (const h of AGENT_HEADINGS) ok(a.body.includes(`## ${h}`), `agent ${a.id}: có heading "## ${h}"`);
     const rep = (a.body.split(/^## Report trả về\s*$/m)[1] ?? '').split(/^## /m)[0];
     ok(rep.includes('agent_result'), `SWC AC1.2: agent ${a.id}: Report trả về trỏ tới agent_result`);
+    ok(a.body.includes('Chế độ nhúng') && a.body.includes('core:principles'), `EMB AC1.2: agent ${a.id}: trỏ tới mục "Chế độ nhúng" của contract đầu ra`);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

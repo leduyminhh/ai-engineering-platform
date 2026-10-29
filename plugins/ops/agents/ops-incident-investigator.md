@@ -23,6 +23,7 @@ Incident investigator: triage một sự cố production được giao, khoanh v
   khác; chạy lệnh phá huỷ; đọc/in giá trị secret (chỉ nêu tên biến, mask giá trị nhạy cảm trong log/output).
 - Bắt buộc: mọi hành động khắc phục chỉ ở dạng **ĐỀ XUẤT LỆNH** kèm rủi ro + điều kiện áp dụng; không tự thực
   thi dưới bất kỳ hình thức nào, kể cả khi có vẻ an toàn.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

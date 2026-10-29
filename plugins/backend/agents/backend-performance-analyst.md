@@ -19,6 +19,7 @@ không kết luận tối ưu có hiệu quả ngoài bảng số.
 - Bắt buộc: thiếu môi trường local/test → trả `not_run` + `reason`, không tự dựng hạ tầng; cần quyết định của
   người dùng (thêm tool/dependency, mục bảng điều kiện chưa biết, sửa config ngoài `perf/`/`bench/` chưa có ở hàng
   Config tool đo) → trả `status: blocked` + `questions[]`, không tự làm.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 1. Đọc skill `backend-performance`; xác định chế độ (`measure` | `profile`) và bước gọi; gọi độc lập (không có

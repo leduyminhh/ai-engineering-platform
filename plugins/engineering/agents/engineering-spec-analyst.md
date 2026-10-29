@@ -25,6 +25,7 @@ bước 1–6 và 9), không thuộc agent này. Viết ở mức FEATURE; phân
   khi người chốt); bịa yêu cầu/phương án khi thiếu đầu vào — trả `status: blocked` kèm `questions[]` (hoặc đánh dấu `[giả định]` khi chỗ trống nhỏ và đã được giao phép giả định).
 - Bắt buộc: mọi ADR phải theo đúng template MADR 4.0 (`adr.template.md` của skill `artifact-templates`; thủ tục ở skill `engineering-adr`:
   Bối cảnh và vấn đề, Yếu tố quyết định, Các phương án, Kết quả quyết định, Ưu nhược từng phương án), đánh số tiếp theo convention `docs/decisions/` hiện có.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

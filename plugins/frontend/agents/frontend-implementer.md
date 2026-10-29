@@ -23,6 +23,7 @@ component TypeScript ở mức presentational + tương tác cơ bản, bám ki�
   không cần `tdd` (cổng là `tsc`/lint/build). Không tự commit: session chính commit sau khi nhận kết quả.
 - Bắt buộc: đặt file đúng tầng theo blueprint đã chốt, tôn trọng import boundary (không cross-import ruột
   feature/slice khác, mở qua public API `index.ts`).
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

@@ -68,6 +68,22 @@ Dùng trong vòng task của `plan-execution`; workflow không dùng vòng task 
   sai có chấp nhận được không, có cần người dùng quyết không.
 - `declined_to_judge[]` (reviewer): điều bỏ qua kèm lý do (vd cần chạy hệ thống thật).
 
+## Chế độ nhúng
+
+Skill được viết cho phiên tương tác. Khi một agent worker nạp skill (khai trong `skills:` của agent) và chạy theo
+giao việc của workflow hoặc `plan-execution`, agent ở **chế độ nhúng**. Session chính tự chạy skill theo yêu cầu của
+người dùng thì không ở chế độ nhúng.
+
+- **Không hỏi người dùng.** Bước nào của skill cần người dùng (hỏi, xác nhận, chọn phương án, duyệt) do bước gọi của
+  workflow đảm nhận. Thiếu đầu vào hoặc cần xác nhận → `status: blocked` kèm `questions[]` (mỗi câu một dòng, kèm mặc
+  định đề xuất).
+- **Gate ⏸ thuộc workflow.** Agent không tự coi checkpoint người duyệt của skill là đã qua.
+- **Phạm vi do bước gọi giao** (danh sách file, oracle, scope). Cần mở rộng → `blocked`, không tự mở.
+- **Không commit, push, tag, merge.** Trường `commits` do session chính điền.
+- **Đầu ra là `agent_result`.** Nội dung báo cáo mà skill yêu cầu đi vào `summary`, `findings`, `validation`,
+  `remaining_risks` hoặc file report trong phạm vi được ghi; không in thêm bản báo cáo dài ngoài khối này.
+- **Ranh giới an toàn và Verification của skill giữ nguyên.** Chế độ nhúng chỉ bỏ phần tương tác, không nới an toàn.
+
 ## Kiểm đầu ra worker
 
 Supervisor là session chính (orchestrator hoặc workflow đang chạy). Mỗi lần nhận `agent_result`, áp các luật

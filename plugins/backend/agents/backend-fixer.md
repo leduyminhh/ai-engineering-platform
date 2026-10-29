@@ -24,6 +24,7 @@ workflow.
   đổi migration; không thêm dependency mới; commit/push; gọi agent khác.
 - Bắt buộc: cần mở rộng phạm vi → trả `status: blocked` + danh sách file đề nghị thêm; **không tự mở**. Che
   triệu chứng (nuốt exception, skip test, nới timeout, hạ log) bị cấm theo F4 của skill.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

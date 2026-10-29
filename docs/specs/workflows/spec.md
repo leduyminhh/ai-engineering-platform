@@ -24,6 +24,7 @@ Workflow và orchestrator điều phối các worker agent qua `graph.json`; nă
 - **workflows/R8** — Mỗi task xong được ghi vào ledger `docs/requests/<ngày>-<slug>/.sdd/progress.md` (dòng `Task N: complete`; `Ruling:` cho quyết định của session chính; `Plan: complete` khi xong cả plan); sau compact hoặc phiên mới, workflow làm tiếp từ task chưa `complete`, không làm lại task đã xong; `workflow_result` có `rulings: []` liệt kê mọi `Ruling:` đã ghi. Nguồn: [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) (thêm)
 - **workflows/R9** — `workflow-bugfix` đếm tổng số lần sửa thất bại ở Bước 6 qua mọi cạnh (oracle vẫn đỏ, regression đỏ, finding `blocker`) vào một bộ đếm duy nhất: đủ 3 lần thì dừng `ask_user` với câu hỏi về kiến trúc, không thử lần 4; bản sửa hỏng được revert trước khi thử lại. Nguồn: [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) (thêm)
 - **workflows/R10** — Thân và bảng "Xử lý lỗi" của mọi `WORKFLOW.md` không còn vòng lặp không giới hạn ("lặp tới khi xanh", "sửa tiếp" không kèm số lần); mọi vòng sửa/đo lại ghi "tối đa N rồi hỏi người dùng", và contract test AC6.1 trong `test/contract/50-workflows.contract.mjs` báo đỏ khi có. Nguồn: [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) (thêm)
+- **workflows/R11** — Contract đầu ra có mục "Chế độ nhúng": agent worker nạp skill và chạy theo giao việc của workflow hoặc `plan-execution` không hỏi người dùng (thiếu đầu vào → `blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, giữ phạm vi do bước gọi giao, không commit/push, trả `agent_result`, và giữ nguyên ranh giới an toàn của skill. Mọi agent trong `plugins/*/agents/*.md` trỏ tới mục này; contract `10-source` đỏ khi mục thiếu hoặc một agent thiếu con trỏ.
 
 ## Lịch sử
 
@@ -40,3 +41,4 @@ Workflow và orchestrator điều phối các worker agent qua `graph.json`; nă
 | 2026-10-26 | [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) | workflows/R8 | thêm |
 | 2026-10-26 | [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) | workflows/R9 | thêm |
 | 2026-10-26 | [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) | workflows/R10 | thêm |
+| 2026-10-29 | [2026-10-29-embedded-mode](../../requests/2026-10-29-embedded-mode/design.md) | workflows/R11 | thêm |

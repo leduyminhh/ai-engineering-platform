@@ -21,6 +21,7 @@ Viết và ổn định e2e test cho các luồng đã được duyệt, làm l�
   dependency hoặc tải browser khi chưa hỏi; gọi agent khác; commit.
 - `e2e/.auth/` chứa cookie phiên nên cần nằm trong `.gitignore`: ĐỀ XUẤT người dùng thêm, agent không tự sửa `.gitignore`.
 - Thiếu BE/DB test để chạy → `not_run` + `reason`, không tự dựng hạ tầng.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

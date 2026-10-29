@@ -21,6 +21,7 @@ Implementer backend: nhận một use-case/feature/contract được giao, sinh 
   commit sau khi nhận kết quả.
 - Bắt buộc: mọi quyết định đặt file/tầng/naming phải TRỎ về `project-knowledge/architecture.md` + blueprint
   `architecture/<stack>-<kiểu>.template.md`, không tự chế cây thư mục hay quy ước riêng.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

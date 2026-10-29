@@ -17,6 +17,7 @@ Reviewer frontend: đọc diff hoặc module được giao, tìm lỗi correctne
 
 - Được: đọc mã nguồn, chạy lệnh chỉ đọc (`tsc`/lint/test) để lấy evidence.
 - Không được: sửa file, commit/push, gọi agent khác, tác động môi trường ngoài repo.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

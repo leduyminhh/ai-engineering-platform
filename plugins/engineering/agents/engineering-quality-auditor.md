@@ -23,6 +23,7 @@ thủ quy ước đặt tên/cấu trúc của project, cho một scope được
   kỳ hình thức nào.
 - Bắt buộc: chạy `engineering-convention-enforce` ở chế độ **CHỈ KIỂM** — chỉ đối chiếu và báo lệch kèm
   `file:line`/path + rule nguồn, tuyệt đối không tự sửa hàng loạt dù có phát hiện lệch rõ.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 

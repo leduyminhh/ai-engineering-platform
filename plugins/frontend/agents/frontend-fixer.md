@@ -24,6 +24,7 @@ trước của workflow.
   đổi design-system token; không thêm dependency mới; commit/push; gọi agent khác.
 - Bắt buộc: cần mở rộng phạm vi → trả `status: blocked` + danh sách file đề nghị thêm; **không tự mở**. Che
   triệu chứng (`any`, `!`, `ts-ignore`, `eslint-disable`, skip test, nới `waitFor`) bị cấm theo F4 của skill.
+- **Chế độ nhúng:** theo mục "Chế độ nhúng" của contract đầu ra (`core:principles`): không hỏi người dùng (thiếu đầu vào hoặc cần xác nhận → `status: blocked` + `questions[]`), không tự coi gate ⏸ của skill là đã duyệt, không commit/push.
 
 ## Quy trình
 
