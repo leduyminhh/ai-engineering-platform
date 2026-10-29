@@ -90,6 +90,13 @@ export default async function run({ ok, ctx }) {
     }
   }
 
+  // AC2.1: review diff-only bỏ sót lỗi ở nơi gọi, nên hai skill review phải dẫn đọc caller/callee và SKILL.md phải trỏ tới mục đó.
+  for (const r of ['backend/skills/backend-code-review', 'frontend/skills/frontend-code-review']) {
+    const read = (rel) => fs.readFileSync(path.join(PLUGINS_DIR, r, rel), 'utf8');
+    ok(read('references/review-dimensions.md').includes('## Đọc phần liên quan') && read('SKILL.md').includes('"Đọc phần liên quan"'),
+      `AC2.1: ${r.split('/').pop()} dẫn đọc caller/callee (mục "Đọc phần liên quan" + con trỏ ở SKILL.md)`);
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // 2b. SOURCE: agents (plugins/<id>/agents/*.md)
   // ─────────────────────────────────────────────────────────────────────────────

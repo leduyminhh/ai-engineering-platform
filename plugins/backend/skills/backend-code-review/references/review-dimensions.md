@@ -111,6 +111,20 @@ Cách đo chỉ **đề xuất** trong finding (skill là READ-ONLY, không tự
 truy vấn trong test tích hợp, `EXPLAIN` trên môi trường local/test, profiler của stack. Cần tối ưu có số đo
 trước/sau → `workflow-performance` (nếu project đã cài).
 
+## Đọc phần liên quan (caller/callee của symbol bị đổi)
+
+Diff chỉ cho thấy nơi đổi, không cho thấy ai phụ thuộc vào nó. Với **tối đa 5 symbol công khai** mà diff đổi
+chữ ký, kiểu trả về, ngoại lệ ném ra hoặc hành vi (method public, endpoint, event, DTO, hàm export):
+
+- **Caller:** `grep` tên symbol trong toàn repo, đọc từng nơi gọi trong vài dòng quanh `file:line`; tìm chỗ vẫn giả
+  định hành vi cũ (null, thứ tự, giá trị mặc định, ngoại lệ không còn ném).
+- **Callee trực tiếp:** đọc hàm mà phần đổi gọi tới nếu hợp đồng của nó (null, ngoại lệ, transaction, idempotency)
+  quyết định phần đổi có đúng không.
+- **Giới hạn:** một bước (caller của caller không đọc); symbol private không cần; quá 5 symbol thì chọn những cái
+  nhiều caller nhất và ghi phần còn lại vào "chưa soát".
+- **Cách báo:** finding nằm ngoài diff ghi rõ **"ngoài scope, ảnh hưởng trực tiếp"** kèm `file:line` của nơi gọi
+  và symbol gây ra; vẫn gắn nhãn proven/suspected. Không mở rộng thành review nơi gọi.
+
 ## Severity — thang phân loại + evidence
 
 | Severity | Nghĩa | Ví dụ |

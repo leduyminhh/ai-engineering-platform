@@ -71,6 +71,7 @@ của project, KHÔNG áp gu cá nhân.
 ### 1. Review theo TRỤC
 Đọc soát phần trong scope theo các trục cố định, mỗi trục có dấu hiệu cụ thể cho frontend:
 [references/review-dimensions.md](references/review-dimensions.md).
+- **Đọc phần liên quan** — symbol công khai mà diff đổi chữ ký hoặc hành vi: đọc caller/callee trực tiếp (tối đa 5 symbol, một bước) theo mục "Đọc phần liên quan" của tài liệu trên; finding ngoài diff ghi "ngoài scope, ảnh hưởng trực tiếp".
 - **Correctness** — state/effect sai, dependency array thiếu/thừa, race giữa các request, `key` list không
   ổn định, `useMemo`/`useCallback` sai (memo hoá vô ích hoặc thiếu khi cần), thiếu xử lý loading/error/empty,
   stale closure.

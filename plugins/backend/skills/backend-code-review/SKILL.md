@@ -69,6 +69,7 @@ tầng, map rò kiểu ở biên) — review bám `architecture/ARD.md` mục "D
 ### 1. Review theo TRỤC
 Đọc soát phần trong scope theo các trục cố định, mỗi trục có dấu hiệu cụ thể cho backend:
 [references/review-dimensions.md](references/review-dimensions.md).
+- **Đọc phần liên quan** — symbol công khai mà diff đổi chữ ký hoặc hành vi: đọc caller/callee trực tiếp (tối đa 5 symbol, một bước) theo mục "Đọc phần liên quan" của tài liệu trên; finding ngoài diff ghi "ngoài scope, ảnh hưởng trực tiếp".
 - **Correctness** — bug/edge/null, error-handling nuốt lỗi, concurrency-race, resource-leak (không đóng
   connection/stream), ranh giới transaction sai.
 - **Thiết kế & bám kiến trúc** — Dependency Rule (domain/application KHÔNG import hạ tầng), inbound KHÔNG gọi
