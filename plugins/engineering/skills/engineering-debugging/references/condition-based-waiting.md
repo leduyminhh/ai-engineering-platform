@@ -1,6 +1,6 @@
 # Chờ theo điều kiện thay cho `sleep` cố định
 
-Test flaky do thời gian thường có dạng "chờ N giây rồi kiểm". N đúng trên máy này, sai trên máy khác. Quy tắc của dự án:
+Test flaky do thời gian thường có dạng "chờ N giây rồi kiểm". N có thể đúng trên máy này nhưng sai trên máy khác. Quy tắc của dự án:
 không `sleep` cố định trong test, chờ điều kiện với thời hạn ngắn nhất vẫn ổn định.
 
 ## Cách làm
@@ -8,6 +8,9 @@ không `sleep` cố định trong test, chờ điều kiện với thời hạn 
 1. **Xác định điều kiện thật** mà test đang chờ (một bản ghi xuất hiện, một cờ đổi trạng thái, một tiến trình thoát).
 2. **Poll điều kiện đó** với chu kỳ ngắn và một thời hạn tối đa; hết hạn thì thất bại với thông báo nêu điều kiện đang chờ.
 3. **Không tăng thời hạn** để làm xanh. Test chỉ xanh khi mới tăng thời hạn là dấu hiệu điều kiện chưa đúng.
+
+`condition` phải trả giá trị truthy khi sẵn sàng và không ném lỗi khi chưa sẵn sàng (giá trị falsy như `0` hay `''` được coi
+là chưa sẵn sàng).
 
 ```js
 // waitFor: poll một điều kiện, thất bại rõ ràng khi hết hạn (không sleep cố định).

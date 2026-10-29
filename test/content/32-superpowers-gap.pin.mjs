@@ -94,7 +94,7 @@ export default async function run({ ok, ctx }) {
     ok(['Điều tra', 'So sánh mẫu', 'Giả thuyết và kiểm', 'Sửa'].every((phase, i) => procedure.includes(`${i + 1}. **${phase}.**`)),
       'AC3.1: mục Quy trình của engineering-debugging có đủ bốn pha theo thứ tự');
     for (const ref of ['root-cause-tracing', 'defense-in-depth', 'condition-based-waiting', 'polluter-bisect']) {
-      ok(dbg.includes(`references/${ref}.md`) && fs.existsSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-debugging', 'references', `${ref}.md`)),
+      ok(dbg.includes(`](references/${ref}.md)`) && fs.existsSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-debugging', 'references', `${ref}.md`)),
         `AC3.1: SKILL.md liên kết references/${ref}.md và file tồn tại`);
     }
     const bugfix = read('workflows', 'bugfix', 'WORKFLOW.md');

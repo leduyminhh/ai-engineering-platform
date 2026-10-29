@@ -19,9 +19,11 @@ Dùng `git bisect` với lệnh kiểm có exit code rõ ràng:
 
 ```bash
 git bisect start <commit-xấu> <commit-tốt>
-git bisect run <lệnh kiểm trả exit 0 khi tốt, khác 0 khi xấu>
+git bisect run <lệnh kiểm>
 git bisect reset
 ```
 
-Lưu ý: lệnh kiểm phải chạy được ở mọi commit trong khoảng (có thể phải build lại); commit không build được thì `git bisect skip`.
+Mã thoát của lệnh kiểm (đã thử với git 2.47.1): `0` = commit tốt; `1`–`127` trừ `125` = commit xấu; `125` = bỏ qua commit
+(vd không build được); `≥ 128` = dừng cả phiên bisect. Lệnh kiểm phải chạy được ở mọi commit trong khoảng (có thể phải build
+lại) và trả `125` khi build lỗi, nếu không commit không build được sẽ bị tính là xấu. `git bisect skip` chỉ dùng khi bisect thủ công.
 `git bisect` checkout lần lượt các commit trong khoảng (HEAD tách rời), nên chỉ chạy khi cây làm việc sạch và luôn `git bisect reset` khi xong.

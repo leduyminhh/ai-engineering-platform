@@ -53,7 +53,7 @@ chọn workflow: chỉ nêu skill cần gọi và kết thúc (không phải l�
 | "refactor", "tái cấu trúc" | `backend-refactor` / `frontend-refactor`; "đổi kiến trúc" → `backend-migrate-architecture` / `frontend-migrate-architecture` |
 | "viết test", "tăng coverage", "test strategy", "kiểm thử" | `backend-testing` / `frontend-testing`; luồng UI đầu-cuối → `frontend-e2e-testing` |
 | "đổi schema", "migration", "thêm cột/bảng", "đổi index" | `data-db-migration` (plugin `data`) |
-| "debug", "test flaky", "tìm nguyên nhân gốc", "tại sao test này đỏ" (chỉ điều tra, chưa cần pipeline sửa) | `engineering-debugging` (plugin `engineering`) |
+| "test flaky", "tìm nguyên nhân gốc", "tại sao test này đỏ" (chỉ điều tra, chưa có lỗi cụ thể cần sửa; có lỗi hay bug cụ thể cần sửa → `workflow-bugfix`) | `engineering-debugging` (plugin `engineering`) |
 | "OpenAPI", "contract-first" (chỉ chốt contract, chưa code) | `backend-api-contract` |
 | "cập nhật tài liệu", "sync docs", "viết runbook" | Session chính sửa trực tiếp; ghi quyết định kiến trúc → `engineering-adr` |
 | "khởi tạo backend", "scaffold API/service", "setup project backend mới" | `backend-init` (model không tự gọi được: đề nghị người dùng gõ `/backend:backend-init` khi cài dạng plugin, `/backend-init` khi cài dạng skills) |
