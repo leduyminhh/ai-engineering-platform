@@ -458,7 +458,7 @@ Giới hạn:
 
 ## Eval
 
-`evals/<plugin>/<case>/` chứa 12 case `claude plugin eval` thuộc `backend`, `frontend`, `engineering`, `workflows`, `core`, `data` và `ops`. Chúng nằm ở cấp repo, không ship trong plugin hay gói npm. `npm test` chỉ kiểm cấu trúc; **chạy case gọi model trên tài khoản của bạn và tốn tiền**, nên không nằm trong `npm test` hay CI.
+`evals/<plugin>/<case>/` chứa 17 case `claude plugin eval` thuộc `backend`, `frontend`, `engineering`, `workflows`, `core`, `data` và `ops`. Chúng nằm ở cấp repo, không ship trong plugin hay gói npm. `npm test` chỉ kiểm cấu trúc; **chạy case gọi model trên tài khoản của bạn và tốn tiền**, nên không nằm trong `npm test` hay CI.
 
 Chạy một plugin từ thư mục gốc repo (runner bỏ khoá `dependencies` của plugin trong bản sao tạm, vì plugin có `dependencies` không được nạp khi đánh giá từ đường dẫn [Inference: chưa xác nhận nguyên nhân]):
 
@@ -466,7 +466,7 @@ Chạy một plugin từ thư mục gốc repo (runner bỏ khoá `dependencies`
 node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd> [--runs 3] [--scaffold] [--case <glob>]
 ```
 
-Một lần đo ngày 2026-10-23 (n=3–5 mỗi nhánh, Windows) nằm trong bảng kết quả của [evals/README.md](evals/README.md). Δ là tín hiệu, không phải thống kê; nhiều Δ đo định dạng/quy ước chứ không đo chất lượng, và `guard-bash`/`guard-mcp`/`gate-stop` không đánh giá được trên Windows (Bash). Xem file đó để biết cờ, danh sách case và giới hạn.
+Một lần đo ngày 2026-10-23 (n=3–5 mỗi nhánh, Windows) nằm trong bảng kết quả của [evals/README_VI.md](evals/README_VI.md). Δ là tín hiệu, không phải thống kê; nhiều Δ đo định dạng/quy ước chứ không đo chất lượng, và `guard-bash`/`guard-mcp`/`gate-stop` không đánh giá được trên Windows (Bash). Xem file đó để biết cờ, danh sách case và giới hạn.
 
 ## Đầu ra theo provider
 

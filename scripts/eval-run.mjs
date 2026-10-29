@@ -21,6 +21,30 @@ export function extraSkillCopies(pluginId, root) {
   return (EXTRA_SKILLS[pluginId] ?? []).map((s) => ({ from: path.join(root, 'build', 'claude', 'plugins', 'core', 'skills', s), to: `skills/${s}` }));
 }
 
+// Chỉ Windows cần shell (claude/npm là .cmd); trên POSIX shell sẽ bung `*`/`?` của --case theo thư mục làm việc.
+export const needsShell = (platform = process.platform) => platform === 'win32';
+
+// Kết quả cũ của evals/<id>/results không được lọt vào bản sao tạm mà claude đọc.
+export const evalCopyFilter = (evalSrc) => (src) => path.relative(evalSrc, src).split(path.sep)[0] !== 'results';
+
+// --case chỉ chạy một phần nên không được ghi đè latest.json của lượt chạy đầy đủ.
+export const reportName = (caseGlob) => (caseGlob ? `latest-${caseGlob.replace(/[*?/]/g, '_')}.json` : 'latest.json');
+
+// Trace của lượt trước: lượt đầy đủ (caseNames = null) xoá hết; --case chỉ xoá trace của các case vừa chạy.
+export function staleTraces(files, caseNames) {
+  return files.filter((f) => f.endsWith('.jsonl') && (!caseNames || caseNames.some((n) => f.startsWith(`${n}-with-`) || f.startsWith(`${n}-without-`))));
+}
+
+// Chỉ xoá thư mục claude-eval-* nằm ngay dưới os.tmpdir(): tracePath đến từ báo cáo nên không được tin để rmSync.
+export function isEvalTemp(dir, tmpRoot = os.tmpdir()) {
+  const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+  const norm = (p) => (process.platform === 'win32' ? p.toLowerCase() : p);
+  return /^claude-eval-/.test(path.basename(dir)) && norm(real(path.dirname(dir))) === norm(real(tmpRoot));
+}
+
+// Khi eval thoát sớm không có r.json thì không biết đường dẫn: chỉ quét claude-eval-* do chính lượt này tạo (tạo sau startMs).
+export const leftoverEvalTemps = (entries, startMs) => entries.filter((e) => /^claude-eval-/.test(e.name) && e.ms >= startMs).map((e) => e.name);
+
 export function parseArgs(argv) {
   const out = { plugin: null, runs: 3, maxCostUsd: null, scaffold: false, case: null };
   for (let i = 0; i < argv.length; i++) {
@@ -68,12 +92,13 @@ function run() {
   const a = parseArgs(process.argv.slice(2));
   const built = path.join(ROOT, 'build', 'claude', 'plugins', a.plugin);
   if (!fs.existsSync(built)) {
-    const r = spawnSync('npm', ['run', 'build'], { cwd: ROOT, stdio: 'inherit', shell: true });
+    const r = spawnSync('npm', ['run', 'build'], { cwd: ROOT, stdio: 'inherit', shell: needsShell() });
     if (r.status !== 0 || !fs.existsSync(built)) throw new Error(`Không build được ${built}`);
   }
   const evalSrc = path.join(ROOT, 'evals', a.plugin);
   if (!fs.existsSync(evalSrc)) throw new Error(`Không có evals/${a.plugin}`);
 
+  const startMs = Date.now();
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-eval-'));
   const work = path.join(tmp, a.plugin);
   const evalTemps = new Set();
@@ -83,29 +108,36 @@ function run() {
       if (!fs.existsSync(x.from)) throw new Error(`Thiếu ${x.from}; chạy npm run build`);
       fs.cpSync(x.from, path.join(work, ...x.to.split('/')), { recursive: true, dereference: true });
     }
-    fs.cpSync(evalSrc, path.join(work, 'evals'), { recursive: true });
+    fs.cpSync(evalSrc, path.join(work, 'evals'), { recursive: true, filter: evalCopyFilter(evalSrc) });
     const pj = path.join(work, '.claude-plugin', 'plugin.json');
     fs.writeFileSync(pj, JSON.stringify(stripDependencies(JSON.parse(fs.readFileSync(pj, 'utf8'))), null, 2) + '\n');
 
     const args = ['plugin', 'eval', '.', '--eval-dir', 'evals', '--runs', String(a.runs), '--keep-temp',
       '--max-cost-usd', String(a.maxCostUsd), '--no-publish', ...(a.scaffold ? ['--scaffold'] : []), ...(a.case ? ['--case', a.case] : []),
       '--allow-tools', 'Write', 'Edit', '--trust-plugin', '--json', 'r.json'];
-    const r = spawnSync('claude', args, { cwd: work, stdio: 'inherit', shell: true });
+    const r = spawnSync('claude', args, { cwd: work, stdio: 'inherit', shell: needsShell() });
     const rj = path.join(work, 'r.json');
-    if (!fs.existsSync(rj)) throw new Error(`claude plugin eval không tạo r.json (exit ${r.status})`);
+    if (!fs.existsSync(rj)) {
+      const root = os.tmpdir();
+      const entries = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => ({ name: d.name, ms: fs.statSync(path.join(root, d.name)).birthtimeMs }));
+      for (const n of leftoverEvalTemps(entries, startMs)) evalTemps.add(path.join(root, n));
+      throw new Error(`claude plugin eval không tạo r.json (exit ${r.status})`);
+    }
     const report = JSON.parse(fs.readFileSync(rj, 'utf8'));
 
     const results = path.join(evalSrc, 'results');
     const traces = path.join(results, 'traces');
     fs.mkdirSync(traces, { recursive: true });
-    fs.copyFileSync(rj, path.join(results, 'latest.json'));
+    fs.copyFileSync(rj, path.join(results, reportName(a.case)));
+    const names = (report.cases ?? []).map((c) => c.name ?? c.id);
+    for (const f of staleTraces(fs.readdirSync(traces), a.case ? names : null)) fs.rmSync(path.join(traces, f));
     for (const c of report.cases ?? []) {
       for (const arm of ['with', 'without']) {
         (c.arms?.[arm] ?? []).forEach((run, i) => {
           if (!run.tracePath) return;
-          // tracePath nằm trong claude-eval-*/out/; chỉ thư mục cha mang tên đó mới bị xoá ở bước dọn.
+          // tracePath nằm trong claude-eval-*/out/.
           const dir = path.dirname(path.dirname(run.tracePath));
-          if (/^claude-eval-/.test(path.basename(dir))) evalTemps.add(dir);
+          if (isEvalTemp(dir)) evalTemps.add(dir);
           if (fs.existsSync(run.tracePath)) fs.copyFileSync(run.tracePath, path.join(traces, `${c.name ?? c.id}-${arm}-${i + 1}.jsonl`));
         });
       }
