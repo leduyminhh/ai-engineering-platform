@@ -33,6 +33,7 @@ Số này là **mặc định tự đặt**, không phải chuẩn; người dù
 
 ## Khi không có tín hiệu churn
 
-Repo mới, shallow clone (`git rev-parse --is-shallow-repository` trả `true`) hoặc không có lịch sử: bỏ tín hiệu
-churn và tác giả, xếp theo kích thước và thiếu test. **Nói rõ trong báo cáo** rằng điểm nóng được chọn không có
+Repo mới, shallow clone (`git rev-parse --is-shallow-repository` trả `true`), không phải repo git, hoặc phiên
+không có công cụ chạy lệnh (chỉ đọc/tìm file): bỏ tín hiệu churn và tác giả, xếp theo kích thước (liệt kê file bằng
+công cụ tìm file, ước lượng cỡ khi mở) và thiếu test. **Nói rõ trong báo cáo** rằng điểm nóng được chọn không có
 tín hiệu lịch sử.

@@ -35,7 +35,7 @@
 **Files:**
 - Create: `evals/engineering/repo-audit-readonly/prompt.md`, `evals/engineering/repo-audit-readonly/case.yaml`, `evals/engineering/repo-audit-readonly/scaffold.sh`, `evals/engineering/repo-audit-readonly/graders/*.md`
 - Modify: `evals/README.md`, `evals/README_VI.md`
-- Test: `test/contract/95-evals.contract.mjs`
+- Test: `evals/engineering/repo-audit-readonly/graders/seeded-found.md`, `evals/engineering/repo-audit-readonly/graders/coverage-disclosed.md`, `test/contract/95-evals.contract.mjs`
 
 - [ ] **Step 1:** Viết scaffold gài 3 vấn đề (nối chuỗi SQL, module thanh toán không test, vòng lặp N+1) và graders: skill-used, no-edit, no-write, finding-has-file-line, seeded-found, not-absolute-claim.
 - [ ] **Step 2:** `node test/validate.mjs --build --only evals`, rồi `node scripts/eval-run.mjs --plugin engineering --max-cost-usd 2.5 --runs 3 --scaffold --case repo-audit-readonly`. Ghi n, chi phí, Δ và nhãn loại Δ vào README.

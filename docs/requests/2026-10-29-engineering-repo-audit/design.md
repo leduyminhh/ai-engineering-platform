@@ -35,7 +35,7 @@ Không ảnh hưởng: skill mới và nội dung review không đổi hành vi 
 - [ ] **AC2.1** — Given `backend-code-review` và `frontend-code-review`, When người dùng review một diff đổi symbol công khai, Then `review-dimensions.md` của mỗi skill hướng dẫn đọc caller/callee với giới hạn 5 symbol và một bước.
 ## Kiểm thử
 - AC1.1: contract hiện có (`10-source`, `40-conventions`, `60-versions`) cộng contract link `references/` mới; không viết pin mới.
-- AC1.2, AC1.3: case eval `evals/engineering/repo-audit-readonly` (n=3, có trần chi phí). Kết quả được ghi vào `evals/README.md` kèm nhãn Δ đo cái gì.
+- AC1.2, AC1.3: case eval `evals/engineering/repo-audit-readonly` (graders `seeded-found`, `coverage-disclosed`) (n=3, có trần chi phí). Kết quả được ghi vào `evals/README.md` kèm nhãn Δ đo cái gì.
 - AC2.1: một assert trong contract vì không có contract chung nào bắt được: mục "Đọc phần liên quan" tồn tại trong `review-dimensions.md` của hai skill review.
 ## Để builder quyết
 - Tên chính xác các lệnh xếp hạng điểm nóng trên Windows và POSIX (ưu tiên `git` thuần để chạy được cả hai).
