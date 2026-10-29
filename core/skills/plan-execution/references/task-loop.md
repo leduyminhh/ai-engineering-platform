@@ -109,8 +109,8 @@ từng file và reviewer kiểm **mỗi file có hunk tương ứng**; file nào
   `engineering-quality-auditor` chỉ chạy ở review cuối, không chạy theo task. Chỉ một lần sửa cho toàn bộ finding và một
   lần re-review có phạm vi; phần còn lại trình người dùng ở bước kết thúc nhánh, không có làn sửa thứ hai.
 - Full suite của mọi component bị chạm chạy **một lần** sau vòng sửa cuối, không chạy ở từng task.
-- Không có tool subagent: session chính tự làm theo brief và tự review bằng đúng `prompts/task-review.md`, ghi rõ trong
-  ledger rằng review là tự review.
+- Không có tool subagent, hoặc người dùng nói rõ chạy inline: làm theo `inline.md` (session chính làm mọi task, review cuối thay
+  review từng task).
 
 ## Ledger
 
