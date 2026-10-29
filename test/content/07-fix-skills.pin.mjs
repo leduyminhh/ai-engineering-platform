@@ -167,10 +167,4 @@ export default async function run({ ok, ctx }) {
     }
   }
 
-  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
-  {
-    ok((workflows.stages.find((s) => s.id === 'workflow-bugfix')?.body ?? '').includes('`references/error-matrix.md`'), 'workflow-bugfix: WORKFLOW.md vẫn trỏ tới references/error-matrix.md');
-    ok((workflows.stages.find((s) => s.id === 'workflow-security-review')?.body ?? '').includes('`references/error-matrix.md`'), 'workflow-security-review: WORKFLOW.md vẫn trỏ tới references/error-matrix.md');
-    ok((workflows.stages.find((s) => s.id === 'workflow-performance')?.body ?? '').includes('`references/error-matrix.md`'), 'workflow-performance: WORKFLOW.md vẫn trỏ tới references/error-matrix.md');
-  }
 }

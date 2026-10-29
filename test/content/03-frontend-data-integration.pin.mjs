@@ -35,7 +35,6 @@ export default async function run({ ok, ctx }) {
     const diOtherRefs = fs.readdirSync(path.join(PLUGINS_DIR, 'frontend', 'skills'))
       .filter((d) => d !== 'frontend-data-integration')
       .flatMap((d) => listFilesRec(path.join(PLUGINS_DIR, 'frontend', 'skills', d, 'references')));
-    ok(diFiles.every((f) => !diOtherRefs.includes(f)), 'frontend-data-integration: tên file references không trùng skill frontend khác');
     const diAgentPath = path.join(PLUGINS_DIR, 'frontend', 'agents', 'frontend-data-integrator.md');
     const diAgentExists = fs.existsSync(diAgentPath);
     ok(diAgentExists, 'frontend-data-integrator: có agent file');

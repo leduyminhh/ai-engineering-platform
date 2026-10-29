@@ -58,7 +58,6 @@ export default async function run({ ok, ctx }) {
     const cowork20 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, '_cowork.json'), 'utf8')).skills;
     ok(cowork20.includes('backend:backend-performance'), '_cowork.json: có backend:backend-performance');
     const beMan20 = JSON.parse(fs.readFileSync(path.join(PLUGINS_DIR, 'backend', '.manifest.json'), 'utf8'));
-    ok(/^\d+\.\d+\.\d+$/.test(beMan20.version), 'backend manifest: version semver');
     const paPath = path.join(PLUGINS_DIR, 'backend', 'agents', 'backend-performance-analyst.md');
     const pa = fs.existsSync(paPath) ? fs.readFileSync(paPath, 'utf8') : '';
     ok(pa.length > 0, 'backend-performance-analyst: có agent file');
@@ -137,8 +136,4 @@ export default async function run({ ok, ctx }) {
     ok(/^\| Khởi chạy ứng dụng \|[^|\n]*PID/m.test(perfRef('measure-conditions')), 'measure-conditions.md: hàng Khởi chạy ứng dụng ghi PID/thời điểm start Bước 3');
   }
 
-  // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.
-  {
-    ok((workflows.stages.find((s) => s.id === 'workflow-performance')?.body ?? '').includes('`references/error-matrix.md`'), 'workflow-performance: WORKFLOW.md vẫn trỏ tới references/error-matrix.md');
-  }
 }

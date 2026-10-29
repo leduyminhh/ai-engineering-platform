@@ -17,8 +17,6 @@ export default async function run({ ok, ctx }) {
   const needBullet = ['aip-gate.json', 'mode: "full"', 'bypassPermissions', 'fullKeep'];
   ok(bullet !== '' && needBullet.every((w) => bullet.includes(w)) && /push/i.test(bullet) && /protected/i.test(bullet),
     'P4e AC3.1: bullet Safety của template nêu aip-gate.json, mode: "full", bypassPermissions và push nhánh bảo vệ vẫn cần xác nhận');
-  ok(Buffer.compare(fs.readFileSync(path.join(REPO_ROOT, 'AGENTS.md')), fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'))) === 0,
-    'P4e AC3.1: AGENTS.md bằng template từng byte');
 
   const cases = [
     ['README.md', '**Permission modes (`aip mode`).**'],

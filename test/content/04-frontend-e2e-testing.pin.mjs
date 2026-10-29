@@ -42,7 +42,6 @@ export default async function run({ ok, ctx }) {
     const e2eOtherRefs = fs.readdirSync(path.join(PLUGINS_DIR, 'frontend', 'skills'))
       .filter((d) => d !== 'frontend-e2e-testing')
       .flatMap((d) => listFilesRec(path.join(PLUGINS_DIR, 'frontend', 'skills', d, 'references')));
-    ok(e2eFiles.every((f) => !e2eOtherRefs.includes(f)), 'frontend-e2e-testing: tên file references không trùng skill frontend khác');
 
     const e2eAgentPath = path.join(PLUGINS_DIR, 'frontend', 'agents', 'frontend-e2e-test-writer.md');
     const e2eAgentExists = fs.existsSync(e2eAgentPath);

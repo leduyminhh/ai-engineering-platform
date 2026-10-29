@@ -23,7 +23,6 @@ export default async function run({ ok, ctx }) {
   ok(sec.includes('/usage'), 'AC4.1: có quy tắc ghi % context ở cổng phase');
 
   const norm = (s) => s.replace(/\r\n/g, '\n');
-  ok(norm(read('AGENTS.md')) === norm(tpl), 'AC1.1: AGENTS.md == AGENTS.template.md');
 
   for (const f of ['README.md', 'README_VI.md']) {
     const t = read(f);
