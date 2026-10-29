@@ -11,7 +11,8 @@ invoke: per-request
 
 Worktree là một cây làm việc riêng của cùng repo. Dùng khi hai agent hoặc hai task chạy cùng lúc với tập file không giao
 nhau, hoặc khi cần cô lập việc mới khỏi thay đổi đang dở. Task chạy tuần tự (mặc định của `plan-execution`) thì ở yên một
-cây, không cần skill này. Skill chỉ hướng dẫn cho session chính; agent worker không tự tạo worktree.
+cây, không cần skill này. Skill dành cho session chính; worktree do `isolation: worktree` của Claude Code tự tạo cho
+subagent thì không thuộc phạm vi skill này.
 
 Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS.md`; skill không đặt quy ước khác.
 
@@ -19,7 +20,8 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 
 1. **Hỏi một lần.** Theo `git-workflow`, chưa được người dùng đồng ý thì không tạo. Nêu tên nhánh, đường dẫn và nhánh gốc.
 2. **Kiểm trước.**
-   - Nhánh tích hợp `feature/<slug>` đã tồn tại và cây hiện tại không có thay đổi dở thuộc việc khác (`git status --short`).
+   - Nhánh tích hợp `feature/<slug>` đã tồn tại, cây hiện tại đang ở đúng nhánh đó (`git branch --show-current`) và không có
+     thay đổi dở thuộc việc khác (`git status --short`).
    - `git check-ignore -q .claude/worktrees/` thành công. Chưa bị bỏ qua thì đề xuất thêm `.claude/worktrees/` vào
      `.gitignore` và chờ người dùng đồng ý; không tự sửa.
 3. **Tạo từ tip hiện tại của nhánh tích hợp:**
@@ -41,7 +43,7 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 
 ## Quy trình — dọn worktree
 
-1. Chỉ dọn khi nhánh đã merge (`git branch --merged feature/<slug>` liệt kê nó) **và** `git -C .claude/worktrees/<slug>-t<n> status --short`
+1. Chỉ dọn khi nhánh đã merge (`git branch --merged feature/<slug>` liệt kê nó, có thể kèm tiền tố `+` vì nhánh đang được worktree dùng) **và** `git -C .claude/worktrees/<slug>-t<n> status --short`
    không in gì. Chưa merge hoặc còn thay đổi thì giữ lại và báo người dùng.
 2. Dọn bằng lệnh của git, theo thứ tự:
    ```bash
@@ -60,6 +62,6 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 - Không tạo worktree khi chưa được người dùng đồng ý; không tạo ngoài `.claude/worktrees/`.
 - Không `rm -rf` hay `Remove-Item -Recurse` lên thư mục worktree; không `git worktree remove --force`; không `git branch -D`.
 - Hai worktree không được ghi cùng một file; kiểm tập file bằng `check-partition.mjs` của `artifact-templates` trước khi chạy song song.
-- Số worktree chạy cùng lúc tối đa 3, theo heuristic của baseline (không phải giới hạn chính thức của git).
+- [Inference] Chạy tối đa 3 agent cùng lúc, theo heuristic của baseline (không phải giới hạn chính thức của git).
 - Không push từ worktree; push và PR đi qua `git-workflow` sau khi người dùng duyệt diff cả nhánh tích hợp.
 - Không xoá nhánh tích hợp; không amend hay squash khi chưa được người dùng xác nhận.

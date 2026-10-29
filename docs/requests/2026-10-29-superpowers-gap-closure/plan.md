@@ -65,7 +65,7 @@
 **Phủ AC:** AC4.1
 **Files:**
 - Create: `core/skills/git-worktree/SKILL.md`
-- Modify: `test/content/32-superpowers-gap.pin.mjs`, `core/.manifest.json`, `plugins/_versions.lock.json`, `CLAUDE.md`
+- Modify: `test/content/32-superpowers-gap.pin.mjs`, `core/.manifest.json`, `plugins/_versions.lock.json`, `CLAUDE.md`, `README.md`, `README_VI.md`
 - Test: `test/content/32-superpowers-gap.pin.mjs`
 
 **Interfaces:**

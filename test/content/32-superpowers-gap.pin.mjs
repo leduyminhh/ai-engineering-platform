@@ -66,9 +66,14 @@ export default async function run({ ok, ctx }) {
     const baseline = read('core', 'agents', 'AGENTS.template.md');
     ok(baseline.includes('worktree-<slug>-t<n>') && baseline.includes('.claude/worktrees/<slug>-t<n>/'),
       'AC4.1: baseline vẫn có quy ước tên nhánh và thư mục worktree mà skill bám theo');
-    ok(t.includes('worktree-<slug>-t<n>') && t.includes('.claude/worktrees/<slug>-t<n>/'), 'AC4.1: git-worktree nêu đúng tên nhánh và thư mục theo baseline');
-    ok(t.includes('git worktree remove') && t.includes('git branch --merged') && t.includes('status --short'),
-      'AC4.1: git-worktree chỉ dọn bằng git worktree remove khi đã merge và cây sạch');
-    ok(/Không `rm -rf`/.test(t) && !/^\s*rm -rf/m.test(t), 'AC4.1: git-worktree cấm rm -rf và không có lệnh rm -rf nào');
+    ok(t.includes('git worktree add -b worktree-<slug>-t<n> .claude/worktrees/<slug>-t<n> feature/<slug>'),
+      'AC4.1: lệnh tạo worktree dùng đúng tên nhánh, thư mục và nhánh gốc theo baseline');
+    // Cổng "đã merge và sạch" phải nằm trong chính mục dọn, không chỉ xuất hiện ở đâu đó trong skill.
+    const cleanup = t.slice(t.indexOf('## Quy trình — dọn worktree'), t.indexOf('## Ranh giới an toàn'));
+    ok(cleanup.includes('git branch --merged') && cleanup.includes('status --short') && cleanup.includes('git worktree remove .claude/worktrees/<slug>-t<n>'),
+      'AC4.1: mục dọn chỉ gỡ bằng git worktree remove sau khi kiểm đã merge và cây sạch');
+    ok(/Không `rm -rf`[^\n]*`Remove-Item -Recurse`[^\n]*`git worktree remove --force`[^\n]*`git branch -D`/.test(t),
+      'AC4.1: git-worktree cấm rm -rf, Remove-Item -Recurse, worktree remove --force và branch -D');
+    ok(!/^\s*(rm -rf|Remove-Item|git worktree remove[^\n]*--force|git branch -D)/m.test(t), 'AC4.1: không có lệnh bị cấm nào nằm trong khối lệnh của skill');
   }
 }
