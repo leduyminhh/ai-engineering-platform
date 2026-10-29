@@ -159,7 +159,6 @@ export default async function run({ ok, ctx }) {
       for (const r of rows) {
         const w = wfs.find((x) => x.id === r.id);
         if (w) ok(r.risk === w.risk, `${o.id}: risk của ${r.id} khớp frontmatter (${r.risk} vs ${w.risk})`);
-        for (const n of r.next) ok(ids.has(n), `${o.id}: nối tiếp "${n}" của ${r.id} tồn tại`);
       }
       ok(priority.length === ids.size && [...ids].every((id) => priority.includes(id)),
         `${o.id}: thứ tự ưu tiên liệt kê đủ ${ids.size} workflow`);

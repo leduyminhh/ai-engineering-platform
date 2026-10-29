@@ -34,7 +34,7 @@ gọi khi cần — không thuộc chuỗi bắt buộc.
   để biết **cây thư mục, Dependency Rule, quy ước đặt tên**. Đây là nguồn quyết định "đặt file ở đâu" và
   "gọi tên tầng/port thế nào" — KHÔNG tự chế.
 - Dò **stack thật** từ `pom.xml` / `build.gradle` / `pyproject.toml` / `requirements.txt`: framework, ORM,
-  test runner, công cụ kiểm ranh giới (ArchUnit / import-linter) + **lệnh build/test** thật để chạy ở bước 4.
+  test runner, công cụ kiểm ranh giới (ArchUnit / import-linter) + **lệnh build/test** thật để chạy ở bước 3 và 5.
 
 ### 1. Chốt use-case
 Từ nguồn đầu vào (mô tả người dùng · `docs/requests/<...>/requirement.md` · contract
@@ -50,7 +50,13 @@ Một aggregate · một use-case · một driven port + một adapter — theo 
 ([ARD.md](architecture/ARD.md) mục 8: "Tối giản, không phình"). KHÔNG sinh nhiều feature trong một
 lần; feature khác là slice khác, gọi lại skill.
 
-### 3. Sinh code ĐÚNG kiến trúc
+### 3. Test đỏ trước (khi được giao task `kind: BE` trong vòng task)
+Viết test lõi của use-case (unit mock/fake port, KHÔNG DB) TRƯỚC khi có code production, chạy và xác nhận **đỏ đúng
+lý do** (thất bại vì chưa có hành vi cần test, không phải lỗi setup). Ghi lệnh + exit code + vì sao đỏ là đúng →
+`tdd.red`. Sau bước 4 chạy lại đúng lệnh đó, xanh → `tdd.green`; báo `tdd: { red, green }` trong `agent_result`.
+Gọi ngoài vòng task (không có `kind: BE`) thì không ép — test lõi vẫn phải xanh ở bước 5.
+
+### 4. Sinh code ĐÚNG kiến trúc
 Theo [references/slice-workflow.md](references/slice-workflow.md) — **DEFER cây/naming/boundary cho blueprint**:
 - **Đặt file đúng tầng/module** theo blueprint `<stack>-<kiểu>` đã chọn (không chép cây ở đây — đọc template).
 - **Tôn trọng Dependency Rule:** `domain`/`application` thuần, **không import** framework/ORM/web; inbound
@@ -62,7 +68,7 @@ Theo [references/slice-workflow.md](references/slice-workflow.md) — **DEFER c�
 - **Ranh giới transaction ở use-case**, không ở adapter; **một transaction = một aggregate** (ARD).
 - Tuân thủ `code-convention.md` + quy ước đặt tên của template **tuyệt đối**.
 
-### 4. Verify (Definition of Done)
+### 5. Verify (Definition of Done)
 Theo [references/checklist.md](references/checklist.md):
 - **Build xanh** + **test use-case xanh** (unit lõi mock/fake port, KHÔNG cần DB; adapter chạm hạ tầng thì
   thêm integration test).

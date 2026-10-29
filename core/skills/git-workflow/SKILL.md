@@ -25,7 +25,8 @@ release/hotfix...).
 - Đọc diff trước khi stage; chỉ stage file thuộc phạm vi người dùng yêu cầu — thay đổi
   không liên quan để nguyên trừ khi người dùng nói rõ.
 - Không commit khi chưa đọc diff; không push khi chưa xác nhận branch hiện tại.
-- Không tạo/dùng git worktree trừ khi người dùng yêu cầu tường minh.
+- Hỏi người dùng một lần trước khi tạo worktree; chưa được đồng ý thì không tự tạo. Khi được đồng ý,
+  đặt theo quy ước `.claude/worktrees/<slug>-t<n>/` của baseline Parallel agents.
 - KHÔNG thêm bất kỳ dòng nào có prefix `Co-authored-by` / `Co-Authored-By` hay attribution
   của assistant vào commit message, PR body, tag/release notes.
 - Không commit công việc đang fail trừ khi người dùng muốn checkpoint tường minh.
@@ -57,8 +58,12 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
    (hoặc `scripts/test-commit-message-encoding.ps1 -MessageFile <file>` trên PowerShell), kiểm tra pass.
 7. **DỪNG cho người dùng duyệt diff** khi branch hiện tại là protected (`main`/`master`/`dev`/`develop`)
    hoặc chưa có plan đã duyệt: trình bày `git status --short` (file đã stage) + toàn bộ nội dung
-   commit message, chờ người dùng xác nhận TRƯỚC khi chạy lệnh commit. Trên feature branch đang
-   chạy plan đã duyệt: commit không dừng; người dùng duyệt toàn bộ diff branch trước merge/push.
+   commit message, chờ người dùng xác nhận TRƯỚC khi chạy lệnh commit. Nhánh protected luôn dừng
+   trước mỗi commit. Trên nhánh feature đang chạy plan đã duyệt: session chính commit theo từng
+   task qua skill này, không dừng; mỗi task ít nhất 1 commit (vòng sửa có thể thêm commit); không
+   amend/squash khi người dùng chưa xác nhận (ngoại lệ duy nhất: sửa encoding ở bước 10). Cỡ
+   "thay đổi nhỏ" không có `plan.md`: `requirement.md` đã duyệt được tính là plan đã duyệt. Người
+   dùng duyệt toàn bộ diff branch trước merge/push.
 8. Sau khi xác nhận (hoặc khi bước 7 không yêu cầu dừng): commit bằng `git commit -F <file>`
    (KHÔNG truyền tiếng Việt qua tham số shell). Check ở bước 6 fail: sửa xử lý UTF-8, không được
    bỏ dấu tiếng Việt để lách.
@@ -75,6 +80,12 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
 
 Báo cáo branch, commit, push, PR, verification và ghi chú bằng tiếng Việt theo
 [references/output-template-vi.md](references/output-template-vi.md).
+
+## Kết thúc nhánh
+
+Khi nhánh feature đã chạy xong plan: làm theo `plan-execution/references/finish.md` (3 lựa chọn merge
+local / push + PR / giữ nguyên, mặc định giữ nguyên). Skill này chỉ thực hiện phần git của lựa chọn
+người dùng đã chọn.
 
 ## Quy trình — changelog / release notes
 

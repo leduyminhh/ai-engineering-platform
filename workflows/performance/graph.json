@@ -1,11 +1,22 @@
 {
   "schema": 1,
   "workflow": "workflow-performance",
-  "start": "metric-goal",
+  "start": "baseline-build",
   "steps": [
     {
-      "id": "metric-goal",
+      "id": "baseline-build",
       "n": 1,
+      "title": "Baseline build/test",
+      "run": { "session": true },
+      "next": "metric-goal",
+      "on_fail": [
+        { "to": "blocked", "when": "build đỏ hoặc test đỏ trong vùng sẽ đụng → dừng blocked, báo người dùng và đề xuất workflow-bugfix trước" }
+      ],
+      "gate": { "type": "auto" }
+    },
+    {
+      "id": "metric-goal",
+      "n": 2,
       "title": "Metric & mục tiêu",
       "run": { "session": true },
       "next": "baseline",
@@ -16,12 +27,12 @@
     },
     {
       "id": "baseline",
-      "n": 2,
-      "title": "Baseline",
+      "n": 3,
+      "title": "Baseline hiệu năng",
       "run": {
         "agents": [
-          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 1" },
-          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 1" }
+          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 2" },
+          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 2" }
         ],
         "parallel": true
       },
@@ -34,18 +45,18 @@
     },
     {
       "id": "profile",
-      "n": 3,
+      "n": 4,
       "title": "Profile & giả thuyết",
       "run": {
         "agents": [
-          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 1" },
-          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 1" }
+          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 2" },
+          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 2" }
         ],
         "parallel": true
       },
       "next": "optimize",
       "on_fail": [
-        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 2 đo lại baseline", "max_attempts": 2 },
+        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 3 đo lại baseline", "max_attempts": 2 },
         { "to": "ask_user", "when": "người dùng không đồng ý hướng tối ưu, hoặc agent trả blocked + câu hỏi → hỏi người dùng rồi chạy lại bước" }
       ],
       "gate": {
@@ -57,7 +68,7 @@
     },
     {
       "id": "optimize",
-      "n": 4,
+      "n": 5,
       "title": "Tối ưu",
       "run": {
         "agents": [
@@ -74,27 +85,27 @@
     },
     {
       "id": "benchmark",
-      "n": 5,
+      "n": 6,
       "title": "Benchmark & so sánh",
       "run": {
         "agents": [
-          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 1" },
-          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 1" }
+          { "id": "backend-performance-analyst", "when": "phía BE; chỉ phía có đụng theo Bước 2" },
+          { "id": "frontend-performance-analyst", "when": "phía FE; chỉ phía có đụng theo Bước 2" }
         ],
         "parallel": true
       },
       "next": "review",
       "on_fail": [
-        { "to": "profile", "when": "không đạt ngưỡng → báo rõ, quay lại Bước 3 tìm hướng khác", "max_attempts": 2 },
+        { "to": "profile", "when": "không đạt ngưỡng → báo rõ, quay lại Bước 4 tìm hướng khác", "max_attempts": 2 },
         { "to": "blocked", "when": "hoặc dừng theo quyết định người dùng" },
-        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 2 đo lại baseline", "max_attempts": 2 },
+        { "to": "baseline", "when": "quyết định làm đổi điều kiện đo → quay lại Bước 3 đo lại baseline", "max_attempts": 2 },
         { "to": "ask_user", "when": "agent trả blocked + câu hỏi → session chính hỏi người dùng, ghi quyết định rồi gọi lại agent" }
       ],
       "gate": { "type": "auto" }
     },
     {
       "id": "review",
-      "n": 6,
+      "n": 7,
       "title": "Review",
       "run": {
         "agents": [
@@ -105,13 +116,13 @@
       },
       "next": "commit",
       "on_fail": [
-        { "to": "optimize", "when": "có finding blocker → quay lại Bước 4 sửa, review lại", "max_attempts": 2 }
+        { "to": "optimize", "when": "có finding blocker → quay lại Bước 5 sửa, review lại", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },
     {
       "id": "commit",
-      "n": 7,
+      "n": 8,
       "title": "Commit",
       "run": { "skills": ["git-workflow"] },
       "next": "done",

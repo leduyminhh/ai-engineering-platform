@@ -9,8 +9,8 @@ export default async function run({ ok, ctx }) {
     const docs = tpl.slice(i, tpl.indexOf('#### Memory and resume', i)).replace(/\s+/g, ' ');
     ok(docs.includes('docs/specs/<capability>/spec.md') && docs.includes('Ảnh hưởng spec') && docs.includes('history table')
       && docs.includes('docs/specs/README.md') && docs.includes('check-request.mjs') && docs.includes('--base <ref>')
-      && docs.indexOf('docs/specs/<capability>/spec.md') < docs.indexOf('finishing-a-development-branch'),
-    'AC4.1: baseline có bước gộp spec sống trước finishing-a-development-branch');
+      && docs.indexOf('docs/specs/<capability>/spec.md') < docs.indexOf('before finishing the branch'),
+    'AC4.1: baseline có bước gộp spec sống trước khi kết thúc nhánh');
     ok(docs.includes('has a `## Ảnh hưởng spec` section') && docs.includes('`Không ảnh hưởng: <reason>`')
       && docs.includes('_TEMPLATE/design.md') && docs.includes('(W10)'),
     'AC4.1: baseline nêu mục Ảnh hưởng spec của design.md và lưu ý _TEMPLATE cũ thiếu mục (W10)');

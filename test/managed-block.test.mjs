@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { mergeManagedBlock, removeManagedBlock, hasOnlyWhitespace, importsAgentsMd } from "../cli/lib/managed-block.mjs";
 
@@ -55,4 +56,18 @@ test("importsAgentsMd chỉ nhận dòng import thật, bỏ code span/fenced bl
     ["email@AGENTS.md", false],
   ];
   for (const [text, expected] of cases) assert.equal(importsAgentsMd(text), expected, JSON.stringify(text));
+});
+
+// AC7.1: block cũ còn mục superpowers được thay hẳn bằng template mới, không nhân đôi marker
+test("merge template mới thay block cũ chứa Superpowers workflow defaults", () => {
+  const full = readFileSync(new URL("../core/agents/AGENTS.template.md", import.meta.url), "utf8");
+  const block = full.slice(full.indexOf(BEGIN), full.indexOf(END) + END.length);
+  const existing = `TOP\n${BEGIN}\n### Superpowers workflow defaults (if the superpowers skills are installed)\n${END}\nBOTTOM`;
+  const out = mergeManagedBlock(existing, block, "AGENTS.md");
+  assert.doesNotMatch(out, /Superpowers workflow defaults/i);
+  assert.match(out, /### Workflow defaults/);
+  assert.match(out, /TOP/);
+  assert.match(out, /BOTTOM/);
+  assert.equal(out.split(BEGIN).length - 1, 1);
+  assert.equal(out.split(END).length - 1, 1);
 });

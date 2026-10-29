@@ -11,7 +11,7 @@ invoke: per-request
 
 Recipe hướng dẫn agent **đo** hiệu năng BACKEND (Java/Spring, Python) với **điều kiện tái lập được** và
 **profile** để tìm bottleneck **có evidence**. Đây là **docs-only recipe** — hướng dẫn cách agent làm việc, KHÔNG
-phải bộ công cụ dựng sẵn. Gọi độc lập hoặc từ Bước 2 (Baseline), Bước 3 (Profile & giả thuyết), Bước 5 (Benchmark
+phải bộ công cụ dựng sẵn. Gọi độc lập hoặc từ Bước 3 (Baseline hiệu năng), Bước 4 (Profile & giả thuyết), Bước 6 (Benchmark
 & so sánh) của `workflow-performance`.
 
 ## Ranh giới với skill lân cận
@@ -25,7 +25,7 @@ phải bộ công cụ dựng sẵn. Gọi độc lập hoặc từ Bước 2 (B
 
 ## Quy trình — hai chế độ
 
-### `measure` — Baseline (Bước 2) và Benchmark (Bước 5)
+### `measure` — Baseline hiệu năng (Bước 3) và Benchmark (Bước 6)
 
 1. Chốt **bảng điều kiện đo** theo mẫu [references/measure-conditions.md](references/measure-conditions.md):
    môi trường (host local/test), phiên bản build, dữ liệu seed, endpoint/luồng, mô hình tải (VU hoặc RPS, thời
@@ -35,11 +35,11 @@ phải bộ công cụ dựng sẵn. Gọi độc lập hoặc từ Bước 2 (B
    `bench/` ([references/jmh-pytest-benchmark.md](references/jmh-pytest-benchmark.md)). Ưu tiên công cụ project
    đã có; chưa có → đề xuất mặc định (k6, JMH, pytest-benchmark) và **hỏi trước** khi thêm tool/dependency.
 3. Chạy **≥ 3 lần**; ghi p50/p95/p99, throughput, error rate và độ lệch giữa các lần.
-4. Ở Bước 5: đọc bảng điều kiện + script của Bước 2, khởi chạy lại ứng dụng từ working tree và xác nhận tiến trình
+4. Ở Bước 6: đọc bảng điều kiện + script của Bước 3, khởi chạy lại ứng dụng từ working tree và xác nhận tiến trình
    mới trước warm-up, rồi **chạy lại nguyên trạng**. Điều kiện lệch (build khác ngoài thay đổi tối ưu, dữ liệu
-   khác, tải khác) → từ chối so sánh, báo. Bảng điều kiện và script chốt ở cuối Bước 2; sau đó không sửa — cần đổi điều kiện thì quay lại Bước 2 đo lại baseline.
+   khác, tải khác) → từ chối so sánh, báo. Bảng điều kiện và script chốt ở cuối Bước 3; sau đó không sửa — cần đổi điều kiện thì quay lại Bước 3 đo lại baseline.
 
-### `profile` — Profile & giả thuyết (Bước 3)
+### `profile` — Profile & giả thuyết (Bước 4)
 
 Thứ tự tầng rẻ → đắt; dừng ở tầng tìm ra bottleneck có evidence:
 
@@ -70,7 +70,7 @@ sách file/hàm đề xuất sửa** (đầu vào F2 của `backend-fix`).
 | # | Gate | Nội dung | Chế độ | Đỏ thì |
 |---|------|---------|--------|--------|
 | P1 | Môi trường | Chỉ chạy trên local/test; host staging/production → từ chối | cả hai | Thiếu môi trường → `not_run` + lý do; không tự dựng hạ tầng |
-| P2 | Điều kiện đo | Bảng điều kiện đo đầy đủ TRƯỚC khi chạy; Bước 5 dùng lại bảng Bước 2 | `measure` | Thiếu mục → dừng, hỏi (chạy như subagent: trả `blocked` + câu hỏi) |
+| P2 | Điều kiện đo | Bảng điều kiện đo đầy đủ TRƯỚC khi chạy; Bước 6 dùng lại bảng Bước 3 | `measure` | Thiếu mục → dừng, hỏi (chạy như subagent: trả `blocked` + câu hỏi) |
 | P3 | Ổn định | ≥ 3 lần; báo độ lệch; độ lệch p95 (load test) hoặc score chính (micro-benchmark) giữa các lần > 10% (mặc định, project ghi đè trong bảng điều kiện) → cảnh báo, không kết luận | `measure` | Tăng số lần lặp hoặc cô lập nhiễu |
 | P4 | Evidence | Mọi giả thuyết có evidence đo được; không suy diễn chỉ từ đọc code | `profile` | Profile thêm |
 | P5 | Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo đã liệt kê ở hàng Config tool đo; thêm tool/dependency → hỏi trước (chạy như subagent: trả `blocked` + câu hỏi); không sửa `src/` production, không sửa test, không chạy DDL/migration | cả hai | Gỡ thay đổi ngoài phạm vi |

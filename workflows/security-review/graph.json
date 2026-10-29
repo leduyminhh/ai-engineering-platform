@@ -90,7 +90,8 @@
       },
       "next": "fix",
       "on_fail": [
-        { "to": "validate-findings", "when": "test đã viết đúng mà vẫn xanh → nghi false positive, quay lại Bước 4 validate lại", "max_attempts": 2 }
+        { "to": "validate-findings", "when": "test đã viết đúng mà vẫn xanh → nghi false positive, quay lại Bước 4 validate lại", "max_attempts": 2 },
+        { "to": "ask_user", "when": "sửa test quá 2 lần mà test vẫn không đỏ đúng lý do → hỏi người dùng" }
       ],
       "gate": { "type": "auto" }
     },
@@ -115,10 +116,17 @@
       "id": "re-scan",
       "n": 9,
       "title": "Re-scan",
-      "run": { "agents": ["engineering-quality-auditor"] },
+      "run": {
+        "agents": [
+          "engineering-quality-auditor",
+          { "id": "backend-reviewer", "when": "chỉ phía có sửa" },
+          { "id": "frontend-reviewer", "when": "chỉ phía có sửa" }
+        ],
+        "parallel": true
+      },
       "next": "commit",
       "on_fail": [
-        { "to": "fix", "when": "finding đã sửa vẫn còn xuất hiện → quay lại Bước 8 sửa lại cho đúng", "max_attempts": 2 }
+        { "to": "fix", "when": "finding đã sửa vẫn còn xuất hiện, hoặc reviewer báo finding blocker → quay lại Bước 8 sửa lại cho đúng", "max_attempts": 2 }
       ],
       "gate": { "type": "auto" }
     },

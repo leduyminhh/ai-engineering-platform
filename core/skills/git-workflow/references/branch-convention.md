@@ -69,5 +69,5 @@ refactor(api): simplify user payload mapping -> refactor/api-user-payload-mappin
 
 ## Quy tắc worktree
 
-KHÔNG tạo/dùng git worktree trừ khi người dùng yêu cầu tường minh. Mặc định làm việc
-trên checkout và branch hiện tại.
+Hỏi người dùng một lần trước khi tạo worktree. Chưa được đồng ý thì làm việc trên checkout và
+branch hiện tại; được đồng ý thì đặt theo `.claude/worktrees/<slug>-t<n>/`.

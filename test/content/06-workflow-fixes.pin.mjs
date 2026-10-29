@@ -45,24 +45,22 @@ export default async function run({ ok, ctx }) {
       'S5: engineering-quality-gate trỏ sang engineering-convention-enforce');
     // S6: thủ tục ghi ADR nằm ở engineering-adr; spec-writing chỉ trỏ sang, không lặp lại thủ tục.
     const specSkill = engRead('engineering-spec-writing/SKILL.md');
-    const specStep4 = (specSkill.split('4. **Ghi ADR')[1] ?? '').split('5. **Verify')[0];
+    const specStep4 = (specSkill.split('**Ghi ADR')[1] ?? '').split('**Builder check')[0];
     ok(specStep4.includes('engineering-adr') && !specStep4.includes('<số kế tiếp>'),
-      'S6: engineering-spec-writing bước 4 trỏ sang engineering-adr, không còn thủ tục đánh số ADR');
+      'S6: engineering-spec-writing bước Ghi ADR trỏ sang engineering-adr, không còn thủ tục đánh số ADR');
 
     // WF10: orchestrator từng không chỉ đường tới skill không có workflow (chuỗi db-change → api → feature đi theo workflow đã gỡ).
     const orch16 = wf16('workflow-orchestrator');
     const direct16 = ((orch16?.body ?? '').split('## Yêu cầu chạy trực tiếp bằng skill')[1] ?? '').split('\n## ')[0];
     ok(['backend-init', 'frontend-init', 'backend-migrate-vault-consul'].every((s) => direct16.includes(`\`${s}\``)),
       'workflow-orchestrator: mục "Yêu cầu chạy trực tiếp bằng skill" nêu backend-init, frontend-init, backend-migrate-vault-consul');
-    ok(/tối đa 3/.test(orch16?.body ?? '') && /thứ tự phụ thuộc/.test(orch16?.body ?? ''),
-      'workflow-orchestrator: giữ luật chuỗi tối đa 3 workflow và ghép theo thứ tự phụ thuộc');
 
     // Sau final review: orchestrator phải nhất quán với đầu ra chuỗi/skill trực tiếp; các workflow khác nêu đủ handoff.
     const orchStep1 = (orch16 ? parseSteps(orch16.body).find((s) => s.n === 1) : undefined) ?? noStep16;
     const out1 = (orchStep1.body.split('**Đầu ra:**')[1] ?? '').split('\n- **')[0];
     const gate1 = (orchStep1.body.split('**Gate:**')[1] ?? '').split('\n- **')[0];
-    ok(/chuỗi/.test(out1) && /skill trực tiếp/.test(out1.replace(/\n/g, ' ')) && /skill trực tiếp/.test(gate1.replace(/\n/g, ' ')),
-      'workflow-orchestrator Bước 1: Đầu ra và Gate nêu chuỗi và mục skill trực tiếp');
+    ok(/ứng viên/.test(out1) && /skill trực tiếp/.test(out1.replace(/\n/g, ' ')) && /skill trực tiếp/.test(gate1.replace(/\n/g, ' ')),
+      'workflow-orchestrator Bước 1: Đầu ra và Gate nêu ứng viên và mục skill trực tiếp');
     ok(((orch16?.body ?? '').replace(/\n\s+/g, ' ').match(/không khớp mục skill trực tiếp/g) ?? []).length >= 3,
       'workflow-orchestrator: Khi fail, bảng lỗi và Điều kiện dừng không coi yêu cầu skill trực tiếp là "không khớp"');
   }

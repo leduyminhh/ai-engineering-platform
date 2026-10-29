@@ -23,8 +23,8 @@ skills: "frontend-performance"
 ## Quy trình
 1. Đọc skill `frontend-performance`; xác định chế độ (`measure` | `profile`) và bước gọi. Khi workflow có cả hai phía, ghi
    artifact vào `perf/frontend/` (phía backend dùng `perf/backend/`).
-2. `measure`: chốt bảng điều kiện đo (P2); ở Bước 5 đọc lại bảng + script của Bước 2, build + phục vụ lại từ working tree và
-   xác nhận bản mới trước khi đo. `profile`: dùng lại bảng của Bước 2, không chốt bảng mới.
+2. `measure`: chốt bảng điều kiện đo (P2); ở Bước 6 đọc lại bảng + script của Bước 3, build + phục vụ lại từ working tree và
+   xác nhận bản mới trước khi đo. `profile`: dùng lại bảng của Bước 3, không chốt bảng mới.
 3. `measure`: chạy ≥3 lần trên bản build production, ghi median LCP/TBT/CLS, kích thước bundle, độ lệch (P3). `profile`:
    bundle → render → main thread, dừng khi có evidence (P4).
 4. Tự đối chiếu diff so với mốc đầu bước (`git diff --name-only` + `git ls-files --others --exclude-standard`): chỉ `perf/`,

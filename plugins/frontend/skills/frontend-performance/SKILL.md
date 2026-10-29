@@ -11,7 +11,7 @@ invoke: per-request
 
 Recipe hướng dẫn agent **đo** hiệu năng FRONTEND (React/TypeScript) với **điều kiện tái lập được** và **profile**
 để tìm bottleneck **có evidence**. Đây là **docs-only recipe** — hướng dẫn cách agent làm việc, KHÔNG phải bộ công
-cụ dựng sẵn. Gọi độc lập hoặc từ Bước 2 (Baseline), Bước 3 (Profile & giả thuyết), Bước 5 (Benchmark & so sánh)
+cụ dựng sẵn. Gọi độc lập hoặc từ Bước 3 (Baseline hiệu năng), Bước 4 (Profile & giả thuyết), Bước 6 (Benchmark & so sánh)
 của `workflow-performance`.
 
 Khác backend: số đo lấy trên **bản build production** (không phải dev server), là số **lab** (không phải người
@@ -29,7 +29,7 @@ dùng thật), và kích thước bundle là chỉ số **xác định** (không
 
 ## Quy trình — hai chế độ
 
-### `measure` — Baseline (Bước 2) và Benchmark (Bước 5)
+### `measure` — Baseline hiệu năng (Bước 3) và Benchmark (Bước 6)
 
 1. Chốt **bảng điều kiện đo** theo mẫu [references/measure-conditions.md](references/measure-conditions.md):
    route/luồng, build (commit SHA + `git diff --name-only`), cách phục vụ **bản build production** ở local (lệnh,
@@ -43,17 +43,17 @@ dùng thật), và kích thước bundle là chỉ số **xác định** (không
 3. Chạy **≥ 3 lần** trên **bản build production** phục vụ ở local; **không đo trên dev server** (HMR, source map,
    React dev build làm số đo vô nghĩa). Ghi **median** LCP, TBT, CLS (kèm điểm Performance nếu cần) và kích thước
    bundle (tổng + chunk lớn nhất); báo độ lệch giữa các lần.
-4. Ở Bước 5: đọc bảng điều kiện + script của Bước 2, **build lại và phục vụ lại** từ working tree, xác nhận là bản
+4. Ở Bước 6: đọc bảng điều kiện + script của Bước 3, **build lại và phục vụ lại** từ working tree, xác nhận là bản
    mới bằng hash file build/tên chunk khác baseline (trùng baseline → dừng, báo: chưa phải bản mới), rồi **chạy
    lại nguyên trạng**. Điều kiện lệch (build khác ngoài thay đổi tối ưu, throttle khác, cache khác) → từ chối so
-   sánh, báo. Bảng điều kiện và script chốt ở cuối Bước 2; sau đó không sửa — cần đổi điều kiện thì quay lại
-   Bước 2 đo lại baseline.
+   sánh, báo. Bảng điều kiện và script chốt ở cuối Bước 3; sau đó không sửa — cần đổi điều kiện thì quay lại
+   Bước 3 đo lại baseline.
 
 Báo rõ trong report: Lighthouse đo **lab**; navigation mặc định **không báo INP** (không có tương tác người dùng;
 `[Unverified]` chế độ timespan/user-flow có thể ghi INP lab, ngoài phạm vi recipe). Số báo cáo là **TBT**, không
 phải INP. Chỉ số người dùng thật (RUM) ngoài phạm vi.
 
-### `profile` — Profile & giả thuyết (Bước 3)
+### `profile` — Profile & giả thuyết (Bước 4)
 
 Thứ tự tầng rẻ → đắt; dừng ở tầng tìm ra bottleneck có evidence:
 
@@ -65,8 +65,8 @@ Thứ tự tầng rẻ → đắt; dừng ở tầng tìm ra bottleneck có evid
    [references/chrome-trace.md](references/chrome-trace.md).
 
 Đầu ra: bottleneck + evidence (số đo, `file:line` hoặc tên chunk/component), giả thuyết nguyên nhân, **danh sách
-file/component đề xuất sửa** (đầu vào của `frontend-fix`). Lệnh/config bật profiler ghi vào **report Bước 3**
-(hoặc `perf/profile-<luồng>.md`), không ghi vào bảng điều kiện đo của Bước 2.
+file/component đề xuất sửa** (đầu vào của `frontend-fix`). Lệnh/config bật profiler ghi vào **report Bước 4**
+(hoặc `perf/profile-<luồng>.md`), không ghi vào bảng điều kiện đo của Bước 3.
 
 ## Ranh giới an toàn (CLAUDE.md)
 - **Chỉ local/test.** Không đo trên dev server; không trỏ vào URL staging/production hay site công khai; không gửi
@@ -88,7 +88,7 @@ file/component đề xuất sửa** (đầu vào của `frontend-fix`). Lệnh/c
 | # | Gate | Nội dung | Chế độ | Đỏ thì |
 |---|------|---------|--------|--------|
 | P1 | Môi trường | Chỉ chạy trên local/test; URL staging/production hoặc site công khai, hay dịch vụ đo của bên thứ ba → từ chối | cả hai | Thiếu môi trường (không có Chrome, không build được) → `not_run` + lý do; không tự dựng hạ tầng |
-| P2 | Điều kiện đo | Bảng điều kiện đo đầy đủ TRƯỚC khi chạy; Bước 5 dùng lại bảng Bước 2 | `measure` | Thiếu mục → dừng, hỏi (chạy như subagent: trả `blocked` + câu hỏi) |
+| P2 | Điều kiện đo | Bảng điều kiện đo đầy đủ TRƯỚC khi chạy; Bước 6 dùng lại bảng Bước 3 | `measure` | Thiếu mục → dừng, hỏi (chạy như subagent: trả `blocked` + câu hỏi) |
 | P3 | Ổn định | ≥ 3 lần; độ lệch median LCP/TBT giữa các lần > 10% (mặc định, project ghi đè trong bảng điều kiện) → cảnh báo, không kết luận; kích thước bundle so trực tiếp (xác định) | `measure` | Tăng số lần lặp hoặc cô lập nhiễu |
 | P4 | Evidence | Mọi giả thuyết có evidence đo được; không suy diễn chỉ từ đọc code | `profile` | Profile thêm |
 | P5 | Phạm vi ghi | Chỉ ghi `perf/`, `bench/`, config tool đo đã liệt kê ở hàng Config tool đo; thêm tool/dependency → hỏi trước (chạy như subagent: trả `blocked` + câu hỏi); không sửa `src/`, không sửa test | cả hai | Gỡ thay đổi ngoài phạm vi |

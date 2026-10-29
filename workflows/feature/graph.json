@@ -8,130 +8,126 @@
       "n": 1,
       "title": "Baseline build/test",
       "run": { "session": true },
-      "next": "requirements",
+      "next": "clarify",
       "on_fail": [
         { "to": "blocked", "when": "baseline đỏ → dừng blocked, đề xuất workflow-bugfix" }
       ],
       "gate": { "type": "auto" }
     },
     {
-      "id": "requirements",
+      "id": "clarify",
       "n": 2,
-      "title": "Phân tích yêu cầu & phạm vi",
-      "run": { "agents": ["engineering-spec-analyst"] },
-      "next": "design-contract",
+      "title": "Làm rõ & cỡ việc",
+      "run": { "session": true, "skills": ["engineering-spec-writing"] },
+      "next": "documents",
       "on_fail": [
-        { "to": "ask_user", "when": "acceptance criteria mơ hồ/không đo được → hỏi lại người dùng" },
+        { "to": "ask_user", "when": "thông tin còn mơ hồ/không đo được sau khi hỏi → hỏi lại người dùng, không tự suy diễn tiếp" },
         { "to": "blocked", "when": "phạm vi có đổi schema → dừng, đề xuất skill data-db-migration" }
       ],
       "gate": {
         "type": "human",
-        "review": "Acceptance criteria + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có)",
-        "approve": "design-contract",
+        "review": "Hướng đã chọn (kèm hướng bị loại) + cỡ việc + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có) + quyết định tách task",
+        "approve": "documents",
         "reject": "ask_user"
       }
     },
     {
-      "id": "design-contract",
+      "id": "documents",
       "n": 3,
-      "title": "Thiết kế & contract",
+      "title": "Tài liệu",
       "run": {
+        "session": true,
         "agents": [
-          { "id": "backend-implementer", "when": "chỉ khi phạm vi có API" },
-          { "id": "engineering-spec-analyst", "when": "chỉ khi ảnh hưởng kiến trúc" }
+          "engineering-spec-analyst",
+          { "id": "backend-implementer", "when": "chỉ khi phạm vi có API", "after": "engineering-spec-analyst" }
         ],
         "skills": [
           { "id": "backend-api-contract", "when": "chỉ khi phạm vi có API" }
-        ],
-        "parallel": true
+        ]
       },
-      "next": "implement",
+      "next": "plan",
       "on_fail": [
-        { "to": "ask_user", "when": "contract xung đột với hệ thống hiện có → dừng, hỏi lại người dùng cách xử lý breaking change" }
+        { "to": "ask_user", "when": "AC không đo được, agent blocked mà session chính không tự trả lời được, hoặc contract xung đột → hỏi người dùng" },
+        { "to": "clarify", "when": "tài liệu cho thấy hướng hoặc cỡ việc đã duyệt sai → quay lại Bước 2", "max_attempts": 2 }
       ],
       "gate": {
         "type": "human",
-        "review": "Contract OpenAPI (nếu có) hoặc ghi chú \"không có API\"; ADR (nếu có)",
-        "approve": "implement",
+        "review": "requirement.md (+ design.md cỡ dự án) + kết quả builder check; contract OpenAPI (nếu có) hoặc ghi chú \"không có API\"; ADR (nếu có)",
+        "approve": "plan",
         "reject": "ask_user"
       }
     },
     {
-      "id": "implement",
+      "id": "plan",
       "n": 4,
-      "title": "Implement",
-      "run": {
-        "agents": [
-          { "id": "backend-implementer", "when": "chỉ phía có đụng theo phạm vi Bước 2" },
-          { "id": "frontend-implementer", "when": "chỉ phía có đụng theo phạm vi Bước 2" },
-          { "id": "frontend-data-integrator", "when": "phạm vi fullstack có contract ở Bước 3", "after": "frontend-implementer" }
-        ],
-        "parallel": true
-      },
-      "next": "test",
+      "title": "Plan",
+      "run": { "session": true, "skills": ["engineering-plan-writing"] },
+      "next": "task-loop",
       "on_fail": [
-        { "to": "design-contract", "when": "contract lệch khi nối data → quay lại Bước 3", "max_attempts": 2 },
-        { "to": "ask_user", "when": "integrator trả blocked vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại" }
+        { "to": "documents", "when": "check-request.mjs còn cảnh báo ngoài W9 mà lỗi nằm ở tài liệu → quay lại Bước 3", "max_attempts": 2 },
+        { "to": "ask_user", "when": "plan còn điểm mơ hồ về phạm vi hay thứ tự → hỏi người dùng ở checkpoint" }
       ],
-      "gate": { "type": "auto" }
+      "gate": {
+        "type": "human",
+        "review": "plan.md + output check-request.mjs (cỡ dự án; cỡ thay đổi nhỏ bỏ qua bước này)",
+        "approve": "task-loop",
+        "reject": "ask_user"
+      }
     },
     {
-      "id": "test",
+      "id": "task-loop",
       "n": 5,
-      "title": "Test",
+      "title": "Vòng task",
       "run": {
+        "session": true,
         "agents": [
-          { "id": "backend-test-writer", "when": "chỉ phía có đụng" },
-          { "id": "frontend-test-writer", "when": "chỉ phía có đụng" },
-          { "id": "frontend-e2e-test-writer", "when": "AC dạng luồng UI đầu-cuối" }
+          { "id": "backend-implementer", "when": "task kind BE" },
+          { "id": "frontend-implementer", "when": "task kind FE-UI" },
+          { "id": "frontend-test-writer", "when": "task kind FE-UI", "after": "frontend-implementer" },
+          { "id": "frontend-data-integrator", "when": "task kind FE-INT" },
+          { "id": "frontend-e2e-test-writer", "when": "task kind E2E (AC dạng luồng UI đầu-cuối)" },
+          { "id": "backend-reviewer", "when": "task review phần backend" },
+          { "id": "frontend-reviewer", "when": "task review phần frontend" }
         ],
-        "parallel": true
+        "skills": ["plan-execution"]
       },
-      "next": "review",
+      "next": "final-review",
       "on_fail": [
-        { "to": "implement", "when": "test đỏ do lỗi code thật → quay lại Bước 4 sửa code (không xoá/nới test)", "max_attempts": 2 }
+        { "to": "documents", "when": "contract lệch khi nối data → quay lại Bước 3", "max_attempts": 2 },
+        { "to": "ask_user", "when": "agent_result hỏng sau 2 lần giao lại, integrator blocked vì chưa có codegen/thư viện data, hoặc việc thuộc loại dừng của plan-execution → hỏi người dùng" }
       ],
       "gate": { "type": "auto" }
     },
     {
-      "id": "review",
+      "id": "final-review",
       "n": 6,
-      "title": "Review",
+      "title": "Review cuối",
       "run": {
         "agents": ["backend-reviewer", "frontend-reviewer", "engineering-quality-auditor"],
         "parallel": true
       },
-      "next": "docs",
+      "next": "finish",
       "on_fail": [
-        { "to": "implement", "when": "còn finding blocker, hoặc drift contract↔code → quay lại Bước 4 sửa code", "max_attempts": 2 },
-        { "to": "test", "when": "còn finding blocker → quay lại Bước 5 sửa test", "max_attempts": 2 },
-        { "to": "design-contract", "when": "drift contract↔code → quay lại Bước 3 sửa contract", "max_attempts": 2 }
+        { "to": "task-loop", "when": "còn finding blocker sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa", "max_attempts": 2 },
+        { "to": "documents", "when": "drift contract↔code mà lỗi nằm ở contract → quay lại Bước 3", "max_attempts": 2 },
+        { "to": "ask_user", "when": "Ruling: hay finding chạm loại dừng của plan-execution (không đảo ngược, bảo mật, tác động ngoài repo, schema DB) → hỏi người dùng" }
       ],
       "gate": { "type": "auto" }
     },
     {
-      "id": "docs",
+      "id": "finish",
       "n": 7,
-      "title": "Tài liệu",
-      "run": { "session": true },
-      "next": "commit",
-      "on_fail": [
-        { "to": "ask_user", "when": "không xác định được docs nào bị ảnh hưởng → hỏi lại người dùng" }
-      ],
-      "gate": { "type": "auto" }
-    },
-    {
-      "id": "commit",
-      "n": 8,
-      "title": "Commit",
-      "run": { "skills": ["git-workflow"] },
+      "title": "Kết thúc nhánh",
+      "run": { "session": true, "skills": ["plan-execution", "git-workflow"] },
       "next": "done",
       "on_fail": [
-        { "to": "ask_user", "when": "người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định" }
+        { "to": "blocked", "when": "full suite đỏ → dừng, sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo blocked" },
+        { "to": "task-loop", "when": "người dùng yêu cầu sửa thêm sau khi xem diff → quay lại Bước 5", "max_attempts": 2 },
+        { "to": "ask_user", "when": "không xác định được docs nào bị ảnh hưởng → hỏi lại người dùng" }
       ],
       "gate": {
         "type": "human",
-        "review": "Diff đầy đủ (code + test + docs) + finding major còn lại trong remaining_risks",
+        "review": "Diff cả nhánh (code + test + docs) + rulings + finding major còn lại trong remaining_risks + kết quả full suite",
         "approve": "done",
         "reject": "ask_user"
       }

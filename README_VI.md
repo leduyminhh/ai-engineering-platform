@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 Người dùng cuối không cần clone repo — gói `ai-engineering-platform` phát hành trên npm
 registry, hai bin `aip` và `ai-engineering-platform` trỏ cùng một CLI.
 
-> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release` / `artifact-templates`
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates`). Các plugin (`backend`, `frontend`, `engineering`,
+> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release` / `artifact-templates` / `plan-execution`
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution`). Các plugin (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) và workflow **không** có trong gói; hãy cài từ source:
 > `git clone` + `npm link` (xem [Bắt đầu nhanh](#bắt-đầu-nhanh)), rồi `aip install --plugin all`, hoặc
 > `aip --all` để mở wizard với mọi skill kể cả draft.
@@ -100,7 +100,7 @@ npx ai-engineering-platform install --provider all --yes
 | Đường dẫn | Vai trò |
 | --- | --- |
 | `plugins/` | Nguồn năng lực: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, cùng `_marketplace.json` và `_cowork.json`. |
-| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, `skills/git-release/` và `skills/artifact-templates/` (11 template artifact, gồm `spec` cho spec sống ở `docs/specs/`; `check-request.mjs` cảnh báo W1–W14), và `hooks/` an toàn (chỉ plugin-mode). |
+| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (giao thức vòng task, 3 script Node) và `skills/artifact-templates/` (11 template artifact, gồm `spec` cho spec sống ở `docs/specs/`; `check-request.mjs` cảnh báo W1–W18), và `hooks/` an toàn (chỉ plugin-mode). |
 | `evals/` | Case `claude plugin eval` theo plugin (chạy tay; không ship; `npm test` chỉ kiểm cấu trúc). |
 | `templates/` | `init/` khung project (do skill `*-init` drop ra); `project-knowledge/`, `docs/requests/_TEMPLATE/` và `docs/decisions/_TEMPLATE.md` sinh từ `core/skills/artifact-templates/`. |
 | `adapters/` | Chiếu theo provider (`<provider>/adapter.mjs`), auto-discover. `_shared/lib.mjs` chứa logic dùng chung. |
@@ -156,8 +156,8 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | Agent id | Plugin | Mode | Skill gói | Dùng trong |
 | --- | --- | --- | --- | --- |
 | `backend-implementer` | backend | write | backend-implement, backend-api-contract | WF01 |
-| `backend-test-writer` | backend | write | backend-testing | WF01, WF02, WF06 |
-| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01, WF02, WF09 |
+| `backend-test-writer` | backend | write | backend-testing | WF02, WF06 |
+| `backend-reviewer` | backend | read-only | backend-code-review, backend-api-contract (kiểm drift) | WF01, WF02, WF06, WF09 |
 | `backend-fixer` | backend | write | backend-fix | WF02, WF06, WF09 |
 | `backend-performance-analyst` | backend | write | backend-performance | WF09 |
 | `data-migration-writer` | data | write | data-db-migration | skill data-db-migration |
@@ -165,7 +165,7 @@ và `write` → `disallowedTools: Agent`; Codex map `read-only` → `sandbox_mod
 | `frontend-data-integrator` | frontend | write | frontend-data-integration | WF01 |
 | `frontend-test-writer` | frontend | write | frontend-testing | WF01, WF02, WF06 |
 | `frontend-e2e-test-writer` | frontend | write | frontend-e2e-testing | WF01 |
-| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01, WF02, WF09 |
+| `frontend-reviewer` | frontend | read-only | frontend-code-review | WF01, WF02, WF06, WF09 |
 | `frontend-fixer` | frontend | write | frontend-fix | WF02, WF06, WF09 |
 | `frontend-performance-analyst` | frontend | write | frontend-performance | WF09 |
 | `engineering-quality-auditor` | engineering | read-only | engineering-quality-gate, engineering-convention-enforce (chế độ kiểm) | WF01, WF02, WF06 |
@@ -183,11 +183,13 @@ xác nhận bắt buộc của orchestrator.
 
 | Mã | Id | Tier | Risk | Thay cho (plan cũ) | Agent |
 | --- | --- | --- | --- | --- | --- |
-| WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, FE data-integrator, BE/FE test-writer, FE e2e-test-writer, BE/FE reviewer, quality-auditor |
+| WF01 | `workflow-feature` | 1 | medium | W1+W2+W3 | spec-analyst, BE/FE implementer, FE data-integrator, FE test-writer, FE e2e-test-writer, BE/FE reviewer, quality-auditor |
 | WF02 | `workflow-bugfix` | 1 | medium | W11 | BE/FE test-writer, BE/FE fixer, BE/FE reviewer, quality-auditor |
 | WF06 | `workflow-security-review` | 1 | high | W14 | quality-auditor, backend-test-writer, frontend-test-writer, backend-fixer, frontend-fixer |
 | WF09 | `workflow-performance` | 3 | medium | W16 | backend-performance-analyst, frontend-performance-analyst, backend-fixer, frontend-fixer, backend-reviewer, frontend-reviewer |
 | — | `workflow-orchestrator` | — | — | mới | không (chạy ở session chính) |
+
+`workflow-feature` chạy 7 bước: baseline → làm rõ & cỡ việc ⏸ → tài liệu ⏸ → plan ⏸ → vòng task (mỗi task: implement theo `kind`, review, sửa tối đa 3 vòng, commit) → review cuối → kết thúc nhánh ⏸. Tiến độ ghi vào ledger (`docs/requests/<ngày>-<slug>/.sdd/progress.md`) để phiên bị nén hoặc phiên mới làm tiếp từ task đầu tiên chưa `complete`; giao thức nằm ở skill `core:plan-execution`.
 
 Việc chỉ cần một năng lực gọi thẳng skill (orchestrator cũng chỉ đường tới skill): review →
 `backend-code-review`/`frontend-code-review`; refactor → `*-refactor`/`*-migrate-architecture`; viết test →
@@ -322,7 +324,7 @@ Plugin `core` mang năm hook cho Claude Code (`core/hooks/`; Node không phụ t
 | H2 | Bash, PowerShell | deny | `git commit -m` có ký tự non-ASCII — dùng `git commit -F <file>` (xem skill `git-workflow`) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | file bí mật: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, khoá riêng `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (kể cả `_sk` và hậu tố bất kỳ khác `.pub`), và chỉ `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` (có giải symlink và NTFS stream; [Unverified] tên ngắn 8.3). `.env.example`/`.env.sample`/`.env.template` và `*.pub` được phép |
 | H3 | Bash, PowerShell | ask | lệnh nhắc tới file bí mật |
-| SS | SessionStart | context | `startup`/`clear`/`compact`: nạp `handoff.md` dùng được mới nhất; `resume`/`fork` phiên đã nguội: một dòng cảnh báo chi phí (xem `session-start` bên dưới) |
+| SS | SessionStart | context | `startup`/`clear`/`compact`: nạp `handoff.md` dùng được mới nhất và đuôi ledger plan chưa xong mới nhất; `resume`/`fork` phiên đã nguội: một dòng cảnh báo chi phí (xem `session-start` bên dưới) |
 | H5 | Edit, Write, MultiEdit, NotebookEdit | deny | agent có `writeScope` ghi ngoài phạm vi (neo theo gốc git của file đích, không phải của cwd phiên): `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. Phiên chính và agent khác không bị khoá |
 
 Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường) thoát 0 không quyết định. Khi `guard-bash` không phân tích chắc chắn được lệnh thì nghiêng về `ask` (`guard-files` không có hành vi này). Không có H4: agent ops không có tool Bash.
@@ -343,11 +345,12 @@ Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường
 }
 ```
 
-**Khởi động phiên (`session-start`).** Đăng ký cho `SessionStart`; bật mặc định. Hook có hai chế độ. (1) `source` là `startup`, `clear` hoặc `compact`: nạp nội dung file handoff làm ngữ cảnh bổ sung, kèm đường dẫn tương đối ở đầu và cắt tối đa 9.000 ký tự (Claude Code giới hạn ngữ cảnh hook ở 10.000). Thứ tự tìm file: `handoffPath` trong cấu hình (resolve theo cwd của phiên), `docs/requests/*/handoff.md` sửa gần nhất, rồi `.claude/handoff.md`. File cũ hơn `handoffMaxAgeHours` (mặc định 24), hoặc rỗng, hoặc còn là template chưa điền thì bị bỏ qua. (2) `source` là `resume` hoặc `fork` khi cache prompt có khả năng đã hết hạn: thêm một dòng nêu số token không cache và chi phí ước tính khi Claude Code cung cấp, và trỏ tới file handoff nếu có file dùng được. Tắt bằng `{"handoffInject": false}` (chế độ 1) và/hoặc `{"resumeWarn": false}` (chế độ 2) trong `<git-root>/.claude/aip-gate.json`. Hook fail-open như các script khác.
+**Khởi động phiên (`session-start`).** Đăng ký cho `SessionStart`; bật mặc định. Hook có hai chế độ. (1) `source` là `startup`, `clear` hoặc `compact`: nạp nội dung file handoff làm ngữ cảnh bổ sung, kèm đường dẫn tương đối ở đầu và cắt tối đa 9.000 ký tự (Claude Code giới hạn ngữ cảnh hook ở 10.000). Thứ tự tìm file: `handoffPath` trong cấu hình (resolve theo cwd của phiên), `docs/requests/*/handoff.md` sửa gần nhất, rồi `.claude/handoff.md`. File cũ hơn `handoffMaxAgeHours` (mặc định 24), hoặc rỗng, hoặc còn là template chưa điền thì bị bỏ qua. Cùng chế độ này hook còn nạp đuôi của `docs/requests/*/.sdd/progress.md` (ledger plan) sửa gần nhất mà chưa có dòng `Plan: complete` và không cũ hơn `handoffMaxAgeHours`, tối đa 2.000 ký tự; ledger và handoff dùng chung ngân sách 9.000 ký tự (ledger tính trước, handoff lấy phần còn lại). (2) `source` là `resume` hoặc `fork` khi cache prompt có khả năng đã hết hạn: thêm một dòng nêu số token không cache và chi phí ước tính khi Claude Code cung cấp, và trỏ tới file handoff nếu có file dùng được. Tắt bằng `{"handoffInject": false}` (chế độ 1) và/hoặc `{"resumeWarn": false}` (chế độ 2), và `{"ledgerInject": false}` để bỏ qua ledger, trong `<git-root>/.claude/aip-gate.json`. Hook fail-open như các script khác.
 
 ```json
 {
   "handoffInject": true,
+  "ledgerInject": true,
   "resumeWarn": true,
   "handoffPath": "docs/requests/my-feature/handoff.md",
   "handoffMaxAgeHours": 24

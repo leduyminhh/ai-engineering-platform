@@ -38,6 +38,11 @@ thủ quy ước đặt tên/cấu trúc của project, cho một scope được
 4. Gộp findings hai skill, triage severity, **mask mọi secret** (token/mật khẩu/connection string) trong mọi
    report/log trước khi xuất — chỉ nêu tên biến/khoá, không đọc giá trị.
 
+## Khi được gọi từ vòng task
+
+Trong vòng task của `plan-execution`, agent này chỉ chạy ở review cuối nhánh, một lần cho toàn nhánh, song song với
+reviewer; không chạy theo từng task. Workflow khác (security-review, feature, bugfix…) gọi như cũ.
+
 ## Report trả về
 
 - Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.

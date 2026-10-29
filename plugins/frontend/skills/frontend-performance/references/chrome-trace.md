@@ -37,10 +37,10 @@ Trace luôn lấy trên **bản build production phục vụ ở local** (`serve
 4. **Third-party/handler:** script ngoài, event handler chạy lâu (liên quan INP thật; Lighthouse navigation mặc định không báo INP, số lab là TBT).
 5. **Tài nguyên chặn render:** CSS/font/ảnh LCP tải muộn.
 
-## Ghi lệnh vào report Bước 3
+## Ghi lệnh vào report Bước 4
 
 Lệnh lấy trace, cờ, phiên bản Chrome/Lighthouse (lấy từ output lệnh) và đường dẫn file trace ghi vào **report
-Bước 3** (hoặc `perf/profile-<luồng>.md`), **không** vào bảng điều kiện đo của Bước 2. Nếu trace cần thêm cờ hay
+Bước 4** (hoặc `perf/profile-<luồng>.md`), **không** vào bảng điều kiện đo của Bước 3. Nếu trace cần thêm cờ hay
 config sửa file ngoài `perf/`/`bench/` → phải nằm trong hàng Config tool đo hoặc hỏi trước (P5). Không sửa `src/`.
 
 ## Đầu ra

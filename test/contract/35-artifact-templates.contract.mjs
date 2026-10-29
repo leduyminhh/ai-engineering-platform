@@ -196,7 +196,8 @@ export default async function run({ ok, ctx }) {
 
     const plan = tplOf('plan');
     ok(plan !== '', 'template plan đọc được qua mục lục');
-    ok(plan.includes('REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development'), 'template plan: header bắt buộc của writing-plans');
+    ok(/^> \*\*For agentic workers:\*\*[^\n]*plan-execution/m.test(plan), 'template plan: header trỏ skill plan-execution');
+    ok(!/superpowers:/.test(plan), 'template plan: không còn tham chiếu skill superpowers:*');
     for (const m of ['**Goal:**', '**Architecture:**', '**Tech Stack:**', '**Spec:** design.md', '**Requirement:**', '**Phủ AC:**']) {
       ok(plan.includes(m), `template plan: có "${m}"`);
     }

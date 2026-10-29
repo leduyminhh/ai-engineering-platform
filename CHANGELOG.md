@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Làm rõ yêu cầu chuyển về session chính (engineering 2.3.0): `engineering-spec-writing` hỏi từng câu, playback từng phần, đề xuất 2–3 hướng kèm khuyến nghị và đánh đổi, xếp cỡ việc (việc rõ và nhỏ, thay đổi nhỏ, dự án) và chạy builder check một lần trước checkpoint. Khi người dùng bỏ qua làm rõ, agent tự chọn hướng và ghi đó là quyết định của agent. `engineering-spec-analyst` chỉ ghi tài liệu, không hỏi người dùng.
+- `workflow-feature` (workflows 3.4.0) thêm Bước 2 Làm rõ & cỡ việc, Bước 3 Tài liệu và Bước 4 Plan trước khi implement; ba bước mới có checkpoint người duyệt. Đây là trạng thái trung gian; các bước sau đã được thay bằng Bước 5 Vòng task, Bước 6 Review cuối, Bước 7 Kết thúc nhánh (tổng 7 bước, xem mục `plan-execution` bên dưới).
 - `check-request.mjs` skips W10 for request folders dated before 2026-10-21 (`SPEC_SINCE`) and for folders without a date prefix, so
   `--strict` in CI no longer fails on request folders written before living specs (core 1.12.1). W11-W14 still run on any design that lists impact entries.
 - `aip init --full` omits the `.env` (`secrets`) rules from the generated `.claude/settings.json` when `.claude/aip-gate.json` has
@@ -22,6 +24,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Giai đoạn P5 của workflow tự đủ — ghi quyết định và spec sống (chỉ tài liệu, không đổi nội dung chiếu ra):
+  - ADR-0004 (`Proposed`, chủ repo chốt) ghi việc workflow aip thay superpowers làm quy trình chính và đảo quyết định cũ của `docs/requests/2026-10-22-parallel-agents/design.md`.
+  - Spec sống: `workflows` đổi R3 (bộ đếm vòng sửa riêng của vòng task) và thêm R7–R10; `artifact-templates` đổi R4 và thêm R9 (`**Kind:**`, W17/W18); `baseline` đổi R2, R3 và thêm R8; `hooks-gates` thêm R11 (`session-start` nạp ledger, khoá `ledgerInject`, chung ngân sách 9000 ký tự với handoff).
+  - README, README_VI và CLAUDE.md nhắc `plan-execution`, ledger/`ledgerInject`, luồng 7 bước của `workflow-feature` và mã cảnh báo W1–W18.
+- Giai đoạn P4 của workflow tự đủ — vòng lặp có giới hạn, review correctness và baseline build/test (backend 1.11.0; frontend 1.13.0; workflows 3.7.0):
+  - `workflow-security-review` Bước 9 (re-scan) thêm `backend-reviewer` ∥ `frontend-reviewer` (chỉ phía có sửa) review correctness song song với `engineering-quality-auditor`; gate thêm 0 finding `blocker` từ reviewer, blocker của reviewer quay lại Bước 8.
+  - `workflow-performance` thêm Bước 1 "Baseline build/test": session chính chạy build + test vùng sẽ đụng và ghi số mốc (lệnh, exit code, pass/fail); đỏ thì dừng `blocked` và đề xuất `workflow-bugfix`. Các bước sau dịch sang 2–8; bước đo hiệu năng cũ đổi tên "Baseline hiệu năng" (Bước 3); Gate Bước 5 Tối ưu so với số mốc Bước 1.
+  - Mọi vòng sửa/đo lại trong thân và bảng lỗi của workflow có giới hạn "tối đa N rồi hỏi người dùng" thay vì lặp tới khi xanh; contract test AC6.1 kiểm mọi workflow.
+  - `workflow-security-review` Bước 8 và `workflow-performance` Bước 5 tách hai loại `blocked` của fixer: hết phạm vi file (người dùng mở rộng danh sách rồi gọi lại) và đã thất bại lần sửa thứ 3 (`ask_user` kèm lý do từng lần); bản sửa hỏng phải revert trước khi thử lại.
+  - `workflow-orchestrator` bỏ dòng Supervisor, cột `Nối tiếp` và logic chuỗi workflow, vì Registry không có cặp nào; `cli/lib/workflows.mjs`: `parseRegistry` bỏ trường `next`, `missingAnchors` miễn neo Supervisor cho orchestrator.
+- Giai đoạn P3 của workflow tự đủ — điều tra và sửa lỗi có kỷ luật (backend 1.10.0; frontend 1.12.0; workflows 3.6.0):
+  - `workflow-bugfix` Bước 3 thử viết script hoặc test tự động ít nhất một lần trước khi chấp nhận tái hiện thủ công; lý do không viết được phải đi kèm evidence. Bug race/timing dùng test chờ theo điều kiện, không sleep cứng, không nới timeout.
+  - Bước 4 xem thay đổi gần đây của vùng nghi ngờ và so với code tương tự đang đúng; log tạm chỉ được chèn sau khi ghi mốc `git status --porcelain`, và phải gỡ hết trước Bước 5.
+  - Bước 5 phát biểu giả thuyết "X là nguyên nhân vì Y" kèm cách kiểm, truy ngược tới nguồn thay vì dừng ở chỗ lỗi nổ, rồi đối chiếu lý do đỏ của test với root cause; test đỏ lệch root cause quay lại Bước 3.
+  - Bước 6 có bộ đếm tổng 3 lần sửa thất bại qua mọi cạnh: đủ 3 lần thì dừng `ask_user` với câu hỏi kiến trúc, không thử lần 4. Bản sửa hỏng được revert trước khi thử lại, và session chính tự chạy lại oracle rồi ghi exit code thay vì chỉ tin báo cáo của fixer.
+  - `backend-fix`, `frontend-fix` và agent `backend-fixer`, `frontend-fixer`: mỗi lượt chỉ áp một thay đổi gắn với một giả thuyết (chế độ `performance` là một thay đổi tối ưu mỗi lượt). Chỉ revert phần thay đổi của bản sửa hỏng, không `git reset --hard`; báo số lần thử và giả thuyết của từng lần; trả `blocked` ở lần thất bại thứ 3.
+  - Pin test `test/content/31-workflow-self-sufficient.pin.mjs` ghim các quy tắc trên.
+- Giai đoạn P2 của workflow tự đủ — vòng task (core 1.16.0; backend 1.9.0; frontend 1.11.0; engineering 2.4.0; workflows 3.5.0):
+  - Skill core mới `plan-execution`: giao thức vòng task (brief, giao agent theo `kind`, review từng task kèm `spec_verdict`, sửa tối đa 3 vòng với vòng 3 chạy opus, `Ruling:`, ledger, review cuối, kết thúc nhánh với 3 lựa chọn) cùng 3 script Node `task-brief`, `review-package`, `ledger`.
+  - Contract đầu ra của agent mở rộng: `tdd`, `spec_verdict`, `rulings` và re-review có phạm vi.
+  - `backend-implementer` tự làm TDD; `backend-test-writer` có luật chất lượng test. Reviewer có 3 chế độ review.
+  - `git-workflow`: commit theo task và hỏi trước khi dùng worktree.
+  - `workflow-feature`: Bước 5 Vòng task, Bước 6 Review cuối, Bước 7 Kết thúc nhánh; feature backend do `backend-implementer` làm cả test, `backend-test-writer` còn dùng ở bugfix và security-review.
+  - Hook `session-start` nạp ledger `docs/requests/*/.sdd/progress.md` (tối đa 2000 ký tự, chung ngân sách 9000 ký tự với handoff); khoá `ledgerInject: false` trong `.claude/aip-gate.json` để tắt.
+- Giai đoạn P1 của workflow tự đủ (core 1.15.0; engineering 2.3.0; workflows 3.4.0): `check-request.mjs` thêm W17 (Task trong `plan.md` thiếu dòng `**Kind:**`) và W18 (Kind ngoài tập `BE|FE-UI|FE-INT|E2E|DB|CT|DOCS|TOOLING`); `plan.template.md` có dòng `**Kind:**` cho mỗi task.
+- Skill mới `engineering-plan-writing` (engineering 2.3.0): lập `plan.md` thực thi từ design đã duyệt (bản đồ file, task theo kind, Interfaces, Global Constraints, Review Focus), tự soát rồi chạy `check-request.mjs`.
 - Agent permissions and MCP gate (core 1.11.1; backend 1.8.18 and frontend 1.10.17 bumped because their `backend-init`/`frontend-init`
   skills embed only the projected AGENTS baseline `AGENTS.template.md`): permission policy `core/permissions/policy.json` (groups `secrets` deny, `git_push`,
   `network`, `production_deploy` ask; Claude-only), `aip init --full` writes `.claude/settings.json` from it only when missing,

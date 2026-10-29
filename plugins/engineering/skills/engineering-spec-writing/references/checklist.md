@@ -31,6 +31,15 @@ không đánh dấu xong khi chưa đủ.
 - [ ] Quyết định lớn đã ghi **ADR** ở `docs/decisions/<số>-<slug>.md` theo `_TEMPLATE.md`; spec link tới ADR.
 - [ ] Link contract/data-model chính xác (đường dẫn tương đối tồn tại); không lặp chi tiết trường/endpoint.
 
+## Làm rõ & builder check
+
+- [ ] Đã qua cổng "đủ thông tin"; hỏi từng câu (một câu mỗi tin nhắn) và playback từng phần, hoặc người dùng đã bỏ qua phần hỏi.
+- [ ] Có 2–3 hướng + 1 khuyến nghị + đánh đổi (đặt sau playback), hoặc ghi rõ vì sao không có (bỏ qua phần hỏi / thay đổi nhỏ).
+- [ ] Mọi lựa chọn không do người dùng chốt được ghi **quyết định của agent**, tách khỏi "Quyết định đã chốt".
+- [ ] Cỡ việc đã xếp (việc rõ và nhỏ / thay đổi nhỏ / dự án) và tài liệu đúng cỡ: thay đổi nhỏ không có `design.md`, `plan.md`.
+- [ ] Đã chạy đúng một lần **builder check** (subagent mới, hoặc tự đọc như builder khi không có tool subagent); kết quả phân
+      3 nhóm; câu của người dùng gom trong một tin nhắn.
+
 ## Đặt đúng chỗ & hình thức
 
 - [ ] Spec nằm ở `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md` (+ `design.md` khi có); chưa dựng `plan.md`.

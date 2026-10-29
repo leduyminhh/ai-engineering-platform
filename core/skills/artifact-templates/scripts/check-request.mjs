@@ -102,6 +102,9 @@ export const SPEC_SINCE = '2026-10-21';
 // Vòng đời một request: token đầu của dòng "- Trạng thái:" trong design.md.
 export const STATUSES = ['draft', 'approved', 'in-progress', 'merged', 'abandoned'];
 
+// Loại task của plan.md; workflow vòng task dùng kind để chọn agent/skill (xem **Kind:** trong plan template).
+export const TASK_KINDS = ['BE', 'FE-UI', 'FE-INT', 'E2E', 'DB', 'CT', 'DOCS', 'TOOLING'];
+
 const CAP_RE = /^[a-z0-9][a-z0-9-]*$/;
 const REQ_ID_RE = /^[a-z0-9][a-z0-9-]*\/R[1-9]\d*$/;
 
@@ -167,6 +170,21 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
         warn('plan.md', 1, 'W5', `plan.md thiếu dòng **${field}:**`);
       }
     }
+  }
+
+  // Task = heading "### Task <n>"; **Kind:** tính trong phạm vi tới heading #–### kế tiếp (linesOf đã bỏ khối code).
+  if (lines['plan.md']) {
+    const pl = lines['plan.md'];
+    pl.forEach((l, i) => {
+      if (!/^###\s+Task\s+\d+/.test(l)) return;
+      let kind;
+      for (let j = i + 1; j < pl.length && !/^#{1,3}\s/.test(pl[j]); j++) {
+        const m = pl[j].match(/^\*\*Kind:\*\*\s*(.*)$/);
+        if (m) { kind = m[1].trim(); break; }
+      }
+      if (kind === undefined) warn('plan.md', i + 1, 'W17', 'Task thiếu dòng **Kind:**');
+      else if (!TASK_KINDS.includes(kind)) warn('plan.md', i + 1, 'W18', `Kind "${kind}" không hợp lệ, cần một trong: ${TASK_KINDS.join(' | ')}`);
+    });
   }
 
   if (lines['plan.md'] || lines['tasks.md']) {

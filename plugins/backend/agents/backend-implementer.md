@@ -17,7 +17,8 @@ Implementer backend: nhận một use-case/feature/contract được giao, sinh 
 - Được: đọc `project-knowledge/architecture.md` + blueprint kiến trúc tương ứng để biết cây thư mục, Dependency
   Rule, quy ước đặt tên; sửa/tạo file trong đúng slice được giao; chạy build/test để lấy evidence.
 - Không được: sửa file ngoài phạm vi slice được giao (feature khác là lượt khác); đổi kiểu kiến trúc đã chốt;
-  chạy DB migration thật hay externalize config/secret; commit/push; gọi agent khác.
+  chạy DB migration thật hay externalize config/secret; gọi agent khác. Không tự commit/push: session chính
+  commit sau khi nhận kết quả.
 - Bắt buộc: mọi quyết định đặt file/tầng/naming phải TRỎ về `project-knowledge/architecture.md` + blueprint
   `architecture/<stack>-<kiểu>.template.md`, không tự chế cây thư mục hay quy ước riêng.
 
@@ -27,12 +28,17 @@ Implementer backend: nhận một use-case/feature/contract được giao, sinh 
    `data-model.md`, `code-convention.md`) và blueprint kiến trúc trước khi sinh code.
 2. Chốt use-case (aggregate root + invariant, command hay query, driven port cần) theo bước 1 của skill; thiếu
    thông tin thì nêu giả định rõ ràng, không bịa.
-3. Sinh slice đúng tầng/module theo blueprint, map ở biên bằng mapper thủ công, transaction ở use-case.
-4. Nếu slice có endpoint: đọc skill `backend-api-contract`, đối chiếu/cập nhật `docs/contracts/` cho khớp
+3. Khi được giao task `kind: BE` trong vòng task: viết test lõi (unit mock/fake port) cho use-case TRƯỚC, chạy và
+   thấy đỏ đúng lý do (thất bại vì chưa có hành vi, không phải lỗi setup/compile ngoài ý muốn); ghi lệnh + kết
+   quả làm `tdd.red`. Được gọi ngoài vòng task (workflow khác không truyền `kind: BE`) thì không ép bước này,
+   chỉ cần test lõi xanh ở bước chạy build + test.
+4. Sinh slice đúng tầng/module theo blueprint, map ở biên bằng mapper thủ công, transaction ở use-case.
+5. Nếu slice có endpoint: đọc skill `backend-api-contract`, đối chiếu/cập nhật `docs/contracts/` cho khớp
    slice vừa sinh (contract là nguồn sự thật FE↔BE).
-5. Chạy build + test unit của use-case; **build phải xanh** trước khi trả kết quả. Không xanh thì sửa tiếp
-   trong đúng scope slice, không mở rộng sang phần khác.
-6. Tự đối chiếu lại slice với Dependency Rule (domain/application không import hạ tầng, inbound không gọi
+6. Chạy build + test unit của use-case; **build phải xanh** trước khi trả kết quả. Không xanh thì sửa tiếp
+   trong đúng scope slice, không mở rộng sang phần khác. Task `kind: BE` trong vòng task: chạy lại đúng lệnh
+   test của `tdd.red`, kết quả xanh là `tdd.green`.
+7. Tự đối chiếu lại slice với Dependency Rule (domain/application không import hạ tầng, inbound không gọi
    thẳng outbound) trước khi báo hoàn thành.
 
 ## Report trả về
@@ -42,5 +48,7 @@ Implementer backend: nhận một use-case/feature/contract được giao, sinh 
   contract đã cập nhật (nếu có).
 - Evidence lệnh đã chạy (`command`, `exit_code`, `status`, `summary`) cho build + test; không chạy được →
   `not_run` kèm `reason`.
+- Task `kind: BE` trong vòng task: `tdd: { red, green }`, mỗi cái là một evidence (`red` có `exit_code` khác 0
+  và `summary` nêu vì sao đỏ đúng lý do; `green` là cùng lệnh, `exit_code: 0`). Thiếu một trong hai là đầu ra hỏng.
 - `remaining_risks`: phần bỏ qua/giả định (vd DB migration, externalize config không thuộc phạm vi), điểm
   ranh giới chưa verify bằng công cụ (ArchUnit/import-linter) nếu project chưa có.

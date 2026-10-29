@@ -3,7 +3,7 @@ export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, core, workflows, wfText } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 20. SOURCE: backend-performance skill + agent + workflow-performance Bước 2/3/5 (spec 2026-09-30-backend-performance-design)
+  // 20. SOURCE: backend-performance skill + agent + workflow-performance Bước 3/4/6 (spec 2026-09-30-backend-performance-design)
   {
     const flat20 = (t) => t.replace(/\s+/g, ' ');
     const wf20 = (id) => workflows.stages.find((s) => s.id === id);
@@ -71,29 +71,29 @@ export default async function run({ ok, ctx }) {
     ok(pa.includes('core:principles') && pa.includes('git diff --name-only'),
       'backend-performance-analyst: report theo core:principles, tự đối chiếu diff');
     const perfWf = wf20('workflow-performance');
-    const pS1 = step20(perfWf, 1), pS2 = step20(perfWf, 2), pS3 = step20(perfWf, 3), pS5 = step20(perfWf, 5);
-    for (const [n, s, mode] of [[2, pS2, 'measure'], [3, pS3, 'profile'], [5, pS5, 'measure']]) {
+    const pS1 = step20(perfWf, 2), pS2 = step20(perfWf, 3), pS3 = step20(perfWf, 4), pS5 = step20(perfWf, 6);
+    for (const [n, s, mode] of [[3, pS2, 'measure'], [4, pS3, 'profile'], [6, pS5, 'measure']]) {
       ok(field20(s.body, 'Thực hiện').includes('agent `backend-performance-analyst`') && field20(s.body, 'Thực hiện').includes(`\`${mode}\``),
         `workflow-performance Bước ${n}: Thực hiện là backend-performance-analyst chế độ ${mode}`);
     }
-    ok(field20(pS1.body, 'Đầu ra').includes('điều kiện đo'), 'workflow-performance Bước 1: Đầu ra có điều kiện đo sơ bộ');
-    for (const [n, s] of [[2, pS2], [3, pS3]]) {
+    ok(field20(pS1.body, 'Đầu ra').includes('điều kiện đo'), 'workflow-performance Bước 2: Đầu ra có điều kiện đo sơ bộ');
+    for (const [n, s] of [[3, pS2], [4, pS3]]) {
       const gate20 = field20(s.body, 'Gate');
       ok(gate20.includes('`perf/`') && gate20.includes('`bench/`') && gate20.includes('git diff --name-only')
         && gate20.includes('git ls-files --others'),
         `workflow-performance Bước ${n}: Gate so diff chỉ perf/ bench/ config tool đo`);
     }
-    ok(field20(pS2.body, 'Khi fail').includes('blocked'), 'workflow-performance Bước 2: thiếu môi trường → dừng blocked');
-    ok(field20(pS5.body, 'Đầu vào').includes('Bước 2') && field20(pS5.body, 'Ràng buộc').includes('không đổi điều kiện đo'),
-      'workflow-performance Bước 5: dùng lại script + bảng điều kiện Bước 2, không đổi điều kiện');
-    ok(field20(pS5.body, 'Gate').includes('nhiễu'), 'workflow-performance Bước 5: nhiễu vượt P3 → không kết luận');
-    ok(pS3.checkpoint, 'workflow-performance Bước 3: giữ ⏸');
+    ok(field20(pS2.body, 'Khi fail').includes('blocked'), 'workflow-performance Bước 3: thiếu môi trường → dừng blocked');
+    ok(field20(pS5.body, 'Đầu vào').includes('Bước 3') && field20(pS5.body, 'Ràng buộc').includes('không đổi điều kiện đo'),
+      'workflow-performance Bước 6: dùng lại script + bảng điều kiện Bước 3, không đổi điều kiện');
+    ok(field20(pS5.body, 'Gate').includes('nhiễu'), 'workflow-performance Bước 6: nhiễu vượt P3 → không kết luận');
+    ok(pS3.checkpoint, 'workflow-performance Bước 4: giữ ⏸');
     ok(perfWf && perfWf.agents.includes('backend-performance-analyst'), 'workflow-performance: frontmatter agents có backend-performance-analyst');
-    ok(parseSteps(perfWf?.body ?? '').length === 7, 'workflow-performance: vẫn 7 bước');
+    ok(parseSteps(perfWf?.body ?? '').length === 8, 'workflow-performance: 8 bước (Bước 1 là baseline build/test)');
     ok((offeredCatalog().plugins.find((p) => p.id === 'workflows')?.skillIds ?? []).includes('workflows/workflow-performance'),
       'offeredCatalog: vẫn offer workflows/workflow-performance (closure analyst đã publish)');
     const perfErr = flat20(wfText('performance'));
-    ok(perfErr.includes('Môi trường đo thiếu') && perfErr.includes('lệch Bước 2') && perfErr.includes('Nhiễu vượt'),
+    ok(perfErr.includes('Môi trường đo thiếu') && perfErr.includes('lệch Bước 3') && perfErr.includes('Nhiễu vượt'),
       'workflow-performance: bảng lỗi có 3 hàng môi trường thiếu / điều kiện lệch / nhiễu');
     for (const f of ['README.md', 'README_VI.md']) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
@@ -114,27 +114,27 @@ export default async function run({ ok, ctx }) {
     const dbq20 = flat20(perfRef('db-query-analysis'));
     ok(dbq20.includes('không sửa') && dbq20.includes('`src/`') && /pg_stat_statements|log_statement/.test(dbq20) && dbq20.includes('blocked'),
       'db-query-analysis.md: đếm query bật lúc khởi chạy, không sửa src/, có cách đếm phía DB, bí → blocked');
-    ok(field20(pS5.body, 'Gate').includes('hash-object'), 'workflow-performance Bước 5: Gate so git hash-object script + bảng điều kiện Bước 2');
-    ok(field20(pS5.body, 'Hành động').includes('tiến trình mới'), 'workflow-performance Bước 5: khởi chạy lại ứng dụng, xác nhận tiến trình mới trước warm-up');
-    for (const [n, s] of [[2, pS2], [3, pS3], [5, pS5]]) {
+    ok(field20(pS5.body, 'Gate').includes('hash-object'), 'workflow-performance Bước 6: Gate so git hash-object script + bảng điều kiện Bước 3');
+    ok(field20(pS5.body, 'Hành động').includes('tiến trình mới'), 'workflow-performance Bước 6: khởi chạy lại ứng dụng, xác nhận tiến trình mới trước warm-up');
+    for (const [n, s] of [[3, pS2], [4, pS3], [6, pS5]]) {
       ok(field20(s.body, 'Khi fail').includes('blocked') && field20(s.body, 'Khi fail').includes('câu hỏi'),
         `workflow-performance Bước ${n}: Khi fail — agent trả blocked + câu hỏi → session chính hỏi người dùng`);
     }
-    ok(field20(pS3.body, 'Đầu vào').includes('script'), 'workflow-performance Bước 3: Đầu vào có bảng điều kiện + script Bước 2');
-    const pf2 = step20(wf20('workflow-performance'), 2), pf3 = step20(wf20('workflow-performance'), 3), pf5 = step20(wf20('workflow-performance'), 5);
-    ok(field20(pf2.body, 'Evidence').includes('hash-object'), 'workflow-performance Bước 2: Evidence ghi mốc git hash-object của script + bảng điều kiện');
-    ok(field20(pf5.body, 'Gate').includes('mốc Bước 2'), 'workflow-performance Bước 5: Gate so hash với mốc Bước 2');
-    ok(field20(pf3.body, 'Gate').includes('mốc Bước 2'),
-      'workflow-performance Bước 3: Gate so git hash-object script + bảng điều kiện với mốc Bước 2');
-    ok(field20(pf3.body, 'Hành động').includes('git hash-object') && field20(pf3.body, 'Evidence').includes('mốc Bước 2'),
-      'workflow-performance Bước 3: Hành động đọc mốc hash-object, Evidence ghi hash hiện tại so với mốc Bước 2');
+    ok(field20(pS3.body, 'Đầu vào').includes('script'), 'workflow-performance Bước 4: Đầu vào có bảng điều kiện + script Bước 3');
+    const pf2 = step20(wf20('workflow-performance'), 3), pf3 = step20(wf20('workflow-performance'), 4), pf5 = step20(wf20('workflow-performance'), 6);
+    ok(field20(pf2.body, 'Evidence').includes('hash-object'), 'workflow-performance Bước 3: Evidence ghi mốc git hash-object của script + bảng điều kiện');
+    ok(field20(pf5.body, 'Gate').includes('mốc Bước 3'), 'workflow-performance Bước 6: Gate so hash với mốc Bước 3');
+    ok(field20(pf3.body, 'Gate').includes('mốc Bước 3'),
+      'workflow-performance Bước 4: Gate so git hash-object script + bảng điều kiện với mốc Bước 3');
+    ok(field20(pf3.body, 'Hành động').includes('git hash-object') && field20(pf3.body, 'Evidence').includes('mốc Bước 3'),
+      'workflow-performance Bước 4: Hành động đọc mốc hash-object, Evidence ghi hash hiện tại so với mốc Bước 3');
     ok(/^description: .*Score/m.test(pa), 'backend-performance-analyst: description nêu thống kê chính theo P3 (Score JMH)');
-    ok(field20(pf5.body, 'Khi fail').includes('report Bước 5') && field20(pf5.body, 'Khi fail').includes('quay lại Bước 2'),
-      'workflow-performance Bước 5: blocked ghi quyết định vào report Bước 5; đổi điều kiện → quay lại Bước 2');
-    ok(field20(pf3.body, 'Ràng buộc').includes('không sửa bảng điều kiện'), 'workflow-performance Bước 3: không sửa bảng điều kiện của Bước 2');
+    ok(field20(pf5.body, 'Khi fail').includes('report Bước 6') && field20(pf5.body, 'Khi fail').includes('quay lại Bước 3'),
+      'workflow-performance Bước 6: blocked ghi quyết định vào report Bước 6; đổi điều kiện → quay lại Bước 3');
+    ok(field20(pf3.body, 'Ràng buộc').includes('không sửa bảng điều kiện'), 'workflow-performance Bước 4: không sửa bảng điều kiện của Bước 3');
     ok(!flat20(perfRef('db-query-analysis')).includes('vào hàng Khởi chạy ứng dụng'),
-      'db-query-analysis.md: profile không ghi lệnh khởi chạy vào bảng điều kiện Bước 2');
-    ok(/^\| Khởi chạy ứng dụng \|[^|\n]*PID/m.test(perfRef('measure-conditions')), 'measure-conditions.md: hàng Khởi chạy ứng dụng ghi PID/thời điểm start Bước 2');
+      'db-query-analysis.md: profile không ghi lệnh khởi chạy vào bảng điều kiện Bước 3');
+    ok(/^\| Khởi chạy ứng dụng \|[^|\n]*PID/m.test(perfRef('measure-conditions')), 'measure-conditions.md: hàng Khởi chạy ứng dụng ghi PID/thời điểm start Bước 3');
   }
 
   // Phase 2 Task 5: câu đã chuyển sang references/ chỉ đến được model qua dòng trỏ trong WORKFLOW.md.

@@ -36,10 +36,13 @@ trước của workflow.
    profile có thật, KHÔNG có lệnh đỏ để chạy; (d) tái hiện thủ công: chạy lại bước tái hiện, ghi kết quả trước
    khi sửa. Đỏ vì lý do khác/không đỏ (a)/(d), finding không còn đúng (b)/(e) hoặc thiếu evidence (c) → báo,
    dừng.
-3. Sửa tối thiểu trong danh sách (F2), không đụng test (F3), không che triệu chứng (F4); tôn trọng import
-   boundary của slice/feature; test sai thật → không sửa, báo để test-writer xử lý ở lượt riêng (F3).
-4. Chạy oracle + `tsc --noEmit` + lint + test feature đụng + build (F5); chưa xanh → sửa tiếp trong danh sách;
-   hết cách → `blocked`.
+3. Ghi giả thuyết đang kiểm, rồi áp một thay đổi mỗi lượt cho giả thuyết đó (chế độ `performance`: một thay đổi
+   tối ưu mỗi lượt). Sửa tối thiểu trong danh sách (F2), không đụng test (F3), không che triệu chứng (F4); tôn trọng
+   import boundary của slice/feature; test sai thật → không sửa, báo để test-writer xử lý ở lượt riêng (F3).
+4. Chạy oracle + `tsc --noEmit` + lint + test feature đụng + build (F5). Chưa xanh → revert bản sửa hỏng trước khi
+   thử lại: chỉ phần thay đổi của chính bản sửa đó trong danh sách, không dùng `git reset --hard`, file test đã
+   bẩn trong mốc giữ nguyên (theo skill); rồi thử một thay đổi cho giả thuyết khác. Chạm lần sửa thất bại thứ 3
+   (tính cả số lần bước gọi báo) hoặc hết cách → `blocked`, kèm các giả thuyết đã loại.
 5. Tự đối chiếu diff so với mốc đầu bước (`git diff --name-only` + `git ls-files --others --exclude-standard`,
    trừ phần đã có trong mốc) với danh sách file; kiểm `git hash-object` file test đã bẩn không đổi; đối chiếu
    danh sách che triệu chứng của skill.
@@ -52,5 +55,8 @@ trước của workflow.
   (d) kết quả chạy lại bước tái hiện trước/sau.
 - File đã sửa (`file:line`) và xác nhận ⊆ danh sách giao; evidence `tsc`/lint/build theo contract
   `core:principles`; không chạy được → `not_run` + `reason`.
-- `remaining_risks`: giả định về nguyên nhân; chỗ cùng pattern chưa sửa vì ngoài phạm vi; trạng thái UI chưa có
+- `summary`: số lần thử và giả thuyết đang kiểm của từng lần (giả thuyết, thay đổi đã áp, kết quả oracle, đã
+  revert chưa). Dùng trường sẵn có của `agent_result`, không thêm trường contract mới.
+- `remaining_risks`: giả thuyết chưa được oracle xác nhận; giả định về nguyên nhân; chỗ cùng pattern chưa sửa vì ngoài
+  phạm vi; trạng thái UI chưa có
   test.

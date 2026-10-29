@@ -87,8 +87,8 @@ export default async function run({ ok, ctx }) {
   {
     const read29 = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
     const mf = JSON.parse(read29('plugins/engineering/.manifest.json'));
-    ok(mf.description.includes('7 skill') && mf.description.includes('engineering-task-breakdown') && /^\d+\.\d+\.\d+$/.test(mf.version),
-      'engineering manifest: 7 skill, có engineering-task-breakdown, version semver');
+    ok(mf.description.includes('8 skill') && mf.description.includes('engineering-task-breakdown') && /^\d+\.\d+\.\d+$/.test(mf.version),
+      'engineering manifest: 8 skill, có engineering-task-breakdown, version semver');
     ok(JSON.parse(read29('plugins/_cowork.json')).skills.includes('engineering:engineering-task-breakdown'),
       '_cowork.json: có engineering:engineering-task-breakdown');
     for (const f of ['README.md', 'README_VI.md']) {

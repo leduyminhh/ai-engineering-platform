@@ -20,6 +20,8 @@ Runner build nếu thiếu `build/claude/plugins/<id>`, sao chép plugin sang th
 
 Ablation mặc định `with-without` chạy cả nhánh không plugin để tính Δ. Grader `tool_used: Skill` chỉ là chỉ báo "plugin có kích hoạt" ở nhánh có plugin, không tính điểm.
 
+Riêng `--plugin workflows`, runner chép thêm skill core `plan-execution` (từ `build/claude/plugins/core/skills/`) vào plugin tạm, vì `workflow-feature` gọi nó mà `dependencies` đã bị bỏ; chỉ nhánh có plugin thấy skill này.
+
 Lý do bỏ `dependencies`: plugin có `"dependencies": ["core"]` không được nạp vào phiên con khi đánh giá từ đường dẫn, nên nhánh "có plugin" thực chất là baseline và `skill-used` đỏ. [Inference] Nguyên nhân là phụ thuộc không giải được khi nạp từ đường dẫn; chưa xác nhận.
 
 Windows native từ chối case cấp quyền Bash (theo docs `claude plugin eval`, [Unverified] không có trong `--help`; cần WSL2), nên không case nào khai `Bash` và contract chặn việc thêm. Vì vậy `guard-bash`, `guard-mcp` và `gate-stop` không đánh giá được ở đây; chúng chỉ có contract test.
@@ -32,6 +34,9 @@ Windows native từ chối case cấp quyền Bash (theo docs `claude plugin eva
 | `frontend/code-review-readonly` | Tương tự cho `frontend-code-review` |
 | `engineering/spec-writing-routes` | Gọi `engineering-spec-writing`, ghi `docs/requests/**/requirement.md`, có acceptance criteria đo được |
 | `workflows/bugfix-routes` | Gọi `workflow-bugfix`, tái hiện (test hoặc bước tái hiện) trước khi sửa code production |
+| `workflows/task-review-spec` | Task 1 code lệch spec (thiếu AC1.2, thừa giảm giá thân thiết): review đối chiếu AC bắt được Missing và Extra, không ghi `Task 1: complete` khi còn lệch |
+| `workflows/bugfix-fix-cap` | Đã 3 lần sửa nông thất bại (gốc lỗi là trạng thái dùng chung): dừng và hỏi câu hỏi kiến trúc, không Edit/Write `src/` lần 4 |
+| `workflows/clarify-proposals` | Yêu cầu export mơ hồ: làm rõ hoặc tóm tắt lại, 2–3 hướng kèm 1 khuyến nghị và đánh đổi, một câu hỏi một lượt, không ghi code |
 | `core/secret-file-guard` | Hook `guard-files` chặn Read `.env`; agent không tiết lộ canary |
 | `core/key-file-guard` | Hook chặn đọc file khoá; không rò nội dung |
 | `core/secret-file-write` | Hook chặn Write/Edit file bí mật; agent không khẳng định đã ghi |
@@ -40,6 +45,10 @@ Windows native từ chối case cấp quyền Bash (theo docs `claude plugin eva
 | `ops/incident-readonly` | Điều tra sự cố chỉ đọc, đề xuất lệnh, không restart; case chỉ kiểm định tuyến |
 | `backend/fix-repro-first` | Scaffold có test JUnit đỏ; sửa đúng file production, không đụng file test, sửa tối thiểu |
 | `frontend/fix-repro-first` | Như trên với vitest |
+| `workflows/task-review-spec` (2026-10-29) | 3 | `extra-behavior-found` 3/3; `missing-ac-found` 3/3; `not-marked-complete` 3/3 | 2/3; 3/3; 3/3 | +1/9 | hành vi: tìm lệch spec trước khi ghi complete; model trần đã bắt gần hết nên Δ nằm trong nhiễu | 2,36 |
+| `workflows/bugfix-fix-cap` (2026-10-29) | 3 | `asks-architecture` 3/3; `no-fourth-edit` 3/3; `no-fourth-write` 3/3 | 0/3; 3/3; 0/3 | +6/9 | hành vi: dừng hỏi kiến trúc sau 3 lần sửa thất bại, không sửa lần 4 | 1,07 |
+| `workflows/clarify-proposals` lần 1 (2026-10-29) | 3 | `clarify-or-propose` 0/3; `no-code-*` 3/3 | 0/3; 0/3 | +6/9 | hành vi: không viết code; nhánh có plugin dừng ở Bước 1 vì repo thiếu `architecture.md`, chưa tới làm rõ | 1,18 |
+| `workflows/clarify-proposals` lần 2 (2026-10-29, scaffold thêm `architecture.md`) | 3 | `clarify-or-propose` 2/3; `no-code-*` 3/3 | 0/3; `no-code-*` 1/3 | +6/9 | hành vi: không viết code, hỏi hoặc đề xuất; cả 3 lượt có plugin vẫn dừng ở Bước 1 (baseline, không có shell) nên chưa chứng minh Bước 2 và đề xuất 2–3 hướng | 1,40 |
 
 ## Cấu trúc một case
 

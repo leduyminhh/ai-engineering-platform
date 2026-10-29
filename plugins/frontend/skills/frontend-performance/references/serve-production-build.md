@@ -37,20 +37,20 @@ Mọi lệnh mẫu **phải kèm cờ bind host** về loopback:
   `::` → dừng tiến trình do agent start và chạy lại với cờ host.
 - Tiến trình phục vụ chạy nền; ghi ai start (agent hay người dùng), port, thời điểm start.
 
-## Bước 3 — ghi baseline của bản build (ở Bước 2 của workflow)
+## Bước 3 — ghi baseline của bản build (ở Bước 3 của workflow)
 
-Ngay sau khi build baseline, **trước khi đo**, ghi danh sách file build làm đối chứng cho Bước 5:
+Ngay sau khi build baseline, **trước khi đo**, ghi danh sách file build làm đối chứng cho Bước 6:
 
 ```bash
 ls dist/assets | sort > perf/frontend/assets-baseline.txt   # [Unverified] thư mục output theo bundler
-# Chỉ khi tên file KHÔNG có hash: băm nội dung chunk chính để Bước 5 so được
+# Chỉ khi tên file KHÔNG có hash: băm nội dung chunk chính để Bước 6 so được
 git hash-object dist/assets/<chunk-chính>.js >> perf/frontend/assets-baseline.txt   # [Unverified]
 ```
 
-`assets-baseline.txt` là artifact của Bước 2 cùng script đo và bảng điều kiện: liệt kê trong bảng, băm vào file
+`assets-baseline.txt` là artifact của Bước 3 cùng script đo và bảng điều kiện: liệt kê trong bảng, băm vào file
 hashes (`measure-conditions.md`), không sửa sau khi chốt.
 
-## Bước 4 — xác nhận bản phục vụ là bản mới (ở Bước 5 của workflow)
+## Bước 4 — xác nhận bản phục vụ là bản mới (ở Bước 6 của workflow)
 
 Build lại + phục vụ lại từ working tree rồi xác nhận là bản **mới** trước khi đo:
 

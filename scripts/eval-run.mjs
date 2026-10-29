@@ -15,6 +15,12 @@ export function stripDependencies(pluginJson) {
   return rest;
 }
 
+// workflow-feature gọi plan-execution (skill core); runner bỏ `dependencies` nên phải chép tay vào plugin tạm, chỉ nhánh có plugin thấy nó.
+const EXTRA_SKILLS = { workflows: ['plan-execution'] };
+export function extraSkillCopies(pluginId, root) {
+  return (EXTRA_SKILLS[pluginId] ?? []).map((s) => ({ from: path.join(root, 'build', 'claude', 'plugins', 'core', 'skills', s), to: `skills/${s}` }));
+}
+
 export function parseArgs(argv) {
   const out = { plugin: null, runs: 3, maxCostUsd: null, scaffold: false, case: null };
   for (let i = 0; i < argv.length; i++) {
@@ -73,6 +79,10 @@ function run() {
   const evalTemps = new Set();
   try {
     fs.cpSync(built, work, { recursive: true, dereference: true });
+    for (const x of extraSkillCopies(a.plugin, ROOT)) {
+      if (!fs.existsSync(x.from)) throw new Error(`Thiếu ${x.from}; chạy npm run build`);
+      fs.cpSync(x.from, path.join(work, ...x.to.split('/')), { recursive: true, dereference: true });
+    }
     fs.cpSync(evalSrc, path.join(work, 'evals'), { recursive: true });
     const pj = path.join(work, '.claude-plugin', 'plugin.json');
     fs.writeFileSync(pj, JSON.stringify(stripDependencies(JSON.parse(fs.readFileSync(pj, 'utf8'))), null, 2) + '\n');

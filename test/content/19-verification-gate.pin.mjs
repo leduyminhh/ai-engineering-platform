@@ -5,7 +5,7 @@ export default async function run({ ok, ctx }) {
   // AC2.5: baseline yêu cầu gắn ID AC vào tên test hoặc comment, và nêu cờ --strict
   {
     const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
-    const sp = tpl.slice(tpl.indexOf('### Superpowers workflow defaults'), tpl.indexOf('### Language'));
+    const sp = tpl.slice(tpl.indexOf('### Workflow defaults'), tpl.indexOf('### Language'));
     ok(sp.includes('`ac1_2`') && sp.includes('`- Test:`') && sp.includes('--strict'),
       'AC2.5: baseline yêu cầu gắn ID AC vào tên test hoặc comment');
   }

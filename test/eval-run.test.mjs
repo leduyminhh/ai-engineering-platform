@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Unit test cho runner eval — chỉ hàm thuần, không gọi model. Zero-dependency.
 // Chạy: node test/eval-run.test.mjs
-import { stripDependencies, parseArgs } from '../scripts/eval-run.mjs';
+import path from 'node:path';
+import { stripDependencies, parseArgs, extraSkillCopies } from '../scripts/eval-run.mjs';
 
 let pass = 0;
 const fails = [];
@@ -26,6 +27,11 @@ ok(throws(() => parseArgs(['--plugin', 'core', '--max-cost-usd', '1', '--bogus']
 ok(throws(() => parseArgs(['--plugin', 'core', '--max-cost-usd', 'abc'])), 'eval-run AC1.2: chi phí không phải số bị từ chối');
 ok(throws(() => parseArgs(['--plugin', 'core', '--max-cost-usd', '1', '--runs', '0'])), 'eval-run AC1.2: runs <= 0 bị từ chối');
 ok(throws(() => parseArgs(['--plugin', '../x', '--max-cost-usd', '1'])), 'eval-run AC1.2: plugin id chứa đường dẫn bị từ chối');
+
+// Nhánh có plugin của workflows cần plan-execution (skill core) vì workflow-feature gọi nó; plugin khác không đổi.
+const ex = extraSkillCopies('workflows', '/r');
+ok(ex.length === 1 && ex[0].from.split(path.sep).join('/') === '/r/build/claude/plugins/core/skills/plan-execution' && ex[0].to === 'skills/plan-execution', 'eval-run: workflows chép thêm skill core plan-execution');
+ok(extraSkillCopies('backend', '/r').length === 0 && extraSkillCopies('core', '/r').length === 0, 'eval-run: plugin khác workflows không chép thêm skill');
 
 if (fails.length) { console.error(`FAIL ${fails.length}:\n- ${fails.join('\n- ')}`); process.exit(1); }
 console.log(`eval-run: ${pass} OK`);

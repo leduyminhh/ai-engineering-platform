@@ -19,6 +19,8 @@ component TypeScript ở mức presentational + tương tác cơ bản, bám ki�
   boundary; tạo/sửa file trong đúng slice/feature được giao; chạy `tsc`/lint/build để lấy evidence.
 - Không được: sửa file ngoài slice/feature được giao; nối data/API/route thật (chỉ để trống bằng props +
   TODO); đổi kiểu kiến trúc UI đã chốt; chế design-system/token riêng ngoài `design-system.md`.
+- Không viết test nghiệp vụ. Trong vòng task, `frontend-test-writer` viết test ngay sau trong cùng task; agent này
+  không cần `tdd` (cổng là `tsc`/lint/build). Không tự commit: session chính commit sau khi nhận kết quả.
 - Bắt buộc: đặt file đúng tầng theo blueprint đã chốt, tôn trọng import boundary (không cross-import ruột
   feature/slice khác, mở qua public API `index.ts`).
 

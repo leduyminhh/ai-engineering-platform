@@ -25,7 +25,7 @@ export default async function run({ ok, ctx }) {
     ok(JSON.stringify(fx27.get('workflow-x')) === '["a b","c"]', 'registrySignals: chỉ lấy cụm trong ngoặc kép');
     if (workflows) {
       for (const s of workflows.stages) {
-        const miss = missingAnchors(s.body);
+        const miss = missingAnchors(s.body, { kind: s.kind });
         ok(miss.length === 0, `${s.id}: đủ dòng neo khung${miss.length ? ' — thiếu: ' + miss.join(' | ') : ''}`);
       }
       const orch27 = workflows.stages.find((s) => s.kind === 'orchestrator');
@@ -389,6 +389,31 @@ export default async function run({ ok, ctx }) {
       const stray = ['cursor', 'antigravity'].flatMap((p) => (fs.existsSync(path.join(BUILD, p)) ? listFilesRec(path.join(BUILD, p)) : []))
         .filter((f) => path.basename(f) === 'graph.json');
       ok(stray.length === 0, `AC3.1: cursor/antigravity không build graph.json${stray.length ? ' — ' + stray.join(', ') : ''}`);
+    }
+  }
+
+  // AC6.1: không còn vòng sửa/đo lại không giới hạn trong thân và bảng lỗi; orchestrator không còn chuỗi nối tiếp
+  {
+    if (workflows) {
+      // Câu chứa dấu hiệu giới hạn thì hợp lệ; "quay lại Bước N" đã bị cạnh graph chặn bằng max_attempts.
+      const loops = [/lặp tới khi xanh/i, /sửa tiếp/i, /build lại/i, /sửa code[^|]*chạy lại/i, /sửa test, chạy lại/i,
+        /chẩn đoán lại/i, /sửa[^|]*rồi chạy lại/i, /sửa hoặc revert/i, /^(?!.*quay lại Bước).*đo lại/i];
+      const bounded = /tối đa|max_attempts|bộ đếm|ask_user/i;
+      const files = workflows.stages.map((s) => [s.id, s.body]);
+      for (const s of workflows.stages) {
+        const m = path.join(s.dir, 'references', 'error-matrix.md');
+        if (fs.existsSync(m)) files.push([`${s.id}/error-matrix`, fs.readFileSync(m, 'utf8')]);
+      }
+      for (const [id, text] of files) {
+        const unbounded = text.replace(/\r\n/g, '\n').replace(/\n {2,}/g, ' ').split(/\n|; /)
+          .filter((l) => loops.some((re) => re.test(l)) && !bounded.test(l)).map((l) => l.trim().slice(0, 70));
+        ok(unbounded.length === 0, `AC6.1: ${id} không còn vòng lặp không giới hạn${unbounded.length ? ' — ' + unbounded.join(' | ') : ''}`);
+      }
+      const orch = workflows.stages.find((s) => s.kind === 'orchestrator');
+      ok(orch && !orch.body.includes('Supervisor (session chính) kiểm `agent_result`'),
+        'AC6.1: orchestrator không còn dòng Supervisor kiểm agent_result (không giao agent)');
+      ok(orch && !/Nối tiếp|\bchain\b|chuỗi nối tiếp/.test(`${orch.body}\n${orch.description}`),
+        'AC6.1: orchestrator không còn cột Nối tiếp / logic chuỗi workflow');
     }
   }
 }

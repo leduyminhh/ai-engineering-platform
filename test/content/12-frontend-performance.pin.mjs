@@ -3,7 +3,7 @@ export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, PLUGINS_DIR, parseSteps, offeredCatalog, frontmatter, core, workflows, wfText } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 23. SOURCE: frontend-performance skill + agent + workflow-performance Bước 2/3/5 phía FE (spec 2026-10-01-frontend-performance-design)
+  // 23. SOURCE: frontend-performance skill + agent + workflow-performance Bước 3/4/6 phía FE (spec 2026-10-01-frontend-performance-design)
   {
     const flat23 = (t) => t.replace(/\s+/g, ' ');
     const wf23 = (id) => workflows.stages.find((s) => s.id === id);
@@ -66,8 +66,8 @@ export default async function run({ ok, ctx }) {
     ok(/Profiler/.test(feRef23('profiling-react')) && /(profiling build|build profiling)/i.test(feRef23('profiling-react'))
       && /commit/i.test(feRef23('profiling-react')),
       'profiling-react.md: React Profiler, cần build profiling, commit thừa');
-    ok(/long task/i.test(feRef23('chrome-trace')) && /trace/i.test(feRef23('chrome-trace')) && feRef23('chrome-trace').includes('Bước 3'),
-      'chrome-trace.md: long task, xuất trace, ghi lệnh vào report Bước 3');
+    ok(/long task/i.test(feRef23('chrome-trace')) && /trace/i.test(feRef23('chrome-trace')) && feRef23('chrome-trace').includes('Bước 4'),
+      'chrome-trace.md: long task, xuất trace, ghi lệnh vào report Bước 4');
     ok(!/https?:\/\/(?!localhost|127\.0\.0\.1)[a-z]/i.test(feRefs23.map(feRef23).join('\n').replace(/https?:\/\/(?:github\.com|developer\.chrome\.com|web\.dev|react\.dev)[^\s)]*/g, '')),
       'frontend-performance references: không URL host ngoài (trừ link tài liệu chính thức)');
 
@@ -99,7 +99,7 @@ export default async function run({ ok, ctx }) {
       'frontend-performance-analyst: nêu lab không phải INP; description nêu LCP/TBT');
 
     const pf23 = wf23('workflow-performance');
-    for (const [n, mode] of [[2, 'measure'], [3, 'profile'], [5, 'measure']]) {
+    for (const [n, mode] of [[3, 'measure'], [4, 'profile'], [6, 'measure']]) {
       const s = step23(pf23, n);
       const th = field23(s.body, 'Thực hiện');
       ok(th.includes('agent `backend-performance-analyst`') && th.includes('agent `frontend-performance-analyst`') && th.includes(`\`${mode}\``),
@@ -109,37 +109,37 @@ export default async function run({ ok, ctx }) {
         `workflow-performance Bước ${n}: Khi fail — analyst trả blocked + câu hỏi → session chính hỏi người dùng`);
     }
     ok(!flat23(pf23?.body ?? '').includes('Phía FE: chưa có skill'), 'workflow-performance: body không còn "Phía FE: chưa có skill"');
-    const fS2 = step23(pf23, 2), fS3 = step23(pf23, 3), fS5 = step23(pf23, 5);
+    const fS2 = step23(pf23, 3), fS3 = step23(pf23, 4), fS5 = step23(pf23, 6);
     ok(field23(fS2.body, 'Evidence').includes('hash-object') && /từng phía|BE và FE|cả hai phía/.test(field23(fS2.body, 'Evidence')),
-      'workflow-performance Bước 2: Evidence ghi git hash-object script + bảng điều kiện của TỪNG phía');
+      'workflow-performance Bước 3: Evidence ghi git hash-object script + bảng điều kiện của TỪNG phía');
     ok(field23(fS2.body, 'Hành động').includes('perf/frontend/') && field23(fS2.body, 'Hành động').includes('perf/backend/'),
-      'workflow-performance Bước 2: hai phía dùng thư mục con riêng perf/backend/ và perf/frontend/');
-    ok(field23(fS3.body, 'Gate').includes('mốc Bước 2') && /từng phía|BE và FE|cả hai phía/.test(field23(fS3.body, 'Gate')),
-      'workflow-performance Bước 3: Gate so hash của từng phía với mốc Bước 2');
-    ok(field23(fS5.body, 'Gate').includes('mốc Bước 2') && /từng phía/.test(field23(fS5.body, 'Gate')),
-      'workflow-performance Bước 5: Gate hash từng phía bằng mốc Bước 2, kết luận đạt/không đạt theo từng phía');
+      'workflow-performance Bước 3: hai phía dùng thư mục con riêng perf/backend/ và perf/frontend/');
+    ok(field23(fS3.body, 'Gate').includes('mốc Bước 3') && /từng phía|BE và FE|cả hai phía/.test(field23(fS3.body, 'Gate')),
+      'workflow-performance Bước 4: Gate so hash của từng phía với mốc Bước 3');
+    ok(field23(fS5.body, 'Gate').includes('mốc Bước 3') && /từng phía/.test(field23(fS5.body, 'Gate')),
+      'workflow-performance Bước 6: Gate hash từng phía bằng mốc Bước 3, kết luận đạt/không đạt theo từng phía');
     ok(flat23(wfText('performance')).includes('hash') && flat23(wfText('performance')).includes('chunk')
       && flat23(wfText('performance')).includes('bản build production'),
-      'workflow-performance Bước 5: FE build lại bản production, xác nhận bản mới (hash file build / tên chunk khác baseline)');
+      'workflow-performance Bước 6: FE build lại bản production, xác nhận bản mới (hash file build / tên chunk khác baseline)');
     ok(field23(fS5.body, 'Ràng buộc').includes('dev server') && field23(fS2.body, 'Ràng buộc').includes('dev server'),
-      'workflow-performance: Ràng buộc FE cấm đo trên dev server ở CẢ Bước 2 và Bước 5');
+      'workflow-performance: Ràng buộc FE cấm đo trên dev server ở CẢ Bước 3 và Bước 6');
     ok(flat23(wfText('performance')).includes('dist-profile'),
-      'workflow-performance Bước 3: output build profile (dist-profile/) xoá sau khi profile hoặc .gitignore, nếu không thì blocked');
+      'workflow-performance Bước 4: output build profile (dist-profile/) xoá sau khi profile hoặc .gitignore, nếu không thì blocked');
     ok(field23(fS3.body, 'Gate').includes('assets-baseline.txt') && field23(fS5.body, 'Gate').includes('assets-baseline.txt')
       && field23(fS5.body, 'Evidence').includes('assets-baseline.txt'),
-      'workflow-performance Bước 3 và 5: hash assets-baseline.txt (FE) nằm trong Gate/Evidence');
+      'workflow-performance Bước 4 và 6: hash assets-baseline.txt (FE) nằm trong Gate/Evidence');
     ok(field23(fS2.body, 'Evidence').includes('giá trị hash') && field23(fS2.body, 'Evidence').includes('không có thẩm quyền'),
-      'workflow-performance Bước 2: session chính ghi GIÁ TRỊ hash vào Evidence; file hashes chỉ là bản sao tiện lợi, không có thẩm quyền');
-    for (const [n, s] of [[2, fS2], [3, fS3], [5, fS5]]) {
+      'workflow-performance Bước 3: session chính ghi GIÁ TRỊ hash vào Evidence; file hashes chỉ là bản sao tiện lợi, không có thẩm quyền');
+    for (const [n, s] of [[3, fS2], [4, fS3], [6, fS5]]) {
       ok(field23(s.body, 'Gate').includes('hợp của hai bảng'),
         `workflow-performance Bước ${n}: Gate session chính đối chiếu diff với HỢP của hai bảng Config tool đo (BE và FE)`);
     }
     ok(field23(fS2.body, 'Hành động').includes('phía kia') && field23(fS2.body, 'Khi fail').includes('phía kia'),
-      'workflow-performance Bước 2: agent chỉ tự đối chiếu phía mình, không revert file của phía kia');
+      'workflow-performance Bước 3: agent chỉ tự đối chiếu phía mình, không revert file của phía kia');
     ok(field23(fS2.body, 'Khi fail').includes('đo lại từng phía tuần tự') && field23(fS5.body, 'Khi fail').includes('đo lại từng phía tuần tự'),
-      'workflow-performance Bước 2 và 5: nhiễu do hai pha đo chồng nhau trên cùng máy → đo lại từng phía tuần tự');
-    ok(step23(pf23, 3).checkpoint && step23(pf23, 7).checkpoint && parseSteps(pf23?.body ?? '').length === 7,
-      'workflow-performance: vẫn 7 bước, ⏸ ở Bước 3 và 7');
+      'workflow-performance Bước 3 và 6: nhiễu do hai pha đo chồng nhau trên cùng máy → đo lại từng phía tuần tự');
+    ok(step23(pf23, 4).checkpoint && step23(pf23, 8).checkpoint && parseSteps(pf23?.body ?? '').length === 8,
+      'workflow-performance: 8 bước, ⏸ ở Bước 4 và 8');
     ok(pf23 && ['backend-performance-analyst', 'frontend-performance-analyst', 'backend-fixer', 'frontend-fixer', 'backend-reviewer', 'frontend-reviewer']
       .every((a) => pf23.agents.includes(a)),
       'workflow-performance: frontmatter agents có frontend-performance-analyst');

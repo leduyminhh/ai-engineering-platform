@@ -35,15 +35,15 @@ export default {
 npx vite build --config perf/frontend/vite.config.profile.js   # [Unverified] cờ --config; cách import theo project
 ```
 
-- Dùng file config profile riêng thay vì sửa config chính: Config tool đo đã chốt ở cuối Bước 2 và không thêm ở
-  Bước 3; một alias còn sót trong config chính sẽ đưa profiling build vào lần đo của Bước 5. File profile **không
+- Dùng file config profile riêng thay vì sửa config chính: Config tool đo đã chốt ở cuối Bước 3 và không thêm ở
+  Bước 4; một alias còn sót trong config chính sẽ đưa profiling build vào lần đo của Bước 6. File profile **không
   bao giờ** dùng cho lần đo ở `measure`, và phải xóa (hoặc revert) sau khi profile xong. Thêm file hay gói mới
   ngoài `perf/`/`bench/` → hỏi trước, chạy như subagent thì trả `blocked` + câu hỏi (P5).
 - Output vào thư mục riêng (`dist-profile`) để không ghi đè `dist/` của lần đo. **Không sửa `src/`** (không bọc
   `<Profiler>` vào code app).
-- Lệnh build/phục vụ profiling + đường dẫn file config profile ghi vào **report Bước 3** (hoặc
-  `perf/profile-<luồng>.md`), **không** vào bảng điều kiện đo của Bước 2: bản profiling khác bản đo, trộn hai thứ
-  làm Bước 5 so lệch điều kiện.
+- Lệnh build/phục vụ profiling + đường dẫn file config profile ghi vào **report Bước 4** (hoặc
+  `perf/profile-<luồng>.md`), **không** vào bảng điều kiện đo của Bước 3: bản profiling khác bản đo, trộn hai thứ
+  làm Bước 6 so lệch điều kiện.
 - Phục vụ bản profiling bằng cách ở `serve-production-build.md`, chỉ trên localhost.
 
 ## Cách ghi và đọc

@@ -61,7 +61,8 @@
       "run": { "session": true },
       "next": "fix",
       "on_fail": [
-        { "to": "evidence", "when": "người dùng không đồng ý root cause → quay lại Bước 4 thu thêm evidence" }
+        { "to": "evidence", "when": "người dùng không đồng ý root cause → quay lại Bước 4 thu thêm evidence" },
+        { "to": "reproduce", "when": "lý do đỏ của test Bước 3 lệch root cause → quay lại Bước 3 sửa test", "max_attempts": 2 }
       ],
       "gate": {
         "type": "human",
@@ -84,7 +85,8 @@
       "next": "regression",
       "on_fail": [
         { "to": "root-cause", "when": "fix không làm test xanh, hoặc test vẫn đỏ vì lý do khác → quay lại Bước 5 xem lại root cause", "max_attempts": 2 },
-        { "to": "ask_user", "when": "agent trả blocked → hỏi người dùng mở rộng danh sách file rồi gọi lại" }
+        { "to": "ask_user", "when": "agent trả blocked → hỏi người dùng mở rộng danh sách file rồi gọi lại" },
+        { "to": "ask_user", "when": "tổng 3 lần sửa thất bại (qua 6→5, 7→6, 8→6) → dừng hỏi người dùng câu hỏi kiến trúc" }
       ],
       "gate": { "type": "auto" }
     },

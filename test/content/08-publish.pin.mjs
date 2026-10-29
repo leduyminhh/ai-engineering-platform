@@ -47,23 +47,20 @@ export default async function run({ ok, ctx }) {
       ok(offWf19.includes(`workflows/${w}`), `offeredCatalog: vẫn offer workflows/${w} (closure agent frontend đã publish)`);
     }
     const feat19 = wf19('workflow-feature');
-    const fS2 = step19(feat19, 2), fS4 = step19(feat19, 4), fS5 = step19(feat19, 5);
-    ok(/^Phân tích/.test(fS2.title) && flat19(fS2.body).includes('schema') && flat19(fS2.body).includes('`data-db-migration`'),
+    const fS2 = step19(feat19, 2), fS4 = step19(feat19, 5), fS5 = fS4; // Bước 5 mới gộp implement + test trong vòng task
+    ok(/^Làm rõ/.test(fS2.title) && flat19(fS2.body).includes('schema') && flat19(fS2.body).includes('`data-db-migration`'),
       'workflow-feature Bước 2: phạm vi có đổi schema → dừng, đề xuất skill data-db-migration trước');
     // Integrator nối vào component do implementer dựng, nên phải chạy SAU, không song song.
-    ok(/^Implement/.test(fS4.title) && field19(fS4.body, 'Thực hiện').includes('agent `frontend-data-integrator`')
-      && field19(fS4.body, 'Thực hiện').includes('sau khi') && !flat19(fS4.body).includes('Gap G1'),
-      'workflow-feature Bước 4: frontend-data-integrator chạy sau frontend-implementer (fullstack), bỏ Gap G1');
-    ok(/^Test/.test(fS5.title) && field19(fS5.body, 'Thực hiện').includes('agent `frontend-e2e-test-writer`'),
-      'workflow-feature Bước 5: có frontend-e2e-test-writer cho AC dạng luồng UI');
+    ok(/^Vòng task/.test(fS4.title) && field19(fS4.body, 'Thực hiện').includes('agent `frontend-data-integrator`')
+      && field19(fS4.body, 'Hành động').includes('`FE-INT` → `frontend-data-integrator` (sau `FE-UI`') && !flat19(fS4.body).includes('Gap G1'),
+      'workflow-feature Bước 5: frontend-data-integrator chạy sau task FE-UI (fullstack), bỏ Gap G1');
+    ok(field19(fS5.body, 'Thực hiện').includes('agent `frontend-e2e-test-writer`') && field19(fS5.body, 'Hành động').includes('`E2E` → `frontend-e2e-test-writer`'),
+      'workflow-feature Bước 5: có frontend-e2e-test-writer cho AC dạng luồng UI (task kind E2E)');
     ok(field19(fS5.body, 'Gate').includes('playwright.config') && flat19(fS5.body).includes('not_run'),
       'workflow-feature Bước 5: Gate cho phép e2e/ + playwright.config.*; e2e thiếu BE/DB test → not_run hợp lệ');
     ok(feat19 && ['frontend-data-integrator', 'frontend-e2e-test-writer'].every((a) => feat19.agents.includes(a)),
       'workflow-feature: frontmatter agents có frontend-data-integrator, frontend-e2e-test-writer');
-    ok(parseSteps(feat19?.body ?? '').length === 8, 'workflow-feature: vẫn 8 bước');
-    const orch19 = workflows.stages.find((s) => s.kind === 'orchestrator');
-    const featRow19 = parseRegistry(orch19?.body ?? '').rows.find((r) => r.id === 'workflow-feature');
-    ok(featRow19 && featRow19.next.length === 0, 'orchestrator: workflow-feature không nối tiếp workflow-docs (Bước 7 đã làm docs)');
+    ok(parseSteps(feat19?.body ?? '').length === 7, 'workflow-feature: 7 bước (làm rõ, tài liệu, plan, vòng task, review cuối, kết thúc nhánh)');
     for (const f of ['README.md', 'README_VI.md']) {
       const rd = fs.readFileSync(path.join(REPO_ROOT, f), 'utf8');
       const row = (a) => rd.split('\n').find((l) => l.startsWith(`| \`${a}\` |`)) ?? '';
@@ -89,7 +86,7 @@ export default async function run({ ok, ctx }) {
         `${name}: Gate E-r7 gồm cả việc thêm script chạy e2e vào package.json (cần duyệt như E-r7)`);
     }
     ok(field19(fS4.body, 'Khi fail').includes('codegen') && field19(fS4.body, 'Khi fail').includes('blocked'),
-      'workflow-feature Bước 4: Khi fail xử lý integrator trả blocked vì thiếu codegen/thư viện data');
+      'workflow-feature Bước 5: Khi fail xử lý integrator trả blocked vì thiếu codegen/thư viện data');
     for (const [name, w] of [['workflow-feature', feat19]]) {
       const b = w?.body ?? '';
       const i = b.indexOf('## Definition of Done'), j = b.indexOf('## Report');
@@ -97,7 +94,7 @@ export default async function run({ ok, ctx }) {
     }
     const fS4r = field19(fS4.body, 'Ràng buộc');
     ok(fS4r.includes('codegen') && fS4r.includes('fetch'),
-      'workflow-feature Bước 4: Ràng buộc integrator (thiếu codegen → dừng chờ chọn; không gọi fetch trong component)');
+      'workflow-feature Bước 5: Ràng buộc integrator (thiếu codegen → dừng chờ chọn; không gọi fetch trong component)');
     for (const t of [['references', 'testing-toolchain.md'], ['react-micro-frontend.template.md']]) {
       const tpl = flat19(fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'templates', 'architecture', ...t), 'utf8'));
       ok(tpl.includes('`frontend-e2e-testing`'), `frontend template ${t.join('/')}: câu e2e trỏ sang frontend-e2e-testing (S7)`);

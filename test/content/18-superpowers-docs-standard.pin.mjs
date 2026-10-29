@@ -1,4 +1,4 @@
-// Pin: chuẩn tài liệu superpowers (docs/requests/2026-10-20-superpowers-docs-standard). Task 1: script check-request.mjs (AC4.1–AC4.3). Task 2: baseline (AC1.1–AC1.4). Task 3: skill engineering (AC3.1, AC3.3). Task 4: workflow (AC3.2).
+// Pin: chuẩn tài liệu superpowers (docs/requests/2026-10-20-superpowers-docs-standard). Task 1: script check-request.mjs (AC4.1–AC4.3). Task 2: baseline (AC1.1–AC1.4). Task 3: skill engineering (AC3.1, AC3.3).
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, pathToFileURL } = ctx;
 
@@ -73,15 +73,15 @@ export default async function run({ ok, ctx }) {
     }
   }
 
-  // AC1.1–AC1.4, P1/P3: baseline (mục Superpowers workflow defaults) ghi đè vị trí docs, quy ước AC, bộ nhớ, resume
+  // AC1.1–AC1.4, P1/P3: baseline (mục Workflow defaults) đặt vị trí docs, quy ước AC, bộ nhớ, resume
   {
     const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
-    const sp = tpl.slice(tpl.indexOf('### Superpowers workflow defaults'), tpl.indexOf('### Language'));
+    const sp = tpl.slice(tpl.indexOf('### Workflow defaults'), tpl.indexOf('### Language'));
     ok(sp.includes('docs/requests/<yyyy-mm-dd>-<slug>/design.md') && sp.includes('`plan.md` in the same folder')
-      && sp.includes('overrides the superpowers default `docs/superpowers/`'), 'AC1.1: baseline ghi đè vị trí docs');
+      && sp.includes('skill `engineering-spec-writing`') && sp.includes('skill `engineering-plan-writing`'), 'AC1.1: baseline đặt vị trí docs theo skill aip');
     ok(sp.includes('`AC<n>.<m>`') && sp.includes('Given/When/Then') && sp.includes('`Tiêu chí chấp nhận`')
       && sp.includes('`requirement.md` if it exists, otherwise in') && sp.includes('`**Phủ AC:**`') && sp.includes('`Không đổi`'), 'AC1.2: baseline có quy ước AC');
-    ok(sp.includes('| Short-term |') && sp.includes('| Long-term |') && sp.includes('first unchecked task')
+    ok(sp.includes('| Short-term |') && sp.includes('| Long-term |') && sp.includes('first task with no `complete` line')
       && sp.includes('never create a second folder'), 'AC1.4: baseline có bảng bộ nhớ + quy tắc resume');
     ok(sp.includes('only when it contains `design.md`') && sp.includes('`artifact-templates`')
       && sp.includes('check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/'), 'P1/P3: baseline trỏ template core + script kiểm tra');
@@ -107,24 +107,5 @@ export default async function run({ ok, ctx }) {
     ok(r(path.join(TB, 'references', 'analysis.md')).includes('dùng lại nguyên ID'), 'AC3.3: dùng lại ID AC của nguồn');
     ok(/không có `requirement\.md`.*`design\.md`/s.test(r(path.join(TB, 'SKILL.md'))),
       'AC3.3: đọc AC từ design.md khi không có requirement.md');
-  }
-
-  // AC3.2: workflow feature/bugfix/orchestrator nêu nhánh superpowers (D1) trong điều kiện tiên quyết
-  for (const wf of ['feature', 'bugfix', 'orchestrator']) {
-    const t = fs.readFileSync(path.join(REPO_ROOT, 'workflows', wf, 'WORKFLOW.md'), 'utf8');
-    const i = t.indexOf('## Điều kiện tiên quyết');
-    const pre = t.slice(i, t.indexOf('\n## ', i + 5));
-    ok(pre.includes('superpowers:brainstorming') && pre.includes('docs/requests/') && pre.includes('trừ khi người dùng chỉ định rõ'),
-      `AC3.2: ${wf} nêu nhánh superpowers (định nghĩa "đã cài" + ngoại lệ người dùng chỉ định) trong điều kiện tiên quyết`);
-  }
-  // AC3.2: orchestrator thực sự route sang superpowers ở Bước 1 (bảng skill trực tiếp xét trước Registry + ngoại lệ tie-break), không chỉ nêu ở điều kiện tiên quyết
-  {
-    const o = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'orchestrator', 'WORKFLOW.md'), 'utf8').replace(/\s+/g, ' ');
-    const direct = o.split('## Yêu cầu chạy trực tiếp bằng skill')[1]?.split('## Các bước')[0] ?? '';
-    const step1 = o.split('### Bước 1')[1]?.split('### Bước 2')[0] ?? '';
-    ok(/\| [^|]*xét TRƯỚC Registry[^|]*\| `superpowers:brainstorming`/.test(direct) && direct.includes('danh sách skill khả dụng'),
-      'AC3.2: bảng skill trực tiếp có dòng superpowers:brainstorming (xét trước Registry, điều kiện đã cài)');
-    ok(step1.includes('dòng `superpowers:brainstorming` ở mục "Yêu cầu chạy trực tiếp bằng skill"') && step1.includes('ngoài tín hiệu sự cố và dòng `superpowers:brainstorming`'),
-      'AC3.2: Bước 1 xét dòng superpowers trước Registry và loại khỏi tie-break ưu tiên Registry');
   }
 }
