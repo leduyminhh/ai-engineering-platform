@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Dựng app báo cáo doanh thu tối thiểu chưa có export; không cần mạng, chỉ heredoc để chạy được trên Windows (Git Bash).
 set -euo pipefail
-mkdir -p src
+mkdir -p src project-knowledge
 
 cat > package.json <<'JSON'
 {
@@ -42,4 +42,19 @@ JS
 cat > README.md <<'MD'
 # Revenue Dashboard
 Trang báo cáo doanh thu theo tháng cho bộ phận kế toán. Hiện chỉ xem được trên web (`GET /reports/summary`).
+MD
+
+cat > project-knowledge/architecture.md <<'MD'
+# Architecture
+## Sơ đồ khối thành phần
+Một service Node: `src/report-routes.js` (HTTP) gọi `src/report-service.js` (tính tổng hợp thuần, không I/O). `orderRepo` do ứng dụng chủ truyền vào.
+## Trách nhiệm từng thành phần
+- `report-routes.js`: đăng ký route, lấy đơn từ `orderRepo`, trả JSON.
+- `report-service.js`: `buildSummary(orders)` gộp doanh thu theo tháng.
+## Luồng dữ liệu
+`orderRepo.findAll()` → `buildSummary` → JSON.
+## Quyết định kiến trúc chính
+Chưa có ADR.
+## Tích hợp ngoài
+Không.
 MD

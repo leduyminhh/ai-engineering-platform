@@ -45,6 +45,10 @@ Windows native từ chối case cấp quyền Bash (theo docs `claude plugin eva
 | `ops/incident-readonly` | Điều tra sự cố chỉ đọc, đề xuất lệnh, không restart; case chỉ kiểm định tuyến |
 | `backend/fix-repro-first` | Scaffold có test JUnit đỏ; sửa đúng file production, không đụng file test, sửa tối thiểu |
 | `frontend/fix-repro-first` | Như trên với vitest |
+| `workflows/task-review-spec` (2026-10-29) | 3 | `extra-behavior-found` 3/3; `missing-ac-found` 3/3; `not-marked-complete` 3/3 | 2/3; 3/3; 3/3 | +1/9 | hành vi: tìm lệch spec trước khi ghi complete; model trần đã bắt gần hết nên Δ nằm trong nhiễu | 2,36 |
+| `workflows/bugfix-fix-cap` (2026-10-29) | 3 | `asks-architecture` 3/3; `no-fourth-edit` 3/3; `no-fourth-write` 3/3 | 0/3; 3/3; 0/3 | +6/9 | hành vi: dừng hỏi kiến trúc sau 3 lần sửa thất bại, không sửa lần 4 | 1,07 |
+| `workflows/clarify-proposals` lần 1 (2026-10-29) | 3 | `clarify-or-propose` 0/3; `no-code-*` 3/3 | 0/3; 0/3 | +6/9 | hành vi: không viết code; nhánh có plugin dừng ở Bước 1 vì repo thiếu `architecture.md`, chưa tới làm rõ | 1,18 |
+| `workflows/clarify-proposals` lần 2 (2026-10-29, scaffold thêm `architecture.md`) | 3 | `clarify-or-propose` 2/3; `no-code-*` 3/3 | 0/3; `no-code-*` 1/3 | +6/9 | hành vi: không viết code, hỏi hoặc đề xuất; cả 3 lượt có plugin vẫn dừng ở Bước 1 (baseline, không có shell) nên chưa chứng minh Bước 2 và đề xuất 2–3 hướng | 1,40 |
 
 ## Cấu trúc một case
 
