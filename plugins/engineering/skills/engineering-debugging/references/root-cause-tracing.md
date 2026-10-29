@@ -10,7 +10,8 @@ Lỗi thường nổ ở chỗ sâu trong call stack, còn nguyên nhân nằm �
 3. **Dừng ở nguồn:** nơi giá trị xấu được tạo ra hoặc nơi một giả định bị vi phạm lần đầu. Dấu hiệu: tới đây giá trị còn
    đúng ở đầu vào nhưng sai ở đầu ra.
 4. **Thiếu thông tin ở một cấp** thì thêm log tạm tại ranh giới của cấp đó (in đầu vào, đầu ra, và `new Error().stack` hoặc
-   tương đương). Ghi mốc `git status --porcelain` trước và gỡ hết log tạm sau.
+   tương đương). Ghi mốc `git status --porcelain` trước và gỡ hết log tạm sau. Với dữ liệu nhạy cảm chỉ in kiểu, độ dài hay tên
+   khoá; che token, header xác thực và dữ liệu cá nhân.
 5. **Sửa tại nguồn.** Chỗ nổ chỉ nhận thêm kiểm tra khi có giá trị riêng (xem `defense-in-depth.md`).
 
 ## Ví dụ rút gọn

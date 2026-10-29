@@ -8,13 +8,17 @@ import { pathToFileURL } from 'node:url';
 
 const DONE_RE = /^Plan: complete\s*$/m;
 // Chế độ inline không có review từng task, nên dòng complete là bằng chứng duy nhất: bắt buộc mang lệnh test và exit 0.
-const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b/i;
+// `inline` phải là một token riêng: "references/inline.md" hay "inline-fix" trong ghi chú của dòng thường không bị bắt nhầm.
+const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b(?![.\w-])/i;
 const INLINE_EVIDENCE_RE = /\btests: \S.* exit 0\b/;
 const EXIT_FAILED_RE = /\bexit [1-9]/;
+// Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
+const MAX_LINE = 4096;
 
 export function validateLine(line) {
   // Đối số nhiều dòng được kiểm từng dòng: một dòng hợp lệ không được che dòng inline thiếu evidence.
   for (const l of line.split(/\r?\n/)) {
+    if (l.length > MAX_LINE) return `dòng ledger dài quá ${MAX_LINE} ký tự`;
     if (INLINE_COMPLETE_RE.test(l) && !(INLINE_EVIDENCE_RE.test(l) && !EXIT_FAILED_RE.test(l))) {
       return 'dòng Task <n>: complete ở chế độ inline phải có "tests: <lệnh> exit 0" và không kèm exit khác 0';
     }

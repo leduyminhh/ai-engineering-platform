@@ -1,6 +1,6 @@
 ---
 name: using-aip
-description: "Quy tắc gọi skill trước khi hành động: kiểm skill áp dụng, ưu tiên theo thứ tự, nhận ra các cách tự biện minh để bỏ qua. Dùng khi người dùng muốn \"bắt đầu phiên mới\", \"chọn skill phù hợp\", \"có skill nào áp dụng không\", hoặc khi vừa mở phiên làm việc. Không dùng khi cần chọn một workflow cho yêu cầu cụ thể → workflow-orchestrator."
+description: "Quy tắc gọi skill trước khi hành động: kiểm skill áp dụng, ưu tiên theo thứ tự, nhận ra các cách tự biện minh để bỏ qua. Dùng khi người dùng muốn \"bắt đầu phiên mới\", \"chọn skill phù hợp\", \"có skill nào áp dụng không\", hoặc khi bắt đầu mọi hội thoại. Không dùng khi cần chọn một workflow cho yêu cầu cụ thể → workflow-orchestrator."
 order: 6
 title: "Using AIP — gọi skill trước khi hành động (dùng chung)"
 runsIn: execute
@@ -36,7 +36,7 @@ nói rõ bỏ qua một skill thì bỏ qua; không tự suy ra điều đó t�
 |---|---|
 | "Chỉ là câu hỏi nhỏ" | Câu hỏi cũng là một việc. Kiểm skill trước. |
 | "Để tôi đọc code trước đã" | Skill chỉ cách đọc. Gọi trước, đọc sau. |
-| "Test đỏ rõ ràng, sửa luôn" | Lỗi chưa rõ nguyên nhân thì đi theo quy trình sửa lỗi (`workflow-bugfix`), không đoán rồi sửa. |
+| "Test đỏ rõ ràng, sửa luôn" | Lỗi chưa rõ nguyên nhân: chỉ cần điều tra thì `engineering-debugging`, cần sửa thì `workflow-bugfix` (khi đã cài). Không đoán rồi sửa. |
 | "Tôi nhớ skill này rồi" | Skill có thể đã đổi. Đọc bản hiện tại. |
 | "Việc này nhỏ, skill quá nặng" | Skill tự nêu lối tắt cho việc nhỏ (vd cỡ "thay đổi nhỏ" của `workflow-feature`). Không tự cắt. |
 | "Cần thêm ngữ cảnh rồi mới chọn" | Chọn skill trước; skill nói cách thu ngữ cảnh. |

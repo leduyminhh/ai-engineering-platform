@@ -43,8 +43,9 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 
 ## Quy trình — dọn worktree
 
-1. Chỉ dọn khi nhánh đã merge (`git branch --merged feature/<slug>` liệt kê nó, có thể kèm tiền tố `+` vì nhánh đang được worktree dùng) **và** `git -C .claude/worktrees/<slug>-t<n> status --short`
-   không in gì. Chưa merge hoặc còn thay đổi thì giữ lại và báo người dùng.
+1. Chỉ dọn khi nhánh đã merge (`git branch --merged feature/<slug>` liệt kê nó, có thể kèm tiền tố `+` vì nhánh đang được worktree dùng) **và** `git -C .claude/worktrees/<slug>-t<n> status --short --ignored`
+   không in gì. `git worktree remove` xoá cả file bị gitignore (cấu hình cục bộ, ledger `.sdd/`), nên còn mục ignored không
+   tái tạo được thì giữ lại. Chưa merge hoặc còn thay đổi thì giữ lại và báo người dùng.
 2. Dọn bằng lệnh của git, theo thứ tự:
    ```bash
    git worktree remove .claude/worktrees/<slug>-t<n>

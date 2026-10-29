@@ -43,7 +43,13 @@ export default async function run({ ok, ctx }) {
       'minor (deferred): đặt tên — task 2',
       'Plan: complete',
       '# Ledger — plan: docs/requests/x/plan.md',
+      // Regression: ghi chú nhắc tới inline.md trong dòng của chế độ subagent không phải dòng inline.
+      'Task 3: complete (commits a..b, review clean, thêm references/inline.md)',
     ];
+    // Regression ReDoS: dòng dài lặp "tests: " bị từ chối theo độ dài thay vì làm regex lùi bậc hai.
+    const t0 = Date.now();
+    const long = lg.validateLine('Task 1: complete inline ' + 'tests: '.repeat(20000));
+    ok(typeof long === 'string' && Date.now() - t0 < 200, 'AC5.2: dòng ledger quá dài bị từ chối nhanh theo độ dài (không ReDoS)');
     const verdict = (l) => (typeof lg.validateLine === 'function' ? lg.validateLine(l) : undefined);
     for (const l of reject) ok(typeof verdict(l) === 'string' && verdict(l) !== '', `AC5.2: validateLine từ chối ${JSON.stringify(l)}`);
     for (const l of accept) ok(verdict(l) === null, `AC5.2: validateLine chấp nhận ${JSON.stringify(l)}`);

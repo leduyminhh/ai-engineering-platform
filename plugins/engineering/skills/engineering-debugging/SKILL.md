@@ -1,6 +1,6 @@
 ---
 name: engineering-debugging
-description: "Debug có hệ thống khi chưa rõ nguyên nhân: điều tra gốc trước, nêu giả thuyết rồi kiểm, mới sửa; kèm bốn kỹ thuật bổ trợ. Dùng khi người dùng muốn \"debug lỗi lạ\", \"test flaky\", \"tìm nguyên nhân gốc\", \"tại sao test này đỏ\". Không dùng khi lỗi đã rõ và cần pipeline sửa đủ bước có commit → workflow-bugfix."
+description: "Debug có hệ thống khi chưa rõ nguyên nhân: điều tra gốc trước, nêu giả thuyết rồi kiểm, mới sửa; kèm bốn kỹ thuật bổ trợ. Dùng khi người dùng muốn \"debug lỗi lạ\", \"test flaky\", \"tìm nguyên nhân gốc\", \"tại sao test này đỏ\". Không dùng khi cần sửa lỗi đủ bước có commit → workflow-bugfix."
 order: 11
 title: "Debugging — điều tra nguyên nhân gốc trước khi sửa (skill dùng chung)"
 runsIn: execute
@@ -27,7 +27,9 @@ Ba skill hay bị nhầm với nhau:
 2. **So sánh mẫu.** Tìm đoạn tương tự đang chạy đúng; liệt kê mọi khác biệt, kể cả nhỏ; ghi giả định mà đoạn lỗi dựa vào.
 3. **Giả thuyết và kiểm.** Viết một câu "X là nguyên nhân vì Y" kèm phép kiểm. Kiểm bằng thay đổi nhỏ nhất, một biến mỗi
    lần. Giả thuyết bị bác bỏ thì bỏ hẳn, không chồng thêm bản sửa lên. Thay đổi thử chỉ tạm thời: hoàn tác
-   ngay (đối chiếu với mốc `git status --porcelain` ghi từ đầu) trước khi sang bước khác. Chưa hiểu thì nói là chưa hiểu.
+   ngay (đối chiếu với mốc `git status --porcelain` ghi từ đầu) trước khi sang bước khác, bằng Edit đảo đúng đoạn vừa
+   chèn; không dùng `git checkout`, `git restore` hay `git reset` lên file chưa commit. File đã có thay đổi dở từ trước mốc
+   thì hỏi người dùng trước khi thử. Chưa hiểu thì nói là chưa hiểu.
    Khi chạy trong `workflow-bugfix`, cổng của workflow thắng.
 4. **Sửa.** Chỉ khi người dùng muốn sửa luôn; nếu chỉ hỏi nguyên nhân thì dừng sau pha 3 và báo kết luận kèm đề xuất. Viết
    test tái hiện đỏ trước (kỷ luật của `engineering-tdd` khi skill đã cài; thiếu thì vẫn phải thấy test đỏ đúng lý do).

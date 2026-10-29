@@ -5,7 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readGateConfig } from './gate-config.mjs';
 
-// Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Handoff và ledger chia chung ngân sách này.
+// Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Bootstrap, ledger và handoff chia chung ngân sách này.
 const MAX_TOTAL = 9000;
 // Chặn file rỗng hoặc chỉ còn khung heading của template.
 const MIN_CHARS = 80;

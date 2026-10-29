@@ -4,16 +4,16 @@
     "hash": "a4ca82348c2bad0a45ac546356531c9078275a90e7bbc318864cc528feea5f85"
   },
   "core": {
-    "version": "1.19.3",
-    "hash": "1d1edb9cd05d033fb6dfcf8ebebf90b6818e10ef512ba77b683889d1f7fbeb89"
+    "version": "1.19.4",
+    "hash": "1e0f834f28fb11d0b2c5052d54b5989b037d67011513618f7bca036377d504aa"
   },
   "data": {
     "version": "1.6.8",
     "hash": "1e6ec81573b73497bf9c97b4469b5784284ba550101da40ea3ec7da78169f0e8"
   },
   "engineering": {
-    "version": "2.8.0",
-    "hash": "561b5d28417d12a6e95c97a6318bae4b12dbd11b15ea2d1ee346bb503f9e88ce"
+    "version": "2.8.2",
+    "hash": "8bcaf8cd0895ce5a535255a68da0d9e5bb746563776cae8e4672ca399c8358c3"
   },
   "frontend": {
     "version": "1.14.6",
@@ -24,7 +24,7 @@
     "hash": "c211147cf8b2fca78616ee5d7c98155d727c675d7793132d0d9df2fc8da4589b"
   },
   "workflows": {
-    "version": "3.9.1",
-    "hash": "516c84509546be2b6940d55e2986c607d92ebdbc94e906edae9a89383aa6e9e4"
+    "version": "3.9.2",
+    "hash": "f330369299ce934f04ec48deac8766f3884276fc90acecec7936bd6b6fcdb336"
   }
 }

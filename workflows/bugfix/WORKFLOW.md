@@ -109,11 +109,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   từng cấp (giá trị này do ai gọi/truyền vào) tới nguồn; đối chiếu lý do đỏ của test Bước 3 với root cause đã
   nêu; trình bày cho người dùng để xác nhận trước khi fix. Pha 1–3 và cách truy ngược: skill `engineering-debugging` (khi skill đã cài); không làm pha 4 của skill ở bước này, việc sửa nằm ở Bước 6.
 - **Ràng buộc:** không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
-  evidence hỗ trợ; không dừng ở chỗ lỗi nổ khi nguồn nằm ở nơi khác.
+  evidence hỗ trợ; không dừng ở chỗ lỗi nổ khi nguồn nằm ở nơi khác; thay đổi thử khi kiểm giả thuyết phải hoàn tác trước
+  khi trình người dùng.
 - **Đầu ra:** giải thích root cause, có trích dẫn evidence; **danh sách file/module được sửa** suy từ chuỗi nhân
   quả, gồm nguồn (không chỉ chỗ nổ lỗi) — đầu vào cho Bước 6; người dùng xác nhận cùng root cause.
 - **Gate:** giải thích nhân quả khớp evidence, lý do đỏ của test Bước 3 khớp root cause, người dùng đồng ý; có
-  danh sách file được sửa.
+  danh sách file được sửa; `git status --porcelain` khớp mốc ghi ở đầu Bước 4 (không còn thay đổi thử).
 - **Khi fail:** người dùng không đồng ý root cause → quay lại Bước 4 thu thêm evidence hoặc xem lại giả
   thuyết; lý do đỏ của test Bước 3 lệch root cause (test đỏ vì triệu chứng hoặc lỗi khác) → quay lại Bước 3 sửa
   test.
