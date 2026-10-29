@@ -1,6 +1,6 @@
 ---
 name: engineering-tdd
-description: "Kỷ luật TDD cho mọi thay đổi hành vi: test đỏ đúng lý do trước, code tối thiểu để xanh, rồi refactor; kèm bảng biện minh và anti-pattern. Dùng khi người dùng muốn \"làm theo TDD\", \"viết test trước\", \"red green refactor\", \"sửa bug bằng test tái hiện\". Không dùng khi chỉ cần chiến lược hoặc độ phủ test cho code đã có → backend-testing."
+description: "Kỷ luật TDD cho mọi thay đổi hành vi: test đỏ đúng lý do trước, code tối thiểu để xanh, rồi refactor; kèm bảng biện minh và anti-pattern. Dùng khi người dùng muốn \"làm theo TDD\", \"viết test trước\", \"red green refactor\", \"sửa bug bằng test tái hiện\". Không dùng khi chỉ cần chiến lược hoặc độ phủ test cho code đã có → backend-testing, sửa lỗi hành vi đã có end-to-end → workflow-bugfix."
 order: 10
 title: "TDD — test đỏ đúng lý do trước, code tối thiểu, rồi refactor (skill dùng chung)"
 runsIn: execute
@@ -22,14 +22,16 @@ Skill này là kỷ luật làm việc, không phải chiến lược test: ch�
    (unit cho logic thuần; integration chỉ khi cần DB, broker hay HTTP thật).
 2. **Viết test.** Tên nêu hành vi. Kỳ vọng tự tính từ spec hoặc AC, không chép từ output của code hiện có.
 3. **Chạy và thấy đỏ đúng lý do.** Đỏ vì hành vi chưa có, không phải vì lỗi cú pháp, import hay setup. Ghi lệnh, exit code
-   và thông báo lỗi → `tdd.red`.
+   và thông báo lỗi (task `kind: BE` ghi vào `tdd.red`).
 4. **Viết code tối thiểu** cho test xanh. Không thêm hành vi chưa có test.
 5. **Chạy lại đúng lệnh đó và thấy xanh** → `tdd.green`; chạy thêm test hẹp của vùng bị chạm.
 6. **Refactor khi đang xanh**, chạy lại sau mỗi bước nhỏ.
-7. **Sửa bug:** test tái hiện bug phải đỏ trước. Sau khi sửa phải xanh; xác nhận bằng cách hoàn tác bản sửa (test đỏ lại)
-   rồi khôi phục (test xanh).
+7. **Sửa bug:** test tái hiện bug phải đỏ trước. Sau khi sửa phải xanh; xác nhận bằng cách tạm vô hiệu hoá đúng đoạn
+   vừa sửa (test đỏ lại) rồi khôi phục (test xanh). Không dùng `git checkout` hay `git reset` lên file chưa commit để hoàn tác:
+   bản sửa chưa commit sẽ mất.
 
-Ngoại lệ (code vứt đi, tệp cấu hình sinh tự động, thay đổi chỉ docs) cần người dùng đồng ý; không tự cấp.
+Ngoại lệ (code vứt đi, tệp cấu hình sinh tự động, thay đổi chỉ docs) cần người dùng đồng ý; không tự cấp. Agent chạy
+trong workflow (chế độ nhúng) không hỏi người dùng: trả `status: blocked` kèm `questions[]`.
 
 ## Dấu hiệu đang tự biện minh để bỏ qua bước đỏ
 
@@ -54,5 +56,6 @@ thành việc thêm test.
 
 - Không sửa, xoá hay nới test để làm xanh; không sửa code production chỉ để test xanh sai lý do.
 - Không dùng `sleep` cố định, không phụ thuộc thứ tự test, thời gian thực hay mạng thật.
-- Báo `tdd: { red, green }` đúng định dạng của contract đầu ra (`core:principles`); skill này không đổi định dạng đó.
+- Báo `tdd: { red, green }` chỉ khi task `kind: BE` trong vòng task, đúng định dạng của contract đầu ra (`core:principles`);
+  ngoài đó ghi cùng evidence (lệnh, exit code) vào `validation`. Skill này không đổi định dạng của contract.
 - Không commit và không chạy lệnh tác động môi trường; commit do bước điều phối đảm nhiệm.

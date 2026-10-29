@@ -65,16 +65,25 @@ export default async function run({ ok, ctx }) {
   // AC2.1, AC2.2: engineering-tdd có luật đỏ trước, bảng biện minh, dẫn chiếu quy tắc Testing; hai skill trỏ tới nó có điều kiện
   {
     const tdd = read('plugins', 'engineering', 'skills', 'engineering-tdd', 'SKILL.md');
-    ok(/đỏ đúng lý do/.test(tdd) && /## Quy trình — đỏ, xanh, refactor/.test(tdd), 'AC2.1: engineering-tdd nêu luật test đỏ đúng lý do trước khi viết code');
+    const slice = (text, from, to) => text.slice(text.indexOf(from), to ? text.indexOf(to) : undefined);
+    const procedure = slice(tdd, '## Quy trình — đỏ, xanh, refactor', '## Dấu hiệu đang tự biện minh');
+    ok(/Chạy và thấy đỏ đúng lý do/.test(procedure) && /`tdd\.red`/.test(procedure) && /Viết code tối thiểu/.test(procedure) && procedure.indexOf('thấy đỏ') < procedure.indexOf('Viết code tối thiểu'),
+      'AC2.1: mục Quy trình của engineering-tdd bắt thấy đỏ đúng lý do trước khi viết code');
     ok(/## Dấu hiệu đang tự biện minh/.test(tdd) && (tdd.match(/^\| "/gm) || []).length >= 5, 'AC2.1: engineering-tdd có bảng ≥ 5 dấu hiệu tự biện minh');
-    ok(/Một hành vi một test|một hành vi một test/.test(tdd) && tdd.includes('references/anti-patterns.md') && /AGENTS\.md/.test(tdd),
-      'AC2.1: engineering-tdd dẫn chiếu quy tắc "một hành vi một test" của AGENTS.md và anti-patterns.md');
+    const boundary = slice(tdd, '## Ranh giới với quy tắc Testing', '## Ranh giới an toàn');
+    ok(/một hành vi một test/i.test(boundary) && boundary.includes('references/anti-patterns.md') && /AGENTS\.md/.test(boundary),
+      'AC2.1: mục ranh giới dẫn chiếu quy tắc "một hành vi một test" của AGENTS.md và anti-patterns.md');
+    ok(/chỉ khi task `kind: BE`/.test(slice(tdd, '## Ranh giới an toàn')), 'AC2.2: engineering-tdd chỉ báo tdd.red/tdd.green cho task kind BE');
     ok(fs.existsSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-tdd', 'references', 'anti-patterns.md')), 'AC2.1: anti-patterns.md tồn tại');
     for (const [name, p] of [['backend-implement', ['plugins', 'backend', 'skills', 'backend-implement', 'SKILL.md']], ['frontend-testing', ['plugins', 'frontend', 'skills', 'frontend-testing', 'SKILL.md']]]) {
-      const t = read(...p);
-      ok(/engineering-tdd[^\n]*khi skill đã cài|khi skill đã cài[^\n]*engineering-tdd/.test(t.replace(/\n(?=[^\n])/g, ' ')), `AC2.2: ${name} trỏ tới engineering-tdd ở dạng có điều kiện (khi skill đã cài)`);
+      const t = read(...p).replace(/\r?\n(?=[^\n])/g, ' ');
+      const at = t.indexOf('engineering-tdd');
+      // Con trỏ phải có cả điều kiện "khi skill đã cài" lẫn nhánh dự phòng "thiếu ..." trong cùng đoạn, để plugin không gãy khi chưa cài engineering.
+      ok(at >= 0 && /khi skill đã cài[^.]*thiếu/.test(t.slice(Math.max(0, at - 200), at + 300)), `AC2.2: ${name} trỏ tới engineering-tdd có điều kiện và có nhánh dự phòng khi thiếu skill`);
     }
     const be = read('plugins', 'backend', 'skills', 'backend-implement', 'SKILL.md');
+    const beStep3 = be.slice(be.indexOf('### 3. Test đỏ trước'), be.indexOf('### 4.'));
+    ok(beStep3.includes('engineering-tdd'), 'AC2.2: con trỏ của backend-implement nằm trong bước viết test (### 3)');
     ok(/`tdd\.red`/.test(be) && /`tdd\.green`/.test(be) && /tdd: \{ red, green \}/.test(be), 'AC2.2: backend-implement giữ nguyên định dạng tdd.red/tdd.green');
   }
 

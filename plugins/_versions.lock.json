@@ -12,12 +12,12 @@
     "hash": "1e6ec81573b73497bf9c97b4469b5784284ba550101da40ea3ec7da78169f0e8"
   },
   "engineering": {
-    "version": "2.7.0",
-    "hash": "3caf5ac331223854e8323f28c908a37c0f26d5afd378e96e29034371950458d8"
+    "version": "2.7.1",
+    "hash": "c15a1e7d4872623da87498c07bada7436c4e8c5a6895bfdecb6b0d535c4af9b2"
   },
   "frontend": {
-    "version": "1.14.5",
-    "hash": "d95955e3a2ec7e4a143c06b566296f6280dbd38687b64854360985ff0beaf2f1"
+    "version": "1.14.6",
+    "hash": "2d732979945d22bddc39a36d2fe77e3cdd044e5e6ee6f2d7f3e0786f7e57aaab"
   },
   "ops": {
     "version": "2.0.5",

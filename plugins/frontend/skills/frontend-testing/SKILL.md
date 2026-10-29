@@ -74,7 +74,7 @@ Xác định **hành vi người dùng cần test + mức rủi ro**, rồi ch�
 hay thư mục `__tests__` — theo repo, không tự bịa). Repo chưa có quy ước → theo mục "Test — vị trí file"
 của template kiến trúc + `architecture/references/testing-toolchain.md`. Idiom cụ thể + ví dụ:
 [references/react-testing-patterns.md](references/react-testing-patterns.md).
-Test cho hành vi chưa có code (vd test tái hiện bug) theo kỷ luật đỏ → xanh của skill `engineering-tdd` khi skill đã cài;
+Test cho hành vi chưa đúng hoặc chưa có (vd test tái hiện bug) theo kỷ luật đỏ → xanh của skill `engineering-tdd` khi skill đã cài;
 thiếu skill thì vẫn phải chạy test và thấy đỏ đúng lý do trước khi có code sửa.
 - **Presentational (render + interaction):** render với props, **query theo role/label/text hiển
   thị** (`getByRole`, `getByLabelText`) — a11y-first, tránh `data-testid` trừ khi không có lựa chọn
