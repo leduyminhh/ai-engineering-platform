@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Unit test cho runner eval — chỉ hàm thuần, không gọi model. Zero-dependency.
 // Chạy: node test/eval-run.test.mjs
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { stripDependencies, parseArgs, extraSkillCopies, needsShell, evalCopyFilter, reportName, staleTraces, isEvalTemp, leftoverEvalTemps } from '../scripts/eval-run.mjs';
+import { stripDependencies, parseArgs, extraSkillCopies, needsShell, evalCopyFilter, reportName, staleTraces, isEvalTemp, leftoverEvalTemps, linuxOnlyDirs } from '../scripts/eval-run.mjs';
 
 let pass = 0;
 const fails = [];
@@ -58,6 +59,18 @@ ok(!isEvalTemp(path.join(tmpRoot, 'x', 'claude-eval-1'), tmpRoot) && !isEvalTemp
 // Eval thoát sớm không có r.json: chỉ dọn thư mục claude-eval-* tạo sau lúc bắt đầu, không đụng thư mục của lượt khác.
 const lo = leftoverEvalTemps([{ name: 'claude-eval-new', ms: 10 }, { name: 'claude-eval-old', ms: 5 }, { name: 'other-new', ms: 10 }], 10);
 ok(lo.length === 1 && lo[0] === 'claude-eval-new', 'eval-run: thiếu r.json chỉ quét claude-eval-* mới tạo');
+
+// Case linux-only làm claude eval trên Windows từ chối cả đợt: win32 loại chúng khỏi bản sao, nền khác giữ nguyên.
+const lx = fs.mkdtempSync(path.join(os.tmpdir(), 'lx-'));
+try {
+  fs.mkdirSync(path.join(lx, 'bashy'));
+  fs.mkdirSync(path.join(lx, 'plain'));
+  fs.writeFileSync(path.join(lx, 'bashy', 'prompt.md'), ['---', 'tags: [policy, linux-only]', '---', 'x', ''].join('\n'));
+  fs.writeFileSync(path.join(lx, 'plain', 'prompt.md'), ['---', 'tags: [policy]', '---', 'x', ''].join('\n'));
+  const w = linuxOnlyDirs(lx, 'win32');
+  ok(w.size === 1 && w.has(path.join(lx, 'bashy')), 'eval-run: win32 bỏ đúng case gắn tag linux-only');
+  ok(linuxOnlyDirs(lx, 'linux').size === 0, 'eval-run: nền Linux không bỏ case nào');
+} finally { fs.rmSync(lx, { recursive: true, force: true }); }
 
 if (fails.length) { console.error(`FAIL ${fails.length}:\n- ${fails.join('\n- ')}`); process.exit(1); }
 console.log(`eval-run: ${pass} OK`);

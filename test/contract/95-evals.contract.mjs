@@ -13,8 +13,12 @@ export default async function run({ ok, ctx }) {
   ok(checkEvalCase({ promptMeta: { foo: 1 }, graders: [grader()] }).some((e) => e.includes('foo')), 'checkEvalCase: khoá prompt.md lạ → lỗi');
   ok(checkEvalCase({ promptMeta: {}, graders: [{}] }).length >= 1, 'checkEvalCase: grader thiếu type → lỗi');
   ok(checkEvalCase({ promptMeta: { allowed_tools: ['Bash'] }, graders: [grader()] }).some((e) => e.includes('Bash')), 'checkEvalCase: allowed_tools có Bash → lỗi');
-  ok(checkEvalCase({ promptMeta: { allowed_tools: ['Read', 'Bash(npm test *)'] }, graders: [grader()] }).some((e) => e.includes('Bash')),
-    'checkEvalCase: Bash(pattern) cũng bị chặn');
+  ok(checkEvalCase({ promptMeta: { allowed_tools: ['Read', 'Bash(npm test *)'] }, graders: [grader()] }).some((e) => e.includes('linux-only')),
+    'checkEvalCase: Bash(pattern) thiếu tag linux-only → lỗi');
+  ok(checkEvalCase({ promptMeta: { allowed_tools: ['Read', 'Bash(git *)'], tags: ['linux-only'] }, graders: [grader()] }).length === 0,
+    'checkEvalCase: Bash(pattern) kèm tag linux-only → hợp lệ');
+  ok(checkEvalCase({ promptMeta: { allowed_tools: ['Bash'], tags: ['linux-only'] }, graders: [grader()] }).some((e) => e.includes('Bash trần')),
+    'checkEvalCase: Bash trần bị chặn kể cả có tag linux-only');
   ok(checkEvalCase({ promptMeta: { runs: 0 }, graders: [grader()] }).length === 1 && checkEvalCase({ promptMeta: { runs: 51 }, graders: [grader()] }).length === 1
     && checkEvalCase({ promptMeta: { runs: 1.5 }, graders: [grader()] }).length === 1, 'checkEvalCase: runs ngoài 1–50 → lỗi');
   ok(checkEvalCase({ promptMeta: { max_turns: 201 }, graders: [grader()] }).length === 1, 'checkEvalCase: max_turns > 200 → lỗi');

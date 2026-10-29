@@ -263,16 +263,21 @@ const EVAL_PROMPT_KEYS = ['schema_version', 'name', 'description', 'tags', 'plug
 const EVAL_RUNS_MAX = 50;
 const EVAL_TURNS_MAX = 200;
 
-// Windows native từ chối case cấp Bash (cần WSL2), nên case của repo không được khai Bash, kể cả dạng Bash(pattern).
+// Windows native từ chối case cấp Bash (cần WSL2/Linux): case có Bash phải gắn tag linux-only (runner bỏ qua trên win32) và giới hạn bằng Bash(pattern).
+export const EVAL_LINUX_ONLY_TAG = 'linux-only';
 export function checkEvalCase({ promptMeta = {}, graders = [] }) {
   const errs = [];
   for (const k of Object.keys(promptMeta)) if (!EVAL_PROMPT_KEYS.includes(k)) errs.push(`prompt.md: khoá lạ "${k}"`);
-  const { runs, max_turns: turns, allowed_tools: tools } = promptMeta;
+  const { runs, max_turns: turns, allowed_tools: tools, tags } = promptMeta;
   if (runs !== undefined && !(Number.isInteger(runs) && runs >= 1 && runs <= EVAL_RUNS_MAX)) errs.push(`runs phải là số nguyên 1–${EVAL_RUNS_MAX}`);
   if (turns !== undefined && !(Number.isInteger(turns) && turns >= 1 && turns <= EVAL_TURNS_MAX)) errs.push(`max_turns phải là số nguyên 1–${EVAL_TURNS_MAX}`);
   if (tools !== undefined) {
     if (!Array.isArray(tools)) errs.push('allowed_tools phải là list');
-    else if (tools.some((t) => /^Bash(\(|$)/.test(String(t)))) errs.push('allowed_tools không được có Bash (Windows native từ chối; chạy trong WSL2 mới cấp)');
+    else {
+      const bash = tools.map(String).filter((t) => /^Bash(\(|$)/.test(t));
+      if (bash.includes('Bash')) errs.push('allowed_tools không được có Bash trần; dùng Bash(<pattern>) để giới hạn lệnh');
+      if (bash.length && !(Array.isArray(tags) && tags.includes(EVAL_LINUX_ONLY_TAG))) errs.push(`allowed_tools có Bash nhưng thiếu tag ${EVAL_LINUX_ONLY_TAG} (Windows native từ chối case cấp Bash)`);
+    }
   }
   if (!graders.length) errs.push('cần ≥ 1 grader');
   graders.forEach((g, i) => {

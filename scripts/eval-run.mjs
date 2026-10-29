@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseFrontmatter } from '../cli/lib/plugins.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -29,6 +30,18 @@ export const evalCopyFilter = (evalSrc) => (src) => path.relative(evalSrc, src).
 
 // --case chỉ chạy một phần nên không được ghi đè latest.json của lượt chạy đầy đủ.
 export const reportName = (caseGlob) => (caseGlob ? `latest-${caseGlob.replace(/[*?/]/g, '_')}.json` : 'latest.json');
+
+// Case gắn tag linux-only (cấp Bash) bị `claude plugin eval` trên Windows native từ chối cả đợt, nên runner bỏ khỏi bản sao tạm.
+export function linuxOnlyDirs(evalSrc, platform = process.platform) {
+  if (platform !== 'win32') return new Set();
+  const out = new Set();
+  for (const pf of fs.readdirSync(evalSrc, { recursive: true })) {
+    if (path.basename(pf) !== 'prompt.md' || pf.split(path.sep)[0] === 'results') continue;
+    const tags = parseFrontmatter(fs.readFileSync(path.join(evalSrc, pf), 'utf8')).meta.tags;
+    if (Array.isArray(tags) && tags.includes('linux-only')) out.add(path.join(evalSrc, path.dirname(pf)));
+  }
+  return out;
+}
 
 // Trace của lượt trước: lượt đầy đủ (caseNames = null) xoá hết; --case chỉ xoá trace của các case vừa chạy.
 export function staleTraces(files, caseNames) {
@@ -108,7 +121,10 @@ function run() {
       if (!fs.existsSync(x.from)) throw new Error(`Thiếu ${x.from}; chạy npm run build`);
       fs.cpSync(x.from, path.join(work, ...x.to.split('/')), { recursive: true, dereference: true });
     }
-    fs.cpSync(evalSrc, path.join(work, 'evals'), { recursive: true, filter: evalCopyFilter(evalSrc) });
+    const skipped = linuxOnlyDirs(evalSrc);
+    if (skipped.size) console.log(`Bỏ qua ${skipped.size} case linux-only trên Windows: ${[...skipped].map((d) => path.basename(d)).join(', ')} (chạy trong WSL2/Linux)`);
+    const baseFilter = evalCopyFilter(evalSrc);
+    fs.cpSync(evalSrc, path.join(work, 'evals'), { recursive: true, filter: (src) => baseFilter(src) && ![...skipped].some((d) => src === d || src.startsWith(d + path.sep)) });
     const pj = path.join(work, '.claude-plugin', 'plugin.json');
     fs.writeFileSync(pj, JSON.stringify(stripDependencies(JSON.parse(fs.readFileSync(pj, 'utf8'))), null, 2) + '\n');
 
