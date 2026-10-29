@@ -136,7 +136,7 @@
 **Kind:** TOOLING
 **Phủ AC:** AC6.1
 **Files:**
-- Create: `evals/core/bootstrap-skill-first/prompt.md`, `evals/core/bootstrap-skill-first/graders/*.md`, `evals/engineering/tdd-red-first/prompt.md`, `evals/engineering/tdd-red-first/case.yaml`, `evals/engineering/tdd-red-first/scaffold.sh`, `evals/engineering/tdd-red-first/graders/*.md`, `evals/engineering/debugging-root-cause-first/prompt.md`, `evals/engineering/debugging-root-cause-first/case.yaml`, `evals/engineering/debugging-root-cause-first/scaffold.sh`, `evals/engineering/debugging-root-cause-first/graders/*.md`
+- Create: `evals/core/bootstrap-skill-first/prompt.md`, `evals/core/bootstrap-skill-first/case.yaml`, `evals/core/bootstrap-skill-first/scaffold.sh`, `evals/core/bootstrap-skill-first/graders/*.md`, `evals/engineering/tdd-red-first/prompt.md`, `evals/engineering/tdd-red-first/case.yaml`, `evals/engineering/tdd-red-first/scaffold.sh`, `evals/engineering/tdd-red-first/graders/*.md`, `evals/engineering/debugging-root-cause-first/prompt.md`, `evals/engineering/debugging-root-cause-first/case.yaml`, `evals/engineering/debugging-root-cause-first/scaffold.sh`, `evals/engineering/debugging-root-cause-first/graders/*.md`
 - Modify: `evals/README.md`, `evals/README_VI.md`
 - Test: `test/contract/95-evals.contract.mjs`
 
@@ -144,7 +144,7 @@
 - Consumes: skill id `using-aip` (Task 1), `engineering-tdd` (Task 4), `engineering-debugging` (Task 5)
 - Produces: không có
 
-- [ ] **Step 1: Viết ba case.** `bootstrap-skill-first`: prompt có test đỏ lạ, grader `skill-used` trước Edit đầu tiên. `tdd-red-first`: yêu cầu sửa bug, grader kiểm test đỏ được ghi trước Edit vào `src/`. `debugging-root-cause-first`: grader kiểm có giả thuyết kèm evidence trước Edit đầu và không có lần sửa thứ hai khi lần một thất bại. Case cần Bash gắn tag `linux-only` và giới hạn `Bash(<pattern>)`.
+- [ ] **Step 1: Viết ba case.** `bootstrap-skill-first`: prompt có test đỏ lạ, grader `skill-used` trước Edit đầu tiên. `tdd-red-first`: yêu cầu sửa bug, grader kiểm test đỏ được ghi trước Edit vào `src/`. `debugging-root-cause-first`: grader kiểm có giả thuyết kèm evidence trước Edit đầu và không có lần sửa thứ hai khi lần một thất bại. Cả ba case chỉ cấp Read, Write, Edit, Glob, Grep, Skill (không Bash), nên không cần tag `linux-only` và chạy được trên Windows; vì không chạy được lệnh test, `tdd-red-first` chấm thứ tự Write test trước Write/Edit code production.
 - [ ] **Step 2: Kiểm cấu trúc.** `node test/validate.mjs --build --only evals`. Mong đợi: 0 fail.
-- [ ] **Step 3: Chạy thật — cần người dùng đồng ý trước.** Mỗi case `node scripts/eval-run.mjs --plugin <id> --max-cost-usd 2.5 --runs 3 --scaffold --case <tên>` (tối đa khoảng 7,5 USD cho ba case). Case `linux-only` chạy trong WSL2; không có WSL2 thì ghi `not_run` kèm lý do. Ghi n, chi phí, Δ và nhãn Δ đo cái gì vào hai README. Không đọc Δ như bằng chứng skill tốt hơn.
+- [ ] **Step 3: Chạy thật — cần người dùng đồng ý trước.** Mỗi case `node scripts/eval-run.mjs --plugin <id> --max-cost-usd 2.5 --runs 3 --scaffold --case <tên>` (tối đa khoảng 7,5 USD cho ba case). Ghi n, chi phí, Δ và nhãn Δ đo cái gì vào hai README. Không đọc Δ như bằng chứng skill tốt hơn.
 - [ ] **Step 4: Commit** `test(evals): add bootstrap, tdd and debugging cases`.
