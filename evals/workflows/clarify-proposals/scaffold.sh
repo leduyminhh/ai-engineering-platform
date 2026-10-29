@@ -8,7 +8,8 @@ cat > package.json <<'JSON'
   "name": "revenue-dashboard",
   "version": "0.3.0",
   "private": true,
-  "main": "src/report-routes.js"
+  "main": "src/report-routes.js",
+  "scripts": { "test": "node --test" }
 }
 JSON
 

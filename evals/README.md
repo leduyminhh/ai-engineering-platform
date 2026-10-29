@@ -20,6 +20,8 @@ Runner build nếu thiếu `build/claude/plugins/<id>`, sao chép plugin sang th
 
 Ablation mặc định `with-without` chạy cả nhánh không plugin để tính Δ. Grader `tool_used: Skill` chỉ là chỉ báo "plugin có kích hoạt" ở nhánh có plugin, không tính điểm.
 
+Riêng `--plugin workflows`, runner chép thêm skill core `plan-execution` (từ `build/claude/plugins/core/skills/`) vào plugin tạm, vì `workflow-feature` gọi nó mà `dependencies` đã bị bỏ; chỉ nhánh có plugin thấy skill này.
+
 Lý do bỏ `dependencies`: plugin có `"dependencies": ["core"]` không được nạp vào phiên con khi đánh giá từ đường dẫn, nên nhánh "có plugin" thực chất là baseline và `skill-used` đỏ. [Inference] Nguyên nhân là phụ thuộc không giải được khi nạp từ đường dẫn; chưa xác nhận.
 
 Windows native từ chối case cấp quyền Bash (theo docs `claude plugin eval`, [Unverified] không có trong `--help`; cần WSL2), nên không case nào khai `Bash` và contract chặn việc thêm. Vì vậy `guard-bash`, `guard-mcp` và `gate-stop` không đánh giá được ở đây; chúng chỉ có contract test.

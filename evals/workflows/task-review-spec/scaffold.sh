@@ -54,7 +54,7 @@ MD
 
 cat > "$R/.sdd/progress.md" <<'MD'
 # Ledger — plan: docs/requests/2026-10-28-coupon-cap/plan.md
-Task 1: implementer báo xong (commit 3f2a9c1) — phủ AC1.1, AC1.2, AC1.3; test xanh 3/3. Chưa review.
+Task 1: implementer báo xong (commit 3f2a9c1) — phủ AC1.1, AC1.2, AC1.3; test xanh 3/3.
 MD
 
 cat > src/coupon.js <<'JS'
