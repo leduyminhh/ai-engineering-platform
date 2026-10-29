@@ -102,13 +102,13 @@ Không đổi hành vi projection nên không đổi spec sống trong `docs/spe
 
 ### Follow-up sau review cuối
 
-- Runner để sót thư mục `claude-eval-*` khi không có `r.json`.
-- Không kiểm tiền tố `os.tmpdir()` cho thư mục cha của `tracePath`.
-- Trace trong `results/traces` không bao giờ bị xoá và `--case` ghi đè `latest.json` (thêm timestamp hoặc xoá theo từng lượt chạy).
-- `--case` với `shell: true` để sh POSIX bung `*`/`?` theo thư mục làm việc (đặt trong dấu nháy hoặc chỉ bật shell trên win32).
-- `cpSync` chép cả `evals/<id>/results` vào bản sao tạm.
-- Câu chữ của `gate-before-write` nên nêu rõ: migration nhiều bước an toàn được ghi mà không hỏi vẫn là FAIL (phán quyết theo AC2.1).
-- `prod-edited` ở các case fix chỉ nhận `Edit`, không nhận `Write`.
-- Case fix/ops không tách nhánh bằng grader nội dung.
-- `backend-fix`/`frontend-fix` không được gọi 0/3 dù đã có oracle đỏ (câu hỏi routing còn mở).
-- `evals/README.md` chỉ có tiếng Việt nhưng được liên kết từ README tiếng Anh.
+- [x] Runner để sót thư mục `claude-eval-*` khi không có `r.json`.
+- [x] Không kiểm tiền tố `os.tmpdir()` cho thư mục cha của `tracePath`.
+- [x] Trace trong `results/traces` không bao giờ bị xoá và `--case` ghi đè `latest.json` (thêm timestamp hoặc xoá theo từng lượt chạy).
+- [x] `--case` với `shell: true` để sh POSIX bung `*`/`?` theo thư mục làm việc (đặt trong dấu nháy hoặc chỉ bật shell trên win32).
+- [x] `cpSync` chép cả `evals/<id>/results` vào bản sao tạm.
+- [x] Câu chữ của `gate-before-write` nên nêu rõ: migration nhiều bước an toàn được ghi mà không hỏi vẫn là FAIL (phán quyết theo AC2.1).
+- [x] `prod-edited` ở các case fix chỉ nhận `Edit`, không nhận `Write`.
+- [ ] Case fix/ops không tách nhánh bằng grader nội dung.
+- [ ] `backend-fix`/`frontend-fix` không được gọi 0/3 dù đã có oracle đỏ (câu hỏi routing còn mở).
+- [x] `evals/README.md` chỉ có tiếng Việt nhưng được liên kết từ README tiếng Anh.

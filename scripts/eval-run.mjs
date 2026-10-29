@@ -42,6 +42,9 @@ export function isEvalTemp(dir, tmpRoot = os.tmpdir()) {
   return /^claude-eval-/.test(path.basename(dir)) && norm(real(path.dirname(dir))) === norm(real(tmpRoot));
 }
 
+// Khi eval thoát sớm không có r.json thì không biết đường dẫn: chỉ quét claude-eval-* do chính lượt này tạo (tạo sau startMs).
+export const leftoverEvalTemps = (entries, startMs) => entries.filter((e) => /^claude-eval-/.test(e.name) && e.ms >= startMs).map((e) => e.name);
+
 export function parseArgs(argv) {
   const out = { plugin: null, runs: 3, maxCostUsd: null, scaffold: false, case: null };
   for (let i = 0; i < argv.length; i++) {
@@ -95,6 +98,7 @@ function run() {
   const evalSrc = path.join(ROOT, 'evals', a.plugin);
   if (!fs.existsSync(evalSrc)) throw new Error(`Không có evals/${a.plugin}`);
 
+  const startMs = Date.now();
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-eval-'));
   const work = path.join(tmp, a.plugin);
   const evalTemps = new Set();
@@ -113,7 +117,12 @@ function run() {
       '--allow-tools', 'Write', 'Edit', '--trust-plugin', '--json', 'r.json'];
     const r = spawnSync('claude', args, { cwd: work, stdio: 'inherit', shell: needsShell() });
     const rj = path.join(work, 'r.json');
-    if (!fs.existsSync(rj)) throw new Error(`claude plugin eval không tạo r.json (exit ${r.status})`);
+    if (!fs.existsSync(rj)) {
+      const root = os.tmpdir();
+      const entries = fs.readdirSync(root, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => ({ name: d.name, ms: fs.statSync(path.join(root, d.name)).birthtimeMs }));
+      for (const n of leftoverEvalTemps(entries, startMs)) evalTemps.add(path.join(root, n));
+      throw new Error(`claude plugin eval không tạo r.json (exit ${r.status})`);
+    }
     const report = JSON.parse(fs.readFileSync(rj, 'utf8'));
 
     const results = path.join(evalSrc, 'results');

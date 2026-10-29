@@ -466,7 +466,7 @@ Chạy một plugin từ thư mục gốc repo (runner bỏ khoá `dependencies`
 node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd> [--runs 3] [--scaffold] [--case <glob>]
 ```
 
-Một lần đo ngày 2026-10-23 (n=3–5 mỗi nhánh, Windows) nằm trong bảng kết quả của [evals/README.md](evals/README.md). Δ là tín hiệu, không phải thống kê; nhiều Δ đo định dạng/quy ước chứ không đo chất lượng, và `guard-bash`/`guard-mcp`/`gate-stop` không đánh giá được trên Windows (Bash). Xem file đó để biết cờ, danh sách case và giới hạn.
+Một lần đo ngày 2026-10-23 (n=3–5 mỗi nhánh, Windows) nằm trong bảng kết quả của [evals/README_VI.md](evals/README_VI.md). Δ là tín hiệu, không phải thống kê; nhiều Δ đo định dạng/quy ước chứ không đo chất lượng, và `guard-bash`/`guard-mcp`/`gate-stop` không đánh giá được trên Windows (Bash). Xem file đó để biết cờ, danh sách case và giới hạn.
 
 ## Đầu ra theo provider
 

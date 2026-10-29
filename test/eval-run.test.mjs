@@ -3,7 +3,7 @@
 // Chạy: node test/eval-run.test.mjs
 import os from 'node:os';
 import path from 'node:path';
-import { stripDependencies, parseArgs, extraSkillCopies, needsShell, evalCopyFilter, reportName, staleTraces, isEvalTemp } from '../scripts/eval-run.mjs';
+import { stripDependencies, parseArgs, extraSkillCopies, needsShell, evalCopyFilter, reportName, staleTraces, isEvalTemp, leftoverEvalTemps } from '../scripts/eval-run.mjs';
 
 let pass = 0;
 const fails = [];
@@ -54,6 +54,10 @@ ok(JSON.stringify(staleTraces(files, ['a'])) === JSON.stringify(['a-with-1.jsonl
 const tmpRoot = path.join(os.tmpdir(), 'evt');
 ok(isEvalTemp(path.join(tmpRoot, 'claude-eval-1'), tmpRoot), 'eval-run: claude-eval-* dưới tmp được dọn');
 ok(!isEvalTemp(path.join(tmpRoot, 'x', 'claude-eval-1'), tmpRoot) && !isEvalTemp(path.join(path.resolve('.'), 'claude-eval-1'), tmpRoot) && !isEvalTemp(path.join(tmpRoot, 'other'), tmpRoot), 'eval-run: ngoài tmp hoặc sai tên không bị dọn');
+
+// Eval thoát sớm không có r.json: chỉ dọn thư mục claude-eval-* tạo sau lúc bắt đầu, không đụng thư mục của lượt khác.
+const lo = leftoverEvalTemps([{ name: 'claude-eval-new', ms: 10 }, { name: 'claude-eval-old', ms: 5 }, { name: 'other-new', ms: 10 }], 10);
+ok(lo.length === 1 && lo[0] === 'claude-eval-new', 'eval-run: thiếu r.json chỉ quét claude-eval-* mới tạo');
 
 if (fails.length) { console.error(`FAIL ${fails.length}:\n- ${fails.join('\n- ')}`); process.exit(1); }
 console.log(`eval-run: ${pass} OK`);
