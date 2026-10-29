@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 End users do not need to clone the repo — the `ai-engineering-platform` package is published
 to the npm registry, and both `aip` and `ai-engineering-platform` bins point to the same CLI.
 
-> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` skills
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip`). Plugins (`backend`, `frontend`, `engineering`,
+> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` skills
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree`). Plugins (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) and workflows are **not** in the package; install them from source:
 > `git clone` + `npm link` (see [Quickstart](#quickstart)), then `aip install --plugin all`, or
 > `aip --all` to open the wizard with every skill including drafts.

@@ -10,4 +10,16 @@ export default async function run({ ok, ctx }) {
     ok(/## Thứ tự ưu tiên/.test(t) && t.includes('quy tắc project') && t.includes('skill'), 'AC1.3: using-aip nêu thứ tự ưu tiên người dùng > project > skill');
     ok(/## Dấu hiệu đang tự biện minh/.test(t) && (t.match(/^\| "/gm) || []).length >= 5, 'AC1.3: using-aip có bảng ≥ 5 dấu hiệu tự biện minh');
   }
+
+  // AC4.1: git-worktree theo quy ước baseline, dọn chỉ bằng git worktree remove khi đã merge và sạch, cấm rm -rf
+  {
+    const t = read('core', 'skills', 'git-worktree', 'SKILL.md');
+    const baseline = read('core', 'agents', 'AGENTS.template.md');
+    ok(baseline.includes('worktree-<slug>-t<n>') && baseline.includes('.claude/worktrees/<slug>-t<n>/'),
+      'AC4.1: baseline vẫn có quy ước tên nhánh và thư mục worktree mà skill bám theo');
+    ok(t.includes('worktree-<slug>-t<n>') && t.includes('.claude/worktrees/<slug>-t<n>/'), 'AC4.1: git-worktree nêu đúng tên nhánh và thư mục theo baseline');
+    ok(t.includes('git worktree remove') && t.includes('git branch --merged') && t.includes('status --short'),
+      'AC4.1: git-worktree chỉ dọn bằng git worktree remove khi đã merge và cây sạch');
+    ok(/Không `rm -rf`/.test(t) && !/^\s*rm -rf/m.test(t), 'AC4.1: git-worktree cấm rm -rf và không có lệnh rm -rf nào');
+  }
 }

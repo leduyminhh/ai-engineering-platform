@@ -1,11 +1,11 @@
 {
   "id": "core",
   "name": "Core — Nguyên tắc nền tảng Cowork→Code",
-  "description": "Nguyên tắc nền tảng dùng chung (4 nguyên tắc cốt lõi, 3 tầng tài liệu, ranh giới an toàn, nguồn sự thật) cho mọi plugin workflow Cowork → Code. Mọi plugin phụ thuộc core này, kèm skill dùng chung git-workflow, git-release, artifact-templates, plan-execution và using-aip (bootstrap gọi skill). Dùng khi bắt đầu bất kỳ skill nào của bộ hoặc khi cần đối chiếu ranh giới an toàn nền.",
+  "description": "Nguyên tắc nền tảng dùng chung (4 nguyên tắc cốt lõi, 3 tầng tài liệu, ranh giới an toàn, nguồn sự thật) cho mọi plugin workflow Cowork → Code. Mọi plugin phụ thuộc core này, kèm skill dùng chung git-workflow, git-release, artifact-templates, plan-execution, using-aip (bootstrap gọi skill) và git-worktree. Dùng khi bắt đầu bất kỳ skill nào của bộ hoặc khi cần đối chiếu ranh giới an toàn nền.",
   "keywords": [
     "principles",
     "git",
     "workflow"
   ],
-  "version": "1.18.0"
+  "version": "1.18.1"
 }

@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 Người dùng cuối không cần clone repo — gói `ai-engineering-platform` phát hành trên npm
 registry, hai bin `aip` và `ai-engineering-platform` trỏ cùng một CLI.
 
-> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip`
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip`). Các plugin (`backend`, `frontend`, `engineering`,
+> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree`
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree`). Các plugin (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) và workflow **không** có trong gói; hãy cài từ source:
 > `git clone` + `npm link` (xem [Bắt đầu nhanh](#bắt-đầu-nhanh)), rồi `aip install --plugin all`, hoặc
 > `aip --all` để mở wizard với mọi skill kể cả draft.
