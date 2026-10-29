@@ -62,6 +62,22 @@ export default async function run({ ok, ctx }) {
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   }
 
+  // AC2.1, AC2.2: engineering-tdd có luật đỏ trước, bảng biện minh, dẫn chiếu quy tắc Testing; hai skill trỏ tới nó có điều kiện
+  {
+    const tdd = read('plugins', 'engineering', 'skills', 'engineering-tdd', 'SKILL.md');
+    ok(/đỏ đúng lý do/.test(tdd) && /## Quy trình — đỏ, xanh, refactor/.test(tdd), 'AC2.1: engineering-tdd nêu luật test đỏ đúng lý do trước khi viết code');
+    ok(/## Dấu hiệu đang tự biện minh/.test(tdd) && (tdd.match(/^\| "/gm) || []).length >= 5, 'AC2.1: engineering-tdd có bảng ≥ 5 dấu hiệu tự biện minh');
+    ok(/Một hành vi một test|một hành vi một test/.test(tdd) && tdd.includes('references/anti-patterns.md') && /AGENTS\.md/.test(tdd),
+      'AC2.1: engineering-tdd dẫn chiếu quy tắc "một hành vi một test" của AGENTS.md và anti-patterns.md');
+    ok(fs.existsSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-tdd', 'references', 'anti-patterns.md')), 'AC2.1: anti-patterns.md tồn tại');
+    for (const [name, p] of [['backend-implement', ['plugins', 'backend', 'skills', 'backend-implement', 'SKILL.md']], ['frontend-testing', ['plugins', 'frontend', 'skills', 'frontend-testing', 'SKILL.md']]]) {
+      const t = read(...p);
+      ok(/engineering-tdd[^\n]*khi skill đã cài|khi skill đã cài[^\n]*engineering-tdd/.test(t.replace(/\n(?=[^\n])/g, ' ')), `AC2.2: ${name} trỏ tới engineering-tdd ở dạng có điều kiện (khi skill đã cài)`);
+    }
+    const be = read('plugins', 'backend', 'skills', 'backend-implement', 'SKILL.md');
+    ok(/`tdd\.red`/.test(be) && /`tdd\.green`/.test(be) && /tdd: \{ red, green \}/.test(be), 'AC2.2: backend-implement giữ nguyên định dạng tdd.red/tdd.green');
+  }
+
   // AC4.1: git-worktree theo quy ước baseline, dọn chỉ bằng git worktree remove khi đã merge và sạch, cấm rm -rf
   {
     const t = read('core', 'skills', 'git-worktree', 'SKILL.md');

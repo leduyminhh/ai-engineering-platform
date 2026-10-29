@@ -100,16 +100,16 @@
 **Phủ AC:** AC2.1, AC2.2
 **Files:**
 - Create: `plugins/engineering/skills/engineering-tdd/SKILL.md`, `plugins/engineering/skills/engineering-tdd/references/anti-patterns.md`
-- Modify: `plugins/backend/skills/backend-implement/SKILL.md`, `plugins/frontend/skills/frontend-implement/SKILL.md`, `plugins/engineering/.manifest.json`, `plugins/backend/.manifest.json`, `plugins/frontend/.manifest.json`, `plugins/_versions.lock.json`, `test/content/32-superpowers-gap.pin.mjs`, `CLAUDE.md`
+- Modify: `plugins/backend/skills/backend-implement/SKILL.md`, `plugins/frontend/skills/frontend-testing/SKILL.md`, `plugins/engineering/.manifest.json`, `plugins/backend/.manifest.json`, `plugins/frontend/.manifest.json`, `plugins/_versions.lock.json`, `test/content/32-superpowers-gap.pin.mjs`, `CLAUDE.md`
 - Test: `test/content/32-superpowers-gap.pin.mjs`, `test/contract/40-conventions.contract.mjs`
 
 **Interfaces:**
 - Consumes: không có
 - Produces: skill id `engineering-tdd`; định dạng `tdd: { red, green }` của contract đầu ra không đổi
 
-- [ ] **Step 1: Pin đỏ.** Pin kiểm (AC2.1) skill có luật test đỏ trước, bảng biện minh và dẫn chiếu "một hành vi một test"; (AC2.2) `backend-implement` và `frontend-implement` chứa `engineering-tdd` kèm cụm có điều kiện. Mong đợi: fail.
+- [ ] **Step 1: Pin đỏ.** Pin kiểm (AC2.1) skill có luật test đỏ trước, bảng biện minh và dẫn chiếu "một hành vi một test"; (AC2.2) `backend-implement` và `frontend-testing` chứa `engineering-tdd` kèm cụm có điều kiện. Mong đợi: fail.
 - [ ] **Step 2: Viết skill và `anti-patterns.md`**, căn theo mục Testing của `AGENTS.md` (không tăng số test để "đủ", không test chỉ assert mock).
-- [ ] **Step 3: Sửa hai skill implement** để trỏ tới `engineering-tdd` ở bước viết test, nói rõ "khi skill đã cài; thiếu thì làm theo bước trong skill này".
+- [ ] **Step 3: Sửa `backend-implement` và `frontend-testing`** để trỏ tới `engineering-tdd` ở bước viết test, nói rõ "khi skill đã cài; thiếu thì làm theo bước trong skill này".
 - [ ] **Step 4: Chiếu.** Bump `engineering` (minor), `backend`, `frontend` (patch), cập nhật mô tả và số skill của `engineering`, `npm run build`, `node cli/lib/versions.mjs --lock`, `node test/validate.mjs --build`. Mong đợi: 0 fail.
 - [ ] **Step 5: Commit** `feat(engineering): add engineering-tdd skill`.
 
