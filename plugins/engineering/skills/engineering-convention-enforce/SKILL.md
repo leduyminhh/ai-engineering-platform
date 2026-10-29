@@ -59,7 +59,8 @@ buộc; gọi khi cần ở bất kỳ giai đoạn nào cần kiểm/áp quy ư
 
 3. **Báo & đề xuất.**
    Theo [references/enforce-workflow.md](references/enforce-workflow.md): tổng hợp **bảng lệch**
-   (path · rule · hiện tại → đề xuất · severity). Mặc định **read-only** — chỉ báo. Nếu người dùng yêu cầu
+   (path · rule kèm nhãn độ mạnh `[MUST]`/`[SHOULD]`/`[?]` · hiện tại → đề xuất · severity; chỉ `[MUST]` mới
+   `fail`). Bỏ qua code sinh tự động/vendored và ngoại lệ đã ghi. Mặc định **read-only** — chỉ báo. Nếu người dùng yêu cầu
    sửa: sửa **trong đúng scope**, gom theo nhóm, **con người duyệt diff**, KHÔNG đổi hành vi nghiệp vụ.
 
 4. **Verify.**

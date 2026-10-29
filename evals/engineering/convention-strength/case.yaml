@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: convention-strength
+description: Convention có một rule bắt buộc và một rule khuyến nghị bị vi phạm, thêm file sinh tự động; agent phải gắn severity theo độ mạnh của rule và bỏ qua code sinh tự động.
+context:
+  scaffold_script: scaffold.sh
