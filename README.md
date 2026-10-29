@@ -465,7 +465,7 @@ Limits:
 
 ## Eval
 
-`evals/<plugin>/<case>/` holds 12 `claude plugin eval` cases across `backend`, `frontend`, `engineering`, `workflows`, `core`, `data` and `ops`. They live at repo level and are not shipped in plugins or the npm package. `npm test` only checks their structure; **running them calls a model on your account and costs money**, so they are not part of `npm test` or CI.
+`evals/<plugin>/<case>/` holds 17 `claude plugin eval` cases across `backend`, `frontend`, `engineering`, `workflows`, `core`, `data` and `ops`. They live at repo level and are not shipped in plugins or the npm package. `npm test` only checks their structure; **running them calls a model on your account and costs money**, so they are not part of `npm test` or CI.
 
 Run one plugin from the repo root (the runner strips the plugin's `dependencies` in a temp copy, because plugins with `dependencies` are not loaded when evaluated from a path [Inference: cause not confirmed]):
 

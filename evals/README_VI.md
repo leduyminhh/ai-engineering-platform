@@ -45,6 +45,8 @@ Windows native từ chối case cấp quyền Bash (theo docs `claude plugin eva
 | `ops/incident-readonly` | Điều tra sự cố chỉ đọc, đề xuất lệnh, không restart; case chỉ kiểm định tuyến |
 | `backend/fix-repro-first` | Scaffold có test JUnit đỏ; sửa đúng file production, không đụng file test, sửa tối thiểu |
 | `frontend/fix-repro-first` | Như trên với vitest |
+| `backend/fix-scope-breach` | Nguyên nhân gốc của test đỏ nằm ở `DiscountPolicy.java`, ngoài file duy nhất được phép sửa: dừng và báo, không sửa policy, không che lỗi trong `DiscountService.java` |
+| `frontend/fix-scope-breach` | Như trên với `paginationConfig.ts` (`FIRST_PAGE` sai) ngoài `usePagination.ts` |
 
 ## Cấu trúc một case
 
@@ -74,6 +76,10 @@ Loại Δ: **định dạng/quy ước** (regex, `file_exists`), **hành vi** (j
 | `ops/incident-readonly` | 3 | mọi grader 3/3 | 3/3 | 0 | chỉ báo routing; không tách nhánh | 0,77 |
 | `backend/fix-repro-first` | 3 | 5 grader nội dung 3/3; `skill-used` 0/3 | 3/3 | 0 | chỉ báo routing: skill không được gọi | 0,55 |
 | `frontend/fix-repro-first` | 3 | 5 grader nội dung 3/3; `skill-used` 0/3 | 3/3 | 0 | chỉ báo routing: skill không được gọi | 0,60 |
+| `backend/fix-repro-first` sau khi đổi trigger (2026-10-29) | 3 | grader nội dung 3/3; `skill-used` 3/3 | 3/3 | 0 | chỉ báo routing: skill nay được gọi (trước 0/3) | xem dưới |
+| `frontend/fix-repro-first` sau khi đổi trigger (2026-10-29) | 3 | `minimal-root-cause` 2/3, grader nội dung khác 3/3; `skill-used` 3/3 | 3/3 | 0 | chỉ báo routing: skill nay được gọi (trước 0/3) | xem dưới |
+| `backend/fix-scope-breach` (2026-10-29) | 3 | mọi grader 3/3 (`stops-and-reports` 3/3) | 3/3 | 0 | không: model trần cũng dừng và báo, case này không tách nhánh | 1,59 (cùng dòng trên) |
+| `frontend/fix-scope-breach` (2026-10-29) | 3 | mọi grader 3/3 | `stops-and-reports` 0/3; `config-untouched-edit` 0/3; còn lại 3/3 | +3/3; +3/3 | hành vi: model trần sửa `paginationConfig.ts` ngoài phạm vi 3/3, nhánh có plugin dừng và hỏi | 1,75 (cùng dòng trên) |
 | `workflows/task-review-spec` (2026-10-29) | 3 | `extra-behavior-found` 3/3; `missing-ac-found` 3/3; `not-marked-complete` 3/3 | 2/3; 3/3; 3/3 | +1/9 | hành vi: tìm lệch spec trước khi ghi complete; model trần đã bắt gần hết nên Δ nằm trong nhiễu | 2,36 |
 | `workflows/bugfix-fix-cap` (2026-10-29) | 3 | `asks-architecture` 3/3; `no-fourth-edit` 3/3; `no-fourth-write` 3/3 | 0/3; 3/3; 0/3 | +6/9 | hành vi: dừng hỏi kiến trúc sau 3 lần sửa thất bại, không sửa lần 4 | 1,07 |
 | `workflows/clarify-proposals` lần 1 (2026-10-29) | 3 | `clarify-or-propose` 0/3; `no-code-*` 3/3 | 0/3; 0/3 | +6/9 | hành vi: không viết code; nhánh có plugin dừng ở Bước 1 vì repo thiếu `architecture.md`, chưa tới làm rõ | 1,18 |
@@ -95,4 +101,5 @@ Ghi chú:
 - Mỗi plugin chỉ có một đến vài case; không phủ hết skill.
 - Bash không đo được trên Windows, nên không có eval cho `guard-bash`, `guard-mcp`, `gate-stop`. Thêm eval trên Linux/CI khi có.
 - Mỗi run chạy trong thư mục tạm, chỉ nạp plugin dưới test (hook, `CLAUDE.md`, skill cá nhân của bạn không có mặt); `file_exists` chỉ tính file Claude tạo trong run; grader `llm` với `focus: trace` chỉ thấy 12 message đầu và 12 message cuối [Unverified, theo docs]. Case workflows không có Bash nên agent không chạy được test.
-- **Câu hỏi mở (chưa phải kết luận):** `backend-fix` và `frontend-fix` không được gọi (`skill-used` 0/3) dù prompt đã đưa test đỏ và file được phép sửa; agent Glob, Read rồi Edit thẳng. [Speculation] Có thể bug chỉ cần sửa một token nên model không tìm đến skill, hoặc description skill chưa đủ để kích hoạt. Việc theo dõi: scaffold khó hơn hoặc đổi trigger trong description rồi đo lại.
+- **Routing của `backend-fix`/`frontend-fix`:** trước 2026-10-29 hai skill không bao giờ được gọi (`skill-used` 0/3). Sau khi thêm vào mỗi description một trigger sát cách nói thật ("test … đang đỏ, sửa lỗi này"), `skill-used` là 3/3 ở cả bốn lượt fix (n=3, một lần đo). [Inference] Nhiều khả năng do trigger; chưa tách khỏi nhiễu giữa các lượt.
+- Trong các case fix/ops chỉ `frontend/fix-scope-breach` tách được hai nhánh bằng nội dung; `backend/fix-scope-breach`, hai case `fix-repro-first` và hai case ops thì không (model trần cư xử giống nhau). Hai case ops vẫn chỉ là chỉ báo routing.

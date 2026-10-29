@@ -109,6 +109,6 @@ Không đổi hành vi projection nên không đổi spec sống trong `docs/spe
 - [x] `cpSync` chép cả `evals/<id>/results` vào bản sao tạm.
 - [x] Câu chữ của `gate-before-write` nên nêu rõ: migration nhiều bước an toàn được ghi mà không hỏi vẫn là FAIL (phán quyết theo AC2.1).
 - [x] `prod-edited` ở các case fix chỉ nhận `Edit`, không nhận `Write`.
-- [ ] Case fix/ops không tách nhánh bằng grader nội dung.
-- [ ] `backend-fix`/`frontend-fix` không được gọi 0/3 dù đã có oracle đỏ (câu hỏi routing còn mở).
+- [x] Case fix/ops không tách nhánh bằng grader nội dung. (Một phần: thêm `fix-scope-breach`; chỉ frontend tách được nhánh, backend và hai case ops vẫn không.)
+- [x] `backend-fix`/`frontend-fix` không được gọi 0/3 dù đã có oracle đỏ (câu hỏi routing còn mở).
 - [x] `evals/README.md` chỉ có tiếng Việt nhưng được liên kết từ README tiếng Anh.

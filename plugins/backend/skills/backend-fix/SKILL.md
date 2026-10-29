@@ -1,6 +1,6 @@
 ---
 name: backend-fix
-description: "Sửa code backend (Java/Spring, Python) theo một oracle đỏ (failing test, regression test bảo mật hoặc bottleneck đã xác nhận): fix tối thiểu trong phạm vi file khoanh trước, không đụng test. Dùng khi người dùng muốn \"sửa bug theo failing test\", \"fix finding bảo mật\", \"sửa backend theo root cause\", \"áp fix tối thiểu backend\". Không dùng khi chưa có oracle đỏ → workflow-bugfix; feature mới → backend-implement; dọn code → backend-refactor."
+description: "Sửa code backend (Java/Spring, Python) theo một oracle đỏ (failing test, regression test bảo mật hoặc bottleneck đã xác nhận): fix tối thiểu trong phạm vi file khoanh trước, không đụng test. Dùng khi người dùng muốn \"sửa bug theo failing test\", \"fix finding bảo mật\", \"sửa backend theo root cause\", \"test Java đang đỏ, sửa lỗi này\". Không dùng khi chưa có oracle đỏ → workflow-bugfix; feature mới → backend-implement; dọn code → backend-refactor."
 order: 9
 title: "Backend Fix — Sửa code backend theo oracle đỏ, phạm vi khoanh trước (recipe on-demand)"
 runsIn: execute

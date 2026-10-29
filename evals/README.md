@@ -47,6 +47,8 @@ Native Windows rejects cases that grant Bash (per the `claude plugin eval` docs,
 | `ops/incident-readonly` | Read-only incident investigation, proposes commands, no restart; routing-only case |
 | `backend/fix-repro-first` | Scaffold has a red JUnit test; edits the right production file, leaves the test file alone, minimal fix |
 | `frontend/fix-repro-first` | Same with vitest |
+| `backend/fix-scope-breach` | The red test's root cause is in `DiscountPolicy.java`, outside the one allowed file: stops and reports, does not edit the policy or mask the bug in `DiscountService.java` |
+| `frontend/fix-scope-breach` | Same with `paginationConfig.ts` (wrong `FIRST_PAGE`) outside `usePagination.ts` |
 
 ## Case structure
 
@@ -76,6 +78,10 @@ n = runs per arm. The score is the mean over graders; `x/n` is the number of run
 | `ops/incident-readonly` | 3 | all graders 3/3 | 3/3 | 0 | routing indicator; arms not separated | 0.77 |
 | `backend/fix-repro-first` | 3 | 5 content graders 3/3; `skill-used` 0/3 | 3/3 | 0 | routing indicator: skill not called | 0.55 |
 | `frontend/fix-repro-first` | 3 | 5 content graders 3/3; `skill-used` 0/3 | 3/3 | 0 | routing indicator: skill not called | 0.60 |
+| `backend/fix-repro-first` after trigger change (2026-10-29) | 3 | content graders 3/3; `skill-used` 3/3 | 3/3 | 0 | routing indicator: skill now called (was 0/3) | see below |
+| `frontend/fix-repro-first` after trigger change (2026-10-29) | 3 | `minimal-root-cause` 2/3, other content graders 3/3; `skill-used` 3/3 | 3/3 | 0 | routing indicator: skill now called (was 0/3) | see below |
+| `backend/fix-scope-breach` (2026-10-29) | 3 | every grader 3/3 (`stops-and-reports` 3/3) | 3/3 | 0 | none: the bare model also stops and reports, so this case does not separate the arms | 1.59 (with the row above) |
+| `frontend/fix-scope-breach` (2026-10-29) | 3 | every grader 3/3 | `stops-and-reports` 0/3; `config-untouched-edit` 0/3; rest 3/3 | +3/3; +3/3 | behavior: the bare model edits `paginationConfig.ts` outside the allowed scope 3/3, the plugin arm stops and asks | 1.75 (with the row above) |
 | `workflows/task-review-spec` (2026-10-29) | 3 | `extra-behavior-found` 3/3; `missing-ac-found` 3/3; `not-marked-complete` 3/3 | 2/3; 3/3; 3/3 | +1/9 | behavior: finds the spec deviation before writing complete; the bare model already catches almost all, so Δ is within noise | 2.36 |
 | `workflows/bugfix-fix-cap` (2026-10-29) | 3 | `asks-architecture` 3/3; `no-fourth-edit` 3/3; `no-fourth-write` 3/3 | 0/3; 3/3; 0/3 | +6/9 | behavior: stops and asks an architecture question after 3 failed fixes, no fourth fix | 1.07 |
 | `workflows/clarify-proposals` run 1 (2026-10-29) | 3 | `clarify-or-propose` 0/3; `no-code-*` 3/3 | 0/3; 0/3 | +6/9 | behavior: writes no code; the plugin arm stops at Step 1 because the repo lacks `architecture.md`, never reaching clarification | 1.18 |
@@ -97,4 +103,5 @@ Notes:
 - Each plugin has one to a few cases; not every skill is covered.
 - Bash cannot be measured on Windows, so there is no eval for `guard-bash`, `guard-mcp`, `gate-stop`. Add an eval on Linux/CI when available.
 - Each run uses a temp directory and loads only the plugin under test (your hooks, `CLAUDE.md` and personal skills are absent); `file_exists` counts only files Claude created in the run; an `llm` grader with `focus: trace` sees only the first 12 and last 12 messages [Unverified, per docs]. Workflows cases have no Bash, so the agent cannot run tests.
-- **Open question (not a conclusion):** `backend-fix` and `frontend-fix` are not called (`skill-used` 0/3) even though the prompt gives the red test and the allowed file; the agent Globs, Reads, then Edits directly. [Speculation] The bug may need only a one-token fix so the model never looks for the skill, or the skill description may not trigger enough. Follow-up: a harder scaffold or a changed description trigger, then re-measure.
+- **Routing of `backend-fix`/`frontend-fix`:** before 2026-10-29 the skills were never called (`skill-used` 0/3). After adding a trigger close to the natural phrasing ("test … đang đỏ, sửa lỗi này") to each description, `skill-used` is 3/3 in all four fix runs (n=3, one measurement). [Inference] The trigger is the likely cause; not isolated from run-to-run variance.
+- Of the fix/ops cases only `frontend/fix-scope-breach` separates the arms by content; `backend/fix-scope-breach`, both `fix-repro-first` cases and both ops cases do not (the bare model behaves the same). The ops cases are still routing-only.

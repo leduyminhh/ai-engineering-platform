@@ -458,7 +458,7 @@ Giới hạn:
 
 ## Eval
 
-`evals/<plugin>/<case>/` chứa 12 case `claude plugin eval` thuộc `backend`, `frontend`, `engineering`, `workflows`, `core`, `data` và `ops`. Chúng nằm ở cấp repo, không ship trong plugin hay gói npm. `npm test` chỉ kiểm cấu trúc; **chạy case gọi model trên tài khoản của bạn và tốn tiền**, nên không nằm trong `npm test` hay CI.
+`evals/<plugin>/<case>/` chứa 17 case `claude plugin eval` thuộc `backend`, `frontend`, `engineering`, `workflows`, `core`, `data` và `ops`. Chúng nằm ở cấp repo, không ship trong plugin hay gói npm. `npm test` chỉ kiểm cấu trúc; **chạy case gọi model trên tài khoản của bạn và tốn tiền**, nên không nằm trong `npm test` hay CI.
 
 Chạy một plugin từ thư mục gốc repo (runner bỏ khoá `dependencies` của plugin trong bản sao tạm, vì plugin có `dependencies` không được nạp khi đánh giá từ đường dẫn [Inference: chưa xác nhận nguyên nhân]):
 

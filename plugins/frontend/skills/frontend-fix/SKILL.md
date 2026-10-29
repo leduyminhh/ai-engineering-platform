@@ -1,6 +1,6 @@
 ---
 name: frontend-fix
-description: "Sửa code frontend (React/TypeScript) theo một oracle đỏ (failing test, regression test bảo mật hoặc bottleneck đã xác nhận): fix tối thiểu trong phạm vi file khoanh trước, không đụng test. Dùng khi người dùng muốn \"sửa bug React theo failing test\", \"fix finding bảo mật frontend\", \"sửa frontend theo root cause\". Không dùng khi chưa có oracle đỏ → workflow-bugfix; dựng UI mới → frontend-implement; dọn component giữ hành vi → frontend-refactor."
+description: "Sửa code frontend (React/TypeScript) theo một oracle đỏ (failing test, regression test bảo mật hoặc bottleneck đã xác nhận): fix tối thiểu trong phạm vi file khoanh trước, không đụng test. Dùng khi người dùng muốn \"sửa bug React theo failing test\", \"fix finding bảo mật frontend\", \"test React/vitest đang đỏ, sửa lỗi này\". Không dùng khi chưa có oracle đỏ → workflow-bugfix; dựng UI mới → frontend-implement; dọn component → frontend-refactor."
 order: 9
 title: "Frontend Fix — Sửa code React theo oracle đỏ, phạm vi khoanh trước (recipe on-demand)"
 runsIn: execute
