@@ -19,14 +19,15 @@ Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <ngư�
 1. Ghi BASE bằng `git rev-parse HEAD`; cắt brief bằng `scripts/task-brief.mjs`; chỉ đọc brief của task này.
 2. Làm theo step trong brief: test đỏ (chạy, thấy đỏ đúng lý do) → code → test xanh. Task `DOCS`/`TOOLING` không có test
    sản phẩm thì dùng lệnh kiểm chứng ghi trong task.
-3. Chạy lệnh test hẹp của task, đọc đủ output và exit code. Không chạy full suite ở từng task. Vì không có review từng
-   task, tự đối chiếu `git diff --name-only <BASE>..HEAD` với `**Files:**` của task: file ngoài danh sách là lệch plan, hoàn
-   tác hoặc ghi `Ruling:`.
+3. Chạy lệnh test hẹp của task, đọc đủ output và exit code. Không chạy full suite ở từng task.
 4. Commit qua `git-workflow`, một task ít nhất một commit.
-5. Ghi ledger:
+5. Vì không có review từng task, sau commit tự đối chiếu `git diff --name-only <BASE>..HEAD` với `**Files:**` của task: file
+   ngoài danh sách là lệch plan, sửa bằng một commit mới (không amend) hoặc ghi `Ruling:`.
+6. Ghi ledger:
    `node <thư mục skill plan-execution>/scripts/ledger.mjs <requestDir> "Task <n>: complete (commits <a>..<b>, inline, tests: <lệnh> exit 0)"`.
-   `ledger.mjs` từ chối (exit 2, không ghi) dòng inline thiếu `tests: <lệnh> exit 0`. Lệnh test pass mà không in gì vẫn hợp
-   lệ: bằng chứng là exit code, không phải output.
+   `ledger.mjs` từ chối (exit 2, không ghi) dòng inline thiếu `tests: <lệnh> exit 0` hoặc kèm exit khác 0. Kiểm này chỉ chặn
+   việc quên điền hay ghi sai định dạng, không xác minh được exit code thật; lệnh test pass mà không in gì vẫn hợp lệ vì
+   bằng chứng là exit code, không phải output.
 
 Lỗi tự phát hiện trong lúc làm thì sửa ngay trong task đó. Chỉ ghi `Ruling:` khi quyết định lệch khỏi plan; lệch plan mà
 không ghi là quyết định bí mật. Chạy liên tục giữa các task; chỉ dừng hỏi người dùng ở năm loại dừng của `task-loop.md`.
