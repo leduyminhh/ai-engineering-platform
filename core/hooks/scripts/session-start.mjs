@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// SessionStart: nạp handoff.md và đuôi ledger của plan đang chạy khi mở phiên mới (startup/clear/compact) và cảnh báo khi resume/fork phiên đã nguội cache.
+// SessionStart: nạp quy tắc bootstrap gọi skill, handoff.md và đuôi ledger của plan đang chạy khi mở phiên mới (startup/clear/compact) và cảnh báo khi resume/fork phiên đã nguội cache.
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readGateConfig } from './gate-config.mjs';
 
-// Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Handoff và ledger chia chung ngân sách này.
+// Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Bootstrap, ledger và handoff chia chung ngân sách này.
 const MAX_TOTAL = 9000;
 // Chặn file rỗng hoặc chỉ còn khung heading của template.
 const MIN_CHARS = 80;
@@ -14,6 +14,12 @@ const LEDGER_MAX_CHARS = 2000;
 const LEDGER_DONE_RE = /^Plan: complete\s*$/m;
 const DEFAULT_MAX_AGE_HOURS = 24;
 const HOUR_MS = 3600000;
+
+// Bản tóm tắt của skill using-aip, chép nhỏ vào hook vì hook không phụ thuộc bố cục thư mục của bản build; ≤ 1200 ký tự (test kiểm).
+const BOOTSTRAP = 'AIP — quy tắc nền của phiên này. Nếu có khả năng, dù nhỏ, một skill áp dụng cho việc đang làm thì gọi skill đó trước khi trả lời, '
+  + 'hỏi lại hay đọc code; skill `using-aip` nêu thứ tự ưu tiên và các dấu hiệu tự biện minh để bỏ qua skill. '
+  + 'Yêu cầu của người dùng và quy tắc project (CLAUDE.md, AGENTS.md) ưu tiên hơn skill. '
+  + 'Skill đã đọc mà không áp dụng thì nói một dòng rồi bỏ qua; ngoài ra chỉ bỏ qua khi người dùng nói rõ. Agent worker được giao một task cụ thể thì bỏ qua đoạn này.';
 
 function findHandoff(cwd, cfg, d) {
   const exists = (p) => { try { return d.existsSync(p); } catch { return false; } };
@@ -106,10 +112,13 @@ export function decide(input, deps = {}) {
       try { ledger = ledgerSection(cwd, cfg, d); } catch { /* ledger hỏng không được chặn handoff */ }
     }
     const parts = [];
+    // Bootstrap đứng đầu và trừ khỏi ngân sách chung để tổng không vượt MAX_TOTAL.
+    const boot = cfg?.bootstrapInject !== false;
+    if (boot) parts.push(BOOTSTRAP);
     if (cfg?.handoffInject !== false) {
       try {
         const h = usableHandoff(cwd, cfg, d);
-        const room = MAX_TOTAL - (ledger ? ledger.length + 2 : 0);
+        const room = MAX_TOTAL - (ledger ? ledger.length + 2 : 0) - (boot ? BOOTSTRAP.length + 2 : 0);
         if (h) parts.push(`Handoff của phiên trước (${path.relative(cwd, h.file).split(path.sep).join('/')}):\n${h.text}`.slice(0, room));
       } catch { /* handoff hỏng không được chặn ledger */ }
     }

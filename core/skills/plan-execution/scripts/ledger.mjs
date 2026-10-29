@@ -1,12 +1,30 @@
 #!/usr/bin/env node
 // Sổ tiến độ của một plan: <requestDir>/.sdd/progress.md (git bỏ qua cả thư mục .sdd).
-// Cách dùng: <requestDir> "<dòng>" — thêm một dòng vào ledger, in đường dẫn file. Exit 2 khi thiếu đối số.
+// Cách dùng: <requestDir> "<dòng>" — thêm một dòng vào ledger, in đường dẫn file. Exit 2 khi thiếu đối số hoặc dòng bị từ chối.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const DONE_RE = /^Plan: complete\s*$/m;
+// Chế độ inline không có review từng task, nên dòng complete là bằng chứng duy nhất: bắt buộc mang lệnh test và exit 0.
+// `inline` phải là một token riêng: "references/inline.md" hay "inline-fix" trong ghi chú của dòng thường không bị bắt nhầm.
+const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b(?![.\w-])/i;
+const INLINE_EVIDENCE_RE = /\btests: \S.* exit 0\b/;
+const EXIT_FAILED_RE = /\bexit [1-9]/;
+// Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
+const MAX_LINE = 4096;
+
+export function validateLine(line) {
+  // Đối số nhiều dòng được kiểm từng dòng: một dòng hợp lệ không được che dòng inline thiếu evidence.
+  for (const l of line.split(/\r?\n/)) {
+    if (l.length > MAX_LINE) return `dòng ledger dài quá ${MAX_LINE} ký tự`;
+    if (INLINE_COMPLETE_RE.test(l) && !(INLINE_EVIDENCE_RE.test(l) && !EXIT_FAILED_RE.test(l))) {
+      return 'dòng Task <n>: complete ở chế độ inline phải có "tests: <lệnh> exit 0" và không kèm exit khác 0';
+    }
+  }
+  return null;
+}
 
 // Tạo .sdd/ và .gitignore chứa `*` để ledger không bao giờ lọt vào commit; trả đường dẫn progress.md.
 export function ensureWorkspace(requestDir) {
@@ -32,6 +50,11 @@ export function main(argv) {
   const [requestDir, line] = argv;
   if (!requestDir || line === undefined) {
     console.error('Cách dùng: ledger.mjs <requestDir> "<dòng>"');
+    return 2;
+  }
+  const invalid = validateLine(line);
+  if (invalid) {
+    console.error(invalid);
     return 2;
   }
   const file = ensureWorkspace(requestDir);

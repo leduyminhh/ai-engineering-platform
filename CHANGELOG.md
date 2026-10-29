@@ -9,10 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Bổ sung lớp kỷ luật hành vi (`docs/requests/2026-10-29-superpowers-gap-closure`): skill `core:using-aip` (gọi skill trước khi hành động), `core:git-worktree` (tạo, merge, dọn worktree theo baseline), `engineering-tdd`, `engineering-debugging`; chế độ inline của `plan-execution` (`references/inline.md`, `ledger.mjs` từ chối dòng inline thiếu `tests: <lệnh> exit 0`); ba case eval mới (chưa chạy thật).
+
 - `aip statusline`: statusLine command for Claude Code. Reads the session JSON from stdin and prints one line with model, context % (warns at `--soft` 40 and urgently at `--hard` 60, the baseline's session-rotation thresholds), minutes of prompt cache left, session cost and the 5-hour rate limit; uses only fields Claude Code already sends, never the transcript, and always exits 0 on bad input. [Unverified] not yet observed in a live session.
 
 ### Changed
 
+- Hook `session-start` (core 1.19) nay mặc định chèn một đoạn bootstrap khoảng 480 ký tự trỏ tới `using-aip` mỗi lần `startup`/`clear`/`compact`, tính vào ngân sách 9.000 ký tự; tắt bằng `{"bootstrapInject": false}` trong `.claude/aip-gate.json`.
 - Làm rõ yêu cầu chuyển về session chính (engineering 2.3.0): `engineering-spec-writing` hỏi từng câu, playback từng phần, đề xuất 2–3 hướng kèm khuyến nghị và đánh đổi, xếp cỡ việc (việc rõ và nhỏ, thay đổi nhỏ, dự án) và chạy builder check một lần trước checkpoint. Khi người dùng bỏ qua làm rõ, agent tự chọn hướng và ghi đó là quyết định của agent. `engineering-spec-analyst` chỉ ghi tài liệu, không hỏi người dùng.
 - `workflow-feature` (workflows 3.4.0) thêm Bước 2 Làm rõ & cỡ việc, Bước 3 Tài liệu và Bước 4 Plan trước khi implement; ba bước mới có checkpoint người duyệt. Đây là trạng thái trung gian; các bước sau đã được thay bằng Bước 5 Vòng task, Bước 6 Review cuối, Bước 7 Kết thúc nhánh (tổng 7 bước, xem mục `plan-execution` bên dưới).
 - `check-request.mjs` skips W10 for request folders dated before 2026-10-21 (`SPEC_SINCE`) and for folders without a date prefix, so

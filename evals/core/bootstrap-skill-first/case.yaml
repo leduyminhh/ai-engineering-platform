@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: bootstrap-skill-first
+description: Test đang đỏ không rõ nguyên nhân; chỉ cài core, agent phải gọi skill using-aip trước khi đọc code hay sửa (đo đường bootstrap qua hook hoặc qua description).
+context:
+  scaffold_script: scaffold.sh

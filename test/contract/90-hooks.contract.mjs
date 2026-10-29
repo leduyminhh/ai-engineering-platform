@@ -437,7 +437,8 @@ export default async function run({ ok, ctx }) {
         statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
         readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => nowMs,
-        loadConfig: () => cfg,
+        // Các ca handoff/ledger kiểm đúng nội dung của chúng nên tắt bootstrap, trừ khi ca đó tự bật lại.
+        loadConfig: () => ({ bootstrapInject: false, ...cfg }),
       };
     };
     const start = (files, { source = 'startup', cfg = null, nowMs, extra = {} } = {}) =>
@@ -504,7 +505,7 @@ export default async function run({ ok, ctx }) {
         statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
         readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => T0 + HOUR,
-        loadConfig: () => cfg,
+        loadConfig: () => ({ bootstrapInject: false, ...cfg }),
       };
     };
     const start = (files, cfg = null) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd: '/repo' }, fake(files, cfg));
@@ -545,6 +546,47 @@ export default async function run({ ok, ctx }) {
     const stale = { [LEDGER]: { text: 'Task 1: complete\n', mtime: T0 - 30 * HOUR } };
     ok(start(stale) === null && start(stale, { handoffMaxAgeHours: 48 })?.additionalContext.includes('Task 1'),
       'AC3.3: ledger cũ hơn handoffMaxAgeHours (mặc định 24) → không nạp; nới khoá thì nạp');
+  }
+  // SessionStart nạp bootstrap quy tắc gọi skill (docs/requests/2026-10-29-superpowers-gap-closure)
+  {
+    const { pathToFileURL, CORE_DIR } = ctx;
+    const ss = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'session-start.mjs')).href);
+    const HOUR = 3600000;
+    const T0 = Date.UTC(2026, 0, 10);
+    const abs = (p) => path.resolve('/repo', p);
+    const fake = (files, cfg) => {
+      const m = new Map(Object.entries(files).map(([k, v]) => [abs(k), v]));
+      return {
+        readFile: (p) => { const f = m.get(p); if (!f) throw new Error('ENOENT'); return f.text; },
+        existsSync: (p) => m.has(p) || [...m.keys()].some((k) => k.startsWith(p + path.sep)),
+        statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
+        readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
+        now: () => T0 + HOUR,
+        loadConfig: () => cfg,
+      };
+    };
+    const start = (files, { source = 'startup', cfg = null, extra = {} } = {}) =>
+      ss.decide({ hook_event_name: 'SessionStart', source, cwd: '/repo', ...extra }, fake(files, cfg))?.additionalContext ?? null;
+    const handoff = { 'docs/requests/2026-01-01-a/handoff.md': { text: '# Bàn giao\n' + 'x'.repeat(20000), mtime: T0 } };
+    const ledger = { 'docs/requests/2026-01-01-a/.sdd/progress.md': { text: 'a'.repeat(5000) + 'CUOI', mtime: T0 } };
+
+    // AC1.1: startup/clear/compact có bootstrap, mở đầu đầu ra, ≤ 1200 ký tự và nhắc skill using-aip
+    for (const source of ['startup', 'clear', 'compact']) {
+      const out = start({}, { source });
+      ok(!!out && out.includes('using-aip') && out.length <= 1200, `AC1.1: ${source} không handoff → chỉ có bootstrap ≤ 1200 ký tự, nhắc using-aip`);
+    }
+    const bootstrap = start({});
+    const full = start({ ...handoff, ...ledger });
+    ok(full.startsWith(bootstrap) && full.length <= 9000 && full.includes('Ledger (') && full.endsWith('CUOI'),
+      'AC1.1: bootstrap đứng đầu; handoff dài + ledger dài vẫn tổng ≤ 9000, ledger còn nguyên');
+    // AC1.2: tắt bằng cấu hình, hoặc source resume/fork thì không có bootstrap
+    ok(start({}, { cfg: { bootstrapInject: false } }) === null && start({}, { cfg: { bootstrapInject: true } }) === bootstrap,
+      'AC1.2: bootstrapInject false → không bootstrap; true và mặc định → có');
+    const cold = { prompt_cache_likely_expired: true, context_tokens: 100 };
+    ok(['resume', 'fork'].every((source) => !String(start({}, { source, extra: cold })).includes('using-aip') && start({}, { source }) === null),
+      'AC1.2: resume/fork không có bootstrap, cảnh báo nguội vẫn như cũ');
+    ok(!start(handoff, { cfg: { bootstrapInject: false } }).includes('using-aip') && start(handoff, { cfg: { bootstrapInject: false } }).length === 9000,
+      'AC1.2: tắt bootstrap thì handoff giữ nguyên ngân sách 9000');
   }
   // Công tắc allowEnvFiles: mở .env theo project, khoá/credentials vẫn bị chặn
   {

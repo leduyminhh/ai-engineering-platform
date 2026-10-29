@@ -55,6 +55,7 @@ Viết test lõi của use-case (unit mock/fake port, KHÔNG DB) TRƯỚC khi c�
 lý do** (thất bại vì chưa có hành vi cần test, không phải lỗi setup). Ghi lệnh + exit code + vì sao đỏ là đúng →
 `tdd.red`. Sau bước 4 chạy lại đúng lệnh đó, xanh → `tdd.green`; báo `tdd: { red, green }` trong `agent_result`.
 Gọi ngoài vòng task (không có `kind: BE`) thì không ép — test lõi vẫn phải xanh ở bước 5.
+Kỷ luật đỏ → xanh, bảng biện minh và anti-pattern nằm ở skill `engineering-tdd` (khi skill đã cài; thiếu thì theo các bước trên).
 
 ### 4. Sinh code ĐÚNG kiến trúc
 Theo [references/slice-workflow.md](references/slice-workflow.md) — **DEFER cây/naming/boundary cho blueprint**:

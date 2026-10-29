@@ -12,7 +12,7 @@ invoke: per-request
 Giao thức để **session chính** thực thi một `plan.md` đã duyệt mà không phụ thuộc skill ngoài bộ: mỗi task đi một vòng
 đầy đủ (brief → implement → review task → sửa → commit → ledger), cả plan kết thúc bằng một lần review toàn nhánh rồi
 mới tới bước kết thúc nhánh. Session chính là người điều phối; mọi việc viết code, viết test và review do agent domain
-làm, kết quả trả theo contract đầu ra (`core:principles`). Điều kiện chạy: có `plan.md` đã duyệt trong
+làm (trừ chế độ inline, xem `references/inline.md`), kết quả trả theo contract đầu ra (`core:principles`). Điều kiện chạy: có `plan.md` đã duyệt trong
 `docs/requests/<ngày>-<slug>/` và đang ở nhánh `feature/<slug>`; cỡ "thay đổi nhỏ" không có `plan.md` thì brief là
 `requirement.md` và kind lấy theo phạm vi đã chốt khi làm rõ (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối API
 thật): một task duy nhất, task id `1`; phạm vi fullstack → hai task, `1` là `BE` rồi `2` là phía FE. Ledger vẫn ghi để làm
@@ -47,7 +47,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 | Implement, viết test | agent domain theo `kind` |
 | Task review, re-review, review cuối | `backend-reviewer` / `frontend-reviewer` (chỉ đọc); DOCS/TOOLING dùng `general-purpose` |
 | Quality/security gate | `engineering-quality-auditor`, chỉ ở review cuối |
-| Chế độ dự phòng khi không có tool subagent | session chính tự làm theo brief và tự review bằng `prompts/task-review.md`, ghi "tự review" vào ledger (`references/task-loop.md`, mục "Review cuối và các điểm cố định") |
+| Chế độ inline (người dùng nói rõ chạy inline, hoặc không có tool subagent) | session chính làm mọi task theo `references/inline.md`; không hỏi người dùng chọn cách thực thi |
 
 Model khi gọi agent (tham số `model`): implementer và reviewer từng task mặc định `sonnet`; vòng 3 của vòng sửa và review cuối
 toàn nhánh dùng `opus`. Plan không cần khai báo model riêng cho từng task.
@@ -74,5 +74,6 @@ toàn nhánh dùng `opus`. Plan không cần khai báo model riêng cho từng t
 - [references/task-loop.md](references/task-loop.md): giao thức từng task, vòng sửa, breaker, ledger.
 - [references/prompts/implementer.md](references/prompts/implementer.md), [task-review.md](references/prompts/task-review.md),
   [re-review.md](references/prompts/re-review.md), [final-review.md](references/prompts/final-review.md): mẫu prompt giao việc.
+- [references/inline.md](references/inline.md): chế độ inline, session chính tự thực thi plan; dòng ledger inline cần `tests: <lệnh> exit 0`.
 - [references/finish.md](references/finish.md): kết thúc nhánh.
 - `scripts/task-brief.mjs`, `scripts/review-package.mjs`, `scripts/ledger.mjs`: Node thuần, không cần bash.

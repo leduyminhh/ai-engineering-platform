@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 End users do not need to clone the repo — the `ai-engineering-platform` package is published
 to the npm registry, and both `aip` and `ai-engineering-platform` bins point to the same CLI.
 
-> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` skills
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution`). Plugins (`backend`, `frontend`, `engineering`,
+> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` skills
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree`). Plugins (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) and workflows are **not** in the package; install them from source:
 > `git clone` + `npm link` (see [Quickstart](#quickstart)), then `aip install --plugin all`, or
 > `aip --all` to open the wizard with every skill including drafts.
@@ -103,7 +103,7 @@ npx ai-engineering-platform install --provider all --yes
 | Path | Owns |
 | --- | --- |
 | `plugins/` | Canonical capability source: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, plus `_marketplace.json` and `_cowork.json`. |
-| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (task-loop protocol, 3 Node scripts) and `skills/artifact-templates/` (the 11 artifact templates, incl. `spec` for living specs in `docs/specs/`; `check-request.mjs` warns W1–W18) recipes, and the safety `hooks/` (plugin-mode only). |
+| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (task-loop protocol, 3 Node scripts), `skills/using-aip/`, `skills/git-worktree/` and `skills/artifact-templates/` (the 11 artifact templates, incl. `spec` for living specs in `docs/specs/`; `check-request.mjs` warns W1–W18) recipes, and the safety `hooks/` (plugin-mode only). |
 | `evals/` | `claude plugin eval` cases per plugin (manual run; not shipped; `npm test` checks structure only). |
 | `templates/` | `init/` project scaffold (dropped by `*-init` skills); `project-knowledge/`, `docs/requests/_TEMPLATE/` and `docs/decisions/_TEMPLATE.md` are generated from `core/skills/artifact-templates/`. |
 | `adapters/` | Per-provider projection (`<provider>/adapter.mjs`), auto-discovered. `_shared/lib.mjs` holds the cross-tool logic. |
@@ -333,7 +333,7 @@ The `core` plugin ships five Claude Code hooks (`core/hooks/`; zero-dependency N
 | H2 | Bash, PowerShell | deny | `git commit -m` with non-ASCII text — use `git commit -F <file>` (see the `git-workflow` skill) |
 | H3 | Read, Edit, Write, MultiEdit, NotebookEdit, Grep | deny | secret files: `.env*`, `*.env`, `.envrc`, `*.pem`/`*.jks`/`*.keystore`/`*.p12`/`*.pfx`/`*.key`/`*.ppk`/`*.p8`, private keys `id_rsa`/`id_dsa`/`id_ecdsa`/`id_ed25519` (also `_sk` and any non-`.pub` suffix), and `credentials`/`credentials.json`/`credentials.yml`/`credentials.yaml` only (symlinks and NTFS streams are resolved; [Unverified] 8.3 short names). `.env.example`/`.env.sample`/`.env.template` and `*.pub` are allowed |
 | H3 | Bash, PowerShell | ask | a command that names a secret file |
-| SS | SessionStart | context | `startup`/`clear`/`compact`: injects the newest usable `handoff.md` and the tail of the newest unfinished plan ledger; `resume`/`fork` of a cold session: one-line cost warning (see `session-start` below) |
+| SS | SessionStart | context | `startup`/`clear`/`compact`: injects a short skill-first rule (skill `using-aip`), the newest usable `handoff.md` and the tail of the newest unfinished plan ledger; `resume`/`fork` of a cold session: one-line cost warning (see `session-start` below) |
 | H5 | Edit, Write, MultiEdit, NotebookEdit | deny | an agent with `writeScope` writing outside its scope (anchored to the git root of the target file, not of the session cwd): `engineering-spec-analyst`, `backend-test-writer`, `frontend-test-writer`, `frontend-e2e-test-writer`. The main session and other agents are not locked |
 
 The scripts fail open: an internal error (empty stdin, broken JSON, missing fields) exits 0 with no decision. When `guard-bash` cannot parse a command reliably it falls toward `ask` (`guard-files` does not). There is no H4: the ops agents have no Bash tool.
@@ -354,10 +354,11 @@ The scripts fail open: an internal error (empty stdin, broken JSON, missing fiel
 }
 ```
 
-**Session start (`session-start`).** Registered for `SessionStart`; on by default. It has two modes. (1) `source` = `startup`, `clear` or `compact`: it injects the content of a handoff file as additional context, prefixed with its relative path and capped at 9,000 characters (Claude Code limits hook context to 10,000). The file is looked up in this order: `handoffPath` from the config (resolved against the session cwd), the most recently modified `docs/requests/*/handoff.md`, then `.claude/handoff.md`. A file older than `handoffMaxAgeHours` (default 24), or one that is empty or still the unfilled template, is ignored. In the same mode it also injects the tail of the most recently modified `docs/requests/*/.sdd/progress.md` (the plan ledger) that has no `Plan: complete` line and is not older than `handoffMaxAgeHours`, at most 2,000 characters; the ledger and the handoff share the 9,000-character budget (the ledger is counted first, the handoff gets the rest). (2) `source` = `resume` or `fork` when the prompt cache is likely expired: it adds one line with the uncached token count and estimated cost when Claude Code supplies them, and points at the handoff file if a usable one exists. Turn it off with `{"handoffInject": false}` (mode 1) and/or `{"resumeWarn": false}` (mode 2), and `{"ledgerInject": false}` to skip the ledger, in `<git-root>/.claude/aip-gate.json`. It fails open like the other scripts.
+**Session start (`session-start`).** Registered for `SessionStart`; on by default. It has two modes. (1) `source` = `startup`, `clear` or `compact`: it first injects a skill-first rule of at most 1,200 characters that points at the `using-aip` skill (counted against the budget below), then the content of a handoff file as additional context, prefixed with its relative path and capped at 9,000 characters (Claude Code limits hook context to 10,000). The file is looked up in this order: `handoffPath` from the config (resolved against the session cwd), the most recently modified `docs/requests/*/handoff.md`, then `.claude/handoff.md`. A file older than `handoffMaxAgeHours` (default 24), or one that is empty or still the unfilled template, is ignored. In the same mode it also injects the tail of the most recently modified `docs/requests/*/.sdd/progress.md` (the plan ledger) that has no `Plan: complete` line and is not older than `handoffMaxAgeHours`, at most 2,000 characters; the ledger and the handoff share the 9,000-character budget (the ledger is counted first, the handoff gets the rest). (2) `source` = `resume` or `fork` when the prompt cache is likely expired: it adds one line with the uncached token count and estimated cost when Claude Code supplies them, and points at the handoff file if a usable one exists. Turn it off with `{"handoffInject": false}` (mode 1) and/or `{"resumeWarn": false}` (mode 2), `{"ledgerInject": false}` to skip the ledger, and `{"bootstrapInject": false}` to skip the skill-first rule, in `<git-root>/.claude/aip-gate.json`. It fails open like the other scripts.
 
 ```json
 {
+  "bootstrapInject": true,
   "handoffInject": true,
   "ledgerInject": true,
   "resumeWarn": true,
