@@ -113,8 +113,9 @@ Dùng khi request có `## Bảng part` trong `design.md` và `parts/<nn>-<part-s
 
 1. Chạy `plan.md` gốc trước, trên `feature/<slug>`, rồi chạy part theo thứ tự cột Phụ thuộc.
 2. Trước khi chạy, rà `**Interfaces:**` giữa các part như bước "Rà plan trước khi chạy": tên, kiểu, chữ ký phải khớp từng ký tự; lệch thì phán một hướng và ghi `Ruling:` vào ledger `root/`.
-3. Trước mỗi nhóm Song song, hỏi người dùng một lần: mở phiên riêng cho từng part hay chạy tuần tự trong session gốc. aip không tự mở phiên hay agent. Câu trả lời này cũng là sự đồng ý để tạo worktree và `merge --no-ff` các nhánh part của nhóm đó vào `feature/<slug>`: merge local, không thuộc loại dừng "tác động ngoài repo", và thay câu hỏi tạo worktree của `git-worktree`. Push, hoặc merge vào nhánh gốc, vẫn chỉ làm ở bước kết thúc nhánh.
-4. Chỉ chạy song song khi `check-partition.mjs` không báo P1/P2 cho nhóm và người dùng chọn phiên riêng; ngược lại chạy tuần tự.
+3. Trước mỗi nhóm Song song, hỏi người dùng một lần: mở phiên riêng cho từng part hay chạy tuần tự trong session gốc. Câu hỏi nêu rõ từng nhánh `worktree-<slug>-p<nn>`, đường dẫn worktree, nhánh gốc
+   `feature/<slug>` và việc `merge --no-ff` nhánh part vào đó khi part xong. aip không tự mở phiên hay agent. Câu trả lời này cũng là sự đồng ý để tạo worktree và `merge --no-ff` các nhánh part của nhóm đó vào `feature/<slug>`: merge local, không thuộc loại dừng "tác động ngoài repo", và thay câu hỏi tạo worktree của `git-worktree`. Push, hoặc merge vào nhánh gốc, vẫn chỉ làm ở bước kết thúc nhánh.
+4. Chỉ chạy song song khi `check-partition.mjs` không báo P1/P2/P4 cho nhóm và người dùng chọn phiên riêng; ngược lại chạy tuần tự.
 5. Khi part bắt đầu (song song: trước khi tạo worktree; tuần tự: trước task đầu của part), session gốc đặt Trạng thái của part trong Bảng part thành `đang làm` và commit. Mỗi part song song có worktree `.claude/worktrees/<slug>-p<nn>/` và nhánh `worktree-<slug>-p<nn>`, cắt từ đỉnh hiện tại của `feature/<slug>` (skill `git-worktree`); session gốc tạo bằng `git worktree add -b worktree-<slug>-p<nn> .claude/worktrees/<slug>-p<nn> feature/<slug>`.
 6. Khối bàn giao cho phiên part, session gốc đưa cho người dùng dán vào phiên mới:
    - đường dẫn worktree của part;
