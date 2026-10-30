@@ -277,10 +277,8 @@ export default async function run({ ok, ctx }) {
     if (lg) {
       const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ledger-'));
       try {
-        const file = lg.ensureWorkspace(tmp);
-        ok(file === path.join(tmp, '.sdd', 'progress.md'), 'AC3.3: ensureWorkspace trả đường dẫn .sdd/progress.md');
-        ok(fs.readFileSync(path.join(tmp, '.sdd', '.gitignore'), 'utf8') === '*\n', 'AC3.3: .sdd/.gitignore chứa "*"');
-        ok(lg.ensureWorkspace(tmp) === file, 'AC3.3: ensureWorkspace chạy lại không lỗi');
+        // Vị trí file do workspace.mjs quyết định (pin 33-request-parts); ở đây chỉ kiểm đọc/ghi một file ledger.
+        const file = path.join(tmp, 'progress.md');
         ok(lg.readTail(file, 100) === null, 'AC3.3: readTail trả null khi ledger chưa có');
         lg.appendLedger(file, '# Ledger — plan: plan.md');
         lg.appendLedger(file, 'Task 1: complete (commits a..b, review clean)');

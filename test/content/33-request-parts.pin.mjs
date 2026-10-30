@@ -1,4 +1,6 @@
 // Pin: request parts, workspace .aip và trường TDD (docs/requests/2026-10-30-request-parts-aip-workspace). Task 2: task-brief chèn dòng TDD hiệu lực (AC5.2).
+import { spawnSync } from 'node:child_process';
+
 export default async function run({ ok, ctx }) {
   const { fs, path, os, REPO_ROOT, pathToFileURL } = ctx;
 
@@ -185,5 +187,114 @@ export default async function run({ ok, ctx }) {
     // Chạy ở chính gốc repo chính (ổ đĩa khác hoa thường): không có chỗ lui, thử lại cùng thư mục là vô nghĩa
     const same = rethrow({ cwd: 'e:/repo', git: gitFake('e:/repo', 'E:\\repo\\.git'), fs: { ...fakeFs, mkdirSync: denying('EPERM', 'E:/repo/.aip') } });
     ok(same.err?.code === 'EPERM' && same.lines.length === 0, 'AC3.5: lỗi quyền ngay ở gốc repo chính (không phải worktree) → ném, không lui');
+  }
+
+  // AC3.1, AC3.3, AC3.4: ba script ghi vào workspace .aip (repo git tạm + git worktree thật, không chạm thư mục request thật)
+  {
+    const scripts = path.join(REPO_ROOT, 'core', 'skills', 'plan-execution', 'scripts');
+    const real = (p) => fs.realpathSync.native(p);
+    const rd = (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null);
+    const git = (cwd, ...a) => {
+      const r = spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', '-c', 'commit.gpgsign=false', ...a], { cwd, encoding: 'utf8' });
+      if (r.status !== 0) throw new Error(`git ${a.join(' ')}: ${r.stderr}`);
+      return r.stdout.trim();
+    };
+    const sh = (script, args, cwd) => spawnSync(process.execPath, [path.join(scripts, script), ...args], { cwd, encoding: 'utf8' });
+
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ws3-'));
+    try {
+      const repo = path.join(tmp, 'repo');
+      const wt = path.join(tmp, 'wt');
+      const req = 'docs/requests/2026-10-30-x';
+      fs.mkdirSync(path.join(repo, req, 'parts', '01-a'), { recursive: true });
+      const planText = '# Plan\n\n### Task 1: a\n**Kind:** BE\n**Phủ AC:** AC1.1\n';
+      fs.writeFileSync(path.join(repo, req, 'plan.md'), planText);
+      fs.writeFileSync(path.join(repo, req, 'parts', '01-a', 'plan.md'), planText);
+      git(repo, 'init', '-q');
+      git(repo, 'add', '.');
+      git(repo, 'commit', '-q', '-m', 'c1');
+      const c1 = git(repo, 'rev-parse', 'HEAD');
+      fs.writeFileSync(path.join(repo, 'f.txt'), 'x\n');
+      git(repo, 'add', '.');
+      git(repo, 'commit', '-q', '-m', 'c2');
+      const c2 = git(repo, 'rev-parse', 'HEAD');
+      git(repo, 'worktree', 'add', '-q', wt, '-b', 'wt');
+
+      for (const [where, cwd] of [['gốc repo chính', repo], ['worktree', wt]]) {
+        for (const [part, planRel] of [['root', `${req}/plan.md`], ['01-a', `${req}/parts/01-a/plan.md`]]) {
+          const dir = path.join(repo, '.aip', 'runs', '2026-10-30-x', part);
+          const at = (r, name) => r.status === 0 && fs.existsSync(path.join(dir, name))
+            && real(r.stdout.trim()) === real(path.join(dir, name));
+          const tag = `AC3.1: ${where}, part ${part}`;
+
+          const l = sh('ledger.mjs', [planRel, `Task 1: started ${where}`], cwd);
+          ok(at(l, 'progress.md') && rd(path.join(dir, 'progress.md'))?.includes(`started ${where}`), `${tag}: ledger.mjs ghi progress.md vào workspace và in đường dẫn`);
+          const b = sh('task-brief.mjs', [planRel, '1'], cwd);
+          ok(at(b, 'task-1-brief.md'), `${tag}: task-brief.mjs ghi brief vào workspace`);
+          const r = sh('review-package.mjs', [c1, c2, '--plan', planRel], cwd);
+          const rp = r.status === 0 ? r.stdout.trim() : '';
+          ok(rp !== '' && fs.existsSync(rp) && real(path.dirname(rp)) === real(dir) && rd(rp)?.startsWith('# Review package'),
+            `AC3.4: ${where}, part ${part}: review-package.mjs --plan không --out ghi package vào workspace và in đường dẫn`);
+        }
+      }
+      ok(rd(path.join(repo, '.aip', '.gitignore')) === '*\n', 'AC3.1: <gốc repo chính>/.aip/.gitignore = "*"');
+      ok(!fs.existsSync(path.join(wt, '.aip')) && !fs.existsSync(path.join(repo, req, '.sdd')) && !fs.existsSync(path.join(wt, req, '.sdd')),
+        'AC3.1: không ghi .aip vào gốc worktree, không còn tạo .sdd trong thư mục request');
+
+      // AC3.4: không --plan → stdout như cũ; --out luôn thắng --plan; --plan thiếu giá trị là sai đối số
+      const out = sh('review-package.mjs', [c1, c2], repo);
+      ok(out.status === 0 && out.stdout.startsWith('# Review package'), 'AC3.4: không --plan, không --out → package ra stdout như cũ');
+      const explicit = path.join(tmp, 'explicit.md');
+      const both = sh('review-package.mjs', [c1, c2, '--plan', `${req}/plan.md`, '--out', explicit], repo);
+      ok(both.status === 0 && both.stdout.trim() === explicit && fs.existsSync(explicit), 'AC3.4: có cả --plan và --out → ghi theo --out');
+      ok(sh('review-package.mjs', [c1, c2, '--plan'], repo).status === 2, 'AC3.4: --plan thiếu giá trị → exit 2');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+
+    // AC3.3: .sdd cũ chỉ được chép sang ledger mới khi ledger mới chưa có; luôn giữ nguyên file cũ
+    const ledger = await import(pathToFileURL(path.join(scripts, 'ledger.mjs')).href);
+    const noGit = () => { throw new Error('không phải repo'); };
+    const lg = (cwd, planArg, line) => {
+      const o = console.log;
+      const e = console.error;
+      console.log = () => {};
+      console.error = () => {};
+      try { return ledger.main([planArg, line], { cwd, git: noGit }); } finally { console.log = o; console.error = e; }
+    };
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ledger-mig-'));
+    try {
+      const seed = (reqName, legacy, current) => {
+        const reqDir = path.join(cwd, 'docs', 'requests', reqName);
+        fs.mkdirSync(path.join(reqDir, '.sdd'), { recursive: true });
+        fs.writeFileSync(path.join(reqDir, '.sdd', 'progress.md'), legacy);
+        const file = path.join(cwd, '.aip', 'runs', reqName, 'root', 'progress.md');
+        if (current !== null) {
+          fs.mkdirSync(path.dirname(file), { recursive: true });
+          fs.writeFileSync(file, current);
+        }
+        return { reqDir, file, legacyFile: path.join(reqDir, '.sdd', 'progress.md') };
+      };
+
+      const a = seed('2026-10-30-a', 'Task 1: complete (cũ)\n', null);
+      ok(lg(cwd, path.join(a.reqDir, 'plan.md'), 'Task 2: started') === 0
+        && rd(a.file) === 'Task 1: complete (cũ)\nTask 2: started\n'
+        && fs.readFileSync(a.legacyFile, 'utf8') === 'Task 1: complete (cũ)\n',
+        'AC3.3: có .sdd/progress.md cũ, chưa có ledger mới → chép nội dung sang ledger mới rồi ghi tiếp, file cũ còn nguyên');
+
+      const b = seed('2026-10-30-b', 'CŨ\n', 'MỚI\n');
+      ok(lg(cwd, b.reqDir, 'Task 2: started') === 0 && rd(b.file) === 'MỚI\nTask 2: started\n'
+        && fs.readFileSync(b.legacyFile, 'utf8') === 'CŨ\n',
+        'ledger: không chép khi ledger mới đã tồn tại');
+
+      // Ledger part không được nhận .sdd của request (ledger cũ là của cả request, thuộc part root)
+      const c = seed('2026-10-30-c', 'CŨ\n', null);
+      fs.mkdirSync(path.join(c.reqDir, 'parts', '01-a'), { recursive: true });
+      lg(cwd, path.join(c.reqDir, 'parts', '01-a', 'plan.md'), 'Task 1: started');
+      ok(rd(path.join(cwd, '.aip', 'runs', '2026-10-30-c', '01-a', 'progress.md')) === 'Task 1: started\n',
+        'AC3.3: ledger của part không chép .sdd của request');
+    } finally {
+      fs.rmSync(cwd, { recursive: true, force: true });
+    }
   }
 }

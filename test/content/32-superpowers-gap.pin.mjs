@@ -55,15 +55,17 @@ export default async function run({ ok, ctx }) {
     for (const l of accept) ok(verdict(l) === null, `AC5.2: validateLine chấp nhận ${JSON.stringify(l)}`);
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ledger-inline-'));
     try {
-      const file = path.join(tmp, '.sdd', 'progress.md');
+      // cwd/git giả: không để main() resolve ra gốc repo chính thật và ghi .aip vào đó.
+      const deps = { cwd: tmp, git: () => { throw new Error('không phải repo'); } };
+      const file = path.join(tmp, '.aip', 'runs', path.basename(tmp), 'root', 'progress.md');
       const realError = console.error;
       let rc;
       console.error = () => {};
-      try { rc = lg.main([tmp, reject[0]]); } finally { console.error = realError; }
+      try { rc = lg.main([tmp, reject[0]], deps); } finally { console.error = realError; }
       ok(rc === 2 && !fs.existsSync(file), 'AC5.2: main trả exit 2 và không tạo hay ghi ledger khi dòng bị từ chối');
       const logged = console.log;
       console.log = () => {};
-      try { rc = lg.main([tmp, accept[0]]); } finally { console.log = logged; }
+      try { rc = lg.main([tmp, accept[0]], deps); } finally { console.log = logged; }
       ok(rc === 0 && fs.readFileSync(file, 'utf8').includes(accept[0]), 'AC5.2: main ghi dòng inline đủ evidence như cũ');
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   }

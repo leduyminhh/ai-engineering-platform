@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// Sổ tiến độ của một plan: <requestDir>/.sdd/progress.md (git bỏ qua cả thư mục .sdd).
-// Cách dùng: <requestDir> "<dòng>" — thêm một dòng vào ledger, in đường dẫn file. Exit 2 khi thiếu đối số hoặc dòng bị từ chối.
+// Sổ tiến độ của một plan: <gốc repo chính>/.aip/runs/<request>/<part>/progress.md (xem workspace.mjs; git bỏ qua .aip).
+// Cách dùng: <plan.md | requestDir> "<dòng>" — thêm một dòng vào ledger, in đường dẫn file. Exit 2 khi thiếu đối số hoặc dòng bị từ chối.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { resolveWorkspace } from './workspace.mjs';
 
 const DONE_RE = /^Plan: complete\s*$/m;
 // Chế độ inline không có review từng task, nên dòng complete là bằng chứng duy nhất: bắt buộc mang lệnh test và exit 0.
@@ -38,12 +39,17 @@ export function validateLine(line) {
   return null;
 }
 
-// Tạo .sdd/ và .gitignore chứa `*` để ledger không bao giờ lọt vào commit; trả đường dẫn progress.md.
-export function ensureWorkspace(requestDir) {
-  const dir = path.join(requestDir, '.sdd');
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, '.gitignore'), '*\n');
-  return path.join(dir, 'progress.md');
+// Trả đường dẫn progress.md trong workspace của plan. Ledger cũ <thư mục plan>/.sdd/progress.md được chép sang một lần để plan đang dở
+// không mất tiến độ; COPYFILE_EXCL để không bao giờ ghi đè ledger mới đã có, và giữ nguyên file cũ.
+export function ledgerFile(planArg, deps) {
+  const ws = resolveWorkspace(planArg, deps);
+  const file = path.join(ws.dir, 'progress.md');
+  try {
+    fs.copyFileSync(path.join(path.dirname(ws.plan), '.sdd', 'progress.md'), file, fs.constants.COPYFILE_EXCL);
+  } catch (e) {
+    if (e?.code !== 'ENOENT' && e?.code !== 'EEXIST') throw e;
+  }
+  return file;
 }
 
 export function appendLedger(file, line) {
@@ -58,10 +64,10 @@ export function readTail(file, max) {
   return text.slice(Math.max(0, text.length - max));
 }
 
-export function main(argv) {
-  const [requestDir, line] = argv;
-  if (!requestDir || line === undefined) {
-    console.error('Cách dùng: ledger.mjs <requestDir> "<dòng>"');
+export function main(argv, deps) {
+  const [planArg, line] = argv;
+  if (!planArg || line === undefined) {
+    console.error('Cách dùng: ledger.mjs <plan.md|requestDir> "<dòng>"');
     return 2;
   }
   const invalid = validateLine(line);
@@ -69,7 +75,7 @@ export function main(argv) {
     console.error(invalid);
     return 2;
   }
-  const file = ensureWorkspace(requestDir);
+  const file = ledgerFile(planArg, deps);
   appendLedger(file, line);
   console.log(file);
   return 0;

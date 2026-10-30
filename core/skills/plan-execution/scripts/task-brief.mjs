@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Cắt một task khỏi plan.md ra file brief cho implementer.
-// Cách dùng: <plan.md> <n> [--out <dir>] — ghi task-<n>-brief.md (mặc định <thư mục plan>/.sdd) và in đường dẫn. Exit 1 khi không có task, exit 2 khi sai đối số.
+// Cách dùng: <plan.md> <n> [--out <dir>] — ghi task-<n>-brief.md (mặc định workspace .aip của plan, xem workspace.mjs) và in đường dẫn. Exit 1 khi không có task, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ensureWorkspace } from './ledger.mjs';
+import { resolveWorkspace } from './workspace.mjs';
 
 // Nguyên văn từ `### Task <n>` tới heading #/##/### kế tiếp; heading trong khối ``` hoặc ~~~ không tính.
 export function extractTask(planText, n) {
@@ -65,7 +65,7 @@ function withTddLine(taskText) {
   return [heading, `**TDD:** ${eff.value} (mặc định theo kind)`, ...rest].join('\n');
 }
 
-export function main(argv) {
+export function main(argv, deps) {
   const args = [...argv];
   const oi = args.indexOf('--out');
   let outDir = null;
@@ -81,7 +81,7 @@ export function main(argv) {
     console.error(`Không có "### Task ${n}" trong ${planFile}`);
     return 1;
   }
-  const dir = outDir ?? path.dirname(ensureWorkspace(path.dirname(path.resolve(planFile))));
+  const dir = outDir ?? resolveWorkspace(planFile, deps).dir;
   fs.mkdirSync(dir, { recursive: true });
   const out = path.join(dir, `task-${n}-brief.md`);
   fs.writeFileSync(out, withTddLine(task));
