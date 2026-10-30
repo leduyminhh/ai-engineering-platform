@@ -12,9 +12,9 @@ const DONE_RE = /^Plan: complete\s*$/m;
 const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b(?![.\w-])/i;
 const INLINE_EVIDENCE_RE = /\btests: \S.* exit 0\b/;
 const EXIT_FAILED_RE = /\bexit [1-9]/;
-const TASK_COMPLETE_RE = /^Task \d+: complete\b/;
+const TASK_COMPLETE_RE = /^Task \d+: complete\b/i;
 // Lazy để dừng ở "exit <n>" đầu tiên sau "red:", không lấn sang "tests: … exit 0" phía sau.
-const RED_RE = /\bred: .*? exit (\d+)\b/;
+const RED_RE = /\bred:\s*.*? exit (\d+)\b/gi;
 // Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
 const MAX_LINE = 4096;
 
@@ -24,12 +24,12 @@ export function validateLine(line) {
     if (l.length > MAX_LINE) return `dòng ledger dài quá ${MAX_LINE} ký tự`;
     let evidence = l;
     if (TASK_COMPLETE_RE.test(l)) {
-      const red = RED_RE.exec(l);
-      if (red) {
+      // Mọi khối red: đều phải exit khác 0; một khối giả không được che bởi khối hợp lệ đứng trước.
+      for (const red of l.matchAll(RED_RE)) {
         if (Number(red[1]) === 0) return 'dòng Task <n>: complete có "red: <lệnh> exit 0": bằng chứng đỏ phải exit khác 0';
-        // exit khác 0 của red là hợp lệ, không được tính vào kiểm "tests" bên dưới.
-        evidence = l.replace(RED_RE, '');
       }
+      // exit khác 0 của red là hợp lệ, không được tính vào kiểm "tests" bên dưới.
+      evidence = l.replace(RED_RE, '');
     }
     if (INLINE_COMPLETE_RE.test(l) && !(INLINE_EVIDENCE_RE.test(evidence) && !EXIT_FAILED_RE.test(evidence))) {
       return 'dòng Task <n>: complete ở chế độ inline phải có "tests: <lệnh> exit 0" và không kèm exit khác 0';

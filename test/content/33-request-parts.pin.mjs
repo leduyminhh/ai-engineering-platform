@@ -93,6 +93,15 @@ export default async function run({ ok, ctx }) {
       ['Task 2: complete (abc123, review round 1)', true, 'dòng không inline, không red: giữ hợp lệ'],
       ['Task 3: started', true, 'dòng không phải complete không bị kiểm red'],
     ];
+    // F1/F2: không phân biệt hoa thường, không cần dấu cách sau "red:", kiểm mọi khối red:
+    for (const [line, name] of [
+      ['task 1: complete (a, inline, red: x exit 0, tests: y exit 0)', 'chữ thường "task" + red exit 0 bị từ chối'],
+      ['TASK 2: COMPLETE (a, review, RED: x exit 0, tests: y exit 0)', 'chữ hoa "RED:" + red exit 0 bị từ chối'],
+      ['Task 1: complete (a, inline, Red: x exit 0, tests: y exit 0)', '"Red:" + red exit 0 bị từ chối'],
+      ['Task 1: complete (a, inline, red:x exit 0, tests: y exit 0)', '"red:" không dấu cách + exit 0 bị từ chối'],
+      ['Task 1: complete (a, red: x exit 1, red: z exit 0, tests: y exit 0)', 'khối red: thứ hai exit 0 bị từ chối'],
+    ]) ok(typeof validateLine(line) === 'string', `AC5.3: ${name}`);
+    ok(validateLine('Task 1: complete (a, inline, red:x exit 1, Red: z exit 2, tests: y exit 0)') === null, 'AC5.3: nhiều khối red: đều exit khác 0 + tests exit 0 hợp lệ');
     for (const [line, valid, name] of cases) ok((validateLine(line) === null) === valid, `AC5.3: ${name}`);
     ok(typeof validateLine('x\nTask 1: complete (inline, red: t exit 0, tests: t exit 0)') === 'string', 'AC5.3: red exit 0 ở dòng sau của đối số nhiều dòng vẫn bị bắt');
     const long = `Task 1: complete (inline, red: ${'tests: '.repeat(2000)} exit 0`;
