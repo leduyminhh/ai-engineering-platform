@@ -324,6 +324,23 @@ export default async function run({ ok, ctx }) {
     ok(rd('AGENTS.md') === tpl, 'AC7.1: AGENTS.md giống hệt AGENTS.template.md');
   }
 
+  // AC7.1: baseline nêu bố cục parts/, nhánh/worktree part -p<nn>, chỉ song song giữa part; repo docs không còn t<n>
+  {
+    const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8');
+    const flat = (s) => s.replace(/\s+/g, ' ');
+    const tpl = rd('core', 'agents', 'AGENTS.template.md');
+    const sec = (head) => { const i = tpl.indexOf(head); return i < 0 ? '' : flat(tpl.slice(i, tpl.indexOf('\n#', i + head.length))); };
+    ok(sec('#### Docs location and format').includes('parts/<nn>-<part-slug>/plan.md'), 'AC7.1: Docs location nêu parts/<nn>-<part-slug>/plan.md');
+    const par = sec('### Parallel agents');
+    ok(par.includes('worktree-<slug>-p<nn>') && par.includes('.claude/worktrees/<slug>-p<nn>/') && /only between parts, never inside a part/i.test(par) && par.includes('check-partition.mjs'),
+      'AC7.1: Parallel agents dùng worktree-<slug>-p<nn>, .claude/worktrees/<slug>-p<nn>/, chỉ song song giữa part, check-partition.mjs');
+    ok(!tpl.includes('t<n>') && !tpl.includes('**Song song:**'), 'AC7.1: AGENTS.template.md không còn t<n> hay **Song song:** cấp task');
+    for (const f of ['CLAUDE.md', 'README.md', 'README_VI.md']) {
+      const t = rd(f);
+      ok(!t.includes('t<n>') && t.includes('worktree-<slug>-p<nn>'), `AC7.1: ${f} không còn t<n>, dùng worktree-<slug>-p<nn>`);
+    }
+  }
+
   // AC1.3, AC2.4: hướng dẫn viết part — template design có mục tuỳ chọn Bảng part, plan-structure nêu luật interface giữa part
   {
     const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');

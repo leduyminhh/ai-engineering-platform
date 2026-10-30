@@ -121,7 +121,7 @@ export default async function run({ ok, ctx }) {
   {
     const t = read('core', 'skills', 'git-worktree', 'SKILL.md');
     const baseline = read('core', 'agents', 'AGENTS.template.md');
-    ok(baseline.includes('worktree-<slug>-t<n>') && baseline.includes('.claude/worktrees/<slug>-t<n>/'),
+    ok(baseline.includes('worktree-<slug>-p<nn>') && baseline.includes('.claude/worktrees/<slug>-p<nn>/'),
       'AC4.1: baseline vẫn có quy ước tên nhánh và thư mục worktree mà skill bám theo');
     ok(t.includes('git worktree add -b worktree-<slug>-p<nn> .claude/worktrees/<slug>-p<nn> feature/<slug>'),
       'AC4.1: lệnh tạo worktree dùng đúng tên nhánh, thư mục và nhánh gốc theo baseline');

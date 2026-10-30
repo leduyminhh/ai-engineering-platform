@@ -161,6 +161,8 @@ them. They apply when the aip workflows and skills are installed.
 
 - Write the spec to `docs/requests/<yyyy-mm-dd>-<slug>/design.md` (skill `engineering-spec-writing`)
   and the plan to `plan.md` in the same folder (skill `engineering-plan-writing`).
+- A large request may be split into parts: `design.md` has a `## Bảng part`, and each part has its own plan in
+  `parts/<nn>-<part-slug>/plan.md`; the root `plan.md` stays as the shared plan.
 - Use `docs/requests/_TEMPLATE/` only when it contains `design.md`; otherwise use the templates of
   the `artifact-templates` skill (a legacy `_TEMPLATE` may still serve `requirement.md`). `aip init` never
   overwrites it; to get the new templates, delete the old `_TEMPLATE` and re-run `aip init --full`.
@@ -211,8 +213,8 @@ them. They apply when the aip workflows and skills are installed.
 
 (Claude Code worktrees. Soft guidance; only an agent's `writeScope` plus the `guard-files` hook enforce write scope.)
 
-- Parallelize only independent tasks whose write sets are disjoint; declare each set in `plan.md` (`**Files:**`, `**Song song:**`).
-- Branch `worktree-<slug>-t<n>` in `.claude/worktrees/<slug>-t<n>/`, cut from the current tip of the integration branch `feature/<slug>`; after every merge, cut the next task branch from the new tip.
+- Parallelize only between parts, never inside a part (tasks of one part run sequentially). Parts of one group (column `Song song` of `## Bảng part`) must have disjoint write sets, taken from their tasks' `**Files:**`; check them with `check-partition.mjs` (P1–P4).
+- Branch `worktree-<slug>-p<nn>` in `.claude/worktrees/<slug>-p<nn>/`, cut from the current tip of the integration branch `feature/<slug>`; after every merge, cut the next part branch from the new tip.
 - Touch shared files (version bump, lock, living spec, README) once, in the main session, after merging.
 - The main session merges with `merge --no-ff` into the integration branch and runs the touched components' tests after each merge.
 - A conflict outside the declared write sets: stop and report. The human gate is the final review of the whole integration branch before any push or PR; merge commits in the main session do not replace it. No per-agent PRs.
