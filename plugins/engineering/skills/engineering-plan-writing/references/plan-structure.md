@@ -58,6 +58,8 @@ Implementer chỉ thấy task của mình, nên mỗi task ghi `**Interfaces:**`
 - `Consumes:` hàm/kiểu/endpoint (`operationId`) do task trước tạo mà task này dùng; không có thì ghi "không có".
 - `Produces:` hàm/kiểu/endpoint task sau sẽ dùng; không có thì ghi "không có".
 
+Ghi tên interface trong backtick: P4 chỉ so tên trong backtick, còn `Consumes`/`Produces` có nội dung mà không backtick thì bị P5 báo là không kiểm được.
+
 Tên và kiểu ở `Produces` của task A phải **trùng từng ký tự** với `Consumes` của task B (kiểm ở mục 3 của
 `self-review.md`).
 

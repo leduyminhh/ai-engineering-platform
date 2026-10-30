@@ -40,11 +40,16 @@ export function resolveWorkspace(planArg, deps = {}) {
   } catch { /* không phải repo hoặc không có git: dùng cwd */ }
 
   const create = (root) => {
-    // .aip là symlink thì ledger, brief bị ghi ra chỗ nó trỏ tới, ngoài repo: từ chối thay vì đi theo.
-    let link = false;
-    try { link = fs.lstatSync(path.join(root, '.aip')).isSymbolicLink(); } catch (e) { if (e?.code !== 'ENOENT') throw e; }
-    if (link) throw new Error(`${path.join(root, '.aip')} là symlink, từ chối ghi workspace qua symlink`);
-    const dir = path.join(root, '.aip', 'runs', request, part);
+    // Symlink/junction ở bất kỳ cấp nào thì ledger, brief bị ghi ra chỗ nó trỏ tới, ngoài repo: từ chối thay vì đi theo.
+    // Lỗi cố ý không mang .code để không bị coi là lỗi quyền và lui về gốc worktree.
+    const segs = ['.aip', 'runs', request, part];
+    const dir = path.join(root, ...segs);
+    for (let i = 1; i <= segs.length; i++) {
+      const p = path.join(root, ...segs.slice(0, i));
+      let link = false;
+      try { link = fs.lstatSync(p).isSymbolicLink(); } catch (e) { if (e?.code !== 'ENOENT') throw e; }
+      if (link) throw new Error(`${p} là symlink, từ chối ghi workspace qua symlink`);
+    }
     fs.mkdirSync(dir, { recursive: true });
     const ignore = path.join(root, '.aip', '.gitignore');
     if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '*\n');

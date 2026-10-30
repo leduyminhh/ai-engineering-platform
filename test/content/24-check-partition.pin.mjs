@@ -1,4 +1,4 @@
-// Pin: check-partition.mjs kiểm giữa các part cùng nhãn cột Song song của Bảng part (P1 trùng file, P2 file chung, P4 Consumes↔Produces)
+// Pin: check-partition.mjs kiểm giữa các part cùng nhãn cột Song song của Bảng part (P1 trùng file, P2 file chung, P4 Consumes↔Produces, P5 interface không backtick)
 // và báo P3 khi plan còn **Song song:** cấp task (docs/requests/2026-10-30-request-parts-aip-workspace, AC2.1–AC2.4).
 export default async function run({ ok, ctx }) {
   const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR } = ctx;
@@ -99,6 +99,18 @@ export default async function run({ ok, ctx }) {
   ok(p4(rows2('A', 'B'), { consumes: ['X'] }, { produces: ['X'] }).length === 0, 'AC2.4: nhãn khác nhau → im');
   ok(p4(rows2('A', 'A'), { consumes: ['X'] }, { produces: ['Y'] }).length === 0, 'AC2.4: tên khác nhau → im');
   ok(p4(rows2('A', 'A'), { consumes: ['X'] }, { produces: ['X'] }).every((w) => w.file === 'design.md'), 'AC2.4: P4 trỏ về Bảng part của design.md');
+
+  // AC2.4: P5 khi Consumes/Produces có nội dung thật mà không có tên nào trong backtick (P4 không kiểm được)
+  const rawIface = (c, pr, cont = '') => plan(['### Task 1: x', '**Files:**', '- Modify: `src/x.js`', '', '**Interfaces:**', `- Consumes: ${c}`, ...(cont ? [cont] : []), `- Produces: ${pr}`, ''].join('\n'));
+  const p5 = (rows, a, b = rawIface('không có', 'không có')) => checkPartition(req(rows, { '01-a': a, '02-b': b })).filter((w) => w.code === 'P5');
+  const bare = p5(rows2('A', 'A'), rawIface('kết quả của part 02-b', 'không có'));
+  ok(bare.length === 1 && bare[0].file === 'design.md' && bare[0].msg.includes('01-a') && bare[0].msg.includes('Consumes') && bare[0].msg.includes('P4 không kiểm được interface này; ghi tên trong backtick'),
+    'AC2.4: Consumes có nội dung nhưng không backtick → P5 nêu part, Consumes và cách sửa');
+  ok(p5(rows2('A', 'A'), rawIface('không có', 'một hàm export')).length === 1 && p5(rows2('A', 'A'), rawIface('không có', 'một hàm export'))[0].msg.includes('Produces'), 'AC2.4: Produces có nội dung không backtick → P5');
+  ok(p5(rows2('A', 'A'), rawIface('không có', 'không có')).length === 0 && p5(rows2('A', 'A'), rawIface('—', '')).length === 0, 'AC2.4: không có, — hoặc để trống → không P5');
+  ok(p5(rows2('A', 'A'), rawIface('`X`', '`Y`')).length === 0, 'AC2.4: có tên trong backtick → không P5');
+  ok(p5(rows2('A', 'A'), rawIface('', '', '  `Z` ở dòng nối tiếp')).length === 0 && p5(rows2('A', 'A'), rawIface('', '', '  ở dòng nối tiếp')).length === 1, 'AC2.4: dòng nối tiếp tính vào cùng mục Consumes/Produces');
+  ok(p5(rows2('—', 'A'), rawIface('x', 'y')).length === 0 && p5(st('bỏ', 'chưa làm'), rawIface('x', 'y')).length === 0, 'AC2.4: part không nhãn Song song hoặc part bỏ → không P5');
 
   // CLI
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-partition-'));

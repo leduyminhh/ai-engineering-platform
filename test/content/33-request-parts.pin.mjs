@@ -168,6 +168,23 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(outside, { recursive: true, force: true });
     }
 
+    // Symlink ở cấp sâu hơn .aip cũng ghi ra ngoài repo; lỗi phải không có .code để không kích hoạt đường lui về worktree.
+    for (const levels of [['runs'], ['runs', '2026-10-30-x'], ['runs', '2026-10-30-x', '01-a']]) {
+      const out = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-out-'));
+      const rt = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ln-'));
+      try {
+        const parent = path.join(rt, '.aip', ...levels.slice(0, -1));
+        fs.mkdirSync(parent, { recursive: true });
+        fs.symlinkSync(out, path.join(parent, levels.at(-1)), 'junction');
+        let err;
+        try { resolveWorkspace(path.join(rt, 'docs', 'requests', '2026-10-30-x', 'parts', '01-a', 'plan.md'), { cwd: rt, git: gitFake(rt, path.join(rt, '.git')), stderr: () => {} }); } catch (e) { err = e; }
+        ok(!!err && err.code === undefined && fs.readdirSync(out).length === 0, `AC3.1: .aip/${levels.join('/')} là symlink → từ chối, lỗi không có .code, không ghi qua symlink`);
+      } finally {
+        fs.rmSync(rt, { recursive: true, force: true });
+        fs.rmSync(out, { recursive: true, force: true });
+      }
+    }
+
     // fs/git giả: không chạm đĩa, dùng đường dẫn Windows như git trả về
     const top = 'e:/repo/.claude/worktrees/x-p01';
     const git = gitFake(top, 'E:\\repo\\.git');

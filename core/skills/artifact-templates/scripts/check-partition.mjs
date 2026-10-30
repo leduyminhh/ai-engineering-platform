@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Kiểm docs/requests/<ngày>-<slug>/: part cùng nhãn cột Song song của Bảng part không được ghi trùng file (P1), file chung (P2) hay Consumes thứ part cùng nhóm Produces (P4); plan còn **Song song:** cấp task thì báo P3 (đã bỏ). Part có Trạng thái `bỏ` không tham gia P1/P2/P4.
+// Kiểm docs/requests/<ngày>-<slug>/: part cùng nhãn cột Song song của Bảng part không được ghi trùng file (P1), file chung (P2) hay Consumes thứ part cùng nhóm Produces (P4), Consumes/Produces có nội dung mà không tên nào trong backtick nên P4 không kiểm được (P5); plan còn **Song song:** cấp task thì báo P3 (đã bỏ). Part có Trạng thái `bỏ` không tham gia P1/P2/P4/P5.
 // Cách dùng: <thư-mục-request> [--strict]. Chọn tham gia: request không có Bảng part và plan không có **Song song:** thì im. Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -45,7 +45,7 @@ export function parsePartition(planText) {
     if (h) {
       const t = l.match(TASK_RE);
       if (t) {
-        cur = { n: Number(t[2]), title: t[3].trim(), line: i + 1, group: null, groupLine: 0, files: [], consumes: new Set(), produces: new Set() };
+        cur = { n: Number(t[2]), title: t[3].trim(), line: i + 1, group: null, groupLine: 0, files: [], consumes: new Set(), produces: new Set(), ifText: { consumes: '', produces: '' } };
         level = t[1].length;
         tasks.push(cur);
       } else if (h[1].length <= level) cur = null;
@@ -62,7 +62,10 @@ export function parsePartition(planText) {
       if (b) mode = b[1].toLowerCase();
       else if (!/^\s+\S/.test(l)) inIface = false;
       if (inIface) {
-        if (mode) for (const m of (b ? b[2] : l).matchAll(/`([^`]+)`/g)) cur[mode].add(m[1].trim());
+        if (mode) {
+          cur.ifText[mode] += ` ${b ? b[2] : l}`;
+          for (const m of (b ? b[2] : l).matchAll(/`([^`]+)`/g)) cur[mode].add(m[1].trim());
+        }
         return;
       }
     }
@@ -79,10 +82,13 @@ export function parsePartition(planText) {
 const isShared = (p) => p.split('/').pop() === '.manifest.json' || p === 'plugins/_versions.lock.json' || p.startsWith('docs/specs/') || /^readme(_[a-z]+)?\.md$/.test(p);
 
 // Tập file/interface của part = hợp mọi task trong parts/<part>/plan.md; part thiếu plan.md có tập rỗng (W19 lo phần lệch thư mục).
+// bare = chiều (Consumes/Produces) có nội dung thật nhưng không tên nào trong backtick: P4 chỉ so tên trong backtick nên bỏ sót interface đó.
+const EMPTY_IFACE = /^[\s.]*(không có|—|–|-)?[\s.]*$/i;
 const partInfo = (planText) => {
   const tasks = typeof planText === 'string' ? parsePartition(planText) : [];
   const union = (k) => [...new Set(tasks.flatMap((t) => [...t[k]]))];
-  return { files: union('files'), consumes: union('consumes'), produces: union('produces') };
+  const bare = [...new Set(tasks.flatMap((t) => ['consumes', 'produces'].filter((k) => !t[k].size && !EMPTY_IFACE.test(t.ifText[k]))))];
+  return { files: union('files'), consumes: union('consumes'), produces: union('produces'), bare };
 };
 
 // input: { design?, plan?, parts?: { '<nn>-<slug>': planText } } (text thô). Cảnh báo: { file, line, code, msg }.
@@ -118,6 +124,7 @@ export function checkPartition({ design, plan, parts = {} } = {}) {
       }
     }
   }
+  for (const r of rows) for (const k of r.bare) at(r, 'P5', `Part ${r.part} (nhóm ${r.group}) khai ${k === 'consumes' ? 'Consumes' : 'Produces'} không có tên trong backtick: P4 không kiểm được interface này; ghi tên trong backtick`);
   return warnings.sort((x, y) => (x.file === y.file ? x.line - y.line : x.file < y.file ? -1 : 1));
 }
 

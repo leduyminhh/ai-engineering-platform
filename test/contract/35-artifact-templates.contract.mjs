@@ -527,6 +527,12 @@ export default async function run({ ok, ctx }) {
     ok(cyc.length === 3 && cyc.every((w) => w.msg.includes('chu trình')), 'AC1.3: Phụ thuộc tạo chu trình 01-a → 03-c → 02-b → 01-a → W19 ở mỗi part trong chu trình');
     const sameGroup = depW19('| 01-a | — | A | chưa làm |', '| 02-b | 01-a | a | chưa làm |', '| 03-c | — | — | chưa làm |');
     ok(sameGroup.length === 1 && ['02-b', '01-a'].every((p) => sameGroup[0].msg.includes(p)), 'AC1.3: part phụ thuộc part cùng nhãn Song song (không phân biệt hoa thường) → W19');
+    // Part bị phụ thuộc đã merged hoặc bỏ thì không còn chạy: part phụ thuộc chạy sau nó, không có song song thật.
+    ok(['merged abc1234', 'bỏ'].every((s) => depW19(`| 01-a | — | A | ${s} |`, '| 02-b | 01-a | A | chưa làm |', '| 03-c | — | — | chưa làm |').length === 0),
+      'AC1.3: phụ thuộc part cùng nhóm đã merged <hash> hoặc bỏ → không W19');
+    ok(depW19('| 01-a | — | A | đang làm |', '| 02-b | 01-a | A | chưa làm |', '| 03-c | — | — | chưa làm |').length === 1
+      && depW19('| 01-a | 02-b | A | merged abc1234 |', '| 02-b | 01-a | A | chưa làm |', '| 03-c | — | — | chưa làm |').some((w) => w.msg.includes('chu trình')),
+      'AC1.3: part bị phụ thuộc còn chạy vẫn W19; chu trình vẫn báo dù một part đã merged');
     ok(depW19('| 01-a | — | A | chưa làm |', '| 02-b | 01-a | B | chưa làm |', '| 03-c | 01-a, 02-b | — | chưa làm |').length === 0,
       'AC1.3: phụ thuộc không chu trình, khác nhóm → sạch');
 

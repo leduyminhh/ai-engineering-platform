@@ -354,7 +354,8 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
       for (const d of r.deps) {
         if (d === r.part) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc chính nó`);
         else if (!byName.has(d)) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" không có trong Bảng part`);
-        else if (r.group && byName.get(d).group?.toLowerCase() === r.group.toLowerCase()) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" cùng nhóm Song song ${r.group}: part phụ thuộc phải chạy sau, không cùng nhóm`);
+        // Part bị phụ thuộc đã merged hoặc bỏ thì không còn chạy, nên không có song song thật với part này.
+        else if (r.group && byName.get(d).group?.toLowerCase() === r.group.toLowerCase() && byName.get(d).status !== 'bỏ' && !/^merged\s/.test(byName.get(d).status)) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" cùng nhóm Song song ${r.group}: part phụ thuộc phải chạy sau, không cùng nhóm`);
       }
       if (byName.get(r.part) === r && onCycle(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" nằm trong chu trình Phụ thuộc: không có thứ tự chạy hợp lệ`);
       if (!PART_STATUSES.includes(r.status) && !/^merged\s+\S+$/.test(r.status)) warn('design.md', r.line, 'W19', `Part "${r.part}" có Trạng thái "${r.status}" không hợp lệ, cần: ${PART_STATUSES.join(' | ')} | merged <hash>`);
