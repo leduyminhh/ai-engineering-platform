@@ -19,7 +19,9 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 5. **Gom `Ruling:`.** Đọc ledger, liệt kê mọi dòng `Ruling:` (cùng `minor (deferred)` còn mở) và đưa vào trường `rulings`
    của `workflow_result` (định dạng theo contract đầu ra, `core:principles`). Trình các dòng này cho người dùng cùng
    menu bên dưới; dòng nào thuộc loại dừng hỏi của `task-loop.md` thì nêu riêng để người dùng quyết.
-6. **Xác nhận nhánh gốc** (nhánh sẽ merge vào hoặc làm đích của PR). Không đoán: hỏi khi có nhiều ứng viên.
+6. **Xác nhận nhánh gốc** (nhánh sẽ merge vào hoặc làm đích của PR). Không đoán: hỏi khi có nhiều ứng viên. Chạy
+   `git remote`: kết quả rỗng thì repo chưa có remote, lựa chọn push + PR ghi "không khả dụng: repo chưa có remote" và
+   không gợi ý lệnh `git push`.
 7. **Đưa đúng 3 lựa chọn**, lựa chọn mặc định là giữ nguyên:
 
 | # | Lựa chọn | Việc làm |

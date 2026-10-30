@@ -360,6 +360,7 @@ export default async function run({ ok, ctx }) {
     ok(/merge local/.test(fin) && /push \+ PR/.test(fin) && /giữ nguyên/.test(fin) && /mặc định[^.]*giữ nguyên/.test(fin), 'AC4.2: kết thúc nhánh đúng 3 lựa chọn, mặc định giữ nguyên');
     ok(/docs\/specs/.test(fin) && /check-request\.mjs/.test(fin) && /full suite/.test(fin), 'AC4.2: finish cập nhật spec sống, chạy check-request.mjs và full suite');
     ok(/không (merge|push)[^.]*chưa chọn/.test(fin) && /merge xong[^.]*(chạy lại|test lại)/.test(fin) && /xác nhận rõ/.test(fin), 'AC4.2: không merge/push khi chưa chọn; test lại sau merge; xoá nhánh chỉ khi xác nhận rõ');
+    ok(/`git remote`[^.]*rỗng[^.]*push \+ PR[^.]*không khả dụng/.test(fin), 'regression trial 2026-10-30: repo chưa có remote thì push + PR không khả dụng');
     ok(/rulings/.test(fin) && /Ruling:/.test(fin), 'AC4.3: kết thúc gom mọi Ruling: vào rulings của workflow_result');
   }
 
