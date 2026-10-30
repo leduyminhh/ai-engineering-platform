@@ -384,7 +384,7 @@ export default async function run({ ok, ctx }) {
 
     // AC3.4: luật kiểm đầu ra mới + ánh xạ trạng thái cho vòng task
     const out = section('Kiểm đầu ra worker');
-    ok(/kind: BE/.test(out) && /tdd\.red/.test(out) && /tdd\.green/.test(out) && /đầu ra hỏng/.test(out), 'AC3.4: task kind: BE thiếu tdd.red/tdd.green → đầu ra hỏng');
+    ok(/TDD `có`/.test(out) && /tdd\.red/.test(out) && /tdd\.green/.test(out) && /đầu ra hỏng/.test(out), 'AC3.4: task TDD `có` thiếu tdd.red/tdd.green → đầu ra hỏng');
     ok(/spec_verdict/.test(out) && /findings/.test(out), 'AC3.4: task-review thiếu spec_verdict hoặc findings → đầu ra hỏng');
     ok(/remaining_risks/.test(out) && /xong kèm lo ngại/.test(out), 'AC3.4: remaining_risks không rỗng = xong kèm lo ngại');
     ok(/spec\/plan/.test(out) && /Ruling:/.test(out) && /không dùng vòng task/.test(out) && /ask_user/.test(out),
@@ -413,8 +413,8 @@ export default async function run({ ok, ctx }) {
   {
     const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, 'plugins', ...p), 'utf8').replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
     const be = rd('backend', 'agents', 'backend-implementer.md');
-    ok(/task `kind: BE` trong vòng task/.test(be) && /test lõi/.test(be) && /đỏ đúng lý do/.test(be) && /tdd: { red, green }/.test(be) && /tdd\.red/.test(be) && /tdd\.green/.test(be),
-      'AC3.4: backend-implementer — task kind: BE trong vòng task: test lõi đỏ đúng lý do trước, báo tdd.red/tdd.green');
+    ok(/task TDD `có` trong vòng task/.test(be) && /test lõi/.test(be) && /đỏ đúng lý do/.test(be) && /tdd: { red, green }/.test(be) && /tdd\.red/.test(be) && /tdd\.green/.test(be),
+      'AC3.4: backend-implementer — task TDD `có` trong vòng task: test lõi đỏ đúng lý do trước, báo tdd.red/tdd.green');
     ok(/ngoài vòng task[^.]*không ép/.test(be), 'AC3.4: backend-implementer — không ép TDD khi được gọi ngoài vòng task');
     ok(!/xanh ở bước [0-9]/.test(be), 'AC3.4: backend-implementer — gọi bước chạy build + test theo tên, không theo số (số bước của agent khác SKILL)');
     const skill = rd('backend', 'skills', 'backend-implement', 'SKILL.md');

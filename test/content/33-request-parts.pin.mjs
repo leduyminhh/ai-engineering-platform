@@ -297,4 +297,14 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(cwd, { recursive: true, force: true });
     }
   }
+
+  // AC5.3: văn bản quy trình dùng trường TDD thay vì "chỉ task kind: BE" (chỉ ghim chuỗi vận hành, không văn xuôi)
+  {
+    const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), "utf8");
+    const contract = rd("core", "principles", "workflow-output-contract.md");
+    ok(contract.includes("TDD `có`") && !/chỉ task `?kind: BE/i.test(contract), "AC5.3: contract đầu ra gắn tdd với task TDD `có`, không còn \"chỉ task kind: BE\"");
+    ok(rd("core", "skills", "artifact-templates", "references", "plan.template.md").includes("**TDD:**"), "AC5.3: plan.template.md có dòng **TDD:**");
+    ok(rd("core", "skills", "plan-execution", "references", "inline.md").includes("red: <lệnh> exit"), "AC5.3: inline.md nêu dòng ledger red: <lệnh> exit");
+    ok(rd("plugins", "engineering", "skills", "engineering-tdd", "SKILL.md").includes("**TDD:** không — <lý do>"), "AC5.3: engineering-tdd nêu ngoại lệ ghi bằng **TDD:** không — <lý do> trong plan đã duyệt");
+  }
 }

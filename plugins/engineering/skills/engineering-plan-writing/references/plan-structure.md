@@ -39,6 +39,13 @@ W18 khi kind ngoài tập. Kind quyết định chuỗi agent:
 
 Task trộn hai phía (vd BE + FE-UI) → tách thành hai task, mỗi task một kind.
 
+## Trường TDD
+
+`**TDD:** có` hoặc `**TDD:** không — <lý do>` (dấu `—`, lý do không rỗng), đặt sau `**Kind:**`. Thiếu dòng thì mặc định theo
+kind: `BE` = có, kind khác = không (`FE-UI` giữ test viết sau). `có` chỉ hợp lệ với `BE` và `TOOLING`; ca khác hoặc dòng
+sai thì `check-request.mjs` cảnh báo W21. Task `có` bị đòi `tdd.red`/`tdd.green` (task `TOOLING` ghi `red:` vào dòng
+ledger). `không — <lý do>` là ngoại lệ mà `engineering-tdd` yêu cầu người dùng đồng ý: plan được duyệt chính là sự đồng ý đó.
+
 Trong `workflow-feature` không tạo task kind `CT` hay `DB`: contract đã chốt ở Bước 3, đổi schema đã dừng ở Bước 2 để chạy
 `data-db-migration`. Plan trỏ ID `tasks.md` thì task `CT`/`DB` của `tasks.md` đã `Done` ở Bước 3 hoặc ngoài workflow nên
 không đưa vào plan.

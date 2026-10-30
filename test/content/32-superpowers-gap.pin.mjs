@@ -81,7 +81,7 @@ export default async function run({ ok, ctx }) {
     const boundary = slice(tdd, '## Ranh giới với quy tắc Testing', '## Ranh giới an toàn');
     ok(/một hành vi một test/i.test(boundary) && boundary.includes('references/anti-patterns.md') && /AGENTS\.md/.test(boundary),
       'AC2.1: mục ranh giới dẫn chiếu quy tắc "một hành vi một test" của AGENTS.md và anti-patterns.md');
-    ok(/chỉ khi task `kind: BE`/.test(slice(tdd, '## Ranh giới an toàn')), 'AC2.2: engineering-tdd chỉ báo tdd.red/tdd.green cho task kind BE');
+    ok(/chỉ khi task TDD `có`/.test(slice(tdd, '## Ranh giới an toàn')), 'AC2.2: engineering-tdd chỉ báo tdd.red/tdd.green cho task TDD `có`');
     ok(fs.existsSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-tdd', 'references', 'anti-patterns.md')), 'AC2.1: anti-patterns.md tồn tại');
     for (const [name, p] of [['backend-implement', ['plugins', 'backend', 'skills', 'backend-implement', 'SKILL.md']], ['frontend-testing', ['plugins', 'frontend', 'skills', 'frontend-testing', 'SKILL.md']]]) {
       const t = read(...p).replace(/\r?\n(?=[^\n])/g, ' ');

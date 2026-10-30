@@ -24,7 +24,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    chỉ gồm một dòng bối cảnh, đường dẫn brief, `Produces` của task trước mà task này dùng, và model; không dán lịch sử
    hội thoại. Task `DOCS`/`TOOLING` do session chính tự làm theo brief.
 4. **Nhận `agent_result`** và áp luật kiểm đầu ra của contract (có `status`, finding có `location` + `evidence`, file thay đổi
-   thuộc danh sách `**Files:**`). Task BE: thiếu `tdd.red`/`tdd.green` là đầu ra hỏng. Ánh xạ trạng thái:
+   thuộc danh sách `**Files:**`). Task TDD `có` (dòng `**TDD:**` trong brief): thiếu `tdd.red`/`tdd.green` là đầu ra hỏng; task `không` không bị đòi `tdd`. Task `TOOLING` TDD `có` do session chính làm: thiếu red/green trong dòng ledger là hỏng. Ánh xạ trạng thái:
    - `completed` và `remaining_risks` rỗng → qua bước 5.
    - `completed` kèm `remaining_risks` → xong kèm lo ngại: đọc từng lo ngại; liên quan đúng/phạm vi thì xử lý trước khi
      review, không thì chuyển cho reviewer.

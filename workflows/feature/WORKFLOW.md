@@ -139,7 +139,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó). Chuẩn bị ledger
   `docs/requests/<ngày>-<slug>/.sdd/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
   xong). Mỗi task theo thứ tự: ghi BASE → cắt brief → giao agent theo `**Kind:**` (chuỗi agent do
-  `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer` viết test đỏ trước rồi code và báo `tdd`;
+  `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer` (TDD `có` thì viết test đỏ trước rồi code và báo `tdd`);
   `FE-UI` → `frontend-implementer` rồi `frontend-test-writer` viết test trong cùng task; `FE-INT` →
   `frontend-data-integrator` (sau `FE-UI`; type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); `E2E` →
   `frontend-e2e-test-writer` cho AC luồng UI đầu-cuối trong bảng ứng viên e2e (3–5 luồng, mỗi test map 1 AC, chạy
@@ -160,7 +160,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   suite ở từng task; agent không commit, không push, không gọi agent khác.
 - **Đầu ra:** code + test của từng task, mỗi task ≥ 1 commit trên nhánh `feature/`, ledger cập nhật.
 - **Gate:** mọi task có dòng `Task <n>: complete` kèm evidence test (lệnh + exit code); mỗi acceptance criterion ≥ 1 test
-  (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào `remaining_risks`); task `BE` có `tdd.red` và `tdd.green`; không
+  (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào `remaining_risks`); task TDD `có` có `tdd.red` và `tdd.green`; không
   còn finding `blocker` mở mà chưa có `Ruling:`; build/`tsc`/lint của phía có đụng xanh; task `FE-INT`: type khớp contract; mọi file đổi của task nằm trong
   `**Files:**`; so với trạng thái ghi lại
   ở đầu bước test (`git status --porcelain` trước lượt của `frontend-test-writer` hoặc `frontend-e2e-test-writer`), các
@@ -175,7 +175,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   plan hỏng đến mức mọi hướng đều là đoán → hỏi người dùng.
 - **Evidence:** ledger `.sdd/progress.md` (các dòng `Task <n>: complete` và `Ruling:`) + `git log` commit theo task; lệnh
   build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0; task `FE-INT`: bằng chứng type sinh từ contract;
-  lệnh test + exit code + số liệu (`X tests, X passed`); task `BE`: `tdd.red`/`tdd.green`; e2e: lệnh Playwright + kết quả hoặc
+  lệnh test + exit code + số liệu (`X tests, X passed`); task TDD `có`: `tdd.red`/`tdd.green`; e2e: lệnh Playwright + kết quả hoặc
   `not_run` + lý do; report của integrator (endpoint ↔ hook ↔ container) khi fullstack có contract; danh sách file thay
   đổi hoặc mới của lượt test so với trạng thái đầu bước.
 
