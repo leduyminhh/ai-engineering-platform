@@ -1,6 +1,6 @@
 # Spec: install-lifecycle
 
-Cập nhật: 2026-10-23
+Cập nhật: 2026-10-30
 
 ## Mục đích
 
@@ -23,6 +23,7 @@ Cập nhật: 2026-10-23
 - **install-lifecycle/R7** — Khối managed không được ghi cho provider `cursor` và `antigravity` (governance đã inline; `AGENTS.md` của antigravity là symlink vào `build/`, ghi sẽ sửa build output). Nguồn: `cli/lib/install.mjs` (`instructionFiles`, chú thích dòng 107–110).
 - **install-lifecycle/R8** — `antigravity` không nằm trong `PROVIDERS` mặc định: không hiện trong wizard và không được cài khi chọn `all`; chỉ cài khi truyền tường minh `--provider antigravity`. Nguồn: `cli/lib/paths.mjs` (chú thích PENDING).
 - **install-lifecycle/R9** — Workflow chỉ được cài cho `claude` và `codex` (`WORKFLOW_PROVIDERS`); khi chọn workflow, skill mà nó cần được kéo theo qua `expandWorkflowDeps`. Nguồn: `cli/lib/workflows.mjs`, `cli/lib/install.mjs` (`stripUnsupportedWorkflows`) [Unverified: phần mở rộng phụ thuộc chỉ chưa đọc thân hàm `expandWorkflowDeps`].
+- **install-lifecycle/R10** — `aip check` (doctor Claude) chỉ so version với nguồn cho bản ghi `claude plugin list --json` thuộc scope đang kiểm: bản ghi có `projectPath` khác gốc của scope (project khác) bị bỏ; bản ghi scope user và bản ghi của chính gốc đó được giữ. Cảnh báo "đã cài dạng plugin" của install skills-mode dùng cùng bộ lọc. Nguồn: [2026-10-30-part-mode-trial-gaps](../../requests/2026-10-30-part-mode-trial-gaps/design.md) (thêm); test `test/contract/60-versions.contract.mjs`.
 
 ## Lịch sử
 
@@ -37,3 +38,4 @@ Cập nhật: 2026-10-23
 | 2026-10-23 | không có request gốc (backfill từ code) | install-lifecycle/R7 | thêm |
 | 2026-10-23 | không có request gốc (backfill từ code) | install-lifecycle/R8 | thêm |
 | 2026-10-23 | không có request gốc (backfill từ code) | install-lifecycle/R9 | thêm |
+| 2026-10-30 | [2026-10-30-part-mode-trial-gaps](../../requests/2026-10-30-part-mode-trial-gaps/design.md) | install-lifecycle/R10 | thêm |

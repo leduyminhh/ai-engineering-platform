@@ -66,5 +66,13 @@ export default async function run({ ok, ctx }) {
     ok(JSON.stringify(parseClaudePluginJson(JSON.stringify({ installed: JSON.parse(pjson) }), 'mkt')) === '[{"id":"backend","version":"1.7.0"}]',
       'parseClaudePluginJson: dạng {installed: [...]} (--available)');
     ok(parseClaudePluginJson('Installed plugins:\n  ❯ backend@mkt', 'mkt') === null, 'parseClaudePluginJson: output text (CLI cũ) → null để rơi về parser text');
+    // Regression (docs/requests/2026-10-30-part-mode-trial-gaps, AC4.1): bản ghi scope project/local của project khác không thuộc scope đang kiểm
+    const scoped = JSON.stringify([
+      { id: 'core@mkt', version: '1.0.0', scope: 'project', projectPath: path.resolve('/other') },
+      { id: 'core@mkt', version: '2.0.0', scope: 'user' },
+      { id: 'data@mkt', version: '3.0.0', scope: 'local', projectPath: path.resolve('/here') },
+    ]);
+    ok(JSON.stringify(parseClaudePluginJson(scoped, 'mkt', path.resolve('/here'))) === '[{"id":"core","version":"2.0.0"},{"id":"data","version":"3.0.0"}]',
+      'regression: parseClaudePluginJson bỏ bản ghi gắn với project khác, giữ scope user và project đang kiểm');
   }
 }

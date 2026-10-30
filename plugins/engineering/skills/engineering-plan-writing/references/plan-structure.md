@@ -76,7 +76,7 @@ test vào task phù hợp hoặc bỏ dòng.
 
 ## Request chia part
 
-Chỉ khi `design.md` gốc có `## Bảng part`. Bố cục: `parts/<nn>-<part-slug>/plan.md`, mỗi part một plan đủ header (`**Goal:**`, `**Spec:**`, `**Phủ AC:**` theo task, `**Kind:**`, `**Files:**`, `**Interfaces:**`) như plan thường; `plan.md` gốc là phần nền (tuỳ chọn) và chạy trước. Part không có `design.md` riêng chứa AC: AC chỉ khai ở `requirement.md`/`design.md` gốc (W20).
+Chỉ khi `design.md` gốc có `## Bảng part`. Bố cục: `parts/<nn>-<part-slug>/plan.md`, mỗi part một plan đủ header (`**Goal:**`, `**Spec:**`, `**Phủ AC:**` theo task, `**Kind:**`, `**Files:**`, `**Interfaces:**`) như plan thường; `plan.md` gốc là phần nền (tuỳ chọn) và chạy trước. Mục Global Constraints và Review Focus của plan gốc chạm tới part thì chép vào plan part, vì phiên part và reviewer của nó chỉ đọc plan part. Part không có `design.md` riêng chứa AC: AC chỉ khai ở `requirement.md`/`design.md` gốc (W20).
 
 Nhóm song song khai ở cột Song song của Bảng part, không ở `**Song song:**` cấp task (P3). Luật interface giữa part:
 

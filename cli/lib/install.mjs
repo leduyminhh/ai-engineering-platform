@@ -260,14 +260,18 @@ export function parseClaudePluginList(text, marketplaceName) {
   return out;
 }
 
+// CLI liệt kê bản ghi scope project/local của mọi project kèm projectPath; bản ghi của project khác không thuộc root đang kiểm.
+const sameDir = (a, b) => path.relative(path.resolve(a), path.resolve(b)) === '';
+
 /** Output `claude plugin list --json`; null khi không phải JSON để caller rơi về parser text (CLI cũ). */
-export function parseClaudePluginJson(text, marketplaceName) {
+export function parseClaudePluginJson(text, marketplaceName, root) {
   let data;
   try { data = JSON.parse(String(text || '')); } catch { return null; }
   const rows = Array.isArray(data) ? data : (data && Array.isArray(data.installed) ? data.installed : null);
   if (!rows) return null;
   return rows
     .filter((r) => r && typeof r.id === 'string' && r.id.endsWith(`@${marketplaceName}`))
+    .filter((r) => !root || typeof r.projectPath !== 'string' || sameDir(r.projectPath, root))
     .map((r) => ({ id: r.id.slice(0, -(`@${marketplaceName}`.length)), version: r.version || null }));
 }
 
@@ -278,13 +282,13 @@ export function claudePluginOverlap(installedIds, selectedPluginIds) {
 }
 
 /** Cảnh báo (không chặn) khi skills-mode sắp cài skill của plugin đã cài dạng plugin → skill hiện hai lần. */
-function warnClaudePluginDuplicates(effSet) {
+function warnClaudePluginDuplicates(effSet, root) {
   if (process.env.AIE_INSTALL_ROOT) return; // test cô lập: không hỏi claude CLI thật
   let installed = [];
   try {
     const j = runClaudeCli(['plugin', 'list', '--json'], { tolerate: true, timeout: 15000 });
     if (!j.ok) return;
-    installed = (parseClaudePluginJson(j.out, loadMarketplace().name) || []).map((e) => e.id);
+    installed = (parseClaudePluginJson(j.out, loadMarketplace().name, root) || []).map((e) => e.id);
   } catch { return; } // không có CLI → bỏ qua im lặng
   const selected = [...new Set([...effSet].map((sid) => sid.split('/')[0]))];
   const dup = claudePluginOverlap(installed, selected);
@@ -295,12 +299,12 @@ function warnClaudePluginDuplicates(effSet) {
 }
 
 /** Đối chiếu version plugin đã cài trong Claude Code với nguồn; không có CLI → available=false, không ném. */
-function claudeDoctor() {
+function claudeDoctor(root) {
   const mkt = loadMarketplace().name;
   let entries = null;
   try {
     const j = runClaudeCli(['plugin', 'list', '--json'], { tolerate: true, timeout: 15000 });
-    if (j.ok) entries = parseClaudePluginJson(j.out, mkt);
+    if (j.ok) entries = parseClaudePluginJson(j.out, mkt, root);
   } catch { /* rơi về text */ }
   if (!entries) {
     let out;
@@ -773,7 +777,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     if (miss.length) throw new Error(`Workflow cần skill không có trong bản cài nguồn: ${miss.join(', ')}`);
     uninstallEntries(m, root, (e) => e.provider === provider); // gỡ bản cũ cùng (provider,scope) rồi cài lại UNION
     const effSet = effectiveSkills(entry);
-    if (provider === 'claude') warnClaudePluginDuplicates(effSet);
+    if (provider === 'claude') warnClaudePluginDuplicates(effSet, root);
     const { files, links } = installOne(provider, effSet, scope);
     const rel = (arr) => arr.map((f) => path.relative(root, f).split(path.sep).join('/'));
     const relF = rel(files), relL = rel(links);
@@ -876,7 +880,7 @@ export function check({ scope = 'project', doctor = false } = {}) {
     root,
     scope,
     manifest: manifestPath(scope),
-    claude: doctor ? claudeDoctor() : null,
+    claude: doctor ? claudeDoctor(root) : null,
     installs: m.installs.map((e) => {
       if (e.mode === 'plugin') {
         // do `claude` CLI quản lý (cache + settings.json) → không soi file ở scope root.
