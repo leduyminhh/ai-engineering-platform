@@ -184,7 +184,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` (chỉ phía có đụng; reviewer chạy `model: opus`) ∥ agent
   `engineering-quality-auditor` (model mặc định)
-- **Đầu vào:** toàn nhánh `MERGE_BASE..HEAD` (gom bằng `plan-execution` `scripts/review-package.mjs --out`), Review Focus
+- **Đầu vào:** toàn nhánh `MERGE_BASE..HEAD` (gom bằng `plan-execution` `scripts/review-package.mjs <MERGE_BASE> <HEAD> --plan <plan.md>`), Review Focus
   của `plan.md`, các dòng `Ruling:` và `minor (deferred)` trong ledger, contract (nếu có)
 - **Hành động:** theo mẫu `final-review.md` của `plan-execution`: reviewer tìm lỗi mà review từng task không
   thấy (tích hợp giữa các task, interface lệch tên/kiểu, hồi quy, phần plan hứa mà không ai làm, từng mục Review Focus

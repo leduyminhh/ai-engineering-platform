@@ -8,7 +8,7 @@ Review Task <n> của plan <đường dẫn plan.md>, chế độ task-review. B
 
 Đầu vào:
 - Brief của task: <đường dẫn task-<n>-brief.md> (nguồn sự thật về yêu cầu và danh sách file).
-- Review package (commit list + stat + diff): <đường dẫn task-<n>-review.md>, khoảng <BASE>..<head>.
+- Review package (commit list + stat + diff): <đường dẫn package do review-package.mjs in ra>, khoảng <BASE>..<head>.
 - Báo cáo của implementer: <đường dẫn hoặc đoạn agent_result> — dùng để biết ý định, KHÔNG tin; đối chiếu với diff.
 
 Cách làm:

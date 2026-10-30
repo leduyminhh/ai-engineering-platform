@@ -49,8 +49,9 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 2. Nếu worktree có `.aip/runs/` (ledger, brief, review package, ghi khi `<gốc repo chính>/.aip/` không ghi được), chép về
    `<gốc repo chính>/.aip/runs/` trước khi xoá, không ghi đè file đã có ở đích; chỉ chép, không xoá nguồn:
    ```bash
-   cp -rn .claude/worktrees/<slug>-t<n>/.aip/runs/. <gốc repo chính>/.aip/runs/
+   node -e "require('fs').cpSync(process.argv[1], process.argv[2], { recursive: true, force: false })" "<worktree>/.aip/runs" "<gốc repo chính>/.aip/runs"
    ```
+   File trùng tên ở đích không bị ghi đè; khi đó so sánh rồi gộp bằng tay trước khi xoá worktree.
 3. Dọn bằng lệnh của git, theo thứ tự:
    ```bash
    git worktree remove .claude/worktrees/<slug>-t<n>
