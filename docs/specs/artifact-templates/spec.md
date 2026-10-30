@@ -1,6 +1,6 @@
 # Spec: artifact-templates
 
-Cập nhật: 2026-10-26
+Cập nhật: 2026-10-30
 
 ## Mục đích
 
@@ -22,6 +22,7 @@ Một nguồn template duy nhất cho các loại artifact của bộ, cùng val
 - **artifact-templates/R7** — `design.md` của request đặt tên `<yyyy-mm-dd>-<slug>` từ `2026-10-21` trở đi phải có mục `## Ảnh hưởng spec` (dòng `- <năng-lực>: thêm|đổi|bỏ R<n>` hoặc `Không ảnh hưởng: <lý do>`), thiếu thì W10; thư mục cũ hoặc không đặt tên theo ngày được miễn. `check-request.mjs` cũng báo W11 (năng lực không có `docs/specs/<tên>/spec.md`), W12 (`đổi`/`bỏ` ID không tồn tại, hoặc `bỏ` mà chưa gạch ngang kèm "đã bỏ bởi"), W13 (chỉ khi có `--base <ref>`: spec không đổi so với `<ref>`), W14 (ID sai định dạng hoặc trùng, tên năng lực lệch thư mục, link request trong Lịch sử không tồn tại). Nguồn: [2026-10-21-living-spec](../../requests/2026-10-21-living-spec/design.md) (thêm)
 - **artifact-templates/R8** — `check-partition.mjs` đọc các nhóm `**Song song:**` của `plan.md` và chỉ cảnh báo (exit 0): P1 khi hai task cùng nhóm có `**Files:**` giao nhau, P2 khi task song song ghi file dùng chung bị cấm (`plugins/_versions.lock.json`, `*/.manifest.json`, `docs/specs/**`, `README*.md`); không có `**Song song:**` hoặc thiếu `**Files:**` thì không cảnh báo. Nguồn: [2026-10-22-parallel-agents](../../requests/2026-10-22-parallel-agents/design.md) (thêm)
 - **artifact-templates/R9** — Mỗi task trong `plan.md` có dòng `**Kind:**` thuộc tập 8 giá trị `BE`, `FE-UI`, `FE-INT`, `E2E`, `DB`, `CT`, `DOCS`, `TOOLING` (`TASK_KINDS` trong `check-request.mjs`); `kind` quyết định chuỗi agent của vòng task. `check-request.mjs` báo W17 khi task thiếu dòng `**Kind:**` và W18 khi giá trị ngoài tập; hai cảnh báo này chỉ cảnh báo (exit 0) như các W khác. Nguồn: [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) (thêm)
+- **artifact-templates/R11** — Task trong `plan.md` có thể ghi dòng `**TDD:**` với hai dạng: `có` hoặc `không — <lý do>`; thiếu dòng thì mặc định theo kind (`BE` = có, kind khác = không). `có` chỉ hợp lệ với kind `BE` và `TOOLING` (`TDD_ALLOWED_KINDS` trong `check-request.mjs`). `check-request.mjs` báo W21 khi giá trị lạ, khi `không` thiếu lý do, hoặc khi `có` ở kind ngoài tập đó; chỉ cảnh báo (exit 0) như các W khác, và plan không có dòng `**TDD:**` thì không có W21. Nguồn: [2026-10-30-request-parts-aip-workspace](../../requests/2026-10-30-request-parts-aip-workspace/design.md) (thêm)
 
 ## Lịch sử
 
@@ -37,3 +38,4 @@ Một nguồn template duy nhất cho các loại artifact của bộ, cùng val
 | 2026-10-23 | [2026-10-22-parallel-agents](../../requests/2026-10-22-parallel-agents/design.md) | artifact-templates/R8 | thêm |
 | 2026-10-26 | [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) | artifact-templates/R4 | đổi |
 | 2026-10-26 | [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) | artifact-templates/R9 | thêm |
+| 2026-10-30 | [2026-10-30-request-parts-aip-workspace](../../requests/2026-10-30-request-parts-aip-workspace/design.md) | artifact-templates/R11 | thêm |
