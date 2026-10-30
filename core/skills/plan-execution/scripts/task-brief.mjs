@@ -52,11 +52,17 @@ export function effectiveTdd(taskText) {
   return { value: TDD_KINDS.includes(kind) ? 'có' : 'không', defaulted: true };
 }
 
-// Chỉ chèn khi plan hoàn toàn không có dòng TDD; dòng đã ghi (kể cả sai) giữ nguyên để W21 còn bắt được.
+// Brief luôn có đúng một dòng TDD hiệu lực: dòng hợp lệ giữ tại chỗ; thiếu hoặc sai thì bỏ dòng sai và chèn mặc định
+// ngay sau heading, để implementer không đọc phải dòng mâu thuẫn (W21 vẫn báo lỗi ở plan.md).
 function withTddLine(taskText) {
-  if (taskField(taskText, 'TDD') !== undefined) return taskText;
-  const [heading, ...rest] = taskText.split('\n');
-  return [heading, `**TDD:** ${effectiveTdd(taskText).value} (mặc định theo kind)`, ...rest].join('\n');
+  const eff = effectiveTdd(taskText);
+  if (!eff.defaulted) return taskText;
+  let fenced = false;
+  const [heading, ...rest] = taskText.split('\n').filter((l) => {
+    if (/^\s*(```|~~~)/.test(l)) fenced = !fenced;
+    return fenced || !l.startsWith('**TDD:**');
+  });
+  return [heading, `**TDD:** ${eff.value} (mặc định theo kind)`, ...rest].join('\n');
 }
 
 export function main(argv) {

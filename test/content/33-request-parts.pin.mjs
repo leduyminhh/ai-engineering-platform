@@ -15,6 +15,9 @@ export default async function run({ ok, ctx }) {
         '### Task 2: ui', '**Kind:** FE-UI', '**Phủ AC:** AC1.1', '',
         '### Task 3: ngoại lệ', '**Kind:** BE', '**TDD:** không — script dùng một lần', '**Phủ AC:** AC1.1', '',
         '### Task 4: tooling có', '**Kind:** TOOLING', '**TDD:** có', '**Phủ AC:** AC1.1', '',
+        '### Task 5: ui sai', '**Kind:** FE-UI', '**TDD:** có', '**Phủ AC:** AC1.1', '',
+        '### Task 6: be sai', '**Kind:** BE', '**TDD:** sau', '**Phủ AC:** AC1.1', '',
+        '### Task 7: be rỗng', '**Kind:** BE', '**TDD:**', '**Phủ AC:** AC1.1', '',
       ].join('\n');
       const planFile = path.join(dir, 'plan.md');
       fs.writeFileSync(planFile, plan);
@@ -34,16 +37,28 @@ export default async function run({ ok, ctx }) {
       const b2 = brief(2);
       ok(b2.split('\n')[1] === '**TDD:** không (mặc định theo kind)' && count(b2) === 1, 'AC5.2: task FE-UI không ghi TDD → "không (mặc định theo kind)"');
 
-      const b3 = brief(3);
-      ok(b3 === tb.extractTask(plan, 3) && count(b3) === 1, 'AC5.2: task có TDD ghi sẵn → giữ nguyên văn, không chèn thêm');
-      const b4 = brief(4);
-      ok(b4 === tb.extractTask(plan, 4), 'AC5.2: task TOOLING có TDD "có" ghi sẵn → giữ nguyên văn');
+      for (const n of [3, 4]) {
+        const b = brief(n);
+        ok(b === tb.extractTask(plan, n) && count(b) === 1, `AC5.2: task ${n} có TDD hợp lệ ghi sẵn → giữ nguyên văn, không chèn thêm`);
+      }
+
+      // Dòng TDD sai: bỏ dòng sai, thay bằng đúng một dòng mặc định ngay sau heading, phần còn lại giữ nguyên
+      for (const [n, line, value] of [[5, '**TDD:** có', 'không'], [6, '**TDD:** sau', 'có'], [7, '**TDD:**', 'có']]) {
+        const b = brief(n);
+        const orig = tb.extractTask(plan, n);
+        const eff = tb.effectiveTdd(orig);
+        ok(count(b) === 1 && b.split('\n')[1] === `**TDD:** ${eff.value} (mặc định theo kind)` && eff.value === value && eff.defaulted,
+          `AC5.2: task ${n} dòng TDD sai (${JSON.stringify(line)}) → đúng một dòng TDD hiệu lực "${value} (mặc định theo kind)" sau heading`);
+        ok(b.split('\n').filter((l) => !l.startsWith('**TDD:**')).join('\n') === orig.split('\n').filter((l) => !l.startsWith('**TDD:**')).join('\n'),
+          `AC5.2: task ${n} dòng TDD sai → các dòng khác giữ nguyên văn`);
+      }
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
 
     // Bộ vector dùng chung: parseTddLine (check-request) và effectiveTdd (task-brief) phải cùng kết luận
-    const vectors = ['có', 'không — script dùng một lần', 'không', 'không —', 'không —   ', 'sau', '', 'Có', 'không - x'];
+    const vectors = ['có', 'không — script dùng một lần', 'không', 'không —', 'không —   ', 'sau', '', 'Có', 'không - x',
+      'không—x', 'không —\tx', 'có — x', 'Không — x'];
     const task = (kind, line) => `### Task 1: x\n**Kind:** ${kind}\n**TDD:** ${line}\n`;
     for (const line of vectors) {
       const p = cr.parseTddLine(line);
