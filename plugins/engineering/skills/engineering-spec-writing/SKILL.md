@@ -85,6 +85,9 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    - **Việc rõ và nhỏ** → không chạy workflow (đã xử lý ở bước 2).
    - **Thay đổi nhỏ** → chỉ `requirement.md` (AC nằm ở đây) + checkpoint trong chat; không có `design.md`, không có `plan.md`.
    - **Dự án** → `requirement.md` + `design.md` + `plan.md`, mỗi file một gate người duyệt.
+   - **Dự án lớn, nhiều chức năng độc lập** (mỗi chức năng đủ lớn để có plan riêng) → vẫn một thư mục request; chia part ở
+     `parts/<nn>-<part-slug>/` và thêm mục `## Bảng part` vào `design.md` gốc (template `design.template.md`). AC chỉ khai ở gốc.
+     Không tách thành nhiều thư mục request; request không chia part thì bỏ mục này.
 
    AC chỉ nằm một nơi: `requirement.md` khi có; `design.md` chỉ chứa AC nếu không có `requirement.md`.
 

@@ -44,7 +44,9 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
    checkpoint duyệt. Không có `tasks.md` → plan tự chia task, không bắt buộc tạo `tasks.md`.
 6. **Tự soát.** Chạy 5 mục trong [references/self-review.md](references/self-review.md), sửa tại chỗ, rồi chạy
    `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Còn cảnh báo ngoài W9 → sửa `plan.md`; không xoá `**Files:**`/test để
-   tắt cảnh báo.
+   tắt cảnh báo. Request chia part (có `## Bảng part`): mỗi part một `parts/<nn>-<part-slug>/plan.md`
+   ([references/plan-structure.md](references/plan-structure.md) mục "Request chia part"), chạy thêm
+   `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` sau `check-request.mjs`.
 7. **Checkpoint plan ⏸.** Trình plan + kết quả tự soát cho người duyệt. Câu hỏi còn lại gom vào một tin nhắn.
 
 ## Quan hệ với tasks.md
@@ -65,5 +67,5 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
 ## Bản đồ tài liệu
 
 - [references/plan-structure.md](references/plan-structure.md): bản đồ file, độ mịn task/step, `kind` → chuỗi agent,
-  Interfaces, Global Constraints, Review Focus.
+  Interfaces, Global Constraints, Review Focus, request chia part.
 - [references/self-review.md](references/self-review.md): tự soát 5 mục, rồi `check-request.mjs`.

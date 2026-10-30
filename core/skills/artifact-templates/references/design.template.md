@@ -18,6 +18,11 @@ Bỏ khối này khi chép template ra dùng.
 <chỉ khi không có requirement.md; cùng định dạng AC như requirement.md>
 ## Thiết kế
 <...>
+## Bảng part
+<tuỳ chọn, bỏ mục này nếu request không chia part; mỗi part có parts/<nn>-<part-slug>/plan.md; Phụ thuộc = danh sách part hoặc —; Song song = nhãn nhóm hoặc —; Trạng thái ∈ chưa làm | đang làm | merged <hash> | bỏ>
+| Part | Phụ thuộc | Song song | Trạng thái |
+|---|---|---|---|
+| 01-<part-slug> | — | — | chưa làm |
 ## Ảnh hưởng spec
 <chọn một trong hai dạng, bỏ dạng không dùng; hành động ∈ thêm|đổi|bỏ>
 - <năng-lực>: thêm R<n>, đổi R<m>, bỏ R<k>

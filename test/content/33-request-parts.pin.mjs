@@ -323,4 +323,38 @@ export default async function run({ ok, ctx }) {
     ok(tpl.includes('.aip/runs/<request>/<part>/progress.md') && !tpl.includes('.sdd'), 'AC7.1: bảng Memory của AGENTS.template.md ghi ledger ở .aip/runs/<request>/<part>/progress.md, không còn .sdd');
     ok(rd('AGENTS.md') === tpl, 'AC7.1: AGENTS.md giống hệt AGENTS.template.md');
   }
+
+  // AC1.3, AC2.4: hướng dẫn viết part — template design có mục tuỳ chọn Bảng part, plan-structure nêu luật interface giữa part
+  {
+    const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
+    const flat = (t) => t.replace(/\s+/g, ' ');
+    const cr = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
+
+    const tpl = rd('core', 'skills', 'artifact-templates', 'references', 'design.template.md');
+    const lines = tpl.split('\n');
+    const at = lines.findIndex((l) => /^## Bảng part\s*$/.test(l));
+    ok(tpl.startsWith('<!-- artifact-template') && lines.filter((l) => /^## Bảng part\s*$/.test(l)).length === 1,
+      'AC1.3: design.template.md giữ khối artifact-template và có đúng một heading "## Bảng part" (không đánh số)');
+    ok(lines.slice(at + 1).find((l) => l.startsWith('|')) === '| Part | Phụ thuộc | Song song | Trạng thái |',
+      'AC1.3: Bảng part trong template có đúng 4 cột Part | Phụ thuộc | Song song | Trạng thái');
+    const table = cr.parsePartTable(tpl.replace(/<part-slug>/g, 'a'));
+    ok(table && table.rows.length === 1 && cr.PART_RE.test(table.rows[0].part) && cr.PART_STATUSES.includes(table.rows[0].status),
+      'AC1.3: parsePartTable đọc được đúng một dòng ví dụ hợp lệ trong template');
+    ok(tpl.includes('bỏ mục này nếu request không chia part'), 'AC1.3: template ghi chú "bỏ mục này nếu request không chia part"');
+
+    const ps = flat(rd('plugins', 'engineering', 'skills', 'engineering-plan-writing', 'references', 'plan-structure.md'));
+    ok(ps.includes('parts/<nn>-<part-slug>/plan.md'), 'AC2.4: plan-structure nêu bố cục parts/<nn>-<part-slug>/plan.md');
+    ok(ps.includes('chỉ tạo ở `plan.md` gốc hoặc ở part mà part kia khai trong cột Phụ thuộc'),
+      'AC2.4: plan-structure nêu interface giữa part chỉ tạo ở plan gốc hoặc part được khai Phụ thuộc');
+    ok(ps.includes('part cùng nhóm Song song không `Consumes` thứ mà part cùng nhóm `Produces`') && ps.includes('P4'),
+      'AC2.4: plan-structure nêu part cùng nhóm không Consumes thứ part cùng nhóm Produces (P4)');
+    ok(flat(rd('plugins', 'engineering', 'skills', 'engineering-plan-writing', 'SKILL.md')).includes('check-partition.mjs'),
+      'AC2.4: engineering-plan-writing nêu chạy check-partition.mjs sau check-request.mjs');
+
+    const atSkill = flat(rd('core', 'skills', 'artifact-templates', 'SKILL.md'));
+    ok(['W19', 'W20', 'W21', 'P3', 'P4'].every((c) => atSkill.includes(c)) && !/task cùng nhóm \*\*Song song:\*\*/.test(atSkill),
+      'AC2.4: artifact-templates SKILL mô tả W19–W21, P3, P4 và P1/P2 cấp part, không còn "task cùng nhóm **Song song:**"');
+    ok(rd('plugins', 'engineering', 'skills', 'engineering-spec-writing', 'SKILL.md').includes('## Bảng part'),
+      'AC1.3: engineering-spec-writing nêu khi nào chia part và mục ## Bảng part');
+  }
 }

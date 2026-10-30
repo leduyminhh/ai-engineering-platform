@@ -71,6 +71,16 @@ Liệt kê tối đa 5 input hoặc failure mode mà design ngụ ý nhưng test
 trùng lặp, quyền truy cập, giá trị biên). Mỗi dòng nêu **test nào ở task nào** sẽ phủ nó; dòng không có test chủ → thêm
 test vào task phù hợp hoặc bỏ dòng.
 
+## Request chia part
+
+Chỉ khi `design.md` gốc có `## Bảng part`. Bố cục: `parts/<nn>-<part-slug>/plan.md`, mỗi part một plan đủ header (`**Goal:**`, `**Spec:**`, `**Phủ AC:**` theo task, `**Kind:**`, `**Files:**`, `**Interfaces:**`) như plan thường; `plan.md` gốc là phần nền (tuỳ chọn) và chạy trước. Part không có `design.md` riêng chứa AC: AC chỉ khai ở `requirement.md`/`design.md` gốc (W20).
+
+Nhóm song song khai ở cột Song song của Bảng part, không ở `**Song song:**` cấp task (P3). Luật interface giữa part:
+
+- Interface dùng chung giữa part chỉ tạo ở `plan.md` gốc hoặc ở part mà part kia khai trong cột Phụ thuộc.
+- Trong một nhóm, part cùng nhóm Song song không `Consumes` thứ mà part cùng nhóm `Produces` (P4, so tên trong backtick); part dùng interface của part khác phải khai Phụ thuộc và chạy sau.
+- Tập file của part = hợp `**Files:**` mọi task của part; part cùng nhóm không ghi trùng file hay file chung (P1/P2).
+
 ## Có tasks.md
 
 Task trong `plan.md` trỏ ID task của `tasks.md` (vd `Task 3` ghi `Nguồn: UC01-BE-02`) thay vì tự chia lại; hai file dùng một
