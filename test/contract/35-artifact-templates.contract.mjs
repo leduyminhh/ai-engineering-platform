@@ -472,4 +472,97 @@ export default async function run({ ok, ctx }) {
     }
     ok(JSON.stringify(cr.TDD_ALLOWED_KINDS) === JSON.stringify(['BE', 'TOOLING']), 'AC5.1: TDD_ALLOWED_KINDS = BE, TOOLING');
   }
+
+  // 9. check-request.mjs: thư mục parts/ (W19, W20, W6/W7/W16 trên hợp plan), một hành vi nhiều đầu vào.
+  {
+    const cr = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
+    const of = (ws, code) => ws.filter((w) => w.code === code);
+    const design = (status, tail = []) => ['# T', ...(status ? [`- Trạng thái: ${status}`] : []), '## 3. Tiêu chí chấp nhận',
+      '- [ ] **AC1.1** — Given a When b Then c', '', ...tail, ''].join('\n');
+    const table = (...rows) => ['## Bảng part', '| Part | Phụ thuộc | Song song | Trạng thái |', '|---|---|---|---|', ...rows].join('\n');
+    const partPlan = (head = ['**Goal:** x', '**Spec:** ../../design.md'], kind = ['**Kind:** BE']) => ['# Plan part', ...head, '**Phủ AC:** AC1.1',
+      '### Task 1: t', ...kind, '**Files:**', '- Test: `test/p.mjs`', ''].join('\n');
+    const reader = (m) => (p) => (Object.hasOwn(m, p) ? m[p] : null);
+
+    const t1 = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan(undefined, []) }, { readTest: reader({ 'test/p.mjs': 'AC1.1' }) });
+    ok(of(t1, 'W17').length === 1 && of(t1, 'W17')[0].file === 'parts/01-a/plan.md' && of(t1, 'W17')[0].line === 5,
+      'AC1.1: task thiếu Kind trong parts/01-a/plan.md → W17 nêu đúng file part');
+    const t1b = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan(['**Spec:** x'], ['**Kind:** ZZ']) });
+    ok(of(t1b, 'W5').length === 1 && of(t1b, 'W5')[0].file === 'parts/01-a/plan.md' && of(t1b, 'W18')[0]?.file === 'parts/01-a/plan.md',
+      'AC1.1: W5 và W18 cũng nêu file part');
+
+    const t2 = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan() }, { readTest: reader({ 'test/p.mjs': 'AC1.1' }) });
+    ok(of(t2, 'W6').length === 0 && of(t2, 'W7').length === 0, 'AC1.2: AC chỉ phủ và chỉ được test của part nhắc tới → không W6/W7');
+    const t2b = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan() }, { readTest: reader({ 'test/p.mjs': 'x' }) });
+    ok(of(t2b, 'W7').length === 1, 'AC1.2: test của part không nhắc AC → vẫn W7');
+    const t2c = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan() }, { readTest: reader({}) });
+    ok(of(t2c, 'W9').length === 1 && of(t2c, 'W9')[0].file === 'parts/01-a/plan.md' && of(t2c, 'W7').length === 0,
+      'AC1.2: file test của part chưa có → W9 nêu file part, không W7');
+
+    const four = table('| 01-a | — | — | xong |', '| 02-b | 09-z | — | chưa làm |', '| 03-c | — | — | chưa làm |');
+    const fourTexts = { 'design.md': design(null, [four]), 'parts/01-a/plan.md': partPlan(), 'parts/02-b/plan.md': partPlan(), 'parts/04-d/plan.md': partPlan() };
+    ok(of(cr.checkRequest(fourTexts), 'W19').length === 4,
+      'AC1.3: Trạng thái lạ, Phụ thuộc trỏ part không có, part thiếu plan, thư mục ngoài bảng → đúng bốn W19');
+    const good = table('| 01-a | — | A | merged abc1234 |', '| 02-b | 01-a | A | đang làm |', '| 03-c | 01-a, 02-b | — | bỏ |', '| 04-d | — | — | chưa làm |');
+    const goodTexts = { 'design.md': design(null, [good]) };
+    for (const p of ['01-a', '02-b', '03-c', '04-d']) goodTexts[`parts/${p}/plan.md`] = partPlan();
+    ok(of(cr.checkRequest(goodTexts), 'W19').length === 0, 'AC1.3: Bảng part khớp thư mục và giá trị → sạch');
+    ok(of(cr.checkRequest({ 'design.md': design(null, [table('| 1-a | — | — | chưa làm |')]), 'parts/1-a/plan.md': partPlan() }), 'W19').length === 1,
+      'AC1.3: tên part không khớp <nn>-<slug> → W19');
+    ok(of(cr.checkRequest({ 'design.md': design(null, [table('| 01-a | — | — | chưa làm |')]), 'parts/01-a/plan.md': partPlan() }, { partDirs: ['01-a', '02-empty'] }), 'W19').length === 1,
+      'AC1.3: thư mục part rỗng (không có file nào) ngoài bảng → W19');
+
+    const w20 = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/design.md': '# P\n- **AC1.1** — x\n' });
+    ok(of(w20, 'W20').length === 1 && of(w20, 'W20')[0].file === 'parts/01-a/design.md' && of(w20, 'W20')[0].line === 2,
+      'AC1.4: parts/01-a/design.md chứa AC<n>.<m> → W20 nêu file đó');
+    ok(of(cr.checkRequest({ 'design.md': design(null), 'parts/01-a/design.md': '# P\nKhông có tiêu chí.\n' }), 'W20').length === 0,
+      'AC1.4: design của part không nhắc AC → sạch');
+
+    // Snapshot ghi từ bản trước khi thêm hỗ trợ parts/: request không part phải ra y hệt, kể cả thông báo W16 của plan.md gốc.
+    const snapDesign = ['# T', '- Trạng thái: merged — master `abc1234`', '## 3. Tiêu chí chấp nhận',
+      '- [ ] **AC1.1** — Given a When b Then c', '- [ ] **AC1.2** — Given a When b Then c', '- [ ] **AC1.3** — Given a When b Then c', ''].join('\n');
+    const snapPlan = ['# Plan', '**Spec:** design.md', '**Phủ AC:** AC1.1, AC1.2', '### Task 1: a', '**Files:**', '- Modify: `src/a.mjs`', '### Task 2: b',
+      '**Kind:** XX', '**TDD:** sau', '**Files:**', '- Test: `test/x.mjs`', ''].join('\n');
+    const snap = cr.checkRequest({ 'design.md': snapDesign, 'plan.md': snapPlan, 'tasks.md': '| T | AC1.3 |\n' }, { readTest: reader({ 'test/x.mjs': 'AC1.1' }) });
+    const SNAPSHOT = '[{"file":"plan.md","line":1,"code":"W5","msg":"plan.md thiếu dòng **Goal:**"},{"file":"plan.md","line":4,"code":"W17","msg":"Task thiếu dòng **Kind:**"},{"file":"plan.md","line":7,"code":"W18","msg":"Kind \\"XX\\" không hợp lệ, cần một trong: BE | FE-UI | FE-INT | E2E | DB | CT | DOCS | TOOLING"},{"file":"plan.md","line":9,"code":"W21","msg":"TDD \\"sau\\" không hợp lệ, cần \\"có\\" hoặc \\"không — <lý do>\\""},{"file":"design.md","line":5,"code":"W7","msg":"AC1.2 chưa có test nào nhắc tới"},{"file":"design.md","line":6,"code":"W7","msg":"AC1.3 chưa có test nào nhắc tới"},{"file":"plan.md","line":1,"code":"W16","msg":"Request đã merged: xoá plan.md (checklist thực thi, không còn giá trị)"}]';
+    ok(JSON.stringify(snap) === SNAPSHOT, 'AC1.5: request mẫu không part, output bằng snapshot trước thay đổi');
+    ok(!snap.some((w) => ['W19', 'W20'].includes(w.code)), 'AC1.5: request không part → không W19, W20');
+
+    const w16 = cr.checkRequest({ 'design.md': design('merged — master `abc1234`'), 'plan.md': partPlan(), 'parts/01-a/plan.md': partPlan() });
+    ok(of(w16, 'W16').map((w) => w.file).join() === 'plan.md,parts/01-a/plan.md' && of(w16, 'W16')[1].msg.includes('parts/01-a/plan.md'),
+      'AC1.6: design merged còn plan part → W16 nêu parts/01-a/plan.md');
+
+    const pt = cr.parsePartTable?.(design(null, [['intro', table('| 01-a | — | — | chưa làm |', '| `02-b` | 01-a, 03-c | A | merged abc1234 |')].join('\n')]));
+    ok(JSON.stringify(pt) === JSON.stringify({ line: 6, rows: [
+      { part: '01-a', deps: [], group: null, status: 'chưa làm', line: 9 },
+      { part: '02-b', deps: ['01-a', '03-c'], group: 'A', status: 'merged abc1234', line: 10 },
+    ] }), 'AC1.3: parsePartTable đọc part, deps (— → []), group (— → null), trạng thái và số dòng');
+    ok(cr.parsePartTable?.(design(null)) === null, 'AC1.3: parsePartTable không có ## Bảng part → null');
+
+    // Đường CLI: main phải đọc parts/*/ và truyền cả thư mục rỗng; vị trí request dưới docs/requests/ ngày mới để W10 không lẫn vào.
+    const tmp = fs.mkdtempSync(path.join(ctx.os.tmpdir(), 'check-request-parts-'));
+    try {
+      const put = (rel, data) => {
+        const p = path.join(tmp, rel);
+        fs.mkdirSync(path.dirname(p), { recursive: true });
+        fs.writeFileSync(p, data);
+      };
+      fs.mkdirSync(path.join(tmp, '.git'));
+      const dir = path.join(tmp, 'docs', 'requests', 'r');
+      put('docs/requests/r/design.md', design(null, [table('| 01-a | — | — | chưa làm |')]));
+      put('docs/requests/r/parts/01-a/plan.md', partPlan(undefined, []));
+      put('docs/requests/r/parts/01-a/design.md', 'AC1.1\n');
+      fs.mkdirSync(path.join(tmp, 'docs', 'requests', 'r', 'parts', '02-empty'));
+      put('test/p.mjs', 'AC1.1');
+      const out = [];
+      const log = console.log;
+      console.log = (...a) => out.push(a.join(' '));
+      try { cr.main([dir]); } finally { console.log = log; }
+      ok(out.some((l) => l.includes('parts/01-a/plan.md:5 [W17]')) && out.some((l) => l.includes('parts/01-a/design.md:1 [W20]'))
+        && out.filter((l) => l.includes('[W19]')).length === 1 && out.some((l) => l.includes('02-empty')),
+        'AC1.1: main đọc parts/*/plan.md, design.md và thư mục part rỗng (W17, W20, W19)');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
 }
