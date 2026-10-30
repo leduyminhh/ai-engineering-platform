@@ -125,7 +125,20 @@ function ownPart(cwd, d) {
   const g = gitInfo(cwd, d);
   if (!g?.top || !g.main || path.resolve(g.top) === path.resolve(g.main)) return null;
   const m = path.basename(g.top).match(/^(.+)-p(\d+)$/);
-  return m && { slug: m[1], nn: m[2] };
+  return m && { slug: m[1], nn: m[2], top: g.top };
+}
+
+const sameSlug = (req, slug) => String(req).replace(/^\d{4}-\d{2}-\d{2}-/, '') === slug;
+
+// Có `docs/requests/<ngày>-<slug>/parts/<nn>-*` trong worktree thì chắc là phiên part, kể cả khi ledger.mjs chưa tạo ledger nào.
+function hasPartPlan(own, d) {
+  const reqDir = path.join(own.top, 'docs', 'requests');
+  try {
+    return d.readdirSync(reqDir).some((r) => {
+      if (!sameSlug(r, own.slug)) return false;
+      try { return d.readdirSync(path.join(reqDir, String(r), 'parts')).some((p) => String(p).startsWith(`${own.nn}-`)); } catch { return false; }
+    });
+  } catch { return false; }
 }
 
 // Ledger chưa xong có mtime mới nhất; file hỏng, đã `Plan: complete` hoặc cũ hơn handoffMaxAgeHours (plan bỏ dở) bị bỏ qua.
@@ -146,7 +159,7 @@ function ledgerSection(cwd, cfg, d) {
   const runs = aipRuns(cwd, d);
   const own = ownPart(cwd, d);
   for (const { req, dir, root } of runs) {
-    const ownReq = own && req.replace(/^\d{4}-\d{2}-\d{2}-/, '') === own.slug;
+    const ownReq = own && sameSlug(req, own.slug);
     try { for (const part of d.readdirSync(dir)) consider(path.join(dir, String(part), 'progress.md'), root, ownReq && String(part).startsWith(`${own.nn}-`)); } catch { /* request không đọc được: bỏ qua */ }
   }
   // Request đã chuyển sang .aip thì .sdd cũ của nó là bản chép lỗi thời, kể cả khi mới hơn; không nạp lại.
@@ -155,8 +168,8 @@ function ledgerSection(cwd, cfg, d) {
   let legacy = [];
   try { legacy = d.readdirSync(reqDir); } catch { /* không có docs/requests */ }
   for (const name of legacy) if (!migrated.has(String(name))) consider(path.join(reqDir, String(name), '.sdd', 'progress.md'), cwd);
-  // Ledger part anh em hay root mới hơn không thuộc việc của phiên part; không thấy ledger của chính part thì giữ cách chọn cũ.
-  const pool = sawMine ? cands.filter((c) => c.mine) : cands;
+  // Ledger part anh em, root hay request khác không thuộc việc của phiên part; worktree tên `-p<nn>` không có plan part thì giữ cách chọn cũ.
+  const pool = sawMine || (own && hasPartPlan(own, d)) ? cands.filter((c) => c.mine) : cands;
   for (const { p } of pool.sort((a, b) => b.t - a.t)) {
     try {
       const text = String(d.readFile(p)).replace(/^\uFEFF/, '');
