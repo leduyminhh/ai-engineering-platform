@@ -3,7 +3,7 @@
 import { readFileSync, existsSync, statSync, readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readGateConfig } from './gate-config.mjs';
+import { readGateConfig, resolveGate } from './gate-config.mjs';
 
 // Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Bootstrap, ledger và handoff chia chung ngân sách này.
 const MAX_TOTAL = 9000;
@@ -11,7 +11,8 @@ const MAX_TOTAL = 9000;
 const MIN_CHARS = 80;
 // Trần của riêng phần ledger; handoff nhường phần còn lại của MAX_TOTAL.
 const LEDGER_MAX_CHARS = 2000;
-const LEDGER_DONE_RE = /^Plan: complete\s*$/m;
+// `Part: complete <hash>` đóng ledger của một part, `Plan: complete` đóng ledger root; dòng `Part <nn>: merged` ở root không phải dấu hiệu xong.
+const LEDGER_DONE_RE = /^(?:Plan: complete\s*$|Part: complete\b)/m;
 const DEFAULT_MAX_AGE_HOURS = 24;
 const HOUR_MS = 3600000;
 
@@ -26,6 +27,34 @@ function within(root, p) {
   return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
+// Workspace `.aip` nằm ở gốc repo chính, nhưng skill có thể lùi về gốc worktree khi không ghi được; cả hai đều là ứng viên.
+// Git lỗi hoặc không phải repo thì chỉ còn cwd: hook phải mở được phiên, không được chặn vì không dò được gốc.
+// Chép quy ước đường dẫn của workspace.mjs thay vì import để hook và skill cài độc lập.
+function aipRoots(cwd, d) {
+  if (d.aipRoots) return d.aipRoots;
+  let g = null;
+  try { g = d.gitRoots(cwd); } catch { /* git lỗi: chỉ dùng cwd */ }
+  const found = [g?.main, g?.top].filter(Boolean).map((r) => path.resolve(r));
+  return (d.aipRoots = [...new Set(found.length ? found : [cwd])]);
+}
+
+// Liệt kê `.aip/runs/<request>/...` ở mọi gốc; mục không đọc được thì bỏ qua.
+function aipRuns(cwd, d) {
+  const out = [];
+  for (const root of aipRoots(cwd, d)) {
+    const runs = path.join(root, '.aip', 'runs');
+    try {
+      for (const req of d.readdirSync(runs)) out.push({ req: String(req), dir: path.join(runs, String(req)) });
+    } catch { /* gốc này chưa có .aip */ }
+  }
+  return out;
+}
+
+// File `.aip` ở gốc repo chính nằm ngoài cwd của worktree; đường tương đối `../../..` khó đọc nên in đường dẫn tuyệt đối.
+function show(cwd, p) {
+  return (within(cwd, p) ? path.relative(cwd, p) : p).split(path.sep).join('/');
+}
+
 function findHandoff(cwd, cfg, d) {
   const exists = (p) => { try { return d.existsSync(p); } catch { return false; } };
   const real = (p) => { try { return d.realpath(p); } catch { return p; } };
@@ -36,17 +65,19 @@ function findHandoff(cwd, cfg, d) {
     // shortcut: so với cwd của phiên, không phải gốc git; phiên mở ở thư mục con thì handoffPath trỏ lên trên bị bỏ qua.
     if (/\.md$/i.test(p) && within(cwd, p) && within(real(cwd), real(p)) && exists(p)) return p;
   }
-  const reqDir = path.join(cwd, 'docs', 'requests');
-  let best = null;
-  let bestTime = -Infinity;
-  if (exists(reqDir)) {
-    for (const name of d.readdirSync(reqDir)) {
-      const p = path.join(reqDir, String(name), 'handoff.md');
+  const newest = (files) => {
+    let best = null;
+    let bestTime = -Infinity;
+    for (const p of files) {
       if (!exists(p)) continue;
       const t = d.statSync(p).mtimeMs;
       if (t > bestTime) { best = p; bestTime = t; }
     }
-  }
+    return best;
+  };
+  const reqDir = path.join(cwd, 'docs', 'requests');
+  const docs = exists(reqDir) ? d.readdirSync(reqDir).map((name) => path.join(reqDir, String(name), 'handoff.md')) : [];
+  const best = newest(aipRuns(cwd, d).map((r) => path.join(r.dir, 'handoff.md'))) ?? newest(docs);
   if (best) return best;
   const fallback = path.join(cwd, '.claude', 'handoff.md');
   return exists(fallback) ? fallback : null;
@@ -71,22 +102,30 @@ function usableHandoff(cwd, cfg, d) {
 // Ledger chưa xong có mtime mới nhất; file hỏng, đã `Plan: complete` hoặc cũ hơn handoffMaxAgeHours (plan bỏ dở) bị bỏ qua.
 // Chép nhỏ thay vì import skill plan-execution để hook tự đứng, không phụ thuộc bố cục thư mục của bản build.
 function ledgerSection(cwd, cfg, d) {
-  const reqDir = path.join(cwd, 'docs', 'requests');
   const maxAge = Number.isFinite(cfg?.handoffMaxAgeHours) ? cfg.handoffMaxAgeHours : DEFAULT_MAX_AGE_HOURS;
   const cands = [];
-  for (const name of d.readdirSync(reqDir)) {
+  const consider = (p) => {
     try {
-      const p = path.join(reqDir, String(name), '.sdd', 'progress.md');
-      if (!d.existsSync(p)) continue;
+      if (!d.existsSync(p)) return;
       const t = d.statSync(p).mtimeMs;
       if (d.now() - t <= maxAge * HOUR_MS) cands.push({ p, t });
     } catch { /* mục không đọc được: bỏ qua */ }
+  };
+  const runs = aipRuns(cwd, d);
+  for (const { dir } of runs) {
+    try { for (const part of d.readdirSync(dir)) consider(path.join(dir, String(part), 'progress.md')); } catch { /* request không đọc được: bỏ qua */ }
   }
+  // Request đã chuyển sang .aip thì .sdd cũ của nó là bản chép lỗi thời, kể cả khi mới hơn; không nạp lại.
+  const migrated = new Set(runs.map((r) => r.req));
+  const reqDir = path.join(cwd, 'docs', 'requests');
+  let legacy = [];
+  try { legacy = d.readdirSync(reqDir); } catch { /* không có docs/requests */ }
+  for (const name of legacy) if (!migrated.has(String(name))) consider(path.join(reqDir, String(name), '.sdd', 'progress.md'));
   for (const { p } of cands.sort((a, b) => b.t - a.t)) {
     try {
       const text = String(d.readFile(p)).replace(/^\uFEFF/, '');
       if (LEDGER_DONE_RE.test(text)) continue;
-      const head = `Ledger (${path.relative(cwd, p).split(path.sep).join('/')}):\n`;
+      const head = `Ledger (${show(cwd, p)}):\n`;
       return head + text.slice(Math.max(0, text.length - (LEDGER_MAX_CHARS - head.length)));
     } catch { /* ledger hỏng: thử ledger kế tiếp */ }
   }
@@ -101,13 +140,13 @@ function resumeLine(input, handoff, cwd) {
   if (Number.isFinite(usd)) parts.push(`(~${usd} USD)`);
   // Chỉ có tiền tố "mở lại tốn" mà không có số liệu thì câu vô nghĩa; bỏ hẳn phần chi phí.
   const cost = parts.length > 1 ? parts.join(' ') + '.' : 'Phiên nguội: cache prompt đã hết hạn.';
-  const rel = handoff ? path.relative(cwd, handoff).split(path.sep).join('/') : '';
+  const rel = handoff ? show(cwd, handoff) : '';
   return `${cost} Cân nhắc mở phiên mới${rel ? ` từ ${rel}` : ''}.`;
 }
 
 export function decide(input, deps = {}) {
   try {
-    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, loadConfig: readGateConfig, ...deps };
+    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, loadConfig: readGateConfig, gitRoots: (dir) => { const g = resolveGate(dir); return g && { top: g.top, main: g.main }; }, ...deps };
     const cwd = path.resolve(input?.cwd || '.');
     const cfg = d.loadConfig(cwd);
     const source = input?.source;
@@ -128,7 +167,7 @@ export function decide(input, deps = {}) {
       try {
         const h = usableHandoff(cwd, cfg, d);
         const room = MAX_TOTAL - (ledger ? ledger.length + 2 : 0) - (boot ? BOOTSTRAP.length + 2 : 0);
-        if (h) parts.push(`Handoff của phiên trước (${path.relative(cwd, h.file).split(path.sep).join('/')}):\n${h.text}`.slice(0, room));
+        if (h) parts.push(`Handoff của phiên trước (${show(cwd, h.file)}):\n${h.text}`.slice(0, room));
       } catch { /* handoff hỏng không được chặn ledger */ }
     }
     if (ledger) parts.push(ledger);
