@@ -29,15 +29,23 @@ W18 khi kind ngoài tập. Kind quyết định chuỗi agent:
 
 | Kind | Chuỗi agent |
 |---|---|
-| `BE` | `backend-implementer` (TDD) → `backend-reviewer` |
+| `BE` | `backend-implementer` (TDD mặc định) → `backend-reviewer` |
 | `FE-UI` | `frontend-implementer` → `frontend-test-writer` → `frontend-reviewer` |
 | `FE-INT` | `frontend-data-integrator` → `frontend-reviewer` |
 | `E2E` | `frontend-e2e-test-writer` → `frontend-reviewer` |
 | `DB` | `data-migration-writer` → `backend-reviewer` |
 | `CT` | `backend-implementer` (skill `backend-api-contract`) → `backend-reviewer` |
-| `DOCS` / `TOOLING` | session chính tự làm, review bằng `general-purpose` |
+| `DOCS` | `general-purpose` (`model: haiku`) → `general-purpose` |
+| `TOOLING` | session chính tự làm, review bằng `general-purpose` |
 
 Task trộn hai phía (vd BE + FE-UI) → tách thành hai task, mỗi task một kind.
+
+## Trường TDD
+
+`**TDD:** có` hoặc `**TDD:** không — <lý do>` (dấu `—`, lý do không rỗng), đặt sau `**Kind:**`. Thiếu dòng thì mặc định theo
+kind: `BE` = có, kind khác = không (`FE-UI` giữ test viết sau). `có` chỉ hợp lệ với `BE` và `TOOLING`; ca khác hoặc dòng
+sai thì `check-request.mjs` cảnh báo W21. Task `có` bị đòi `tdd.red`/`tdd.green` (task `TOOLING` ghi `red:` vào dòng
+ledger). `không — <lý do>` là ngoại lệ mà `engineering-tdd` yêu cầu người dùng đồng ý: plan được duyệt chính là sự đồng ý đó.
 
 Trong `workflow-feature` không tạo task kind `CT` hay `DB`: contract đã chốt ở Bước 3, đổi schema đã dừng ở Bước 2 để chạy
 `data-db-migration`. Plan trỏ ID `tasks.md` thì task `CT`/`DB` của `tasks.md` đã `Done` ở Bước 3 hoặc ngoài workflow nên
@@ -49,6 +57,8 @@ Implementer chỉ thấy task của mình, nên mỗi task ghi `**Interfaces:**`
 
 - `Consumes:` hàm/kiểu/endpoint (`operationId`) do task trước tạo mà task này dùng; không có thì ghi "không có".
 - `Produces:` hàm/kiểu/endpoint task sau sẽ dùng; không có thì ghi "không có".
+
+Ghi tên interface trong backtick: P4 chỉ so tên trong backtick, còn `Consumes`/`Produces` có nội dung mà không backtick thì bị P5 báo là không kiểm được.
 
 Tên và kiểu ở `Produces` của task A phải **trùng từng ký tự** với `Consumes` của task B (kiểm ở mục 3 của
 `self-review.md`).
@@ -63,6 +73,16 @@ quy tắc commit). Chép nguyên văn để implementer không phải đoán; đ
 Liệt kê tối đa 5 input hoặc failure mode mà design ngụ ý nhưng test của task có thể chưa phủ (vd chuỗi rỗng,
 trùng lặp, quyền truy cập, giá trị biên). Mỗi dòng nêu **test nào ở task nào** sẽ phủ nó; dòng không có test chủ → thêm
 test vào task phù hợp hoặc bỏ dòng.
+
+## Request chia part
+
+Chỉ khi `design.md` gốc có `## Bảng part`. Bố cục: `parts/<nn>-<part-slug>/plan.md`, mỗi part một plan đủ header (`**Goal:**`, `**Spec:**`, `**Phủ AC:**` theo task, `**Kind:**`, `**Files:**`, `**Interfaces:**`) như plan thường; `plan.md` gốc là phần nền (tuỳ chọn) và chạy trước. Part không có `design.md` riêng chứa AC: AC chỉ khai ở `requirement.md`/`design.md` gốc (W20).
+
+Nhóm song song khai ở cột Song song của Bảng part, không ở `**Song song:**` cấp task (P3). Luật interface giữa part:
+
+- Interface dùng chung giữa part chỉ tạo ở `plan.md` gốc hoặc ở part mà part kia khai trong cột Phụ thuộc.
+- Trong một nhóm, part cùng nhóm Song song không `Consumes` thứ mà part cùng nhóm `Produces` (P4, so tên trong backtick); part dùng interface của part khác phải khai Phụ thuộc và chạy sau.
+- Tập file của part = hợp `**Files:**` mọi task của part; part cùng nhóm không ghi trùng file hay file chung (P1/P2).
 
 ## Có tasks.md
 

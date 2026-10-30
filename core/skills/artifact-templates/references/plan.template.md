@@ -28,6 +28,7 @@ Bỏ khối này khi chép template ra dùng.
 
 ### Task 1: <tên>
 **Kind:** <BE|FE-UI|FE-INT|E2E|DB|CT|DOCS|TOOLING>
+**TDD:** <có | không — lý do>   <!-- tuỳ chọn; thiếu thì BE = có, kind khác = không; có chỉ với BE/TOOLING -->
 **Phủ AC:** <AC1.1, AC1.2>
 **Files:**
 - Create: `<path>`

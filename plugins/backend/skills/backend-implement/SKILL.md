@@ -50,11 +50,13 @@ Một aggregate · một use-case · một driven port + một adapter — theo 
 ([ARD.md](architecture/ARD.md) mục 8: "Tối giản, không phình"). KHÔNG sinh nhiều feature trong một
 lần; feature khác là slice khác, gọi lại skill.
 
-### 3. Test đỏ trước (khi được giao task `kind: BE` trong vòng task)
+### 3. Test đỏ trước (khi được giao task TDD `có` trong vòng task)
 Viết test lõi của use-case (unit mock/fake port, KHÔNG DB) TRƯỚC khi có code production, chạy và xác nhận **đỏ đúng
 lý do** (thất bại vì chưa có hành vi cần test, không phải lỗi setup). Ghi lệnh + exit code + vì sao đỏ là đúng →
 `tdd.red`. Sau bước 4 chạy lại đúng lệnh đó, xanh → `tdd.green`; báo `tdd: { red, green }` trong `agent_result`.
-Gọi ngoài vòng task (không có `kind: BE`) thì không ép — test lõi vẫn phải xanh ở bước 5.
+Trong vòng task (plan-execution, kể cả cỡ thay đổi nhỏ không có plan.md), task không có dòng `**TDD:**` thì theo mặc
+định của kind: BE là `có`; chỉ `**TDD:** không — <lý do>` mới bỏ bước này. Gọi ngoài vòng task (workflow không dùng
+plan-execution) thì không ép — test lõi vẫn phải xanh ở bước 5.
 Kỷ luật đỏ → xanh, bảng biện minh và anti-pattern nằm ở skill `engineering-tdd` (khi skill đã cài; thiếu thì theo các bước trên).
 
 ### 4. Sinh code ĐÚNG kiến trúc

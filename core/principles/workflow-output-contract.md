@@ -43,7 +43,7 @@ agent_result:
   findings: [ <finding> ]
   questions: []         # câu hỏi cho người dùng/bước gọi; không rỗng thường đi kèm status: blocked
   remaining_risks: []
-  tdd: { red: <evidence>, green: <evidence> }   # chỉ task kind: BE; xem "Trường mở rộng"
+  tdd: { red: <evidence>, green: <evidence> }   # chỉ task TDD `có` (trường **TDD:** của plan); xem "Trường mở rộng"
   report_file: ""       # đường dẫn file report nếu có; agent chỉ-đọc để trống
   commits: []           # SHA commit của task; agent không tự commit nên thường rỗng
 ```
@@ -54,7 +54,8 @@ Dùng trong vòng task của `plan-execution`; workflow không dùng vòng task 
 `agent_result` ở trên.
 
 - `tdd.red` / `tdd.green`: mỗi cái là một evidence. `red` là lệnh test chạy trước khi viết code, `exit_code` khác 0 và
-  `summary` nêu vì sao đỏ là đúng lý do; `green` là cùng lệnh sau khi viết code, `exit_code: 0`. Chỉ task `kind: BE`.
+  `summary` nêu vì sao đỏ là đúng lý do; `green` là cùng lệnh sau khi viết code, `exit_code: 0`. Chỉ task TDD `có`:
+  dòng `**TDD:**` của task trong plan; thiếu dòng thì `BE` là `có`, kind khác là `không`.
 - `report_file`: đường dẫn file report của agent. Agent không có quyền ghi (reviewer) trả report trong tin nhắn và để
   trống; session chính ghi file khi cần.
 - `commits`: danh sách SHA. Agent không tự commit, nên trường này do session chính điền sau khi commit hoặc để rỗng.
@@ -94,7 +95,8 @@ sau trước khi đi `next`:
   với log, số đo hoặc tài liệu thì là tham chiếu tới nguồn đó.
 - `status: completed` thì không có `validation` nào ở trạng thái `failed`.
 - Mọi file trong `changes` thuộc danh sách file đã giao (với agent có danh sách).
-- Task `kind: BE` phải có `tdd.red` và `tdd.green`; thiếu một trong hai → đầu ra hỏng.
+- Task TDD `có` phải có `tdd.red` và `tdd.green`; thiếu một trong hai → đầu ra hỏng. Task `**TDD:** không — <lý do>`
+  không bị đòi `tdd`.
 - Reviewer chạy task-review phải trả đủ cả `spec_verdict` lẫn `findings`; thiếu một trong hai → đầu ra hỏng.
   Re-review phải có `verdicts[]` cho từng finding đã giao.
 
@@ -106,7 +108,7 @@ Kết quả không đạt bất kỳ luật nào là **đầu ra hỏng**. Xử 
   Luật này áp cho workflow không dùng vòng task. Trong vòng task của `plan-execution`, `blocked` kèm `questions[]` thì
   session chính thử trả lời từ spec/plan/design trước; trả lời được thì gửi lại câu trả lời (quyết định thì ghi dòng
   `Ruling:`), không hỏi người dùng. Chỉ `ask_user` khi câu hỏi thuộc loại dừng của `task-loop.md` (không đảo ngược, bảo mật,
-  ngoài repo, schema DB, plan hỏng đến mức mọi hướng đều là đoán).
+  ngoài repo, schema DB, plan hỏng đến mức mọi hướng đều là đoán, phải đổi một AC người dùng đã duyệt).
 - **`status: completed` kèm `remaining_risks` không rỗng** → xong kèm lo ngại: đọc từng lo ngại, xử lý nếu thuộc phạm vi
   task, không thì chuyển cho reviewer; không tính là lỗi và không đi cạnh `on_fail`.
 - **`status: failed`**, hoặc đầu ra hợp lệ nhưng gate trượt → đi cạnh `on_fail` khớp `when`, tính lượt theo

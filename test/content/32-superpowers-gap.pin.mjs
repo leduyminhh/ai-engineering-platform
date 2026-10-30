@@ -55,15 +55,17 @@ export default async function run({ ok, ctx }) {
     for (const l of accept) ok(verdict(l) === null, `AC5.2: validateLine chấp nhận ${JSON.stringify(l)}`);
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ledger-inline-'));
     try {
-      const file = path.join(tmp, '.sdd', 'progress.md');
+      // cwd/git giả: không để main() resolve ra gốc repo chính thật và ghi .aip vào đó.
+      const deps = { cwd: tmp, git: () => { throw new Error('không phải repo'); } };
+      const file = path.join(tmp, '.aip', 'runs', path.basename(tmp), 'root', 'progress.md');
       const realError = console.error;
       let rc;
       console.error = () => {};
-      try { rc = lg.main([tmp, reject[0]]); } finally { console.error = realError; }
+      try { rc = lg.main([tmp, reject[0]], deps); } finally { console.error = realError; }
       ok(rc === 2 && !fs.existsSync(file), 'AC5.2: main trả exit 2 và không tạo hay ghi ledger khi dòng bị từ chối');
       const logged = console.log;
       console.log = () => {};
-      try { rc = lg.main([tmp, accept[0]]); } finally { console.log = logged; }
+      try { rc = lg.main([tmp, accept[0]], deps); } finally { console.log = logged; }
       ok(rc === 0 && fs.readFileSync(file, 'utf8').includes(accept[0]), 'AC5.2: main ghi dòng inline đủ evidence như cũ');
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   }
@@ -79,7 +81,7 @@ export default async function run({ ok, ctx }) {
     const boundary = slice(tdd, '## Ranh giới với quy tắc Testing', '## Ranh giới an toàn');
     ok(/một hành vi một test/i.test(boundary) && boundary.includes('references/anti-patterns.md') && /AGENTS\.md/.test(boundary),
       'AC2.1: mục ranh giới dẫn chiếu quy tắc "một hành vi một test" của AGENTS.md và anti-patterns.md');
-    ok(/chỉ khi task `kind: BE`/.test(slice(tdd, '## Ranh giới an toàn')), 'AC2.2: engineering-tdd chỉ báo tdd.red/tdd.green cho task kind BE');
+    ok(/chỉ khi task TDD `có`/.test(slice(tdd, '## Ranh giới an toàn')), 'AC2.2: engineering-tdd chỉ báo tdd.red/tdd.green cho task TDD `có`');
     ok(fs.existsSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-tdd', 'references', 'anti-patterns.md')), 'AC2.1: anti-patterns.md tồn tại');
     for (const [name, p] of [['backend-implement', ['plugins', 'backend', 'skills', 'backend-implement', 'SKILL.md']], ['frontend-testing', ['plugins', 'frontend', 'skills', 'frontend-testing', 'SKILL.md']]]) {
       const t = read(...p).replace(/\r?\n(?=[^\n])/g, ' ');
@@ -119,13 +121,13 @@ export default async function run({ ok, ctx }) {
   {
     const t = read('core', 'skills', 'git-worktree', 'SKILL.md');
     const baseline = read('core', 'agents', 'AGENTS.template.md');
-    ok(baseline.includes('worktree-<slug>-t<n>') && baseline.includes('.claude/worktrees/<slug>-t<n>/'),
+    ok(baseline.includes('worktree-<slug>-p<nn>') && baseline.includes('.claude/worktrees/<slug>-p<nn>/'),
       'AC4.1: baseline vẫn có quy ước tên nhánh và thư mục worktree mà skill bám theo');
-    ok(t.includes('git worktree add -b worktree-<slug>-t<n> .claude/worktrees/<slug>-t<n> feature/<slug>'),
+    ok(t.includes('git worktree add -b worktree-<slug>-p<nn> .claude/worktrees/<slug>-p<nn> feature/<slug>'),
       'AC4.1: lệnh tạo worktree dùng đúng tên nhánh, thư mục và nhánh gốc theo baseline');
     // Cổng "đã merge và sạch" phải nằm trong chính mục dọn, không chỉ xuất hiện ở đâu đó trong skill.
     const cleanup = t.slice(t.indexOf('## Quy trình — dọn worktree'), t.indexOf('## Ranh giới an toàn'));
-    ok(cleanup.includes('git branch --merged') && cleanup.includes('status --short') && cleanup.includes('git worktree remove .claude/worktrees/<slug>-t<n>'),
+    ok(cleanup.includes('git branch --merged') && cleanup.includes('status --short') && cleanup.includes('git worktree remove .claude/worktrees/<slug>-p<nn>'),
       'AC4.1: mục dọn chỉ gỡ bằng git worktree remove sau khi kiểm đã merge và cây sạch');
     ok(/Không `rm -rf`[^\n]*`Remove-Item -Recurse`[^\n]*`git worktree remove --force`[^\n]*`git branch -D`/.test(t),
       'AC4.1: git-worktree cấm rm -rf, Remove-Item -Recurse, worktree remove --force và branch -D');

@@ -70,4 +70,4 @@ refactor(api): simplify user payload mapping -> refactor/api-user-payload-mappin
 ## Quy tắc worktree
 
 Hỏi người dùng một lần trước khi tạo worktree. Chưa được đồng ý thì làm việc trên checkout và
-branch hiện tại; được đồng ý thì đặt theo `.claude/worktrees/<slug>-t<n>/`.
+branch hiện tại; được đồng ý thì đặt theo `.claude/worktrees/<slug>-p<nn>/` (chỉ song song giữa part).

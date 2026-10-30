@@ -439,6 +439,7 @@ export default async function run({ ok, ctx }) {
         now: () => nowMs,
         // Các ca handoff/ledger kiểm đúng nội dung của chúng nên tắt bootstrap, trừ khi ca đó tự bật lại.
         loadConfig: () => ({ bootstrapInject: false, ...cfg }),
+        gitRoots: () => null,
       };
     };
     const start = (files, { source = 'startup', cfg = null, nowMs, extra = {} } = {}) =>
@@ -517,6 +518,7 @@ export default async function run({ ok, ctx }) {
         readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => T0 + HOUR,
         loadConfig: () => ({ bootstrapInject: false, ...cfg }),
+        gitRoots: () => null,
       };
     };
     const start = (files, cfg = null) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd: '/repo' }, fake(files, cfg));
@@ -558,6 +560,134 @@ export default async function run({ ok, ctx }) {
     ok(start(stale) === null && start(stale, { handoffMaxAgeHours: 48 })?.additionalContext.includes('Task 1'),
       'AC3.3: ledger cũ hơn handoffMaxAgeHours (mặc định 24) → không nạp; nới khoá thì nạp');
   }
+  // SessionStart đọc ledger và handoff từ workspace .aip (docs/requests/2026-10-30-request-parts-aip-workspace)
+  {
+    const { pathToFileURL, CORE_DIR } = ctx;
+    const ss = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'session-start.mjs')).href);
+    const HOUR = 3600000;
+    const T0 = Date.UTC(2026, 0, 10);
+    const abs = (p) => path.resolve('/repo', p);
+    const WT = '.claude/worktrees/w';
+    const statted = [];
+    const fake = (files, { cfg = null, git, links = {} } = {}) => {
+      const m = new Map(Object.entries(files).map(([k, v]) => [abs(k), v]));
+      const lk = new Map(Object.entries(links).map(([k, v]) => [abs(k), path.resolve(v)]));
+      return {
+        // Ánh xạ theo tiền tố để một symlink ở cấp thư mục cũng đổi đường dẫn thật của mọi file bên trong.
+        realpath: (p) => { for (const [k, v] of lk) if (p === k || p.startsWith(k + path.sep)) return v + p.slice(k.length); return p; },
+        readFile: (p) => { const f = m.get(p); if (!f) throw new Error('ENOENT'); return f.text; },
+        existsSync: (p) => m.has(p) || [...m.keys()].some((k) => k.startsWith(p + path.sep)),
+        statSync: (p) => { statted.push(p); if (m.get(p).statThrows) throw new Error('EIO'); return { mtimeMs: m.get(p).mtime }; },
+        readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
+        now: () => T0 + HOUR,
+        loadConfig: () => ({ bootstrapInject: false, ...cfg }),
+        gitRoots: git ?? (() => ({ top: abs('.'), main: abs('.') })),
+      };
+    };
+    const inWt = { top: abs(WT), main: abs('.') };
+    const start = (files, { cwd = '/repo', ...o } = {}) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd: abs(cwd) }, fake(files, o))?.additionalContext ?? null;
+    const body = (tag) => `# Bàn giao\nNhánh: feature/x. Việc đang làm: hoàn thiện hook SessionStart, còn lại bước đăng ký event và test. ${tag}`;
+    const L = (req, part) => `.aip/runs/${req}/${part}/progress.md`;
+    const led = (text, mtime = T0) => ({ text, mtime });
+
+    // AC4.1: ledger dở ở .aip của gốc repo chính, phiên mở ở gốc, ở worktree, hoặc ledger nằm ở .aip của gốc worktree (đường lui Task 6)
+    const mainLedger = { [L('2026-10-30-x', '01-a')]: led('Task 1: complete\nTask 2: MAIN_OPEN\n') };
+    const atRoot = start(mainLedger) || '';
+    ok(atRoot.startsWith('Ledger (.aip/runs/2026-10-30-x/01-a/progress.md):') && atRoot.includes('MAIN_OPEN'), 'AC4.1: ledger .aip ở gốc repo chính, phiên ở gốc → nạp');
+    ok(start(mainLedger, { cwd: WT, git: () => inWt })?.includes('MAIN_OPEN'), 'AC4.1: phiên ở worktree vẫn nạp ledger .aip của gốc repo chính');
+    const wtLedger = { [`${WT}/${L('2026-10-30-x', '01-a')}`]: led('WT_OPEN') };
+    ok(start(wtLedger, { cwd: WT, git: () => inWt })?.includes('WT_OPEN'), 'AC4.1: ledger ở .aip của gốc worktree (đường lui) → nạp');
+
+    // AC4.2: .sdd cũ vẫn nạp khi chưa có .aip; request đã có .aip/runs/<r>/ thì .sdd của nó bị bỏ
+    const sdd = (r, text, mtime = T0) => ({ [`docs/requests/${r}/.sdd/progress.md`]: led(text, mtime) });
+    ok(start(sdd('2026-01-01-a', 'SDD_OPEN'))?.includes('Ledger (docs/requests/2026-01-01-a/.sdd/progress.md):'), 'AC4.2: chỉ có .sdd cũ → nạp');
+    const both = start({ ...sdd('2026-01-01-a', 'SDD_NEW', T0 + 5), [L('2026-01-01-a', 'root')]: led('AIP_OLD', T0) }) || '';
+    ok(both.includes('AIP_OLD') && !both.includes('SDD_NEW'), 'AC4.2: request đã có .aip/runs/<r>/ → bỏ .sdd của <r> dù mới hơn');
+    ok(start({ ...sdd('2026-01-01-a', 'SDD_NEW'), [L('2026-01-01-a', 'root')]: led('Plan: complete\n') }) === null, 'AC4.2: .aip của <r> đã xong → .sdd của <r> cũng không nạp lại');
+    ok(start({ ...sdd('2026-01-01-b', 'SDD_B', T0 + 5), [L('2026-01-01-a', 'root')]: led('AIP_A', T0) })?.includes('SDD_B'), 'AC4.2: .sdd của request khác không bị loại');
+
+    // AC4.4: Part: complete / Plan: complete bị bỏ, lấy ứng viên kế
+    const parts = start({
+      [L('2026-10-30-x', '01-a')]: led('Task 1: complete\nTask 2: OPEN_OLD\n', T0),
+      [L('2026-10-30-x', '02-b')]: led('Task 1: complete\nPart: complete abc1234\n', T0 + 5),
+      [L('2026-10-30-x', 'root')]: led('Part 02: merged abc1234\nPlan: complete\n', T0 + 6),
+    }) || '';
+    ok(parts.includes('OPEN_OLD') && !parts.includes('abc1234'), 'AC4.4: ledger có Part: complete <hash> hoặc Plan: complete bị bỏ, lấy ledger dở kế tiếp');
+    ok(start({ [L('2026-10-30-x', '02-b')]: led('Part: complete abc1234\n') }) === null, 'AC4.4: mọi ledger đã xong → không nạp');
+    ok(start({ [L('2026-10-30-x', 'root')]: led('Part 01: merged abc1234\n') })?.includes('Part 01: merged'), 'AC4.4: dòng `Part <nn>: merged` ở root không phải dấu hiệu xong');
+
+    // AC4.3: handoff theo thứ tự handoffPath → .aip/runs mới nhất → docs/requests mới nhất → .claude/handoff.md
+    const src = {
+      'notes/h.md': led(body('H_CFG'), T0),
+      '.aip/runs/2026-10-29-a/handoff.md': led(body('H_AIP_OLD'), T0),
+      '.aip/runs/2026-10-30-b/handoff.md': led(body('H_AIP_NEW'), T0 + 5),
+      'docs/requests/2026-01-01-a/handoff.md': led(body('H_DOCS'), T0 + 9),
+      '.claude/handoff.md': led(body('H_CLAUDE'), T0 + 9),
+    };
+    const tags = (files, o) => (start(files, o) || '').match(/H_[A-Z_]+/g);
+    const drop = (...ks) => Object.fromEntries(Object.entries(src).filter(([k]) => !ks.includes(k)));
+    ok(JSON.stringify(tags(src, { cfg: { handoffPath: 'notes/h.md' } })) === '["H_CFG"]', 'AC4.3: handoffPath hợp lệ thắng mọi nguồn');
+    ok(JSON.stringify(tags(src)) === '["H_AIP_NEW"]', 'AC4.3: không handoffPath → .aip/runs/*/handoff.md mới nhất, dù docs/.claude mới hơn');
+    const noAip = drop('.aip/runs/2026-10-29-a/handoff.md', '.aip/runs/2026-10-30-b/handoff.md');
+    ok(JSON.stringify(tags(noAip)) === '["H_DOCS"]', 'AC4.3: không có .aip → docs/requests/*/handoff.md');
+    ok(JSON.stringify(tags(drop('.aip/runs/2026-10-29-a/handoff.md', '.aip/runs/2026-10-30-b/handoff.md', 'docs/requests/2026-01-01-a/handoff.md'))) === '["H_CLAUDE"]', 'AC4.3: cuối cùng → .claude/handoff.md');
+    ok(tags({ [`.aip/runs/2026-10-30-b/handoff.md`]: src['.aip/runs/2026-10-30-b/handoff.md'] }, { cwd: WT, git: () => inWt })?.[0] === 'H_AIP_NEW', 'AC4.3: phiên ở worktree đọc handoff .aip của gốc repo chính');
+
+    // AC4.3: handoff là symlink trỏ ra ngoài gốc chứa nó thì không nạp (so đường dẫn thật), rơi xuống nguồn kế
+    const lkHandoff = (rel) => ({ [rel]: led(body('H_LEAK'), T0 + 9) });
+    const leaked = (files, o) => (start(files, o) || '').includes('H_LEAK');
+    const aipLink = '.aip/runs/2026-10-30-b/handoff.md';
+    ok(!leaked(lkHandoff(aipLink), { links: { [aipLink]: '/outside/secret.md' } }), 'AC4.3: .aip/runs/*/handoff.md là symlink ra ngoài .aip → không nạp');
+    const dirLink = { ...lkHandoff(aipLink), 'docs/requests/2026-01-01-a/handoff.md': led(body('H_DOCS'), T0) };
+    ok(JSON.stringify(tags(dirLink, { links: { [aipLink]: '/outside/secret.md' } })) === '["H_DOCS"]', 'AC4.3: handoff .aip bị loại vì symlink → rơi xuống docs/requests');
+    ok(!leaked(lkHandoff(`${WT}/${aipLink}`), { cwd: WT, git: () => inWt, links: { [`${WT}/${aipLink}`]: '/outside/secret.md' } }), 'AC4.3: symlink ra ngoài gốc worktree cũng bị loại');
+    ok(!leaked(lkHandoff('docs/requests/2026-01-01-a/handoff.md'), { links: { 'docs/requests/2026-01-01-a/handoff.md': '/outside/secret.md' } })
+      && !leaked(lkHandoff('.claude/handoff.md'), { links: { '.claude/handoff.md': '/outside/secret.md' } }), 'AC4.3: docs/requests và .claude/handoff.md symlink ra ngoài cwd → không nạp');
+    ok(tags(lkHandoff(aipLink), { links: { [aipLink]: '/repo/.aip/runs/2026-10-30-c/handoff.md' } })?.[0] === 'H_LEAK', 'AC4.3: symlink trỏ vào trong cùng gốc vẫn được nạp');
+    // Symlink trỏ tới file bí mật (.env, *.pem) nằm TRONG repo vẫn qua kiểm "trong gốc"; đòi đường dẫn thật có đuôi .md
+    const toEnv = (...rels) => ({ links: Object.fromEntries(rels.map((r) => [r, '/repo/.env'])) });
+    const docsH = 'docs/requests/2026-01-01-a/handoff.md';
+    ok(!leaked(lkHandoff(aipLink), toEnv(aipLink)) && !leaked(lkHandoff(docsH), toEnv(docsH)) && !leaked(lkHandoff('.claude/handoff.md'), toEnv('.claude/handoff.md')),
+      'AC4.3: handoff là symlink trỏ tới .env trong repo → không nạp');
+    ok(!leaked(lkHandoff('notes/h.md'), { ...toEnv('notes/h.md'), cfg: { handoffPath: 'notes/h.md' } }), 'AC4.3: handoffPath là symlink trỏ tới .env trong repo → không nạp');
+    ok(!leaked(lkHandoff(aipLink), { links: { [aipLink]: '/repo/secret.PEM' } }), 'AC4.3: handoff symlink trỏ tới *.pem trong repo → không nạp');
+    ok(tags(lkHandoff(aipLink), { links: { [aipLink]: '/repo/notes/real.MD' } })?.[0] === 'H_LEAK', 'AC4.3: đuôi .md thật không phân biệt hoa thường vẫn được nạp');
+    // Thư mục request là symlink ra ngoài thì handoff bên trong không được nạp, dù tên file vẫn là handoff.md
+    ok(!leaked(lkHandoff(aipLink), { links: { '.aip/runs/2026-10-30-b': '/outside/req' } }), 'AC4.3: thư mục .aip/runs/<req> là symlink ra ngoài → handoff trong đó không nạp');
+    ok(!leaked(lkHandoff(docsH), { links: { 'docs/requests/2026-01-01-a': '/outside/req' } }), 'AC4.3: thư mục docs/requests/<req> là symlink ra ngoài → handoff trong đó không nạp');
+    // F3: nguồn ưu tiên cũ hoặc rỗng không che nguồn thấp hơn; F2: docs chỉ được xét khi cần, lỗi stat từng file không chặn nguồn kế
+    const fresh = { 'docs/requests/2026-01-01-a/handoff.md': led(body('H_DOCS'), T0) };
+    ok(JSON.stringify(tags({ ...fresh, [aipLink]: led(body('H_AIP_OLD'), T0 - 30 * HOUR) })) === '["H_DOCS"]', 'AC4.3: .aip cũ quá 24 giờ, docs còn mới → chọn docs');
+    ok(JSON.stringify(tags({ ...fresh, [aipLink]: led('# Bàn giao\n', T0 + 5) })) === '["H_DOCS"]', 'AC4.3: .aip rỗng, docs có nội dung → chọn docs');
+    statted.length = 0;
+    start({ ...fresh, [aipLink]: led(body('H_AIP_NEW'), T0 + 5) });
+    ok(!statted.some((p) => p.includes(`docs${path.sep}requests`)), 'AC4.3: .aip có handoff dùng được → không đụng tới docs/requests');
+    ok(JSON.stringify(tags({ 'docs/requests/2026-01-01-a/handoff.md': { text: body('H_DOCS'), mtime: T0, statThrows: true }, '.claude/handoff.md': led(body('H_CLAUDE')) })) === '["H_CLAUDE"]', 'AC4.3: stat lỗi một file docs → bỏ file đó, rơi xuống .claude');
+
+    // AC4.1: ledger là symlink ra ngoài gốc chứa nó thì không nạp
+    const symLedger = L('2026-10-30-x', '01-a');
+    ok(start({ [symLedger]: led('LEDGER_LEAK') }, { links: { [symLedger]: '/outside/progress.md' } }) === null, 'AC4.1: progress.md trong .aip là symlink ra ngoài gốc → không nạp');
+    ok(start({ [`${WT}/${symLedger}`]: led('LEDGER_LEAK') }, { cwd: WT, git: () => inWt, links: { [`${WT}/${symLedger}`]: '/outside/progress.md' } }) === null, 'AC4.1: ledger .aip ở worktree là symlink ra ngoài → không nạp');
+    const sddLink = 'docs/requests/2026-01-01-a/.sdd/progress.md';
+    ok(start({ [sddLink]: led('LEDGER_LEAK') }, { links: { [sddLink]: '/outside/progress.md' } }) === null, 'AC4.1: .sdd/progress.md là symlink ra ngoài cwd → không nạp');
+    ok(start({ [symLedger]: led('LEDGER_LEAK'), ...sdd('2026-01-01-b', 'SDD_B', T0 - 1) }, { links: { [symLedger]: '/outside/progress.md' } })?.includes('SDD_B'), 'AC4.1: ledger symlink bị loại thì ứng viên kế vẫn được nạp');
+
+    ok(start({ [symLedger]: led('LEDGER_LEAK') }, { links: { [symLedger]: '/repo/.env' } }) === null
+      && start({ [sddLink]: led('LEDGER_LEAK') }, { links: { [sddLink]: '/repo/.env' } }) === null, 'AC4.1: progress.md là symlink trỏ tới .env trong repo → không nạp');
+    ok(start({ [symLedger]: led('LEDGER_LEAK') }, { links: { '.aip/runs/2026-10-30-x': '/outside/req' } }) === null, 'AC4.1: thư mục .aip/runs/<req> là symlink ra ngoài → ledger trong đó không nạp');
+
+    // git lỗi: vẫn fail-open (chỉ gốc cwd), không đổi ngân sách 9000
+    const boom = () => { throw new Error('git: not a repository'); };
+    const longH = { '.aip/runs/2026-10-30-b/handoff.md': led('# Bàn giao\n' + 'x'.repeat(20000)) };
+    const bigLedger = { [L('2026-10-30-x', '01-a')]: led('a'.repeat(5000) + 'CUOI') };
+    const budget = start({ ...longH, ...bigLedger }, { git: boom }) || '';
+    ok(budget.length <= 9000 && budget.includes('Handoff của phiên trước') && budget.includes('Ledger (') && budget.endsWith('CUOI'),
+      'session-start: git lỗi vẫn fail-open, ngân sách không đổi');
+    ok(start(longH, { git: boom })?.length === 9000 && start(longH, { git: () => null })?.length === 9000, 'session-start: git lỗi hoặc không phải repo → handoff vẫn đúng 9000');
+    ok(start(sdd('2026-01-01-a', 'SDD_OPEN'), { git: boom })?.includes('SDD_OPEN'), 'session-start: git lỗi vẫn nạp .sdd cũ');
+    const withAip = start({ ...longH, ...bigLedger }, { git: () => inWt, cwd: WT }) || '';
+    ok(withAip.length <= 9000 && withAip.endsWith('CUOI'), 'session-start: ledger + handoff từ .aip gốc chính vẫn ≤ 9000, ledger còn nguyên');
+  }
   // SessionStart nạp bootstrap quy tắc gọi skill (docs/requests/2026-10-29-superpowers-gap-closure)
   {
     const { pathToFileURL, CORE_DIR } = ctx;
@@ -574,6 +704,7 @@ export default async function run({ ok, ctx }) {
         readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => T0 + HOUR,
         loadConfig: () => cfg,
+        gitRoots: () => null,
       };
     };
     const start = (files, { source = 'startup', cfg = null, extra = {} } = {}) =>

@@ -4,6 +4,7 @@ description: "Phân tích hiệu năng frontend: đo ≥3 lần median LCP/TBT/C
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "frontend-performance"
 ---
 

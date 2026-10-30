@@ -4,6 +4,7 @@ description: "Sửa code backend: áp fix tối thiểu cho một oracle (test �
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "backend-fix"
 ---
 

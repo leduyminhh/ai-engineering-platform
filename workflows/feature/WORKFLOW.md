@@ -69,7 +69,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   tài liệu ở bước này (Bước 3 ghi); người dùng bỏ qua phần hỏi → agent tự chọn hướng, ghi "quyết định của agent",
   không hỏi thêm; chỉ phân rã task khi người dùng chọn ở checkpoint.
 - **Đầu ra:** tóm tắt trình duyệt trong chat: hướng đã chọn (kèm hướng bị loại), cỡ việc, phạm vi BE/FE/fullstack,
-  bảng ứng viên e2e (nếu có), quyết định có tách task hay không.
+  bảng ứng viên e2e (nếu có), quyết định có tách task hay không; cỡ "thay đổi nhỏ" có API và repo chưa có contract cho
+  API đó thì nêu mặc định không viết file contract, người dùng chọn có thì Bước 3 viết.
 - **Gate:** người dùng duyệt hướng và cỡ việc; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc
   migration đã viết và verify qua `data-db-migration`; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e"; cỡ
   "việc rõ và nhỏ" thì kết thúc workflow tại đây.
@@ -81,14 +82,16 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 ### Bước 3 — Tài liệu ⏸
 
 - **Thực hiện:** agent `engineering-spec-analyst` ghi tài liệu → agent `backend-implementer` (skill
-  `backend-api-contract`, chỉ khi phạm vi có API) chốt contract → session chính chạy builder check
+  `backend-api-contract`, chỉ khi phạm vi có API và cần file contract) chốt contract → session chính chạy builder check
 - **Đầu vào:** hướng, cỡ việc, phạm vi và các quyết định đã chốt ở Bước 2 (session chính chuyển cho agent; agent không
   hỏi người dùng)
 - **Hành động:** `engineering-spec-analyst` ghi `requirement.md` (acceptance criteria đo được, phạm vi, bảng ứng
   viên e2e) và `design.md` chỉ khi cỡ dự án (2–3 hướng, hướng bị loại); ảnh hưởng kiến trúc thì viết thêm ADR đề
   xuất; thiếu đầu vào thì trả `blocked` + `questions[]`, session chính thử trả lời từ đầu vào đã chốt trước khi hỏi
   người dùng. Người dùng đã chọn tách task ở Bước 2 → đọc `references/task-breakdown.md`, mục Bước 3. Có endpoint
-  mới/đổi endpoint cũ: `backend-implementer` chốt/đồng bộ OpenAPI contract trong `docs/contracts/`. Sau cùng session
+  mới/đổi endpoint cũ: `backend-implementer` chốt/đồng bộ OpenAPI contract trong `docs/contracts/` khi cỡ dự án, khi
+  repo đã có contract cho API đó, hoặc khi người dùng chọn có contract ở Bước 2. Cỡ "thay đổi nhỏ" ngoài các trường hợp
+  đó mặc định không viết file contract: endpoint, status code và schema nằm trong AC của `requirement.md`. Sau cùng session
   chính chạy builder check (subagent mới đọc tài liệu như người sẽ làm; không có tool subagent thì tự đọc như
   builder): câu của người dùng gom một tin nhắn, câu nhỏ ghi "quyết định của agent"; người dùng đã bỏ qua phần hỏi
   thì không hỏi, nêu nổi bật các quyết định của agent ở checkpoint.
@@ -96,9 +99,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   "thay đổi nhỏ" chỉ có `requirement.md`, không có `design.md`; không bịa yêu cầu, phần suy đoán đánh dấu `[giả
   định]`.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` (+ `design.md` nếu cỡ dự án; + `tasks.md` nếu người
-  dùng chọn tách task); contract OpenAPI cập nhật (hoặc ghi rõ "không có API"); ADR đề xuất nếu ảnh hưởng kiến trúc.
+  dùng chọn tách task); contract OpenAPI cập nhật (hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ");
+  ADR đề xuất nếu ảnh hưởng kiến trúc.
 - **Gate:** acceptance criteria đo được; builder check xong và câu của người dùng đã được trả lời; contract OpenAPI
-  hợp lệ hoặc ghi rõ "không có API"; có ảnh hưởng kiến trúc thì ADR đã viết; có `tasks.md` thì `check-tasks.mjs`
+  hợp lệ hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ"; có ảnh hưởng kiến trúc thì ADR đã viết; có `tasks.md` thì `check-tasks.mjs`
   báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và Checkpoint 1 của
   `engineering-task-breakdown` đã duyệt; người dùng đã duyệt tài liệu.
 - **Khi fail:** acceptance criteria không đo được hoặc agent `blocked` mà session chính không tự trả lời được →
@@ -114,18 +118,18 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** `requirement.md` + `design.md` (+ `tasks.md` nếu có) + contract từ Bước 3 + baseline Bước 1
 - **Hành động:** cỡ "thay đổi nhỏ" → bỏ qua bước này, ghi rõ "bỏ qua: cỡ thay đổi nhỏ, không có `plan.md`" và sang
   Bước 5 không có plan (brief là `requirement.md`, số task và kind theo Bước 5). Cỡ dự án: viết `plan.md` theo skill (bản đồ
-  file, Global Constraints, task có Kind/Interfaces/Phủ AC, Review Focus), tự soát 5 mục, rồi chạy
-  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Có `tasks.md` →
+  file, Global Constraints, task có Kind/Interfaces/Phủ AC, Review Focus), tự soát 5 mục; request lớn có `## Bảng part` ở `design.md` thì plan chia thành `plan.md` gốc + `parts/<nn>-<part-slug>/plan.md`, rồi chạy
+  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` và, khi có part, `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` (chỉ là cảnh báo; nhóm bị báo P1/P2/P4 thì sửa plan hoặc đổi nhóm sang chạy tuần tự: quay lại Bước 3 đặt cột Song song của các part đó thành `—` trong `design.md`, hoặc giữ bảng và ghi `Ruling: nhóm <nhãn> chạy tuần tự — <lý do>` vào ledger `root/` bằng `ledger.mjs`). Có `tasks.md` →
   task trong `plan.md` trỏ ID task của `tasks.md`, và Checkpoint 2 của `engineering-task-breakdown` được duyệt cùng
   `plan.md` (không hỏi hai lần).
-- **Ràng buộc:** chỉ ghi `plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
-  ở bước này; không xoá `**Files:**` hay test để tắt cảnh báo.
-- **Đầu ra:** `docs/requests/<ngày>-<slug>/plan.md`, hoặc dòng ghi rõ bỏ qua vì cỡ "thay đổi nhỏ".
-- **Gate:** `check-request.mjs` không còn cảnh báo ngoài W9 (file test chưa tồn tại lúc lập plan); mọi acceptance
-  criterion có task phủ; người dùng đã duyệt plan (cỡ dự án) — cỡ "thay đổi nhỏ" không có gate này.
+- **Ràng buộc:** chỉ ghi `plan.md` gốc (nếu có) và `parts/*/plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
+  ở bước này (đổi cột Song song thì quay lại Bước 3); không xoá `**Files:**` hay test để tắt cảnh báo.
+- **Đầu ra:** `docs/requests/<ngày>-<slug>/plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part), hoặc dòng ghi rõ bỏ qua vì cỡ "thay đổi nhỏ".
+- **Gate:** `check-request.mjs` không còn cảnh báo ngoài W9 (file test chưa tồn tại lúc lập plan); khi có part, `check-partition.mjs` không còn cảnh báo, hoặc nhóm còn bị báo P1/P2/P4 đã được đổi sang chạy tuần tự (cột Song song `—` hoặc dòng `Ruling:` như trên); mọi acceptance
+  criterion có task phủ trong `plan.md` gốc (nếu có) và `parts/*/plan.md`; người dùng đã duyệt plan (cỡ dự án) — cỡ "thay đổi nhỏ" không có gate này.
 - **Khi fail:** `check-request.mjs` còn cảnh báo ngoài W9 mà sửa `plan.md` không hết vì lỗi nằm ở tài liệu → quay
   lại Bước 3; plan còn điểm mơ hồ về phạm vi hay thứ tự → hỏi người dùng ở checkpoint.
-- **Evidence:** đường dẫn `plan.md` + output `check-request.mjs` (số cảnh báo, chỉ còn W9 hoặc 0), hoặc dòng bỏ qua.
+- **Evidence:** đường dẫn `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (số cảnh báo, chỉ còn W9 hoặc 0) + output `check-partition.mjs` khi có part, hoặc dòng bỏ qua.
 
 ### Bước 5 — Vòng task
 
@@ -137,30 +141,31 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   (acceptance criteria từ Bước 3) + contract (nếu có) + `design.md`/`tasks.md` (nếu có) + baseline Bước 1 + bảng ứng
   viên e2e đã duyệt ở Bước 2 (đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
 - **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó). Chuẩn bị ledger
-  `docs/requests/<ngày>-<slug>/.sdd/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
+  `<gốc repo chính>/.aip/runs/<request>/<part>/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
   xong). Mỗi task theo thứ tự: ghi BASE → cắt brief → giao agent theo `**Kind:**` (chuỗi agent do
-  `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer` viết test đỏ trước rồi code và báo `tdd`;
+  `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer`
+  (TDD `có` thì viết test đỏ trước rồi code và báo `tdd`);
   `FE-UI` → `frontend-implementer` rồi `frontend-test-writer` viết test trong cùng task; `FE-INT` →
   `frontend-data-integrator` (sau `FE-UI`; type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); `E2E` →
   `frontend-e2e-test-writer` cho AC luồng UI đầu-cuối trong bảng ứng viên e2e (3–5 luồng, mỗi test map 1 AC, chạy
-  `--repeat-each=3`); `DOCS`/`TOOLING` → session chính tự làm. Plan không chứa task `CT`/`DB` (đã xử lý ở Bước 2–3: contract chốt ở
+  `--repeat-each=3`); `DOCS` → `general-purpose` (`model: haiku`); `TOOLING` → session chính tự làm. Plan không chứa task `CT`/`DB` (đã xử lý ở Bước 2–3: contract chốt ở
   Bước 3, đổi schema đã dừng ở Bước 2 sang `data-db-migration`). Session chính kiểm `agent_result`, tự chạy test hẹp, rồi commit theo task qua `git-workflow` không dừng (agent
-  không commit). Task review: reviewer chế độ `task-review` trả `spec_verdict` + finding, không chạy lại suite. Finding
+  không commit). Task review: reviewer chế độ `task-review` (`model: haiku`) trả `spec_verdict` + finding, không chạy lại suite. Finding
   `blocker`/`major` hoặc `spec_verdict` khác `compliant` vào vòng sửa, tối đa 3 vòng mỗi task (vòng 3 agent mới chạy
   opus; mỗi vòng một re-review có phạm vi); hết vòng còn finding thì session chính phán và ghi `Ruling:`, thuộc loại dừng
   của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là
   `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
   API thật); phạm vi backend hoặc frontend chạy một task duy nhất, task id `1`; phạm vi fullstack chạy hai task, `1` là
-  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5.
+  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc, hỏi người dùng một lần trước mỗi nhóm Song song).
 - **Ràng buộc:** chỉ sửa file trong `**Files:**` của task; không giả lập data ẩn; không sửa code production để "cho test
   xanh", không xoá hay nới test, không viết test phụ thuộc thứ tự/thời gian thực/mạng thật; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator chưa có codegen/thư viện data → dừng, đề
   xuất, chờ người dùng chọn; không viết tay type trùng contract; không gọi `fetch`/`axios` trong component; e2e chỉ chạy
   trên môi trường local/test — thiếu BE/DB test thì agent trả `not_run` + lý do, không tự dựng hạ tầng; không chạy full
   suite ở từng task; agent không commit, không push, không gọi agent khác.
-- **Đầu ra:** code + test của từng task, mỗi task ≥ 1 commit trên nhánh `feature/`, ledger cập nhật.
-- **Gate:** mọi task có dòng `Task <n>: complete` kèm evidence test (lệnh + exit code); mỗi acceptance criterion ≥ 1 test
-  (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào `remaining_risks`); task `BE` có `tdd.red` và `tdd.green`; không
+- **Đầu ra:** code + test của từng task, mỗi task ≥ 1 commit trên nhánh `feature/`, ledger cập nhật; có part thì Bảng part cập nhật (mọi part `merged <hash>` hoặc `bỏ`).
+- **Gate:** mọi task có dòng `Task <n>: complete` kèm evidence test (lệnh + exit code); có part thì mọi part `merged <hash>` hoặc `bỏ` trong Bảng part; mỗi acceptance criterion ≥ 1 test
+  (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào `remaining_risks`); task TDD `có` có `tdd.red` và `tdd.green`; không
   còn finding `blocker` mở mà chưa có `Ruling:`; build/`tsc`/lint của phía có đụng xanh; task `FE-INT`: type khớp contract; mọi file đổi của task nằm trong
   `**Files:**`; so với trạng thái ghi lại
   ở đầu bước test (`git status --porcelain` trước lượt của `frontend-test-writer` hoặc `frontend-e2e-test-writer`), các
@@ -173,9 +178,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `questions[]` → session chính thử trả lời từ spec/plan trước, chỉ hỏi người dùng khi thuộc loại dừng; contract lệch khi
   nối data → quay lại Bước 3; integrator trả `blocked` vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại;
   plan hỏng đến mức mọi hướng đều là đoán → hỏi người dùng.
-- **Evidence:** ledger `.sdd/progress.md` (các dòng `Task <n>: complete` và `Ruling:`) + `git log` commit theo task; lệnh
+- **Evidence:** ledger `.aip/runs/<request>/<part>/progress.md` (các dòng `Task <n>: complete` và `Ruling:`) + `git log` commit theo task; lệnh
   build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0; task `FE-INT`: bằng chứng type sinh từ contract;
-  lệnh test + exit code + số liệu (`X tests, X passed`); task `BE`: `tdd.red`/`tdd.green`; e2e: lệnh Playwright + kết quả hoặc
+  lệnh test + exit code + số liệu (`X tests, X passed`); task TDD `có`: `tdd.red`/`tdd.green`; e2e: lệnh Playwright + kết quả hoặc
   `not_run` + lý do; report của integrator (endpoint ↔ hook ↔ container) khi fullstack có contract; danh sách file thay
   đổi hoặc mới của lượt test so với trạng thái đầu bước.
 
@@ -183,7 +188,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` (chỉ phía có đụng; reviewer chạy `model: opus`) ∥ agent
   `engineering-quality-auditor` (model mặc định)
-- **Đầu vào:** toàn nhánh `MERGE_BASE..HEAD` (gom bằng `plan-execution` `scripts/review-package.mjs --out`), Review Focus
+- **Đầu vào:** toàn nhánh `MERGE_BASE..HEAD` (gom bằng `plan-execution` `scripts/review-package.mjs <MERGE_BASE> <HEAD> --plan <plan.md>`), Review Focus
   của `plan.md`, các dòng `Ruling:` và `minor (deferred)` trong ledger, contract (nếu có)
 - **Hành động:** theo mẫu `final-review.md` của `plan-execution`: reviewer tìm lỗi mà review từng task không
   thấy (tích hợp giữa các task, interface lệch tên/kiểu, hồi quy, phần plan hứa mà không ai làm, từng mục Review Focus
@@ -197,13 +202,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** reviewer và auditor chỉ đọc, không tự sửa code; mọi finding phải có `file:line` + evidence quan sát
   được; không lặp lại vòng sửa — phần còn lại trình người dùng ở Bước 7.
 - **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`), `ruling_review[]`, kết quả re-review.
-- **Gate:** 0 finding `blocker`; có API thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
+- **Gate:** 0 finding `blocker`; có contract thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
   `remaining_risks`/`Ruling:` để người dùng quyết ở Bước 7.
 - **Khi fail:** còn finding `blocker` sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa, tối đa 2 lần rồi
   hỏi người dùng; drift mà lỗi nằm ở contract → quay lại Bước 3; `Ruling:` hay finding chạm loại dừng của
-  `plan-execution` (không đảo ngược, bảo mật, tác động ngoài repo, schema DB) → hỏi người dùng.
+  `plan-execution` (không đảo ngược, bảo mật, tác động ngoài repo, schema DB, đổi AC đã duyệt) → hỏi người dùng.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence) + số finding còn lại sau lượt sửa;
-  `ruling_review[]`; có API: bảng đối chiếu contract↔code.
+  `ruling_review[]`; có contract: bảng đối chiếu contract↔code.
 
 ### Bước 7 — Kết thúc nhánh ⏸
 
@@ -237,12 +242,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 |---|---|---|
 | 2 | Hướng đã chọn (kèm hướng bị loại) + cỡ việc + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có) + quyết định tách task | Người dùng xác nhận hướng và cỡ việc (và bảng e2e, tính là duyệt E2); bỏ qua phần hỏi thì các quyết định của agent được nêu nổi bật |
 | 3 | `requirement.md` (+ `design.md` cỡ dự án) + kết quả builder check; contract OpenAPI (nếu có) hoặc ghi chú "không có API"; ADR (nếu có) | Người dùng xác nhận tài liệu, contract/ADR, hoặc đồng ý không cần |
-| 4 | `plan.md` + output `check-request.mjs` (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9 |
+| 4 | `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (+ `check-partition.mjs` khi có part) (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9; `check-partition.mjs` không còn cảnh báo (hoặc nhóm bị báo chạy tuần tự) |
 | 7 | Diff cả nhánh (code + test + docs) + `rulings` + finding `major` còn lại trong `remaining_risks` + kết quả full suite | Người dùng duyệt diff cả nhánh, chấp nhận các `Ruling:`/`major` còn lại và chọn một trong 3 lựa chọn |
 
 Vòng task (Bước 5) và review cuối (Bước 6) chạy liên tục, không có checkpoint; chỉ dừng hỏi người dùng ở các loại dừng của
 `plan-execution`. Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
-tag chỉ sau lựa chọn của người dùng ở Bước 7; agent không tự commit.
+tag chỉ sau lựa chọn của người dùng ở Bước 7; ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời trước nhóm Song song (Bước 5) là merge local, không chờ Bước 7; agent không tự commit.
 
 ## Xử lý lỗi & rollback
 
@@ -266,21 +271,21 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
   phạm vi feature; việc thuộc loại dừng của `plan-execution`; người dùng không duyệt diff cả nhánh.
 - **Rollback:** các task đã commit trên nhánh `feature/`; người dùng huỷ giữa chừng thì bỏ commit hoặc nhánh bằng thao
   tác git thủ công của họ (workflow không tự `reset --hard`, không xoá nhánh, không amend hay squash khi chưa được xác
-  nhận). Chưa chọn ở Bước 7 thì không có merge hay push nào để hoàn tác.
+  nhận). Chưa chọn ở Bước 7 thì không có merge vào nhánh gốc hay push nào để hoàn tác; merge part vào `feature/<slug>` (nếu có) hoàn tác bằng thao tác git thủ công của người dùng.
 
 ## Definition of Done
 
 - [ ] Baseline build/test đã đo, số mốc đã ghi — evidence: Bước 1
 - [ ] Hướng, cỡ việc và phạm vi có xác nhận người dùng (hoặc quyết định của agent nêu rõ khi bỏ qua phần hỏi) — evidence: Bước 2
 - [ ] Acceptance criteria đo được, builder check xong, người dùng duyệt tài liệu; contract OpenAPI hợp lệ hoặc ghi rõ
-  không có API — evidence: Bước 3
-- [ ] `plan.md` qua `check-request.mjs` (chỉ còn W9) và được duyệt, hoặc ghi rõ bỏ qua vì cỡ "thay đổi nhỏ" — evidence: Bước 4
-- [ ] Mọi task `complete` trong ledger, mỗi task đã qua task review và có commit; build xanh cho phần backend/frontend có
+  không có API / không có contract vì cỡ thay đổi nhỏ — evidence: Bước 3
+- [ ] `plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part) qua `check-request.mjs` (chỉ còn W9) và `check-partition.mjs`, và được duyệt, hoặc ghi rõ bỏ qua vì cỡ "thay đổi nhỏ" — evidence: Bước 4
+- [ ] Mọi task `complete` trong ledger (có part thì mọi part `merged <hash>` hoặc `bỏ`), mỗi task đã qua task review và có commit; build xanh cho phần backend/frontend có
   đụng — evidence: Bước 5
 - [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass (e2e `not_run` vì thiếu môi trường BE/DB test là
   hợp lệ, ghi vào `remaining_risks`) — evidence: Bước 5
-- [ ] Review cuối toàn nhánh: 0 `blocker`; có API: 0 drift contract↔code, 0 `blocker` về authorization/input
-  validation — evidence: Bước 6
+- [ ] Review cuối toàn nhánh: 0 `blocker`; có contract: 0 drift contract↔code; có API: 0 `blocker` về
+  authorization/input validation — evidence: Bước 6
 - [ ] Docs và spec sống bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng", `check-request.mjs` và full suite xanh;
   người dùng đã duyệt diff cả nhánh và chọn một trong 3 lựa chọn — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)

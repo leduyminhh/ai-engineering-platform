@@ -2,8 +2,8 @@
 name: engineering-spec-analyst
 description: "Spec analyst: ghi requirement.md, design.md, ADR và tasks.md vào docs/ từ đầu vào đã chốt ở session chính, không hỏi người dùng, theo skill engineering-spec-writing. Dùng khi workflow cần ghi tài liệu đặc tả sau khi đã làm rõ yêu cầu."
 mode: write
-model: sonnet
-effort: high
+model: haiku
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "engineering-spec-writing,engineering-adr,engineering-diagram,engineering-task-breakdown"
 writeScope:
   - docs/**

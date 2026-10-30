@@ -1,11 +1,11 @@
 # Mẫu prompt: review cuối toàn nhánh
 
-Chạy một lần sau task cuối, khi mọi task đã `complete` trong ledger. Gọi `backend-reviewer` và/hoặc `frontend-reviewer` theo
+Chạy một lần sau task cuối, khi mọi task đã `complete` trong ledger (khi có part: mọi part đã `merged <hash>` hoặc `bỏ`). Gọi `backend-reviewer` và/hoặc `frontend-reviewer` theo
 phía bị chạm (hai phía thì gọi song song), mỗi lần với `model: opus`. Song song với đó là `engineering-quality-auditor`
 (quality + security gate); auditor chỉ chạy ở review cuối nhánh, không chạy ở review từng task.
 
-Package là toàn nhánh: `node <thư mục skill plan-execution>/scripts/review-package.mjs <MERGE_BASE> <HEAD> --out <requestDir>/.sdd/final-review.md` với
-`MERGE_BASE` = `git merge-base HEAD <nhánh gốc>`; luôn dùng `--out` để diff toàn nhánh không đổ vào context session chính.
+Package là toàn nhánh: `node <thư mục skill plan-execution>/scripts/review-package.mjs <MERGE_BASE> <HEAD> --plan <plan.md>` với
+`MERGE_BASE` = `git merge-base HEAD <nhánh gốc>` và `<plan.md>` là plan gốc; luôn dùng `--plan` (package ghi vào workspace `.aip/`) để diff toàn nhánh không đổ vào context session chính.
 
 ```
 Review cuối toàn nhánh cho plan <đường dẫn plan.md>, chế độ final-review. Bạn chỉ đọc; không sửa file, không commit,
@@ -16,6 +16,7 @@ không gọi agent khác.
 - Plan: <đường dẫn plan.md>, spec/design: <đường dẫn>. Coi spec là tầm nhìn, không phải danh sách kiểm: im lặng của spec
   không phải là cho phép.
 - Review Focus của plan (các failure mode design ngụ ý mà test từng task có thể chưa phủ): <dán mục Review Focus>.
+- Request chia part: Bảng part (`## Bảng part` của design) và các interface giữa part (`**Interfaces:**` Produces/Consumes qua ranh giới part) là Review Focus bắt buộc: <dán Bảng part và danh sách interface giữa part>.
 - Các dòng Ruling: đã ghi trong ledger (quyết định của session chính trong lúc chạy): <dán nguyên các dòng Ruling:>.
 - Finding minor/nit đã hoãn: <dán các dòng minor (deferred)>. Finding blocker/major đã hoãn nằm trong các dòng Ruling:
   ở trên, kèm mức gốc.
@@ -29,8 +30,10 @@ Cách làm:
 4. Được chạy lệnh chỉ đọc, kể cả test/build, để lấy evidence; ghi lệnh và kết quả.
 5. Thang severity của contract đầu ra; mỗi finding có location file:line và evidence; tự đọc lại trước khi trả.
 6. Liệt kê điều bạn bỏ qua trong declined_to_judge[] kèm lý do.
+7. Finding chỉ sửa được bằng cách đổi nghĩa hoặc câu chữ một AC đã duyệt: không chọn hướng sửa, ghi vào questions[]
+   gồm AC ID, các cách hiểu, và hệ quả của từng cách hiểu.
 
-Trả khối agent_result: findings[], validation[], ruling_review[], declined_to_judge[], remaining_risks[].
+Trả khối agent_result: findings[], validation[], ruling_review[], declined_to_judge[], remaining_risks[], questions[].
 ```
 
 Sau review cuối, chỉ một lần sửa cho toàn bộ finding blocker/major (một dispatch, `model: opus`) và một lần re-review có

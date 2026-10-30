@@ -3,6 +3,7 @@ type: handoff
 version: 1
 validator: chưa có
 sources: docs/requests/2026-10-21-long-session-context/design.md (D4); Claude Code prompt-caching (session rotation)
+Ghi bản điền ở <gốc repo chính>/.aip/runs/<request>/handoff.md (git bỏ qua; hook session-start nạp từ đó).
 Bỏ khối này khi chép template ra dùng.
 -->
 

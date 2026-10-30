@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới và mục "Ảnh hưởng spec" của design.md (W10–W14).
+// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới, mục "Ảnh hưởng spec" của design.md (W10–W14) và thư mục parts/ (Bảng part W19, AC trong design của part W20).
 // Cách dùng: <thư-mục> [--tests <path>…] [--base <ref>] [--strict]. --base <ref> bật W13 (spec bị ảnh hưởng chưa đổi kể từ ref). Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -105,7 +105,52 @@ export const STATUSES = ['draft', 'approved', 'in-progress', 'merged', 'abandone
 // Loại task của plan.md; workflow vòng task dùng kind để chọn agent/skill (xem **Kind:** trong plan template).
 export const TASK_KINDS = ['BE', 'FE-UI', 'FE-INT', 'E2E', 'DB', 'CT', 'DOCS', 'TOOLING'];
 
-const CAP_RE = /^[a-z0-9][a-z0-9-]*$/;
+// TDD `có` chỉ cho kind có test đỏ-vì-hành-vi: FE-UI đỏ do thiếu import component, trái engineering-tdd.
+export const TDD_ALLOWED_KINDS = ['BE', 'TOOLING'];
+
+// Giá trị sau `**TDD:**`: `có` | `không — <lý do>`; trả { error } khi sai định dạng.
+export function parseTddLine(line) {
+  const v = line.trim();
+  if (v === 'có') return { value: 'có' };
+  const m = v.match(/^không(?:\s*—\s*(.*))?$/);
+  if (!m) return { error: `TDD "${v}" không hợp lệ, cần "có" hoặc "không — <lý do>"` };
+  const reason = (m[1] || '').trim();
+  return reason ? { value: 'không', reason } : { error: 'TDD "không" thiếu lý do, cần "không — <lý do>"' };
+}
+
+export const PART_RE = /^\d{2}-[a-z0-9][a-z0-9-]*$/;
+export const PART_STATUSES = ['chưa làm', 'đang làm', 'bỏ'];
+const PART_PLAN_RE = /^parts\/[^/]+\/plan\.md$/;
+
+// Bảng part: chỉ bảng đầu tiên dưới heading H2 "Bảng part" (khớp đúng; heading lặp bị bỏ); dòng "|" đầu là tiêu đề cột, dòng phân cách bị bỏ. Ô thiếu thành '' để W19 báo thay vì bỏ im lặng.
+export function parsePartTable(designText) {
+  const lines = linesOf(designText);
+  const res = { line: 0, rows: [] };
+  let state = 0; // 0 chờ heading, 1 trong mục, 2 đã đọc xong
+  let header = true;
+  let seenRow = false;
+  const bare = (v) => v.trim().replace(/^`+|`+$/g, '');
+  lines.forEach((l, i) => {
+    if (state === 2) return;
+    const h = l.match(/^(#{1,6})\s+(.*)$/);
+    if (h) {
+      if (state === 1) state = 2;
+      else if (h[1].length === 2 && /^bảng part\s*$/i.test(h[2])) { state = 1; res.line = i + 1; }
+      return;
+    }
+    if (state !== 1) return;
+    if (!/^\s*\|/.test(l)) { if (seenRow) state = 2; return; }
+    seenRow = true;
+    const cells = l.trim().replace(/^\||\|$/g, '').split('|').map(bare);
+    if (header) { header = false; return; }
+    if (cells.every((c) => /^:?-+:?$/.test(c))) return;
+    const deps = !cells[1] || cells[1] === '—' ? [] : cells[1].split(',').map(bare).filter(Boolean);
+    res.rows.push({ part: cells[0], deps, group: cells[2] && cells[2] !== '—' ? cells[2] : null, status: cells[3] ?? '', line: i + 1 });
+  });
+  return res.line ? res : null;
+}
+
+const CAP_RE =/^[a-z0-9][a-z0-9-]*$/;
 const REQ_ID_RE = /^[a-z0-9][a-z0-9-]*\/R[1-9]\d*$/;
 
 // Đọc spec sống: yêu cầu nằm trong H2 "Yêu cầu"; link lấy toàn file vì bảng Lịch sử cũng trỏ về request. Dòng lạ (Cập nhật:, ghi chú) bị bỏ qua.
@@ -134,11 +179,15 @@ export function parseSpec(text, folder) {
   return { reqs, problems, links };
 }
 
-export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs, legacy } = {}) {
+export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs, legacy, partDirs } = {}) {
   const warnings = [];
   const warn = (file, line, code, msg) => warnings.push({ file, line, code, msg });
   const lines = {};
   for (const f of FILES) if (typeof texts[f] === 'string') lines[f] = linesOf(texts[f]);
+  // Khoá parts/<nn>-<slug>/plan.md cũng là plan: mọi kiểm plan chạy cho từng file với đúng tên file; sort để thứ tự cảnh báo ổn định.
+  const partPlans = Object.keys(texts).filter((f) => PART_PLAN_RE.test(f) && typeof texts[f] === 'string').sort();
+  for (const f of partPlans) lines[f] = linesOf(texts[f]);
+  const planFiles = [...(lines['plan.md'] ? ['plan.md'] : []), ...partPlans];
 
   const acsBy = Object.fromEntries(AC_SOURCES.filter((f) => lines[f]).map((f) => [f, parseAcs(lines[f])]));
   const sources = AC_SOURCES.filter((f) => acsBy[f]?.length);
@@ -164,32 +213,40 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     }
   }
 
-  if (lines['plan.md']) {
+  for (const pf of planFiles) {
     for (const field of ['Goal', 'Spec']) {
-      if (!lines['plan.md'].some((l) => l.startsWith(`**${field}:**`))) {
-        warn('plan.md', 1, 'W5', `plan.md thiếu dòng **${field}:**`);
+      if (!lines[pf].some((l) => l.startsWith(`**${field}:**`))) {
+        warn(pf, 1, 'W5', `${pf} thiếu dòng **${field}:**`);
       }
     }
   }
 
   // Task = heading "### Task <n>"; **Kind:** tính trong phạm vi tới heading #–### kế tiếp (linesOf đã bỏ khối code).
-  if (lines['plan.md']) {
-    const pl = lines['plan.md'];
+  for (const pf of planFiles) {
+    const pl = lines[pf];
     pl.forEach((l, i) => {
       if (!/^###\s+Task\s+\d+/.test(l)) return;
       let kind;
+      let tdd;
       for (let j = i + 1; j < pl.length && !/^#{1,3}\s/.test(pl[j]); j++) {
         const m = pl[j].match(/^\*\*Kind:\*\*\s*(.*)$/);
-        if (m) { kind = m[1].trim(); break; }
+        if (m && kind === undefined) kind = m[1].trim();
+        const t = pl[j].match(/^\*\*TDD:\*\*\s*(.*)$/);
+        if (t && !tdd) tdd = { line: j + 1, ...parseTddLine(t[1]) };
       }
-      if (kind === undefined) warn('plan.md', i + 1, 'W17', 'Task thiếu dòng **Kind:**');
-      else if (!TASK_KINDS.includes(kind)) warn('plan.md', i + 1, 'W18', `Kind "${kind}" không hợp lệ, cần một trong: ${TASK_KINDS.join(' | ')}`);
+      if (kind === undefined) warn(pf, i + 1, 'W17', 'Task thiếu dòng **Kind:**');
+      else if (!TASK_KINDS.includes(kind)) warn(pf, i + 1, 'W18', `Kind "${kind}" không hợp lệ, cần một trong: ${TASK_KINDS.join(' | ')}`);
+      if (!tdd) return;
+      if (tdd.error) warn(pf, tdd.line, 'W21', tdd.error);
+      else if (tdd.value === 'có' && !TDD_ALLOWED_KINDS.includes(kind)) {
+        warn(pf, tdd.line, 'W21', `TDD "có" chỉ hợp lệ với kind ${TDD_ALLOWED_KINDS.join(' | ')}, task này ${kind === undefined ? 'thiếu **Kind:**' : `là ${kind}`}`);
+      }
     });
   }
 
-  if (lines['plan.md'] || lines['tasks.md']) {
+  if (planFiles.length || lines['tasks.md']) {
     const covered = new Set();
-    for (const l of lines['plan.md'] || []) if (l.startsWith('**Phủ AC:**')) for (const a of l.match(AC_ANY_RE) || []) covered.add(a);
+    for (const pf of planFiles) for (const l of lines[pf]) if (l.startsWith('**Phủ AC:**')) for (const a of l.match(AC_ANY_RE) || []) covered.add(a);
     for (const l of lines['tasks.md'] || []) for (const a of l.match(AC_ANY_RE) || []) covered.add(a);
     for (const [id, at] of valid) {
       if (!covered.has(id)) warn(at.file, at.line, 'W6', `${id} chưa được task nào phủ (plan.md "**Phủ AC:**" hoặc tasks.md)`);
@@ -203,15 +260,17 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     if (override) {
       for (const p of override) { const c = readTest(p); if (c !== null) contents.push(c); }
     } else {
-      const { hasFiles, entries } = planTestPaths(texts['plan.md'] || '');
-      if (hasFiles && !entries.length) {
-        const at = lines['plan.md'].findIndex((l) => l.startsWith('**Files:**'));
-        warn('plan.md', at + 1, 'W8', 'plan.md không ghi file test nào trong **Files:**');
-      }
-      for (const e of entries) {
-        const c = readTest(e.path);
-        if (c === null) warn('plan.md', e.line, 'W9', `File test ${e.path} chưa tồn tại`);
-        else contents.push(c);
+      for (const pf of planFiles) {
+        const { hasFiles, entries } = planTestPaths(texts[pf]);
+        if (hasFiles && !entries.length) {
+          const at = lines[pf].findIndex((l) => l.startsWith('**Files:**'));
+          warn(pf, at + 1, 'W8', `${pf} không ghi file test nào trong **Files:**`);
+        }
+        for (const e of entries) {
+          const c = readTest(e.path);
+          if (c === null) warn(pf, e.line, 'W9', `File test ${e.path} chưa tồn tại`);
+          else contents.push(c);
+        }
       }
       // W8/W9 đã báo thiếu file test; lúc lập plan test chưa có nên W7 cho mọi AC chỉ gây nhiễu (và không được xoá **Files:** để im).
       run = contents.length > 0;
@@ -263,8 +322,51 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     if (at >= 0) {
       const status = lines['design.md'][at].replace(/^-\s+Trạng thái\s*:\s*/, '').split(/[\s—–]/)[0].toLowerCase();
       if (!STATUSES.includes(status)) warn('design.md', at + 1, 'W15', `Trạng thái "${status}" không hợp lệ, cần một trong: ${STATUSES.join(' | ')}`);
-      else if ((status === 'merged' || status === 'abandoned') && typeof texts['plan.md'] === 'string') warn('plan.md', 1, 'W16', `Request đã ${status}: xoá plan.md (checklist thực thi, không còn giá trị)`);
+      else if (status === 'merged' || status === 'abandoned') {
+        for (const pf of planFiles) warn(pf, 1, 'W16', `Request đã ${status}: xoá ${pf} (checklist thực thi, không còn giá trị)`);
+      }
     }
+  }
+
+  // Request không có parts/ và không có Bảng part thì không có gì để kiểm: output phải y hệt trước khi có tính năng part.
+  const dirs = [...new Set(partDirs ?? Object.keys(texts).map((k) => k.match(/^parts\/([^/]+)\//)?.[1]).filter(Boolean))].sort();
+  const table = typeof texts['design.md'] === 'string' ? parsePartTable(texts['design.md']) : null;
+  if (dirs.length || table) {
+    const byName = new Map();
+    for (const r of table?.rows ?? []) if (!byName.has(r.part)) byName.set(r.part, r);
+    const depsOf = (p) => (byName.get(p)?.deps ?? []).filter((d) => d !== p);
+    const onCycle = (p) => {
+      const seenDeps = new Set();
+      for (const stack = depsOf(p); stack.length;) {
+        const d = stack.pop();
+        if (d === p) return true;
+        if (!seenDeps.has(d) && seenDeps.add(d)) stack.push(...depsOf(d));
+      }
+      return false;
+    };
+    const seen = new Set();
+    for (const r of table?.rows ?? []) {
+      if (seen.has(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" trùng tên với hàng trước trong Bảng part`);
+      seen.add(r.part);
+      if (!PART_RE.test(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" sai định dạng, cần <nn>-<part-slug> (vd 01-a)`);
+      // Part đã merged hoặc bỏ không còn chạy: plan của nó được phép xoá (W16 đòi xoá khi request merged).
+      else if (typeof texts[`parts/${r.part}/plan.md`] !== 'string' && ['chưa làm', 'đang làm'].includes(r.status)) warn('design.md', r.line, 'W19', `Part "${r.part}" không có parts/${r.part}/plan.md`);
+      for (const d of r.deps) {
+        if (d === r.part) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc chính nó`);
+        else if (!byName.has(d)) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" không có trong Bảng part`);
+        // Part bị phụ thuộc đã merged hoặc bỏ thì không còn chạy, nên không có song song thật với part này.
+        else if (r.group && byName.get(d).group?.toLowerCase() === r.group.toLowerCase() && byName.get(d).status !== 'bỏ' && !/^merged\s/.test(byName.get(d).status)) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" cùng nhóm Song song ${r.group}: part phụ thuộc phải chạy sau, không cùng nhóm`);
+      }
+      if (byName.get(r.part) === r && onCycle(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" nằm trong chu trình Phụ thuộc: không có thứ tự chạy hợp lệ`);
+      if (!PART_STATUSES.includes(r.status) && !/^merged\s+\S+$/.test(r.status)) warn('design.md', r.line, 'W19', `Part "${r.part}" có Trạng thái "${r.status}" không hợp lệ, cần: ${PART_STATUSES.join(' | ')} | merged <hash>`);
+    }
+    for (const d of dirs) if (!byName.has(d)) warn(`parts/${d}`, 1, 'W19', `Thư mục parts/${d}/ không có trong Bảng part${table ? '' : ' (design.md thiếu mục "## Bảng part")'}`);
+  }
+  // AC chỉ ở gốc request để ID duy nhất toàn request; design của part nhắc AC<n>.<m> là dấu hiệu AC bị khai báo lặp.
+  for (const f of Object.keys(texts).sort()) {
+    if (!/^parts\/[^/]+\/design\.md$/.test(f) || typeof texts[f] !== 'string') continue;
+    const at = linesOf(texts[f]).findIndex((l) => (l.match(AC_ANY_RE) || []).length);
+    if (at >= 0) warn(f, at + 1, 'W20', 'design của part không được chứa AC<n>.<m>: AC chỉ khai báo ở requirement.md/design.md gốc');
   }
   return warnings;
 }
@@ -373,6 +475,19 @@ export function main(argv) {
     if (!fs.existsSync(p)) continue;
     try { texts[f] = fs.readFileSync(p, 'utf8'); } catch (e) { console.error(`Không đọc được ${p}: ${e.message}`); return 2; }
   }
+  // Chỉ một cấp parts/<x>/; tên thư mục lấy từ readdir để thư mục rỗng vẫn bị W19 nếu ngoài Bảng part.
+  const partDirs = [];
+  try {
+    for (const e of fs.readdirSync(path.join(dir, 'parts'), { withFileTypes: true })) if (e.isDirectory()) partDirs.push(e.name);
+  } catch { /* không có parts/ */ }
+  partDirs.sort();
+  for (const d of partDirs) {
+    for (const n of ['plan.md', 'design.md']) {
+      const p = path.join(dir, 'parts', d, n);
+      if (!fs.existsSync(p)) continue;
+      try { texts[`parts/${d}/${n}`] = fs.readFileSync(p, 'utf8'); } catch (e) { console.error(`Không đọc được ${p}: ${e.message}`); return 2; }
+    }
+  }
   const specsDir = path.resolve(dir, '..', '..', 'specs');
   const readSpec = (cap) => {
     const p = path.resolve(specsDir, cap, 'spec.md');
@@ -383,7 +498,7 @@ export function main(argv) {
   // Thư mục không có tiền tố ngày coi là cũ (không rõ tuổi thì không cảnh báo).
   const dated = path.basename(path.resolve(dir)).match(/^(\d{4}-\d{2}-\d{2})-/);
   const legacy = !dated || dated[1] < SPEC_SINCE;
-  const warnings = checkRequest(texts, { legacy, readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
+  const warnings = checkRequest(texts, { legacy, partDirs, readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
   for (const w of warnings) console.log(`WARN ${w.file}:${w.line} [${w.code}] ${w.msg}`);
   console.log(`${warnings.length} cảnh báo`);
   return strict && warnings.length ? 1 : 0;

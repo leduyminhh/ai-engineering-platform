@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// Sổ tiến độ của một plan: <requestDir>/.sdd/progress.md (git bỏ qua cả thư mục .sdd).
-// Cách dùng: <requestDir> "<dòng>" — thêm một dòng vào ledger, in đường dẫn file. Exit 2 khi thiếu đối số hoặc dòng bị từ chối.
+// Sổ tiến độ của một plan: <gốc repo chính>/.aip/runs/<request>/<part>/progress.md (xem workspace.mjs; git bỏ qua .aip).
+// Cách dùng: <plan.md | requestDir> "<dòng>" — thêm một dòng vào ledger, in đường dẫn file. Exit 2 khi thiếu đối số hoặc dòng bị từ chối.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { resolveWorkspace } from './workspace.mjs';
 
 const DONE_RE = /^Plan: complete\s*$/m;
 // Chế độ inline không có review từng task, nên dòng complete là bằng chứng duy nhất: bắt buộc mang lệnh test và exit 0.
@@ -12,6 +13,9 @@ const DONE_RE = /^Plan: complete\s*$/m;
 const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b(?![.\w-])/i;
 const INLINE_EVIDENCE_RE = /\btests: \S.* exit 0\b/;
 const EXIT_FAILED_RE = /\bexit [1-9]/;
+const TASK_COMPLETE_RE = /^Task \d+: complete\b/i;
+// Lazy để dừng ở "exit <n>" đầu tiên sau "red:", không lấn sang "tests: … exit 0" phía sau.
+const RED_RE = /\bred:\s*.*? exit (\d+)\b/gi;
 // Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
 const MAX_LINE = 4096;
 
@@ -19,19 +23,38 @@ export function validateLine(line) {
   // Đối số nhiều dòng được kiểm từng dòng: một dòng hợp lệ không được che dòng inline thiếu evidence.
   for (const l of line.split(/\r?\n/)) {
     if (l.length > MAX_LINE) return `dòng ledger dài quá ${MAX_LINE} ký tự`;
-    if (INLINE_COMPLETE_RE.test(l) && !(INLINE_EVIDENCE_RE.test(l) && !EXIT_FAILED_RE.test(l))) {
+    let evidence = l;
+    if (TASK_COMPLETE_RE.test(l)) {
+      // Mọi khối red: đều phải exit khác 0; một khối giả không được che bởi khối hợp lệ đứng trước.
+      for (const red of l.matchAll(RED_RE)) {
+        if (Number(red[1]) === 0) return 'dòng Task <n>: complete có "red: <lệnh> exit 0": bằng chứng đỏ phải exit khác 0';
+      }
+      // exit khác 0 của red là hợp lệ, không được tính vào kiểm "tests" bên dưới.
+      evidence = l.replace(RED_RE, '');
+    }
+    if (INLINE_COMPLETE_RE.test(l) && !(INLINE_EVIDENCE_RE.test(evidence) && !EXIT_FAILED_RE.test(evidence))) {
       return 'dòng Task <n>: complete ở chế độ inline phải có "tests: <lệnh> exit 0" và không kèm exit khác 0';
     }
   }
   return null;
 }
 
-// Tạo .sdd/ và .gitignore chứa `*` để ledger không bao giờ lọt vào commit; trả đường dẫn progress.md.
-export function ensureWorkspace(requestDir) {
-  const dir = path.join(requestDir, '.sdd');
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, '.gitignore'), '*\n');
-  return path.join(dir, 'progress.md');
+// Trả đường dẫn progress.md trong workspace của plan. Ledger cũ <thư mục plan>/.sdd/progress.md được chép sang một lần để plan đang dở
+// không mất tiến độ; COPYFILE_EXCL để không bao giờ ghi đè ledger mới đã có, và giữ nguyên file cũ.
+export function ledgerFile(planArg, deps = {}) {
+  const ws = resolveWorkspace(planArg, deps);
+  const fsx = { ...fs, ...deps.fs };
+  const file = path.join(ws.dir, 'progress.md');
+  const planDir = path.dirname(ws.plan);
+  const src = path.join(planDir, '.sdd', 'progress.md');
+  try {
+    // Chỉ chép file thường nằm thật trong thư mục plan: symlink (vd tới .env) sẽ đưa bí mật vào .aip, rồi hook session-start nạp vào context.
+    const rel = fsx.lstatSync(src).isFile() && path.relative(fsx.realpathSync(planDir), fsx.realpathSync(src));
+    if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) fsx.copyFileSync(src, file, fs.constants.COPYFILE_EXCL);
+  } catch (e) {
+    if (e?.code !== 'ENOENT' && e?.code !== 'EEXIST') throw e;
+  }
+  return file;
 }
 
 export function appendLedger(file, line) {
@@ -46,10 +69,10 @@ export function readTail(file, max) {
   return text.slice(Math.max(0, text.length - max));
 }
 
-export function main(argv) {
-  const [requestDir, line] = argv;
-  if (!requestDir || line === undefined) {
-    console.error('Cách dùng: ledger.mjs <requestDir> "<dòng>"');
+export function main(argv, deps) {
+  const [planArg, line] = argv;
+  if (!planArg || line === undefined) {
+    console.error('Cách dùng: ledger.mjs <plan.md|requestDir> "<dòng>"');
     return 2;
   }
   const invalid = validateLine(line);
@@ -57,7 +80,7 @@ export function main(argv) {
     console.error(invalid);
     return 2;
   }
-  const file = ensureWorkspace(requestDir);
+  const file = ledgerFile(planArg, deps);
   appendLedger(file, line);
   console.log(file);
   return 0;

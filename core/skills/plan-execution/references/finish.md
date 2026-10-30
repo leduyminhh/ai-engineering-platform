@@ -19,7 +19,9 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 5. **Gom `Ruling:`.** Đọc ledger, liệt kê mọi dòng `Ruling:` (cùng `minor (deferred)` còn mở) và đưa vào trường `rulings`
    của `workflow_result` (định dạng theo contract đầu ra, `core:principles`). Trình các dòng này cho người dùng cùng
    menu bên dưới; dòng nào thuộc loại dừng hỏi của `task-loop.md` thì nêu riêng để người dùng quyết.
-6. **Xác nhận nhánh gốc** (nhánh sẽ merge vào hoặc làm đích của PR). Không đoán: hỏi khi có nhiều ứng viên.
+6. **Xác nhận nhánh gốc** (nhánh sẽ merge vào hoặc làm đích của PR). Không đoán: hỏi khi có nhiều ứng viên. Chạy
+   `git remote`: kết quả rỗng thì repo chưa có remote, lựa chọn push + PR ghi "không khả dụng: repo chưa có remote" và
+   không gợi ý lệnh `git push`.
 7. **Đưa đúng 3 lựa chọn**, lựa chọn mặc định là giữ nguyên:
 
 | # | Lựa chọn | Việc làm |
@@ -28,7 +30,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 | 2 | push + PR | Xác nhận tên nhánh rồi push và mở PR qua `git-workflow`. |
 | 3 | giữ nguyên | Không làm gì thêm; báo tên nhánh và commit đầu/cuối. |
 
-Không merge, không push khi người dùng chưa chọn; không trả lời rõ → áp lựa chọn mặc định (giữ nguyên) và nói như vậy.
+Không merge nhánh `feature/<slug>` vào nhánh gốc, không push khi người dùng chưa chọn (merge nhánh part vào `feature/<slug>` đã làm ở "Chế độ part" của `task-loop.md`); không trả lời rõ → áp lựa chọn mặc định (giữ nguyên) và nói như vậy.
 
 ## Chi tiết từng lựa chọn
 
@@ -51,5 +53,5 @@ Không merge, không push khi người dùng chưa chọn; không trả lời r�
 ## Ghi nhận
 
 Khi người dùng đã chọn và việc của lựa chọn đó xong (kể cả giữ nguyên), ghi
-`node <thư mục skill plan-execution>/scripts/ledger.mjs <requestDir> "Plan: complete"` rồi trả `workflow_result` có `rulings` đã gom. Dòng
+`node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md gốc> "Plan: complete"` rồi trả `workflow_result` có `rulings` đã gom. `Plan: complete` chỉ ghi ở ledger `root/` (plan gốc), không bao giờ ở ledger part. Dòng
 `Plan: complete` làm hook `session-start` ngừng nạp ledger.

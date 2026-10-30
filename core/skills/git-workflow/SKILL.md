@@ -26,7 +26,7 @@ release/hotfix...).
   không liên quan để nguyên trừ khi người dùng nói rõ.
 - Không commit khi chưa đọc diff; không push khi chưa xác nhận branch hiện tại.
 - Hỏi người dùng một lần trước khi tạo worktree; chưa được đồng ý thì không tự tạo. Khi được đồng ý,
-  đặt theo quy ước `.claude/worktrees/<slug>-t<n>/` của baseline Parallel agents.
+  đặt theo quy ước `.claude/worktrees/<slug>-p<nn>/` của baseline Parallel agents (chỉ song song giữa part, `<nn>` là số part).
 - KHÔNG thêm bất kỳ dòng nào có prefix `Co-authored-by` / `Co-Authored-By` hay attribution
   của assistant vào commit message, PR body, tag/release notes.
 - Không commit công việc đang fail trừ khi người dùng muốn checkpoint tường minh.

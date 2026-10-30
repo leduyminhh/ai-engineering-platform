@@ -4,6 +4,7 @@ description: "Phân tích hiệu năng backend: đo ≥3 lần (p95 load test, S
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "backend-performance"
 ---
 

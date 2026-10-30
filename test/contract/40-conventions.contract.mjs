@@ -391,7 +391,7 @@ export default async function run({ ok, ctx }) {
 
     if (fs.existsSync(path.join(BUILD, 'claude'))) {
       const missing = allAgents
-        .filter((a) => !new RegExp('^model: sonnet\\s*$', 'm').test(fs.readFileSync(path.join(BUILD, 'claude', 'plugins', a.plugin, 'agents', `${a.id}.md`), 'utf8')))
+        .filter((a) => !new RegExp(`^model: ${a.model}\\s*$`, 'm').test(fs.readFileSync(path.join(BUILD, 'claude', 'plugins', a.plugin, 'agents', `${a.id}.md`), 'utf8')))
         .map((a) => a.id);
       const leaked = [];
       for (const prov of ['codex', 'cursor', 'antigravity']) {
@@ -406,14 +406,14 @@ export default async function run({ ok, ctx }) {
       ok(missing.length === 0 && leaked.length === 0,
         `AC1.3: build Claude mang model, provider khác không đổi${missing.length ? ' — thiếu: ' + missing.join(', ') : ''}${leaked.length ? ' — lọt: ' + leaked.slice(0, 3).join(', ') : ''}`);
       const noEffort = allAgents
-        .filter((a) => !/^effort: high\s*$/m.test(fs.readFileSync(path.join(BUILD, 'claude', 'plugins', a.plugin, 'agents', `${a.id}.md`), 'utf8')))
+        .filter((a) => a.effort && !new RegExp(`^effort: ${a.effort}\\s*$`, 'm').test(fs.readFileSync(path.join(BUILD, 'claude', 'plugins', a.plugin, 'agents', `${a.id}.md`), 'utf8')))
         .map((a) => a.id);
       const codexDir = path.join(BUILD, 'codex');
       const codexEffort = fs.existsSync(codexDir)
         ? listFilesRec(codexDir).filter((f) => /\.(toml|md)$/.test(f) && fs.readFileSync(path.join(codexDir, f), 'utf8').includes('model_reasoning_effort'))
         : [];
       ok(noEffort.length === 0 && codexEffort.length === 0,
-        `AC1.3: Claude mang effort high, Codex không nhận model_reasoning_effort${noEffort.length ? ' — thiếu effort: ' + noEffort.join(', ') : ''}${codexEffort.length ? ' — lọt: ' + codexEffort.slice(0, 3).join(', ') : ''}`);
+        `AC1.3: Claude mang effort đã khai, Codex không nhận model_reasoning_effort${noEffort.length ? ' — thiếu effort: ' + noEffort.join(', ') : ''}${codexEffort.length ? ' — lọt: ' + codexEffort.slice(0, 3).join(', ') : ''}`);
     }
   }
 }

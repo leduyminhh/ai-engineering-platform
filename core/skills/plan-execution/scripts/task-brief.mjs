@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Cắt một task khỏi plan.md ra file brief cho implementer.
-// Cách dùng: <plan.md> <n> [--out <dir>] — ghi task-<n>-brief.md (mặc định <thư mục plan>/.sdd) và in đường dẫn. Exit 1 khi không có task, exit 2 khi sai đối số.
+// Cách dùng: <plan.md | requestDir> <n> [--out <dir>] — ghi task-<n>-brief.md (mặc định workspace .aip của plan, xem workspace.mjs) và in đường dẫn. Exit 1 khi không có task, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ensureWorkspace } from './ledger.mjs';
+import { resolveWorkspace } from './workspace.mjs';
 
 // Nguyên văn từ `### Task <n>` tới heading #/##/### kế tiếp; heading trong khối ``` hoặc ~~~ không tính.
 export function extractTask(planText, n) {
@@ -27,7 +27,45 @@ export function extractTask(planText, n) {
   return `${body.join('\n')}\n`;
 }
 
-export function main(argv) {
+// Không import check-request.mjs vì khác skill; test 33-request-parts chạy chung bộ vector để hai bên không lệch.
+const TDD_KINDS = ['BE', 'TOOLING'];
+
+// Dòng **Kind:** / **TDD:** đầu tiên ngoài khối code (khớp cách check-request đọc plan).
+function taskField(taskText, name) {
+  let fenced = false;
+  for (const l of taskText.split(/\r?\n/)) {
+    if (/^\s*(```|~~~)/.test(l)) { fenced = !fenced; continue; }
+    const m = !fenced && l.match(new RegExp(`^\\*\\*${name}:\\*\\*\\s*(.*)$`));
+    if (m) return m[1].trim();
+  }
+  return undefined;
+}
+
+// TDD hiệu lực của task: giá trị plan ghi nếu hợp lệ với kind, ngược lại mặc định theo kind (BE = có, còn lại = không).
+export function effectiveTdd(taskText) {
+  const kind = taskField(taskText, 'Kind');
+  const raw = taskField(taskText, 'TDD');
+  const m = raw?.match(/^(có|không(?:\s*—\s*(\S.*))?)$/);
+  if (m && (m[1] === 'có' ? TDD_KINDS.includes(kind) : m[2] !== undefined)) {
+    return m[1] === 'có' ? { value: 'có', defaulted: false } : { value: 'không', reason: m[2].trim(), defaulted: false };
+  }
+  return { value: TDD_KINDS.includes(kind) ? 'có' : 'không', defaulted: true };
+}
+
+// Brief luôn có đúng một dòng TDD hiệu lực: dòng hợp lệ giữ tại chỗ; thiếu hoặc sai thì bỏ dòng sai và chèn mặc định
+// ngay sau heading, để implementer không đọc phải dòng mâu thuẫn (W21 vẫn báo lỗi ở plan.md).
+function withTddLine(taskText) {
+  const eff = effectiveTdd(taskText);
+  if (!eff.defaulted) return taskText;
+  let fenced = false;
+  const [heading, ...rest] = taskText.split('\n').filter((l) => {
+    if (/^\s*(```|~~~)/.test(l)) fenced = !fenced;
+    return fenced || !l.startsWith('**TDD:**');
+  });
+  return [heading, `**TDD:** ${eff.value} (mặc định theo kind)`, ...rest].join('\n');
+}
+
+export function main(argv, deps) {
   const args = [...argv];
   const oi = args.indexOf('--out');
   let outDir = null;
@@ -35,18 +73,20 @@ export function main(argv) {
   const [planFile, nRaw] = args;
   const n = Number(nRaw);
   if (!planFile || !Number.isInteger(n) || n < 1 || (oi >= 0 && !outDir)) {
-    console.error('Cách dùng: task-brief.mjs <plan.md> <n> [--out <dir>]');
+    console.error('Cách dùng: task-brief.mjs <plan.md|requestDir> <n> [--out <dir>]');
     return 2;
   }
-  const task = extractTask(fs.readFileSync(planFile, 'utf8'), n);
+  let planPath = planFile;
+  try { if (fs.statSync(planFile).isDirectory()) planPath = path.join(planFile, 'plan.md'); } catch { /* readFileSync bên dưới báo lỗi */ }
+  const task = extractTask(fs.readFileSync(planPath, 'utf8'), n);
   if (task === null) {
     console.error(`Không có "### Task ${n}" trong ${planFile}`);
     return 1;
   }
-  const dir = outDir ?? path.dirname(ensureWorkspace(path.dirname(path.resolve(planFile))));
+  const dir = outDir ?? resolveWorkspace(planFile, deps).dir;
   fs.mkdirSync(dir, { recursive: true });
   const out = path.join(dir, `task-${n}-brief.md`);
-  fs.writeFileSync(out, task);
+  fs.writeFileSync(out, withTddLine(task));
   console.log(out);
   return 0;
 }

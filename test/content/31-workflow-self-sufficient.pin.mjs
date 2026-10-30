@@ -151,6 +151,8 @@ export default async function run({ ok, ctx }) {
     ok(s3.includes('engineering-spec-analyst') && /builder check/.test(s3),
       'AC1.3: Bước 3 spec-analyst ghi tài liệu, session chính chạy builder check');
     ok(/design\.md/.test(s3) && /cỡ dự án/.test(s3), 'AC1.4: Bước 3 chỉ viết design.md khi cỡ dự án');
+    ok(/thay đổi nhỏ"[^.]*mặc định không viết file contract/.test(s3),
+      'regression trial 2026-10-30: cỡ thay đổi nhỏ mặc định không viết file contract riêng');
     const s4 = secs[3].body;
     ok(s4.includes('check-request.mjs') && s4.includes('`engineering-plan-writing`') && /thay đổi nhỏ/.test(s4) && /bỏ qua/.test(s4),
       'AC2.2: Bước 4 theo engineering-plan-writing, chạy check-request.mjs, bỏ qua khi cỡ thay đổi nhỏ');
@@ -172,8 +174,8 @@ export default async function run({ ok, ctx }) {
       'AC3.1: workflow-feature đúng 7 bước, Bước 5–7 là Vòng task, Review cuối, Kết thúc nhánh ⏸');
     const field = (s, name) => flatW((s.body.split(`- **${name}:**`)[1] || '').split(/\n- \*\*/)[0]);
     const s5 = flatW(secs[4].body);
-    ok(s5.includes('`plan-execution`') && s5.includes('.sdd/progress.md') && /ledger/.test(s5),
-      'AC3.1: Bước 5 chạy skill plan-execution và nhắc ledger .sdd/progress.md');
+    ok(s5.includes('`plan-execution`') && s5.includes('.aip/runs/<request>/<part>/progress.md') && /ledger/.test(s5),
+      'AC3.1: Bước 5 chạy skill plan-execution và nhắc ledger .aip/runs/<request>/<part>/progress.md');
     ok(/spec_verdict/.test(s5) && /tối đa 3 vòng/.test(s5) && /commit/.test(field(secs[4], 'Hành động')),
       'AC3.1: Bước 5 review từng task trả spec_verdict, sửa tối đa 3 vòng, session chính commit theo task');
     ok(/thay đổi nhỏ/.test(s5) && /task id `1`/.test(s5) && /requirement\.md/.test(s5),
@@ -277,10 +279,8 @@ export default async function run({ ok, ctx }) {
     if (lg) {
       const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ledger-'));
       try {
-        const file = lg.ensureWorkspace(tmp);
-        ok(file === path.join(tmp, '.sdd', 'progress.md'), 'AC3.3: ensureWorkspace trả đường dẫn .sdd/progress.md');
-        ok(fs.readFileSync(path.join(tmp, '.sdd', '.gitignore'), 'utf8') === '*\n', 'AC3.3: .sdd/.gitignore chứa "*"');
-        ok(lg.ensureWorkspace(tmp) === file, 'AC3.3: ensureWorkspace chạy lại không lỗi');
+        // Vị trí file do workspace.mjs quyết định (pin 33-request-parts); ở đây chỉ kiểm đọc/ghi một file ledger.
+        const file = path.join(tmp, 'progress.md');
         ok(lg.readTail(file, 100) === null, 'AC3.3: readTail trả null khi ledger chưa có');
         lg.appendLedger(file, '# Ledger — plan: plan.md');
         lg.appendLedger(file, 'Task 1: complete (commits a..b, review clean)');
@@ -324,9 +324,11 @@ export default async function run({ ok, ctx }) {
     ok(/tối đa 3 vòng/.test(loop) && /vòng 3/.test(loop) && /opus/.test(loop) && /đặt lại/.test(loop), 'AC3.2: tối đa 3 vòng/task, đặt lại mỗi task, vòng 3 agent mới opus');
     ok(/SendMessage/.test(loop) && /ADDRESSED/.test(loop) && /chỉ[^.]*diff của vòng sửa/.test(loop), 'AC3.2: vòng 1–2 SendMessage; re-review chỉ diff của vòng sửa');
     ok(/sau vòng 3[^.]*(không còn|hết)/.test(loop) && /Ruling:/.test(loop), 'AC3.2: hết vòng 3 không còn vòng nào, ghi Ruling:');
-    for (const stop of ['không đảo ngược', 'bảo mật', 'ngoài repo', 'mọi hướng đều là đoán', 'schema DB']) {
+    for (const stop of ['không đảo ngược', 'bảo mật', 'ngoài repo', 'mọi hướng đều là đoán', 'schema DB', 'AC người dùng đã duyệt']) {
       ok(loop.includes(stop), `AC3.2: loại dừng hỏi người dùng nhắc "${stop}"`);
     }
+    ok(/AC mơ hồ[^.]*không chọn hướng\s+sửa/.test(prompt('task-review')) && /questions\[\][^.]*AC ID/.test(prompt('task-review')),
+      'regression trial 2026-10-30: task-review đưa AC mơ hồ vào questions[], không tự chọn hướng sửa');
 
     // review cuối nhánh
     const fr = prompt('final-review');
@@ -343,10 +345,10 @@ export default async function run({ ok, ctx }) {
     const rr = prompt('re-review');
     ok(/(?<!NOT )ADDRESSED/.test(rr) && rr.includes('NOT ADDRESSED'), 'AC3.2: re-review.md yêu cầu ADDRESSED đứng riêng và NOT ADDRESSED');
 
-    // AC3.1: mọi lệnh review-package ghi package vào .sdd/ của request bằng --out (không đổ diff vào context, không lọt vào commit)
+    // AC3.1: mọi lệnh review-package ghi package vào workspace .aip/ của plan bằng --plan (không đổ diff vào context, không lọt vào commit)
     {
       const cmds = (loop + ' ' + fr + ' ' + rr).match(/review-package\.mjs <[^`]*/g) || [];
-      ok(cmds.length >= 4 && cmds.every((c) => c.includes('--out <requestDir>/.sdd/')), 'AC3.1: mọi lệnh review-package (task, re-review, review cuối) có --out <requestDir>/.sdd/…');
+      ok(cmds.length >= 4 && cmds.every((c) => c.includes('--plan <plan.md>')), 'AC3.1: mọi lệnh review-package (task, re-review, review cuối) có --plan <plan.md>');
     }
 
     // AC3.2: task qua breaker vẫn có dòng complete sau các Ruling:; hoãn blocker/major ghi trong Ruling: kèm mức gốc
@@ -360,6 +362,7 @@ export default async function run({ ok, ctx }) {
     ok(/merge local/.test(fin) && /push \+ PR/.test(fin) && /giữ nguyên/.test(fin) && /mặc định[^.]*giữ nguyên/.test(fin), 'AC4.2: kết thúc nhánh đúng 3 lựa chọn, mặc định giữ nguyên');
     ok(/docs\/specs/.test(fin) && /check-request\.mjs/.test(fin) && /full suite/.test(fin), 'AC4.2: finish cập nhật spec sống, chạy check-request.mjs và full suite');
     ok(/không (merge|push)[^.]*chưa chọn/.test(fin) && /merge xong[^.]*(chạy lại|test lại)/.test(fin) && /xác nhận rõ/.test(fin), 'AC4.2: không merge/push khi chưa chọn; test lại sau merge; xoá nhánh chỉ khi xác nhận rõ');
+    ok(/`git remote`[^.]*rỗng[^.]*push \+ PR[^.]*không khả dụng/.test(fin), 'regression trial 2026-10-30: repo chưa có remote thì push + PR không khả dụng');
     ok(/rulings/.test(fin) && /Ruling:/.test(fin), 'AC4.3: kết thúc gom mọi Ruling: vào rulings của workflow_result');
   }
 
@@ -386,7 +389,7 @@ export default async function run({ ok, ctx }) {
 
     // AC3.4: luật kiểm đầu ra mới + ánh xạ trạng thái cho vòng task
     const out = section('Kiểm đầu ra worker');
-    ok(/kind: BE/.test(out) && /tdd\.red/.test(out) && /tdd\.green/.test(out) && /đầu ra hỏng/.test(out), 'AC3.4: task kind: BE thiếu tdd.red/tdd.green → đầu ra hỏng');
+    ok(/TDD `có`/.test(out) && /tdd\.red/.test(out) && /tdd\.green/.test(out) && /đầu ra hỏng/.test(out), 'AC3.4: task TDD `có` thiếu tdd.red/tdd.green → đầu ra hỏng');
     ok(/spec_verdict/.test(out) && /findings/.test(out), 'AC3.4: task-review thiếu spec_verdict hoặc findings → đầu ra hỏng');
     ok(/remaining_risks/.test(out) && /xong kèm lo ngại/.test(out), 'AC3.4: remaining_risks không rỗng = xong kèm lo ngại');
     ok(/spec\/plan/.test(out) && /Ruling:/.test(out) && /không dùng vòng task/.test(out) && /ask_user/.test(out),
@@ -415,13 +418,15 @@ export default async function run({ ok, ctx }) {
   {
     const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, 'plugins', ...p), 'utf8').replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
     const be = rd('backend', 'agents', 'backend-implementer.md');
-    ok(/task `kind: BE` trong vòng task/.test(be) && /test lõi/.test(be) && /đỏ đúng lý do/.test(be) && /tdd: { red, green }/.test(be) && /tdd\.red/.test(be) && /tdd\.green/.test(be),
-      'AC3.4: backend-implementer — task kind: BE trong vòng task: test lõi đỏ đúng lý do trước, báo tdd.red/tdd.green');
+    ok(/task TDD `có` trong vòng task/.test(be) && /test lõi/.test(be) && /đỏ đúng lý do/.test(be) && /tdd: { red, green }/.test(be) && /tdd\.red/.test(be) && /tdd\.green/.test(be),
+      'AC3.4: backend-implementer — task TDD `có` trong vòng task: test lõi đỏ đúng lý do trước, báo tdd.red/tdd.green');
     ok(/ngoài vòng task[^.]*không ép/.test(be), 'AC3.4: backend-implementer — không ép TDD khi được gọi ngoài vòng task');
+    ok(/không có dòng `\*\*TDD:\*\*`[^.]*mặc định của kind: BE là `có`/.test(be),'AC5.3: backend-implementer — trong vòng task thiếu dòng **TDD:** thì BE mặc định là `có` (cỡ thay đổi nhỏ không có plan.md)');
     ok(!/xanh ở bước [0-9]/.test(be), 'AC3.4: backend-implementer — gọi bước chạy build + test theo tên, không theo số (số bước của agent khác SKILL)');
     const skill = rd('backend', 'skills', 'backend-implement', 'SKILL.md');
-    ok(/kind: BE/.test(skill) && /đỏ đúng lý do/.test(skill) && /tdd\.red/.test(skill) && /tdd\.green/.test(skill),
-      'AC3.4: backend-implement SKILL — bước test đỏ trước và báo tdd khi task kind: BE trong vòng task');
+    ok(/task TDD `có` trong vòng task/.test(skill) && !/kind: BE\)/.test(skill) && /đỏ đúng lý do/.test(skill) && /tdd\.red/.test(skill) && /tdd\.green/.test(skill),
+      'AC3.4: backend-implement SKILL — bước test đỏ trước và báo tdd khi task TDD `có` trong vòng task');
+    ok(/không có dòng `\*\*TDD:\*\*`[^.]*mặc định của kind: BE là `có`/.test(skill),'AC5.3: backend-implement SKILL — trong vòng task thiếu dòng **TDD:** thì BE mặc định là `có`');
 
     const fi = rd('frontend', 'agents', 'frontend-implementer.md');
     ok(/`frontend-test-writer`[^.]*cùng task/.test(fi) && /không cần `tdd`/.test(fi) && /không (viết|sinh) test nghiệp vụ/i.test(fi),
@@ -714,8 +719,8 @@ export default async function run({ ok, ctx }) {
     const sec = tpl.slice(i, tpl.indexOf('### Agents in CI'));
     ok(sec.includes('workflow-feature') && sec.includes('workflow-bugfix') && sec.includes('plan-execution')
       && sec.includes('engineering-spec-writing') && sec.includes('engineering-plan-writing'), 'AC7.2: mục trỏ workflow-feature, workflow-bugfix, plan-execution và skill spec/plan');
-    ok(sec.includes('.sdd/progress.md') && !sec.includes('.superpowers') && /Keep the branch as-is/.test(sec),
-      'AC7.2: ledger .sdd/progress.md; kết thúc nhánh mặc định giữ nhánh');
+    ok(sec.includes('.aip/runs/<request>/<part>/progress.md') && !sec.includes('.superpowers') && /Keep the branch as-is/.test(sec),
+      'AC7.2: ledger .aip/runs/<request>/<part>/progress.md; kết thúc nhánh mặc định giữ nhánh');
     ok(/each task ends with at least one commit/.test(tpl) && !/1 task = 1 commit/.test(tpl), 'AC7.2: Safety ghi mỗi task kết thúc bằng ≥ 1 commit');
     const claude = fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
     ok(/## Workflow defaults/.test(claude) && claude.includes('plan-execution') && claude.includes('workflow-feature'), 'AC7.2: CLAUDE.md gốc có mục Workflow defaults dùng workflow aip');

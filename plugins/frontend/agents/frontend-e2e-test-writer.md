@@ -4,6 +4,7 @@ description: "Test writer E2E: chỉ viết test Playwright cho vài luồng gi�
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "frontend-e2e-testing"
 writeScope:
   - "**/e2e/**"
