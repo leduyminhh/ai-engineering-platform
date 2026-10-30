@@ -4,16 +4,16 @@
     "hash": "a4ca82348c2bad0a45ac546356531c9078275a90e7bbc318864cc528feea5f85"
   },
   "core": {
-    "version": "1.19.4",
-    "hash": "1e0f834f28fb11d0b2c5052d54b5989b037d67011513618f7bca036377d504aa"
+    "version": "1.19.5",
+    "hash": "ef2f4065fa09de498d819e9c94d13950bff71af7625ac8f2ebdf064cd2cef67f"
   },
   "data": {
     "version": "1.6.8",
     "hash": "1e6ec81573b73497bf9c97b4469b5784284ba550101da40ea3ec7da78169f0e8"
   },
   "engineering": {
-    "version": "2.8.2",
-    "hash": "8bcaf8cd0895ce5a535255a68da0d9e5bb746563776cae8e4672ca399c8358c3"
+    "version": "2.8.3",
+    "hash": "f32e65b4ebc8f187b56ce0a96cb4597c5b181c216a53017ea8bced6fb2ab919a"
   },
   "frontend": {
     "version": "1.14.6",
