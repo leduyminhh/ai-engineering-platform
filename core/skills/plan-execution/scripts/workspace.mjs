@@ -40,6 +40,10 @@ export function resolveWorkspace(planArg, deps = {}) {
   } catch { /* không phải repo hoặc không có git: dùng cwd */ }
 
   const create = (root) => {
+    // .aip là symlink thì ledger, brief bị ghi ra chỗ nó trỏ tới, ngoài repo: từ chối thay vì đi theo.
+    let link = false;
+    try { link = fs.lstatSync(path.join(root, '.aip')).isSymbolicLink(); } catch (e) { if (e?.code !== 'ENOENT') throw e; }
+    if (link) throw new Error(`${path.join(root, '.aip')} là symlink, từ chối ghi workspace qua symlink`);
     const dir = path.join(root, '.aip', 'runs', request, part);
     fs.mkdirSync(dir, { recursive: true });
     const ignore = path.join(root, '.aip', '.gitignore');

@@ -7,7 +7,7 @@ export default async function run({ ok, ctx }) {
   const { checkPartition } = await import(pathToFileURL(script).href);
 
   const design = (rows) => ['# D', '', '## Bảng part', '', '| Part | Phụ thuộc | Song song | Trạng thái |', '|---|---|---|---|',
-    ...rows.map(([p, deps = '—', group = '—']) => `| ${p} | ${deps} | ${group} | chưa làm |`), ''].join('\n');
+    ...rows.map(([p, deps = '—', group = '—', status = 'chưa làm']) => `| ${p} | ${deps} | ${group} | ${status} |`), ''].join('\n');
   // spec: { files, consumes, produces } cho một task
   const ptask = (n, { files, consumes, produces, group } = {}) => [
     `### Task ${n}: x`,
@@ -56,6 +56,19 @@ export default async function run({ ok, ctx }) {
   ok(JSON.stringify(checkPartition(crlf)) === JSON.stringify(checkPartition(lf)) && checkPartition(crlf).length === 1, 'P3 AC2.1: design và plan CRLF + BOM cho kết quả giống bản LF');
   ok(codes(req(rows2('A', 'A'), { '01-a': filesPlan('src/a.js') })).length === 0, 'P3 AC2.1: part không có plan.md → im (W19 lo)');
   ok(codes({ parts: same }).length === 0 && codes({ design: '# D\n', parts: same }).length === 0, 'P3 AC2.1: không có Bảng part → không P1');
+
+  // Q2: part bỏ không còn chạy nên không tham gia P1/P2/P4; part merged vẫn so vì code của nó đã nằm trên nhánh tích hợp
+  const st = (sa, sb) => [['01-a', '—', 'A', sa], ['02-b', '—', 'A', sb]];
+  ok(codes(req(st('chưa làm', 'bỏ'), same)).length === 0, 'AC2.1: part bỏ trùng file với part cùng nhóm → im');
+  ok(JSON.stringify(codes(req(st('merged abc1234', 'chưa làm'), same))) === '["P1"]', 'AC2.1: part merged <hash> trùng file với part cùng nhóm → vẫn P1');
+  ok(codes(req([['01-a', '—', 'A', 'bỏ']], { '01-a': filesPlan('README.md') })).length === 0, 'AC2.2: part bỏ ghi file chung → không P2');
+  ok(checkPartition(req(st('bỏ', 'chưa làm'), { '01-a': plan(ptask(1, { files: ['src/x.js'], produces: ['X'] })), '02-b': plan(ptask(1, { files: ['src/y.js'], consumes: ['X'] })) })).length === 0,
+    'AC2.4: Consumes trùng Produces của part bỏ cùng nhóm → không P4');
+  // Hàng trùng tên đã bị W19 báo; so part với chính nó chỉ ra P1/P2 giả
+  const dupRows = checkPartition(req([['01-a', '—', 'A'], ['01-a', '—', 'A']], { '01-a': filesPlan('src/a.js', 'README.md') }));
+  ok(dupRows.length === 1 && dupRows[0].code === 'P2', 'AC2.1: hai hàng cùng tên part → không P1 với chính nó, P2 chỉ một lần');
+  ok(codes(req(rows2('A', 'A'), { '01-a': plan(ptask(1, {})), '02-b': filesPlan('src/**', 'README.md') })).join() === 'P2',
+    'AC2.1: part không có **Files:** → không P1 với part cùng nhóm');
 
   // AC2.2: P2 khi part trong nhóm ghi file chung
   const shared = ['plugins/_versions.lock.json', 'plugins/backend/.manifest.json', 'docs/specs/hooks-gates/spec.md', 'README.md', 'README_VI.md'];

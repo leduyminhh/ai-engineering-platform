@@ -39,7 +39,7 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 1. Chạy ở cây tích hợp (session chính): `git merge --no-ff worktree-<slug>-p<nn>`; sau mỗi merge chạy test của các component
    bị chạm.
 2. Xung đột nằm ngoài tập file đã khai cho part đó thì dừng và báo người dùng; không tự giải quyết.
-3. File dùng chung (version bump, lock, spec sống, README) chỉ sửa một lần ở session chính, sau khi các nhánh đã merge.
+3. File dùng chung (version bump, lock, spec sống, README) chỉ sửa ở session chính: sau mỗi lần merge part, trước khi chạy full suite (`plan-execution`, mục "Chế độ part").
 
 ## Quy trình — dọn worktree
 
@@ -49,9 +49,10 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 2. Nếu worktree có `.aip/runs/` (ledger, brief, review package, ghi khi `<gốc repo chính>/.aip/` không ghi được), chép về
    `<gốc repo chính>/.aip/runs/` trước khi xoá, không ghi đè file đã có ở đích; chỉ chép, không xoá nguồn:
    ```bash
-   node -e "require('fs').cpSync(process.argv[1], process.argv[2], { recursive: true, force: false })" "<worktree>/.aip/runs" "<gốc repo chính>/.aip/runs"
+   node -e "require('fs').cpSync(process.argv[1], process.argv[2], { recursive: true, force: false, errorOnExist: true })" "<worktree>/.aip/runs" "<gốc repo chính>/.aip/runs"
    ```
-   File trùng tên ở đích không bị ghi đè; khi đó so sánh rồi gộp bằng tay trước khi xoá worktree.
+   Đích đã có file trùng tên thì lệnh lỗi (file đã tồn tại) và có thể đã chép một phần: dừng, không xoá worktree; so sánh từng
+   file `.aip/runs/` của worktree với đích, gộp bằng tay, rồi mới sang bước 3.
 3. Dọn bằng lệnh của git, theo thứ tự:
    ```bash
    git worktree remove .claude/worktrees/<slug>-p<nn>

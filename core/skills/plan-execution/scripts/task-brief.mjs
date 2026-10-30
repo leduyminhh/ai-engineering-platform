@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Cắt một task khỏi plan.md ra file brief cho implementer.
-// Cách dùng: <plan.md> <n> [--out <dir>] — ghi task-<n>-brief.md (mặc định workspace .aip của plan, xem workspace.mjs) và in đường dẫn. Exit 1 khi không có task, exit 2 khi sai đối số.
+// Cách dùng: <plan.md | requestDir> <n> [--out <dir>] — ghi task-<n>-brief.md (mặc định workspace .aip của plan, xem workspace.mjs) và in đường dẫn. Exit 1 khi không có task, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -73,10 +73,12 @@ export function main(argv, deps) {
   const [planFile, nRaw] = args;
   const n = Number(nRaw);
   if (!planFile || !Number.isInteger(n) || n < 1 || (oi >= 0 && !outDir)) {
-    console.error('Cách dùng: task-brief.mjs <plan.md> <n> [--out <dir>]');
+    console.error('Cách dùng: task-brief.mjs <plan.md|requestDir> <n> [--out <dir>]');
     return 2;
   }
-  const task = extractTask(fs.readFileSync(planFile, 'utf8'), n);
+  let planPath = planFile;
+  try { if (fs.statSync(planFile).isDirectory()) planPath = path.join(planFile, 'plan.md'); } catch { /* readFileSync bên dưới báo lỗi */ }
+  const task = extractTask(fs.readFileSync(planPath, 'utf8'), n);
   if (task === null) {
     console.error(`Không có "### Task ${n}" trong ${planFile}`);
     return 1;

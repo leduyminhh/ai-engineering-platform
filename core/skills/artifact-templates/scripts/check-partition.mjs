@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Kiểm docs/requests/<ngày>-<slug>/: part cùng nhãn cột Song song của Bảng part không được ghi trùng file (P1), file chung (P2) hay Consumes thứ part cùng nhóm Produces (P4); plan còn **Song song:** cấp task thì báo P3 (đã bỏ).
+// Kiểm docs/requests/<ngày>-<slug>/: part cùng nhãn cột Song song của Bảng part không được ghi trùng file (P1), file chung (P2) hay Consumes thứ part cùng nhóm Produces (P4); plan còn **Song song:** cấp task thì báo P3 (đã bỏ). Part có Trạng thái `bỏ` không tham gia P1/P2/P4.
 // Cách dùng: <thư-mục-request> [--strict]. Chọn tham gia: request không có Bảng part và plan không có **Song song:** thì im. Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -96,7 +96,10 @@ export function checkPartition({ design, plan, parts = {} } = {}) {
     }
   }
   const table = typeof design === 'string' ? parsePartTable(design) : null;
-  const rows = (table?.rows ?? []).filter((r) => r.group).map((r) => ({ ...r, group: r.group.toLowerCase(), ...partInfo(parts[r.part]) }));
+  // Part bỏ không chạy nên không đụng ai; hàng trùng tên (W19 đã báo) chỉ lấy hàng đầu để part không bị so với chính nó.
+  const seen = new Set();
+  const rows = (table?.rows ?? []).filter((r) => r.group && r.status !== 'bỏ' && !seen.has(r.part) && seen.add(r.part))
+    .map((r) => ({ ...r, group: r.group.toLowerCase(), ...partInfo(parts[r.part]) }));
   const at = (r, code, msg) => warnings.push({ file: 'design.md', line: r.line, code, msg });
   for (const r of rows) {
     for (const f of r.files.filter(isShared)) at(r, 'P2', `Part ${r.part} (nhóm ${r.group}) ghi file chung ${f}; bước chạm file chung làm ở phiên chính sau khi gộp, không giao cho agent song song`);

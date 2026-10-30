@@ -41,11 +41,16 @@ export function validateLine(line) {
 
 // Trả đường dẫn progress.md trong workspace của plan. Ledger cũ <thư mục plan>/.sdd/progress.md được chép sang một lần để plan đang dở
 // không mất tiến độ; COPYFILE_EXCL để không bao giờ ghi đè ledger mới đã có, và giữ nguyên file cũ.
-export function ledgerFile(planArg, deps) {
+export function ledgerFile(planArg, deps = {}) {
   const ws = resolveWorkspace(planArg, deps);
+  const fsx = { ...fs, ...deps.fs };
   const file = path.join(ws.dir, 'progress.md');
+  const planDir = path.dirname(ws.plan);
+  const src = path.join(planDir, '.sdd', 'progress.md');
   try {
-    fs.copyFileSync(path.join(path.dirname(ws.plan), '.sdd', 'progress.md'), file, fs.constants.COPYFILE_EXCL);
+    // Chỉ chép file thường nằm thật trong thư mục plan: symlink (vd tới .env) sẽ đưa bí mật vào .aip, rồi hook session-start nạp vào context.
+    const rel = fsx.lstatSync(src).isFile() && path.relative(fsx.realpathSync(planDir), fsx.realpathSync(src));
+    if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) fsx.copyFileSync(src, file, fs.constants.COPYFILE_EXCL);
   } catch (e) {
     if (e?.code !== 'ENOENT' && e?.code !== 'EEXIST') throw e;
   }

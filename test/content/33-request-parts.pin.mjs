@@ -54,6 +54,13 @@ export default async function run({ ok, ctx }) {
         ok(b.split('\n').filter((l) => !l.startsWith('**TDD:**')).join('\n') === orig.split('\n').filter((l) => !l.startsWith('**TDD:**')).join('\n'),
           `AC5.2: task ${n} dòng TDD sai → các dòng khác giữ nguyên văn`);
       }
+
+      const log = console.log;
+      console.log = () => {};
+      let code;
+      try { code = tb.main([dir, '1', '--out', path.join(dir, 'via-dir')]); } catch { code = 'throw'; } finally { console.log = log; }
+      ok(code === 0 && fs.readFileSync(path.join(dir, 'via-dir', 'task-1-brief.md'), 'utf8') === brief(1),
+        'AC3.2: task-brief.mjs nhận thư mục request, kết quả giống truyền <dir>/plan.md');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -148,13 +155,26 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(root, { recursive: true, force: true });
     }
 
+    // <gốc>/.aip là symlink (junction trên Windows, không cần quyền admin): ghi theo nó sẽ rơi ra ngoài repo
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-out-'));
+    const linkedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ln-'));
+    try {
+      fs.symlinkSync(outside, path.join(linkedRoot, '.aip'), 'junction');
+      let err;
+      try { resolveWorkspace(path.join(linkedRoot, 'plan.md'), { cwd: linkedRoot, git: gitFake(linkedRoot, path.join(linkedRoot, '.git')), stderr: () => {} }); } catch (e) { err = e; }
+      ok(!!err && fs.readdirSync(outside).length === 0, 'AC3.1: <gốc>/.aip là symlink → resolveWorkspace từ chối, không ghi gì qua symlink');
+    } finally {
+      fs.rmSync(linkedRoot, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+
     // fs/git giả: không chạm đĩa, dùng đường dẫn Windows như git trả về
     const top = 'e:/repo/.claude/worktrees/x-p01';
     const git = gitFake(top, 'E:\\repo\\.git');
     const plan = 'docs/requests/r1/plan.md';
     const made = [];
     const notFound = () => { throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' }); };
-    const fakeFs = { mkdirSync: (p) => { made.push(fwd(p)); }, writeFileSync: (p) => { made.push(fwd(p)); }, existsSync: () => false, statSync: notFound };
+    const fakeFs = { mkdirSync: (p) => { made.push(fwd(p)); }, writeFileSync: (p) => { made.push(fwd(p)); }, existsSync: () => false, statSync: notFound, lstatSync: notFound };
     const denying = (code, deny) => (p) => {
       if (fwd(p).startsWith(deny)) throw Object.assign(new Error(code), { code });
       made.push(fwd(p));
@@ -255,12 +275,12 @@ export default async function run({ ok, ctx }) {
     // AC3.3: .sdd cũ chỉ được chép sang ledger mới khi ledger mới chưa có; luôn giữ nguyên file cũ
     const ledger = await import(pathToFileURL(path.join(scripts, 'ledger.mjs')).href);
     const noGit = () => { throw new Error('không phải repo'); };
-    const lg = (cwd, planArg, line) => {
+    const lg = (cwd, planArg, line, extra = {}) => {
       const o = console.log;
       const e = console.error;
       console.log = () => {};
       console.error = () => {};
-      try { return ledger.main([planArg, line], { cwd, git: noGit }); } finally { console.log = o; console.error = e; }
+      try { return ledger.main([planArg, line], { cwd, git: noGit, ...extra }); } finally { console.log = o; console.error = e; }
     };
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ledger-mig-'));
     try {
@@ -293,6 +313,36 @@ export default async function run({ ok, ctx }) {
       lg(cwd, path.join(c.reqDir, 'parts', '01-a', 'plan.md'), 'Task 1: started');
       ok(rd(path.join(cwd, '.aip', 'runs', '2026-10-30-c', '01-a', 'progress.md')) === 'Task 1: started\n',
         'AC3.3: ledger của part không chép .sdd của request');
+
+      // Ledger cũ là symlink ra ngoài (vd tới .env): chép theo symlink đưa bí mật vào .aip rồi hook session-start nạp vào context
+      const secret = path.join(cwd, 'secret.env');
+      fs.writeFileSync(secret, 'TOKEN=abc\n');
+      const linkedLedger = (reqName, link) => {
+        const reqDir = path.join(cwd, 'docs', 'requests', reqName);
+        fs.mkdirSync(reqDir, { recursive: true });
+        link(reqDir);
+        return { reqDir, file: path.join(cwd, '.aip', 'runs', reqName, 'root', 'progress.md') };
+      };
+      let extra = {};
+      const s1 = linkedLedger('2026-10-30-s1', (reqDir) => {
+        const at = path.join(reqDir, '.sdd', 'progress.md');
+        fs.mkdirSync(path.dirname(at));
+        try { fs.symlinkSync(secret, at); } catch {
+          try { fs.symlinkSync(secret, at, 'file'); } catch {
+            // Không tạo được symlink file (Windows thiếu quyền): file thường + lstat giả báo symlink
+            fs.copyFileSync(secret, at);
+            extra = { fs: { lstatSync: (p) => (path.resolve(p) === at ? { isFile: () => false, isSymbolicLink: () => true } : fs.lstatSync(p)) } };
+          }
+        }
+      });
+      ok(lg(cwd, s1.reqDir, 'Task 1: started', extra) === 0 && rd(s1.file) === 'Task 1: started\n',
+        'AC3.3: .sdd/progress.md là symlink trỏ ra ngoài → không chép sang ledger mới');
+      const outDir = path.join(cwd, 'outside');
+      fs.mkdirSync(outDir);
+      fs.copyFileSync(secret, path.join(outDir, 'progress.md'));
+      const s2 = linkedLedger('2026-10-30-s2', (reqDir) => fs.symlinkSync(outDir, path.join(reqDir, '.sdd'), 'junction'));
+      ok(lg(cwd, s2.reqDir, 'Task 1: started') === 0 && rd(s2.file) === 'Task 1: started\n',
+        'AC3.3: thư mục .sdd là symlink/junction ra ngoài thư mục plan → không chép');
     } finally {
       fs.rmSync(cwd, { recursive: true, force: true });
     }
@@ -318,6 +368,8 @@ export default async function run({ ok, ctx }) {
     const removeAt = clean.search(/^\s+git worktree remove /m);
     ok(copyAt >= 0 && removeAt >= 0 && copyAt < removeAt && /gốc repo chính/.test(clean.slice(copyAt, removeAt)),
       'AC3.6: git-worktree: bước chép .aip/runs/ về gốc repo chính đứng trước lệnh git worktree remove');
+    ok(clean.includes('force: false, errorOnExist: true') && /không xoá worktree/.test(clean),
+      'AC3.6: lệnh chép .aip/runs lỗi khi trùng file (errorOnExist) và khi đó không xoá worktree');
 
     const tpl = rd('core', 'agents', 'AGENTS.template.md');
     ok(tpl.includes('.aip/runs/<request>/<part>/progress.md') && !tpl.includes('.sdd'), 'AC7.1: bảng Memory của AGENTS.template.md ghi ledger ở .aip/runs/<request>/<part>/progress.md, không còn .sdd');
@@ -334,6 +386,9 @@ export default async function run({ ok, ctx }) {
     const par = sec('### Parallel agents');
     ok(par.includes('worktree-<slug>-p<nn>') && par.includes('.claude/worktrees/<slug>-p<nn>/') && /only between parts, never inside a part/i.test(par) && par.includes('check-partition.mjs'),
       'AC7.1: Parallel agents dùng worktree-<slug>-p<nn>, .claude/worktrees/<slug>-p<nn>/, chỉ song song giữa part, check-partition.mjs');
+    const merged = par.slice(par.indexOf('After each part merge'));
+    ok(par.includes('After each part merge') && merged.indexOf('shared-file step') >= 0 && merged.indexOf('shared-file step') < merged.indexOf('full suites'),
+      'AC6.5: Parallel agents: sau mỗi merge part, bước file dùng chung (bump version, lock) chạy trước full suite');
     ok(!tpl.includes('t<n>') && !tpl.includes('**Song song:**'), 'AC7.1: AGENTS.template.md không còn t<n> hay **Song song:** cấp task');
     for (const f of ['CLAUDE.md', 'README.md', 'README_VI.md']) {
       const t = rd(f);
@@ -396,6 +451,9 @@ export default async function run({ ok, ctx }) {
     ok(mode.includes('HEAD sau commit task cuối'), 'AC6.4: part chạy tuần tự lấy hash là HEAD sau commit task cuối');
     ok(mode.includes('full suite') && mode.includes('component phụ thuộc') && mode.includes('đỏ thì dừng nhóm'),
       'AC6.5: sau mỗi merge part chạy full suite của component bị chạm và component phụ thuộc, đỏ thì dừng nhóm');
+    const afterMerge = mode.slice(mode.indexOf('`merge --no-ff worktree-<slug>-p<nn>`'));
+    ok(afterMerge.indexOf('file dùng chung') >= 0 && afterMerge.indexOf('file dùng chung') < afterMerge.indexOf('full suite') && afterMerge.includes('vòng sửa'),
+      'AC6.5: sau merge part, session gốc làm bước file dùng chung (bump version, lock) trước full suite; đỏ thì sửa trên feature/<slug> theo vòng sửa');
 
     const fr = flat(pe('references', 'prompts', 'final-review.md'));
     ok(fr.includes('Bảng part') && fr.includes('interface giữa part'), 'AC6.3: final-review có Review Focus gồm Bảng part và interface giữa part');

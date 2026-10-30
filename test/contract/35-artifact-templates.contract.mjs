@@ -463,9 +463,10 @@ export default async function run({ ok, ctx }) {
       { name: 'giá trị lạ → W21', kind: 'BE', tdd: 'sau', warns: true },
       { name: 'không — lý do → sạch', kind: 'BE', tdd: 'không — script dùng một lần', warns: false },
       { name: 'không có dòng TDD → sạch', kind: 'FE-UI', tdd: null, warns: false },
+      { name: 'thiếu Kind + có → W21 (mặc định theo kind là không)', kind: null, tdd: 'có', warns: true },
     ];
     for (const c of cases) {
-      const plan = ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1', '### Task 1: t', `**Kind:** ${c.kind}`, ...(c.tdd === null ? [] : [`**TDD:** ${c.tdd}`]), ''].join('\n');
+      const plan = ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1', '### Task 1: t', ...(c.kind === null ? [] : [`**Kind:** ${c.kind}`]), ...(c.tdd === null ? [] : [`**TDD:** ${c.tdd}`]), ''].join('\n');
       const design = ['# T', '## 3. Tiêu chí chấp nhận', '- [ ] **AC1.1** — Given a When b Then c', ''].join('\n');
       const w21 = cr.checkRequest({ 'design.md': design, 'plan.md': plan }).filter((w) => w.code === 'W21');
       ok(c.warns ? w21.length === 1 : w21.length === 0, `AC5.1: check-request TDD: ${c.name}`);
@@ -501,7 +502,7 @@ export default async function run({ ok, ctx }) {
     const fourTexts = { 'design.md': design(null, [four]), 'parts/01-a/plan.md': partPlan(), 'parts/02-b/plan.md': partPlan(), 'parts/04-d/plan.md': partPlan() };
     ok(of(cr.checkRequest(fourTexts), 'W19').length === 4,
       'AC1.3: Trạng thái lạ, Phụ thuộc trỏ part không có, part thiếu plan, thư mục ngoài bảng → đúng bốn W19');
-    const good = table('| 01-a | — | A | merged abc1234 |', '| 02-b | 01-a | A | đang làm |', '| 03-c | 01-a, 02-b | — | bỏ |', '| 04-d | — | — | chưa làm |');
+    const good = table('| 01-a | — | A | merged abc1234 |', '| 02-b | 01-a | B | đang làm |', '| 03-c | 01-a, 02-b | — | bỏ |', '| 04-d | — | — | chưa làm |');
     const goodTexts = { 'design.md': design(null, [good]) };
     for (const p of ['01-a', '02-b', '03-c', '04-d']) goodTexts[`parts/${p}/plan.md`] = partPlan();
     ok(of(cr.checkRequest(goodTexts), 'W19').length === 0, 'AC1.3: Bảng part khớp thư mục và giá trị → sạch');
@@ -514,6 +515,20 @@ export default async function run({ ok, ctx }) {
       'AC1.3: hai hàng trùng tên part → W19');
     ok(of(cr.checkRequest(dupTexts('| 01-a | 01-a | — | chưa làm |', '| 02-b | — | — | chưa làm |')), 'W19').length === 1,
       'AC1.3: part phụ thuộc chính nó → W19');
+    // Q1: thiếu plan chỉ là lệch khi part còn phải chạy (chưa làm, đang làm); merged/bỏ được phép đã xoá plan (W16 đòi xoá).
+    const noPlan = (status) => of(cr.checkRequest({ 'design.md': design(null, [table(`| 01-a | — | — | ${status} |`)]) }, { partDirs: ['01-a'] }), 'W19').length;
+    ok(noPlan('chưa làm') === 1 && noPlan('đang làm') === 1 && noPlan('merged abc1234') === 0 && noPlan('bỏ') === 0,
+      'AC1.3: thiếu parts/<part>/plan.md chỉ W19 khi Trạng thái chưa làm hoặc đang làm; merged <hash> và bỏ được phép thiếu plan');
+    ok(cr.checkRequest({ 'design.md': design('merged — master `abc1234`', [table('| 01-a | — | — | merged abc1234 |')]) }, { partDirs: ['01-a'] }).length === 0,
+      'AC1.6: design merged, part merged abc1234, đã xoá parts/01-a/plan.md → 0 cảnh báo');
+    // Phụ thuộc là thứ tự chạy: chu trình không có thứ tự hợp lệ, còn part phụ thuộc part cùng nhóm thì không song song được.
+    const depW19 = (...rows) => of(cr.checkRequest({ 'design.md': design(null, [table(...rows)]), 'parts/01-a/plan.md': partPlan(), 'parts/02-b/plan.md': partPlan(), 'parts/03-c/plan.md': partPlan() }), 'W19');
+    const cyc = depW19('| 01-a | 03-c | — | chưa làm |', '| 02-b | 01-a | — | chưa làm |', '| 03-c | 02-b | — | chưa làm |');
+    ok(cyc.length === 3 && cyc.every((w) => w.msg.includes('chu trình')), 'AC1.3: Phụ thuộc tạo chu trình 01-a → 03-c → 02-b → 01-a → W19 ở mỗi part trong chu trình');
+    const sameGroup = depW19('| 01-a | — | A | chưa làm |', '| 02-b | 01-a | a | chưa làm |', '| 03-c | — | — | chưa làm |');
+    ok(sameGroup.length === 1 && ['02-b', '01-a'].every((p) => sameGroup[0].msg.includes(p)), 'AC1.3: part phụ thuộc part cùng nhãn Song song (không phân biệt hoa thường) → W19');
+    ok(depW19('| 01-a | — | A | chưa làm |', '| 02-b | 01-a | B | chưa làm |', '| 03-c | 01-a, 02-b | — | chưa làm |').length === 0,
+      'AC1.3: phụ thuộc không chu trình, khác nhóm → sạch');
 
     const w20 = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/design.md': '# P\n- **AC1.1** — x\n' });
     ok(of(w20, 'W20').length === 1 && of(w20, 'W20')[0].file === 'parts/01-a/design.md' && of(w20, 'W20')[0].line === 2,

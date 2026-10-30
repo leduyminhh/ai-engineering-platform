@@ -119,13 +119,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** cỡ "thay đổi nhỏ" → bỏ qua bước này, ghi rõ "bỏ qua: cỡ thay đổi nhỏ, không có `plan.md`" và sang
   Bước 5 không có plan (brief là `requirement.md`, số task và kind theo Bước 5). Cỡ dự án: viết `plan.md` theo skill (bản đồ
   file, Global Constraints, task có Kind/Interfaces/Phủ AC, Review Focus), tự soát 5 mục; request lớn có `## Bảng part` ở `design.md` thì plan chia thành `plan.md` gốc + `parts/<nn>-<part-slug>/plan.md`, rồi chạy
-  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` và, khi có part, `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` (chỉ là cảnh báo; nhóm bị báo P1/P2/P4 thì sửa plan hoặc chạy tuần tự). Có `tasks.md` →
+  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` và, khi có part, `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` (chỉ là cảnh báo; nhóm bị báo P1/P2/P4 thì sửa plan hoặc đổi nhóm sang chạy tuần tự: quay lại Bước 3 đặt cột Song song của các part đó thành `—` trong `design.md`, hoặc giữ bảng và ghi `Ruling: nhóm <nhãn> chạy tuần tự — <lý do>` vào ledger `root/` bằng `ledger.mjs`). Có `tasks.md` →
   task trong `plan.md` trỏ ID task của `tasks.md`, và Checkpoint 2 của `engineering-task-breakdown` được duyệt cùng
   `plan.md` (không hỏi hai lần).
 - **Ràng buộc:** chỉ ghi `plan.md` gốc (nếu có) và `parts/*/plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
-  ở bước này; không xoá `**Files:**` hay test để tắt cảnh báo.
+  ở bước này (đổi cột Song song thì quay lại Bước 3); không xoá `**Files:**` hay test để tắt cảnh báo.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part), hoặc dòng ghi rõ bỏ qua vì cỡ "thay đổi nhỏ".
-- **Gate:** `check-request.mjs` không còn cảnh báo ngoài W9 (file test chưa tồn tại lúc lập plan); khi có part, `check-partition.mjs` không còn cảnh báo, hoặc nhóm còn bị báo P1/P2/P4 đã được đổi sang chạy tuần tự; mọi acceptance
+- **Gate:** `check-request.mjs` không còn cảnh báo ngoài W9 (file test chưa tồn tại lúc lập plan); khi có part, `check-partition.mjs` không còn cảnh báo, hoặc nhóm còn bị báo P1/P2/P4 đã được đổi sang chạy tuần tự (cột Song song `—` hoặc dòng `Ruling:` như trên); mọi acceptance
   criterion có task phủ trong `plan.md` gốc (nếu có) và `parts/*/plan.md`; người dùng đã duyệt plan (cỡ dự án) — cỡ "thay đổi nhỏ" không có gate này.
 - **Khi fail:** `check-request.mjs` còn cảnh báo ngoài W9 mà sửa `plan.md` không hết vì lỗi nằm ở tài liệu → quay
   lại Bước 3; plan còn điểm mơ hồ về phạm vi hay thứ tự → hỏi người dùng ở checkpoint.

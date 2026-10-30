@@ -238,8 +238,8 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
       else if (!TASK_KINDS.includes(kind)) warn(pf, i + 1, 'W18', `Kind "${kind}" không hợp lệ, cần một trong: ${TASK_KINDS.join(' | ')}`);
       if (!tdd) return;
       if (tdd.error) warn(pf, tdd.line, 'W21', tdd.error);
-      else if (tdd.value === 'có' && kind !== undefined && !TDD_ALLOWED_KINDS.includes(kind)) {
-        warn(pf, tdd.line, 'W21', `TDD "có" chỉ hợp lệ với kind ${TDD_ALLOWED_KINDS.join(' | ')}, task này là ${kind}`);
+      else if (tdd.value === 'có' && !TDD_ALLOWED_KINDS.includes(kind)) {
+        warn(pf, tdd.line, 'W21', `TDD "có" chỉ hợp lệ với kind ${TDD_ALLOWED_KINDS.join(' | ')}, task này ${kind === undefined ? 'thiếu **Kind:**' : `là ${kind}`}`);
       }
     });
   }
@@ -332,20 +332,34 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
   const dirs = [...new Set(partDirs ?? Object.keys(texts).map((k) => k.match(/^parts\/([^/]+)\//)?.[1]).filter(Boolean))].sort();
   const table = typeof texts['design.md'] === 'string' ? parsePartTable(texts['design.md']) : null;
   if (dirs.length || table) {
-    const names = new Set((table?.rows ?? []).map((r) => r.part));
+    const byName = new Map();
+    for (const r of table?.rows ?? []) if (!byName.has(r.part)) byName.set(r.part, r);
+    const depsOf = (p) => (byName.get(p)?.deps ?? []).filter((d) => d !== p);
+    const onCycle = (p) => {
+      const seenDeps = new Set();
+      for (const stack = depsOf(p); stack.length;) {
+        const d = stack.pop();
+        if (d === p) return true;
+        if (!seenDeps.has(d) && seenDeps.add(d)) stack.push(...depsOf(d));
+      }
+      return false;
+    };
     const seen = new Set();
     for (const r of table?.rows ?? []) {
       if (seen.has(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" trùng tên với hàng trước trong Bảng part`);
       seen.add(r.part);
       if (!PART_RE.test(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" sai định dạng, cần <nn>-<part-slug> (vd 01-a)`);
-      else if (typeof texts[`parts/${r.part}/plan.md`] !== 'string') warn('design.md', r.line, 'W19', `Part "${r.part}" không có parts/${r.part}/plan.md`);
+      // Part đã merged hoặc bỏ không còn chạy: plan của nó được phép xoá (W16 đòi xoá khi request merged).
+      else if (typeof texts[`parts/${r.part}/plan.md`] !== 'string' && ['chưa làm', 'đang làm'].includes(r.status)) warn('design.md', r.line, 'W19', `Part "${r.part}" không có parts/${r.part}/plan.md`);
       for (const d of r.deps) {
         if (d === r.part) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc chính nó`);
-        else if (!names.has(d)) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" không có trong Bảng part`);
+        else if (!byName.has(d)) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" không có trong Bảng part`);
+        else if (r.group && byName.get(d).group?.toLowerCase() === r.group.toLowerCase()) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" cùng nhóm Song song ${r.group}: part phụ thuộc phải chạy sau, không cùng nhóm`);
       }
+      if (byName.get(r.part) === r && onCycle(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" nằm trong chu trình Phụ thuộc: không có thứ tự chạy hợp lệ`);
       if (!PART_STATUSES.includes(r.status) && !/^merged\s+\S+$/.test(r.status)) warn('design.md', r.line, 'W19', `Part "${r.part}" có Trạng thái "${r.status}" không hợp lệ, cần: ${PART_STATUSES.join(' | ')} | merged <hash>`);
     }
-    for (const d of dirs) if (!names.has(d)) warn(`parts/${d}`, 1, 'W19', `Thư mục parts/${d}/ không có trong Bảng part${table ? '' : ' (design.md thiếu mục "## Bảng part")'}`);
+    for (const d of dirs) if (!byName.has(d)) warn(`parts/${d}`, 1, 'W19', `Thư mục parts/${d}/ không có trong Bảng part${table ? '' : ' (design.md thiếu mục "## Bảng part")'}`);
   }
   // AC chỉ ở gốc request để ID duy nhất toàn request; design của part nhắc AC<n>.<m> là dấu hiệu AC bị khai báo lặp.
   for (const f of Object.keys(texts).sort()) {
