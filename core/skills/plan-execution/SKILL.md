@@ -44,13 +44,14 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 |---|---|
 | Điều phối, ghi ledger, trả lời `questions[]` từ spec/plan, phán `Ruling:` | session chính |
 | Commit sau mỗi task (qua `git-workflow`) | session chính — agent không tự commit |
-| Implement, viết test | agent domain theo `kind` |
+| Implement, viết test | agent domain theo `kind`; task `DOCS`: `general-purpose` |
 | Task review, re-review, review cuối | `backend-reviewer` / `frontend-reviewer` (chỉ đọc); DOCS/TOOLING dùng `general-purpose` |
 | Quality/security gate | `engineering-quality-auditor`, chỉ ở review cuối |
 | Chế độ inline (người dùng nói rõ chạy inline, hoặc không có tool subagent) | session chính làm mọi task theo `references/inline.md`; không hỏi người dùng chọn cách thực thi |
 
-Model khi gọi agent (tham số `model`): implementer và reviewer từng task mặc định `sonnet`; vòng 3 của vòng sửa và review cuối
-toàn nhánh dùng `opus`. Plan không cần khai báo model riêng cho từng task.
+Model khi gọi agent (tham số `model`): implementer mặc định `sonnet`; task review, re-review và task `DOCS` dùng `haiku`
+(haiku sai một lần trong task đó → gọi lại bằng `sonnet`); vòng 3 của vòng sửa và review cuối toàn nhánh dùng `opus`. Plan
+không cần khai báo model riêng cho từng task.
 
 ## Ranh giới an toàn
 

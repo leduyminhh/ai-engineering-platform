@@ -4,6 +4,7 @@ description: "Data integrator frontend: nối UI React đã dựng với API th�
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "frontend-data-integration"
 ---
 

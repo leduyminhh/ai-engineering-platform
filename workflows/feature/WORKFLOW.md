@@ -147,9 +147,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `FE-UI` → `frontend-implementer` rồi `frontend-test-writer` viết test trong cùng task; `FE-INT` →
   `frontend-data-integrator` (sau `FE-UI`; type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); `E2E` →
   `frontend-e2e-test-writer` cho AC luồng UI đầu-cuối trong bảng ứng viên e2e (3–5 luồng, mỗi test map 1 AC, chạy
-  `--repeat-each=3`); `DOCS`/`TOOLING` → session chính tự làm. Plan không chứa task `CT`/`DB` (đã xử lý ở Bước 2–3: contract chốt ở
+  `--repeat-each=3`); `DOCS` → `general-purpose` (`model: haiku`); `TOOLING` → session chính tự làm. Plan không chứa task `CT`/`DB` (đã xử lý ở Bước 2–3: contract chốt ở
   Bước 3, đổi schema đã dừng ở Bước 2 sang `data-db-migration`). Session chính kiểm `agent_result`, tự chạy test hẹp, rồi commit theo task qua `git-workflow` không dừng (agent
-  không commit). Task review: reviewer chế độ `task-review` trả `spec_verdict` + finding, không chạy lại suite. Finding
+  không commit). Task review: reviewer chế độ `task-review` (`model: haiku`) trả `spec_verdict` + finding, không chạy lại suite. Finding
   `blocker`/`major` hoặc `spec_verdict` khác `compliant` vào vòng sửa, tối đa 3 vòng mỗi task (vòng 3 agent mới chạy
   opus; mỗi vòng một re-review có phạm vi); hết vòng còn finding thì session chính phán và ghi `Ruling:`, thuộc loại dừng
   của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là

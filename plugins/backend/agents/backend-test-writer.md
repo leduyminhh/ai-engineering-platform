@@ -4,6 +4,7 @@ description: "Test writer backend: chỉ viết test (unit, integration, web sli
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "backend-testing"
 writeScope:
   - "**/test/**"
