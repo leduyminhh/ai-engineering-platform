@@ -139,7 +139,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó). Chuẩn bị ledger
   `docs/requests/<ngày>-<slug>/.sdd/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
   xong). Mỗi task theo thứ tự: ghi BASE → cắt brief → giao agent theo `**Kind:**` (chuỗi agent do
-  `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer` (TDD `có` thì viết test đỏ trước rồi code và báo `tdd`);
+  `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer`
+  (TDD `có` thì viết test đỏ trước rồi code và báo `tdd`);
   `FE-UI` → `frontend-implementer` rồi `frontend-test-writer` viết test trong cùng task; `FE-INT` →
   `frontend-data-integrator` (sau `FE-UI`; type sinh từ contract, data hook đúng tầng, đủ 4 trạng thái); `E2E` →
   `frontend-e2e-test-writer` cho AC luồng UI đầu-cuối trong bảng ứng viên e2e (3–5 luồng, mỗi test map 1 AC, chạy

@@ -18,7 +18,8 @@ Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <ngư�
 
 1. Ghi BASE bằng `git rev-parse HEAD`; cắt brief bằng `scripts/task-brief.mjs`; chỉ đọc brief của task này.
 2. Làm theo step trong brief: task TDD `có` thì test đỏ (chạy, thấy đỏ đúng lý do) → code → test xanh; task `không` thì
-   làm theo step của brief. Task `DOCS`/`TOOLING` không có test sản phẩm thì dùng lệnh kiểm chứng ghi trong task.
+   làm theo step của brief. Chỉ task `DOCS`/`TOOLING` thuộc diện `không` (không có test sản phẩm) mới dùng lệnh kiểm
+   chứng ghi trong task thay cho test.
 3. Chạy lệnh test hẹp của task, đọc đủ output và exit code. Không chạy full suite ở từng task.
 4. Commit qua `git-workflow`, một task ít nhất một commit.
 5. Vì không có review từng task, sau commit tự đối chiếu `git diff --name-only <BASE>..HEAD` với `**Files:**` của task: file
@@ -27,8 +28,10 @@ Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <ngư�
    `node <thư mục skill plan-execution>/scripts/ledger.mjs <requestDir> "Task <n>: complete (commits <a>..<b>, inline, tests: <lệnh> exit 0)"`.
    Task TDD `có` ghi thêm bằng chứng đỏ ngay trước `tests:`: `red: <lệnh> exit <n khác 0>, tests: <lệnh> exit 0`.
    `ledger.mjs` từ chối (exit 2, không ghi) dòng inline thiếu `tests: <lệnh> exit 0` hoặc kèm exit khác 0, và dòng có
-   `red: … exit 0`. Kiểm này chỉ chặn việc quên điền hay ghi sai định dạng, không xác minh được exit code thật; lệnh test pass mà không in gì vẫn hợp lệ vì
-   bằng chứng là exit code, không phải output.
+   `red: … exit 0`. Thiếu `red:` thì script không từ chối (nó không biết task có TDD `có` hay không): session chính tự
+   kiểm dòng của task TDD `có` đã có `red:` trước khi ghi. Kiểm này chỉ chặn việc quên điền hay ghi sai định dạng,
+   không xác minh được exit code thật; lệnh test pass mà không in gì vẫn hợp lệ vì bằng chứng là exit code, không phải
+   output.
 
 Lỗi tự phát hiện trong lúc làm thì sửa ngay trong task đó. Chỉ ghi `Ruling:` khi quyết định lệch khỏi plan; lệch plan mà
 không ghi là quyết định bí mật. Chạy liên tục giữa các task; chỉ dừng hỏi người dùng ở năm loại dừng của `task-loop.md`.

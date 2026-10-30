@@ -416,10 +416,12 @@ export default async function run({ ok, ctx }) {
     ok(/task TDD `có` trong vòng task/.test(be) && /test lõi/.test(be) && /đỏ đúng lý do/.test(be) && /tdd: { red, green }/.test(be) && /tdd\.red/.test(be) && /tdd\.green/.test(be),
       'AC3.4: backend-implementer — task TDD `có` trong vòng task: test lõi đỏ đúng lý do trước, báo tdd.red/tdd.green');
     ok(/ngoài vòng task[^.]*không ép/.test(be), 'AC3.4: backend-implementer — không ép TDD khi được gọi ngoài vòng task');
+    ok(/không có dòng `\*\*TDD:\*\*`[^.]*mặc định của kind: BE là `có`/.test(be),'AC5.3: backend-implementer — trong vòng task thiếu dòng **TDD:** thì BE mặc định là `có` (cỡ thay đổi nhỏ không có plan.md)');
     ok(!/xanh ở bước [0-9]/.test(be), 'AC3.4: backend-implementer — gọi bước chạy build + test theo tên, không theo số (số bước của agent khác SKILL)');
     const skill = rd('backend', 'skills', 'backend-implement', 'SKILL.md');
-    ok(/kind: BE/.test(skill) && /đỏ đúng lý do/.test(skill) && /tdd\.red/.test(skill) && /tdd\.green/.test(skill),
-      'AC3.4: backend-implement SKILL — bước test đỏ trước và báo tdd khi task kind: BE trong vòng task');
+    ok(/task TDD `có` trong vòng task/.test(skill) && !/kind: BE\)/.test(skill) && /đỏ đúng lý do/.test(skill) && /tdd\.red/.test(skill) && /tdd\.green/.test(skill),
+      'AC3.4: backend-implement SKILL — bước test đỏ trước và báo tdd khi task TDD `có` trong vòng task');
+    ok(/không có dòng `\*\*TDD:\*\*`[^.]*mặc định của kind: BE là `có`/.test(skill),'AC5.3: backend-implement SKILL — trong vòng task thiếu dòng **TDD:** thì BE mặc định là `có`');
 
     const fi = rd('frontend', 'agents', 'frontend-implementer.md');
     ok(/`frontend-test-writer`[^.]*cùng task/.test(fi) && /không cần `tdd`/.test(fi) && /không (viết|sinh) test nghiệp vụ/i.test(fi),

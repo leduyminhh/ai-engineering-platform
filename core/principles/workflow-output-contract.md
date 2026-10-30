@@ -54,7 +54,8 @@ Dùng trong vòng task của `plan-execution`; workflow không dùng vòng task 
 `agent_result` ở trên.
 
 - `tdd.red` / `tdd.green`: mỗi cái là một evidence. `red` là lệnh test chạy trước khi viết code, `exit_code` khác 0 và
-  `summary` nêu vì sao đỏ là đúng lý do; `green` là cùng lệnh sau khi viết code, `exit_code: 0`. Chỉ task TDD `có`: dòng `**TDD:**` của task trong plan, thiếu dòng thì `BE` là `có`, kind khác là `không`.
+  `summary` nêu vì sao đỏ là đúng lý do; `green` là cùng lệnh sau khi viết code, `exit_code: 0`. Chỉ task TDD `có`:
+  dòng `**TDD:**` của task trong plan; thiếu dòng thì `BE` là `có`, kind khác là `không`.
 - `report_file`: đường dẫn file report của agent. Agent không có quyền ghi (reviewer) trả report trong tin nhắn và để
   trống; session chính ghi file khi cần.
 - `commits`: danh sách SHA. Agent không tự commit, nên trường này do session chính điền sau khi commit hoặc để rỗng.
@@ -94,7 +95,8 @@ sau trước khi đi `next`:
   với log, số đo hoặc tài liệu thì là tham chiếu tới nguồn đó.
 - `status: completed` thì không có `validation` nào ở trạng thái `failed`.
 - Mọi file trong `changes` thuộc danh sách file đã giao (với agent có danh sách).
-- Task TDD `có` phải có `tdd.red` và `tdd.green`; thiếu một trong hai → đầu ra hỏng. Task `**TDD:** không — <lý do>` không bị đòi `tdd`.
+- Task TDD `có` phải có `tdd.red` và `tdd.green`; thiếu một trong hai → đầu ra hỏng. Task `**TDD:** không — <lý do>`
+  không bị đòi `tdd`.
 - Reviewer chạy task-review phải trả đủ cả `spec_verdict` lẫn `findings`; thiếu một trong hai → đầu ra hỏng.
   Re-review phải có `verdicts[]` cho từng finding đã giao.
 

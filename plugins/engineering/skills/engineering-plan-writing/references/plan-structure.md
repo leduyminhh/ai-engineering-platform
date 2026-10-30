@@ -29,7 +29,7 @@ W18 khi kind ngoài tập. Kind quyết định chuỗi agent:
 
 | Kind | Chuỗi agent |
 |---|---|
-| `BE` | `backend-implementer` (TDD) → `backend-reviewer` |
+| `BE` | `backend-implementer` (TDD mặc định) → `backend-reviewer` |
 | `FE-UI` | `frontend-implementer` → `frontend-test-writer` → `frontend-reviewer` |
 | `FE-INT` | `frontend-data-integrator` → `frontend-reviewer` |
 | `E2E` | `frontend-e2e-test-writer` → `frontend-reviewer` |

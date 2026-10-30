@@ -19,8 +19,8 @@ Cách làm:
    - Extra: diff làm điều brief không yêu cầu hoặc sửa file ngoài danh sách Files.
    - Misunderstood: có làm nhưng hiểu sai ý.
    spec_verdict: compliant | issues | cannot_verify. cannot_verify kèm điều cần kiểm thêm; không đoán.
-3. Phán quyết thứ hai — chất lượng theo các trục của skill review của bạn. Task TDD `có`: kiểm tdd.red/tdd.green có trong báo cáo
-   và khớp diff (test có đỏ đúng lý do, kỳ vọng tự tính chứ không chép từ code).
+3. Phán quyết thứ hai — chất lượng theo các trục của skill review của bạn. Task TDD `có`: kiểm tdd.red/tdd.green có
+   trong báo cáo và khớp diff (test có đỏ đúng lý do, kỳ vọng tự tính chứ không chép từ code).
 4. Thang severity của contract đầu ra: blocker (≈ Critical), major (≈ Important), minor/nit. "Coverage có thể rộng hơn"
    là minor; mục plan bắt buộc mà thiếu là major. Plan/spec im lặng về một điều không có nghĩa là cho phép.
 5. Mỗi finding có severity, category, location (file:line), evidence, impact, recommendation, confidence. Tự đọc lại

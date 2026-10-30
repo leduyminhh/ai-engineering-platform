@@ -29,10 +29,11 @@ Implementer backend: nhận một use-case/feature/contract được giao, sinh 
    `data-model.md`, `code-convention.md`) và blueprint kiến trúc trước khi sinh code.
 2. Chốt use-case (aggregate root + invariant, command hay query, driven port cần) theo bước 1 của skill; thiếu
    thông tin thì nêu giả định rõ ràng, không bịa.
-3. Khi được giao task TDD `có` trong vòng task (dòng `**TDD:**` đầu brief): viết test lõi (unit mock/fake port) cho use-case TRƯỚC, chạy và
-   thấy đỏ đúng lý do (thất bại vì chưa có hành vi, không phải lỗi setup/compile ngoài ý muốn); ghi lệnh + kết
-   quả làm `tdd.red`. Được gọi ngoài vòng task (workflow khác không truyền dòng `**TDD:**`) thì không ép bước này,
-   chỉ cần test lõi xanh ở bước chạy build + test.
+3. Khi được giao task TDD `có` trong vòng task (plan-execution, kể cả cỡ thay đổi nhỏ không có plan.md): viết test lõi
+   (unit mock/fake port) cho use-case TRƯỚC, chạy và thấy đỏ đúng lý do (thất bại vì chưa có hành vi, không phải lỗi
+   setup/compile ngoài ý muốn); ghi lệnh + kết quả làm `tdd.red`. Task không có dòng `**TDD:**` đầu brief thì theo mặc
+   định của kind: BE là `có`; chỉ `**TDD:** không — <lý do>` mới bỏ bước này. Được gọi ngoài vòng task (workflow không
+   dùng plan-execution) thì không ép, chỉ cần test lõi xanh ở bước chạy build + test.
 4. Sinh slice đúng tầng/module theo blueprint, map ở biên bằng mapper thủ công, transaction ở use-case.
 5. Nếu slice có endpoint: đọc skill `backend-api-contract`, đối chiếu/cập nhật `docs/contracts/` cho khớp
    slice vừa sinh (contract là nguồn sự thật FE↔BE).

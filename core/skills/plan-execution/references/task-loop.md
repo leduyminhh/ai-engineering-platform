@@ -24,7 +24,9 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    chỉ gồm một dòng bối cảnh, đường dẫn brief, `Produces` của task trước mà task này dùng, và model; không dán lịch sử
    hội thoại. Task `DOCS`/`TOOLING` do session chính tự làm theo brief.
 4. **Nhận `agent_result`** và áp luật kiểm đầu ra của contract (có `status`, finding có `location` + `evidence`, file thay đổi
-   thuộc danh sách `**Files:**`). Task TDD `có` (dòng `**TDD:**` trong brief): thiếu `tdd.red`/`tdd.green` là đầu ra hỏng; task `không` không bị đòi `tdd`. Task `TOOLING` TDD `có` do session chính làm: thiếu red/green trong dòng ledger là hỏng. Ánh xạ trạng thái:
+   thuộc danh sách `**Files:**`). Task TDD `có` (dòng `**TDD:**` trong brief; thiếu dòng thì `BE` là `có`): thiếu
+   `tdd.red`/`tdd.green` là đầu ra hỏng; task `không` không bị đòi `tdd`. Task `TOOLING` TDD `có` do session chính làm:
+   thiếu red/green trong dòng ledger là hỏng. Ánh xạ trạng thái:
    - `completed` và `remaining_risks` rỗng → qua bước 5.
    - `completed` kèm `remaining_risks` → xong kèm lo ngại: đọc từng lo ngại; liên quan đúng/phạm vi thì xử lý trước khi
      review, không thì chuyển cho reviewer.
@@ -50,7 +52,9 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    - review sạch: `node <thư mục skill plan-execution>/scripts/ledger.mjs <requestDir> "Task <n>: complete (commits <a>..<b>, review clean)"`;
    - qua breaker (còn finding mở sau vòng 3, đã phán hết): các dòng `Ruling:` của task đứng trước, rồi
      `Task <n>: complete (commits <a>..<b>, <k> ruled)` với `<k>` là số finding đã phán. Không có dòng complete thì lần
-     làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này.
+     làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này;
+   - task `TOOLING` TDD `có` do session chính làm: dòng `complete` mang bằng chứng đỏ theo định dạng
+     `red: <lệnh> exit <n khác 0>` … `tests: <lệnh> exit 0` của `inline.md` (bước 6).
 
 ## Vòng sửa
 

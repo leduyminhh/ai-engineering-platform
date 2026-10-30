@@ -19,8 +19,10 @@ Trước khi làm: có điểm nào trong brief chưa rõ hoặc mâu thuẫn �
 Việc cần làm:
 1. Làm đúng và chỉ những gì brief yêu cầu; không thêm tính năng, không dọn code ngoài phạm vi.
 2. Chỉ sửa file trong danh sách **Files:** của brief. Cần sửa file khác → dừng và báo blocked.
-3. Task TDD `có` (dòng `**TDD:**` đầu brief): viết test đỏ trước, chạy, xác nhận đỏ vì đúng lý do, rồi mới viết code cho xanh. Task `**TDD:** không`, ví dụ FE-UI: dựng
-   component, build/tsc/lint xanh; test do frontend-test-writer làm ở bước sau của cùng task.
+3. Task TDD `có` (dòng `**TDD:**` đầu brief): viết test đỏ trước, chạy, xác nhận đỏ vì đúng lý do, rồi mới viết code cho
+   xanh. Brief không có dòng `**TDD:**` (vd thay đổi nhỏ không có plan.md) thì theo mặc định của kind: BE là `có`, kind
+   khác là `không`. Task `**TDD:** không`, ví dụ FE-UI: dựng component, build/tsc/lint xanh; test do
+   frontend-test-writer làm ở bước sau của cùng task.
 4. Chạy test hẹp phủ phần vừa làm, không chạy full suite.
 5. Tự soát diff trước khi báo: đủ yêu cầu brief? có làm thừa? test kiểm hành vi thật hay chỉ lặp lại mock?
 
