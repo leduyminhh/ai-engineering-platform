@@ -27,6 +27,38 @@ export function extractTask(planText, n) {
   return `${body.join('\n')}\n`;
 }
 
+// Không import check-request.mjs vì khác skill; test 33-request-parts chạy chung bộ vector để hai bên không lệch.
+const TDD_KINDS = ['BE', 'TOOLING'];
+
+// Dòng **Kind:** / **TDD:** đầu tiên ngoài khối code (khớp cách check-request đọc plan).
+function taskField(taskText, name) {
+  let fenced = false;
+  for (const l of taskText.split(/\r?\n/)) {
+    if (/^\s*(```|~~~)/.test(l)) { fenced = !fenced; continue; }
+    const m = !fenced && l.match(new RegExp(`^\\*\\*${name}:\\*\\*\\s*(.*)$`));
+    if (m) return m[1].trim();
+  }
+  return undefined;
+}
+
+// TDD hiệu lực của task: giá trị plan ghi nếu hợp lệ với kind, ngược lại mặc định theo kind (BE = có, còn lại = không).
+export function effectiveTdd(taskText) {
+  const kind = taskField(taskText, 'Kind');
+  const raw = taskField(taskText, 'TDD');
+  const m = raw?.match(/^(có|không(?:\s*—\s*(\S.*))?)$/);
+  if (m && (m[1] === 'có' ? TDD_KINDS.includes(kind) : m[2] !== undefined)) {
+    return m[1] === 'có' ? { value: 'có', defaulted: false } : { value: 'không', reason: m[2].trim(), defaulted: false };
+  }
+  return { value: TDD_KINDS.includes(kind) ? 'có' : 'không', defaulted: true };
+}
+
+// Chỉ chèn khi plan hoàn toàn không có dòng TDD; dòng đã ghi (kể cả sai) giữ nguyên để W21 còn bắt được.
+function withTddLine(taskText) {
+  if (taskField(taskText, 'TDD') !== undefined) return taskText;
+  const [heading, ...rest] = taskText.split('\n');
+  return [heading, `**TDD:** ${effectiveTdd(taskText).value} (mặc định theo kind)`, ...rest].join('\n');
+}
+
 export function main(argv) {
   const args = [...argv];
   const oi = args.indexOf('--out');
@@ -46,7 +78,7 @@ export function main(argv) {
   const dir = outDir ?? path.dirname(ensureWorkspace(path.dirname(path.resolve(planFile))));
   fs.mkdirSync(dir, { recursive: true });
   const out = path.join(dir, `task-${n}-brief.md`);
-  fs.writeFileSync(out, task);
+  fs.writeFileSync(out, withTddLine(task));
   console.log(out);
   return 0;
 }
