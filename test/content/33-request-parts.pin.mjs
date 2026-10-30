@@ -108,4 +108,82 @@ export default async function run({ ok, ctx }) {
     const t0 = Date.now();
     ok(typeof validateLine(long) === 'string' && Date.now() - t0 < 500, 'AC5.3: dòng dài bị chặn bằng MAX_LINE, không lùi regex');
   }
+
+  // AC3.2, AC3.5: resolveWorkspace tính <gốc repo chính>/.aip/runs/<request>/<part>/; đường lui chỉ với lỗi quyền
+  {
+    const { resolveWorkspace } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'skills', 'plan-execution', 'scripts', 'workspace.mjs')).href);
+    const fwd = (p) => p.replace(/\\/g, '/');
+    const gitFake = (top, common) => (args) => {
+      if (args.includes('--show-toplevel')) return top;
+      if (args.includes('--git-common-dir')) return common;
+      throw new Error(`git lạ: ${args.join(' ')}`);
+    };
+
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-ws-'));
+    try {
+      const reqDir = path.join(root, 'docs', 'requests', '2026-10-30-x');
+      fs.mkdirSync(path.join(reqDir, 'parts', '01-a'), { recursive: true });
+      const lines = [];
+      const deps = { cwd: root, git: gitFake(root, path.join(root, '.git')), stderr: (s) => lines.push(s) };
+      const runs = fwd(path.join(root, '.aip', 'runs'));
+
+      const a = resolveWorkspace(reqDir, deps);
+      const b = resolveWorkspace(path.join(reqDir, 'plan.md'), deps);
+      ok(JSON.stringify(a) === JSON.stringify(b), 'AC3.2: đối số thư mục request cho kết quả giống truyền <dir>/plan.md');
+      ok(a.plan === path.join(reqDir, 'plan.md') && a.request === '2026-10-30-x' && a.part === 'root' && a.fallback === false
+        && fwd(a.dir) === `${runs}/2026-10-30-x/root`, 'AC3.2: plan gốc → part root, dir dưới <gốc>/.aip/runs/<request>/root');
+      ok(fs.statSync(a.dir).isDirectory() && fs.readFileSync(path.join(root, '.aip', '.gitignore'), 'utf8') === '*\n',
+        'AC3.2: tạo dir và .aip/.gitignore = "*\\n"');
+
+      const p = resolveWorkspace(path.join(reqDir, 'parts', '01-a', 'plan.md'), deps);
+      ok(p.part === '01-a' && p.request === '2026-10-30-x' && fwd(p.dir) === `${runs}/2026-10-30-x/01-a`, 'AC3.2: parts/01-a/plan.md → part 01-a');
+
+      fs.mkdirSync(path.join(root, 'misc', 'notes'), { recursive: true });
+      const o = resolveWorkspace(path.join(root, 'misc', 'notes', 'plan.md'), deps);
+      ok(o.request === 'notes' && o.part === 'root' && fwd(o.dir) === `${runs}/notes/root`, 'AC3.2: plan ngoài docs/requests → request = thư mục cha, part root');
+      ok(lines.length === 0, 'AC3.2: không cảnh báo khi ghi được');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+
+    // fs/git giả: không chạm đĩa, dùng đường dẫn Windows như git trả về
+    const top = 'e:/repo/.claude/worktrees/x-p01';
+    const git = gitFake(top, 'E:\\repo\\.git');
+    const plan = 'docs/requests/r1/plan.md';
+    const made = [];
+    const notFound = () => { throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' }); };
+    const fakeFs = { mkdirSync: (p) => { made.push(fwd(p)); }, writeFileSync: (p) => { made.push(fwd(p)); }, existsSync: () => false, statSync: notFound };
+    const denying = (code, deny) => (p) => {
+      if (fwd(p).startsWith(deny)) throw Object.assign(new Error(code), { code });
+      made.push(fwd(p));
+    };
+
+    {
+      const w = resolveWorkspace(plan, { cwd: top, git, fs: fakeFs, stderr: () => {} });
+      ok(fwd(w.root) === 'E:/repo' && fwd(w.dir) === 'E:/repo/.aip/runs/r1/root' && w.fallback === false
+        && made.every((p) => p.startsWith('E:/repo/.aip')) && made.includes('E:/repo/.aip/.gitignore'),
+        'workspace: gốc repo chính từ worktree, đường dẫn Windows');
+    }
+
+    for (const code of ['EACCES', 'EPERM', 'EROFS']) {
+      made.length = 0;
+      const lines = [];
+      const w = resolveWorkspace(plan, { cwd: top, git, fs: { ...fakeFs, mkdirSync: denying(code, 'E:/repo/.aip') }, stderr: (s) => lines.push(s) });
+      ok(w.fallback === true && fwd(w.root) === top && fwd(w.dir) === `${top}/.aip/runs/r1/root` && made.includes(`${top}/.aip/.gitignore`),
+        `AC3.5: ${code} khi ghi gốc repo chính → ghi vào gốc worktree, fallback true`);
+      ok(lines.join('').trimEnd().split('\n').length === 1 && lines.join('').includes(w.dir), `AC3.5: ${code} → đúng một dòng stderr nêu đường dẫn đã dùng`);
+    }
+
+    const rethrow = (deps) => {
+      const lines = [];
+      let err;
+      try { resolveWorkspace(plan, { stderr: (s) => lines.push(s), ...deps }); } catch (e) { err = e; }
+      return { err, lines };
+    };
+    const full = rethrow({ cwd: top, git, fs: { ...fakeFs, mkdirSync: denying('ENOSPC', 'E:/repo/.aip') } });
+    ok(full.err?.code === 'ENOSPC' && full.lines.length === 0, 'AC3.5: lỗi ngoài EACCES/EPERM/EROFS (ENOSPC) → hàm ném, không cảnh báo');
+    // Chạy ở chính gốc repo chính (ổ đĩa khác hoa thường): không có chỗ lui, thử lại cùng thư mục là vô nghĩa
+    const same = rethrow({ cwd: 'e:/repo', git: gitFake('e:/repo', 'E:\\repo\\.git'), fs: { ...fakeFs, mkdirSync: denying('EPERM', 'E:/repo/.aip') } });
+    ok(same.err?.code === 'EPERM' && same.lines.length === 0, 'AC3.5: lỗi quyền ngay ở gốc repo chính (không phải worktree) → ném, không lui');
+  }
 }
