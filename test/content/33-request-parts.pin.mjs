@@ -78,4 +78,25 @@ export default async function run({ ok, ctx }) {
       'AC5.2: thiếu dòng TDD → BE có, thiếu Kind → không');
     ok(tb.effectiveTdd('### Task 1: x\n**Kind:** BE\n```\n**TDD:** không — y\n```\n').defaulted === true, 'AC5.2: dòng TDD trong khối code không tính');
   }
+
+  // AC5.3: ledger từ chối bằng chứng đỏ giả ("red: … exit 0") ở mọi dòng Task <n>: complete; dòng không có red: giữ hành vi cũ
+  {
+    const { validateLine } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'skills', 'plan-execution', 'scripts', 'ledger.mjs')).href);
+    const cases = [
+      ['Task 1: complete (abc123, inline, red: npm t exit 1, tests: npm t exit 0)', true, 'inline red exit 1 + tests exit 0 hợp lệ'],
+      ['Task 1: complete (abc123, inline, red: npm t exit 0, tests: npm t exit 0)', false, 'inline red exit 0 bị từ chối'],
+      ['Task 1: complete (abc123, inline, tests: npm t exit 0)', true, 'inline không red: giữ hợp lệ'],
+      ['Task 1: complete (abc123, inline, red: npm t exit 1, tests: npm t exit 1)', false, 'inline tests exit khác 0 vẫn bị từ chối dù có red'],
+      ['Task 1: complete (abc123, inline, red: npm t exit 1)', false, 'inline thiếu tests: vẫn bị từ chối dù có red'],
+      ['Task 2: complete (abc123, review round 1, red: npm t exit 0, tests: npm t exit 0)', false, 'dòng không inline: red exit 0 cũng bị từ chối'],
+      ['Task 2: complete (abc123, review round 1, red: npm t exit 1, tests: npm t exit 0)', true, 'dòng không inline: red exit 1 hợp lệ'],
+      ['Task 2: complete (abc123, review round 1)', true, 'dòng không inline, không red: giữ hợp lệ'],
+      ['Task 3: started', true, 'dòng không phải complete không bị kiểm red'],
+    ];
+    for (const [line, valid, name] of cases) ok((validateLine(line) === null) === valid, `AC5.3: ${name}`);
+    ok(typeof validateLine('x\nTask 1: complete (inline, red: t exit 0, tests: t exit 0)') === 'string', 'AC5.3: red exit 0 ở dòng sau của đối số nhiều dòng vẫn bị bắt');
+    const long = `Task 1: complete (inline, red: ${'tests: '.repeat(2000)} exit 0`;
+    const t0 = Date.now();
+    ok(typeof validateLine(long) === 'string' && Date.now() - t0 < 500, 'AC5.3: dòng dài bị chặn bằng MAX_LINE, không lùi regex');
+  }
 }
