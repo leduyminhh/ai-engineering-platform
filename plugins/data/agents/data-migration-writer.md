@@ -4,6 +4,7 @@ description: "Người viết migration: chỉ tạo file migration schema mới
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "data-db-migration"
 ---
 

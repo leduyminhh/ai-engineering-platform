@@ -47,3 +47,7 @@ Quyết định về effort (người dùng, 2026-10-21): `opus` mặc định `
 - Rủi ro: Sonnet có thể bỏ sót lỗi tinh vi ở review; quy tắc nâng `opus` (bằng tham số lúc gọi, effort `high`, không đặt trong frontmatter) cho review toàn phase, review bảo mật trước release và debug nguyên nhân gốc khó bù lại.
 - Đổi `effort` giữa phiên vẫn giữ prompt cache trên model 5.5, còn đổi model thì không ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)); nên chỉnh effort theo loại việc thay vì đổi model.
 - Cần kiểm lại con số TTL, hệ số giá khi Claude Code đổi tài liệu; trọng số cache read trong hạn mức gói chưa kiểm được [Unverified].
+
+## Cập nhật 2026-10-30
+
+Thí nghiệm trên trial `aip-lifecycle-trial` (n=1 mỗi vai, haiku và sonnet cùng prompt): haiku ngang chất lượng ở viết spec, review từng task và cập nhật docs, rẻ hơn 1,5–5 lần; nâng severity sai ở quality gate. Context nền của subagent nạp mọi tool là 76–83K token, có allowlist là 46K; prompt haiku trên 100K token tính giá ×5. Người dùng chọn: `engineering-spec-analyst` khai `model: haiku`; task review, re-review và task `DOCS` gọi `haiku` bằng tham số lúc gọi (sai một lần → `sonnet`); mọi agent ghi khai `tools` allowlist, trừ `frontend-implementer` (cần MCP Figma). Quality auditor giữ `sonnet` vì context làm việc tích luỹ vượt 100K.

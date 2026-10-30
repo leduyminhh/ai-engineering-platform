@@ -13,8 +13,15 @@ export default async function run({ ok, ctx }) {
     && ['`haiku`', '`sonnet`', '`opus`', 'new session', '`/clear`', '`/compact', '15 minutes', 'acknowledg'].every((s) => sec.includes(s)),
     'AC2.1: baseline có mục Model and session routing');
 
-  ok(ctx.allAgents.length > 0 && ctx.allAgents.every((a) => a.model === 'sonnet' && a.effort === 'high'),
-    `AC1.1: mọi agent hiện có khai model sonnet + effort high${ctx.allAgents.filter((a) => a.model !== 'sonnet' || a.effort !== 'high').map((a) => ' ' + a.id).join('')}`);
+  // Thí nghiệm 2026-10-30: spec-analyst chạy haiku ngang chất lượng sonnet, rẻ hơn; haiku giữ effort mặc định.
+  const HAIKU = ['engineering-spec-analyst'];
+  const offRoute = ctx.allAgents.filter((a) => (HAIKU.includes(a.id)
+    ? a.model !== 'haiku' || a.effort : a.model !== 'sonnet' || a.effort !== 'high'));
+  ok(ctx.allAgents.length > 0 && !offRoute.length,
+    `AC1.1: agent khai model sonnet + effort high, spec-analyst khai haiku${offRoute.map((a) => ' ' + a.id).join('')}`);
+
+  ok(/task review, re-review và task `DOCS` dùng `haiku`/.test(read('core', 'skills', 'plan-execution', 'SKILL.md')),
+    'plan-execution giao task review, re-review và DOCS cho haiku (thí nghiệm 2026-10-30)');
 
   ok(['`effort`', '`medium`', '`high`'].every((s) => sec.includes(s)),
     'AC2.1: mục baseline nêu quy tắc effort (opus mặc định medium, sonnet high)');

@@ -4,6 +4,7 @@ description: "Hiện thực backend: sinh một vertical slice (aggregate, use-c
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "backend-implement,backend-api-contract"
 ---
 

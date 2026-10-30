@@ -4,6 +4,7 @@ description: "Test writer frontend: chỉ viết test React/TypeScript (Testing 
 mode: write
 model: sonnet
 effort: high
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill
 skills: "frontend-testing"
 writeScope:
   - "**/__tests__/**"

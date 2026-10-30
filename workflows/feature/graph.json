@@ -39,10 +39,10 @@
         "session": true,
         "agents": [
           "engineering-spec-analyst",
-          { "id": "backend-implementer", "when": "chỉ khi phạm vi có API", "after": "engineering-spec-analyst" }
+          { "id": "backend-implementer", "when": "chỉ khi phạm vi có API và cần file contract", "after": "engineering-spec-analyst" }
         ],
         "skills": [
-          { "id": "backend-api-contract", "when": "chỉ khi phạm vi có API" }
+          { "id": "backend-api-contract", "when": "chỉ khi phạm vi có API và cần file contract" }
         ]
       },
       "next": "plan",

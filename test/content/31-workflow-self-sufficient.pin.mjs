@@ -151,6 +151,8 @@ export default async function run({ ok, ctx }) {
     ok(s3.includes('engineering-spec-analyst') && /builder check/.test(s3),
       'AC1.3: Bước 3 spec-analyst ghi tài liệu, session chính chạy builder check');
     ok(/design\.md/.test(s3) && /cỡ dự án/.test(s3), 'AC1.4: Bước 3 chỉ viết design.md khi cỡ dự án');
+    ok(/thay đổi nhỏ"[^.]*mặc định không viết file contract/.test(s3),
+      'regression trial 2026-10-30: cỡ thay đổi nhỏ mặc định không viết file contract riêng');
     const s4 = secs[3].body;
     ok(s4.includes('check-request.mjs') && s4.includes('`engineering-plan-writing`') && /thay đổi nhỏ/.test(s4) && /bỏ qua/.test(s4),
       'AC2.2: Bước 4 theo engineering-plan-writing, chạy check-request.mjs, bỏ qua khi cỡ thay đổi nhỏ');
@@ -322,9 +324,11 @@ export default async function run({ ok, ctx }) {
     ok(/tối đa 3 vòng/.test(loop) && /vòng 3/.test(loop) && /opus/.test(loop) && /đặt lại/.test(loop), 'AC3.2: tối đa 3 vòng/task, đặt lại mỗi task, vòng 3 agent mới opus');
     ok(/SendMessage/.test(loop) && /ADDRESSED/.test(loop) && /chỉ[^.]*diff của vòng sửa/.test(loop), 'AC3.2: vòng 1–2 SendMessage; re-review chỉ diff của vòng sửa');
     ok(/sau vòng 3[^.]*(không còn|hết)/.test(loop) && /Ruling:/.test(loop), 'AC3.2: hết vòng 3 không còn vòng nào, ghi Ruling:');
-    for (const stop of ['không đảo ngược', 'bảo mật', 'ngoài repo', 'mọi hướng đều là đoán', 'schema DB']) {
+    for (const stop of ['không đảo ngược', 'bảo mật', 'ngoài repo', 'mọi hướng đều là đoán', 'schema DB', 'AC người dùng đã duyệt']) {
       ok(loop.includes(stop), `AC3.2: loại dừng hỏi người dùng nhắc "${stop}"`);
     }
+    ok(/AC mơ hồ[^.]*không chọn hướng\s+sửa/.test(prompt('task-review')) && /questions\[\][^.]*AC ID/.test(prompt('task-review')),
+      'regression trial 2026-10-30: task-review đưa AC mơ hồ vào questions[], không tự chọn hướng sửa');
 
     // review cuối nhánh
     const fr = prompt('final-review');
@@ -358,6 +362,7 @@ export default async function run({ ok, ctx }) {
     ok(/merge local/.test(fin) && /push \+ PR/.test(fin) && /giữ nguyên/.test(fin) && /mặc định[^.]*giữ nguyên/.test(fin), 'AC4.2: kết thúc nhánh đúng 3 lựa chọn, mặc định giữ nguyên');
     ok(/docs\/specs/.test(fin) && /check-request\.mjs/.test(fin) && /full suite/.test(fin), 'AC4.2: finish cập nhật spec sống, chạy check-request.mjs và full suite');
     ok(/không (merge|push)[^.]*chưa chọn/.test(fin) && /merge xong[^.]*(chạy lại|test lại)/.test(fin) && /xác nhận rõ/.test(fin), 'AC4.2: không merge/push khi chưa chọn; test lại sau merge; xoá nhánh chỉ khi xác nhận rõ');
+    ok(/`git remote`[^.]*rỗng[^.]*push \+ PR[^.]*không khả dụng/.test(fin), 'regression trial 2026-10-30: repo chưa có remote thì push + PR không khả dụng');
     ok(/rulings/.test(fin) && /Ruling:/.test(fin), 'AC4.3: kết thúc gom mọi Ruling: vào rulings của workflow_result');
   }
 

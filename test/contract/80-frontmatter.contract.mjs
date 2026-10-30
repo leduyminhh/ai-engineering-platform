@@ -174,6 +174,9 @@ export default async function run({ ok, ctx }) {
     const { allAgents } = ctx;
     const ro = allAgents.filter((a) => a.mode === 'read-only');
     ok(ro.length === 4 && ro.every((a) => a.tools.length > 0), 'mọi agent read-only khai báo tools allowlist (W1)');
+    // Không có allowlist thì subagent nạp schema mọi tool MCP (~33K token đo 2026-10-30); frontend-implementer cần MCP Figma.
+    const noTools = allAgents.filter((a) => !a.tools.length).map((a) => a.id);
+    ok(noTools.join(',') === 'frontend-implementer', `mọi agent ghi khai tools allowlist, trừ frontend-implementer — thiếu: ${noTools.join(', ')}`);
     for (const a of allAgents) {
       const errs = ctx.checkAgentTools(a);
       ok(errs.length === 0, `${a.id}: tools hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);

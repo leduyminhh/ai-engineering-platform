@@ -35,7 +35,8 @@ W18 khi kind ngoài tập. Kind quyết định chuỗi agent:
 | `E2E` | `frontend-e2e-test-writer` → `frontend-reviewer` |
 | `DB` | `data-migration-writer` → `backend-reviewer` |
 | `CT` | `backend-implementer` (skill `backend-api-contract`) → `backend-reviewer` |
-| `DOCS` / `TOOLING` | session chính tự làm, review bằng `general-purpose` |
+| `DOCS` | `general-purpose` (`model: haiku`) → `general-purpose` |
+| `TOOLING` | session chính tự làm, review bằng `general-purpose` |
 
 Task trộn hai phía (vd BE + FE-UI) → tách thành hai task, mỗi task một kind.
 
