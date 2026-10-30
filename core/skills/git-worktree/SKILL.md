@@ -44,15 +44,20 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 ## Quy trình — dọn worktree
 
 1. Chỉ dọn khi nhánh đã merge (`git branch --merged feature/<slug>` liệt kê nó, có thể kèm tiền tố `+` vì nhánh đang được worktree dùng) **và** `git -C .claude/worktrees/<slug>-t<n> status --short --ignored`
-   không in gì. `git worktree remove` xoá cả file bị gitignore (cấu hình cục bộ, ledger `.sdd/`), nên còn mục ignored không
-   tái tạo được thì giữ lại. Chưa merge hoặc còn thay đổi thì giữ lại và báo người dùng.
-2. Dọn bằng lệnh của git, theo thứ tự:
+   không in gì ngoài mục `.aip/` (chép ở bước 2). `git worktree remove` xoá cả file bị gitignore (cấu hình cục bộ, `.aip/` của worktree), nên còn mục ignored
+   không tái tạo được thì giữ lại. Chưa merge hoặc còn thay đổi thì giữ lại và báo người dùng.
+2. Nếu worktree có `.aip/runs/` (ledger, brief, review package, ghi khi `<gốc repo chính>/.aip/` không ghi được), chép về
+   `<gốc repo chính>/.aip/runs/` trước khi xoá, không ghi đè file đã có ở đích; chỉ chép, không xoá nguồn:
+   ```bash
+   cp -rn .claude/worktrees/<slug>-t<n>/.aip/runs/. <gốc repo chính>/.aip/runs/
+   ```
+3. Dọn bằng lệnh của git, theo thứ tự:
    ```bash
    git worktree remove .claude/worktrees/<slug>-t<n>
    git branch -d worktree-<slug>-t<n>
    ```
    `git worktree prune` chỉ chạy sau khi thư mục đã không còn.
-3. **Windows và junction.** Worktree có thể chứa junction (vd `node_modules`, `build/` trỏ ra ngoài). Xoá đệ quy bằng shell
+4. **Windows và junction.** Worktree có thể chứa junction (vd `node_modules`, `build/` trỏ ra ngoài). Xoá đệ quy bằng shell
    có thể đi xuyên junction và xoá nội dung ở đích. Nếu `git worktree remove` không gỡ được, liệt kê junction bằng
    `fs.lstatSync(p).isSymbolicLink()`, gỡ chính link bằng `fs.unlinkSync`, rồi dọn phần còn lại bằng `fs.rmSync` của Node.
    [Unverified] Hành vi `fs.rmSync` trên junction chưa được kiểm ở đây; thử trên thư mục tạm có junction trỏ vào thư mục

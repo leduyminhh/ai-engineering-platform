@@ -137,7 +137,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   (acceptance criteria từ Bước 3) + contract (nếu có) + `design.md`/`tasks.md` (nếu có) + baseline Bước 1 + bảng ứng
   viên e2e đã duyệt ở Bước 2 (đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
 - **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó). Chuẩn bị ledger
-  `docs/requests/<ngày>-<slug>/.sdd/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
+  `<gốc repo chính>/.aip/runs/<request>/<part>/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
   xong). Mỗi task theo thứ tự: ghi BASE → cắt brief → giao agent theo `**Kind:**` (chuỗi agent do
   `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer`
   (TDD `có` thì viết test đỏ trước rồi code và báo `tdd`);
@@ -174,7 +174,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `questions[]` → session chính thử trả lời từ spec/plan trước, chỉ hỏi người dùng khi thuộc loại dừng; contract lệch khi
   nối data → quay lại Bước 3; integrator trả `blocked` vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại;
   plan hỏng đến mức mọi hướng đều là đoán → hỏi người dùng.
-- **Evidence:** ledger `.sdd/progress.md` (các dòng `Task <n>: complete` và `Ruling:`) + `git log` commit theo task; lệnh
+- **Evidence:** ledger `.aip/runs/<request>/<part>/progress.md` (các dòng `Task <n>: complete` và `Ruling:`) + `git log` commit theo task; lệnh
   build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0; task `FE-INT`: bằng chứng type sinh từ contract;
   lệnh test + exit code + số liệu (`X tests, X passed`); task TDD `có`: `tdd.red`/`tdd.green`; e2e: lệnh Playwright + kết quả hoặc
   `not_run` + lý do; report của integrator (endpoint ↔ hook ↔ container) khi fullstack có contract; danh sách file thay

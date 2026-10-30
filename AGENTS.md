@@ -189,7 +189,7 @@ them. They apply when the aip workflows and skills are installed.
 
 | Type | Scope | Stored in | Updated by |
 |---|---|---|---|
-| Short-term | One change, spec to merge | `docs/requests/<yyyy-mm-dd>-<slug>/`, ledger `.sdd/progress.md` in that folder | Agent, while working |
+| Short-term | One change, spec to merge | `docs/requests/<yyyy-mm-dd>-<slug>/`, ledger `.aip/runs/<request>/<part>/progress.md` (git-ignored, at the main repo root) | Agent, while working |
 | Long-term | Whole project | `project-knowledge/`, `docs/decisions/`, `docs/contracts/`, `docs/specs/`, `AGENTS.md`/`CLAUDE.md` | Human reviewer; agent only proposes |
 
 - Resume a change that already has a folder: read `design.md`, `plan.md` and the ledger; continue from

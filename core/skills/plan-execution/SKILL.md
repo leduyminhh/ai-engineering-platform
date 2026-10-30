@@ -24,7 +24,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 ## Quy trình
 
 1. **Chuẩn bị.** Đọc `plan.md` một lần (bản đồ file, Global Constraints, Review Focus, `**Interfaces:**` của từng task).
-   Chạy `node <thư mục skill plan-execution>/scripts/ledger.mjs <requestDir> "# Ledger — plan: <đường dẫn plan.md>"` để tạo `.sdd/` và dòng đầu ledger;
+   Chạy `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "# Ledger — plan: <đường dẫn plan.md>"` để tạo workspace `.aip/` và dòng đầu ledger;
    ledger đã có thì đọc phần cuối và làm tiếp từ task chưa `complete`, không làm lại task đã xong. Bước này đồng thời
    rà trước các cặp task chung file hoặc nối interface (xem `references/task-loop.md`, mục "Rà plan trước khi chạy").
 2. **Vòng task**, lần lượt từng task chưa `complete`, theo `references/task-loop.md`:
@@ -65,7 +65,7 @@ toàn nhánh dùng `opus`. Plan không cần khai báo model riêng cho từng t
 - Không merge, không push khi người dùng chưa chọn ở bước kết thúc nhánh; không xoá nhánh khi chưa được xác nhận rõ.
 - Không tuyên bố task hoặc plan xong khi chưa có evidence lệnh kiểm chứng; kết quả agent báo "xanh" phải đối chiếu bằng
   diff và lần chạy test của chính session chính.
-- Ledger nằm ở `<requestDir>/.sdd/progress.md` và không bao giờ được commit (`.sdd/.gitignore` chứa `*`).
+- Ledger, brief và review package nằm ở `<gốc repo chính>/.aip/runs/<request>/<part>/` (`<part>` là `root` cho plan gốc) và không bao giờ được commit (`.aip/.gitignore` chứa `*`). Ba script tự tính đường dẫn từ plan và in ra; ledger `.sdd/progress.md` cũ được chép sang một lần.
 - Thang severity và định dạng `agent_result`, `spec_verdict`, `tdd`, `rulings` theo contract đầu ra (`core:principles`);
   skill này không định nghĩa lại.
 

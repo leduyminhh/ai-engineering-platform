@@ -2,7 +2,8 @@
 # Dựng request đã có design + plan duyệt và code Task 1 lệch spec (thiếu AC1.2, thừa giảm giá thân thiết); không cần mạng, chỉ heredoc để chạy được trên Windows (Git Bash).
 set -euo pipefail
 R=docs/requests/2026-10-28-coupon-cap
-mkdir -p "$R/.sdd" src test
+L=.aip/runs/2026-10-28-coupon-cap/root
+mkdir -p "$R" "$L" src test
 
 cat > "$R/design.md" <<'MD'
 # Giới hạn mã giảm giá — Design
@@ -52,7 +53,7 @@ Mỗi AC của design.md có nhánh code và test phủ thật.
 - [x] **Step 2:** Hiện thực `applyCoupon`.
 MD
 
-cat > "$R/.sdd/progress.md" <<'MD'
+cat > "$L/progress.md" <<'MD'
 # Ledger — plan: docs/requests/2026-10-28-coupon-cap/plan.md
 Task 1: implementer báo xong (commit 3f2a9c1) — phủ AC1.1, AC1.2, AC1.3; test xanh 3/3.
 MD

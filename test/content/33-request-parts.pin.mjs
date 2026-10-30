@@ -308,4 +308,19 @@ export default async function run({ ok, ctx }) {
     ok(rd("core", "skills", "plan-execution", "references", "inline.md").includes("red: <lệnh> exit"), "AC5.3: inline.md nêu dòng ledger red: <lệnh> exit");
     ok(rd("plugins", "engineering", "skills", "engineering-tdd", "SKILL.md").includes("**TDD:** không — <lý do>"), "AC5.3: engineering-tdd nêu ngoại lệ ghi bằng **TDD:** không — <lý do> trong plan đã duyệt");
   }
+
+  // AC3.6, AC7.1 (một phần): văn bản đường dẫn .aip — dọn worktree chép .aip/runs về gốc repo chính trước khi xoá; bảng Memory nêu ledger mới
+  {
+    const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8');
+    const wt = rd('core', 'skills', 'git-worktree', 'SKILL.md');
+    const clean = wt.slice(wt.indexOf('## Quy trình — dọn worktree'), wt.indexOf('## Ranh giới an toàn'));
+    const copyAt = clean.indexOf('.aip/runs/');
+    const removeAt = clean.search(/^\s+git worktree remove /m);
+    ok(copyAt >= 0 && removeAt >= 0 && copyAt < removeAt && /gốc repo chính/.test(clean.slice(copyAt, removeAt)),
+      'AC3.6: git-worktree: bước chép .aip/runs/ về gốc repo chính đứng trước lệnh git worktree remove');
+
+    const tpl = rd('core', 'agents', 'AGENTS.template.md');
+    ok(tpl.includes('.aip/runs/<request>/<part>/progress.md') && !tpl.includes('.sdd'), 'AC7.1: bảng Memory của AGENTS.template.md ghi ledger ở .aip/runs/<request>/<part>/progress.md, không còn .sdd');
+    ok(rd('AGENTS.md') === tpl, 'AC7.1: AGENTS.md giống hệt AGENTS.template.md');
+  }
 }
