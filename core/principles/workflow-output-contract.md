@@ -106,7 +106,7 @@ Kết quả không đạt bất kỳ luật nào là **đầu ra hỏng**. Xử 
   Luật này áp cho workflow không dùng vòng task. Trong vòng task của `plan-execution`, `blocked` kèm `questions[]` thì
   session chính thử trả lời từ spec/plan/design trước; trả lời được thì gửi lại câu trả lời (quyết định thì ghi dòng
   `Ruling:`), không hỏi người dùng. Chỉ `ask_user` khi câu hỏi thuộc loại dừng của `task-loop.md` (không đảo ngược, bảo mật,
-  ngoài repo, schema DB, plan hỏng đến mức mọi hướng đều là đoán).
+  ngoài repo, schema DB, plan hỏng đến mức mọi hướng đều là đoán, phải đổi một AC người dùng đã duyệt).
 - **`status: completed` kèm `remaining_risks` không rỗng** → xong kèm lo ngại: đọc từng lo ngại, xử lý nếu thuộc phạm vi
   task, không thì chuyển cho reviewer; không tính là lỗi và không đi cạnh `on_fail`.
 - **`status: failed`**, hoặc đầu ra hợp lệ nhưng gate trượt → đi cạnh `on_fail` khớp `when`, tính lượt theo

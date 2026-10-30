@@ -69,7 +69,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   tài liệu ở bước này (Bước 3 ghi); người dùng bỏ qua phần hỏi → agent tự chọn hướng, ghi "quyết định của agent",
   không hỏi thêm; chỉ phân rã task khi người dùng chọn ở checkpoint.
 - **Đầu ra:** tóm tắt trình duyệt trong chat: hướng đã chọn (kèm hướng bị loại), cỡ việc, phạm vi BE/FE/fullstack,
-  bảng ứng viên e2e (nếu có), quyết định có tách task hay không.
+  bảng ứng viên e2e (nếu có), quyết định có tách task hay không; cỡ "thay đổi nhỏ" có API và repo chưa có contract cho
+  API đó thì nêu mặc định không viết file contract, người dùng chọn có thì Bước 3 viết.
 - **Gate:** người dùng duyệt hướng và cỡ việc; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc
   migration đã viết và verify qua `data-db-migration`; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e"; cỡ
   "việc rõ và nhỏ" thì kết thúc workflow tại đây.
@@ -81,14 +82,16 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 ### Bước 3 — Tài liệu ⏸
 
 - **Thực hiện:** agent `engineering-spec-analyst` ghi tài liệu → agent `backend-implementer` (skill
-  `backend-api-contract`, chỉ khi phạm vi có API) chốt contract → session chính chạy builder check
+  `backend-api-contract`, chỉ khi phạm vi có API và cần file contract) chốt contract → session chính chạy builder check
 - **Đầu vào:** hướng, cỡ việc, phạm vi và các quyết định đã chốt ở Bước 2 (session chính chuyển cho agent; agent không
   hỏi người dùng)
 - **Hành động:** `engineering-spec-analyst` ghi `requirement.md` (acceptance criteria đo được, phạm vi, bảng ứng
   viên e2e) và `design.md` chỉ khi cỡ dự án (2–3 hướng, hướng bị loại); ảnh hưởng kiến trúc thì viết thêm ADR đề
   xuất; thiếu đầu vào thì trả `blocked` + `questions[]`, session chính thử trả lời từ đầu vào đã chốt trước khi hỏi
   người dùng. Người dùng đã chọn tách task ở Bước 2 → đọc `references/task-breakdown.md`, mục Bước 3. Có endpoint
-  mới/đổi endpoint cũ: `backend-implementer` chốt/đồng bộ OpenAPI contract trong `docs/contracts/`. Sau cùng session
+  mới/đổi endpoint cũ: `backend-implementer` chốt/đồng bộ OpenAPI contract trong `docs/contracts/` khi cỡ dự án, khi
+  repo đã có contract cho API đó, hoặc khi người dùng chọn có contract ở Bước 2. Cỡ "thay đổi nhỏ" ngoài các trường hợp
+  đó mặc định không viết file contract: endpoint, status code và schema nằm trong AC của `requirement.md`. Sau cùng session
   chính chạy builder check (subagent mới đọc tài liệu như người sẽ làm; không có tool subagent thì tự đọc như
   builder): câu của người dùng gom một tin nhắn, câu nhỏ ghi "quyết định của agent"; người dùng đã bỏ qua phần hỏi
   thì không hỏi, nêu nổi bật các quyết định của agent ở checkpoint.
@@ -96,9 +99,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   "thay đổi nhỏ" chỉ có `requirement.md`, không có `design.md`; không bịa yêu cầu, phần suy đoán đánh dấu `[giả
   định]`.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` (+ `design.md` nếu cỡ dự án; + `tasks.md` nếu người
-  dùng chọn tách task); contract OpenAPI cập nhật (hoặc ghi rõ "không có API"); ADR đề xuất nếu ảnh hưởng kiến trúc.
+  dùng chọn tách task); contract OpenAPI cập nhật (hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ");
+  ADR đề xuất nếu ảnh hưởng kiến trúc.
 - **Gate:** acceptance criteria đo được; builder check xong và câu của người dùng đã được trả lời; contract OpenAPI
-  hợp lệ hoặc ghi rõ "không có API"; có ảnh hưởng kiến trúc thì ADR đã viết; có `tasks.md` thì `check-tasks.mjs`
+  hợp lệ hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ"; có ảnh hưởng kiến trúc thì ADR đã viết; có `tasks.md` thì `check-tasks.mjs`
   báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và Checkpoint 1 của
   `engineering-task-breakdown` đã duyệt; người dùng đã duyệt tài liệu.
 - **Khi fail:** acceptance criteria không đo được hoặc agent `blocked` mà session chính không tự trả lời được →
@@ -197,13 +201,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** reviewer và auditor chỉ đọc, không tự sửa code; mọi finding phải có `file:line` + evidence quan sát
   được; không lặp lại vòng sửa — phần còn lại trình người dùng ở Bước 7.
 - **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`), `ruling_review[]`, kết quả re-review.
-- **Gate:** 0 finding `blocker`; có API thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
+- **Gate:** 0 finding `blocker`; có contract thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
   `remaining_risks`/`Ruling:` để người dùng quyết ở Bước 7.
 - **Khi fail:** còn finding `blocker` sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa, tối đa 2 lần rồi
   hỏi người dùng; drift mà lỗi nằm ở contract → quay lại Bước 3; `Ruling:` hay finding chạm loại dừng của
-  `plan-execution` (không đảo ngược, bảo mật, tác động ngoài repo, schema DB) → hỏi người dùng.
+  `plan-execution` (không đảo ngược, bảo mật, tác động ngoài repo, schema DB, đổi AC đã duyệt) → hỏi người dùng.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence) + số finding còn lại sau lượt sửa;
-  `ruling_review[]`; có API: bảng đối chiếu contract↔code.
+  `ruling_review[]`; có contract: bảng đối chiếu contract↔code.
 
 ### Bước 7 — Kết thúc nhánh ⏸
 
@@ -273,14 +277,14 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
 - [ ] Baseline build/test đã đo, số mốc đã ghi — evidence: Bước 1
 - [ ] Hướng, cỡ việc và phạm vi có xác nhận người dùng (hoặc quyết định của agent nêu rõ khi bỏ qua phần hỏi) — evidence: Bước 2
 - [ ] Acceptance criteria đo được, builder check xong, người dùng duyệt tài liệu; contract OpenAPI hợp lệ hoặc ghi rõ
-  không có API — evidence: Bước 3
+  không có API / không có contract vì cỡ thay đổi nhỏ — evidence: Bước 3
 - [ ] `plan.md` qua `check-request.mjs` (chỉ còn W9) và được duyệt, hoặc ghi rõ bỏ qua vì cỡ "thay đổi nhỏ" — evidence: Bước 4
 - [ ] Mọi task `complete` trong ledger, mỗi task đã qua task review và có commit; build xanh cho phần backend/frontend có
   đụng — evidence: Bước 5
 - [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass (e2e `not_run` vì thiếu môi trường BE/DB test là
   hợp lệ, ghi vào `remaining_risks`) — evidence: Bước 5
-- [ ] Review cuối toàn nhánh: 0 `blocker`; có API: 0 drift contract↔code, 0 `blocker` về authorization/input
-  validation — evidence: Bước 6
+- [ ] Review cuối toàn nhánh: 0 `blocker`; có contract: 0 drift contract↔code; có API: 0 `blocker` về
+  authorization/input validation — evidence: Bước 6
 - [ ] Docs và spec sống bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng", `check-request.mjs` và full suite xanh;
   người dùng đã duyệt diff cả nhánh và chọn một trong 3 lựa chọn — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)

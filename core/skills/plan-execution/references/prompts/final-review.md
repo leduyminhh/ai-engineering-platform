@@ -29,8 +29,10 @@ Cách làm:
 4. Được chạy lệnh chỉ đọc, kể cả test/build, để lấy evidence; ghi lệnh và kết quả.
 5. Thang severity của contract đầu ra; mỗi finding có location file:line và evidence; tự đọc lại trước khi trả.
 6. Liệt kê điều bạn bỏ qua trong declined_to_judge[] kèm lý do.
+7. Finding chỉ sửa được bằng cách đổi nghĩa hoặc câu chữ một AC đã duyệt: không chọn hướng sửa, ghi vào questions[]
+   gồm AC ID, các cách hiểu, và hệ quả của từng cách hiểu.
 
-Trả khối agent_result: findings[], validation[], ruling_review[], declined_to_judge[], remaining_risks[].
+Trả khối agent_result: findings[], validation[], ruling_review[], declined_to_judge[], remaining_risks[], questions[].
 ```
 
 Sau review cuối, chỉ một lần sửa cho toàn bộ finding blocker/major (một dispatch, `model: opus`) và một lần re-review có

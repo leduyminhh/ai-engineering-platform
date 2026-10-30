@@ -92,7 +92,8 @@ thấy; nhãn `minor (deferred)` chỉ dành cho finding `minor`/`nit`. Phán xo
 2. bảo mật;
 3. tác động ngoài repo (merge, push, publish, gọi dịch vụ ngoài);
 4. finding chạm schema DB;
-5. plan hỏng đến mức mọi hướng đều là đoán.
+5. plan hỏng đến mức mọi hướng đều là đoán;
+6. phải đổi nghĩa hoặc câu chữ một AC người dùng đã duyệt, kể cả khi reviewer trả câu hỏi trong `questions[]`.
 
 Các trường hợp còn lại (mơ hồ nhỏ, xung đột giữa hai task, finding không load-bearing) session chính tự quyết, ghi
 `Ruling:` và chạy tiếp. Mọi dòng `Ruling:` phải đi vào `rulings` của `workflow_result` lúc kết thúc.

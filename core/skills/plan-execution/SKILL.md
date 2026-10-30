@@ -59,9 +59,9 @@ toàn nhánh dùng `opus`. Plan không cần khai báo model riêng cho từng t
 - Agent không commit, không push, không gọi agent khác. Session chính commit sau mỗi task bằng `git-workflow`
   (`git commit -F`, header tiếng Anh, body tiếng Việt, không `Co-Authored-By`); mỗi task có ≥ 1 commit; không amend hay
   squash khi người dùng chưa xác nhận.
-- Chạy liên tục giữa các task, nhưng **dừng hỏi người dùng** (không ghi `Ruling:` rồi chạy tiếp) trong 5 trường hợp:
+- Chạy liên tục giữa các task, nhưng **dừng hỏi người dùng** (không ghi `Ruling:` rồi chạy tiếp) trong 6 trường hợp:
   việc không đảo ngược được hoặc phá huỷ; bảo mật; tác động ngoài repo (merge, push, publish); finding chạm schema DB;
-  plan hỏng đến mức mọi hướng đều là đoán. Chi tiết ở `references/task-loop.md`.
+  plan hỏng đến mức mọi hướng đều là đoán; phải đổi một AC người dùng đã duyệt. Chi tiết ở `references/task-loop.md`.
 - Không merge, không push khi người dùng chưa chọn ở bước kết thúc nhánh; không xoá nhánh khi chưa được xác nhận rõ.
 - Không tuyên bố task hoặc plan xong khi chưa có evidence lệnh kiểm chứng; kết quả agent báo "xanh" phải đối chiếu bằng
   diff và lần chạy test của chính session chính.
