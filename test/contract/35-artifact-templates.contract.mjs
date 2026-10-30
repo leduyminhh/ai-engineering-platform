@@ -450,4 +450,26 @@ export default async function run({ ok, ctx }) {
       ok(c.code ? codes.length === 1 && codes[0] === c.code : codes.length === 0, `check-request trạng thái: ${c.name}`);
     }
   }
+
+  // 8. check-request.mjs: dòng **TDD:** của task (W21), một hành vi nhiều đầu vào.
+  {
+    const cr = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
+    const cases = [
+      { name: 'BE + có → sạch', kind: 'BE', tdd: 'có', warns: false },
+      { name: 'TOOLING + có → sạch', kind: 'TOOLING', tdd: 'có', warns: false },
+      { name: 'FE-UI + có → W21', kind: 'FE-UI', tdd: 'có', warns: true },
+      { name: 'không thiếu lý do → W21', kind: 'BE', tdd: 'không', warns: true },
+      { name: 'không — để trống lý do → W21', kind: 'BE', tdd: 'không —', warns: true },
+      { name: 'giá trị lạ → W21', kind: 'BE', tdd: 'sau', warns: true },
+      { name: 'không — lý do → sạch', kind: 'BE', tdd: 'không — script dùng một lần', warns: false },
+      { name: 'không có dòng TDD → sạch', kind: 'FE-UI', tdd: null, warns: false },
+    ];
+    for (const c of cases) {
+      const plan = ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1', '### Task 1: t', `**Kind:** ${c.kind}`, ...(c.tdd === null ? [] : [`**TDD:** ${c.tdd}`]), ''].join('\n');
+      const design = ['# T', '## 3. Tiêu chí chấp nhận', '- [ ] **AC1.1** — Given a When b Then c', ''].join('\n');
+      const w21 = cr.checkRequest({ 'design.md': design, 'plan.md': plan }).filter((w) => w.code === 'W21');
+      ok(c.warns ? w21.length === 1 : w21.length === 0, `AC5.1: check-request TDD: ${c.name}`);
+    }
+    ok(JSON.stringify(cr.TDD_ALLOWED_KINDS) === JSON.stringify(['BE', 'TOOLING']), 'AC5.1: TDD_ALLOWED_KINDS = BE, TOOLING');
+  }
 }

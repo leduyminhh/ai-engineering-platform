@@ -105,7 +105,20 @@ export const STATUSES = ['draft', 'approved', 'in-progress', 'merged', 'abandone
 // Loại task của plan.md; workflow vòng task dùng kind để chọn agent/skill (xem **Kind:** trong plan template).
 export const TASK_KINDS = ['BE', 'FE-UI', 'FE-INT', 'E2E', 'DB', 'CT', 'DOCS', 'TOOLING'];
 
-const CAP_RE = /^[a-z0-9][a-z0-9-]*$/;
+// TDD `có` chỉ cho kind có test đỏ-vì-hành-vi: FE-UI đỏ do thiếu import component, trái engineering-tdd.
+export const TDD_ALLOWED_KINDS = ['BE', 'TOOLING'];
+
+// Giá trị sau `**TDD:**`: `có` | `không — <lý do>`; trả { error } khi sai định dạng.
+export function parseTddLine(line) {
+  const v = line.trim();
+  if (v === 'có') return { value: 'có' };
+  const m = v.match(/^không(?:\s*—\s*(.*))?$/);
+  if (!m) return { error: `TDD "${v}" không hợp lệ, cần "có" hoặc "không — <lý do>"` };
+  const reason = (m[1] || '').trim();
+  return reason ? { value: 'không', reason } : { error: 'TDD "không" thiếu lý do, cần "không — <lý do>"' };
+}
+
+const CAP_RE =/^[a-z0-9][a-z0-9-]*$/;
 const REQ_ID_RE = /^[a-z0-9][a-z0-9-]*\/R[1-9]\d*$/;
 
 // Đọc spec sống: yêu cầu nằm trong H2 "Yêu cầu"; link lấy toàn file vì bảng Lịch sử cũng trỏ về request. Dòng lạ (Cập nhật:, ghi chú) bị bỏ qua.
@@ -178,12 +191,20 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     pl.forEach((l, i) => {
       if (!/^###\s+Task\s+\d+/.test(l)) return;
       let kind;
+      let tdd;
       for (let j = i + 1; j < pl.length && !/^#{1,3}\s/.test(pl[j]); j++) {
         const m = pl[j].match(/^\*\*Kind:\*\*\s*(.*)$/);
-        if (m) { kind = m[1].trim(); break; }
+        if (m && kind === undefined) kind = m[1].trim();
+        const t = pl[j].match(/^\*\*TDD:\*\*\s*(.*)$/);
+        if (t && !tdd) tdd = { line: j + 1, ...parseTddLine(t[1]) };
       }
       if (kind === undefined) warn('plan.md', i + 1, 'W17', 'Task thiếu dòng **Kind:**');
       else if (!TASK_KINDS.includes(kind)) warn('plan.md', i + 1, 'W18', `Kind "${kind}" không hợp lệ, cần một trong: ${TASK_KINDS.join(' | ')}`);
+      if (!tdd) return;
+      if (tdd.error) warn('plan.md', tdd.line, 'W21', tdd.error);
+      else if (tdd.value === 'có' && kind !== undefined && !TDD_ALLOWED_KINDS.includes(kind)) {
+        warn('plan.md', tdd.line, 'W21', `TDD "có" chỉ hợp lệ với kind ${TDD_ALLOWED_KINDS.join(' | ')}, task này là ${kind}`);
+      }
     });
   }
 
