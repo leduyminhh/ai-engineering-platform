@@ -18,7 +18,7 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 
 ## Quy trình — tạo worktree
 
-1. **Hỏi một lần.** Theo `git-workflow`, chưa được người dùng đồng ý thì không tạo. Nêu tên nhánh, đường dẫn và nhánh gốc.
+1. **Hỏi một lần.** Theo `git-workflow`, chưa được người dùng đồng ý thì không tạo. Nêu tên nhánh, đường dẫn và nhánh gốc. Part chạy qua `plan-execution`: câu trả lời "phiên riêng hay tuần tự" ở bước 3 của "Chế độ part" thay câu hỏi này.
 2. **Kiểm trước.**
    - Nhánh tích hợp `feature/<slug>` đã tồn tại, cây hiện tại đang ở đúng nhánh đó (`git branch --show-current`) và không có
      thay đổi dở thuộc việc khác (`git status --short`).

@@ -413,5 +413,23 @@ export default async function run({ ok, ctx }) {
     const wf = rd('workflows', 'feature', 'WORKFLOW.md');
     const step = (n) => wf.slice(wf.indexOf(`### Bước ${n} `), wf.indexOf(`### Bước ${n + 1} `));
     ok(step(4).includes('Bảng part') && step(5).includes('Chế độ part'), 'AC6.1: workflow-feature Bước 4 nhắc chia part, Bước 5 nhắc chế độ part');
+    ok(step(4).includes('parts/*/plan.md') && step(4).includes('check-partition.mjs') && step(5).includes('merged <hash>'),
+      'AC6.1: workflow-feature Bước 4 nêu parts/*/plan.md và check-partition.mjs, Bước 5 yêu cầu mọi part merged <hash> hoặc bỏ');
+
+    // Câu trả lời trước nhóm Song song là đồng ý merge part local; ba nơi từng cấm merge phải nêu ngoại lệ
+    ok(/đồng ý để tạo worktree và `merge --no-ff`/.test(mode), 'AC6.1: bước 3 của Chế độ part: câu trả lời là đồng ý tạo worktree và merge --no-ff part của nhóm');
+    ok(loop.includes('ngoại lệ: `merge --no-ff` nhánh part') && flat(pe('SKILL.md')).includes('ngoại lệ: `merge --no-ff` nhánh part'),
+      'AC6.1: SKILL.md và danh sách dừng của task-loop nêu ngoại lệ merge --no-ff nhánh part');
+    const wfFlat = flat(wf);
+    ok(wfFlat.includes('ngoại lệ: `merge --no-ff` nhánh part') && wfFlat.includes('merge part vào `feature/<slug>`'),
+      'AC6.1: workflow-feature nêu ngoại lệ merge --no-ff nhánh part ở Checkpoint và Rollback');
+
+    // Giao thức chạy được: lệnh tạo worktree, khối bàn giao, định nghĩa <hash>, nơi đọc Part: complete
+    ok(mode.includes('git worktree add -b worktree-<slug>-p<nn> .claude/worktrees/<slug>-p<nn> feature/<slug>'), 'AC6.2: Chế độ part nêu lệnh git worktree add -b worktree-<slug>-p<nn> …');
+    ok(mode.includes('parts/<nn>-<part-slug>/plan.md') && mode.includes('review-package.mjs --plan') && mode.includes('task-brief.mjs') && mode.includes('ledger.mjs')
+      && mode.includes('<gốc repo chính>/.aip/runs/<request>/<nn>-<part-slug>/progress.md'),
+    'AC6.2: khối bàn giao nêu plan của part, ba script và ledger part ở <gốc repo chính>/.aip/runs/<request>/<nn>-<part-slug>/progress.md');
+    ok(mode.includes('ngay sau merge') && mode.includes('trước commit cập nhật Bảng part') && mode.includes('HEAD nhánh part sau commit task cuối'),
+      'AC6.2: định nghĩa <hash>: Part: complete = HEAD nhánh part; merged song song = HEAD feature/<slug> ngay sau merge, trước commit cập nhật Bảng part');
   }
 }

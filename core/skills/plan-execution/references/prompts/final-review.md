@@ -1,11 +1,11 @@
 # Mẫu prompt: review cuối toàn nhánh
 
-Chạy một lần sau task cuối, khi mọi task đã `complete` trong ledger. Gọi `backend-reviewer` và/hoặc `frontend-reviewer` theo
+Chạy một lần sau task cuối, khi mọi task đã `complete` trong ledger (khi có part: mọi part đã `merged <hash>` hoặc `bỏ`). Gọi `backend-reviewer` và/hoặc `frontend-reviewer` theo
 phía bị chạm (hai phía thì gọi song song), mỗi lần với `model: opus`. Song song với đó là `engineering-quality-auditor`
 (quality + security gate); auditor chỉ chạy ở review cuối nhánh, không chạy ở review từng task.
 
 Package là toàn nhánh: `node <thư mục skill plan-execution>/scripts/review-package.mjs <MERGE_BASE> <HEAD> --plan <plan.md>` với
-`MERGE_BASE` = `git merge-base HEAD <nhánh gốc>`; luôn dùng `--plan` (package ghi vào workspace `.aip/`) để diff toàn nhánh không đổ vào context session chính.
+`MERGE_BASE` = `git merge-base HEAD <nhánh gốc>` và `<plan.md>` là plan gốc; luôn dùng `--plan` (package ghi vào workspace `.aip/`) để diff toàn nhánh không đổ vào context session chính.
 
 ```
 Review cuối toàn nhánh cho plan <đường dẫn plan.md>, chế độ final-review. Bạn chỉ đọc; không sửa file, không commit,

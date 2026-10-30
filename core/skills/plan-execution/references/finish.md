@@ -28,7 +28,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 | 2 | push + PR | Xác nhận tên nhánh rồi push và mở PR qua `git-workflow`. |
 | 3 | giữ nguyên | Không làm gì thêm; báo tên nhánh và commit đầu/cuối. |
 
-Không merge, không push khi người dùng chưa chọn; không trả lời rõ → áp lựa chọn mặc định (giữ nguyên) và nói như vậy.
+Không merge nhánh `feature/<slug>` vào nhánh gốc, không push khi người dùng chưa chọn (merge nhánh part vào `feature/<slug>` đã làm ở "Chế độ part" của `task-loop.md`); không trả lời rõ → áp lựa chọn mặc định (giữ nguyên) và nói như vậy.
 
 ## Chi tiết từng lựa chọn
 

@@ -57,15 +57,16 @@ toàn nhánh dùng `opus`. Plan không cần khai báo model riêng cho từng t
 
 ## Ranh giới an toàn
 
-- Chỉ làm việc trên nhánh `feature/<slug>`; đang ở nhánh protected (`main`/`master`/`dev`/`develop`) thì dừng và
+- Chỉ làm việc trên nhánh `feature/<slug>` (phiên part làm trên `worktree-<slug>-p<nn>`); đang ở nhánh protected (`main`/`master`/`dev`/`develop`) thì dừng và
   hỏi trước mỗi commit theo `git-workflow`.
 - Agent không commit, không push, không gọi agent khác. Session chính commit sau mỗi task bằng `git-workflow`
   (`git commit -F`, header tiếng Anh, body tiếng Việt, không `Co-Authored-By`); mỗi task có ≥ 1 commit; không amend hay
   squash khi người dùng chưa xác nhận.
 - Chạy liên tục giữa các task, nhưng **dừng hỏi người dùng** (không ghi `Ruling:` rồi chạy tiếp) trong 5 trường hợp:
-  việc không đảo ngược được hoặc phá huỷ; bảo mật; tác động ngoài repo (merge, push, publish); finding chạm schema DB;
-  plan hỏng đến mức mọi hướng đều là đoán. Chi tiết ở `references/task-loop.md`.
-- Không merge, không push khi người dùng chưa chọn ở bước kết thúc nhánh; không xoá nhánh khi chưa được xác nhận rõ.
+  việc không đảo ngược được hoặc phá huỷ; bảo mật; tác động ngoài repo (merge, push, publish; ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` mà người dùng đã đồng ý ở
+  bước 3 của "Chế độ part" là merge local, không dừng); finding chạm schema DB; plan hỏng đến mức mọi hướng đều là đoán.
+  Chi tiết ở `references/task-loop.md`.
+- Không merge, không push khi người dùng chưa chọn ở bước kết thúc nhánh (trừ merge part local đã được đồng ý, xem trên); không xoá nhánh khi chưa được xác nhận rõ.
 - Không tuyên bố task hoặc plan xong khi chưa có evidence lệnh kiểm chứng; kết quả agent báo "xanh" phải đối chiếu bằng
   diff và lần chạy test của chính session chính.
 - Ledger, brief và review package nằm ở `<gốc repo chính>/.aip/runs/<request>/<part>/` (`<part>` là `root` cho plan gốc) và không bao giờ được commit (`.aip/.gitignore` chứa `*`). Ba script tự tính đường dẫn từ plan và in ra; ledger `.sdd/progress.md` cũ được chép sang một lần.
