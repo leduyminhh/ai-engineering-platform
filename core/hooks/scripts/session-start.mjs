@@ -57,8 +57,11 @@ function show(cwd, p) {
 
 // Theo symlink: .aip, docs và .claude là nội dung repo, một symlink (ở file hay ở thư mục request) trỏ ra ngoài gốc của nó
 // sẽ kéo file bất kỳ vào context; nên chỉ nhận file có đường dẫn thật nằm trong đường dẫn thật của gốc chứa nó.
+// shortcut: realpath lỗi thì so đường dẫn chữ (fail-open), an toàn vì existsSync đứng trước; upgrade khi bỏ existsSync
 const real = (d, p) => { try { return d.realpath(p); } catch { return p; } };
-const inside = (d, root, p) => within(real(d, root), real(d, p));
+// Đòi thêm đuôi .md của đường dẫn thật: symlink tên handoff.md/progress.md trỏ tới .env hay *.pem trong chính repo vẫn nằm trong gốc,
+// nên chỉ kiểm gốc sẽ để lọt file bí mật qua cổng chặn đọc.
+const inside = (d, root, p) => within(real(d, root), real(d, p)) && /\.md$/i.test(real(d, p));
 
 // Template chưa điền chỉ còn heading, `<…>`, nhãn và dấu list rỗng; các phần đó không tính vào nội dung thật.
 function substantive(text) {

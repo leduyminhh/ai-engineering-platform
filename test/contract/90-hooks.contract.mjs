@@ -573,7 +573,8 @@ export default async function run({ ok, ctx }) {
       const m = new Map(Object.entries(files).map(([k, v]) => [abs(k), v]));
       const lk = new Map(Object.entries(links).map(([k, v]) => [abs(k), path.resolve(v)]));
       return {
-        realpath: (p) => lk.get(p) ?? p,
+        // Ánh xạ theo tiền tố để một symlink ở cấp thư mục cũng đổi đường dẫn thật của mọi file bên trong.
+        realpath: (p) => { for (const [k, v] of lk) if (p === k || p.startsWith(k + path.sep)) return v + p.slice(k.length); return p; },
         readFile: (p) => { const f = m.get(p); if (!f) throw new Error('ENOENT'); return f.text; },
         existsSync: (p) => m.has(p) || [...m.keys()].some((k) => k.startsWith(p + path.sep)),
         statSync: (p) => { statted.push(p); if (m.get(p).statThrows) throw new Error('EIO'); return { mtimeMs: m.get(p).mtime }; },
@@ -643,6 +644,17 @@ export default async function run({ ok, ctx }) {
     ok(!leaked(lkHandoff('docs/requests/2026-01-01-a/handoff.md'), { links: { 'docs/requests/2026-01-01-a/handoff.md': '/outside/secret.md' } })
       && !leaked(lkHandoff('.claude/handoff.md'), { links: { '.claude/handoff.md': '/outside/secret.md' } }), 'AC4.3: docs/requests và .claude/handoff.md symlink ra ngoài cwd → không nạp');
     ok(tags(lkHandoff(aipLink), { links: { [aipLink]: '/repo/.aip/runs/2026-10-30-c/handoff.md' } })?.[0] === 'H_LEAK', 'AC4.3: symlink trỏ vào trong cùng gốc vẫn được nạp');
+    // Symlink trỏ tới file bí mật (.env, *.pem) nằm TRONG repo vẫn qua kiểm "trong gốc"; đòi đường dẫn thật có đuôi .md
+    const toEnv = (...rels) => ({ links: Object.fromEntries(rels.map((r) => [r, '/repo/.env'])) });
+    const docsH = 'docs/requests/2026-01-01-a/handoff.md';
+    ok(!leaked(lkHandoff(aipLink), toEnv(aipLink)) && !leaked(lkHandoff(docsH), toEnv(docsH)) && !leaked(lkHandoff('.claude/handoff.md'), toEnv('.claude/handoff.md')),
+      'AC4.3: handoff là symlink trỏ tới .env trong repo → không nạp');
+    ok(!leaked(lkHandoff('notes/h.md'), { ...toEnv('notes/h.md'), cfg: { handoffPath: 'notes/h.md' } }), 'AC4.3: handoffPath là symlink trỏ tới .env trong repo → không nạp');
+    ok(!leaked(lkHandoff(aipLink), { links: { [aipLink]: '/repo/secret.PEM' } }), 'AC4.3: handoff symlink trỏ tới *.pem trong repo → không nạp');
+    ok(tags(lkHandoff(aipLink), { links: { [aipLink]: '/repo/notes/real.MD' } })?.[0] === 'H_LEAK', 'AC4.3: đuôi .md thật không phân biệt hoa thường vẫn được nạp');
+    // Thư mục request là symlink ra ngoài thì handoff bên trong không được nạp, dù tên file vẫn là handoff.md
+    ok(!leaked(lkHandoff(aipLink), { links: { '.aip/runs/2026-10-30-b': '/outside/req' } }), 'AC4.3: thư mục .aip/runs/<req> là symlink ra ngoài → handoff trong đó không nạp');
+    ok(!leaked(lkHandoff(docsH), { links: { 'docs/requests/2026-01-01-a': '/outside/req' } }), 'AC4.3: thư mục docs/requests/<req> là symlink ra ngoài → handoff trong đó không nạp');
     // F3: nguồn ưu tiên cũ hoặc rỗng không che nguồn thấp hơn; F2: docs chỉ được xét khi cần, lỗi stat từng file không chặn nguồn kế
     const fresh = { 'docs/requests/2026-01-01-a/handoff.md': led(body('H_DOCS'), T0) };
     ok(JSON.stringify(tags({ ...fresh, [aipLink]: led(body('H_AIP_OLD'), T0 - 30 * HOUR) })) === '["H_DOCS"]', 'AC4.3: .aip cũ quá 24 giờ, docs còn mới → chọn docs');
@@ -659,6 +671,10 @@ export default async function run({ ok, ctx }) {
     const sddLink = 'docs/requests/2026-01-01-a/.sdd/progress.md';
     ok(start({ [sddLink]: led('LEDGER_LEAK') }, { links: { [sddLink]: '/outside/progress.md' } }) === null, 'AC4.1: .sdd/progress.md là symlink ra ngoài cwd → không nạp');
     ok(start({ [symLedger]: led('LEDGER_LEAK'), ...sdd('2026-01-01-b', 'SDD_B', T0 - 1) }, { links: { [symLedger]: '/outside/progress.md' } })?.includes('SDD_B'), 'AC4.1: ledger symlink bị loại thì ứng viên kế vẫn được nạp');
+
+    ok(start({ [symLedger]: led('LEDGER_LEAK') }, { links: { [symLedger]: '/repo/.env' } }) === null
+      && start({ [sddLink]: led('LEDGER_LEAK') }, { links: { [sddLink]: '/repo/.env' } }) === null, 'AC4.1: progress.md là symlink trỏ tới .env trong repo → không nạp');
+    ok(start({ [symLedger]: led('LEDGER_LEAK') }, { links: { '.aip/runs/2026-10-30-x': '/outside/req' } }) === null, 'AC4.1: thư mục .aip/runs/<req> là symlink ra ngoài → ledger trong đó không nạp');
 
     // git lỗi: vẫn fail-open (chỉ gốc cwd), không đổi ngân sách 9000
     const boom = () => { throw new Error('git: not a repository'); };
