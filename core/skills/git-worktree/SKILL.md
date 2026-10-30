@@ -45,7 +45,9 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 
 1. Chỉ dọn khi nhánh đã merge (`git branch --merged feature/<slug>` liệt kê nó, có thể kèm tiền tố `+` vì nhánh đang được worktree dùng) **và** `git -C .claude/worktrees/<slug>-p<nn> status --short --ignored`
    không in gì ngoài mục `.aip/` (chép ở bước 2). `git worktree remove` xoá cả file bị gitignore (cấu hình cục bộ, `.aip/` của worktree), nên còn mục ignored
-   không tái tạo được thì giữ lại. Chưa merge hoặc còn thay đổi thì giữ lại và báo người dùng.
+   không tái tạo được thì giữ lại. Chưa merge hoặc còn thay đổi thì giữ lại và báo người dùng. Phiên Claude Code mở trong
+   worktree phải đóng (hoặc archive) trước: phiên còn mở giữ cwd ở đó, trên Windows `git worktree remove` khi đó gỡ đăng ký
+   nhưng để lại thư mục không xoá được.
 2. Nếu worktree có `.aip/runs/` (ledger, brief, review package, ghi khi `<gốc repo chính>/.aip/` không ghi được), chép về
    `<gốc repo chính>/.aip/runs/` trước khi xoá, không ghi đè file đã có ở đích; chỉ chép, không xoá nguồn:
    ```bash

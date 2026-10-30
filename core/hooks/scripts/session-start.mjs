@@ -27,13 +27,20 @@ function within(root, p) {
   return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
+function gitInfo(cwd, d) {
+  if (!('git' in d)) {
+    d.git = null;
+    try { d.git = d.gitRoots(cwd); } catch { /* git lỗi: chỉ dùng cwd */ }
+  }
+  return d.git;
+}
+
 // Workspace `.aip` nằm ở gốc repo chính, nhưng skill có thể lùi về gốc worktree khi không ghi được; cả hai đều là ứng viên.
 // Git lỗi hoặc không phải repo thì chỉ còn cwd: hook phải mở được phiên, không được chặn vì không dò được gốc.
 // Chép quy ước đường dẫn của workspace.mjs thay vì import để hook và skill cài độc lập.
 function aipRoots(cwd, d) {
   if (d.aipRoots) return d.aipRoots;
-  let g = null;
-  try { g = d.gitRoots(cwd); } catch { /* git lỗi: chỉ dùng cwd */ }
+  const g = gitInfo(cwd, d);
   const found = [g?.main, g?.top].filter(Boolean).map((r) => path.resolve(r));
   return (d.aipRoots = [...new Set(found.length ? found : [cwd])]);
 }
@@ -113,21 +120,34 @@ function usableHandoff(cwd, cfg, d) {
   return null;
 }
 
+// Phiên part chạy trong worktree `<slug>-p<nn>` (quy ước của plan-execution); null khi ở gốc repo chính hoặc tên worktree khác quy ước.
+function ownPart(cwd, d) {
+  const g = gitInfo(cwd, d);
+  if (!g?.top || !g.main || path.resolve(g.top) === path.resolve(g.main)) return null;
+  const m = path.basename(g.top).match(/^(.+)-p(\d+)$/);
+  return m && { slug: m[1], nn: m[2] };
+}
+
 // Ledger chưa xong có mtime mới nhất; file hỏng, đã `Plan: complete` hoặc cũ hơn handoffMaxAgeHours (plan bỏ dở) bị bỏ qua.
 // Chép nhỏ thay vì import skill plan-execution để hook tự đứng, không phụ thuộc bố cục thư mục của bản build.
 function ledgerSection(cwd, cfg, d) {
   const maxAge = Number.isFinite(cfg?.handoffMaxAgeHours) ? cfg.handoffMaxAgeHours : DEFAULT_MAX_AGE_HOURS;
   const cands = [];
-  const consider = (p, root) => {
+  let sawMine = false;
+  const consider = (p, root, mine = false) => {
     try {
       if (!d.existsSync(p) || !inside(d, root, p)) return;
+      // Ledger của chính part quá tuổi vẫn chặn ledger part anh em: part bỏ dở không được thay bằng việc của phiên khác.
+      sawMine ||= mine;
       const t = d.statSync(p).mtimeMs;
-      if (d.now() - t <= maxAge * HOUR_MS) cands.push({ p, t });
+      if (d.now() - t <= maxAge * HOUR_MS) cands.push({ p, t, mine });
     } catch { /* mục không đọc được: bỏ qua */ }
   };
   const runs = aipRuns(cwd, d);
-  for (const { dir, root } of runs) {
-    try { for (const part of d.readdirSync(dir)) consider(path.join(dir, String(part), 'progress.md'), root); } catch { /* request không đọc được: bỏ qua */ }
+  const own = ownPart(cwd, d);
+  for (const { req, dir, root } of runs) {
+    const ownReq = own && req.replace(/^\d{4}-\d{2}-\d{2}-/, '') === own.slug;
+    try { for (const part of d.readdirSync(dir)) consider(path.join(dir, String(part), 'progress.md'), root, ownReq && String(part).startsWith(`${own.nn}-`)); } catch { /* request không đọc được: bỏ qua */ }
   }
   // Request đã chuyển sang .aip thì .sdd cũ của nó là bản chép lỗi thời, kể cả khi mới hơn; không nạp lại.
   const migrated = new Set(runs.map((r) => r.req));
@@ -135,7 +155,9 @@ function ledgerSection(cwd, cfg, d) {
   let legacy = [];
   try { legacy = d.readdirSync(reqDir); } catch { /* không có docs/requests */ }
   for (const name of legacy) if (!migrated.has(String(name))) consider(path.join(reqDir, String(name), '.sdd', 'progress.md'), cwd);
-  for (const { p } of cands.sort((a, b) => b.t - a.t)) {
+  // Ledger part anh em hay root mới hơn không thuộc việc của phiên part; không thấy ledger của chính part thì giữ cách chọn cũ.
+  const pool = sawMine ? cands.filter((c) => c.mine) : cands;
+  for (const { p } of pool.sort((a, b) => b.t - a.t)) {
     try {
       const text = String(d.readFile(p)).replace(/^\uFEFF/, '');
       if (LEDGER_DONE_RE.test(text)) continue;

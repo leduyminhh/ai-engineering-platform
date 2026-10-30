@@ -615,6 +615,15 @@ export default async function run({ ok, ctx }) {
     ok(parts.includes('OPEN_OLD') && !parts.includes('abc1234'), 'AC4.4: ledger có Part: complete <hash> hoặc Plan: complete bị bỏ, lấy ledger dở kế tiếp');
     ok(start({ [L('2026-10-30-x', '02-b')]: led('Part: complete abc1234\n') }) === null, 'AC4.4: mọi ledger đã xong → không nạp');
     ok(start({ [L('2026-10-30-x', 'root')]: led('Part 01: merged abc1234\n') })?.includes('Part 01: merged'), 'AC4.4: dòng `Part <nn>: merged` ở root không phải dấu hiệu xong');
+    // Regression (docs/requests/2026-10-30-part-mode-trial-gaps, AC5.1): phiên ở worktree <slug>-p<nn> phải nạp ledger của chính part đó dù ledger khác mới hơn
+    const sibling = {
+      [L('2026-10-30-x', '01-a')]: led('SIBLING_OPEN', T0 + 5),
+      [L('2026-10-30-x', '02-b')]: led('OWN_OPEN', T0),
+      [L('2026-10-30-x', 'root')]: led('ROOT_OPEN', T0 + 6),
+    };
+    const own = start(sibling, { cwd: '.claude/worktrees/x-p02', git: () => ({ top: abs('.claude/worktrees/x-p02'), main: abs('.') }) }) || '';
+    ok(own.includes('OWN_OPEN') && !own.includes('SIBLING_OPEN') && !own.includes('ROOT_OPEN'), 'regression: worktree x-p02 nạp ledger 02-b của chính part, không nạp ledger part khác hay root mới hơn');
+    ok(start(sibling)?.includes('ROOT_OPEN'), 'regression: phiên ở gốc repo chính giữ cách chọn ledger dở mới nhất');
 
     // AC4.3: handoff theo thứ tự handoffPath → .aip/runs mới nhất → docs/requests mới nhất → .claude/handoff.md
     const src = {
