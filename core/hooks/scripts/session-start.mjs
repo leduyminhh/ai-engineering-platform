@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SessionStart: nạp quy tắc bootstrap gọi skill, handoff.md và đuôi ledger của plan đang chạy khi mở phiên mới (startup/clear/compact) và cảnh báo khi resume/fork phiên đã nguội cache.
-import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readGateConfig } from './gate-config.mjs';
@@ -21,11 +21,20 @@ const BOOTSTRAP = 'AIP — quy tắc nền của phiên này. Nếu có khả n�
   + 'Yêu cầu của người dùng và quy tắc project (CLAUDE.md, AGENTS.md) ưu tiên hơn skill. '
   + 'Skill đã đọc mà không áp dụng thì nói một dòng rồi bỏ qua; ngoài ra chỉ bỏ qua khi người dùng nói rõ. Agent worker được giao một task cụ thể thì bỏ qua đoạn này.';
 
+function within(root, p) {
+  const rel = path.relative(root, p);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
 function findHandoff(cwd, cfg, d) {
   const exists = (p) => { try { return d.existsSync(p); } catch { return false; } };
+  const real = (p) => { try { return d.realpath(p); } catch { return p; } };
   if (typeof cfg?.handoffPath === 'string' && cfg.handoffPath) {
     const p = path.resolve(cwd, cfg.handoffPath);
-    if (exists(p)) return p;
+    // aip-gate.json nằm trong repo nên handoffPath không đáng tin: chỉ nhận file .md trong project, kể cả sau khi theo symlink,
+    // để file bí mật hay file ngoài repo không bị nạp vào context.
+    // shortcut: so với cwd của phiên, không phải gốc git; phiên mở ở thư mục con thì handoffPath trỏ lên trên bị bỏ qua.
+    if (/\.md$/i.test(p) && within(cwd, p) && within(real(cwd), real(p)) && exists(p)) return p;
   }
   const reqDir = path.join(cwd, 'docs', 'requests');
   let best = null;
@@ -98,7 +107,7 @@ function resumeLine(input, handoff, cwd) {
 
 export function decide(input, deps = {}) {
   try {
-    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, now: Date.now, loadConfig: readGateConfig, ...deps };
+    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, loadConfig: readGateConfig, ...deps };
     const cwd = path.resolve(input?.cwd || '.');
     const cfg = d.loadConfig(cwd);
     const source = input?.source;

@@ -466,6 +466,17 @@ export default async function run({ ok, ctx }) {
     ok(start({ 'docs/requests/a/handoff.md': { throws: true, mtime: T0 } }) === null, 'AC3.1: lỗi đọc file → null');
     const viaCfg = { 'notes/h.md': { text: body('CFG'), mtime: T0 }, ...one };
     ok(start(viaCfg, { cfg: { handoffPath: 'notes/h.md' } })?.additionalContext.includes('CFG'), 'AC3.1: handoffPath được ưu tiên hơn tự tìm');
+    // Regression: handoffPath do repo kiểm soát không được kéo file ngoài project hoặc file không phải .md (vd .env) vào context.
+    for (const [handoffPath, file] of [['../outside.md', '../outside.md'], [path.resolve('/elsewhere/h.md'), '/elsewhere/h.md'], ['.env', '.env'], ['notes/h.txt', 'notes/h.txt']]) {
+      const out = start({ [file]: { text: body('LEAK'), mtime: T0 }, ...one }, { cfg: { handoffPath } })?.additionalContext || '';
+      ok(!out.includes('LEAK') && out.includes('feature/x'), `handoffPath ${handoffPath} bị bỏ qua, rơi về handoff tự tìm`);
+    }
+    {
+      const files = { 'notes/link.md': { text: body('LINKED'), mtime: T0 }, ...one };
+      const realpath = (p) => (p === abs('notes/link.md') ? path.resolve('/outside/secret.md') : p);
+      const out = ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd: '/repo' }, { ...fake(files, { handoffPath: 'notes/link.md' }), realpath })?.additionalContext || '';
+      ok(!out.includes('LINKED'), 'handoffPath là symlink trỏ ra ngoài project bị bỏ qua (so theo đường dẫn thật)');
+    }
     ok(start({ '.claude/handoff.md': { text: body('FALLBACK'), mtime: T0 } })?.additionalContext.includes('FALLBACK'), 'AC3.1: fallback .claude/handoff.md');
 
     // Regression: bản chép nguyên template chưa điền không được coi là handoff thật
