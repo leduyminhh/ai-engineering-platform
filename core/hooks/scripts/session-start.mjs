@@ -44,7 +44,7 @@ function aipRuns(cwd, d) {
   for (const root of aipRoots(cwd, d)) {
     const runs = path.join(root, '.aip', 'runs');
     try {
-      for (const req of d.readdirSync(runs)) out.push({ req: String(req), dir: path.join(runs, String(req)) });
+      for (const req of d.readdirSync(runs)) out.push({ req: String(req), dir: path.join(runs, String(req)), root });
     } catch { /* gốc này chưa có .aip */ }
   }
   return out;
@@ -55,33 +55,10 @@ function show(cwd, p) {
   return (within(cwd, p) ? path.relative(cwd, p) : p).split(path.sep).join('/');
 }
 
-function findHandoff(cwd, cfg, d) {
-  const exists = (p) => { try { return d.existsSync(p); } catch { return false; } };
-  const real = (p) => { try { return d.realpath(p); } catch { return p; } };
-  if (typeof cfg?.handoffPath === 'string' && cfg.handoffPath) {
-    const p = path.resolve(cwd, cfg.handoffPath);
-    // aip-gate.json nằm trong repo nên handoffPath không đáng tin: chỉ nhận file .md trong project, kể cả sau khi theo symlink,
-    // để file bí mật hay file ngoài repo không bị nạp vào context.
-    // shortcut: so với cwd của phiên, không phải gốc git; phiên mở ở thư mục con thì handoffPath trỏ lên trên bị bỏ qua.
-    if (/\.md$/i.test(p) && within(cwd, p) && within(real(cwd), real(p)) && exists(p)) return p;
-  }
-  const newest = (files) => {
-    let best = null;
-    let bestTime = -Infinity;
-    for (const p of files) {
-      if (!exists(p)) continue;
-      const t = d.statSync(p).mtimeMs;
-      if (t > bestTime) { best = p; bestTime = t; }
-    }
-    return best;
-  };
-  const reqDir = path.join(cwd, 'docs', 'requests');
-  const docs = exists(reqDir) ? d.readdirSync(reqDir).map((name) => path.join(reqDir, String(name), 'handoff.md')) : [];
-  const best = newest(aipRuns(cwd, d).map((r) => path.join(r.dir, 'handoff.md'))) ?? newest(docs);
-  if (best) return best;
-  const fallback = path.join(cwd, '.claude', 'handoff.md');
-  return exists(fallback) ? fallback : null;
-}
+// Theo symlink: .aip, docs và .claude là nội dung repo, một symlink (ở file hay ở thư mục request) trỏ ra ngoài gốc của nó
+// sẽ kéo file bất kỳ vào context; nên chỉ nhận file có đường dẫn thật nằm trong đường dẫn thật của gốc chứa nó.
+const real = (d, p) => { try { return d.realpath(p); } catch { return p; } };
+const inside = (d, root, p) => within(real(d, root), real(d, p));
 
 // Template chưa điền chỉ còn heading, `<…>`, nhãn và dấu list rỗng; các phần đó không tính vào nội dung thật.
 function substantive(text) {
@@ -89,14 +66,48 @@ function substantive(text) {
     .replace(/\*\*[^*\n]*\*\*:?/g, '').replace(/``/g, '').replace(/^\s*(?:[-*+]|\d+\.)\s*$/gm, '').trim();
 }
 
-// Handoff dùng được = tồn tại, chưa quá tuổi và đã điền; dùng chung cho nạp ngữ cảnh và dòng cảnh báo resume.
+// Handoff dùng được = tồn tại, trong gốc, chưa quá tuổi và đã điền; dùng chung cho nạp ngữ cảnh và dòng cảnh báo resume.
+// Lọc tuổi/nội dung ngay ở từng nguồn rồi mới rơi xuống nguồn kế, để handoff cũ hoặc rỗng ở nguồn ưu tiên không che nguồn thấp hơn.
 function usableHandoff(cwd, cfg, d) {
-  const file = findHandoff(cwd, cfg, d);
-  if (!file) return null;
   const maxAge = Number.isFinite(cfg?.handoffMaxAgeHours) ? cfg.handoffMaxAgeHours : DEFAULT_MAX_AGE_HOURS;
-  if (d.now() - d.statSync(file).mtimeMs > maxAge * HOUR_MS) return null;
-  const text = String(d.readFile(file)).replace(/^\uFEFF/, '');
-  return substantive(text).length < MIN_CHARS ? null : { file, text };
+  const probe = ([p, root]) => {
+    try {
+      if (!d.existsSync(p) || !inside(d, root, p)) return null;
+      const t = d.statSync(p).mtimeMs;
+      return d.now() - t > maxAge * HOUR_MS ? null : { file: p, t };
+    } catch { return null; }
+  };
+  const load = (c) => {
+    try {
+      const text = String(d.readFile(c.file)).replace(/^\uFEFF/, '');
+      return substantive(text).length < MIN_CHARS ? null : { file: c.file, text };
+    } catch { return null; }
+  };
+  // Mỗi nguồn là hàm lười: docs/requests chỉ được liệt kê khi các nguồn ưu tiên hơn không có handoff dùng được.
+  const sources = [
+    () => {
+      if (typeof cfg?.handoffPath !== 'string' || !cfg.handoffPath) return [];
+      const p = path.resolve(cwd, cfg.handoffPath);
+      // aip-gate.json nằm trong repo nên handoffPath không đáng tin: chỉ nhận file .md trong project, kể cả sau khi theo symlink.
+      // shortcut: so với cwd của phiên, không phải gốc git; phiên mở ở thư mục con thì handoffPath trỏ lên trên bị bỏ qua.
+      return /\.md$/i.test(p) && within(cwd, p) ? [[p, cwd]] : [];
+    },
+    () => aipRuns(cwd, d).map((r) => [path.join(r.dir, 'handoff.md'), r.root]),
+    () => {
+      const reqDir = path.join(cwd, 'docs', 'requests');
+      return d.readdirSync(reqDir).map((name) => [path.join(reqDir, String(name), 'handoff.md'), cwd]);
+    },
+    () => [[path.join(cwd, '.claude', 'handoff.md'), cwd]],
+  ];
+  for (const source of sources) {
+    let cands = [];
+    try { cands = source().map(probe).filter(Boolean); } catch { /* nguồn không liệt kê được: rơi xuống nguồn kế */ }
+    for (const c of cands.sort((a, b) => b.t - a.t)) {
+      const h = load(c);
+      if (h) return h;
+    }
+  }
+  return null;
 }
 
 // Ledger chưa xong có mtime mới nhất; file hỏng, đã `Plan: complete` hoặc cũ hơn handoffMaxAgeHours (plan bỏ dở) bị bỏ qua.
@@ -104,23 +115,23 @@ function usableHandoff(cwd, cfg, d) {
 function ledgerSection(cwd, cfg, d) {
   const maxAge = Number.isFinite(cfg?.handoffMaxAgeHours) ? cfg.handoffMaxAgeHours : DEFAULT_MAX_AGE_HOURS;
   const cands = [];
-  const consider = (p) => {
+  const consider = (p, root) => {
     try {
-      if (!d.existsSync(p)) return;
+      if (!d.existsSync(p) || !inside(d, root, p)) return;
       const t = d.statSync(p).mtimeMs;
       if (d.now() - t <= maxAge * HOUR_MS) cands.push({ p, t });
     } catch { /* mục không đọc được: bỏ qua */ }
   };
   const runs = aipRuns(cwd, d);
-  for (const { dir } of runs) {
-    try { for (const part of d.readdirSync(dir)) consider(path.join(dir, String(part), 'progress.md')); } catch { /* request không đọc được: bỏ qua */ }
+  for (const { dir, root } of runs) {
+    try { for (const part of d.readdirSync(dir)) consider(path.join(dir, String(part), 'progress.md'), root); } catch { /* request không đọc được: bỏ qua */ }
   }
   // Request đã chuyển sang .aip thì .sdd cũ của nó là bản chép lỗi thời, kể cả khi mới hơn; không nạp lại.
   const migrated = new Set(runs.map((r) => r.req));
   const reqDir = path.join(cwd, 'docs', 'requests');
   let legacy = [];
   try { legacy = d.readdirSync(reqDir); } catch { /* không có docs/requests */ }
-  for (const name of legacy) if (!migrated.has(String(name))) consider(path.join(reqDir, String(name), '.sdd', 'progress.md'));
+  for (const name of legacy) if (!migrated.has(String(name))) consider(path.join(reqDir, String(name), '.sdd', 'progress.md'), cwd);
   for (const { p } of cands.sort((a, b) => b.t - a.t)) {
     try {
       const text = String(d.readFile(p)).replace(/^\uFEFF/, '');
