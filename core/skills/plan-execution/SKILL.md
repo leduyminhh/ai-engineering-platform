@@ -38,6 +38,9 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 4. **Kết thúc nhánh** theo `references/finish.md`: docs + spec sống + `check-request.mjs` + full suite, rồi đưa đúng 3 lựa
    chọn cho người dùng; ghi `Plan: complete` vào ledger khi plan xong.
 
+Request chia part (`## Bảng part` trong `design.md`): thứ tự part, song song và merge theo mục "Chế độ part" của
+`references/task-loop.md`; `Plan: complete` chỉ ghi ở ledger `root/`.
+
 ## Ai làm gì
 
 | Việc | Người làm |

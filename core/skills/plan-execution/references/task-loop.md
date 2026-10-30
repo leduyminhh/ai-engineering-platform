@@ -107,6 +107,21 @@ Nhiều task nhỏ cùng khuôn (vd đổi một dòng ở nhiều file) có th�
 từng file và reviewer kiểm **mỗi file có hunk tương ứng**; file nào không có hunk là `Missing`. Ledger vẫn ghi một dòng
 `Task <n>: complete` cho từng task.
 
+## Chế độ part
+
+Dùng khi request có `## Bảng part` trong `design.md` và `parts/<nn>-<part-slug>/plan.md`. Vòng task ở trên giữ nguyên; mục này chỉ thêm thứ tự và ledger giữa các part.
+
+1. Chạy `plan.md` gốc trước, trên `feature/<slug>`, rồi chạy part theo thứ tự cột Phụ thuộc.
+2. Trước khi chạy, rà `**Interfaces:**` giữa các part như bước "Rà plan trước khi chạy": tên, kiểu, chữ ký phải khớp từng ký tự; lệch thì phán một hướng và ghi `Ruling:` vào ledger `root/`.
+3. Trước mỗi nhóm Song song, hỏi người dùng một lần: mở phiên riêng cho từng part hay chạy tuần tự trong session gốc. aip không tự mở phiên hay agent.
+4. Chỉ chạy song song khi `check-partition.mjs` không báo P1/P2 cho nhóm và người dùng chọn phiên riêng; ngược lại chạy tuần tự.
+5. Mỗi part song song có worktree `.claude/worktrees/<slug>-p<nn>/` và nhánh `worktree-<slug>-p<nn>`, cắt từ đỉnh hiện tại của `feature/<slug>` (skill `git-worktree`).
+6. Phiên của part chạy vòng task tuần tự và tự commit; không sửa `design.md` gốc hay Bảng part, không chạy review cuối. Xong thì ghi `Part: complete <hash>` vào ledger của part rồi báo về session gốc.
+7. Session gốc `merge --no-ff worktree-<slug>-p<nn>`, rồi chạy full suite của component bị chạm và component phụ thuộc; đỏ thì dừng nhóm, không merge part kế. Xanh thì ghi `Part <nn>: merged <hash>` vào ledger `root/`, đặt Trạng thái của part trong Bảng part thành `merged <hash>`, rồi commit.
+8. Part chạy tuần tự không có merge commit: `<hash>` là HEAD sau commit task cuối của part trên `feature/<slug>`; vẫn ghi `Part <nn>: merged <hash>` và cập nhật Bảng part như trên.
+9. Part đã merge và worktree sạch thì chép `.aip/runs` rồi dọn theo `git-worktree`.
+10. Bên trong một part không chạy song song. Review cuối chỉ một lần cho toàn nhánh, sau khi mọi part đã merge (`prompts/final-review.md`).
+
 ## Review cuối và các điểm cố định
 
 - Sau task cuối, một lần review toàn nhánh (`MERGE_BASE..HEAD`) theo `prompts/final-review.md`: reviewer chạy `model: opus`;
@@ -130,4 +145,4 @@ Plan: complete
 ```
 
 Sau compact hoặc resume, tin ledger + `git log` hơn trí nhớ: làm tiếp từ task chưa `complete`. Dòng `Plan: complete`
-chỉ ghi ở cuối bước kết thúc nhánh; hook `session-start` ngừng nạp ledger khi thấy dòng này.
+chỉ ghi ở ledger `root/`, cuối bước kết thúc nhánh; hook `session-start` ngừng nạp ledger khi thấy dòng này.

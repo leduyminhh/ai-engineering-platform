@@ -114,7 +114,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** `requirement.md` + `design.md` (+ `tasks.md` nếu có) + contract từ Bước 3 + baseline Bước 1
 - **Hành động:** cỡ "thay đổi nhỏ" → bỏ qua bước này, ghi rõ "bỏ qua: cỡ thay đổi nhỏ, không có `plan.md`" và sang
   Bước 5 không có plan (brief là `requirement.md`, số task và kind theo Bước 5). Cỡ dự án: viết `plan.md` theo skill (bản đồ
-  file, Global Constraints, task có Kind/Interfaces/Phủ AC, Review Focus), tự soát 5 mục, rồi chạy
+  file, Global Constraints, task có Kind/Interfaces/Phủ AC, Review Focus), tự soát 5 mục; request lớn có `## Bảng part` ở `design.md` thì plan chia thành `plan.md` gốc + `parts/<nn>-<part-slug>/plan.md`, rồi chạy
   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Có `tasks.md` →
   task trong `plan.md` trỏ ID task của `tasks.md`, và Checkpoint 2 của `engineering-task-breakdown` được duyệt cùng
   `plan.md` (không hỏi hai lần).
@@ -152,7 +152,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là
   `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
   API thật); phạm vi backend hoặc frontend chạy một task duy nhất, task id `1`; phạm vi fullstack chạy hai task, `1` là
-  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5.
+  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc, hỏi người dùng một lần trước mỗi nhóm Song song).
 - **Ràng buộc:** chỉ sửa file trong `**Files:**` của task; không giả lập data ẩn; không sửa code production để "cho test
   xanh", không xoá hay nới test, không viết test phụ thuộc thứ tự/thời gian thực/mạng thật; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator chưa có codegen/thư viện data → dừng, đề

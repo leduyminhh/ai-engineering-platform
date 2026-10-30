@@ -51,5 +51,5 @@ Không merge, không push khi người dùng chưa chọn; không trả lời r�
 ## Ghi nhận
 
 Khi người dùng đã chọn và việc của lựa chọn đó xong (kể cả giữ nguyên), ghi
-`node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Plan: complete"` rồi trả `workflow_result` có `rulings` đã gom. Dòng
+`node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md gốc> "Plan: complete"` rồi trả `workflow_result` có `rulings` đã gom. `Plan: complete` chỉ ghi ở ledger `root/` (plan gốc), không bao giờ ở ledger part. Dòng
 `Plan: complete` làm hook `session-start` ngừng nạp ledger.

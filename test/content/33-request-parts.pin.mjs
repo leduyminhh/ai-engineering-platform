@@ -357,4 +357,44 @@ export default async function run({ ok, ctx }) {
     ok(rd('plugins', 'engineering', 'skills', 'engineering-spec-writing', 'SKILL.md').includes('## Bảng part'),
       'AC1.3: engineering-spec-writing nêu khi nào chia part và mục ## Bảng part');
   }
+
+  // AC6.1–AC6.5: chế độ part của plan-execution (chỉ ghim chuỗi vận hành)
+  {
+    const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
+    const flat = (t) => t.replace(/\s+/g, ' ');
+    const pe = (...p) => rd('core', 'skills', 'plan-execution', ...p);
+    const loop = pe('references', 'task-loop.md');
+    const at = loop.indexOf('## Chế độ part');
+    const mode = at >= 0 ? flat(loop.slice(at, loop.indexOf('\n## ', at + 1) < 0 ? undefined : loop.indexOf('\n## ', at + 1))) : '';
+    ok(at >= 0, 'AC6.1: task-loop.md có mục "## Chế độ part"');
+    ok(mode.includes('một lần') && mode.includes('Song song') && mode.includes('phiên riêng') && mode.includes('tuần tự')
+      && mode.includes('P1') && mode.includes('P2') && mode.includes('check-partition.mjs'),
+    'AC6.1: hỏi người dùng một lần mỗi nhóm Song song (phiên riêng hay tuần tự); chỉ song song khi check-partition không báo P1/P2');
+    ok(mode.includes('worktree-<slug>-p<nn>') && mode.includes('.claude/worktrees/<slug>-p<nn>/') && mode.includes('Part: complete <hash>')
+      && mode.includes('Part <nn>: merged <hash>') && mode.includes('merge --no-ff'),
+    'AC6.2: nhánh/worktree part, dòng ledger Part: complete / Part <nn>: merged, merge --no-ff');
+    ok(mode.includes('Bảng part') && mode.includes('merged <hash>') && mode.includes('`root/`'),
+      'AC6.2: merge xong ghi ledger root/ và đặt Trạng thái merged <hash> trong Bảng part');
+    ok(mode.includes('**Interfaces:**') && mode.includes('trước khi chạy'), 'AC6.1: rà **Interfaces:** giữa các part trước khi chạy');
+    ok(mode.includes('HEAD sau commit task cuối'), 'AC6.4: part chạy tuần tự lấy hash là HEAD sau commit task cuối');
+    ok(mode.includes('full suite') && mode.includes('component phụ thuộc') && mode.includes('đỏ thì dừng nhóm'),
+      'AC6.5: sau mỗi merge part chạy full suite của component bị chạm và component phụ thuộc, đỏ thì dừng nhóm');
+
+    const fr = flat(pe('references', 'prompts', 'final-review.md'));
+    ok(fr.includes('Bảng part') && fr.includes('interface giữa part'), 'AC6.3: final-review có Review Focus gồm Bảng part và interface giữa part');
+    const fin = flat(pe('references', 'finish.md'));
+    ok(/`Plan: complete`[^.]*ledger `root\/`|ledger `root\/`[^.]*`Plan: complete`/.test(fin), 'AC6.3: finish: Plan: complete chỉ ghi ở ledger root/');
+    ok(flat(pe('SKILL.md')).includes('Chế độ part'), 'AC6.1: SKILL.md của plan-execution trỏ tới chế độ part');
+
+    for (const [file, label] of [[['core', 'skills', 'git-worktree', 'SKILL.md'], 'git-worktree'], [['core', 'skills', 'git-workflow', 'SKILL.md'], 'git-workflow'],
+      [['core', 'skills', 'git-workflow', 'references', 'branch-convention.md'], 'branch-convention']]) {
+      const t = rd(...file);
+      ok(!t.includes('t<n>') && t.includes('-p<nn>'), `AC6.2: ${label} dùng -p<nn>, không còn -t<n>`);
+    }
+    ok(/chỉ song song giữa part/i.test(flat(rd('core', 'skills', 'git-worktree', 'SKILL.md'))), 'AC6.2: git-worktree nêu chỉ song song giữa part');
+
+    const wf = rd('workflows', 'feature', 'WORKFLOW.md');
+    const step = (n) => wf.slice(wf.indexOf(`### Bước ${n} `), wf.indexOf(`### Bước ${n + 1} `));
+    ok(step(4).includes('Bảng part') && step(5).includes('Chế độ part'), 'AC6.1: workflow-feature Bước 4 nhắc chia part, Bước 5 nhắc chế độ part');
+  }
 }
