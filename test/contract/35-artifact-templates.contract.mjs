@@ -484,13 +484,11 @@ export default async function run({ ok, ctx }) {
       '### Task 1: t', ...kind, '**Files:**', '- Test: `test/p.mjs`', ''].join('\n');
     const reader = (m) => (p) => (Object.hasOwn(m, p) ? m[p] : null);
 
-    const t1 = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan(undefined, []) }, { readTest: reader({ 'test/p.mjs': 'AC1.1' }) });
-    ok(of(t1, 'W17').length === 1 && of(t1, 'W17')[0].file === 'parts/01-a/plan.md' && of(t1, 'W17')[0].line === 5,
+    const t1 = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan(['**Spec:** x'], []) + '### Task 2: u\n**Kind:** ZZ\n' }, { readTest: reader({ 'test/p.mjs': 'AC1.1' }) });
+    ok(of(t1, 'W17').length === 1 && of(t1, 'W17')[0].file === 'parts/01-a/plan.md' && of(t1, 'W17')[0].line === 4,
       'AC1.1: task thiếu Kind trong parts/01-a/plan.md → W17 nêu đúng file part');
-    const t1b = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan(['**Spec:** x'], ['**Kind:** ZZ']) });
-    ok(of(t1b, 'W5').length === 1 && of(t1b, 'W5')[0].file === 'parts/01-a/plan.md' && of(t1b, 'W18')[0]?.file === 'parts/01-a/plan.md',
+    ok(of(t1, 'W5').length === 1 && of(t1, 'W5')[0].file === 'parts/01-a/plan.md' && of(t1, 'W18').length === 1 && of(t1, 'W18')[0].file === 'parts/01-a/plan.md',
       'AC1.1: W5 và W18 cũng nêu file part');
-
     const t2 = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan() }, { readTest: reader({ 'test/p.mjs': 'AC1.1' }) });
     ok(of(t2, 'W6').length === 0 && of(t2, 'W7').length === 0, 'AC1.2: AC chỉ phủ và chỉ được test của part nhắc tới → không W6/W7');
     const t2b = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/plan.md': partPlan() }, { readTest: reader({ 'test/p.mjs': 'x' }) });
@@ -511,6 +509,11 @@ export default async function run({ ok, ctx }) {
       'AC1.3: tên part không khớp <nn>-<slug> → W19');
     ok(of(cr.checkRequest({ 'design.md': design(null, [table('| 01-a | — | — | chưa làm |')]), 'parts/01-a/plan.md': partPlan() }, { partDirs: ['01-a', '02-empty'] }), 'W19').length === 1,
       'AC1.3: thư mục part rỗng (không có file nào) ngoài bảng → W19');
+    const dupTexts = (...rows) => ({ 'design.md': design(null, [table(...rows)]), 'parts/01-a/plan.md': partPlan(), 'parts/02-b/plan.md': partPlan() });
+    ok(of(cr.checkRequest(dupTexts('| 01-a | — | — | chưa làm |', '| 01-a | — | — | chưa làm |', '| 02-b | — | — | chưa làm |')), 'W19').length === 1,
+      'AC1.3: hai hàng trùng tên part → W19');
+    ok(of(cr.checkRequest(dupTexts('| 01-a | 01-a | — | chưa làm |', '| 02-b | — | — | chưa làm |')), 'W19').length === 1,
+      'AC1.3: part phụ thuộc chính nó → W19');
 
     const w20 = cr.checkRequest({ 'design.md': design(null), 'parts/01-a/design.md': '# P\n- **AC1.1** — x\n' });
     ok(of(w20, 'W20').length === 1 && of(w20, 'W20')[0].file === 'parts/01-a/design.md' && of(w20, 'W20')[0].line === 2,
@@ -532,12 +535,19 @@ export default async function run({ ok, ctx }) {
     ok(of(w16, 'W16').map((w) => w.file).join() === 'plan.md,parts/01-a/plan.md' && of(w16, 'W16')[1].msg.includes('parts/01-a/plan.md'),
       'AC1.6: design merged còn plan part → W16 nêu parts/01-a/plan.md');
 
-    const pt = cr.parsePartTable?.(design(null, [['intro', table('| 01-a | — | — | chưa làm |', '| `02-b` | 01-a, 03-c | A | merged abc1234 |')].join('\n')]));
+    const pt = cr.parsePartTable(design(null, [['intro', table('| 01-a | — | — | chưa làm |', '| `02-b` | 01-a, 03-c | A | merged abc1234 |')].join('\n')]));
     ok(JSON.stringify(pt) === JSON.stringify({ line: 6, rows: [
       { part: '01-a', deps: [], group: null, status: 'chưa làm', line: 9 },
       { part: '02-b', deps: ['01-a', '03-c'], group: 'A', status: 'merged abc1234', line: 10 },
     ] }), 'AC1.3: parsePartTable đọc part, deps (— → []), group (— → null), trạng thái và số dòng');
-    ok(cr.parsePartTable?.(design(null)) === null, 'AC1.3: parsePartTable không có ## Bảng part → null');
+    ok(cr.parsePartTable(design(null)) === null, 'AC1.3: parsePartTable không có ## Bảng part → null');
+    const rowsOf = (tail) => cr.parsePartTable(design(null, tail)).rows.map((r) => r.part).join();
+    ok(rowsOf([table('| 01-a | — | — | chưa làm |'), '', '| Cột | Ý nghĩa |', '|---|---|', '| x | y |']) === '01-a',
+      'AC1.3: parsePartTable chỉ đọc bảng đầu tiên dưới heading, bảng ghi chú sau đó không thành part');
+    ok(rowsOf([table('| 01-a | — | — | chưa làm |'), '## Bảng part', '| Part | Phụ thuộc | Song song | Trạng thái |', '|---|---|---|---|', '| 02-b | — | — | chưa làm |']) === '01-a',
+      'AC1.3: parsePartTable lặp heading ## Bảng part → tiêu đề cột của heading sau không thành part');
+    ok(cr.parsePartTable(design(null, [table('| 01-a | — | — | chưa làm |').replace('## Bảng part', '## Bảng partition')])) === null,
+      'AC1.3: heading ## Bảng partition không phải Bảng part');
 
     // Đường CLI: main phải đọc parts/*/ và truyền cả thư mục rỗng; vị trí request dưới docs/requests/ ngày mới để W10 không lẫn vào.
     const tmp = fs.mkdtempSync(path.join(ctx.os.tmpdir(), 'check-request-parts-'));

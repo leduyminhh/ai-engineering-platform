@@ -122,21 +122,25 @@ export const PART_RE = /^\d{2}-[a-z0-9][a-z0-9-]*$/;
 export const PART_STATUSES = ['chưa làm', 'đang làm', 'bỏ'];
 const PART_PLAN_RE = /^parts\/[^/]+\/plan\.md$/;
 
-// Bảng part: heading H2 "Bảng part" tới heading kế tiếp; dòng "|" đầu là tiêu đề cột, dòng phân cách bị bỏ. Ô thiếu thành '' để W19 báo thay vì bỏ im lặng.
+// Bảng part: chỉ bảng đầu tiên dưới heading H2 "Bảng part" (khớp đúng; heading lặp bị bỏ); dòng "|" đầu là tiêu đề cột, dòng phân cách bị bỏ. Ô thiếu thành '' để W19 báo thay vì bỏ im lặng.
 export function parsePartTable(designText) {
   const lines = linesOf(designText);
   const res = { line: 0, rows: [] };
-  let inside = false;
+  let state = 0; // 0 chờ heading, 1 trong mục, 2 đã đọc xong
   let header = true;
+  let seenRow = false;
   const bare = (v) => v.trim().replace(/^`+|`+$/g, '');
   lines.forEach((l, i) => {
+    if (state === 2) return;
     const h = l.match(/^(#{1,6})\s+(.*)$/);
     if (h) {
-      inside = h[1].length === 2 && h[2].trim().toLowerCase().startsWith('bảng part');
-      if (inside && !res.line) res.line = i + 1;
+      if (state === 1) state = 2;
+      else if (h[1].length === 2 && /^bảng part\s*$/i.test(h[2])) { state = 1; res.line = i + 1; }
       return;
     }
-    if (!inside || !/^\s*\|/.test(l)) return;
+    if (state !== 1) return;
+    if (!/^\s*\|/.test(l)) { if (seenRow) state = 2; return; }
+    seenRow = true;
     const cells = l.trim().replace(/^\||\|$/g, '').split('|').map(bare);
     if (header) { header = false; return; }
     if (cells.every((c) => /^:?-+:?$/.test(c))) return;
@@ -329,10 +333,16 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
   const table = typeof texts['design.md'] === 'string' ? parsePartTable(texts['design.md']) : null;
   if (dirs.length || table) {
     const names = new Set((table?.rows ?? []).map((r) => r.part));
+    const seen = new Set();
     for (const r of table?.rows ?? []) {
+      if (seen.has(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" trùng tên với hàng trước trong Bảng part`);
+      seen.add(r.part);
       if (!PART_RE.test(r.part)) warn('design.md', r.line, 'W19', `Part "${r.part}" sai định dạng, cần <nn>-<part-slug> (vd 01-a)`);
       else if (typeof texts[`parts/${r.part}/plan.md`] !== 'string') warn('design.md', r.line, 'W19', `Part "${r.part}" không có parts/${r.part}/plan.md`);
-      for (const d of r.deps) if (!names.has(d)) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" không có trong Bảng part`);
+      for (const d of r.deps) {
+        if (d === r.part) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc chính nó`);
+        else if (!names.has(d)) warn('design.md', r.line, 'W19', `Part "${r.part}" phụ thuộc "${d}" không có trong Bảng part`);
+      }
       if (!PART_STATUSES.includes(r.status) && !/^merged\s+\S+$/.test(r.status)) warn('design.md', r.line, 'W19', `Part "${r.part}" có Trạng thái "${r.status}" không hợp lệ, cần: ${PART_STATUSES.join(' | ')} | merged <hash>`);
     }
     for (const d of dirs) if (!names.has(d)) warn(`parts/${d}`, 1, 'W19', `Thư mục parts/${d}/ không có trong Bảng part${table ? '' : ' (design.md thiếu mục "## Bảng part")'}`);
