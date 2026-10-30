@@ -624,6 +624,12 @@ export default async function run({ ok, ctx }) {
     const own = start(sibling, { cwd: '.claude/worktrees/x-p02', git: () => ({ top: abs('.claude/worktrees/x-p02'), main: abs('.') }) }) || '';
     ok(own.includes('OWN_OPEN') && !own.includes('SIBLING_OPEN') && !own.includes('ROOT_OPEN'), 'regression: worktree x-p02 nạp ledger 02-b của chính part, không nạp ledger part khác hay root mới hơn');
     ok(start(sibling)?.includes('ROOT_OPEN'), 'regression: phiên ở gốc repo chính giữ cách chọn ledger dở mới nhất');
+    // Regression (trial text-format): phiên part mở trước khi ledger của part và root được tạo đã nạp ledger root dở của request khác
+    const wtP = '.claude/worktrees/y-p01';
+    const otherReq = { [L('2026-10-30-x', 'root')]: led('OTHER_REQ_OPEN') };
+    const inP = { cwd: wtP, git: () => ({ top: abs(wtP), main: abs('.') }) };
+    ok(start({ ...otherReq, [`${wtP}/docs/requests/2026-10-30-y/parts/01-a/plan.md`]: led('# plan') }, inP) === null, 'regression: worktree y-p01 có plan part 01 nhưng chưa có ledger → không nạp ledger request khác');
+    ok(start(otherReq, inP)?.includes('OTHER_REQ_OPEN'), 'regression: worktree tên -p<nn> không có plan part → giữ cách chọn cũ');
 
     // AC4.3: handoff theo thứ tự handoffPath → .aip/runs mới nhất → docs/requests mới nhất → .claude/handoff.md
     const src = {
