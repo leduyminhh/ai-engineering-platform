@@ -1,6 +1,6 @@
 ---
 name: engineering-tdd
-description: "Kỷ luật TDD cho mọi thay đổi hành vi: test đỏ đúng lý do trước, code tối thiểu để xanh, rồi refactor; kèm bảng biện minh và anti-pattern. Dùng khi người dùng muốn \"làm theo TDD\", \"viết test trước\", \"red green refactor\", \"sửa bug bằng test tái hiện\". Không dùng khi chỉ cần chiến lược hoặc độ phủ test cho code đã có → backend-testing, sửa lỗi hành vi đã có end-to-end → workflow-bugfix."
+description: "Kỷ luật TDD, gọi trước khi viết code cho hàm hoặc hành vi mới: test đỏ đúng lý do trước, code tối thiểu để xanh, rồi refactor. Dùng khi người dùng muốn \"thêm hàm mới vào file\", \"thêm xử lý mới cho module\", \"làm theo TDD\", \"viết test trước\". Không dùng khi chỉ cần chiến lược hoặc độ phủ test cho code đã có → backend-testing, sửa lỗi hành vi đã có end-to-end → workflow-bugfix."
 order: 10
 title: "TDD — test đỏ đúng lý do trước, code tối thiểu, rồi refactor (skill dùng chung)"
 runsIn: execute

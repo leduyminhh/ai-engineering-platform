@@ -1,6 +1,6 @@
 ---
 name: engineering-debugging
-description: "Debug có hệ thống khi chưa rõ nguyên nhân: điều tra gốc trước, nêu giả thuyết rồi kiểm, mới sửa; kèm bốn kỹ thuật bổ trợ. Dùng khi người dùng muốn \"debug lỗi lạ\", \"test flaky\", \"tìm nguyên nhân gốc\", \"tại sao test này đỏ\". Không dùng khi cần sửa lỗi đủ bước có commit → workflow-bugfix."
+description: "Debug có hệ thống, gọi trước khi đọc code khi kết quả sai mà chưa rõ nguyên nhân: điều tra gốc, nêu giả thuyết kèm bằng chứng rồi mới sửa. Dùng khi người dùng muốn \"tìm nguyên nhân gốc\", \"kết quả sai, tìm nguyên nhân giúp tôi\", \"test flaky\", \"tại sao test này đỏ\". Không dùng khi cần sửa lỗi đủ bước có commit → workflow-bugfix."
 order: 11
 title: "Debugging — điều tra nguyên nhân gốc trước khi sửa (skill dùng chung)"
 runsIn: execute
