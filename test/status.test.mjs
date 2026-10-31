@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildStatus, pickRequest, renderText, renderHtml, countBlocked, staleMinutesOf } from '../cli/lib/status.mjs';
+import { buildStatus, pickRequest, renderText, renderHtml, countBlocked, staleMinutesOf, runStatus } from '../cli/lib/status.mjs';
 import { parse } from '../cli/lib/args.mjs';
 
 const CLI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'cli', 'index.mjs');
@@ -157,6 +157,16 @@ try {
   const r29 = fixture(LEDGERS, { ...MTIME, '08-stale': NOW - 29 * MIN });
   try { ok(stateOf(build(r29), '08-stale') === 'active', 'AC1.5: 29 phút dưới ngưỡng mặc định 30 là đang làm'); } finally { fs.rmSync(r29, { recursive: true, force: true }); }
 
+  // Regression minor review cuối: thư mục request tên lạ (dấu cách, chữ có dấu) bị bỏ qua, không làm aip status không đối số thoát 2
+  {
+    const odd = path.join(root, '.aip', 'runs', 'tên lạ', 'root');
+    fs.mkdirSync(odd, { recursive: true });
+    fs.writeFileSync(path.join(odd, 'progress.md'), 'Blocked: x\n');
+    fs.utimesSync(path.join(odd, 'progress.md'), new Date(NOW + 60 * MIN), new Date(NOW + 60 * MIN));
+    ok(pickRequest(root) === REQ && countBlocked(root) === 1, 'pickRequest bỏ thư mục request tên lạ, chọn request hợp lệ');
+    fs.rmSync(path.join(root, '.aip', 'runs', 'tên lạ'), { recursive: true, force: true });
+  }
+
   // Request cũ: không có events.jsonl, git ném lỗi → không ném, vẫn có bảng
   const bare = buildStatus({ docsRoot: root, runsRoot: root, request: REQ, now: NOW, git: () => { throw new Error('x'); } });
   ok(bare.parts.length === 8 && bare.header.branch === null, 'thiếu git: vẫn dựng bảng, nhánh null');
@@ -204,6 +214,17 @@ try {
   ok(!fs.existsSync(path.join(root, '.aip', 'status.html')) && !fs.existsSync(path.join(root, 'status.html')), 'tên request lạ không ghi status.html ra ngoài thư mục request');
   const ctl = renderText({ ...m, needs: [{ part: 'x', state: 'blocked', reason: 'a\x1b[31mb\x07c' }] });
   ok(!/[\x00-\x09\x0b-\x1f\x7f]/.test(ctl) && ctl.includes('a[31mbc'), 'text bỏ ký tự điều khiển lấy từ ledger');
+  // Regression minor review cuối: tab là khoảng trắng, không phải ký tự điều khiển cần bỏ (không dính chữ)
+  ok(renderText({ ...m, needs: [{ part: 'x', state: 'blocked', reason: 'a	b' }] }).includes('a b'), 'text đổi tab thành khoảng trắng, không dính chữ');
+  // Regression minor review cuối: rename đè file đang mở có thể lỗi EPERM trên Windows → ghi trực tiếp, không để lại .tmp
+  {
+    let calls = 0;
+    const eperm = () => { calls++; throw Object.assign(new Error('EPERM'), { code: 'EPERM' }); };
+    const target = path.join(root, '.aip', 'runs', REQ, 'status.html');
+    fs.rmSync(target, { force: true });
+    const rc = runStatus({ _: ['status', REQ], html: true }, { cwd: root, out: () => {}, err: () => {}, rename: eperm });
+    ok(calls === 1 && rc === 0 && fs.readFileSync(target, 'utf8').includes('id="parts"') && !fs.existsSync(`${target}.tmp`), '--html: rename lỗi EPERM vẫn ghi status.html và không để lại .tmp');
+  }
   const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-empty-'));
   const e = spawnSync(process.execPath, [CLI, 'status'], { cwd: empty, encoding: 'utf8' });
   ok(e.status === 0 && e.stdout.trim().length > 0, 'không có request đang chạy: in một dòng, exit 0');
