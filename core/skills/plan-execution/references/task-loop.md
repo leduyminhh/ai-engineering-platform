@@ -17,7 +17,8 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 ## Các bước của một task
 
 1. **Ghi BASE** bằng `git rev-parse HEAD` trước khi giao việc. Không dùng `HEAD~1`. Mất BASE sau khi compact thì lấy
-   `<b>` của dòng `Task <n-1>: complete` gần nhất trong ledger và đối chiếu `git log`.
+   `<b>` của dòng `Task <n-1>: complete` gần nhất trong ledger và đối chiếu `git log`. Ghi ngay vào ledger
+   `Task <n>: start (base <hash>)` (`<hash>` = BASE); dòng này cho `aip status` biết task đang chạy và là mốc để dựng lại BASE.
 2. **Cắt brief**: `node <thư mục skill plan-execution>/scripts/task-brief.mjs <plan.md> <n>` ghi `task-<n>-brief.md` vào workspace `.aip/` của plan và in đường
    dẫn. Brief là nguyên văn mục `### Task <n>`; không tóm tắt lại, không chép nội dung task vào context của session chính.
 3. **Giao việc** theo `kind` (chuỗi agent: `engineering-plan-writing`) bằng mẫu `prompts/implementer.md`. Prompt giao việc
@@ -50,7 +51,9 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    lượng; thiếu một trong hai là đầu ra hỏng. Task có chuỗi hai agent (vd FE-UI) chỉ review một lần, sau cả hai. Task `TOOLING` review bằng `general-purpose` không nạp skill domain, tiêu chí là `prompts/task-review.md`; đưa reviewer đường dẫn `task-<n>-report.md` (bước 3) cùng review package.
 8. **Xử lý kết quả review**: `spec_verdict: cannot_verify` do session chính giải quyết (đọc code, chạy lệnh) rồi mới
    tiếp. Chỉ finding `blocker`/`major` hoặc `spec_verdict` khác `compliant` mới vào vòng sửa; `minor`/`nit` ghi vào
-   ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Mục plan bắt buộc mà thiếu vẫn là
+   ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Sau mỗi lần review (task review, rồi
+   mỗi re-review) ghi `Task <n>: review <vòng> <spec_verdict> <blocker>/<major>/<minor>` (`<vòng>` đếm lần review của task
+   từ 1; `spec_verdict` ∈ `compliant` | `issues` | `cannot_verify`; ba số là số finding còn mở theo severity). Mục plan bắt buộc mà thiếu vẫn là
    `major`. Không tự sửa finding: sửa do agent.
 9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
    - review sạch (`review clean` = `spec_verdict: compliant`, hoặc `cannot_verify` session chính đã giải quyết ở bước 8 mà không ra lệch, và không còn finding `blocker`/`major` mở; các dòng `minor (deferred)` của task đứng trước dòng `complete`; task `TOOLING` TDD `có`: mẫu ở gạch cuối): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
@@ -119,6 +122,30 @@ hỏi người dùng"); agent trả `blocked` mà session chính không tự tr�
 `blocked`/`failed` hoặc kết thúc mà ledger part không có `Part: complete` ("Chế độ part" bước 7); conflict, suite đỏ hoặc
 cây làm việc bẩn khi merge local theo khoá `mergeLocal` (`finish.md`). Lỗi chặn được báo ngay, kèm `questions[]` khi có.
 
+## Part vướng
+
+Một part (hoặc chính session gốc) **vướng** khi không tự đi tiếp được. Người ghi dòng `Blocked: <lý do>` vào ledger của
+mình là phiên part, subagent part (khi trả `blocked`/`failed`) hoặc session gốc cho chính nó (`root`); `Unblocked: <cách
+giải>` ghi khi đã gỡ. `aip status` đọc hai dòng này để đánh dấu part `vướng` và đếm cho `aip statusline`. Phần dưới là
+cách session gốc xử lý (kích hoạt khi người dùng nhắn `xử lý vướng part <nn>` hoặc bấm "Xử lý ↗" trên trang của skill `aip-status`;
+`xử lý vướng part root` là vướng của chính session gốc), không đổi 6 loại dừng ở trên.
+
+| Loại vướng | Ai xử lý | Cách xử lý |
+|---|---|---|
+| Test đỏ sau merge part | session gốc, không hỏi | Vòng sửa trên `feature/<slug>` (task sửa, review, commit); tối đa 2 vòng, quá thì chuyển người dùng |
+| Conflict trong write set của part | session gốc, không hỏi | Gỡ conflict giữ cả hai phía theo `**Files:**` của part, ghi `Ruling:` |
+| Part im lặng (không dòng ledger/commit mới quá `statusStaleMinutes`) | session gốc, không hỏi | Kiểm phiên hoặc subagent còn chạy; đã chết thì khởi động lại part từ task chưa `complete` trong worktree cũ, giữ thay đổi chưa commit; chỉ một lần, im lặng lần hai chuyển người dùng |
+| Câu hỏi trả lời được từ design/plan | session gốc, không hỏi | Trả lời, ghi `Ruling:` |
+| Một trong 6 loại dừng | người dùng | Hỏi (xem mục Breaker) |
+| Plan của part hỏng | người dùng | Viết lại plan riêng part, người dùng duyệt một lần như G2 thu nhỏ |
+| Conflict ngoài write set | người dùng | Liệt kê file xung đột trong câu hỏi |
+
+Câu hỏi cho người dùng gom vào **một thẻ**: mỗi mục nêu cách hiểu, hệ quả và đáp án khuyến nghị; part khác chạy tiếp trong
+lúc chờ. Có lời giải thì gửi về part (phiên part qua `SendMessage`; subagent part giao lại, hoặc subagent mới tiếp từ ledger
+của part) rồi ghi `Unblocked: <cách giải>`. Mỗi vướng chỉ báo **một lần** (tin nhắn kèm trang `aip status`); người dùng
+chưa trả lời thì không nhắc lại, vướng mới gộp vào cùng thẻ. Ngoài ra session gốc đưa trang `aip status` (skill
+`aip-status`) ở mỗi cổng G1/G2/G3 và khi một part chuyển sang vướng cần người dùng; việc này không phải dòng trạng thái giữa chừng.
+
 ## Gom task nhỏ
 
 Nhiều task nhỏ cùng khuôn (vd đổi một dòng ở nhiều file) có thể giao một lần và review như một đơn vị, miễn brief liệt kê
@@ -173,6 +200,8 @@ Task <m>: complete (commits <a>..<b>, <k> ruled)
 minor (deferred): <finding minor/nit> — task <n>
 Plan: complete
 ```
+
+Ngoài ra ledger nhận `Task <n>: start (base <hash>)`, `Task <n>: review <vòng> <spec_verdict> <b>/<m>/<n>`, `Blocked: <lý do>` và `Unblocked: <cách giải>` (`ledger.mjs` kiểm định dạng, exit 2 khi sai; mỗi dòng ghi thêm bản ghi vào `events.jsonl` cạnh `progress.md`).
 
 Ledger part (`<nn>-<part-slug>/`) có thêm `Part: complete <hash>` (cả khi part chạy tuần tự); ledger `root/` có thêm `Part <nn>: merged <hash>`.
 

@@ -50,4 +50,23 @@ export default async function run({ ok, ctx }) {
     ok(t.includes('Cần bạn xử lý') && t.includes('Xử lý ↗'), 'AC3.1: skill nêu khối "Cần bạn xử lý" và nút "Xử lý ↗"');
     ok(/không có công cụ hiển thị[^\n]*in text/.test(t), 'AC3.2: skill có nhánh không có công cụ hiển thị in text của aip status');
   }
+  // AC4.1–AC4.3 (+ AC2.1: nơi bắt ghi 4 dòng mới): câu chữ task-loop/inline về dòng ledger mới và xử lý part vướng
+  {
+    const dir = path.join(REPO_ROOT, 'core', 'skills', 'plan-execution', 'references');
+    const loop = fs.readFileSync(path.join(dir, 'task-loop.md'), 'utf8');
+    const inline = fs.readFileSync(path.join(dir, 'inline.md'), 'utf8');
+    const part = loop.slice(loop.indexOf('## Part vướng'), loop.indexOf('## Gom task nhỏ'));
+    ok(loop.includes('Task <n>: start (base <hash>)') && loop.includes('Task <n>: review <vòng> <spec_verdict>'),
+      'AC2.1: task-loop.md bắt ghi Task <n>: start và Task <n>: review');
+    ok(inline.includes('Task <n>: start (base <hash>)') && inline.includes('Blocked: <lý do>'),
+      'AC2.1: inline.md bắt ghi Task <n>: start và Blocked:');
+    ok(part.length > 0 && part.includes('không hỏi') && part.includes('Ruling:') && part.includes('Unblocked:')
+      && part.includes('tối đa 2 vòng') && /chỉ một lần/.test(part),
+      'AC4.1: bảng xử lý vướng nêu root tự gỡ không hỏi, Ruling/Unblocked, giới hạn 2 vòng sửa và 1 lần khởi động lại');
+    ok(part.includes('một thẻ') && part.includes('đáp án khuyến nghị') && part.includes('part khác chạy tiếp') && part.includes('SendMessage'),
+      'AC4.2: vướng hỏi người dùng gom một thẻ có đáp án khuyến nghị, part khác chạy tiếp, lời giải gửi về part');
+    ok(part.includes('chỉ báo **một lần**') && part.includes('không nhắc lại') && part.includes('gộp vào cùng thẻ'),
+      'AC4.3: mỗi vướng báo một lần, không nhắc lại, vướng mới gộp vào cùng thẻ');
+    ok(part.includes('xử lý vướng part root'), 'task 2 minor: nêu cách xử lý vướng của chính session gốc (part root)');
+  }
 }
