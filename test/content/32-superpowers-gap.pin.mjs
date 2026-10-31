@@ -34,6 +34,8 @@ export default async function run({ ok, ctx }) {
       'Task 2: complete (commits a..b, INLINE)',
       'Task 2: complete (commits a..b, inline, tests: a exit 1; b exit 0)',
       'Task 2: complete (commits a..b, review clean)\nTask 3: complete (commits c..d, inline)',
+      // AC1.3 (2026-10-31-part-mode-tooling-minors): \r lẻ cũng ngăn dòng
+      'Task 2: complete (commits a..b, review clean)\rTask 3: complete (commits c..d, inline)',
     ];
     const accept = [
       'Task 2: complete (commits a..b, inline, tests: npm test exit 0)',
@@ -93,6 +95,11 @@ export default async function run({ ok, ctx }) {
         [`Task 1: complete (commits a..b, review clean, ${red}, ${tests})\nTask 3: complete (commits a..b, review clean)`, 0, 'regression: ctx của task TOOLING không áp sang dòng BE phía sau'],
         // Regression (review Task 1, F2): red: thiếu exit không được mượn exit của tests:
         ['Task 1: complete (commits a..b, review clean, red: npm test, tests: npm test exit 1)', 2, 'regression: red: thiếu exit không mượn exit của tests:'],
+        // AC1.1, AC1.2 (docs/requests/2026-10-31-part-mode-tooling-minors): selfRun TDD có cần tests: exit 0 và red: có lệnh
+        [`Task 1: complete (commits a..b, review clean, ${red})`, 2, 'AC1.1: TOOLING TDD có thiếu tests: → từ chối'],
+        [`Task 1: complete (commits a..b, review clean, ${red}, tests: npm test exit 1)`, 2, 'AC1.1: TOOLING TDD có tests: exit khác 0 → từ chối'],
+        [`Task 1: complete (commits a..b, review clean, ${red}, ${tests}, lint exit 2)`, 2, 'AC1.1: TOOLING TDD có kèm exit khác 0 ngoài red: → từ chối'],
+        [`Task 1: complete (commits a..b, review clean, red: exit 1, ${tests})`, 2, 'AC1.2: red: không có lệnh → từ chối'],
       ]) {
         const before = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
         console.error = () => {};
