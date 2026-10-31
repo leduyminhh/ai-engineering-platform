@@ -13,7 +13,8 @@ export const STATE_LABELS = {
   stale: 'im lặng quá lâu', active: 'đang làm', todo: 'chưa làm',
 };
 const WATCH_SECONDS = 10;
-const DONE_RE = /^Plan: complete\s*$/m;
+const REQUEST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const DONE_RE =/^Plan: complete\s*$/m;
 // Chỉ dòng theo định dạng plan-execution; "Task 1: started …" là ghi chú tự do cũ, không có nghĩa part đã bắt đầu.
 const TASK_EVENT_RE = /^Task \d+: (?:start|review|complete)\b/;
 
@@ -55,7 +56,8 @@ export function pickRequest(runsRoot) {
   let best = null;
   let bestTime = -1;
   let names = [];
-  try { names = fs.readdirSync(runsDir(runsRoot), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); } catch { return null; }
+  // Tên không qua REQUEST_RE (vd có dấu cách) bị runStatus từ chối, nên không chọn làm request mặc định.
+  try { names = fs.readdirSync(runsDir(runsRoot), { withFileTypes: true }).filter((d) => d.isDirectory() && REQUEST_RE.test(d.name)).map((d) => d.name); } catch { return null; }
   for (const name of names) {
     if (DONE_RE.test(readText(path.join(runsDir(runsRoot, name), 'root', 'progress.md')) ?? '')) continue;
     const t = Math.max(0, ...ledgerDirs(runsRoot, name).map((p) => mtimeOf(path.join(runsDir(runsRoot, name), p, 'progress.md'))));
@@ -227,7 +229,7 @@ export function renderText(model, { part } = {}) {
     }
   }
   // Nội dung ledger, commit, tên file là dữ liệu không tin cậy: bỏ ký tự điều khiển để không chèn escape sequence vào terminal.
-  return out.join('\n').replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, '');
+  return out.join('\n').replace(/\t/g, ' ').replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '');
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -268,10 +270,8 @@ ${model.needs.length ? `<section id="needs" class="needs"><h2>Cần bạn xử l
 `;
 }
 
-const REQUEST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-
 // CLI: trả exit code; --watch giữ tiến trình và ghi lại HTML mỗi 10 giây.
-export function runStatus(args, { cwd = process.cwd(), out = console.log, err = console.error, git = defaultGit } = {}) {
+export function runStatus(args, { cwd = process.cwd(), out = console.log, err = console.error, git = defaultGit, rename = fs.renameSync } = {}) {
   const runsRoot = mainRoot(cwd, git);
   const docsRoot = tryGit(git, ['rev-parse', '--show-toplevel'], cwd) ?? cwd;
   if ('part' in args && !args.part) { err('--part cần số part, vd --part 02.'); return 2; }
@@ -291,8 +291,15 @@ export function runStatus(args, { cwd = process.cwd(), out = console.log, err = 
     const ignore = path.join(runsRoot, '.aip', '.gitignore');
     if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '*\n');
     // Ghi qua file tạm rồi đổi tên để trang đang mở với meta refresh không đọc phải file ghi dở.
-    fs.writeFileSync(`${html}.tmp`, renderHtml(make(), { watch }));
-    fs.renameSync(`${html}.tmp`, html);
+    const page = renderHtml(make(), { watch });
+    fs.writeFileSync(`${html}.tmp`, page);
+    try {
+      rename(`${html}.tmp`, html);
+    } catch {
+      // Windows: đích đang bị trình duyệt hay antivirus giữ thì rename lỗi EPERM; ghi trực tiếp thay vì thất bại.
+      fs.writeFileSync(html, page);
+      fs.rmSync(`${html}.tmp`, { force: true });
+    }
   };
   if (args.watch) {
     writeHtml(true);
