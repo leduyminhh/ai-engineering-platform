@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Gom commit list + diff --stat + diff -U10 của khoảng base..head vào một file cho reviewer.
+// Gom commit list (kèm file đổi của từng commit) + diff --stat + diff -U10 của khoảng base..head vào một file cho reviewer.
 // Cách dùng: <base> <head> [--plan <plan.md>] [--out <file>] — --out thắng; chỉ có --plan thì ghi vào workspace .aip của plan và in đường dẫn; không có cả hai thì in ra stdout. Exit 1 khi khoảng commit không hợp lệ, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -27,7 +27,7 @@ export function buildPackage({ base, head, run = git }) {
     `# Review package: ${range}`,
     '',
     '## Commits',
-    run(['log', '--oneline', range]).trimEnd(),
+    run(['log', '--stat', '--format=%h %s', range]).trimEnd(),
     '',
     '## Stat',
     run(['diff', '--stat', range]).trimEnd(),

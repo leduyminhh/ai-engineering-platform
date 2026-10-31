@@ -40,7 +40,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 6. **Commit**: session chính commit sau mỗi task qua `git-workflow`; agent không tự commit. Một task có ≥ 1 commit; vòng
    sửa sinh thêm commit, không amend hay squash. Ghi `head` = `git rev-parse HEAD` sau commit.
    Task `TOOLING` TDD `có` do session chính làm: commit test đỏ riêng trước (`test(<scope>): …`, chỉ stage file test),
-   rồi commit code xanh; reviewer kiểm thứ tự qua hai commit trong review package. Hook pre-commit của repo chặn commit
+   rồi commit code xanh; reviewer kiểm thứ tự và file của từng commit qua mục Commits của review package. Hook pre-commit của repo chặn commit
    đỏ thì ghi `Ruling:` (nêu hook chặn) và gộp thành một commit, bằng chứng đỏ vẫn đi vào dòng ledger ở bước 9.
 7. **Task review**: `node <thư mục skill plan-execution>/scripts/review-package.mjs <BASE> <head> --plan <plan.md>`
    (luôn có `--plan` để package ghi vào workspace `.aip/` của plan, đã được git bỏ qua, và script in đường dẫn; diff không
