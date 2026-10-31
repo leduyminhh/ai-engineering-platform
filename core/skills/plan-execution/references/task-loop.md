@@ -53,7 +53,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Mục plan bắt buộc mà thiếu vẫn là
    `major`. Không tự sửa finding: sửa do agent.
 9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
-   - review sạch (`review clean` = `spec_verdict: compliant` và không còn finding `blocker`/`major` mở; các dòng `minor (deferred)` của task đứng trước dòng `complete`; task `TOOLING` TDD `có`: mẫu ở gạch cuối): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
+   - review sạch (`review clean` = `spec_verdict: compliant`, hoặc `cannot_verify` session chính đã giải quyết ở bước 8 mà không ra lệch, và không còn finding `blocker`/`major` mở; các dòng `minor (deferred)` của task đứng trước dòng `complete`; task `TOOLING` TDD `có`: mẫu ở gạch cuối): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
    - qua breaker (còn finding mở sau vòng 3, đã phán hết): các dòng `Ruling:` của task đứng trước, rồi
      `Task <n>: complete (commits <a>..<b>, <k> ruled)` với `<k>` là số finding đã phán. Không có dòng complete thì lần
      làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này;

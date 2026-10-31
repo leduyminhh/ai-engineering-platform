@@ -23,7 +23,8 @@ Cách làm:
    sửa. Ghi vào questions[] gồm AC ID, các cách hiểu, và hệ quả của từng cách hiểu.
 3. Phán quyết thứ hai — chất lượng theo các trục của skill review của bạn. Task TDD `có`: kiểm tdd.red/tdd.green có
    trong báo cáo và khớp diff (test có đỏ đúng lý do, kỳ vọng tự tính chứ không chép từ code). Có commit đỏ riêng thì
-   kiểm qua mục `## Commits` của review package (file theo từng commit): commit đỏ chỉ chứa file test và đứng trước commit code.
+   kiểm qua mục `## Commits` của review package (file theo từng commit, commit mới liệt kê trước): commit đỏ chỉ chứa
+   file test và đứng trước commit code, tức nằm dưới nó trong mục này.
 4. Thang severity của contract đầu ra: blocker (≈ Critical), major (≈ Important), minor/nit. "Coverage có thể rộng hơn"
    là minor; mục plan bắt buộc mà thiếu là major. Plan/spec im lặng về một điều không có nghĩa là cho phép.
 5. Mỗi finding có severity, category, location (file:line), evidence, impact, recommendation, confidence. Tự đọc lại
