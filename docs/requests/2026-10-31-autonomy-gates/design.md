@@ -1,6 +1,6 @@
 # Thiết kế: luồng tự động với 3 cổng duyệt cố định
 - Ngày: 2026-10-31
-- Trạng thái: in-progress
+- Trạng thái: merged — merge `feature/autonomy-gates` vào master f232e57 ngày 2026-10-31 (review cuối + một lượt sửa, 0 blocker/major còn mở; G3 giữ nguyên 3 quyết định: Ruling sửa bảo mật F7, khoá autonomy đã commit chỉ cảnh báo, không sửa baseline AGENTS)
 - Requirement: không có
 ## Vấn đề và lý do
 Ba lượt thử chế độ part cho thấy một request phải quay lại chat 15–20 lần: hỏi trước mỗi nhóm Song song, mở và trust phiên part, hỏi riêng merge local, dọn worktree, xoá nhánh, cộng các dòng báo trạng thái từ phiên con. Phần lớn là việc đảo ngược được, đã có kiểm chứng máy (test, review, ledger), nên không cần người duyệt từng bước. Người dùng muốn: việc tự động được thì tự làm; việc cần người kiểm thì dừng một lần và chờ duyệt.
@@ -14,17 +14,17 @@ Ba lượt thử chế độ part cho thấy một request phải quay lại cha
 - (7) Báo cáo: session gốc không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một lượt); chỉ nói ở G1, G2, G3, câu hỏi push, loại dừng, hoặc lỗi chặn.
 - (8) Lệnh mới `aip autonomy high|safe|status` (scope project, giống `aip mode`): `high` ghi `{ mergeLocal: true, cleanup: true, partRunner: "subagent" }`, `safe` xoá khoá, `status` in giá trị hiệu lực. Script `plan-execution/scripts/autonomy.mjs` in JSON hiệu lực để skill đọc, zero-dependency.
 ## Tiêu chí chấp nhận
-- [ ] **AC1.1** — Given request chạy `workflow-feature` When đi từ làm rõ tới kết thúc nhánh Then chỉ dừng chờ người dùng ở G1, G2, G3, câu hỏi push và 6 loại dừng; tài liệu `workflow-feature` và `plan-execution` nêu đúng danh sách này
-- [ ] **AC2.1** — Given yêu cầu cần làm rõ When ở Bước 2 của `workflow-feature` Then mọi câu hỏi gom trong một tin nhắn
-- [ ] **AC3.1** — Given `aip-gate.json` có khoá `autonomy` hợp lệ When chạy `autonomy.mjs` Then in JSON đủ ba trường với giá trị đã ghi
-- [ ] **AC3.2** — Given không có khoá `autonomy`, hoặc giá trị sai kiểu/ngoài tập When chạy `autonomy.mjs` Then in mặc định an toàn `{ mergeLocal: false, cleanup: false, partRunner: "session" }` cho trường đó
-- [ ] **AC3.3** — Given worktree không có `aip-gate.json` riêng When chạy `autonomy.mjs` trong worktree Then đọc khoá của repo chính
-- [ ] **AC4.1** — Given `mergeLocal: true` và người dùng duyệt G3 When kết thúc nhánh Then `finish.md` merge local, chạy full suite, đặt `merged` mà không hỏi thêm; suite đỏ thì dừng
-- [ ] **AC5.1** — Given `cleanup: true` và merge local xanh When dọn Then `finish.md` chỉ gỡ worktree sạch và xoá nhánh đã là tổ tiên của nhánh gốc
-- [ ] **AC6.1** — Given `partRunner: "subagent"` và nhóm Song song sạch `check-partition` When tới nhóm đó Then `task-loop.md` không hỏi, tạo worktree theo quy ước, giao subagent nền theo `inline.md`, merge khi có `Part: complete`
-- [ ] **AC7.1** — Given phiên con hoặc subagent xong một lượt không cần người dùng quyết When session gốc nhận note Then không gửi tin nhắn trạng thái
-- [ ] **AC8.1** — Given project bất kỳ When chạy `aip autonomy high`, `safe`, `status` Then lần lượt ghi preset, xoá khoá, in giá trị hiệu lực; các khoá khác của `aip-gate.json` giữ nguyên
-- [ ] **AC9.1** — Given `aip autonomy high` và một request 2 part Song song trên `aip-parts-trial` When chạy từ G2 tới G3 Then không có lượt dừng nào ngoài cổng, và cả hai part merged qua subagent
+- [x] **AC1.1** — Given request chạy `workflow-feature` When đi từ làm rõ tới kết thúc nhánh Then chỉ dừng chờ người dùng ở G1, G2, G3, câu hỏi push và 6 loại dừng; tài liệu `workflow-feature` và `plan-execution` nêu đúng danh sách này
+- [x] **AC2.1** — Given yêu cầu cần làm rõ When ở Bước 2 của `workflow-feature` Then mọi câu hỏi gom trong một tin nhắn
+- [x] **AC3.1** — Given `aip-gate.json` có khoá `autonomy` hợp lệ When chạy `autonomy.mjs` Then in JSON đủ ba trường với giá trị đã ghi
+- [x] **AC3.2** — Given không có khoá `autonomy`, hoặc giá trị sai kiểu/ngoài tập When chạy `autonomy.mjs` Then in mặc định an toàn `{ mergeLocal: false, cleanup: false, partRunner: "session" }` cho trường đó
+- [x] **AC3.3** — Given worktree không có `aip-gate.json` riêng When chạy `autonomy.mjs` trong worktree Then đọc khoá của repo chính
+- [x] **AC4.1** — Given `mergeLocal: true` và người dùng duyệt G3 When kết thúc nhánh Then `finish.md` merge local, chạy full suite, đặt `merged` mà không hỏi thêm; suite đỏ thì dừng
+- [x] **AC5.1** — Given `cleanup: true` và merge local xanh When dọn Then `finish.md` chỉ gỡ worktree sạch và xoá nhánh đã là tổ tiên của nhánh gốc
+- [x] **AC6.1** — Given `partRunner: "subagent"` và nhóm Song song sạch `check-partition` When tới nhóm đó Then `task-loop.md` không hỏi, tạo worktree theo quy ước, giao subagent nền theo `inline.md`, merge khi có `Part: complete`
+- [x] **AC7.1** — Given phiên con hoặc subagent xong một lượt không cần người dùng quyết When session gốc nhận note Then không gửi tin nhắn trạng thái
+- [x] **AC8.1** — Given project bất kỳ When chạy `aip autonomy high`, `safe`, `status` Then lần lượt ghi preset, xoá khoá, in giá trị hiệu lực; các khoá khác của `aip-gate.json` giữ nguyên
+- [x] **AC9.1** — Given `aip autonomy high` và một request 2 part Song song trên `aip-parts-trial` When chạy từ G2 tới G3 Then không có lượt dừng nào ngoài cổng, và cả hai part merged qua subagent
 ## Thiết kế
 - `core/skills/plan-execution/scripts/autonomy.mjs`: đọc gate theo thứ tự của `workspace.mjs`/hook (gốc worktree, rồi gốc repo chính), chuẩn hoá từng trường về mặc định khi sai.
 - `cli/lib/mode.mjs` (hoặc file mới `cli/lib/autonomy.mjs` theo cùng mẫu `runMode`) + định tuyến trong `cli/index.mjs`/`args.mjs`.
