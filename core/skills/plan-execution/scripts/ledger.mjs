@@ -24,11 +24,12 @@ const MAX_LINE = 4096;
 // \r lẻ cũng ngăn dòng: TASK_COMPLETE_RE neo ^ không cờ m, nên "x\rTask 1: complete … inline" sẽ lọt kiểm.
 const LINE_SPLIT = /\r\n|\r|\n/;
 // Dòng sự kiện mà `aip status` đọc để dựng trạng thái part: tiền tố khớp thì cả dòng phải đúng mẫu, sai thì trạng thái dựng sai.
+// Tiền tố nới (thụt đầu dòng, hoa thường) để "blocked: x" bị từ chối thay vì lọt qua thành dòng tự do mà status không nhận ra.
 const EVENT_FORMATS = [
-  [/^Task \d+: start\b/, /^Task \d+: start \(base [0-9a-f]{7,40}\)$/, 'Task <n>: start (base <hash>)'],
-  [/^Task \d+: review\b/, /^Task \d+: review [1-9]\d* (?:compliant|issues|cannot_verify) \d+\/\d+\/\d+$/, 'Task <n>: review <vòng> <compliant|issues|cannot_verify> <blocker>/<major>/<minor>'],
-  [/^Blocked:/, /^Blocked: +\S/, 'Blocked: <lý do>'],
-  [/^Unblocked:/, /^Unblocked: +\S/, 'Unblocked: <cách giải>'],
+  [/^\s*task \d+: start\b/i, /^Task \d+: start \(base [0-9a-f]{7,40}\)$/, 'Task <n>: start (base <hash>)'],
+  [/^\s*task \d+: review\b/i, /^Task \d+: review [1-9]\d* (?:compliant|issues|cannot_verify) \d+\/\d+\/\d+$/, 'Task <n>: review <vòng> <compliant|issues|cannot_verify> <blocker>/<major>/<minor>'],
+  [/^\s*blocked:/i, /^Blocked: \S/, 'Blocked: <lý do>'],
+  [/^\s*unblocked:/i, /^Unblocked: \S/, 'Unblocked: <cách giải>'],
 ];
 
 // ctx = { tdd, kind } của task trong plan; thiếu ctx thì chỉ kiểm định dạng như trước.
@@ -83,7 +84,7 @@ export function appendLedger(file, line, now = new Date()) {
   const text = line.replace(/\r?\n$/, '');
   fs.appendFileSync(file, `${text}\n`);
   const ts = now.toISOString();
-  fs.appendFileSync(path.join(path.dirname(file), 'events.jsonl'), text.split(LINE_SPLIT).map((l) => `${JSON.stringify({ ts, line: l })}\n`).join(''));
+  fs.appendFileSync(path.join(path.dirname(file), 'events.jsonl'), text.split(LINE_SPLIT).filter((l) => l.trim()).map((l) => `${JSON.stringify({ ts, line: l })}\n`).join(''));
 }
 
 // null = không có gì để nạp lại: file không đọc được hoặc plan đã xong. Còn lại trả tối đa `max` ký tự cuối.

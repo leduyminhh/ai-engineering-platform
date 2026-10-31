@@ -9,6 +9,8 @@ export default async function run({ ok, ctx }) {
       'Task 1: start', 'Task 1: start (base xyz)', 'Task 1: start base 1a2b3c4',
       'Task 1: review 0 compliant 0/0/0', 'Task 1: review 1 ok 0/0/0', 'Task 1: review 1 issues 1/0', 'Task 1: review',
       'Blocked:', 'Blocked:   ', 'Unblocked:', 'Unblocked:  ',
+      // Regression review Task 1 (F1): biến thể hoa thường/thụt đầu dòng không được lọt thành dòng tự do
+      ' Blocked: x', 'blocked: x', 'UNBLOCKED: y', '  Task 1: start', 'task 1: review 1 compliant 0/0/0',
     ];
     const accept = [
       'Task 3: start (base 1a2b3c4)', 'Task 3: start (base 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b)',
