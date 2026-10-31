@@ -15,17 +15,20 @@ const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b(?![.\w-])/i;
 const INLINE_EVIDENCE_RE = /\btests: \S.* exit 0\b/;
 const EXIT_FAILED_RE = /\bexit [1-9]/;
 const TASK_COMPLETE_RE = /^Task \d+: complete\b/i;
-// Không vượt qua "tests:": red: thiếu exit không được mượn exit của tests: phía sau.
-const RED_RE = /\bred:(?:(?!\btests:).)*? exit (\d+)\b/gi;
+// Không vượt qua "tests:": red: thiếu exit không được mượn exit của tests: phía sau. "red: exit 1" không có lệnh thì không tính.
+const RED_RE = /\bred:\s*\S(?:(?!\btests:).)*? exit (\d+)\b/gi;
 // Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
 const MAX_LINE = 4096;
+// \r lẻ cũng ngăn dòng: TASK_COMPLETE_RE neo ^ không cờ m, nên "x\rTask 1: complete … inline" sẽ lọt kiểm.
+const LINE_SPLIT = /\r\n|\r|\n/;
 
 // ctx = { tdd, kind } của task trong plan; thiếu ctx thì chỉ kiểm định dạng như trước.
 export function validateLine(line, ctx) {
   // Đối số nhiều dòng được kiểm từng dòng: một dòng hợp lệ không được che dòng inline thiếu evidence.
-  for (const l of line.split(/\r?\n/)) {
+  for (const l of line.split(LINE_SPLIT)) {
     if (l.length > MAX_LINE) return `dòng ledger dài quá ${MAX_LINE} ký tự`;
     let evidence = l;
+    let selfRunTdd = false;
     if (TASK_COMPLETE_RE.test(l)) {
       // Mọi khối red: đều phải exit khác 0; một khối giả không được che bởi khối hợp lệ đứng trước.
       for (const red of l.matchAll(RED_RE)) {
@@ -35,10 +38,11 @@ export function validateLine(line, ctx) {
       evidence = l.replace(RED_RE, '');
       // Task do session chính tự làm (TOOLING hoặc inline) không có agent_result: dòng ledger là bằng chứng đỏ duy nhất.
       const selfRun = ctx?.kind === 'TOOLING' || INLINE_COMPLETE_RE.test(l);
-      if (ctx?.tdd === 'có' && selfRun && evidence === l) return 'dòng Task <n>: complete của task TDD có do session chính làm phải có "red: <lệnh> exit <n khác 0>"';
+      selfRunTdd = ctx?.tdd === 'có' && selfRun;
+      if (selfRunTdd && evidence === l) return 'dòng Task <n>: complete của task TDD có do session chính làm phải có "red: <lệnh> exit <n khác 0>"';
     }
-    if (INLINE_COMPLETE_RE.test(l) && !(INLINE_EVIDENCE_RE.test(evidence) && !EXIT_FAILED_RE.test(evidence))) {
-      return 'dòng Task <n>: complete ở chế độ inline phải có "tests: <lệnh> exit 0" và không kèm exit khác 0';
+    if ((selfRunTdd || INLINE_COMPLETE_RE.test(l)) && !(INLINE_EVIDENCE_RE.test(evidence) && !EXIT_FAILED_RE.test(evidence))) {
+      return 'dòng Task <n>: complete ở chế độ inline hoặc của task TDD có do session chính làm phải có "tests: <lệnh> exit 0" và không kèm exit khác 0';
     }
   }
   return null;
@@ -92,7 +96,7 @@ export function main(argv, deps) {
     return 2;
   }
   // Mỗi dòng mang số task của chính nó, nên ctx dựng theo từng dòng.
-  const invalid = line.split(/\r?\n/).map((l) => validateLine(l, taskCtx(planArg, l))).find(Boolean);
+  const invalid = line.split(LINE_SPLIT).map((l) => validateLine(l, taskCtx(planArg, l))).find(Boolean);
   if (invalid) {
     console.error(invalid);
     return 2;

@@ -22,7 +22,7 @@ Review cuối nhánh `feature/part-mode-tooling-gaps` và lượt thử 3 (`../2
 - [ ] **AC3.1** — Given task TDD `có` When reviewer đọc `task-review.md` Then được bảo kiểm file của commit đỏ qua mục `## Commits` của review package
 - [ ] **AC4.1** — Given diff toàn nhánh không chạm backend/frontend When đọc `workflows/feature/WORKFLOW.md` Bước 6 Then reviewer là `general-purpose` `model: opus`, khớp R7, và `graph.json` vẫn qua `checkGraphAgainstBody`
 ## Thiết kế
-- `ledger.mjs`: hằng `LINE_SPLIT = /\r\n|\r|\n/` dùng ở `validateLine` và `main`; `RED_RE = /\bred: \S(?:(?!\btests:).)*? exit (\d+)\b/gi`; điều kiện evidence (`INLINE_EVIDENCE_RE` và không `EXIT_FAILED_RE` trên phần đã bỏ `red:`) áp cho dòng inline và cho dòng selfRun TDD `có`.
+- `ledger.mjs`: hằng `LINE_SPLIT = /\r\n|\r|\n/` dùng ở `validateLine` và `main`; `RED_RE = /\bred:\s*\S(?:(?!\btests:).)*? exit (\d+)\b/gi` (`red:x` không dấu cách vẫn là khối red như R12); điều kiện evidence (`INLINE_EVIDENCE_RE` và không `EXIT_FAILED_RE` trên phần đã bỏ `red:`) áp cho dòng inline và cho dòng selfRun TDD `có`.
 - Mục (2)(3)(4) là câu chữ.
 ## Ảnh hưởng spec
 - workflows: đổi R7
