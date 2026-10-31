@@ -1,6 +1,6 @@
 # Thiết kế: brainstorming không giới hạn domain và định tuyến tin cậy
 - Ngày: 2026-10-31
-- Trạng thái: draft
+- Trạng thái: approved
 - Requirement: không có
 ## Vấn đề và lý do
 aip mạnh ở giai đoạn "làm" của phát triển phần mềm nhưng trống ở giai đoạn "nghĩ" và ở mọi việc không phải code. Bước làm rõ (cổng đủ thông tin, playback, 2–3 hướng) chỉ nằm trong `engineering-spec-writing` và luôn kết thúc bằng `requirement.md`/`design.md` của một feature. Người dùng muốn nghĩ cùng về vấn đề chưa rõ loại (feature, bug, quyết định, quy trình, nghiên cứu, tài liệu, nghiệp vụ, hoặc không làm gì) thì không có skill nào hợp; đợt brainstorm `autonomy-gates`/`aip-status` ngày 2026-10-31 phải làm tay. `workflow-orchestrator` chỉ phân loại yêu cầu đã rõ bằng cột Tín hiệu (chuỗi tự do) nên dễ chọn sai, và không có cách quay đầu khi workflow đã chạy mà phát hiện chọn nhầm.
