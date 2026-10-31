@@ -775,7 +775,8 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     const miss = missingDeps(deps.required, catalogIds());
     // Ném TRƯỚC khi gỡ bản cũ để lỗi không để lại bản cài dở.
     if (miss.length) throw new Error(`Workflow cần skill không có trong bản cài nguồn: ${miss.join(', ')}`);
-    uninstallEntries(m, root, (e) => e.provider === provider); // gỡ bản cũ cùng (provider,scope) rồi cài lại UNION
+    // Chỉ thay bản skills-mode: bản plugin-mode của claude do `claude` CLI quản lý, gỡ nó ở đây là gỡ cả plugin của máy.
+    uninstallEntries(m, root, (e) => e.provider === provider && e.mode !== 'plugin');
     const effSet = effectiveSkills(entry);
     if (provider === 'claude') warnClaudePluginDuplicates(effSet, root);
     const { files, links } = installOne(provider, effSet, scope);

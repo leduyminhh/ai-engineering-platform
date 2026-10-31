@@ -345,6 +345,29 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   process.env.AIE_INSTALL_ROOT = TMP; // khôi phục cho round-trip
 }
 
+// ── regression: cài skills-mode cho claude không được gỡ bản cài plugin-mode (lượt thử 3 gỡ cả 7 plugin) ─────
+{
+  const TMP_PM = mkTmp('cwf-pm-');
+  process.env.AIE_INSTALL_ROOT = TMP_PM;
+  const pluginEntry = { provider: 'claude', mode: 'plugin', plugins: ['backend'], scope: 'project',
+    marketplace: 'aip-test-fake-mkt', cliScope: 'project', files: [], links: [], managed: [] };
+  fs.mkdirSync(path.join(TMP_PM, '.ai-engineering'), { recursive: true });
+  fs.writeFileSync(path.join(TMP_PM, '.ai-engineering/manifest.json'), JSON.stringify({ version: 1, installs: [pluginEntry] }));
+  // `claude` giả đứng đầu PATH: ghi lại lời gọi thay vì chạm bản cài plugin thật của máy.
+  const BIN = mkTmp('cwf-pm-bin-');
+  const calls = path.join(BIN, 'calls.log');
+  fs.writeFileSync(path.join(BIN, 'claude.cmd'), `@echo %*>>"${calls}"\r\n`);
+  fs.writeFileSync(path.join(BIN, 'claude'), `#!/bin/sh\necho "$@" >> "${calls}"\n`, { mode: 0o755 });
+  const savedPath = process.env.PATH;
+  process.env.PATH = `${BIN}${path.delimiter}${savedPath}`;
+  try { install({ providers: 'claude', plugins: 'backend', scope: 'project' }); } finally { process.env.PATH = savedPath; }
+  const mf = JSON.parse(fs.readFileSync(path.join(TMP_PM, '.ai-engineering/manifest.json'), 'utf8'));
+  const invoked = fs.existsSync(calls) ? fs.readFileSync(calls, 'utf8').trim() : '';
+  ok(!invoked && mf.installs.some((e) => e.mode === 'plugin' && e.marketplace === 'aip-test-fake-mkt'),
+    `regression: skills-mode giữ nguyên entry plugin-mode của claude, không gọi claude CLI${invoked ? ` (đã gọi: ${invoked})` : ''}`);
+  process.env.AIE_INSTALL_ROOT = TMP;
+}
+
 // ── skill-granular: cài LẺ 1 skill → chỉ skill đó (+ baseline principles) ─────
 {
   const TMP_S = mkTmp('cwf-skill-');
