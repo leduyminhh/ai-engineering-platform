@@ -36,6 +36,8 @@ export default async function run({ ok, ctx }) {
       'Task 2: complete (commits a..b, review clean)\nTask 3: complete (commits c..d, inline)',
       // AC1.3 (2026-10-31-part-mode-tooling-minors): \r lẻ cũng ngăn dòng
       'Task 2: complete (commits a..b, review clean)\rTask 3: complete (commits c..d, inline)',
+      // Regression: red: không được nuốt một khối tests: thất bại làm lệnh của nó
+      'Task 2: complete (commits a..b, inline, red: tests: npm test exit 1, tests: npm test exit 0)',
     ];
     const accept = [
       'Task 2: complete (commits a..b, inline, tests: npm test exit 0)',
