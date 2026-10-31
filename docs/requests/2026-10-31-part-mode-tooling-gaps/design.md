@@ -1,6 +1,6 @@
 # Thiết kế: vá lỗ hổng TOOLING/ledger/review cuối của chế độ part từ lượt thử 2
 - Ngày: 2026-10-31
-- Trạng thái: in-progress — Task 1–3 complete, review cuối xong (1 major đã sửa ở ddb7341); AC2.5 chờ người dùng chốt câu chữ; kết quả thử ở trial-3.md
+- Trạng thái: in-progress — Task 1–3 complete, review cuối xong (1 major đã sửa ở ddb7341); câu chữ AC2.5 người dùng chốt 2026-10-31 (BE không ở chế độ inline); kết quả thử ở trial-3.md
 - Requirement: không có
 ## Vấn đề và lý do
 Lượt thử 2 (`text-format`, repo `E:\Mine\AI\aip-parts-trial`) chạy trọn chế độ part nhưng lộ các chỗ phải tự chế:
@@ -28,7 +28,7 @@ Lượt thử 2 (`text-format`, repo `E:\Mine\AI\aip-parts-trial`) chạy trọn
 - [x] **AC2.2** — Given task `TOOLING` When session chính giao task review Then `task-loop.md` bảo ghi `task-<n>-report.md` dạng `agent_result` có `tdd.red`/`tdd.green` và reviewer `general-purpose` không nạp skill domain
 - [x] **AC2.3** — Given task do session chính làm có TDD `có` When commit Then `task-loop.md` và `inline.md` đòi commit test đỏ riêng trước commit code, kèm lối thoát khi hook pre-commit chặn
 - [x] **AC2.4** — Given plan có task kind `TOOLING` TDD `có` When `ledger.mjs` ghi dòng `Task <n>: complete` thiếu `red:` Then exit 2 và không ghi
-- [ ] **AC2.5** — Given task TDD `không` hoặc kind `BE`, hoặc số task không có trong plan When `ledger.mjs` ghi dòng `complete` không có `red:` Then ghi như cũ (exit 0)
+- [x] **AC2.5** — Given task TDD `không` hoặc kind `BE` không ở chế độ inline, hoặc số task không có trong plan When `ledger.mjs` ghi dòng `complete` không có `red:` Then ghi như cũ (exit 0)
 - [x] **AC3.1** — Given diff toàn nhánh không chạm backend hay frontend When chuẩn bị review cuối Then `final-review.md` chỉ định `general-purpose` với `model: opus`
 - [x] **AC4.1** — Given vòng sửa review cuối thêm AC mới When chuẩn bị dispatch sửa Then `final-review.md` bảo thêm `### Task` sửa có `**Phủ AC:**` vào plan gốc
 - [x] **AC5.1** — Given khối bàn giao phiên part When session gốc soạn ở bước 6 Then có dòng nhắc trust thư mục worktree
