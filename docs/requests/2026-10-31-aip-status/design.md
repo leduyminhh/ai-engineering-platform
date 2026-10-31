@@ -18,19 +18,19 @@ Khi request chia part, người dùng không biết part đang làm gì, đã l�
 - (11) Mỗi lần vướng chỉ báo một lần (tin nhắn + trang); người dùng chưa trả lời thì không nhắc lại; vướng mới gộp vào cùng thẻ.
 - (12) `aip statusline` thêm đoạn `⚠ <n> vướng` (đọc file, không tốn token) khi request đang chạy có part vướng.
 ## Tiêu chí chấp nhận
-- [ ] **AC1.1** — Given request chia part có ledger root và ledger part When chạy `aip status` Then in số tổng và bảng part với trạng thái đúng thứ tự ưu tiên (3)
-- [ ] **AC1.2** — Given cùng dữ liệu When chạy `aip status --json` Then in JSON có đủ trường của 7 khối
-- [ ] **AC1.3** — Given cùng dữ liệu When chạy `aip status --html` Then ghi `status.html` tự chứa (không tải tài nguyên ngoài) có 7 khối
-- [ ] **AC1.4** — Given part có phụ thuộc chưa merged When chạy `aip status` Then part đó ở trạng thái chờ part phụ thuộc, không tính là vướng
-- [ ] **AC1.5** — Given part đang làm không có dòng ledger hay commit mới quá `statusStaleMinutes` When chạy `aip status` Then part ở trạng thái im lặng quá lâu; thiếu khoá thì ngưỡng 30
-- [ ] **AC2.1** — Given `ledger.mjs` ghi một dòng hợp lệ When ghi xong Then `events.jsonl` có thêm một bản ghi `{ts, line}` và `progress.md` không đổi định dạng
-- [ ] **AC2.2** — Given dòng `Task <n>: start`, `Task <n>: review …`, `Blocked:`, `Unblocked:` sai định dạng When gọi `ledger.mjs` Then exit 2 và không ghi
-- [ ] **AC3.1** — Given phiên root có công cụ hiển thị When người dùng gọi `/aip-status` Then tạo `status.html`, render ở panel, và nếu có vướng thì hiện widget gồm khối "Cần bạn xử lý" với nút "Xử lý ↗"
-- [ ] **AC3.2** — Given phiên không có công cụ hiển thị When gọi `/aip-status` Then in text gọn
-- [ ] **AC4.1** — Given part vướng thuộc loại root tự gỡ (8) When root xử lý Then không hỏi người dùng, ghi `Ruling:`/`Unblocked:`, và dừng lại hỏi khi vượt giới hạn (2 vòng sửa, 1 lần khởi động lại)
+- [x] **AC1.1** — Given request chia part có ledger root và ledger part When chạy `aip status` Then in số tổng và bảng part với trạng thái đúng thứ tự ưu tiên (3)
+- [x] **AC1.2** — Given cùng dữ liệu When chạy `aip status --json` Then in JSON có đủ trường của 7 khối
+- [x] **AC1.3** — Given cùng dữ liệu When chạy `aip status --html` Then ghi `status.html` tự chứa (không tải tài nguyên ngoài) có 7 khối
+- [x] **AC1.4** — Given part có phụ thuộc chưa merged When chạy `aip status` Then part đó ở trạng thái chờ part phụ thuộc, không tính là vướng
+- [x] **AC1.5** — Given part đang làm không có dòng ledger hay commit mới quá `statusStaleMinutes` When chạy `aip status` Then part ở trạng thái im lặng quá lâu; thiếu khoá thì ngưỡng 30
+- [x] **AC2.1** — Given `ledger.mjs` ghi một dòng hợp lệ When ghi xong Then `events.jsonl` có thêm một bản ghi `{ts, line}` và `progress.md` không đổi định dạng
+- [x] **AC2.2** — Given dòng `Task <n>: start`, `Task <n>: review …`, `Blocked:`, `Unblocked:` sai định dạng When gọi `ledger.mjs` Then exit 2 và không ghi
+- [x] **AC3.1** — Given phiên root có công cụ hiển thị When người dùng gọi `/aip-status` Then tạo `status.html`, render ở panel, và nếu có vướng thì hiện widget gồm khối "Cần bạn xử lý" với nút "Xử lý ↗"
+- [x] **AC3.2** — Given phiên không có công cụ hiển thị When gọi `/aip-status` Then in text gọn
+- [x] **AC4.1** — Given part vướng thuộc loại root tự gỡ (8) When root xử lý Then không hỏi người dùng, ghi `Ruling:`/`Unblocked:`, và dừng lại hỏi khi vượt giới hạn (2 vòng sửa, 1 lần khởi động lại)
 - [ ] **AC4.2** — Given part vướng thuộc loại hỏi người dùng (9) When root xử lý Then gom vào một thẻ có đáp án khuyến nghị, part khác chạy tiếp, lời giải gửi về part và ghi `Unblocked:`
 - [ ] **AC4.3** — Given một vướng đã báo When người dùng chưa trả lời Then root không nhắc lại; vướng mới gộp vào cùng thẻ
-- [ ] **AC5.1** — Given request đang chạy có part vướng When `aip statusline` chạy Then dòng có `⚠ <n> vướng`
+- [x] **AC5.1** — Given request đang chạy có part vướng When `aip statusline` chạy Then dòng có `⚠ <n> vướng`
 - [ ] **AC6.1** — Given request thử có một part vướng có chủ đích When chạy chế độ part tới G3 Then trang hiện đúng trạng thái, vướng được báo một lần, gỡ xong part tiếp tục và merged
 ## Thiết kế
 - `cli/lib/status.mjs`: đọc design (Bảng part), plan gốc + plan part (`### Task`, `**Interfaces:**`), ledger + `events.jsonl` mọi part, `git log` nhánh part; dựng một mô hình JSON; render text / HTML từ mô hình đó. Zero-dependency, HTML một file có CSS inline, `<meta http-equiv="refresh">` khi `--watch`.
