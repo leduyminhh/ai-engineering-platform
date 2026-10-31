@@ -1,6 +1,6 @@
 # Thiết kế: vá lỗ hổng TOOLING/ledger/review cuối của chế độ part từ lượt thử 2
 - Ngày: 2026-10-31
-- Trạng thái: in-progress
+- Trạng thái: in-progress — Task 1–3 complete, review cuối xong (1 major đã sửa ở ddb7341); AC2.5 chờ người dùng chốt câu chữ; kết quả thử ở trial-3.md
 - Requirement: không có
 ## Vấn đề và lý do
 Lượt thử 2 (`text-format`, repo `E:\Mine\AI\aip-parts-trial`) chạy trọn chế độ part nhưng lộ các chỗ phải tự chế:
@@ -23,16 +23,16 @@ Lượt thử 2 (`text-format`, repo `E:\Mine\AI\aip-parts-trial`) chạy trọn
 - (4) `final-review.md`: AC mới do người dùng chốt trong vòng sửa thì người dùng duyệt câu AC trong `design.md`, session chính thêm `### Task <n>` sửa vào plan gốc (`**Phủ AC:**`, `**Files:**`), một lần dispatch sửa phủ cả task đó.
 - (5) `task-loop.md` bước 6: khối bàn giao nhắc người dùng lần đầu mở phiên ở thư mục worktree mới có thể phải trust thư mục.
 ## Tiêu chí chấp nhận
-- [ ] **AC1.1** — Given core cài từ nhánh này ở scope user When mở phiên part thật trong worktree `<slug>-p<nn>` có plan part mà ledger của part chưa có, và có ledger `root/` dở của request khác Then hook `session-start` không nạp ledger nào
-- [ ] **AC2.1** — Given task `TOOLING` TDD `có` do session chính làm When đọc `task-loop.md` bước 9 Then có mẫu dòng `complete` gồm `review clean|<k> ruled`, `red:` và `tests:`, và định nghĩa `review clean` khi còn minor
-- [ ] **AC2.2** — Given task `TOOLING` When session chính giao task review Then `task-loop.md` bảo ghi `task-<n>-report.md` dạng `agent_result` có `tdd.red`/`tdd.green` và reviewer `general-purpose` không nạp skill domain
-- [ ] **AC2.3** — Given task do session chính làm có TDD `có` When commit Then `task-loop.md` và `inline.md` đòi commit test đỏ riêng trước commit code, kèm lối thoát khi hook pre-commit chặn
-- [ ] **AC2.4** — Given plan có task kind `TOOLING` TDD `có` When `ledger.mjs` ghi dòng `Task <n>: complete` thiếu `red:` Then exit 2 và không ghi
+- [x] **AC1.1** — Given core cài từ nhánh này ở scope user When mở phiên part thật trong worktree `<slug>-p<nn>` có plan part mà ledger của part chưa có, và có ledger `root/` dở của request khác Then hook `session-start` không nạp ledger nào
+- [x] **AC2.1** — Given task `TOOLING` TDD `có` do session chính làm When đọc `task-loop.md` bước 9 Then có mẫu dòng `complete` gồm `review clean|<k> ruled`, `red:` và `tests:`, và định nghĩa `review clean` khi còn minor
+- [x] **AC2.2** — Given task `TOOLING` When session chính giao task review Then `task-loop.md` bảo ghi `task-<n>-report.md` dạng `agent_result` có `tdd.red`/`tdd.green` và reviewer `general-purpose` không nạp skill domain
+- [x] **AC2.3** — Given task do session chính làm có TDD `có` When commit Then `task-loop.md` và `inline.md` đòi commit test đỏ riêng trước commit code, kèm lối thoát khi hook pre-commit chặn
+- [x] **AC2.4** — Given plan có task kind `TOOLING` TDD `có` When `ledger.mjs` ghi dòng `Task <n>: complete` thiếu `red:` Then exit 2 và không ghi
 - [ ] **AC2.5** — Given task TDD `không` hoặc kind `BE`, hoặc số task không có trong plan When `ledger.mjs` ghi dòng `complete` không có `red:` Then ghi như cũ (exit 0)
-- [ ] **AC3.1** — Given diff toàn nhánh không chạm backend hay frontend When chuẩn bị review cuối Then `final-review.md` chỉ định `general-purpose` với `model: opus`
-- [ ] **AC4.1** — Given vòng sửa review cuối thêm AC mới When chuẩn bị dispatch sửa Then `final-review.md` bảo thêm `### Task` sửa có `**Phủ AC:**` vào plan gốc
-- [ ] **AC5.1** — Given khối bàn giao phiên part When session gốc soạn ở bước 6 Then có dòng nhắc trust thư mục worktree
-- [ ] **AC6.1** — Given request thử 3 part (01, 02 song song; 03 phụ thuộc 01 qua Interfaces) When chạy chế độ part trên `aip-parts-trial` với core từ nhánh này Then cả 3 part `merged <hash>`, review cuối chạy xong, và không phải tự chế mẫu dòng `complete`/báo cáo TOOLING
+- [x] **AC3.1** — Given diff toàn nhánh không chạm backend hay frontend When chuẩn bị review cuối Then `final-review.md` chỉ định `general-purpose` với `model: opus`
+- [x] **AC4.1** — Given vòng sửa review cuối thêm AC mới When chuẩn bị dispatch sửa Then `final-review.md` bảo thêm `### Task` sửa có `**Phủ AC:**` vào plan gốc
+- [x] **AC5.1** — Given khối bàn giao phiên part When session gốc soạn ở bước 6 Then có dòng nhắc trust thư mục worktree
+- [x] **AC6.1** — Given request thử 3 part (01, 02 song song; 03 phụ thuộc 01 qua Interfaces) When chạy chế độ part trên `aip-parts-trial` với core từ nhánh này Then cả 3 part `merged <hash>`, review cuối chạy xong, và không phải tự chế mẫu dòng `complete`/báo cáo TOOLING
 ## Thiết kế
 - `ledger.mjs`: `main` đã có `planArg`; đọc plan, `extractTask(plan, n)` với `n` từ `Task <n>: complete`, `effectiveTdd`; kind lấy bằng `taskField(task, 'Kind')` (export thêm từ `task-brief.mjs` nếu chưa export). `validateLine(line, ctx)` nhận thêm `{ tdd, kind }` tuỳ chọn; thiếu ctx thì hành vi cũ.
 - Các mục (2a)(2b)(2c)(3)(4)(5) là câu chữ trong `core/skills/plan-execution/references/task-loop.md`, `inline.md`, `prompts/final-review.md`.
