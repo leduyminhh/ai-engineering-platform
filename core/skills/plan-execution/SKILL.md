@@ -26,7 +26,9 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 1. **Chuẩn bị.** Đọc `plan.md` một lần (bản đồ file, Global Constraints, Review Focus, `**Interfaces:**` của từng task).
    Chạy `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "# Ledger — plan: <đường dẫn plan.md>"` để tạo workspace `.aip/` và dòng đầu ledger;
    ledger đã có thì đọc phần cuối và làm tiếp từ task chưa `complete`, không làm lại task đã xong. Bước này đồng thời
-   rà trước các cặp task chung file hoặc nối interface (xem `references/task-loop.md`, mục "Rà plan trước khi chạy").
+   rà trước các cặp task chung file hoặc nối interface (xem `references/task-loop.md`, mục "Rà plan trước khi chạy") và
+   chạy `node <thư mục skill plan-execution>/scripts/autonomy.mjs` một lần để lấy `mergeLocal`, `cleanup`, `partRunner`
+   (thiếu khoá hoặc sai giá trị = mặc định an toàn: hỏi merge local, hỏi dọn, hỏi cách chạy part).
 2. **Vòng task**, lần lượt từng task chưa `complete`, theo `references/task-loop.md`:
    ghi BASE → cắt brief bằng `scripts/task-brief.mjs` → giao agent domain theo `kind` bằng mẫu
    `references/prompts/implementer.md` → nhận `agent_result` → session chính commit → gom diff bằng
@@ -35,18 +37,25 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    `Task <n>: complete (…)` vào ledger.
 3. **Review cuối toàn nhánh** sau task cuối, theo `references/prompts/final-review.md`: reviewer chạy opus, nhận Review
    Focus + các dòng `Ruling:` + finding minor đã hoãn; `engineering-quality-auditor` chỉ chạy ở bước này.
-4. **Kết thúc nhánh** theo `references/finish.md`: docs + spec sống + `check-request.mjs` + full suite, rồi đưa đúng 3 lựa
-   chọn cho người dùng; ghi `Plan: complete` vào ledger khi plan xong.
+4. **Kết thúc nhánh** theo `references/finish.md`: docs + spec sống + `check-request.mjs` + full suite, rồi trình G3
+   (diff cả nhánh); `mergeLocal: true` thì duyệt G3 là đồng ý merge local, không thì đưa đúng 3 lựa chọn; ghi
+   `Plan: complete` vào ledger khi plan xong.
 
 Request chia part (`## Bảng part` trong `design.md`): thứ tự part, song song và merge theo mục "Chế độ part" của
-`references/task-loop.md`; `Plan: complete` chỉ ghi ở ledger `root/`.
+`references/task-loop.md` (rẽ theo `partRunner`); `Plan: complete` chỉ ghi ở ledger `root/`.
+
+**Điểm dừng và báo cáo.** Chờ người dùng chỉ ở G1 (duyệt design), G2 (duyệt plan), G3 (duyệt diff cả nhánh; thiếu khoá
+`mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3), câu hỏi push/PR riêng một lần sau merge local (chỉ khi
+`mergeLocal: true`), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và 6 loại dừng bên dưới;
+giữa G2 và G3 chạy liền. Session chính không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một
+lượt), chỉ nói ở các điểm dừng trên hoặc khi gặp lỗi chặn (định nghĩa ở mục "Báo cáo" của `references/task-loop.md`).
 
 ## Ai làm gì
 
 | Việc | Người làm |
 |---|---|
 | Điều phối, ghi ledger, trả lời `questions[]` từ spec/plan, phán `Ruling:` | session chính |
-| Commit sau mỗi task (qua `git-workflow`) | session chính — agent không tự commit |
+| Commit sau mỗi task (qua `git-workflow`) | session chính — agent không tự commit (ngoại lệ: subagent part của `partRunner: subagent`, xem `references/inline.md`) |
 | Implement, viết test | agent domain theo `kind`; task `DOCS`: `general-purpose` |
 | Task review, re-review, review cuối | `backend-reviewer` / `frontend-reviewer` (chỉ đọc); DOCS/TOOLING dùng `general-purpose` |
 | Quality/security gate | `engineering-quality-auditor`, chỉ ở review cuối |
@@ -62,12 +71,13 @@ không cần khai báo model riêng cho từng task.
   hỏi trước mỗi commit theo `git-workflow`.
 - Agent không commit, không push, không gọi agent khác. Session chính commit sau mỗi task bằng `git-workflow`
   (`git commit -F`, header tiếng Anh, body tiếng Việt, không `Co-Authored-By`); mỗi task có ≥ 1 commit; không amend hay
-  squash khi người dùng chưa xác nhận.
+  squash khi người dùng chưa xác nhận. Ngoại lệ duy nhất: subagent part (`partRunner: subagent`) đóng vai session của
+  part và tự commit trên nhánh part theo `references/inline.md`.
 - Chạy liên tục giữa các task, nhưng **dừng hỏi người dùng** (không ghi `Ruling:` rồi chạy tiếp) trong 6 trường hợp:
   việc không đảo ngược được hoặc phá huỷ; bảo mật; tác động ngoài repo (merge, push, publish; ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` mà người dùng đã đồng ý ở
-  bước 3 của "Chế độ part" là merge local, không dừng); finding chạm schema DB; plan hỏng đến mức mọi hướng đều là đoán;
+  bước 3 của "Chế độ part" (câu trả lời, hoặc khoá `partRunner: subagent`) là merge local, không dừng); finding chạm schema DB; plan hỏng đến mức mọi hướng đều là đoán;
   phải đổi một AC người dùng đã duyệt. Chi tiết ở `references/task-loop.md`.
-- Không merge, không push khi người dùng chưa chọn ở bước kết thúc nhánh (trừ merge part local đã được đồng ý, xem trên); không xoá nhánh khi chưa được xác nhận rõ.
+- Không merge, không push khi người dùng chưa chọn ở bước kết thúc nhánh (trừ merge part local đã được đồng ý, xem trên; `mergeLocal: true` biến duyệt G3 thành chọn merge local; không khoá nào bật push); không xoá nhánh khi chưa được xác nhận rõ (trừ `cleanup: true`: chỉ nhánh đã là tổ tiên của nhánh gốc, xem `references/finish.md`).
 - Không tuyên bố task hoặc plan xong khi chưa có evidence lệnh kiểm chứng; kết quả agent báo "xanh" phải đối chiếu bằng
   diff và lần chạy test của chính session chính.
 - Ledger, brief và review package nằm ở `<gốc repo chính>/.aip/runs/<request>/<part>/` (`<part>` là `root` cho plan gốc) và không bao giờ được commit (`.aip/.gitignore` chứa `*`). Ba script tự tính đường dẫn từ plan và in ra; ledger `.sdd/progress.md` cũ được chép sang một lần.
@@ -81,4 +91,4 @@ không cần khai báo model riêng cho từng task.
   [re-review.md](references/prompts/re-review.md), [final-review.md](references/prompts/final-review.md): mẫu prompt giao việc.
 - [references/inline.md](references/inline.md): chế độ inline, session chính tự thực thi plan; dòng ledger inline cần `tests: <lệnh> exit 0`.
 - [references/finish.md](references/finish.md): kết thúc nhánh.
-- `scripts/task-brief.mjs`, `scripts/review-package.mjs`, `scripts/ledger.mjs`: Node thuần, không cần bash.
+- `scripts/task-brief.mjs`, `scripts/review-package.mjs`, `scripts/ledger.mjs`, `scripts/autonomy.mjs` (in JSON khoá `autonomy` hiệu lực): Node thuần, không cần bash.

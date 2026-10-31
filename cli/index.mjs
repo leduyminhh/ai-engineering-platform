@@ -19,6 +19,7 @@ import { install, uninstall, update, check, knownPluginIds } from './lib/install
 import { pack } from './lib/pack.mjs';
 import { init } from './lib/init.mjs';
 import { runMode, modeRoot } from './lib/mode.mjs';
+import { runAutonomy } from './lib/autonomy.mjs';
 import { PROVIDERS, scopeRoot } from './lib/paths.mjs';
 import { runWizard } from './lib/wizard.mjs';
 import { WizardUnavailable } from './lib/prompt.mjs';
@@ -238,6 +239,9 @@ LỆNH
   mode <full|ask|status>    chế độ quyền của project (chỉ project, không nhận -g): full = ghi mode=full vào
                             .claude/aip-gate.json (hook bỏ xác nhận khi phiên chạy bypassPermissions); ask = bỏ khóa mode
                             và sinh lại .claude/settings.json chuẩn nếu là bản full do aip sinh; status = xem hiện trạng
+  autonomy <high|safe|status> mức hỏi của luồng plan-execution (chỉ project, không nhận -g): high = ghi autonomy
+                            {mergeLocal: true, cleanup: true, partRunner: "subagent"} vào .claude/aip-gate.json; safe = bỏ khóa
+                            (hỏi như mặc định); status = in giá trị hiệu lực. Push luôn hỏi; G1/G2/G3 vẫn dừng
   list                      liệt kê adapter + plugin tìm được
   help                      hiện trợ giúp này (hoặc -h, --help)
 
@@ -318,6 +322,11 @@ async function main() {
         process.exitCode = 2; return;
       }
       process.exitCode = runMode(sub, { root: modeRoot(process.cwd()) });
+      return;
+    }
+    case 'autonomy': {
+      if (args.scope === 'global') { console.error('aip autonomy chỉ áp dụng cho phạm vi project (thư mục hiện tại), không nhận -g.'); process.exitCode = 2; return; }
+      process.exitCode = runAutonomy(args._.slice(1).join(' '), { root: modeRoot(process.cwd()) });
       return;
     }
     case 'list':

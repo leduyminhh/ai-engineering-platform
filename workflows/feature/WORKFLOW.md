@@ -39,6 +39,8 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 
 Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint người duyệt thì gắn ⏸ cuối tên bước.
 
+Ở workflow này, ⏸ ở Bước 2 là điểm dừng hỏi làm rõ (một tin nhắn gom, chỉ khi còn câu cần hỏi), không phải cổng duyệt; ba cổng duyệt là G1 (Bước 3), G2 (Bước 4), G3 (Bước 7).
+
 ### Bước 1 — Baseline build/test
 
 - **Thực hiện:** session chính
@@ -56,27 +58,28 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** session chính, theo skill `engineering-spec-writing` (không giao agent hỏi người dùng)
 - **Đầu vào:** mô tả yêu cầu/user story của người dùng + baseline Bước 1
 - **Hành động:** chạy quy trình làm rõ của skill: cổng "đủ thông tin" (đủ thì không hỏi), lối thoát cho người dùng
-  bỏ qua phần hỏi, hỏi từng câu một và tóm tắt lại từng phần, đề xuất 2–3 hướng kèm 1 khuyến nghị và đánh đổi, xếp
+  bỏ qua phần hỏi, gom mọi câu còn lại vào một tin nhắn (mỗi câu kèm phương án khuyến nghị; không hỏi từng câu qua nhiều lượt) rồi tóm tắt lại những gì đã hiểu, đề xuất 2–3 hướng kèm 1 khuyến nghị và đánh đổi, xếp
   cỡ việc (việc rõ và nhỏ → không chạy workflow, làm thẳng; thay đổi nhỏ; dự án), tách các request độc lập.
   Xác định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`. Phạm vi cần đổi schema DB
   (bảng/cột/index/migration) → dừng, đề xuất chạy skill `data-db-migration` (chế độ `change`, plugin `data`)
   trước rồi quay lại feature. Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
-  chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do). Ở checkpoint, hỏi người dùng có tách task
+  chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do). Trong chính tin nhắn gom, hỏi người dùng có tách task
   không (gợi ý có khi phạm vi `fullstack` hoặc ≥ 2 use case); khi người dùng chọn tách task → đọc
-  `references/task-breakdown.md`, mục Bước 2 (`tasks.md` được ghi ở Bước 3). Chưa duyệt checkpoint này → chưa sang
-  Bước 3.
-- **Ràng buộc:** hỏi từng câu một; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả định]`; chưa ghi
+  `references/task-breakdown.md`, mục Bước 2 (`tasks.md` được ghi ở Bước 3). Chưa có câu trả lời cho tin nhắn gom →
+  chưa sang Bước 3. Bước này không phải cổng duyệt: hướng, cỡ việc, phạm vi và bảng e2e được duyệt cùng tài liệu ở G1
+  (Bước 3).
+- **Ràng buộc:** một tin nhắn gom mọi câu hỏi, không hỏi từng câu; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả định]`; chưa ghi
   tài liệu ở bước này (Bước 3 ghi); người dùng bỏ qua phần hỏi → agent tự chọn hướng, ghi "quyết định của agent",
-  không hỏi thêm; chỉ phân rã task khi người dùng chọn ở checkpoint.
-- **Đầu ra:** tóm tắt trình duyệt trong chat: hướng đã chọn (kèm hướng bị loại), cỡ việc, phạm vi BE/FE/fullstack,
+  không hỏi thêm; chỉ phân rã task khi người dùng chọn trong tin nhắn gom.
+- **Đầu ra:** tóm tắt trong chat (kèm tin nhắn gom hoặc ngay sau câu trả lời; duyệt ở G1): hướng đã chọn (kèm hướng bị loại), cỡ việc, phạm vi BE/FE/fullstack,
   bảng ứng viên e2e (nếu có), quyết định có tách task hay không; cỡ "thay đổi nhỏ" có API và repo chưa có contract cho
   API đó thì nêu mặc định không viết file contract, người dùng chọn có thì Bước 3 viết.
-- **Gate:** người dùng duyệt hướng và cỡ việc; phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc
+- **Gate:** mọi câu làm rõ đã được trả lời trong một tin nhắn (hoặc không còn câu nào cần hỏi); phạm vi ∈ {backend, frontend, fullstack}; không đổi schema, hoặc
   migration đã viết và verify qua `data-db-migration`; có FE thì có bảng ứng viên e2e hoặc ghi "không có e2e"; cỡ
   "việc rõ và nhỏ" thì kết thúc workflow tại đây.
-- **Khi fail:** thông tin còn mơ hồ/không đo được sau khi hỏi → hỏi lại người dùng, không tự suy diễn tiếp; phạm vi
+- **Khi fail:** thông tin còn mơ hồ/không đo được sau khi hỏi → hỏi lại người dùng bằng một tin nhắn gom, không hỏi từng câu, không tự suy diễn tiếp; phạm vi
   có đổi schema → dừng, đề xuất skill `data-db-migration`.
-- **Evidence:** bản tóm tắt đã trình (hướng, cỡ việc, phạm vi, bảng e2e) + dòng xác nhận của người dùng, hoặc dòng
+- **Evidence:** bản tóm tắt đã trình (hướng, cỡ việc, phạm vi, bảng e2e) + câu trả lời của người dùng cho tin nhắn gom (hoặc dòng "không còn câu cần hỏi"), hoặc dòng
   "bỏ qua phần hỏi — quyết định của agent".
 
 ### Bước 3 — Tài liệu ⏸
@@ -104,10 +107,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Gate:** acceptance criteria đo được; builder check xong và câu của người dùng đã được trả lời; contract OpenAPI
   hợp lệ hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ"; có ảnh hưởng kiến trúc thì ADR đã viết; có `tasks.md` thì `check-tasks.mjs`
   báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và Checkpoint 1 của
-  `engineering-task-breakdown` đã duyệt; người dùng đã duyệt tài liệu.
+  `engineering-task-breakdown` đã duyệt; người dùng đã duyệt tài liệu cùng hướng, cỡ việc, phạm vi và bảng ứng viên e2e đã trình ở Bước 2 (G1, tính là duyệt E2).
 - **Khi fail:** acceptance criteria không đo được hoặc agent `blocked` mà session chính không tự trả lời được →
   hỏi người dùng (gom một tin nhắn); contract xung đột với hệ thống hiện có → dừng, hỏi lại người dùng cách xử lý
-  breaking change; tài liệu cho thấy hướng hoặc cỡ việc đã duyệt sai → quay lại Bước 2.
+  breaking change; tài liệu cho thấy hướng hoặc cỡ việc đã chốt sai → quay lại Bước 2.
 - **Evidence:** đường dẫn `requirement.md` (+ `design.md`) + trích đoạn acceptance criteria; kết quả builder check
   (số câu theo nhóm đã trả lời/nhỏ/của người dùng); đường dẫn contract (hoặc dòng "không có API") + đường dẫn ADR nếu
   có; có `tasks.md` thì đường dẫn + output `check-tasks.mjs` (dòng tổng + exit code) hoặc kết quả checklist thủ công.
@@ -139,7 +142,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   agent `frontend-reviewer` (chỉ phía có đụng)
 - **Đầu vào:** `plan.md` đã duyệt (cỡ "thay đổi nhỏ": không có `plan.md`, brief là `requirement.md`) + `requirement.md`
   (acceptance criteria từ Bước 3) + contract (nếu có) + `design.md`/`tasks.md` (nếu có) + baseline Bước 1 + bảng ứng
-  viên e2e đã duyệt ở Bước 2 (đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
+  viên e2e đã duyệt ở G1 (Bước 3; đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
 - **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó). Chuẩn bị ledger
   `<gốc repo chính>/.aip/runs/<request>/<part>/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
   xong). Mỗi task theo thứ tự: ghi BASE → cắt brief → giao agent theo `**Kind:**` (chuỗi agent do
@@ -156,13 +159,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là
   `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
   API thật); phạm vi backend hoặc frontend chạy một task duy nhất, task id `1`; phạm vi fullstack chạy hai task, `1` là
-  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc, hỏi người dùng một lần trước mỗi nhóm Song song).
+  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc; cách chạy nhóm Song song theo khoá `partRunner` của `autonomy.mjs`, thiếu khoá thì hỏi người dùng một lần trước mỗi nhóm Song song).
 - **Ràng buộc:** chỉ sửa file trong `**Files:**` của task; không giả lập data ẩn; không sửa code production để "cho test
   xanh", không xoá hay nới test, không viết test phụ thuộc thứ tự/thời gian thực/mạng thật; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator chưa có codegen/thư viện data → dừng, đề
   xuất, chờ người dùng chọn; không viết tay type trùng contract; không gọi `fetch`/`axios` trong component; e2e chỉ chạy
   trên môi trường local/test — thiếu BE/DB test thì agent trả `not_run` + lý do, không tự dựng hạ tầng; không chạy full
-  suite ở từng task; agent không commit, không push, không gọi agent khác.
+  suite ở từng task; agent không commit, không push, không gọi agent khác (ngoại lệ: subagent part của `partRunner: subagent` tự commit trên nhánh part theo `inline.md`).
 - **Đầu ra:** code + test của từng task, mỗi task ≥ 1 commit trên nhánh `feature/`, ledger cập nhật; có part thì Bảng part cập nhật (mọi part `merged <hash>` hoặc `bỏ`).
 - **Gate:** mọi task có dòng `Task <n>: complete` kèm evidence test (lệnh + exit code); có part thì mọi part `merged <hash>` hoặc `bỏ` trong Bảng part; mỗi acceptance criterion ≥ 1 test
   (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào `remaining_risks`); task TDD `có` có `tdd.red` và `tdd.green`; không
@@ -219,17 +222,18 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   sống `docs/specs/<capability>/spec.md` theo `## Ảnh hưởng spec` (không ảnh hưởng thì ghi lý do); chạy
   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (thêm `--base <nhánh
   gốc>` khi có spec sống); bump version/lock theo quy ước dự án nếu cần; chạy full suite của mọi component bị chạm và
-  component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings`; trình diff cả nhánh để người dùng duyệt và đưa
-  đúng 3 lựa chọn: merge local / push + PR / giữ nguyên (mặc định); ghi `Plan: complete` vào ledger sau khi việc của lựa
+  component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings`; trình diff cả nhánh (G3) để người dùng duyệt, cùng tên nhánh gốc đề xuất (nhiều ứng viên thì hỏi chọn ngay trong tin nhắn G3). Khoá `mergeLocal` bật thì bản trình G3 nêu nhánh gốc và hai commit sẽ tạo, duyệt rõ G3 là
+  đồng ý merge local (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, xanh mới commit merge, đỏ hoặc conflict thì `git merge --abort`; rồi một commit docs đặt `merged` và xoá plan trên nhánh gốc, rồi dọn theo `cleanup`, xem `finish.md`), push/PR hỏi riêng một lần sau merge local; thiếu khoá thì đưa
+  đúng 3 lựa chọn ngay trong câu hỏi G3: merge local / push + PR / giữ nguyên (mặc định), chọn push + PR là đồng ý push, không hỏi lại. Ghi `Plan: complete` vào ledger sau khi việc của lựa
   chọn xong.
 - **Ràng buộc:** không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`; không merge, không push khi người dùng chưa
-  chọn (không trả lời → giữ nguyên) và không push lên nhánh protected; không xoá nhánh, amend, squash hay force-push khi
-  chưa được xác nhận; không đưa 3 lựa chọn khi full suite còn đỏ; không xoá `**Files:**` hay test để tắt cảnh báo của
+  chọn (không trả lời → giữ nguyên; `mergeLocal: true` đã là chọn merge local, không khoá nào bật push) và không push lên nhánh protected; không xoá nhánh, amend, squash hay force-push khi
+  chưa được xác nhận (ngoại lệ: `cleanup: true` chỉ xoá nhánh đã là tổ tiên của nhánh gốc, theo `finish.md`); không đưa G3 hay 3 lựa chọn khi full suite còn đỏ; không xoá `**Files:**` hay test để tắt cảnh báo của
   `check-request.mjs`.
 - **Đầu ra:** docs và spec sống cập nhật (hoặc ghi "không ảnh hưởng"), output `check-request.mjs`, kết quả full suite,
   `rulings`, lựa chọn của người dùng cùng việc đã làm theo lựa chọn đó.
 - **Gate:** docs/spec sống đã cập nhật hoặc ghi "không ảnh hưởng"; `check-request.mjs` không còn cảnh báo chưa xử lý;
-  full suite xanh; người dùng đã duyệt diff cả nhánh và chọn một trong 3 lựa chọn.
+  full suite xanh; người dùng đã duyệt diff cả nhánh (G3) và chọn một trong 3 lựa chọn (hoặc `mergeLocal: true` đã gồm lựa chọn merge local).
 - **Khi fail:** full suite đỏ → dừng, sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked`; không xác định được docs
   nào bị ảnh hưởng → hỏi lại người dùng; người dùng yêu cầu sửa thêm sau khi xem diff → quay lại Bước 5, tối đa 2 lần
   rồi hỏi người dùng.
@@ -239,16 +243,17 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ## Checkpoint
 
+Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); thiếu khoá `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3, còn `mergeLocal: true` thì câu hỏi push/PR đứng riêng một lần sau merge local. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá, Bước 5) và 6 loại dừng của `plan-execution`.
+
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
-| 2 | Hướng đã chọn (kèm hướng bị loại) + cỡ việc + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có) + quyết định tách task | Người dùng xác nhận hướng và cỡ việc (và bảng e2e, tính là duyệt E2); bỏ qua phần hỏi thì các quyết định của agent được nêu nổi bật |
-| 3 | `requirement.md` (+ `design.md` cỡ dự án) + kết quả builder check; contract OpenAPI (nếu có) hoặc ghi chú "không có API"; ADR (nếu có) | Người dùng xác nhận tài liệu, contract/ADR, hoặc đồng ý không cần |
-| 4 | `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (+ `check-partition.mjs` khi có part) (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9; `check-partition.mjs` không còn cảnh báo (hoặc nhóm bị báo chạy tuần tự) |
-| 7 | Diff cả nhánh (code + test + docs) + `rulings` + finding `major` còn lại trong `remaining_risks` + kết quả full suite | Người dùng duyệt diff cả nhánh, chấp nhận các `Ruling:`/`major` còn lại và chọn một trong 3 lựa chọn |
+| 2 (làm rõ, không phải cổng) | Một tin nhắn gom mọi câu hỏi làm rõ, kèm tóm tắt hướng/cỡ việc/phạm vi/bảng e2e/quyết định tách task | Người dùng trả lời tin nhắn gom (hoặc không còn câu cần hỏi); bỏ qua phần hỏi thì các quyết định của agent được nêu nổi bật |
+| 3 (G1) | Hướng đã chọn (kèm hướng bị loại) + cỡ việc + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có); `requirement.md` (+ `design.md` cỡ dự án) + kết quả builder check; contract OpenAPI (nếu có) hoặc ghi chú "không có API"; ADR (nếu có) | Người dùng xác nhận hướng, cỡ việc (và bảng e2e, tính là duyệt E2), tài liệu, contract/ADR, hoặc đồng ý không cần |
+| 4 (G2) | `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (+ `check-partition.mjs` khi có part) (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9; `check-partition.mjs` không còn cảnh báo (hoặc nhóm bị báo chạy tuần tự) |
+| 7 (G3) | Diff cả nhánh (code + test + docs) + `rulings` + finding `major` còn lại trong `remaining_risks` + kết quả full suite | Người dùng duyệt diff cả nhánh, chấp nhận các `Ruling:`/`major` còn lại; có `mergeLocal: true` thì đó là đồng ý merge local, không thì chọn một trong 3 lựa chọn |
 
-Vòng task (Bước 5) và review cuối (Bước 6) chạy liên tục, không có checkpoint; chỉ dừng hỏi người dùng ở các loại dừng của
-`plan-execution`. Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
-tag chỉ sau lựa chọn của người dùng ở Bước 7; ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời trước nhóm Song song (Bước 5) là merge local, không chờ Bước 7; agent không tự commit.
+Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution` và câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một lượt): session chính chỉ nói ở G1, G2, G3, câu hỏi push, câu hỏi cách chạy part, loại dừng hoặc lỗi chặn (định nghĩa ở mục "Báo cáo" của `task-loop.md` trong skill `plan-execution`). Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
+tag chỉ sau lựa chọn của người dùng ở Bước 7 (`mergeLocal: true` đã là chọn merge local; không khoá nào bật push); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời trước nhóm Song song, hoặc khoá `partRunner: subagent` (Bước 5), là merge local, không chờ Bước 7; agent không tự commit (ngoại lệ: subagent part theo `inline.md`).
 
 ## Xử lý lỗi & rollback
 
@@ -259,11 +264,12 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Baseline đỏ (Bước 1) | Dừng `blocked`, không tiếp tục trên baseline đỏ; đề xuất workflow-bugfix (bugfix: báo người dùng) |
 | Build/test đỏ hoặc finding review trong một task (Bước 5) | Vòng sửa của task: tối đa 3 vòng, vòng 3 agent mới chạy opus, rồi `Ruling:`; không xoá/nới test |
 | `agent_result` hỏng (Bước 5) | Giao lại cho chính agent đó, tối đa 2 lần rồi hỏi người dùng |
-| Yêu cầu mơ hồ (Bước 2–3) | Dừng, hỏi lại người dùng từng câu (builder check gom một tin nhắn) |
+| Yêu cầu mơ hồ (Bước 2–3) | Dừng, gom mọi câu hỏi vào một tin nhắn rồi hỏi người dùng (cả Bước 2 lẫn builder check) |
 | Việc rõ và nhỏ (Bước 2) | Không chạy workflow; làm thẳng và báo người dùng |
 | `check-request.mjs` còn cảnh báo ngoài W9 (Bước 4) | Sửa `plan.md`; lỗi ở tài liệu → quay lại Bước 3, tối đa 2 lần rồi hỏi người dùng |
 | Finding `blocker` sau review cuối (Bước 6) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
-| Full suite đỏ (Bước 7) | Dừng, không đưa 3 lựa chọn; sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
+| Full suite đỏ (Bước 7) | Dừng, không đưa G3 hay 3 lựa chọn (và không merge dù `mergeLocal: true`); sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
+| Merge local theo khoá `mergeLocal`: cây bẩn, conflict hoặc suite đỏ trên cây đã merge (Bước 7) | Lỗi chặn: cây bẩn thì không checkout; conflict hoặc đỏ thì `git merge --abort` (nhánh gốc giữ nguyên); dừng, báo người dùng, không dọn |
 | Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy skill `data-db-migration` trước rồi quay lại feature |
 
 Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
@@ -272,7 +278,7 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
   phạm vi feature; việc thuộc loại dừng của `plan-execution`; người dùng không duyệt diff cả nhánh.
 - **Rollback:** các task đã commit trên nhánh `feature/`; người dùng huỷ giữa chừng thì bỏ commit hoặc nhánh bằng thao
   tác git thủ công của họ (workflow không tự `reset --hard`, không xoá nhánh, không amend hay squash khi chưa được xác
-  nhận). Chưa chọn ở Bước 7 thì không có merge vào nhánh gốc hay push nào để hoàn tác; merge part vào `feature/<slug>` (nếu có) hoàn tác bằng thao tác git thủ công của người dùng.
+  nhận; ngoại lệ: `cleanup: true` xoá nhánh đã merge theo `finish.md`). Chưa duyệt G3 (hoặc chưa chọn ở Bước 7) thì không có merge vào nhánh gốc hay push nào để hoàn tác; merge local theo khoá `mergeLocal` gặp conflict hoặc suite đỏ đã được `git merge --abort` nên nhánh gốc không đổi; merge part vào `feature/<slug>` (nếu có) hoàn tác bằng thao tác git thủ công của người dùng.
 
 ## Definition of Done
 
@@ -288,7 +294,7 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
 - [ ] Review cuối toàn nhánh: 0 `blocker`; có contract: 0 drift contract↔code; có API: 0 `blocker` về
   authorization/input validation — evidence: Bước 6
 - [ ] Docs và spec sống bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng", `check-request.mjs` và full suite xanh;
-  người dùng đã duyệt diff cả nhánh và chọn một trong 3 lựa chọn — evidence: Bước 7
+  người dùng đã duyệt diff cả nhánh (G3) và chọn một trong 3 lựa chọn (hoặc `mergeLocal: true`) — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)
 - [ ] 0 finding `blocker`
 
