@@ -67,6 +67,30 @@ export default async function run({ ok, ctx }) {
       console.log = () => {};
       try { rc = lg.main([tmp, accept[0]], deps); } finally { console.log = logged; }
       ok(rc === 0 && fs.readFileSync(file, 'utf8').includes(accept[0]), 'AC5.2: main ghi dòng inline đủ evidence như cũ');
+
+      // AC2.4, AC2.5 (docs/requests/2026-10-31-part-mode-tooling-gaps): main đòi red: theo TDD của task trong plan
+      fs.writeFileSync(path.join(tmp, 'plan.md'), [
+        '### Task 1: a', '**Kind:** TOOLING', '**TDD:** có', '',
+        '### Task 2: b', '**Kind:** TOOLING', '**TDD:** không — chỉ đổi docs', '',
+        '### Task 3: c', '**Kind:** BE', '',
+      ].join('\n'));
+      const tests = 'tests: npm test exit 0';
+      const red = 'red: npm test exit 1';
+      for (const [line, want, why] of [
+        [`Task 1: complete (commits a..b, review clean, ${tests})`, 2, 'AC2.4: TOOLING TDD có thiếu red: → từ chối'],
+        [`Task 3: complete (commits a..b, inline, ${tests})`, 2, 'AC2.4: dòng inline của task TDD có thiếu red: → từ chối'],
+        [`Task 1: complete (commits a..b, review clean, ${red}, ${tests})`, 0, 'AC2.4: TOOLING TDD có kèm red: → ghi'],
+        [`Task 2: complete (commits a..b, review clean, ${tests})`, 0, 'AC2.5: TDD không → không đòi red:'],
+        ['Task 3: complete (commits a..b, review clean)', 0, 'AC2.5: BE (red nằm trong agent_result) → không đòi red:'],
+        ['Task 9: complete (commits a..b, review clean)', 0, 'AC2.5: task không có trong plan → giữ kiểm cũ'],
+      ]) {
+        const before = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+        console.error = () => {};
+        console.log = () => {};
+        try { rc = lg.main([tmp, line], deps); } finally { console.error = realError; console.log = logged; }
+        const wrote = (fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '') !== before;
+        ok(rc === want && wrote === (want === 0), why);
+      }
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   }
 
