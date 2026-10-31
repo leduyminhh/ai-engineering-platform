@@ -9,7 +9,7 @@ Review cuối nhánh `feature/part-mode-tooling-gaps` và lượt thử 3 (`../2
 3. `task-review.md`: reviewer không được chạy git, nhưng không được bảo kiểm file của commit đỏ qua mục `## Commits` của review package (có từ `ddb7341`).
 4. `workflows/R7` nói review cuối dùng `general-purpose` `model: opus` khi diff không chạm backend/frontend; `workflows/feature/WORKFLOW.md` Bước 6 chỉ nêu `backend-reviewer`/`frontend-reviewer`.
 ## Quyết định đã chốt
-- (1) `ledger.mjs`: tách dòng bằng `/\r\n|\r|\n/` ở `validateLine` và `main`. `RED_RE` đòi `red: \S… exit <n>`. Dòng `complete` của task TDD `có` do session chính làm (selfRun) phải có `tests: <lệnh> exit 0` và không có exit khác 0 ngoài khối `red:` — cùng kiểm với dòng inline.
+- (1) `ledger.mjs`: tách dòng bằng `/\r\n|\r|\n/` ở `validateLine` và `main`. `RED_RE` đòi một lệnh (không mở đầu bằng `tests:`) giữa `red:` và `exit <n>`. Dòng `complete` của task TDD `có` do session chính làm (selfRun) phải có `tests: <lệnh> exit 0` và không có exit khác 0 ngoài khối `red:` — cùng kiểm với dòng inline.
 - (2) `final-review.md`: task sửa thêm vào plan gốc ghi `Task <n>: complete (…)` theo `task-loop.md` bước 9 sau re-review. `task-loop.md` bước 9: `review clean` = `spec_verdict: compliant` và không còn finding `blocker`/`major` mở.
 - (3) `task-review.md` bước 3: TDD `có` thì kiểm qua mục `## Commits` của review package rằng commit đỏ chỉ chứa file test và đứng trước commit code.
 - (4) Sửa `WORKFLOW.md` Bước 6 cho khớp R7 (không đổi R7 về nghĩa). `general-purpose` không phải agent của plugin nên ghi không có chữ `agent` đứng trước: `graph.json` không đổi, bump `workflows` vì nội dung chiếu ra đổi.
@@ -22,7 +22,7 @@ Review cuối nhánh `feature/part-mode-tooling-gaps` và lượt thử 3 (`../2
 - [ ] **AC3.1** — Given task TDD `có` When reviewer đọc `task-review.md` Then được bảo kiểm file của commit đỏ qua mục `## Commits` của review package
 - [ ] **AC4.1** — Given diff toàn nhánh không chạm backend/frontend When đọc `workflows/feature/WORKFLOW.md` Bước 6 Then reviewer là `general-purpose` `model: opus`, khớp R7, và `graph.json` vẫn qua `checkGraphAgainstBody`
 ## Thiết kế
-- `ledger.mjs`: hằng `LINE_SPLIT = /\r\n|\r|\n/` dùng ở `validateLine` và `main`; `RED_RE = /\bred:\s*\S(?:(?!\btests:).)*? exit (\d+)\b/gi` (`red:x` không dấu cách vẫn là khối red như R12); điều kiện evidence (`INLINE_EVIDENCE_RE` và không `EXIT_FAILED_RE` trên phần đã bỏ `red:`) áp cho dòng inline và cho dòng selfRun TDD `có`.
+- `ledger.mjs`: hằng `LINE_SPLIT = /\r\n|\r|\n/` dùng ở `validateLine` và `main`; `RED_RE = /\bred:\s*(?!tests:)\S(?:(?!\btests:).)*? exit (\d+)\b/gi` (`red:x` không dấu cách vẫn là khối red như R12); điều kiện evidence (`INLINE_EVIDENCE_RE` và không `EXIT_FAILED_RE` trên phần đã bỏ `red:`) áp cho dòng inline và cho dòng selfRun TDD `có`.
 - Mục (2)(3)(4) là câu chữ.
 ## Ảnh hưởng spec
 - workflows: đổi R7

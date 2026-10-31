@@ -16,7 +16,7 @@ const INLINE_EVIDENCE_RE = /\btests: \S.* exit 0\b/;
 const EXIT_FAILED_RE = /\bexit [1-9]/;
 const TASK_COMPLETE_RE = /^Task \d+: complete\b/i;
 // Không vượt qua "tests:": red: thiếu exit không được mượn exit của tests: phía sau. "red: exit 1" không có lệnh thì không tính.
-const RED_RE = /\bred:\s*\S(?:(?!\btests:).)*? exit (\d+)\b/gi;
+const RED_RE = /\bred:\s*(?!tests:)\S(?:(?!\btests:).)*? exit (\d+)\b/gi;
 // Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
 const MAX_LINE = 4096;
 // \r lẻ cũng ngăn dòng: TASK_COMPLETE_RE neo ^ không cờ m, nên "x\rTask 1: complete … inline" sẽ lọt kiểm.
