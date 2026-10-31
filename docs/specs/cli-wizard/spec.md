@@ -1,6 +1,6 @@
 # Spec: cli-wizard
 
-Cập nhật: 2026-10-23
+Cập nhật: 2026-10-31
 
 ## Mục đích
 
@@ -10,6 +10,7 @@ CLI `aip` và wizard là cửa vào của người dùng; năng lực này gồm
 
 - Gồm: `aip stats --usage [--since <số ngày|yyyy-mm-dd>]` — chỉ phần do request `2026-10-22-cost-tracking` thêm.
 - Gồm: `aip mode full|ask|status` — do request `2026-10-22-permission-modes` thêm; cảnh báo/trạng thái git do request `2026-10-23-permission-modes-phase2` đổi.
+- Gồm: `aip status` và đoạn `⚠ <n> vướng` của `aip statusline` — do request `2026-10-31-aip-status` thêm.
 - Không gồm: hành vi cũ của `init`, wizard, `args` và các chế độ `aip stats` đã có (bảng context, `--session`, `--json`) chưa có yêu cầu trong spec này vì chưa có request nào chạm tới; spec sống tạo dần.
 
 ## Yêu cầu
@@ -20,6 +21,7 @@ CLI `aip` và wizard là cửa vào của người dùng; năng lực này gồm
 - **cli-wizard/R4** — `aip mode full|ask|status` chỉ chạy ở phạm vi project (`-g` và giá trị lạ bị từ chối): `full` ghi `mode: "full"` vào `.claude/aip-gate.json` (giữ các khoá khác, bỏ BOM, chạy lại không đổi gì), `ask` bỏ khoá `mode`, `status` in `mode` và tình trạng `settings.json`; `.claude/settings.json` chỉ bị viết lại (rỗng ở `full`, policy chuẩn ở `ask`) khi trùng byte với bản aip sinh, ngược lại giữ nguyên và liệt kê quy tắc của aip còn trong đó. `full` in cảnh báo khi `aip-gate.json` đang được git theo dõi (full bị bỏ qua; gợi ý `git rm --cached`) hoặc chưa được gitignore, `status` thêm dòng `git:` (theo dõi / ignore / chưa ignore / không xác định); aip không bao giờ sửa `.gitignore`. Lỗi (JSON hỏng, không đọc được file) in ra stderr và exit 1. Nguồn: [2026-10-23-permission-modes-phase2](../../requests/2026-10-23-permission-modes-phase2/design.md) (đổi)
 - **cli-wizard/R5** — `aip statusline` đọc JSON statusLine của Claude Code từ stdin và in một dòng: model, `ctx <n>%` (kèm nhắc bàn giao từ `--soft` mặc định 40 và `--hard` mặc định 60, soft < hard, số trong 1–100, sai thì stderr + mã 2), phút cache còn ấm từ `prompt_cache.expires_at` hoặc `cache nguội`, tiền phiên, hạn mức 5 giờ. Chỉ dùng trường có sẵn trong stdin, không đọc transcript; stdin rỗng, hỏng hoặc không phải object thì in dòng rỗng và thoát mã 0.
 - **cli-wizard/R6** — `aip autonomy high|safe|status` chỉ áp cho project (từ chối `-g`, mã 2; sub lạ hoặc thiếu, mã 2): `high` ghi `autonomy: { mergeLocal: true, cleanup: true, partRunner: "subagent" }` vào `<gốc project>/.claude/aip-gate.json`, `safe` bỏ khoá `autonomy` (không có khoá thì không ghi gì), `status` in giá trị hiệu lực qua `autonomy.mjs` và nguồn; mọi khoá khác giữ nguyên, không đụng `settings.json`. Worktree chưa có file thì chép khoá của repo chính sang file worktree nhưng bỏ `mode` (file repo chính đã commit thì hook bỏ qua full, file worktree chưa theo dõi sẽ âm thầm bật full) và báo một dòng; ngoài repo git thì đọc và ghi thẳng `<cwd>/.claude/aip-gate.json` (vẫn giữ khoá khác); file worktree, file repo chính hoặc file ngoài git hỏng → stderr, mã 1, không ghi. `high` cảnh báo khi file đã được git theo dõi (khoá bị bỏ qua, không có hiệu lực) hoặc chưa gitignore; `status` in mặc định an toàn kèm lý do khi khoá bị bỏ qua vì file đã theo dõi, và dòng `git:` theo trạng thái git của file. Nguồn: [2026-10-31-autonomy-gates](../../requests/2026-10-31-autonomy-gates/design.md) (thêm); test `test/mode.test.mjs`.
+- **cli-wizard/R7** — `aip status [<request>] [--json | --html [--watch]] [--part <nn>]` chỉ đọc (không gọi model): dựng một mô hình từ Bảng part của `design.md`, plan gốc và plan part, ledger cùng `events.jsonl` của mọi part và `git log` nhánh `worktree-<slug>-p<nn>`; không truyền tên thì chọn request có ledger dở ghi gần nhất. Trạng thái part theo thứ tự ưu tiên `vướng` (dòng `Blocked:` mới nhất chưa có `Unblocked:`/`complete` sau nó) > `merged` > `xong chờ merge` > `chờ part phụ thuộc` (không tính là vướng) > `im lặng quá lâu` (không dòng ledger hay commit mới quá `statusStaleMinutes`) > `đang làm` > `chưa làm`. Text mặc định in số tổng và bảng part; `--json` in đủ 7 khối (đầu trang, dải cổng, cần xử lý, số tổng, bảng part, phụ thuộc, chi tiết và sự kiện); `--html` ghi `.aip/runs/<request>/status.html` một file, CSS inline, không tải tài nguyên ngoài, mọi nội dung ledger được escape; `--watch` ghi lại mỗi 10 giây kèm `<meta http-equiv="refresh">`. Request cũ thiếu `events.jsonl`, nhánh part hoặc git vẫn in được bảng, không ném lỗi. `aip statusline` thêm đoạn `⚠ <n> vướng` khi request đang chạy có part vướng (đọc file, không đọc transcript). Skill `core:aip-status` (`/aip-status`) chạy `aip status --json` và `--html`, hiện trang ở panel, widget inline chỉ gồm khối "Cần bạn xử lý" với nút "Xử lý ↗" khi có vướng, hoặc in text khi không có công cụ hiển thị. Nguồn: [2026-10-31-aip-status](../../requests/2026-10-31-aip-status/design.md) (thêm); test `test/status.test.mjs`, `test/statusline.test.mjs`, `test/content/35-aip-status.pin.mjs`
 
 ## Lịch sử
 
@@ -32,3 +34,4 @@ CLI `aip` và wizard là cửa vào của người dùng; năng lực này gồm
 | 2026-10-23 | [2026-10-23-permission-modes-phase2](../../requests/2026-10-23-permission-modes-phase2/design.md) | cli-wizard/R4 | đổi |
 | 2026-10-29 | [2026-10-29-aip-statusline](../../requests/2026-10-29-aip-statusline/design.md) | cli-wizard/R5 | thêm |
 | 2026-10-31 | [2026-10-31-autonomy-gates](../../requests/2026-10-31-autonomy-gates/design.md) | cli-wizard/R6 | thêm |
+| 2026-10-31 | [2026-10-31-aip-status](../../requests/2026-10-31-aip-status/design.md) | cli-wizard/R7 | thêm |

@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 Người dùng cuối không cần clone repo — gói `ai-engineering-platform` phát hành trên npm
 registry, hai bin `aip` và `ai-engineering-platform` trỏ cùng một CLI.
 
-> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree`
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree`). Các plugin (`backend`, `frontend`, `engineering`,
+> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` / `aip-status`
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree` + `core:aip-status`). Các plugin (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) và workflow **không** có trong gói; hãy cài từ source:
 > `git clone` + `npm link` (xem [Bắt đầu nhanh](#bắt-đầu-nhanh)), rồi `aip install --plugin all`, hoặc
 > `aip --all` để mở wizard với mọi skill kể cả draft.
@@ -100,7 +100,7 @@ npx ai-engineering-platform install --provider all --yes
 | Đường dẫn | Vai trò |
 | --- | --- |
 | `plugins/` | Nguồn năng lực: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, cùng `_marketplace.json` và `_cowork.json`. |
-| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (giao thức vòng task, 3 script Node), `skills/using-aip/`, `skills/git-worktree/` và `skills/artifact-templates/` (11 template artifact, gồm `spec` cho spec sống ở `docs/specs/`; `check-request.mjs` cảnh báo W1–W21), và `hooks/` an toàn (chỉ plugin-mode). |
+| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (giao thức vòng task, 3 script Node), `skills/using-aip/`, `skills/git-worktree/`, `skills/aip-status/` (trang tiến độ `aip status`) và `skills/artifact-templates/` (11 template artifact, gồm `spec` cho spec sống ở `docs/specs/`; `check-request.mjs` cảnh báo W1–W21), và `hooks/` an toàn (chỉ plugin-mode). |
 | `evals/` | Case `claude plugin eval` theo plugin (chạy tay; không ship; `npm test` chỉ kiểm cấu trúc). |
 | `templates/` | `init/` khung project (do skill `*-init` drop ra); `project-knowledge/`, `docs/requests/_TEMPLATE/` và `docs/decisions/_TEMPLATE.md` sinh từ `core/skills/artifact-templates/`. |
 | `adapters/` | Chiếu theo provider (`<provider>/adapter.mjs`), auto-discover. `_shared/lib.mjs` chứa logic dùng chung. |
@@ -265,6 +265,7 @@ aip mode      full|ask|status   # chế độ quyền theo project (chỉ phạm
 aip autonomy  high|safe|status  # mức hỏi của luồng plan-execution (chỉ phạm vi project); xem Hooks > Mức tự chủ
 aip stats     [--session <path>] [--json] [--usage [--since <số ngày|yyyy-mm-dd>]]   # kích thước context, hoặc token + tiền theo model, từ transcript
 aip statusline [--soft <n>] [--hard <n>] [--no-color]   # một dòng trạng thái từ JSON của Claude Code trên stdin; xem bên dưới
+aip status [<request>] [--json | --html [--watch]] [--part <nn>]   # xem tiến trình request chia part, chỉ đọc; xem bên dưới
 ```
 
 - **Scope**: `project` (mặc định, cwd) hoặc `global` (`-g` / `--scope global`, thư mục home).
@@ -289,6 +290,7 @@ aip statusline [--soft <n>] [--hard <n>] [--no-color]   # một dòng trạng th
   rỗng, và đếm-tham-chiếu khối managed dùng chung.
 - **`aip stats`** đọc các transcript Claude Code của project hiện tại. Không cờ thì in bảng 10 phiên đầu theo đỉnh context (số lượt, đầu, đỉnh, cuối); `--session <path>` in phân rã đầy đủ một phiên; `--json` in JSON thô. `--usage [--since <số ngày|yyyy-mm-dd>]` (mặc định 7 ngày, lọc theo timestamp của từng dòng) tổng hợp token và tiền theo model, phiên chính so với subagent, kèm tín hiệu cache (đổi model, khoảng nghỉ trên 60 phút trước lượt ghi cache lớn, lượt ghi cache trên 50% context). Tiền lấy từ bản ghi `cost-state` do Claude Code ghi: tính cho cả phiên gồm subagent, không chia theo cửa sổ `--since`, và có thể lệch hóa đơn. aip không có bảng giá (không tự giữ bảng giá) và không dự đoán hạn mức gói; phiên thiếu `cost-state` hiển thị `—` cho tiền. [Unverified] Lệnh dựa vào layout `~/.claude/projects/<slug>/*.jsonl` và ý nghĩa của `cost-state`, đều là nội bộ của Claude Code, không phải hợp đồng công khai. Bảng chỉ hiện tỷ lệ subagent; phân rã theo từng agent nằm ở `--json`. `--since yyyy-mm-dd` nghĩa là 0h UTC của ngày đó. Mỗi `message.id` chỉ tính một lần trên toàn project, kể cả bản sao fork/resume; phiên bị bỏ lượt như vậy được đánh dấu trong bảng (tiền từ `cost-state` không bị trừ). Lệnh chỉ đọc, không in nội dung hội thoại và không ghi gì.
 - **`aip statusline`** đọc JSON Claude Code gửi cho lệnh `statusLine` và in một dòng: model, context % (cảnh báo từ `--soft`, mặc định 40, và khẩn cấp từ `--hard`, mặc định 60, là hai ngưỡng xoay phiên của baseline), số phút cache prompt còn ấm, tiền phiên và hạn mức 5 giờ. Lệnh chỉ dùng các trường Claude Code đã gửi sẵn, không đọc transcript. Bạn tự thêm vào `settings.json`: `{"statusLine":{"type":"command","command":"aip statusline","refreshInterval":60}}` (`refreshInterval` giữ số phút của cache chạy khi phiên rảnh). Màu theo `NO_COLOR` hoặc `--no-color`. [Unverified] chưa quan sát trong phiên Claude Code thật; ngưỡng 40/60 là heuristic chưa kiểm của baseline.
+- **`aip status`** hiện tiến trình một request (mặc định: request có ledger dở trong `.aip/runs/` được ghi gần nhất): đầu trang, dải cổng G1 → G2 → G3 → push, "Cần bạn xử lý" (part vướng hoặc im lặng), số tổng, bảng part, cạnh phụ thuộc có nhãn từ `**Interfaces:**`, chi tiết task và dòng sự kiện. Trạng thái part theo thứ tự ưu tiên: vướng (dòng `Blocked:` mới nhất chưa có `Unblocked:`/`complete` sau nó), merged, xong chờ merge, chờ part phụ thuộc, im lặng quá lâu (không có dòng ledger hay commit mới quá `statusStaleMinutes` trong `.claude/aip-gate.json`, mặc định 30), đang làm, chưa làm. `--json` in mô hình, `--html` ghi `.aip/runs/<request>/status.html` tự chứa, `--watch` ghi lại mỗi 10 giây, `--part <nn>` in chi tiết một part. Lệnh đọc design, plan, ledger, `events.jsonl` và `git log` nhánh part; chỉ ghi `status.html`.
 - Provider cài mặc định: `claude`, `cursor`, `codex`. `antigravity` có build nhưng chỉ cài
   khi gọi tường minh (`--provider antigravity`).
 

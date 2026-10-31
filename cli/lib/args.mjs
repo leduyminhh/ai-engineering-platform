@@ -28,6 +28,10 @@ export function parse(argv) {
     else if (v === '--hard') a.hard = argv[++i];
     else if (v.startsWith('--hard=')) a.hard = v.slice(7);
     else if (v === '--no-color') a.noColor = true;
+    else if (v === '--html') a.html = true;
+    else if (v === '--watch') a.watch = true;
+    else if (v === '--part') a.part = argv[++i];
+    else if (v.startsWith('--part=')) a.part = v.slice(7);
     else if (v === '--as-plugin') { a.mode = 'plugin'; a.explicit = true; } // claude: cài như plugin (qua `claude` CLI)
     else if (v.startsWith('--provider=')) { a.provider = v.slice(11); a.explicit = true; }
     else if (v.startsWith('--plugin=')) { a.plugin = v.slice(9); a.explicit = true; a.pluginExplicit = true; }

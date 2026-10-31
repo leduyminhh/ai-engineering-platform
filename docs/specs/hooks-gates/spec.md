@@ -1,6 +1,6 @@
 # Spec: hooks-gates
 
-Cập nhật: 2026-10-30
+Cập nhật: 2026-10-31
 
 ## Mục đích
 
@@ -33,6 +33,7 @@ Các hook cổng an toàn của core chặn hoặc hỏi trước khi agent làm
 - **hooks-gates/R14** — `session-start` chọn handoff theo thứ tự nguồn: `handoffPath` hợp lệ (R13), rồi `.aip/runs/*/handoff.md` mới nhất (gốc repo chính và gốc worktree hiện tại), rồi `docs/requests/*/handoff.md` mới nhất, rồi `.claude/handoff.md`. Mỗi nguồn được lọc tuổi (`handoffMaxAgeHours`) và nội dung (phần thật sau khi bỏ heading và khung template phải đủ 80 ký tự) ngay tại nguồn, nên handoff cũ hoặc rỗng ở nguồn ưu tiên không che nguồn thấp hơn; nguồn không liệt kê được thì rơi xuống nguồn kế. Chỉ nhận file có đường dẫn thật (sau realpath) nằm trong gốc chứa nó và có đuôi `.md`. Nguồn: [2026-10-30-request-parts-aip-workspace](../../requests/2026-10-30-request-parts-aip-workspace/design.md) (thêm); test `test/contract/90-hooks.contract.mjs`.
 - **hooks-gates/R15** — `.claude/aip-gate.json` có khoá `autonomy` `{ mergeLocal: boolean, cleanup: boolean, partRunner: "subagent" | "session" | "sequential" }` cho mức hỏi của luồng `plan-execution` (không phải quyền công cụ, không hook nào thi hành). `core/skills/plan-execution/scripts/autonomy.mjs` (zero-dependency, không import hook) đọc file ở gốc worktree rồi gốc repo chính như hook (file worktree hỏng vẫn che repo chính; không có git thì đọc cwd), bỏ BOM, in JSON hiệu lực; khoá trong file đã được git theo dõi (hoặc không xác định được trạng thái git) trong repo git bị bỏ qua như `full` ở hook (ngoài repo git thì đọc như thường), chỉ hỏi git khi file có khoá `autonomy`; khoá thiếu, không phải object, JSON hỏng → mặc định an toàn `{ mergeLocal: false, cleanup: false, partRunner: "session" }`; từng trường sai kiểu hoặc ngoài tập rơi về mặc định riêng trường đó. Nguồn: [2026-10-31-autonomy-gates](../../requests/2026-10-31-autonomy-gates/design.md) (thêm); test `test/content/34-autonomy-gates.pin.mjs`.
 - **hooks-gates/R16** — `guard-mcp` từ chối (deny) `mcp__ccd_session__start_session` khi `tool_input.initiation` khác `offer`, không có `tool_input.proposal_id` và không có `tool_input.model` (chuỗi không rỗng): lý do nêu phải truyền `model` (mặc định phiên thực thi là sonnet, cần opus thì truyền tường minh). Quy tắc chạy trước cấu hình nên áp cả khi không có `aip-gate.json` (ngoại lệ của R3); có `model` thì rơi xuống `mcpAllow`/`mcpDeny` như mọi tool; lỗi nội bộ vẫn cho qua. Nguồn: [2026-10-31-autonomy-gates](../../requests/2026-10-31-autonomy-gates/design.md) (thêm); test `test/contract/91-guard-mcp.contract.mjs`.
+- **hooks-gates/R17** — `.claude/aip-gate.json` có khoá `statusStaleMinutes` (số dương) là ngưỡng phút im lặng để `aip status` xếp part đang làm vào `im lặng quá lâu`; thiếu hoặc không phải số dương thì 30. Khoá được đọc theo thứ tự worktree rồi repo chính như các khoá khác và không hook nào thi hành. Nguồn: [2026-10-31-aip-status](../../requests/2026-10-31-aip-status/design.md) (thêm); test `test/status.test.mjs`
 
 ## Lịch sử
 
@@ -59,3 +60,4 @@ Các hook cổng an toàn của core chặn hoặc hỏi trước khi agent làm
 | 2026-10-31 | [2026-10-31-part-mode-tooling-gaps](../../requests/2026-10-31-part-mode-tooling-gaps/design.md) | hooks-gates/R11 | đổi |
 | 2026-10-31 | [2026-10-31-autonomy-gates](../../requests/2026-10-31-autonomy-gates/design.md) | hooks-gates/R15 | thêm |
 | 2026-10-31 | [2026-10-31-autonomy-gates](../../requests/2026-10-31-autonomy-gates/design.md) | hooks-gates/R16 | thêm |
+| 2026-10-31 | [2026-10-31-aip-status](../../requests/2026-10-31-aip-status/design.md) | hooks-gates/R17 | thêm |

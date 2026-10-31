@@ -17,7 +17,7 @@ Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <ngư�
 
 ## Vòng một task
 
-1. Ghi BASE bằng `git rev-parse HEAD`; cắt brief bằng `scripts/task-brief.mjs`; chỉ đọc brief của task này.
+1. Ghi BASE bằng `git rev-parse HEAD` và vào ledger `Task <n>: start (base <hash>)`; cắt brief bằng `scripts/task-brief.mjs`; chỉ đọc brief của task này.
 2. Làm theo step trong brief: task TDD `có` thì test đỏ (chạy, thấy đỏ đúng lý do) → code → test xanh; task `không` thì
    làm theo step của brief. Chỉ task `DOCS`/`TOOLING` thuộc diện `không` (không có test sản phẩm) mới dùng lệnh kiểm
    chứng ghi trong task thay cho test.
@@ -66,7 +66,7 @@ Với `partRunner: subagent` (`task-loop.md`, "Chế độ part" bước 3), m�
   trong worktree làm cây bẩn và cản dọn worktree).
 - Không cần `task-<n>-report.md`: dòng ledger inline (bước 6, có `tests:` và `red:` khi TDD `có`) là bằng chứng của task.
 - Không review từng task (subagent không gọi được agent khác) và không review cuối; lỗi do review cuối toàn nhánh của session gốc bắt.
-- Không sửa `design.md` gốc hay Bảng part. Gặp loại dừng của `task-loop.md` thì trả `blocked` kèm `questions[]` thay vì tự quyết.
+- Không sửa `design.md` gốc hay Bảng part. Gặp loại dừng của `task-loop.md` thì ghi `Blocked: <lý do>` vào ledger part rồi trả `blocked` (hoặc `failed` khi không làm tiếp được) kèm `questions[]` thay vì tự quyết; session gốc gỡ theo mục "Part vướng" của `task-loop.md` và ghi `Unblocked:` vào ledger của part này.
 - Xong thì ghi `Part: complete <hash>` vào ledger của part, với `<hash>` là hash đầy đủ của HEAD nhánh part sau commit task
   cuối (`git -C <worktree> rev-parse HEAD`); session gốc merge khi thấy dòng đó.
 

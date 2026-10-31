@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 End users do not need to clone the repo — the `ai-engineering-platform` package is published
 to the npm registry, and both `aip` and `ai-engineering-platform` bins point to the same CLI.
 
-> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` skills
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree`). Plugins (`backend`, `frontend`, `engineering`,
+> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` / `aip-status` skills
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree` + `core:aip-status`). Plugins (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) and workflows are **not** in the package; install them from source:
 > `git clone` + `npm link` (see [Quickstart](#quickstart)), then `aip install --plugin all`, or
 > `aip --all` to open the wizard with every skill including drafts.
@@ -103,7 +103,7 @@ npx ai-engineering-platform install --provider all --yes
 | Path | Owns |
 | --- | --- |
 | `plugins/` | Canonical capability source: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, plus `_marketplace.json` and `_cowork.json`. |
-| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (task-loop protocol, 3 Node scripts), `skills/using-aip/`, `skills/git-worktree/` and `skills/artifact-templates/` (the 11 artifact templates, incl. `spec` for living specs in `docs/specs/`; `check-request.mjs` warns W1–W21) recipes, and the safety `hooks/` (plugin-mode only). |
+| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (task-loop protocol, 3 Node scripts), `skills/using-aip/`, `skills/git-worktree/`, `skills/aip-status/` (the `aip status` progress page) and `skills/artifact-templates/` (the 11 artifact templates, incl. `spec` for living specs in `docs/specs/`; `check-request.mjs` warns W1–W21) recipes, and the safety `hooks/` (plugin-mode only). |
 | `evals/` | `claude plugin eval` cases per plugin (manual run; not shipped; `npm test` checks structure only). |
 | `templates/` | `init/` project scaffold (dropped by `*-init` skills); `project-knowledge/`, `docs/requests/_TEMPLATE/` and `docs/decisions/_TEMPLATE.md` are generated from `core/skills/artifact-templates/`. |
 | `adapters/` | Per-provider projection (`<provider>/adapter.mjs`), auto-discovered. `_shared/lib.mjs` holds the cross-tool logic. |
@@ -271,6 +271,7 @@ aip mode      full|ask|status   # per-project permission mode (project scope onl
 aip autonomy  high|safe|status  # how often plan-execution asks (project scope only); see Hooks > Autonomy
 aip stats     [--session <path>] [--json] [--usage [--since <days|yyyy-mm-dd>]]   # context size, or token + cost per model, from the transcript
 aip statusline [--soft <n>] [--hard <n>] [--no-color]   # one status line from Claude Code JSON on stdin; see below
+aip status [<request>] [--json | --html [--watch]] [--part <nn>]   # read-only progress of a request split into parts; see below
 ```
 
 - **Scope**: `project` (default, cwd) or `global` (`-g` / `--scope global`, home dir).
@@ -296,6 +297,7 @@ aip statusline [--soft <n>] [--hard <n>] [--no-color]   # one status line from C
   prunes emptied directories, and reference-counts the shared managed block.
 - **`aip stats`** reads the Claude Code transcripts of the current project. Without flags it prints a table of the top 10 sessions sorted by peak context (turns, first, peak, last); `--session <path>` prints the full breakdown of one session; `--json` prints raw JSON. `--usage [--since <days|yyyy-mm-dd>]` (default 7 days, filtered by each line's timestamp) aggregates tokens and money per model, main session vs subagents, plus cache signals (model switches, idle gaps over 60 minutes before a large cache write, cache writes above 50% of context). Money comes from the `cost-state` records that Claude Code writes: it covers the whole session including subagents, is not split by the `--since` window, and can differ from invoices. aip has no price table (no price list of its own) and does not predict plan limits; a session without `cost-state` shows `—` for money. [Unverified] It relies on the layout `~/.claude/projects/<slug>/*.jsonl` and on the meaning of `cost-state`, both internal to Claude Code and not a public contract. The table shows only the subagent share; the per-agent breakdown is in `--json`. `--since yyyy-mm-dd` means 00:00 UTC of that day. Each `message.id` is counted once across the whole project, including fork/resume copies; a session that lost such turns is marked in the table (money from `cost-state` is not reduced). It only reads, never prints conversation content, and writes nothing.
 - **`aip statusline`** reads the JSON Claude Code sends to a `statusLine` command and prints one line: model, context % (a warning from `--soft`, default 40, and an urgent one from `--hard`, default 60, the baseline's session-rotation thresholds), how many minutes the prompt cache stays warm, session cost and the 5-hour rate limit. It only uses fields Claude Code already sends and never reads the transcript. Add it to `settings.json` yourself: `{"statusLine":{"type":"command","command":"aip statusline","refreshInterval":60}}` (`refreshInterval` keeps the cache countdown moving while the session is idle). Colors follow `NO_COLOR` or `--no-color`. [Unverified] not yet observed inside a live Claude Code session; the 40/60 thresholds are the baseline's untested heuristics.
+- **`aip status`** shows the progress of a request (default: the request whose ledger in `.aip/runs/` is unfinished and was written last): header, gates G1 → G2 → G3 → push, "Cần bạn xử lý" (blocked or silent parts), totals, the part table, dependency edges labelled from `**Interfaces:**`, task detail and the event timeline. Part state, in priority order: blocked (latest `Blocked:` with no `Unblocked:`/`complete` after it), merged, done awaiting merge, waiting for a dependency, silent too long (no ledger line or commit for `statusStaleMinutes` from `.claude/aip-gate.json`, default 30), active, not started. `--json` prints the model, `--html` writes a self-contained `.aip/runs/<request>/status.html`, `--watch` rewrites it every 10 seconds, `--part <nn>` prints one part's detail. It reads design, plans, ledgers, `events.jsonl` and `git log` of the part branches; it writes only `status.html`.
 - Providers installed by default: `claude`, `cursor`, `codex`. `antigravity` builds
   but installs only when named explicitly (`--provider antigravity`).
 

@@ -17,7 +17,7 @@ export function parseThresholds({ soft, hard }) {
   return { soft: s, hard: h };
 }
 
-export function renderStatusline(input, { nowMs = Date.now(), soft = DEFAULT_SOFT, hard = DEFAULT_HARD, color = false } = {}) {
+export function renderStatusline(input, { nowMs = Date.now(), soft = DEFAULT_SOFT, hard = DEFAULT_HARD, color = false, blocked = 0 } = {}) {
   if (!input || typeof input !== 'object') return '';
   const paint = (code, text) => (color ? `\x1b[${code}m${text}\x1b[0m` : text);
   const parts = [];
@@ -51,6 +51,8 @@ export function renderStatusline(input, { nowMs = Date.now(), soft = DEFAULT_SOF
 
   const five = num(input.rate_limits?.five_hour?.used_percentage);
   if (five !== null) parts.push(`5h ${Math.round(five)}%`);
+
+  if (num(blocked) > 0) parts.push(paint(31, `⚠ ${blocked} vướng`));
 
   return parts.join(' │ ');
 }
