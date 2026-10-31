@@ -42,4 +42,12 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   }
+
+  // AC3.1, AC3.2: skill /aip-status nêu đủ lệnh, khối hành động và nhánh không có công cụ hiển thị
+  {
+    const t = fs.readFileSync(path.join(REPO_ROOT, 'core', 'skills', 'aip-status', 'SKILL.md'), 'utf8');
+    ok(t.includes('aip status --json') && t.includes('aip status --html'), 'AC3.1: skill nêu cả `aip status --json` lẫn `aip status --html`');
+    ok(t.includes('Cần bạn xử lý') && t.includes('Xử lý ↗'), 'AC3.1: skill nêu khối "Cần bạn xử lý" và nút "Xử lý ↗"');
+    ok(/không có công cụ hiển thị[^\n]*in text/.test(t), 'AC3.2: skill có nhánh không có công cụ hiển thị in text của aip status');
+  }
 }

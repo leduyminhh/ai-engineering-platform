@@ -1,0 +1,40 @@
+---
+name: aip-status
+description: "Xem tiến độ request đang chạy bằng lệnh aip status: trang HTML ở panel, widget chỉ gồm phần cần người dùng xử lý khi có vướng, hoặc text khi không có công cụ hiển thị. Dùng khi người dùng muốn \"xem tiến độ\", \"trạng thái request\", \"tiến độ các part\", \"part nào đang vướng\", \"mở trang tiến độ\". Không dùng khi cần làm tiếp hoặc xử lý vướng của plan → plan-execution."
+order: 8
+title: "AIP Status — xem tiến độ request và phần vướng (dùng chung)"
+runsIn: execute
+invoke: per-request
+---
+
+# AIP Status (skill dùng chung)
+
+Skill chỉ đọc tiến độ qua `aip status`. Nguồn xem chính là `status.html`; widget trong chat chỉ dùng để hành động.
+
+## Quy trình — xem tiến độ
+
+1. **Lấy số liệu.** Chạy `aip status --json` ở gốc worktree; có tên request thì `aip status <request> --json`. Đọc khoá `needs`
+   (mảng `{part, state, reason}`, `state` là `blocked` hoặc `stale`).
+2. **Tạo trang.** Chạy `aip status --html` cùng tham số request. Lệnh in đường dẫn `.aip/runs/<request>/status.html`; lấy đường dẫn đó.
+3. **Hiển thị theo công cụ có sẵn.**
+   - **Phiên có công cụ hiển thị** (app desktop Claude): đưa `status.html` lên panel bên để xem. Nếu `needs` không rỗng, hiện
+     thêm một widget inline CHỈ gồm khối "Cần bạn xử lý": mỗi part một dòng (part, trạng thái, lý do), mỗi dòng có nút
+     "Xử lý ↗" gửi vào chat lệnh `xử lý vướng part <nn>` đúng part đó. Widget không vẽ lại dashboard.
+     [Unverified] Cách app desktop mở panel bên và render widget chưa được kiểm trong môi trường này.
+   - **Phiên không có công cụ hiển thị** (CLI): in text của `aip status` (gọn), không tạo widget.
+4. **Không có request đang chạy.** Lệnh in một dòng và thoát 0; báo đúng dòng đó, không tạo widget.
+5. **Trang tự đưa lên.** Theo thiết kế, session gốc tự đưa `status.html` lên panel ở mỗi cổng G1, G2, G3 và khi một part
+   chuyển sang vướng cần người dùng; skill này là cách người dùng bấm xem bất cứ lúc nào.
+
+## Quy trình — xử lý phần vướng
+
+Khi người dùng bấm "Xử lý ↗" hoặc nhắn `xử lý vướng part <nn>`, làm theo `plan-execution` cho part đó. Không gỡ vướng
+khi người dùng chưa yêu cầu.
+
+## Ranh giới an toàn
+
+- Chỉ đọc. `aip status` chỉ ghi `status.html` trong `.aip/runs/<request>/`; thư mục này có `.gitignore` chứa `*` nên git bỏ qua.
+- Không đưa `status.html`, nội dung ledger hay số liệu ra dịch vụ ngoài (publish, gist, link chia sẻ). File ở máy người dùng.
+- Widget chỉ để hành động: không vẽ lại dashboard, không thêm số liệu ngoài khối "Cần bạn xử lý".
+- Không tự gỡ vướng khi người dùng chưa bấm nút hoặc nhắn; cách xử lý theo `plan-execution`.
+- [Unverified] Với `--watch`, `status.html` có `<meta http-equiv="refresh">`; chưa kiểm trình duyệt có tự làm mới khi mở bằng `file://` hay không.
