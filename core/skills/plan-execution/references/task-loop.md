@@ -59,7 +59,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
      làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này;
    - task `TOOLING` TDD `có` do session chính làm: dòng có dạng
      `Task <n>: complete (commits <a>..<b>, review clean|<k> ruled, red: <lệnh> exit <n khác 0>, tests: <lệnh> exit 0)`.
-     `ledger.mjs` từ chối (exit 2, không ghi) dòng thiếu `red:` của task này. Ở chế độ inline, dòng theo `inline.md` (bước 6).
+     `ledger.mjs` từ chối (exit 2, không ghi) dòng của task này thiếu `red: <lệnh>` hoặc `tests: <lệnh> exit 0`, hay kèm exit khác 0 ngoài `red:`. Ở chế độ inline, dòng theo `inline.md` (bước 6).
 
 ## Vòng sửa
 
