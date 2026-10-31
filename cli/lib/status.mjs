@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { parsePartTable } from '../../core/skills/artifact-templates/scripts/check-request.mjs';
-import { parsePartition } from '../../core/skills/artifact-templates/scripts/check-partition.mjs';
+import { parsePartition, normPath } from '../../core/skills/artifact-templates/scripts/check-partition.mjs';
 import { readGateConfig } from '../../core/hooks/scripts/gate-config.mjs';
 
 export const DEFAULT_STALE_MINUTES = 30;
@@ -111,7 +111,9 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
     const id = r.part;
     const lg = id === 'root' ? root : ledger(id);
     const planText = readText(path.join(reqDir, ...(id === 'root' ? ['plan.md'] : ['parts', id, 'plan.md'])));
-    const tasks = planText ? parsePartition(planText) : [];
+    // parsePartition viết thường đường dẫn để so trùng; trang phải hiện tên file đúng như plan.
+    const original = new Map([...(planText ?? '').matchAll(/`([^`]+)`/g)].map((m) => [normPath(m[1]), m[1].trim()]));
+    const tasks = (planText ? parsePartition(planText) : []).map((t) => ({ ...t, files: t.files.map((f) => original.get(f) ?? f) }));
     const branch = id === 'root' ? `feature/${slug}` : `worktree-${slug}-p${nnOf(id)}`;
     const log = id === 'root' ? null : tryGit(git, ['log', '--format=%H%x09%ct%x09%s', `feature/${slug}..${branch}`], docsRoot);
     const commits = linesOf(log).map((l) => l.split('\t')).filter((c) => c.length >= 3)
@@ -188,12 +190,20 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
 
 const findPart = (model, sel) => model.parts.find((p) => p.id === sel || p.id.startsWith(`${sel}-`));
 const autonomyText = (a) => (a && typeof a === 'object' ? JSON.stringify(a) : 'mặc định');
+// Mô hình giữ ISO UTC (cho --json); người đọc thấy giờ máy: HH:MM nếu cùng ngày với `ref`, không thì dd/mm HH:MM.
+const two = (v) => String(v).padStart(2, '0');
+function clock(iso, ref) {
+  const d = new Date(iso);
+  if (typeof iso !== 'string' || Number.isNaN(d.getTime())) return '—';
+  const hm = `${two(d.getHours())}:${two(d.getMinutes())}`;
+  return ref && new Date(ref).toDateString() === d.toDateString() ? hm : `${two(d.getDate())}/${two(d.getMonth() + 1)} ${hm}`;
+}
 const totalsText = (t) => `Part merged ${t.partsMerged}/${t.partsTotal} · task ${t.tasksDone}/${t.tasksTotal} · vướng ${t.blocked} · Ruling ${t.rulings} · minor ${t.minors}`;
 
 export function renderText(model, { part } = {}) {
   const h = model.header;
   const out = [
-    `aip status — ${h.request} (${h.branch ?? '?'} @ ${h.head ?? '?'}) · autonomy ${autonomyText(h.autonomy)} · cập nhật ${h.updatedAt}`,
+    `aip status — ${h.request} (${h.branch ?? '?'} @ ${h.head ?? '?'}) · autonomy ${autonomyText(h.autonomy)} · cập nhật ${clock(h.updatedAt)}`,
     `Cổng: ${model.gates.map((g) => `${g.id} ${g.done ? '✓' : '·'}`).join(' → ')}`,
   ];
   if (model.needs.length) out.push('Cần bạn xử lý:', ...model.needs.map((n) => `  - ${n.part}: ${STATE_LABELS[n.state]} — ${n.reason}`));
@@ -212,7 +222,7 @@ export function renderText(model, { part } = {}) {
         if (t.files.length) out.push(`    file: ${t.files.join(', ')}`);
       }
       const ev = model.events.filter((e) => e.part === p.id);
-      if (ev.length) out.push('  Sự kiện:', ...ev.map((e) => `    ${e.ts} ${e.text}`));
+      if (ev.length) out.push('  Sự kiện:', ...ev.map((e) => `    ${clock(e.ts, h.updatedAt)} ${e.text}`));
       else if (p.reason) out.push(`  Blocked: ${p.reason}`);
     }
   }
@@ -233,20 +243,20 @@ export function renderHtml(model, { watch = false } = {}) {
   const h = model.header;
   const state = (s) => `<span class="s-${s}">${esc(STATE_LABELS[s])}</span>`;
   const t = model.totals;
-  const parts = model.parts.map((p) => `<tr><td>${esc(p.id)}</td><td>${state(p.state)}</td><td>${p.tasksDone}/${p.tasksTotal}</td><td>${esc(p.deps.join(', ') || '—')}</td><td>${esc(p.group ?? '—')}</td><td class="muted">${esc(p.lastActivity ?? '—')}</td></tr>`).join('');
+  const parts = model.parts.map((p) => `<tr><td>${esc(p.id)}</td><td>${state(p.state)}</td><td>${p.tasksDone}/${p.tasksTotal}</td><td>${esc(p.deps.join(', ') || '—')}</td><td>${esc(p.group ?? '—')}</td><td class="muted">${esc(clock(p.lastActivity, h.updatedAt))}</td></tr>`).join('');
   const graph = model.graph.length
     ? `<ul>${model.graph.map((e) => `<li>${esc(e.from)} → ${esc(e.to)}${e.label.length ? ` <code>${esc(e.label.join(', '))}</code>` : ''}</li>`).join('')}</ul>`
     : '<p class="muted">Không có phụ thuộc.</p>';
   const details = model.parts.map((p) => {
-    const rows = model.details[p.id].map((d) => `<tr><td>Task ${d.n}: ${esc(d.title)}</td><td>${esc(d.start === true ? 'đã start' : d.start ?? '—')}</td><td>${esc(d.complete ?? '—')}</td><td>${d.reviews.map(esc).join('<br>') || '—'}</td><td>${d.minors.map(esc).join('<br>') || '—'}</td><td><code>${esc(d.files.join(', '))}</code></td></tr>`).join('');
+    const rows = model.details[p.id].map((d) => `<tr><td>Task ${d.n}: ${esc(d.title)}</td><td>${esc(d.start === true ? 'đã start' : d.start ? clock(d.start, h.updatedAt) : '—')}</td><td>${esc(d.complete ?? '—')}</td><td>${d.reviews.map(esc).join('<br>') || '—'}</td><td>${d.minors.map(esc).join('<br>') || '—'}</td><td><code>${esc(d.files.join(', '))}</code></td></tr>`).join('');
     return `<h3>${esc(p.id)} ${state(p.state)}</h3>${rows ? `<table><tr><th>Task</th><th>Start</th><th>Complete (commit đỏ/xanh)</th><th>Review</th><th>Minor</th><th>File</th></tr>${rows}</table>` : '<p class="muted">Chưa có plan part.</p>'}`;
   }).join('');
   const events = model.events.length
-    ? `<table>${model.events.map((e) => `<tr><td class="muted">${esc(e.ts)}</td><td>${esc(e.part)}</td><td>${esc(e.text)}</td></tr>`).join('')}</table>`
+    ? `<table>${model.events.map((e) => `<tr><td class="muted">${esc(clock(e.ts, h.updatedAt))}</td><td>${esc(e.part)}</td><td>${esc(e.text)}</td></tr>`).join('')}</table>`
     : '<p class="muted">Chưa có sự kiện có thời điểm (events.jsonl).</p>';
   return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 ${watch ? `<meta http-equiv="refresh" content="${WATCH_SECONDS}">` : ''}<title>aip status — ${esc(h.request)}</title><style>${CSS}</style></head><body>
-<section id="header"><h1>${esc(h.request)}</h1><div class="muted">nhánh ${esc(h.branch ?? '?')} · HEAD ${esc(h.head ?? '?')} · autonomy ${esc(autonomyText(h.autonomy))} · cập nhật ${esc(h.updatedAt)}</div></section>
+<section id="header"><h1>${esc(h.request)}</h1><div class="muted">nhánh ${esc(h.branch ?? '?')} · HEAD ${esc(h.head ?? '?')} · autonomy ${esc(autonomyText(h.autonomy))} · cập nhật ${esc(clock(h.updatedAt))}</div></section>
 <section id="gates" class="gates">${model.gates.map((g) => `<span class="${g.done ? 'done' : ''}">${esc(g.id)} ${g.done ? '✓' : '·'}</span>`).join('→ ')}</section>
 ${model.needs.length ? `<section id="needs" class="needs"><h2>Cần bạn xử lý</h2><ul>${model.needs.map((n) => `<li><b>${esc(n.part)}</b> ${state(n.state)} — ${esc(n.reason)}</li>`).join('')}</ul></section>` : ''}
 <section id="totals" class="totals"><span>Part merged <b>${t.partsMerged}/${t.partsTotal}</b></span><span>Task <b>${t.tasksDone}/${t.tasksTotal}</b></span><span>Vướng <b>${t.blocked}</b></span><span>Ruling <b>${t.rulings}</b> · minor <b>${t.minors}</b></span></section>
