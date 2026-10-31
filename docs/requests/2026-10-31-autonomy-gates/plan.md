@@ -37,7 +37,7 @@
 ### Task 1: autonomy.mjs đọc khoá autonomy
 **Kind:** TOOLING
 **TDD:** có
-**Phủ AC:** AC3.1, AC3.2, AC3.3
+**Phủ AC:** AC3.1, AC3.2, AC3.3, AC3.4
 **Files:**
 - Create: `core/skills/plan-execution/scripts/autonomy.mjs`
 - Test: `test/content/34-autonomy-gates.pin.mjs`
