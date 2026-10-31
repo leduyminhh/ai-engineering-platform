@@ -38,6 +38,9 @@ export default async function run({ ok, ctx }) {
       'Task 2: complete (commits a..b, review clean)\rTask 3: complete (commits c..d, inline)',
       // Regression: red: không được nuốt một khối tests: thất bại làm lệnh của nó
       'Task 2: complete (commits a..b, inline, red: tests: npm test exit 1, tests: npm test exit 0)',
+      // Regression: khối red: không có lệnh vẫn bị bắt, kể cả khi exit 0 và dòng không thuộc task selfRun
+      'Task 2: complete (commits a..b, review clean, red: tests: npm test exit 0)',
+      'Task 2: complete (commits a..b, review clean, red: exit 0)',
     ];
     const accept = [
       'Task 2: complete (commits a..b, inline, tests: npm test exit 0)',
