@@ -105,6 +105,9 @@ export default async function run({ ok, ctx }) {
         [`Task 1: complete (commits a..b, review clean, ${red}, tests: npm test exit 1)`, 2, 'AC1.1: TOOLING TDD có tests: exit khác 0 → từ chối'],
         [`Task 1: complete (commits a..b, review clean, ${red}, ${tests}, lint exit 2)`, 2, 'AC1.1: TOOLING TDD có kèm exit khác 0 ngoài red: → từ chối'],
         [`Task 1: complete (commits a..b, review clean, red: exit 1, ${tests})`, 2, 'AC1.2: red: không có lệnh → từ chối'],
+        // Regression (review cuối F1): "exit" không kèm số sau red: là lệnh hay ghi chú, không phải khối red thiếu lệnh
+        [`Task 1: complete (commits a..b, review clean, red: exit-check.sh exit 1, ${tests})`, 0, 'regression: lệnh red bắt đầu bằng exit- được nhận'],
+        ['Task 3: complete (commits a..b, review clean, hook chặn commit red: exit sớm)', 0, 'regression: ghi chú "red: exit …" ở dòng BE vẫn ghi như cũ'],
       ]) {
         const before = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
         console.error = () => {};
