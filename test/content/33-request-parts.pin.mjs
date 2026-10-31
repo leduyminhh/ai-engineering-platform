@@ -281,6 +281,8 @@ export default async function run({ ok, ctx }) {
       // AC3.4: không --plan → stdout như cũ; --out luôn thắng --plan; --plan thiếu giá trị là sai đối số
       const out = sh('review-package.mjs', [c1, c2], repo);
       ok(out.status === 0 && out.stdout.startsWith('# Review package'), 'AC3.4: không --plan, không --out → package ra stdout như cũ');
+      // Reviewer không được chạy git, nên chỉ từ package mới kiểm được commit đỏ chỉ chứa file test (task-loop bước 6).
+      ok(/## Commits\n[^#]*f\.txt[^#]*\n## Stat/.test(out.stdout), 'AC2.3: mục Commits liệt kê file đổi của từng commit');
       const explicit = path.join(tmp, 'explicit.md');
       const both = sh('review-package.mjs', [c1, c2, '--plan', `${req}/plan.md`, '--out', explicit], repo);
       ok(both.status === 0 && both.stdout.trim() === explicit && fs.existsSync(explicit), 'AC3.4: có cả --plan và --out → ghi theo --out');

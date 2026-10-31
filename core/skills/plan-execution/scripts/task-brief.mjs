@@ -31,7 +31,7 @@ export function extractTask(planText, n) {
 const TDD_KINDS = ['BE', 'TOOLING'];
 
 // Dòng **Kind:** / **TDD:** đầu tiên ngoài khối code (khớp cách check-request đọc plan).
-function taskField(taskText, name) {
+export function taskField(taskText, name) {
   let fenced = false;
   for (const l of taskText.split(/\r?\n/)) {
     if (/^\s*(```|~~~)/.test(l)) { fenced = !fenced; continue; }
@@ -49,7 +49,7 @@ export function effectiveTdd(taskText) {
   if (m && (m[1] === 'có' ? TDD_KINDS.includes(kind) : m[2] !== undefined)) {
     return m[1] === 'có' ? { value: 'có', defaulted: false } : { value: 'không', reason: m[2].trim(), defaulted: false };
   }
-  return { value: TDD_KINDS.includes(kind) ? 'có' : 'không', defaulted: true };
+  return { value: kind === 'BE' ? 'có' : 'không', defaulted: true };
 }
 
 // Brief luôn có đúng một dòng TDD hiệu lực: dòng hợp lệ giữ tại chỗ; thiếu hoặc sai thì bỏ dòng sai và chèn mặc định

@@ -1,7 +1,7 @@
 # Mẫu prompt: review cuối toàn nhánh
 
 Chạy một lần sau task cuối, khi mọi task đã `complete` trong ledger (khi có part: mọi part đã `merged <hash>` hoặc `bỏ`). Gọi `backend-reviewer` và/hoặc `frontend-reviewer` theo
-phía bị chạm (hai phía thì gọi song song), mỗi lần với `model: opus`. Song song với đó là `engineering-quality-auditor`
+phía bị chạm (hai phía thì gọi song song), mỗi lần với `model: opus`. Diff toàn nhánh không chạm phía backend hay frontend (chỉ tooling, script, docs) thì gọi `general-purpose` với `model: opus` thay cho hai reviewer đó, cùng mẫu prompt bên dưới. Song song với đó là `engineering-quality-auditor`
 (quality + security gate); auditor chỉ chạy ở review cuối nhánh, không chạy ở review từng task.
 
 Package là toàn nhánh: `node <thư mục skill plan-execution>/scripts/review-package.mjs <MERGE_BASE> <HEAD> --plan <plan.md>` với
@@ -39,3 +39,6 @@ Trả khối agent_result: findings[], validation[], ruling_review[], declined_t
 Sau review cuối, chỉ một lần sửa cho toàn bộ finding blocker/major (một dispatch, `model: opus`) và một lần re-review có
 phạm vi theo `prompts/re-review.md`; không có làn sửa thứ hai. Finding còn lại và `Ruling:` cần quyết trình người dùng ở
 bước kết thúc nhánh (`references/finish.md`).
+
+AC mới do người dùng chốt từ `questions[]` (mục 7): người dùng duyệt câu AC trong `design.md` trước; session chính thêm `### Task <n>` sửa vào plan gốc, có `**TDD:**`, `**Kind:**`, `**Phủ AC:**` (gồm AC mới) và `**Files:**` với `- Test:`, đúng mẫu task của plan, để `check-request.mjs` không báo W6. Task này đi chung
+đúng một lần dispatch sửa và một lần re-review ở trên, không mở làn sửa thứ hai.
