@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Test cho `aip statusline`: hàm thuần cho nội dung dòng, chạy CLI thật cho đường stdin và mã thoát. Zero-dependency.
 // Chạy: node test/statusline.test.mjs
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +13,7 @@ const CLI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'cl
 let pass = 0;
 const fails = [];
 const ok = (c, m) => { if (c) pass++; else fails.push(m); };
-const run = (args, input) => spawnSync(process.execPath, [CLI, 'statusline', ...args], { input, encoding: 'utf8' });
+const run = (args, input, cwd) => spawnSync(process.execPath, [CLI, 'statusline', ...args], { input, encoding: 'utf8', cwd });
 
 const NOW = 1_700_000_000_000;
 const ctx = (p) => ({ context_window: { used_percentage: p } });
@@ -57,6 +59,25 @@ ok(parseThresholds({}).soft === 40 && parseThresholds({}).hard === 60, 'AC1.4: m
 for (const bad of [['--soft', '70', '--hard', '60'], ['--soft', 'abc'], ['--hard=0']]) {
   const r = run(bad, '{}');
   ok(r.status === 2 && r.stderr.includes('--soft'), `AC1.4: CLI ${bad.join(' ')} báo lỗi stderr và thoát 2`);
+}
+
+// AC5.1 (2026-10-31-aip-status): request đang chạy có part vướng thì dòng có ⚠ <n> vướng
+ok(line(ctx(10), { blocked: 2 }) === 'ctx 10% │ ⚠ 2 vướng', 'AC5.1: blocked 2 → đoạn ⚠ 2 vướng');
+ok(!line(ctx(10), { blocked: 0 }).includes('vướng') && !line(ctx(10)).includes('vướng'), 'AC5.1: không vướng thì không có đoạn');
+ok(line(ctx(10), { blocked: 1, color: true }).includes('\x1b[31m⚠ 1 vướng'), 'AC5.1: đoạn vướng tô đỏ khi bật color');
+{
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-statusline-'));
+  try {
+    const dir = path.join(tmp, '.aip', 'runs', '2026-01-01-demo', '02-api');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'progress.md'), 'Task 1: start (base 1a2b3c4)\nBlocked: thiếu quyền\n');
+    const r = run(['--no-color'], JSON.stringify({ ...ctx(10), workspace: { current_dir: tmp } }), os.tmpdir());
+    ok(r.status === 0 && r.stdout.includes('⚠ 1 vướng'), 'AC5.1: CLI đọc .aip/runs của workspace.current_dir, in ⚠ 1 vướng');
+    const other = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-statusline-none-'));
+    const r2 = run(['--no-color'], JSON.stringify(ctx(10)), other);
+    ok(r2.status === 0 && !r2.stdout.includes('vướng'), 'AC5.1: thư mục không có request đang chạy thì không có đoạn vướng, exit 0');
+    fs.rmSync(other, { recursive: true, force: true });
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 
 // seam args: cờ mới đi qua parse(), không rơi vào danh sách lệnh
