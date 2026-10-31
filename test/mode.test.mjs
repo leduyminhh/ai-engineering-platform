@@ -251,9 +251,7 @@ test("autonomy-gates AC8.1: aip autonomy high/safe/status giữ khóa khác; sub
   const root = tmp();
   const others = { mode: "full", allowEnvFiles: true, mcpDeny: ["evil"] };
   put(gatePath(root), JSON.stringify(others));
-  const run = (sub) => { const out = [], err = []; const code = runAutonomy(sub, { root, out: (l) => out.push(l), err: (l) => err.push(l) }); return { code, out: out.join("
-"), err: err.join("
-") }; };
+  const run = (sub) => { const out = [], err = []; const code = runAutonomy(sub, { root, out: (l) => out.push(l), err: (l) => err.push(l) }); return { code, out: out.join("\n"), err: err.join("\n") }; };
   const gate = () => JSON.parse(fs.readFileSync(gatePath(root), "utf8"));
   const HIGH = { mergeLocal: true, cleanup: true, partRunner: "subagent" };
 
@@ -263,7 +261,7 @@ test("autonomy-gates AC8.1: aip autonomy high/safe/status giữ khóa khác; sub
   assert.deepEqual(gate(), { ...others, autonomy: HIGH });
   assert.equal(run("high").code, 0);
   assert.deepEqual(gate(), { ...others, autonomy: HIGH }, "high lần hai không đổi gì");
-  assert.match(run("status").out, new RegExp(JSON.stringify(HIGH).replace(/[{}]/g, "\$&")));
+  assert.ok(run("status").out.includes(JSON.stringify(HIGH)));
 
   assert.equal(run("safe").code, 0);
   assert.deepEqual(gate(), others);
