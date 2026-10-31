@@ -33,12 +33,12 @@ Skill chỉ đọc tiến độ qua `aip status`. Nguồn xem chính là `status
 ## Quy trình — xử lý phần vướng
 
 Khi người dùng bấm "Xử lý ↗" hoặc nhắn `xử lý vướng part <nn>`, xử lý part đó theo bảng xử lý vướng của `references/task-loop.md`
-(thuộc `plan-execution`). Không gỡ vướng khi người dùng chưa yêu cầu.
+(thuộc `plan-execution`). Skill không tự gỡ vướng khi người dùng chưa yêu cầu; việc session gốc đang chạy `plan-execution` tự gỡ các loại vướng "không hỏi" nằm ở bảng đó, không ở skill này.
 
 ## Ranh giới an toàn
 
 - Chỉ đọc. `aip status` chỉ ghi `status.html` trong `<gốc repo chính>/.aip/runs/<request>/`; `<gốc repo chính>/.aip/.gitignore` (do `plan-execution` tạo) chứa `*` nên git bỏ qua file này.
 - Không đưa `status.html`, nội dung ledger hay số liệu ra dịch vụ ngoài (publish, gist, link chia sẻ). File ở máy người dùng.
 - Widget chỉ để hành động: không vẽ lại dashboard, không thêm số liệu ngoài khối "Cần bạn xử lý".
-- Không tự gỡ vướng khi người dùng chưa bấm nút hoặc nhắn; cách xử lý theo `plan-execution`.
+- Skill này không tự gỡ vướng khi người dùng chưa bấm nút hoặc nhắn; cách xử lý theo `plan-execution`.
 - [Unverified] Với `--watch`, `status.html` có `<meta http-equiv="refresh">`; chưa kiểm trình duyệt có tự làm mới khi mở bằng `file://` hay không.
