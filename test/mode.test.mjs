@@ -6,6 +6,7 @@ import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { applyFull, applyAsk, statusOf, runMode } from "../cli/lib/mode.mjs";
+import { runAutonomy } from "../cli/lib/autonomy.mjs";
 import { buildClaudePermissions, loadPolicy } from "../cli/lib/permissions.mjs";
 
 const CLI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "cli", "index.mjs");
@@ -244,4 +245,60 @@ test("P4e2 AC4.5: git không chạy được (run trả null) → status 'không
   const full = [];
   runMode("full", { root, out: (l) => full.push(l), run: () => null });
   assert.ok(!full.join("\n").includes("được git theo dõi"));
+});
+
+test("autonomy-gates AC8.1: aip autonomy high/safe/status giữ khóa khác; sub lạ exit 2", () => {
+  const root = tmp();
+  const others = { mode: "full", allowEnvFiles: true, mcpDeny: ["evil"] };
+  put(gatePath(root), JSON.stringify(others));
+  const run = (sub) => { const out = [], err = []; const code = runAutonomy(sub, { root, out: (l) => out.push(l), err: (l) => err.push(l) }); return { code, out: out.join("
+"), err: err.join("
+") }; };
+  const gate = () => JSON.parse(fs.readFileSync(gatePath(root), "utf8"));
+  const HIGH = { mergeLocal: true, cleanup: true, partRunner: "subagent" };
+
+  assert.match(run("status").out, /"partRunner":"session"/);
+
+  assert.equal(run("high").code, 0);
+  assert.deepEqual(gate(), { ...others, autonomy: HIGH });
+  assert.equal(run("high").code, 0);
+  assert.deepEqual(gate(), { ...others, autonomy: HIGH }, "high lần hai không đổi gì");
+  assert.match(run("status").out, new RegExp(JSON.stringify(HIGH).replace(/[{}]/g, "\$&")));
+
+  assert.equal(run("safe").code, 0);
+  assert.deepEqual(gate(), others);
+  assert.match(run("status").out, /"mergeLocal":false,"cleanup":false,"partRunner":"session"/);
+
+  const before = fs.readFileSync(gatePath(root), "utf8");
+  for (const sub of ["bogus", undefined]) assert.equal(run(sub).code, 2, String(sub));
+  assert.equal(fs.readFileSync(gatePath(root), "utf8"), before, "sub lạ không ghi file");
+});
+
+test("autonomy-gates AC8.1: safe khi chưa có aip-gate.json không tạo file; high tạo .claude/", () => {
+  const root = tmp();
+  assert.equal(runAutonomy("safe", { root, out: () => {} }), 0);
+  assert.equal(fs.existsSync(gatePath(root)), false);
+  assert.equal(runAutonomy("high", { root, out: () => {} }), 0);
+  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(root), "utf8")), { autonomy: { mergeLocal: true, cleanup: true, partRunner: "subagent" } });
+});
+
+test("autonomy-gates AC8.1: aip-gate.json hỏng → stderr, exit 1, không ghi", () => {
+  const root = tmp();
+  put(gatePath(root), "{ hỏng");
+  for (const sub of ["high", "safe"]) {
+    const err = [];
+    assert.equal(runAutonomy(sub, { root, out: () => {}, err: (l) => err.push(l) }), 1, sub);
+    assert.equal(fs.readFileSync(gatePath(root), "utf8"), "{ hỏng");
+    assert.ok(err.length, sub);
+  }
+});
+
+test("autonomy-gates AC8.1: CLI aip autonomy từ chối -g và giá trị lạ", () => {
+  const root = tmp();
+  const run = (...args) => spawnSync("node", [CLI, "autonomy", ...args], { cwd: root, encoding: "utf8" });
+  assert.notEqual(run("high", "-g").status, 0);
+  assert.equal(run("bogus").status, 2);
+  assert.equal(fs.existsSync(gatePath(root)), false);
+  assert.equal(run("high").status, 0);
+  assert.equal(JSON.parse(fs.readFileSync(gatePath(root), "utf8")).autonomy.partRunner, "subagent");
 });
