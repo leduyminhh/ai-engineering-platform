@@ -34,6 +34,13 @@ export default async function run({ ok, ctx }) {
       'Task 2: complete (commits a..b, INLINE)',
       'Task 2: complete (commits a..b, inline, tests: a exit 1; b exit 0)',
       'Task 2: complete (commits a..b, review clean)\nTask 3: complete (commits c..d, inline)',
+      // AC1.3 (2026-10-31-part-mode-tooling-minors): \r lẻ cũng ngăn dòng
+      'Task 2: complete (commits a..b, review clean)\rTask 3: complete (commits c..d, inline)',
+      // Regression: red: không được nuốt một khối tests: thất bại làm lệnh của nó
+      'Task 2: complete (commits a..b, inline, red: tests: npm test exit 1, tests: npm test exit 0)',
+      // Regression: khối red: không có lệnh vẫn bị bắt, kể cả khi exit 0 và dòng không thuộc task selfRun
+      'Task 2: complete (commits a..b, review clean, red: tests: npm test exit 0)',
+      'Task 2: complete (commits a..b, review clean, red: exit 0)',
     ];
     const accept = [
       'Task 2: complete (commits a..b, inline, tests: npm test exit 0)',
@@ -93,6 +100,14 @@ export default async function run({ ok, ctx }) {
         [`Task 1: complete (commits a..b, review clean, ${red}, ${tests})\nTask 3: complete (commits a..b, review clean)`, 0, 'regression: ctx của task TOOLING không áp sang dòng BE phía sau'],
         // Regression (review Task 1, F2): red: thiếu exit không được mượn exit của tests:
         ['Task 1: complete (commits a..b, review clean, red: npm test, tests: npm test exit 1)', 2, 'regression: red: thiếu exit không mượn exit của tests:'],
+        // AC1.1, AC1.2 (docs/requests/2026-10-31-part-mode-tooling-minors): selfRun TDD có cần tests: exit 0 và red: có lệnh
+        [`Task 1: complete (commits a..b, review clean, ${red})`, 2, 'AC1.1: TOOLING TDD có thiếu tests: → từ chối'],
+        [`Task 1: complete (commits a..b, review clean, ${red}, tests: npm test exit 1)`, 2, 'AC1.1: TOOLING TDD có tests: exit khác 0 → từ chối'],
+        [`Task 1: complete (commits a..b, review clean, ${red}, ${tests}, lint exit 2)`, 2, 'AC1.1: TOOLING TDD có kèm exit khác 0 ngoài red: → từ chối'],
+        [`Task 1: complete (commits a..b, review clean, red: exit 1, ${tests})`, 2, 'AC1.2: red: không có lệnh → từ chối'],
+        // Regression (review cuối F1): "exit" không kèm số sau red: là lệnh hay ghi chú, không phải khối red thiếu lệnh
+        [`Task 1: complete (commits a..b, review clean, red: exit-check.sh exit 1, ${tests})`, 0, 'regression: lệnh red bắt đầu bằng exit- được nhận'],
+        ['Task 3: complete (commits a..b, review clean, hook chặn commit red: exit sớm)', 0, 'regression: ghi chú "red: exit …" ở dòng BE vẫn ghi như cũ'],
       ]) {
         const before = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
         console.error = () => {};
