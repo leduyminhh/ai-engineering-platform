@@ -21,12 +21,14 @@ Skill chỉ đọc tiến độ qua `aip status`. Nguồn xem chính là `status
 3. **Hiển thị theo công cụ có sẵn.**
    - **Phiên có công cụ hiển thị** (app desktop Claude): đưa `status.html` lên panel bên để xem. Nếu `needs` không rỗng, hiện
      thêm một widget inline CHỈ gồm khối "Cần bạn xử lý": mỗi part một dòng (part, trạng thái, lý do), mỗi dòng có nút
-     "Xử lý ↗" gửi vào chat lệnh `xử lý vướng part <nn>` đúng part đó. Widget không vẽ lại dashboard.
+     "Xử lý ↗" gửi vào chat lệnh `xử lý vướng part <nn>` đúng part đó (`root` là session gốc: `xử lý vướng part root`).
+     Widget không vẽ lại dashboard.
      [Unverified] Cách app desktop mở panel bên và render widget chưa được kiểm trong môi trường này.
    - **Phiên không có công cụ hiển thị** (CLI): in text của `aip status` (gọn), không tạo widget.
-4. **Không có request đang chạy.** Lệnh in một dòng chữ và thoát 0; báo đúng dòng đó, không tạo widget, dừng.
-5. **Trang tự đưa lên.** `plan-execution` (vòng task, không phải skill này) đưa `status.html` lên panel ở mỗi cổng G1, G2, G3
-   và khi một part chuyển sang vướng cần người dùng; skill này là cách người dùng bấm xem bất cứ lúc nào.
+4. **Không có request đang chạy.** Lệnh in một dòng chữ và thoát 0; báo đúng dòng đó, không tạo widget, dừng. Lệnh thoát 2
+   (`Không tìm thấy request …`, sai tên request hay sai `--part`) thì báo nguyên dòng lỗi, dừng.
+5. **Ai tự đưa trang.** Session gốc chạy `plan-execution` đưa trang lên ở mỗi cổng G1, G2, G3 và khi một part chuyển sang
+   vướng cần người dùng (`references/task-loop.md`); skill này là cách người dùng bấm xem bất cứ lúc nào.
 
 ## Quy trình — xử lý phần vướng
 
