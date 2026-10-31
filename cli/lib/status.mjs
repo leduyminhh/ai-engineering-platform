@@ -65,13 +65,11 @@ export function pickRequest(runsRoot) {
 }
 
 // Chỉ đọc ledger, không gọi git: statusline gọi hàm này mỗi lần làm mới.
-// root chỉ là một hàng khi request không chia part (như buildStatus), để statusline và trang báo cùng một số vướng.
+// Đếm cả ledger root: buildStatus cũng đưa root vướng vào "Cần bạn xử lý", nên statusline và trang báo cùng một số.
 export function countBlocked(runsRoot) {
   const request = pickRequest(runsRoot);
   if (!request) return 0;
-  const dirs = ledgerDirs(runsRoot, request);
-  const rows = dirs.some((p) => p !== 'root') ? dirs.filter((p) => p !== 'root') : dirs;
-  return rows.filter((p) => blockedReason(linesOf(readText(path.join(runsDir(runsRoot, request), p, 'progress.md'))))).length;
+  return ledgerDirs(runsRoot, request).filter((p) => blockedReason(linesOf(readText(path.join(runsDir(runsRoot, request), p, 'progress.md'))))).length;
 }
 
 function readEvents(dir) {
@@ -164,18 +162,24 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
 
   const details = Object.fromEntries(parts.map((p) => [p.id, taskDetails(p._tasks, p._lg.lines, p._lg.events)]));
   const clean = parts.map(({ _tasks, _lg, _commits, ...p }) => p);
+  // Request chia part: session gốc vướng không có hàng riêng nhưng vẫn là việc của người dùng, và countBlocked (statusline) cũng đếm nó.
+  const rootReason = parts.some((p) => p.id === 'root') ? null : blockedReason(root.lines);
+  const needs = [
+    ...(rootReason === null ? [] : [{ part: 'root', state: 'blocked', reason: rootReason }]),
+    ...clean.filter((p) => p.state === 'blocked' || p.state === 'stale')
+      .map((p) => ({ part: p.id, state: p.state, reason: p.state === 'blocked' ? p.reason : `không có dòng ledger hay commit mới quá ${staleMinutes} phút` })),
+  ];
   return {
     header: {
       request, branch: tryGit(git, ['rev-parse', '--abbrev-ref', 'HEAD'], docsRoot), head: tryGit(git, ['rev-parse', '--short', 'HEAD'], docsRoot),
       autonomy, updatedAt: new Date(now).toISOString(), staleMinutes,
     },
     gates,
-    needs: clean.filter((p) => p.state === 'blocked' || p.state === 'stale')
-      .map((p) => ({ part: p.id, state: p.state, reason: p.state === 'blocked' ? p.reason : `không có dòng ledger hay commit mới quá ${staleMinutes} phút` })),
+    needs,
     totals: {
       partsMerged: clean.filter((p) => p.state === 'merged').length, partsTotal: clean.length,
       tasksDone: clean.reduce((a, p) => a + p.tasksDone, 0), tasksTotal: clean.reduce((a, p) => a + p.tasksTotal, 0),
-      blocked: clean.filter((p) => p.state === 'blocked').length,
+      blocked: needs.filter((n) => n.state === 'blocked').length,
       rulings: allLines.filter((l) => /^Ruling:/.test(l)).length, minors: allLines.filter((l) => /^minor \(deferred\):/.test(l)).length,
     },
     parts: clean, graph, details, events,

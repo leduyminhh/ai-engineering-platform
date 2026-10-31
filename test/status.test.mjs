@@ -152,14 +152,20 @@ try {
   fs.writeFileSync(path.join(old, 'progress.md'), 'Blocked: cũ\nPlan: complete\n');
   ok(pickRequest(root) === REQ && countBlocked(root) === 1, 'pickRequest chọn request dở; countBlocked đếm part vướng của request đó');
   ok(pickRequest(path.join(root, 'không-có')) === null && countBlocked(path.join(root, 'không-có')) === 0, 'không có .aip/runs: pickRequest null, countBlocked 0');
-  // Regression review Task 2 (F1): request chia part thì Blocked: ở ledger root không làm statusline lệch số vướng của trang
+  // Regression review Task 2 (F1): request chia part có Blocked: ở ledger root → trang và statusline báo cùng số vướng
   fs.appendFileSync(path.join(root, '.aip', 'runs', REQ, 'root', 'progress.md'), 'Blocked: root chờ\n');
-  ok(countBlocked(root) === 1 && build(root).totals.blocked === 1, 'countBlocked bằng totals.blocked khi ledger root có Blocked:');
+  const withRoot = build(root);
+  ok(countBlocked(root) === 2 && withRoot.totals.blocked === 2 && withRoot.needs.some((n) => n.part === 'root' && n.reason === 'root chờ'),
+    'root vướng vào Cần bạn xử lý, countBlocked bằng totals.blocked');
+  // Chỉ có ledger root (part chưa có ledger) và có Bảng part
+  const onlyRoot = fixture({ root: [...LEDGERS.root, 'Blocked: root chờ'] });
+  try { ok(countBlocked(onlyRoot) === 1 && build(onlyRoot).totals.blocked === 1, 'chỉ ledger root vướng: countBlocked bằng totals.blocked'); } finally { fs.rmSync(onlyRoot, { recursive: true, force: true }); }
   const solo = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-solo-'));
   try {
     fs.mkdirSync(path.join(solo, '.aip', 'runs', REQ, 'root'), { recursive: true });
     fs.writeFileSync(path.join(solo, '.aip', 'runs', REQ, 'root', 'progress.md'), 'Blocked: x\n');
-    ok(countBlocked(solo) === 1, 'request không chia part: Blocked: ở root được đếm');
+    const m1 = buildStatus({ docsRoot: solo, runsRoot: solo, request: REQ, now: NOW, git: fakeGit });
+    ok(countBlocked(solo) === 1 && m1.totals.blocked === 1 && m1.needs.length === 1, 'request không chia part: root là hàng, vướng đếm một lần');
   } finally { fs.rmSync(solo, { recursive: true, force: true }); }
 
   // CLI thật: thư mục tạm không phải repo nên docsRoot = runsRoot = cwd
