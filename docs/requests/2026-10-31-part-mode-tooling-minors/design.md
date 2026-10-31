@@ -1,6 +1,6 @@
 # Thiết kế: sửa các minor còn hoãn của part-mode-tooling-gaps
 - Ngày: 2026-10-31
-- Trạng thái: approved — phạm vi do session gốc giao (mục 1–4); mục 5 chỉ đề xuất, chờ người dùng duyệt
+- Trạng thái: in-progress — mục 1–4 xong (review cuối 0 blocker/major), nhánh `fix/part-mode-tooling-minors` giữ nguyên chưa merge; mục 5 chờ người dùng duyệt
 - Requirement: không có
 ## Vấn đề và lý do
 Review cuối nhánh `feature/part-mode-tooling-gaps` và lượt thử 3 (`../2026-10-31-part-mode-tooling-gaps/trial-3.md`) để lại các `minor (deferred)`:
@@ -14,13 +14,13 @@ Review cuối nhánh `feature/part-mode-tooling-gaps` và lượt thử 3 (`../2
 - (3) `task-review.md` bước 3: TDD `có` thì kiểm qua mục `## Commits` của review package rằng commit đỏ chỉ chứa file test và đứng trước commit code.
 - (4) Sửa `WORKFLOW.md` Bước 6 cho khớp R7 (không đổi R7 về nghĩa). `general-purpose` không phải agent của plugin nên ghi không có chữ `agent` đứng trước: `graph.json` không đổi, bump `workflows` vì nội dung chiếu ra đổi.
 ## Tiêu chí chấp nhận
-- [ ] **AC1.1** — Given plan có task `TOOLING` TDD `có` When `ledger.mjs` ghi dòng `complete` có `red:` hợp lệ nhưng thiếu `tests: <lệnh> exit 0`, hoặc `tests:` exit khác 0, hoặc kèm exit khác 0 ngoài `red:` Then exit 2 và không ghi
-- [ ] **AC1.2** — Given task `TOOLING` TDD `có` When dòng `complete` có `red: exit 1` (không có lệnh) Then exit 2 và không ghi
-- [ ] **AC1.3** — Given đối số có `\r` lẻ ngăn hai dòng When dòng sau là `Task <n>: complete … inline` thiếu evidence Then `validateLine` từ chối
-- [ ] **AC2.1** — Given task sửa thêm vào plan gốc sau review cuối When re-review xong Then `final-review.md` bảo ghi `Task <n>: complete (…)` theo `task-loop.md` bước 9
-- [ ] **AC2.2** — Given `task-loop.md` bước 9 When đọc định nghĩa `review clean` Then có vế `spec_verdict: compliant`
-- [ ] **AC3.1** — Given task TDD `có` When reviewer đọc `task-review.md` Then được bảo kiểm file của commit đỏ qua mục `## Commits` của review package
-- [ ] **AC4.1** — Given diff toàn nhánh không chạm backend/frontend When đọc `workflows/feature/WORKFLOW.md` Bước 6 Then reviewer là `general-purpose` `model: opus`, khớp R7, và `graph.json` vẫn qua `checkGraphAgainstBody`
+- [x] **AC1.1** — Given plan có task `TOOLING` TDD `có` When `ledger.mjs` ghi dòng `complete` có `red:` hợp lệ nhưng thiếu `tests: <lệnh> exit 0`, hoặc `tests:` exit khác 0, hoặc kèm exit khác 0 ngoài `red:` Then exit 2 và không ghi
+- [x] **AC1.2** — Given task `TOOLING` TDD `có` When dòng `complete` có `red: exit 1` (không có lệnh) Then exit 2 và không ghi
+- [x] **AC1.3** — Given đối số có `\r` lẻ ngăn hai dòng When dòng sau là `Task <n>: complete … inline` thiếu evidence Then `validateLine` từ chối
+- [x] **AC2.1** — Given task sửa thêm vào plan gốc sau review cuối When re-review xong Then `final-review.md` bảo ghi `Task <n>: complete (…)` theo `task-loop.md` bước 9
+- [x] **AC2.2** — Given `task-loop.md` bước 9 When đọc định nghĩa `review clean` Then có vế `spec_verdict: compliant`
+- [x] **AC3.1** — Given task TDD `có` When reviewer đọc `task-review.md` Then được bảo kiểm file của commit đỏ qua mục `## Commits` của review package
+- [x] **AC4.1** — Given diff toàn nhánh không chạm backend/frontend When đọc `workflows/feature/WORKFLOW.md` Bước 6 Then reviewer là `general-purpose` `model: opus`, khớp R7, và `graph.json` vẫn qua `checkGraphAgainstBody`
 ## Thiết kế
 - `ledger.mjs`: hằng `LINE_SPLIT = /\r\n|\r|\n/` dùng ở `validateLine` và `main`; `RED_RE = /\bred:\s*(?!tests:)\S(?:(?!\btests:).)*? exit (\d+)\b/gi` (`red:x` không dấu cách vẫn là khối red như R12); điều kiện evidence (`INLINE_EVIDENCE_RE` và không `EXIT_FAILED_RE` trên phần đã bỏ `red:`) áp cho dòng inline và cho dòng selfRun TDD `có`.
 - Mục (2)(3)(4) là câu chữ.
