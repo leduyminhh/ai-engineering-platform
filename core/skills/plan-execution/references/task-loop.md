@@ -17,7 +17,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 ## Các bước của một task
 
 1. **Ghi BASE** bằng `git rev-parse HEAD` trước khi giao việc. Không dùng `HEAD~1`. Mất BASE sau khi compact thì lấy
-   `<b>` của dòng `Task <n-1>: complete` gần nhất trong ledger và đối chiếu `git log`. Ghi ngay vào ledger
+   `<b>` của dòng `Task <n-1>: complete` gần nhất (hoặc `<hash>` của dòng `Task <n>: start` gần nhất) trong ledger và đối chiếu `git log`. Ghi ngay vào ledger
    `Task <n>: start (base <hash>)` (`<hash>` = BASE); dòng này cho `aip status` biết task đang chạy và là mốc để dựng lại BASE.
 2. **Cắt brief**: `node <thư mục skill plan-execution>/scripts/task-brief.mjs <plan.md> <n>` ghi `task-<n>-brief.md` vào workspace `.aip/` của plan và in đường
    dẫn. Brief là nguyên văn mục `### Task <n>`; không tóm tắt lại, không chép nội dung task vào context của session chính.
@@ -115,35 +115,37 @@ Các trường hợp còn lại (mơ hồ nhỏ, xung đột giữa hai task, fi
 `mergeLocal: true`, `finish.md`) và, khi `partRunner` là `session` hoặc thiếu khoá, câu hỏi cách chạy part ở bước 3 của
 "Chế độ part". Giữa G2 và G3 session chính không gửi dòng trạng thái giữa chừng, kể cả khi phiên con hoặc subagent xong
 một lượt không cần người dùng quyết (nhận note thì đọc ledger, chạy tiếp); chỉ nói ở cổng, câu hỏi push, câu hỏi cách
-chạy part, loại dừng hoặc lỗi chặn.
+chạy part, loại dừng, lỗi chặn hoặc thẻ vướng của mục "Part vướng".
 
 **Lỗi chặn** là: việc đã hết số lần thử theo "Khi fail" của bước hoặc vòng sửa mà vẫn cần người dùng (vd "tối đa 2 lần rồi
 hỏi người dùng"); agent trả `blocked` mà session chính không tự trả lời được từ spec/plan/design; subagent part trả
-`blocked`/`failed` hoặc kết thúc mà ledger part không có `Part: complete` ("Chế độ part" bước 7); conflict, suite đỏ hoặc
-cây làm việc bẩn khi merge local theo khoá `mergeLocal` (`finish.md`). Lỗi chặn được báo ngay, kèm `questions[]` khi có.
+`blocked`/`failed` hoặc kết thúc mà ledger part không có `Part: complete` ("Chế độ part" bước 7; trường hợp kết thúc không có `Part: complete` chỉ thành lỗi chặn sau một lần khởi động lại theo mục "Part vướng"); conflict, suite đỏ hoặc
+cây làm việc bẩn khi merge local nhánh feature vào nhánh gốc theo khoá `mergeLocal` (`finish.md`); conflict ngoài write set của part (mục "Part vướng"). Lỗi chặn được báo ngay, kèm `questions[]` khi có.
 
 ## Part vướng
 
 Một part (hoặc chính session gốc) **vướng** khi không tự đi tiếp được. Người ghi dòng `Blocked: <lý do>` vào ledger của
 mình là phiên part, subagent part (khi trả `blocked`/`failed`) hoặc session gốc cho chính nó (`root`); `Unblocked: <cách
 giải>` ghi khi đã gỡ. `aip status` đọc hai dòng này để đánh dấu part `vướng` và đếm cho `aip statusline`. Phần dưới là
-cách session gốc xử lý (kích hoạt khi người dùng nhắn `xử lý vướng part <nn>` hoặc bấm "Xử lý ↗" trên trang của skill `aip-status`;
-`xử lý vướng part root` là vướng của chính session gốc), không đổi 6 loại dừng ở trên.
+cách session gốc xử lý, không đổi 6 loại dừng ở trên. Session gốc thấy vướng khi đọc ledger part (note của phiên con,
+bước 7 "Chế độ part", trang `aip status` ở cổng); các hàng "session gốc, không hỏi" chạy ngay khi thấy, không chờ người dùng.
+Hàng "người dùng" xử lý khi người dùng nhắn `xử lý vướng part <nn>` hoặc bấm "Xử lý ↗" trên trang của skill `aip-status`
+(`xử lý vướng part root` là vướng của chính session gốc).
 
 | Loại vướng | Ai xử lý | Cách xử lý |
 |---|---|---|
 | Test đỏ sau merge part | session gốc, không hỏi | Vòng sửa trên `feature/<slug>` (task sửa, review, commit); tối đa 2 vòng, quá thì chuyển người dùng |
-| Conflict trong write set của part | session gốc, không hỏi | Gỡ conflict giữ cả hai phía theo `**Files:**` của part, ghi `Ruling:` |
-| Part im lặng (không dòng ledger/commit mới quá `statusStaleMinutes`) | session gốc, không hỏi | Kiểm phiên hoặc subagent còn chạy; đã chết thì khởi động lại part từ task chưa `complete` trong worktree cũ, giữ thay đổi chưa commit; chỉ một lần, im lặng lần hai chuyển người dùng |
+| Conflict trong write set của part | session gốc, không hỏi | Gỡ theo `**Files:**` của part, chạy lại test hẹp của part, ghi `Ruling:`; hunk chồng lấn nhau về ngữ nghĩa thì xử như conflict ngoài write set |
+| Part im lặng (không dòng ledger/commit mới quá `statusStaleMinutes`) | session gốc, không hỏi | Kiểm phiên hoặc subagent còn chạy; đã chết thì khởi động lại part từ task chưa `complete` trong worktree cũ, giữ thay đổi chưa commit; chỉ một lần; im lặng lần hai, hoặc subagent part trả `blocked`/`failed`, là lỗi chặn (bước 7 "Chế độ part") |
 | Câu hỏi trả lời được từ design/plan | session gốc, không hỏi | Trả lời, ghi `Ruling:` |
 | Một trong 6 loại dừng | người dùng | Hỏi (xem mục Breaker) |
-| Plan của part hỏng | người dùng | Viết lại plan riêng part, người dùng duyệt một lần như G2 thu nhỏ |
+| Plan của part hỏng (loại dừng 5) | người dùng | Session gốc viết lại plan riêng part, người dùng duyệt một lần như G2 thu nhỏ |
 | Conflict ngoài write set | người dùng | Liệt kê file xung đột trong câu hỏi |
 
 Câu hỏi cho người dùng gom vào **một thẻ**: mỗi mục nêu cách hiểu, hệ quả và đáp án khuyến nghị; part khác chạy tiếp trong
-lúc chờ. Có lời giải thì gửi về part (phiên part qua `SendMessage`; subagent part giao lại, hoặc subagent mới tiếp từ ledger
+lúc chờ. Có lời giải thì gửi về part (phiên part qua `SendMessage`, không gửi được thì đưa người dùng dán vào phiên part; subagent part giao lại, hoặc subagent mới tiếp từ ledger
 của part) rồi ghi `Unblocked: <cách giải>`. Mỗi vướng chỉ báo **một lần** (tin nhắn kèm trang `aip status`); người dùng
-chưa trả lời thì không nhắc lại, vướng mới gộp vào cùng thẻ. Ngoài ra session gốc đưa trang `aip status` (skill
+chưa trả lời thì không nhắc lại, vướng mới gộp vào cùng thẻ (vướng chưa gỡ vẫn hiện ở trang `aip status`: đó là trạng thái, không tính là nhắc lại). Ngoài ra session gốc đưa trang `aip status` (skill
 `aip-status`) ở mỗi cổng G1/G2/G3 và khi một part chuyển sang vướng cần người dùng; việc này không phải dòng trạng thái giữa chừng.
 
 ## Gom task nhỏ
