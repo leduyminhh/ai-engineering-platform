@@ -28,10 +28,10 @@ Khi request chia part, người dùng không biết part đang làm gì, đã l�
 - [x] **AC3.1** — Given phiên root có công cụ hiển thị When người dùng gọi `/aip-status` Then tạo `status.html`, render ở panel, và nếu có vướng thì hiện widget gồm khối "Cần bạn xử lý" với nút "Xử lý ↗"
 - [x] **AC3.2** — Given phiên không có công cụ hiển thị When gọi `/aip-status` Then in text gọn
 - [x] **AC4.1** — Given part vướng thuộc loại root tự gỡ (8) When root xử lý Then không hỏi người dùng, ghi `Ruling:`/`Unblocked:`, và dừng lại hỏi khi vượt giới hạn (2 vòng sửa, 1 lần khởi động lại)
-- [ ] **AC4.2** — Given part vướng thuộc loại hỏi người dùng (9) When root xử lý Then gom vào một thẻ có đáp án khuyến nghị, part khác chạy tiếp, lời giải gửi về part và ghi `Unblocked:`
-- [ ] **AC4.3** — Given một vướng đã báo When người dùng chưa trả lời Then root không nhắc lại; vướng mới gộp vào cùng thẻ
+- [x] **AC4.2** — Given part vướng thuộc loại hỏi người dùng (9) When root xử lý Then gom vào một thẻ có đáp án khuyến nghị, part khác chạy tiếp, lời giải gửi về part và ghi `Unblocked:`
+- [x] **AC4.3** — Given một vướng đã báo When người dùng chưa trả lời Then root không nhắc lại; vướng mới gộp vào cùng thẻ
 - [x] **AC5.1** — Given request đang chạy có part vướng When `aip statusline` chạy Then dòng có `⚠ <n> vướng`
-- [ ] **AC6.1** — Given request thử có một part vướng có chủ đích When chạy chế độ part tới G3 Then trang hiện đúng trạng thái, vướng được báo một lần, gỡ xong part tiếp tục và merged
+- [x] **AC6.1** — Given request thử có một part vướng có chủ đích When chạy chế độ part tới G3 Then trang hiện đúng trạng thái, vướng được báo một lần, gỡ xong part tiếp tục và merged
 ## Thiết kế
 - `cli/lib/status.mjs`: đọc design (Bảng part), plan gốc + plan part (`### Task`, `**Interfaces:**`), ledger + `events.jsonl` mọi part, `git log` nhánh part; dựng một mô hình JSON; render text / HTML từ mô hình đó. Zero-dependency, HTML một file có CSS inline, `<meta http-equiv="refresh">` khi `--watch`.
 - `core/skills/plan-execution/scripts/ledger.mjs`: `validateLine` thêm 4 dạng dòng; `appendLedger` ghi thêm `events.jsonl`.
