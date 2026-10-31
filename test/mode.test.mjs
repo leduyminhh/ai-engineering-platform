@@ -277,6 +277,19 @@ test("autonomy-gates AC8.1: aip autonomy high/safe/status giữ khóa khác; sub
   assert.equal(fs.readFileSync(gatePath(root), "utf8"), before, "sub lạ không ghi file");
 });
 
+test("autonomy-gates AC3.4: aip-gate.json đã git add ⇒ status nêu khoá bị bỏ qua và in mặc định an toàn; high cảnh báo", () => {
+  const root = tmp();
+  const run = (sub) => { const out = []; runAutonomy(sub, { root, out: (l) => out.push(l) }); return out.join("
+"); };
+  assert.equal(runAutonomy("high", { root, out: () => {} }), 0);
+  assert.ok(run("status").includes('"mergeLocal":true'), "chưa theo dõi: khoá có hiệu lực");
+  execFileSync("git", ["add", ".claude/aip-gate.json"], { cwd: root });
+  const st = run("status");
+  assert.match(st, /"mergeLocal":false,"cleanup":false,"partRunner":"session"/);
+  assert.match(st, /bỏ qua/);
+  assert.match(run("high"), /bỏ qua/);
+});
+
 test("autonomy-gates AC8.1: safe khi chưa có aip-gate.json không tạo file; high tạo .claude/", () => {
   const root = tmp();
   assert.equal(runAutonomy("safe", { root, out: () => {} }), 0);
