@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resolveWorkspace } from './workspace.mjs';
+import { extractTask, effectiveTdd, taskField } from './task-brief.mjs';
 
 const DONE_RE = /^Plan: complete\s*$/m;
 // Chế độ inline không có review từng task, nên dòng complete là bằng chứng duy nhất: bắt buộc mang lệnh test và exit 0.
@@ -19,7 +20,8 @@ const RED_RE = /\bred:\s*.*? exit (\d+)\b/gi;
 // Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
 const MAX_LINE = 4096;
 
-export function validateLine(line) {
+// ctx = { tdd, kind } của task trong plan; thiếu ctx thì chỉ kiểm định dạng như trước.
+export function validateLine(line, ctx) {
   // Đối số nhiều dòng được kiểm từng dòng: một dòng hợp lệ không được che dòng inline thiếu evidence.
   for (const l of line.split(/\r?\n/)) {
     if (l.length > MAX_LINE) return `dòng ledger dài quá ${MAX_LINE} ký tự`;
@@ -31,6 +33,9 @@ export function validateLine(line) {
       }
       // exit khác 0 của red là hợp lệ, không được tính vào kiểm "tests" bên dưới.
       evidence = l.replace(RED_RE, '');
+      // Task do session chính tự làm (TOOLING hoặc inline) không có agent_result: dòng ledger là bằng chứng đỏ duy nhất.
+      const selfRun = ctx?.kind === 'TOOLING' || INLINE_COMPLETE_RE.test(l);
+      if (ctx?.tdd === 'có' && selfRun && evidence === l) return 'dòng Task <n>: complete của task TDD có do session chính làm phải có "red: <lệnh> exit <n khác 0>"';
     }
     if (INLINE_COMPLETE_RE.test(l) && !(INLINE_EVIDENCE_RE.test(evidence) && !EXIT_FAILED_RE.test(evidence))) {
       return 'dòng Task <n>: complete ở chế độ inline phải có "tests: <lệnh> exit 0" và không kèm exit khác 0';
@@ -69,13 +74,24 @@ export function readTail(file, max) {
   return text.slice(Math.max(0, text.length - max));
 }
 
+// Đọc plan trực tiếp, không qua resolveWorkspace, để dòng bị từ chối không tạo thư mục .aip; plan không đọc được hay không có task thì không có ctx.
+function taskCtx(planArg, line) {
+  const n = line.match(/^Task (\d+): complete\b/im)?.[1];
+  if (!n) return undefined;
+  try {
+    const plan = fs.statSync(planArg).isDirectory() ? path.join(planArg, 'plan.md') : planArg;
+    const task = extractTask(fs.readFileSync(plan, 'utf8'), Number(n));
+    return task ? { tdd: effectiveTdd(task).value, kind: taskField(task, 'Kind') } : undefined;
+  } catch { return undefined; }
+}
+
 export function main(argv, deps) {
   const [planArg, line] = argv;
   if (!planArg || line === undefined) {
     console.error('Cách dùng: ledger.mjs <plan.md|requestDir> "<dòng>"');
     return 2;
   }
-  const invalid = validateLine(line);
+  const invalid = validateLine(line, taskCtx(planArg, line));
   if (invalid) {
     console.error(invalid);
     return 2;
