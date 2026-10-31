@@ -1,6 +1,6 @@
 # Thiết kế: vá lỗ hổng TOOLING/ledger/review cuối của chế độ part từ lượt thử 2
 - Ngày: 2026-10-31
-- Trạng thái: in-progress — Task 1–3 complete, review cuối xong (1 major đã sửa ở ddb7341); câu chữ AC2.5 người dùng chốt 2026-10-31 (BE không ở chế độ inline); kết quả thử ở trial-3.md
+- Trạng thái: merged — merge feature/part-mode-tooling-gaps vào master c1e427a ngày 2026-10-31; Task 1–3 complete, review cuối xong (1 major đã sửa ở ddb7341); câu chữ AC2.5 người dùng chốt 2026-10-31 (BE không ở chế độ inline); kết quả thử ở trial-3.md
 - Requirement: không có
 ## Vấn đề và lý do
 Lượt thử 2 (`text-format`, repo `E:\Mine\AI\aip-parts-trial`) chạy trọn chế độ part nhưng lộ các chỗ phải tự chế:
