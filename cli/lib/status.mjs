@@ -14,6 +14,8 @@ export const STATE_LABELS = {
 };
 const WATCH_SECONDS = 10;
 const DONE_RE = /^Plan: complete\s*$/m;
+// Chỉ dòng theo định dạng plan-execution; "Task 1: started …" là ghi chú tự do cũ, không có nghĩa part đã bắt đầu.
+const TASK_EVENT_RE = /^Task \d+: (?:start|review|complete)\b/;
 
 const defaultGit = (args, cwd) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 const tryGit = (git, args, cwd) => { try { return git(args, cwd); } catch { return null; } };
@@ -63,10 +65,13 @@ export function pickRequest(runsRoot) {
 }
 
 // Chỉ đọc ledger, không gọi git: statusline gọi hàm này mỗi lần làm mới.
+// root chỉ là một hàng khi request không chia part (như buildStatus), để statusline và trang báo cùng một số vướng.
 export function countBlocked(runsRoot) {
   const request = pickRequest(runsRoot);
   if (!request) return 0;
-  return ledgerDirs(runsRoot, request).filter((p) => blockedReason(linesOf(readText(path.join(runsDir(runsRoot, request), p, 'progress.md'))))).length;
+  const dirs = ledgerDirs(runsRoot, request);
+  const rows = dirs.some((p) => p !== 'root') ? dirs.filter((p) => p !== 'root') : dirs;
+  return rows.filter((p) => blockedReason(linesOf(readText(path.join(runsDir(runsRoot, request), p, 'progress.md'))))).length;
 }
 
 function readEvents(dir) {
@@ -116,7 +121,7 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
     const done = new Set(lg.lines.map((l) => l.match(/^Task (\d+): complete\b/)?.[1]).filter(Boolean));
     const last = Math.max(lg.mtime, ...lg.events.map((e) => Date.parse(e.ts) || 0), ...commits.map((c) => Date.parse(c.ts)));
     const reason = blockedReason(lg.lines);
-    const started = commits.length > 0 || lg.lines.some((l) => /^Task \d+:/.test(l));
+    const started = commits.length > 0 || lg.lines.some((l) => TASK_EVENT_RE.test(l));
     let state;
     if (reason !== null) state = 'blocked';
     else if (mergedNn.has(nnOf(id))) state = 'merged';
@@ -152,7 +157,7 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
   const designStatus = design.match(/^- Trạng thái:\s*(\S+)/m)?.[1] ?? '';
   const gates = [
     { id: 'G1', done: /^(approved|in-progress|merged)$/.test(designStatus) },
-    { id: 'G2', done: allLines.some((l) => /^Task \d+:/.test(l)) },
+    { id: 'G2', done: allLines.some((l) => TASK_EVENT_RE.test(l)) },
     { id: 'G3', done: DONE_RE.test(root.lines.join('\n')) || designStatus === 'merged' },
     { id: 'push', done: !!tryGit(git, ['branch', '-r', '--contains', `feature/${slug}`], docsRoot) },
   ];
@@ -252,6 +257,7 @@ ${model.needs.length ? `<section id="needs" class="needs"><h2>Cần bạn xử l
 export function runStatus(args, { cwd = process.cwd(), out = console.log, err = console.error, git = defaultGit } = {}) {
   const runsRoot = mainRoot(cwd, git);
   const docsRoot = tryGit(git, ['rev-parse', '--show-toplevel'], cwd) ?? cwd;
+  if ('part' in args && !args.part) { err('--part cần số part, vd --part 02.'); return 2; }
   const request = args._[1] ?? pickRequest(runsRoot);
   if (!request) { out('Không có request nào đang chạy (chưa có ledger dở trong .aip/runs/).'); return 0; }
   const hasDocs = (r) => fs.existsSync(path.join(r, 'docs', 'requests', request));

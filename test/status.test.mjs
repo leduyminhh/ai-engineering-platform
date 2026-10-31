@@ -105,6 +105,8 @@ try {
     [[START, 'Blocked: a', 'Task 1: complete (commits a..b, review clean)'], 'active'],
     [[START, 'Blocked: a', 'Unblocked: b', 'Blocked: c'], 'blocked'],
     [['Blocked: a', 'Part: complete x'], 'done'],
+    // Regression review Task 2 (F2): ghi chú tự do cũ "Task 1: started …" không có nghĩa part đã bắt đầu
+    [['Task 1: started trong worktree'], 'todo'],
   ]) {
     const r = fixture({ root: LEDGERS.root, '02-api': lines });
     try { ok(stateOf(build(r), '02-api') === want, `AC1.1: ${JSON.stringify(lines)} → ${want}`); } finally { fs.rmSync(r, { recursive: true, force: true }); }
@@ -150,6 +152,15 @@ try {
   fs.writeFileSync(path.join(old, 'progress.md'), 'Blocked: cũ\nPlan: complete\n');
   ok(pickRequest(root) === REQ && countBlocked(root) === 1, 'pickRequest chọn request dở; countBlocked đếm part vướng của request đó');
   ok(pickRequest(path.join(root, 'không-có')) === null && countBlocked(path.join(root, 'không-có')) === 0, 'không có .aip/runs: pickRequest null, countBlocked 0');
+  // Regression review Task 2 (F1): request chia part thì Blocked: ở ledger root không làm statusline lệch số vướng của trang
+  fs.appendFileSync(path.join(root, '.aip', 'runs', REQ, 'root', 'progress.md'), 'Blocked: root chờ\n');
+  ok(countBlocked(root) === 1 && build(root).totals.blocked === 1, 'countBlocked bằng totals.blocked khi ledger root có Blocked:');
+  const solo = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-solo-'));
+  try {
+    fs.mkdirSync(path.join(solo, '.aip', 'runs', REQ, 'root'), { recursive: true });
+    fs.writeFileSync(path.join(solo, '.aip', 'runs', REQ, 'root', 'progress.md'), 'Blocked: x\n');
+    ok(countBlocked(solo) === 1, 'request không chia part: Blocked: ở root được đếm');
+  } finally { fs.rmSync(solo, { recursive: true, force: true }); }
 
   // CLI thật: thư mục tạm không phải repo nên docsRoot = runsRoot = cwd
   const cli = (...a) => spawnSync(process.execPath, [CLI, 'status', ...a], { cwd: root, encoding: 'utf8' });
@@ -170,6 +181,8 @@ try {
   const pa = parse(['status', '--html', '--part', '02', '--watch']);
   ok(pa._.join() === 'status' && pa.html === true && pa.part === '02' && pa.watch === true, 'parse() nhận --html/--part/--watch');
   ok(parse(['status', '--part=03']).part === '03', 'parse() nhận --part=<nn>');
+  const np = cli('--part');
+  ok(np.status === 2 && np.stderr.includes('--part'), '--part thiếu giá trị → exit 2, báo lỗi');
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }
