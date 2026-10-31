@@ -49,7 +49,7 @@ export function effectiveTdd(taskText) {
   if (m && (m[1] === 'có' ? TDD_KINDS.includes(kind) : m[2] !== undefined)) {
     return m[1] === 'có' ? { value: 'có', defaulted: false } : { value: 'không', reason: m[2].trim(), defaulted: false };
   }
-  return { value: TDD_KINDS.includes(kind) ? 'có' : 'không', defaulted: true };
+  return { value: kind === 'BE' ? 'có' : 'không', defaulted: true };
 }
 
 // Brief luôn có đúng một dòng TDD hiệu lực: dòng hợp lệ giữ tại chỗ; thiếu hoặc sai thì bỏ dòng sai và chèn mặc định

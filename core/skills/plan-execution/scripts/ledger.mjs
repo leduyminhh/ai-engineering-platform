@@ -15,8 +15,8 @@ const INLINE_COMPLETE_RE = /^Task \d+: complete\b.*\binline\b(?![.\w-])/i;
 const INLINE_EVIDENCE_RE = /\btests: \S.* exit 0\b/;
 const EXIT_FAILED_RE = /\bexit [1-9]/;
 const TASK_COMPLETE_RE = /^Task \d+: complete\b/i;
-// Lazy để dừng ở "exit <n>" đầu tiên sau "red:", không lấn sang "tests: … exit 0" phía sau.
-const RED_RE = /\bred:\s*.*? exit (\d+)\b/gi;
+// Không vượt qua "tests:": red: thiếu exit không được mượn exit của tests: phía sau.
+const RED_RE = /\bred:(?:(?!\btests:).)*? exit (\d+)\b/gi;
 // Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
 const MAX_LINE = 4096;
 
@@ -76,7 +76,7 @@ export function readTail(file, max) {
 
 // Đọc plan trực tiếp, không qua resolveWorkspace, để dòng bị từ chối không tạo thư mục .aip; plan không đọc được hay không có task thì không có ctx.
 function taskCtx(planArg, line) {
-  const n = line.match(/^Task (\d+): complete\b/im)?.[1];
+  const n = line.match(/^Task (\d+): complete\b/i)?.[1];
   if (!n) return undefined;
   try {
     const plan = fs.statSync(planArg).isDirectory() ? path.join(planArg, 'plan.md') : planArg;
@@ -91,7 +91,8 @@ export function main(argv, deps) {
     console.error('Cách dùng: ledger.mjs <plan.md|requestDir> "<dòng>"');
     return 2;
   }
-  const invalid = validateLine(line, taskCtx(planArg, line));
+  // Mỗi dòng mang số task của chính nó, nên ctx dựng theo từng dòng.
+  const invalid = line.split(/\r?\n/).map((l) => validateLine(l, taskCtx(planArg, l))).find(Boolean);
   if (invalid) {
     console.error(invalid);
     return 2;
