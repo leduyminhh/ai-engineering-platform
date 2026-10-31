@@ -186,7 +186,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ### Bước 6 — Review cuối
 
-- **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` (chỉ phía có đụng; reviewer chạy `model: opus`) ∥ agent
+- **Thực hiện:** agent `backend-reviewer` ∥ agent `frontend-reviewer` (chỉ phía có đụng; reviewer chạy `model: opus`; diff
+  toàn nhánh không chạm backend hay frontend thì `general-purpose` `model: opus` thay hai reviewer này) ∥ agent
   `engineering-quality-auditor` (model mặc định)
 - **Đầu vào:** toàn nhánh `MERGE_BASE..HEAD` (gom bằng `plan-execution` `scripts/review-package.mjs <MERGE_BASE> <HEAD> --plan <plan.md>`), Review Focus
   của `plan.md`, các dòng `Ruling:` và `minor (deferred)` trong ledger, contract (nếu có)
