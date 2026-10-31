@@ -83,9 +83,10 @@ Báo cáo branch, commit, push, PR, verification và ghi chú bằng tiếng Vi�
 
 ## Kết thúc nhánh
 
-Khi nhánh feature đã chạy xong plan: làm theo `plan-execution/references/finish.md` (3 lựa chọn merge
-local / push + PR / giữ nguyên, mặc định giữ nguyên). Skill này chỉ thực hiện phần git của lựa chọn
-người dùng đã chọn.
+Khi nhánh feature đã chạy xong plan: làm theo `plan-execution/references/finish.md` (cổng G3: khoá
+`mergeLocal: true` thì duyệt G3 là đồng ý merge local, push/PR hỏi riêng sau đó; thiếu khoá thì 3 lựa
+chọn merge local / push + PR / giữ nguyên, mặc định giữ nguyên). Skill này chỉ thực hiện phần git của
+lựa chọn người dùng đã chọn.
 
 ## Quy trình — changelog / release notes
 

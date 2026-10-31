@@ -48,7 +48,7 @@ không ghi là quyết định bí mật. Chạy liên tục giữa các task; c
   không có góc nhìn thứ hai` vào ledger và đưa mục này vào `remaining_risks` khi trình người dùng. Finding `blocker`/`major`
   tự tìm ra thì sửa một lượt rồi tự đọc lại đúng phần diff vừa sửa; không có làn sửa thứ hai.
 
-Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một lần, ba lựa chọn, `Plan: complete`.
+Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một lần, G3 (rẽ theo khoá `mergeLocal`), `Plan: complete`.
 
 ## Subagent part
 
@@ -59,13 +59,19 @@ Với `partRunner: subagent` (`task-loop.md`, "Chế độ part" bước 3), m�
   đường dẫn tuyệt đối hoặc `git -C <worktree>`, vì cwd có thể bị reset giữa các lệnh Bash. Dùng plan của part
   `parts/<nn>-<part-slug>/plan.md` cho `ledger.mjs`, `task-brief.mjs`, `review-package.mjs --plan`; ba script tự đặt ledger,
   brief và review package ở gốc repo chính, đó là chỗ đúng, không phải ghi ra ngoài worktree.
+- Trước dòng `Ruling:` đầu tiên, tạo tiêu đề ledger part:
+  `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan part> "# Ledger — plan: <đường dẫn plan part>"`.
 - Tự commit từng task trên nhánh part qua `git-workflow`: đây là ngoại lệ của luật "agent không commit". Không push, không merge.
+  File message cho `git commit -F` đặt trong scratchpad hoặc thư mục tạm của phiên, không đặt trong worktree (file lạ
+  trong worktree làm cây bẩn và cản dọn worktree).
+- Không cần `task-<n>-report.md`: dòng ledger inline (bước 6, có `tests:` và `red:` khi TDD `có`) là bằng chứng của task.
 - Không review từng task (subagent không gọi được agent khác) và không review cuối; lỗi do review cuối toàn nhánh của session gốc bắt.
 - Không sửa `design.md` gốc hay Bảng part. Gặp loại dừng của `task-loop.md` thì trả `blocked` kèm `questions[]` thay vì tự quyết.
-- Xong thì ghi `Part: complete <hash>` (HEAD nhánh part sau commit task cuối) vào ledger của part; session gốc merge khi thấy dòng đó.
+- Xong thì ghi `Part: complete <hash>` vào ledger của part, với `<hash>` là hash đầy đủ của HEAD nhánh part sau commit task
+  cuối (`git -C <worktree> rev-parse HEAD`); session gốc merge khi thấy dòng đó.
 
 ## Ranh giới
 
-- Inline bỏ review từng task, không bỏ ranh giới an toàn: vẫn chỉ làm trên nhánh `feature/<slug>`, vẫn không push hay merge
-  khi người dùng chưa chọn, vẫn không `Co-authored-by`.
+- Inline bỏ review từng task, không bỏ ranh giới an toàn: vẫn chỉ làm trên nhánh `feature/<slug>` (subagent part: nhánh
+  part của nó), vẫn không push hay merge khi người dùng chưa chọn, vẫn không `Co-authored-by`.
 - Không tự nâng một task lên `complete` khi chưa có lệnh test chạy trong lượt này.

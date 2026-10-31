@@ -44,8 +44,9 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 Request chia part (`## Bảng part` trong `design.md`): thứ tự part, song song và merge theo mục "Chế độ part" của
 `references/task-loop.md` (rẽ theo `partRunner`); `Plan: complete` chỉ ghi ở ledger `root/`.
 
-**Điểm dừng và báo cáo.** Chờ người dùng chỉ ở G1 (duyệt design), G2 (duyệt plan), G3 (duyệt diff cả nhánh), câu hỏi
-push/PR riêng sau G3, câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và 6 loại dừng bên dưới;
+**Điểm dừng và báo cáo.** Chờ người dùng chỉ ở G1 (duyệt design), G2 (duyệt plan), G3 (duyệt diff cả nhánh; thiếu khoá
+`mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3), câu hỏi push/PR riêng một lần sau merge local (chỉ khi
+`mergeLocal: true`), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và 6 loại dừng bên dưới;
 giữa G2 và G3 chạy liền. Session chính không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một
 lượt), chỉ nói ở các điểm dừng trên hoặc khi gặp lỗi chặn (định nghĩa ở mục "Báo cáo" của `references/task-loop.md`).
 
@@ -74,7 +75,7 @@ không cần khai báo model riêng cho từng task.
   part và tự commit trên nhánh part theo `references/inline.md`.
 - Chạy liên tục giữa các task, nhưng **dừng hỏi người dùng** (không ghi `Ruling:` rồi chạy tiếp) trong 6 trường hợp:
   việc không đảo ngược được hoặc phá huỷ; bảo mật; tác động ngoài repo (merge, push, publish; ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` mà người dùng đã đồng ý ở
-  bước 3 của "Chế độ part" (câu trả lời, hoặc khoá `partRunner` `subagent`/`sequential`) là merge local, không dừng); finding chạm schema DB; plan hỏng đến mức mọi hướng đều là đoán;
+  bước 3 của "Chế độ part" (câu trả lời, hoặc khoá `partRunner: subagent`) là merge local, không dừng); finding chạm schema DB; plan hỏng đến mức mọi hướng đều là đoán;
   phải đổi một AC người dùng đã duyệt. Chi tiết ở `references/task-loop.md`.
 - Không merge, không push khi người dùng chưa chọn ở bước kết thúc nhánh (trừ merge part local đã được đồng ý, xem trên; `mergeLocal: true` biến duyệt G3 thành chọn merge local; không khoá nào bật push); không xoá nhánh khi chưa được xác nhận rõ (trừ `cleanup: true`: chỉ nhánh đã là tổ tiên của nhánh gốc, xem `references/finish.md`).
 - Không tuyên bố task hoặc plan xong khi chưa có evidence lệnh kiểm chứng; kết quả agent báo "xanh" phải đối chiếu bằng

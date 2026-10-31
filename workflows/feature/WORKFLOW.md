@@ -222,9 +222,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   sống `docs/specs/<capability>/spec.md` theo `## Ảnh hưởng spec` (không ảnh hưởng thì ghi lý do); chạy
   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (thêm `--base <nhánh
   gốc>` khi có spec sống); bump version/lock theo quy ước dự án nếu cần; chạy full suite của mọi component bị chạm và
-  component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings`; trình diff cả nhánh (G3) để người dùng duyệt. Khoá `mergeLocal` bật thì duyệt G3 là
-  đồng ý merge local (merge `--no-ff`, full suite, một commit docs đặt `merged` và xoá plan trên nhánh gốc, rồi dọn theo `cleanup`, xem `finish.md`); thiếu khoá thì đưa
-  đúng 3 lựa chọn: merge local / push + PR / giữ nguyên (mặc định). Push + PR luôn hỏi riêng sau G3. Ghi `Plan: complete` vào ledger sau khi việc của lựa
+  component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings`; trình diff cả nhánh (G3) để người dùng duyệt, cùng tên nhánh gốc đề xuất (nhiều ứng viên thì hỏi chọn ngay trong tin nhắn G3). Khoá `mergeLocal` bật thì bản trình G3 nêu nhánh gốc và hai commit sẽ tạo, duyệt rõ G3 là
+  đồng ý merge local (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, xanh mới commit merge, đỏ hoặc conflict thì `git merge --abort`; rồi một commit docs đặt `merged` và xoá plan trên nhánh gốc, rồi dọn theo `cleanup`, xem `finish.md`), push/PR hỏi riêng một lần sau merge local; thiếu khoá thì đưa
+  đúng 3 lựa chọn ngay trong câu hỏi G3: merge local / push + PR / giữ nguyên (mặc định), chọn push + PR là đồng ý push, không hỏi lại. Ghi `Plan: complete` vào ledger sau khi việc của lựa
   chọn xong.
 - **Ràng buộc:** không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`; không merge, không push khi người dùng chưa
   chọn (không trả lời → giữ nguyên; `mergeLocal: true` đã là chọn merge local, không khoá nào bật push) và không push lên nhánh protected; không xoá nhánh, amend, squash hay force-push khi
@@ -243,7 +243,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ## Checkpoint
 
-Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); câu hỏi push/PR đứng riêng ngay sau G3. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá, Bước 5) và 6 loại dừng của `plan-execution`.
+Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); thiếu khoá `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3, còn `mergeLocal: true` thì câu hỏi push/PR đứng riêng một lần sau merge local. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá, Bước 5) và 6 loại dừng của `plan-execution`.
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
@@ -253,7 +253,7 @@ Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 d
 | 7 (G3) | Diff cả nhánh (code + test + docs) + `rulings` + finding `major` còn lại trong `remaining_risks` + kết quả full suite | Người dùng duyệt diff cả nhánh, chấp nhận các `Ruling:`/`major` còn lại; có `mergeLocal: true` thì đó là đồng ý merge local, không thì chọn một trong 3 lựa chọn |
 
 Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution` và câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một lượt): session chính chỉ nói ở G1, G2, G3, câu hỏi push, câu hỏi cách chạy part, loại dừng hoặc lỗi chặn (định nghĩa ở mục "Báo cáo" của `task-loop.md` trong skill `plan-execution`). Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
-tag chỉ sau lựa chọn của người dùng ở Bước 7 (`mergeLocal: true` đã là chọn merge local; không khoá nào bật push); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời trước nhóm Song song, hoặc khoá `partRunner` `subagent`/`sequential` (Bước 5), là merge local, không chờ Bước 7; agent không tự commit (ngoại lệ: subagent part theo `inline.md`).
+tag chỉ sau lựa chọn của người dùng ở Bước 7 (`mergeLocal: true` đã là chọn merge local; không khoá nào bật push); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời trước nhóm Song song, hoặc khoá `partRunner: subagent` (Bước 5), là merge local, không chờ Bước 7; agent không tự commit (ngoại lệ: subagent part theo `inline.md`).
 
 ## Xử lý lỗi & rollback
 
@@ -269,6 +269,7 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | `check-request.mjs` còn cảnh báo ngoài W9 (Bước 4) | Sửa `plan.md`; lỗi ở tài liệu → quay lại Bước 3, tối đa 2 lần rồi hỏi người dùng |
 | Finding `blocker` sau review cuối (Bước 6) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
 | Full suite đỏ (Bước 7) | Dừng, không đưa G3 hay 3 lựa chọn (và không merge dù `mergeLocal: true`); sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
+| Merge local theo khoá `mergeLocal`: cây bẩn, conflict hoặc suite đỏ trên cây đã merge (Bước 7) | Lỗi chặn: cây bẩn thì không checkout; conflict hoặc đỏ thì `git merge --abort` (nhánh gốc giữ nguyên); dừng, báo người dùng, không dọn |
 | Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy skill `data-db-migration` trước rồi quay lại feature |
 
 Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
@@ -277,7 +278,7 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
   phạm vi feature; việc thuộc loại dừng của `plan-execution`; người dùng không duyệt diff cả nhánh.
 - **Rollback:** các task đã commit trên nhánh `feature/`; người dùng huỷ giữa chừng thì bỏ commit hoặc nhánh bằng thao
   tác git thủ công của họ (workflow không tự `reset --hard`, không xoá nhánh, không amend hay squash khi chưa được xác
-  nhận; ngoại lệ: `cleanup: true` xoá nhánh đã merge theo `finish.md`). Chưa duyệt G3 (hoặc chưa chọn ở Bước 7) thì không có merge vào nhánh gốc hay push nào để hoàn tác; merge part vào `feature/<slug>` (nếu có) hoàn tác bằng thao tác git thủ công của người dùng.
+  nhận; ngoại lệ: `cleanup: true` xoá nhánh đã merge theo `finish.md`). Chưa duyệt G3 (hoặc chưa chọn ở Bước 7) thì không có merge vào nhánh gốc hay push nào để hoàn tác; merge local theo khoá `mergeLocal` gặp conflict hoặc suite đỏ đã được `git merge --abort` nên nhánh gốc không đổi; merge part vào `feature/<slug>` (nếu có) hoàn tác bằng thao tác git thủ công của người dùng.
 
 ## Definition of Done
 
