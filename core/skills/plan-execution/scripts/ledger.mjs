@@ -23,12 +23,21 @@ const RED_NO_CMD_RE = /\bred:\s*(?:tests:|exit\s+\d)/i;
 const MAX_LINE = 4096;
 // \r lẻ cũng ngăn dòng: TASK_COMPLETE_RE neo ^ không cờ m, nên "x\rTask 1: complete … inline" sẽ lọt kiểm.
 const LINE_SPLIT = /\r\n|\r|\n/;
+// Dòng sự kiện mà `aip status` đọc để dựng trạng thái part: tiền tố khớp thì cả dòng phải đúng mẫu, sai thì trạng thái dựng sai.
+const EVENT_FORMATS = [
+  [/^Task \d+: start\b/, /^Task \d+: start \(base [0-9a-f]{7,40}\)$/, 'Task <n>: start (base <hash>)'],
+  [/^Task \d+: review\b/, /^Task \d+: review [1-9]\d* (?:compliant|issues|cannot_verify) \d+\/\d+\/\d+$/, 'Task <n>: review <vòng> <compliant|issues|cannot_verify> <blocker>/<major>/<minor>'],
+  [/^Blocked:/, /^Blocked: +\S/, 'Blocked: <lý do>'],
+  [/^Unblocked:/, /^Unblocked: +\S/, 'Unblocked: <cách giải>'],
+];
 
 // ctx = { tdd, kind } của task trong plan; thiếu ctx thì chỉ kiểm định dạng như trước.
 export function validateLine(line, ctx) {
   // Đối số nhiều dòng được kiểm từng dòng: một dòng hợp lệ không được che dòng inline thiếu evidence.
   for (const l of line.split(LINE_SPLIT)) {
     if (l.length > MAX_LINE) return `dòng ledger dài quá ${MAX_LINE} ký tự`;
+    const fmt = EVENT_FORMATS.find(([prefix]) => prefix.test(l));
+    if (fmt && !fmt[1].test(l)) return `dòng ledger sai định dạng, cần "${fmt[2]}"`;
     let evidence = l;
     let selfRunTdd = false;
     if (TASK_COMPLETE_RE.test(l)) {
@@ -69,8 +78,12 @@ export function ledgerFile(planArg, deps = {}) {
   return file;
 }
 
-export function appendLedger(file, line) {
-  fs.appendFileSync(file, `${line.replace(/\r?\n$/, '')}\n`);
+// events.jsonl cạnh progress.md mang thời điểm của từng dòng cho `aip status`; progress.md giữ định dạng vì hook session-start đọc nó.
+export function appendLedger(file, line, now = new Date()) {
+  const text = line.replace(/\r?\n$/, '');
+  fs.appendFileSync(file, `${text}\n`);
+  const ts = now.toISOString();
+  fs.appendFileSync(path.join(path.dirname(file), 'events.jsonl'), text.split(LINE_SPLIT).map((l) => `${JSON.stringify({ ts, line: l })}\n`).join(''));
 }
 
 // null = không có gì để nạp lại: file không đọc được hoặc plan đã xong. Còn lại trả tối đa `max` ký tự cuối.
