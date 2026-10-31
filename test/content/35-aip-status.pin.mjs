@@ -38,6 +38,11 @@ export default async function run({ ok, ctx }) {
       ok(rc3 === 0 && recs.length === 2 && recs.every((r, i) => r.line === lines[i] && !Number.isNaN(Date.parse(r.ts)) && /T.*Z$/.test(r.ts)),
         'AC2.1: ghi 2 dòng → events.jsonl thêm đúng 2 bản ghi {ts ISO, line}');
       ok(rc3 === 0 && fs.readFileSync(prog, 'utf8') === `${lines.join('\n')}\n`, 'AC2.1: progress.md chỉ chứa đúng các dòng ledger, không có JSON');
+      // Regression review cuối: events.jsonl không ghi được thì progress.md vẫn có dòng và lệnh không thất bại (ghi lại sẽ trùng dòng)
+      fs.rmSync(events);
+      fs.mkdirSync(events);
+      const rc4 = quiet(() => lg.main([tmp, 'Unblocked: dùng thư mục tạm'], deps));
+      ok(rc4 === 0 && fs.readFileSync(prog, 'utf8').endsWith('Unblocked: dùng thư mục tạm\n'), 'events.jsonl lỗi → progress.md vẫn ghi, exit 0');
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }

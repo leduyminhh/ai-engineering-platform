@@ -64,7 +64,7 @@ export function pickRequest(runsRoot) {
   return best;
 }
 
-// Chỉ đọc ledger, không gọi git: statusline gọi hàm này mỗi lần làm mới.
+// countBlocked chỉ đọc ledger, không gọi git (caller gọi mainRoot một lần mỗi lần làm mới statusline).
 // Đếm cả ledger root: buildStatus cũng đưa root vướng vào "Cần bạn xử lý", nên statusline và trang báo cùng một số.
 export function countBlocked(runsRoot) {
   const request = pickRequest(runsRoot);
@@ -226,7 +226,8 @@ export function renderText(model, { part } = {}) {
       else if (p.reason) out.push(`  Blocked: ${p.reason}`);
     }
   }
-  return out.join('\n');
+  // Nội dung ledger, commit, tên file là dữ liệu không tin cậy: bỏ ký tự điều khiển để không chèn escape sequence vào terminal.
+  return out.join('\n').replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, '');
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -254,7 +255,7 @@ export function renderHtml(model, { watch = false } = {}) {
   const events = model.events.length
     ? `<table>${model.events.map((e) => `<tr><td class="muted">${esc(clock(e.ts, h.updatedAt))}</td><td>${esc(e.part)}</td><td>${esc(e.text)}</td></tr>`).join('')}</table>`
     : '<p class="muted">Chưa có sự kiện có thời điểm (events.jsonl).</p>';
-  return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
 ${watch ? `<meta http-equiv="refresh" content="${WATCH_SECONDS}">` : ''}<title>aip status — ${esc(h.request)}</title><style>${CSS}</style></head><body>
 <section id="header"><h1>${esc(h.request)}</h1><div class="muted">nhánh ${esc(h.branch ?? '?')} · HEAD ${esc(h.head ?? '?')} · autonomy ${esc(autonomyText(h.autonomy))} · cập nhật ${esc(clock(h.updatedAt))}</div></section>
 <section id="gates" class="gates">${model.gates.map((g) => `<span class="${g.done ? 'done' : ''}">${esc(g.id)} ${g.done ? '✓' : '·'}</span>`).join('→ ')}</section>
@@ -267,6 +268,8 @@ ${model.needs.length ? `<section id="needs" class="needs"><h2>Cần bạn xử l
 `;
 }
 
+const REQUEST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
 // CLI: trả exit code; --watch giữ tiến trình và ghi lại HTML mỗi 10 giây.
 export function runStatus(args, { cwd = process.cwd(), out = console.log, err = console.error, git = defaultGit } = {}) {
   const runsRoot = mainRoot(cwd, git);
@@ -274,13 +277,23 @@ export function runStatus(args, { cwd = process.cwd(), out = console.log, err = 
   if ('part' in args && !args.part) { err('--part cần số part, vd --part 02.'); return 2; }
   const request = args._[1] ?? pickRequest(runsRoot);
   if (!request) { out('Không có request nào đang chạy (chưa có ledger dở trong .aip/runs/).'); return 0; }
+  // Tên request đi thẳng vào đường dẫn đọc và ghi status.html: chặn `..`, dấu phân cách và đường dẫn tuyệt đối.
+  if (!REQUEST_RE.test(request)) { err(`Tên request không hợp lệ: ${request}.`); return 2; }
   const hasDocs = (r) => fs.existsSync(path.join(r, 'docs', 'requests', request));
   const docs = hasDocs(docsRoot) ? docsRoot : hasDocs(runsRoot) ? runsRoot : null;
   if (!docs && !fs.existsSync(runsDir(runsRoot, request))) { err(`Không tìm thấy request ${request}.`); return 2; }
   const config = readGateConfig(cwd);
   const make = () => buildStatus({ docsRoot: docs ?? docsRoot, runsRoot, request, git, staleMinutes: staleMinutesOf(config), autonomy: config?.autonomy ?? null });
   const html = path.join(runsDir(runsRoot, request), 'status.html');
-  const writeHtml = (watch) => { fs.mkdirSync(path.dirname(html), { recursive: true }); fs.writeFileSync(html, renderHtml(make(), { watch })); };
+  const writeHtml = (watch) => {
+    fs.mkdirSync(path.dirname(html), { recursive: true });
+    // status.html chứa nội dung ledger: bảo đảm git bỏ qua .aip dù plan-execution chưa tạo workspace (vd trước G2).
+    const ignore = path.join(runsRoot, '.aip', '.gitignore');
+    if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '*\n');
+    // Ghi qua file tạm rồi đổi tên để trang đang mở với meta refresh không đọc phải file ghi dở.
+    fs.writeFileSync(`${html}.tmp`, renderHtml(make(), { watch }));
+    fs.renameSync(`${html}.tmp`, html);
+  };
   if (args.watch) {
     writeHtml(true);
     out(`${html} (ghi lại mỗi ${WATCH_SECONDS} giây, Ctrl+C để dừng)`);

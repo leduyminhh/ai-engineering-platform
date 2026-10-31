@@ -84,7 +84,12 @@ export function appendLedger(file, line, now = new Date()) {
   const text = line.replace(/\r?\n$/, '');
   fs.appendFileSync(file, `${text}\n`);
   const ts = now.toISOString();
-  fs.appendFileSync(path.join(path.dirname(file), 'events.jsonl'), text.split(LINE_SPLIT).filter((l) => l.trim()).map((l) => `${JSON.stringify({ ts, line: l })}\n`).join(''));
+  try {
+    fs.appendFileSync(path.join(path.dirname(file), 'events.jsonl'), text.split(LINE_SPLIT).filter((l) => l.trim()).map((l) => `${JSON.stringify({ ts, line: l })}\n`).join(''));
+  } catch (e) {
+    // progress.md là nguồn sự thật và đã ghi xong; lỗi ở events.jsonl không được làm lệnh thất bại, vì ghi lại sẽ trùng dòng.
+    console.error(`events.jsonl không ghi được: ${e.message}`);
+  }
 }
 
 // null = không có gì để nạp lại: file không đọc được hoặc plan đã xong. Còn lại trả tối đa `max` ký tự cuối.

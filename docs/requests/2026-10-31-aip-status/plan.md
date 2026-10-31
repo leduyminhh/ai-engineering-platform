@@ -157,6 +157,6 @@
 - Produces: không có
 
 - [ ] **Step 1:** Bump `core/.manifest.json`, `npm run build`, `node cli/lib/versions.mjs --lock`, `npm test` → Expected: PASS.
-- [ ] **Step 2:** Spec sống theo `## Ảnh hưởng spec`: `workflows` đổi R8, R14; `cli-wizard` thêm R7; `hooks-gates` thêm R16; chạy `check-request.mjs` → không cảnh báo ngoài W9.
+- [ ] **Step 2:** Spec sống theo `## Ảnh hưởng spec`: `workflows` đổi R8, R14; `cli-wizard` thêm R7; `hooks-gates` thêm R17; chạy `check-request.mjs` → không cảnh báo ngoài W9.
 - [ ] **Step 3:** Lượt thử 5 ở `E:\Mine\AI\aip-parts-trial`: request 2 part, một part vướng có chủ đích; kiểm AC3.1, AC3.2, AC4.1–AC4.3, AC6.1 (trang đúng trạng thái, vướng báo một lần, gỡ xong part tiếp tục và merged); ghi kết quả từng AC vào `trial-5.md`.
 - [ ] **Step 4:** Commit.

@@ -112,6 +112,12 @@ try {
     try { ok(stateOf(build(r), '02-api') === want, `AC1.1: ${JSON.stringify(lines)} → ${want}`); } finally { fs.rmSync(r, { recursive: true, force: true }); }
   }
 
+  // Review Focus (a): Blocked thắng chờ part phụ thuộc (04-docs phụ thuộc 02-api chưa merged)
+  {
+    const r = fixture({ root: LEDGERS.root, '04-docs': [START, 'Blocked: a'] });
+    try { ok(stateOf(build(r), '04-docs') === 'blocked', 'Review Focus: Blocked + phụ thuộc chưa merged → blocked'); } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  }
+
   // AC1.2: JSON đủ trường của 7 khối
   const json = JSON.parse(JSON.stringify(m));
   ok(['header', 'gates', 'needs', 'totals', 'parts', 'graph', 'details', 'events'].every((k) => k in json), 'AC1.2: mô hình JSON có đủ khoá của 7 khối');
@@ -188,6 +194,16 @@ try {
   const h = cli('--html');
   const out = path.join(root, '.aip', 'runs', REQ, 'status.html');
   ok(h.status === 0 && fs.existsSync(out) && h.stdout.includes('status.html'), 'AC1.3: aip status --html ghi .aip/runs/<request>/status.html và in đường dẫn');
+  ok(fs.readFileSync(path.join(root, '.aip', '.gitignore'), 'utf8').trim() === '*', '--html tạo .aip/.gitignore (*) khi thiếu');
+  ok(fs.readFileSync(out, 'utf8').includes('Content-Security-Policy') && !fs.existsSync(`${out}.tmp`), '--html có CSP và không để lại file tạm');
+  // Regression review cuối (CWE-22): tên request có `..`, dấu phân cách hay đường dẫn tuyệt đối bị từ chối, không ghi file
+  for (const bad of ['..', '../x', 'a/../..', 'a\\b', '/abs', '-x']) {
+    const b = cli(bad, '--html');
+    ok(b.status === 2 && b.stderr.includes('không hợp lệ'), `tên request ${JSON.stringify(bad)} → exit 2`);
+  }
+  ok(!fs.existsSync(path.join(root, '.aip', 'status.html')) && !fs.existsSync(path.join(root, 'status.html')), 'tên request lạ không ghi status.html ra ngoài thư mục request');
+  const ctl = renderText({ ...m, needs: [{ part: 'x', state: 'blocked', reason: 'a\x1b[31mb\x07c' }] });
+  ok(!/[\x00-\x09\x0b-\x1f\x7f]/.test(ctl) && ctl.includes('a[31mbc'), 'text bỏ ký tự điều khiển lấy từ ledger');
   const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-empty-'));
   const e = spawnSync(process.execPath, [CLI, 'status'], { cwd: empty, encoding: 'utf8' });
   ok(e.status === 0 && e.stdout.trim().length > 0, 'không có request đang chạy: in một dòng, exit 0');
