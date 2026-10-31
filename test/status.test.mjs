@@ -38,7 +38,7 @@ Không ảnh hưởng: test
 const plan = (tasks) => tasks.map(([n, files, iface = '']) => `### Task ${n}: t${n}\n**Kind:** TOOLING\n**Files:**\n${files.map((f) => `- Modify: \`${f}\``).join('\n')}\n${iface}\n`).join('\n');
 const PLANS = {
   '01-core': plan([[1, ['src/core.mjs'], '**Interfaces:**\n- Consumes: không có\n- Produces: `parseX(text)`\n']]),
-  '02-api': plan([[1, ['src/api.mjs'], '**Interfaces:**\n- Consumes: `parseX(text)`\n- Produces: không có\n'], [2, ['src/api2.mjs']]]),
+  '02-api': plan([[1, ['src/api.mjs', 'src/ApiController.java'], '**Interfaces:**\n- Consumes: `parseX(text)`\n- Produces: không có\n'], [2, ['src/api2.mjs']]]),
   '07-done': plan([[1, ['src/done.mjs']]]),
 };
 const LEDGERS = {
@@ -128,6 +128,15 @@ try {
   for (const id of ['header', 'gates', 'needs', 'totals', 'parts', 'graph', 'details']) ok(html.includes(`id="${id}"`), `AC1.3: HTML có khối #${id}`);
   ok(!/(src|href)\s*=\s*["']?(https?:)?\/\//i.test(html) && !/<link\b|@import|<script\b/i.test(html), 'AC1.3: HTML không tải tài nguyên ngoài, không có script');
   ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), 'AC1.3: nội dung ledger được escape');
+  // Regression xem trang (2026-10-31): tên file giữ nguyên hoa thường như plan; JSON giữ ISO, trang in giờ địa phương thay vì ISO UTC
+  ok(json.details['02-api'][0].files.includes('src/ApiController.java') && html.includes('src/ApiController.java'), 'chi tiết part giữ nguyên hoa thường của tên file trong plan');
+  const iso = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z/;
+  ok(!iso.test(html) && !iso.test(renderText(m)) && !iso.test(renderText(m, { part: '02' })), 'trang và text không in thời điểm ISO UTC thô');
+  const two = (v) => String(v).padStart(2, '0');
+  const d = new Date(json.events.find((e) => e.part === '02-api').ts);
+  const today = new Date(NOW).toDateString() === d.toDateString();
+  ok(html.includes(`${today ? '' : `${two(d.getDate())}/${two(d.getMonth() + 1)} `}${two(d.getHours())}:${two(d.getMinutes())}`), 'thời điểm in theo giờ địa phương HH:MM (thêm dd/mm khi khác ngày)');
+  ok(iso.test(JSON.stringify(json.events[0])), '--json vẫn giữ thời điểm ISO');
   ok(!html.includes('http-equiv="refresh"') && renderHtml(m, { watch: true }).includes('http-equiv="refresh"'), 'AC1.3: chỉ --watch mới có meta refresh');
   const calm = fixture({ root: LEDGERS.root });
   try { ok(!renderHtml(build(calm)).includes('id="needs"'), 'AC1.3: không có việc thì không có khối Cần bạn xử lý'); } finally { fs.rmSync(calm, { recursive: true, force: true }); }
