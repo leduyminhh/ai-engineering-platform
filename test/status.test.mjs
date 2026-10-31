@@ -1,0 +1,178 @@
+#!/usr/bin/env node
+// Test cho `aip status`: mô hình dựng từ fixture request (design, plan, ledger, events.jsonl) với git giả, render text/JSON/HTML, CLI thật. Zero-dependency.
+// Chạy: node test/status.test.mjs
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { buildStatus, pickRequest, renderText, renderHtml, countBlocked, staleMinutesOf } from '../cli/lib/status.mjs';
+import { parse } from '../cli/lib/args.mjs';
+
+const CLI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'cli', 'index.mjs');
+let pass = 0;
+const fails = [];
+const ok = (c, m) => { if (c) pass++; else fails.push(m); };
+
+const REQ = '2026-01-01-demo';
+const NOW = Date.now();
+const MIN = 60_000;
+const START = 'Task 1: start (base 1a2b3c4)';
+
+const DESIGN = `# Thiết kế: demo
+- Trạng thái: approved
+## Bảng part
+| Part | Phụ thuộc | Song song | Trạng thái |
+|---|---|---|---|
+| 01-core | — | — | merged abc1234 |
+| 02-api | 01-core | a | đang làm |
+| 03-ui | 01-core | a | đang làm |
+| 04-docs | 02-api | — | chưa làm |
+| 05-idle | — | — | chưa làm |
+| 06-git | — | — | chưa làm |
+| 07-done | — | — | đang làm |
+| 08-stale | — | — | đang làm |
+## Ảnh hưởng spec
+Không ảnh hưởng: test
+`;
+const plan = (tasks) => tasks.map(([n, files, iface = '']) => `### Task ${n}: t${n}\n**Kind:** TOOLING\n**Files:**\n${files.map((f) => `- Modify: \`${f}\``).join('\n')}\n${iface}\n`).join('\n');
+const PLANS = {
+  '01-core': plan([[1, ['src/core.mjs'], '**Interfaces:**\n- Consumes: không có\n- Produces: `parseX(text)`\n']]),
+  '02-api': plan([[1, ['src/api.mjs'], '**Interfaces:**\n- Consumes: `parseX(text)`\n- Produces: không có\n'], [2, ['src/api2.mjs']]]),
+  '07-done': plan([[1, ['src/done.mjs']]]),
+};
+const LEDGERS = {
+  root: ['# Ledger', 'Part 01: merged (abc1234)', 'Ruling: chọn A — vì B — nếu sai: C'],
+  '01-core': ['Task 1: complete (commits a..b, review clean)', 'Part: complete abc1234'],
+  '02-api': [START, 'Blocked: thiếu quyền <script>alert(1)</script>'],
+  '03-ui': [START],
+  '07-done': ['Task 1: complete (commits c..d, review clean)', 'minor (deferred): đặt tên — task 1', 'Part: complete def5678'],
+  '08-stale': [START],
+};
+const MTIME = { '03-ui': NOW - 5 * MIN, '08-stale': NOW - 31 * MIN };
+
+function fixture(ledgers = LEDGERS, mtime = MTIME) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-'));
+  const req = path.join(root, 'docs', 'requests', REQ);
+  fs.mkdirSync(req, { recursive: true });
+  fs.writeFileSync(path.join(req, 'design.md'), DESIGN);
+  for (const [p, t] of Object.entries(PLANS)) {
+    fs.mkdirSync(path.join(req, 'parts', p), { recursive: true });
+    fs.writeFileSync(path.join(req, 'parts', p, 'plan.md'), t);
+  }
+  for (const [p, lines] of Object.entries(ledgers)) {
+    const dir = path.join(root, '.aip', 'runs', REQ, p);
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'progress.md');
+    fs.writeFileSync(file, `${lines.join('\n')}\n`);
+    if (p === '02-api') fs.writeFileSync(path.join(dir, 'events.jsonl'), lines.map((line, i) => JSON.stringify({ ts: new Date(NOW - (10 - i) * MIN).toISOString(), line })).join('\n') + '\n');
+    const t = (mtime[p] ?? NOW) / 1000;
+    fs.utimesSync(file, t, t);
+  }
+  return root;
+}
+
+// git giả: chỉ nhánh part 06 có commit (2 phút trước); lệnh khác ném như ngoài repo.
+const fakeGit = (args) => {
+  const s = args.join(' ');
+  if (s.includes('worktree-demo-p06')) return `${'f'.repeat(40)}\t${Math.floor(NOW / 1000) - 120}\tfeat: thêm git part`;
+  if (s.startsWith('rev-parse --abbrev-ref')) return 'feature/demo';
+  if (s.startsWith('rev-parse --short')) return 'abc1234';
+  throw new Error('không phải repo');
+};
+const build = (root, opts = {}) => buildStatus({ docsRoot: root, runsRoot: root, request: REQ, now: NOW, git: fakeGit, ...opts });
+const stateOf = (m, id) => m.parts.find((p) => p.id === id)?.state;
+
+const root = fixture();
+try {
+  const m = build(root);
+
+  // AC1.1: trạng thái theo thứ tự ưu tiên, số tổng và bảng part ở text
+  for (const [id, want] of [['01-core', 'merged'], ['02-api', 'blocked'], ['03-ui', 'active'], ['04-docs', 'waiting'], ['05-idle', 'todo'], ['06-git', 'active'], ['07-done', 'done'], ['08-stale', 'stale']]) {
+    ok(stateOf(m, id) === want, `AC1.1: part ${id} ở trạng thái ${want} (nhận ${stateOf(m, id)})`);
+  }
+  ok(m.totals.partsMerged === 1 && m.totals.partsTotal === 8 && m.totals.tasksDone === 2 && m.totals.tasksTotal === 4 && m.totals.blocked === 1 && m.totals.rulings === 1 && m.totals.minors === 1,
+    `AC1.1: số tổng đúng (nhận ${JSON.stringify(m.totals)})`);
+  const text = renderText(m);
+  ok(/merged 1\/8/.test(text) && /task 2\/4/.test(text) && /vướng 1/.test(text), 'AC1.1: text có dòng số tổng');
+  ok(['01-core', '08-stale'].every((id) => text.includes(id)) && text.includes('chờ part phụ thuộc') && text.includes('im lặng quá lâu'), 'AC1.1: text có bảng part với nhãn trạng thái');
+  ok(renderText(m, { part: '02' }).includes('Task 2') && renderText(m, { part: '02' }).includes('Blocked: thiếu quyền'), 'AC1.1: --part 02 in chi tiết task và dòng sự kiện của part');
+
+  // AC1.1: dòng Blocked: chỉ là vướng khi chưa có Unblocked:/complete sau nó
+  for (const [lines, want] of [
+    [[START, 'Blocked: a'], 'blocked'],
+    [[START, 'Blocked: a', 'Unblocked: b'], 'active'],
+    [[START, 'Blocked: a', 'Task 1: complete (commits a..b, review clean)'], 'active'],
+    [[START, 'Blocked: a', 'Unblocked: b', 'Blocked: c'], 'blocked'],
+    [['Blocked: a', 'Part: complete x'], 'done'],
+  ]) {
+    const r = fixture({ root: LEDGERS.root, '02-api': lines });
+    try { ok(stateOf(build(r), '02-api') === want, `AC1.1: ${JSON.stringify(lines)} → ${want}`); } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  }
+
+  // AC1.2: JSON đủ trường của 7 khối
+  const json = JSON.parse(JSON.stringify(m));
+  ok(['header', 'gates', 'needs', 'totals', 'parts', 'graph', 'details', 'events'].every((k) => k in json), 'AC1.2: mô hình JSON có đủ khoá của 7 khối');
+  ok(json.header.request === REQ && json.header.branch === 'feature/demo' && json.header.head === 'abc1234' && typeof json.header.updatedAt === 'string', 'AC1.2: đầu trang có request, nhánh, HEAD, thời điểm');
+  ok(json.gates.map((g) => g.id).join() === 'G1,G2,G3,push' && json.gates[0].done === true && json.gates[2].done === false, 'AC1.2: dải cổng G1 → G2 → G3 → push, G1 xong theo design approved');
+  ok(json.graph.some((e) => e.from === '01-core' && e.to === '02-api' && e.label.includes('parseX(text)')), 'AC1.2: sơ đồ phụ thuộc có nhãn từ Interfaces');
+  ok(json.details['02-api']?.length === 2 && json.details['02-api'][0].files.includes('src/api.mjs'), 'AC1.2: chi tiết part có task và file');
+  ok(json.events.length >= 3 && json.events.every((e, i, a) => i === 0 || a[i - 1].ts >= e.ts) && json.events.some((e) => e.part === '06-git' && e.text.includes('feat: thêm git part')),
+    'AC1.2: dòng sự kiện gồm ledger + commit nhánh part, mới nhất trước');
+  ok(json.needs.length === 2 && json.needs.some((n) => n.part === '02-api' && n.reason.includes('thiếu quyền')) && json.needs.some((n) => n.part === '08-stale'), 'AC1.2: Cần bạn xử lý gồm part vướng và part im lặng');
+
+  // AC1.3: HTML tự chứa, 7 khối, escape nội dung ledger, refresh khi watch
+  const html = renderHtml(m);
+  for (const id of ['header', 'gates', 'needs', 'totals', 'parts', 'graph', 'details']) ok(html.includes(`id="${id}"`), `AC1.3: HTML có khối #${id}`);
+  ok(!/(src|href)\s*=\s*["']?(https?:)?\/\//i.test(html) && !/<link\b|@import|<script\b/i.test(html), 'AC1.3: HTML không tải tài nguyên ngoài, không có script');
+  ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), 'AC1.3: nội dung ledger được escape');
+  ok(!html.includes('http-equiv="refresh"') && renderHtml(m, { watch: true }).includes('http-equiv="refresh"'), 'AC1.3: chỉ --watch mới có meta refresh');
+  const calm = fixture({ root: LEDGERS.root });
+  try { ok(!renderHtml(build(calm)).includes('id="needs"'), 'AC1.3: không có việc thì không có khối Cần bạn xử lý'); } finally { fs.rmSync(calm, { recursive: true, force: true }); }
+
+  // AC1.4: chờ part phụ thuộc không phải vướng
+  ok(stateOf(m, '04-docs') === 'waiting' && !m.needs.some((n) => n.part === '04-docs'), 'AC1.4: part chờ phụ thuộc chưa merged không vào Cần bạn xử lý, không tính vướng');
+
+  // AC1.5: ngưỡng im lặng, mặc định 30
+  ok(staleMinutesOf(null) === 30 && staleMinutesOf({}) === 30 && staleMinutesOf({ statusStaleMinutes: 'x' }) === 30 && staleMinutesOf({ statusStaleMinutes: -5 }) === 30 && staleMinutesOf({ statusStaleMinutes: 45 }) === 45,
+    'AC1.5: statusStaleMinutes thiếu/sai thì 30, hợp lệ thì dùng');
+  ok(stateOf(build(root, { staleMinutes: 60 }), '08-stale') === 'active', 'AC1.5: 31 phút dưới ngưỡng 60 là đang làm');
+  const r29 = fixture(LEDGERS, { ...MTIME, '08-stale': NOW - 29 * MIN });
+  try { ok(stateOf(build(r29), '08-stale') === 'active', 'AC1.5: 29 phút dưới ngưỡng mặc định 30 là đang làm'); } finally { fs.rmSync(r29, { recursive: true, force: true }); }
+
+  // Request cũ: không có events.jsonl, git ném lỗi → không ném, vẫn có bảng
+  const bare = buildStatus({ docsRoot: root, runsRoot: root, request: REQ, now: NOW, git: () => { throw new Error('x'); } });
+  ok(bare.parts.length === 8 && bare.header.branch === null, 'thiếu git: vẫn dựng bảng, nhánh null');
+
+  // pickRequest / countBlocked: request có ledger dở mới nhất; request đã Plan: complete bị bỏ
+  const old = path.join(root, '.aip', 'runs', '2025-01-01-old', 'root');
+  fs.mkdirSync(old, { recursive: true });
+  fs.writeFileSync(path.join(old, 'progress.md'), 'Blocked: cũ\nPlan: complete\n');
+  ok(pickRequest(root) === REQ && countBlocked(root) === 1, 'pickRequest chọn request dở; countBlocked đếm part vướng của request đó');
+  ok(pickRequest(path.join(root, 'không-có')) === null && countBlocked(path.join(root, 'không-có')) === 0, 'không có .aip/runs: pickRequest null, countBlocked 0');
+
+  // CLI thật: thư mục tạm không phải repo nên docsRoot = runsRoot = cwd
+  const cli = (...a) => spawnSync(process.execPath, [CLI, 'status', ...a], { cwd: root, encoding: 'utf8' });
+  const j = cli(REQ, '--json');
+  let parsed = null;
+  try { parsed = JSON.parse(j.stdout); } catch { /* để ok báo */ }
+  ok(j.status === 0 && parsed?.header?.request === REQ, 'AC1.2: aip status <request> --json in JSON, exit 0');
+  const t = cli();
+  ok(t.status === 0 && t.stdout.includes('02-api') && t.stdout.includes('vướng'), 'AC1.1: aip status không tên chọn request dở mới nhất, in text');
+  const h = cli('--html');
+  const out = path.join(root, '.aip', 'runs', REQ, 'status.html');
+  ok(h.status === 0 && fs.existsSync(out) && h.stdout.includes('status.html'), 'AC1.3: aip status --html ghi .aip/runs/<request>/status.html và in đường dẫn');
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-empty-'));
+  const e = spawnSync(process.execPath, [CLI, 'status'], { cwd: empty, encoding: 'utf8' });
+  ok(e.status === 0 && e.stdout.trim().length > 0, 'không có request đang chạy: in một dòng, exit 0');
+  fs.rmSync(empty, { recursive: true, force: true });
+
+  const pa = parse(['status', '--html', '--part', '02', '--watch']);
+  ok(pa._.join() === 'status' && pa.html === true && pa.part === '02' && pa.watch === true, 'parse() nhận --html/--part/--watch');
+  ok(parse(['status', '--part=03']).part === '03', 'parse() nhận --part=<nn>');
+} finally {
+  fs.rmSync(root, { recursive: true, force: true });
+}
+
+if (fails.length) { console.error(`FAIL ${fails.length}:\n- ${fails.join('\n- ')}`); process.exit(1); }
+console.log(`status: ${pass} OK`);
