@@ -1,6 +1,6 @@
 # Thiết kế: sửa các minor còn hoãn của part-mode-tooling-gaps
 - Ngày: 2026-10-31
-- Trạng thái: in-progress — mục 1–4 xong (review cuối 0 blocker/major), nhánh `fix/part-mode-tooling-minors` giữ nguyên chưa merge; mục 5 chờ người dùng duyệt
+- Trạng thái: merged — merge `fix/part-mode-tooling-minors` vào master b5d8d21 ngày 2026-10-31 (mục 1–4, review cuối 0 blocker/major); mục 5 vẫn chờ người dùng duyệt, chưa viết
 - Requirement: không có
 ## Vấn đề và lý do
 Review cuối nhánh `feature/part-mode-tooling-gaps` và lượt thử 3 (`../2026-10-31-part-mode-tooling-gaps/trial-3.md`) để lại các `minor (deferred)`:
