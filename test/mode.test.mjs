@@ -17,6 +17,11 @@ const tmp = () => {
   execFileSync("git", ["init", "-q"], { cwd: d });
   return d;
 };
+const tmpNoGit = () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), "aip-auto-nogit-"));
+  dirs.push(d);
+  return d;
+};
 after(() => { for (const d of dirs) fs.rmSync(d, { recursive: true, force: true }); });
 
 const gen = (allowEnvFiles = false) => JSON.stringify(buildClaudePermissions(loadPolicy(), { allowEnvFiles }), null, 2) + "\n";
@@ -299,6 +304,56 @@ test("autonomy-gates AC8.1: CLI aip autonomy từ chối -g và giá trị lạ"
   assert.equal(fs.existsSync(gatePath(root)), false);
   assert.equal(run("high").status, 0);
   assert.equal(JSON.parse(fs.readFileSync(gatePath(root), "utf8")).autonomy.partRunner, "subagent");
+});
+
+test("autonomy-gates AC8.1: ngoài repo git, high/safe/status đọc thẳng aip-gate.json của thư mục; file hỏng ⇒ exit 1, không ghi", () => {
+  const root = tmpNoGit();
+  const others = { mode: "full", allowEnvFiles: true, mcpDeny: ["evil"] };
+  put(gatePath(root), JSON.stringify(others));
+  const run = (sub) => { const out = [], err = []; const code = runAutonomy(sub, { root, out: (l) => out.push(l), err: (l) => err.push(l) }); return { code, out: out.join("\n"), err: err.join("\n") }; };
+  const gate = () => JSON.parse(fs.readFileSync(gatePath(root), "utf8"));
+  const HIGH = { mergeLocal: true, cleanup: true, partRunner: "subagent" };
+
+  assert.equal(run("high").code, 0);
+  assert.deepEqual(gate(), { ...others, autonomy: HIGH });
+  const st = run("status").out;
+  assert.ok(st.includes(JSON.stringify(HIGH)));
+  assert.doesNotMatch(st, /mặc định an toàn/);
+  assert.equal(run("safe").code, 0);
+  assert.deepEqual(gate(), others);
+
+  for (const bad of ["{ hỏng", "[]"]) {
+    put(gatePath(root), bad);
+    for (const sub of ["high", "safe", "status"]) {
+      const r = run(sub);
+      assert.equal(r.code, 1, `${sub} với ${bad}`);
+      assert.match(r.err, /aip-gate\.json/);
+      assert.equal(fs.readFileSync(gatePath(root), "utf8"), bad);
+    }
+  }
+});
+
+test("autonomy-gates AC8.1: high cảnh báo theo trạng thái git của aip-gate.json, không sửa .gitignore", () => {
+  const git = (cwd, ...a) => execFileSync("git", ["-c", "commit.gpgsign=false", ...a], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+  const run = (sub, root) => { const l = []; assert.equal(runAutonomy(sub, { root, out: (x) => l.push(x), err: () => {} }), 0); return l.join("\n"); };
+
+  const tracked = tmp();
+  git(tracked, "config", "user.name", "t");
+  git(tracked, "config", "user.email", "t@example.com");
+  put(gatePath(tracked), "{}");
+  git(tracked, "add", ".claude/aip-gate.json");
+  git(tracked, "commit", "-q", "-m", "gate");
+  const t = run("high", tracked);
+  assert.match(t, /clone/);
+  assert.match(t, /git rm --cached \.claude\/aip-gate\.json/);
+  assert.match(run("status", tracked), /git: .*được git theo dõi/);
+
+  const open = tmp();
+  const o = run("high", open);
+  assert.match(o, /\.gitignore/);
+  assert.doesNotMatch(o, /git rm --cached/);
+  assert.match(run("status", open), /git: .*chưa gitignore/);
+  assert.equal(fs.existsSync(path.join(open, ".gitignore")), false);
 });
 
 test("autonomy-gates AC8.1: trong worktree, safe chép khóa repo chính trừ autonomy và mode; repo chính hỏng ⇒ exit 1, không ghi", () => {
