@@ -17,6 +17,8 @@ const EXIT_FAILED_RE = /\bexit [1-9]/;
 const TASK_COMPLETE_RE = /^Task \d+: complete\b/i;
 // Không vượt qua "tests:": red: thiếu exit không được mượn exit của tests: phía sau. "red: exit 1" không có lệnh thì không tính.
 const RED_RE = /\bred:\s*(?!tests:)\S(?:(?!\btests:).)*? exit (\d+)\b/gi;
+// Khối red: không có lệnh bị từ chối thẳng, không chỉ bị bỏ qua: bỏ qua thì "red: exit 0" thoát kiểm exit 0 ở dưới.
+const RED_NO_CMD_RE = /\bred:\s*(?:tests:|exit\b)/i;
 // Chặn độ dài trước khi chạy regex: INLINE_EVIDENCE_RE lùi bậc hai trên dòng dài lặp "tests: ".
 const MAX_LINE = 4096;
 // \r lẻ cũng ngăn dòng: TASK_COMPLETE_RE neo ^ không cờ m, nên "x\rTask 1: complete … inline" sẽ lọt kiểm.
@@ -30,6 +32,7 @@ export function validateLine(line, ctx) {
     let evidence = l;
     let selfRunTdd = false;
     if (TASK_COMPLETE_RE.test(l)) {
+      if (RED_NO_CMD_RE.test(l)) return 'dòng Task <n>: complete có khối "red:" không có lệnh: cần "red: <lệnh> exit <n khác 0>"';
       // Mọi khối red: đều phải exit khác 0; một khối giả không được che bởi khối hợp lệ đứng trước.
       for (const red of l.matchAll(RED_RE)) {
         if (Number(red[1]) === 0) return 'dòng Task <n>: complete có "red: <lệnh> exit 0": bằng chứng đỏ phải exit khác 0';
