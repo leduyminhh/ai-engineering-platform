@@ -7,11 +7,11 @@ review cuối.
 ## Khi nào dùng
 
 - Người dùng nói rõ trong yêu cầu rằng muốn chạy inline hoặc không dùng subagent; hoặc
-- session không có tool subagent. Không bịa lệnh giao việc: chạy plan tại chỗ; hoặc
-- là subagent part do `partRunner: subagent` giao (mục "Subagent part" bên dưới).
+- session không có tool subagent. Không bịa lệnh giao việc: chạy plan tại chỗ.
 
 Không hỏi người dùng chọn cách thực thi. Plan đã duyệt thì mặc định là vòng task có subagent (`AGENTS.md`, mục Workflow
-defaults); inline chỉ bật theo một trong ba điều kiện trên.
+defaults); inline chỉ bật theo một trong hai điều kiện trên. Subagent part do `partRunner: subagent` giao là trường hợp
+riêng, xem mục "Subagent part".
 
 Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <người dùng chọn | không có tool subagent | subagent part> — <chi phí nếu sai>`.
 
@@ -53,10 +53,12 @@ Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một l�
 ## Subagent part
 
 Với `partRunner: subagent` (`task-loop.md`, "Chế độ part" bước 3), mỗi part do một subagent nền (`general-purpose`,
-`model: sonnet`) làm theo file này, đóng vai session của part:
+`model: sonnet`) làm theo "Vòng một task" của file này, chỉ cho plan của part mình, đóng vai session của part:
 
-- Chỉ làm trong worktree `.claude/worktrees/<slug>-p<nn>/` (cwd và mọi đường dẫn nằm trong đó), trên nhánh `worktree-<slug>-p<nn>`;
-  dùng plan của part `parts/<nn>-<part-slug>/plan.md` cho `ledger.mjs`, `task-brief.mjs`, `review-package.mjs --plan`.
+- Code, test và commit chỉ trong worktree `.claude/worktrees/<slug>-p<nn>/`, trên nhánh `worktree-<slug>-p<nn>`. Mọi lệnh dùng
+  đường dẫn tuyệt đối hoặc `git -C <worktree>`, vì cwd có thể bị reset giữa các lệnh Bash. Dùng plan của part
+  `parts/<nn>-<part-slug>/plan.md` cho `ledger.mjs`, `task-brief.mjs`, `review-package.mjs --plan`; ba script tự đặt ledger,
+  brief và review package ở gốc repo chính, đó là chỗ đúng, không phải ghi ra ngoài worktree.
 - Tự commit từng task trên nhánh part qua `git-workflow`: đây là ngoại lệ của luật "agent không commit". Không push, không merge.
 - Không review từng task (subagent không gọi được agent khác) và không review cuối; lỗi do review cuối toàn nhánh của session gốc bắt.
 - Không sửa `design.md` gốc hay Bảng part. Gặp loại dừng của `task-loop.md` thì trả `blocked` kèm `questions[]` thay vì tự quyết.

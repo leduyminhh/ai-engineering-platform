@@ -45,8 +45,9 @@ Request chia part (`## Bảng part` trong `design.md`): thứ tự part, song so
 `references/task-loop.md` (rẽ theo `partRunner`); `Plan: complete` chỉ ghi ở ledger `root/`.
 
 **Điểm dừng và báo cáo.** Chờ người dùng chỉ ở G1 (duyệt design), G2 (duyệt plan), G3 (duyệt diff cả nhánh), câu hỏi
-push/PR riêng sau G3, và 6 loại dừng bên dưới; giữa G2 và G3 chạy liền. Session chính không gửi dòng trạng thái giữa
-chừng (kể cả khi phiên con hoặc subagent xong một lượt), chỉ nói ở các điểm dừng trên hoặc khi gặp lỗi chặn.
+push/PR riêng sau G3, câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và 6 loại dừng bên dưới;
+giữa G2 và G3 chạy liền. Session chính không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một
+lượt), chỉ nói ở các điểm dừng trên hoặc khi gặp lỗi chặn (định nghĩa ở mục "Báo cáo" của `references/task-loop.md`).
 
 ## Ai làm gì
 

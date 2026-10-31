@@ -39,6 +39,8 @@ Thiếu điều kiện nào → dừng, báo thiếu gì, không tự tạo thay
 
 Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint người duyệt thì gắn ⏸ cuối tên bước.
 
+Ở workflow này, ⏸ ở Bước 2 là điểm dừng hỏi làm rõ (một tin nhắn gom, chỉ khi còn câu cần hỏi), không phải cổng duyệt; ba cổng duyệt là G1 (Bước 3), G2 (Bước 4), G3 (Bước 7).
+
 ### Bước 1 — Baseline build/test
 
 - **Thực hiện:** session chính
@@ -108,7 +110,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `engineering-task-breakdown` đã duyệt; người dùng đã duyệt tài liệu cùng hướng, cỡ việc, phạm vi và bảng ứng viên e2e đã trình ở Bước 2 (G1, tính là duyệt E2).
 - **Khi fail:** acceptance criteria không đo được hoặc agent `blocked` mà session chính không tự trả lời được →
   hỏi người dùng (gom một tin nhắn); contract xung đột với hệ thống hiện có → dừng, hỏi lại người dùng cách xử lý
-  breaking change; tài liệu cho thấy hướng hoặc cỡ việc đã duyệt sai → quay lại Bước 2.
+  breaking change; tài liệu cho thấy hướng hoặc cỡ việc đã chốt sai → quay lại Bước 2.
 - **Evidence:** đường dẫn `requirement.md` (+ `design.md`) + trích đoạn acceptance criteria; kết quả builder check
   (số câu theo nhóm đã trả lời/nhỏ/của người dùng); đường dẫn contract (hoặc dòng "không có API") + đường dẫn ADR nếu
   có; có `tasks.md` thì đường dẫn + output `check-tasks.mjs` (dòng tổng + exit code) hoặc kết quả checklist thủ công.
@@ -221,7 +223,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (thêm `--base <nhánh
   gốc>` khi có spec sống); bump version/lock theo quy ước dự án nếu cần; chạy full suite của mọi component bị chạm và
   component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings`; trình diff cả nhánh (G3) để người dùng duyệt. Khoá `mergeLocal` bật thì duyệt G3 là
-  đồng ý merge local (merge, full suite, `merged`, và dọn theo `cleanup`, xem `finish.md`); thiếu khoá thì đưa
+  đồng ý merge local (merge `--no-ff`, full suite, một commit docs đặt `merged` và xoá plan trên nhánh gốc, rồi dọn theo `cleanup`, xem `finish.md`); thiếu khoá thì đưa
   đúng 3 lựa chọn: merge local / push + PR / giữ nguyên (mặc định). Push + PR luôn hỏi riêng sau G3. Ghi `Plan: complete` vào ledger sau khi việc của lựa
   chọn xong.
 - **Ràng buộc:** không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`; không merge, không push khi người dùng chưa
@@ -241,7 +243,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ## Checkpoint
 
-Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); câu hỏi push/PR đứng riêng ngay sau G3. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom) và 6 loại dừng của `plan-execution`.
+Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); câu hỏi push/PR đứng riêng ngay sau G3. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá, Bước 5) và 6 loại dừng của `plan-execution`.
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
@@ -250,7 +252,7 @@ Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 d
 | 4 (G2) | `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (+ `check-partition.mjs` khi có part) (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9; `check-partition.mjs` không còn cảnh báo (hoặc nhóm bị báo chạy tuần tự) |
 | 7 (G3) | Diff cả nhánh (code + test + docs) + `rulings` + finding `major` còn lại trong `remaining_risks` + kết quả full suite | Người dùng duyệt diff cả nhánh, chấp nhận các `Ruling:`/`major` còn lại; có `mergeLocal: true` thì đó là đồng ý merge local, không thì chọn một trong 3 lựa chọn |
 
-Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution`, và không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một lượt): session chính chỉ nói ở G1, G2, G3, câu hỏi push, loại dừng hoặc lỗi chặn. Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
+Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution` và câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một lượt): session chính chỉ nói ở G1, G2, G3, câu hỏi push, câu hỏi cách chạy part, loại dừng hoặc lỗi chặn (định nghĩa ở mục "Báo cáo" của `task-loop.md` trong skill `plan-execution`). Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
 tag chỉ sau lựa chọn của người dùng ở Bước 7 (`mergeLocal: true` đã là chọn merge local; không khoá nào bật push); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời trước nhóm Song song, hoặc khoá `partRunner` `subagent`/`sequential` (Bước 5), là merge local, không chờ Bước 7; agent không tự commit (ngoại lệ: subagent part theo `inline.md`).
 
 ## Xử lý lỗi & rollback
