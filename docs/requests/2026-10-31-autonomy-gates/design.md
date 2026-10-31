@@ -13,6 +13,7 @@ Ba lượt thử chế độ part cho thấy một request phải quay lại cha
 - (6) `partRunner: "subagent"`: không hỏi trước nhóm Song song. Session gốc tự tạo worktree theo quy ước `worktree-<slug>-p<nn>`, giao mỗi part cho một subagent chạy nền (`general-purpose`, `model: sonnet`) làm việc chỉ trong đường dẫn worktree đó theo `inline.md` (subagent không gọi được agent khác nên không có review từng task trong part), tự commit từng task trên nhánh part qua `git-workflow` (subagent part đóng vai session của part, ngoại lệ của luật "agent không commit"), ghi `Part: complete <hash>`; review cuối toàn nhánh vẫn chạy như cũ. `"session"` giữ cách hiện nay (phiên thật, câu hỏi bước 3); `"sequential"` chạy tuần tự trong session gốc.
 - (7) Báo cáo: session gốc không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một lượt); chỉ nói ở G1, G2, G3, câu hỏi push, loại dừng, hoặc lỗi chặn.
 - (8) Lệnh mới `aip autonomy high|safe|status` (scope project, giống `aip mode`): `high` ghi `{ mergeLocal: true, cleanup: true, partRunner: "subagent" }`, `safe` xoá khoá, `status` in giá trị hiệu lực. Script `plan-execution/scripts/autonomy.mjs` in JSON hiệu lực để skill đọc, zero-dependency.
+- (9) Hook `guard-mcp` từ chối `mcp__ccd_session__start_session` khi thiếu `model` (trừ `initiation: "offer"` hoặc có `proposal_id`): phiên mới kế thừa model của phiên cha (opus), nên phải truyền `model` (mặc định phiên thực thi là sonnet, muốn opus thì truyền tường minh). Chặn không phụ thuộc `aip-gate.json`; fail-open khi lỗi nội bộ; `mcpAllow`/`mcpDeny` không đổi — yêu cầu người dùng G3 2026-10-31. [Unverified] tool `ccd_session` có đi qua PreToolUse hook của plugin hay không; kiểm bằng một lần gọi thật sau `aip update -g`.
 ## Tiêu chí chấp nhận
 - [ ] **AC1.1** — Given request chạy `workflow-feature` When đi từ làm rõ tới kết thúc nhánh Then chỉ dừng chờ người dùng ở G1, G2, G3, câu hỏi push và 6 loại dừng; tài liệu `workflow-feature` và `plan-execution` nêu đúng danh sách này
 - [ ] **AC2.1** — Given yêu cầu cần làm rõ When ở Bước 2 của `workflow-feature` Then mọi câu hỏi gom trong một tin nhắn
@@ -26,6 +27,7 @@ Ba lượt thử chế độ part cho thấy một request phải quay lại cha
 - [ ] **AC7.1** — Given phiên con hoặc subagent xong một lượt không cần người dùng quyết When session gốc nhận note Then không gửi tin nhắn trạng thái
 - [ ] **AC8.1** — Given project bất kỳ When chạy `aip autonomy high`, `safe`, `status` Then lần lượt ghi preset, xoá khoá, in giá trị hiệu lực; các khoá khác của `aip-gate.json` giữ nguyên
 - [ ] **AC9.1** — Given `aip autonomy high` và một request 2 part Song song trên `aip-parts-trial` When chạy từ G2 tới G3 Then không có lượt dừng nào ngoài cổng, và cả hai part merged qua subagent
+- [ ] **AC10.1** — Given `tool_name` là `mcp__ccd_session__start_session`, `initiation` khác `offer`, không có `proposal_id` và không có `model` When hook `guard-mcp` chạy Then trả `permissionDecision: deny` có lý do nêu `model` và sonnet; có `model` (kể cả opus), `offer`, `proposal_id` hoặc tool khác thì không can thiệp
 ## Thiết kế
 - `core/skills/plan-execution/scripts/autonomy.mjs`: đọc gate theo thứ tự của `workspace.mjs`/hook (gốc worktree, rồi gốc repo chính), chuẩn hoá từng trường về mặc định khi sai.
 - `cli/lib/mode.mjs` (hoặc file mới `cli/lib/autonomy.mjs` theo cùng mẫu `runMode`) + định tuyến trong `cli/index.mjs`/`args.mjs`.
@@ -34,6 +36,7 @@ Ba lượt thử chế độ part cho thấy một request phải quay lại cha
 - workflows: đổi R7
 - workflows: đổi R14
 - hooks-gates: thêm R15
+- hooks-gates: thêm R16
 - cli-wizard: thêm R6
 ## Ngoài phạm vi và anti-goal
 - Không tự push hay tạo PR; không khoá nào bật push tự động.
