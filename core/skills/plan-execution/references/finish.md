@@ -18,11 +18,14 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
    này. Đỏ → dừng: sửa trong phạm vi plan rồi chạy lại, hoặc báo `blocked`. Không đưa menu khi suite còn đỏ.
 5. **Gom `Ruling:`.** Đọc ledger (request chia part: ledger `root/` và mọi ledger part), liệt kê mọi dòng `Ruling:` (cùng `minor (deferred)` còn mở) và đưa vào trường `rulings`
    của `workflow_result` (định dạng theo contract đầu ra, `core:principles`). Trình các dòng này cho người dùng cùng
-   menu bên dưới; dòng nào thuộc loại dừng hỏi của `task-loop.md` thì nêu riêng để người dùng quyết.
+   diff cả nhánh ở G3 (bước 7); dòng nào thuộc loại dừng hỏi của `task-loop.md` thì nêu riêng để người dùng quyết.
 6. **Xác nhận nhánh gốc** (nhánh sẽ merge vào hoặc làm đích của PR). Không đoán: hỏi khi có nhiều ứng viên. Chạy
    `git remote`: kết quả rỗng thì repo chưa có remote, lựa chọn push + PR ghi "không khả dụng: repo chưa có remote" và
    không gợi ý lệnh `git push`.
-7. **Đưa đúng 3 lựa chọn**, lựa chọn mặc định là giữ nguyên:
+7. **G3.** Trình diff cả nhánh + `rulings` + finding còn lại (`remaining_risks`) cho người dùng duyệt, rồi rẽ theo khoá
+   `mergeLocal` của `autonomy.mjs` (đã đọc ở bước Chuẩn bị của skill). `mergeLocal: true`: duyệt G3 cũng là đồng ý merge
+   local, làm theo mục "Merge local theo khoá" bên dưới, không hỏi thêm. Thiếu khoá: đưa đúng 3 lựa chọn dưới đây, lựa chọn
+   mặc định là giữ nguyên. Push/PR luôn hỏi riêng sau G3, không khoá nào bật push.
 
 | # | Lựa chọn | Việc làm |
 |---|---|---|
@@ -30,7 +33,18 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 | 2 | push + PR | Xác nhận tên nhánh rồi push và mở PR qua `git-workflow`. |
 | 3 | giữ nguyên | Không làm gì thêm; báo tên nhánh và commit đầu/cuối. |
 
-Không merge nhánh `feature/<slug>` vào nhánh gốc, không push khi người dùng chưa chọn (merge nhánh part vào `feature/<slug>` đã làm ở "Chế độ part" của `task-loop.md`); không trả lời rõ → áp lựa chọn mặc định (giữ nguyên) và nói như vậy.
+Không merge nhánh `feature/<slug>` vào nhánh gốc, không push khi người dùng chưa chọn (merge nhánh part vào `feature/<slug>` đã làm ở "Chế độ part" của `task-loop.md`; `mergeLocal: true` đã là chọn merge local); không trả lời rõ → áp lựa chọn mặc định (giữ nguyên) và nói như vậy.
+
+## Merge local theo khoá
+
+Chỉ khi `mergeLocal: true` và người dùng đã duyệt G3:
+
+1. Merge `--no-ff` nhánh feature vào nhánh gốc đã xác nhận ở bước 6 (local, không push), rồi chạy full suite trên kết quả
+   merge. Đỏ → dừng, không dọn gì, báo người dùng.
+2. Xanh → đặt `Trạng thái` trong `design.md` thành `merged` kèm hash merge, và xoá `plan.md` cùng `parts/*/plan.md` (nếu có):
+   `check-request.mjs` W16 đòi xoá plan khi request đã `merged`. Commit thay đổi docs này qua `git-workflow`.
+3. `cleanup: true` → dọn như mục "Dọn theo khoá" bên dưới. Thiếu khoá `cleanup` → hỏi như mục "Xoá và huỷ".
+4. Push/PR hỏi riêng sau bước này.
 
 ## Chi tiết từng lựa chọn
 
@@ -45,13 +59,20 @@ Không merge nhánh `feature/<slug>` vào nhánh gốc, không push khi người
 ## Xoá và huỷ
 
 - Xoá nhánh, huỷ công việc hoặc bỏ commit chỉ khi người dùng xác nhận rõ, sau khi bạn liệt kê commit sẽ mất. Xoá nhánh
-  feature sau merge local cũng cần xác nhận, không làm mặc định.
+  feature sau merge local cũng cần xác nhận, không làm mặc định (trừ `cleanup: true`, xem "Dọn theo khoá").
 - Dọn worktree chỉ với worktree đã merge và sạch, thuộc `.claude/worktrees/`; trên Windows không `rm -rf` thư mục có
   junction, dọn bằng `git worktree remove` hoặc `fs.rmSync` của Node.
 - Không amend, squash hay force-push khi người dùng chưa xác nhận.
 
+## Dọn theo khoá
+
+Chỉ khi `cleanup: true` và merge local đã xanh (full suite trên kết quả merge, bước 1 của "Merge local theo khoá"): tự gỡ
+worktree sạch thuộc `.claude/worktrees/` (theo `git-worktree`) và xoá nhánh mà `git merge-base --is-ancestor <nhánh> <nhánh gốc>`
+báo là tổ tiên của nhánh gốc; nhánh chưa merge và worktree còn thay đổi (kể cả file chưa theo dõi) thì giữ nguyên.
+Báo một dòng đã gỡ/xoá gì. Không dọn khi suite đỏ.
+
 ## Ghi nhận
 
-Khi người dùng đã chọn và việc của lựa chọn đó xong (kể cả giữ nguyên), ghi
+Khi người dùng đã chọn (hoặc duyệt G3 với `mergeLocal: true`) và việc của lựa chọn đó xong (kể cả giữ nguyên), ghi
 `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md gốc> "Plan: complete"` rồi trả `workflow_result` có `rulings` đã gom. `Plan: complete` chỉ ghi ở ledger `root/` (plan gốc), không bao giờ ở ledger part. Dòng
 `Plan: complete` làm hook `session-start` ngừng nạp ledger.

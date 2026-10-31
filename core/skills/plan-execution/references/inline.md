@@ -7,12 +7,13 @@ review cuối.
 ## Khi nào dùng
 
 - Người dùng nói rõ trong yêu cầu rằng muốn chạy inline hoặc không dùng subagent; hoặc
-- session không có tool subagent. Không bịa lệnh giao việc: chạy plan tại chỗ.
+- session không có tool subagent. Không bịa lệnh giao việc: chạy plan tại chỗ; hoặc
+- là subagent part do `partRunner: subagent` giao (mục "Subagent part" bên dưới).
 
 Không hỏi người dùng chọn cách thực thi. Plan đã duyệt thì mặc định là vòng task có subagent (`AGENTS.md`, mục Workflow
-defaults); inline chỉ bật theo một trong hai điều kiện trên.
+defaults); inline chỉ bật theo một trong ba điều kiện trên.
 
-Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <người dùng chọn | không có tool subagent> — <chi phí nếu sai>`.
+Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <người dùng chọn | không có tool subagent | subagent part> — <chi phí nếu sai>`.
 
 ## Vòng một task
 
@@ -48,6 +49,18 @@ không ghi là quyết định bí mật. Chạy liên tục giữa các task; c
   tự tìm ra thì sửa một lượt rồi tự đọc lại đúng phần diff vừa sửa; không có làn sửa thứ hai.
 
 Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một lần, ba lựa chọn, `Plan: complete`.
+
+## Subagent part
+
+Với `partRunner: subagent` (`task-loop.md`, "Chế độ part" bước 3), mỗi part do một subagent nền (`general-purpose`,
+`model: sonnet`) làm theo file này, đóng vai session của part:
+
+- Chỉ làm trong worktree `.claude/worktrees/<slug>-p<nn>/` (cwd và mọi đường dẫn nằm trong đó), trên nhánh `worktree-<slug>-p<nn>`;
+  dùng plan của part `parts/<nn>-<part-slug>/plan.md` cho `ledger.mjs`, `task-brief.mjs`, `review-package.mjs --plan`.
+- Tự commit từng task trên nhánh part qua `git-workflow`: đây là ngoại lệ của luật "agent không commit". Không push, không merge.
+- Không review từng task (subagent không gọi được agent khác) và không review cuối; lỗi do review cuối toàn nhánh của session gốc bắt.
+- Không sửa `design.md` gốc hay Bảng part. Gặp loại dừng của `task-loop.md` thì trả `blocked` kèm `questions[]` thay vì tự quyết.
+- Xong thì ghi `Part: complete <hash>` (HEAD nhánh part sau commit task cuối) vào ledger của part; session gốc merge khi thấy dòng đó.
 
 ## Ranh giới
 
