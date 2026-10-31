@@ -25,7 +25,7 @@
 | Merge part 01 + Bảng part | session gốc | `8837165`, `815bed1` | `npm test` exit 0 |
 | Merge part 02 + Bảng part | session gốc | `ae57041`, `02ea06e` | `npm test` exit 0 (29 pass) |
 | Gỡ worktree p01, p02 (bước 10, `cleanup: true`, không hỏi) | session gốc | — | `git worktree remove` sạch |
-| Review cuối `9d0f3e4..02ea06e` | `general-purpose` opus | — | approve, 0 blocker/major, 3 nit |
+| Review cuối `9d0f3e4..02ea06e` | `general-purpose` opus; bỏ `engineering-quality-auditor` (`Ruling:`: 2 hàm thuần, không có bề mặt bảo mật), lệch mặc định của `final-review.md` | — | approve, 0 blocker/major, 3 nit; kết quả rút gọn ở `root/final-review-result.md` của repo thử |
 | AC đạt | session gốc | `a5808c7` | check-request 0, `npm test` exit 0 (29 pass) |
 | Merge local vào `feature/text-case` (`mergeLocal: true`) | session gốc | `89f3652` | `npm test` exit 0 (29 pass) trên kết quả merge |
 | Commit docs trên nhánh gốc: `merged 89f3652`, xoá `plan.md` + `parts/*/plan.md` | session gốc | `a4f0735` | check-request chạy lại: 0 cảnh báo |
@@ -41,12 +41,15 @@ Ledger repo thử `E:\Mine\AI\aip-parts-trial\.aip\runs\2026-10-31-text-snake-ke
 
 ## Số lần dừng chờ người dùng
 
-Từ G2 tới G3 của request thử: **0** câu hỏi cho người dùng. Không có câu hỏi trước nhóm Song song, không mở phiên, không
+Từ G2 tới G3 của request thử: **0** câu hỏi cho người dùng. G2 và G3 của request thử do session gốc tự phán bằng `Ruling:`
+(không có người duyệt thật xen giữa: commit AC `a5808c7` và merge `89f3652` cách nhau vài giây), nên con số này đo đoạn chạy
+giữa hai cổng, không chứng minh hai cổng dừng đúng với người duyệt thật. Không có câu hỏi trước nhóm Song song, không mở phiên, không
 trust thư mục, không hỏi merge part, không hỏi dọn worktree, không hỏi merge local hay xoá nhánh. So với lượt thử 3
 (15–20 lần quay lại chat mỗi request).
 
 Ngoài luồng: harness Claude Code nhiều lần nhắc "người dùng chưa nghe gì một lúc" và session gốc trả một dòng trạng thái
-ngắn. Đó là nhắc của harness, không phải điểm dừng của luồng; câu chữ AC7.1 không ngăn được nhắc này.
+ngắn. Đó là nhắc của harness, không phải điểm dừng của luồng, nhưng vẫn là dòng trạng thái giữa G2 và G3 mà quyết định (7)
+muốn bỏ; câu chữ của skill không ngăn được nhắc này.
 
 ## Subagent part: cwd, hook, commit
 
@@ -58,7 +61,7 @@ ngắn. Đó là nhắc của harness, không phải điểm dừng của luồn
 - Commit: subagent tự commit trên nhánh part (ngoại lệ "agent không commit"), header tiếng Anh, `commit -F`, không
   `Co-Authored-By` (theo AGENTS.md dù system-reminder của harness yêu cầu thêm).
 - Ledger: `ledger.mjs` chạy từ worktree tự đặt ledger part ở gốc repo chính; session gốc đọc `Part: complete` ở đó.
-- Thời gian: mỗi part ~40–45 giây, hai part chạy song song.
+- Thời gian: khoảng 35–40 giây mỗi part (từ commit `đang làm` tới commit cuối của part), hai part chạy song song.
 
 ## Vướng còn lại
 
@@ -70,6 +73,13 @@ ngắn. Đó là nhắc của harness, không phải điểm dừng của luồn
   plan đã xoá vẫn chạy đúng, nhưng session gốc lỡ truyền đường dẫn `progress.md` và ledger rơi vào `.aip/runs/root/root/`
   (đã xoá, ghi lại đúng chỗ). Câu chữ nên nói rõ: dùng đường dẫn plan dù file đã bị xoá.
 - V5 (nit): đỏ của test mới là `ERR_MODULE_NOT_FOUND` (task tạo file mới), như lượt thử 3.
+- V6 (rủi ro): phạm vi worktree của subagent part chỉ được giữ bằng câu chữ prompt. cwd mặc định của subagent là repo aip,
+  không phải repo thử; subagent quên `cd`/`git -C` thì commit rơi vào nhánh đang checkout của repo khác. `general-purpose`
+  không có `writeScope` nên `guard-files` không chặn. Lượt này không xảy ra (diff nhánh part chỉ có file của task).
+- V7 (minor): subagent part không ghi `task-<n>-report.md` dù task `TOOLING` TDD `có`; `inline.md` không đòi báo cáo này
+  cho subagent part (khác `task-loop.md` bước 3–4).
+- Lệch quy trình đã biết trong nhánh aip: Task 2 sửa một finding bảo mật (aip autonomy chép `mode` từ repo chính) theo
+  hướng bỏ quyền và ghi `Ruling:` thay vì dừng hỏi (loại dừng 2); nêu riêng ở G3.
 - G3 của request thử là giả lập bằng `Ruling:`; phần "người dùng duyệt G3 thật rồi luồng không hỏi thêm" chỉ kiểm được ở
   nửa sau (merge, suite, commit docs, dọn chạy liền không hỏi).
 
@@ -77,10 +87,10 @@ ngắn. Đó là nhắc của harness, không phải điểm dừng của luồn
 
 | AC | Kết quả | Evidence |
 |---|---|---|
-| AC1.1 | đạt | `workflow-feature` (mục Checkpoint, đoạn sau bảng) và `plan-execution` (SKILL.md "Điểm dừng và báo cáo", task-loop.md "Báo cáo") nêu đúng G1, G2, G3, câu hỏi push, câu hỏi cách chạy part khi `session`, 6 loại dừng, lỗi chặn. Lượt thử: 0 lần dừng từ G2 tới G3. |
+| AC1.1 | đạt (câu chữ), danh sách rộng hơn AC | `workflow-feature` (mục Checkpoint, đoạn sau bảng) và `plan-execution` (SKILL.md "Điểm dừng và báo cáo", task-loop.md "Báo cáo") nêu G1, G2, G3, câu hỏi push, 6 loại dừng; thêm ba điểm AC không nêu: Bước 2 khi còn câu làm rõ (quyết định 2), câu hỏi cách chạy part khi `session`/thiếu khoá ("Không đổi" của design), lỗi chặn. Lượt thử không đi qua G1/G2 thật. |
 | AC2.1 | đạt (câu chữ) | `workflow-feature` Bước 2 gom mọi câu làm rõ vào một tin nhắn; bảng lỗi "Yêu cầu mơ hồ" cũng gom. Lượt thử bắt đầu từ G2 nên không chạy Bước 2. `engineering-spec-writing` vẫn ghi "hỏi từng câu" (ngoài phạm vi, Bước 2 ghi đè). |
-| AC4.1 | đạt | Sau G3 (giả lập), `mergeLocal: true`: merge `89f3652`, `npm test` exit 0 trên kết quả merge, commit docs `a4f0735` đặt `merged 89f3652` và xoá plan, check-request 0 cảnh báo, không hỏi thêm. Nhánh đỏ không chạy (suite xanh). |
+| AC4.1 | đạt có điều kiện | Sau G3 (giả lập), `mergeLocal: true`: merge `89f3652`, `npm test` exit 0 trên kết quả merge, commit docs `a4f0735` đặt `merged 89f3652` và xoá plan, check-request 0 cảnh báo, không hỏi thêm. Chưa kiểm: nhánh đỏ (suite xanh), G3 với người duyệt thật, nhánh gốc protected. |
 | AC5.1 | đạt | `cleanup: true`: chỉ gỡ worktree sạch của request này; `git branch -d` 3 nhánh sau khi `git merge-base --is-ancestor` xác nhận; worktree `text-case-p02` và các nhánh cũ (không thuộc request) giữ nguyên. |
-| AC6.1 | đạt | `partRunner: subagent`, `check-partition` 0: không hỏi, tạo worktree theo quy ước `worktree-text-snake-kebab-p0{1,2}`, giao 2 subagent nền theo `inline.md`, merge khi ledger part có `Part: complete`. |
-| AC7.1 | đạt (kèm lưu ý) | Session gốc không gửi tin trạng thái khi subagent part xong; chỉ nhắc của harness (xem trên) sinh dòng trạng thái. |
-| AC9.1 | đạt | `aip autonomy high` + request 2 part Song song: 0 lần dừng ngoài cổng từ G2 tới G3, cả hai part `merged` qua subagent. |
+| AC6.1 | đạt (rủi ro V6) | `partRunner: subagent`, `check-partition` 0: không hỏi, tạo worktree theo quy ước `worktree-text-snake-kebab-p0{1,2}`, giao 2 subagent nền theo `inline.md`, merge khi ledger part có `Part: complete`. |
+| AC7.1 | đạt có ngoại lệ | Session gốc không gửi tin trạng thái khi subagent part xong (cả hai note subagent và note review đều không kéo theo tin nhắn riêng); ngoại lệ: các dòng trạng thái trả lời nhắc của harness (xem trên). |
+| AC9.1 | đạt có điều kiện | `aip autonomy high` + request 2 part Song song: 0 lần dừng từ G2 tới G3, cả hai part do subagent làm và session gốc merge sau khi thấy `Part: complete`. Điều kiện: G2/G3 của request thử giả lập bằng `Ruling:`. |
