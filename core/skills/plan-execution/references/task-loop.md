@@ -22,7 +22,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    dẫn. Brief là nguyên văn mục `### Task <n>`; không tóm tắt lại, không chép nội dung task vào context của session chính.
 3. **Giao việc** theo `kind` (chuỗi agent: `engineering-plan-writing`) bằng mẫu `prompts/implementer.md`. Prompt giao việc
    chỉ gồm một dòng bối cảnh, đường dẫn brief, `Produces` của task trước mà task này dùng, và model; không dán lịch sử
-   hội thoại. Task `DOCS` giao `general-purpose` với `model: haiku`; task `TOOLING` do session chính tự làm theo brief.
+   hội thoại. Task `DOCS` giao `general-purpose` với `model: haiku`; task `TOOLING` do session chính tự làm theo brief, rồi ghi báo cáo `task-<n>-report.md` dạng `agent_result` (file đổi, lệnh test; task TDD `có` thêm `tdd.red`/`tdd.green`) vào cùng thư mục workspace `.aip/` với brief.
 4. **Nhận `agent_result`** và áp luật kiểm đầu ra của contract (có `status`, finding có `location` + `evidence`, file thay đổi
    thuộc danh sách `**Files:**`). Task TDD `có` (dòng `**TDD:**` trong brief; thiếu dòng thì `BE` là `có`): thiếu
    `tdd.red`/`tdd.green` là đầu ra hỏng; task `không` không bị đòi `tdd`. Task `TOOLING` TDD `có` do session chính làm:
@@ -38,23 +38,25 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    và so với `Expected:` của plan; báo cáo "xanh" của agent chỉ là đầu vào, không phải bằng chứng.
 6. **Commit**: session chính commit sau mỗi task qua `git-workflow`; agent không tự commit. Một task có ≥ 1 commit; vòng
    sửa sinh thêm commit, không amend hay squash. Ghi `head` = `git rev-parse HEAD` sau commit.
+   Task `TOOLING` TDD `có` do session chính làm: commit test đỏ riêng trước (`test(<scope>): …`), rồi commit code xanh; reviewer kiểm thứ tự qua hai commit trong review package. Hook pre-commit của repo chặn commit đỏ thì ghi `Ruling:` (nêu hook chặn) và gộp thành một commit, bằng chứng đỏ vẫn đi vào dòng ledger ở bước 9.
 7. **Task review**: `node <thư mục skill plan-execution>/scripts/review-package.mjs <BASE> <head> --plan <plan.md>`
    (luôn có `--plan` để package ghi vào workspace `.aip/` của plan, đã được git bỏ qua, và script in đường dẫn; diff không
    đổ vào context của session chính), rồi gọi
-   `backend-reviewer`/`frontend-reviewer` (task `DOCS`/`TOOLING`: `general-purpose` nạp skill review phù hợp) bằng
+   `backend-reviewer`/`frontend-reviewer` (task `DOCS`: `general-purpose` nạp skill review phù hợp; task `TOOLING`: xem câu cuối bước này) bằng
    `prompts/task-review.md`. Reviewer trả **cả hai**: `spec_verdict` (Missing / Extra / Misunderstood) và finding chất
-   lượng; thiếu một trong hai là đầu ra hỏng. Task có chuỗi hai agent (vd FE-UI) chỉ review một lần, sau cả hai.
+   lượng; thiếu một trong hai là đầu ra hỏng. Task có chuỗi hai agent (vd FE-UI) chỉ review một lần, sau cả hai. Task `TOOLING` review bằng `general-purpose` không nạp skill domain, tiêu chí là `prompts/task-review.md`; đưa reviewer đường dẫn `task-<n>-report.md` (bước 3) cùng review package.
 8. **Xử lý kết quả review**: `spec_verdict: cannot_verify` do session chính giải quyết (đọc code, chạy lệnh) rồi mới
    tiếp. Chỉ finding `blocker`/`major` hoặc `spec_verdict` khác `compliant` mới vào vòng sửa; `minor`/`nit` ghi vào
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Mục plan bắt buộc mà thiếu vẫn là
    `major`. Không tự sửa finding: sửa do agent.
 9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
-   - review sạch: `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
+   - review sạch (`review clean` = không còn finding `blocker`/`major` mở; các dòng `minor (deferred)` của task đứng trước dòng `complete`): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
    - qua breaker (còn finding mở sau vòng 3, đã phán hết): các dòng `Ruling:` của task đứng trước, rồi
      `Task <n>: complete (commits <a>..<b>, <k> ruled)` với `<k>` là số finding đã phán. Không có dòng complete thì lần
      làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này;
-   - task `TOOLING` TDD `có` do session chính làm: dòng `complete` mang bằng chứng đỏ theo định dạng
-     `red: <lệnh> exit <n khác 0>` … `tests: <lệnh> exit 0` của `inline.md` (bước 6).
+   - task `TOOLING` TDD `có` do session chính làm: dòng có dạng
+     `Task <n>: complete (commits <a>..<b>, review clean|<k> ruled, red: <lệnh> exit <n khác 0>, tests: <lệnh> exit 0)`.
+     `ledger.mjs` từ chối (exit 2, không ghi) dòng thiếu `red:` của task này. Ở chế độ inline, dòng theo `inline.md` (bước 6).
 
 ## Vòng sửa
 
@@ -120,6 +122,7 @@ Dùng khi request có `## Bảng part` trong `design.md` và `parts/<nn>-<part-s
 5. Khi part bắt đầu (song song: trước khi tạo worktree; tuần tự: trước task đầu của part), session gốc đặt Trạng thái của part trong Bảng part thành `đang làm` và commit. Mỗi part song song có worktree `.claude/worktrees/<slug>-p<nn>/` và nhánh `worktree-<slug>-p<nn>`, cắt từ đỉnh hiện tại của `feature/<slug>` (skill `git-worktree`); session gốc tạo bằng `git worktree add -b worktree-<slug>-p<nn> .claude/worktrees/<slug>-p<nn> feature/<slug>`.
 6. Khối bàn giao cho phiên part, session gốc đưa cho người dùng dán vào phiên mới:
    - đường dẫn worktree của part;
+   - lần đầu mở phiên ở thư mục worktree mới, app Claude Code có thể đòi trust thư mục trước khi phiên chạy được: nhắc người dùng chấp nhận trust rồi mới chạy vòng task;
    - plan của part là `parts/<nn>-<part-slug>/plan.md`; dùng `ledger.mjs`, `task-brief.mjs`, `review-package.mjs --plan` với chính plan đó;
    - không sửa `design.md` gốc hay Bảng part, không chạy review cuối;
    - chạy vòng task tuần tự và tự commit; xong thì ghi `Part: complete <hash>` vào ledger của part rồi báo về session gốc.
