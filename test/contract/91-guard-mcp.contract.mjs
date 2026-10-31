@@ -55,6 +55,29 @@ export default async function run({ ok, ctx }) {
   ok(reason.includes('b') && /mcpAllow/.test(reason), 'AC2.3: lý do nêu server bị chặn và khoá cần sửa');
   ok(/mcpDeny/.test(call('mcp__a__t', { mcpDeny: ['a'] })?.reason || ''), 'AC2.4: lý do deny nêu mcpDeny');
 
+  // AC10.1: start_session không truyền model sẽ kế thừa model của phiên cha (opus); chặn trừ offer (người dùng chọn sau) và proposal_id (đã có brief)
+  const START = 'mcp__ccd_session__start_session';
+  const start = (tool_input, tool = START, config = null) => decide({ tool_name: tool, tool_input, cwd: '.' }, { config });
+  const startCases = [
+    ['thiếu model, own_initiative', { initiation: 'own_initiative', prompt: 'x' }, START, true],
+    ['thiếu model, user_asked', { initiation: 'user_asked', prompt: 'x' }, START, true],
+    ['thiếu model, không có initiation', { prompt: 'x' }, START, true],
+    ['thiếu tool_input', undefined, START, true],
+    ['model rỗng coi như thiếu', { initiation: 'own_initiative', model: '' }, START, true],
+    ['có model sonnet', { initiation: 'own_initiative', model: 'sonnet' }, START, false],
+    ['có model opus tường minh', { initiation: 'user_asked', model: 'opus' }, START, false],
+    ['initiation offer, thiếu model', { initiation: 'offer', prompt: 'x' }, START, false],
+    ['có proposal_id, thiếu model', { proposal_id: 'p1' }, START, false],
+    ['tool khác của cùng server', { initiation: 'own_initiative' }, 'mcp__ccd_session__list_start_targets', false],
+    ['tool server khác tên start_session', { initiation: 'own_initiative' }, 'mcp__other__start_session', false],
+  ];
+  for (const [name, input, tool, deny] of startCases) {
+    const r = start(input, tool);
+    ok(deny ? r?.decision === 'deny' && /model/.test(r.reason) && /sonnet/.test(r.reason) : r === null, `AC10.1: start_session ${name}`);
+  }
+  ok(start({ initiation: 'own_initiative' }, START, { mcpAllow: ['ccd_session'] })?.decision === 'deny', 'AC10.1: chặn kể cả khi mcpAllow cho phép server');
+  ok(start({ initiation: 'own_initiative', model: 'sonnet' }, START, { mcpDeny: ['ccd_session'] })?.decision === 'deny', 'AC10.1: mcpDeny vẫn chặn khi có model (không đổi)');
+
   const run = (stdin, cwd) => execFileSync('node', [script], { input: stdin, encoding: 'utf8', cwd, stdio: ['pipe', 'pipe', 'ignore'] });
   ok(run('') === '' && run('nope') === '' && run('{}') === '', 'AC2.5: CLI input rỗng/hỏng/{} → exit 0, không in gì');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-mcp-'));
@@ -75,6 +98,10 @@ export default async function run({ ok, ctx }) {
     ok(deny.hookSpecificOutput?.permissionDecision === 'deny' && /mcpDeny/.test(deny.hookSpecificOutput?.permissionDecisionReason || ''), 'AC2.4: CLI mcpDeny trong git repo → in JSON deny');
     ok(run(JSON.stringify({ tool_name: 'mcp__a__t', cwd: repo }), repo) === '', 'AC2.4: CLI mcpDeny không chặn server khác → không in gì');
     ok(run(payload(plain), plain) === '', 'AC2.2: CLI thư mục không phải git → không in gì');
+    const sess = (tool_input) => JSON.stringify({ tool_name: START, tool_input, cwd: plain });
+    const sd = JSON.parse(run(sess({ initiation: 'own_initiative' }), plain) || '{}');
+    ok(sd.hookSpecificOutput?.permissionDecision === 'deny' && /model/.test(sd.hookSpecificOutput?.permissionDecisionReason || ''), 'AC10.1: CLI start_session thiếu model, không có aip-gate.json → deny');
+    ok(run(sess({ initiation: 'own_initiative', model: 'sonnet' }), plain) === '', 'AC10.1: CLI start_session có model → không in gì');
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

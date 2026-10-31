@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// PreToolUse(mcp__.*): chặn tool của server MCP theo mcpAllow/mcpDeny trong <git-root>/.claude/aip-gate.json.
+// PreToolUse(mcp__.*): chặn tool của server MCP theo mcpAllow/mcpDeny trong <git-root>/.claude/aip-gate.json; chặn start_session thiếu model.
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { readGate, fullEffective } from './gate-config.mjs';
@@ -19,9 +19,21 @@ function nameList(v) {
   return s.length ? s : null;
 }
 
+const START_SESSION = 'mcp__ccd_session__start_session';
+
+// Phiên mới không truyền model sẽ kế thừa model của phiên cha (thường opus); offer để người dùng chọn sau, proposal_id đã có brief.
+function startSessionWithoutModel(input) {
+  if (input?.tool_name !== START_SESSION) return false;
+  const ti = input.tool_input;
+  if (ti?.initiation === 'offer' || ti?.proposal_id) return false;
+  return typeof ti?.model !== 'string' || !ti.model.trim();
+}
+
 export function decide(input, { config, tracked } = {}) {
   const t = parseMcpTool(input?.tool_name);
   if (!t) return null;
+  // Chạy trước cấu hình: không phụ thuộc aip-gate.json và không đổi mcpAllow/mcpDeny (các nhánh dưới vẫn chạy khi có model).
+  if (startSessionWithoutModel(input)) return { decision: 'deny', reason: 'start_session thiếu `model` nên phiên mới kế thừa model của phiên cha (thường opus). Truyền `model`: phiên thực thi mặc định là sonnet (mục "Model and session routing" của baseline); cần opus thì truyền tường minh.' };
   const gate = config === undefined ? readGate(input?.cwd) : { config };
   const cfg = gate?.config;
   if (!cfg || typeof cfg !== 'object') return null;
