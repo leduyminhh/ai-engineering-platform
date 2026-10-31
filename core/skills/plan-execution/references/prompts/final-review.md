@@ -40,4 +40,5 @@ Sau review cuối, chỉ một lần sửa cho toàn bộ finding blocker/major 
 phạm vi theo `prompts/re-review.md`; không có làn sửa thứ hai. Finding còn lại và `Ruling:` cần quyết trình người dùng ở
 bước kết thúc nhánh (`references/finish.md`).
 
-AC mới do người dùng chốt từ `questions[]` (mục 7): người dùng duyệt câu AC trong `design.md` trước; session chính thêm `### Task <n>` sửa vào plan gốc, có `**TDD:**`, `**Kind:**`, `**Phủ AC:**` (gồm AC mới) và `**Files:**` với `- Test:`, đúng mẫu task của plan, để `check-request.mjs` không báo W6. Sau đó một lần dispatch sửa phủ cả task đó.
+AC mới do người dùng chốt từ `questions[]` (mục 7): người dùng duyệt câu AC trong `design.md` trước; session chính thêm `### Task <n>` sửa vào plan gốc, có `**TDD:**`, `**Kind:**`, `**Phủ AC:**` (gồm AC mới) và `**Files:**` với `- Test:`, đúng mẫu task của plan, để `check-request.mjs` không báo W6. Task này đi chung
+đúng một lần dispatch sửa và một lần re-review ở trên, không mở làn sửa thứ hai.

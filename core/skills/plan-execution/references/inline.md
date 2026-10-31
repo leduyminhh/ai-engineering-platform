@@ -21,7 +21,8 @@ Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <ngư�
    làm theo step của brief. Chỉ task `DOCS`/`TOOLING` thuộc diện `không` (không có test sản phẩm) mới dùng lệnh kiểm
    chứng ghi trong task thay cho test.
 3. Chạy lệnh test hẹp của task, đọc đủ output và exit code. Không chạy full suite ở từng task.
-4. Commit qua `git-workflow`, một task ít nhất một commit. Task TDD `có`: commit test đỏ riêng trước (`test(<scope>): …`), rồi commit code xanh. Hook pre-commit của repo chặn commit đỏ thì ghi `Ruling:` (nêu hook chặn) và gộp thành một commit; bằng chứng đỏ vẫn ghi vào dòng ledger ở bước 6.
+4. Commit qua `git-workflow`, một task ít nhất một commit. Task TDD `có`: commit test đỏ riêng trước
+   (`test(<scope>): …`, chỉ stage file test), rồi commit code xanh. Hook pre-commit của repo chặn commit đỏ thì ghi `Ruling:` (nêu hook chặn) và gộp thành một commit; bằng chứng đỏ vẫn ghi vào dòng ledger ở bước 6.
 5. Vì không có review từng task, sau commit tự đối chiếu `git diff --name-only <BASE>..HEAD` với `**Files:**` của task: file
    ngoài danh sách là lệch plan, sửa bằng một commit mới (không amend) hoặc ghi `Ruling:`.
 6. Ghi ledger:
@@ -35,7 +36,7 @@ Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <ngư�
    output.
 
 Lỗi tự phát hiện trong lúc làm thì sửa ngay trong task đó. Chỉ ghi `Ruling:` khi quyết định lệch khỏi plan; lệch plan mà
-không ghi là quyết định bí mật. Chạy liên tục giữa các task; chỉ dừng hỏi người dùng ở năm loại dừng của `task-loop.md`.
+không ghi là quyết định bí mật. Chạy liên tục giữa các task; chỉ dừng hỏi người dùng ở sáu loại dừng của `task-loop.md`.
 
 ## Review cuối
 

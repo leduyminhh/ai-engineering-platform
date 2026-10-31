@@ -22,11 +22,12 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    dẫn. Brief là nguyên văn mục `### Task <n>`; không tóm tắt lại, không chép nội dung task vào context của session chính.
 3. **Giao việc** theo `kind` (chuỗi agent: `engineering-plan-writing`) bằng mẫu `prompts/implementer.md`. Prompt giao việc
    chỉ gồm một dòng bối cảnh, đường dẫn brief, `Produces` của task trước mà task này dùng, và model; không dán lịch sử
-   hội thoại. Task `DOCS` giao `general-purpose` với `model: haiku`; task `TOOLING` do session chính tự làm theo brief, rồi ghi báo cáo `task-<n>-report.md` dạng `agent_result` (file đổi, lệnh test; task TDD `có` thêm `tdd.red`/`tdd.green`) vào cùng thư mục workspace `.aip/` với brief.
+   hội thoại. Task `DOCS` giao `general-purpose` với `model: haiku`; task `TOOLING` do session chính tự làm theo brief, rồi ghi báo cáo `task-<n>-report.md` dạng `agent_result` (`status`, `summary`,
+   `changes`, `validation`; task TDD `có` thêm `tdd.red`/`tdd.green`) vào cùng thư mục workspace `.aip/` với brief.
 4. **Nhận `agent_result`** và áp luật kiểm đầu ra của contract (có `status`, finding có `location` + `evidence`, file thay đổi
    thuộc danh sách `**Files:**`). Task TDD `có` (dòng `**TDD:**` trong brief; thiếu dòng thì `BE` là `có`): thiếu
    `tdd.red`/`tdd.green` là đầu ra hỏng; task `không` không bị đòi `tdd`. Task `TOOLING` TDD `có` do session chính làm:
-   thiếu red/green trong dòng ledger là hỏng. Ánh xạ trạng thái:
+   thiếu `tdd.red`/`tdd.green` trong `task-<n>-report.md` là hỏng. Ánh xạ trạng thái:
    - `completed` và `remaining_risks` rỗng → qua bước 5.
    - `completed` kèm `remaining_risks` → xong kèm lo ngại: đọc từng lo ngại; liên quan đúng/phạm vi thì xử lý trước khi
      review, không thì chuyển cho reviewer.
@@ -38,7 +39,9 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    và so với `Expected:` của plan; báo cáo "xanh" của agent chỉ là đầu vào, không phải bằng chứng.
 6. **Commit**: session chính commit sau mỗi task qua `git-workflow`; agent không tự commit. Một task có ≥ 1 commit; vòng
    sửa sinh thêm commit, không amend hay squash. Ghi `head` = `git rev-parse HEAD` sau commit.
-   Task `TOOLING` TDD `có` do session chính làm: commit test đỏ riêng trước (`test(<scope>): …`), rồi commit code xanh; reviewer kiểm thứ tự qua hai commit trong review package. Hook pre-commit của repo chặn commit đỏ thì ghi `Ruling:` (nêu hook chặn) và gộp thành một commit, bằng chứng đỏ vẫn đi vào dòng ledger ở bước 9.
+   Task `TOOLING` TDD `có` do session chính làm: commit test đỏ riêng trước (`test(<scope>): …`, chỉ stage file test),
+   rồi commit code xanh; reviewer kiểm thứ tự qua hai commit trong review package. Hook pre-commit của repo chặn commit
+   đỏ thì ghi `Ruling:` (nêu hook chặn) và gộp thành một commit, bằng chứng đỏ vẫn đi vào dòng ledger ở bước 9.
 7. **Task review**: `node <thư mục skill plan-execution>/scripts/review-package.mjs <BASE> <head> --plan <plan.md>`
    (luôn có `--plan` để package ghi vào workspace `.aip/` của plan, đã được git bỏ qua, và script in đường dẫn; diff không
    đổ vào context của session chính), rồi gọi
@@ -50,7 +53,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Mục plan bắt buộc mà thiếu vẫn là
    `major`. Không tự sửa finding: sửa do agent.
 9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
-   - review sạch (`review clean` = không còn finding `blocker`/`major` mở; các dòng `minor (deferred)` của task đứng trước dòng `complete`): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
+   - review sạch (`review clean` = không còn finding `blocker`/`major` mở; các dòng `minor (deferred)` của task đứng trước dòng `complete`; task `TOOLING` TDD `có`: mẫu ở gạch cuối): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
    - qua breaker (còn finding mở sau vòng 3, đã phán hết): các dòng `Ruling:` của task đứng trước, rồi
      `Task <n>: complete (commits <a>..<b>, <k> ruled)` với `<k>` là số finding đã phán. Không có dòng complete thì lần
      làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này;
