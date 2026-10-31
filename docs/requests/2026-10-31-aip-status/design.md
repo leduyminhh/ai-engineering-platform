@@ -1,6 +1,6 @@
 # Thiết kế: aip status — xem tiến trình part và xử lý vướng
 - Ngày: 2026-10-31
-- Trạng thái: approved
+- Trạng thái: merged 30772ad
 - Requirement: không có
 ## Vấn đề và lý do
 Khi request chia part, người dùng không biết part đang làm gì, đã làm gì, vướng gì; chỉ nhận các đoạn text từ phiên con. Dữ liệu có sẵn nhưng rải rác: Bảng part (`design.md`), ledger `.aip/runs/<request>/<part>/progress.md`, task trong `plan.md`, commit trên nhánh `worktree-<slug>-p<nn>`. Ledger không có thời gian và không ghi kết quả từng vòng review, nên không dựng được dòng sự kiện hay chi tiết task. Khi part vướng, chưa có cách phân loại ai gỡ, gỡ thế nào, gửi câu trả lời về part ra sao.
