@@ -301,7 +301,7 @@ test("autonomy-gates AC8.1: CLI aip autonomy từ chối -g và giá trị lạ"
   assert.equal(JSON.parse(fs.readFileSync(gatePath(root), "utf8")).autonomy.partRunner, "subagent");
 });
 
-test("autonomy-gates AC8.1: trong worktree, safe chép khóa repo chính trừ autonomy; repo chính hỏng ⇒ exit 1, không ghi", () => {
+test("autonomy-gates AC8.1: trong worktree, safe chép khóa repo chính trừ autonomy và mode; repo chính hỏng ⇒ exit 1, không ghi", () => {
   const main = fs.realpathSync.native(tmp());
   const git = (cwd, ...a) => execFileSync("git", ["-c", "commit.gpgsign=false", ...a], { cwd, stdio: ["ignore", "pipe", "pipe"] });
   git(main, "config", "user.name", "t");
@@ -319,7 +319,7 @@ test("autonomy-gates AC8.1: trong worktree, safe chép khóa repo chính trừ a
 
   assert.ok(run("status").out.includes(JSON.stringify(high)), "worktree đọc khóa của repo chính");
   assert.equal(run("safe").code, 0);
-  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mode: "full", mcpDeny: ["evil"] });
+  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mcpDeny: ["evil"] }, "mode full của repo chính không được chép sang file worktree chưa theo dõi");
   assert.equal(fs.readFileSync(gatePath(main), "utf8"), mainGate, "file repo chính không bị sửa");
 
   fs.rmSync(gatePath(wt));

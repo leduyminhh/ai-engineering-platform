@@ -37,6 +37,9 @@ function runUnsafe(sub, { root, out, err }) {
   // Ghi vào gốc hiện tại như `aip mode`: worktree chưa có file thì chép khoá của repo chính sang để không mất chúng.
   const file = path.join(root, '.claude', 'aip-gate.json');
   const next = { ...(g?.config || {}) };
+  // File repo chính có thể đã commit (hook bỏ qua `full` của nó); chép `mode` sang file worktree chưa theo dõi sẽ âm thầm bật full.
+  const droppedMode = g?.source === 'main' && 'mode' in next;
+  if (droppedMode) delete next.mode;
   if (sub === 'high') next.autonomy = { ...HIGH };
   else if (!('autonomy' in next)) { out(`✓ autonomy=safe tại ${root} (không có khoá autonomy, không ghi gì)`); return 0; }
   else delete next.autonomy;
@@ -45,6 +48,7 @@ function runUnsafe(sub, { root, out, err }) {
   fs.writeFileSync(file, dump(next), 'utf8');
   out(`✓ autonomy=${sub} tại ${root}${sub === 'high' ? `: ${JSON.stringify(HIGH)}` : ''}`);
   if (g?.source === 'main') out(`  ghi ${file}: cấu hình lấy từ repo chính, file của worktree này che file của repo chính từ giờ.`);
+  if (droppedMode) out('  không chép khoá mode của repo chính; cần full trong worktree này thì chạy aip mode full.');
   if (sub === 'high') out('  Push/PR vẫn luôn hỏi; G1 (design), G2 (plan), G3 (diff cả nhánh) vẫn dừng chờ duyệt.');
   return 0;
 }
