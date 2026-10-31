@@ -66,18 +66,21 @@ ok(line(ctx(10), { blocked: 2 }) === 'ctx 10% │ ⚠ 2 vướng', 'AC5.1: block
 ok(!line(ctx(10), { blocked: 0 }).includes('vướng') && !line(ctx(10)).includes('vướng'), 'AC5.1: không vướng thì không có đoạn');
 ok(line(ctx(10), { blocked: 1, color: true }).includes('\x1b[31m⚠ 1 vướng'), 'AC5.1: đoạn vướng tô đỏ khi bật color');
 {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-statusline-'));
+  // git init để mainRoot dừng ở thư mục tạm, không leo lên một repo bao quanh TMPDIR có .aip/runs thật.
+  const repo = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-statusline-')); spawnSync('git', ['init', '-q'], { cwd: d }); return d; };
+  const tmp = repo();
+  const other = repo();
   try {
     const dir = path.join(tmp, '.aip', 'runs', '2026-01-01-demo', '02-api');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, 'progress.md'), 'Task 1: start (base 1a2b3c4)\nBlocked: thiếu quyền\n');
-    const r = run(['--no-color'], JSON.stringify({ ...ctx(10), workspace: { current_dir: tmp } }), os.tmpdir());
+    const r = run(['--no-color'], JSON.stringify({ ...ctx(10), workspace: { current_dir: tmp } }), other);
     ok(r.status === 0 && r.stdout.includes('⚠ 1 vướng'), 'AC5.1: CLI đọc .aip/runs của workspace.current_dir, in ⚠ 1 vướng');
-    const other = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-statusline-none-'));
+    const rc = run(['--no-color'], JSON.stringify({ ...ctx(10), workspace: { current_dir: 5 }, cwd: tmp }), other);
+    ok(rc.status === 0 && rc.stdout.includes('⚠ 1 vướng'), 'AC5.1: current_dir không phải chuỗi thì dùng cwd của stdin');
     const r2 = run(['--no-color'], JSON.stringify(ctx(10)), other);
     ok(r2.status === 0 && !r2.stdout.includes('vướng'), 'AC5.1: thư mục không có request đang chạy thì không có đoạn vướng, exit 0');
-    fs.rmSync(other, { recursive: true, force: true });
-  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  } finally { for (const d of [tmp, other]) fs.rmSync(d, { recursive: true, force: true }); }
 }
 
 // seam args: cờ mới đi qua parse(), không rơi vào danh sách lệnh

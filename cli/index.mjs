@@ -351,10 +351,13 @@ async function main() {
       let input = null;
       if (!process.stdin.isTTY) { try { input = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { /* dòng rỗng */ } }
       let blocked = 0;
-      try {
-        const dir = input?.workspace?.current_dir ?? input?.cwd ?? process.cwd();
-        blocked = countBlocked(mainRoot(typeof dir === 'string' ? dir : process.cwd()));
-      } catch { /* không đọc được ledger thì bỏ đoạn vướng */ }
+      // Đầu vào hỏng cho dòng rỗng, nên không tốn một lần gọi git.
+      if (input && typeof input === 'object') {
+        try {
+          const dir = [input.workspace?.current_dir, input.cwd].find((d) => typeof d === 'string' && d) ?? process.cwd();
+          blocked = countBlocked(mainRoot(dir));
+        } catch { /* không đọc được ledger thì bỏ đoạn vướng */ }
+      }
       console.log(renderStatusline(input, { soft: th.soft, hard: th.hard, color: !args.noColor && !process.env.NO_COLOR, blocked }));
       return;
     }
