@@ -279,8 +279,7 @@ test("autonomy-gates AC8.1: aip autonomy high/safe/status giữ khóa khác; sub
 
 test("autonomy-gates AC3.4: aip-gate.json đã git add ⇒ status nêu khoá bị bỏ qua và in mặc định an toàn; high cảnh báo", () => {
   const root = tmp();
-  const run = (sub) => { const out = []; runAutonomy(sub, { root, out: (l) => out.push(l) }); return out.join("
-"); };
+  const run = (sub) => { const out = []; runAutonomy(sub, { root, out: (l) => out.push(l) }); return out.join("\n"); };
   assert.equal(runAutonomy("high", { root, out: () => {} }), 0);
   assert.ok(run("status").includes('"mergeLocal":true'), "chưa theo dõi: khoá có hiệu lực");
   execFileSync("git", ["add", ".claude/aip-gate.json"], { cwd: root });

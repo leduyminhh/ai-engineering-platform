@@ -74,6 +74,7 @@ export default async function run({ ok, ctx }) {
       put(main, JSON.stringify({ mode: 'full' }));
       ok(resolveAutonomy(main, { ...inMain, tracked: () => { throw new Error('không được hỏi git khi không có khoá autonomy'); } }).ignored === null, 'AC3.4: không có khoá autonomy thì không hỏi git');
 
+      put(main, JSON.stringify(FULL));
       const noGit = { git: () => { throw new Error('không có git'); } };
       ok(JSON.stringify(readAutonomy(main, noGit)) === JSON.stringify({ mergeLocal: true, cleanup: true, partRunner: 'subagent' }), 'AC3.3: không có git → đọc gate ở cwd');
 

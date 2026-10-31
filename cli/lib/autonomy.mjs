@@ -3,17 +3,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { resolveGate } from '../../core/hooks/scripts/gate-config.mjs';
-import { readAutonomy } from '../../core/skills/plan-execution/scripts/autonomy.mjs';
+import { resolveAutonomy } from '../../core/skills/plan-execution/scripts/autonomy.mjs';
 import { gitStateOf } from './mode.mjs';
 
 const HIGH = Object.freeze({ mergeLocal: true, cleanup: true, partRunner: 'subagent' });
 const SUBS = new Set(['high', 'safe', 'status']);
 
 const GIT_LABEL = {
-  tracked: 'aip-gate.json được git theo dõi ⇒ repo clone cũng mang khoá autonomy',
+  tracked: 'aip-gate.json được git theo dõi ⇒ khoá autonomy bị bỏ qua',
   ignored: 'aip-gate.json không theo dõi, đã gitignore',
   open: 'aip-gate.json không theo dõi, chưa gitignore',
-  unknown: 'không xác định (không có git, ngoài repo, hoặc đường dẫn là symlink chưa commit)',
+  unknown: 'không xác định (git lỗi, hoặc đường dẫn là symlink chưa commit); trong repo git thì khoá autonomy bị bỏ qua',
 };
 
 const dump = (obj) => JSON.stringify(obj, null, 2) + '\n';
@@ -51,7 +51,10 @@ function runUnsafe(sub, { root, out, err, run }) {
   const gitState = (f) => gitStateOf(f, run && { run });
 
   if (sub === 'status') {
-    out(`autonomy: ${JSON.stringify(readAutonomy(root))}${g.config?.autonomy === undefined ? ' (mặc định an toàn, aip-gate.json không có khoá autonomy)' : ''}`);
+    const eff = resolveAutonomy(root);
+    const why = g.config?.autonomy === undefined ? ' (mặc định an toàn, aip-gate.json không có khoá autonomy)'
+      : eff.ignored ? ` (mặc định an toàn: bỏ qua khoá autonomy vì aip-gate.json ${eff.ignored === 'tracked' ? 'đang được git theo dõi' : 'không xác định được trạng thái git'}; gỡ theo dõi: git rm --cached .claude/aip-gate.json)` : '';
+    out(`autonomy: ${JSON.stringify(eff.value)}${why}`);
     out(`Nguồn: ${g.file ? `${g.file}${g.source === 'main' ? ' (repo chính; worktree này chưa có aip-gate.json)' : ''}` : 'không có'}`);
     out(`git: ${GIT_LABEL[gitState(g.file ?? file)]}`);
     return 0;
@@ -72,10 +75,10 @@ function runUnsafe(sub, { root, out, err, run }) {
   if (g.source === 'main') out(`  ghi ${file}: cấu hình lấy từ repo chính, file của worktree này che file của repo chính từ giờ.`);
   if (droppedMode) out('  không chép khoá mode của repo chính; cần full trong worktree này thì chạy aip mode full.');
   if (sub === 'high') {
-    // readAutonomy không bỏ qua file đã commit (khác `full`), nên khoá đã commit đi theo mọi bản clone.
+    // Như `full`, khoá trong file đã commit bị bỏ qua nên high ở file đã theo dõi là vô hiệu.
     const gs = gitState(file);
-    if (gs === 'tracked') out('  ⚠ aip-gate.json đang được git theo dõi nên repo clone cũng mang khoá autonomy (ai clone sẽ bị merge local/dọn không hỏi). Gỡ theo dõi: git rm --cached .claude/aip-gate.json rồi thêm vào .gitignore.');
-    else if (gs === 'open') out('  ⚠ aip-gate.json chưa được gitignore; nếu bị commit, repo clone cũng mang khoá autonomy. Thêm dòng này vào .gitignore: .claude/aip-gate.json (aip không tự sửa .gitignore).');
+    if (gs === 'tracked') out('  ⚠ aip-gate.json đang được git theo dõi nên khoá autonomy bị bỏ qua (repo clone không tự cấp được). Gỡ theo dõi: git rm --cached .claude/aip-gate.json rồi thêm vào .gitignore.');
+    else if (gs === 'open') out('  ⚠ aip-gate.json chưa được gitignore; nếu bị commit, khoá autonomy sẽ bị bỏ qua. Thêm dòng này vào .gitignore: .claude/aip-gate.json (aip không tự sửa .gitignore).');
     out('  Push/PR vẫn luôn hỏi; G1 (design), G2 (plan), G3 (diff cả nhánh) vẫn dừng chờ duyệt.');
   }
   return 0;
