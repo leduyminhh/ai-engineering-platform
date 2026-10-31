@@ -42,7 +42,7 @@ Khi request chia part, người dùng không biết part đang làm gì, đã l�
 - workflows: đổi R8
 - workflows: đổi R14
 - cli-wizard: thêm R7
-- hooks-gates: thêm R16
+- hooks-gates: thêm R17
 ## Ngoài phạm vi và anti-goal
 - Không đọc trạng thái phiên Claude (aip chạy ngoài app); dùng ngưỡng im lặng thay thế.
 - Không hiện diff (việc của G3) và không hiện chi phí token (đã có `aip stats --usage`).
