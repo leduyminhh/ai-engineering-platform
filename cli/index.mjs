@@ -237,7 +237,7 @@ LỆNH
                             .claude/aip-gate.json (hook bỏ xác nhận khi phiên chạy bypassPermissions); ask = bỏ khóa mode
                             và sinh lại .claude/settings.json chuẩn nếu là bản full do aip sinh; status = xem hiện trạng
   autonomy <high|safe|status> mức hỏi của luồng plan-execution (chỉ project, không nhận -g): high = ghi autonomy
-                            {mergeLocal, cleanup: true, partRunner: subagent} vào .claude/aip-gate.json; safe = bỏ khóa
+                            {mergeLocal: true, cleanup: true, partRunner: "subagent"} vào .claude/aip-gate.json; safe = bỏ khóa
                             (hỏi như mặc định); status = in giá trị hiệu lực. Push luôn hỏi; G1/G2/G3 vẫn dừng
   list                      liệt kê adapter + plugin tìm được
   help                      hiện trợ giúp này (hoặc -h, --help)

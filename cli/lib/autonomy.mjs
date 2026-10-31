@@ -5,10 +5,17 @@ import path from 'node:path';
 import { resolveGate } from '../../core/hooks/scripts/gate-config.mjs';
 import { readAutonomy } from '../../core/skills/plan-execution/scripts/autonomy.mjs';
 
-export const HIGH = Object.freeze({ mergeLocal: true, cleanup: true, partRunner: 'subagent' });
+const HIGH = Object.freeze({ mergeLocal: true, cleanup: true, partRunner: 'subagent' });
 const SUBS = new Set(['high', 'safe', 'status']);
 
 const dump = (obj) => JSON.stringify(obj, null, 2) + '\n';
+
+// resolveGate bỏ qua lặng lẽ file hỏng của repo chính; aip mode báo lỗi nên aip autonomy cũng báo, không ghi file che nó.
+function invalidAt(root) {
+  let raw;
+  try { raw = fs.readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8'); } catch (e) { return e?.code !== 'ENOENT'; }
+  try { const v = JSON.parse(raw.replace(/^﻿/, '')); return !(v && typeof v === 'object' && !Array.isArray(v)); } catch { return true; }
+}
 
 export function runAutonomy(sub, { root, out = console.log, err = console.error }) {
   if (!SUBS.has(sub)) { err(`Cách dùng: aip autonomy high|safe|status${sub ? ` (giá trị không hợp lệ: "${sub}")` : ''}`); return 2; }
@@ -17,7 +24,9 @@ export function runAutonomy(sub, { root, out = console.log, err = console.error 
 
 function runUnsafe(sub, { root, out, err }) {
   const g = resolveGate(root);
-  if (g?.source === 'worktree-invalid') { err(`Lỗi: ${g.file} không phải đối tượng JSON hợp lệ; sửa tay trước khi chạy aip autonomy.`); return 1; }
+  const bad = g?.source === 'worktree-invalid' ? g.file
+    : g && !g.source && g.main && invalidAt(g.main) ? path.join(g.main, '.claude', 'aip-gate.json') : null;
+  if (bad) { err(`Lỗi: ${bad} không phải đối tượng JSON hợp lệ; sửa tay trước khi chạy aip autonomy.`); return 1; }
 
   if (sub === 'status') {
     out(`autonomy: ${JSON.stringify(readAutonomy(root))}${g?.config?.autonomy === undefined ? ' (mặc định an toàn, aip-gate.json không có khoá autonomy)' : ''}`);

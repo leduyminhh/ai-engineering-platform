@@ -300,3 +300,30 @@ test("autonomy-gates AC8.1: CLI aip autonomy từ chối -g và giá trị lạ"
   assert.equal(run("high").status, 0);
   assert.equal(JSON.parse(fs.readFileSync(gatePath(root), "utf8")).autonomy.partRunner, "subagent");
 });
+
+test("autonomy-gates AC8.1: trong worktree, safe chép khóa repo chính trừ autonomy; repo chính hỏng ⇒ exit 1, không ghi", () => {
+  const main = fs.realpathSync.native(tmp());
+  const git = (cwd, ...a) => execFileSync("git", ["-c", "commit.gpgsign=false", ...a], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+  git(main, "config", "user.name", "t");
+  git(main, "config", "user.email", "t@example.com");
+  put(path.join(main, "README.md"), "x");
+  git(main, "add", "README.md");
+  git(main, "commit", "-q", "-m", "init");
+  const wt = path.join(path.dirname(main), `${path.basename(main)}-auto-wt`);
+  dirs.push(wt);
+  git(main, "worktree", "add", "-q", wt, "-b", "autonomy-wt");
+  const high = { mergeLocal: true, cleanup: true, partRunner: "subagent" };
+  const mainGate = JSON.stringify({ mode: "full", mcpDeny: ["evil"], autonomy: high });
+  put(gatePath(main), mainGate);
+  const run = (sub) => { const out = []; const code = runAutonomy(sub, { root: wt, out: (l) => out.push(l), err: () => {} }); return { code, out: out.join("\n") }; };
+
+  assert.ok(run("status").out.includes(JSON.stringify(high)), "worktree đọc khóa của repo chính");
+  assert.equal(run("safe").code, 0);
+  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mode: "full", mcpDeny: ["evil"] });
+  assert.equal(fs.readFileSync(gatePath(main), "utf8"), mainGate, "file repo chính không bị sửa");
+
+  fs.rmSync(gatePath(wt));
+  put(gatePath(main), "{ hỏng");
+  for (const sub of ["high", "safe", "status"]) assert.equal(run(sub).code, 1, sub);
+  assert.equal(fs.existsSync(gatePath(wt)), false, "không tạo file che repo chính hỏng");
+});
