@@ -28,7 +28,7 @@ import { findTranscripts, projectSlug, statsForFile } from './lib/transcript-sta
 import { parseSince, loadSessionUsage, buildUsageReport } from './lib/transcript-usage.mjs';
 import { formatUsageReport } from './lib/usage-report.mjs';
 import { renderStatusline, parseThresholds } from './lib/statusline.mjs';
-import { runStatus } from './lib/status.mjs';
+import { runStatus, countBlocked, mainRoot } from './lib/status.mjs';
 
 const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -231,7 +231,7 @@ LỆNH
                             bảng chỉ có tỷ lệ subagent, tách theo từng agent nằm ở --json);
                             tiền là cost-state của Claude Code cho cả phiên, không phải hóa đơn [Unverified]
   statusline                đọc JSON của Claude Code từ stdin, in một dòng trạng thái (model, context % kèm nhắc bàn giao,
-                            cache còn ấm bao lâu, tiền phiên, hạn mức 5h); --soft <n> --hard <n> (mặc định 40/60), --no-color.
+                            cache còn ấm bao lâu, tiền phiên, hạn mức 5h, ⚠ <n> vướng khi request đang chạy có part vướng); --soft <n> --hard <n> (mặc định 40/60), --no-color.
                             Cấu hình: {"statusLine":{"type":"command","command":"aip statusline","refreshInterval":60}}
   status [<request>]        xem tiến trình request chia part, chỉ đọc (mặc định: request có ledger dở ghi gần nhất);
                             --json, --html (ghi .aip/runs/<request>/status.html), --watch (ghi lại mỗi 10 giây), --part <nn>
@@ -350,7 +350,12 @@ async function main() {
       // Statusline không được làm vỡ giao diện: stdin rỗng, hỏng hoặc đang là TTY đều cho dòng rỗng và mã 0.
       let input = null;
       if (!process.stdin.isTTY) { try { input = JSON.parse(fs.readFileSync(0, 'utf8')); } catch { /* dòng rỗng */ } }
-      console.log(renderStatusline(input, { soft: th.soft, hard: th.hard, color: !args.noColor && !process.env.NO_COLOR }));
+      let blocked = 0;
+      try {
+        const dir = input?.workspace?.current_dir ?? input?.cwd ?? process.cwd();
+        blocked = countBlocked(mainRoot(typeof dir === 'string' ? dir : process.cwd()));
+      } catch { /* không đọc được ledger thì bỏ đoạn vướng */ }
+      console.log(renderStatusline(input, { soft: th.soft, hard: th.hard, color: !args.noColor && !process.env.NO_COLOR, blocked }));
       return;
     }
     case 'status': {
