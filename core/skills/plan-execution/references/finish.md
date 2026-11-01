@@ -57,7 +57,7 @@ Chỉ khi `mergeLocal: true` và người dùng đã duyệt rõ G3:
 3. Đặt `Trạng thái` trong `design.md` thành `merged <hash merge>`, và xoá `plan.md` cùng `parts/*/plan.md` (nếu có):
    `check-request.mjs` W16 đòi xoá plan khi request đã `merged`. Commit thay đổi docs này qua `git-workflow` (commit thứ hai
    đã được G3 đồng ý), rồi chạy lại `check-request.mjs` trên thư mục request; cảnh báo còn lại ghi vào `remaining_risks`.
-4. `cleanup: true` → dọn như mục "Dọn theo khoá" bên dưới. Thiếu khoá `cleanup` → hỏi như mục "Xoá và huỷ".
+4. `cleanup: true` → dọn như mục "Dọn theo khoá" bên dưới, rồi đóng phiên con như mục "Đóng phiên con". Thiếu khoá `cleanup` → hỏi như mục "Xoá và huỷ" (gộp cả câu hỏi đóng phiên con).
 5. Push/PR hỏi riêng một lần sau bước này; không trả lời rõ → không push.
 
 ## Chi tiết từng lựa chọn
@@ -87,8 +87,18 @@ báo là tổ tiên của nhánh gốc. Phạm vi: nhánh feature vừa merge v�
 `git branch -d <nhánh>` (git từ chối khi chưa merge; không dùng `-D`). Nhánh chưa merge và worktree còn thay đổi (kể cả
 file chưa theo dõi) thì giữ nguyên. Báo một dòng đã gỡ/xoá gì. Không dọn khi suite đỏ.
 
+## Đóng phiên con
+
+Chỉ khi merge local đã xanh và bước dọn theo khoá đã xong. Session gốc archive các phiên con đã mở cho request này
+(phiên part, phiên thực thi), chỉ phiên đã idle:
+
+- Dùng công cụ quản lý phiên của môi trường (liệt kê phiên liên kết, archive) nếu có; không có thì bỏ qua và ghi một dòng trong báo cáo.
+- Phiên còn chạy hoặc đang chờ người dùng: giữ và nêu tên từng phiên.
+- `cleanup: true`: archive luôn, không hỏi thêm. Thiếu khoá `cleanup` (hoặc `false`, giá trị mặc định của `autonomy.mjs`): gộp vào câu hỏi dọn của mục "Xoá và huỷ".
+- Archive đảo ngược được; không xoá phiên vì xoá không đảo ngược.
+
 ## Ghi nhận
 
-Khi người dùng đã chọn (hoặc duyệt G3 với `mergeLocal: true`) và việc của lựa chọn đó xong (kể cả giữ nguyên), ghi
+Khi người dùng đã chọn (hoặc duyệt G3 với `mergeLocal: true`) và việc của lựa chọn đó xong (kể cả giữ nguyên; merge local kèm đóng phiên con), ghi
 `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md gốc> "Plan: complete"` rồi trả `workflow_result` có `rulings` đã gom. Truyền đường dẫn `plan.md` gốc kể cả khi file đã bị xoá ở bước 3 của "Merge local theo khoá" (script tính workspace từ đường dẫn, không cần file còn), không truyền đường dẫn `progress.md`. `Plan: complete` chỉ ghi ở ledger `root/` (plan gốc), không bao giờ ở ledger part. Dòng
 `Plan: complete` làm hook `session-start` ngừng nạp ledger.
