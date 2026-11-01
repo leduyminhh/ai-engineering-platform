@@ -19,3 +19,4 @@ evals/**/results/
 
 # Worktree của Claude Code
 .claude/worktrees/
+.claude/aip-gate.json
