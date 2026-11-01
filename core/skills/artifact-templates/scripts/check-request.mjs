@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const FILES = ['requirement.md', 'design.md', 'plan.md', 'tasks.md'];
+const FILES = ['brief.md', 'requirement.md', 'design.md', 'plan.md', 'tasks.md'];
 const AC_SOURCES = ['requirement.md', 'design.md'];
 const AC_ID_RE = /^AC\d+\.\d+$/;
 const AC_ANY_RE = /AC\d+\.\d+/g;
@@ -192,7 +192,9 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
   const acsBy = Object.fromEntries(AC_SOURCES.filter((f) => lines[f]).map((f) => [f, parseAcs(lines[f])]));
   const sources = AC_SOURCES.filter((f) => acsBy[f]?.length);
 
-  if (!sources.length) {
+  // Request mới chỉ có brief.md (brainstorm xong, chưa viết design) chưa có AC để kiểm; báo W1 lúc này là cảnh báo giả.
+  const briefOnly = !!lines['brief.md'] && !lines['requirement.md'] && !lines['design.md'] && !planFiles.length;
+  if (!sources.length && !briefOnly) {
     warn(lines['design.md'] ? 'design.md' : 'requirement.md', 1, 'W1', 'Không có nguồn AC: cần mục "Tiêu chí chấp nhận" có AC trong requirement.md hoặc design.md');
   }
   if (sources.length > 1) {
