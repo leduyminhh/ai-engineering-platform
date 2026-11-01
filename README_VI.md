@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 Người dùng cuối không cần clone repo — gói `ai-engineering-platform` phát hành trên npm
 registry, hai bin `aip` và `ai-engineering-platform` trỏ cùng một CLI.
 
-> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` / `aip-status`
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree` + `core:aip-status`). Các plugin (`backend`, `frontend`, `engineering`,
+> **Gói npm chỉ ship core** — nguyên tắc nền tảng và skill `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` / `aip-status` / `brainstorming`
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree` + `core:aip-status` + `core:brainstorming`). Các plugin (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) và workflow **không** có trong gói; hãy cài từ source:
 > `git clone` + `npm link` (xem [Bắt đầu nhanh](#bắt-đầu-nhanh)), rồi `aip install --plugin all`, hoặc
 > `aip --all` để mở wizard với mọi skill kể cả draft.
@@ -100,7 +100,7 @@ npx ai-engineering-platform install --provider all --yes
 | Đường dẫn | Vai trò |
 | --- | --- |
 | `plugins/` | Nguồn năng lực: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, cùng `_marketplace.json` và `_cowork.json`. |
-| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (giao thức vòng task, 3 script Node), `skills/using-aip/`, `skills/git-worktree/`, `skills/aip-status/` (trang tiến độ `aip status`) và `skills/artifact-templates/` (11 template artifact, gồm `spec` cho spec sống ở `docs/specs/`; `check-request.mjs` cảnh báo W1–W21), và `hooks/` an toàn (chỉ plugin-mode). |
+| `core/` | Baseline dùng chung: `agents/AGENTS.template.md`, `principles/`, recipe dùng chung `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (giao thức vòng task, 3 script Node), `skills/using-aip/`, `skills/git-worktree/`, `skills/aip-status/` (trang tiến độ `aip status`), `skills/brainstorming/` (brainstorm ra `brief.md` có định tuyến; `scripts/route.mjs`) và `skills/artifact-templates/` (12 template artifact, gồm `spec` cho spec sống ở `docs/specs/`; `check-request.mjs` cảnh báo W1–W21), và `hooks/` an toàn (chỉ plugin-mode). |
 | `evals/` | Case `claude plugin eval` theo plugin (chạy tay; không ship; `npm test` chỉ kiểm cấu trúc). |
 | `templates/` | `init/` khung project (do skill `*-init` drop ra); `project-knowledge/`, `docs/requests/_TEMPLATE/` và `docs/decisions/_TEMPLATE.md` sinh từ `core/skills/artifact-templates/`. |
 | `adapters/` | Chiếu theo provider (`<provider>/adapter.mjs`), auto-discover. `_shared/lib.mjs` chứa logic dùng chung. |

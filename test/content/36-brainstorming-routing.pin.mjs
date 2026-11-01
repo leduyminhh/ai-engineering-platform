@@ -6,6 +6,7 @@ export default async function run({ ok, ctx }) {
   // [AC, file, regex, mô tả]; một hành vi nhiều ràng buộc → một bảng có tham số.
   // Các regex AC7.1 khoanh trong mục "## Đóng phiên con" (không lan sang mục khác).
   const F = 'core/skills/plan-execution/references/finish.md';
+  const B = 'core/skills/brainstorming/SKILL.md';
   const ANCHORS = [
     ['AC7.1', F, /^## Dọn theo khoá[\s\S]*^## Đóng phiên con$/m, 'mục Đóng phiên con đặt sau "Dọn theo khoá"'],
     ['AC7.1', F, /^## Đóng phiên con\n(?:(?!^## )[\s\S])*archive/m, 'nêu archive'],
@@ -18,6 +19,15 @@ export default async function run({ ok, ctx }) {
     ['AC3.2', 'workflows/security-review/WORKFLOW.md', /^### Bước 1 —(?:(?!^### )[\s\S])*status: misrouted/m, 'Bước 1 security-review trả status: misrouted'],
     ['AC3.2', 'workflows/performance/WORKFLOW.md', /^### Bước 1 —(?:(?!^### )[\s\S])*status: misrouted/m, 'Bước 1 performance trả status: misrouted'],
     ['AC4.1', 'workflows/feature/WORKFLOW.md', /^### Bước 2 —(?:(?!^### )[\s\S])*brief\.md/m, 'Bước 2 feature đọc brief.md'],
+    ['AC1.1', B, /brief\.md/, 'SKILL.md nêu brief.md là đầu ra'],
+    ['AC1.1', B, /route\.mjs/, 'SKILL.md nêu lệnh route.mjs'],
+    ['AC1.1', B, /bỏ qua phần hỏi/, 'lượt đầu có dòng bỏ qua phần hỏi'],
+    ['AC1.1', B, /thẻ gom câu hỏi/, 'lượt đầu có thẻ gom câu hỏi'],
+    ['AC1.1', B, /đáp án khuyến nghị/, 'mỗi câu trong thẻ kèm đáp án khuyến nghị'],
+    ['AC1.1', B, /một câu mở/, 'thẻ có đúng một câu mở'],
+    ['AC1.2', B, /builder check[\s\S]*một vòng/i, 'builder check chỉ một vòng hỏi'],
+    ['AC1.2', B, /cổng duy nhất/, 'duyệt brief là cổng duy nhất'],
+    ['AC1.3', B, /quyết định của agent/, 'người dùng bỏ qua → ghi quyết định của agent'],
   ];
   for (const [ac, file, re, msg] of ANCHORS) ok(re.test(read(file)), `${ac}: ${msg}`);
 }

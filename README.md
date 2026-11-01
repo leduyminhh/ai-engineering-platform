@@ -42,8 +42,8 @@ aip uninstall --skill backend/backend-migrate-architecture --yes
 End users do not need to clone the repo — the `ai-engineering-platform` package is published
 to the npm registry, and both `aip` and `ai-engineering-platform` bins point to the same CLI.
 
-> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` / `aip-status` skills
-> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree` + `core:aip-status`). Plugins (`backend`, `frontend`, `engineering`,
+> **The npm package ships core only** — the baseline principles and the `git-workflow` / `git-release` / `artifact-templates` / `plan-execution` / `using-aip` / `git-worktree` / `aip-status` / `brainstorming` skills
+> (`core:principles` + `core:git-workflow` + `core:git-release` + `core:artifact-templates` + `core:plan-execution` + `core:using-aip` + `core:git-worktree` + `core:aip-status` + `core:brainstorming`). Plugins (`backend`, `frontend`, `engineering`,
 > `ops`, `data`) and workflows are **not** in the package; install them from source:
 > `git clone` + `npm link` (see [Quickstart](#quickstart)), then `aip install --plugin all`, or
 > `aip --all` to open the wizard with every skill including drafts.
@@ -103,7 +103,7 @@ npx ai-engineering-platform install --provider all --yes
 | Path | Owns |
 | --- | --- |
 | `plugins/` | Canonical capability source: `<id>/.manifest.json` + `shared/principles.md` + `skills/<skill>/SKILL.md`, plus `_marketplace.json` and `_cowork.json`. |
-| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (task-loop protocol, 3 Node scripts), `skills/using-aip/`, `skills/git-worktree/`, `skills/aip-status/` (the `aip status` progress page) and `skills/artifact-templates/` (the 11 artifact templates, incl. `spec` for living specs in `docs/specs/`; `check-request.mjs` warns W1–W21) recipes, and the safety `hooks/` (plugin-mode only). |
+| `core/` | Shared baseline: `agents/AGENTS.template.md`, `principles/`, the shared `skills/git-workflow/`, `skills/git-release/`, `skills/plan-execution/` (task-loop protocol, 3 Node scripts), `skills/using-aip/`, `skills/git-worktree/`, `skills/aip-status/` (the `aip status` progress page), `skills/brainstorming/` (brainstorm into a routed `brief.md`; `scripts/route.mjs`) and `skills/artifact-templates/` (the 12 artifact templates, incl. `spec` for living specs in `docs/specs/`; `check-request.mjs` warns W1–W21) recipes, and the safety `hooks/` (plugin-mode only). |
 | `evals/` | `claude plugin eval` cases per plugin (manual run; not shipped; `npm test` checks structure only). |
 | `templates/` | `init/` project scaffold (dropped by `*-init` skills); `project-knowledge/`, `docs/requests/_TEMPLATE/` and `docs/decisions/_TEMPLATE.md` are generated from `core/skills/artifact-templates/`. |
 | `adapters/` | Per-provider projection (`<provider>/adapter.mjs`), auto-discovered. `_shared/lib.mjs` holds the cross-tool logic. |
