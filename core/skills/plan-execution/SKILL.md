@@ -44,7 +44,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
 Request chia part (`## Bảng part` trong `design.md`): thứ tự part, song song và merge theo mục "Chế độ part" của
 `references/task-loop.md` (rẽ theo `partRunner`); `Plan: complete` chỉ ghi ở ledger `root/`.
 
-**Điểm dừng và báo cáo.** Chờ người dùng chỉ ở G1 (duyệt design), G2 (duyệt plan), G3 (duyệt diff cả nhánh; thiếu khoá
+**Điểm dừng và báo cáo.** Mọi lần dừng chờ người dùng đều theo [references/ask-user.md](references/ask-user.md): mở file hoặc diff cần duyệt ở pane và hỏi bằng lựa chọn bấm được, không kết thúc lượt bằng câu hỏi suông. Chờ người dùng chỉ ở G1 (duyệt design), G2 (duyệt plan), G3 (duyệt diff cả nhánh; thiếu khoá
 `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3), câu hỏi push/PR riêng một lần sau merge local (chỉ khi
 `mergeLocal: true`), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và 6 loại dừng bên dưới;
 giữa G2 và G3 chạy liền. Session chính không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một
@@ -91,4 +91,5 @@ không cần khai báo model riêng cho từng task.
   [re-review.md](references/prompts/re-review.md), [final-review.md](references/prompts/final-review.md): mẫu prompt giao việc.
 - [references/inline.md](references/inline.md): chế độ inline, session chính tự thực thi plan; dòng ledger inline cần `tests: <lệnh> exit 0`.
 - [references/finish.md](references/finish.md): kết thúc nhánh.
+- [references/ask-user.md](references/ask-user.md): cách hỏi người dùng ở mọi cổng (lựa chọn bấm được, mở file hoặc diff cần duyệt, mỗi cổng hỏi gì).
 - `scripts/task-brief.mjs`, `scripts/review-package.mjs`, `scripts/ledger.mjs`, `scripts/autonomy.mjs` (in JSON khoá `autonomy` hiệu lực): Node thuần, không cần bash.

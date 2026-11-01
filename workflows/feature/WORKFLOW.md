@@ -98,7 +98,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   chính chạy builder check (subagent mới đọc tài liệu như người sẽ làm; không có tool subagent thì tự đọc như
   builder): câu của người dùng gom một tin nhắn, câu nhỏ ghi "quyết định của agent"; người dùng đã bỏ qua phần hỏi
   thì không hỏi, nêu nổi bật các quyết định của agent ở checkpoint.
-- **Ràng buộc:** agent chỉ ghi trong `docs/`; không code implementation; không đổi kiểu kiến trúc đã chốt; cỡ
+- **Ràng buộc:** trình tài liệu để duyệt theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó) (mở file ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng, không hỏi suông); agent chỉ ghi trong `docs/`; không code implementation; không đổi kiểu kiến trúc đã chốt; cỡ
   "thay đổi nhỏ" chỉ có `requirement.md`, không có `design.md`; không bịa yêu cầu, phần suy đoán đánh dấu `[giả
   định]`.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` (+ `design.md` nếu cỡ dự án; + `tasks.md` nếu người
@@ -125,7 +125,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` và, khi có part, `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` (chỉ là cảnh báo; nhóm bị báo P1/P2/P4 thì sửa plan hoặc đổi nhóm sang chạy tuần tự: quay lại Bước 3 đặt cột Song song của các part đó thành `—` trong `design.md`, hoặc giữ bảng và ghi `Ruling: nhóm <nhãn> chạy tuần tự — <lý do>` vào ledger `root/` bằng `ledger.mjs`). Có `tasks.md` →
   task trong `plan.md` trỏ ID task của `tasks.md`, và Checkpoint 2 của `engineering-task-breakdown` được duyệt cùng
   `plan.md` (không hỏi hai lần).
-- **Ràng buộc:** chỉ ghi `plan.md` gốc (nếu có) và `parts/*/plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
+- **Ràng buộc:** trình plan để duyệt theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó) (mở `plan.md` ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng); chỉ ghi `plan.md` gốc (nếu có) và `parts/*/plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
   ở bước này (đổi cột Song song thì quay lại Bước 3); không xoá `**Files:**` hay test để tắt cảnh báo.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part), hoặc dòng ghi rõ bỏ qua vì cỡ "thay đổi nhỏ".
 - **Gate:** `check-request.mjs` không còn cảnh báo ngoài W9 (file test chưa tồn tại lúc lập plan); khi có part, `check-partition.mjs` không còn cảnh báo, hoặc nhóm còn bị báo P1/P2/P4 đã được đổi sang chạy tuần tự (cột Song song `—` hoặc dòng `Ruling:` như trên); mọi acceptance

@@ -29,6 +29,10 @@ export default async function run({ ok, ctx }) {
     ['AC5.2', 'evals/core/route-brief-decision/case.yaml', /name: route-brief-decision/, 'case eval route-brief-decision có case.yaml'],
     ['AC5.2', 'evals/core/route-brief-decision/graders/route-is-adr.md', /engineering-adr/, 'route kỳ vọng của route-brief-decision là engineering-adr'],
     ['AC6.1', 'docs/requests/2026-10-31-brainstorming-routing/trial-6.md', /workflow-feature[\s\S]*engineering-adr[\s\S]*chưa có quy trình/, 'trial-6.md ghi kết quả ba vấn đề thử (feature, quyết định, nghiên cứu)'],
+    // Yêu cầu của người dùng 2026-11-01: mọi lần dừng hỏi phải có lựa chọn bấm được hoặc file/diff mở sẵn, không hỏi suông.
+    ['ASK', 'core/skills/plan-execution/references/ask-user.md', /AskUserQuestion[\s\S]*show_pane/, 'ask-user.md nêu công cụ hỏi có lựa chọn và pane mở file/diff'],
+    ['ASK', 'core/skills/plan-execution/references/finish.md', /G3\.\*\* Theo `ask-user\.md`/, 'G3 hỏi theo ask-user.md (mở diff, lựa chọn bấm được)'],
+    ['ASK', 'core/skills/brainstorming/SKILL.md', /ask-user\.md[\s\S]*Dừng/, 'brainstorming hỏi theo ask-user.md ở thẻ đầu và thẻ duyệt brief'],
   ];
   for (const [ac, file, re, msg] of ANCHORS) ok(re.test(read(file)), `${ac}: ${msg}`);
 

@@ -23,7 +23,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
    tin nhắn G3; nhiều ứng viên thì không đoán, liệt kê và hỏi chọn ngay trong tin nhắn G3 (bước 7). Chạy
    `git remote`: kết quả rỗng thì repo chưa có remote, lựa chọn push + PR ghi "không khả dụng: repo chưa có remote" và
    không gợi ý lệnh `git push`.
-7. **G3.** Một tin nhắn: diff cả nhánh + `rulings` + finding còn lại (`remaining_risks`) + tên nhánh feature và nhánh gốc
+7. **G3.** Theo `ask-user.md`: mở diff cả nhánh ở pane diff trước, rồi hỏi bằng lựa chọn bấm được (`mergeLocal: true`: Duyệt / Sửa thêm / Giữ nguyên; thiếu khoá: 3 lựa chọn bên dưới), không chỉ viết câu hỏi bằng chữ. Một tin nhắn: diff cả nhánh + `rulings` + finding còn lại (`remaining_risks`) + tên nhánh feature và nhánh gốc
    (bước 6), rồi rẽ theo khoá `mergeLocal` của `autonomy.mjs` (đã đọc ở bước Chuẩn bị của skill):
    - `mergeLocal: true`: bản trình G3 nêu tên nhánh gốc và hai commit sẽ tạo trên đó: commit merge `--no-ff` của nhánh
      feature, rồi một commit docs (Trạng thái `merged <hash>`, xoá `plan.md` và `parts/*/plan.md`); và xin một câu duyệt

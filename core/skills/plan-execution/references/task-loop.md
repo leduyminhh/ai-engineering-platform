@@ -98,7 +98,7 @@ Finding `blocker`/`major` mà hoãn hoặc chấp nhận phải ghi trong `Rulin
 thấy; nhãn `minor (deferred)` chỉ dành cho finding `minor`/`nit`. Phán xong hết finding thì ghi dòng
 `Task <n>: complete (commits <a>..<b>, <k> ruled)` (bước 9) và chạy tiếp task sau.
 
-**Dừng hỏi người dùng, không ghi `Ruling:` rồi chạy tiếp**, khi finding hoặc tình huống thuộc một trong:
+**Dừng hỏi người dùng, không ghi `Ruling:` rồi chạy tiếp** (hỏi theo `ask-user.md`: các hướng xử lý là lựa chọn bấm được, hướng khuyến nghị đứng đầu kèm hệ quả), khi finding hoặc tình huống thuộc một trong:
 
 1. việc không đảo ngược được hoặc phá huỷ (xoá dữ liệu, ghi đè lịch sử, thao tác không hoàn tác được);
 2. bảo mật;
