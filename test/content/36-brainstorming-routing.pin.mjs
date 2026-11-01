@@ -28,6 +28,7 @@ export default async function run({ ok, ctx }) {
     ['AC1.2', B, /builder check[\s\S]*một vòng/i, 'builder check chỉ một vòng hỏi'],
     ['AC1.2', B, /cổng duy nhất/, 'duyệt brief là cổng duy nhất'],
     ['AC1.3', B, /quyết định của agent/, 'người dùng bỏ qua → ghi quyết định của agent'],
+    ['AC1.2', 'plugins/engineering/skills/engineering-spec-writing/SKILL.md', /clarify-core\.md/, 'engineering-spec-writing trỏ tới clarify-core.md (phần làm rõ chung)'],
   ];
   for (const [ac, file, re, msg] of ANCHORS) ok(re.test(read(file)), `${ac}: ${msg}`);
 }

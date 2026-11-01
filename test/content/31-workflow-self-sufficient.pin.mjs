@@ -97,7 +97,9 @@ export default async function run({ ok, ctx }) {
       'AC1.2: SKILL bước 9 — đã bỏ qua phần hỏi thì không hỏi, nhóm của người dùng thành quyết định của agent, nêu nổi bật ở checkpoint');
     ok(/người dùng đã bỏ qua phần hỏi[^]*không hỏi gì[^]*quyết định của agent[^]*nổi bật/.test(read(sw, 'references', 'builder-check.md')),
       'AC1.2: builder-check.md có ngoại lệ bỏ qua phần hỏi (không hỏi, quyết định của agent, nêu nổi bật)');
-    const step5 = between('5. **Đề xuất', '6. **Xếp cỡ');
+    // Phần làm rõ chung (người dùng bỏ qua → tự chọn, không dừng chờ) nằm ở clarify-core.md; SKILL.md trỏ tới đó.
+    const clarifyCore = read(REPO_ROOT, 'core', 'skills', 'brainstorming', 'references', 'clarify-core.md');
+    const step5 = between('5. **Đề xuất', '6. **Xếp cỡ') + '\n' + clarifyCore;
     ok(/hướng bị loại/.test(step5) && /tự chọn/.test(step5) && /không dừng chờ chọn/.test(step5),
       'AC1.1: SKILL bước 5 — ghi cả hướng bị loại; bỏ qua phần hỏi thì agent tự chọn, không dừng chờ');
     const step2 = between('2. **Cổng', '3. **Hỏi từng câu');
