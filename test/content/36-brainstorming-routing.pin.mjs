@@ -29,6 +29,9 @@ export default async function run({ ok, ctx }) {
     ['AC1.2', B, /cổng duy nhất/, 'duyệt brief là cổng duy nhất'],
     ['AC1.3', B, /quyết định của agent/, 'người dùng bỏ qua → ghi quyết định của agent'],
     ['AC1.2', 'plugins/engineering/skills/engineering-spec-writing/SKILL.md', /clarify-core\.md/, 'engineering-spec-writing trỏ tới clarify-core.md (phần làm rõ chung)'],
+    ['AC5.2', 'evals/core/brainstorm-gather-questions/case.yaml', /name: brainstorm-gather-questions/, 'case eval brainstorm-gather-questions có case.yaml'],
+    ['AC5.2', 'evals/core/route-brief-decision/case.yaml', /name: route-brief-decision/, 'case eval route-brief-decision có case.yaml'],
+    ['AC5.2', 'evals/core/route-brief-decision/graders/route-is-adr.md', /engineering-adr/, 'route kỳ vọng của route-brief-decision là engineering-adr'],
   ];
   for (const [ac, file, re, msg] of ANCHORS) ok(re.test(read(file)), `${ac}: ${msg}`);
 }
