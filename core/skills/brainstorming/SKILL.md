@@ -22,58 +22,69 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
 
 ## Ranh giới an toàn
 
-- **Docs-only:** chỉ ghi `brief.md`; không sinh code, không sửa file khác, không chạy lệnh làm đổi trạng thái project.
+- **Docs-only, với đúng hai ngoại lệ tường minh.** Skill chỉ ghi `brief.md`; không sinh code, không sửa file khác của
+  project, không commit. Ngoại lệ: (1) HTML phụ trợ cho hiển thị trực quan ghi ở `.aip/runs/brainstorm-<slug>/` (tạo
+  `.aip/.gitignore` chứa `*` nếu chưa có để git bỏ qua); (2) spike bỏ đi, **chỉ khi người dùng đồng ý**, làm ở thư mục tạm
+  ngoài repo, không commit, bỏ sau khi dùng; muốn giữ lại spike thì đó là một request mới.
 - **Không bịa.** Phần đoán đánh dấu **[giả định]** và đưa vào mục "Phần đoán" của brief; không trình bày như điều người
   dùng đã nói.
-- **Đi xem ngoài repo cần đồng ý.** Đọc code và file trong repo là mặc định. Đọc web, tài liệu ngoài repo hay mở thứ gì
-  ngoài hội thoại: hỏi trước, người dùng đồng ý rồi mới làm.
-- **Spike bỏ đi.** Thử nhanh để lấy cảm giác thì làm ở nơi tạm và bỏ sau khi dùng; muốn giữ lại thì đó là một request mới,
-  không nằm trong brainstorm này.
-- **Nơi lưu brief.** Trong repo code: `docs/requests/<yyyy-mm-dd>-<slug>/brief.md`. Ngoài repo code (không có `docs/requests/`
-  hoặc việc không gắn với repo): hỏi người dùng muốn lưu ở đâu, không tự chọn.
+- **Đi xem cần đồng ý.** Chỉ việc nạp context nền ở bước 1 là mặc định, không cần hỏi. Mọi việc đi xem sâu hơn (đọc code,
+  đọc file khác, đọc web, tài liệu ngoài repo) thì nêu rõ muốn xem gì và vì sao, rồi **chờ đồng ý**, bất kể trong hay
+  ngoài repo.
+- **Nơi lưu brief.** Trong repo code: `docs/requests/<yyyy-mm-dd>-<slug>/brief.md`. Ngoài repo code (không có
+  `docs/requests/` hoặc việc không gắn với repo): hỏi người dùng muốn lưu ở đâu, không tự chọn.
 - **Không ghi đè** `brief.md` đã có khi chưa hỏi; có sẵn thì hỏi cập nhật hay tạo bản mới.
 - **Người dùng giữ cổng duy nhất:** duyệt brief. Skill không tự chạy workflow hay skill kế tiếp.
 
 ## Quy trình — nghĩ cùng rồi ghi brief
 
-1. **Nạp context và qua cổng "đủ thông tin".** Đọc `CLAUDE.md`, `project-knowledge/`, `docs/decisions/`, `docs/specs/` và
-   `docs/requests/` khi có; tìm trong repo trước khi hỏi. Rồi qua cổng của `clarify-core.md`: việc đủ rõ và nhỏ thì **làm
-   thẳng, không brainstorm** và nói với người dùng như vậy. Còn lại mới tiếp tục.
+1. **Nạp context nền và qua cổng "đủ thông tin".** Đọc `CLAUDE.md`, `project-knowledge/`, `docs/decisions/` và
+   `docs/specs/` khi có; đây là phần duy nhất đọc mặc định. Rồi qua cổng của `clarify-core.md`. Việc đã đủ rõ và nhỏ: nói
+   với người dùng việc đã đủ rõ nên **không brainstorm và không ghi brief**, rồi kết thúc skill; làm việc đó theo yêu cầu
+   thông thường ngoài skill (việc làm ngoài skill không bị ràng buộc docs-only của skill này). Còn lại mới tiếp tục, và
+   chốt `<slug>` ngay khi hiểu tên việc.
 2. **Lượt hỏi đầu.** Một tin nhắn gồm đúng hai phần: một dòng nói người dùng có thể **bỏ qua phần hỏi** bất cứ lúc nào, và
    **một thẻ gom câu hỏi**. Mỗi câu trong thẻ kèm một **đáp án khuyến nghị** để người dùng chỉ cần "đồng ý" hoặc sửa; thẻ
-   có đúng **một câu mở** để người dùng tự mô tả tình huống bằng lời của họ. Các lượt sau cũng gom thành một thẻ, không
-   hỏi từng câu qua nhiều lượt. Người dùng bỏ qua phần hỏi → agent tự chọn, không hỏi thêm, ghi mọi lựa chọn là
-   **quyết định của agent** vào brief và nêu ở thẻ duyệt.
+   có đúng **một câu mở** để người dùng tự mô tả tình huống bằng lời của họ (thẻ này thay cho câu mở đơn lẻ của
+   `clarify-core.md`). Các lượt sau cũng gom thành một thẻ, không hỏi từng câu qua nhiều lượt. Người dùng bỏ qua phần hỏi
+   → bỏ hỏi và bỏ playback từng phần, agent tự chọn, ghi mọi lựa chọn là **quyết định của agent** vào brief và nêu ở thẻ
+   duyệt brief (checkpoint của skill này).
 3. **Nội dung cần nắm** theo [references/coverage.md](references/coverage.md): loại việc và điểm đặc biệt, vì sao bây giờ
    và thành công trông thế nào, goal/non-goal/anti-goal, tham khảo đã thấy, hiện trạng. Đó là vùng phủ để kiểm không sót,
-   không đọc ra thành câu. **Mô tả trước, phương án sau:** chỉ đưa menu 2–3 hướng khi người dùng bí hoặc sau playback.
-   Tự nghĩ rộng riêng tư, bỏ hướng yếu, không đổ cả đống ý tưởng lên người dùng.
-4. **Đề nghị đi xem.** Khi một phần hiểu biết nằm ở code, file, tài liệu hay web mà agent chưa xem, nói rõ muốn xem gì và
-   vì sao, rồi **chờ đồng ý** nếu phải ra ngoài repo. Phần chưa xem ghi rõ là chưa xem.
-5. **Spike bỏ đi** khi người dùng cần cảm nhận mới chốt được (một mẫu, một đoạn thử, một bản nháp): làm nhanh ở nơi tạm,
-   cho xem, rồi bỏ. Không đưa spike vào brief như kết quả.
+   không đọc ra thành câu. **Mô tả trước, phương án sau.** Người dùng bí thì được đưa menu 2–3 hướng cho họ chọn, bất kỳ
+   lúc nào; đó là công cụ gỡ bí, không thay đề xuất bắt buộc ở bước 7. Tự nghĩ rộng riêng tư, bỏ hướng yếu, không đổ cả
+   đống ý tưởng lên người dùng.
+4. **Đề nghị đi xem.** Khi một phần hiểu biết nằm ở code, file, tài liệu hay web mà agent chưa xem, nêu rõ muốn xem gì và
+   vì sao rồi **chờ đồng ý** (trong hay ngoài repo, theo mục Ranh giới an toàn). Phần chưa xem ghi rõ là chưa xem.
+5. **Spike bỏ đi** khi người dùng cần cảm nhận mới chốt được (một mẫu, một đoạn thử, một bản nháp): hỏi đồng ý, làm nhanh
+   ở thư mục tạm ngoài repo, cho xem, rồi bỏ. Không commit và không đưa spike vào brief như kết quả.
 6. **Hiển thị trực quan** khi người dùng hiểu rõ hơn khi thấy hơn khi đọc, theo
    [references/visual.md](references/visual.md): widget inline có nút nếu phiên có công cụ hiển thị, không thì HTML cục
-   bộ dưới `.aip/runs/<request>/`, không thì text. Không viết server riêng.
-7. **Playback từng phần.** Hiểu xong một phần thì tóm tắt lại, đánh dấu chỗ đoán là **[giả định]**, kết bằng "sai hoặc
-   thiếu gì?" (chi tiết ở `clarify-core.md`). Đề xuất 2–3 hướng + khuyến nghị đặt **sau** playback.
-8. **Builder check** bằng một subagent mới theo [references/builder-check.md](references/builder-check.md): phân kết quả
-   thành 3 nhóm (đã trả lời / nhỏ → **quyết định của agent** / của người dùng), chỉ nhóm cuối đi hỏi, gom vào **một tin
-   nhắn**. Đó là **một vòng** hỏi duy nhất của bước kiểm; người dùng đã bỏ qua phần hỏi thì không hỏi. Không có công cụ
-   subagent thì tự đọc theo cùng prompt.
-9. **Ghi `brief.md`** theo template `brief` của `artifact-templates` (`references/brief.template.md`; bỏ khối
+   bộ ở `.aip/runs/brainstorm-<slug>/`, không thì text. Không viết server riêng.
+7. **Playback từng phần, rồi đề xuất hướng.** Hiểu xong một phần thì tóm tắt lại, đánh dấu chỗ đoán là **[giả định]**,
+   kết bằng "sai hoặc thiếu gì?" (chi tiết ở `clarify-core.md`). Sau đó, và chỉ **sau playback**, agent đề xuất 2–3
+   hướng + 1 khuyến nghị + đánh đổi, ghi cả hướng bị loại. Bước này bắt buộc kể cả khi người dùng bỏ qua phần hỏi (khi
+   đó không có playback, agent tự chọn theo khuyến nghị và ghi **quyết định của agent**).
+8. **Ghi brief.md nháp** theo template `brief` của `artifact-templates` (`references/brief.template.md`; bỏ khối
    `<!-- artifact-template … -->`), đặt ở nơi đã chốt ở mục Ranh giới an toàn, trạng thái `draft`. Điền khối
    `## Định tuyến` (`loại-việc`, `phạm-vi`, `đầu-ra-mong-đợi`, `rủi-ro`, `ứng-viên-route`), để `route-đã-duyệt` trống.
-   Chạy `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/` và sửa
-   mọi cảnh báo thuộc brief (ngoài repo code thì bỏ bước này, ghi "chưa chạy check-request").
+9. **Builder check** đọc brief nháp, bằng một subagent mới theo [references/builder-check.md](references/builder-check.md):
+   phân kết quả thành 3 nhóm (đã trả lời / nhỏ → **quyết định của agent** / của người dùng), chỉ nhóm cuối đi hỏi, gom
+   vào **một tin nhắn**. Đó là **một vòng** hỏi duy nhất của bước kiểm, không chạy lại builder check sau khi nhận trả lời;
+   người dùng đã bỏ qua phần hỏi thì không hỏi. Không có công cụ subagent thì tự đọc theo cùng prompt. Rồi **cập nhật
+   brief** theo kết quả và chạy
+   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/`, sửa mọi
+   cảnh báo thuộc brief (ngoài repo code thì bỏ lệnh này, ghi "chưa chạy check-request").
 10. **Kiểm route rồi trình một thẻ duyệt brief.** Chạy
-    `node <thư mục skill brainstorming>/scripts/route.mjs <brief.md> <WORKFLOW.md của orchestrator>`; orchestrator là
-    `workflows/orchestrator/WORKFLOW.md` trong repo aip hoặc bản cài của skill `workflow-orchestrator`. Không tìm thấy
-    orchestrator thì ghi "chưa kiểm route" và để `route-đã-duyệt` trống. Từ JSON `{ chosen, candidates, reason, confidence }`
-    trình **một thẻ duyệt brief** gồm: tóm tắt brief (kèm các **quyết định của agent**), route đề xuất (`chosen`), hoặc
-    hai ứng viên (`candidates`) để người dùng chọn, hoặc "chưa có quy trình phù hợp" kèm gợi ý làm trong phiên, và câu
-    nói rõ người dùng **luôn ghi đè được route**. Route chọn có risk `high` hoặc `critical` (đọc cột Risk của
-    `## Registry`) thì thẻ này đòi một câu duyệt rõ ràng cho route đó, không coi im lặng là đồng ý.
+    `node <thư mục skill brainstorming>/scripts/route.mjs <brief.md> <orchestrator>`. `<orchestrator>` là
+    `workflows/orchestrator/WORKFLOW.md` trong repo aip, hoặc file `SKILL.md` của skill `workflow-orchestrator` trong bản
+    cài (đã kiểm: bản build của file này parse ra route đúng). Không tìm thấy orchestrator, hoặc `route.mjs` thoát 2
+    (thiếu đối số hoặc không đọc được file): ghi "chưa kiểm route", báo đường dẫn lỗi cho người dùng và để
+    `route-đã-duyệt` trống. Từ JSON `{ chosen, candidates, reason, confidence }` trình **một thẻ duyệt brief** gồm: tóm
+    tắt brief (kèm các **quyết định của agent**), route đề xuất (`chosen`), hoặc hai ứng viên (`candidates`) để người
+    dùng chọn, hoặc "chưa có quy trình phù hợp" kèm gợi ý làm trong phiên, và câu nói rõ người dùng **luôn ghi đè được
+    route**. Route chọn có risk `high` hoặc `critical` (đọc cột Risk của `## Registry`) thì thẻ này đòi một câu duyệt rõ
+    ràng cho route đó, không coi im lặng là đồng ý.
 11. **Sau khi người dùng duyệt:** ghi `route-đã-duyệt: <id | chưa-có-quy-trình>` và `Trạng thái: approved` vào brief
     (người dùng ghi đè thì ghi route họ chọn). Duyệt brief là **cổng duy nhất** của brainstorm và cũng là duyệt route;
     không mở thêm cổng nào khác. Rồi gợi ý bước kế: gọi `workflow-orchestrator` với brief, hoặc skill đã chọn; **không tự
@@ -81,14 +92,18 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
 
 ## Verification (trước khi báo hoàn thành)
 
-- Đã qua cổng "đủ thông tin"; lượt đầu có dòng bỏ qua phần hỏi và một thẻ gom câu hỏi (đáp án khuyến nghị mỗi câu, một
-  câu mở); không hỏi từng câu qua nhiều lượt.
+- Đã qua cổng "đủ thông tin" (việc đủ rõ và nhỏ thì kết thúc skill mà không ghi brief); lượt đầu có dòng bỏ qua phần hỏi
+  và một thẻ gom câu hỏi (đáp án khuyến nghị mỗi câu, một câu mở); không hỏi từng câu qua nhiều lượt.
 - Mọi lựa chọn agent tự đưa ra ghi **quyết định của agent**; phần đoán ghi **[giả định]**; không có spike nào bị đưa vào brief.
-- Đã chạy đúng một builder check; câu hỏi của người dùng gom trong một tin nhắn.
+- Đề xuất 2–3 hướng của agent đặt sau playback (hoặc ghi quyết định của agent khi người dùng bỏ qua phần hỏi).
+- Mọi việc đi xem sâu hơn nạp context nền đã được người dùng đồng ý; file ghi ra chỉ gồm `brief.md` và, nếu có, HTML phụ
+  trợ ở `.aip/runs/brainstorm-<slug>/`; spike (nếu có) ở thư mục tạm ngoài repo, không commit, đã bỏ.
+- `brief.md` nháp được ghi trước builder check; đã chạy đúng một builder check đọc brief nháp, câu hỏi của người dùng gom
+  trong một tin nhắn, rồi brief được cập nhật theo kết quả.
 - `brief.md` đúng template `brief`, khối `## Định tuyến` đủ khoá; đã chạy `check-request.mjs` (hoặc nêu lý do không chạy).
-- Đã chạy `route.mjs` (hoặc ghi "chưa kiểm route"); thẻ duyệt nêu route hoặc hai ứng viên hoặc "chưa có quy trình", quyền
-  ghi đè, và câu duyệt rõ cho route risk cao.
-- Chỉ ghi `brief.md`; `route-đã-duyệt` và `Trạng thái: approved` chỉ ghi sau khi người dùng duyệt; chưa tự chạy bước kế.
+- Đã chạy `route.mjs` sau khi brief cập nhật (hoặc ghi "chưa kiểm route"); thẻ duyệt nêu route hoặc hai ứng viên hoặc
+  "chưa có quy trình", quyền ghi đè, và câu duyệt rõ cho route risk cao.
+- `route-đã-duyệt` và `Trạng thái: approved` chỉ ghi sau khi người dùng duyệt; chưa tự chạy bước kế.
 
 ## Bản đồ tài liệu
 
@@ -101,5 +116,5 @@ Nạp đúng file khi cần, đừng nạp tất cả:
   cách tự đọc khi không có subagent.
 - [references/visual.md](references/visual.md): khi nào hiển thị trực quan, thứ tự widget inline → HTML cục bộ → text.
 
-Tham khảo: skill brainstorming của bộ Claude plugins chính thức (xem design request
+Tham khảo: skill brainstorming của bộ Claude plugins (xem design request
 `docs/requests/2026-10-31-brainstorming-routing/design.md`); không chép nội dung.

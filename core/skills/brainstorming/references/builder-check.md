@@ -1,6 +1,6 @@
 # Builder check — kiểm brief.md bằng một người thực hiện "không được hỏi lại"
 
-Chạy **một lần**, sau khi đã có bản nháp `brief.md` và trước thẻ duyệt brief. Mục đích: bắt phần còn thiếu mà người viết
+Chạy **một lần**, sau khi đã ghi `brief.md` nháp (bước 8 của `SKILL.md`) và trước khi chạy `route.mjs` và trình thẻ duyệt brief. Mục đích: bắt phần còn thiếu mà người viết
 không thấy, **không** tăng số câu hỏi cho người dùng. Câu nhỏ do agent tự quyết và nêu rõ; chỉ câu mà đoán sai sẽ làm
 hỏng kết quả mới đi hỏi người dùng. Chỉ session chính chạy bước này.
 
@@ -24,6 +24,8 @@ hỏng kết quả mới đi hỏi người dùng. Chỉ session chính chạy b
    kèm mặc định đã chọn, và nêu nổi bật ở thẻ duyệt brief để người dùng sửa.
 5. **Không có công cụ subagent** → session chính tự đọc `brief.md` theo đúng prompt dưới đây, đóng vai người thực hiện,
    rồi phân 3 nhóm như trên và ghi rõ là đã tự đọc.
+6. Cập nhật `brief.md` theo kết quả (nhóm "đã trả lời", "nhỏ" và câu trả lời của người dùng); chỉ sau đó mới chạy
+   `route.mjs`, vì khối `## Định tuyến` có thể đổi.
 
 ## Prompt mẫu cho subagent
 

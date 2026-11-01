@@ -11,13 +11,15 @@ nào cũng cần hình.
 
 1. **Widget inline có nút** khi phiên có công cụ hiển thị (app desktop Claude): mockup hoặc so sánh phương án, mỗi phương
    án một nút gửi lại lựa chọn vào chat. Widget chỉ để xem và chọn; không nhồi cả brief vào widget.
-2. **HTML cục bộ** khi phiên không có công cụ hiển thị nhưng ghi được file: ghi dưới `.aip/runs/<request>/` (thư mục chạy
-   của request ở gốc repo chính, git bỏ qua) theo kiểu `status.html` của `aip status`: một file HTML tĩnh, tự đủ, mở bằng
+2. **HTML cục bộ** khi phiên không có công cụ hiển thị nhưng ghi được file: ghi dưới `.aip/runs/brainstorm-<slug>/` (ở gốc
+   repo chính; `<slug>` chốt ngay khi hiểu tên việc vì lúc này chưa có `docs/requests/`; tạo `.aip/.gitignore` chứa `*` nếu
+   chưa có để git bỏ qua) theo kiểu `status.html` của `aip status`: một file HTML tĩnh, tự đủ, mở bằng
    trình duyệt. **Không viết server riêng**, không đưa file ra dịch vụ ngoài.
 3. **Text** khi không có cả hai, hoặc khi chữ đủ rõ: bảng markdown, sơ đồ ASCII ngắn.
 
 ## Quy tắc
 
+- HTML phụ trợ này và spike là hai ngoại lệ duy nhất của skill ngoài `brief.md`; không ghi gì khác vào repo.
 - Hỏi trước khi mở bất cứ thứ gì ngoài hội thoại (trang web, file HTML); người dùng đồng ý rồi mới làm.
 - Nội dung đưa vào HTML là dữ liệu người dùng đã nói: hiển thị dạng text, không chèn script hay tải tài nguyên ngoài.
 - Hình là phương tiện để chốt điều đang bàn; chốt xong thì ghi kết luận vào `brief.md` bằng chữ.

@@ -11,19 +11,22 @@ không có quyết định thiết kế) → **không chạy quy trình làm rõ
 phần:
 
 1. Một dòng nói rằng người dùng có thể **bỏ qua phần hỏi** bất cứ lúc nào.
-2. Một câu mở gợi họ kể tình huống thật. Ở `brainstorming`, thẻ gom câu hỏi thay cho câu mở đơn lẻ nhưng thẻ vẫn có
-   đúng một câu mở.
+2. Một câu mở gợi họ kể tình huống thật.
 
-Người dùng chọn **bỏ qua phần hỏi** → bỏ phần hỏi và playback từng phần, **không hỏi thêm câu nào** trước checkpoint
-(kể cả ở builder check): agent **tự chọn hướng** (vẫn ghi 2–3 hướng + khuyến nghị + đánh đổi, không dừng chờ chọn), viết
+**Checkpoint** là điểm duyệt của skill gọi (ví dụ `engineering-spec-writing`: lúc người dùng duyệt tài liệu;
+`brainstorming`: thẻ duyệt brief).
+
+Người dùng chọn **bỏ qua phần hỏi** nghĩa là bỏ hỏi và bỏ playback từng phần: **không hỏi thêm câu nào** trước checkpoint
+(kể cả ở builder check). Agent **tự chọn hướng** (vẫn ghi 2–3 hướng + khuyến nghị + đánh đổi, không dừng chờ chọn), viết
 tài liệu với mọi lựa chọn đánh dấu **quyết định của agent**, và nêu nổi bật các quyết định đó ở checkpoint (chỉ nêu riêng
 lựa chọn công nghệ hoặc nền tảng quan trọng) để người dùng sửa khi duyệt. Không trình bày quyết định của agent như điều
-người dùng đã đồng ý.
+người dùng đã đồng ý. Cũng áp dụng khi người dùng trả lời nhưng không chốt một lựa chọn: agent tự chọn theo khuyến nghị.
 
 ## Nguyên tắc hỏi
 
-- **Câu mở trước, đoán để họ sửa:** neo vào tình huống cụ thể; chỉ đưa lựa chọn khi họ bí. Khi có cơ sở, nêu điều mình
-  đoán và hỏi "đúng không?"; điều chưa xác nhận ghi **[giả định]**.
+- **Câu mở trước, đoán để họ sửa:** neo vào tình huống cụ thể. Khi họ bí, được đưa menu 2–3 hướng cho họ chọn (xem mục
+  "Đề xuất 2–3 hướng"). Khi có cơ sở, nêu điều mình đoán
+  và hỏi "đúng không?"; điều chưa xác nhận ghi **[giả định]**.
 - **Ưu tiên câu mở khoá kết quả:** hỏi trước những câu mà thiếu nó thì không viết được tiêu chí kiểm được.
 - **Không bịa:** phần chưa có câu trả lời ghi **[giả định]** kèm cơ sở và đưa vào mục câu hỏi mở để con người chốt.
 - Chuyện kỹ thuật hoặc nền tảng: hỏi người dùng muốn tự chọn hay giao agent; agent chọn thì ghi **quyết định của agent**.
@@ -36,8 +39,14 @@ Mỗi khi hiểu xong một phần, **tóm tắt lại** ngắn (khoảng 200–
 
 ## Đề xuất 2–3 hướng — đặt sau playback
 
-Chỉ làm khi mô tả đã được xác nhận qua playback (**sau playback**). Tự nghĩ rộng riêng tư, bỏ hướng yếu; chỉ trình
-**2–3 hướng** thật sự khác nhau, mỗi hướng một dòng đánh đổi, nêu **một khuyến nghị** và lý do. Ghi cả hướng được chọn lẫn
+Hai việc khác nhau, đừng lẫn:
+
+- **Menu hướng để người dùng chọn:** đưa bất kỳ lúc nào họ bí khi đang hỏi, kể cả trước playback; chỉ là công cụ gỡ bí,
+  không thay đề xuất bên dưới.
+- **Đề xuất của agent (2–3 hướng + 1 khuyến nghị + đánh đổi):** bắt buộc, và chỉ đặt **sau playback**, khi mô tả đã được
+  xác nhận. Người dùng bỏ qua phần hỏi thì không có playback; agent vẫn ghi đề xuất rồi tự chọn.
+
+Tự nghĩ rộng riêng tư, bỏ hướng yếu; chỉ trình **2–3 hướng** thật sự khác nhau, mỗi hướng một dòng đánh đổi, nêu **một khuyến nghị** và lý do. Ghi cả hướng được chọn lẫn
 các hướng bị loại (kèm đánh đổi và lý do) vào tài liệu đầu ra. Người dùng chốt hướng → ghi là quyết định đã chốt;
 người dùng bỏ qua phần hỏi hoặc không chốt → agent tự chọn theo khuyến nghị, ghi **quyết định của agent**, không dừng
 chờ chọn.
