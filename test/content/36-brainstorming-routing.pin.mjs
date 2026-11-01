@@ -28,6 +28,7 @@ export default async function run({ ok, ctx }) {
     ['AC5.2', 'evals/core/brainstorm-gather-questions/case.yaml', /name: brainstorm-gather-questions/, 'case eval brainstorm-gather-questions có case.yaml'],
     ['AC5.2', 'evals/core/route-brief-decision/case.yaml', /name: route-brief-decision/, 'case eval route-brief-decision có case.yaml'],
     ['AC5.2', 'evals/core/route-brief-decision/graders/route-is-adr.md', /engineering-adr/, 'route kỳ vọng của route-brief-decision là engineering-adr'],
+    ['AC6.1', 'docs/requests/2026-10-31-brainstorming-routing/trial-6.md', /workflow-feature[\s\S]*engineering-adr[\s\S]*chưa có quy trình/, 'trial-6.md ghi kết quả ba vấn đề thử (feature, quyết định, nghiên cứu)'],
   ];
   for (const [ac, file, re, msg] of ANCHORS) ok(re.test(read(file)), `${ac}: ${msg}`);
 
