@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: route-brief-decision
+description: Thư mục có brief loại quyết-định, không-code và bảng route rút gọn viết tay trong scaffold (sandbox eval không đọc được file của repo; bảng thật do contract 55-routing kiểm); chạy route.mjs của skill brainstorming phải cho engineering-adr.
+context:
+  scaffold_script: scaffold.sh

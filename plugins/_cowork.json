@@ -4,6 +4,7 @@
     "core:principles",
     "core:git-workflow",
     "core:artifact-templates",
+    "core:brainstorming",
     "backend:backend-init",
     "backend:backend-implement",
     "backend:backend-testing",

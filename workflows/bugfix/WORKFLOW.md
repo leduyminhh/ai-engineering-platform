@@ -40,13 +40,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả lỗi + vùng nghi ngờ của người dùng
-- **Hành động:** chạy build và test của vùng nghi ngờ theo lệnh của project; ghi số mốc (lệnh, exit code, số test
-  pass/fail) làm baseline cho các bước sau.
-- **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Hành động:** có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-bugfix` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`; không có orchestrator thì bỏ qua phần đối chiếu Registry, chỉ dùng việc thật) (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng nghi ngờ theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+  pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng nghi ngờ: nếu việc thật là thêm hành vi mới thay vì sửa lỗi thì không khớp `workflow-bugfix`.
+- **Ràng buộc:** brief `Trạng thái: approved` có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc` hay `phạm-vi` của brief, chỉ khi việc thật mâu thuẫn rõ với route (vd việc thật là thêm hành vi mới thay vì sửa lỗi); chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build xanh; số mốc test của vùng nghi ngờ đã ghi (test có thể đỏ đúng vì bug đang xử lý).
-- **Khi fail:** build đỏ, hoặc test đỏ ngoài vùng bug → dừng `blocked`, báo người dùng; không sửa lẫn hai lỗi.
-- **Evidence:** lệnh build/test + exit code + số liệu pass/fail.
+- **Khi fail:** brief lệch route (`loại-việc` hoặc `phạm-vi` không khớp hàng này, trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Build đỏ, hoặc test đỏ ngoài vùng bug → dừng `blocked`, báo người dùng; không sửa lẫn hai lỗi. Chỉ khi build xanh mà đọc vùng nghi ngờ thấy việc thật là thêm hành vi mới thay vì sửa lỗi (trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → `misrouted` như trên.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc` và `phạm-vi`, kết luận (khớp, hoặc `misrouted` kèm lý do); khi dừng trước baseline, baseline ghi `status: not_run`, `reason: misrouted`.
 
 ### Bước 2 — Hiểu bối cảnh
 
@@ -108,7 +108,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   nhận/bác bỏ nó); xây dựng chuỗi nhân quả từ evidence tới hành vi lỗi quan sát được, truy ngược từ chỗ nổ lỗi
   từng cấp (giá trị này do ai gọi/truyền vào) tới nguồn; đối chiếu lý do đỏ của test Bước 3 với root cause đã
   nêu; trình bày cho người dùng để xác nhận trước khi fix. Pha 1–3 và cách truy ngược: skill `engineering-debugging` (khi skill đã cài); không làm pha 4 của skill ở bước này, việc sửa nằm ở Bước 6.
-- **Ràng buộc:** không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
   evidence hỗ trợ; không dừng ở chỗ lỗi nổ khi nguồn nằm ở nơi khác; thay đổi thử khi kiểm giả thuyết phải hoàn tác trước
   khi trình người dùng.
 - **Đầu ra:** giải thích root cause, có trích dẫn evidence; **danh sách file/module được sửa** suy từ chuỗi nhân
@@ -190,7 +190,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** diff fix hoàn chỉnh (code + test) đã qua Bước 1–8
 - **Hành động:** tóm tắt bug + root cause + fix, đề xuất commit message Conventional Commits (header EN, body
   VI); trình diff cho người dùng duyệt.
-- **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
   Đây là chốt riêng của workflow, áp cả trên feature branch.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
 - **Gate:** người dùng duyệt diff.
@@ -252,7 +252,7 @@ Trả về đúng khối sau; mục nào không chạy được ghi `status: not
 ```yaml
 workflow_result:
   workflow: workflow-bugfix
-  status: completed        # completed | failed | blocked
+  status: completed        # completed | failed | blocked | misrouted
   summary: "<1–3 câu>"
   changes: { added: [], modified: [], deleted: [] }
   validation:

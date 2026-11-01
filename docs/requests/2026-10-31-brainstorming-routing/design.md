@@ -19,6 +19,7 @@ Tham chiếu: skill `brainstorming` của superpowers 7.0.0 (không giới hạn
 - (10) `workflow-feature` thấy `brief.md` của request thì Bước 2 chỉ hỏi phần brief chưa có, không hỏi lại phần đã chốt.
 - (11) Ghi mỗi lần định tuyến vào `.aip/routing-log.jsonl` (`{ts, brief, chosen, overridden, misrouted}`); thêm case định tuyến vào `evals/core/` với route kỳ vọng.
 - (12) Người dùng luôn ghi đè được route trên thẻ duyệt brief.
+- (13) Bước đóng phiên trong `finish.md` (yêu cầu người dùng 2026-11-01): sau merge local xanh và dọn theo `cleanup`, session gốc archive các phiên con nó đã mở cho request đó (phiên part, phiên thực thi), chỉ phiên đã idle; phiên còn chạy hoặc đang chờ người dùng thì giữ và nêu tên. Archive đảo ngược được nên không hỏi thêm khi `cleanup: true`; thiếu khoá thì gộp vào câu hỏi dọn của "Xoá và huỷ". Không xoá phiên (không đảo ngược).
 ## Tiêu chí chấp nhận
 - [ ] **AC1.1** — Given người dùng nêu một vấn đề chưa rõ loại (kể cả không phải code) When gọi `brainstorming` Then lượt đầu có dòng bỏ qua và một thẻ gom câu hỏi có đáp án khuyến nghị
 - [ ] **AC1.2** — Given brainstorm đã đủ thông tin When kết thúc Then ghi `brief.md` đúng template, qua builder check, và dừng một lần chờ duyệt
@@ -32,14 +33,17 @@ Tham chiếu: skill `brainstorming` của superpowers 7.0.0 (không giới hạn
 - [ ] **AC5.1** — Given một lần định tuyến When xong Then `.aip/routing-log.jsonl` có thêm một bản ghi
 - [ ] **AC5.2** — Given các case trong `evals/core/` When chạy kiểm cấu trúc (`95-evals.contract.mjs`) Then case định tuyến hợp lệ
 - [ ] **AC6.1** — Given 3 vấn đề thử (một feature, một quyết định quy trình không code, một nghiên cứu) When brainstorm rồi định tuyến Then mỗi vấn đề tới đúng route hoặc "chưa có quy trình", ghi kết quả vào `trial-6.md`
+- [ ] **AC7.1** — Given `cleanup: true`, merge local xanh và session gốc có phiên con đã idle của request When kết thúc nhánh Then `finish.md` bảo archive các phiên đó không hỏi thêm, giữ phiên còn chạy và nêu tên; thiếu khoá thì gộp vào câu hỏi dọn
 ## Thiết kế
 - `core/skills/brainstorming/SKILL.md` (+ `references/` cho danh sách nội dung cần nắm, builder check, hiển thị trực quan), `scripts/route.mjs` (zero-dependency, đọc bảng markdown của orchestrator như `cli/lib/workflows.mjs`).
 - `core/skills/artifact-templates/references/brief.template.md` + mục lục; `check-request.mjs` nhận request chỉ có `brief.md` (chưa có design) mà không báo lỗi giả.
 - Phần làm rõ chung (cổng đủ thông tin, playback, 2–3 hướng) tách thành reference dùng chung, `engineering-spec-writing` trỏ tới, không chép hai bản.
 - `workflows/orchestrator/WORKFLOW.md` (+ `graph.json` nếu bước đổi), `core/principles/workflow-output-contract.md` (`misrouted`), Bước 1 của 4 workflow pipeline, Bước 2 của `workflow-feature`.
+- `core/skills/plan-execution/references/finish.md`: bước đóng phiên (13), sau mục "Dọn theo khoá".
 ## Ảnh hưởng spec
 - workflows: thêm R15
 - workflows: đổi R7
+- workflows: đổi R14
 - artifact-templates: thêm R12
 ## Ngoài phạm vi và anti-goal
 - Không thêm skill `research`, `writing` hay plugin nghiệp vụ (lộ trình P4, P5); brainstorm chỉ định tuyến tới cái đã có hoặc báo "chưa có quy trình".

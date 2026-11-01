@@ -44,13 +44,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** phạm vi cần review của người dùng
-- **Hành động:** chạy build và test của phạm vi review theo lệnh của project; ghi số mốc (lệnh, exit code, số test
-  pass/fail) làm baseline cho các bước sau.
-- **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Hành động:** có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-security-review` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`; không có orchestrator thì bỏ qua phần đối chiếu Registry, chỉ dùng việc thật) (đọc từ bảng, không chép giá trị) và kiểm trường `rủi-ro` của brief theo `điều-kiện` của hàng đó (đọc từ bảng). Sau đó chạy build và test của phạm vi review theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+  pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng review: việc thật không khớp `loại-việc` hoặc `phạm-vi` của hàng này thì không khớp route.
+- **Ràng buộc:** brief `Trạng thái: approved` có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc`, `phạm-vi` hay `rủi-ro` của brief, chỉ khi việc thật mâu thuẫn rõ với route (vd không có gì thuộc phạm vi review bảo mật); chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build/test xanh (exit code 0) và số mốc đã ghi, để phân biệt lỗi bảo mật với lỗi build có sẵn.
-- **Khi fail:** đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; lỗi build có sẵn không tính là finding bảo mật.
-- **Evidence:** lệnh build/test + exit code + số liệu pass/fail.
+- **Khi fail:** brief lệch route (`loại-việc`, `phạm-vi` hoặc `rủi-ro` không khớp hàng này, trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Baseline đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; lỗi build có sẵn không tính là finding bảo mật. Sau baseline xanh, việc thật không khớp `loại-việc` hoặc `phạm-vi` (trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → `misrouted` như trên.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc`, `phạm-vi`, `điều-kiện` và kết luận (khớp, hoặc `misrouted` kèm lý do); khi dừng trước baseline, baseline ghi `status: not_run`, `reason: misrouted`.
 
 ### Bước 2 — Phạm vi & threat
 
@@ -101,7 +101,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** finding đã validate từ Bước 4
 - **Hành động:** trình toàn bộ finding cho người dùng theo severity; người dùng chọn finding nào sửa ngay,
   finding nào chấp nhận rủi ro (ghi lý do chấp nhận).
-- **Ràng buộc:** không tự quyết định bỏ qua finding `blocker` mà không có xác nhận rõ ràng của người dùng.
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tự quyết định bỏ qua finding `blocker` mà không có xác nhận rõ ràng của người dùng.
 - **Đầu ra:** danh sách finding người dùng chọn sửa + **danh sách file được sửa cho mỗi finding đã chọn** (đầu
   vào cho Bước 8) + danh sách finding được chấp nhận rủi ro (nếu có).
 - **Gate:** người dùng chọn finding cần sửa; có danh sách file được sửa.
@@ -118,7 +118,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   người dùng tự rotate/thu hồi secret đó tại hệ thống phát hành (cloud, IdP, database, dịch vụ ngoài) rồi xác
   nhận đã làm; coi secret là đã lộ kể cả khi sau này xoá khỏi code. Nếu không có finding secret bị lộ, ghi
   "không áp dụng".
-- **Ràng buộc:** workflow không tự rotate, không gọi hệ thống bên ngoài, không đọc hay in giá trị secret (chỉ
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; workflow không tự rotate, không gọi hệ thống bên ngoài, không đọc hay in giá trị secret (chỉ
   nêu tên/vị trí đã mask); không viết lại lịch sử git.
 - **Đầu ra:** xác nhận của người dùng rằng secret đã được rotate, hoặc dòng "không áp dụng".
 - **Gate:** người dùng xác nhận đã rotate mọi secret bị lộ, hoặc không có finding secret bị lộ.
@@ -202,7 +202,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** diff sửa hoàn chỉnh đã qua Bước 1–9
 - **Hành động:** tóm tắt finding đã sửa + finding được chấp nhận rủi ro (nếu có); đề xuất commit message
   Conventional Commits (header EN, body VI); trình diff cho người dùng duyệt.
-- **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu; không commit
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu; không commit
   kèm giá trị secret thật.
   Đây là chốt riêng của workflow, áp cả trên feature branch.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
@@ -267,7 +267,7 @@ Trả về đúng khối sau; mục nào không chạy được ghi `status: not
 ```yaml
 workflow_result:
   workflow: workflow-security-review
-  status: completed        # completed | failed | blocked
+  status: completed        # completed | failed | blocked | misrouted
   summary: "<1–3 câu>"
   changes: { added: [], modified: [], deleted: [] }
   validation:

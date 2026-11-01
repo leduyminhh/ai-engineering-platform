@@ -45,22 +45,22 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** yêu cầu tính năng của người dùng
-- **Hành động:** chạy build và test của vùng sẽ đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
-  pass/fail) làm baseline cho các bước sau.
-- **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Hành động:** có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-feature` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`; không có orchestrator thì bỏ qua phần đối chiếu Registry, chỉ dùng việc thật) (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng sẽ đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+  pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng code: nếu việc thật chỉ là sửa lỗi hành vi đã có thì không khớp `workflow-feature`.
+- **Ràng buộc:** brief `Trạng thái: approved` có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc` hay `phạm-vi` của brief, chỉ khi việc thật mâu thuẫn rõ với route (vd việc thật là sửa lỗi hành vi có sẵn); chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build/test xanh (exit code 0) và số mốc đã ghi.
-- **Khi fail:** đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; không implement trên baseline đỏ.
-- **Evidence:** lệnh build/test + exit code + số liệu pass/fail.
+- **Khi fail:** brief lệch route (`loại-việc` hoặc `phạm-vi` không khớp hàng này, trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Baseline đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; không implement trên baseline đỏ. Chỉ khi baseline xanh mà đọc vùng code thấy việc thật chỉ là sửa lỗi hành vi đã có (trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → `misrouted` như trên.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc` và `phạm-vi`, kết luận (khớp, hoặc `misrouted` kèm lý do); khi dừng trước baseline, baseline ghi `status: not_run`, `reason: misrouted`.
 
 ### Bước 2 — Làm rõ & cỡ việc ⏸
 
 - **Thực hiện:** session chính, theo skill `engineering-spec-writing` (không giao agent hỏi người dùng)
 - **Đầu vào:** mô tả yêu cầu/user story của người dùng + baseline Bước 1
-- **Hành động:** chạy quy trình làm rõ của skill: cổng "đủ thông tin" (đủ thì không hỏi), lối thoát cho người dùng
+- **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì đọc trước: bỏ qua phần brief đã chốt (mục tiêu, phạm vi, hướng đã cân nhắc, quyết định của agent); chỉ hỏi phần brief còn thiếu, vẫn gom vào một tin nhắn. Chạy quy trình làm rõ của skill: cổng "đủ thông tin" (đủ thì không hỏi), lối thoát cho người dùng
   bỏ qua phần hỏi, gom mọi câu còn lại vào một tin nhắn (mỗi câu kèm phương án khuyến nghị; không hỏi từng câu qua nhiều lượt) rồi tóm tắt lại những gì đã hiểu, đề xuất 2–3 hướng kèm 1 khuyến nghị và đánh đổi, xếp
   cỡ việc (việc rõ và nhỏ → không chạy workflow, làm thẳng; thay đổi nhỏ; dự án), tách các request độc lập.
-  Xác định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`. Phạm vi cần đổi schema DB
+  Xác định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`; có `brief.md` thì `phạm-vi` của brief ánh xạ `code-be` → backend, `code-fe` → frontend, `fullstack` → fullstack; `phạm-vi` `data` (kể cả khi `route-đã-duyệt` là workflow này) → dừng, đề xuất `data-db-migration`. Phạm vi cần đổi schema DB
   (bảng/cột/index/migration) → dừng, đề xuất chạy skill `data-db-migration` (chế độ `change`, plugin `data`)
   trước rồi quay lại feature. Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
   chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do). Trong chính tin nhắn gom, hỏi người dùng có tách task
@@ -68,7 +68,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `references/task-breakdown.md`, mục Bước 2 (`tasks.md` được ghi ở Bước 3). Chưa có câu trả lời cho tin nhắn gom →
   chưa sang Bước 3. Bước này không phải cổng duyệt: hướng, cỡ việc, phạm vi và bảng e2e được duyệt cùng tài liệu ở G1
   (Bước 3).
-- **Ràng buộc:** một tin nhắn gom mọi câu hỏi, không hỏi từng câu; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả định]`; chưa ghi
+- **Ràng buộc:** tin nhắn gom hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`) (lựa chọn bấm được cho từng câu, phương án khuyến nghị đứng đầu); một tin nhắn gom mọi câu hỏi, không hỏi từng câu; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả định]`; chưa ghi
   tài liệu ở bước này (Bước 3 ghi); người dùng bỏ qua phần hỏi → agent tự chọn hướng, ghi "quyết định của agent",
   không hỏi thêm; chỉ phân rã task khi người dùng chọn trong tin nhắn gom.
 - **Đầu ra:** tóm tắt trong chat (kèm tin nhắn gom hoặc ngay sau câu trả lời; duyệt ở G1): hướng đã chọn (kèm hướng bị loại), cỡ việc, phạm vi BE/FE/fullstack,
@@ -98,7 +98,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   chính chạy builder check (subagent mới đọc tài liệu như người sẽ làm; không có tool subagent thì tự đọc như
   builder): câu của người dùng gom một tin nhắn, câu nhỏ ghi "quyết định của agent"; người dùng đã bỏ qua phần hỏi
   thì không hỏi, nêu nổi bật các quyết định của agent ở checkpoint.
-- **Ràng buộc:** agent chỉ ghi trong `docs/`; không code implementation; không đổi kiểu kiến trúc đã chốt; cỡ
+- **Ràng buộc:** trình tài liệu để duyệt theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó) (mở file ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng, không hỏi suông); agent chỉ ghi trong `docs/`; không code implementation; không đổi kiểu kiến trúc đã chốt; cỡ
   "thay đổi nhỏ" chỉ có `requirement.md`, không có `design.md`; không bịa yêu cầu, phần suy đoán đánh dấu `[giả
   định]`.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` (+ `design.md` nếu cỡ dự án; + `tasks.md` nếu người
@@ -125,7 +125,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` và, khi có part, `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` (chỉ là cảnh báo; nhóm bị báo P1/P2/P4 thì sửa plan hoặc đổi nhóm sang chạy tuần tự: quay lại Bước 3 đặt cột Song song của các part đó thành `—` trong `design.md`, hoặc giữ bảng và ghi `Ruling: nhóm <nhãn> chạy tuần tự — <lý do>` vào ledger `root/` bằng `ledger.mjs`). Có `tasks.md` →
   task trong `plan.md` trỏ ID task của `tasks.md`, và Checkpoint 2 của `engineering-task-breakdown` được duyệt cùng
   `plan.md` (không hỏi hai lần).
-- **Ràng buộc:** chỉ ghi `plan.md` gốc (nếu có) và `parts/*/plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
+- **Ràng buộc:** trình plan để duyệt theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó) (mở `plan.md` ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng); chỉ ghi `plan.md` gốc (nếu có) và `parts/*/plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
   ở bước này (đổi cột Song song thì quay lại Bước 3); không xoá `**Files:**` hay test để tắt cảnh báo.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part), hoặc dòng ghi rõ bỏ qua vì cỡ "thay đổi nhỏ".
 - **Gate:** `check-request.mjs` không còn cảnh báo ngoài W9 (file test chưa tồn tại lúc lập plan); khi có part, `check-partition.mjs` không còn cảnh báo, hoặc nhóm còn bị báo P1/P2/P4 đã được đổi sang chạy tuần tự (cột Song song `—` hoặc dòng `Ruling:` như trên); mọi acceptance
@@ -226,7 +226,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   đồng ý merge local (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, xanh mới commit merge, đỏ hoặc conflict thì `git merge --abort`; rồi một commit docs đặt `merged` và xoá plan trên nhánh gốc, rồi dọn theo `cleanup`, xem `finish.md`), push/PR hỏi riêng một lần sau merge local; thiếu khoá thì đưa
   đúng 3 lựa chọn ngay trong câu hỏi G3: merge local / push + PR / giữ nguyên (mặc định), chọn push + PR là đồng ý push, không hỏi lại. Ghi `Plan: complete` vào ledger sau khi việc của lựa
   chọn xong.
-- **Ràng buộc:** không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`; không merge, không push khi người dùng chưa
+- **Ràng buộc:** G3 hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`) (mở diff cả nhánh ở pane diff rồi hỏi bằng lựa chọn); không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`; không merge, không push khi người dùng chưa
   chọn (không trả lời → giữ nguyên; `mergeLocal: true` đã là chọn merge local, không khoá nào bật push) và không push lên nhánh protected; không xoá nhánh, amend, squash hay force-push khi
   chưa được xác nhận (ngoại lệ: `cleanup: true` chỉ xoá nhánh đã là tổ tiên của nhánh gốc, theo `finish.md`); không đưa G3 hay 3 lựa chọn khi full suite còn đỏ; không xoá `**Files:**` hay test để tắt cảnh báo của
   `check-request.mjs`.
@@ -305,7 +305,7 @@ Trả về đúng khối sau; mục nào không chạy được ghi `status: not
 ```yaml
 workflow_result:
   workflow: workflow-feature
-  status: completed        # completed | failed | blocked
+  status: completed        # completed | failed | blocked | misrouted
   summary: "<1–3 câu>"
   changes: { added: [], modified: [], deleted: [] }
   validation:

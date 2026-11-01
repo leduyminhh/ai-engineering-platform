@@ -114,6 +114,8 @@ Kết quả không đạt bất kỳ luật nào là **đầu ra hỏng**. Xử 
 - **`status: failed`**, hoặc đầu ra hợp lệ nhưng gate trượt → đi cạnh `on_fail` khớp `when`, tính lượt theo
   mục "Retry có ngưỡng".
 
+`misrouted` của workflow không phải đầu ra hỏng và không đi cạnh `on_fail`; Supervisor chuyển sang route kế với cùng brief.
+
 ## Retry có ngưỡng
 
 - Cạnh `on_fail` quay ngược khai báo `max_attempts` trong `graph.json`; mỗi cạnh quay ngược được đi tối đa
@@ -153,7 +155,7 @@ Mọi workflow kết thúc bằng:
 ```yaml
 workflow_result:
   workflow: <workflow-id>
-  status: completed     # completed | failed | blocked
+  status: completed     # completed | failed | blocked | misrouted
   summary: "<1–3 câu>"
   changes: { added: [], modified: [], deleted: [] }
   validation: [ <evidence> ]
@@ -166,8 +168,10 @@ workflow_result:
 
 `rulings` liệt kê nguyên văn mọi dòng `Ruling: <quyết định> — <lý do> — <chi phí nếu sai>` ghi trong ledger của lần chạy.
 
+`misrouted` chỉ thuộc `workflow_result`: workflow dừng ở Bước 1 vì điều-kiện (kể cả `rủi-ro`), loại-việc hoặc phạm-vi của route không khớp việc thật; `summary` nêu lý do, `next_actions` nêu route gợi ý. Đây không phải lỗi, và `agent_result` không dùng giá trị này.
+
 ## Quy tắc chung
 
 - `status: completed` chỉ khi mọi mục Definition of Done có evidence `passed`. Mục `not_run` ghi vào
-  `remaining_risks`; mục bắt buộc mà `not_run` → `blocked`.
+  `remaining_risks`; mục bắt buộc mà `not_run` → `blocked`. Mọi mục chưa tới được vì workflow pipeline dừng `misrouted` ở Bước 1 (baseline chưa chạy hoặc việc thật lệch route sau baseline) không thuộc luật này: ghi evidence `status: not_run` với `reason: misrouted`, kết quả là `misrouted`, không `blocked`.
 - Không kết luận về hiệu năng nếu không có số đo trước/sau trên cùng điều kiện.

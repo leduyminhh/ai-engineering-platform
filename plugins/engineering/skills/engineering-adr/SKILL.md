@@ -36,7 +36,7 @@ người giữ chốt: **duyệt và chốt Status** trước khi ADR được c
   `_TEMPLATE.md` có sẵn của project thắng template core: nếu khác `adr.template.md` của `artifact-templates` thì nêu
   trong báo cáo và gợi ý cập nhật, KHÔNG ghi đè (chi tiết ở references/adr-structure.md).
 - Defer `project-knowledge/` (skill init lo); docs-only, không đụng CLI/adapter/engine.
-- Con người **duyệt** ADR và **chốt Status** trước khi coi là quyết định chính thức.
+- Con người **duyệt** ADR và **chốt Status** trước khi coi là quyết định chính thức; trình ADR theo tài liệu `ask-user.md` của skill `plan-execution` (bản cài plugin: `core:plan-execution`): mở file ADR ở pane rồi hỏi bằng lựa chọn bấm được (Accepted / Sửa / Giữ Proposed).
 
 ## Quy trình — viết ADR
 

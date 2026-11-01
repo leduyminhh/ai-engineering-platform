@@ -38,7 +38,7 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
   thì nêu trong báo cáo và gợi ý cập nhật, KHÔNG ghi đè; `design.md`/`plan.md` theo template core khi `_TEMPLATE` cũ
   không có `design.md` (baseline `AGENTS.md`; chi tiết ở references/spec-structure.md).
 - Defer `project-knowledge/` + `code-convention.md` (skill init lo); docs-only, không đụng CLI/adapter/engine.
-- Con người **duyệt** spec trước khi dùng làm nguồn cho plan/triển khai; mỗi file (`requirement.md`, `design.md`,
+- Con người **duyệt** spec trước khi dùng làm nguồn cho plan/triển khai (hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (bản cài plugin: `core:plan-execution`): mở `requirement.md`/`design.md` ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng); mỗi file (`requirement.md`, `design.md`,
   `plan.md`) một gate duyệt riêng.
 
 ## Quy trình — làm rõ rồi viết spec
@@ -52,10 +52,9 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    stakeholder). Thiếu `project-knowledge/` → nói rõ (fail-loud) và đề nghị chạy init trước, hoặc viết với giả định + ghi rõ.
 
 2. **Cổng "đủ thông tin" + lối thoát.**
-   Tự hỏi: mình đã biết gì về điều người dùng muốn và vì sao? Yêu cầu đã đủ rõ và nhỏ (một sửa đổi có kết quả quan sát
-   được, không có quyết định thiết kế) → **không chạy workflow**, làm thẳng. Ngược lại, tin nhắn đầu tiên gồm đúng
-   hai phần: một dòng nói rằng người dùng có thể **bỏ qua phần hỏi** bất cứ lúc nào, và một câu mở gợi họ kể tình huống
-   thật. Người dùng chọn bỏ qua → bỏ bước 3–4, **không hỏi thêm câu nào** trước checkpoint (kể cả ở builder check, bước 9):
+   Làm theo mục "Cổng "đủ thông tin" + lối thoát" của skill `brainstorming` (bản cài plugin: `core:brainstorming`), file
+   `references/clarify-core.md`: yêu cầu đã đủ rõ và nhỏ → **không chạy workflow**, làm thẳng; ngược lại tin nhắn đầu
+   gồm dòng **bỏ qua phần hỏi** và một câu mở. Riêng skill này: người dùng chọn bỏ qua → bỏ bước 3–4, **không hỏi thêm câu nào** trước checkpoint (kể cả ở builder check, bước 9):
    agent **tự chọn hướng ở bước 5** (vẫn ghi 2–3 hướng + khuyến nghị + đánh đổi, không dừng chờ chọn), xếp cỡ việc
    rồi viết tài liệu (bước 6–8) với mọi lựa chọn đánh dấu **quyết định của agent**, nêu nổi bật ở checkpoint (chỉ
    nêu riêng lựa chọn công nghệ/nền tảng quan trọng) để người dùng sửa khi duyệt.
@@ -68,18 +67,14 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    **quyết định của agent**.
 
 4. **Playback — tóm tắt lại từng phần.**
-   Mỗi khi hiểu xong một phần, nói lại ngắn (khoảng 200–300 từ) bằng lời của mình, đánh dấu chỗ suy đoán là **[giả định]**,
-   kết bằng "sai hoặc thiếu gì?"; xen kẽ với câu hỏi, không dồn về cuối. Nếu thực ra là nhiều dự án độc lập → nói
-   thẳng, thống nhất thứ tự rồi làm lần lượt.
+   Làm theo mục "Playback — tóm tắt lại từng phần" của `references/clarify-core.md` (skill `brainstorming` / `core:brainstorming`): tóm tắt
+   lại từng phần, đánh dấu **[giả định]**, kết bằng "sai hoặc thiếu gì?", xen kẽ với câu hỏi.
 
-5. **Đề xuất 2–3 hướng + 1 khuyến nghị + đánh đổi** — đặt **sau playback**, khi mô tả đã được xác nhận.
-   Tự nghĩ rộng riêng tư, bỏ hướng yếu; chỉ trình 2–3 hướng thật sự khác nhau, mỗi hướng một dòng đánh đổi, nêu **một
-   khuyến nghị** và lý do. Cả hướng được chọn lẫn các hướng bị loại (kèm đánh đổi và lý do) đều ghi vào `design.md`. Người dùng chốt hướng →
-   mục Quyết định đã chốt; người dùng bỏ qua phần hỏi hoặc không chốt → agent tự chọn theo khuyến nghị, ghi
-   **quyết định của agent**, không dừng chờ chọn. Đây là **lệch có chủ đích**: cách làm thường gặp là không đưa lựa
-   chọn sớm, còn ở đây chủ repo yêu cầu có đề xuất. Giữ thứ tự "hỏi mô tả trước, đề xuất sau" và đừng bỏ bước đề
-   xuất này. Cần diagram (flow/ERD/sequence/kiến trúc) → skill **`engineering-diagram`**; chỉ đưa hình khi
-   nhìn tốt hơn đọc.
+5. **Đề xuất 2–3 hướng + 1 khuyến nghị + đánh đổi** — đặt **sau playback**.
+   Làm theo mục "Đề xuất 2–3 hướng — đặt sau playback" của `references/clarify-core.md`, gồm ghi chú **lệch có chủ đích** (đừng bỏ bước
+   này). Riêng skill này: cả hướng được chọn lẫn các hướng bị loại (kèm đánh đổi và lý do) đều ghi vào `design.md`;
+   người dùng chốt hướng → mục Quyết định đã chốt. Cần diagram (flow/ERD/sequence/kiến trúc) → skill
+   **`engineering-diagram`**; chỉ đưa hình khi nhìn tốt hơn đọc.
 
 6. **Xếp cỡ việc** (xác nhận lại ở đây; nếu việc lớn lên giữa chừng thì dừng, nâng cỡ).
    - **Việc rõ và nhỏ** → không chạy workflow (đã xử lý ở bước 2).

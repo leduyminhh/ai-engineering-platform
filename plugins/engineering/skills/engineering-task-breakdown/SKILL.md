@@ -31,7 +31,7 @@ Teamlead giữ chốt ở hai điểm: duyệt danh sách use case (**Checkpoint
 - Đổi schema DB → nêu rõ trong task `DB` + gợi ý skill `data-db-migration`.
 - KHÔNG ghi đè `requirement.md` / `plan.md` có sẵn; `tasks.md` đã tồn tại → hỏi trước (xem output-formats).
 - Ngôn ngữ đo được; không tuyên bố tuyệt đối.
-- Con người **duyệt** ở Checkpoint 1 và Checkpoint 2 trước khi task được giao.
+- Con người **duyệt** ở Checkpoint 1 và Checkpoint 2 trước khi task được giao; mỗi checkpoint hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (bản cài plugin: `core:plan-execution`): mở bảng use case hoặc `tasks.md` ở pane rồi hỏi bằng lựa chọn bấm được (Duyệt / Sửa / Dừng).
 
 ## Quy trình — phân rã task
 
