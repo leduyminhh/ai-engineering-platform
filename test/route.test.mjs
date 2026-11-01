@@ -179,6 +179,8 @@ try {
   const logFile = path.join(tmp, '.aip', 'routing-log.jsonl');
   const deps = { cwd: tmp, git: () => { throw new Error('không phải repo'); }, now: () => new Date('2026-11-01T00:00:00Z') };
   const rc1 = quiet(() => r.main(['--log', bf, '--chosen', 'engineering-adr'], deps));
+  const gi = path.join(tmp, '.aip', '.gitignore');
+  ok(fs.existsSync(gi) && fs.readFileSync(gi, 'utf8').trim() === '*', 'ac5_1: --log tạo .aip/.gitignore chứa * (git bỏ qua nhật ký)');
   const lines1 = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').trim().split('\n') : [];
   const rec = lines1.length ? JSON.parse(lines1[0]) : {};
   ok(rc1 === 0 && lines1.length === 1 && rec.chosen === 'engineering-adr' && rec.overridden === false && rec.misrouted === false && rec.ts === '2026-11-01T00:00:00.000Z' && typeof rec.brief === 'string' && rec.brief.endsWith('brief.md'), 'ac5_1: --log ghi một bản ghi {ts,brief,chosen,overridden,misrouted}');

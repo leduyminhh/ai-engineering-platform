@@ -6,7 +6,7 @@ mục đã được trả lời gián tiếp thì bỏ qua. Việc nhỏ chỉ c
 
 ## 1. Loại việc và điểm đặc biệt
 
-- Đây là loại việc nào: feature, bug, quyết định, nghiên cứu, quy trình, tài liệu, nghiệp vụ, hay quyết định không làm gì?
+- Đây là loại việc nào: feature, bug, quyết định, nghiên cứu, quy trình, tài liệu, nghiệp vụ, hay quyết định không làm gì? Phân biệt `quyết-định` (chọn phương án kiến trúc hoặc thiết kế kỹ thuật cần ghi ADR; route `engineering-adr`) với `quy-trình` (cách làm việc của nhóm, quy ước, thủ tục; hiện chưa có route nên ra "chưa có quy trình").
 - Có điểm gì làm việc này khác thường (ràng buộc pháp lý, người dùng cuối đặc biệt, hệ thống cũ, hạn chót, nhiều bên liên quan)?
 - Phạm vi chạm vào đâu: code backend, code frontend, cả hai, dữ liệu, vận hành, hay không chạm code?
 - Là một việc hay nhiều việc độc lập gộp lại? Nhiều việc thì tách và thống nhất thứ tự.

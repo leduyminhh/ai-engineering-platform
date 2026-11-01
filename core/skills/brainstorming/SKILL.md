@@ -32,7 +32,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
   đọc file khác, đọc web, tài liệu ngoài repo) thì nêu rõ muốn xem gì và vì sao, rồi **chờ đồng ý**, bất kể trong hay
   ngoài repo.
 - **Nơi lưu brief.** Trong repo code: `docs/requests/<yyyy-mm-dd>-<slug>/brief.md`. Ngoài repo code (không có
-  `docs/requests/` hoặc việc không gắn với repo): hỏi người dùng muốn lưu ở đâu, không tự chọn.
+  `docs/requests/` hoặc việc không gắn với repo): hỏi người dùng muốn lưu ở đâu, không tự chọn (đưa câu này vào thẻ ở lượt hỏi đầu); người dùng đã bỏ qua phần hỏi thì không hỏi: lưu ở `.aip/runs/brainstorm-<slug>/brief.md` và ghi lựa chọn đó là **quyết định của agent**.
 - **Không ghi đè** `brief.md` đã có khi chưa hỏi; có sẵn thì hỏi cập nhật hay tạo bản mới.
 - **Người dùng giữ cổng duy nhất:** duyệt brief. Skill không tự chạy workflow hay skill kế tiếp.
 
@@ -44,10 +44,10 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
    thông thường ngoài skill (việc làm ngoài skill không bị ràng buộc docs-only của skill này). Còn lại mới tiếp tục, và
    chốt `<slug>` ngay khi hiểu tên việc.
 2. **Lượt hỏi đầu.** Một tin nhắn gồm đúng hai phần: một dòng nói người dùng có thể **bỏ qua phần hỏi** bất cứ lúc nào, và
-   **một thẻ gom câu hỏi**. Mỗi câu trong thẻ kèm một **đáp án khuyến nghị** để người dùng chỉ cần "đồng ý" hoặc sửa; thẻ
+   **một thẻ gom câu hỏi**. Mỗi câu trong thẻ kèm một **đáp án khuyến nghị** để người dùng chỉ cần "đồng ý" hoặc sửa (đáp án khuyến nghị cho dữ kiện agent chưa biết thì đánh dấu **[giả định]**); thẻ
    có đúng **một câu mở** để người dùng tự mô tả tình huống bằng lời của họ (thẻ này thay cho câu mở đơn lẻ của
    `clarify-core.md`). Các lượt sau cũng gom thành một thẻ, không hỏi từng câu qua nhiều lượt. Người dùng bỏ qua phần hỏi
-   → bỏ hỏi và bỏ playback từng phần, agent tự chọn, ghi mọi lựa chọn là **quyết định của agent** vào brief và nêu ở thẻ
+   → bỏ hỏi, bỏ playback từng phần và không đi xem thêm (ghi "chưa xem" vào Hiện trạng), agent tự chọn, ghi mọi lựa chọn là **quyết định của agent** vào brief và nêu ở thẻ
    duyệt brief (checkpoint của skill này).
 3. **Nội dung cần nắm** theo [references/coverage.md](references/coverage.md): loại việc và điểm đặc biệt, vì sao bây giờ
    và thành công trông thế nào, goal/non-goal/anti-goal, tham khảo đã thấy, hiện trạng. Đó là vùng phủ để kiểm không sót,
@@ -88,8 +88,8 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
     ràng cho route đó, không coi im lặng là đồng ý.
 11. **Sau khi người dùng duyệt:** ghi `route-đã-duyệt: <id | chưa-có-quy-trình>` và `Trạng thái: approved` vào brief
     (người dùng ghi đè thì ghi route họ chọn). Duyệt brief là **cổng duy nhất** của brainstorm và cũng là duyệt route;
-    không mở thêm cổng nào khác. Rồi gợi ý bước kế: gọi `workflow-orchestrator` với brief, hoặc skill đã chọn; **không tự
-    chạy**. Người dùng sửa brief thì cập nhật và trình lại thẻ, không chạy lại builder check.
+    không mở thêm cổng nào khác. Rồi gợi ý bước kế: gọi `workflow-orchestrator` với brief, hoặc skill đã chọn; route `chưa-có-quy-trình` thì không
+    gọi orchestrator (nó chỉ báo lại rồi dừng) mà gợi ý làm việc trong phiên theo brief; **không tự chạy**. Người dùng sửa brief thì cập nhật và trình lại thẻ, không chạy lại builder check.
 
 ## Verification (trước khi báo hoàn thành)
 

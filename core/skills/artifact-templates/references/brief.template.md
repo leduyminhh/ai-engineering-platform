@@ -19,6 +19,8 @@ Bỏ khối này khi chép template ra dùng.
 <...>
 ## Hiện trạng và tham khảo đã thấy
 <code, file, tài liệu, đường link đã xem; phần chưa xem ghi rõ>
+## Hướng đã cân nhắc
+<2–3 hướng, hướng được chọn và các hướng bị loại kèm đánh đổi và lý do; việc nhỏ không có hướng nào thì ghi "không có">
 ## Quyết định của agent
 <mọi lựa chọn agent tự đưa ra khi người dùng bỏ qua phần hỏi hoặc câu trả lời chưa chốt; không có thì ghi "không có">
 ## Phần đoán

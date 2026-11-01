@@ -159,6 +159,9 @@ function mainRoot(cwd, git) {
 export function appendRoutingLog(root, record) {
   const dir = path.join(root, '.aip');
   fs.mkdirSync(dir, { recursive: true });
+  // Cùng quy ước với workspace.mjs: .aip chứa trạng thái chạy, git phải bỏ qua dù plan-execution chưa tạo workspace.
+  const ignore = path.join(dir, '.gitignore');
+  if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '*\n');
   fs.appendFileSync(path.join(dir, 'routing-log.jsonl'), `${JSON.stringify(record)}\n`);
 }
 
