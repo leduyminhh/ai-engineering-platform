@@ -79,4 +79,29 @@ export default async function run({ ok, ctx }) {
   const arStatus = statusUnder('agent_result') ?? '';
   ok(wfStatus.includes('misrouted'), `AC3.2: workflow_result.status có misrouted (dòng: "${wfStatus.trim()}")`);
   ok(arStatus !== '' && !arStatus.includes('misrouted'), `AC3.2: agent_result.status không có misrouted (dòng: "${arStatus.trim()}")`);
+
+  // Bước 1 của bốn workflow pipeline: kiểm điều-kiện trong Hành động và trả misrouted trong Khi fail.
+  // Khoanh theo trường để chữ ở trường khác của bước không làm đạt điều kiện.
+  const readWorkflow = (id) => fs.readFileSync(path.join(REPO_ROOT, 'workflows', id, 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n').split('\n');
+  const section = (lines, n) => {
+    const at = lines.findIndex((l) => l.startsWith(`### Bước ${n} —`));
+    if (at === -1) return [];
+    const end = lines.findIndex((l, i) => i > at && l.startsWith('### '));
+    return lines.slice(at, end === -1 ? lines.length : end);
+  };
+  const field = (lines, name) => {
+    const at = lines.findIndex((l) => l.startsWith(`- **${name}:**`));
+    if (at === -1) return '';
+    const end = lines.findIndex((l, i) => i > at && l.startsWith('- **'));
+    return lines.slice(at, end === -1 ? lines.length : end).join('\n');
+  };
+  for (const id of ['feature', 'bugfix', 'security-review', 'performance']) {
+    const step1 = section(readWorkflow(id), 1);
+    ok(field(step1, 'Khi fail').includes('misrouted'), `AC3.2: workflow-${id} Bước 1 trả misrouted trong Khi fail`);
+    ok(field(step1, 'Hành động').includes('điều-kiện'), `AC3.2: workflow-${id} Bước 1 kiểm điều-kiện trong Hành động`);
+  }
+
+  // Bước 2 của feature: request có brief.md thì việc đọc brief nằm trong Hành động.
+  const featureStep2 = section(readWorkflow('feature'), 2);
+  ok(field(featureStep2, 'Hành động').includes('brief.md'), 'AC4.1: workflow-feature Bước 2 đọc brief.md trong Hành động');
 }

@@ -42,13 +42,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** mô tả vấn đề hiệu năng của người dùng
 - **Hành động:** chạy build và test theo lệnh của project, phạm vi là suite của project hoặc phần liên quan đến luồng
   người dùng mô tả (vùng đụng chỉ chốt được ở Bước 4); ghi số mốc (lệnh, exit code, số test
-  pass/fail) làm baseline cho các bước sau — Gate bước Tối ưu so với số mốc này.
+  pass/fail) làm baseline cho các bước sau — Gate bước Tối ưu so với số mốc này. Có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì đối chiếu `loại-việc`, `phạm-vi` và `điều-kiện` của hàng `workflow-performance` trong Registry của `workflows/orchestrator/WORKFLOW.md` (đọc từ bảng, không chép giá trị) với điều thấy khi chạy baseline và đọc vùng đụng. `điều-kiện` của hàng này là vị từ trên `rủi-ro`, nên phải kiểm dù `loại-việc` đã khớp.
 - **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build xanh; test trong phạm vi đã chạy xanh, số mốc đã ghi.
 - **Khi fail:** build đỏ hoặc test đỏ trong phạm vi đã chạy → dừng `blocked`, báo người dùng và đề xuất
-  `workflow-bugfix` trước; không tối ưu trên nền đỏ, không sửa lẫn hai việc.
-- **Evidence:** lệnh build/test + exit code + số liệu pass/fail.
+  `workflow-bugfix` trước; không tối ưu trên nền đỏ, không sửa lẫn hai việc. Có `brief.md` và `loại-việc`, `phạm-vi` hoặc `điều-kiện` không khớp điều thấy → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không làm tiếp.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc`, `phạm-vi`, `điều-kiện` và kết luận (khớp, hoặc `misrouted` kèm lý do).
 
 ### Bước 2 — Metric & mục tiêu
 
