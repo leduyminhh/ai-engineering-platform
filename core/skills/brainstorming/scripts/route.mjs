@@ -18,7 +18,13 @@ const COND_FIELDS = ['loại-việc', 'phạm-vi', 'rủi-ro'];
 const COND_RE = new RegExp(`^(${COND_FIELDS.join('|')})(!=|=|~)(.+)$`, 'u');
 
 const lines = (text) => text.replace(/\r\n?/g, '\n').split('\n');
-const cells = (line) => (line.trim().startsWith('|') ? line.split('|').slice(1, -1).map((c) => c.trim()) : null);
+// Hàng thiếu dấu | cuối sẽ mất ô cuối nếu cắt cứng; chỉ bỏ ô cuối khi nó rỗng.
+const cells = (line) => {
+  if (!line.trim().startsWith('|')) return null;
+  const cs = line.trim().split('|').slice(1).map((c) => c.trim());
+  if (cs.at(-1) === '') cs.pop();
+  return cs;
+};
 const list = (v) => v.split(',').map((s) => s.trim()).filter(Boolean);
 const norm = (s) => s.toLowerCase().normalize('NFC');
 
@@ -33,7 +39,7 @@ function section(text, heading) {
 export function parseBrief(text) {
   const raw = {};
   for (const l of section(text, 'Định tuyến')) {
-    const m = l.match(/^\s*([^:\s][^:]*?)\s*:\s*(.*?)\s*$/u);
+    const m = l.replace(/^\s*(?:[-*]\s+)?/, '').replace(/\*\*/g, '').match(/^([^:\s][^:]*?)\s*:\s*(.*?)\s*$/u);
     if (m) raw[norm(m[1])] = m[2];
   }
   const type = norm(raw['loại-việc'] ?? '');
@@ -44,17 +50,22 @@ export function parseBrief(text) {
     type,
     scope,
     risk: norm(raw['rủi-ro'] ?? ''),
-    hints: list(hints),
+    hints: list(hints).map(norm),
     approved: raw['route-đã-duyệt'] || null,
   };
 }
 
+// bad = vị từ không đọc được: bỏ qua im lặng sẽ biến hàng có điều kiện thành hàng luôn khớp, nên routeBrief báo lỗi thay vì đoán.
 function parseConds(cell) {
-  if (!cell || cell === '—' || cell === '-') return [];
-  return list(cell).flatMap((c) => {
+  if (!cell || cell === '—' || cell === '-') return { conds: [], bad: [] };
+  const conds = [];
+  const bad = [];
+  for (const c of list(cell)) {
     const m = c.match(COND_RE);
-    return m ? [{ field: m[1], op: m[2], values: m[3].split('/').map((v) => norm(v.trim())) }] : [];
-  });
+    if (m) conds.push({ field: m[1], op: m[2], values: m[3].split('/').map((v) => norm(v.trim())) });
+    else bad.push(c);
+  }
+  return { conds, bad };
 }
 
 // Đọc cột theo tên tiêu đề nên thứ tự cột không quan trọng; hàng thiếu cột mới có types rỗng, không bao giờ khớp.
@@ -90,7 +101,7 @@ export function parseRoutes(text) {
         kind,
         types: list(at('loại-việc')).map(norm),
         scopes: list(at('phạm-vi')).map(norm),
-        conds: parseConds(at('điều-kiện')),
+        ...parseConds(at('điều-kiện')),
         order: order++,
       });
     }
@@ -107,7 +118,11 @@ const matches = (values, have) => values.includes('*') || values.includes(have);
 
 export function routeBrief(brief, routes, { exclude = [], priority = [] } = {}) {
   if (!brief) return { chosen: null, candidates: [], reason: 'thiếu khối định tuyến hợp lệ (cần loại-việc và phạm-vi dưới "## Định tuyến")', confidence: 'none' };
+  if (!TYPES.includes(brief.type)) return { chosen: null, candidates: [], reason: `loại-việc "${brief.type}" không thuộc tập đóng (${TYPES.join(', ')})`, confidence: 'none' };
+  if (!SCOPES.includes(brief.scope)) return { chosen: null, candidates: [], reason: `phạm-vi "${brief.scope}" không thuộc tập đóng (${SCOPES.join(', ')})`, confidence: 'none' };
   const skip = new Set(exclude);
+  const broken = routes.find((r) => !skip.has(r.id) && r.bad?.length && matches(r.types, brief.type) && matches(r.scopes, brief.scope));
+  if (broken) return { chosen: null, candidates: [], reason: `điều-kiện sai cú pháp ở "${broken.id}": ${broken.bad.join(', ')}`, confidence: 'none' };
   const hintAt = (id) => brief.hints.indexOf(id);
   const scored = routes
     .filter((r) => !skip.has(r.id) && r.conds.every((c) => holds(brief, c)))
@@ -123,7 +138,7 @@ export function routeBrief(brief, routes, { exclude = [], priority = [] } = {}) 
   const [top, second] = scored;
   if (second && top.score - second.score < MARGIN) {
     // Hai ứng viên sát điểm: không tự chọn; thứ tự ưu tiên chỉ quyết định hiển thị.
-    const pair = scored.filter((r) => top.score - r.score < MARGIN).sort((a, b) => rank(a.id, a.order) - rank(b.id, b.order)).slice(0, 2);
+    const pair = scored.filter((r) => top.score - r.score < MARGIN).slice(0, 2).sort((a, b) => rank(a.id, a.order) - rank(b.id, b.order));
     return { chosen: null, candidates: pair.map(({ id, kind, score }) => ({ id, kind, score })), reason: `${pair.map((p) => p.id).join(' và ')} sát điểm nhau (chênh < ${MARGIN})`, confidence: 'low' };
   }
   const candidates = scored.slice(0, 3).map(({ id, kind, score }) => ({ id, kind, score }));
@@ -135,8 +150,7 @@ const defaultGit = (args, cwd) => execFileSync('git', ['-C', cwd, ...args], { en
 // Gốc repo chính (không phải gốc worktree) để nhật ký sống qua việc dọn worktree; không có git thì dùng cwd.
 function mainRoot(cwd, git) {
   try {
-    const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd);
-    return path.dirname(/^[A-Za-z]:[\\/]/.test(common) ? common.replace(/\\/g, '/') : common);
+    return path.dirname(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd));
   } catch {
     return cwd;
   }
@@ -197,4 +211,6 @@ export function main(argv, deps = {}) {
   return 0;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) process.exit(main(process.argv.slice(2)));
+// realpath: cài skills-mode dùng symlink/junction, khi đó argv[1] chưa resolve còn import.meta.url đã resolve.
+const isMain = (() => { try { return !!process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href; } catch { return false; } })();
+if (isMain) process.exit(main(process.argv.slice(2)));

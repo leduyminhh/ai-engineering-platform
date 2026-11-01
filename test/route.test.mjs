@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Test cho route.mjs của skill brainstorming: đọc khối định tuyến của brief + hai bảng của orchestrator, chấm điểm tất định,
-// ghi nhật ký định tuyến. Fixture là chuỗi, không đọc workflows/orchestrator/WORKFLOW.md thật (contract 55-routing lo phần đó).
+// ghi nhật ký định tuyến. Fixture là chuỗi, không đọc workflows/orchestrator/WORKFLOW.md thật.
 // Chạy: node test/route.test.mjs
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -118,6 +119,35 @@ const ex = run(brief({ type: 'bug', scope: 'code-be', risk: 'hiệu năng' }), {
 ok(ex.chosen?.id === 'workflow-performance', `exclude: loại workflow-bugfix → còn workflow-performance (được ${JSON.stringify(ex.chosen)})`);
 ok(run(brief({ type: 'feature', scope: 'fullstack' }), { exclude: ['workflow-feature'] }).chosen === null, 'exclude: hết route → chosen null');
 
+// Điều-kiện là thứ duy nhất loại hàng (hàng đủ 6 điểm): lọc điều-kiện hỏng phải làm test đỏ
+const single = [{ id: 'w', kind: 'workflow', types: ['bug'], scopes: ['code-be'], conds: [{ field: 'rủi-ro', op: '~', values: ['bảo mật'] }], bad: [], order: 0 }];
+ok(r.routeBrief(r.parseBrief(brief({ type: 'bug', scope: 'code-be', risk: 'không' })), single).chosen === null, 'ac2_1: điều-kiện là thứ duy nhất loại hàng đủ điểm → chosen null');
+ok(r.routeBrief(r.parseBrief(brief({ type: 'bug', scope: 'code-be', risk: 'rủi ro bảo mật cao' })), single).chosen?.id === 'w', 'ac2_1: điều-kiện thoả → chọn hàng');
+
+// Vị từ sai cú pháp không được nuốt im lặng; hàng thiếu dấu | cuối không mất ô điều-kiện
+const badOrch = ORCH.replace('rủi-ro~bảo mật |', 'rủi ro~bảo mật |');
+const badRes = r.routeBrief(r.parseBrief(brief({ type: 'nghiên-cứu', scope: 'code-be', risk: 'không' })), r.parseRoutes(badOrch));
+ok(badRes.chosen === null && badRes.confidence === 'none' && badRes.reason.includes('sai cú pháp') && badRes.reason.includes('workflow-security-review'), `ac2_3: điều-kiện sai cú pháp → chosen null kèm reason (được ${badRes.reason})`);
+const noPipe = r.parseRoutes(ORCH.replace('| rủi-ro~bảo mật |', '| rủi-ro~bảo mật'));
+ok(noPipe.find((x) => x.id === 'workflow-security-review').conds.length === 1, 'parseRoutes: hàng thiếu dấu | cuối vẫn đọc ô điều-kiện');
+
+// Giá trị ngoài tập đóng báo đúng nguyên nhân (không phải "chưa có quy trình")
+ok(run(brief({ type: 'featrue' })).reason.includes('không thuộc tập đóng'), 'ac2_3: loại-việc ngoài TYPES → reason nêu tập đóng');
+ok(run(brief({ scope: 'frontend' })).reason.includes('không thuộc tập đóng'), 'ac2_3: phạm-vi ngoài SCOPES → reason nêu tập đóng');
+
+// Hint viết hoa vẫn được cộng; khoá có tiền tố bullet/bold vẫn đọc được
+ok(r.parseBrief(brief({ hints: '[Workflow-Feature]' })).hints[0] === 'workflow-feature', 'parseBrief: hint được chuẩn hoá chữ thường');
+ok(r.parseBrief(brief().replace('loại-việc: feature', '- **loại-việc**: feature'))?.type === 'feature', 'parseBrief: khoá có tiền tố bullet/bold');
+
+// Cặp ứng viên: hai điểm cao nhất, thứ tự ưu tiên chỉ để hiển thị (A điểm cao nhất nhưng ưu tiên thấp nhất vẫn có mặt)
+{
+  const row = (id, hint) => ({ id, kind: 'workflow', types: ['bug'], scopes: ['code-be'], conds: [], bad: [], order: 0, hint });
+  const rs = ['a', 'b', 'c'].map((id, i) => ({ ...row(id), order: i }));
+  // a=7 (hint đầu), b=c=6.5 (hint sau), ưu tiên b > c > a: cặp phải gồm a, hiển thị theo ưu tiên
+  const res = r.routeBrief(r.parseBrief(brief({ type: 'bug', scope: 'code-be', hints: '[a, b, c]' })), rs, { priority: ['b', 'c', 'a'] });
+  ok(res.chosen === null && res.candidates.map((c) => c.id).join() === 'b,a', `ac2_2: cặp ứng viên gồm điểm cao nhất, xếp theo ưu tiên (được ${res.candidates.map((c) => c.id)})`);
+}
+
 // CLI + --log trong thư mục tạm
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-route-'));
 const quiet = (fn) => { const o = [console.log, console.error]; console.log = console.error = () => {}; try { return fn(); } finally { [console.log, console.error] = o; } };
@@ -151,13 +181,33 @@ try {
   ok(quiet(() => r.main(['--log', bf], deps)) === 2, 'ac5_1: --log thiếu --chosen → exit 2, không ghi thêm');
   ok(fs.readFileSync(logFile, 'utf8').trim().split('\n').length === 3, 'ac5_1: lệnh sai không ghi thêm dòng');
 
-  // ghi hỏng → fail-open: exit 0 (cảnh báo trên stderr), không ném
+  // ghi hỏng → fail-open: exit 0 và cảnh báo trên stderr, không ném
   const bad = path.join(tmp, 'bad');
   fs.mkdirSync(bad);
   fs.writeFileSync(path.join(bad, '.aip'), 'file chặn thư mục');
-  const rc3 = quiet(() => r.main(['--log', bf, '--chosen', 'x'], { ...deps, cwd: bad }));
-  ok(rc3 === 0, 'ac5_1: thư mục .aip không tạo được → exit 0 (fail-open)');
+  const errs = [];
+  const oe = console.error;
+  console.error = (s) => errs.push(String(s));
+  let rc3;
+  try { rc3 = r.main(['--log', bf, '--chosen', 'x'], { ...deps, cwd: bad }); } finally { console.error = oe; }
+  ok(rc3 === 0 && errs.some((e) => e.includes('routing-log')), 'ac5_1: thư mục .aip không tạo được → exit 0 kèm cảnh báo routing-log trên stderr');
+
+  // nhật ký ở gốc repo chính (git-common-dir), không phải gốc worktree
+  const main = path.join(tmp, 'main');
+  const wt = path.join(tmp, 'wt');
+  fs.mkdirSync(path.join(main, '.git'), { recursive: true });
+  fs.mkdirSync(wt);
+  quiet(() => r.main(['--log', bf, '--chosen', 'engineering-adr'], { cwd: wt, git: () => path.join(main, '.git'), now: deps.now }));
+  ok(fs.existsSync(path.join(main, '.aip', 'routing-log.jsonl')) && !fs.existsSync(path.join(wt, '.aip')), 'ac5_1: nhật ký ghi ở gốc repo chính, không ở worktree');
+
+  // cài skills-mode dùng symlink/junction: chạy qua liên kết vẫn phải in JSON
+  const link = path.join(tmp, 'link');
+  fs.symlinkSync(path.dirname(SCRIPT), link, 'junction');
+  const viaLink = spawnSync(process.execPath, [path.join(link, 'route.mjs'), bf, of], { encoding: 'utf8' });
+  ok(viaLink.status === 0 && JSON.parse(viaLink.stdout || '{}').chosen?.id === 'engineering-adr', 'chạy qua symlink/junction vẫn in JSON định tuyến');
 } finally {
+  // Gỡ junction trước: rmdir không đi xuyên vào thư mục đích (skills/brainstorming/scripts).
+  try { fs.rmdirSync(path.join(tmp, 'link')); } catch { /* chưa tạo */ }
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
