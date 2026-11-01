@@ -39,9 +39,9 @@ export default async function run({ ok, ctx }) {
   const skillText = fs.existsSync(skillFile) ? read(skillFile) : '';
   const index = templateIndex(skillText);
   ok(index.length > 0, 'mục lục artifact-templates có ít nhất một dòng');
-  const TYPES = ['skill', 'agent', 'workflow', 'requirement', 'design', 'plan', 'task', 'adr', 'project-knowledge', 'handoff', 'spec'];
+  const TYPES = ['skill', 'agent', 'workflow', 'requirement', 'design', 'plan', 'task', 'adr', 'project-knowledge', 'handoff', 'spec', 'brief'];
   ok(JSON.stringify(index.map((r) => r.type).sort()) === JSON.stringify([...TYPES].sort()),
-    `mục lục artifact-templates có đúng 11 loại (đang có: ${index.map((r) => r.type).join(', ')})`);
+    `mục lục artifact-templates có đúng 12 loại (đang có: ${index.map((r) => r.type).join(', ')})`);
   const tplOf = (type) => {
     const row = index.find((r) => r.type === type);
     return row ? read(path.join(path.dirname(skillFile), row.file)) : '';
@@ -592,6 +592,38 @@ export default async function run({ ok, ctx }) {
       ok(out.some((l) => l.includes('parts/01-a/plan.md:5 [W17]')) && out.some((l) => l.includes('parts/01-a/design.md:1 [W20]'))
         && out.filter((l) => l.includes('[W19]')).length === 1 && out.some((l) => l.includes('02-empty')),
         'AC1.1: main đọc parts/*/plan.md, design.md và thư mục part rỗng (W17, W20, W19)');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
+  // brief: template + enum dùng chung với route.mjs + check-request nhận request chỉ có brief.md
+  {
+    const route = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'brainstorming', 'scripts', 'route.mjs')).href);
+    const cr = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
+    const row = index.find((r) => r.type === 'brief');
+    ok(!!row && row.validator.includes('check-request.mjs'), 'AC1.2: mục lục có dòng brief với validator check-request.mjs');
+    const tpl = tplOf('brief');
+    ok(templateHeader(tpl)?.type === 'brief', 'AC1.2: brief.template.md có header type: brief');
+    ok(/^## Định tuyến\s*$/m.test(tpl), 'AC1.2: brief.template.md có mục ## Định tuyến');
+    const sec = (tpl.split(/^## Định tuyến\s*$/m)[1] || '').split(/^## /m)[0];
+    for (const k of ['loại-việc', 'phạm-vi', 'đầu-ra-mong-đợi', 'rủi-ro', 'ứng-viên-route', 'route-đã-duyệt']) {
+      ok(new RegExp(`^${k}:`, 'm').test(sec), `AC1.2: khối định tuyến của template có khoá ${k}`);
+    }
+    const listed = (key) => ((sec.match(new RegExp(`^${key}:\s*(.+)$`, 'm')) || [])[1] || '').split('|').map((v) => v.trim()).filter(Boolean);
+    ok(JSON.stringify(listed('loại-việc')) === JSON.stringify(route.TYPES), 'AC1.2: loại-việc của template trùng TYPES của route.mjs');
+    ok(JSON.stringify(listed('phạm-vi')) === JSON.stringify(route.SCOPES), 'AC1.2: phạm-vi của template trùng SCOPES của route.mjs');
+    ok(cr.checkRequest({ 'brief.md': tpl }).length === 0, 'AC1.2: request chỉ có brief.md → không cảnh báo (không W1 giả)');
+    ok(cr.checkRequest({}).some((w) => w.code === 'W1'), 'AC1.2: thư mục không có brief, requirement lẫn design vẫn báo W1');
+    ok(cr.checkRequest({ 'brief.md': tpl, 'design.md': '# Thiết kế\n## Tiêu chí chấp nhận\n- [ ] **AC1.1** — Given a When b Then c\n' }).every((w) => w.code !== 'W1'), 'AC1.2: có brief và design có AC → không W1');
+    const tmp = fs.mkdtempSync(path.join(ctx.os.tmpdir(), 'aip-brief-'));
+    try {
+      fs.writeFileSync(path.join(tmp, 'brief.md'), tpl);
+      const out = [];
+      const log = console.log;
+      console.log = (...a) => out.push(a.join(' '));
+      let rc;
+      try { rc = cr.main([tmp]); } finally { console.log = log; }
+      ok(rc === 0 && !out.some((l) => l.includes('[W1]')), 'AC1.2: main đọc brief.md từ đĩa, thư mục chỉ có brief không có W1');
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
