@@ -45,7 +45,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** yêu cầu tính năng của người dùng
-- **Hành động:** có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-feature` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`) (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng sẽ đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+- **Hành động:** có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-feature` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`; không có orchestrator thì bỏ qua phần đối chiếu Registry, chỉ dùng việc thật) (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng sẽ đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
   pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng code: nếu việc thật chỉ là sửa lỗi hành vi đã có thì không khớp `workflow-feature`.
 - **Ràng buộc:** brief `Trạng thái: approved` có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc` hay `phạm-vi` của brief, chỉ khi việc thật mâu thuẫn rõ với route (vd việc thật là sửa lỗi hành vi có sẵn); chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).

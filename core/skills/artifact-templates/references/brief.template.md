@@ -29,6 +29,6 @@ Bỏ khối này khi chép template ra dùng.
 loại-việc: feature | bug | quyết-định | nghiên-cứu | quy-trình | tài-liệu | nghiệp-vụ | không-làm
 phạm-vi: code-be | code-fe | fullstack | data | ops | không-code
 đầu-ra-mong-đợi: <một dòng: kết quả người dùng nhận được>
-rủi-ro: <một dòng: điều có thể hỏng hoặc làm lệch, chỉ nêu rủi ro có thật, không viết câu phủ định (route.mjs so chuỗi con); ghi "không có" nếu không>
+rủi-ro: <một dòng: điều có thể hỏng hoặc làm lệch, chỉ nêu rủi ro có thật, không viết câu phủ định (route.mjs so chuỗi con); để trống hoặc ghi đúng từ "không có" nếu không>
 ứng-viên-route: [<id route chính>, <id route phụ>]
 route-đã-duyệt: <id route sau khi người dùng duyệt brief, hoặc chưa-có-quy-trình; để trống khi còn draft>

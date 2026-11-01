@@ -40,7 +40,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả lỗi + vùng nghi ngờ của người dùng
-- **Hành động:** có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-bugfix` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`) (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng nghi ngờ theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+- **Hành động:** có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-bugfix` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`; không có orchestrator thì bỏ qua phần đối chiếu Registry, chỉ dùng việc thật) (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng nghi ngờ theo lệnh của project; ghi số mốc (lệnh, exit code, số test
   pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng nghi ngờ: nếu việc thật là thêm hành vi mới thay vì sửa lỗi thì không khớp `workflow-bugfix`.
 - **Ràng buộc:** brief `Trạng thái: approved` có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc` hay `phạm-vi` của brief, chỉ khi việc thật mâu thuẫn rõ với route (vd việc thật là thêm hành vi mới thay vì sửa lỗi); chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
