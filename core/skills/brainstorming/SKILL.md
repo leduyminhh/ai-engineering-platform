@@ -44,7 +44,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
    thông thường ngoài skill (việc làm ngoài skill không bị ràng buộc docs-only của skill này). Còn lại mới tiếp tục, và
    chốt `<slug>` ngay khi hiểu tên việc.
 2. **Lượt hỏi đầu.** Một tin nhắn gồm đúng hai phần: một dòng nói người dùng có thể **bỏ qua phần hỏi** bất cứ lúc nào, và
-   **một thẻ gom câu hỏi**. Mỗi câu trong thẻ kèm một **đáp án khuyến nghị** để người dùng chỉ cần "đồng ý" hoặc sửa (đáp án khuyến nghị cho dữ kiện agent chưa biết thì đánh dấu **[giả định]**); thẻ
+   **một thẻ gom câu hỏi**. Mỗi câu trong thẻ (trừ câu mở) kèm một **đáp án khuyến nghị** để người dùng chỉ cần "đồng ý" hoặc sửa (đáp án khuyến nghị cho dữ kiện agent chưa biết thì đánh dấu **[giả định]**); thẻ
    có đúng **một câu mở** để người dùng tự mô tả tình huống bằng lời của họ (thẻ này thay cho câu mở đơn lẻ của
    `clarify-core.md`). Các lượt sau cũng gom thành một thẻ, không hỏi từng câu qua nhiều lượt. Người dùng bỏ qua phần hỏi
    → bỏ hỏi, bỏ playback từng phần và không đi xem thêm (ghi "chưa xem" vào Hiện trạng), agent tự chọn, ghi mọi lựa chọn là **quyết định của agent** vào brief và nêu ở thẻ
@@ -73,8 +73,8 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
    vào **một tin nhắn**. Đó là **một vòng** hỏi duy nhất của bước kiểm, không chạy lại builder check sau khi nhận trả lời;
    người dùng đã bỏ qua phần hỏi thì không hỏi. Không có công cụ subagent thì tự đọc theo cùng prompt. Rồi **cập nhật
    brief** theo kết quả và chạy
-   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/`, sửa mọi
-   cảnh báo thuộc brief (ngoài repo code thì bỏ lệnh này, ghi "chưa chạy check-request").
+   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/`, chỉ
+   báo thư mục request lỗi cấu trúc chứ không kiểm nội dung brief, nên tự soát brief theo template (đủ mục, khối `## Định tuyến` đủ khoá, giá trị đúng tập đóng; `route.mjs` ở bước 10 báo giá trị sai) rồi sửa (ngoài repo code thì bỏ lệnh này, ghi "chưa chạy check-request").
 10. **Kiểm route rồi trình một thẻ duyệt brief.** Chạy
     `node <thư mục skill brainstorming>/scripts/route.mjs <brief.md> <orchestrator>`. `<orchestrator>` là
     `workflows/orchestrator/WORKFLOW.md` trong repo aip, hoặc file `SKILL.md` của skill `workflow-orchestrator` trong bản
@@ -102,7 +102,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
   mục tạm ngoài repo, không commit, đã bỏ.
 - `brief.md` nháp được ghi trước builder check; đã chạy đúng một builder check đọc brief nháp, câu hỏi của người dùng gom
   trong một tin nhắn, rồi brief được cập nhật theo kết quả.
-- `brief.md` đúng template `brief`, khối `## Định tuyến` đủ khoá; đã chạy `check-request.mjs` (hoặc nêu lý do không chạy).
+- `brief.md` đúng template `brief` (tự soát), khối `## Định tuyến` đủ khoá và giá trị đúng tập đóng; đã chạy `check-request.mjs` (hoặc nêu lý do không chạy; lệnh này chỉ bắt lỗi cấu trúc thư mục).
 - Đã chạy `route.mjs` sau khi brief cập nhật (hoặc ghi "chưa kiểm route"); thẻ duyệt nêu route hoặc hai ứng viên hoặc
   "chưa có quy trình", quyền ghi đè, và câu duyệt rõ cho route risk cao.
 - `route-đã-duyệt` và `Trạng thái: approved` chỉ ghi sau khi người dùng duyệt; chưa tự chạy bước kế.

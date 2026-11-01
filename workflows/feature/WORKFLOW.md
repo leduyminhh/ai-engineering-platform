@@ -47,20 +47,20 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** yêu cầu tính năng của người dùng
 - **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-feature` trong Registry của `workflows/orchestrator/WORKFLOW.md` (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng sẽ đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
   pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng code: nếu việc thật chỉ là sửa lỗi hành vi đã có thì không khớp `workflow-feature`.
-- **Ràng buộc:** brief có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc` hay `phạm-vi` của brief, chỉ khi việc thật mâu thuẫn rõ với route; chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Ràng buộc:** brief có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc` hay `phạm-vi` của brief, chỉ khi việc thật mâu thuẫn rõ với route (vd việc thật là sửa lỗi hành vi có sẵn); chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build/test xanh (exit code 0) và số mốc đã ghi.
 - **Khi fail:** brief lệch route (`loại-việc` hoặc `phạm-vi` không khớp hàng này, trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Baseline đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; không implement trên baseline đỏ. Chỉ khi baseline xanh mà đọc vùng code thấy việc thật chỉ là sửa lỗi hành vi đã có (trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → `misrouted` như trên.
-- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc` và `phạm-vi`, kết luận (khớp, hoặc `misrouted` kèm lý do); khi dừng trước baseline, baseline ghi `not_run (misrouted)`.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc` và `phạm-vi`, kết luận (khớp, hoặc `misrouted` kèm lý do); khi dừng trước baseline, baseline ghi `status: not_run`, `reason: misrouted`.
 
 ### Bước 2 — Làm rõ & cỡ việc ⏸
 
 - **Thực hiện:** session chính, theo skill `engineering-spec-writing` (không giao agent hỏi người dùng)
 - **Đầu vào:** mô tả yêu cầu/user story của người dùng + baseline Bước 1
-- **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì đọc trước: bỏ qua phần brief đã chốt (mục tiêu, phạm vi, quyết định của agent); chỉ hỏi phần brief còn thiếu, vẫn gom vào một tin nhắn. Chạy quy trình làm rõ của skill: cổng "đủ thông tin" (đủ thì không hỏi), lối thoát cho người dùng
+- **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì đọc trước: bỏ qua phần brief đã chốt (mục tiêu, phạm vi, hướng đã cân nhắc, quyết định của agent); chỉ hỏi phần brief còn thiếu, vẫn gom vào một tin nhắn. Chạy quy trình làm rõ của skill: cổng "đủ thông tin" (đủ thì không hỏi), lối thoát cho người dùng
   bỏ qua phần hỏi, gom mọi câu còn lại vào một tin nhắn (mỗi câu kèm phương án khuyến nghị; không hỏi từng câu qua nhiều lượt) rồi tóm tắt lại những gì đã hiểu, đề xuất 2–3 hướng kèm 1 khuyến nghị và đánh đổi, xếp
   cỡ việc (việc rõ và nhỏ → không chạy workflow, làm thẳng; thay đổi nhỏ; dự án), tách các request độc lập.
-  Xác định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`; có `brief.md` thì `phạm-vi` của brief ánh xạ `code-be` → backend, `code-fe` → frontend, `fullstack` → fullstack. Phạm vi cần đổi schema DB
+  Xác định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`; có `brief.md` thì `phạm-vi` của brief ánh xạ `code-be` → backend, `code-fe` → frontend, `fullstack` → fullstack; `phạm-vi` `data` (kể cả khi `route-đã-duyệt` là workflow này) → dừng, đề xuất `data-db-migration`. Phạm vi cần đổi schema DB
   (bảng/cột/index/migration) → dừng, đề xuất chạy skill `data-db-migration` (chế độ `change`, plugin `data`)
   trước rồi quay lại feature. Với phạm vi có FE: đánh dấu AC nào là luồng UI đầu-cuối cần e2e, kèm lý do không
   chứng minh được ở tầng unit/integration (bảng luồng → AC → lý do). Trong chính tin nhắn gom, hỏi người dùng có tách task
@@ -305,7 +305,7 @@ Trả về đúng khối sau; mục nào không chạy được ghi `status: not
 ```yaml
 workflow_result:
   workflow: workflow-feature
-  status: completed        # completed | failed | blocked
+  status: completed        # completed | failed | blocked | misrouted
   summary: "<1–3 câu>"
   changes: { added: [], modified: [], deleted: [] }
   validation:

@@ -43,11 +43,11 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-performance` trong Registry của `workflows/orchestrator/WORKFLOW.md` (đọc từ bảng, không chép giá trị) và kiểm trường `rủi-ro` của brief theo `điều-kiện` của hàng đó (đọc từ bảng). Sau đó chạy build và test theo lệnh của project, phạm vi là suite của project hoặc phần liên quan đến luồng
   người dùng mô tả (vùng đụng chỉ chốt được ở Bước 4); ghi số mốc (lệnh, exit code, số test
   pass/fail) làm baseline cho các bước sau — Gate bước Tối ưu so với số mốc này. Sau baseline, đọc vùng đụng: việc thật không khớp `loại-việc` hoặc `phạm-vi` của hàng này thì không khớp route.
-- **Ràng buộc:** brief có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc`, `phạm-vi` hay `rủi-ro` của brief, chỉ khi việc thật mâu thuẫn rõ với route; chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Ràng buộc:** brief có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc`, `phạm-vi` hay `rủi-ro` của brief, chỉ khi việc thật mâu thuẫn rõ với route (vd không có vấn đề hiệu năng đo được); chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build xanh; test trong phạm vi đã chạy xanh, số mốc đã ghi.
 - **Khi fail:** brief lệch route (`loại-việc`, `phạm-vi` hoặc `rủi-ro` không khớp hàng này, trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Build đỏ hoặc test đỏ trong phạm vi đã chạy → dừng `blocked`, báo người dùng và đề xuất `workflow-bugfix` trước; không tối ưu trên nền đỏ, không sửa lẫn hai việc. Sau baseline xanh, việc thật không khớp `loại-việc` hoặc `phạm-vi` (trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → `misrouted` như trên.
-- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc`, `phạm-vi`, `điều-kiện` và kết luận (khớp, hoặc `misrouted` kèm lý do); khi dừng trước baseline, baseline ghi `not_run (misrouted)`.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc`, `phạm-vi`, `điều-kiện` và kết luận (khớp, hoặc `misrouted` kèm lý do); khi dừng trước baseline, baseline ghi `status: not_run`, `reason: misrouted`.
 
 ### Bước 2 — Metric & mục tiêu
 
@@ -249,7 +249,7 @@ Trả về đúng khối sau; mục nào không chạy được ghi `status: not
 ```yaml
 workflow_result:
   workflow: workflow-performance
-  status: completed        # completed | failed | blocked
+  status: completed        # completed | failed | blocked | misrouted
   summary: "<1–3 câu>"
   changes: { added: [], modified: [], deleted: [] }
   validation:

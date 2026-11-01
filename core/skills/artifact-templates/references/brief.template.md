@@ -22,7 +22,7 @@ Bỏ khối này khi chép template ra dùng.
 ## Hướng đã cân nhắc
 <2–3 hướng, hướng được chọn và các hướng bị loại kèm đánh đổi và lý do; việc nhỏ không có hướng nào thì ghi "không có">
 ## Quyết định của agent
-<mọi lựa chọn agent tự đưa ra khi người dùng bỏ qua phần hỏi hoặc câu trả lời chưa chốt; không có thì ghi "không có">
+<mọi lựa chọn agent tự đưa ra: khi người dùng bỏ qua phần hỏi, khi câu trả lời chưa chốt, và các câu nhỏ builder check tự quyết; không có thì ghi "không có">
 ## Phần đoán
 <các chỗ đánh dấu [giả định] chưa được xác nhận>
 ## Định tuyến

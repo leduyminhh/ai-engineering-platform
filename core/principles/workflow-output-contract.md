@@ -173,5 +173,5 @@ workflow_result:
 ## Quy tắc chung
 
 - `status: completed` chỉ khi mọi mục Definition of Done có evidence `passed`. Mục `not_run` ghi vào
-  `remaining_risks`; mục bắt buộc mà `not_run` → `blocked`. Baseline `not_run` vì workflow pipeline dừng `misrouted` trước khi chạy baseline không thuộc luật này: Evidence và Definition of Done ghi `not_run (misrouted)`, không `blocked`.
+  `remaining_risks`; mục bắt buộc mà `not_run` → `blocked`. Mọi mục chưa tới được vì workflow pipeline dừng `misrouted` ở Bước 1 (baseline chưa chạy hoặc việc thật lệch route sau baseline) không thuộc luật này: ghi evidence `status: not_run` với `reason: misrouted`, kết quả là `misrouted`, không `blocked`.
 - Không kết luận về hiệu năng nếu không có số đo trước/sau trên cùng điều kiện.

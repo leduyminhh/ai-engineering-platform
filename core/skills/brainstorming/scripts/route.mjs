@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Định tuyến tất định: khối `## Định tuyến` của brief.md + hai bảng của orchestrator WORKFLOW.md → route nên chạy.
-// Cách dùng: <brief.md> <orchestrator WORKFLOW.md> [--exclude id,id]  → in JSON { chosen, candidates, reason, confidence }.
+// Cách dùng: <brief.md> <orchestrator WORKFLOW.md> [--exclude id,id]  → in JSON { chosen, candidates, reason, confidence } (thêm error: 'brief' | 'registry' khi brief hoặc bảng lỗi).
 //            --log <brief.md> --chosen <id|-> [--overridden] [--misrouted] → thêm một dòng vào <gốc repo chính>/.aip/routing-log.jsonl.
 // Exit 0 khi chạy được (kể cả không khớp), 2 khi thiếu đối số hoặc không đọc được file; ghi nhật ký hỏng chỉ cảnh báo (exit 0).
 // Không gọi model. Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
