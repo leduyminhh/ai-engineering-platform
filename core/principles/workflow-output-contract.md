@@ -168,10 +168,10 @@ workflow_result:
 
 `rulings` liệt kê nguyên văn mọi dòng `Ruling: <quyết định> — <lý do> — <chi phí nếu sai>` ghi trong ledger của lần chạy.
 
-`misrouted` chỉ thuộc `workflow_result`: workflow dừng ở Bước 1 vì điều-kiện, loại-việc hoặc phạm-vi của route không khớp việc thật; `summary` nêu lý do, `next_actions` nêu route gợi ý. Đây không phải lỗi, và `agent_result` không dùng giá trị này.
+`misrouted` chỉ thuộc `workflow_result`: workflow dừng ở Bước 1 vì điều-kiện (kể cả `rủi-ro`), loại-việc hoặc phạm-vi của route không khớp việc thật; `summary` nêu lý do, `next_actions` nêu route gợi ý. Đây không phải lỗi, và `agent_result` không dùng giá trị này.
 
 ## Quy tắc chung
 
 - `status: completed` chỉ khi mọi mục Definition of Done có evidence `passed`. Mục `not_run` ghi vào
-  `remaining_risks`; mục bắt buộc mà `not_run` → `blocked`.
+  `remaining_risks`; mục bắt buộc mà `not_run` → `blocked`. Baseline `not_run` vì workflow pipeline dừng `misrouted` trước khi chạy baseline không thuộc luật này: Evidence và Definition of Done ghi `not_run (misrouted)`, không `blocked`.
 - Không kết luận về hiệu năng nếu không có số đo trước/sau trên cùng điều kiện.

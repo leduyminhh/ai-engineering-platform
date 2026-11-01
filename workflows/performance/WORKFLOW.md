@@ -46,8 +46,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** brief có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc`, `phạm-vi` hay `rủi-ro` của brief, chỉ khi việc thật mâu thuẫn rõ với route; chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build xanh; test trong phạm vi đã chạy xanh, số mốc đã ghi.
-- **Khi fail:** brief lệch route (`loại-việc`, `phạm-vi` hoặc `rủi-ro` không khớp hàng này) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Sau baseline, việc thật không khớp route → `misrouted` như trên. Build đỏ hoặc test đỏ trong phạm vi đã chạy → dừng `blocked`, báo người dùng và đề xuất `workflow-bugfix` trước; không tối ưu trên nền đỏ, không sửa lẫn hai việc.
-- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc`, `phạm-vi`, `điều-kiện` và kết luận (khớp, hoặc `misrouted` kèm lý do).
+- **Khi fail:** brief lệch route (`loại-việc`, `phạm-vi` hoặc `rủi-ro` không khớp hàng này, trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Build đỏ hoặc test đỏ trong phạm vi đã chạy → dừng `blocked`, báo người dùng và đề xuất `workflow-bugfix` trước; không tối ưu trên nền đỏ, không sửa lẫn hai việc. Sau baseline xanh, việc thật không khớp `loại-việc` hoặc `phạm-vi` (trừ khi `route-đã-duyệt` trùng workflow này, xem Ràng buộc) → `misrouted` như trên.
+- **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc`, `phạm-vi`, `điều-kiện` và kết luận (khớp, hoặc `misrouted` kèm lý do); khi dừng trước baseline, baseline ghi `not_run (misrouted)`.
 
 ### Bước 2 — Metric & mục tiêu
 
