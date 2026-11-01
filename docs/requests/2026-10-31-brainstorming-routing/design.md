@@ -1,6 +1,6 @@
 # Thiết kế: brainstorming không giới hạn domain và định tuyến tin cậy
 - Ngày: 2026-10-31
-- Trạng thái: approved
+- Trạng thái: merged — master `d39ec98`
 - Requirement: không có
 ## Vấn đề và lý do
 aip mạnh ở giai đoạn "làm" của phát triển phần mềm nhưng trống ở giai đoạn "nghĩ" và ở mọi việc không phải code. Bước làm rõ (cổng đủ thông tin, playback, 2–3 hướng) chỉ nằm trong `engineering-spec-writing` và luôn kết thúc bằng `requirement.md`/`design.md` của một feature. Người dùng muốn nghĩ cùng về vấn đề chưa rõ loại (feature, bug, quyết định, quy trình, nghiên cứu, tài liệu, nghiệp vụ, hoặc không làm gì) thì không có skill nào hợp; đợt brainstorm `autonomy-gates`/`aip-status` ngày 2026-10-31 phải làm tay. `workflow-orchestrator` chỉ phân loại yêu cầu đã rõ bằng cột Tín hiệu (chuỗi tự do) nên dễ chọn sai, và không có cách quay đầu khi workflow đã chạy mà phát hiện chọn nhầm.
@@ -21,19 +21,19 @@ Tham chiếu: skill `brainstorming` của superpowers 7.0.0 (không giới hạn
 - (12) Người dùng luôn ghi đè được route trên thẻ duyệt brief.
 - (13) Bước đóng phiên trong `finish.md` (yêu cầu người dùng 2026-11-01): sau merge local xanh và dọn theo `cleanup`, session gốc archive các phiên con nó đã mở cho request đó (phiên part, phiên thực thi), chỉ phiên đã idle; phiên còn chạy hoặc đang chờ người dùng thì giữ và nêu tên. Archive đảo ngược được nên không hỏi thêm khi `cleanup: true`; thiếu khoá thì gộp vào câu hỏi dọn của "Xoá và huỷ". Không xoá phiên (không đảo ngược).
 ## Tiêu chí chấp nhận
-- [ ] **AC1.1** — Given người dùng nêu một vấn đề chưa rõ loại (kể cả không phải code) When gọi `brainstorming` Then lượt đầu có dòng bỏ qua và một thẻ gom câu hỏi có đáp án khuyến nghị
-- [ ] **AC1.2** — Given brainstorm đã đủ thông tin When kết thúc Then ghi `brief.md` đúng template, qua builder check, và dừng một lần chờ duyệt
-- [ ] **AC1.3** — Given người dùng bỏ qua phần hỏi When brainstorm Then agent tự chọn, ghi "quyết định của agent" trong `brief.md`
-- [ ] **AC2.1** — Given `brief.md` hợp lệ khớp rõ một dòng Registry When chạy `route.mjs` Then `chosen` là dòng đó, `confidence` cao
-- [ ] **AC2.2** — Given `brief.md` khớp hai dòng gần điểm When chạy `route.mjs` Then trả hai `candidates` và không tự chọn
-- [ ] **AC2.3** — Given `brief.md` không khớp dòng nào hoặc thiếu khối định tuyến When chạy `route.mjs` Then trả `chosen: null` kèm lý do
-- [ ] **AC3.1** — Given brief đã duyệt When gọi `workflow-orchestrator` Then chạy route đã duyệt không hỏi lại
-- [ ] **AC3.2** — Given workflow phát hiện `điều-kiện` không khớp ở Bước 1 When trả kết quả Then `status: misrouted` và orchestrator chuyển route kế tiếp với cùng brief
-- [ ] **AC4.1** — Given request có `brief.md` When `workflow-feature` Bước 2 chạy Then chỉ hỏi phần brief chưa có
-- [ ] **AC5.1** — Given một lần định tuyến When xong Then `.aip/routing-log.jsonl` có thêm một bản ghi
-- [ ] **AC5.2** — Given các case trong `evals/core/` When chạy kiểm cấu trúc (`95-evals.contract.mjs`) Then case định tuyến hợp lệ
-- [ ] **AC6.1** — Given 3 vấn đề thử (một feature, một quyết định quy trình không code, một nghiên cứu) When brainstorm rồi định tuyến Then mỗi vấn đề tới đúng route hoặc "chưa có quy trình", ghi kết quả vào `trial-6.md`
-- [ ] **AC7.1** — Given `cleanup: true`, merge local xanh và session gốc có phiên con đã idle của request When kết thúc nhánh Then `finish.md` bảo archive các phiên đó không hỏi thêm, giữ phiên còn chạy và nêu tên; thiếu khoá thì gộp vào câu hỏi dọn
+- [x] **AC1.1** — Given người dùng nêu một vấn đề chưa rõ loại (kể cả không phải code) When gọi `brainstorming` Then lượt đầu có dòng bỏ qua và một thẻ gom câu hỏi có đáp án khuyến nghị
+- [x] **AC1.2** — Given brainstorm đã đủ thông tin When kết thúc Then ghi `brief.md` đúng template, qua builder check, và dừng một lần chờ duyệt
+- [x] **AC1.3** — Given người dùng bỏ qua phần hỏi When brainstorm Then agent tự chọn, ghi "quyết định của agent" trong `brief.md`
+- [x] **AC2.1** — Given `brief.md` hợp lệ khớp rõ một dòng Registry When chạy `route.mjs` Then `chosen` là dòng đó, `confidence` cao
+- [x] **AC2.2** — Given `brief.md` khớp hai dòng gần điểm When chạy `route.mjs` Then trả hai `candidates` và không tự chọn
+- [x] **AC2.3** — Given `brief.md` không khớp dòng nào hoặc thiếu khối định tuyến When chạy `route.mjs` Then trả `chosen: null` kèm lý do
+- [x] **AC3.1** — Given brief đã duyệt When gọi `workflow-orchestrator` Then chạy route đã duyệt không hỏi lại
+- [x] **AC3.2** — Given workflow phát hiện `điều-kiện` không khớp ở Bước 1 When trả kết quả Then `status: misrouted` và orchestrator chuyển route kế tiếp với cùng brief
+- [x] **AC4.1** — Given request có `brief.md` When `workflow-feature` Bước 2 chạy Then chỉ hỏi phần brief chưa có
+- [x] **AC5.1** — Given một lần định tuyến When xong Then `.aip/routing-log.jsonl` có thêm một bản ghi
+- [x] **AC5.2** — Given các case trong `evals/core/` When chạy kiểm cấu trúc (`95-evals.contract.mjs`) Then case định tuyến hợp lệ
+- [x] **AC6.1** — Given 3 vấn đề thử (một feature, một quyết định quy trình không code, một nghiên cứu) When brainstorm rồi định tuyến Then mỗi vấn đề tới đúng route hoặc "chưa có quy trình", ghi kết quả vào `trial-6.md`
+- [x] **AC7.1** — Given `cleanup: true`, merge local xanh và session gốc có phiên con đã idle của request When kết thúc nhánh Then `finish.md` bảo archive các phiên đó không hỏi thêm, giữ phiên còn chạy và nêu tên; thiếu khoá thì gộp vào câu hỏi dọn
 ## Thiết kế
 - `core/skills/brainstorming/SKILL.md` (+ `references/` cho danh sách nội dung cần nắm, builder check, hiển thị trực quan), `scripts/route.mjs` (zero-dependency, đọc bảng markdown của orchestrator như `cli/lib/workflows.mjs`).
 - `core/skills/artifact-templates/references/brief.template.md` + mục lục; `check-request.mjs` nhận request chỉ có `brief.md` (chưa có design) mà không báo lỗi giả.
