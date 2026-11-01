@@ -138,8 +138,11 @@ export default async function run({ ok, ctx }) {
   };
   for (const id of ['feature', 'bugfix', 'security-review', 'performance']) {
     const step1 = section(readWorkflow(id), 1);
-    ok(field(step1, 'Khi fail').includes('misrouted'), `AC3.2: workflow-${id} Bước 1 trả misrouted trong Khi fail`);
+    const khiFail = field(step1, 'Khi fail');
+    ok(/trả [^.]*status: misrouted/.test(khiFail), `AC3.2: workflow-${id} Bước 1 Khi fail trả status: misrouted`);
+    ok(!/không trả[^.]*misrouted/.test(khiFail), `AC3.2: workflow-${id} Bước 1 Khi fail không phủ định misrouted`);
     ok(field(step1, 'Hành động').includes('điều-kiện'), `AC3.2: workflow-${id} Bước 1 kiểm điều-kiện trong Hành động`);
+    ok(/misrouted|loại-việc/.test(field(step1, 'Evidence')), `AC3.2: workflow-${id} Bước 1 Evidence ghi misrouted hoặc loại-việc`);
   }
 
   // Bước 2 của feature: request có brief.md thì việc đọc brief nằm trong Hành động.

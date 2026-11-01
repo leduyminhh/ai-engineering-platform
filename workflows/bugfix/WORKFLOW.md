@@ -40,12 +40,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả lỗi + vùng nghi ngờ của người dùng
-- **Hành động:** chạy build và test của vùng nghi ngờ theo lệnh của project; ghi số mốc (lệnh, exit code, số test
-  pass/fail) làm baseline cho các bước sau. Có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì đối chiếu `loại-việc`, `phạm-vi` và `điều-kiện` của hàng `workflow-bugfix` trong Registry của `workflows/orchestrator/WORKFLOW.md` (đọc từ bảng, không chép giá trị) với điều thấy khi chạy baseline và đọc vùng nghi ngờ.
-- **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-bugfix` trong Registry của `workflows/orchestrator/WORKFLOW.md` (đọc từ bảng, không chép giá trị) và kiểm `điều-kiện` của hàng đó. Sau đó chạy build và test của vùng nghi ngờ theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+  pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng nghi ngờ: nếu việc thật là thêm hành vi mới thay vì sửa lỗi thì không khớp `workflow-bugfix`.
+- **Ràng buộc:** brief có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc`, `phạm-vi` hay `rủi-ro` của brief, chỉ khi việc thật mâu thuẫn rõ với route; chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build xanh; số mốc test của vùng nghi ngờ đã ghi (test có thể đỏ đúng vì bug đang xử lý).
-- **Khi fail:** build đỏ, hoặc test đỏ ngoài vùng bug → dừng `blocked`, báo người dùng; không sửa lẫn hai lỗi. Có `brief.md` và `loại-việc`, `phạm-vi` hoặc `điều-kiện` không khớp điều thấy → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không làm tiếp.
+- **Khi fail:** brief lệch route (`loại-việc` hoặc `phạm-vi` không khớp hàng này) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Sau baseline và đọc vùng nghi ngờ, `điều-kiện` không khớp hoặc việc thật là thêm hành vi mới → `misrouted` như trên. Build đỏ, hoặc test đỏ ngoài vùng bug → dừng `blocked`, báo người dùng; không sửa lẫn hai lỗi.
 - **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc`, `phạm-vi`, `điều-kiện` và kết luận (khớp, hoặc `misrouted` kèm lý do).
 
 ### Bước 2 — Hiểu bối cảnh

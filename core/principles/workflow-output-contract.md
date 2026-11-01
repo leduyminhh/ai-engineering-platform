@@ -168,7 +168,7 @@ workflow_result:
 
 `rulings` liệt kê nguyên văn mọi dòng `Ruling: <quyết định> — <lý do> — <chi phí nếu sai>` ghi trong ledger của lần chạy.
 
-`misrouted` chỉ thuộc `workflow_result`: workflow dừng ở Bước 1 vì điều-kiện của route không khớp việc thật; `summary` nêu lý do, `next_actions` nêu route gợi ý. Đây không phải lỗi, và `agent_result` không dùng giá trị này.
+`misrouted` chỉ thuộc `workflow_result`: workflow dừng ở Bước 1 vì điều-kiện, loại-việc hoặc phạm-vi của route không khớp việc thật; `summary` nêu lý do, `next_actions` nêu route gợi ý. Đây không phải lỗi, và `agent_result` không dùng giá trị này.
 
 ## Quy tắc chung
 

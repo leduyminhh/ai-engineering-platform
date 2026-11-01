@@ -44,12 +44,12 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** phạm vi cần review của người dùng
-- **Hành động:** chạy build và test của phạm vi review theo lệnh của project; ghi số mốc (lệnh, exit code, số test
-  pass/fail) làm baseline cho các bước sau. Có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì đối chiếu `loại-việc`, `phạm-vi` và `điều-kiện` của hàng `workflow-security-review` trong Registry của `workflows/orchestrator/WORKFLOW.md` (đọc từ bảng, không chép giá trị) với điều thấy khi chạy baseline và đọc vùng review. `điều-kiện` của hàng này là vị từ trên `rủi-ro`, nên phải kiểm dù `loại-việc` đã khớp.
-- **Ràng buộc:** chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
+- **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-security-review` trong Registry của `workflows/orchestrator/WORKFLOW.md` (đọc từ bảng, không chép giá trị) và kiểm trường `rủi-ro` của brief theo `điều-kiện` của hàng đó (đọc từ bảng). Sau đó chạy build và test của phạm vi review theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+  pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng review: việc thật không khớp `loại-việc` hoặc `phạm-vi` của hàng này thì không khớp route.
+- **Ràng buộc:** brief có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc`, `phạm-vi` hay `rủi-ro` của brief, chỉ khi việc thật mâu thuẫn rõ với route; chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
 - **Gate:** build/test xanh (exit code 0) và số mốc đã ghi, để phân biệt lỗi bảo mật với lỗi build có sẵn.
-- **Khi fail:** đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; lỗi build có sẵn không tính là finding bảo mật. Có `brief.md` và `loại-việc`, `phạm-vi` hoặc `điều-kiện` không khớp điều thấy → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không làm tiếp.
+- **Khi fail:** brief lệch route (`loại-việc`, `phạm-vi` hoặc `rủi-ro` không khớp hàng này) → dừng, trả `workflow_result` với `status: misrouted`, `summary` nêu lý do, `next_actions` nêu route gợi ý; không chạy baseline, không làm tiếp. Sau baseline, việc thật không khớp `loại-việc` hoặc `phạm-vi` → `misrouted` như trên. Baseline đỏ → dừng `blocked`, đề xuất `workflow-bugfix`; lỗi build có sẵn không tính là finding bảo mật.
 - **Evidence:** lệnh build/test + exit code + số liệu pass/fail. Với brief: dòng so khớp `loại-việc`, `phạm-vi`, `điều-kiện` và kết luận (khớp, hoặc `misrouted` kèm lý do).
 
 ### Bước 2 — Phạm vi & threat
