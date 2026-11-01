@@ -1,5 +1,5 @@
 // Contract routing: bảng định tuyến của orchestrator đọc được bằng route.mjs, từng bước của orchestrator nêu đúng
-// lệnh và giá trị vận hành, các mẫu brief chạy qua bảng thật ra đúng route, và chỉ workflow_result có status misrouted.
+// chuỗi lệnh và giá trị vận hành, các mẫu brief chạy qua bảng thật ra đúng route, và chỉ workflow_result có status misrouted.
 const splitCell = (c) => (c ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 // Tập cờ của route.mjs; route.mjs phải còn khai báo từng cờ (khoá drift bên dưới).
 const ROUTE_FLAGS = ['--exclude', '--log', '--chosen', '--overridden', '--misrouted'];
@@ -27,6 +27,17 @@ function stepText(text, n) {
   const end = ls.findIndex((l, i) => i > at && /^#{2,3} /.test(l));
   return ls.slice(at, end === -1 ? ls.length : end).join('\n');
 }
+
+// Lấy một trường "- **Tên:**" của bước; kết thúc ở bullet cột 0 kế tiếp (gạch thụt lề của Hành động không cắt).
+function fieldOf(lines, name) {
+  const at = lines.findIndex((l) => l.startsWith(`- **${name}:**`));
+  if (at === -1) return '';
+  const end = lines.findIndex((l, i) => i > at && l.startsWith('- **'));
+  return lines.slice(at, end === -1 ? lines.length : end).join('\n');
+}
+
+// Phủ định ngay trước "trả" của status misrouted: "không trả", "không được trả", "chớ trả", "đừng trả".
+const isNegated = (s) => /(?:không|chớ|đừng)\s+(?:được\s+)?trả\s[^.]*misrouted/.test(s);
 
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, CORE_DIR } = ctx;
@@ -93,15 +104,27 @@ export default async function run({ ok, ctx }) {
   ok(sqli.chosen === null && sqli.confidence === 'low' && pair === 'workflow-bugfix,workflow-security-review',
     `AC2.2: bug/code-be + "SQL injection lộ secret" → hai ứng viên, không chọn bugfix (chosen=${JSON.stringify(sqli.chosen)}, candidates=${pair})`);
 
-  // Từng bước của orchestrator nêu đúng lệnh và giá trị vận hành; kiểm trong đúng bước để chữ ở bước khác không đạt thay.
-  ok(stepText(orch, 1).includes('route.mjs'), 'AC2.2: Bước 1 của orchestrator gọi route.mjs');
-  ok(stepText(orch, 1).includes('route-đã-duyệt') && stepText(orch, 1).includes('--exclude'),
-    'AC3.1: Bước 1 nêu route-đã-duyệt và --exclude (lượt quay lại bỏ qua route đã duyệt)');
-  ok(stepText(orch, 1).includes('--log'), 'AC5.1: Bước 1 ghi --log khi dừng ở nhánh không chạy workflow');
-  ok(stepText(orch, 3).includes('route-đã-duyệt'), 'AC3.1: Bước 3 nêu route-đã-duyệt khi bỏ qua xác nhận');
-  ok(stepText(orch, 4).includes('misrouted') && stepText(orch, 4).includes('--exclude'), 'AC3.2: Bước 4 nêu misrouted và --exclude');
-  ok(stepText(orch, 5).includes('--log'), 'AC5.1: Bước 5 có lệnh --log');
-  ok(stepText(orch, 5).includes('blocked'), 'AC3.2: Bước 5 nêu blocked khi hết route sau misrouted');
+  // Chuỗi lệnh đầy đủ theo bước: một cờ bị xoá hoặc đổi thứ tự làm chuỗi không khớp và test đỏ.
+  const s1 = stepText(orch, 1);
+  ok(s1.includes('route.mjs <brief.md> <WORKFLOW.md của orchestrator> [--exclude id,id]'), 'AC2.2: Bước 1 có lệnh route.mjs kèm --exclude');
+  ok(s1.includes('route-đã-duyệt') && s1.includes('`error`'), 'AC3.1: Bước 1 nêu route-đã-duyệt và khoá error của route.mjs');
+  ok(s1.includes('làm-trong-phiên') && s1.includes('chưa-có-quy-trình'), 'AC3.1: Bước 1 nêu giá trị làm-trong-phiên và chưa-có-quy-trình của route-đã-duyệt');
+  ok(s1.includes('--log <brief.md> --chosen <id|-> [--overridden]'), 'AC5.1: Bước 1 ghi nhật ký với --chosen và --overridden');
+  ok(stepText(orch, 2).includes('--log <brief.md> --chosen <id workflow>'), 'AC5.1: Bước 2 ghi nhật ký khi workflow chưa cài');
+  const s3 = stepText(orch, 3);
+  const h3 = fieldOf(s3.split('\n'), 'Hành động');
+  ok(h3.includes('route-đã-duyệt'), 'AC3.1: Bước 3 Hành động có điều kiện route-đã-duyệt');
+  ok(h3.includes('`--exclude`'), 'AC3.1: Bước 3 Hành động có điều kiện lượt đầu (không --exclude)');
+  ok(h3.includes('cột Risk, không phải `rủi-ro` của brief') && h3.includes('`high`/`critical`'), 'AC3.1: Bước 3 Hành động dùng Risk của Registry và high/critical');
+  ok(fieldOf(s3.split('\n'), 'Gate').includes('cột Risk, không phải `rủi-ro` của brief'), 'AC3.1: Bước 3 Gate dùng Risk của Registry');
+  ok(s3.includes('--log <brief.md> --chosen <id workflow>'), 'AC5.1: Bước 3 ghi nhật ký khi người dùng từ chối');
+  const cp = orch.slice(orch.indexOf('## Checkpoint'), orch.indexOf('## Xử lý lỗi'));
+  ok(cp.includes('cột Risk, không phải `rủi-ro` của brief'), 'AC3.1: dòng Checkpoint dùng Risk của Registry');
+  ok(stepText(orch, 4).includes('--log <brief.md> --chosen <id đã thử> --misrouted'), 'AC3.2: Bước 4 ghi nhật ký misrouted với --chosen và --misrouted');
+  ok(stepText(orch, 4).includes('--exclude'), 'AC3.2: Bước 4 quay lại Bước 1 với --exclude');
+  const s5 = stepText(orch, 5);
+  ok(s5.includes('--log <brief.md> --chosen <id workflow> [--overridden] [--misrouted]'), 'AC5.1: Bước 5 có lệnh --log với [--overridden] [--misrouted]');
+  ok(s5.includes('`status` tổng là `blocked`'), 'AC3.2: Bước 5 nêu status tổng là blocked khi hết route sau misrouted');
 
   // Cờ trong lệnh route.mjs của orchestrator phải thuộc tập cờ thật; route.mjs phải còn khai báo từng cờ.
   for (const f of ROUTE_FLAGS) ok(routeSrc.includes(f), `AC5.1: route.mjs còn khai báo cờ ${f}`);
@@ -121,8 +144,14 @@ export default async function run({ ok, ctx }) {
   ok(wfStatus.includes('misrouted'), `AC3.2: workflow_result.status có misrouted (dòng: "${wfStatus.trim()}")`);
   ok(arStatus !== '' && !arStatus.includes('misrouted'), `AC3.2: agent_result.status không có misrouted (dòng: "${arStatus.trim()}")`);
 
-  // Bước 1 của bốn workflow pipeline: kiểm điều-kiện trong Hành động và trả misrouted trong Khi fail.
-  // Khoanh theo trường để chữ ở trường khác của bước không làm đạt điều kiện.
+  // Bộ dò phủ định phải bắt các dạng phủ định và bỏ qua câu khẳng định, nếu không kiểm Khi fail bên dưới vô nghĩa.
+  ok(!isNegated('Workflow trả `status: misrouted`, không phải lỗi.')
+    && isNegated('không trả `status: misrouted`') && isNegated('không được trả status: misrouted')
+    && isNegated('chớ trả status: misrouted') && isNegated('đừng trả status: misrouted'),
+  'AC3.2: bộ dò phủ định bắt không trả / không được trả / chớ trả / đừng trả và bỏ qua câu khẳng định');
+
+  // Bốn workflow pipeline: Khi fail Bước 1 trả misrouted (không phủ định), Evidence ghi misrouted,
+  // Hành động nêu đúng vị từ: security-review và performance dùng điều-kiện, feature và bugfix dùng loại-việc.
   const readWorkflow = (id) => fs.readFileSync(path.join(REPO_ROOT, 'workflows', id, 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n').split('\n');
   const section = (lines, n) => {
     const at = lines.findIndex((l) => l.startsWith(`### Bước ${n} —`));
@@ -130,22 +159,16 @@ export default async function run({ ok, ctx }) {
     const end = lines.findIndex((l, i) => i > at && l.startsWith('### '));
     return lines.slice(at, end === -1 ? lines.length : end);
   };
-  const field = (lines, name) => {
-    const at = lines.findIndex((l) => l.startsWith(`- **${name}:**`));
-    if (at === -1) return '';
-    const end = lines.findIndex((l, i) => i > at && l.startsWith('- **'));
-    return lines.slice(at, end === -1 ? lines.length : end).join('\n');
-  };
-  for (const id of ['feature', 'bugfix', 'security-review', 'performance']) {
+  const PIPE_TERM = { feature: 'loại-việc', bugfix: 'loại-việc', 'security-review': 'điều-kiện', performance: 'điều-kiện' };
+  for (const [id, term] of Object.entries(PIPE_TERM)) {
     const step1 = section(readWorkflow(id), 1);
-    const khiFail = field(step1, 'Khi fail');
-    ok(/trả [^.]*status: misrouted/.test(khiFail), `AC3.2: workflow-${id} Bước 1 Khi fail trả status: misrouted`);
-    ok(!/không trả[^.]*misrouted/.test(khiFail), `AC3.2: workflow-${id} Bước 1 Khi fail không phủ định misrouted`);
-    ok(field(step1, 'Hành động').includes('điều-kiện'), `AC3.2: workflow-${id} Bước 1 kiểm điều-kiện trong Hành động`);
-    ok(/misrouted|loại-việc/.test(field(step1, 'Evidence')), `AC3.2: workflow-${id} Bước 1 Evidence ghi misrouted hoặc loại-việc`);
+    const khiFail = fieldOf(step1, 'Khi fail');
+    ok(/trả\s[^.]*status: misrouted/.test(khiFail) && !isNegated(khiFail), `AC3.2: workflow-${id} Bước 1 Khi fail trả status: misrouted (không phủ định)`);
+    ok(fieldOf(step1, 'Evidence').includes('misrouted'), `AC3.2: workflow-${id} Bước 1 Evidence ghi misrouted`);
+    ok(fieldOf(step1, 'Hành động').includes(term), `AC3.2: workflow-${id} Bước 1 Hành động nêu ${term}`);
   }
 
   // Bước 2 của feature: request có brief.md thì việc đọc brief nằm trong Hành động.
   const featureStep2 = section(readWorkflow('feature'), 2);
-  ok(field(featureStep2, 'Hành động').includes('brief.md'), 'AC4.1: workflow-feature Bước 2 đọc brief.md trong Hành động');
+  ok(fieldOf(featureStep2, 'Hành động').includes('brief.md'), 'AC4.1: workflow-feature Bước 2 đọc brief.md trong Hành động');
 }

@@ -128,12 +128,22 @@ ok(r.routeBrief(r.parseBrief(brief({ type: 'bug', scope: 'code-be', risk: 'rủi
 const badOrch = ORCH.replace('rủi-ro~bảo mật |', 'rủi ro~bảo mật |');
 const badRes = r.routeBrief(r.parseBrief(brief({ type: 'nghiên-cứu', scope: 'code-be', risk: 'không' })), r.parseRoutes(badOrch));
 ok(badRes.chosen === null && badRes.confidence === 'none' && badRes.reason.includes('sai cú pháp') && badRes.reason.includes('workflow-security-review'), `ac2_3: điều-kiện sai cú pháp → chosen null kèm reason (được ${badRes.reason})`);
+ok(badRes.error === 'registry', 'ac2_3: điều-kiện sai cú pháp → error registry');
 const noPipe = r.parseRoutes(ORCH.replace('| rủi-ro~bảo mật |', '| rủi-ro~bảo mật'));
 ok(noPipe.find((x) => x.id === 'workflow-security-review').conds.length === 1, 'parseRoutes: hàng thiếu dấu | cuối vẫn đọc ô điều-kiện');
 
 // Giá trị ngoài tập đóng báo đúng nguyên nhân (không phải "chưa có quy trình")
 ok(run(brief({ type: 'featrue' })).reason.includes('không thuộc tập đóng'), 'ac2_3: loại-việc ngoài TYPES → reason nêu tập đóng');
 ok(run(brief({ scope: 'frontend' })).reason.includes('không thuộc tập đóng'), 'ac2_3: phạm-vi ngoài SCOPES → reason nêu tập đóng');
+
+// error chỉ có ở lỗi brief/registry; orchestrator dựa vào đó để tách lỗi khỏi "chưa có quy trình"
+ok(run(brief({ type: 'featrue' })).error === 'brief', 'ac2_3: loại-việc ngoài TYPES → error brief');
+ok(run(brief({ scope: 'frontend' })).error === 'brief', 'ac2_3: phạm-vi ngoài SCOPES → error brief');
+ok(run('# Brief\nkhông có khối\n').error === 'brief', 'ac2_3: thiếu khối → error brief');
+ok(run('## Định tuyến\nphạm-vi: fullstack\n').error === 'brief', 'ac2_3: thiếu loại-việc → error brief');
+ok(!('error' in run(brief({ type: 'nghiệp-vụ', scope: 'không-code' }))), 'ac2_3: không khớp dòng nào → không có error');
+ok(!('error' in run(brief({ type: 'feature', scope: 'fullstack' }))), 'ac2_1: khớp rõ → không có error');
+ok(!('error' in run(brief({ type: 'bug', scope: 'code-be', risk: 'hiệu năng chậm' }))), 'ac2_2: hai ứng viên → không có error');
 
 // Hint viết hoa vẫn được cộng; khoá có tiền tố bullet/bold vẫn đọc được
 ok(r.parseBrief(brief({ hints: '[Workflow-Feature]' })).hints[0] === 'workflow-feature', 'parseBrief: hint được chuẩn hoá chữ thường');

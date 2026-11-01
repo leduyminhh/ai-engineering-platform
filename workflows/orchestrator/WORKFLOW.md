@@ -73,19 +73,20 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 - **Thực hiện:** session chính
 - **Đầu vào:** mô tả yêu cầu của người dùng; `brief.md` của request nếu có
 - **Hành động:** tín hiệu sự cố production ("prod down", "sự cố", "alert", "incident") xét TRƯỚC Registry và TRƯỚC `brief.md`; khớp thì nêu `ops-incident-troubleshooting` và dừng. Yêu cầu không khớp sự cố thì theo nhánh dưới:
-  - Có `brief.md` (có khối `## Định tuyến`): chạy `node <thư mục skill brainstorming>/scripts/route.mjs <brief.md> <WORKFLOW.md của orchestrator>`, thêm `--exclude id,id` các route đã thử khi quay lại từ Bước 4. Thư mục skill brainstorming là bản cài của skill `brainstorming` (`core:brainstorming` khi cài dạng plugin). Lấy kết quả theo các dòng sau:
-    - Lượt đầu (không `--exclude`) và brief có `route-đã-duyệt` khác `chưa-có-quy-trình`: chạy đúng route đó, không phân loại lại bằng Tín hiệu; `chosen` của `route.mjs` chỉ dùng để ghi `--overridden` khi khác.
+  - Có `brief.md` (có khối `## Định tuyến`): chạy `node <thư mục skill brainstorming>/scripts/route.mjs <brief.md> <WORKFLOW.md của orchestrator> [--exclude id,id]`; lượt quay lại thêm `--exclude` các route đã thử ở Bước 4. Thư mục skill brainstorming là bản cài của skill `brainstorming` (`core:brainstorming` khi cài dạng plugin). JSON trả về có `chosen`, `candidates`, `reason`, `confidence`, và `error` (chỉ khi lỗi). Xét theo thứ tự:
+    - Có `error`: `brief` (khối hoặc loại-việc/phạm-vi sai) hoặc `registry` (điều-kiện Registry sai cú pháp): dừng, báo sửa brief hoặc sửa Registry; không coi là "chưa có quy trình"; ghi nhật ký `--chosen -`.
+    - Lượt đầu (không `--exclude`) và brief có `route-đã-duyệt`: tra giá trị đó trong hai bảng của orchestrator. Id `workflow-*` ở Registry → kind `workflow`; id nằm trong backtick đầu ô Skill → kind `skill`; `làm-trong-phiên` → kind `in-session`; `chưa-có-quy-trình` → nhánh chưa có quy trình; không có ở bảng nào → dừng và báo brief ghi route không có trong bảng, ghi nhật ký `--chosen -`. Áp đúng nhánh của kind đó, không phân loại lại bằng Tín hiệu; chỉ kind `workflow` mới sang Bước 2.
     - Lượt quay lại (có `--exclude`): bỏ qua `route-đã-duyệt` (route đã duyệt vừa trả `misrouted`), dùng `chosen` của `route.mjs`.
-    - `chosen` kind `workflow` → workflow đó (sang Bước 2). Kind `skill` → nêu skill và dừng. Kind `in-session` → session chính làm trực tiếp và dừng.
-    - `route-đã-duyệt: chưa-có-quy-trình`, hoặc `chosen: null` với `candidates` rỗng: báo "chưa có quy trình phù hợp" kèm `reason`, đề nghị làm trong phiên, dừng; không phải lỗi. Lượt quay lại rơi vào trường hợp này: hết route, `status: blocked` (Bước 5).
+    - Không có `route-đã-duyệt`: `chosen` kind `workflow` → workflow đó (sang Bước 2); kind `skill` → nêu skill và dừng; kind `in-session` → session chính làm trực tiếp và dừng.
+    - `chosen: null`, `confidence: none`, không có `error`: báo "chưa có quy trình phù hợp" kèm `reason`, đề nghị làm trong phiên, dừng; không phải lỗi. Lượt quay lại rơi vào trường hợp này: hết route, `status: blocked` (Bước 5).
     - `chosen: null` với hai `candidates` (`confidence: low`): không tự chọn, Bước 3 hỏi người dùng chọn 1.
   - Không có `brief.md`: so khớp yêu cầu với cột `Tín hiệu` của từng dòng Registry; loại dòng mà yêu cầu rơi vào cột `Không dùng khi` (chuyển sang workflow cột đó chỉ tới); nếu vẫn khớp nhiều dòng, áp dụng **Thứ tự ưu tiên** để rút về tối đa 2 ứng viên. Yêu cầu khớp mục "Yêu cầu chạy trực tiếp bằng skill" thì nêu skill cần gọi và dừng; khớp cả Registry lẫn mục đó (ngoài tín hiệu sự cố, vd "review bảo mật PR#12") thì ưu tiên workflow trong Registry vì workflow đã gồm năng lực của skill.
-  - Ghi nhật ký (chỉ khi có `brief.md`): nhánh dừng ở Bước 1 ghi đúng một dòng trước khi dừng, `node <thư mục skill brainstorming>/scripts/route.mjs --log <brief.md> --chosen <id|-> [--overridden]`. `--chosen`: id skill (nhánh sự cố hoặc skill trực tiếp), `làm-trong-phiên` (kind `in-session`), `-` (chưa có quy trình hoặc hết route). `--overridden` chỉ khi `route.mjs` đã chạy trong lượt này và trả `chosen` khác. Nhánh workflow ghi ở Bước 5.
+  - Ghi nhật ký (chỉ khi có `brief.md`): nhánh dừng ở Bước 1 ghi đúng một dòng trước khi dừng: `node <thư mục skill brainstorming>/scripts/route.mjs --log <brief.md> --chosen <id|-> [--overridden]`. `--chosen`: id skill (nhánh sự cố hoặc skill), `làm-trong-phiên` (kind `in-session`), `-` (chưa có quy trình, hết route, lỗi `error`, route đã duyệt không có trong bảng). `--overridden`: route thực chạy khác `chosen` của `route.mjs` trong lượt này; khi `chosen` là null (hai ứng viên hoặc không route), `--overridden` là false nếu route thực chạy là một trong `candidates` và true nếu là route khác. Bước 2 (chưa cài), Bước 3 (từ chối hoặc còn mơ hồ), Bước 4 (misrouted) và Bước 5 (workflow đã chạy) ghi nhật ký ở chính nhánh đó.
 - **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry và mục "Yêu cầu chạy trực tiếp bằng skill" (với brief: chỉ theo kết quả `route.mjs`); không
   đoán khi tín hiệu quá yếu — nêu rõ vì sao chọn.
 - **Đầu ra:** 1 workflow đã chọn, hoặc tối đa 2 ứng viên kèm lý do, hoặc 1 skill trực tiếp, hoặc dừng với "chưa có quy trình" (không phải lỗi).
 - **Gate:** chọn được 1 workflow (`chosen` của `route.mjs` hoặc route đã duyệt), hoặc ≤2 ứng viên, có tín hiệu khớp trong Registry; hoặc yêu cầu khớp mục skill trực tiếp (kể cả sự cố production).
-- **Khi fail:** không ứng viên nào khớp Registry và cũng không khớp mục skill trực tiếp (không có brief) → hỏi lại người dùng mô tả rõ hơn việc cần làm. Với brief, `confidence: none` hoặc `chưa-có-quy-trình` không phải lỗi: dừng theo mục Hành động.
+- **Khi fail:** không ứng viên nào khớp Registry và cũng không khớp mục skill trực tiếp (không có brief) → hỏi lại người dùng mô tả rõ hơn việc cần làm. Với brief, `confidence: none` không có `error` là chưa có quy trình (không phải lỗi, xem Hành động); có `error` thì dừng và báo sửa brief hoặc Registry.
 - **Evidence:** trích dẫn tín hiệu khớp trong yêu cầu + dòng Registry tương ứng; với brief, `reason` và `confidence` của `route.mjs`.
 
 ### Bước 2 — Kiểm cài
@@ -100,19 +101,19 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 - **Đầu ra:** xác nhận đã cài, hoặc lệnh cài đề xuất.
 - **Gate:** workflow đã cài; chưa cài → in lệnh cài theo cách đang dùng (cài phẳng: `aip install --skill workflows/<id>`;
   cài plugin Claude: `claude plugin install workflows@<marketplace>`) và dừng `blocked`.
-- **Khi fail:** chưa cài → in đúng lệnh cài theo cách đang dùng, dừng workflow, không thử cách khác.
+- **Khi fail:** chưa cài → in đúng lệnh cài theo cách đang dùng, dừng workflow, không thử cách khác; có `brief.md` thì ghi nhật ký `node <thư mục skill brainstorming>/scripts/route.mjs --log <brief.md> --chosen <id workflow>` trước khi dừng.
 - **Evidence:** đường dẫn skill đã cài (hoặc lệnh cài in ra khi chưa cài).
 
 ### Bước 3 — Xác nhận ⏸
 
 - **Thực hiện:** session chính
 - **Đầu vào:** workflow đã chọn (đã xác nhận cài ở Bước 2)
-- **Hành động:** nêu rõ workflow được chọn, lý do khớp tín hiệu, `risk` (cột Risk của Registry); nếu ở Bước 1 còn 2 ứng viên, hỏi người dùng chọn 1. Chỉ bỏ qua xác nhận này khi route sắp chạy đúng là `route-đã-duyệt` của brief, là lượt đầu (không `--exclude`) và `risk` không phải `high`/`critical`: khi đó nêu route đã duyệt trong report rồi chạy tiếp. Route dự phòng sau `misrouted`, brief chưa duyệt, hoặc risk `high`/`critical` thì xác nhận như trên.
+- **Hành động:** nêu rõ workflow được chọn, lý do khớp tín hiệu, Risk của Registry (cột Risk, không phải `rủi-ro` của brief); nếu ở Bước 1 còn 2 ứng viên, hỏi người dùng chọn 1. Chỉ bỏ qua xác nhận này khi cả ba đúng: route sắp chạy là `route-đã-duyệt` của brief; là lượt đầu (không `--exclude`); và Risk của Registry không phải `high`/`critical`. Khi đó nêu route đã duyệt trong report rồi chạy tiếp. Route dự phòng sau `misrouted`, brief chưa duyệt, hoặc risk `high`/`critical` thì xác nhận như trên.
 - **Ràng buộc:** `risk` = `high`/`critical` bắt buộc người dùng xác nhận rõ ràng bằng lời, không suy diễn từ
   im lặng.
 - **Đầu ra:** người dùng xác nhận workflow sẽ chạy.
-- **Gate:** người dùng xác nhận workflow; risk high/critical phải xác nhận rõ ràng; hoặc route đã duyệt lượt đầu với risk không high/critical (bỏ qua xác nhận).
-- **Khi fail:** người dùng từ chối hoặc còn mơ hồ → quay lại Bước 1 với thông tin bổ sung.
+- **Gate:** người dùng xác nhận workflow; Risk của Registry high/critical (cột Risk, không phải `rủi-ro` của brief) phải xác nhận rõ ràng; hoặc route đã duyệt lượt đầu với Risk không high/critical (bỏ qua xác nhận).
+- **Khi fail:** người dùng từ chối hoặc còn mơ hồ → ghi nhật ký (có brief) `node <thư mục skill brainstorming>/scripts/route.mjs --log <brief.md> --chosen <id workflow>`, rồi quay lại Bước 1 với thông tin bổ sung.
 - **Evidence:** câu trả lời xác nhận của người dùng (trích dẫn nguyên văn trong report), hoặc `route-đã-duyệt` của brief khi bỏ qua xác nhận.
 
 ### Bước 4 — Chạy
@@ -123,17 +124,17 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 - **Ràng buộc:** chỉ chạy workflow đã xác nhận, không tự nối thêm workflow khác; không gọi lồng orchestrator.
 - **Đầu ra:** `workflow_result` của workflow đã chạy.
 - **Gate:** workflow đã chạy trả về `workflow_result` hợp lệ (có `status`).
-- **Khi fail:** workflow `blocked`/`failed` → dừng tại đó, chuyển nguyên `workflow_result` sang Bước 5. `misrouted` không phải lỗi: ghi nhật ký `node <thư mục skill brainstorming>/scripts/route.mjs --log <brief.md> --chosen <id đã thử> --misrouted`, rồi quay lại Bước 1 với `--exclude` gồm mọi route đã thử, cùng `brief.md` và phần việc đã làm. Bước 1 không còn route → `blocked` (Bước 5).
+- **Khi fail:** workflow `blocked`/`failed` → dừng tại đó, chuyển nguyên `workflow_result` sang Bước 5. `misrouted` không phải lỗi: chuyển sang Bước 5 để ghi nhật ký `node <thư mục skill brainstorming>/scripts/route.mjs --log <brief.md> --chosen <id đã thử> --misrouted`, rồi quay lại Bước 1 với `--exclude` gồm mọi route đã thử, cùng `brief.md` và phần việc đã làm. Bước 1 không còn route → `blocked` (Bước 5).
 - **Evidence:** khối `workflow_result` của workflow đã chạy.
 
 ### Bước 5 — Tổng hợp
 
 - **Thực hiện:** session chính
 - **Đầu vào:** `workflow_result` từ Bước 4; hoặc `blocked` từ Bước 1 khi hết route sau `misrouted`
-- **Hành động:** đặt `workflow_result` vào `result`, lấy `status` của nó làm `status` tổng. Hết route sau `misrouted`: `status` tổng là `blocked`, `reason` liệt kê từng route đã thử kèm lý do trượt, `result` là `not_run`. Với brief, nhánh workflow ghi nhật ký một dòng cho route vừa chạy: `node <thư mục skill brainstorming>/scripts/route.mjs --log <brief.md> --chosen <id workflow> [--overridden]`; `--overridden` khi route chạy khác `chosen` mà `route.mjs` trả ở lượt này. Ghi nhật ký hỏng thì bỏ qua và báo một dòng, không chặn bước.
+- **Hành động:** đặt `workflow_result` vào `result`, lấy `status` của nó làm `status` tổng; riêng `misrouted` thì không tổng hợp. Với brief, ghi nhật ký một dòng cho workflow vừa chạy: `node <thư mục skill brainstorming>/scripts/route.mjs --log <brief.md> --chosen <id workflow> [--overridden] [--misrouted]`; `--misrouted` khi workflow trả `misrouted`, `--overridden` theo quy tắc ở Bước 1. Hết route sau `misrouted` (Bước 1 `blocked`): `status` tổng là `blocked`, `reason` liệt kê từng route đã thử kèm lý do trượt, `result` là `not_run`; dòng nhật ký của lượt cuối đã ghi ở Bước 1. Ghi nhật ký hỏng thì bỏ qua và báo một dòng, không chặn bước.
 - **Ràng buộc:** không tự nâng `status` lên `completed` nếu workflow chưa `completed`.
 - **Đầu ra:** khối `orchestrator_result`.
-- **Gate:** có `orchestrator_result` với `status` bằng `status` của `workflow_result`; ngoại lệ: hết route sau `misrouted` → `status: blocked` kèm `reason`.
+- **Gate:** có `orchestrator_result` với `status` bằng `status` của `workflow_result` (không áp dụng cho `misrouted`); ngoại lệ: hết route sau `misrouted` → `status: blocked` kèm `reason`.
 - **Khi fail:** thiếu `workflow_result` (không phải hết route) → `status: blocked`, ghi rõ lý do.
 - **Evidence:** khối `orchestrator_result` cuối report.
 
@@ -141,7 +142,7 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
-| 3 | Workflow được chọn, lý do, risk | Người dùng xác nhận rõ ràng (bằng lời với risk high/critical); route đã duyệt lượt đầu với risk không high/critical thì bỏ qua (Bước 3) |
+| 3 | Workflow được chọn, lý do, Risk của Registry (cột Risk, không phải `rủi-ro` của brief) | Người dùng xác nhận rõ ràng (bằng lời với risk high/critical); route đã duyệt lượt đầu với Risk không high/critical thì bỏ qua (Bước 3) |
 
 Commit/push/tag luôn qua `core:git-workflow` sau checkpoint cuối của workflow con; orchestrator không tự
 commit.
@@ -155,25 +156,27 @@ commit.
 | Yêu cầu mơ hồ | Dừng ở Bước 1/3, hỏi lại người dùng |
 | Finding `blocker` (trong workflow con) | Workflow con dừng `blocked`; orchestrator dừng tại đó |
 | Không tín hiệu nào khớp Registry và không khớp mục skill trực tiếp | Dừng, hỏi người dùng mô tả lại việc cần làm |
-| Workflow chưa cài | In lệnh `aip install`, dừng `blocked`, không tự cài |
-| Workflow trả `misrouted` | Không phải lỗi: ghi nhật ký (Bước 4), quay lại Bước 1 với route kế và cùng `brief.md`; Bước 1 hết route → `blocked` (Bước 5) |
+| Workflow chưa cài | In lệnh `aip install`, dừng `blocked`, không tự cài; có brief thì ghi nhật ký `--chosen <id workflow>` |
+| Workflow trả `misrouted` | Không phải lỗi: ghi nhật ký (Bước 5), quay lại Bước 1 với route kế và cùng `brief.md`; Bước 1 hết route → `blocked` (Bước 5) |
+| `route.mjs` trả `error` | Dừng Bước 1, báo sửa brief (`brief`) hoặc Registry (`registry`); ghi nhật ký `--chosen -`; không phải "chưa có quy trình" |
+| `route-đã-duyệt` không có trong hai bảng | Dừng Bước 1, báo brief ghi route không có trong bảng; ghi nhật ký `--chosen -` |
 | `route.mjs` không chạy được (exit 2) | Dừng Bước 1, báo lỗi đường dẫn; không tự phân loại thay |
 | Ghi nhật ký `--log` hỏng | Bỏ qua, báo một dòng, không chặn việc chính |
 
 - **Điều kiện dừng:** không tín hiệu nào khớp Registry và không khớp mục skill trực tiếp; workflow chưa cài;
   người dùng không xác nhận ở Bước 3; workflow con trả `blocked`/`failed`; hết route ứng viên sau `misrouted`;
-  `route.mjs` không chạy được (exit 2).
+  `route.mjs` không chạy được (exit 2); `route.mjs` trả `error`; `route-đã-duyệt` không có trong hai bảng.
 - **Rollback:** orchestrator không tự sửa file nên không có gì để rollback ở tầng orchestrator; rollback thay
   đổi (nếu có) thuộc trách nhiệm của workflow con đã chạy.
 
 ## Definition of Done
 
-- [ ] Workflow được chọn có tín hiệu khớp Registry (hoặc `chosen` của `route.mjs` khi có brief) — evidence: Bước 1
+- [ ] Workflow được chọn có tín hiệu khớp Registry (hoặc route từ `route.mjs` / `route-đã-duyệt` khi có brief) — evidence: Bước 1
 - [ ] Người dùng đã xác nhận workflow (hoặc route đã duyệt lượt đầu bỏ qua xác nhận) — evidence: Bước 3
 - [ ] Workflow đã chạy có `workflow_result` — evidence: Bước 4
 - [ ] Mọi gate có evidence `passed`
 - [ ] `orchestrator_result` phản ánh đúng `status` của workflow đã chạy; hết route sau `misrouted` thì `blocked` — evidence: Bước 5
-- [ ] Mỗi lần định tuyến có đúng một dòng nhật ký `--log` (nhánh dừng ở Bước 1 hoặc nhánh workflow ở Bước 5), hoặc cảnh báo ghi hỏng đã báo — evidence: Bước 1 hoặc Bước 5
+- [ ] Mỗi lần định tuyến xong (dừng ở Bước 1, 2 hoặc 3; misrouted; workflow đã chạy) có đúng một dòng nhật ký `--log` khi có brief, hoặc cảnh báo ghi hỏng đã báo — evidence: Bước 1, 2, 3 hoặc 5
 
 ## Report cuối
 

@@ -117,12 +117,12 @@ const holds = (brief, c) => {
 const matches = (values, have) => values.includes('*') || values.includes(have);
 
 export function routeBrief(brief, routes, { exclude = [], priority = [] } = {}) {
-  if (!brief) return { chosen: null, candidates: [], reason: 'thiếu khối định tuyến hợp lệ (cần loại-việc và phạm-vi dưới "## Định tuyến")', confidence: 'none' };
-  if (!TYPES.includes(brief.type)) return { chosen: null, candidates: [], reason: `loại-việc "${brief.type}" không thuộc tập đóng (${TYPES.join(', ')})`, confidence: 'none' };
-  if (!SCOPES.includes(brief.scope)) return { chosen: null, candidates: [], reason: `phạm-vi "${brief.scope}" không thuộc tập đóng (${SCOPES.join(', ')})`, confidence: 'none' };
+  if (!brief) return { chosen: null, candidates: [], reason: 'thiếu khối định tuyến hợp lệ (cần loại-việc và phạm-vi dưới "## Định tuyến")', confidence: 'none', error: 'brief' };
+  if (!TYPES.includes(brief.type)) return { chosen: null, candidates: [], reason: `loại-việc "${brief.type}" không thuộc tập đóng (${TYPES.join(', ')})`, confidence: 'none', error: 'brief' };
+  if (!SCOPES.includes(brief.scope)) return { chosen: null, candidates: [], reason: `phạm-vi "${brief.scope}" không thuộc tập đóng (${SCOPES.join(', ')})`, confidence: 'none', error: 'brief' };
   const skip = new Set(exclude);
   const broken = routes.find((r) => !skip.has(r.id) && r.bad?.length && matches(r.types, brief.type) && matches(r.scopes, brief.scope));
-  if (broken) return { chosen: null, candidates: [], reason: `điều-kiện sai cú pháp ở "${broken.id}": ${broken.bad.join(', ')}`, confidence: 'none' };
+  if (broken) return { chosen: null, candidates: [], reason: `điều-kiện sai cú pháp ở "${broken.id}": ${broken.bad.join(', ')}`, confidence: 'none', error: 'registry' };
   const hintAt = (id) => brief.hints.indexOf(id);
   const scored = routes
     .filter((r) => !skip.has(r.id) && r.conds.every((c) => holds(brief, c)))
