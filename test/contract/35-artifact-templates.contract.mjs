@@ -609,10 +609,11 @@ export default async function run({ ok, ctx }) {
     for (const k of ['loại-việc', 'phạm-vi', 'đầu-ra-mong-đợi', 'rủi-ro', 'ứng-viên-route', 'route-đã-duyệt']) {
       ok(new RegExp(`^${k}:`, 'm').test(sec), `AC1.2: khối định tuyến của template có khoá ${k}`);
     }
-    const listed = (key) => ((sec.match(new RegExp(`^${key}:\s*(.+)$`, 'm')) || [])[1] || '').split('|').map((v) => v.trim()).filter(Boolean);
+    const listed = (key) => ((sec.match(new RegExp(`^${key}:\\s*(.+)$`, 'm')) || [])[1] || '').split('|').map((v) => v.trim()).filter(Boolean);
     ok(JSON.stringify(listed('loại-việc')) === JSON.stringify(route.TYPES), 'AC1.2: loại-việc của template trùng TYPES của route.mjs');
     ok(JSON.stringify(listed('phạm-vi')) === JSON.stringify(route.SCOPES), 'AC1.2: phạm-vi của template trùng SCOPES của route.mjs');
     ok(cr.checkRequest({ 'brief.md': tpl }).length === 0, 'AC1.2: request chỉ có brief.md → không cảnh báo (không W1 giả)');
+    ok(cr.checkRequest({ 'brief.md': tpl, 'tasks.md': '# Tasks\n' }).some((w) => w.code === 'W1'), 'AC1.2: brief + tasks.md không có AC vẫn báo W1 (brief-only chỉ khi không có tài liệu nào khác)');
     ok(cr.checkRequest({}).some((w) => w.code === 'W1'), 'AC1.2: thư mục không có brief, requirement lẫn design vẫn báo W1');
     ok(cr.checkRequest({ 'brief.md': tpl, 'design.md': '# Thiết kế\n## Tiêu chí chấp nhận\n- [ ] **AC1.1** — Given a When b Then c\n' }).every((w) => w.code !== 'W1'), 'AC1.2: có brief và design có AC → không W1');
     const tmp = fs.mkdtempSync(path.join(ctx.os.tmpdir(), 'aip-brief-'));

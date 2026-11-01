@@ -193,7 +193,7 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
   const sources = AC_SOURCES.filter((f) => acsBy[f]?.length);
 
   // Request mới chỉ có brief.md (brainstorm xong, chưa viết design) chưa có AC để kiểm; báo W1 lúc này là cảnh báo giả.
-  const briefOnly = !!lines['brief.md'] && !lines['requirement.md'] && !lines['design.md'] && !planFiles.length;
+  const briefOnly = !!lines['brief.md'] && !lines['requirement.md'] && !lines['design.md'] && !lines['tasks.md'] && !planFiles.length;
   if (!sources.length && !briefOnly) {
     warn(lines['design.md'] ? 'design.md' : 'requirement.md', 1, 'W1', 'Không có nguồn AC: cần mục "Tiêu chí chấp nhận" có AC trong requirement.md hoặc design.md');
   }
