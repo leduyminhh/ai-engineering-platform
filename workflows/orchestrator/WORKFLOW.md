@@ -78,7 +78,7 @@ Orchestrator không dispatch agent, không sửa code — mọi bước chạy �
   để rút về tối đa 2 ứng viên. Yêu cầu khớp mục "Yêu cầu chạy trực tiếp bằng skill"
   thì nêu skill cần gọi và dừng; khớp cả Registry lẫn mục đó (ngoài tín hiệu sự cố, vd "review bảo mật PR#12")
   thì ưu tiên workflow trong Registry vì workflow đã gồm năng lực của skill.
-- **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry, mục "Yêu cầu chạy trực tiếp bằng skill" và `route.mjs`; không
+- **Ràng buộc:** không tự phân loại bằng heuristic ngoài Registry và mục "Yêu cầu chạy trực tiếp bằng skill" (với brief: chỉ theo kết quả `route.mjs`); không
   đoán khi tín hiệu quá yếu — nêu rõ vì sao chọn.
 - **Đầu ra:** 1 workflow đã chọn, hoặc tối đa 2 ứng viên kèm lý do, hoặc 1 skill trực tiếp.
 - **Gate:** chọn được 1 workflow hoặc ≤2 ứng viên, có tín hiệu khớp trong Registry (với brief: `chosen` hoặc hai `candidates` của `route.mjs`);
