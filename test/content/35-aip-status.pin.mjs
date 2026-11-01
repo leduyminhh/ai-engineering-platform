@@ -72,6 +72,8 @@ export default async function run({ ok, ctx }) {
       'AC4.2: vướng hỏi người dùng gom một thẻ có đáp án khuyến nghị, part khác chạy tiếp, lời giải gửi về part');
     ok(part.includes('chỉ báo **một lần**') && part.includes('không nhắc lại') && part.includes('gộp vào cùng thẻ'),
       'AC4.3: mỗi vướng báo một lần, không nhắc lại, vướng mới gộp vào cùng thẻ');
+    ok(part.includes('docs/requests/<request>/parts/<nn>-<part-slug>/plan.md "Unblocked: …"') && !part.includes('ledger.mjs parts/'),
+      'ví dụ Unblocked dùng đường dẫn plan part đầy đủ từ gốc repo, không dùng dạng tương đối rơi nhầm vào request khác');
     ok(part.includes('xử lý vướng part root'), 'nêu cách xử lý vướng của chính session gốc (part root)');
   }
 }

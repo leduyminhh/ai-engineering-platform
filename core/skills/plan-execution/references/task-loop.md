@@ -146,7 +146,7 @@ Hàng "người dùng" xử lý khi người dùng nhắn `xử lý vướng par
 
 Câu hỏi cho người dùng gom vào **một thẻ**: mỗi mục nêu cách hiểu, hệ quả và đáp án khuyến nghị; part khác chạy tiếp trong
 lúc chờ. Có lời giải thì gửi về part (phiên part qua `SendMessage`, không gửi được thì đưa người dùng dán vào phiên part; subagent part giao lại, hoặc subagent mới tiếp từ ledger
-của part) rồi ghi `Unblocked: <cách giải>` vào ledger của chính part vướng (`ledger.mjs parts/<nn>-<part-slug>/plan.md "Unblocked: …"`; `aip status` chỉ coi là gỡ khi dòng nằm cùng ledger với `Blocked:`), `Ruling:` vẫn ghi ở `root/`. Mỗi vướng chỉ báo **một lần** (tin nhắn kèm trang `aip status`); người dùng
+của part) rồi ghi `Unblocked: <cách giải>` vào ledger của chính part vướng (`ledger.mjs docs/requests/<request>/parts/<nn>-<part-slug>/plan.md "Unblocked: …"`; `aip status` chỉ coi là gỡ khi dòng nằm cùng ledger với `Blocked:`), `Ruling:` vẫn ghi ở `root/`. Mỗi vướng chỉ báo **một lần** (tin nhắn kèm trang `aip status`); người dùng
 chưa trả lời thì không nhắc lại, vướng mới gộp vào cùng thẻ (vướng chưa gỡ vẫn hiện ở trang `aip status`: đó là trạng thái, không tính là nhắc lại). Ngoài ra session gốc đưa trang `aip status` (skill
 `aip-status`) ở G3 và khi một part chuyển sang vướng cần người dùng (G1, G2 diễn ra trước khi có ledger nên chưa có trang để đưa); việc này không phải dòng trạng thái giữa chừng.
 
