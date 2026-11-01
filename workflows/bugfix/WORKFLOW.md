@@ -108,7 +108,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   nhận/bác bỏ nó); xây dựng chuỗi nhân quả từ evidence tới hành vi lỗi quan sát được, truy ngược từ chỗ nổ lỗi
   từng cấp (giá trị này do ai gọi/truyền vào) tới nguồn; đối chiếu lý do đỏ của test Bước 3 với root cause đã
   nêu; trình bày cho người dùng để xác nhận trước khi fix. Pha 1–3 và cách truy ngược: skill `engineering-debugging` (khi skill đã cài); không làm pha 4 của skill ở bước này, việc sửa nằm ở Bước 6.
-- **Ràng buộc:** không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
   evidence hỗ trợ; không dừng ở chỗ lỗi nổ khi nguồn nằm ở nơi khác; thay đổi thử khi kiểm giả thuyết phải hoàn tác trước
   khi trình người dùng.
 - **Đầu ra:** giải thích root cause, có trích dẫn evidence; **danh sách file/module được sửa** suy từ chuỗi nhân
@@ -190,7 +190,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** diff fix hoàn chỉnh (code + test) đã qua Bước 1–8
 - **Hành động:** tóm tắt bug + root cause + fix, đề xuất commit message Conventional Commits (header EN, body
   VI); trình diff cho người dùng duyệt.
-- **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
   Đây là chốt riêng của workflow, áp cả trên feature branch.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
 - **Gate:** người dùng duyệt diff.

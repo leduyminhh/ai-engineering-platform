@@ -102,7 +102,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   tải của Bước 3, nêu bottleneck + giả thuyết kèm evidence đo được, đề xuất danh
   sách file/hàm cho Bước 5; session chính trình người dùng xác nhận hướng tối ưu. Khi phạm vi có phía FE → đọc
   `references/frontend.md`, mục Bước 4.
-- **Ràng buộc:** không tối ưu khi giả thuyết chưa có evidence; không sửa bảng điều kiện và script đo của Bước 3 —
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tối ưu khi giả thuyết chưa có evidence; không sửa bảng điều kiện và script đo của Bước 3 —
   lệnh/config bật đếm query hay profiler ghi vào report Bước 4 (hoặc `perf/profile-<luồng>.md`).
 - **Đầu ra:** bottleneck + giả thuyết đã xác nhận + **danh sách file/hàm bottleneck được sửa** (đầu vào cho
   Bước 5).
@@ -192,7 +192,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** code đã tối ưu đã qua Bước 1–7
 - **Hành động:** đề xuất commit message Conventional Commits (header EN, body VI); trình diff cho người dùng
   duyệt.
-- **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff.
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tự commit khi người dùng chưa duyệt diff.
   Đây là chốt riêng của workflow, áp cả trên feature branch.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
 - **Gate:** người dùng duyệt diff.

@@ -68,7 +68,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `references/task-breakdown.md`, mục Bước 2 (`tasks.md` được ghi ở Bước 3). Chưa có câu trả lời cho tin nhắn gom →
   chưa sang Bước 3. Bước này không phải cổng duyệt: hướng, cỡ việc, phạm vi và bảng e2e được duyệt cùng tài liệu ở G1
   (Bước 3).
-- **Ràng buộc:** một tin nhắn gom mọi câu hỏi, không hỏi từng câu; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả định]`; chưa ghi
+- **Ràng buộc:** tin nhắn gom hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`) (lựa chọn bấm được cho từng câu, phương án khuyến nghị đứng đầu); một tin nhắn gom mọi câu hỏi, không hỏi từng câu; không bịa yêu cầu khi thiếu thông tin — hỏi hoặc đánh dấu `[giả định]`; chưa ghi
   tài liệu ở bước này (Bước 3 ghi); người dùng bỏ qua phần hỏi → agent tự chọn hướng, ghi "quyết định của agent",
   không hỏi thêm; chỉ phân rã task khi người dùng chọn trong tin nhắn gom.
 - **Đầu ra:** tóm tắt trong chat (kèm tin nhắn gom hoặc ngay sau câu trả lời; duyệt ở G1): hướng đã chọn (kèm hướng bị loại), cỡ việc, phạm vi BE/FE/fullstack,
@@ -226,7 +226,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   đồng ý merge local (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, xanh mới commit merge, đỏ hoặc conflict thì `git merge --abort`; rồi một commit docs đặt `merged` và xoá plan trên nhánh gốc, rồi dọn theo `cleanup`, xem `finish.md`), push/PR hỏi riêng một lần sau merge local; thiếu khoá thì đưa
   đúng 3 lựa chọn ngay trong câu hỏi G3: merge local / push + PR / giữ nguyên (mặc định), chọn push + PR là đồng ý push, không hỏi lại. Ghi `Plan: complete` vào ledger sau khi việc của lựa
   chọn xong.
-- **Ràng buộc:** không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`; không merge, không push khi người dùng chưa
+- **Ràng buộc:** G3 hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`) (mở diff cả nhánh ở pane diff rồi hỏi bằng lựa chọn); không sửa vùng managed block của `AGENTS.md`/`CLAUDE.md`; không merge, không push khi người dùng chưa
   chọn (không trả lời → giữ nguyên; `mergeLocal: true` đã là chọn merge local, không khoá nào bật push) và không push lên nhánh protected; không xoá nhánh, amend, squash hay force-push khi
   chưa được xác nhận (ngoại lệ: `cleanup: true` chỉ xoá nhánh đã là tổ tiên của nhánh gốc, theo `finish.md`); không đưa G3 hay 3 lựa chọn khi full suite còn đỏ; không xoá `**Files:**` hay test để tắt cảnh báo của
   `check-request.mjs`.

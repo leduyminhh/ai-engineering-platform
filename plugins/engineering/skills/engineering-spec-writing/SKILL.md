@@ -38,7 +38,7 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
   thì nêu trong báo cáo và gợi ý cập nhật, KHÔNG ghi đè; `design.md`/`plan.md` theo template core khi `_TEMPLATE` cũ
   không có `design.md` (baseline `AGENTS.md`; chi tiết ở references/spec-structure.md).
 - Defer `project-knowledge/` + `code-convention.md` (skill init lo); docs-only, không đụng CLI/adapter/engine.
-- Con người **duyệt** spec trước khi dùng làm nguồn cho plan/triển khai; mỗi file (`requirement.md`, `design.md`,
+- Con người **duyệt** spec trước khi dùng làm nguồn cho plan/triển khai (hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (bản cài plugin: `core:plan-execution`): mở `requirement.md`/`design.md` ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng); mỗi file (`requirement.md`, `design.md`,
   `plan.md`) một gate duyệt riêng.
 
 ## Quy trình — làm rõ rồi viết spec

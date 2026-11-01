@@ -101,7 +101,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** finding đã validate từ Bước 4
 - **Hành động:** trình toàn bộ finding cho người dùng theo severity; người dùng chọn finding nào sửa ngay,
   finding nào chấp nhận rủi ro (ghi lý do chấp nhận).
-- **Ràng buộc:** không tự quyết định bỏ qua finding `blocker` mà không có xác nhận rõ ràng của người dùng.
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tự quyết định bỏ qua finding `blocker` mà không có xác nhận rõ ràng của người dùng.
 - **Đầu ra:** danh sách finding người dùng chọn sửa + **danh sách file được sửa cho mỗi finding đã chọn** (đầu
   vào cho Bước 8) + danh sách finding được chấp nhận rủi ro (nếu có).
 - **Gate:** người dùng chọn finding cần sửa; có danh sách file được sửa.
@@ -118,7 +118,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   người dùng tự rotate/thu hồi secret đó tại hệ thống phát hành (cloud, IdP, database, dịch vụ ngoài) rồi xác
   nhận đã làm; coi secret là đã lộ kể cả khi sau này xoá khỏi code. Nếu không có finding secret bị lộ, ghi
   "không áp dụng".
-- **Ràng buộc:** workflow không tự rotate, không gọi hệ thống bên ngoài, không đọc hay in giá trị secret (chỉ
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; workflow không tự rotate, không gọi hệ thống bên ngoài, không đọc hay in giá trị secret (chỉ
   nêu tên/vị trí đã mask); không viết lại lịch sử git.
 - **Đầu ra:** xác nhận của người dùng rằng secret đã được rotate, hoặc dòng "không áp dụng".
 - **Gate:** người dùng xác nhận đã rotate mọi secret bị lộ, hoặc không có finding secret bị lộ.
@@ -202,7 +202,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** diff sửa hoàn chỉnh đã qua Bước 1–9
 - **Hành động:** tóm tắt finding đã sửa + finding được chấp nhận rủi ro (nếu có); đề xuất commit message
   Conventional Commits (header EN, body VI); trình diff cho người dùng duyệt.
-- **Ràng buộc:** không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu; không commit
+- **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu; không commit
   kèm giá trị secret thật.
   Đây là chốt riêng của workflow, áp cả trên feature branch.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
