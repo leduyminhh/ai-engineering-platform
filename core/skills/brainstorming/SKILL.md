@@ -33,6 +33,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
   ngoài repo.
 - **Nơi lưu brief.** Trong repo code: `docs/requests/<yyyy-mm-dd>-<slug>/brief.md`. Ngoài repo code (không có
   `docs/requests/` hoặc việc không gắn với repo): hỏi người dùng muốn lưu ở đâu, không tự chọn (đưa câu này vào thẻ ở lượt hỏi đầu); người dùng đã bỏ qua phần hỏi thì không hỏi: lưu ở `.aip/runs/brainstorm-<slug>/brief.md` và ghi lựa chọn đó là **quyết định của agent**.
+- **Slug** (`<slug>` trong đường dẫn): chỉ `a-z`, `0-9`, `-`, không dấu, tối đa 60 ký tự, không có `/` hay `..`; `.aip` luôn ở gốc repo chính.
 - **Không ghi đè** `brief.md` đã có khi chưa hỏi; có sẵn thì hỏi cập nhật hay tạo bản mới.
 - **Người dùng giữ cổng duy nhất:** duyệt brief. Skill không tự chạy workflow hay skill kế tiếp.
 
@@ -84,7 +85,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
     `route-đã-duyệt` trống. Từ JSON `{ chosen, candidates, reason, confidence }` trình **một thẻ duyệt brief** gồm: tóm
     tắt brief (kèm các **quyết định của agent**), route đề xuất (`chosen`), hoặc hai ứng viên (`candidates`) để người
     dùng chọn, hoặc "chưa có quy trình phù hợp" kèm gợi ý làm trong phiên, và câu nói rõ người dùng **luôn ghi đè được
-    route**. Route chọn có risk `high` hoặc `critical` (đọc cột Risk của `## Registry`) thì thẻ này đòi một câu duyệt rõ
+    route** (ghi đè sang skill ngoài hai bảng của orchestrator thì gọi thẳng skill đó, không qua orchestrator). Route chọn có risk `high` hoặc `critical` (đọc cột Risk của `## Registry`) thì thẻ này đòi một câu duyệt rõ
     ràng cho route đó, không coi im lặng là đồng ý.
 11. **Sau khi người dùng duyệt:** ghi `route-đã-duyệt: <id | chưa-có-quy-trình>` và `Trạng thái: approved` vào brief
     (người dùng ghi đè thì ghi route họ chọn). Duyệt brief là **cổng duy nhất** của brainstorm và cũng là duyệt route;
@@ -118,5 +119,5 @@ Nạp đúng file khi cần, đừng nạp tất cả:
   cách tự đọc khi không có subagent.
 - [references/visual.md](references/visual.md): khi nào hiển thị trực quan, thứ tự widget inline → HTML cục bộ → text.
 
-Tham khảo: skill brainstorming của bộ Claude plugins (xem design request
+Tham khảo: skill brainstorming của một bộ plugin bên thứ ba cho Claude Code (xem design request
 `docs/requests/2026-10-31-brainstorming-routing/design.md`); không chép nội dung.

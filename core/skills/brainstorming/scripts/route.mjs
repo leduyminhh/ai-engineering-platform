@@ -17,7 +17,8 @@ export const MARGIN = 1;
 const COND_FIELDS = ['loại-việc', 'phạm-vi', 'rủi-ro'];
 export const COND_RE = new RegExp(`^(${COND_FIELDS.join('|')})(!=|=|~)(.+)$`, 'u');
 
-const lines = (text) => text.replace(/\r\n?/g, '\n').split('\n');
+// NFC: file lưu ở dạng NFD (vd sinh từ macOS) vẫn khớp heading và khoá tiếng Việt.
+const lines = (text) => text.normalize('NFC').replace(/\r\n?/g, '\n').split('\n');
 // Hàng thiếu dấu | cuối sẽ mất ô cuối nếu cắt cứng; chỉ bỏ ô cuối khi nó rỗng.
 const cells = (line) => {
   if (!line.trim().startsWith('|')) return null;
@@ -39,6 +40,8 @@ function section(text, heading) {
 export function parseBrief(text) {
   const raw = {};
   for (const l of section(text, 'Định tuyến')) {
+    // Regex khoá có thể chạy bậc hai trên dòng dài toàn khoảng trắng; dòng khoá hợp lệ luôn ngắn.
+    if (l.length > 1000) continue;
     const m = l.replace(/^\s*(?:[-*]\s+)?/, '').replace(/\*\*/g, '').match(/^([^:\s][^:]*?)\s*:\s*(.*?)\s*$/u);
     if (m) raw[norm(m[1])] = m[2];
   }
@@ -120,6 +123,8 @@ export function routeBrief(brief, routes, { exclude = [], priority = [] } = {}) 
   if (!brief) return { chosen: null, candidates: [], reason: 'thiếu khối định tuyến hợp lệ (cần loại-việc và phạm-vi dưới "## Định tuyến")', confidence: 'none', error: 'brief' };
   if (!TYPES.includes(brief.type)) return { chosen: null, candidates: [], reason: `loại-việc "${brief.type}" không thuộc tập đóng (${TYPES.join(', ')})`, confidence: 'none', error: 'brief' };
   if (!SCOPES.includes(brief.scope)) return { chosen: null, candidates: [], reason: `phạm-vi "${brief.scope}" không thuộc tập đóng (${SCOPES.join(', ')})`, confidence: 'none', error: 'brief' };
+  // Bảng không có hàng nào mang cột loại-việc (orchestrator bản cũ, hoặc sai file): im lặng trả "chưa có quy trình" sẽ là câu trả lời sai.
+  if (!routes.some((r) => r.types.length)) return { chosen: null, candidates: [], reason: 'bảng route không có hàng nào có cột loại-việc/phạm-vi (orchestrator bản cũ hoặc sai file)', confidence: 'none', error: 'registry' };
   const skip = new Set(exclude);
   const broken = routes.find((r) => !skip.has(r.id) && r.bad?.length && matches(r.types, brief.type) && matches(r.scopes, brief.scope));
   if (broken) return { chosen: null, candidates: [], reason: `điều-kiện sai cú pháp ở "${broken.id}": ${broken.bad.join(', ')}`, confidence: 'none', error: 'registry' };
@@ -150,15 +155,28 @@ const defaultGit = (args, cwd) => execFileSync('git', ['-C', cwd, ...args], { en
 // Gốc repo chính (không phải gốc worktree) để nhật ký sống qua việc dọn worktree; không có git thì dùng cwd.
 function mainRoot(cwd, git) {
   try {
-    return path.dirname(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd));
+    const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd);
+    // Submodule: common-dir là <cha>/.git/modules/<tên>, dirname sẽ rơi vào trong .git của repo cha; dùng gốc của chính submodule.
+    if (path.basename(common) !== '.git') return git(['rev-parse', '--show-toplevel'], cwd);
+    return path.dirname(common);
   } catch {
     return cwd;
   }
 }
 
+// Từ chối ghi qua symlink/junction (cùng luật workspace.mjs): repo không tin cậy có thể commit .aip là symlink ra ngoài.
+function assertNotLink(p) {
+  let link = false;
+  try { link = fs.lstatSync(p).isSymbolicLink(); } catch (e) { if (e?.code !== 'ENOENT') throw e; }
+  if (link) throw new Error(`${p} là symlink, từ chối ghi nhật ký qua symlink`);
+}
+
 export function appendRoutingLog(root, record) {
   const dir = path.join(root, '.aip');
+  assertNotLink(dir);
   fs.mkdirSync(dir, { recursive: true });
+  assertNotLink(path.join(dir, '.gitignore'));
+  assertNotLink(path.join(dir, 'routing-log.jsonl'));
   // Cùng quy ước với workspace.mjs: .aip chứa trạng thái chạy, git phải bỏ qua dù plan-execution chưa tạo workspace.
   const ignore = path.join(dir, '.gitignore');
   if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '*\n');

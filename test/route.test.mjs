@@ -132,6 +132,20 @@ ok(badRes.error === 'registry', 'ac2_3: điều-kiện sai cú pháp → error r
 const noPipe = r.parseRoutes(ORCH.replace('| rủi-ro~bảo mật |', '| rủi-ro~bảo mật'));
 ok(noPipe.find((x) => x.id === 'workflow-security-review').conds.length === 1, 'parseRoutes: hàng thiếu dấu | cuối vẫn đọc ô điều-kiện');
 
+// Bảng không có cột loại-việc (orchestrator bản cũ) hoặc sai file: báo lỗi registry, không trả "chưa có quy trình"
+const oldOrch = r.parseRoutes(['## Registry', '| id | Tín hiệu | Risk | Không dùng khi |', '|---|---|---|---|', '| `workflow-feature` | "a" | medium | x |'].join('\n'));
+const oldRes = r.routeBrief(r.parseBrief(brief()), oldOrch);
+ok(oldRes.chosen === null && oldRes.error === 'registry' && oldRes.reason.includes('loại-việc'), 'ac2_3: bảng không có cột loại-việc → error registry');
+ok(r.routeBrief(r.parseBrief(brief()), r.parseRoutes('# README\nkhông phải orchestrator')).error === 'registry', 'ac2_3: file không phải orchestrator → error registry');
+
+// Dòng khoá dài toàn khoảng trắng không được làm treo (regex bậc hai) và NFD vẫn đọc được
+{
+  const t0 = Date.now();
+  r.parseBrief(`## Định tuyến\nloại-việc: feature\nphạm-vi: fullstack\n${'a' + ' '.repeat(60000) + 'x'}\n`);
+  ok(Date.now() - t0 < 500, 'parseBrief: dòng dài 60000 khoảng trắng xử lý dưới 500ms');
+  ok(r.parseBrief(brief().normalize('NFD'))?.type === 'feature', 'parseBrief: brief lưu dạng NFD vẫn đọc được heading và khoá');
+}
+
 // Giá trị ngoài tập đóng báo đúng nguyên nhân (không phải "chưa có quy trình")
 ok(run(brief({ type: 'featrue' })).reason.includes('không thuộc tập đóng'), 'ac2_3: loại-việc ngoài TYPES → reason nêu tập đóng');
 ok(run(brief({ scope: 'frontend' })).reason.includes('không thuộc tập đóng'), 'ac2_3: phạm-vi ngoài SCOPES → reason nêu tập đóng');
@@ -211,6 +225,29 @@ try {
   fs.mkdirSync(wt);
   quiet(() => r.main(['--log', bf, '--chosen', 'engineering-adr'], { cwd: wt, git: () => path.join(main, '.git'), now: deps.now }));
   ok(fs.existsSync(path.join(main, '.aip', 'routing-log.jsonl')) && !fs.existsSync(path.join(wt, '.aip')), 'ac5_1: nhật ký ghi ở gốc repo chính, không ở worktree');
+
+  // submodule: common-dir không phải <gốc>/.git thì dùng toplevel của chính submodule, không ghi vào trong .git của repo cha
+  const outer = path.join(tmp, 'outer');
+  const sm = path.join(outer, 'sm');
+  fs.mkdirSync(path.join(outer, '.git', 'modules', 'sm'), { recursive: true });
+  fs.mkdirSync(sm, { recursive: true });
+  const smGit = (args) => (args.includes('--show-toplevel') ? sm : path.join(outer, '.git', 'modules', 'sm'));
+  quiet(() => r.main(['--log', bf, '--chosen', 'engineering-adr'], { cwd: sm, git: smGit, now: deps.now }));
+  ok(fs.existsSync(path.join(sm, '.aip', 'routing-log.jsonl')) && !fs.existsSync(path.join(outer, '.git', 'modules', '.aip')), 'ac5_1: submodule ghi nhật ký ở gốc submodule, không trong .git của repo cha');
+
+  // .aip là symlink/junction ra ngoài: từ chối ghi (cảnh báo, exit 0), không tạo file ở đích
+  const evil = path.join(tmp, 'evil-target');
+  const victim = path.join(tmp, 'victim-repo');
+  fs.mkdirSync(evil);
+  fs.mkdirSync(victim);
+  fs.symlinkSync(evil, path.join(victim, '.aip'), 'junction');
+  const errs2 = [];
+  const oe2 = console.error;
+  console.error = (s) => errs2.push(String(s));
+  let rc4;
+  try { rc4 = r.main(['--log', bf, '--chosen', 'x'], { cwd: victim, git: () => { throw new Error('no git'); }, now: deps.now }); } finally { console.error = oe2; }
+  ok(rc4 === 0 && errs2.some((e) => e.includes('symlink')) && fs.readdirSync(evil).length === 0, 'ac5_1: .aip là symlink → từ chối ghi, không tạo file ở thư mục đích');
+  try { fs.rmdirSync(path.join(victim, '.aip')); } catch { /* đã gỡ */ }
 
   // cài skills-mode dùng symlink/junction: chạy qua liên kết vẫn phải in JSON
   const link = path.join(tmp, 'link');
