@@ -1,7 +1,8 @@
-// Contract routing: bảng định tuyến của orchestrator đọc được bằng route.mjs, ba brief mẫu chạy qua bảng thật
-// ra đúng route, và chỉ workflow_result có status misrouted (agent_result thì không).
-const COND_RE = /^(loại-việc|phạm-vi|rủi-ro)(!=|=|~)(.+)$/u;
+// Contract routing: bảng định tuyến của orchestrator đọc được bằng route.mjs, từng bước của orchestrator nêu đúng
+// lệnh và giá trị vận hành, các mẫu brief chạy qua bảng thật ra đúng route, và chỉ workflow_result có status misrouted.
 const splitCell = (c) => (c ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+// Tập cờ của route.mjs; route.mjs phải còn khai báo từng cờ (khoá drift bên dưới).
+const ROUTE_FLAGS = ['--exclude', '--log', '--chosen', '--overridden', '--misrouted'];
 
 // Đọc thô để thấy ô sai cú pháp: parseRoutes bỏ qua ô không khớp nên không tự báo lỗi điều-kiện,
 // và dòng lệch số ô là dấu hiệu của `|` lạc vào trong ô.
@@ -18,10 +19,21 @@ function rawRows(text, heading) {
   return { rows: body.map((l) => Object.fromEntries(names.map((n, i) => [n, cellsOf(l)[i] ?? '']))), broken };
 }
 
+// Cắt theo "### Bước N —" tới heading kế tiếp, để kiểm chữ đúng trong đúng bước.
+function stepText(text, n) {
+  const ls = text.split('\n');
+  const at = ls.findIndex((l) => l.startsWith(`### Bước ${n} —`));
+  if (at === -1) return '';
+  const end = ls.findIndex((l, i) => i > at && /^#{2,3} /.test(l));
+  return ls.slice(at, end === -1 ? ls.length : end).join('\n');
+}
+
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT, CORE_DIR } = ctx;
-  const route = await import(ctx.pathToFileURL(path.join(REPO_ROOT, 'core', 'skills', 'brainstorming', 'scripts', 'route.mjs')).href);
-  const { TYPES, SCOPES, parseRoutes, parseBrief, routeBrief } = route;
+  const routeFile = path.join(REPO_ROOT, 'core', 'skills', 'brainstorming', 'scripts', 'route.mjs');
+  const route = await import(ctx.pathToFileURL(routeFile).href);
+  const { TYPES, SCOPES, COND_RE, parseRoutes, parseBrief, routeBrief } = route;
+  const routeSrc = fs.readFileSync(routeFile, 'utf8');
   const orch = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'orchestrator', 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n');
 
   const TYPE_SET = new Set([...TYPES, '*', '—']);
@@ -43,31 +55,60 @@ export default async function run({ ok, ctx }) {
       const badCond = conds.filter((c) => {
         const m = c.match(COND_RE);
         if (!m) return true;
+        const vals = m[3].split('/').map((v) => v.trim());
+        if (vals.some((v) => v === '')) return true;
         if (m[1] === 'rủi-ro' || m[2] === '~') return false;
         const allowed = m[1] === 'loại-việc' ? TYPES : SCOPES;
-        return m[3].split('/').some((v) => !allowed.includes(v.trim()));
+        return vals.some((v) => !allowed.includes(v));
       });
       ok(badCond.length === 0, `AC2.1: ${name} điều-kiện đúng cú pháp${badCond.length ? ' — sai: ' + badCond.join(', ') : ''}`);
     }
   }
 
-  // Brief mẫu chạy qua parseBrief + routeBrief với bảng thật; đổi bảng mà lệch route là lỗi của contract này.
+  // Mẫu brief chạy qua parseBrief + routeBrief với bảng thật; đổi bảng mà lệch route là lỗi của contract này.
   const routes = parseRoutes(orch);
-  const brief = (type, scope) => ['# Brief: mẫu', '', '## Định tuyến', `loại-việc: ${type}`, `phạm-vi: ${scope}`,
-    'đầu-ra-mong-đợi: mẫu', 'rủi-ro: —', 'ứng-viên-route: []', ''].join('\n');
-  const pick = (type, scope) => routeBrief(parseBrief(brief(type, scope)), routes);
+  const brief = (type, scope, risk) => ['# Brief: mẫu', '', '## Định tuyến', `loại-việc: ${type}`, `phạm-vi: ${scope}`,
+    'đầu-ra-mong-đợi: mẫu', `rủi-ro: ${risk}`, 'ứng-viên-route: []', ''].join('\n');
+  const pick = (type, scope, risk = '—') => routeBrief(parseBrief(brief(type, scope, risk)), routes);
 
-  const feat = pick('feature', 'fullstack');
-  ok(feat.chosen?.id === 'workflow-feature', `AC2.1: brief feature/fullstack → workflow-feature (chosen=${JSON.stringify(feat.chosen)})`);
-  const adr = pick('quyết-định', 'không-code');
-  ok(adr.chosen?.id === 'engineering-adr' && adr.chosen.kind === 'skill', `AC2.1: brief quyết-định/không-code → skill engineering-adr (chosen=${JSON.stringify(adr.chosen)})`);
-  const none = pick('nghiên-cứu', 'không-code');
-  ok(none.chosen === null && none.confidence === 'none', `AC2.3: brief nghiên-cứu/không-code → chosen null, confidence none (chosen=${JSON.stringify(none.chosen)}, confidence=${none.confidence})`);
-
-  // Operational contract: orchestrator phải gọi đúng lệnh, dùng đúng khoá và đúng giá trị status.
-  for (const [token, ac] of [['route.mjs', 'AC2.2'], ['route-đã-duyệt', 'AC3.1'], ['--exclude', 'AC3.2'], ['--log', 'AC5.1'], ['misrouted', 'AC3.2']]) {
-    ok(orch.includes(token), `${ac}: orchestrator nêu ${token}`);
+  // [AC, nhãn, loại-việc, phạm-vi, rủi-ro, id mong đợi, kind mong đợi]
+  const SAMPLES = [
+    ['AC2.1', 'feature/fullstack', 'feature', 'fullstack', '—', 'workflow-feature', 'workflow'],
+    ['AC2.1', 'feature/data', 'feature', 'data', '—', 'data-db-migration', 'skill'],
+    ['AC2.1', 'quyết-định/không-code', 'quyết-định', 'không-code', '—', 'engineering-adr', 'skill'],
+    ['AC2.1', 'bug/code-be', 'bug', 'code-be', '—', 'workflow-bugfix', 'workflow'],
+    ['AC2.1', 'nghiên-cứu/code-be rủi-ro hiệu năng chậm', 'nghiên-cứu', 'code-be', 'hiệu năng chậm', 'workflow-performance', 'workflow'],
+    ['AC2.1', 'nghiên-cứu/code-be rủi-ro lỗ hổng bảo mật', 'nghiên-cứu', 'code-be', 'lỗ hổng bảo mật', 'workflow-security-review', 'workflow'],
+    ['AC2.1', 'tài-liệu/không-code', 'tài-liệu', 'không-code', '—', 'làm-trong-phiên', 'in-session'],
+  ];
+  for (const [ac, label, type, scope, risk, id, kind] of SAMPLES) {
+    const r = pick(type, scope, risk);
+    ok(r.chosen?.id === id && r.chosen?.kind === kind, `${ac}: ${label} → ${id} (${kind}) (chosen=${JSON.stringify(r.chosen)})`);
   }
+  const none = pick('nghiên-cứu', 'không-code');
+  ok(none.chosen === null && none.confidence === 'none', `AC2.3: nghiên-cứu/không-code → chosen null, confidence none (chosen=${JSON.stringify(none.chosen)}, confidence=${none.confidence})`);
+  // Bug kèm rủi ro bảo mật khớp cả bugfix lẫn security-review cùng 6 điểm: không được chọn bugfix với độ tin cậy cao.
+  const sqli = pick('bug', 'code-be', 'SQL injection lộ secret');
+  const pair = (sqli.candidates ?? []).map((c) => c.id).sort().join(',');
+  ok(sqli.chosen === null && sqli.confidence === 'low' && pair === 'workflow-bugfix,workflow-security-review',
+    `AC2.2: bug/code-be + "SQL injection lộ secret" → hai ứng viên, không chọn bugfix (chosen=${JSON.stringify(sqli.chosen)}, candidates=${pair})`);
+
+  // Từng bước của orchestrator nêu đúng lệnh và giá trị vận hành; kiểm trong đúng bước để chữ ở bước khác không đạt thay.
+  ok(stepText(orch, 1).includes('route.mjs'), 'AC2.2: Bước 1 của orchestrator gọi route.mjs');
+  ok(stepText(orch, 1).includes('route-đã-duyệt') && stepText(orch, 1).includes('--exclude'),
+    'AC3.1: Bước 1 nêu route-đã-duyệt và --exclude (lượt quay lại bỏ qua route đã duyệt)');
+  ok(stepText(orch, 1).includes('--log'), 'AC5.1: Bước 1 ghi --log khi dừng ở nhánh không chạy workflow');
+  ok(stepText(orch, 3).includes('route-đã-duyệt'), 'AC3.1: Bước 3 nêu route-đã-duyệt khi bỏ qua xác nhận');
+  ok(stepText(orch, 4).includes('misrouted') && stepText(orch, 4).includes('--exclude'), 'AC3.2: Bước 4 nêu misrouted và --exclude');
+  ok(stepText(orch, 5).includes('--log'), 'AC5.1: Bước 5 có lệnh --log');
+  ok(stepText(orch, 5).includes('blocked'), 'AC3.2: Bước 5 nêu blocked khi hết route sau misrouted');
+
+  // Cờ trong lệnh route.mjs của orchestrator phải thuộc tập cờ thật; route.mjs phải còn khai báo từng cờ.
+  for (const f of ROUTE_FLAGS) ok(routeSrc.includes(f), `AC5.1: route.mjs còn khai báo cờ ${f}`);
+  const cmdSpans = [...orch.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]).filter((s) => s.includes('route.mjs') || s.startsWith('--'));
+  const flags = cmdSpans.flatMap((s) => s.match(/--[a-z]+/g) ?? []);
+  const unknown = [...new Set(flags)].filter((f) => !ROUTE_FLAGS.includes(f));
+  ok(flags.length > 0 && unknown.length === 0, `AC5.1: cờ trong lệnh route.mjs của orchestrator đều thuộc tập cờ route.mjs${unknown.length ? ' — lạ: ' + unknown.join(', ') : ''}`);
 
   // status: misrouted chỉ thuộc workflow_result; agent_result là worker, không định tuyến.
   const contract = fs.readFileSync(path.join(CORE_DIR, 'principles', 'workflow-output-contract.md'), 'utf8').replace(/\r\n/g, '\n').split('\n');

@@ -15,7 +15,7 @@ export const SCOPES = ['code-be', 'code-fe', 'fullstack', 'data', 'ops', 'không
 export const THRESHOLD = 6;
 export const MARGIN = 1;
 const COND_FIELDS = ['loại-việc', 'phạm-vi', 'rủi-ro'];
-const COND_RE = new RegExp(`^(${COND_FIELDS.join('|')})(!=|=|~)(.+)$`, 'u');
+export const COND_RE = new RegExp(`^(${COND_FIELDS.join('|')})(!=|=|~)(.+)$`, 'u');
 
 const lines = (text) => text.replace(/\r\n?/g, '\n').split('\n');
 // Hàng thiếu dấu | cuối sẽ mất ô cuối nếu cắt cứng; chỉ bỏ ô cuối khi nó rỗng.
