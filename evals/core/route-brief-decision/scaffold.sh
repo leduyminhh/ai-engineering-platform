@@ -5,7 +5,7 @@ set -euo pipefail
 cat > brief.md <<'MD'
 # Brief: chốt cách ghi quyết định sau họp
 - Ngày: 2026-11-01
-- Trạng thái: approved
+- Trạng thái: draft
 
 ## Vấn đề và loại việc
 Nhóm họp hàng tuần nhưng không ai nhớ đã quyết gì; cần chọn một cách ghi quyết định.
@@ -14,7 +14,7 @@ loại-việc: quyết-định
 phạm-vi: không-code
 đầu-ra-mong-đợi: một quyết định về cách ghi lại kết luận sau họp, kèm phương án đã loại
 rủi-ro: không có
-ứng-viên-route: [engineering-adr]
+ứng-viên-route: []
 route-đã-duyệt:
 MD
 

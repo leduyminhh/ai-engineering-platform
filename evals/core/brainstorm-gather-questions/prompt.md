@@ -1,6 +1,6 @@
 ---
 runs: 3
-max_turns: 6
+max_turns: 8
 allowed_tools: [Read, Write, Edit, Glob, Grep, Skill]
 tags: [routing, core]
 ---
