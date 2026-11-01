@@ -8,12 +8,9 @@ trực tiếp với người dùng), không chạy trong subagent. Chỉ hỏi p
 
 - **Một câu mỗi tin nhắn:** tin nhắn kết thúc bằng đúng một câu hỏi, không kèm danh sách ví dụ hay bảng câu hỏi;
   đợi trả lời rồi mới sang câu tiếp.
-- **Câu mở trước:** hỏi mở để người dùng kể tình huống thật ("lần gần nhất chuyện này xảy ra thế nào?"); chỉ đưa
-  lựa chọn khi họ bí. Neo câu hỏi vào tình huống cụ thể thay vì hỏi khái niệm.
-- **Đoán để họ sửa:** khi có cơ sở, nêu điều mình đoán và hỏi "đúng không?" — thường nhanh hơn hỏi trống. Điều đoán
-  mà chưa được xác nhận ghi **[giả định]**.
-- **Playback từng phần:** hiểu xong một phần thì nói lại ngắn (khoảng 200–300 từ), chỗ suy đoán đánh dấu **[giả định]**,
-  kết bằng "sai hoặc thiếu gì?", xen kẽ với câu hỏi. Không để dồn một lần diễn giải ở cuối.
+- **Câu mở trước, đoán để họ sửa, playback từng phần:** theo mục "Nguyên tắc hỏi" và mục "Playback — tóm tắt lại từng
+  phần" của `references/clarify-core.md` (skill `brainstorming`, bản cài plugin: `core:brainstorming`). Ví dụ câu mở
+  cho spec: "lần gần nhất chuyện này xảy ra thế nào?".
 - **Ưu tiên câu mở khoá spec:** hỏi trước những câu mà thiếu nó thì không viết được acceptance criteria đo được
   (mục tiêu, actor, kết quả kỳ vọng).
 - **Đo được khi có thể:** khi hỏi NFR/tiêu chí, đẩy về con số/điều kiện kiểm được thay vì tính từ mơ hồ.
@@ -77,5 +74,5 @@ gợi ý bên dưới chỉ để tự chọn và diễn đạt lại theo tình
 
 ## Sau khi làm rõ
 
-Đề xuất 2–3 hướng (sau playback), xếp cỡ việc, rồi giao `engineering-spec-analyst` ghi spec theo [spec-structure.md](spec-structure.md); mọi phần chưa chốt giữ nguyên
+Đề xuất hướng theo mục "Đề xuất 2–3 hướng — đặt sau playback" của `references/clarify-core.md`, xếp cỡ việc, rồi giao `engineering-spec-analyst` ghi spec theo [spec-structure.md](spec-structure.md); mọi phần chưa chốt giữ nguyên
 dạng **[giả định]** + đưa vào mục *câu hỏi mở* để con người quyết. Kiểm tài liệu bằng [builder-check.md](builder-check.md) rồi [checklist.md](checklist.md).

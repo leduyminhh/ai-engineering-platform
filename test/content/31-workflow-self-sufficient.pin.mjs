@@ -102,6 +102,9 @@ export default async function run({ ok, ctx }) {
     const step5 = between('5. **Đề xuất', '6. **Xếp cỡ') + '\n' + clarifyCore;
     ok(/hướng bị loại/.test(step5) && /tự chọn/.test(step5) && /không dừng chờ chọn/.test(step5),
       'AC1.1: SKILL bước 5 — ghi cả hướng bị loại; bỏ qua phần hỏi thì agent tự chọn, không dừng chờ');
+    ok(/200–300 từ/.test(clarifyCore), 'AC1.1: clarify-core (playback dùng chung) nêu độ dài 200–300 từ');
+    ok(/lệch có chủ đích[^]*chủ repo yêu cầu có đề xuất/.test(clarifyCore),
+      'AC1.1: clarify-core nêu lệch có chủ đích kèm lý do chủ repo yêu cầu có đề xuất');
     const step2 = between('2. **Cổng', '3. **Hỏi từng câu');
     ok(/tự chọn hướng/.test(step2) && /2–3 hướng/.test(step2) && !/bước 5–7/.test(step2),
       'AC1.1: SKILL bước 2 — bỏ qua phần hỏi: agent tự chọn hướng, vẫn ghi 2–3 hướng');

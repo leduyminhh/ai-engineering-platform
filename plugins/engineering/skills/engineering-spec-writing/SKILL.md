@@ -52,7 +52,7 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    stakeholder). Thiếu `project-knowledge/` → nói rõ (fail-loud) và đề nghị chạy init trước, hoặc viết với giả định + ghi rõ.
 
 2. **Cổng "đủ thông tin" + lối thoát.**
-   Làm theo mục "Cổng đủ thông tin + lối thoát" của skill `brainstorming` (bản cài plugin: `core:brainstorming`), file
+   Làm theo mục "Cổng "đủ thông tin" + lối thoát" của skill `brainstorming` (bản cài plugin: `core:brainstorming`), file
    `references/clarify-core.md`: yêu cầu đã đủ rõ và nhỏ → **không chạy workflow**, làm thẳng; ngược lại tin nhắn đầu
    gồm dòng **bỏ qua phần hỏi** và một câu mở. Riêng skill này: người dùng chọn bỏ qua → bỏ bước 3–4, **không hỏi thêm câu nào** trước checkpoint (kể cả ở builder check, bước 9):
    agent **tự chọn hướng ở bước 5** (vẫn ghi 2–3 hướng + khuyến nghị + đánh đổi, không dừng chờ chọn), xếp cỡ việc
@@ -67,11 +67,11 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    **quyết định của agent**.
 
 4. **Playback — tóm tắt lại từng phần.**
-   Làm theo mục "Playback" của `references/clarify-core.md` (skill `brainstorming` / `core:brainstorming`): tóm tắt
+   Làm theo mục "Playback — tóm tắt lại từng phần" của `references/clarify-core.md` (skill `brainstorming` / `core:brainstorming`): tóm tắt
    lại từng phần, đánh dấu **[giả định]**, kết bằng "sai hoặc thiếu gì?", xen kẽ với câu hỏi.
 
 5. **Đề xuất 2–3 hướng + 1 khuyến nghị + đánh đổi** — đặt **sau playback**.
-   Làm theo mục "Đề xuất 2–3 hướng" của `references/clarify-core.md`, gồm ghi chú **lệch có chủ đích** (đừng bỏ bước
+   Làm theo mục "Đề xuất 2–3 hướng — đặt sau playback" của `references/clarify-core.md`, gồm ghi chú **lệch có chủ đích** (đừng bỏ bước
    này). Riêng skill này: cả hướng được chọn lẫn các hướng bị loại (kèm đánh đổi và lý do) đều ghi vào `design.md`;
    người dùng chốt hướng → mục Quyết định đã chốt. Cần diagram (flow/ERD/sequence/kiến trúc) → skill
    **`engineering-diagram`**; chỉ đưa hình khi nhìn tốt hơn đọc.
