@@ -63,8 +63,8 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
    bộ ở `.aip/runs/brainstorm-<slug>/`, không thì text. Không viết server riêng.
 7. **Playback từng phần, rồi đề xuất hướng.** Hiểu xong một phần thì tóm tắt lại, đánh dấu chỗ đoán là **[giả định]**,
    kết bằng "sai hoặc thiếu gì?" (chi tiết ở `clarify-core.md`). Sau đó, và chỉ **sau playback**, agent đề xuất 2–3
-   hướng + 1 khuyến nghị + đánh đổi, ghi cả hướng bị loại. Bước này bắt buộc kể cả khi người dùng bỏ qua phần hỏi (khi
-   đó không có playback, agent tự chọn theo khuyến nghị và ghi **quyết định của agent**).
+   hướng + 1 khuyến nghị + đánh đổi, ghi cả hướng bị loại. Người dùng bỏ qua phần hỏi thì không có playback: agent vẫn
+   đề xuất, tự chọn theo khuyến nghị và ghi **quyết định của agent** (xem `clarify-core.md`).
 8. **Ghi brief.md nháp** theo template `brief` của `artifact-templates` (`references/brief.template.md`; bỏ khối
    `<!-- artifact-template … -->`), đặt ở nơi đã chốt ở mục Ranh giới an toàn, trạng thái `draft`. Điền khối
    `## Định tuyến` (`loại-việc`, `phạm-vi`, `đầu-ra-mong-đợi`, `rủi-ro`, `ứng-viên-route`), để `route-đã-duyệt` trống.
@@ -78,7 +78,8 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
 10. **Kiểm route rồi trình một thẻ duyệt brief.** Chạy
     `node <thư mục skill brainstorming>/scripts/route.mjs <brief.md> <orchestrator>`. `<orchestrator>` là
     `workflows/orchestrator/WORKFLOW.md` trong repo aip, hoặc file `SKILL.md` của skill `workflow-orchestrator` trong bản
-    cài (đã kiểm: bản build của file này parse ra route đúng). Không tìm thấy orchestrator, hoặc `route.mjs` thoát 2
+    cài (đã kiểm: bản build của file này parse ra route đúng); đọc orchestrator qua `route.mjs` là bước máy của skill,
+    không tính là đi xem. Không tìm thấy orchestrator, hoặc `route.mjs` thoát 2
     (thiếu đối số hoặc không đọc được file): ghi "chưa kiểm route", báo đường dẫn lỗi cho người dùng và để
     `route-đã-duyệt` trống. Từ JSON `{ chosen, candidates, reason, confidence }` trình **một thẻ duyệt brief** gồm: tóm
     tắt brief (kèm các **quyết định của agent**), route đề xuất (`chosen`), hoặc hai ứng viên (`candidates`) để người
@@ -96,8 +97,9 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
   và một thẻ gom câu hỏi (đáp án khuyến nghị mỗi câu, một câu mở); không hỏi từng câu qua nhiều lượt.
 - Mọi lựa chọn agent tự đưa ra ghi **quyết định của agent**; phần đoán ghi **[giả định]**; không có spike nào bị đưa vào brief.
 - Đề xuất 2–3 hướng của agent đặt sau playback (hoặc ghi quyết định của agent khi người dùng bỏ qua phần hỏi).
-- Mọi việc đi xem sâu hơn nạp context nền đã được người dùng đồng ý; file ghi ra chỉ gồm `brief.md` và, nếu có, HTML phụ
-  trợ ở `.aip/runs/brainstorm-<slug>/`; spike (nếu có) ở thư mục tạm ngoài repo, không commit, đã bỏ.
+- Mọi việc đi xem sâu hơn (ngoài nạp context nền ở bước 1) đã được người dùng đồng ý; file ghi ra chỉ gồm `brief.md` và,
+  nếu có, HTML phụ trợ cùng `.aip/.gitignore` (một lần, chứa `*`) ở `.aip/runs/brainstorm-<slug>/`; spike (nếu có) ở thư
+  mục tạm ngoài repo, không commit, đã bỏ.
 - `brief.md` nháp được ghi trước builder check; đã chạy đúng một builder check đọc brief nháp, câu hỏi của người dùng gom
   trong một tin nhắn, rồi brief được cập nhật theo kết quả.
 - `brief.md` đúng template `brief`, khối `## Định tuyến` đủ khoá; đã chạy `check-request.mjs` (hoặc nêu lý do không chạy).

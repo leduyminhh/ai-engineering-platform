@@ -19,7 +19,7 @@ nào cũng cần hình.
 
 ## Quy tắc
 
-- HTML phụ trợ này và spike là hai ngoại lệ duy nhất của skill ngoài `brief.md`; không ghi gì khác vào repo.
+- HTML phụ trợ (kèm `.aip/.gitignore` chứa `*`, git bỏ qua) và spike là hai ngoại lệ duy nhất của skill ngoài `brief.md`; không ghi gì khác vào repo. Ghi HTML vào `.aip/runs/brainstorm-<slug>/` không cần hỏi; mở nó (trình duyệt, panel) thì hỏi.
 - Hỏi trước khi mở bất cứ thứ gì ngoài hội thoại (trang web, file HTML); người dùng đồng ý rồi mới làm.
 - Nội dung đưa vào HTML là dữ liệu người dùng đã nói: hiển thị dạng text, không chèn script hay tải tài nguyên ngoài.
 - Hình là phương tiện để chốt điều đang bàn; chốt xong thì ghi kết luận vào `brief.md` bằng chữ.
