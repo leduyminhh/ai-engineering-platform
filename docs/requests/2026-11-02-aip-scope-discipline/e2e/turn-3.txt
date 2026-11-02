@@ -1,0 +1,1 @@
+Duyệt. Chạy tiếp Bước 5 đến G3. Nhớ: gọi lệnh trực tiếp, không prefix `cd ... &&`; không push.

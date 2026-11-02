@@ -1,0 +1,1 @@
+Đồng ý cả 4 khuyến nghị (1a, 2a, 3a, 4a), thêm 2b đơn tối thiểu và 2c tổng lượt dùng tối đa. Câu 5: mã khuyến mãi dịp lễ, nhập mã lúc thanh toán; thành công = tổng tiền sau giảm đúng và không bao giờ âm. Cứ đọc src/ thoải mái. Shell được phép cho node, npm, git (không push) — gọi lệnh trực tiếp, KHÔNG prefix `cd ... &&`. Xong brief thì đi tiếp theo route bạn đề xuất.

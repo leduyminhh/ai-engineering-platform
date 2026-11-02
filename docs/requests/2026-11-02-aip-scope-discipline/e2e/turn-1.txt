@@ -1,0 +1,1 @@
+Mình muốn thêm mã giảm giá (coupon) cho giỏ hàng trong project này. Chưa rõ nên làm thế nào, brainstorm cùng mình trước nhé.
