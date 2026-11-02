@@ -36,7 +36,7 @@ bước 1–6 và 9), không thuộc agent này. Viết ở mức FEATURE; phân
    đầu ra của `core:principles`; session chính hỏi người dùng rồi giao lại.
 3. Ghi `docs/requests/<yyyy-mm-dd>-<slug>/requirement.md` (+ `design.md` khi cỡ dự án) theo
    `references/spec-structure.md`; giữ nguyên phân biệt **Quyết định đã chốt** / **quyết định của agent** trong `design.md`;
-   acceptance criteria đo được (Given/When/Then hoặc tiêu chí kiểm được), mỗi AC mang ID `AC<n>.<m>`; cỡ thay đổi nhỏ không tạo `design.md`.
+   acceptance criteria đo được (Given/When/Then hoặc tiêu chí kiểm được), mỗi AC mang ID `AC<n>.<m>`; AC có ví dụ số thì tự tính lại kết quả từ Given theo quy tắc làm tròn đã chốt (chạy lệnh tính khi có shell) trước khi ghi; cỡ thay đổi nhỏ không tạo `design.md`.
 4. Cần diagram minh hoạ (flow/ERD/sequence/kiến trúc) trong spec: đọc skill `engineering-diagram`, chọn đúng
    loại rồi sinh PlantUML renderable, nhúng/liên kết vào spec.
 5. Với mỗi quyết định thiết kế/nghiệp vụ đáng lưu đã được giao: đọc skill `engineering-adr`, ghi 2–4 phương án kèm

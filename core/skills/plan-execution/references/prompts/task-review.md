@@ -26,7 +26,9 @@ Cách làm:
    kiểm qua mục `## Commits` của review package (file theo từng commit, commit mới liệt kê trước): commit đỏ chỉ chứa
    file test và đứng trước commit code, tức nằm dưới nó trong mục này.
 4. Thang severity của contract đầu ra: blocker (≈ Critical), major (≈ Important), minor/nit. "Coverage có thể rộng hơn"
-   là minor; mục plan bắt buộc mà thiếu là major. Plan/spec im lặng về một điều không có nghĩa là cho phép.
+   là minor; mục plan bắt buộc mà thiếu là major. Vi phạm AC, tiêu chí thành công hoặc ràng buộc đã duyệt (brief, Global Constraints,
+   Phủ AC) là major trở lên, không bao giờ minor, kể cả khi chỉ xảy ra với đầu vào hiếm hoặc giá trị bảng sửa tay sau này.
+   minor/nit chỉ dành cho điều không vi phạm yêu cầu đã duyệt. Plan/spec im lặng về một điều không có nghĩa là cho phép.
 5. Mỗi finding có severity, category, location (file:line), evidence, impact, recommendation, confidence. Tự đọc lại
    file:line trước khi trả; bỏ finding không tái lập được.
 

@@ -338,6 +338,11 @@ export default async function run({ ok, ctx }) {
       && blocked(run([human('x'), edit(path.join(repo, 'src', 'a.yaml'))], { input: { cwd: path.join(repo, 'docs') } })),
     'regression trial 2026-11-02: sửa contract trong docs/contracts/ dưới cwd → cho dừng; docs/ khác, docs/contracts/ lồng hay file ngoài vẫn chặn');
 
+    // Regression E2E 2026-11-02: script tạm trong scratchpad ngoài project không được tính là sửa code.
+    const outside = path.join(path.parse(process.cwd()).root, 'aip-outside-scratch', 'why2.mjs');
+    ok(run([human('x'), edit(outside)]) === null && blocked(run([human('x'), edit(outside), edit('src/a.js')])),
+      'regression E2E 2026-11-02: sửa file ngoài cwd và gốc git → cho dừng; kèm file trong project vẫn chặn');
+
     const dirty = [human('x'), edit('a.js')];
     ok(run(dirty, { input: { stop_hook_active: true } }) === null, 'AC1.4: stop_hook_active → cho dừng (chống vòng lặp)');
     ok(run(dirty, { env: { AIP_STOP_GATE: 'off' } }) === null, 'AC1.4: AIP_STOP_GATE=off → cho dừng');

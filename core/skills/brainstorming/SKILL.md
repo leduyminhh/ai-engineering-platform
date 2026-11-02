@@ -28,9 +28,10 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
   ngoài repo, không commit, bỏ sau khi dùng; muốn giữ lại spike thì đó là một request mới.
 - **Không bịa.** Phần đoán đánh dấu **[giả định]** và đưa vào mục "Phần đoán" của brief; không trình bày như điều người
   dùng đã nói.
-- **Đi xem cần đồng ý.** Chỉ việc nạp context nền ở bước 1 là mặc định, không cần hỏi. Mọi việc đi xem sâu hơn (đọc code,
-  đọc file khác, đọc web, tài liệu ngoài repo) thì nêu rõ muốn xem gì và vì sao, rồi **chờ đồng ý**, bất kể trong hay
-  ngoài repo.
+- **Đi xem.** Nạp context nền ở bước 1 và đọc code nhỏ trong repo của việc (vài file, theo tên hoặc thư mục người
+  dùng nhắc hoặc `project-knowledge/` chỉ tới; chỉ đọc) là mặc định, không cần hỏi, và làm **trước khi hỏi**: điều code
+  trả lời được (vd "giỏ hàng tính tiền thế nào") không hỏi người dùng. Đi xem sâu hơn (đọc web, tài liệu ngoài repo, quét cả cây
+  hoặc nhiều module) thì nêu rõ muốn xem gì và vì sao, rồi **chờ đồng ý**.
 - **Nơi lưu brief.** Trong repo code: `docs/requests/<yyyy-mm-dd>-<slug>/brief.md`. Ngoài repo code (không có
   `docs/requests/` hoặc việc không gắn với repo): hỏi người dùng muốn lưu ở đâu, không tự chọn (đưa câu này vào thẻ ở lượt hỏi đầu); người dùng đã bỏ qua phần hỏi thì không hỏi: lưu ở `.aip/runs/brainstorm-<slug>/brief.md` và ghi lựa chọn đó là **quyết định của agent**.
 - **Slug** (`<slug>` trong đường dẫn): chỉ `a-z`, `0-9`, `-`, không dấu, tối đa 60 ký tự, không có `/` hay `..`; `.aip` luôn ở gốc repo chính.
@@ -40,7 +41,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
 ## Quy trình — nghĩ cùng rồi ghi brief
 
 1. **Nạp context nền và qua cổng "đủ thông tin".** Đọc `CLAUDE.md`, `project-knowledge/`, `docs/decisions/` và
-   `docs/specs/` khi có; đây là phần duy nhất đọc mặc định. Rồi qua cổng của `clarify-core.md`. Việc đã đủ rõ và nhỏ: nói
+   `docs/specs/` khi có; đây là phần đọc mặc định cùng code nhỏ của mục "Đi xem". Rồi qua cổng của `clarify-core.md`. Việc đã đủ rõ và nhỏ: nói
    với người dùng việc đã đủ rõ nên **không brainstorm và không ghi brief**, rồi kết thúc skill; làm việc đó theo yêu cầu
    thông thường ngoài skill (việc làm ngoài skill không bị ràng buộc docs-only của skill này). Còn lại mới tiếp tục, và
    chốt `<slug>` ngay khi hiểu tên việc.
@@ -55,8 +56,9 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
    không đọc ra thành câu. **Mô tả trước, phương án sau.** Người dùng bí thì được đưa menu 2–3 hướng cho họ chọn, bất kỳ
    lúc nào; đó là công cụ gỡ bí, không thay đề xuất bắt buộc ở bước 7. Tự nghĩ rộng riêng tư, bỏ hướng yếu, không đổ cả
    đống ý tưởng lên người dùng.
-4. **Đề nghị đi xem.** Khi một phần hiểu biết nằm ở code, file, tài liệu hay web mà agent chưa xem, nêu rõ muốn xem gì và
-   vì sao rồi **chờ đồng ý** (trong hay ngoài repo, theo mục Ranh giới an toàn). Phần chưa xem ghi rõ là chưa xem.
+4. **Đề nghị đi xem.** Phần hiểu biết nằm ở code nhỏ trong repo thì tự đọc (mục "Đi xem"). Còn ở web, tài liệu ngoài repo
+   hay đọc rộng mà agent chưa xem thì nêu rõ muốn xem gì và vì sao rồi **chờ đồng ý** (theo mục Ranh giới an toàn). Phần
+   chưa xem ghi rõ là chưa xem.
 5. **Spike bỏ đi** khi người dùng cần cảm nhận mới chốt được (một mẫu, một đoạn thử, một bản nháp): hỏi đồng ý, làm nhanh
    ở thư mục tạm ngoài repo, cho xem, rồi bỏ. Không commit và không đưa spike vào brief như kết quả.
 6. **Hiển thị trực quan** khi người dùng hiểu rõ hơn khi thấy hơn khi đọc, theo
@@ -101,7 +103,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
   và một thẻ gom câu hỏi (đáp án khuyến nghị mỗi câu, một câu mở); không hỏi từng câu qua nhiều lượt.
 - Mọi lựa chọn agent tự đưa ra ghi **quyết định của agent**; phần đoán ghi **[giả định]**; không có spike nào bị đưa vào brief.
 - Đề xuất 2–3 hướng của agent đặt sau playback (hoặc ghi quyết định của agent khi người dùng bỏ qua phần hỏi).
-- Mọi việc đi xem sâu hơn (ngoài nạp context nền ở bước 1) đã được người dùng đồng ý; file ghi ra chỉ gồm `brief.md` và,
+- Mọi việc đi xem sâu hơn (ngoài context nền và code nhỏ trong repo) đã được người dùng đồng ý; không hỏi người dùng điều đọc code là biết; file ghi ra chỉ gồm `brief.md` và,
   nếu có, HTML phụ trợ cùng `.aip/.gitignore` (một lần, chứa `*`) ở `.aip/runs/brainstorm-<slug>/`; spike (nếu có) ở thư
   mục tạm ngoài repo, không commit, đã bỏ.
 - `brief.md` nháp được ghi trước builder check; đã chạy đúng một builder check đọc brief nháp, câu hỏi của người dùng gom

@@ -36,7 +36,7 @@ Cách làm:
 Trả khối agent_result: findings[], validation[], ruling_review[], declined_to_judge[], remaining_risks[], questions[].
 ```
 
-Sau review cuối, chỉ một lần sửa cho toàn bộ finding blocker/major (một dispatch, `model: opus`) và một lần re-review có
+Sau review cuối, chỉ một lần sửa cho toàn bộ finding blocker/major (một dispatch, `model: sonnet`: logic subagent theo bảng routing của baseline) và một lần re-review có
 phạm vi theo `prompts/re-review.md`; không có làn sửa thứ hai. Finding còn lại và `Ruling:` cần quyết trình người dùng ở
 bước kết thúc nhánh (`references/finish.md`).
 
