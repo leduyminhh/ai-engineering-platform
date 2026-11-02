@@ -390,6 +390,7 @@ claude -p "Review the diff and report findings" \
 ```
 
 - `--permission-mode dontAsk` turns every non-allowed action into a denial instead of a prompt nobody can answer; list what is allowed explicitly with `--allowedTools`; cap the run with `--max-turns` and `--max-budget-usd`.
+- To run aip skills (workflows, `plan-execution`) headless, also allow the skill scripts, e.g. `--allowedTools "Bash(node *scripts/*.mjs *)" "Bash(git *)"` [Unverified: rule syntax per the permissions doc]. The skills call scripts as `node <skill dir>/scripts/<script>.mjs …` from the project root, with no `cd … &&` prefix and no PowerShell wrapper; a model that adds either one no longer matches a narrow `Bash(node …)` rule and is denied under `dontAsk` (seen in the 2026-11-02 E2E run).
 - Use `--bare` when plugins and hooks are not needed. Without it, `-p` loads the project's hooks and `.mcp.json` without a trust prompt, so an untrusted pull request can bring its own hooks and MCP servers.
 - Pin third-party actions to a full commit SHA, give the job read-only tokens, and run any workflow that can push in a protected environment with required reviewers.
 - aip adds no workflow file to `templates/init`. A read-only pull request review example is described in [Run reviews in CI](#run-reviews-in-ci).

@@ -1,6 +1,6 @@
 ---
 type: regex
-pattern: '\|[^\n]*\.(?:java|py):\d+[^\n]*\b(?:[Pp]roven|[Ss]uspected)\b'
+pattern: '\|[^\n]*\.(?:java|py):\d+[^\n]*(?:\b(?:[Pp]roven|[Ss]uspected)\b|[Đđ]ã chứng minh|[Nn]ghi ngờ)'
 ---
 
 Chỉ cần một dòng khớp: không kiểm mọi finding đều có nhãn.

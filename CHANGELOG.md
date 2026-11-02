@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Sửa 8 phát hiện từ lượt eval + E2E 2026-11-02 (core 1.26.2, workflows 3.14.5): `workflow-feature` Bước 1 không chặn làm rõ khi session không có shell (baseline `not_run`, đo trước Bước 5); review từng task xếp vi phạm AC/tiêu chí đã duyệt là `major` trở lên; lần sửa sau review cuối chạy `sonnet`; `brainstorming` tự đọc code nhỏ trong repo trước khi hỏi; `aip status` coi G1 xong khi G2/G3 đã xong; README nêu mẫu `allowedTools` cho script skill; grader `finding-label` nhận nhãn tiếng Việt, `clarify-or-propose` theo thẻ gom câu hỏi.
+
 - Hook `session-start` (core 1.19) nay mặc định chèn một đoạn bootstrap khoảng 480 ký tự trỏ tới `using-aip` mỗi lần `startup`/`clear`/`compact`, tính vào ngân sách 9.000 ký tự; tắt bằng `{"bootstrapInject": false}` trong `.claude/aip-gate.json`.
 - Làm rõ yêu cầu chuyển về session chính (engineering 2.3.0): `engineering-spec-writing` hỏi từng câu, playback từng phần, đề xuất 2–3 hướng kèm khuyến nghị và đánh đổi, xếp cỡ việc (việc rõ và nhỏ, thay đổi nhỏ, dự án) và chạy builder check một lần trước checkpoint. Khi người dùng bỏ qua làm rõ, agent tự chọn hướng và ghi đó là quyết định của agent. `engineering-spec-analyst` chỉ ghi tài liệu, không hỏi người dùng.
 - `workflow-feature` (workflows 3.4.0) thêm Bước 2 Làm rõ & cỡ việc, Bước 3 Tài liệu và Bước 4 Plan trước khi implement; ba bước mới có checkpoint người duyệt. Đây là trạng thái trung gian; các bước sau đã được thay bằng Bước 5 Vòng task, Bước 6 Review cuối, Bước 7 Kết thúc nhánh (tổng 7 bước, xem mục `plan-execution` bên dưới).

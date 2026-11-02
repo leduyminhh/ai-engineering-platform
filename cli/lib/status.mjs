@@ -161,8 +161,10 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
     { id: 'G1', done: /^(approved|in-progress|merged)$/.test(designStatus) },
     { id: 'G2', done: allLines.some((l) => TASK_EVENT_RE.test(l)) },
     { id: 'G3', done: DONE_RE.test(root.lines.join('\n')) || designStatus === 'merged' },
-    { id: 'push', done: !!tryGit(git, ['branch', '-r', '--contains', `feature/${slug}`], docsRoot) },
   ];
+  // Cổng sau xong thì cổng trước đã qua: request cỡ nhỏ không có design.md nên không có dấu hiệu nào ghi G1.
+  for (let i = gates.length - 2; i >= 0; i--) gates[i].done ||= gates[i + 1].done;
+  gates.push({ id: 'push', done: !!tryGit(git, ['branch', '-r', '--contains', `feature/${slug}`], docsRoot) });
 
   const details = Object.fromEntries(parts.map((p) => [p.id, taskDetails(p._tasks, p._lg.lines, p._lg.events)]));
   const clean = parts.map(({ _tasks, _lg, _commits, ...p }) => p);

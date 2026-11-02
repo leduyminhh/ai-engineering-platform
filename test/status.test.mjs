@@ -112,6 +112,19 @@ try {
     try { ok(stateOf(build(r), '02-api') === want, `AC1.1: ${JSON.stringify(lines)} → ${want}`); } finally { fs.rmSync(r, { recursive: true, force: true }); }
   }
 
+  // Regression 2026-11-02: request cỡ nhỏ không có design.md approved nhưng ledger đã có task → G1 không được hiện chưa xong.
+  {
+    const r = fixture();
+    try {
+      fs.writeFileSync(path.join(r, 'docs', 'requests', REQ, 'design.md'), DESIGN.replace('approved', 'draft'));
+      const g = build(r).gates;
+      ok(g[0].done && g[1].done && !g[2].done, `G1 xong khi G2 đã xong dù design chưa approved (nhận ${JSON.stringify(g)})`);
+      fs.rmSync(path.join(r, '.aip'), { recursive: true, force: true });
+      const g0 = build(r).gates;
+      ok(!g0[0].done && !g0[1].done, 'chưa có task nào và design draft → G1, G2 chưa xong');
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  }
+
   // Review Focus (a): Blocked thắng chờ part phụ thuộc (04-docs phụ thuộc 02-api chưa merged)
   {
     const r = fixture({ root: LEDGERS.root, '04-docs': [START, 'Blocked: a'] });

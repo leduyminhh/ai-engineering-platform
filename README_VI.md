@@ -383,6 +383,7 @@ claude -p "Review the diff and report findings" \
 ```
 
 - `--permission-mode dontAsk` biến mọi hành động không được phép thành từ chối thay vì hộp hỏi không ai trả lời; liệt kê tường minh điều được phép bằng `--allowedTools`; giới hạn lượt chạy bằng `--max-turns` và `--max-budget-usd`.
+- Chạy skill aip (workflow, `plan-execution`) headless thì cho phép thêm script của skill, ví dụ `--allowedTools "Bash(node *scripts/*.mjs *)" "Bash(git *)"` [Unverified: cú pháp rule theo tài liệu permissions]. Skill gọi script dạng `node <thư mục skill>/scripts/<script>.mjs …` từ gốc project, không prefix `cd … &&`, không bọc PowerShell; model thêm một trong hai thì không còn khớp rule `Bash(node …)` hẹp và bị từ chối dưới `dontAsk` (gặp ở lần chạy E2E 2026-11-02).
 - Dùng `--bare` khi không cần plugin và hook. Không có `--bare`, `-p` nạp hook và `.mcp.json` của project mà không hỏi tin cậy, nên một pull request không đáng tin có thể mang theo hook và MCP server riêng.
 - Ghim action bên thứ ba theo commit SHA đầy đủ, cấp token chỉ đọc cho job, và chạy mọi workflow có thể push trong môi trường được bảo vệ, cần người duyệt (required reviewers).
 - aip không thêm file workflow vào `templates/init`. Ví dụ review pull request chỉ đọc được mô tả ở [Chạy review trong CI](#chạy-review-trong-ci).

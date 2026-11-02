@@ -2,7 +2,7 @@
 
 Session chính chạy giao thức này cho từng task của `plan.md`, lần lượt, không song song trong cùng một cây làm việc.
 Định dạng trường (`agent_result`, `spec_verdict`, `tdd`, finding, `rulings`) theo contract đầu ra (`core:principles`).
-Mọi lệnh chạy từ gốc project: `node <thư mục skill plan-execution>/scripts/<script>.mjs …`; đường dẫn
+Mọi lệnh chạy từ gốc project, gọi thẳng `node <thư mục skill plan-execution>/scripts/<script>.mjs …` (không prefix `cd … &&`, không bọc PowerShell: quyền `Bash(node *)` theo mẫu lệnh sẽ không khớp); đường dẫn
 `plan.md` tương đối theo gốc project (script tự tính workspace `.aip/` từ plan).
 
 ## Rà plan trước khi chạy
@@ -54,7 +54,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Sau mỗi lần review (task review, rồi
    mỗi re-review) ghi `Task <n>: review <vòng> <spec_verdict> <blocker>/<major>/<minor>` (`<vòng>` đếm lần review của task
    từ 1; `spec_verdict` ∈ `compliant` | `issues` | `cannot_verify`; ba số là số finding còn mở theo severity). Mục plan bắt buộc mà thiếu vẫn là
-   `major`. Không tự sửa finding: sửa do agent.
+   `major`; vi phạm AC hay tiêu chí đã duyệt cũng là `major` trở lên, reviewer xếp `minor` thì session chính nâng lên trước khi ghi `minor (deferred)`. Không tự sửa finding: sửa do agent.
 9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
    - review sạch (`review clean` = `spec_verdict: compliant`, hoặc `cannot_verify` session chính đã giải quyết ở bước 8 mà không ra lệch, và không còn finding `blocker`/`major` mở; các dòng `minor (deferred)` của task đứng trước dòng `complete`; task `TOOLING` TDD `có`: mẫu ở gạch cuối): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
    - qua breaker (còn finding mở sau vòng 3, đã phán hết): các dòng `Ruling:` của task đứng trước, rồi
