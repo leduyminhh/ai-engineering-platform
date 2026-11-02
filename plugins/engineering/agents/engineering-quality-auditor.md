@@ -32,7 +32,7 @@ thủ quy ước đặt tên/cấu trúc của project, cho một scope được
    nhưng KHÔNG áp fix vì agent này read-only).
 2. Thu thập findings hai chiều: tool gate (Sonar + Black Duck/Trivy) và security review source-first theo
    vùng rủi ro (auth/session, input-validation, crypto/secrets, dependency/supply-chain, logging), ánh xạ
-   OWASP Top 10 / ASVS / CWE. Finding kiểm đầu vào cho dữ liệu do code hoặc cấu hình nội bộ khai báo: theo mục "Ranh giới tin cậy" của `core:principles` (nguồn `core/principles/trust-boundary.md`), tối đa `minor`.
+   OWASP Top 10 / ASVS / CWE. Finding kiểm đầu vào cho dữ liệu do code hoặc cấu hình nội bộ khai báo: theo mục "Ranh giới tin cậy" của `core:principles` (nguồn `core/principles/trust-boundary.md`), tối đa `minor`, trừ finding vi phạm AC hay tiêu chí đã duyệt (vẫn `major` trở lên).
 3. Đọc skill `engineering-convention-enforce`, đối chiếu đặt tên + cấu trúc với `code-convention.md` (+
    `source-structure.md`/`architecture.md`/lint config); liệt kê lệch kèm evidence + rule nguồn — CHỈ KIỂM,
    không áp sửa.

@@ -61,7 +61,7 @@ export default async function run({ ok, ctx }) {
     ok(/Gắn nhãn `trong AC` hoặc `ngoài AC`/.test(read(f)), `AC3.1: ${f.split('/').pop()} bảo reviewer gắn nhãn trong AC/ngoài AC cho finding`);
   const PRIN = read('build/claude/plugins/core/skills/principles/SKILL.md');
   ok(/`Ruling: ngoài AC, đổi hành vi — <mức gốc> <finding> — task <n> — <hệ quả>`[^\n]*G3[^\n]*sau compact/.test(NR), 'AC3.2: nhóm đổi hành vi/API ghi dòng ledger Ruling: ngoài AC, đổi hành vi để G3 thấy sau compact');
-  ok(/Hạ nhãn \(trong phạm vi → ngoài AC\) phải có `Ruling:` nêu AC cụ thể không liên quan hoặc lý do đầu vào không hợp lệ; không đủ thì giữ trong phạm vi/.test(NR) && /chỉ được nâng tự do/.test(NR), 'AC3.1: hạ nhãn trong phạm vi → ngoài AC cần Ruling:, không đủ thì giữ trong phạm vi');
+  ok(/Hạ nhãn \(trong phạm vi → ngoài AC\) phải có `Ruling:` nêu AC cụ thể không liên quan hoặc lý do đầu vào không hợp lệ; không đủ thì giữ trong phạm vi/.test(NR) && /đổi tự do theo chiều `ngoài AC` → trong phạm vi/.test(NR), 'AC3.1: hạ nhãn trong phạm vi → ngoài AC cần Ruling:, không đủ thì giữ trong phạm vi');
   ok(/Đầu vào hợp lệ là đầu vào đúng kiểu và đúng miền mà design mô tả/.test(NR), 'AC3.1: định nghĩa đầu vào hợp lệ theo design');
   ok(/vi phạm AC hay tiêu chí đã duyệt áp quy tắc vi phạm AC \(major trở lên\) trước; trần `minor` chỉ áp cho finding không vi phạm AC/.test(TB), 'AC3.3: trust-boundary — vi phạm AC áp quy tắc major trở lên trước, trần minor chỉ cho finding không vi phạm AC');
   const WF = read('workflows/feature/WORKFLOW.md');
@@ -80,7 +80,7 @@ export default async function run({ ok, ctx }) {
   // Lượt sửa sau review cuối toàn nhánh (final-fix-brief): mỗi mục một câu quy tắc, neo theo nguyên văn.
   const flat = (rel) => read(rel).replace(/\n\s*/g, ' ');
   const BS = flat('core/skills/brainstorming/SKILL.md');
-  ok(/[Cc]a biên của mục "Rà ca biên" \(`clarify-core\.md`\) có mặc định dẫn code đi vào \*\*thẻ đầu\*\*, gom thành một câu nếu thẻ đã đủ 4 câu/.test(BS), 'F2: brainstorming bước 2 đưa ca biên có mặc định dẫn code vào thẻ đầu, gom một câu nếu đủ 4 câu');
+  ok(/[Cc]a biên của mục "Rà ca biên" \(`clarify-core\.md`\) có mặc định dẫn code đi vào \*\*thẻ đầu\*\*, các ca biên gom chung một câu của thẻ \([^)]*không thêm câu thứ 5\)/.test(BS), 'F2: brainstorming bước 2 đưa ca biên có mặc định dẫn code vào thẻ đầu, gom một câu nếu đủ 4 câu');
   ok(/Rà ca biên[^.]{0,60}clarify-core\.md[^.]{0,120}tin nhắn hỏi gom đầu tiên/.test(flat(`${SS}/SKILL.md`)), 'F2: spec-writing trỏ mục Rà ca biên cho tin nhắn hỏi gom đầu tiên');
   ok(/ca biên theo mục "Rà ca biên" của `clarify-core\.md` đi vào tin nhắn gom đó/.test(WF1), 'F2: workflow-feature Bước 2 trỏ mục Rà ca biên cho tin nhắn gom');
 

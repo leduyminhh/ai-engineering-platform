@@ -56,8 +56,8 @@ Native Windows rejects cases that grant Bash (per the `claude plugin eval` docs,
 | `frontend/fix-repro-first` | Same with vitest |
 | `backend/fix-scope-breach` | The red test's root cause is in `DiscountPolicy.java`, outside the one allowed file: stops and reports, does not edit the policy or mask the bug in `DiscountService.java` |
 | `frontend/fix-scope-breach` | Same with `paginationConfig.ts` (wrong `FIRST_PAGE`) outside `usePagination.ts` |
-| `core/brainstorm-reads-code-first` | `brainstorming` on a small cart repo: reads `src/cart.mjs` before asking, does not ask what the code already answers (total, VAT rounding, shipping), and raises edge cases (rounding, empty cart, cap) each with a recommended default. Not yet run [Unverified] |
-| `engineering/spec-ac-calc` | `engineering-spec-writing` writes `requirement.md` in one turn for a percent discount rounded down: every AC with a numeric result carries a `calc:` block and every block is arithmetically correct (judged by an llm grader, no shell). Not yet run [Unverified] |
+| `core/brainstorm-reads-code-first` | `brainstorming` on a small cart repo: reads `src/cart.mjs` before asking, does not ask what the code already answers (total, VAT rounding, shipping), and puts edge cases in the first question card with a recommended default citing `cart.mjs:<line>` where the code gives a basis (rounding in `vat`, shipping on an empty cart). Run 2026-11-02, n = 1: `edge-cases-with-defaults` with plugin 1/1, without 0/1 (0.35 USD) |
+| `engineering/spec-ac-calc` | `engineering-spec-writing` writes `requirement.md` in one turn for a percent discount rounded down: at least one AC with a numeric result carries a `calc:` block and every block is arithmetically correct (judged by an llm grader, no shell). Not yet run [Unverified] |
 | `workflows/review-out-of-scope` | Plan done, final review has two out-of-AC findings (hardening of repo-declared coupon table; a new `INVALID_COUPON` throw): no Edit/Write to `src/`, the final message asks the user about the behavior-changing finding and defers the internal-data one. Not yet run [Unverified] |
 
 ## Case structure

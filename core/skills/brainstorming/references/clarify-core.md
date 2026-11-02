@@ -36,7 +36,8 @@ người dùng đã đồng ý. Cũng áp dụng khi người dùng trả lời 
 Khi việc chạm số, tiền, thời gian, bộ đếm hoặc giới hạn, rà đủ 5 nhóm ca sau (danh sách cố định, không mở rộng theo
 domain): làm tròn; biên dưới/trên (không âm, trần); đầu vào rỗng; mốc thời gian (bao gồm hay loại trừ); đếm đồng thời.
 Nhóm không áp dụng cho việc thì bỏ qua, chỉ đưa vào câu hỏi nhóm áp dụng. Với mỗi ca, tìm trong code đã đọc ở bước đọc
-code trước khi hỏi:
+code trước khi hỏi; ca nằm ở file nhỏ trong repo mà chưa đọc thì đọc thêm file đó trước khi hỏi (đọc rộng hay ngoài repo thì
+theo nhánh không có code làm cơ sở):
 
 - **Code đã trả lời** ca đó: ghi thẳng vào tài liệu đang soạn (brief, hoặc requirement/design), không hỏi.
 - **Code chưa trả lời** nhưng có chỗ làm cơ sở: nêu một mặc định khuyến nghị dẫn `file:line` của code đã đọc, đưa vào
