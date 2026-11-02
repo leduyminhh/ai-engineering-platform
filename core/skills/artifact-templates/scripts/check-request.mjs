@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới, mục "Ảnh hưởng spec" của design.md (W10–W14) và thư mục parts/ (Bảng part W19, AC trong design của part W20).
+// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới, mục "Ảnh hưởng spec" của design.md (W10–W14) và thư mục parts/ (Bảng part W19, AC trong design của part W20), khối `calc:` của AC tính lại bằng evalCalc (W22).
 // Cách dùng: <thư-mục> [--tests <path>…] [--base <ref>] [--strict]. --base <ref> bật W13 (spec bị ảnh hưởng chưa đổi kể từ ref). Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -118,7 +118,63 @@ export function parseTddLine(line) {
   return reason ? { value: 'không', reason } : { error: 'TDD "không" thiếu lý do, cần "không — <lý do>"' };
 }
 
-export const PART_RE = /^\d{2}-[a-z0-9][a-z0-9-]*$/;
+const CALC_FNS = { floor: Math.floor, ceil: Math.ceil, round: Math.round, abs: Math.abs, min: Math.min, max: Math.max };
+const CALC_ARITY = { floor: 1, ceil: 1, round: 1, abs: 1 };
+
+// Bộ tính số học cho khối `calc:` của AC: tokenizer + đệ quy giảm dần; không eval/Function vì nội dung lấy từ tài liệu.
+export function evalCalc(expr) {
+  const toks = [];
+  const re = /\s*(?:(\d+(?:\.\d+)?|\.\d+)|([a-z]+)|([-+*/%(),]))/y;
+  let at = 0;
+  while (at < expr.length) {
+    if (/^\s*$/.test(expr.slice(at))) break;
+    re.lastIndex = at;
+    const m = re.exec(expr);
+    if (!m) throw new Error(`ký tự không hợp lệ ở vị trí ${at + 1}`);
+    toks.push(m[1] !== undefined ? { num: Number(m[1]) } : m[2] !== undefined ? { id: m[2] } : { op: m[3] });
+    at = re.lastIndex;
+  }
+  let i = 0;
+  const peek = (op) => toks[i]?.op === op;
+  const take = (op) => { if (!peek(op)) throw new Error(`thiếu "${op}"`); i++; };
+  const expr0 = () => {
+    let v = term();
+    while (peek('+') || peek('-')) v = toks[i++].op === '+' ? v + term() : v - term();
+    return v;
+  };
+  const term = () => {
+    let v = unary();
+    while (peek('*') || peek('/') || peek('%')) {
+      const op = toks[i++].op;
+      const r = unary();
+      v = op === '*' ? v * r : op === '/' ? v / r : v % r;
+    }
+    return v;
+  };
+  const unary = () => (peek('-') ? (i++, -unary()) : peek('+') ? (i++, unary()) : primary());
+  const primary = () => {
+    const t = toks[i++];
+    if (!t) throw new Error('biểu thức thiếu toán hạng');
+    if (t.num !== undefined) return t.num;
+    if (t.op === '(') { const v = expr0(); take(')'); return v; }
+    if (t.id !== undefined) {
+      if (!Object.hasOwn(CALC_FNS, t.id)) throw new Error(`hàm "${t.id}" không được phép`);
+      take('(');
+      const args = [expr0()];
+      while (peek(',')) { i++; args.push(expr0()); }
+      take(')');
+      if (CALC_ARITY[t.id] && args.length !== CALC_ARITY[t.id]) throw new Error(`hàm "${t.id}" cần ${CALC_ARITY[t.id]} đối số`);
+      return CALC_FNS[t.id](...args);
+    }
+    throw new Error(`không mong đợi "${t.op}"`);
+  };
+  const v = expr0();
+  if (i < toks.length) throw new Error('thừa ký hiệu sau biểu thức');
+  if (!Number.isFinite(v)) throw new Error('kết quả không hữu hạn');
+  return v;
+}
+
+export const PART_RE =/^\d{2}-[a-z0-9][a-z0-9-]*$/;
 export const PART_STATUSES = ['chưa làm', 'đang làm', 'bỏ'];
 const PART_PLAN_RE = /^parts\/[^/]+\/plan\.md$/;
 
@@ -369,6 +425,24 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     if (!/^parts\/[^/]+\/design\.md$/.test(f) || typeof texts[f] !== 'string') continue;
     const at = linesOf(texts[f]).findIndex((l) => (l.match(AC_ANY_RE) || []).length);
     if (at >= 0) warn(f, at + 1, 'W20', 'design của part không được chứa AC<n>.<m>: AC chỉ khai báo ở requirement.md/design.md gốc');
+  }
+  // Chỉ kiểm khối `calc:` có mặt; không đòi AC có số phải có calc vì số còn là ID, ngày, mã HTTP.
+  const calcFiles = [...AC_SOURCES, ...Object.keys(texts).filter((f) => /^parts\/[^/]+\/design\.md$/.test(f)).sort()];
+  for (const f of calcFiles) {
+    if (typeof texts[f] !== 'string') continue;
+    (lines[f] || linesOf(texts[f])).forEach((l, idx) => {
+      for (const m of l.matchAll(/`calc:([^`]*)`/g)) {
+        // Câu văn nhắc tên khối (`calc:` rỗng) hay mẫu có <…>/… là tài liệu, không phải phép tính để kiểm.
+        if (!m[1].trim() || /[<…]/.test(m[1])) continue;
+        const eq = m[1].lastIndexOf('=');
+        const written = eq < 0 ? '' : m[1].slice(eq + 1).trim().replace(/,/g, '');
+        let got;
+        let err = eq < 0 ? 'thiếu "= <kết quả>"' : !/^-?(\d+(\.\d+)?|\.\d+)$/.test(written) ? `kết quả "${written}" không phải số` : null;
+        if (!err) { try { got = evalCalc(m[1].slice(0, eq)); } catch (e) { err = e.message; } }
+        if (err) warn(f, idx + 1, 'W22', `calc: biểu thức không hợp lệ (${err})`);
+        else if (Math.abs(got - Number(written)) > 1e-9) warn(f, idx + 1, 'W22', `calc ghi ${written} nhưng tính ra ${got}`);
+      }
+    });
   }
   return warnings;
 }

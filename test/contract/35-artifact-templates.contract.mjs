@@ -630,7 +630,7 @@ export default async function run({ ok, ctx }) {
     }
   }
 
-  // 11. check-request.mjs: evalCalc và khối `calc:` trong AC (W22) — request 2026-11-02-aip-scope-discipline.
+  // 10. check-request.mjs: evalCalc và khối `calc:` trong AC (W22) — request 2026-11-02-aip-scope-discipline.
   {
     const cr = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
     const calcCases = [
@@ -662,6 +662,7 @@ export default async function run({ ok, ctx }) {
     ok(w22('`calc: 99999 - floor(99999 * 15 / 100) = 85000`').length === 0, 'AC2.2: calc đúng → không W22');
     ok(w22('`calc: 10 / 4 = 2.5`').length === 0, 'AC2.2: calc kết quả thập phân đúng → không W22');
     ok(w22('`calc: 1000 * 2 = 2,000`').length === 0, 'calc kết quả có dấu phẩy hàng nghìn → bỏ dấu phẩy khi so');
+    ok(w22('có khối `calc:`, mẫu `calc: <biểu thức> = <kết quả>` hay `calc: … = <số>`').length === 0, 'câu văn nhắc khối calc rỗng hoặc mẫu placeholder → không W22');
     ok(w22('`calc: a = b = 3`').some((w) => /biểu thức không hợp lệ/.test(w.msg)), 'calc nhiều dấu = → tách ở = cuối, vế trái không hợp lệ');
     ok(w22('`calc: process.exit() = 0`').some((w) => /biểu thức không hợp lệ/.test(w.msg)), 'AC2.2: calc ký tự lạ → W22 "biểu thức không hợp lệ"');
     ok(w22('`calc: 1 + 1 = hai`').some((w) => /biểu thức không hợp lệ/.test(w.msg)), 'calc kết quả không phải số → W22 "biểu thức không hợp lệ"');

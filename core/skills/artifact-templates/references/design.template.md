@@ -15,7 +15,7 @@ Bỏ khối này khi chép template ra dùng.
 ## Quyết định đã chốt
 <...>
 ## Tiêu chí chấp nhận
-<chỉ khi không có requirement.md; cùng định dạng AC như requirement.md>
+<chỉ khi không có requirement.md; cùng định dạng AC như requirement.md, kể cả khối `calc:` cho kết quả số>
 ## Thiết kế
 <...>
 ## Bảng part
