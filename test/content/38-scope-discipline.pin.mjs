@@ -24,4 +24,8 @@ export default async function run({ ok, ctx }) {
   for (const g of ['làm tròn', 'biên dưới/trên', 'đầu vào rỗng', 'mốc thời gian', 'đếm đồng thời']) ok(RB.includes(g), `AC1.1: Rà ca biên nêu nhóm ${g}`);
   ok(/mặc định khuyến nghị[^\n]{0,120}`file:line`/.test(RB), 'AC1.1: mỗi ca một mặc định khuyến nghị dẫn file:line của code đã đọc');
   ok(/[Cc]ode đã trả lời[^\n]{0,80}không hỏi/.test(RB), 'AC1.1: ca code đã trả lời thì ghi thẳng vào brief, không hỏi');
+  ok(/\[giả định\]\*\* kèm cơ sở/.test(RB), 'AC1.1: ca không có code vẫn có mặc định đánh dấu [giả định] kèm cơ sở');
+  ok(/[Nn]hóm không áp dụng[^\n]{0,80}bỏ qua/.test(RB), 'AC1.1: nhóm không áp dụng cho việc thì bỏ qua');
+  ok(/spec/.test(RB) && /tài liệu đang soạn/.test(RB), 'AC1.1: mục dùng thuật ngữ chung cho brainstorming và spec-writing');
+  ok(!/src\/cart\.mjs|bước "Đi xem"/.test(RB), 'AC1.1: mục không dẫn file:line mẫu có thể bị bắt chước');
 }
