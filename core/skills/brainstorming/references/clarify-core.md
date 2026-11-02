@@ -31,6 +31,19 @@ người dùng đã đồng ý. Cũng áp dụng khi người dùng trả lời 
 - **Không bịa:** phần chưa có câu trả lời ghi **[giả định]** kèm cơ sở và đưa vào mục câu hỏi mở để con người chốt.
 - Chuyện kỹ thuật hoặc nền tảng: hỏi người dùng muốn tự chọn hay giao agent; agent chọn thì ghi **quyết định của agent**.
 
+## Rà ca biên
+
+Khi việc chạm số, tiền, thời gian, bộ đếm hoặc giới hạn, rà đúng 5 nhóm ca sau (danh sách cố định, không mở rộng theo
+domain): làm tròn; biên dưới/trên (không âm, trần); đầu vào rỗng; mốc thời gian (bao gồm hay loại trừ); đếm đồng thời.
+Với mỗi ca, tìm trong code của project đã đọc ở bước "Đi xem":
+
+- **Code đã trả lời** ca đó: ghi thẳng vào brief, không hỏi.
+- **Code chưa trả lời** nhưng có chỗ làm cơ sở: nêu một mặc định khuyến nghị dẫn `file:line` của code đã đọc, đặt vào thẻ
+  câu hỏi dưới dạng đáp án khuyến nghị.
+- **Không có code làm cơ sở:** vẫn đề xuất một mặc định, đánh dấu **[giả định]**.
+
+Ví dụ minh hoạ dạng dẫn (không phải code có thật): "Giảm giá làm tròn xuống, theo `src/cart.mjs:12` — đúng không?".
+
 ## Playback — tóm tắt lại từng phần
 
 Mỗi khi hiểu xong một phần, **tóm tắt lại** ngắn (khoảng 200–300 từ) bằng lời của mình, đánh dấu chỗ suy đoán là
