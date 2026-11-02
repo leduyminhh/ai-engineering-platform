@@ -1,4 +1,4 @@
-// usage: node oracle.mjs <aip|base> <module path>
+// usage: node oracle.mjs <aip|aip-obj|base> <module path>
 import { pathToFileURL } from 'node:url';
 
 const [kind, modPath] = process.argv.slice(2);
@@ -9,6 +9,12 @@ const cart = (price, qty = 1) => [{ sku: 'X', price, qty }];
 
 // Mỗi coupon mô tả trung tính; adapter dịch sang schema riêng của từng bản.
 function apply(items, code, c, now = NOW) {
+  // aip-obj: API nhận đối tượng coupon (caller tra mã), hạn là số ms; tra mã khớp tuyệt đối nên ca chuẩn hoá mã không áp dụng.
+  if (kind === 'aip-obj') {
+    const coupon = code === c.code ? { type: c.type, value: c.value, expiresAt: c.expiresAt?.getTime(), minSubtotal: c.min, maxUses: c.maxUses } : null;
+    const r = mod.applyCoupon(items, coupon, { now: now.getTime(), used: c.used ?? 0 });
+    return { ...r, ok: r.applied };
+  }
   if (kind === 'aip') {
     const rec = { code: c.code, type: c.type, value: c.value, endsAt: c.expiresAt, minSubtotal: c.min, maxUses: c.maxUses, used: c.used };
     return mod.applyCoupon(items, code, [rec], now);
