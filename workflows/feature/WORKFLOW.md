@@ -208,7 +208,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`), `ruling_review[]`, kết quả re-review.
 - **Gate:** 0 finding `blocker` trong phạm vi; có contract thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
   `remaining_risks`/`Ruling:` để người dùng quyết ở Bước 7; `blocker`/`major` ngoài AC đã có `Ruling:` cũng trình ở Bước 7 (G3).
-- **Khi fail:** còn finding `blocker` sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa, tối đa 2 lần rồi
+- **Khi fail:** còn finding `blocker` trong phạm vi sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa, tối đa 2 lần rồi
   hỏi người dùng; drift mà lỗi nằm ở contract → quay lại Bước 3; `Ruling:` hay finding chạm loại dừng của
   `plan-execution` (không đảo ngược, bảo mật, tác động ngoài repo, schema DB, đổi AC đã duyệt) → hỏi người dùng.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence) + số finding còn lại sau lượt sửa;
@@ -267,7 +267,7 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Yêu cầu mơ hồ (Bước 2–3) | Dừng, gom mọi câu hỏi vào một tin nhắn rồi hỏi người dùng (cả Bước 2 lẫn builder check) |
 | Việc rõ và nhỏ (Bước 2) | Không chạy workflow; làm thẳng và báo người dùng |
 | `check-request.mjs` còn cảnh báo ngoài W9 (Bước 4) | Sửa `plan.md`; lỗi ở tài liệu → quay lại Bước 3, tối đa 2 lần rồi hỏi người dùng |
-| Finding `blocker` sau review cuối (Bước 6) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
+| Finding `blocker` trong phạm vi sau review cuối (Bước 6; ngoài AC đã có `Ruling:` thì trình ở Bước 7) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
 | Full suite đỏ (Bước 7) | Dừng, không đưa G3 hay 3 lựa chọn (và không merge dù `mergeLocal: true`); sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
 | Merge local theo khoá `mergeLocal`: cây bẩn, conflict hoặc suite đỏ trên cây đã merge (Bước 7) | Lỗi chặn: cây bẩn thì không checkout; conflict hoặc đỏ thì `git merge --abort` (nhánh gốc giữ nguyên); dừng, báo người dùng, không dọn |
 | Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy skill `data-db-migration` trước rồi quay lại feature |
@@ -291,12 +291,12 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
   đụng — evidence: Bước 5
 - [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass (e2e `not_run` vì thiếu môi trường BE/DB test là
   hợp lệ, ghi vào `remaining_risks`) — evidence: Bước 5
-- [ ] Review cuối toàn nhánh: 0 `blocker`; có contract: 0 drift contract↔code; có API: 0 `blocker` về
+- [ ] Review cuối toàn nhánh: 0 `blocker` trong phạm vi; có contract: 0 drift contract↔code; có API: 0 `blocker` về
   authorization/input validation — evidence: Bước 6
 - [ ] Docs và spec sống bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng", `check-request.mjs` và full suite xanh;
   người dùng đã duyệt diff cả nhánh (G3) và chọn một trong 3 lựa chọn (hoặc `mergeLocal: true`) — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)
-- [ ] 0 finding `blocker`
+- [ ] 0 finding `blocker` trong phạm vi (ngoài AC đã có `Ruling:` thì trình ở Bước 7)
 
 ## Report cuối
 
