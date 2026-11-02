@@ -35,7 +35,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
   `docs/requests/` hoặc việc không gắn với repo): hỏi người dùng muốn lưu ở đâu, không tự chọn (đưa câu này vào thẻ ở lượt hỏi đầu); người dùng đã bỏ qua phần hỏi thì không hỏi: lưu ở `.aip/runs/brainstorm-<slug>/brief.md` và ghi lựa chọn đó là **quyết định của agent**.
 - **Slug** (`<slug>` trong đường dẫn): chỉ `a-z`, `0-9`, `-`, không dấu, tối đa 60 ký tự, không có `/` hay `..`; `.aip` luôn ở gốc repo chính.
 - **Không ghi đè** `brief.md` đã có khi chưa hỏi; có sẵn thì hỏi cập nhật hay tạo bản mới.
-- **Người dùng giữ cổng duy nhất:** duyệt brief. Skill không tự chạy workflow hay skill kế tiếp.
+- **Người dùng giữ cổng duy nhất:** duyệt brief. Skill không tự chạy workflow hay skill kế tiếp, trừ khi người dùng chọn "Duyệt và chạy" trên thẻ duyệt (bước 10–11).
 
 ## Quy trình — nghĩ cùng rồi ghi brief
 
@@ -82,7 +82,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
     cài (đã kiểm: bản build của file này parse ra route đúng); đọc orchestrator qua `route.mjs` là bước máy của skill,
     không tính là đi xem. Không tìm thấy orchestrator, hoặc `route.mjs` thoát 2
     (thiếu đối số hoặc không đọc được file): ghi "chưa kiểm route", báo đường dẫn lỗi cho người dùng và để
-    `route-đã-duyệt` trống. Từ JSON `{ chosen, candidates, reason, confidence }` trình **một thẻ duyệt brief**: mở `brief.md` ở pane file rồi hỏi bằng lựa chọn bấm được (Duyệt brief và route đề xuất / Chọn route khác / Sửa brief / Dừng; theo `ask-user.md`) kèm nội dung gồm: tóm
+    `route-đã-duyệt` trống. Từ JSON `{ chosen, candidates, reason, confidence }` trình **một thẻ duyệt brief**: mở `brief.md` ở pane file rồi hỏi bằng lựa chọn bấm được (Duyệt brief và route đề xuất / Chọn route khác / Sửa brief / Dừng; theo `ask-user.md`; yêu cầu đầu của người dùng nói rõ bằng lời là làm luôn khi chốt xong, vd "rồi làm luôn", "chốt xong thì làm", "làm luôn nếu chốt được", và route là một workflow hoặc skill thì lựa chọn đầu là "Duyệt và chạy `<route>` ngay"; câu chỉ nhờ nghĩ cùng, hoặc không chắc người dùng có ý đó, thì không đưa lựa chọn này) kèm nội dung gồm: tóm
     tắt brief (kèm các **quyết định của agent**), route đề xuất (`chosen`), hoặc hai ứng viên (`candidates`) để người
     dùng chọn, hoặc "chưa có quy trình phù hợp" kèm gợi ý làm trong phiên, và câu nói rõ người dùng **luôn ghi đè được
     route** (ghi đè sang skill ngoài hai bảng của orchestrator thì gọi thẳng skill đó, không qua orchestrator). Route chọn có risk `high` hoặc `critical` (đọc cột Risk của `## Registry`) thì thẻ này đòi một câu duyệt rõ
@@ -91,7 +91,9 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
 11. **Sau khi người dùng duyệt:** ghi `route-đã-duyệt: <id | chưa-có-quy-trình>` và `Trạng thái: approved` vào brief
     (người dùng ghi đè thì ghi route họ chọn). Duyệt brief là **cổng duy nhất** của brainstorm và cũng là duyệt route;
     không mở thêm cổng nào khác. Rồi gợi ý bước kế: gọi `workflow-orchestrator` với brief, hoặc skill đã chọn; route `chưa-có-quy-trình` thì không
-    gọi orchestrator (nó chỉ báo lại rồi dừng) mà gợi ý làm việc trong phiên theo brief; **không tự chạy**. Người dùng sửa brief thì cập nhật và trình lại thẻ, không chạy lại builder check.
+    gọi orchestrator (nó chỉ báo lại rồi dừng) mà gợi ý làm việc trong phiên theo brief; **không tự chạy**. Ngoại lệ duy nhất:
+    người dùng chọn "Duyệt và chạy `<route>` ngay" thì gọi thẳng workflow hoặc skill đó trong phiên với đường dẫn brief (không qua
+    orchestrator, vì thẻ này đã thay xác nhận Bước 3 của nó). Người dùng sửa brief thì cập nhật và trình lại thẻ, không chạy lại builder check.
 
 ## Verification (trước khi báo hoàn thành)
 
@@ -107,7 +109,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
 - `brief.md` đúng template `brief` (tự soát), khối `## Định tuyến` đủ khoá và giá trị đúng tập đóng; đã chạy `check-request.mjs` (hoặc nêu lý do không chạy; lệnh này chỉ bắt lỗi cấu trúc thư mục).
 - Đã chạy `route.mjs` sau khi brief cập nhật (hoặc ghi "chưa kiểm route"); thẻ duyệt nêu route hoặc hai ứng viên hoặc
   "chưa có quy trình", quyền ghi đè, và câu duyệt rõ cho route risk cao.
-- `route-đã-duyệt` và `Trạng thái: approved` chỉ ghi sau khi người dùng duyệt; chưa tự chạy bước kế.
+- `route-đã-duyệt` và `Trạng thái: approved` chỉ ghi sau khi người dùng duyệt; chưa tự chạy bước kế, trừ khi người dùng chọn "Duyệt và chạy".
 
 ## Bản đồ tài liệu
 

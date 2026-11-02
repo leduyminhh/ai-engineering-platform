@@ -29,7 +29,7 @@ câu trả lời rồi gõ lại.
 | Cổng | Mở trước khi hỏi | Lựa chọn (khuyến nghị đứng đầu) |
 |---|---|---|
 | Lượt hỏi đầu của `brainstorming` | không có file | tối đa 4 câu, mỗi câu có đáp án khuyến nghị; thêm lựa chọn "Bỏ qua phần hỏi, bạn tự quyết" ở câu đầu |
-| Thẻ duyệt brief | `brief.md` (pane file) | Duyệt brief và route đề xuất / Chọn route khác (nêu các ứng viên) / Sửa brief / Dừng; route Risk `high`/`critical`: lựa chọn duyệt ghi rõ "chấp nhận rủi ro cao" |
+| Thẻ duyệt brief | `brief.md` (pane file) | Duyệt brief và route đề xuất / Chọn route khác (nêu các ứng viên) / Sửa brief / Dừng; yêu cầu đầu nói rõ làm luôn khi chốt xong (xem bước 10 của `brainstorming`) và route là workflow/skill: lựa chọn đầu là "Duyệt và chạy `<route>` ngay"; route Risk `high`/`critical`: lựa chọn duyệt ghi rõ "chấp nhận rủi ro cao" |
 | G1 duyệt design | `design.md` (pane file) | Duyệt / Sửa design / Dừng |
 | G2 duyệt plan | `plan.md` (pane file) + kết quả `check-request` | Duyệt (chạy liền tới G3) / Sửa plan / Dừng |
 | G3 duyệt diff | diff cả nhánh (pane diff) | `mergeLocal: true`: Duyệt (merge local và commit docs) / Sửa thêm / Giữ nguyên; thiếu khoá: merge local / push + PR / giữ nguyên |
