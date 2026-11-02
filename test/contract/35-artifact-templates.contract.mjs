@@ -629,4 +629,46 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   }
+
+  // 11. check-request.mjs: evalCalc và khối `calc:` trong AC (W22) — request 2026-11-02-aip-scope-discipline.
+  {
+    const cr = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'artifact-templates', 'scripts', 'check-request.mjs')).href);
+    const calcCases = [
+      ['99999 - floor(99999 * 15 / 100)', 85000],
+      ['2 + 3 * 4', 14],
+      ['(2 + 3) * 4', 20],
+      ['-(-5)', 5],
+      ['-2 * -3', 6],
+      ['min(3, max(1, 2))', 2],
+      ['ceil(10 / 3) + round(2.5) + abs(-1) + 7 % 4', 4 + 3 + 1 + 3],
+      ['1 / 3', 1 / 3],
+      ['1.5 * 2', 3],
+    ];
+    for (const [expr, want] of calcCases) {
+      let got;
+      try { got = cr.evalCalc?.(expr); } catch { got = NaN; }
+      ok(Math.abs(got - want) < 1e-9, `AC2.2: evalCalc("${expr}") = ${want}`);
+    }
+    for (const expr of ['process.exit()', '2 +', 'foo(1)', '(1', '1 2', '']) {
+      let threw = false;
+      try { cr.evalCalc(expr); } catch { threw = true; }
+      ok(threw, `AC2.2: evalCalc("${expr}") ném lỗi`);
+    }
+    const design = (ac) => ['# T', '## Tiêu chí chấp nhận', `- [ ] **AC1.1** — Given giỏ 99999 When giảm 15% Then tổng 85000 ${ac}`, ''].join('\n');
+    const w22 = (ac) => cr.checkRequest({ 'design.md': design(ac) }).filter((w) => w.code === 'W22');
+    const wrong = w22('`calc: 99999 - floor(99999 * 15 / 100) = 84999`');
+    ok(wrong.length === 1 && wrong[0].file === 'design.md' && wrong[0].line === 3 && /84999/.test(wrong[0].msg) && /85000/.test(wrong[0].msg),
+      'AC2.1: calc ghi 84999 → một W22 nêu dòng 3, giá trị ghi 84999 và giá trị tính 85000');
+    ok(w22('`calc: 99999 - floor(99999 * 15 / 100) = 85000`').length === 0, 'AC2.2: calc đúng → không W22');
+    ok(w22('`calc: 10 / 4 = 2.5`').length === 0, 'AC2.2: calc kết quả thập phân đúng → không W22');
+    ok(w22('`calc: 1000 * 2 = 2,000`').length === 0, 'calc kết quả có dấu phẩy hàng nghìn → bỏ dấu phẩy khi so');
+    ok(w22('`calc: a = b = 3`').some((w) => /biểu thức không hợp lệ/.test(w.msg)), 'calc nhiều dấu = → tách ở = cuối, vế trái không hợp lệ');
+    ok(w22('`calc: process.exit() = 0`').some((w) => /biểu thức không hợp lệ/.test(w.msg)), 'AC2.2: calc ký tự lạ → W22 "biểu thức không hợp lệ"');
+    ok(w22('`calc: 1 + 1 = hai`').some((w) => /biểu thức không hợp lệ/.test(w.msg)), 'calc kết quả không phải số → W22 "biểu thức không hợp lệ"');
+    ok(w22('').length === 0, 'AC không có calc → không W22');
+    const req = cr.checkRequest({ 'requirement.md': design('`calc: 2 + 2 = 5`') }).filter((w) => w.code === 'W22');
+    ok(req.length === 1 && req[0].file === 'requirement.md', 'W22 quét cả requirement.md');
+    const part = cr.checkRequest({ 'design.md': design(''), 'parts/01-a/design.md': '# P\n`calc: 2 + 2 = 5`\n' }).filter((w) => w.code === 'W22');
+    ok(part.length === 1 && part[0].file === 'parts/01-a/design.md' && part[0].line === 2, 'W22 quét cả parts/*/design.md');
+  }
 }
