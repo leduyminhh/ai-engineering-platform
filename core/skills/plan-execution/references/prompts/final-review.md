@@ -31,12 +31,15 @@ Cách làm:
 5. Thang severity của contract đầu ra; mỗi finding có location file:line và evidence; tự đọc lại trước khi trả.
 6. Liệt kê điều bạn bỏ qua trong declined_to_judge[] kèm lý do.
 7. Finding chỉ sửa được bằng cách đổi nghĩa hoặc câu chữ một AC đã duyệt: không chọn hướng sửa, ghi vào questions[]
-   gồm AC ID, các cách hiểu, và hệ quả của từng cách hiểu.
+   gồm AC ID, các cách hiểu, và hệ quả của từng cách hiểu. Finding ngoài AC mà chỉ sửa được bằng cách đổi hành vi hoặc API (ném lỗi mới, mã lý do mới, tham số mới): cũng không chọn hướng sửa, gắn nhãn `ngoài AC` kèm hệ quả để thẻ G3 hỏi người dùng.
+8. Gắn nhãn `trong AC` hoặc `ngoài AC` cho mỗi finding. Finding kiểm đầu vào cho dữ liệu do code hoặc cấu hình nội bộ khai báo: theo mục "Ranh giới tin cậy" của skill `principles` (bản cài plugin: `core:principles`; nguồn `core/principles/trust-boundary.md`), tối đa `minor`.
 
 Trả khối agent_result: findings[], validation[], ruling_review[], declined_to_judge[], remaining_risks[], questions[].
 ```
 
-Sau review cuối, chỉ một lần sửa cho toàn bộ finding blocker/major (một dispatch, `model: sonnet`: logic subagent theo bảng routing của baseline) và một lần re-review có
+`review clean` = không còn blocker/major mở **trong phạm vi**; finding ngoài AC đi theo mục "Nhận review" của `task-loop.md`.
+
+Sau review cuối, chỉ một lần sửa cho toàn bộ finding blocker/major trong phạm vi (một dispatch, `model: sonnet`: logic subagent theo bảng routing của baseline) và một lần re-review có
 phạm vi theo `prompts/re-review.md`; không có làn sửa thứ hai. Finding còn lại và `Ruling:` cần quyết trình người dùng ở
 bước kết thúc nhánh (`references/finish.md`).
 

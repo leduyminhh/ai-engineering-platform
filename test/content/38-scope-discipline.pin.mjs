@@ -28,4 +28,37 @@ export default async function run({ ok, ctx }) {
   ok(/[Nn]hóm không áp dụng[^\n]{0,80}bỏ qua/.test(RB), 'AC1.1: nhóm không áp dụng cho việc thì bỏ qua');
   ok(/spec/.test(RB) && /tài liệu đang soạn/.test(RB), 'AC1.1: mục dùng thuật ngữ chung cho brainstorming và spec-writing');
   ok(!/src\/cart\.mjs|bước "Đi xem"/.test(RB), 'AC1.1: mục không dẫn file:line mẫu có thể bị bắt chước');
+
+  const PE = 'core/skills/plan-execution/references';
+  const TL = read(`${PE}/task-loop.md`);
+  const NR = (TL.match(/^## Nhận review[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m) || [, ''])[1];
+  ok(NR !== '', 'AC3.1: task-loop có mục "Nhận review"');
+  ok(/\*\*trong phạm vi\*\* \(vi phạm AC hay tiêu chí đã duyệt, lỗi đúng\/sai với đầu vào hợp lệ của chính tính năng, test sai, lỗ hổng bảo mật ở ranh giới tin cậy\) → sửa/.test(NR), 'AC3.1: nhóm trong phạm vi nguyên văn → sửa');
+  ok(/\*\*ngoài AC, không đổi hành vi\*\* → `minor \(deferred\)` hoặc `Ruling:` giữ mức gốc, không sửa/.test(NR), 'AC3.1: nhóm ngoài AC không đổi hành vi → minor (deferred) hoặc Ruling: giữ mức gốc, không sửa');
+  ok(/\*\*ngoài AC, đổi hành vi hoặc API\*\* \([^)]*\) → thẻ G3 kèm hệ quả, không sửa; "làm" thành follow-up/.test(NR), 'AC3.2: nhóm đổi hành vi/API → thẻ G3 kèm hệ quả, không sửa, "làm" thành follow-up');
+  ok(/`Ruling:` không được thêm hành vi không có trong AC/.test(NR), 'AC3.2: Ruling: không được thêm hành vi không có trong AC');
+  ok(/mục "Nhận review"/.test(TL.replace(NR, '')), 'AC3.1: bước xử lý kết quả review trỏ mục "Nhận review"');
+
+  // `review clean` phải cùng một định nghĩa ở mọi nơi nó xuất hiện (task-loop, final-review, finish).
+  const CLEAN = /không còn (?:finding )?`?blocker`?\/`?major`? mở \*\*trong phạm vi\*\*/;
+  const FR = read(`${PE}/prompts/final-review.md`);
+  const FN = read(`${PE}/finish.md`);
+  const defs = (t) => t.split('\n').filter((l) => l.includes('`review clean` ='));
+  ok(defs(TL).length >= 2 && defs(TL).every((l) => CLEAN.test(l)), 'AC3.1: task-loop (bước 9 và mục Nhận review) định nghĩa review clean = không còn blocker/major mở trong phạm vi');
+  ok(defs(FR).length >= 1 && defs(FR).every((l) => CLEAN.test(l)), 'AC3.1: final-review định nghĩa review clean trong phạm vi, khớp task-loop');
+  ok(CLEAN.test(FN.split('\n').find((l) => l.startsWith('Chạy sau khi review cuối sạch')) ?? ''), 'AC3.1: finish.md điều kiện review cuối sạch là trong phạm vi, khớp task-loop');
+
+  ok(/Finding ngoài AC[^\n]*đổi hành vi hoặc API[^\n]*không chọn hướng sửa[^\n]*G3/.test(FR), 'AC3.2: final-review quy tắc 7 mở rộng sang finding ngoài AC đổi hành vi hoặc API → G3, không sửa');
+  ok(/thẻ G3/.test(FN) && /ngoài AC, đổi hành vi hoặc API/.test(FN), 'AC3.2: finish.md thẻ G3 liệt kê finding ngoài AC đổi hành vi hoặc API');
+  ok(/"làm"[^\n]*follow-up[^\n]*sau khi nhánh xong/.test(FN) && /không chạy tiếp trong nhánh/.test(FN) && /không thêm lane mới/.test(FN), 'AC3.2: finish.md ghi "làm" thành follow-up sau khi nhánh xong, không chạy tiếp, không thêm lane mới');
+
+  const TB = read('core/principles/trust-boundary.md');
+  ok(/^## Ranh giới tin cậy$/m.test(TB), 'AC3.3: trust-boundary.md có heading H2 Ranh giới tin cậy');
+  ok(/code hoặc cấu hình nội bộ của repo khai báo không phải ranh giới tin cậy/.test(TB) && /tối đa `minor`/.test(TB), 'AC3.3: trust-boundary.md nêu dữ liệu nội bộ không phải ranh giới tin cậy, finding tối đa minor');
+  for (const f of [`${PE}/prompts/task-review.md`, `${PE}/prompts/final-review.md`, 'plugins/engineering/agents/engineering-quality-auditor.md'])
+    ok(/Ranh giới tin cậy[^\n]*trust-boundary\.md/.test(read(f)), `AC3.3: ${f.split('/').pop()} trỏ trust-boundary.md`);
+  for (const f of [`${PE}/prompts/task-review.md`, `${PE}/prompts/final-review.md`])
+    ok(/Gắn nhãn `trong AC` hoặc `ngoài AC`/.test(read(f)), `AC3.1: ${f.split('/').pop()} bảo reviewer gắn nhãn trong AC/ngoài AC cho finding`);
+  const PRIN = read('build/claude/plugins/core/skills/principles/SKILL.md');
+  ok(/^## Ranh giới tin cậy$/m.test(PRIN) && /code hoặc cấu hình nội bộ của repo khai báo không phải ranh giới tin cậy/.test(PRIN), 'AC3.3: skill principles sau build có nội dung trust-boundary.md');
 }

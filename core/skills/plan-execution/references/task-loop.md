@@ -50,19 +50,29 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    `prompts/task-review.md`. Reviewer trả **cả hai**: `spec_verdict` (Missing / Extra / Misunderstood) và finding chất
    lượng; thiếu một trong hai là đầu ra hỏng. Task có chuỗi hai agent (vd FE-UI) chỉ review một lần, sau cả hai. Task `TOOLING` review bằng `general-purpose` không nạp skill domain, tiêu chí là `prompts/task-review.md`; đưa reviewer đường dẫn `task-<n>-report.md` (bước 3) cùng review package.
 8. **Xử lý kết quả review**: `spec_verdict: cannot_verify` do session chính giải quyết (đọc code, chạy lệnh) rồi mới
-   tiếp. Chỉ finding `blocker`/`major` hoặc `spec_verdict` khác `compliant` mới vào vòng sửa; `minor`/`nit` ghi vào
+   tiếp. Xếp từng finding theo mục "Nhận review". Chỉ finding `blocker`/`major` trong phạm vi hoặc `spec_verdict` khác `compliant` mới vào vòng sửa; `minor`/`nit` ghi vào
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Sau mỗi lần review (task review, rồi
    mỗi re-review) ghi `Task <n>: review <vòng> <spec_verdict> <blocker>/<major>/<minor>` (`<vòng>` đếm lần review của task
    từ 1; `spec_verdict` ∈ `compliant` | `issues` | `cannot_verify`; ba số là số finding còn mở theo severity). Mục plan bắt buộc mà thiếu vẫn là
    `major`; vi phạm AC hay tiêu chí đã duyệt cũng là `major` trở lên, reviewer xếp `minor` thì session chính nâng lên trước khi ghi `minor (deferred)`. Không tự sửa finding: sửa do agent.
 9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
-   - review sạch (`review clean` = `spec_verdict: compliant`, hoặc `cannot_verify` session chính đã giải quyết ở bước 8 mà không ra lệch, và không còn finding `blocker`/`major` mở; các dòng `minor (deferred)` của task đứng trước dòng `complete`; task `TOOLING` TDD `có`: mẫu ở gạch cuối): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
+   - review sạch (`review clean` = `spec_verdict: compliant`, hoặc `cannot_verify` session chính đã giải quyết ở bước 8 mà không ra lệch, và không còn finding `blocker`/`major` mở **trong phạm vi**; các dòng `minor (deferred)` của task đứng trước dòng `complete`; task `TOOLING` TDD `có`: mẫu ở gạch cuối): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
    - qua breaker (còn finding mở sau vòng 3, đã phán hết): các dòng `Ruling:` của task đứng trước, rồi
      `Task <n>: complete (commits <a>..<b>, <k> ruled)` với `<k>` là số finding đã phán. Không có dòng complete thì lần
      làm tiếp sẽ làm lại task, nên task chưa bao giờ kết thúc mà thiếu dòng này;
    - task `TOOLING` TDD `có` do session chính làm: dòng có dạng
      `Task <n>: complete (commits <a>..<b>, review clean|<k> ruled, red: <lệnh> exit <n khác 0>, tests: <lệnh> exit 0)`.
      `ledger.mjs` từ chối (exit 2, không ghi) dòng của task này thiếu `red: <lệnh>` hoặc `tests: <lệnh> exit 0`, hay kèm exit khác 0 ngoài `red:`. Ở chế độ inline, dòng theo `inline.md` (bước 6).
+
+## Nhận review
+
+Áp cho review từng task và review cuối, ngay sau khi nhận finding và trước khi giao sửa. Session chính xếp mỗi finding vào đúng một nhóm theo AC; nhãn `trong AC`/`ngoài AC` của reviewer chỉ là đầu vào, session chính xác nhận lại:
+
+- **trong phạm vi** (vi phạm AC hay tiêu chí đã duyệt, lỗi đúng/sai với đầu vào hợp lệ của chính tính năng, test sai, lỗ hổng bảo mật ở ranh giới tin cậy) → sửa theo mục "Vòng sửa"; ranh giới tin cậy theo mục "Ranh giới tin cậy" của `core:principles`.
+- **ngoài AC, không đổi hành vi** → `minor (deferred)` hoặc `Ruling:` giữ mức gốc, không sửa (blocker/major hoãn bằng `Ruling:` kèm mức gốc, xem mục Breaker).
+- **ngoài AC, đổi hành vi hoặc API** (ném lỗi mới, mã lý do mới, tham số mới) → thẻ G3 kèm hệ quả, không sửa; "làm" thành follow-up sau khi nhánh xong (`finish.md`).
+
+`Ruling:` không được thêm hành vi không có trong AC. `review clean` = không còn blocker/major mở **trong phạm vi**: finding blocker/major ngoài AC đã hoãn bằng `Ruling:` không chặn `Task <n>: complete`, và mọi `Ruling:` đó được liệt kê ở G3.
 
 ## Vòng sửa
 
