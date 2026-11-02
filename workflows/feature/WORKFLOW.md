@@ -45,7 +45,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** session chính
 - **Đầu vào:** yêu cầu tính năng của người dùng
-- **Hành động:** có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-feature` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`; không có orchestrator thì bỏ qua phần đối chiếu Registry, chỉ dùng việc thật) (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng sẽ đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
+- **Hành động:** trước mọi việc khác, gọi skill `plan-execution` (bản cài plugin: `core:plan-execution`) bằng công cụ gọi skill, với mọi cỡ việc kể cả "thay đổi nhỏ": các cổng từ Bước 2 hỏi theo `ask-user.md` và Bước 5 chạy theo `task-loop.md` của skill đó, nên không làm theo trí nhớ; nạp ở đây chưa bắt đầu vòng task. Có `brief.md` của request (do orchestrator truyền đường dẫn, hoặc `docs/requests/<ngày>-<slug>/brief.md`) thì, trước baseline, đối chiếu `loại-việc` và `phạm-vi` của brief với hàng `workflow-feature` trong Registry của `workflows/orchestrator/WORKFLOW.md` (bản cài: `SKILL.md` của skill `workflow-orchestrator`; không có orchestrator thì bỏ qua phần đối chiếu Registry, chỉ dùng việc thật) (đọc từ bảng, không chép giá trị). Sau đó chạy build và test của vùng sẽ đụng theo lệnh của project; ghi số mốc (lệnh, exit code, số test
   pass/fail) làm baseline cho các bước sau. Sau baseline, đọc vùng code: nếu việc thật chỉ là sửa lỗi hành vi đã có thì không khớp `workflow-feature`.
 - **Ràng buộc:** brief `Trạng thái: approved` có `route-đã-duyệt` trùng workflow này (người dùng đã duyệt hoặc ghi đè route) thì không trả `misrouted` chỉ vì `loại-việc` hay `phạm-vi` của brief, chỉ khi việc thật mâu thuẫn rõ với route (vd việc thật là sửa lỗi hành vi có sẵn); chỉ chạy build/test cục bộ; không chạy lệnh tác động môi trường; không sửa code để làm xanh.
 - **Đầu ra:** baseline build/test (lệnh + exit code + số liệu).
@@ -143,7 +143,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** `plan.md` đã duyệt (cỡ "thay đổi nhỏ": không có `plan.md`, brief là `requirement.md`) + `requirement.md`
   (acceptance criteria từ Bước 3) + contract (nếu có) + `design.md`/`tasks.md` (nếu có) + baseline Bước 1 + bảng ứng
   viên e2e đã duyệt ở G1 (Bước 3; đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
-- **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó). Chuẩn bị ledger
+- **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó; chưa nạp skill ở Bước 1 thì gọi nó bằng công cụ gọi skill trước task đầu tiên), với mọi cỡ việc kể cả "thay đổi nhỏ": dòng `Task <n>: start` ghi trước khi giao agent, mỗi vòng sửa có re-review do agent reviewer làm. Chuẩn bị ledger
   `<gốc repo chính>/.aip/runs/<request>/<part>/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
   xong). Mỗi task theo thứ tự: ghi BASE → cắt brief → giao agent theo `**Kind:**` (chuỗi agent do
   `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer`
