@@ -13,6 +13,12 @@ export default async function run({ ok, ctx }) {
     ['F8', `${PE}/references/task-loop.md`, /không prefix `cd … &&`/, 'task-loop: gọi script không prefix cd'],
     ['F8', 'README.md', /Bash\(node \*scripts\/\*\.mjs \*\)[\s\S]*no `cd … &&` prefix/, 'README: mẫu allowedTools cho script skill'],
     ['F8', 'README_VI.md', /Bash\(node \*scripts\/\*\.mjs \*\)[\s\S]*không prefix `cd … &&`/, 'README_VI: mẫu allowedTools cho script skill'],
+    // F10: E2E v2 — AC1.3 sai số học (14999 thay vì 15000) lọt qua builder check, chỉ lộ ở TDD đỏ.
+    ['F10', 'plugins/engineering/skills/engineering-spec-writing/SKILL.md', /AC có ví dụ số[\s\S]*tự tính lại từng kết quả từ Given/, 'spec-writing: tự tính lại ví dụ số trong AC'],
+    ['F10', 'plugins/engineering/skills/engineering-spec-writing/references/checklist.md', /Ví dụ số trong AC đã tính lại/, 'checklist: ví dụ số trong AC đã tính lại'],
+    ['F10', 'plugins/engineering/skills/engineering-spec-writing/references/builder-check.md', /AC<id> sai số/, 'builder-check: báo AC sai số'],
+    ['F10', 'plugins/engineering/agents/engineering-spec-analyst.md', /AC có ví dụ số thì tự tính lại/, 'spec-analyst: tự tính lại ví dụ số'],
+    ['F9', 'README.md', /outside both the session cwd and the git root/, 'README: gate-stop bỏ qua file ngoài cwd và gốc git'],
   ];
   for (const [id, file, re, msg] of ANCHORS) ok(re.test(read(file)), `${id}: ${msg}`);
 

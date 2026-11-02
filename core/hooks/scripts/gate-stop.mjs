@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readGateConfig } from './gate-config.mjs';
+import { readGateConfig, resolveGate, classifyPath } from './gate-config.mjs';
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SHELL_TOOLS = new Set(['Bash', 'PowerShell']);
@@ -103,10 +103,12 @@ function currentTurn(text, wholeFile) {
 
 export function decide(input, deps = {}) {
   try {
-    const { readFile = (p) => readFileSync(p, 'utf8'), loadConfig: load = readGateConfig, env = process.env } = deps;
+    const { readFile = (p) => readFileSync(p, 'utf8'), loadConfig: load = readGateConfig, env = process.env, resolveRoots = (d) => resolveGate(d)?.roots } = deps;
     if (input?.stop_hook_active === true || String(env.AIP_STOP_GATE || '').toLowerCase() === 'off') return null;
     const cwd = path.resolve(input?.cwd || '.');
     const cfg = load(cwd);
+    // File ngoài project (vd script tạm trong scratchpad) không có test nào của project chạy được; chỉ xét file dưới cwd hoặc gốc git.
+    const roots = [cwd, ...(resolveRoots(cwd) ?? [])];
     if (cfg?.stopGate === false) return null;
     const sub = input?.hook_event_name === 'SubagentStop';
     if (sub) {
@@ -132,7 +134,7 @@ export function decide(input, deps = {}) {
         const inp = part.input;
         if (EDIT_TOOLS.has(part.name)) {
           const p = inp?.file_path ?? inp?.notebook_path;
-          if (typeof p !== 'string' || !p || DOC_FILE.test(p) || DOC_DIR.test(path.relative(cwd, path.resolve(cwd, p)))) continue;
+          if (typeof p !== 'string' || !p || DOC_FILE.test(p) || DOC_DIR.test(path.relative(cwd, path.resolve(cwd, p))) || classifyPath(p, cwd, roots, false) === 'outside') continue;
           lastEdit = pos;
           if (!edited.includes(p)) edited.push(p);
         } else if (SHELL_TOOLS.has(part.name) && typeof inp?.command === 'string' && isTestCommand(inp.command, extra)) {

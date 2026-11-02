@@ -39,6 +39,8 @@ sẽ hỏng hoặc phải làm lại. Quy tắc:
 - Xếp hạng từ quan trọng nhất; mỗi câu một dòng, kèm một dòng "đoán sai thì hỏng gì".
 - Bỏ câu soi chi tiết vụn vặt, phần tài liệu đã giao cho builder quyết (mục "Để builder quyết"), và câu mà một
   mặc định hợp lý trả lời được.
+- Có AC nêu ví dụ số: tính lại kết quả từ Given theo quy tắc đã ghi; lệch thì thêm một dòng "AC<id> sai số: <ghi> ≠ <tính>"
+  (không phải câu hỏi, session chính sửa thẳng). Không tính được thì bỏ qua, đừng đoán.
 - Không viết lại tài liệu, không đề xuất thiết kế mới.
 - Nếu không còn câu nào quan trọng, trả đúng một dòng: "Không còn gì quan trọng."
 ```
