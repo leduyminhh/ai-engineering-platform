@@ -94,9 +94,8 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    [references/spec-structure.md](references/spec-structure.md). Agent không hỏi người dùng; thiếu đầu vào thì trả `blocked`
    + `questions[]` và session chính hỏi lại. Bám scaffold `_TEMPLATE`, mở rộng chứ không thay thế. Tiếng Việt CÓ DẤU.
    Mỗi acceptance criterion mang ID `AC<n>.<m>` (`<n>` = số thứ tự requirement, `<m>` = số thứ tự AC trong requirement đó,
-   vd `AC1.2`), viết Given/When/Then, để `plan.md` và `tasks.md` phủ/truy vết đúng ID. AC có ví dụ số (Given/When/Then
-   nêu giá trị cụ thể): tự tính lại từng kết quả từ Given theo quy tắc làm tròn đã chốt (chạy một lệnh tính khi có công cụ
-   shell) trước khi giao hoặc trình, vì builder check không tính lại giúp. Skill này KHÔNG dựng `plan.md`
+   vd `AC1.2`), viết Given/When/Then, để `plan.md` và `tasks.md` phủ/truy vết đúng ID. AC nêu kết quả số phải kèm khối `calc: <biểu thức> = <kết quả>` trong backtick; `check-request.mjs` tính lại (W22).
+   Skill này KHÔNG dựng `plan.md`
    (kế hoạch triển khai thuộc `engineering-plan-writing` sau khi spec được duyệt).
 
 8. **Ghi ADR cho quyết định lớn.**

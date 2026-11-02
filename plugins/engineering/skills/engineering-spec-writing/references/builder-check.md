@@ -19,6 +19,11 @@ Chỉ session chính chạy bước này (spec-analyst không có tool gọi sub
    | **Nhỏ** | Đoán sai chỉ tốn một sửa nhỏ, có mặc định hợp lý | Tự quyết, ghi vào tài liệu là **quyết định của agent**, không hỏi |
    | **Của người dùng** | Đoán sai làm đổi AC, phạm vi, hướng đã chọn hoặc rủi ro mất dữ liệu/bảo mật | Gom vào danh sách hỏi |
 
+   Trước khi giao subagent, session chính chạy `check-request.mjs` trên bản nháp. Mọi cảnh báo W22 là lỗi sửa thẳng:
+   session chính sửa tài liệu, không đưa vào bảng này và không hỏi người dùng. Tính năng người dùng nêu mà design chỉ
+   làm một phần (vd có giới hạn lượt dùng nhưng không có cách tăng lượt) là câu hỏi của người dùng, không ghi là
+   quyết định của agent.
+
 4. Có câu thuộc nhóm "của người dùng" → hỏi **trong đúng một tin nhắn** (đánh số, mỗi câu kèm mặc định đề xuất để
    người dùng chỉ cần "đồng ý" hoặc sửa). Đây là vòng hỏi **duy nhất** của bước kiểm; không chạy lại builder check sau
    khi nhận trả lời, chỉ cập nhật tài liệu. Không có câu nào → báo ngắn rằng builder check không còn câu hỏi.
@@ -39,8 +44,6 @@ sẽ hỏng hoặc phải làm lại. Quy tắc:
 - Xếp hạng từ quan trọng nhất; mỗi câu một dòng, kèm một dòng "đoán sai thì hỏng gì".
 - Bỏ câu soi chi tiết vụn vặt, phần tài liệu đã giao cho builder quyết (mục "Để builder quyết"), và câu mà một
   mặc định hợp lý trả lời được.
-- Có AC nêu ví dụ số: tính lại kết quả từ Given theo quy tắc đã ghi; lệch thì thêm một dòng "AC<id> sai số: <ghi> ≠ <tính>"
-  (không phải câu hỏi, session chính sửa thẳng). Không tính được thì bỏ qua, đừng đoán.
 - Không viết lại tài liệu, không đề xuất thiết kế mới.
 - Nếu không còn câu nào quan trọng, trả đúng một dòng: "Không còn gì quan trọng."
 ```
