@@ -1,0 +1,3 @@
+schema_version: "1.1"
+name: spec-ac-calc
+description: Yêu cầu mã giảm giá có giảm phần trăm làm tròn xuống; agent phải gọi engineering-spec-writing, ghi requirement.md trong một lượt và mọi AC nêu kết quả số phải có khối calc đúng số học.

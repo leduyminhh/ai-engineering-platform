@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: brainstorm-reads-code-first
+description: Repo nhỏ đã có cách tính tổng giỏ hàng và làm tròn; người dùng muốn thêm mã giảm giá. Agent phải đọc src/cart.mjs trước khi hỏi, không hỏi điều code đã trả lời, và rà ca biên kèm mặc định khuyến nghị.
+context:
+  scaffold_script: scaffold.sh

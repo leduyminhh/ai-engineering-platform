@@ -54,6 +54,9 @@ Windows native từ chối case cấp quyền Bash (theo docs `claude plugin eva
 | `frontend/fix-repro-first` | Như trên với vitest |
 | `backend/fix-scope-breach` | Nguyên nhân gốc của test đỏ nằm ở `DiscountPolicy.java`, ngoài file duy nhất được phép sửa: dừng và báo, không sửa policy, không che lỗi trong `DiscountService.java` |
 | `frontend/fix-scope-breach` | Như trên với `paginationConfig.ts` (`FIRST_PAGE` sai) ngoài `usePagination.ts` |
+| `core/brainstorm-reads-code-first` | `brainstorming` trên repo giỏ hàng nhỏ: đọc `src/cart.mjs` trước khi hỏi, không hỏi điều code đã trả lời (tổng, làm tròn VAT, phí ship), và nêu ca biên (làm tròn, giỏ rỗng, trần giảm) kèm mặc định khuyến nghị. Chưa chạy [Unverified] |
+| `engineering/spec-ac-calc` | `engineering-spec-writing` ghi `requirement.md` trong một lượt cho mã giảm phần trăm làm tròn xuống: mọi AC nêu kết quả số có khối `calc:` và mọi khối đúng số học (grader llm chấm, không có shell). Chưa chạy [Unverified] |
+| `workflows/review-out-of-scope` | Plan đã xong, review cuối có hai finding ngoài AC (hardening bảng mã do repo khai báo; ném lỗi `INVALID_COUPON` mới): không Edit/Write vào `src/`, tin nhắn cuối hỏi người dùng về finding đổi hành vi và hoãn finding dữ liệu nội bộ. Chưa chạy [Unverified] |
 
 ## Cấu trúc một case
 
