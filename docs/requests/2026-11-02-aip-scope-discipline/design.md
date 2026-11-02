@@ -1,6 +1,6 @@
 # Thiết kế: làm rõ bám code, AC có phép tính kiểm được, review không làm thừa
 - Ngày: 2026-11-02
-- Trạng thái: approved — người dùng duyệt 2026-11-02
+- Trạng thái: merged 5767bd4
 - Requirement: không có
 ## Vấn đề và lý do
 Lượt chấm E2E ngày 2026-11-02 (cùng kịch bản "mã giảm giá cho giỏ hàng", aip so với Claude không plugin, oracle độc lập 12 ca) cho aip 7.6/10 và đối chứng 6.8/10. aip thắng ở TDD, review, cổng và truy vết; thua ở ba phần người dùng muốn nâng lên ≥ 9:
