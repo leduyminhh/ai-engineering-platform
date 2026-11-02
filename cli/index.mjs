@@ -296,7 +296,9 @@ Manifest '.ai-engineering/manifest.json' (ghi ở gốc scope) cho phép check/u
 }
 
 async function main() {
-  const args = parse(process.argv.slice(2));
+  let args;
+  try { args = parse(process.argv.slice(2)); }
+  catch (e) { console.error(e.message); process.exitCode = 2; return; }
   const cmd = args._[0];
 
   if (args.help || cmd === 'help') { console.log(buildHelp()); return; }

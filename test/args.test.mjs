@@ -37,6 +37,22 @@ ok(parse(['stats', '--session', 'a.jsonl', '--json']).session === 'a.jsonl' && p
   ok(parse(['mode', 'full', '-g']).scope === 'global', 'P4e AC2.4: -g vẫn được parse (index.mjs từ chối)');
   ok(eq(parse(['install'])._, ['install']) && parse(['install']).mode === 'skills', 'P4e AC2.4: lệnh hiện có không đổi');
 }
+{
+  const throws = (argv) => { try { parse(argv); return null; } catch (e) { return e.message; } };
+  // Regression: cờ gõ sai từng bị nuốt vào `_`, plugin giữ mặc định 'all' nên cài cả 6 plugin.
+  for (const [argv, flag] of [
+    [['install', '--provider', 'cursor', '--plugins', 'ops'], '--plugins'],
+    [['uninstall', '--plugin=ops', '--yse'], '--yse'],
+    [['install', '-x'], '-x'],
+  ]) {
+    const msg = throws(argv);
+    ok(msg && msg.includes(flag), `cờ lạ bị từ chối, nêu tên cờ: ${argv.join(' ')}`);
+  }
+  for (const y of ['--yes', '-y']) {
+    const msg = throws(['install', '--provider', 'claude', y]);
+    ok(!msg && eq(parse(['install', '--provider', 'claude', y])._, ['install']), `${y} được nhận, không rơi vào _`);
+  }
+}
 
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }
 console.log(`args.test: ${pass} pass`);

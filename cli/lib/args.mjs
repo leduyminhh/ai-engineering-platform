@@ -38,6 +38,9 @@ export function parse(argv) {
     else if (v.startsWith('--skill=')) { a.skill = csv(v.slice(8)); a.explicit = true; }
     else if (v.startsWith('--target=')) a.target = v.slice(9);
     else if (v === '-h' || v === '--help') a.help = true;
+    else if (v === '-y' || v === '--yes') a.yes = true;
+    // Cờ gõ sai mà bỏ qua thì plugin giữ mặc định 'all' → cài/gỡ mọi plugin ngoài ý muốn.
+    else if (v.startsWith('-')) throw new Error(`Cờ không hợp lệ: ${v} (xem aip --help)`);
     else a._.push(v);
   }
   return a;
