@@ -331,6 +331,12 @@ export default async function run({ ok, ctx }) {
     ok(['docs/a.md', 'E:\\repo\\README.MD', 'notes.txt', 'x.rst', 'y.adoc', 'z.mdx'].every((p) => run([human('x'), edit(p)]) === null),
       'AC1.3: chỉ sửa file tài liệu → cho dừng');
     ok(blocked(run([human('x'), edit('package.json')])) && blocked(run([human('x'), edit('ci.yml')])), 'AC1.3: sửa cấu hình (json/yml) không test → block');
+    const repo = path.resolve('repo');
+    ok(run([human('x'), edit('docs/contracts/notes.openapi.yaml')]) === null
+      && run([human('x'), edit(path.join(repo, 'docs', 'contracts', 'a.json'))], { input: { cwd: repo } }) === null
+      && blocked(run([human('x'), edit('docs/diagram/flow.yaml')])) && blocked(run([human('x'), edit('src/docs/contracts/gen.py')]))
+      && blocked(run([human('x'), edit(path.join(repo, 'src', 'a.yaml'))], { input: { cwd: path.join(repo, 'docs') } })),
+    'regression trial 2026-11-02: sửa contract trong docs/contracts/ dưới cwd → cho dừng; docs/ khác, docs/contracts/ lồng hay file ngoài vẫn chặn');
 
     const dirty = [human('x'), edit('a.js')];
     ok(run(dirty, { input: { stop_hook_active: true } }) === null, 'AC1.4: stop_hook_active → cho dừng (chống vòng lặp)');

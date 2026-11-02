@@ -8,6 +8,8 @@ import { readGateConfig } from './gate-config.mjs';
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SHELL_TOOLS = new Set(['Bash', 'PowerShell']);
 const DOC_FILE = /\.(md|mdx|txt|rst|adoc)$/i;
+// Contract trong docs/contracts/ không có test nào chạy được; neo theo cwd để repo nằm trong thư mục tên "docs" vẫn bị chặn.
+const DOC_DIR = /^docs[\\/]contracts[\\/]/i;
 export const DEFAULT_EXEMPT_AGENTS = ['data-migration-writer'];
 
 // Neo ^ vào đầu từng đoạn lệnh để "echo npm test" hay "cat test/a.js" không bị tính là đã chạy test.
@@ -103,7 +105,8 @@ export function decide(input, deps = {}) {
   try {
     const { readFile = (p) => readFileSync(p, 'utf8'), loadConfig: load = readGateConfig, env = process.env } = deps;
     if (input?.stop_hook_active === true || String(env.AIP_STOP_GATE || '').toLowerCase() === 'off') return null;
-    const cfg = load(path.resolve(input?.cwd || '.'));
+    const cwd = path.resolve(input?.cwd || '.');
+    const cfg = load(cwd);
     if (cfg?.stopGate === false) return null;
     const sub = input?.hook_event_name === 'SubagentStop';
     if (sub) {
@@ -129,7 +132,7 @@ export function decide(input, deps = {}) {
         const inp = part.input;
         if (EDIT_TOOLS.has(part.name)) {
           const p = inp?.file_path ?? inp?.notebook_path;
-          if (typeof p !== 'string' || !p || DOC_FILE.test(p)) continue;
+          if (typeof p !== 'string' || !p || DOC_FILE.test(p) || DOC_DIR.test(path.relative(cwd, path.resolve(cwd, p)))) continue;
           lastEdit = pos;
           if (!edited.includes(p)) edited.push(p);
         } else if (SHELL_TOOLS.has(part.name) && typeof inp?.command === 'string' && isTestCommand(inp.command, extra)) {
