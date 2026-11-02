@@ -17,4 +17,4 @@ claude -p "$(cat turn-<n>.txt)" --output-format json --max-turns 80 --max-budget
 Câu trả lời ở các lượt sau đi theo câu hỏi thật của agent: giữ ý của `turn-<n>.txt`, sửa số mục cho khớp.
 
 ## Chấm
-`node oracle.mjs aip <sandbox>/src/cart.mjs` hoặc `node oracle.mjs base <sandbox>/src/coupon.mjs`. Adapter trong `oracle.mjs` dịch coupon trung tính sang schema của từng bản; API khác thì sửa adapter, không sửa ca. Rubric ở mục Kiểm thử của `design.md`.
+`node oracle.mjs aip <sandbox>/src/cart.mjs`, `node oracle.mjs aip-obj <sandbox>/src/cart.mjs` (API nhận đối tượng coupon) hoặc `node oracle.mjs base <sandbox>/src/coupon.mjs`. Adapter trong `oracle.mjs` dịch coupon trung tính sang schema của từng bản; API khác thì sửa adapter, không sửa ca. Rubric ở mục Kiểm thử của `design.md`.

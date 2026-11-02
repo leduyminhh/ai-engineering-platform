@@ -9,7 +9,7 @@ const cart = (price, qty = 1) => [{ sku: 'X', price, qty }];
 
 // Mỗi coupon mô tả trung tính; adapter dịch sang schema riêng của từng bản.
 function apply(items, code, c, now = NOW) {
-  // aip-obj: API nhận đối tượng coupon (caller tra mã), hạn là số ms; tra mã khớp tuyệt đối nên ca chuẩn hoá mã không áp dụng.
+  // aip-obj: API nhận đối tượng coupon, adapter đóng vai caller tra mã khớp tuyệt đối nên ca chuẩn hoá mã trượt; hạn là số ms.
   if (kind === 'aip-obj') {
     const coupon = code === c.code ? { type: c.type, value: c.value, expiresAt: c.expiresAt?.getTime(), minSubtotal: c.min, maxUses: c.maxUses } : null;
     const r = mod.applyCoupon(items, coupon, { now: now.getTime(), used: c.used ?? 0 });
