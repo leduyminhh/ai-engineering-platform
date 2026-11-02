@@ -63,7 +63,7 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    Mỗi tin nhắn kết thúc bằng **một câu hỏi**, không kèm danh sách ví dụ; câu mở trước, chỉ đưa lựa chọn khi
    người dùng bí; neo vào tình huống cụ thể; đoán để họ sửa thường tốt hơn hỏi. Tám nhóm của
    [references/elicitation.md](references/elicitation.md) là **vùng phủ** để không bỏ sót, không đọc ra thành câu.
-   Ưu tiên câu mở khoá AC. Chuyện kỹ thuật/nền tảng: hỏi người dùng muốn tự chọn hay giao agent; agent chọn thì ghi
+   Ưu tiên câu mở khoá AC. Ca biên theo mục "Rà ca biên" của `references/clarify-core.md` (skill `brainstorming` / `core:brainstorming`): ca có mặc định dẫn code đi vào tin nhắn hỏi gom đầu tiên. Chuyện kỹ thuật/nền tảng: hỏi người dùng muốn tự chọn hay giao agent; agent chọn thì ghi
    **quyết định của agent**.
 
 4. **Playback — tóm tắt lại từng phần.**

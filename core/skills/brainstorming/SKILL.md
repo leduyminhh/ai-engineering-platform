@@ -48,7 +48,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
 2. **Lượt hỏi đầu.** Một tin nhắn gồm đúng hai phần: một dòng nói người dùng có thể **bỏ qua phần hỏi** bất cứ lúc nào, và
    **một thẻ gom câu hỏi** (hỏi theo `ask-user.md` của skill `plan-execution`: một lần gọi công cụ hỏi có lựa chọn, tối đa 4 câu, mỗi câu 2–4 lựa chọn với đáp án khuyến nghị đứng đầu; câu mở viết trong chat ngay trước lời gọi; không có công cụ thì danh sách đánh số). Mỗi câu trong thẻ (trừ câu mở) kèm một **đáp án khuyến nghị** để người dùng chỉ cần "đồng ý" hoặc sửa (đáp án khuyến nghị cho dữ kiện agent chưa biết thì đánh dấu **[giả định]**); thẻ
    có đúng **một câu mở** để người dùng tự mô tả tình huống bằng lời của họ (thẻ này thay cho câu mở đơn lẻ của
-   `clarify-core.md`). Các lượt sau cũng gom thành một thẻ, không hỏi từng câu qua nhiều lượt. Người dùng bỏ qua phần hỏi
+   `clarify-core.md`). Ca biên của mục "Rà ca biên" (`clarify-core.md`) có mặc định dẫn code đi vào **thẻ đầu**, gom thành một câu nếu thẻ đã đủ 4 câu. Các lượt sau cũng gom thành một thẻ, không hỏi từng câu qua nhiều lượt. Người dùng bỏ qua phần hỏi
    → bỏ hỏi, bỏ playback từng phần và không đi xem thêm (ghi "chưa xem" vào Hiện trạng), agent tự chọn, ghi mọi lựa chọn là **quyết định của agent** vào brief và nêu ở thẻ
    duyệt brief (checkpoint của skill này).
 3. **Nội dung cần nắm** theo [references/coverage.md](references/coverage.md): loại việc và điểm đặc biệt, vì sao bây giờ
@@ -85,7 +85,7 @@ người dùng. Phần làm rõ chung (cổng "đủ thông tin", lối thoát, 
     không tính là đi xem. Không tìm thấy orchestrator, hoặc `route.mjs` thoát 2
     (thiếu đối số hoặc không đọc được file): ghi "chưa kiểm route", báo đường dẫn lỗi cho người dùng và để
     `route-đã-duyệt` trống. Từ JSON `{ chosen, candidates, reason, confidence }` trình **một thẻ duyệt brief**: mở `brief.md` ở pane file rồi hỏi bằng lựa chọn bấm được (Duyệt brief và route đề xuất / Chọn route khác / Sửa brief / Dừng; theo `ask-user.md`; yêu cầu đầu của người dùng nói rõ bằng lời là làm luôn khi chốt xong, vd "rồi làm luôn", "chốt xong thì làm", "làm luôn nếu chốt được", và route là một workflow hoặc skill thì lựa chọn đầu là "Duyệt và chạy `<route>` ngay", và thẻ giữ đúng 4 lựa chọn: Duyệt và chạy `<route>` ngay / Duyệt brief, chưa chạy / Sửa brief hoặc đổi route / Dừng; câu chỉ nhờ nghĩ cùng, hoặc không chắc người dùng có ý đó, thì không đưa lựa chọn này) kèm nội dung gồm: tóm
-    tắt brief (kèm các **quyết định của agent**), route đề xuất (`chosen`), hoặc hai ứng viên (`candidates`) để người
+    tắt brief (kèm các **quyết định của agent**; tính năng người dùng nêu mà brief chỉ làm một phần nêu riêng như câu hỏi của người dùng, không xếp dưới "quyết định của agent"), route đề xuất (`chosen`), hoặc hai ứng viên (`candidates`) để người
     dùng chọn, hoặc "chưa có quy trình phù hợp" kèm gợi ý làm trong phiên, và câu nói rõ người dùng **luôn ghi đè được
     route** (ghi đè sang skill ngoài hai bảng của orchestrator thì gọi thẳng skill đó, không qua orchestrator). Route chọn có risk `high` hoặc `critical` (đọc cột Risk của `## Registry`) thì thẻ này đòi một câu duyệt rõ
     ràng cho route đó, không coi im lặng là đồng ý; câu duyệt này thay xác nhận ở Bước 3 của orchestrator nên chỉ ghi

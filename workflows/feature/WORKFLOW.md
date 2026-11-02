@@ -58,7 +58,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** session chính, theo skill `engineering-spec-writing` (không giao agent hỏi người dùng)
 - **Đầu vào:** mô tả yêu cầu/user story của người dùng + baseline Bước 1
 - **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì đọc trước: bỏ qua phần brief đã chốt (mục tiêu, phạm vi, hướng đã cân nhắc, quyết định của agent); chỉ hỏi phần brief còn thiếu, vẫn gom vào một tin nhắn. Chạy quy trình làm rõ của skill: cổng "đủ thông tin" (đủ thì không hỏi), lối thoát cho người dùng
-  bỏ qua phần hỏi, gom mọi câu còn lại vào một tin nhắn (mỗi câu kèm phương án khuyến nghị; không hỏi từng câu qua nhiều lượt) rồi tóm tắt lại những gì đã hiểu, đề xuất 2–3 hướng kèm 1 khuyến nghị và đánh đổi, xếp
+  bỏ qua phần hỏi, gom mọi câu còn lại vào một tin nhắn (mỗi câu kèm phương án khuyến nghị; không hỏi từng câu qua nhiều lượt; ca biên theo mục "Rà ca biên" của `clarify-core.md` đi vào tin nhắn gom đó) rồi tóm tắt lại những gì đã hiểu, đề xuất 2–3 hướng kèm 1 khuyến nghị và đánh đổi, xếp
   cỡ việc (việc rõ và nhỏ → không chạy workflow, làm thẳng; thay đổi nhỏ; dự án), tách các request độc lập.
   Xác định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`; có `brief.md` thì `phạm-vi` của brief ánh xạ `code-be` → backend, `code-fe` → frontend, `fullstack` → fullstack; `phạm-vi` `data` (kể cả khi `route-đã-duyệt` là workflow này) → dừng, đề xuất `data-db-migration`. Phạm vi cần đổi schema DB
   (bảng/cột/index/migration) → dừng, đề xuất chạy skill `data-db-migration` (chế độ `change`, plugin `data`)
@@ -89,7 +89,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** hướng, cỡ việc, phạm vi và các quyết định đã chốt ở Bước 2 (session chính chuyển cho agent; agent không
   hỏi người dùng)
 - **Hành động:** `engineering-spec-analyst` ghi `requirement.md` (acceptance criteria đo được, phạm vi, bảng ứng
-  viên e2e) và `design.md` chỉ khi cỡ dự án (2–3 hướng, hướng bị loại); ảnh hưởng kiến trúc thì viết thêm ADR đề
+  viên e2e; AC nêu kết quả số kèm `calc:`) và `design.md` chỉ khi cỡ dự án (2–3 hướng, hướng bị loại); ảnh hưởng kiến trúc thì viết thêm ADR đề
   xuất; thiếu đầu vào thì trả `blocked` + `questions[]`, session chính thử trả lời từ đầu vào đã chốt trước khi hỏi
   người dùng. Người dùng đã chọn tách task ở Bước 2 → đọc `references/task-breakdown.md`, mục Bước 3. Có endpoint
   mới/đổi endpoint cũ: `backend-implementer` chốt/đồng bộ OpenAPI contract trong `docs/contracts/` khi cỡ dự án, khi
@@ -104,7 +104,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` (+ `design.md` nếu cỡ dự án; + `tasks.md` nếu người
   dùng chọn tách task); contract OpenAPI cập nhật (hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ");
   ADR đề xuất nếu ảnh hưởng kiến trúc.
-- **Gate:** acceptance criteria đo được; builder check xong và câu của người dùng đã được trả lời; contract OpenAPI
+- **Gate:** acceptance criteria đo được (AC nêu kết quả số có `calc:`; `check-request.mjs` không còn W22); builder check xong và câu của người dùng đã được trả lời; contract OpenAPI
   hợp lệ hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ"; có ảnh hưởng kiến trúc thì ADR đã viết; có `tasks.md` thì `check-tasks.mjs`
   báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và Checkpoint 1 của
   `engineering-task-breakdown` đã duyệt; người dùng đã duyệt tài liệu cùng hướng, cỡ việc, phạm vi và bảng ứng viên e2e đã trình ở Bước 2 (G1, tính là duyệt E2).

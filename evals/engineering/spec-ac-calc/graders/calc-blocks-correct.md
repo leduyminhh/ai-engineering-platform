@@ -1,5 +1,6 @@
 ---
 type: llm
+focus: trace
 ---
 
 Xét nội dung `requirement.md` agent đã ghi (đối số của lệnh Write hoặc Edit) và câu trả lời cuối. Quy tắc nghiệp vụ trong yêu cầu: giảm 15% tổng đơn, làm tròn xuống tới đồng, đơn từ 50.000đ mới được áp, giảm tối đa 100.000đ.

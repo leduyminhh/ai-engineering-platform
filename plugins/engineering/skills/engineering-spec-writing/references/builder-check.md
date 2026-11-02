@@ -19,7 +19,7 @@ Chỉ session chính chạy bước này (spec-analyst không có tool gọi sub
    | **Nhỏ** | Đoán sai chỉ tốn một sửa nhỏ, có mặc định hợp lý | Tự quyết, ghi vào tài liệu là **quyết định của agent**, không hỏi |
    | **Của người dùng** | Đoán sai làm đổi AC, phạm vi, hướng đã chọn hoặc rủi ro mất dữ liệu/bảo mật | Gom vào danh sách hỏi |
 
-   Trước khi giao subagent, session chính chạy `check-request.mjs` trên bản nháp. Mọi cảnh báo W22 là lỗi sửa thẳng:
+   Trước khi giao subagent, session chính chạy `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` trên bản nháp. Mọi cảnh báo W22, và dòng `AC<id> thiếu calc` của subagent, là lỗi sửa thẳng:
    session chính sửa tài liệu, không đưa vào bảng này và không hỏi người dùng. Tính năng người dùng nêu mà design chỉ
    làm một phần (vd có giới hạn lượt dùng nhưng không có cách tăng lượt) là câu hỏi của người dùng, không ghi là
    quyết định của agent.
@@ -45,6 +45,7 @@ sẽ hỏng hoặc phải làm lại. Quy tắc:
 - Xếp hạng từ quan trọng nhất; mỗi câu một dòng, kèm một dòng "đoán sai thì hỏng gì".
 - Bỏ câu soi chi tiết vụn vặt, phần tài liệu đã giao cho builder quyết (mục "Để builder quyết"), và câu mà một
   mặc định hợp lý trả lời được.
+- AC nêu kết quả số mà thiếu `calc:` → `AC<id> thiếu calc` (sửa thẳng).
 - Không viết lại tài liệu, không đề xuất thiết kế mới.
 - Nếu không còn câu nào quan trọng, trả đúng một dòng: "Không còn gì quan trọng."
 ```

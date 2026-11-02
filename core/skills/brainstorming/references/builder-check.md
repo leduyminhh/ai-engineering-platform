@@ -17,11 +17,15 @@ hỏng kết quả mới đi hỏi người dùng. Chỉ session chính chạy b
    | **Nhỏ** | Đoán sai chỉ tốn một sửa nhỏ, có mặc định hợp lý | Tự quyết, ghi vào brief là **quyết định của agent**, không hỏi |
    | **Của người dùng** | Đoán sai làm đổi loại việc, phạm vi, route, kết quả mong đợi hoặc rủi ro mất dữ liệu/bảo mật | Gom vào danh sách hỏi |
 
+   Tính năng người dùng nêu mà brief chỉ làm một phần (vd có giới hạn lượt dùng nhưng không có cách tăng lượt; người dùng
+   nói "nhập mã lúc thanh toán" mà hàm không nhận mã) là câu hỏi của người dùng, không ghi là quyết định của agent.
+
 4. Có câu thuộc nhóm "của người dùng" → hỏi **trong đúng một tin nhắn** (đánh số, mỗi câu kèm mặc định đề xuất để người
    dùng chỉ cần "đồng ý" hoặc sửa). Đây là vòng hỏi **duy nhất** của bước kiểm; không chạy lại builder check sau khi nhận
    trả lời, chỉ cập nhật brief. Không có câu nào → báo ngắn rằng builder check không còn câu hỏi.
    **Ngoại lệ, người dùng đã bỏ qua phần hỏi:** không hỏi gì; nhóm "của người dùng" cũng ghi là **quyết định của agent**
-   kèm mặc định đã chọn, và nêu nổi bật ở thẻ duyệt brief để người dùng sửa.
+   kèm mặc định đã chọn, và nêu nổi bật ở thẻ duyệt brief để người dùng sửa. Trừ tính năng người dùng nêu mà brief chỉ
+   làm một phần: mục đó vẫn nêu ở thẻ duyệt brief như điều chưa được duyệt, không ghi là quyết định của agent.
 5. **Không có công cụ subagent** → session chính tự đọc `brief.md` theo đúng prompt dưới đây, đóng vai người thực hiện,
    rồi phân 3 nhóm như trên và ghi rõ là đã tự đọc.
 6. Cập nhật `brief.md` theo kết quả (nhóm "đã trả lời", "nhỏ" và câu trả lời của người dùng); chỉ sau đó mới chạy

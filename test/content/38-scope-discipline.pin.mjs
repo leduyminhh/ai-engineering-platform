@@ -33,7 +33,7 @@ export default async function run({ ok, ctx }) {
   const TL = read(`${PE}/task-loop.md`);
   const NR = (TL.match(/^## Nhận review[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m) || [, ''])[1];
   ok(NR !== '', 'AC3.1: task-loop có mục "Nhận review"');
-  ok(/\*\*trong phạm vi\*\* \(vi phạm AC hay tiêu chí đã duyệt, lỗi đúng\/sai với đầu vào hợp lệ của chính tính năng, test sai, lỗ hổng bảo mật ở ranh giới tin cậy\) → sửa/.test(NR), 'AC3.1: nhóm trong phạm vi nguyên văn → sửa');
+  ok(/\*\*trong phạm vi\*\* \(vi phạm AC hay tiêu chí đã duyệt, lỗi đúng\/sai với đầu vào hợp lệ của chính tính năng, test sai, lỗ hổng bảo mật\) → sửa/.test(NR), 'AC3.1: nhóm trong phạm vi nguyên văn → sửa');
   ok(/\*\*ngoài AC, không đổi hành vi\*\* → `minor \(deferred\)` hoặc `Ruling:` giữ mức gốc, không sửa/.test(NR), 'AC3.1: nhóm ngoài AC không đổi hành vi → minor (deferred) hoặc Ruling: giữ mức gốc, không sửa');
   ok(/\*\*ngoài AC, đổi hành vi hoặc API\*\* \([^)]*\) → thẻ G3 kèm hệ quả, không sửa; "làm" thành follow-up/.test(NR), 'AC3.2: nhóm đổi hành vi/API → thẻ G3 kèm hệ quả, không sửa, "làm" thành follow-up');
   ok(/`Ruling:` không được thêm hành vi không có trong AC/.test(NR), 'AC3.2: Ruling: không được thêm hành vi không có trong AC');
@@ -76,4 +76,34 @@ export default async function run({ ok, ctx }) {
   ok(/- \[ \] 0 finding `blocker` trong phạm vi \(ngoài AC đã có `Ruling:` thì trình ở Bước 7\)/.test(WF), 'AC3.1: workflow-feature checklist cuối: 0 finding blocker trong phạm vi');
   ok(/Finding `blocker`\/`major` trong phạm vi tự tìm ra thì sửa/.test(IL.replace(/\n\s+/g, ' ')), 'AC3.1: inline.md tự review chỉ sửa finding trong phạm vi');
   ok(/^## Ranh giới tin cậy$/m.test(PRIN)&& /code hoặc cấu hình nội bộ của repo khai báo không phải ranh giới tin cậy/.test(PRIN), 'AC3.3: skill principles sau build có nội dung trust-boundary.md');
+
+  // Lượt sửa sau review cuối toàn nhánh (final-fix-brief): mỗi mục một câu quy tắc, neo theo nguyên văn.
+  const flat = (rel) => read(rel).replace(/\n\s*/g, ' ');
+  const BS = flat('core/skills/brainstorming/SKILL.md');
+  ok(/[Cc]a biên của mục "Rà ca biên" \(`clarify-core\.md`\) có mặc định dẫn code đi vào \*\*thẻ đầu\*\*, gom thành một câu nếu thẻ đã đủ 4 câu/.test(BS), 'F2: brainstorming bước 2 đưa ca biên có mặc định dẫn code vào thẻ đầu, gom một câu nếu đủ 4 câu');
+  ok(/Rà ca biên[^.]{0,60}clarify-core\.md[^.]{0,120}tin nhắn hỏi gom đầu tiên/.test(flat(`${SS}/SKILL.md`)), 'F2: spec-writing trỏ mục Rà ca biên cho tin nhắn hỏi gom đầu tiên');
+  ok(/ca biên theo mục "Rà ca biên" của `clarify-core\.md` đi vào tin nhắn gom đó/.test(WF1), 'F2: workflow-feature Bước 2 trỏ mục Rà ca biên cho tin nhắn gom');
+
+  const BCF = flat(`${SS}/references/builder-check.md`);
+  ok(/AC nêu kết quả số mà thiếu `calc:` → `AC<id> thiếu calc` \(sửa thẳng\)/.test(read(`${SS}/references/builder-check.md`)), 'F3: prompt builder-check bắt AC nêu kết quả số mà thiếu calc: → sửa thẳng');
+  ok(/session chính chạy `node <thư mục skill artifact-templates>\/scripts\/check-request\.mjs docs\/requests\/<ngày>-<slug>\/`/.test(BCF), 'F3: builder-check ghi đủ lệnh check-request.mjs do session chính chạy');
+  ok(/acceptance criteria đo được \(AC nêu kết quả số có `calc:`; `check-request\.mjs` không còn W22\)/.test(WF1), 'F3: workflow-feature Gate Bước 3 đòi AC có kết quả số kèm calc: và không còn W22');
+  ok(/bảng ứng viên e2e; AC nêu kết quả số kèm `calc:`\) và `design\.md` chỉ khi/.test(WF1), 'F3: workflow-feature Bước 3 bảo spec-analyst ghi calc: cho AC có kết quả số');
+  ok(CALC.test(read(`${SS}/references/spec-structure.md`)) && /W22/.test(read(`${SS}/references/spec-structure.md`)), 'F3: spec-structure khuôn AC nêu AC có kết quả số kèm calc: và W22');
+
+  const BCB = flat('core/skills/brainstorming/references/builder-check.md');
+  ok(/chỉ làm một phần \(vd có giới hạn lượt dùng nhưng không có cách tăng lượt; người dùng nói "nhập mã lúc thanh toán" mà hàm không nhận mã\) là câu hỏi của người dùng, không ghi là quyết định của agent/.test(BCB), 'F4: builder-check của brainstorming đưa tính năng brief làm một phần vào câu hỏi của người dùng');
+  ok(/Trừ tính năng người dùng nêu mà brief chỉ làm một phần[^.]{0,120}không ghi là quyết định của agent/.test(BCB), 'F4: ngoại lệ bỏ qua phần hỏi của brainstorming loại trừ tính năng cắt bớt');
+  ok(/tính năng người dùng nêu mà brief chỉ làm một phần[^)]{0,120}không xếp dưới "quyết định của agent"/.test(BS), 'F4: thẻ duyệt brief nêu tính năng cắt bớt như câu hỏi của người dùng, không xếp dưới quyết định của agent');
+
+  ok(/Extra: diff làm điều brief không yêu cầu, sửa file ngoài danh sách Files, hoặc thêm hành vi không AC nào nêu \(ném lỗi mới, mã lý do mới, kiểm kiểu\/đầu vào mà AC không đòi\)/.test(flat(`${PE}/prompts/task-review.md`)), 'F5: task-review xếp hành vi không AC nào nêu vào Extra');
+  ok(/không thêm hành vi không AC nào nêu \(ném lỗi mới, mã lý do mới, kiểm kiểu\/đầu vào mà AC không đòi\)/.test(flat(`${PE}/prompts/implementer.md`)), 'F5: implementer không thêm hành vi không AC nào nêu');
+
+  ok(/^focus: trace$/m.test(read('evals/engineering/spec-ac-calc/graders/calc-blocks-correct.md')), 'F7: grader calc-blocks-correct chấm trên trace để thấy đối số Write');
+  ok(/còn finding blocker trong phạm vi sau một lần sửa và một re-review/.test(read('workflows/feature/graph.json')), 'F8: graph.json Khi fail Bước 6 chỉ finding blocker trong phạm vi');
+
+  ok(/Finding bảo mật không hoãn bằng `Ruling:`, đi theo loại dừng 2; trần `minor` của ranh giới tin cậy chỉ áp cho finding kiểm đầu vào/.test(NR.replace(/\n\s*/g, ' ')), 'Audit F1: finding bảo mật không hoãn bằng Ruling:, đi theo loại dừng 2; trần minor chỉ cho finding kiểm đầu vào');
+  const TBF = TB.replace(/\n\s*/g, ' ');
+  ok(/Trần `minor` chỉ áp khi finding ghi `file:line` khai báo nội bộ và không có đường dữ liệu từ ngoài tới đó; không chứng minh được thì giữ mức gốc/.test(TBF), 'Audit F2: trần minor cần file:line khai báo nội bộ và không có đường dữ liệu từ ngoài, không chứng minh được thì giữ mức gốc');
+  ok(/Cấu hình runtime ngoài repo \(biến môi trường, Consul, DB, giao diện quản trị\) không phải "nội bộ"/.test(TBF), 'Audit F2: cấu hình runtime ngoài repo không phải nội bộ');
 }

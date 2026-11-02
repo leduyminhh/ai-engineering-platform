@@ -68,7 +68,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 
 Áp cho review từng task và review cuối, ngay sau khi nhận finding và trước khi giao sửa. Session chính xếp mỗi finding vào đúng một nhóm theo AC; nhãn `trong AC`/`ngoài AC` của reviewer chỉ là đầu vào, session chính xác nhận lại:
 
-- **trong phạm vi** (vi phạm AC hay tiêu chí đã duyệt, lỗi đúng/sai với đầu vào hợp lệ của chính tính năng, test sai, lỗ hổng bảo mật ở ranh giới tin cậy) → sửa theo mục "Vòng sửa"; ranh giới tin cậy theo mục "Ranh giới tin cậy" của `core:principles`.
+- **trong phạm vi** (vi phạm AC hay tiêu chí đã duyệt, lỗi đúng/sai với đầu vào hợp lệ của chính tính năng, test sai, lỗ hổng bảo mật) → sửa theo mục "Vòng sửa"; ranh giới tin cậy theo mục "Ranh giới tin cậy" của `core:principles`. Finding bảo mật không hoãn bằng `Ruling:`, đi theo loại dừng 2; trần `minor` của ranh giới tin cậy chỉ áp cho finding kiểm đầu vào.
 - **ngoài AC, không đổi hành vi** → `minor (deferred)` hoặc `Ruling:` giữ mức gốc, không sửa (blocker/major hoãn bằng `Ruling:` kèm mức gốc, xem mục Breaker).
 - **ngoài AC, đổi hành vi hoặc API** (ném lỗi mới, mã lý do mới, tham số mới) → thẻ G3 kèm hệ quả, không sửa; "làm" thành follow-up sau khi nhánh xong (`finish.md`). Ghi một dòng ledger `Ruling: ngoài AC, đổi hành vi — <mức gốc> <finding> — task <n> — <hệ quả>` để G3 (`finish.md`, bước 5) vẫn thấy sau compact.
 

@@ -1,7 +1,7 @@
 # Trial 7 — eval mới và E2E sau request aip-scope-discipline
 
 Ngày chạy: 2026-11-02. Nhánh `feature/aip-scope-discipline` tại `2c8c083` (core 1.26.5, engineering 2.10.7, workflows 3.14.7).
-Plugin toàn cục đã cập nhật bằng `aip update -g` trước E2E; `aip check -g` không còn lệch.
+Plugin toàn cục đã cập nhật bằng `aip update -g` theo lựa chọn "Cập nhật, chạy E2E" của người dùng, trước E2E; `aip check -g` không còn lệch.
 Tổng chi phí model: eval 1,56 USD + E2E 3,09 USD ≈ 4,65 USD (trần 15 USD).
 
 ## 1. Eval mới (runs = 1, ablation with/without)
@@ -22,7 +22,7 @@ Lệnh: `node scripts/eval-run.mjs --plugin <id> --max-cost-usd 2 --runs 1 --sca
 **Đọc trace nhánh có plugin đỏ (`spec-ac-calc` / `calc-blocks-correct`).**
 - `requirement.md` agent ghi có 16 khối `calc:` (AC1.2–AC3.2).
 - Trích file từ trace `spec-ac-calc-with-1.jsonl` rồi chạy `check-request.mjs`: 0 cảnh báo, tức mọi khối đều đúng số học.
-- Hai trong ba phiếu chấm của LLM judge vẫn cho FAIL. Nguyên nhân: grader đặt `focus: last_message` (xem `config` trong `latest-spec-ac-calc.json`), nên judge chỉ thấy tin nhắn cuối, không thấy đối số lệnh Write mà tiêu chí yêu cầu đọc.
+- Hai trong ba phiếu chấm của LLM judge vẫn cho FAIL. Nguyên nhân: grader đặt `focus: last_message` (xem `config` trong `latest-spec-ac-calc.json`), [Inference] nên judge chỉ thấy tin nhắn cuối, không thấy đối số lệnh Write mà tiêu chí yêu cầu đọc.
 - Kết luận: grader báo đỏ nhầm. Hành vi AC2.4 đạt; grader cần đổi `focus` sang trace hoặc kiểm bằng máy (chạy W22 trên file đã ghi). Việc đổi này ghi thành follow-up.
 
 **Ca không phân biệt được hai nhánh.** `brainstorm-reads-code-first` cho hai nhánh cùng điểm. Repo mẫu nhỏ nên baseline cũng đọc `src/cart.mjs` trước khi hỏi; case này chưa đo được tác dụng của "Rà ca biên".
@@ -53,18 +53,18 @@ Oracle (`node oracle.mjs aip-obj <shop4>/src/cart.mjs`): **11/12**. Ca trượt 
 |---|---|---|---|
 | Làm rõ | 7 | **8** | Đạt: lượt 1 đọc `src/cart.mjs` rồi chỉ hỏi điều code không trả lời ("Mình đã đọc repo: `src/cart.mjs` chỉ có hàm thuần `subtotal(items)`…"); brief có ở lượt 2. Không đạt: thẻ đầu không có ca biên số nào kèm mặc định dẫn code. Làm tròn xuống, `total ≥ 0`, hạn tính cả mốc và rủi ro đếm đồng thời chỉ xuất hiện ở brief lượt 2 (`brief.md:28-34`) và `requirement.md:17` (hạn tính cả mốc) dưới dạng quyết định hoặc giả định của agent, không dẫn `file:line`. |
 | Spec / AC | 7 | **8** | Đạt: W22 = 0; AC1.2–AC1.4 có `calc:` đúng. Không đạt: AC1.1, AC1.5, AC1.9 nêu kết quả số mà không có `calc:` (`requirement.md:30`, `:34`, `:38`). Đạt một phần: tính năng người dùng nêu (giới hạn lượt dùng) bị cắt một phần (bên gọi tự tăng `used`), được nêu ở thẻ duyệt brief và người dùng chọn "Duyệt", nhưng thẻ xếp mục này dưới tiêu đề "Quyết định của agent, cần bạn xác nhận" thay vì câu hỏi của người dùng (C3). |
-| Gọn / đúng phạm vi | 7 | **8** | Đạt: 25 dòng code, 15 test (lượt trước `shop2/src/cart.mjs` +42 dòng); hai finding ngoài AC (kiểm `items` hỏng, `null` trong coupon) được đưa lên G3 hỏi người dùng, không tự sửa; không kiểm đầu vào cho `items`. Không đạt: oracle 11/12 (rubric đòi 12/12); code từ chối `minSubtotal`, `maxUses`, `expiresAt`, `used` không nguyên hoặc âm và `now` thiếu khi có `expiresAt` (`src/cart.mjs:18-19`), trong khi AC1.8 chỉ nêu `type`, `value` — hành vi ngoài AC chưa được người dùng duyệt. |
+| Gọn / đúng phạm vi | 7 | **8** | Đạt: 25 dòng code, 15 test (lượt trước `<scratchpad>/e2e/shop2/src/cart.mjs` +42 dòng); hai finding ngoài AC (kiểm `items` hỏng, `null` trong coupon) được đưa lên G3 hỏi người dùng, không tự sửa; không kiểm đầu vào cho `items`. Không đạt: oracle 11/12 (rubric đòi 12/12); code từ chối `minSubtotal`, `maxUses`, `expiresAt`, `used` không nguyên hoặc âm và `now` thiếu khi có `expiresAt` (`src/cart.mjs:18-19`), trong khi AC1.8 chỉ nêu `type`, `value` — hành vi ngoài AC chưa được người dùng duyệt. |
 
 ### Ba phần còn dưới 9 và nguyên nhân
 
 - **Làm rõ (8).** [Inference] `brainstorming/SKILL.md` mô tả thẻ hỏi đầu (dòng ~44–51) mà không trỏ tới mục "Rà ca biên" của `clarify-core.md`. Vì vậy agent chỉ rà ca biên khi viết brief, sau khi người dùng đã trả lời. Muốn sửa thì bước tạo thẻ đầu phải gọi tới mục đó. Eval AC1.2 không bắt được lỗi này vì cả hai nhánh đều đạt.
-- **Spec / AC (8).** Quy tắc "AC nêu kết quả số phải kèm `calc:`" chỉ do skill bắt buộc. Theo quyết định B2, W22 không cảnh báo khi AC thiếu `calc:`, nên AC1.1, AC1.5, AC1.9 lọt. Lượt này agent tự ghi `requirement.md` (cỡ thay đổi nhỏ, không giao `engineering-spec-analyst`). Builder check vẫn chạy nhưng không bắt được ba AC đó. Nhãn "Quyết định của agent" cho tính năng cắt bớt cho thấy quy tắc C3 chưa đủ mạnh ở thẻ duyệt brief của `brainstorming` (C3 chỉ sửa builder check của spec).
-- **Gọn (8).** Mục "Nhận review" làm đúng việc của nó (finding ngoài AC lên G3). Phần thừa nằm ở code implementer viết ngay từ đầu (kiểm kiểu cho mọi trường coupon), và task review lẫn review cuối không xếp nó vào "Extra". Oracle 11/12 do API không nhận mã.
+- **Spec / AC (8).** Quy tắc "AC nêu kết quả số phải kèm `calc:`" chỉ do skill bắt buộc. Theo quyết định B2, W22 không cảnh báo khi AC thiếu `calc:`, nên AC1.1, AC1.5, AC1.9 lọt. Lượt này agent tự ghi `requirement.md` (cỡ thay đổi nhỏ, không giao `engineering-spec-analyst`). Builder check vẫn chạy nhưng không bắt được ba AC đó. Nhãn "Quyết định của agent" cho tính năng cắt bớt cho thấy quy tắc C3 chưa đủ mạnh ở thẻ duyệt brief của `brainstorming` (C3 áp cho builder check và thẻ duyệt G1; thẻ duyệt brief của `brainstorming` chưa có quy tắc này).
+- **Gọn (8).** Mục "Nhận review" làm đúng việc của nó (finding ngoài AC lên G3). Phần thừa nằm ở code implementer viết ngay từ đầu (kiểm kiểu cho mọi trường coupon), và [Inference] task review lẫn review cuối không xếp nó vào "Extra". Oracle 11/12 do API không nhận mã.
 
 Không chấm nới: cả ba phần chưa đạt mức ≥ 9 của AC4.1. So với lượt trước: Làm rõ 7 → 8, Spec / AC 7 → 8, Gọn 7 → 8.
 
 ## 4. Giới hạn của lượt đo
 
 - n = 1, mỗi nhánh một lượt; kết quả dao động giữa các lượt chưa đo.
-- Không chạy lại nhánh đối chứng E2E. Số so sánh lấy từ lượt trước: oracle đối chứng 10/12 (chạy lại `node oracle.mjs base <scratchpad>/e2e/shop3/src/coupon.mjs` ngày 2026-11-02 ra 10/12), chấm đối chứng 6,8 (phiên trước, không có trong repo).
+- Không chạy lại nhánh đối chứng E2E. Số so sánh lấy từ lượt trước: oracle đối chứng 10/12 (chạy lại `node oracle.mjs base <scratchpad>/e2e/shop3/src/coupon.mjs` ngày 2026-11-02 ra 10/12), chấm đối chứng 6,8 (phiên trước, ghi ở `design.md:6`).
 - `~/.claude/CLAUDE.md` mang baseline aip vẫn được nạp, nên là yếu tố gây nhiễu (như lượt trước).

@@ -434,9 +434,9 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
       for (const m of l.matchAll(/`calc:([^`]*)`/g)) {
         const eq = m[1].lastIndexOf('=');
         const raw = eq < 0 ? '' : m[1].slice(eq + 1).trim();
-        // Câu văn nhắc tên khối (`calc:` rỗng) hay mẫu mà cả một vế là chỗ trống (<biểu thức>, …, <số>) là tài liệu, không phải phép tính.
-        const blank = (s) => /^(<biểu thức>|<kết quả>|<số>|…)?$/.test(s.trim());
-        if (eq < 0 ? blank(m[1]) : blank(m[1].slice(0, eq)) || blank(raw)) continue;
+        // Chỉ bỏ qua khối rỗng (câu văn nhắc tên `calc:`) hoặc mẫu có một vế đúng là chỗ trống (<biểu thức>, …, <số>); vế rỗng thật (`2 + 2 =`, `= 4`) vẫn là lỗi.
+        const blank = (s) => /^(<biểu thức>|<kết quả>|<số>|…)$/.test(s.trim());
+        if (!m[1].trim() || (eq < 0 ? blank(m[1]) : blank(m[1].slice(0, eq)) || blank(raw))) continue;
         // Thập phân dùng '.'; dấu phẩy chỉ nhận ở nhóm hàng nghìn để "1,5" không bị đọc thành 15.
         const written = /^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw) ? raw.replace(/,/g, '') : raw;
         let got;

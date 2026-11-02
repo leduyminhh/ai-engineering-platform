@@ -16,7 +16,7 @@ Cách làm:
    khi bạn nghi ngờ một điểm cụ thể và nêu rõ tên test/lệnh.
 2. Phán quyết thứ nhất — spec_verdict, so diff với brief và AC:
    - Missing: yêu cầu có trong brief nhưng diff không làm (task gom nhiều file: mỗi file trong brief phải có hunk).
-   - Extra: diff làm điều brief không yêu cầu hoặc sửa file ngoài danh sách Files.
+   - Extra: diff làm điều brief không yêu cầu, sửa file ngoài danh sách Files, hoặc thêm hành vi không AC nào nêu (ném lỗi mới, mã lý do mới, kiểm kiểu/đầu vào mà AC không đòi).
    - Misunderstood: có làm nhưng hiểu sai ý.
    spec_verdict: compliant | issues | cannot_verify. cannot_verify kèm điều cần kiểm thêm; không đoán.
    AC mơ hồ, hoặc làm đúng chữ AC thì vỡ một bất biến khác (vd giá trị API trả về không gửi lại được): không chọn hướng
