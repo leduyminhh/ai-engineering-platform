@@ -53,7 +53,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    tiếp. Xếp từng finding theo mục "Nhận review". Chỉ finding `blocker`/`major` trong phạm vi hoặc `spec_verdict` khác `compliant` mới vào vòng sửa; `minor`/`nit` ghi vào
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Sau mỗi lần review (task review, rồi
    mỗi re-review) ghi `Task <n>: review <vòng> <spec_verdict> <blocker>/<major>/<minor>` (`<vòng>` đếm lần review của task
-   từ 1; `spec_verdict` ∈ `compliant` | `issues` | `cannot_verify`; ba số là số finding còn mở theo severity). Mục plan bắt buộc mà thiếu vẫn là
+   từ 1; `spec_verdict` ∈ `compliant` | `issues` | `cannot_verify`; ba số là số finding trong phạm vi còn mở theo severity; finding ngoài AC đã ghi `Ruling:` hoặc `minor (deferred)` không tính). Mục plan bắt buộc mà thiếu vẫn là
    `major`; vi phạm AC hay tiêu chí đã duyệt cũng là `major` trở lên, reviewer xếp `minor` thì session chính nâng lên trước khi ghi `minor (deferred)`. Không tự sửa finding: sửa do agent.
 9. **Ghi ledger** khi task kết thúc, với `<a>` = BASE và `<b>` = `head` cuối cùng, và chỉ khi đã có evidence test:
    - review sạch (`review clean` = `spec_verdict: compliant`, hoặc `cannot_verify` session chính đã giải quyết ở bước 8 mà không ra lệch, và không còn finding `blocker`/`major` mở **trong phạm vi**; các dòng `minor (deferred)` của task đứng trước dòng `complete`; task `TOOLING` TDD `có`: mẫu ở gạch cuối): `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "Task <n>: complete (commits <a>..<b>, review clean)"`;
@@ -66,13 +66,13 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 
 ## Nhận review
 
-Áp cho review từng task và review cuối, ngay sau khi nhận finding và trước khi giao sửa. Session chính xếp mỗi finding vào đúng một nhóm theo AC; nhãn `trong AC`/`ngoài AC` của reviewer chỉ là đầu vào, session chính xác nhận lại:
+Áp cho review từng task, mỗi re-review và review cuối, ngay sau khi nhận finding và trước khi giao sửa. Session chính xếp mỗi finding vào đúng một nhóm theo AC; nhãn `trong AC`/`ngoài AC` của reviewer chỉ là đầu vào, session chính xác nhận lại:
 
 - **trong phạm vi** (vi phạm AC hay tiêu chí đã duyệt, lỗi đúng/sai với đầu vào hợp lệ của chính tính năng, test sai, lỗ hổng bảo mật) → sửa theo mục "Vòng sửa"; ranh giới tin cậy theo mục "Ranh giới tin cậy" của `core:principles`. Finding bảo mật không hoãn bằng `Ruling:`, đi theo loại dừng 2; trần `minor` của ranh giới tin cậy chỉ áp cho finding kiểm đầu vào.
 - **ngoài AC, không đổi hành vi** → `minor (deferred)` hoặc `Ruling:` giữ mức gốc, không sửa (blocker/major hoãn bằng `Ruling:` kèm mức gốc, xem mục Breaker).
 - **ngoài AC, đổi hành vi hoặc API** (ném lỗi mới, mã lý do mới, tham số mới) → thẻ G3 kèm hệ quả, không sửa; "làm" thành follow-up sau khi nhánh xong (`finish.md`). Ghi một dòng ledger `Ruling: ngoài AC, đổi hành vi — <mức gốc> <finding> — task <n> — <hệ quả>` để G3 (`finish.md`, bước 5) vẫn thấy sau compact.
 
-Nhãn của reviewer chỉ được nâng tự do (`ngoài AC` → trong phạm vi). Hạ nhãn (trong phạm vi → ngoài AC) phải có `Ruling:` nêu AC cụ thể không liên quan hoặc lý do đầu vào không hợp lệ; không đủ thì giữ trong phạm vi. Đầu vào hợp lệ là đầu vào đúng kiểu và đúng miền mà design mô tả.
+Nhãn phạm vi của reviewer được đổi tự do theo chiều `ngoài AC` → trong phạm vi; đây là đổi nhãn phạm vi, không đổi severity. Hạ nhãn (trong phạm vi → ngoài AC) phải có `Ruling:` nêu AC cụ thể không liên quan hoặc lý do đầu vào không hợp lệ; không đủ thì giữ trong phạm vi. Đầu vào hợp lệ là đầu vào đúng kiểu và đúng miền mà design mô tả.
 
 `Ruling:` không được thêm hành vi không có trong AC. `review clean` = không còn blocker/major mở **trong phạm vi**: finding blocker/major ngoài AC đã hoãn bằng `Ruling:` không chặn `Task <n>: complete`, và mọi `Ruling:` đó được liệt kê ở G3.
 

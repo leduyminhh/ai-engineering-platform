@@ -220,8 +220,8 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** nhánh đã qua review cuối + ledger + mục `## Ảnh hưởng spec` của `design.md`
 - **Hành động:** theo `finish.md` (của `plan-execution`): cập nhật docs bị ảnh hưởng (README/API docs/ADR/`project-knowledge/`); cập nhật spec
   sống `docs/specs/<capability>/spec.md` theo `## Ảnh hưởng spec` (không ảnh hưởng thì ghi lý do); chạy
-  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (thêm `--base <nhánh
-  gốc>` khi có spec sống); bump version/lock theo quy ước dự án nếu cần; chạy full suite của mọi component bị chạm và
+  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (kèm `--base <nhánh
+  gốc>` để W7 chỉ tính test thêm trong nhánh và W13 kiểm spec sống); bump version/lock theo quy ước dự án nếu cần; chạy full suite của mọi component bị chạm và
   component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings`; trình diff cả nhánh (G3) để người dùng duyệt, cùng tên nhánh gốc đề xuất (nhiều ứng viên thì hỏi chọn ngay trong tin nhắn G3). Khoá `mergeLocal` bật thì bản trình G3 nêu nhánh gốc và hai commit sẽ tạo, duyệt rõ G3 là
   đồng ý merge local (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, xanh mới commit merge, đỏ hoặc conflict thì `git merge --abort`; rồi một commit docs đặt `merged` và xoá plan trên nhánh gốc, rồi dọn theo `cleanup`, xem `finish.md`), push/PR hỏi riêng một lần sau merge local; thiếu khoá thì đưa
   đúng 3 lựa chọn ngay trong câu hỏi G3: merge local / push + PR / giữ nguyên (mặc định), chọn push + PR là đồng ý push, không hỏi lại. Ghi `Plan: complete` vào ledger sau khi việc của lựa

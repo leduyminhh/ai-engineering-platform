@@ -431,6 +431,46 @@ export default async function run({ ok, ctx }) {
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
+
+    // --base: file test dùng chung còn ID AC của request cũ; chỉ dòng thêm từ base (và file chưa track) mới phủ AC.
+    const { execFileSync } = await import('node:child_process');
+    const gtmp = fs.mkdtempSync(path.join(ctx.os.tmpdir(), 'check-request-base-'));
+    try {
+      const git = (...a) => execFileSync('git', a, { cwd: gtmp, stdio: 'pipe' });
+      const put = (rel, data) => {
+        const p = path.join(gtmp, rel);
+        fs.mkdirSync(path.dirname(p), { recursive: true });
+        fs.writeFileSync(p, data);
+      };
+      const dir = path.join(gtmp, 'docs', 'requests', 'r');
+      const SHARED = 'ok(a, "AC1.1: cũ")\nok(b, "AC1.2: cũ")\nok(c, "AC1.10: cũ")\n';
+      put('docs/requests/r/design.md', DESIGN);
+      put('docs/requests/r/plan.md', ['# Plan', '**Goal:** x', '**Spec:** design.md', '**Phủ AC:** AC1.1, AC1.2, AC1.10', '', '**Files:**', `- Test: ${tick('test/')}`, ''].join('\n'));
+      put('test/shared.mjs', SHARED);
+      git('init', '-q');
+      git('config', 'user.name', 'T');
+      git('config', 'user.email', 't@example.com');
+      git('config', 'commit.gpgsign', 'false');
+      git('add', '-A');
+      git('commit', '-q', '-m', 'init');
+      const w7ids = (argv) => quiet(() => cr.main(argv)).out.filter((l) => l.includes('[W7]')).map((l) => l.match(/AC\d+\.\d+/)[0]).sort().join();
+      const cases = [
+        { name: 'không --base → giữ hành vi cũ, ID cũ vẫn phủ', argv: [dir], want: '' },
+        { name: '--base, file dùng chung không đổi → mọi AC W7', argv: [dir, '--base', 'HEAD'], want: 'AC1.1,AC1.10,AC1.2' },
+        { name: '--base, dòng thêm nhắc AC1.1 → chỉ AC1.1 được phủ', argv: [dir, '--base', 'HEAD'], edit: () => put('test/shared.mjs', SHARED + 'ok(d, "AC1.1: mới")\n'), want: 'AC1.10,AC1.2' },
+        { name: '--base, dòng xoá nhắc AC1.2 không tính là phủ', argv: [dir, '--base', 'HEAD'], edit: () => put('test/shared.mjs', SHARED.replace('ok(b, "AC1.2: cũ")\n', '')), want: 'AC1.1,AC1.10,AC1.2' },
+        { name: '--base, file test mới chưa track → phủ cả file', argv: [dir, '--base', 'HEAD'], edit: () => put('test/new.mjs', 'AC1.2 AC1.10'), want: 'AC1.1' },
+        { name: '--base ref không có → giữ hành vi cũ', argv: [dir, '--base', 'khong-ton-tai-ref'], want: '' },
+      ];
+      for (const c of cases) {
+        put('test/shared.mjs', SHARED);
+        fs.rmSync(path.join(gtmp, 'test', 'new.mjs'), { force: true });
+        c.edit?.();
+        ok(w7ids(c.argv) === c.want, `W7 theo request: ${c.name}`);
+      }
+    } finally {
+      fs.rmSync(gtmp, { recursive: true, force: true });
+    }
   }
 
   // 7. check-request.mjs: trạng thái request (W15–W16), một hành vi nhiều đầu vào.

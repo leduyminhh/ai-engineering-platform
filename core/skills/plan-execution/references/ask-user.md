@@ -23,7 +23,7 @@ câu trả lời rồi gõ lại.
 5. **Sau câu trả lời:** đọc kết quả của công cụ và chạy tiếp. Câu trả lời tự viết ("Other", hoặc lời thay cho số ở quy tắc 4)
    là câu trả lời hợp lệ ngang một lựa chọn: rõ nghĩa thì làm đúng theo nó, kể cả khi nó gộp, sửa hay khác mọi lựa chọn đã
    nêu. Chỉ câu trả lời mơ hồ mới hỏi lại, đúng một lần với lựa chọn hẹp hơn; vẫn không rõ thì áp lựa chọn an toàn nhất (giữ
-   nguyên, không làm). Câu trả lời tự viết không nới ranh giới an toàn: push, xóa hay việc ngoài phạm vi chỉ làm khi người dùng
+   nguyên, không làm). Câu trả lời tự viết không nới ranh giới an toàn: push, merge (kể cả duyệt G3), xóa hay việc ngoài phạm vi chỉ làm khi người dùng
    viết rõ. Thông báo hệ thống tự động không phải câu trả lời của người dùng.
 
 ## Mỗi cổng hỏi gì và mở gì

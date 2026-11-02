@@ -11,7 +11,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
    `docs/specs/<capability>/spec.md`, thêm một hàng vào bảng lịch sử của spec; capability mới thì thêm vào
    `docs/specs/README.md`. Design ghi "Không ảnh hưởng" thì bỏ qua và ghi lý do.
 3. **Chạy `check-request.mjs`** trên thư mục request (`node <thư mục skill artifact-templates>/scripts/check-request.mjs
-   docs/requests/<ngày>-<slug>/`, thêm `--base <nhánh gốc>` khi có spec sống). Cảnh báo nào còn lại phải sửa hoặc ghi vào
+   docs/requests/<ngày>-<slug>/`, kèm `--base <nhánh gốc>` để W7 chỉ tính test thêm trong nhánh và W13 kiểm spec sống). Cảnh báo nào còn lại phải sửa hoặc ghi vào
    `remaining_risks`; không xoá mục `**Files:**` hay test để làm cảnh báo biến mất.
 4. **Full suite** của mọi component bị chạm và component phụ thuộc vào chúng, chạy một lần, chọn theo component chứ không
    theo từng test. Nếu thay đổi cần bước phát hành theo quy ước dự án (bump version, cập nhật lock), làm trước lần chạy

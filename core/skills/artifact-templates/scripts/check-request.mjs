@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới, mục "Ảnh hưởng spec" của design.md (W10–W14) và thư mục parts/ (Bảng part W19, AC trong design của part W20), khối `calc:` của AC tính lại bằng evalCalc (W22).
-// Cách dùng: <thư-mục> [--tests <path>…] [--base <ref>] [--strict]. --base <ref> bật W13 (spec bị ảnh hưởng chưa đổi kể từ ref). Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
+// Cách dùng: <thư-mục> [--tests <path>…] [--base <ref>] [--strict]. --base <ref> bật W13 (spec bị ảnh hưởng chưa đổi kể từ ref) và giới hạn W7 vào dòng test thêm từ ref. Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -505,6 +505,23 @@ function readTestFrom(root) {
   };
 }
 
+// --base: file test dùng chung còn ID AC của request khác, nên chỉ dòng thêm từ ref và file chưa track mới phủ AC (W7).
+// Lỗi git (ref không có, không phải repo) → đọc cả file như khi không có --base.
+function readTestSince(root, ref, readTest) {
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  return (rel) => {
+    const full = readTest(rel);
+    if (full === null) return null;
+    try {
+      const added = git('diff', '--unified=0', '--no-color', ref, '--', rel).split(/\r?\n/)
+        .filter((l) => l.startsWith('+') && !l.startsWith('+++')).map((l) => l.slice(1));
+      const untracked = git('ls-files', '--others', '--exclude-standard', '--', rel).split(/\r?\n/)
+        .filter(Boolean).map((p) => readTest(p) ?? '');
+      return [...added, ...untracked].join('\n');
+    } catch { return full; }
+  };
+}
+
 export function main(argv) {
   const usage = () => { console.error('Cách dùng: node check-request.mjs <thư-mục-request> [--tests <path>…] [--base <ref>] [--strict]'); return 2; };
   let dir;
@@ -577,7 +594,9 @@ export function main(argv) {
   // Thư mục không có tiền tố ngày coi là cũ (không rõ tuổi thì không cảnh báo).
   const dated = path.basename(path.resolve(dir)).match(/^(\d{4}-\d{2}-\d{2})-/);
   const legacy = !dated || dated[1] < SPEC_SINCE;
-  const warnings = checkRequest(texts, { legacy, partDirs, readTest: readTestFrom(projectRoot(dir)), override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
+  const root = projectRoot(dir);
+  const readTest = base === undefined ? readTestFrom(root) : readTestSince(root, base, readTestFrom(root));
+  const warnings = checkRequest(texts, { legacy, partDirs, readTest, override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
   for (const w of warnings) console.log(`WARN ${w.file}:${w.line} [${w.code}] ${w.msg}`);
   console.log(`${warnings.length} cảnh báo`);
   return strict && warnings.length ? 1 : 0;
