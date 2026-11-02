@@ -432,10 +432,11 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     if (typeof texts[f] !== 'string') continue;
     (lines[f] || linesOf(texts[f])).forEach((l, idx) => {
       for (const m of l.matchAll(/`calc:([^`]*)`/g)) {
-        // Câu văn nhắc tên khối (`calc:` rỗng) hay mẫu có chỗ trống <…> là tài liệu, không phải phép tính để kiểm.
-        if (!m[1].trim() || /<[^<>]+>/.test(m[1])) continue;
         const eq = m[1].lastIndexOf('=');
         const raw = eq < 0 ? '' : m[1].slice(eq + 1).trim();
+        // Câu văn nhắc tên khối (`calc:` rỗng) hay mẫu mà cả một vế là chỗ trống (<biểu thức>, …, <số>) là tài liệu, không phải phép tính.
+        const blank = (s) => /^(<[^<>]+>|…)$/.test(s.trim());
+        if (!m[1].trim() || (eq >= 0 && (blank(m[1].slice(0, eq)) || blank(raw)))) continue;
         // Thập phân dùng '.'; dấu phẩy chỉ nhận ở nhóm hàng nghìn để "1,5" không bị đọc thành 15.
         const written = /^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw) ? raw.replace(/,/g, '') : raw;
         let got;

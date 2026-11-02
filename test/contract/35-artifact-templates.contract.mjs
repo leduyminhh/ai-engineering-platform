@@ -663,7 +663,7 @@ export default async function run({ ok, ctx }) {
     ok(w22('`calc: 10 / 4 = 2.5`').length === 0, 'AC2.2: calc kết quả thập phân đúng → không W22');
     ok(w22('`calc: 1000 * 2 = 2,000`').length === 0, 'calc kết quả có dấu phẩy hàng nghìn → bỏ dấu phẩy khi so');
     ok(w22('có khối `calc:`, mẫu `calc: <biểu thức> = <kết quả>` hay `calc: … = <số>`').length === 0, 'câu văn nhắc khối calc rỗng hoặc mẫu placeholder → không W22');
-    for (const bad of ['`calc: 5 < 3 = 2`', '`calc: 1 … 2 = 3`', '`calc: 3 * 5 = 1,5`']) {
+    for (const bad of ['`calc: 5 < 3 = 2`', '`calc: 1 … 2 = 3`', '`calc: 3 * 5 = 1,5`', '`calc: 2 * <n> = 4`', '`calc: 5 < 3 > 1 = 1`']) {
       ok(w22(bad).some((w) => /biểu thức không hợp lệ/.test(w.msg)), `AC2.2: ${bad} → W22 "biểu thức không hợp lệ"`);
     }
     ok(w22('`calc: a = b = 3`').some((w) => /biểu thức không hợp lệ/.test(w.msg)), 'calc nhiều dấu = → tách ở = cuối, vế trái không hợp lệ');
