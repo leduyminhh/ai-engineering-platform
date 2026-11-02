@@ -14,6 +14,9 @@ export default async function run({ ok, ctx }) {
     ['AC7.1', F, /^## Đóng phiên con\n(?:(?!^## )[\s\S])*đang chờ người dùng/m, 'phiên còn chạy hoặc đang chờ người dùng được giữ'],
     ['AC7.1', F, /^## Đóng phiên con\n(?:(?!^## )[\s\S])*không xoá phiên/m, 'nêu không xoá phiên'],
     ['AC7.1', F, /^## Merge local theo khoá\n(?:(?!^## )[\s\S])*^4\. [^\n]*Đóng phiên con/m, 'bước 4 của "Merge local theo khoá" tham chiếu mục mới'],
+    // AskUserQuestion nhận tối đa 4 lựa chọn: trial 2026-11-02 thẻ "Duyệt và chạy" ra 5 lựa chọn và lần gọi đầu bị từ chối.
+    ...[B, 'core/skills/plan-execution/references/ask-user.md'].map((f) => ['regression trial 2026-11-02', f,
+      /Duyệt và chạy `<route>` ngay \/ Duyệt brief, chưa chạy \/ Sửa brief hoặc đổi route \/ Dừng/, 'thẻ "Duyệt và chạy" có đúng 4 lựa chọn']),
     ['AC1.1', B, /brief\.md/, 'SKILL.md nêu brief.md là đầu ra'],
     ['AC1.1', B, /route\.mjs/, 'SKILL.md nêu lệnh route.mjs'],
     // Khối một bước = từ dòng "<n>. **" tới dòng bước kế (dòng con thụt lề không khớp ^\d+\.).
