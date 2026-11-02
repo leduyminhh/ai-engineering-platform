@@ -68,3 +68,28 @@ Không chấm nới: cả ba phần chưa đạt mức ≥ 9 của AC4.1. So v�
 - n = 1, mỗi nhánh một lượt; kết quả dao động giữa các lượt chưa đo.
 - Không chạy lại nhánh đối chứng E2E. Số so sánh lấy từ lượt trước: oracle đối chứng 10/12 (chạy lại `node oracle.mjs base <scratchpad>/e2e/shop3/src/coupon.mjs` ngày 2026-11-02 ra 10/12), chấm đối chứng 6,8 (phiên trước, ghi ở `design.md:6`).
 - `~/.claude/CLAUDE.md` mang baseline aip vẫn được nạp, nên là yếu tố gây nhiễu (như lượt trước).
+
+## 5. E2E lần 2 (sau lượt sửa của review cuối)
+
+Lượt sửa `dcf1f11` (bump `467c2ea`: core 1.26.6, engineering 2.10.8, workflows 3.14.8) cho các file gọi trỏ tới "Rà ca biên", bắt AC có số mà thiếu `calc:` ở builder check và Gate, áp C3 ở thẻ duyệt brief, và nêu rõ "Extra". Plugin toàn cục cập nhật lại bằng `aip update -g`. Sandbox mới `<scratchpad>/e2e/shop5`, session `f7edf004-…`, 4 lượt:
+
+| Lượt | Nội dung | Chi phí (USD) | Số turn |
+|---|---|---|---|
+| 1 | `turn-1.txt` | 0,26 | 8 |
+| 2 | câu mở (dịp lễ, nhập mã lúc thanh toán, tổng đúng và không âm) + 2a, 3a, 4a + 3b (giới hạn lượt) | 0,68 | 13 |
+| 3 | hai mục "Chưa được duyệt": làm luôn tra mã từ chuỗi nhập; bộ đếm lượt dùng để bên gọi tăng; duyệt và chạy | 1,44 | 30 |
+| 4 | "1 — Duyệt tài liệu. Chạy tiếp đến G3" | 4,42 | 25 |
+
+Kết quả: nhánh `feature/cart-coupon`, 3 commit; `src/cart.mjs` +42 dòng, `npm test` 32/32; `check-request.mjs` 0 cảnh báo; ledger có 3 `Ruling:` trong AC và 2 `Ruling: ngoài AC, đổi hành vi` (giỏ không hợp lệ, dữ liệu coupon hỏng) được đưa lên G3, không tự sửa. Lượt 4 có 2 lệnh bị từ chối quyền.
+
+Oracle (`node oracle.mjs aip-list <shop5>/src/cart.mjs`, adapter mới cho API `applyCoupon(items, code, coupons, now)`): **12/12**.
+
+| Phần | Lần 1 | Lần 2 | Bằng chứng |
+|---|---|---|---|
+| Làm rõ | 8 | **9,5** | Thẻ đầu (lượt 1) có ca biên kèm mặc định dẫn code: làm tròn xuống "vì giá là số nguyên (`cart.mjs:1`)", mức giảm không vượt `subtotal` nên tổng không âm, mốc hết hạn tính cả ngày, giới hạn lượt "cần chỗ lưu và xử lý đếm đồng thời". Không hỏi điều code đã trả lời. Brief có ở lượt 2. |
+| Spec / AC | 8 | **8,5** | Đạt: W22 = 0; 11/22 AC có `calc:` cho mọi kết quả tính ra; hai tính năng cắt bớt nằm trong mục "Chưa được duyệt" của thẻ duyệt brief và người dùng quyết (C3); G1 dừng riêng ở lượt 3. Chưa đạt theo cách đọc chặt: AC10.2 (giỏ rỗng, `total` = 0) và ba AC từ chối ghi `discount` = 0 không có `calc:`. Nếu kết quả hằng (0, bằng subtotal) không tính là "kết quả số" thì phần này đạt 9,5. |
+| Gọn / đúng phạm vi | 8 | **9** | Oracle 12/12. Hai finding ngoài AC đổi hành vi lên G3 kèm hệ quả, không sửa. Kiểm `NaN`/`Infinity` của coupon nằm trong "Quyết định của agent" đã duyệt ở G1. Còn dư: 31 test mới cho 42 dòng code. |
+
+Tổng chi phí model của request: eval 1,56 + E2E lần 1 3,09 + E2E lần 2 6,80 ≈ 11,45 USD, vượt mức ước tính ~10 USD đã duyệt, dưới trần dừng 15 USD.
+
+AC4.1 (≥ 9 cả ba phần): Làm rõ và Gọn đạt. Spec / AC đạt hay không phụ thuộc cách đọc "AC nêu kết quả số" với kết quả hằng; câu hỏi này đưa lên G3.

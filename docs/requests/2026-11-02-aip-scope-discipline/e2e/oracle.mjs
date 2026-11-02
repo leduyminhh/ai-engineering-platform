@@ -1,4 +1,4 @@
-// usage: node oracle.mjs <aip|aip-obj|base> <module path>
+// usage: node oracle.mjs <aip|aip-obj|aip-list|base> <module path>
 import { pathToFileURL } from 'node:url';
 
 const [kind, modPath] = process.argv.slice(2);
@@ -14,6 +14,13 @@ function apply(items, code, c, now = NOW) {
     const coupon = code === c.code ? { type: c.type, value: c.value, expiresAt: c.expiresAt?.getTime(), minSubtotal: c.min, maxUses: c.maxUses } : null;
     const r = mod.applyCoupon(items, coupon, { now: now.getTime(), used: c.used ?? 0 });
     return { ...r, ok: r.applied };
+  }
+  // aip-list: applyCoupon(items, code, coupons, now), hạn là chuỗi 'YYYY-MM-DD' theo ngày local, áp được khi reason null.
+  if (kind === 'aip-list') {
+    const day = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const rec = { code: c.code, type: c.type, value: c.value, expiresAt: c.expiresAt ? day(c.expiresAt) : '9999-12-31', minSubtotal: c.min, maxUses: c.maxUses, usedCount: c.used };
+    const r = mod.applyCoupon(items, code, [rec], now);
+    return { ...r, ok: r.reason === null };
   }
   if (kind === 'aip') {
     const rec = { code: c.code, type: c.type, value: c.value, endsAt: c.expiresAt, minSubtotal: c.min, maxUses: c.maxUses, used: c.used };
