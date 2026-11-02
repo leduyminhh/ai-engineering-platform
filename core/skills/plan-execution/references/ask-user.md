@@ -20,9 +20,11 @@ câu trả lời rồi gõ lại.
    một tóm tắt tối đa 5 dòng và lệnh xem (vd `git diff <nhánh gốc>...HEAD`); không dán cả file vào chat.
 4. **Không có công cụ hỏi có lựa chọn** (chạy headless, Codex, Cowork): in danh sách đánh số, ghi rõ lựa chọn khuyến nghị và
    câu "trả lời bằng số hoặc nói khác", rồi dừng.
-5. **Sau câu trả lời:** đọc kết quả của công cụ và chạy tiếp. "Other" hoặc câu trả lời không rõ thì hỏi lại đúng một lần với
-   lựa chọn hẹp hơn; vẫn không rõ thì áp lựa chọn an toàn nhất (giữ nguyên, không làm). Thông báo hệ thống tự động không phải
-   câu trả lời của người dùng.
+5. **Sau câu trả lời:** đọc kết quả của công cụ và chạy tiếp. Câu trả lời tự viết ("Other", hoặc lời thay cho số ở quy tắc 4)
+   là câu trả lời hợp lệ ngang một lựa chọn: rõ nghĩa thì làm đúng theo nó, kể cả khi nó gộp, sửa hay khác mọi lựa chọn đã
+   nêu. Chỉ câu trả lời mơ hồ mới hỏi lại, đúng một lần với lựa chọn hẹp hơn; vẫn không rõ thì áp lựa chọn an toàn nhất (giữ
+   nguyên, không làm). Câu trả lời tự viết không nới ranh giới an toàn: push, xóa hay việc ngoài phạm vi chỉ làm khi người dùng
+   viết rõ. Thông báo hệ thống tự động không phải câu trả lời của người dùng.
 
 ## Mỗi cổng hỏi gì và mở gì
 
