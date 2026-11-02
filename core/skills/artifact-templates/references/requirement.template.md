@@ -15,5 +15,6 @@ Bỏ khối này khi chép template ra dùng.
 <...>
 ## Tiêu chí chấp nhận
 - [ ] **AC1.1** — Given <tiền điều kiện> When <hành động> Then <kết quả đo được>
+<AC nêu kết quả số thì kèm khối `calc: <biểu thức> = <kết quả>` trong backtick, vd `calc: 99999 - floor(99999 * 15 / 100) = 85000`; check-request.mjs tính lại (W22)>
 ## Không đổi (bugfix)
 - <hành vi phải giữ nguyên; bỏ mục này nếu không phải bugfix>

@@ -108,7 +108,7 @@
       },
       "next": "finish",
       "on_fail": [
-        { "to": "task-loop", "when": "còn finding blocker sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa", "max_attempts": 2 },
+        { "to": "task-loop", "when": "còn finding blocker trong phạm vi sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa", "max_attempts": 2 },
         { "to": "documents", "when": "drift contract↔code mà lỗi nằm ở contract → quay lại Bước 3", "max_attempts": 2 },
         { "to": "ask_user", "when": "Ruling: hay finding chạm loại dừng của plan-execution (không đảo ngược, bảo mật, tác động ngoài repo, schema DB) → hỏi người dùng" }
       ],

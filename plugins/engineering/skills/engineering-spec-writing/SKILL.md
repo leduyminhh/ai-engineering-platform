@@ -63,7 +63,7 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    Mỗi tin nhắn kết thúc bằng **một câu hỏi**, không kèm danh sách ví dụ; câu mở trước, chỉ đưa lựa chọn khi
    người dùng bí; neo vào tình huống cụ thể; đoán để họ sửa thường tốt hơn hỏi. Tám nhóm của
    [references/elicitation.md](references/elicitation.md) là **vùng phủ** để không bỏ sót, không đọc ra thành câu.
-   Ưu tiên câu mở khoá AC. Chuyện kỹ thuật/nền tảng: hỏi người dùng muốn tự chọn hay giao agent; agent chọn thì ghi
+   Ưu tiên câu mở khoá AC. Ca biên theo mục "Rà ca biên" của `references/clarify-core.md` (skill `brainstorming` / `core:brainstorming`): ca có mặc định dẫn code đi vào tin nhắn hỏi gom đầu tiên. Chuyện kỹ thuật/nền tảng: hỏi người dùng muốn tự chọn hay giao agent; agent chọn thì ghi
    **quyết định của agent**.
 
 4. **Playback — tóm tắt lại từng phần.**
@@ -94,9 +94,8 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    [references/spec-structure.md](references/spec-structure.md). Agent không hỏi người dùng; thiếu đầu vào thì trả `blocked`
    + `questions[]` và session chính hỏi lại. Bám scaffold `_TEMPLATE`, mở rộng chứ không thay thế. Tiếng Việt CÓ DẤU.
    Mỗi acceptance criterion mang ID `AC<n>.<m>` (`<n>` = số thứ tự requirement, `<m>` = số thứ tự AC trong requirement đó,
-   vd `AC1.2`), viết Given/When/Then, để `plan.md` và `tasks.md` phủ/truy vết đúng ID. AC có ví dụ số (Given/When/Then
-   nêu giá trị cụ thể): tự tính lại từng kết quả từ Given theo quy tắc làm tròn đã chốt (chạy một lệnh tính khi có công cụ
-   shell) trước khi giao hoặc trình, vì builder check không tính lại giúp. Skill này KHÔNG dựng `plan.md`
+   vd `AC1.2`), viết Given/When/Then, để `plan.md` và `tasks.md` phủ/truy vết đúng ID. AC nêu kết quả số phải kèm khối `calc: <biểu thức> = <kết quả>` trong backtick; `check-request.mjs` tính lại (W22).
+   Skill này KHÔNG dựng `plan.md`
    (kế hoạch triển khai thuộc `engineering-plan-writing` sau khi spec được duyệt).
 
 8. **Ghi ADR cho quyết định lớn.**
@@ -112,7 +111,9 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    sai sẽ hỏng, xếp hạng. Session chính phân kết quả thành 3 nhóm: **đã trả lời** (ghi vào tài liệu) / **nhỏ** (tự quyết,
    ghi **quyết định của agent**) / **của người dùng** — chỉ nhóm này đi hỏi, **gom vào đúng một tin nhắn**, đây là vòng
    hỏi duy nhất của bước kiểm. Người dùng đã **bỏ qua phần hỏi** → không hỏi: nhóm "của người dùng" cũng ghi là
-   **quyết định của agent** kèm mặc định đã chọn và nêu nổi bật ở checkpoint. **Không có tool subagent** → session chính tự đọc tài liệu như builder theo cùng prompt.
+   **quyết định của agent** kèm mặc định đã chọn và nêu nổi bật ở checkpoint. Trừ tính năng người dùng nêu mà design chỉ
+   làm một phần: mục đó vẫn nêu ở checkpoint duyệt design như điều chưa được duyệt, không ghi là quyết định của agent.
+   **Không có tool subagent** → session chính tự đọc tài liệu như builder theo cùng prompt.
 
 10. **Verify.**
     Chạy checklist [references/checklist.md](references/checklist.md): đủ mục; mỗi requirement truy vết được

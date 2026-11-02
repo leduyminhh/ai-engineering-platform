@@ -43,6 +43,7 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
   kiểm chứng được.
 - Tránh từ mơ hồ ("nhanh", "thân thiện", "ổn định") — thay bằng số/điều kiện ("p95 < 300ms", "0 lỗi validation
   với input hợp lệ").
+- AC nêu kết quả số kèm khối `calc: <biểu thức> = <kết quả>` trong backtick; `check-request.mjs` kiểm phép tính (W22).
 - Mỗi acceptance criterion nên soi chiếu về một functional/NFR ở trên (truy vết được).
 - Mỗi AC mang ID `AC<n>.<m>` (regex `^AC\d+\.\d+$`): `<n>` là số thứ tự requirement, `<m>` là số thứ tự AC trong
   requirement đó (vd `AC2.1`). ID không trùng và không đánh số lại sau khi đã chia sẻ; `plan.md` (`**Phủ AC:**`) và

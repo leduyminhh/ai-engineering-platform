@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: review-out-of-scope
+description: Plan đã chạy xong mọi task, review cuối có hai finding ngoài AC (hardening dữ liệu do repo khai báo; đề xuất ném lỗi mới). Agent không sửa src/ cho hai finding đó và hỏi người dùng về finding đổi hành vi.
+context:
+  scaffold_script: scaffold.sh

@@ -1,0 +1,1 @@
+1 — sửa AC1.3 thành total = 85000. Chạy tiếp tới G3. Nhớ: gọi lệnh trực tiếp, không prefix `cd ... &&`; không push.

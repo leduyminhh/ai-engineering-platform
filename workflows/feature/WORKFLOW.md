@@ -58,7 +58,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Thực hiện:** session chính, theo skill `engineering-spec-writing` (không giao agent hỏi người dùng)
 - **Đầu vào:** mô tả yêu cầu/user story của người dùng + baseline Bước 1
 - **Hành động:** có `brief.md` của request (`docs/requests/<ngày>-<slug>/brief.md`) thì đọc trước: bỏ qua phần brief đã chốt (mục tiêu, phạm vi, hướng đã cân nhắc, quyết định của agent); chỉ hỏi phần brief còn thiếu, vẫn gom vào một tin nhắn. Chạy quy trình làm rõ của skill: cổng "đủ thông tin" (đủ thì không hỏi), lối thoát cho người dùng
-  bỏ qua phần hỏi, gom mọi câu còn lại vào một tin nhắn (mỗi câu kèm phương án khuyến nghị; không hỏi từng câu qua nhiều lượt) rồi tóm tắt lại những gì đã hiểu, đề xuất 2–3 hướng kèm 1 khuyến nghị và đánh đổi, xếp
+  bỏ qua phần hỏi, gom mọi câu còn lại vào một tin nhắn (mỗi câu kèm phương án khuyến nghị; không hỏi từng câu qua nhiều lượt; ca biên theo mục "Rà ca biên" của `clarify-core.md` đi vào tin nhắn gom đó) rồi tóm tắt lại những gì đã hiểu, đề xuất 2–3 hướng kèm 1 khuyến nghị và đánh đổi, xếp
   cỡ việc (việc rõ và nhỏ → không chạy workflow, làm thẳng; thay đổi nhỏ; dự án), tách các request độc lập.
   Xác định phạm vi ảnh hưởng thuộc `backend`, `frontend`, hay `fullstack`; có `brief.md` thì `phạm-vi` của brief ánh xạ `code-be` → backend, `code-fe` → frontend, `fullstack` → fullstack; `phạm-vi` `data` (kể cả khi `route-đã-duyệt` là workflow này) → dừng, đề xuất `data-db-migration`. Phạm vi cần đổi schema DB
   (bảng/cột/index/migration) → dừng, đề xuất chạy skill `data-db-migration` (chế độ `change`, plugin `data`)
@@ -89,7 +89,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** hướng, cỡ việc, phạm vi và các quyết định đã chốt ở Bước 2 (session chính chuyển cho agent; agent không
   hỏi người dùng)
 - **Hành động:** `engineering-spec-analyst` ghi `requirement.md` (acceptance criteria đo được, phạm vi, bảng ứng
-  viên e2e) và `design.md` chỉ khi cỡ dự án (2–3 hướng, hướng bị loại); ảnh hưởng kiến trúc thì viết thêm ADR đề
+  viên e2e; AC nêu kết quả số kèm `calc:`) và `design.md` chỉ khi cỡ dự án (2–3 hướng, hướng bị loại); ảnh hưởng kiến trúc thì viết thêm ADR đề
   xuất; thiếu đầu vào thì trả `blocked` + `questions[]`, session chính thử trả lời từ đầu vào đã chốt trước khi hỏi
   người dùng. Người dùng đã chọn tách task ở Bước 2 → đọc `references/task-breakdown.md`, mục Bước 3. Có endpoint
   mới/đổi endpoint cũ: `backend-implementer` chốt/đồng bộ OpenAPI contract trong `docs/contracts/` khi cỡ dự án, khi
@@ -104,7 +104,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` (+ `design.md` nếu cỡ dự án; + `tasks.md` nếu người
   dùng chọn tách task); contract OpenAPI cập nhật (hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ");
   ADR đề xuất nếu ảnh hưởng kiến trúc.
-- **Gate:** acceptance criteria đo được; builder check xong và câu của người dùng đã được trả lời; contract OpenAPI
+- **Gate:** acceptance criteria đo được (AC nêu kết quả số có `calc:`; `check-request.mjs` không còn W22); builder check xong và câu của người dùng đã được trả lời; contract OpenAPI
   hợp lệ hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ"; có ảnh hưởng kiến trúc thì ADR đã viết; có `tasks.md` thì `check-tasks.mjs`
   báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và Checkpoint 1 của
   `engineering-task-breakdown` đã duyệt; người dùng đã duyệt tài liệu cùng hướng, cỡ việc, phạm vi và bảng ứng viên e2e đã trình ở Bước 2 (G1, tính là duyệt E2).
@@ -154,7 +154,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `--repeat-each=3`); `DOCS` → `general-purpose` (`model: haiku`); `TOOLING` → session chính tự làm. Plan không chứa task `CT`/`DB` (đã xử lý ở Bước 2–3: contract chốt ở
   Bước 3, đổi schema đã dừng ở Bước 2 sang `data-db-migration`). Session chính kiểm `agent_result`, tự chạy test hẹp, rồi commit theo task qua `git-workflow` không dừng (agent
   không commit). Task review: reviewer chế độ `task-review` (`model: haiku`) trả `spec_verdict` + finding, không chạy lại suite. Finding
-  `blocker`/`major` hoặc `spec_verdict` khác `compliant` vào vòng sửa, tối đa 3 vòng mỗi task (vòng 3 agent mới chạy
+  `blocker`/`major` trong phạm vi hoặc `spec_verdict` khác `compliant` vào vòng sửa (finding ngoài AC xếp theo mục "Nhận review" của `task-loop.md` trong `plan-execution`), tối đa 3 vòng mỗi task (vòng 3 agent mới chạy
   opus; mỗi vòng một re-review có phạm vi); hết vòng còn finding thì session chính phán và ghi `Ruling:`, thuộc loại dừng
   của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là
   `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
@@ -201,14 +201,14 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   API (Bước 3 có contract): reviewer đối chiếu endpoint/DTO thực tế với contract (thiếu/thừa field, kiểu sai, endpoint
   lệch — drift contract↔code); auditor kiểm authorization của endpoint mới/đổi (kiểm quyền theo vai trò/chủ sở hữu tài
   nguyên, không lộ dữ liệu người khác) và input validation (ràng buộc schema contract được thực thi ở server). Sau đó
-  đúng một lần sửa cho toàn bộ finding `blocker`/`major` (một dispatch, `model: opus`) và một re-review có phạm vi; không
+  đúng một lần sửa cho toàn bộ finding `blocker`/`major` trong phạm vi (một dispatch, `model: opus`) và một re-review có phạm vi; không
   có làn sửa thứ hai.
 - **Ràng buộc:** reviewer và auditor chỉ đọc, không tự sửa code; mọi finding phải có `file:line` + evidence quan sát
   được; không lặp lại vòng sửa — phần còn lại trình người dùng ở Bước 7.
 - **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`), `ruling_review[]`, kết quả re-review.
-- **Gate:** 0 finding `blocker`; có contract thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
-  `remaining_risks`/`Ruling:` để người dùng quyết ở Bước 7.
-- **Khi fail:** còn finding `blocker` sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa, tối đa 2 lần rồi
+- **Gate:** 0 finding `blocker` trong phạm vi; có contract thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
+  `remaining_risks`/`Ruling:` để người dùng quyết ở Bước 7; `blocker`/`major` ngoài AC đã có `Ruling:` cũng trình ở Bước 7 (G3).
+- **Khi fail:** còn finding `blocker` trong phạm vi sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa, tối đa 2 lần rồi
   hỏi người dùng; drift mà lỗi nằm ở contract → quay lại Bước 3; `Ruling:` hay finding chạm loại dừng của
   `plan-execution` (không đảo ngược, bảo mật, tác động ngoài repo, schema DB, đổi AC đã duyệt) → hỏi người dùng.
 - **Evidence:** danh sách finding (severity/category/location/evidence/confidence) + số finding còn lại sau lượt sửa;
@@ -267,7 +267,7 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Yêu cầu mơ hồ (Bước 2–3) | Dừng, gom mọi câu hỏi vào một tin nhắn rồi hỏi người dùng (cả Bước 2 lẫn builder check) |
 | Việc rõ và nhỏ (Bước 2) | Không chạy workflow; làm thẳng và báo người dùng |
 | `check-request.mjs` còn cảnh báo ngoài W9 (Bước 4) | Sửa `plan.md`; lỗi ở tài liệu → quay lại Bước 3, tối đa 2 lần rồi hỏi người dùng |
-| Finding `blocker` sau review cuối (Bước 6) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
+| Finding `blocker` trong phạm vi sau review cuối (Bước 6; ngoài AC đã có `Ruling:` thì trình ở Bước 7) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
 | Full suite đỏ (Bước 7) | Dừng, không đưa G3 hay 3 lựa chọn (và không merge dù `mergeLocal: true`); sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
 | Merge local theo khoá `mergeLocal`: cây bẩn, conflict hoặc suite đỏ trên cây đã merge (Bước 7) | Lỗi chặn: cây bẩn thì không checkout; conflict hoặc đỏ thì `git merge --abort` (nhánh gốc giữ nguyên); dừng, báo người dùng, không dọn |
 | Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy skill `data-db-migration` trước rồi quay lại feature |
@@ -291,12 +291,12 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
   đụng — evidence: Bước 5
 - [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass (e2e `not_run` vì thiếu môi trường BE/DB test là
   hợp lệ, ghi vào `remaining_risks`) — evidence: Bước 5
-- [ ] Review cuối toàn nhánh: 0 `blocker`; có contract: 0 drift contract↔code; có API: 0 `blocker` về
+- [ ] Review cuối toàn nhánh: 0 `blocker` trong phạm vi; có contract: 0 drift contract↔code; có API: 0 `blocker` về
   authorization/input validation — evidence: Bước 6
 - [ ] Docs và spec sống bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng", `check-request.mjs` và full suite xanh;
   người dùng đã duyệt diff cả nhánh (G3) và chọn một trong 3 lựa chọn (hoặc `mergeLocal: true`) — evidence: Bước 7
 - [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)
-- [ ] 0 finding `blocker`
+- [ ] 0 finding `blocker` trong phạm vi (ngoài AC đã có `Ruling:` thì trình ở Bước 7)
 
 ## Report cuối
 

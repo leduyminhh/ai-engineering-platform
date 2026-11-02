@@ -17,7 +17,7 @@ Trước khi làm: có điểm nào trong brief chưa rõ hoặc mâu thuẫn �
 Đừng đoán. Hỏi được ở đầu thì hỏi ở đầu.
 
 Việc cần làm:
-1. Làm đúng và chỉ những gì brief yêu cầu; không thêm tính năng, không dọn code ngoài phạm vi.
+1. Làm đúng và chỉ những gì brief yêu cầu; không thêm tính năng, không dọn code ngoài phạm vi, không thêm hành vi không AC nào nêu (ném lỗi mới, mã lý do mới, kiểm kiểu/đầu vào mà AC không đòi).
 2. Chỉ sửa file trong danh sách **Files:** của brief. Cần sửa file khác → dừng và báo blocked.
 3. Task TDD `có` (dòng `**TDD:**` đầu brief): viết test đỏ trước, chạy, xác nhận đỏ vì đúng lý do, rồi mới viết code cho
    xanh. Brief không có dòng `**TDD:**` (vd thay đổi nhỏ không có plan.md) thì theo mặc định của kind: BE là `có`, kind

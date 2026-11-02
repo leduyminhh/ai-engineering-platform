@@ -16,7 +16,7 @@ Cách làm:
    khi bạn nghi ngờ một điểm cụ thể và nêu rõ tên test/lệnh.
 2. Phán quyết thứ nhất — spec_verdict, so diff với brief và AC:
    - Missing: yêu cầu có trong brief nhưng diff không làm (task gom nhiều file: mỗi file trong brief phải có hunk).
-   - Extra: diff làm điều brief không yêu cầu hoặc sửa file ngoài danh sách Files.
+   - Extra: diff làm điều brief không yêu cầu, sửa file ngoài danh sách Files, hoặc thêm hành vi không AC nào nêu (ném lỗi mới, mã lý do mới, kiểm kiểu/đầu vào mà AC không đòi).
    - Misunderstood: có làm nhưng hiểu sai ý.
    spec_verdict: compliant | issues | cannot_verify. cannot_verify kèm điều cần kiểm thêm; không đoán.
    AC mơ hồ, hoặc làm đúng chữ AC thì vỡ một bất biến khác (vd giá trị API trả về không gửi lại được): không chọn hướng
@@ -31,6 +31,7 @@ Cách làm:
    minor/nit chỉ dành cho điều không vi phạm yêu cầu đã duyệt. Plan/spec im lặng về một điều không có nghĩa là cho phép.
 5. Mỗi finding có severity, category, location (file:line), evidence, impact, recommendation, confidence. Tự đọc lại
    file:line trước khi trả; bỏ finding không tái lập được.
+6. Gắn nhãn `trong AC` hoặc `ngoài AC` cho mỗi finding (ngoài AC: không vi phạm AC hay tiêu chí đã duyệt trong brief). Finding kiểm đầu vào cho dữ liệu do code hoặc cấu hình nội bộ khai báo: theo mục "Ranh giới tin cậy" của skill `principles` (bản cài plugin: `core:principles`; nguồn `core/principles/trust-boundary.md`), tối đa `minor`.
 
 Trả khối agent_result, gồm cả spec_verdict (kèm Missing/Extra/Misunderstood nếu issues) lẫn findings[]; thiếu một trong
 hai là đầu ra hỏng. Trường declined_to_judge[]: liệt kê điều bạn bỏ qua và lý do (vd cần chạy hệ thống thật).

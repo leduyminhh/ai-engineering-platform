@@ -1,6 +1,6 @@
 # Kết thúc nhánh
 
-Chạy sau khi review cuối sạch (0 blocker, hoặc phần còn lại đã có `Ruling:`/được người dùng chấp nhận). Mục tiêu: đưa
+Chạy sau khi review cuối sạch (không còn blocker/major mở **trong phạm vi**, hoặc phần còn lại đã có `Ruling:`/được người dùng chấp nhận). Mục tiêu: đưa
 nhánh về trạng thái người dùng có thể quyết định, không tự merge hay push thay họ.
 
 ## Thứ tự
@@ -19,6 +19,8 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 5. **Gom `Ruling:`.** Đọc ledger (request chia part: ledger `root/` và mọi ledger part), liệt kê mọi dòng `Ruling:` (cùng `minor (deferred)` còn mở) và đưa vào trường `rulings`
    của `workflow_result` (định dạng theo contract đầu ra, `core:principles`). Trình các dòng này cho người dùng cùng
    diff cả nhánh ở G3 (bước 7); dòng nào thuộc loại dừng hỏi của `task-loop.md` thì nêu riêng để người dùng quyết.
+   Liệt kê trong thẻ G3 mọi finding **ngoài AC, đổi hành vi hoặc API** (`task-loop.md`, mục "Nhận review"), mỗi mục kèm hệ quả.
+   Người dùng chọn "làm" cho mục nào thì ghi mục đó thành follow-up (request hoặc task riêng, làm sau khi nhánh xong); không chạy tiếp trong nhánh và không thêm lane mới.
 6. **Chọn nhánh gốc đề xuất** (nhánh sẽ merge vào hoặc làm đích của PR), không hỏi riêng: một ứng viên thì nêu nó trong
    tin nhắn G3; nhiều ứng viên thì không đoán, liệt kê và hỏi chọn ngay trong tin nhắn G3 (bước 7). Chạy
    `git remote`: kết quả rỗng thì repo chưa có remote, lựa chọn push + PR ghi "không khả dụng: repo chưa có remote" và

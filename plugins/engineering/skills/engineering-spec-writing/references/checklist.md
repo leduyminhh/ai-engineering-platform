@@ -19,7 +19,7 @@ không đánh dấu xong khi chưa đủ.
 
 - [ ] **Truy vết được:** mỗi requirement soi chiếu về nguồn (project-knowledge/ADR/contract) hoặc actor + mục
       tiêu; không có requirement "mồ côi".
-- [ ] **Ví dụ số trong AC đã tính lại:** mỗi AC nêu giá trị cụ thể được tính lại từ Given theo quy tắc làm tròn đã chốt (chạy lệnh tính khi có shell), kết quả ghi trong AC khớp.
+- [ ] **calc trong AC:** AC nêu kết quả số phải kèm khối `calc: <biểu thức> = <kết quả>` trong backtick; `check-request.mjs` tính lại (W22) và không còn W22.
 - [ ] **Acceptance criteria đo được:** Given/When/Then hoặc tiêu chí kiểm được; không dùng từ mơ hồ
       ("nhanh", "ổn định") mà không kèm ngưỡng.
 - [ ] **Không mâu thuẫn:** các mục nhất quán với nhau và với ADR/contract/project-knowledge; điểm lệch đã ghi
