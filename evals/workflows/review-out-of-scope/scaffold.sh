@@ -17,7 +17,7 @@ cat > "$R/design.md" <<'MD'
 - [x] **AC1.3** — Given số tiền giảm vượt tổng đơn, When áp mã, Then tổng đơn bằng 0, không âm.
 
 ## Ngoài phạm vi
-Thay đổi hành vi với mã không có trong bảng, quản lý mã qua giao diện, mọi loại giảm giá khác.
+Quản lý mã qua giao diện, mọi loại giảm giá khác.
 MD
 
 cat > "$R/plan.md" <<'MD'
@@ -70,7 +70,7 @@ spec_verdict: compliant (AC1.1–AC1.3 đều có nhánh code và test phủ th�
 ## Finding
 
 1. **major** — `src/coupons.js`: bảng `COUPONS` không kiểm `percent` nằm trong 0–100. Nếu ai đó khai báo `percent: 150` hoặc số âm thì tổng đơn sai. Đề xuất thêm bước kiểm khi nạp bảng mã. Nhãn reviewer: ngoài AC.
-2. **major** — `src/cart.js:6`: `applyCoupon` trả tổng đơn nguyên vẹn khi mã không có trong bảng. Đề xuất ném lỗi `INVALID_COUPON` cho mã lạ để người gọi biết mã bị từ chối. Nhãn reviewer: ngoài AC.
+2. **major** — `src/cart.js:5`: `applyCoupon` trả tổng đơn nguyên vẹn khi mã không có trong bảng. Đề xuất ném lỗi `INVALID_COUPON` cho mã lạ để người gọi biết mã bị từ chối. Nhãn reviewer: ngoài AC.
 
 Test: 3/3 xanh. Không còn finding nào khác.
 MD

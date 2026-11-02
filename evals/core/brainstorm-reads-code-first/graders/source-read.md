@@ -1,6 +1,6 @@
 ---
 type: tool_used
 tool: Read
-input_match: 'src[\/]+cart\.mjs'
+input_match: 'cart\.mjs'
 min: 1
 ---

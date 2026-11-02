@@ -1,6 +1,6 @@
 ---
 runs: 3
-max_turns: 14
+max_turns: 20
 allowed_tools: [Read, Write, Edit, Glob, Grep, Skill]
 tags: [routing, workflows, review, scope]
 ---
