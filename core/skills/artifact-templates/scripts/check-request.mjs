@@ -174,7 +174,7 @@ export function evalCalc(expr) {
   return v;
 }
 
-export const PART_RE =/^\d{2}-[a-z0-9][a-z0-9-]*$/;
+export const PART_RE = /^\d{2}-[a-z0-9][a-z0-9-]*$/;
 export const PART_STATUSES = ['chưa làm', 'đang làm', 'bỏ'];
 const PART_PLAN_RE = /^parts\/[^/]+\/plan\.md$/;
 
@@ -432,10 +432,12 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     if (typeof texts[f] !== 'string') continue;
     (lines[f] || linesOf(texts[f])).forEach((l, idx) => {
       for (const m of l.matchAll(/`calc:([^`]*)`/g)) {
-        // Câu văn nhắc tên khối (`calc:` rỗng) hay mẫu có <…>/… là tài liệu, không phải phép tính để kiểm.
-        if (!m[1].trim() || /[<…]/.test(m[1])) continue;
+        // Câu văn nhắc tên khối (`calc:` rỗng) hay mẫu có chỗ trống <…> là tài liệu, không phải phép tính để kiểm.
+        if (!m[1].trim() || /<[^<>]+>/.test(m[1])) continue;
         const eq = m[1].lastIndexOf('=');
-        const written = eq < 0 ? '' : m[1].slice(eq + 1).trim().replace(/,/g, '');
+        const raw = eq < 0 ? '' : m[1].slice(eq + 1).trim();
+        // Thập phân dùng '.'; dấu phẩy chỉ nhận ở nhóm hàng nghìn để "1,5" không bị đọc thành 15.
+        const written = /^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw) ? raw.replace(/,/g, '') : raw;
         let got;
         let err = eq < 0 ? 'thiếu "= <kết quả>"' : !/^-?(\d+(\.\d+)?|\.\d+)$/.test(written) ? `kết quả "${written}" không phải số` : null;
         if (!err) { try { got = evalCalc(m[1].slice(0, eq)); } catch (e) { err = e.message; } }
