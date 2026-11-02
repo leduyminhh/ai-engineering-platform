@@ -111,7 +111,9 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    sai sẽ hỏng, xếp hạng. Session chính phân kết quả thành 3 nhóm: **đã trả lời** (ghi vào tài liệu) / **nhỏ** (tự quyết,
    ghi **quyết định của agent**) / **của người dùng** — chỉ nhóm này đi hỏi, **gom vào đúng một tin nhắn**, đây là vòng
    hỏi duy nhất của bước kiểm. Người dùng đã **bỏ qua phần hỏi** → không hỏi: nhóm "của người dùng" cũng ghi là
-   **quyết định của agent** kèm mặc định đã chọn và nêu nổi bật ở checkpoint. **Không có tool subagent** → session chính tự đọc tài liệu như builder theo cùng prompt.
+   **quyết định của agent** kèm mặc định đã chọn và nêu nổi bật ở checkpoint. Trừ tính năng người dùng nêu mà design chỉ
+   làm một phần: mục đó vẫn nêu ở checkpoint duyệt design như điều chưa được duyệt, không ghi là quyết định của agent.
+   **Không có tool subagent** → session chính tự đọc tài liệu như builder theo cùng prompt.
 
 10. **Verify.**
     Chạy checklist [references/checklist.md](references/checklist.md): đủ mục; mỗi requirement truy vết được

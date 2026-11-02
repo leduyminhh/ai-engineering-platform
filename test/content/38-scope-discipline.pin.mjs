@@ -14,4 +14,7 @@ export default async function run({ ok, ctx }) {
   ok(/W22[\s\S]{0,200}sửa thẳng/.test(BC), 'AC2.3: builder-check đưa W22 vào nhóm sửa thẳng');
   ok(!/tính lại kết quả từ Given|tự tính lại/.test(BC), 'AC2.3: builder-check đã bỏ câu tính lại kết quả từ Given (quy tắc cũ)');
   ok(/làm một phần[\s\S]{0,200}của người dùng/.test(BC), 'AC3.4: builder-check đưa tính năng người dùng nêu mà design làm một phần vào nhóm câu hỏi của người dùng');
+  ok(/làm một phần[\s\S]{0,200}không ghi là quyết định của agent/.test(BC), 'AC3.4: builder-check không ghi tính năng cắt bớt là quyết định của agent');
+  ok(/Ngoại lệ[\s\S]{0,400}[Tt]rừ tính năng[\s\S]{0,200}không ghi là quyết định của agent/.test(BC), 'AC3.4: ngoại lệ bỏ qua phần hỏi của builder-check loại trừ tính năng cắt bớt');
+  ok(/bỏ qua phần hỏi\*\*[\s\S]{0,400}[Tt]rừ tính năng[\s\S]{0,200}không ghi là quyết định của agent/.test(read(`${SS}/SKILL.md`)), 'AC3.4: SKILL ngoại lệ bỏ qua phần hỏi loại trừ tính năng cắt bớt');
 }
