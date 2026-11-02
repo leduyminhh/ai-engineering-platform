@@ -46,7 +46,7 @@ không ghi là quyết định bí mật. Chạy liên tục giữa các task; c
 - **Không có tool subagent**: session chính tự review theo `prompts/final-review.md`, đọc diff qua
   `scripts/review-package.mjs <base> <head> --plan <plan.md>` thay vì dựa vào trí nhớ. Ghi `Ruling: review cuối là tự review — không có tool subagent —
   không có góc nhìn thứ hai` vào ledger và đưa mục này vào `remaining_risks` khi trình người dùng. Finding `blocker`/`major`
-  tự tìm ra thì sửa một lượt rồi tự đọc lại đúng phần diff vừa sửa; không có làn sửa thứ hai.
+  trong phạm vi tự tìm ra thì sửa một lượt rồi tự đọc lại đúng phần diff vừa sửa; không có làn sửa thứ hai.
 
 Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một lần, G3 (rẽ theo khoá `mergeLocal`), `Plan: complete`.
 

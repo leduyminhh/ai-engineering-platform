@@ -60,5 +60,15 @@ export default async function run({ ok, ctx }) {
   for (const f of [`${PE}/prompts/task-review.md`, `${PE}/prompts/final-review.md`])
     ok(/Gắn nhãn `trong AC` hoặc `ngoài AC`/.test(read(f)), `AC3.1: ${f.split('/').pop()} bảo reviewer gắn nhãn trong AC/ngoài AC cho finding`);
   const PRIN = read('build/claude/plugins/core/skills/principles/SKILL.md');
-  ok(/^## Ranh giới tin cậy$/m.test(PRIN) && /code hoặc cấu hình nội bộ của repo khai báo không phải ranh giới tin cậy/.test(PRIN), 'AC3.3: skill principles sau build có nội dung trust-boundary.md');
+  ok(/`Ruling: ngoài AC, đổi hành vi — <finding> — task <n> — <hệ quả>`[^\n]*G3[^\n]*sau compact/.test(NR), 'AC3.2: nhóm đổi hành vi/API ghi dòng ledger Ruling: ngoài AC, đổi hành vi để G3 thấy sau compact');
+  ok(/Hạ nhãn \(trong phạm vi → ngoài AC\) phải có `Ruling:` nêu AC cụ thể không liên quan hoặc lý do đầu vào không hợp lệ; không đủ thì giữ trong phạm vi/.test(NR) && /chỉ được nâng tự do/.test(NR), 'AC3.1: hạ nhãn trong phạm vi → ngoài AC cần Ruling:, không đủ thì giữ trong phạm vi');
+  ok(/Đầu vào hợp lệ là đầu vào đúng kiểu và đúng miền mà design mô tả/.test(NR), 'AC3.1: định nghĩa đầu vào hợp lệ theo design');
+  ok(/vi phạm AC hay tiêu chí đã duyệt áp quy tắc vi phạm AC \(major trở lên\) trước; trần `minor` chỉ áp cho finding không vi phạm AC/.test(TB), 'AC3.3: trust-boundary — vi phạm AC áp quy tắc major trở lên trước, trần minor chỉ cho finding không vi phạm AC');
+  const WF = read('workflows/feature/WORKFLOW.md');
+  const IL = read(`${PE}/inline.md`);
+  ok(/`blocker`\/`major` trong phạm vi hoặc `spec_verdict` khác `compliant` vào vòng sửa \(finding ngoài AC xếp theo mục "Nhận review"/.test(WF.replace(/\n\s+/g, ' ')), 'AC3.1: workflow-feature Bước 5 chỉ finding trong phạm vi vào vòng sửa');
+  ok(/một lần sửa cho toàn bộ finding `blocker`\/`major` trong phạm vi/.test(WF.replace(/\n\s+/g, ' ')), 'AC3.1: workflow-feature Bước 6 một lần sửa cho finding trong phạm vi');
+  ok(/\*\*Gate:\*\* 0 finding `blocker` trong phạm vi[\s\S]{0,300}`blocker`\/`major` ngoài AC đã có `Ruling:` cũng trình ở Bước 7/.test(WF), 'AC3.1: workflow-feature Gate review cuối theo phạm vi, ngoài AC đã Ruling: trình ở Bước 7');
+  ok(/Finding `blocker`\/`major` trong phạm vi tự tìm ra thì sửa/.test(IL.replace(/\n\s+/g, ' ')), 'AC3.1: inline.md tự review chỉ sửa finding trong phạm vi');
+  ok(/^## Ranh giới tin cậy$/m.test(PRIN)&& /code hoặc cấu hình nội bộ của repo khai báo không phải ranh giới tin cậy/.test(PRIN), 'AC3.3: skill principles sau build có nội dung trust-boundary.md');
 }

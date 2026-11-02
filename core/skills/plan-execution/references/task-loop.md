@@ -70,7 +70,9 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 
 - **trong phạm vi** (vi phạm AC hay tiêu chí đã duyệt, lỗi đúng/sai với đầu vào hợp lệ của chính tính năng, test sai, lỗ hổng bảo mật ở ranh giới tin cậy) → sửa theo mục "Vòng sửa"; ranh giới tin cậy theo mục "Ranh giới tin cậy" của `core:principles`.
 - **ngoài AC, không đổi hành vi** → `minor (deferred)` hoặc `Ruling:` giữ mức gốc, không sửa (blocker/major hoãn bằng `Ruling:` kèm mức gốc, xem mục Breaker).
-- **ngoài AC, đổi hành vi hoặc API** (ném lỗi mới, mã lý do mới, tham số mới) → thẻ G3 kèm hệ quả, không sửa; "làm" thành follow-up sau khi nhánh xong (`finish.md`).
+- **ngoài AC, đổi hành vi hoặc API** (ném lỗi mới, mã lý do mới, tham số mới) → thẻ G3 kèm hệ quả, không sửa; "làm" thành follow-up sau khi nhánh xong (`finish.md`). Ghi một dòng ledger `Ruling: ngoài AC, đổi hành vi — <finding> — task <n> — <hệ quả>` để G3 (`finish.md`, bước 5) vẫn thấy sau compact.
+
+Nhãn của reviewer chỉ được nâng tự do (`ngoài AC` → trong phạm vi). Hạ nhãn (trong phạm vi → ngoài AC) phải có `Ruling:` nêu AC cụ thể không liên quan hoặc lý do đầu vào không hợp lệ; không đủ thì giữ trong phạm vi. Đầu vào hợp lệ là đầu vào đúng kiểu và đúng miền mà design mô tả.
 
 `Ruling:` không được thêm hành vi không có trong AC. `review clean` = không còn blocker/major mở **trong phạm vi**: finding blocker/major ngoài AC đã hoãn bằng `Ruling:` không chặn `Task <n>: complete`, và mọi `Ruling:` đó được liệt kê ở G3.
 

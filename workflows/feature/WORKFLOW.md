@@ -154,7 +154,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `--repeat-each=3`); `DOCS` → `general-purpose` (`model: haiku`); `TOOLING` → session chính tự làm. Plan không chứa task `CT`/`DB` (đã xử lý ở Bước 2–3: contract chốt ở
   Bước 3, đổi schema đã dừng ở Bước 2 sang `data-db-migration`). Session chính kiểm `agent_result`, tự chạy test hẹp, rồi commit theo task qua `git-workflow` không dừng (agent
   không commit). Task review: reviewer chế độ `task-review` (`model: haiku`) trả `spec_verdict` + finding, không chạy lại suite. Finding
-  `blocker`/`major` hoặc `spec_verdict` khác `compliant` vào vòng sửa, tối đa 3 vòng mỗi task (vòng 3 agent mới chạy
+  `blocker`/`major` trong phạm vi hoặc `spec_verdict` khác `compliant` vào vòng sửa (finding ngoài AC xếp theo mục "Nhận review" của `task-loop.md` trong `plan-execution`), tối đa 3 vòng mỗi task (vòng 3 agent mới chạy
   opus; mỗi vòng một re-review có phạm vi); hết vòng còn finding thì session chính phán và ghi `Ruling:`, thuộc loại dừng
   của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là
   `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
@@ -201,13 +201,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   API (Bước 3 có contract): reviewer đối chiếu endpoint/DTO thực tế với contract (thiếu/thừa field, kiểu sai, endpoint
   lệch — drift contract↔code); auditor kiểm authorization của endpoint mới/đổi (kiểm quyền theo vai trò/chủ sở hữu tài
   nguyên, không lộ dữ liệu người khác) và input validation (ràng buộc schema contract được thực thi ở server). Sau đó
-  đúng một lần sửa cho toàn bộ finding `blocker`/`major` (một dispatch, `model: opus`) và một re-review có phạm vi; không
+  đúng một lần sửa cho toàn bộ finding `blocker`/`major` trong phạm vi (một dispatch, `model: opus`) và một re-review có phạm vi; không
   có làn sửa thứ hai.
 - **Ràng buộc:** reviewer và auditor chỉ đọc, không tự sửa code; mọi finding phải có `file:line` + evidence quan sát
   được; không lặp lại vòng sửa — phần còn lại trình người dùng ở Bước 7.
 - **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`), `ruling_review[]`, kết quả re-review.
-- **Gate:** 0 finding `blocker`; có contract thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
-  `remaining_risks`/`Ruling:` để người dùng quyết ở Bước 7.
+- **Gate:** 0 finding `blocker` trong phạm vi; có contract thì 0 drift contract↔code; finding `major` đã sửa, hoặc ghi vào
+  `remaining_risks`/`Ruling:` để người dùng quyết ở Bước 7; `blocker`/`major` ngoài AC đã có `Ruling:` cũng trình ở Bước 7 (G3).
 - **Khi fail:** còn finding `blocker` sau một lần sửa và một re-review → quay lại Bước 5 thêm task sửa, tối đa 2 lần rồi
   hỏi người dùng; drift mà lỗi nằm ở contract → quay lại Bước 3; `Ruling:` hay finding chạm loại dừng của
   `plan-execution` (không đảo ngược, bảo mật, tác động ngoài repo, schema DB, đổi AC đã duyệt) → hỏi người dùng.
