@@ -76,7 +76,9 @@ lần sửa + một lần re-review có phạm vi.
   brief + báo cáo trước + finding còn mở.
 - **Re-review**: `FIX_BASE` = `git rev-parse HEAD` trước khi sửa; gom `node <thư mục skill plan-execution>/scripts/review-package.mjs <FIX_BASE> <head> --plan <plan.md>`
   và gọi reviewer bằng `prompts/re-review.md`. Re-review chỉ xét diff của vòng sửa, trả `ADDRESSED` hoặc `NOT ADDRESSED` cho từng
-  finding cộng breakage mới trong diff đó. Quan sát ngoài diff ghi vào ledger, không kéo dài vòng.
+  finding cộng breakage mới trong diff đó. Quan sát ngoài diff ghi vào ledger, không kéo dài vòng. Re-review luôn do agent
+  reviewer làm, kể cả khi vòng sửa chỉ vài dòng; session chính không tự đọc diff thay reviewer và không dùng `Ruling:` để bỏ
+  re-review. Kết quả ghi `Task <n>: review <vòng kế> …` như bước 8.
 - Mỗi vòng sửa chỉ chạy test hẹp phủ phần vừa sửa. Bugfix có regression test thì kiểm đỏ→xanh: hoàn tác bản sửa phải
   làm test đỏ, khôi phục thì xanh.
 - Một task không bao giờ có vòng thứ tư: sau vòng 3, không còn vòng nào nữa; finding còn mở chuyển sang breaker.
@@ -194,18 +196,24 @@ Dùng khi request có `## Bảng part` trong `design.md` và `parts/<nn>-<part-s
 
 ## Ledger
 
-`<gốc repo chính>/.aip/runs/<request>/<part>/progress.md`, mỗi dòng thêm bằng `scripts/ledger.mjs <plan.md> "<dòng>"`:
+`<gốc repo chính>/.aip/runs/<request>/<part>/progress.md`, mỗi dòng thêm bằng `scripts/ledger.mjs <plan.md> "<dòng>"` (cỡ
+"thay đổi nhỏ" không có `plan.md`: đối số đầu là thư mục request). Bảng dưới là đủ mọi dạng dòng, theo thứ tự xuất hiện; không cần
+đọc mã nguồn `ledger.mjs`:
 
 ```
-# Ledger — plan: <đường dẫn plan.md>
-Task <n>: complete (commits <a>..<b>, review clean)
+# Ledger — plan: <đường dẫn plan.md hoặc thư mục request>
+Task <n>: start (base <hash>)
+Task <n>: review <vòng> <compliant|issues|cannot_verify> <blocker>/<major>/<minor>
 Ruling: <quyết định> — <lý do> — <chi phí nếu sai>
-Task <m>: complete (commits <a>..<b>, <k> ruled)
 minor (deferred): <finding minor/nit> — task <n>
+Task <n>: complete (commits <a>..<b>, review clean|<k> ruled[, red: <lệnh> exit <n khác 0>][, tests: <lệnh> exit 0])
+Blocked: <lý do>
+Unblocked: <cách giải>
 Plan: complete
 ```
 
-Ngoài ra ledger nhận `Task <n>: start (base <hash>)`, `Task <n>: review <vòng> <spec_verdict> <b>/<m>/<n>`, `Blocked: <lý do>` và `Unblocked: <cách giải>` (`ledger.mjs` kiểm định dạng, exit 2 khi sai; mỗi dòng ghi thêm bản ghi vào `events.jsonl` cạnh `progress.md`).
+`red:`/`tests:` bắt buộc theo bước 9 (task TDD do session chính làm, chế độ inline). `ledger.mjs` kiểm định dạng, exit 2 khi sai
+và không ghi; mỗi dòng ghi thêm bản ghi vào `events.jsonl` cạnh `progress.md`.
 
 Ledger part (`<nn>-<part-slug>/`) có thêm `Part: complete <hash>` (cả khi part chạy tuần tự); ledger `root/` có thêm `Part <nn>: merged <hash>`.
 
