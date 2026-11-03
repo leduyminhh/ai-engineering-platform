@@ -60,6 +60,19 @@ export default async function run({ ok, ctx }) {
   }
 
 
+  // ── ledger: #9 dòng Plan:/Part:/Part NN: sai định dạng bị từ chối, dòng trống bị từ chối
+  {
+    const { validateLine } = await load(CORE_DIR, 'skills', 'plan-execution', 'scripts', 'ledger.mjs');
+    const sha = 'a'.repeat(40);
+    for (const l of ['Part 1: merged', 'Part 1: merged abc1234', 'Plan: Complete', 'Plan: complete.', 'Plan: complete now', 'Part: done', 'Part: complete.',
+      'Part: Complete abc1234', 'Part 01: done', '', '   ', '\n']) {
+      ok(typeof validateLine(l) === 'string', `AC9.1: validateLine từ chối ${JSON.stringify(l)}`);
+    }
+    for (const l of ['Plan: complete', 'Part: complete', `Part: complete ${sha}`, 'Part 01: merged abc1234def', 'Part 02-word-count: merged abc1234',
+      'Task 1: start (base abc1234)', 'Blocked: x']) {
+      ok(validateLine(l) === null, `AC9.1: validateLine chấp nhận ${JSON.stringify(l)}`);
+    }
+  }
 
   // ── AC8.1: gốc repo chính trong submodule là gốc của chính submodule, không phải <cha>/.git
   {
