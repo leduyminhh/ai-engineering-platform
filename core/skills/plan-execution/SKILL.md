@@ -64,8 +64,8 @@ lượt), chỉ nói ở các điểm dừng trên hoặc khi gặp lỗi chặn
 | Quality/security gate | `engineering-quality-auditor`, chỉ ở review cuối |
 | Chế độ inline (người dùng nói rõ chạy inline, hoặc không có tool subagent) | session chính làm mọi task theo `references/inline.md`; không hỏi người dùng chọn cách thực thi |
 
-Model khi gọi agent (tham số `model`): implementer mặc định `sonnet`; task review, re-review và task `DOCS` dùng `haiku`
-(haiku sai một lần trong task đó → gọi lại bằng `sonnet`); vòng 3 của vòng sửa và reviewer của review cuối toàn nhánh dùng `opus`; lần sửa sau review cuối dùng `sonnet`. Plan
+Model khi gọi agent (tham số `model`): implementer mặc định `sonnet`; task review của task code (mọi kind trừ `DOCS`) dùng
+`sonnet`; re-review, task `DOCS` và task review của task `DOCS` dùng `haiku` (haiku sai một lần trong task đó → gọi lại bằng `sonnet`); vòng 3 của vòng sửa và reviewer của review cuối toàn nhánh dùng `opus`; lần sửa sau review cuối dùng `sonnet`. Plan
 không cần khai báo model riêng cho từng task.
 
 ## Ranh giới an toàn
