@@ -159,77 +159,16 @@ them. They apply when the aip workflows and skills are installed.
 
 #### Docs location and format
 
-- Write the spec to `docs/requests/<yyyy-mm-dd>-<slug>/design.md` (skill `engineering-spec-writing`)
-  and the plan to `plan.md` in the same folder (skill `engineering-plan-writing`).
-- A large request may be split into parts: `design.md` has a `## Bảng part`, and each part has its own plan in
-  `parts/<nn>-<part-slug>/plan.md`; the root `plan.md` is optional and holds the base work that runs before any part.
-- Use `docs/requests/_TEMPLATE/` only when it contains `design.md`; otherwise use the templates of
-  the `artifact-templates` skill (a legacy `_TEMPLATE` may still serve `requirement.md`). `aip init` never
-  overwrites it; to get the new templates, delete the old `_TEMPLATE` and re-run `aip init --full`.
-- Acceptance criteria: `AC<n>.<m>` IDs (`<n>` = requirement number), written as Given/When/Then.
-  They live under a heading containing `Tiêu chí chấp nhận`, in `requirement.md` if it exists, otherwise in
-  `design.md`, as bullets `- [ ] **AC<n>.<m>** — Given … When … Then …`. Each plan task lists the ones it
-  covers in a `**Phủ AC:**` line (no leading bullet). A bugfix spec has a `Không đổi` section (behavior that
-  must stay as is).
-- A test that covers an AC names its ID in the test name or a comment (`AC1.2`; Python function names use
-  `ac1_2`). Each plan task lists its test files in `**Files:**` as `- Test:` bullets, the path in backticks.
-- After writing `design.md` and again after `plan.md`, run
-  `node <artifact-templates skill dir>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/`.
-  It also warns about an AC that none of the plan's test files mention. It only warns (exit 0) unless run
-  with `--strict` (exit 1 on any warning, for CI). Right after the plan, W9 (listed test file does not exist
-  yet) is expected and W7 is skipped: never delete `**Files:**` or test entries to silence them. Re-run once
-  the tests are written, and use `--strict` in CI only from then on.
-- `design.md` has a `## Ảnh hưởng spec` section: one line `- <capability>: thêm|đổi|bỏ R<n>` per affected
-  capability, or `Không ảnh hưởng: <reason>`. An older `docs/requests/_TEMPLATE/design.md` may lack it; add the
-  section by hand, since the validator warns (W10) when it is missing.
-- Merge step: update `docs/specs/<capability>/spec.md` as the design's `## Ảnh hưởng spec` section says
-  (add, edit or strike through requirements `<capability>/R<n>`, add a row to the spec's history table; if you
-  created a new capability, also add it to `docs/specs/README.md`), then run `check-request.mjs` (with
-  `--base <ref>` in CI). Do this before finishing the branch (`plan-execution`).
+- Write the spec to `docs/requests/<yyyy-mm-dd>-<slug>/design.md` (skill `engineering-spec-writing`) and the plan to `plan.md` in the same folder (skill `engineering-plan-writing`).
+- Resume a change that already has a folder: read `design.md`, `plan.md` and the ledger `.aip/runs/<request>/<part>/progress.md`; never create a second folder, design or plan for the same change.
+- Knowledge that outlives the change → propose it to long-term memory (human reviewer updates it). AC format, `check-request.mjs`, living specs, memory table: skill `artifact-templates`, `references/docs-conventions.md`.
 
-#### Memory and resume
+### Agents in CI and Parallel agents
 
-| Type | Scope | Stored in | Updated by |
-|---|---|---|---|
-| Short-term | One change, spec to merge | `docs/requests/<yyyy-mm-dd>-<slug>/`, ledger `.aip/runs/<request>/<part>/progress.md` (git-ignored, at the main repo root) | Agent, while working |
-| Long-term | Whole project | `project-knowledge/`, `docs/decisions/`, `docs/contracts/`, `docs/specs/`, `AGENTS.md`/`CLAUDE.md` | Human reviewer; agent only proposes |
-
-- Resume a change that already has a folder: read `design.md`, `plan.md` and the ledger; continue from
-  the first task with no `complete` line (the `session-start` hook injects the ledger tail);
-  never create a second folder, design or plan for the same change.
-- Knowledge that outlives the change (architecture decision, convention) → propose it to long-term
-  memory instead of leaving it only in `design.md`.
-
-### Agents in CI
-
-(Claude Code. Facts are [Unverified] secondary summaries of [headless](https://code.claude.com/docs/en/headless).)
-
-- Run `claude -p` with `--permission-mode dontAsk`, an explicit `--allowedTools` list, `--max-turns` and `--max-budget-usd`.
-- Add `--bare` when plugins and hooks are not needed; without it `-p` loads the project's hooks and `.mcp.json` with no trust prompt.
-- Pin third-party actions to a full commit SHA; give the job read-only tokens.
-- Any workflow that can push runs in a protected environment with required reviewers.
-
-### Parallel agents
-
-(Claude Code worktrees. Soft guidance; only an agent's `writeScope` plus the `guard-files` hook enforce write scope.)
-
-- Parallelize only between parts, never inside a part (tasks of one part run sequentially). Parts of one group (column `Song song` of `## Bảng part`) must have disjoint write sets, taken from their tasks' `**Files:**`; check them with `check-partition.mjs` (P1, P2, P4; P3 only flags a leftover task-level `Song song` line).
-- Branch `worktree-<slug>-p<nn>` in `.claude/worktrees/<slug>-p<nn>/`, cut from the current tip of the integration branch `feature/<slug>`; after every merge, cut the next part branch from the new tip.
-- Parts never write shared files (version bump, lock, living spec, README); only the main session does.
-- The main session merges each part with `merge --no-ff` into the integration branch. After each part merge it first does the project's shared-file step (e.g. version bump and lock), then runs the full suites of the touched components and their dependents; on red it stops the group and fixes on `feature/<slug>` through the plan-execution fix loop.
-- Merging a part branch into `feature/<slug>` is a local merge, approved by the user's answer before each group (not asked when `autonomy.partRunner` is `subagent`); push, or merge into the base branch, happens only when the branch is finished.
-- A conflict outside the declared write sets: stop and report. The human gate is the final review of the whole integration branch before any push or PR; merge commits in the main session do not replace it. No per-part PRs.
-- [Inference] Keep to at most 3 agents at once (heuristic, not an official limit).
-- Clean up with `git worktree remove`, only for worktrees that are merged and clean; never `rm -rf` a worktree holding a junction on Windows.
+- Agents in CI (`claude -p` flags, read-only tokens, protected environment): skill `using-aip`, `references/agents-in-ci.md`.
+- Several agents at once (one worktree per part, disjoint files, `merge --no-ff`): skill `git-worktree`, `references/parallel-agents.md`.
 
 ### Model and session routing
-
-(Claude Code. Other tools: apply the session and messaging rules; ignore model names.)
-
-Soft guidance (no hook). Facts are from the official docs: [prompt-caching](https://code.claude.com/docs/en/prompt-caching),
-[sub-agents](https://code.claude.com/docs/en/sub-agents), [costs](https://code.claude.com/docs/en/costs),
-[multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system).
-
 | Tier | Work | Default model | Step up when |
 |---|---|---|---|
 | Mechanical subagent | docs, run-log/ledger updates, lint/format fixes, renames, mock data, running check scripts, summarizing test logs, conflict-free merges, broad repo search | `haiku` (call-time parameter) | `haiku` got it wrong once → `sonnet` |
@@ -238,74 +177,11 @@ Soft guidance (no hook). Facts are from the official docs: [prompt-caching](http
 | Execution session (one phase/branch) | orchestrates the subagents of one work package | `sonnet`, chosen at session creation | design-heavy or hard-debug package → `opus` at creation |
 | Root orchestration session | hands work between sessions, batches questions for the user | `opus` | — |
 
-**Choosing a model**
-
-1. Choose model and effort when creating a session or calling a subagent. Never switch model on a session that
-   already has context; to change it, hand off to a new session. Each model has its own cache, so a switch
-   recomputes the whole request ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
-2. Set `effort` together with the model. Our defaults: `opus` → `medium` (same as the 5.5 product default),
-   `high` only for the heavy work named in the deep-subagent row; `sonnet` → `high` (the product default is
-   `medium`); `haiku` → product default. Unlike a model switch, changing `effort` keeps the prompt cache on 5.5
-   models (Claude Code with an API key or subscription; see prompt-caching for exceptions), so raise or lower it
-   mid-session when the kind of work changes ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
-3. Subagents report the model they used. Every step up to `opus` gets a one-line reason.
-
-Subagent model order: call-time parameter → frontmatter `model` → `CLAUDE_CODE_SUBAGENT_MODEL` → main session
-model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
-
-**Rotating sessions**
-
-4. One session handles one work package (a phase, a branch). When the package is done, or context passes ~40%
-   of the window (soft) or ~60% (hard), write the handoff to `handoff.md` (template in `core:artifact-templates`:
-   branch, hash, unfinished work, pending questions) and open a new session. [Inference] The 40% and 60%
-   thresholds are team heuristics, not official figures.
-   Only a human or the statusline can read the percentage (`context_window.used_percentage`); a hook cannot.
-   The common hook input fields carry no context size ([hooks](https://code.claude.com/docs/en/hooks#common-input-fields),
-   [statusline](https://code.claude.com/docs/en/statusline)). Only SessionStart on resume/fork gets `context_tokens`;
-   [Inference] that is a token count, not the percentage.
-5. Keep the orchestrating session's context small: read summaries, give long log/diff reading to `haiku` subagents.
-6. Use `/clear` between unrelated tasks; run `/compact <focus>` only at a natural pause. Compaction drops the
-   cache; the main session's TTL is 1 hour on a subscription (within plan usage), subagents' default is 5 minutes
-   ([prompt-caching](https://code.claude.com/docs/en/prompt-caching)).
-
-**Messages between sessions**
-
-7. Do not send a message only to announce a rule or check in; fold it into the brief of the next task.
-8. A child session reports only when: a queued task is done, it is blocked, or the user must decide. Never send an
-   acknowledgement ("received", "rule noted").
-9. One message batches several small results. Long output goes in a file (run-log); the message points to it.
-10. Brief a child session with a queue of 2–3 chained tasks so it never idles between them.
-
-**Monitoring**
-
-11. Do not poll child sessions with dense cron; rely on the event that a child finished its turn. For a safety
-    net, use an interval of at least 15 minutes (each check re-reads the whole context).
-12. Check quota (`/usage`) at each phase gate, not every turn.
-
-**Parallelism**
-
-13. Run sessions or subagents in parallel only when the tasks are independent in files and each is large enough.
-    Tightly coupled coding runs sequentially in one session. An agent uses ~4× the tokens of chat and a
-    multi-agent system ~15× ([multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system));
-    agent teams ~7× ([costs](https://code.claude.com/docs/en/costs)).
-
-**Long sessions**
-
-14. A child session writes its long report to a file and sends the parent one line with the path and the
-    conclusion. The orchestrating session never reads long diffs or logs itself; a `haiku` subagent reads and
-    returns the summary.
-15. Every command in the orchestrating session bounds its output (`--stat`, `head`, column filters); list
-    sessions by name or id rather than a full listing; never repeat `get_usage`/`list_events` within one gate.
-16. When the next step depends on a subagent's result, run it in the foreground instead of ending the turn to
-    wait for a background notification.
-17. A session idle longer than the prompt-cache TTL (1 hour for the main session on a subscription,
-    [prompt-caching](https://code.claude.com/docs/en/prompt-caching#cache-lifetime)) is cheaper to replace than
-    to wake: open a new session from `handoff.md`. Never switch model mid-session (rule 1).
-18. Record each session's context usage (`/usage` or the statusline's `used_percentage`) in the run-log at every
-    phase gate.
-
-[Unverified] How much a cache read weighs against a subscription's usage limit is not documented; the rules above
-still hold because they cut the number of turns on large contexts.
+- Choose model and effort when creating a session or calling a subagent; never switch model on a session that already has context, hand off to a new session instead. Other tools: ignore model names, keep the session rules.
+- One session handles one work package; when it is done, or context passes ~40% (soft) / ~60% (hard) of the window ([Inference] team heuristics), write `handoff.md` and open a new session.
+- Do not message only to announce or check in; a child session reports only when a task is done, it is blocked, or the user must decide.
+- Parallelize only tasks independent in files; when the next step depends on a subagent's result, run it in the foreground.
+- Effort defaults, model order, monitoring, long sessions and sources: skill `plan-execution`, `references/model-routing.md`.
 
 ### Language
 

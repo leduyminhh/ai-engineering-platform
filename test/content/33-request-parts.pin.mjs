@@ -392,7 +392,7 @@ export default async function run({ ok, ctx }) {
 
     const tpl = rd('core', 'agents', 'AGENTS.template.md');
     const dcm = rd('core', 'skills', 'artifact-templates', 'references', 'docs-conventions.md');
-    ok(dcm.includes('.aip/runs/<request>/<part>/progress.md') && !dcm.includes('.sdd') && !tpl.includes('.sdd'), 'AC7.1: bảng Memory của AGENTS.template.md ghi ledger ở .aip/runs/<request>/<part>/progress.md, không còn .sdd');
+    ok([tpl, dcm].every((t) => t.includes('.aip/runs/<request>/<part>/progress.md') && !t.includes('.sdd')), 'AC7.1: baseline (quy tắc resume) và bảng Memory của docs-conventions.md ghi ledger ở .aip/runs/<request>/<part>/progress.md, không còn .sdd');
     ok(rd('AGENTS.md') === tpl, 'AC7.1: AGENTS.md giống hệt AGENTS.template.md');
   }
 

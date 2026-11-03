@@ -7,11 +7,11 @@ export default async function run({ ok, ctx }) {
   // AC1.1: baseline có mục Parallel agents nằm giữa Agents in CI và Model and session routing
   {
     const tpl = read('core', 'agents', 'AGENTS.template.md');
-    const i = tpl.indexOf('### Parallel agents');
+    const i = tpl.indexOf('references/parallel-agents.md');
     const sec = flat(read('core', 'skills', 'git-worktree', 'references', 'parallel-agents.md'));
     const need = ['worktree-<slug>-p<nn>', '.claude/worktrees/', 'merge --no-ff', 'integration branch', '3 agents', 'disjoint', 'rm -rf', 'junction', 'once', 'autonomy.partRunner'];
     ok(need.every((w) => sec.includes(w)), 'P3 AC1.1: parallel-agents.md (chuyển từ baseline) có mục Parallel agents với tên nhánh, thư mục worktree, merge --no-ff, integration branch, giới hạn 3, disjoint, rm -rf/junction, once');
-    ok(i > tpl.indexOf('### Agents in CI') && i < tpl.indexOf('### Model and session routing'), 'P3 AC1.1: mục Parallel agents nằm giữa Agents in CI và Model and session routing');
+    ok(i > tpl.indexOf('### Agents in CI') && i < tpl.indexOf('### Model and session routing'), 'P3 AC1.1: dòng trỏ Parallel agents nằm giữa Agents in CI và Model and session routing');
   }
 
   // AC1.2: README EN/VI có đoạn Parallel agents / Agent song song; CLAUDE.md nhắc script và quy ước nhánh
