@@ -132,6 +132,8 @@ function planManagedBlock(root, rels) {
   const block = baselineBlock();
   return rels.map((rel) => {
     const abs = path.join(root, rel);
+    // File chỉ dẫn là symlink/junction (vd AGENTS.md của antigravity trỏ vào build/): ghi sẽ xuyên vào nguồn, nên không đụng tới.
+    if (isLinkPath(abs)) return { rel, abs, link: true };
     const existing = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
     return { rel, abs, next: existing.trim() === '' ? `${block}\n` : mergeManagedBlock(existing, block, rel) };
   });
@@ -139,7 +141,11 @@ function planManagedBlock(root, rels) {
 /** Merge khối baseline vào từng file; trả các rel đã ghi (để lưu vào manifest entry). */
 function applyManagedBlock(root, rels) {
   const written = [];
-  for (const { rel, abs, next } of planManagedBlock(root, rels)) {
+  for (const { rel, abs, next, link } of planManagedBlock(root, rels)) {
+    if (link) {
+      console.warn(`[aip] Bỏ qua managed block ở ${rel}: là symlink/junction, ghi sẽ xuyên vào file nguồn.`);
+      continue;
+    }
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, next);
     written.push(rel);

@@ -1023,6 +1023,19 @@ try {
     ok(!fs.existsSync(path.join(dir, '.cursor', 'skills', 'git-workflow')), 'AC6.1: gỡ được bản cursor đã ghi manifest sau lần cài lỗi');
   });
 
+  // AC7.1: AGENTS.md là symlink do antigravity cài (trỏ vào build/) → managed block của codex không được ghi xuyên vào build
+  withRoot('cwf-lnk-', (dir) => {
+    const buildAgents = path.join(REPO, 'build/antigravity/backend/AGENTS.md');
+    const before = fs.readFileSync(buildAgents, 'utf8');
+    try {
+      install({ providers: 'antigravity', plugins: 'backend', scope: 'project' });
+      const linked = isLink(path.join(dir, 'AGENTS.md'));
+      install({ providers: 'codex', plugins: 'backend', scope: 'project' });
+      ok(!fs.readFileSync(buildAgents, 'utf8').includes(MARK), 'AC7.1: managed block của codex không ghi xuyên symlink vào build/antigravity');
+      const ce = check({ scope: 'project' }).installs.find((e) => e.provider === 'codex');
+      ok(!linked || (ce && !(ce.managed || []).includes('AGENTS.md')), 'AC7.1: entry codex không theo dõi AGENTS.md là symlink');
+    } finally { fs.writeFileSync(buildAgents, before); }
+  });
 }
 
 console.log('');
