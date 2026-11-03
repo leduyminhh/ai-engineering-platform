@@ -17,6 +17,7 @@ const REQUEST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const DONE_RE =/^Plan: complete\s*$/m;
 // Chỉ dòng theo định dạng plan-execution; "Task 1: started …" là ghi chú tự do cũ, không có nghĩa part đã bắt đầu.
 const TASK_EVENT_RE = /^Task \d+: (?:start|review|complete)\b/;
+const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 
 const defaultGit = (args, cwd) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 const tryGit = (git, args, cwd) => { try { return git(args, cwd); } catch { return null; } };
@@ -97,8 +98,14 @@ function taskDetails(tasks, lines, events) {
 export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), staleMinutes = DEFAULT_STALE_MINUTES, git = defaultGit, autonomy = null }) {
   const slug = request.replace(/^\d{4}-\d{2}-\d{2}-/, '');
   const reqDir = path.join(docsRoot, 'docs', 'requests', request);
-  const design = readText(path.join(reqDir, 'design.md')) ?? '';
+  const designText = readText(path.join(reqDir, 'design.md'));
+  const design = designText ?? '';
   const table = parsePartTable(design);
+  // Cỡ "thay đổi nhỏ" chỉ có requirement.md: không có plan nên không có cổng G2, task lấy từ ledger.
+  const small = designText === null && readText(path.join(reqDir, 'plan.md')) === null;
+  const headBranch = tryGit(git, ['rev-parse', '--abbrev-ref', 'HEAD'], docsRoot);
+  // feature/<slug> chỉ là quy ước; session gốc có thể đặt tên khác, nên nhánh đang checkout (không phải nhánh part hay protected) đáng tin hơn.
+  const rootBranch = headBranch && headBranch !== 'HEAD' && !PROTECTED.has(headBranch) && !/^worktree-/.test(headBranch) ? headBranch : `feature/${slug}`;
   const rows = table?.rows.length ? table.rows : [{ part: 'root', deps: [], group: null, status: '' }];
   const ledger = (id) => {
     const dir = path.join(runsDir(runsRoot, request), id);
@@ -115,9 +122,12 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
     const planText = readText(path.join(reqDir, ...(id === 'root' ? ['plan.md'] : ['parts', id, 'plan.md'])));
     // parsePartition viết thường đường dẫn để so trùng; trang phải hiện tên file đúng như plan.
     const original = new Map([...(planText ?? '').matchAll(/`([^`]+)`/g)].map((m) => [normPath(m[1]), m[1].trim()]));
-    const tasks = (planText ? parsePartition(planText) : []).map((t) => ({ ...t, files: t.files.map((f) => original.get(f) ?? f) }));
-    const branch = id === 'root' ? `feature/${slug}` : `worktree-${slug}-p${nnOf(id)}`;
-    const log = id === 'root' ? null : tryGit(git, ['log', '--format=%H%x09%ct%x09%s', `feature/${slug}..${branch}`], docsRoot);
+    const tasks = !small
+      ? (planText ? parsePartition(planText) : []).map((t) => ({ ...t, files: t.files.map((f) => original.get(f) ?? f) }))
+      : [...new Set(lg.lines.map((l) => l.match(/^Task (\d+): (?:start|review|complete)\b/)?.[1]).filter(Boolean))]
+        .map((n) => ({ n: Number(n), title: 'theo requirement.md', files: [], consumes: new Set(), produces: new Set() }));
+    const branch = id === 'root' ? rootBranch : `worktree-${slug}-p${nnOf(id)}`;
+    const log = id === 'root' ? null : tryGit(git, ['log', '--format=%H%x09%ct%x09%s', `${rootBranch}..${branch}`], docsRoot);
     const commits = linesOf(log).map((l) => l.split('\t')).filter((c) => c.length >= 3)
       .map(([hash, ct, ...s]) => ({ hash, ts: new Date(Number(ct) * 1000).toISOString(), subject: s.join('\t') }));
     const done = new Set(lg.lines.map((l) => l.match(/^Task (\d+): complete\b/)?.[1]).filter(Boolean));
@@ -159,12 +169,14 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
   const designStatus = design.match(/^- Trạng thái:\s*(\S+)/m)?.[1] ?? '';
   const gates = [
     { id: 'G1', done: /^(approved|in-progress|merged)$/.test(designStatus) },
-    { id: 'G2', done: allLines.some((l) => TASK_EVENT_RE.test(l)) },
+    ...(small ? [] : [{ id: 'G2', done: allLines.some((l) => TASK_EVENT_RE.test(l)) }]),
     { id: 'G3', done: DONE_RE.test(root.lines.join('\n')) || designStatus === 'merged' },
   ];
-  // Cổng sau xong thì cổng trước đã qua: request cỡ nhỏ không có design.md nên không có dấu hiệu nào ghi G1.
+  // Request cỡ nhỏ không có design.md nên không có dấu hiệu nào ghi G1: task đã chạy nghĩa là requirement đã duyệt.
+  if (small) gates[0].done ||= allLines.some((l) => TASK_EVENT_RE.test(l));
+  // Cổng sau xong thì cổng trước đã qua.
   for (let i = gates.length - 2; i >= 0; i--) gates[i].done ||= gates[i + 1].done;
-  gates.push({ id: 'push', done: !!tryGit(git, ['branch', '-r', '--contains', `feature/${slug}`], docsRoot) });
+  gates.push({ id: 'push', done: !!tryGit(git, ['branch', '-r', '--contains', rootBranch], docsRoot) });
 
   const details = Object.fromEntries(parts.map((p) => [p.id, taskDetails(p._tasks, p._lg.lines, p._lg.events)]));
   const clean = parts.map(({ _tasks, _lg, _commits, ...p }) => p);
@@ -177,7 +189,7 @@ export function buildStatus({ docsRoot, runsRoot, request, now = Date.now(), sta
   ];
   return {
     header: {
-      request, branch: tryGit(git, ['rev-parse', '--abbrev-ref', 'HEAD'], docsRoot), head: tryGit(git, ['rev-parse', '--short', 'HEAD'], docsRoot),
+      request, branch: headBranch, head: tryGit(git, ['rev-parse', '--short', 'HEAD'], docsRoot),
       autonomy, updatedAt: new Date(now).toISOString(), staleMinutes,
     },
     gates,

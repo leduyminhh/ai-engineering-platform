@@ -20,8 +20,10 @@ export default async function run({ ok, ctx }) {
   ok(ctx.allAgents.length > 0 && !offRoute.length,
     `AC1.1: agent khai model sonnet + effort high, spec-analyst khai haiku${offRoute.map((a) => ' ' + a.id).join('')}`);
 
-  ok(/task review, re-review và task `DOCS` dùng `haiku`/.test(read('core', 'skills', 'plan-execution', 'SKILL.md')),
-    'plan-execution giao task review, re-review và DOCS cho haiku (thí nghiệm 2026-10-30)');
+  // Trial 2026-11-03: task review haiku sót lỗi major ở task BE cả hai lần (opus ở review cuối mới bắt), nên task code review bằng sonnet.
+  const pe = read('core', 'skills', 'plan-execution', 'SKILL.md');
+  ok(/task review của task code \(mọi kind trừ `DOCS`\) dùng\s+`sonnet`/.test(pe) && /re-review, task `DOCS` và task review của task `DOCS` dùng `haiku`/.test(pe),
+    'plan-execution: task review của task code dùng sonnet; re-review và DOCS dùng haiku');
 
   ok(['`effort`', '`medium`', '`high`'].every((s) => sec.includes(s)),
     'AC2.1: mục baseline nêu quy tắc effort (opus mặc định medium, sonnet high)');

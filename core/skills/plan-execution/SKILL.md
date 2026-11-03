@@ -29,7 +29,9 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    rà trước các cặp task chung file hoặc nối interface (xem `references/task-loop.md`, mục "Rà plan trước khi chạy") và
    chạy `node <thư mục skill plan-execution>/scripts/autonomy.mjs` một lần để lấy `mergeLocal`, `cleanup`, `partRunner`
    (thiếu khoá hoặc sai giá trị = mặc định an toàn: hỏi merge local, hỏi dọn, hỏi cách chạy part).
-2. **Vòng task**, lần lượt từng task chưa `complete`, theo `references/task-loop.md`:
+2. **Vòng task**, lần lượt từng task chưa `complete`, theo `references/task-loop.md`. Đọc hết file đó trước task đầu tiên
+   (cả cỡ "thay đổi nhỏ"), và giao việc bằng đúng mẫu trong `references/prompts/`, không tự soạn prompt; bước này chỉ tóm
+   tắt, luật vòng sửa, xếp finding và dòng ledger nằm ở `task-loop.md`:
    ghi BASE → cắt brief bằng `scripts/task-brief.mjs` → giao agent domain theo `kind` bằng mẫu
    `references/prompts/implementer.md` → nhận `agent_result` → session chính commit → gom diff bằng
    `scripts/review-package.mjs` → task review (`references/prompts/task-review.md`, trả `spec_verdict` + finding) →
@@ -37,7 +39,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    `Task <n>: complete (…)` vào ledger.
 3. **Review cuối toàn nhánh** sau task cuối, theo `references/prompts/final-review.md`: reviewer chạy opus, nhận Review
    Focus + các dòng `Ruling:` + finding minor đã hoãn; `engineering-quality-auditor` chỉ chạy ở bước này.
-4. **Kết thúc nhánh** theo `references/finish.md`: docs + spec sống + `check-request.mjs` + full suite, rồi trình G3
+4. **Kết thúc nhánh** theo `references/finish.md` (đọc file trước khi làm bước này): docs + spec sống + `check-request.mjs` + full suite, rồi trình G3
    (diff cả nhánh); `mergeLocal: true` thì duyệt G3 là đồng ý merge local, không thì đưa đúng 3 lựa chọn; ghi
    `Plan: complete` vào ledger khi plan xong.
 
@@ -57,12 +59,13 @@ lượt), chỉ nói ở các điểm dừng trên hoặc khi gặp lỗi chặn
 | Điều phối, ghi ledger, trả lời `questions[]` từ spec/plan, phán `Ruling:` | session chính |
 | Commit sau mỗi task (qua `git-workflow`) | session chính — agent không tự commit (ngoại lệ: subagent part của `partRunner: subagent`, xem `references/inline.md`) |
 | Implement, viết test | agent domain theo `kind`; task `DOCS`: `general-purpose` |
+| Sửa finding (vòng sửa, lần sửa sau review cuối) | agent domain theo `kind`, kể cả khi bản sửa chỉ vài dòng; session chính không tự sửa code |
 | Task review, re-review, review cuối | `backend-reviewer` / `frontend-reviewer` (chỉ đọc); DOCS/TOOLING dùng `general-purpose` |
 | Quality/security gate | `engineering-quality-auditor`, chỉ ở review cuối |
 | Chế độ inline (người dùng nói rõ chạy inline, hoặc không có tool subagent) | session chính làm mọi task theo `references/inline.md`; không hỏi người dùng chọn cách thực thi |
 
-Model khi gọi agent (tham số `model`): implementer mặc định `sonnet`; task review, re-review và task `DOCS` dùng `haiku`
-(haiku sai một lần trong task đó → gọi lại bằng `sonnet`); vòng 3 của vòng sửa và reviewer của review cuối toàn nhánh dùng `opus`; lần sửa sau review cuối dùng `sonnet`. Plan
+Model khi gọi agent (tham số `model`): implementer mặc định `sonnet`; task review của task code (mọi kind trừ `DOCS`) dùng
+`sonnet`; re-review, task `DOCS` và task review của task `DOCS` dùng `haiku` (haiku sai một lần trong task đó → gọi lại bằng `sonnet`); vòng 3 của vòng sửa và reviewer của review cuối toàn nhánh dùng `opus`; lần sửa sau review cuối dùng `sonnet`. Plan
 không cần khai báo model riêng cho từng task.
 
 ## Ranh giới an toàn

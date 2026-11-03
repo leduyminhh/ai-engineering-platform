@@ -86,6 +86,16 @@ export default async function run({ ok, ctx }) {
       ok(JSON.stringify(readAutonomy(repo)) === JSON.stringify(FULL.autonomy), 'AC3.4: git thật, file chưa theo dõi → khoá có hiệu lực');
       execFileSync('git', ['add', '.claude/aip-gate.json'], { cwd: repo });
       ok(JSON.stringify(readAutonomy(repo)) === JSON.stringify(SAFE), 'AC3.4: git thật, file đã theo dõi → mặc định an toàn');
+
+      // Regression trial 2026-11-03: `cd <skill> && node scripts/autonomy.mjs` đọc aip-gate.json của clone aip chứa plugin
+      // (mergeLocal/cleanup true) thay vì của project đích → từ chối, exit 2, không in JSON.
+      const { spawnSync } = await import('node:child_process');
+      const skillDir = path.join(REPO_ROOT, 'core', 'skills', 'plan-execution');
+      for (const [cwd, want] of [[skillDir, 2], [path.join(REPO_ROOT, 'core'), 2], [repo, 0]]) {
+        const r = spawnSync(process.execPath, [path.join(skillDir, 'scripts', 'autonomy.mjs')], { cwd, encoding: 'utf8' });
+        ok(r.status === want && (want === 0 ? r.stdout.includes('mergeLocal') : r.stdout === '' && r.stderr.includes('gốc project')),
+          `autonomy.mjs chạy từ ${path.relative(REPO_ROOT, cwd) || cwd} → exit ${want} (nhận ${r.status})`);
+      }
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
