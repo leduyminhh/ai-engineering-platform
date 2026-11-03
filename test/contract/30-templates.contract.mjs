@@ -12,7 +12,7 @@ export default async function run({ ok, ctx }) {
     ok(fs.existsSync(a), 'AGENTS.md (repo) tồn tại');
     if (fs.existsSync(a) && fs.existsSync(t)) {
       const norm = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
-      ok(norm(a) === norm(t), 'AGENTS.md == AGENTS.template.md (không drift)');
+      ok(norm(a) === norm(t), 'AGENTS.md == AGENTS.template.md (không drift; baseline-slim AC1.3)');
       const body = norm(a);
       ok(body.includes('Comments are documentation, not narration')
         && body.includes('Quality gate')

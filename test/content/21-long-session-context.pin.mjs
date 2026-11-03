@@ -14,7 +14,7 @@ export default async function run({ ok, ctx }) {
   ok(['handoff.md', 'foreground', '[Inference]'].every((s) => sec.includes(s))
     && ['1 hour', 'statusline', 'sends the parent one line', 'bounds its output', 'instead of ending the turn',
       'cheaper to replace than', 'open a new session from `handoff.md`', 'Record each session'].every((s) => mr.includes(s)),
-    'AC1.1: baseline giữ quy tắc phiên dài cốt lõi, chi tiết ở model-routing.md');
+    'AC1.1: baseline giữ quy tắc phiên dài cốt lõi, chi tiết ở model-routing.md (baseline-slim AC2.2, AC3.2)');
 
   ok(['[Inference]', '[Unverified]', 'code.claude.com/docs/en/prompt-caching'].every((s) => mr.includes(s)),
     'AC1.2: mọi con số có nguồn hoặc nhãn');

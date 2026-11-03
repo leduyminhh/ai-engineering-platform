@@ -14,7 +14,7 @@ export default async function run({ ok, ctx }) {
   ok(start >= 0 && start < tpl.indexOf('### Language')
     && ['`haiku`', '`sonnet`', '`opus`', 'new session'].every((s) => sec.includes(s))
     && ['`/clear`', '`/compact', '15 minutes', 'acknowledg'].every((s) => mr.includes(s)),
-    'AC2.1: baseline có mục Model and session routing, chi tiết ở model-routing.md');
+    'AC2.1: baseline có mục Model and session routing, chi tiết ở model-routing.md (baseline-slim AC2.2, AC3.2)');
 
   // Thí nghiệm 2026-10-30: spec-analyst chạy haiku ngang chất lượng sonnet, rẻ hơn; haiku giữ effort mặc định.
   const HAIKU = ['engineering-spec-analyst'];
