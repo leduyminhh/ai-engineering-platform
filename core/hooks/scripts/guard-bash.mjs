@@ -365,6 +365,24 @@ function hasCommitWithMessageFlag(cmd) {
   return false;
 }
 
+// Đoạn chỉ đọc metadata (git check-ignore/ls-files, echo, printf) nhắc tên file bí mật mà không đọc nội dung thì không hỏi.
+// Chỉ miễn khi đoạn không chuyển hướng, không pipe sang lệnh sau và cả lệnh không có $( ), `` hay <( ): các đường đó đưa tên file sang lệnh đọc nội dung.
+const META_GIT = new Set(['check-ignore', 'ls-files']);
+// Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
+const HARMLESS_REDIRECT = /(^|\s)(?:\d*>>?&\d+|(?:\d*|&)>>?\s*(?:\/dev\/null|nul|\$null))(?=\s|$|[;&|])/gi;
+function secretScanText(cmd) {
+  if (/\$\(|`|<\(/.test(cmd)) return cmd;
+  const c = cmd.replace(HARMLESS_REDIRECT, '$1');
+  const p = parse(c);
+  if (p.unclosed) return cmd;
+  const keep = (list) => list.filter((t, k) => {
+    const name = cmdName(t[0]);
+    const meta = name === 'echo' || name === 'printf' || (name === 'git' && META_GIT.has(gitCmd(t)?.sub));
+    return !meta || list[k + 1]?.op === '|' || t.some((x) => /[<>]/.test(x));
+  });
+  return [...keep(p.segs), ...keep(naiveSegments(c))].map((t) => t.join(' ')).join('\n');
+}
+
 export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked, reader = readGate } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
@@ -411,7 +429,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (!bypass && [...segs, ...naiveSegments(cmd)].some(matchesAsk) && gate()?.mode === 'full') {
     return { decision: 'ask', reason: 'Chế độ full: phiên không bypass nên lệnh push/mạng/deploy production cần người dùng xác nhận. Chạy `aip mode ask` hoặc khởi động với `--permission-mode bypassPermissions` nếu muốn đổi.' };
   }
-  const hits = (re) => re.test(cmd) || re.test(raw);
+  const hits = (re) => re.test(secretScanText(cmd)) || re.test(secretScanText(raw));
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
   const secretAsk = { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
   if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk;

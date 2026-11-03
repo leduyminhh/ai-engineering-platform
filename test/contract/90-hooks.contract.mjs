@@ -59,6 +59,13 @@ export default async function run({ ok, ctx }) {
       'H1: -C <dir> → tra nhánh của repo đích (so với cwd)');
     ok(['cat .env;echo', 'cat <.env', 'source .env&&npm start', 'echo $(cat .env)', 'type certs\\server.pem', 'cat ..\\.env']
       .every((c) => d(c)?.decision === 'ask'), 'H3: .env sau ;/</&&/$()/dấu backslash → ask');
+    // Regression trial 2026-11-03: auditor kiểm .env có bị git theo dõi hay không, lệnh không đọc nội dung nhưng bị hỏi rồi bị từ chối ở -p.
+    const metaOnly = ['git check-ignore -v .env', 'git ls-files --error-unmatch .env >/dev/null 2>&1 && echo ".env TRACKED" || echo ".env untracked"',
+      'git -C repo ls-files .env; echo "check-ignore exit=$?"', 'printf "%s\\n" .env'];
+    const stillAsk = ['git ls-files .env | xargs cat', 'cat $(git ls-files .env)', 'git ls-files .env && cat .env', 'echo X >> .env',
+      'git diff -- .env', 'git add .env', 'echo .env | xargs cat', "echo 'ok' ; cat <(git ls-files .env)"];
+    for (const c of metaOnly) ok(d(c) === null, `H3: lệnh chỉ đọc metadata không hỏi: ${c}`);
+    for (const c of stillAsk) ok(d(c)?.decision === 'ask', `H3: tên file bí mật đi sang lệnh đọc/ghi nội dung vẫn hỏi: ${c}`);
     ok(['cp .env.example .env.example.bak', 'cat config/.env.sample', 'cat id_rsa.pub', 'echo process.env'].every((c) => d(c) === null)
       && d('cat .envrc')?.decision === 'ask',
       'H3: .env.example/.env.sample/id_rsa.pub/process.env → cho qua; .envrc → ask (vòng sửa 1: .envrc là file bí mật)');
