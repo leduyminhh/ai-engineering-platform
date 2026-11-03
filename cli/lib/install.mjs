@@ -75,7 +75,13 @@ function removeLinkAndPruneEmpty(link, stopAt) {
 function readManifest(scope) {
   const p = manifestPath(scope);
   if (!fs.existsSync(p)) return { version: 1, installs: [] };
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return { version: 1, installs: [] }; }
+  // Manifest hỏng không được coi là trống: lần gỡ kế sẽ xoá nó và mọi file đã cài mất dấu.
+  let m;
+  try { m = JSON.parse(fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, '')); } catch (e) {
+    throw new Error(`Manifest hỏng, không đọc được: ${p} (${e.message}). Sửa hoặc xoá thủ công rồi chạy lại; aip không tự ghi đè.`);
+  }
+  if (!m || !Array.isArray(m.installs)) throw new Error(`Manifest sai dạng (thiếu mảng "installs"): ${p}. Sửa hoặc xoá thủ công rồi chạy lại; aip không tự ghi đè.`);
+  return m;
 }
 function writeManifest(scope, m) {
   const p = manifestPath(scope);
@@ -86,7 +92,10 @@ function writeManifest(scope, m) {
     return;
   }
   fs.mkdirSync(path.dirname(p), { recursive: true }); // đảm bảo .ai-engineering tồn tại trước khi ghi
-  fs.writeFileSync(p, JSON.stringify(m, null, 2) + '\n');
+  // Ghi qua file tạm rồi rename để ngắt giữa chừng không để lại manifest cụt.
+  const tmp = `${p}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(m, null, 2) + '\n');
+  fs.renameSync(tmp, p);
 }
 
 // ── managed block (graft) ──────────────────────────────────────────────────────
@@ -118,14 +127,25 @@ function instructionFiles(provider, scope, root) {
   if (provider === 'codex') return [scope === 'global' ? '.codex/AGENTS.md' : 'AGENTS.md'];
   return [];
 }
+/** Tính (không ghi) nội dung mới của từng file chỉ dẫn; ném khi file có managed block hỏng. */
+function planManagedBlock(root, rels) {
+  const block = baselineBlock();
+  return rels.map((rel) => {
+    const abs = path.join(root, rel);
+    // File chỉ dẫn là symlink/junction (vd AGENTS.md của antigravity trỏ vào build/): ghi sẽ xuyên vào nguồn, nên không đụng tới.
+    if (isLinkPath(abs)) return { rel, abs, link: true };
+    const existing = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
+    return { rel, abs, next: existing.trim() === '' ? `${block}\n` : mergeManagedBlock(existing, block, rel) };
+  });
+}
 /** Merge khối baseline vào từng file; trả các rel đã ghi (để lưu vào manifest entry). */
 function applyManagedBlock(root, rels) {
-  const block = baselineBlock();
   const written = [];
-  for (const rel of rels) {
-    const abs = path.join(root, rel);
-    const existing = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
-    const next = existing.trim() === '' ? `${block}\n` : mergeManagedBlock(existing, block, rel);
+  for (const { rel, abs, next, link } of planManagedBlock(root, rels)) {
+    if (link) {
+      console.warn(`[aip] Bỏ qua managed block ở ${rel}: là symlink/junction, ghi sẽ xuyên vào file nguồn.`);
+      continue;
+    }
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, next);
     written.push(rel);
@@ -735,6 +755,8 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
   const results = [];
   for (const provider of provs) {
     ensureBuilt(provider);
+    // Managed block hỏng phải lộ ra trước khi gỡ bản cũ hay đặt file: ném sau đó thì file đã đặt không còn được manifest theo dõi.
+    planManagedBlock(root, instructionFiles(provider, scope, root));
 
     if (provider === 'claude' && mode === 'plugin') {
       // plugin-mode CHỈ cài NGUYÊN plugin (claude CLI không tách skill). Suy tập plugin DOMAIN từ
@@ -758,6 +780,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
         files: [], links: [], managed, installedAt: new Date().toISOString(),
       });
       results.push({ provider: 'claude', plugins: effPlugins, mode: 'plugin', marketplace: info.marketplace });
+      writeManifest(scope, m); // ghi sau từng provider: provider sau lỗi không được làm mất dấu provider đã xong
       continue;
     }
 
@@ -785,8 +808,8 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     const managed = applyManagedBlock(root, instructionFiles(provider, scope, root));
     m.installs.push({ ...entry, files: relF, links: relL, managed, installedAt: new Date().toISOString() });
     results.push({ provider, plugins: entry.plugins, skills: entry.skills, linked: relL.length, copied: relF.length, count: relF.length + relL.length, pulled: deps.pulled });
+    writeManifest(scope, m);
   }
-  writeManifest(scope, m);
   // Cài claude → đóng gói sẵn skill cho Cowork (Cowork không đọc kho plugin local; phải upload .zip).
   let coworkPack = null;
   if (provs.includes('claude')) {

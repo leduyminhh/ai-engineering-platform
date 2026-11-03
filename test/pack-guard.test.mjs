@@ -2,7 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { classifyFiles, describePack, loadPolicy } from "../cli/lib/pack-guard.mjs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { pathToFileURL } from "node:url";
+import { classifyFiles, describePack, loadPolicy, npmPackInvocation, isMainModule } from "../cli/lib/pack-guard.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..");
@@ -141,4 +144,29 @@ test("pack-guard: _published.json không còn buộc plugin published phải có
   // _published.json (wizard offer) giữ nguyên, nhưng không được ép ship: gói chỉ core vẫn hợp lệ.
   const policy = loadPolicy(REPO_ROOT);
   assert.deepEqual(classifyFiles(baseline(), policy), []);
+});
+
+test("AC3.1 pack-guard: spawn npm pack bằng mảng args, chỉ dùng shell trên Windows", () => {
+  const posix = npmPackInvocation("linux");
+  assert.equal(posix.cmd, "npm");
+  assert.deepEqual(posix.args, ["pack", "--ignore-scripts", "--dry-run", "--json"]);
+  assert.equal(posix.shell, false);
+  const win = npmPackInvocation("win32");
+  assert.equal(win.shell, true);
+  assert.match(win.cmd, /^npm\.cmd pack --ignore-scripts --dry-run --json$/);
+  assert.deepEqual(win.args, []);
+});
+
+test("AC3.2 pack-guard: isMainModule khớp cả đường dẫn có khoảng trắng, # và ký tự non-ASCII", () => {
+  const dir = mkdtempSync(resolve(tmpdir(), "pg main#é "));
+  try {
+    mkdirSync(resolve(dir, "a b"));
+    const file = resolve(dir, "a b", "x#é.mjs");
+    writeFileSync(file, "");
+    assert.equal(isMainModule(pathToFileURL(file).href, file), true);
+    assert.equal(isMainModule(pathToFileURL(file).href, resolve(dir, "khác.mjs")), false);
+    assert.equal(isMainModule(pathToFileURL(file).href, undefined), false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -44,7 +44,9 @@ export function resolveAutonomy(cwd = process.cwd(), deps = {}) {
   let inRepo = false;
   try {
     top = git(['rev-parse', '--show-toplevel'], cwd);
-    main = path.dirname(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd));
+    const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd);
+    // Submodule: common-dir là <cha>/.git/modules/<tên>, dirname của nó nằm trong .git của repo cha; dùng gốc của chính submodule (cùng guard với route.mjs).
+    main = path.basename(common) === '.git' ? path.dirname(common) : top;
     inRepo = true;
   } catch { /* không phải repo hoặc không có git: chỉ đọc cwd */ }
   const own = readGateAt(top);

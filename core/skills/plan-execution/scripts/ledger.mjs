@@ -30,10 +30,15 @@ const EVENT_FORMATS = [
   [/^\s*task \d+: review\b/i, /^Task \d+: review [1-9]\d* (?:compliant|issues|cannot_verify) \d+\/\d+\/\d+$/, 'Task <n>: review <vòng> <compliant|issues|cannot_verify> <blocker>/<major>/<minor>'],
   [/^\s*blocked:/i, /^Blocked: \S/, 'Blocked: <lý do>'],
   [/^\s*unblocked:/i, /^Unblocked: \S/, 'Unblocked: <cách giải>'],
+  // Hook session-start chỉ nhận đúng "Plan: complete" và "Part: complete"; aip status chỉ nhận "Part <nn>…: merged": sai chữ thì ledger bị nạp lại mãi và part kẹt ở chờ.
+  [/^\s*plan:/i, /^Plan: complete$/, 'Plan: complete'],
+  [/^\s*part:/i, /^Part: complete(?: [0-9a-f]{7,40})?$/, 'Part: complete [<hash>]'],
+  [/^\s*part \d/i, /^Part \d{2}\S*: merged(?: [0-9a-f]{7,40})?$/, 'Part <nn>[-<slug>]: merged [<hash>]'],
 ];
 
 // ctx = { tdd, kind } của task trong plan; thiếu ctx thì chỉ kiểm định dạng như trước.
 export function validateLine(line, ctx) {
+  if (line.trim() === '') return 'dòng ledger trống';
   // Đối số nhiều dòng được kiểm từng dòng: một dòng hợp lệ không được che dòng inline thiếu evidence.
   for (const l of line.split(LINE_SPLIT)) {
     if (l.length > MAX_LINE) return `dòng ledger dài quá ${MAX_LINE} ký tự`;
@@ -118,7 +123,8 @@ export function main(argv, deps) {
     return 2;
   }
   // Mỗi dòng mang số task của chính nó, nên ctx dựng theo từng dòng.
-  const invalid = line.split(LINE_SPLIT).map((l) => validateLine(l, taskCtx(planArg, l))).find(Boolean);
+  // Dòng trống xen giữa (vd xuống dòng cuối) bỏ qua, nhưng cả đối số trống thì từ chối.
+  const invalid = (line.trim() === '' ? [line] : line.split(LINE_SPLIT).filter((l) => l.trim())).map((l) => validateLine(l, taskCtx(planArg, l))).find(Boolean);
   if (invalid) {
     console.error(invalid);
     return 2;

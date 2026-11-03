@@ -14,8 +14,9 @@
 // Policy publish lấy từ <root>/pack.config.json — nguồn sự thật duy nhất.
 // Khi thiếu file (vd consumer cài package), fallback về DEFAULT_POLICY.
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 // ---- policy mặc định (fallback khi thiếu pack.config.json) ----
 // Giữ khớp với nội dung pack.config.json ở root repo.
@@ -64,20 +65,21 @@ export function loadPolicy(root) {
   }
 }
 
-const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
+// Windows không spawn được *.cmd khi truyền mảng args (EINVAL) nên cần shell; khi đó truyền một chuỗi lệnh và không kèm mảng args
+// (Node cảnh báo DEP0190 với shell + args). POSIX truyền mảng, không shell: chuỗi lệnh một mảnh sẽ ENOENT.
+// Args là hằng số cố định, không chứa input người dùng.
+// --ignore-scripts: npm pack mặc định chạy prepack, mà prepack chính là guard này → nếu không dừng script sẽ đệ quy vô hạn.
+export function npmPackInvocation(platform = process.platform) {
+  const args = ["pack", "--ignore-scripts", "--dry-run", "--json"];
+  return platform === "win32"
+    ? { cmd: `npm.cmd ${args.join(" ")}`, args: [], shell: true }
+    : { cmd: "npm", args, shell: false };
+}
 
 function runNpmPack(root) {
   return new Promise((resolve, reject) => {
-    // Windows không spawn được *.cmd khi pass arg dạng mảng qua spawn thuần
-    // (EINVAL), nên cần shell. Args ở đây là hằng số cố định, không chứa input
-    // người dùng.
-    // --ignore-scripts: npm pack mặc định chạy prepack, mà prepack chính là
-    // guard này → nếu không dừng script sẽ đệ quy vô hạn.
-    const child = spawn(`${npmBin} pack --ignore-scripts --dry-run --json`, {
-      cwd: root,
-      shell: process.platform === "win32",
-      windowsHide: true,
-    });
+    const { cmd, args, shell } = npmPackInvocation();
+    const child = spawn(cmd, args, { cwd: root, shell, windowsHide: true });
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8");
@@ -272,10 +274,12 @@ async function runShow() {
 // Chạy như entry point: `node cli/lib/pack-guard.mjs` hoặc qua npm script.
 // Dùng so khớp import.meta.url với argv[1] (import.meta.main chưa ổn định trên Node 20 →
 // undefined khiến guard không chạy, prepack pass rỗng — vô hiệu hoá guard).
-const isMain = process.argv[1] && (
-  import.meta.url === `file://${process.argv[1]}` ||
-  import.meta.url === `file:///${process.argv[1].replace(/\\/g, "/")}`
-);
+// pathToFileURL xử lý đúng khoảng trắng, #, ký tự non-ASCII và dấu \ của Windows; dựng file:// bằng tay thì trượt và guard thoát 0 mà không chạy.
+export function isMainModule(metaUrl, argv1) {
+  if (!argv1) return false;
+  try { return metaUrl === pathToFileURL(realpathSync(argv1)).href; } catch { return false; }
+}
+const isMain = isMainModule(import.meta.url, process.argv[1]);
 if (isMain) {
   if (process.argv.includes("--show")) {
     await runShow();

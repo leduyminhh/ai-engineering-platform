@@ -53,6 +53,26 @@ ok(parse(['stats', '--session', 'a.jsonl', '--json']).session === 'a.jsonl' && p
     ok(!msg && eq(parse(['install', '--provider', 'claude', y])._, ['install']), `${y} được nhận, không rơi vào _`);
   }
 }
+{
+  // AC4.1: cờ nhận giá trị mà thiếu giá trị từng thành plugin/provider undefined = "không lọc" nên uninstall gỡ hết
+  const throws = (argv) => { try { parse(argv); return null; } catch (e) { return e.message; } };
+  for (const [argv, flag] of [
+    [['uninstall', '--provider', 'claude', '--plugin'], '--plugin'],
+    [['uninstall', '--plugin', '--yes'], '--plugin'],
+    [['uninstall', '--provider'], '--provider'],
+    [['uninstall', '--provider='], '--provider'],
+    [['uninstall', '--plugin='], '--plugin'],
+    [['uninstall', '--skill='], '--skill'],
+    [['uninstall', '--skill', ','], '--skill'],
+    [['build', '--target'], '--target'],
+    [['build', '--target='], '--target'],
+  ]) {
+    const msg = throws(argv);
+    ok(msg && msg.includes(flag), `AC4.1: thiếu giá trị bị từ chối, nêu tên cờ: ${argv.join(' ')}`);
+  }
+  ok(parse(['uninstall', '--plugin', 'all']).plugin === 'all' && parse(['uninstall', '--provider=claude', '--plugin=ops']).plugin === 'ops'
+    && eq(parse(['uninstall', '--skill', 'a,b']).skill, ['a', 'b']), 'AC4.1: cờ có giá trị hợp lệ không đổi');
+}
 
 if (fails.length) { for (const f of fails) console.error('✗', f); console.error(`\n${fails.length} FAIL / ${pass + fails.length}`); process.exit(1); }
 console.log(`args.test: ${pass} pass`);

@@ -983,6 +983,61 @@ try {
   fs.rmSync(TMP_PK, { recursive: true, force: true });
 }
 
+// ── audit 2026-11-03: manifest hỏng, cài dở khi managed block hỏng, managed block xuyên symlink ─────────
+{
+  const MARK = '<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->';
+  const withRoot = (prefix, fn) => {
+    const dir = mkTmp(prefix);
+    process.env.AIE_INSTALL_ROOT = dir;
+    try { return fn(dir); } finally { process.env.AIE_INSTALL_ROOT = TMP; }
+  };
+  const thrown = (fn) => { try { fn(); return null; } catch (e) { return e; } };
+
+  // AC5.1: manifest JSON hỏng hay sai dạng phải làm lệnh ném, không được coi là trống rồi xoá manifest ở lần gỡ kế
+  withRoot('cwf-mf-', (dir) => {
+    install({ providers: 'cursor', plugins: 'core', scope: 'project' });
+    const mf = path.join(dir, '.ai-engineering', 'manifest.json');
+    for (const bad of ['{ không phải json', '{}', 'null', '{"installs":"x"}']) {
+      fs.mkdirSync(path.dirname(mf), { recursive: true });
+      fs.writeFileSync(mf, bad);
+      const eu = thrown(() => uninstall({ providers: 'all', scope: 'project' }));
+      ok(eu && /manifest/i.test(eu.message), `AC5.1: uninstall ném lỗi nêu manifest khi manifest = ${bad}`);
+      ok(fs.existsSync(mf) && fs.readFileSync(mf, 'utf8') === bad, `AC5.1: manifest = ${bad} còn nguyên sau lệnh lỗi`);
+      ok(thrown(() => check({ scope: 'project' })) !== null, `AC5.1: check ném lỗi khi manifest = ${bad}`);
+    }
+  });
+
+  // AC6.1: managed block hỏng phải lộ ra TRƯỚC khi đặt file; --provider nhiều: provider đã xong vẫn được ghi vào manifest
+  withRoot('cwf-mb-', (dir) => {
+    fs.writeFileSync(path.join(dir, 'AGENTS.md'), `# Dự án\n${MARK}\nthiếu marker END\n`);
+    const e1 = thrown(() => install({ providers: 'codex', plugins: 'backend', scope: 'project' }));
+    ok(e1 && /managed block/i.test(e1.message), 'AC6.1: managed block hỏng → install ném lỗi');
+    ok(!fs.existsSync(path.join(dir, '.agents', 'skills')), 'AC6.1: install lỗi không để lại file skill không được theo dõi');
+    ok(!fs.existsSync(path.join(dir, '.ai-engineering', 'manifest.json')), 'AC6.1: install lỗi trước khi đặt file không tạo manifest');
+    const e2 = thrown(() => install({ providers: ['cursor', 'codex'], plugins: 'backend', scope: 'project' }));
+    ok(e2 !== null, 'AC6.1: provider thứ hai lỗi → install ném lỗi');
+    const m = check({ scope: 'project' });
+    ok(m.installs.some((e) => e.provider === 'cursor') && fs.existsSync(path.join(dir, '.cursor', 'skills')), 'AC6.1: provider cursor đã xong được ghi vào manifest');
+    ok(!fs.existsSync(path.join(dir, '.agents', 'skills')), 'AC6.1: provider codex lỗi không đặt file');
+    uninstall({ providers: 'cursor', scope: 'project' });
+    ok(!fs.existsSync(path.join(dir, '.cursor', 'skills', 'git-workflow')), 'AC6.1: gỡ được bản cursor đã ghi manifest sau lần cài lỗi');
+  });
+
+  // AC7.1: AGENTS.md là symlink do antigravity cài (trỏ vào build/) → managed block của codex không được ghi xuyên vào build
+  withRoot('cwf-lnk-', (dir) => {
+    const buildAgents = path.join(REPO, 'build/antigravity/backend/AGENTS.md');
+    const before = fs.readFileSync(buildAgents, 'utf8');
+    try {
+      install({ providers: 'antigravity', plugins: 'backend', scope: 'project' });
+      const linked = isLink(path.join(dir, 'AGENTS.md'));
+      install({ providers: 'codex', plugins: 'backend', scope: 'project' });
+      ok(!fs.readFileSync(buildAgents, 'utf8').includes(MARK), 'AC7.1: managed block của codex không ghi xuyên symlink vào build/antigravity');
+      const ce = check({ scope: 'project' }).installs.find((e) => e.provider === 'codex');
+      ok(!linked || (ce && !(ce.managed || []).includes('AGENTS.md')), 'AC7.1: entry codex không theo dõi AGENTS.md là symlink');
+    } finally { fs.writeFileSync(buildAgents, before); }
+  });
+}
+
 console.log('');
 if (fails.length) { console.log('FAIL:'); for (const f of fails) console.log('  ✗ ' + f); }
 console.log(`\nINSTALL TEST: ${pass} pass, ${fails.length} fail`);
