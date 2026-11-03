@@ -5,7 +5,7 @@
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const DEFAULTS = Object.freeze({ mergeLocal: false, cleanup: false, partRunner: 'session' });
 const RUNNERS = new Set(['subagent', 'session', 'sequential']);
@@ -65,7 +65,22 @@ export function resolveAutonomy(cwd = process.cwd(), deps = {}) {
 
 export const readAutonomy = (cwd, deps) => resolveAutonomy(cwd, deps).value;
 
+// Gate đọc theo cwd: chạy sau khi `cd` vào thư mục skill sẽ đọc aip-gate.json của repo chứa plugin
+// (bản cài từ source nằm trong clone aip) và cấp mergeLocal/cleanup của project khác.
+export function insidePlugin(cwd, scriptFile) {
+  const pluginRoot = path.resolve(scriptFile, '..', '..', '..', '..');
+  const rel = path.relative(pluginRoot, path.resolve(cwd));
+  return !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
 const invoked = (() => {
   try { return !!process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href; } catch { return false; }
 })();
-if (invoked) console.log(JSON.stringify(readAutonomy()));
+if (invoked) {
+  let cwd = process.cwd();
+  try { cwd = realpathSync.native(cwd); } catch { /* giữ cwd như process báo */ }
+  if (insidePlugin(cwd, realpathSync(fileURLToPath(import.meta.url)))) {
+    console.error('autonomy.mjs phải chạy từ gốc project đích, không phải từ trong thư mục plugin/skill: gọi `node <thư mục skill>/scripts/autonomy.mjs` mà không `cd`.');
+    process.exitCode = 2;
+  } else console.log(JSON.stringify(readAutonomy()));
+}
