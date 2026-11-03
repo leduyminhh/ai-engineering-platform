@@ -39,7 +39,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: danh sách đoạn lệnh đã mở rộng dùng cho mọi kiểm tra trong `decide`
 
-- [ ] **Step 1:** chạy test #1 đỏ, thêm `expandShells`, chạy xanh, commit.
+- [x] **Step 1:** chạy test #1 đỏ, thêm `expandShells`, chạy xanh, commit.
 
 ### Task 2: Ghi cấu hình của guard (#2)
 **Kind:** TOOLING
@@ -54,7 +54,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** test đỏ, sửa hai hook, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa hai hook, xanh, commit.
 
 ### Task 3: pack-guard (#3)
 **Kind:** TOOLING
@@ -68,7 +68,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: `npmPackInvocation(platform)`, `isMainModule(metaUrl, argv1)`
 
-- [ ] **Step 1:** test đỏ, sửa, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa, xanh, commit.
 
 ### Task 4: Cờ CLI thiếu giá trị (#4)
 **Kind:** TOOLING
@@ -82,7 +82,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** test đỏ, sửa, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa, xanh, commit.
 
 ### Task 5: Manifest hỏng và ghi nguyên tử (#5)
 **Kind:** TOOLING
@@ -96,7 +96,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** test đỏ, sửa `readManifest`/`writeManifest`, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa `readManifest`/`writeManifest`, xanh, commit.
 
 ### Task 6: Cài dở khi managed block hỏng (#6)
 **Kind:** TOOLING
@@ -110,7 +110,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: `planManagedBlock(root, rels)`
 
-- [ ] **Step 1:** test đỏ, sửa, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa, xanh, commit.
 
 ### Task 7: Managed block xuyên symlink (#7)
 **Kind:** TOOLING
@@ -124,7 +124,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: `planManagedBlock` của Task 6
 - Produces: không có
 
-- [ ] **Step 1:** test đỏ, sửa, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa, xanh, commit.
 
 ### Task 8: Gốc repo chính trong submodule (#8)
 **Kind:** TOOLING
@@ -141,7 +141,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** test đỏ, sửa bốn bản, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa bốn bản, xanh, commit.
 
 ### Task 9: Định dạng dòng ledger (#9)
 **Kind:** TOOLING
@@ -155,7 +155,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** test đỏ, thêm `EVENT_FORMATS` và kiểm dòng trống, xanh, commit.
+- [x] **Step 1:** test đỏ, thêm `EVENT_FORMATS` và kiểm dòng trống, xanh, commit.
 
 ### Task 10: Nối dòng và refspec biến (#10)
 **Kind:** TOOLING
@@ -169,7 +169,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** test đỏ, sửa, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa, xanh, commit.
 
 ### Task 11: Handoff đã commit (#11)
 **Kind:** TOOLING
@@ -183,7 +183,7 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** test đỏ, sửa, xanh, commit.
+- [x] **Step 1:** test đỏ, sửa, xanh, commit.
 
 ### Task 12: Spec sống, version, full suite
 **Kind:** DOCS
@@ -198,4 +198,4 @@ Hook fail-open giữ nguyên (lỗi nội bộ không chặn phiên); không h�
 - Consumes: mọi task trước
 - Produces: không có
 
-- [ ] **Step 1:** cập nhật spec theo `## Ảnh hưởng spec`, `npm run build`, bump `core`, `node cli/lib/versions.mjs --lock`, `check-request.mjs`, `npm test` một lần.
+- [x] **Step 1:** cập nhật spec theo `## Ảnh hưởng spec`, `npm run build`, bump `core`, `node cli/lib/versions.mjs --lock`, `check-request.mjs`, `npm test` một lần.

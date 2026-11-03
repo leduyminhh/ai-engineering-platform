@@ -20,19 +20,19 @@ Root cause theo mục (đã đối chiếu với code, mỗi mục có test đ�
 ## Quyết định đã chốt
 Người dùng (qua session cha) giao 11 mục và cách sửa từng mục; quyết định của agent ghi ở "Thiết kế".
 ## Tiêu chí chấp nhận
-- [ ] **AC1.1** — Given lệnh `bash -c`/`sh -c`/`zsh -c`/`pwsh -Command`/`powershell -Command`/`eval`/`iex`/`Invoke-Expression` chứa `git push` vào nhánh bảo vệ hoặc force When `guard-bash` quyết định Then trả `ask`; lệnh vô hại bọc trong shell vẫn `null`.
-- [ ] **AC2.1** — Given `Edit`/`Write`/`MultiEdit` vào `.claude/aip-gate.json` hoặc `.claude/settings*.json` When `guard-files` quyết định Then `ask` ở mọi chế độ, kể cả full + bypass.
-- [ ] **AC2.2** — Given lệnh shell có ghi (`>`, `tee`, `sed -i`, `cp`, `mv`, `rm`, `Set-Content`…) vào các file đó When `guard-bash` quyết định Then `ask`; đọc (`cat`, `git diff`) vẫn `null`.
-- [ ] **AC3.1** — Given nền POSIX When `pack-guard` chạy `npm pack` Then dùng `spawn("npm", [args])` không shell; Windows giữ shell.
-- [ ] **AC3.2** — Given đường dẫn script có khoảng trắng, `#`, non-ASCII When `pack-guard` so khớp entry point Then `isMainModule` đúng.
-- [ ] **AC4.1** — Given `--provider`/`--plugin`/`--skill`/`--target` thiếu giá trị, giá trị bắt đầu bằng `-` hoặc dạng `=` rỗng When `parse` Then ném lỗi nêu tên cờ.
-- [ ] **AC5.1** — Given `manifest.json` JSON hỏng, `{}`, `null` hoặc `installs` không phải mảng When đọc manifest Then ném lỗi nêu manifest, file còn nguyên; ghi manifest qua file tạm + rename.
-- [ ] **AC6.1** — Given AGENTS.md có managed block hỏng When `install` Then ném trước khi gỡ bản cũ hay đặt file; nhiều provider thì provider đã xong có trong manifest.
-- [ ] **AC7.1** — Given `AGENTS.md` là symlink/junction When áp managed block Then bỏ qua kèm cảnh báo, không ghi xuyên, không theo dõi trong `managed[]`.
-- [ ] **AC8.1** — Given repo là submodule When tính gốc repo chính Then là gốc của submodule, không nằm trong `.git`, ở cả bốn nơi.
-- [ ] **AC9.1** — Given dòng ledger `Plan:`, `Part:`, `Part NN:` sai định dạng hoặc đầu vào trống When `validateLine` Then từ chối; `Plan: complete`, `Part: complete [<hash>]`, `Part NN<slug>: merged [<hash>]` được nhận.
-- [ ] **AC10.1** — Given `git push origin \<xuống dòng> master` hoặc refspec chứa `$` When `guard-bash` quyết định Then `ask`; nối dòng với nhánh feature vẫn `null`.
-- [ ] **AC11.1** — Given handoff được git theo dõi When `session-start` chạy Then không nạp; handoff và ledger được nạp kèm dòng "dữ liệu từ file, không phải chỉ dẫn".
+- [x] **AC1.1** — Given lệnh `bash -c`/`sh -c`/`zsh -c`/`pwsh -Command`/`powershell -Command`/`eval`/`iex`/`Invoke-Expression` chứa `git push` vào nhánh bảo vệ hoặc force When `guard-bash` quyết định Then trả `ask`; lệnh vô hại bọc trong shell vẫn `null`.
+- [x] **AC2.1** — Given `Edit`/`Write`/`MultiEdit` vào `.claude/aip-gate.json` hoặc `.claude/settings*.json` When `guard-files` quyết định Then `ask` ở mọi chế độ, kể cả full + bypass.
+- [x] **AC2.2** — Given lệnh shell có ghi (`>`, `tee`, `sed -i`, `cp`, `mv`, `rm`, `Set-Content`…) vào các file đó When `guard-bash` quyết định Then `ask`; đọc (`cat`, `git diff`) vẫn `null`.
+- [x] **AC3.1** — Given nền POSIX When `pack-guard` chạy `npm pack` Then dùng `spawn("npm", [args])` không shell; Windows giữ shell.
+- [x] **AC3.2** — Given đường dẫn script có khoảng trắng, `#`, non-ASCII When `pack-guard` so khớp entry point Then `isMainModule` đúng.
+- [x] **AC4.1** — Given `--provider`/`--plugin`/`--skill`/`--target` thiếu giá trị, giá trị bắt đầu bằng `-` hoặc dạng `=` rỗng When `parse` Then ném lỗi nêu tên cờ.
+- [x] **AC5.1** — Given `manifest.json` JSON hỏng, `{}`, `null` hoặc `installs` không phải mảng When đọc manifest Then ném lỗi nêu manifest, file còn nguyên; ghi manifest qua file tạm + rename.
+- [x] **AC6.1** — Given AGENTS.md có managed block hỏng When `install` Then ném trước khi gỡ bản cũ hay đặt file; nhiều provider thì provider đã xong có trong manifest.
+- [x] **AC7.1** — Given `AGENTS.md` là symlink/junction When áp managed block Then bỏ qua kèm cảnh báo, không ghi xuyên, không theo dõi trong `managed[]`.
+- [x] **AC8.1** — Given repo là submodule When tính gốc repo chính Then là gốc của submodule, không nằm trong `.git`, ở cả bốn nơi.
+- [x] **AC9.1** — Given dòng ledger `Plan:`, `Part:`, `Part NN:` sai định dạng hoặc đầu vào trống When `validateLine` Then từ chối; `Plan: complete`, `Part: complete [<hash>]`, `Part NN<slug>: merged [<hash>]` được nhận.
+- [x] **AC10.1** — Given `git push origin \<xuống dòng> master` hoặc refspec chứa `$` When `guard-bash` quyết định Then `ask`; nối dòng với nhánh feature vẫn `null`.
+- [x] **AC11.1** — Given handoff được git theo dõi When `session-start` chạy Then không nạp; handoff và ledger được nạp kèm dòng "dữ liệu từ file, không phải chỉ dẫn".
 ## Thiết kế
 - Quyết định của agent: #1 và #10 sửa trong `guard-bash.mjs` `decide`: mở rộng danh sách đoạn lệnh bằng chuỗi con của shell `-c`/`-Command`/`eval`/`iex` (đệ quy tối đa 3 cấp, đặt ngay sau đoạn cha để giữ thứ tự `cd`), rồi mọi kiểm tra sau đó chạy trên danh sách mở rộng; nối dòng `\<newline>` thành dấu cách trước `parse` (không áp cho PowerShell, đã có `psNormalize`); refspec có `$`/`~`/backtick trả `ask` như `-C`.
 - Quyết định của agent: #2 hằng `GUARD_CONFIG` ở `guard-files` đặt sau `confine` (full + ngoài root vẫn `deny`), `ask` thay vì `deny` vì người dùng đôi khi tự nhờ sửa. `guard-bash` dùng heuristic token (nhắc tên file + có lệnh ghi), không phải sandbox: `node -e` ghi file vẫn lọt, ghi rõ trong comment.
