@@ -120,6 +120,8 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true
   }
   const specs = pos.slice(1);
   if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return 'push dạng force/xoá/mirror/all';
+  // Refspec chứa biến/~/backtick không biết đích thật (có thể là nhánh bảo vệ): hỏi như -C không resolve được.
+  if (specs.some(hasUnresolvedRef)) return 'push có refspec chứa biến/~ không xác định được nhánh đích';
   // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
   const unresolvable = cdUnresolved || gc.dirs.some(hasUnresolvedRef);
   const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs.map((d) => np(d, msys))) : cwd;
@@ -414,7 +416,8 @@ function secretScanText(cmd) {
 export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked, reader = readGate } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
-  const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw;
+  // Shell POSIX nối dòng bằng \<xuống dòng>; không nối thì \ thành refspec và che nhánh phía sau. PowerShell đã nối bằng backtick ở psNormalize.
+  const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw.replace(/\\\r?\n/g, ' ');
   const cwd = input?.cwd || '.';
   const msys = input?.tool_name !== 'PowerShell';
   // Kiểm rẻ (permission_mode) trước; chỉ đọc cấu hình (tốn lời gọi git) khi một nhánh H1–H3 thật sự cần quyết định.

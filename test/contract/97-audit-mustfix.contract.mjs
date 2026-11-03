@@ -31,6 +31,11 @@ export default async function run({ ok, ctx }) {
         'AC1.1: full + bypass: bash -c "git push origin main" vẫn ask (fullKeep push)');
     }
 
+    for (const c of ['git push origin \\\n  master', 'git push origin \\\r\nmain', 'git push origin $BRANCH', 'git push origin HEAD:$BR', 'git push origin "$BRANCH"']) {
+      ok(ask(c), `AC10.1: nối dòng bằng \\ hoặc refspec chứa biến vẫn bị hỏi: ${JSON.stringify(c)}`);
+    }
+    ok(run1('git push origin \\\n  feature/x') === null && run1('git push -u origin feature/x') === null, 'AC10.1: nối dòng với nhánh feature không bị hỏi nhầm');
+
     for (const c of ['echo \'{"mode":"full"}\' > .claude/aip-gate.json', "sed -i 's/ask/full/' .claude/aip-gate.json", 'cp x.json .claude/settings.json',
       'echo x | tee .claude/settings.local.json', 'rm .claude/aip-gate.json', 'echo x >> .claude\\settings.json']) {
       ok(ask(c), `AC2.2: lệnh shell ghi file cấu hình của guard → ask: ${c}`);
