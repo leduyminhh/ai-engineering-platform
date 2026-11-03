@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+@AGENTS.md
+
 ## What this is
 
 `ai-engineering-platform` (CLI: `aip`) projects **canonical AI-agent capability content** into **provider-native files** for Codex, Claude Code, Cursor, and Google Antigravity. You author capabilities once under `plugins/` and `core/`; the CLI generates the per-provider skills, marketplace, rules, and workflow docs into a target project, and can merge an "AI Engineering" baseline block into that project's `AGENTS.md` / `CLAUDE.md`.
