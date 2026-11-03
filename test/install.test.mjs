@@ -1007,6 +1007,22 @@ try {
     }
   });
 
+  // AC6.1: managed block hỏng phải lộ ra TRƯỚC khi đặt file; --provider nhiều: provider đã xong vẫn được ghi vào manifest
+  withRoot('cwf-mb-', (dir) => {
+    fs.writeFileSync(path.join(dir, 'AGENTS.md'), `# Dự án\n${MARK}\nthiếu marker END\n`);
+    const e1 = thrown(() => install({ providers: 'codex', plugins: 'backend', scope: 'project' }));
+    ok(e1 && /managed block/i.test(e1.message), 'AC6.1: managed block hỏng → install ném lỗi');
+    ok(!fs.existsSync(path.join(dir, '.agents', 'skills')), 'AC6.1: install lỗi không để lại file skill không được theo dõi');
+    ok(!fs.existsSync(path.join(dir, '.ai-engineering', 'manifest.json')), 'AC6.1: install lỗi trước khi đặt file không tạo manifest');
+    const e2 = thrown(() => install({ providers: ['cursor', 'codex'], plugins: 'backend', scope: 'project' }));
+    ok(e2 !== null, 'AC6.1: provider thứ hai lỗi → install ném lỗi');
+    const m = check({ scope: 'project' });
+    ok(m.installs.some((e) => e.provider === 'cursor') && fs.existsSync(path.join(dir, '.cursor', 'skills')), 'AC6.1: provider cursor đã xong được ghi vào manifest');
+    ok(!fs.existsSync(path.join(dir, '.agents', 'skills')), 'AC6.1: provider codex lỗi không đặt file');
+    uninstall({ providers: 'cursor', scope: 'project' });
+    ok(!fs.existsSync(path.join(dir, '.cursor', 'skills', 'git-workflow')), 'AC6.1: gỡ được bản cursor đã ghi manifest sau lần cài lỗi');
+  });
+
 }
 
 console.log('');
