@@ -225,6 +225,28 @@ function unwrap(tokens) {
   return [t, k];
 }
 
+const SHELL_CMD_FLAG = /^(-[a-z]*c|-command)$/i;
+const EVAL_CMDS = new Set(['eval', 'iex', 'invoke-expression']);
+
+// Chuỗi lệnh con của `bash -c "…"`, `pwsh -Command …`, `eval …`, `iex …`: gitCmd chỉ nhận token đúng tên `git`, nên push nằm trong chuỗi bị che.
+function innerSegs(t) {
+  const [tk, k] = unwrap(t);
+  const name = k < tk.length ? cmdName(tk[k]) : '';
+  const args = tk.slice(k + 1);
+  let inner = null;
+  if (SHELLS.has(name)) {
+    const i = args.findIndex((a) => SHELL_CMD_FLAG.test(a));
+    // -Command nhận phần còn lại làm lệnh, -c chỉ nhận đối số kế (các đối số sau là $0, $1…).
+    if (i >= 0) inner = /^-command$/i.test(args[i]) ? args.slice(i + 1).join(' ') : args[i + 1];
+  } else if (EVAL_CMDS.has(name)) inner = args.join(' ');
+  return inner ? parse(inner).segs : [];
+}
+
+// Đoạn con đặt ngay sau đoạn cha để trackDirs giữ đúng thứ tự cd; sâu quá 3 cấp thì dừng.
+function expandShells(segs, depth = 0) {
+  return segs.flatMap((t) => [t, ...(depth < 3 ? expandShells(innerSegs(t), depth + 1) : [])]);
+}
+
 function classifyTarget(raw, dir, unres, roots, msys = true) {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
@@ -404,13 +426,19 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   let fe;
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
-  const { segs, unclosed } = parse(cmd);
+  const parsedCmd = parse(cmd);
+  const { unclosed } = parsedCmd;
+  // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
+  const outer = parsedCmd.segs;
+  const naiveOuter = naiveSegments(cmd);
+  const segs = expandShells(outer);
+  const naiveAll = expandShells(naiveOuter);
   const parsed = withDirs(segs, cwd, msys);
   if (parsed.some(({ u, gc }) => gc.sub === 'commit' && commitMessages(u, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;
   // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → hỏi người dùng (ask) khi có dấu bất kỳ.
   if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd) && !full()) return ASK_UNPARSABLE;
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
-  const naive = withDirs(naiveSegments(cmd), cwd, msys);
+  const naive = withDirs(naiveAll, cwd, msys);
   for (const { u, gc, dir, unres } of [...parsed, ...naive]) {
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
@@ -418,7 +446,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (full()) {
     const roots = rootsOf();
     let ask = false;
-    for (const { t, dir, unres } of [...trackDirs(segs, cwd, msys), ...trackDirs(naiveSegments(cmd), cwd, msys)]) {
+    for (const { t, dir, unres } of [...trackDirs(outer, cwd, msys), ...trackDirs(naiveOuter, cwd, msys)]) {
       const r = confineSegment(t, dir, unres, roots, msys);
       if (r === 'deny') return { decision: 'deny', reason: 'Chế độ full: lệnh ghi/xoá đường dẫn ngoài root của project. Thêm thư mục vào "fullRoots" trong .claude/aip-gate.json nếu thật sự cần.' };
       if (r === 'ask') ask = true;
@@ -427,7 +455,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   }
   // Phiên không bypass trong project full: settings.json không còn quy tắc ask nào chắc chắn áp dụng nên hook hỏi thay.
   // Chỉ đọc cấu hình sau khi một đoạn khớp tiền tố, để lệnh thường không tốn lời gọi git.
-  if (!bypass && [...segs, ...naiveSegments(cmd)].some(matchesAsk) && gate()?.mode === 'full') {
+  if (!bypass && [...segs, ...naiveAll].some(matchesAsk) && gate()?.mode === 'full') {
     return { decision: 'ask', reason: 'Chế độ full: phiên không bypass nên lệnh push/mạng/deploy production cần người dùng xác nhận. Chạy `aip mode ask` hoặc khởi động với `--permission-mode bypassPermissions` nếu muốn đổi.' };
   }
   const hits = (re) => re.test(secretScanText(cmd)) || re.test(secretScanText(raw));
@@ -438,7 +466,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (hits(SECRET) && full()) {
     // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
     const secretRe = hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET;
-    if (hits(secretRe) && secretOutsideRoots([segs, naiveSegments(cmd)], cwd, rootsOf(), secretRe, msys)) return secretAsk;
+    if (hits(secretRe) && secretOutsideRoots([outer, naiveOuter], cwd, rootsOf(), secretRe, msys)) return secretAsk;
   }
   return null;
 }
