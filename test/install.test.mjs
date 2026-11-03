@@ -983,6 +983,32 @@ try {
   fs.rmSync(TMP_PK, { recursive: true, force: true });
 }
 
+// ── audit 2026-11-03: manifest hỏng, cài dở khi managed block hỏng, managed block xuyên symlink ─────────
+{
+  const MARK = '<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->';
+  const withRoot = (prefix, fn) => {
+    const dir = mkTmp(prefix);
+    process.env.AIE_INSTALL_ROOT = dir;
+    try { return fn(dir); } finally { process.env.AIE_INSTALL_ROOT = TMP; }
+  };
+  const thrown = (fn) => { try { fn(); return null; } catch (e) { return e; } };
+
+  // AC5.1: manifest JSON hỏng hay sai dạng phải làm lệnh ném, không được coi là trống rồi xoá manifest ở lần gỡ kế
+  withRoot('cwf-mf-', (dir) => {
+    install({ providers: 'cursor', plugins: 'core', scope: 'project' });
+    const mf = path.join(dir, '.ai-engineering', 'manifest.json');
+    for (const bad of ['{ không phải json', '{}', 'null', '{"installs":"x"}']) {
+      fs.mkdirSync(path.dirname(mf), { recursive: true });
+      fs.writeFileSync(mf, bad);
+      const eu = thrown(() => uninstall({ providers: 'all', scope: 'project' }));
+      ok(eu && /manifest/i.test(eu.message), `AC5.1: uninstall ném lỗi nêu manifest khi manifest = ${bad}`);
+      ok(fs.existsSync(mf) && fs.readFileSync(mf, 'utf8') === bad, `AC5.1: manifest = ${bad} còn nguyên sau lệnh lỗi`);
+      ok(thrown(() => check({ scope: 'project' })) !== null, `AC5.1: check ném lỗi khi manifest = ${bad}`);
+    }
+  });
+
+}
+
 console.log('');
 if (fails.length) { console.log('FAIL:'); for (const f of fails) console.log('  ✗ ' + f); }
 console.log(`\nINSTALL TEST: ${pass} pass, ${fails.length} fail`);

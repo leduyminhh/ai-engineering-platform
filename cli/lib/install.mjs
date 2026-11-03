@@ -75,7 +75,13 @@ function removeLinkAndPruneEmpty(link, stopAt) {
 function readManifest(scope) {
   const p = manifestPath(scope);
   if (!fs.existsSync(p)) return { version: 1, installs: [] };
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return { version: 1, installs: [] }; }
+  // Manifest hỏng không được coi là trống: lần gỡ kế sẽ xoá nó và mọi file đã cài mất dấu.
+  let m;
+  try { m = JSON.parse(fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, '')); } catch (e) {
+    throw new Error(`Manifest hỏng, không đọc được: ${p} (${e.message}). Sửa hoặc xoá thủ công rồi chạy lại; aip không tự ghi đè.`);
+  }
+  if (!m || !Array.isArray(m.installs)) throw new Error(`Manifest sai dạng (thiếu mảng "installs"): ${p}. Sửa hoặc xoá thủ công rồi chạy lại; aip không tự ghi đè.`);
+  return m;
 }
 function writeManifest(scope, m) {
   const p = manifestPath(scope);
@@ -86,7 +92,10 @@ function writeManifest(scope, m) {
     return;
   }
   fs.mkdirSync(path.dirname(p), { recursive: true }); // đảm bảo .ai-engineering tồn tại trước khi ghi
-  fs.writeFileSync(p, JSON.stringify(m, null, 2) + '\n');
+  // Ghi qua file tạm rồi rename để ngắt giữa chừng không để lại manifest cụt.
+  const tmp = `${p}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(m, null, 2) + '\n');
+  fs.renameSync(tmp, p);
 }
 
 // ── managed block (graft) ──────────────────────────────────────────────────────
