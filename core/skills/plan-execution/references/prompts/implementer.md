@@ -23,8 +23,9 @@ Việc cần làm:
    xanh. Brief không có dòng `**TDD:**` (vd thay đổi nhỏ không có plan.md) thì theo mặc định của kind: BE là `có`, kind
    khác là `không`. Task `**TDD:** không`, ví dụ FE-UI: dựng component, build/tsc/lint xanh; test do
    frontend-test-writer làm ở bước sau của cùng task.
-4. Chạy test hẹp phủ phần vừa làm, không chạy full suite.
-5. Tự soát diff trước khi báo: đủ yêu cầu brief? có làm thừa? test kiểm hành vi thật hay chỉ lặp lại mock?
+4. Test phủ AC ghi ID AC của dòng `**Phủ AC:**` trong tên test hoặc comment (`AC1.2`; hàm Python `ac1_2`), để `check-request.mjs` không báo W7.
+5. Chạy test hẹp phủ phần vừa làm, không chạy full suite.
+6. Tự soát diff trước khi báo: đủ yêu cầu brief? có làm thừa? test kiểm hành vi thật hay chỉ lặp lại mock?
 
 Không được: commit, push, gọi agent khác hay reviewer. Session chính sẽ commit và review sau khi bạn báo.
 
