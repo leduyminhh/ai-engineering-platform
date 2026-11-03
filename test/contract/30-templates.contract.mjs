@@ -22,6 +22,35 @@ export default async function run({ ok, ctx }) {
     }
   }
 
+  // Template được chiếu vào CLAUDE.md/AGENTS.md của project đích; docs Claude Code khuyến nghị dưới 200 dòng vì file dài giảm mức tuân thủ.
+  {
+    const MAX = 200;
+    const countLines = (s) => (s.replace(/\r\n/g, '\n').match(/\n/g) ?? []).length;
+    ok(countLines('x\n'.repeat(MAX + 1)) > MAX && countLines('x\r\n'.repeat(MAX)) === MAX, 'baseline-slim AC1.2: bộ đếm phân biệt 200 và 201 dòng');
+    const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
+    ok(countLines(tpl) <= MAX, `baseline-slim AC1.1: AGENTS.template.md ≤ ${MAX} dòng (đo được ${countLines(tpl)})`);
+    ok(tpl.split('<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->').length === 2 && tpl.split('<!-- AI-ENGINEERING:END AGENTS_BASELINE -->').length === 2,
+      'baseline-slim AC1.4: đúng một cặp marker managed block');
+
+    const moved = { 'artifact-templates': 'docs-conventions.md', 'using-aip': 'agents-in-ci.md', 'git-worktree': 'parallel-agents.md', 'plan-execution': 'model-routing.md' };
+    const ptrs = [...tpl.matchAll(/skill `([a-z-]+)`, `references\/([a-z-]+\.md)`/g)].map((m) => [m[1], m[2]]);
+    ok(Object.entries(moved).every(([s, f]) => ptrs.filter(([ps, pf]) => ps === s && pf === f).length === 1),
+      'baseline-slim AC2.5: baseline có đúng một dòng trỏ cho mỗi mục đã chuyển');
+    const builds = {
+      claude: (s, f) => [path.join(BUILD, 'claude', 'plugins', 'core', 'skills', s, 'references', f)],
+      codex: (s, f) => [path.join(BUILD, 'codex', 'core', 'skills', s, 'references', f)],
+      cursor: (s, f) => [path.join(BUILD, 'cursor', 'core', '.cursor', 'skills', s, 'references', f)],
+      antigravity: (s, f) => fs.readdirSync(path.join(BUILD, 'antigravity')).map((p) => path.join(BUILD, 'antigravity', p, 'docs', 'workflow', s, 'references', f)),
+    };
+    for (const [s, f] of ptrs) {
+      ok(fs.existsSync(path.join(REPO_ROOT, 'core', 'skills', s, 'references', f)), `baseline-slim AC2.5: dòng trỏ ${s}/references/${f} có file nguồn`);
+      for (const [prov, at] of Object.entries(builds)) {
+        if (!fs.existsSync(path.join(BUILD, prov))) continue;
+        ok(at(s, f).some((p) => fs.existsSync(p)), `baseline-slim AC2.5: ${prov} build có ${s}/references/${f}`);
+      }
+    }
+  }
+
   // 7. SOURCE: templates.md của *-init (nếu có) phải có link tới AGENTS.md
   for (const p of plugins) {
     for (const s of p.stages) {
