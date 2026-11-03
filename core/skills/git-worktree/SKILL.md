@@ -75,3 +75,7 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 - [Inference] Chạy tối đa 3 agent cùng lúc, theo heuristic của baseline (không phải giới hạn chính thức của git).
 - Không push từ worktree; push và PR đi qua `git-workflow` sau khi người dùng duyệt diff cả nhánh tích hợp.
 - Không xoá nhánh tích hợp; không amend hay squash khi chưa được người dùng xác nhận.
+
+## Tham chiếu
+
+- [references/parallel-agents.md](references/parallel-agents.md): quy ước chạy nhiều agent song song theo part (nhánh, worktree, merge, dọn), chuyển từ baseline.

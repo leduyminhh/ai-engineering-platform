@@ -391,7 +391,8 @@ export default async function run({ ok, ctx }) {
       'AC3.6: lệnh chép .aip/runs lỗi khi trùng file (errorOnExist) và khi đó không xoá worktree');
 
     const tpl = rd('core', 'agents', 'AGENTS.template.md');
-    ok(tpl.includes('.aip/runs/<request>/<part>/progress.md') && !tpl.includes('.sdd'), 'AC7.1: bảng Memory của AGENTS.template.md ghi ledger ở .aip/runs/<request>/<part>/progress.md, không còn .sdd');
+    const dcm = rd('core', 'skills', 'artifact-templates', 'references', 'docs-conventions.md');
+    ok(dcm.includes('.aip/runs/<request>/<part>/progress.md') && !dcm.includes('.sdd') && !tpl.includes('.sdd'), 'AC7.1: bảng Memory của AGENTS.template.md ghi ledger ở .aip/runs/<request>/<part>/progress.md, không còn .sdd');
     ok(rd('AGENTS.md') === tpl, 'AC7.1: AGENTS.md giống hệt AGENTS.template.md');
   }
 
@@ -400,15 +401,16 @@ export default async function run({ ok, ctx }) {
     const rd = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8');
     const flat = (s) => s.replace(/\s+/g, ' ');
     const tpl = rd('core', 'agents', 'AGENTS.template.md');
-    const sec = (head) => { const i = tpl.indexOf(head); return i < 0 ? '' : flat(tpl.slice(i, tpl.indexOf('\n#', i + head.length))); };
-    ok(sec('#### Docs location and format').includes('parts/<nn>-<part-slug>/plan.md'), 'AC7.1: Docs location nêu parts/<nn>-<part-slug>/plan.md');
-    const par = sec('### Parallel agents');
+    const ref = (skill, file) => rd('core', 'skills', skill, 'references', file);
+    const moved = [ref('artifact-templates', 'docs-conventions.md'), ref('git-worktree', 'parallel-agents.md'), ref('plan-execution', 'model-routing.md'), ref('using-aip', 'agents-in-ci.md')];
+    ok(flat(moved[0]).includes('parts/<nn>-<part-slug>/plan.md'), 'AC7.1: docs-conventions.md nêu parts/<nn>-<part-slug>/plan.md');
+    const par = flat(moved[1]);
     ok(par.includes('worktree-<slug>-p<nn>') && par.includes('.claude/worktrees/<slug>-p<nn>/') && /only between parts, never inside a part/i.test(par) && par.includes('check-partition.mjs'),
       'AC7.1: Parallel agents dùng worktree-<slug>-p<nn>, .claude/worktrees/<slug>-p<nn>/, chỉ song song giữa part, check-partition.mjs');
     const merged = par.slice(par.indexOf('After each part merge'));
     ok(par.includes('After each part merge') && merged.indexOf('shared-file step') >= 0 && merged.indexOf('shared-file step') < merged.indexOf('full suites'),
       'AC6.5: Parallel agents: sau mỗi merge part, bước file dùng chung (bump version, lock) chạy trước full suite');
-    ok(!tpl.includes('t<n>') && !tpl.includes('**Song song:**'), 'AC7.1: AGENTS.template.md không còn t<n> hay **Song song:** cấp task');
+    ok([tpl, ...moved].every((t) => !t.includes('t<n>') && !t.includes('**Song song:**')), 'AC7.1: AGENTS.template.md và 4 reference chuyển từ baseline không còn t<n> hay **Song song:** cấp task');
     for (const f of ['CLAUDE.md', 'README.md', 'README_VI.md']) {
       const t = rd(f);
       ok(!t.includes('t<n>') && t.includes('worktree-<slug>-p<nn>'), `AC7.1: ${f} không còn t<n>, dùng worktree-<slug>-p<nn>`);

@@ -99,6 +99,7 @@ Khối header nằm ngay sau frontmatter nếu template có frontmatter, ngượ
   `Người quyết định`, bối cảnh, yếu tố quyết định, phương án, kết quả + hệ quả + xác nhận, ưu nhược từng phương án).
 - [references/handoff.template.md](references/handoff.template.md): khung bàn giao phiên (nhánh + HEAD, đã xong, đang dở, bước kế, câu hỏi chờ, ràng buộc, run-log, context từng phiên) cho việc xoay phiên không kế thừa hội thoại.
 - [references/spec.template.md](references/spec.template.md): khung spec sống theo năng lực (`docs/specs/<năng-lực>/spec.md`: mục đích, phạm vi, yêu cầu `<năng-lực>/R<n>` kèm dòng yêu cầu bị bỏ, lịch sử).
+- [references/docs-conventions.md](references/docs-conventions.md): quy ước đặt và định dạng tài liệu request (AC, `check-request.mjs`, spec sống, memory và làm tiếp), chuyển từ baseline.
 - [references/project-knowledge/](references/project-knowledge/): 5 khung `.md` (`project-overview`, `domain-context`,
   `architecture`, `source-structure`, `code-convention`) và `tech-stack.yml` (không có header) cho `project-knowledge/`.
 - [scripts/check-request.mjs](scripts/check-request.mjs): validator cho requirement/design/plan; kiểm thư mục request (nguồn AC,

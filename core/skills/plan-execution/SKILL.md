@@ -94,5 +94,6 @@ không cần khai báo model riêng cho từng task.
   [re-review.md](references/prompts/re-review.md), [final-review.md](references/prompts/final-review.md): mẫu prompt giao việc.
 - [references/inline.md](references/inline.md): chế độ inline, session chính tự thực thi plan; dòng ledger inline cần `tests: <lệnh> exit 0`.
 - [references/finish.md](references/finish.md): kết thúc nhánh.
+- [references/model-routing.md](references/model-routing.md): chi tiết Model and session routing của baseline (chọn model và effort, xoay phiên, nhắn giữa phiên, monitoring, phiên dài).
 - [references/ask-user.md](references/ask-user.md): cách hỏi người dùng ở mọi cổng (lựa chọn bấm được, mở file hoặc diff cần duyệt, mỗi cổng hỏi gì).
 - `scripts/task-brief.mjs`, `scripts/review-package.mjs`, `scripts/ledger.mjs`, `scripts/autonomy.mjs` (in JSON khoá `autonomy` hiệu lực): Node thuần, không cần bash.

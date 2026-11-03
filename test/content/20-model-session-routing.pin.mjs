@@ -9,9 +9,12 @@ export default async function run({ ok, ctx }) {
   const next = rest.indexOf('\n### ');
   const sec = start < 0 ? '' : tpl.slice(start, next < 0 ? tpl.length : start + 5 + next);
 
+  const mr = read('core', 'skills', 'plan-execution', 'references', 'model-routing.md');
+
   ok(start >= 0 && start < tpl.indexOf('### Language')
-    && ['`haiku`', '`sonnet`', '`opus`', 'new session', '`/clear`', '`/compact', '15 minutes', 'acknowledg'].every((s) => sec.includes(s)),
-    'AC2.1: baseline có mục Model and session routing');
+    && ['`haiku`', '`sonnet`', '`opus`', 'new session'].every((s) => sec.includes(s))
+    && ['`/clear`', '`/compact', '15 minutes', 'acknowledg'].every((s) => mr.includes(s)),
+    'AC2.1: baseline có mục Model and session routing, chi tiết ở model-routing.md');
 
   // Thí nghiệm 2026-10-30: spec-analyst chạy haiku ngang chất lượng sonnet, rẻ hơn; haiku giữ effort mặc định.
   const HAIKU = ['engineering-spec-analyst'];
@@ -25,11 +28,11 @@ export default async function run({ ok, ctx }) {
   ok(/task review của task code \(mọi kind trừ `DOCS`\) dùng\s+`sonnet`/.test(pe) && /re-review, task `DOCS` và task review của task `DOCS` dùng `haiku`/.test(pe),
     'plan-execution: task review của task code dùng sonnet; re-review và DOCS dùng haiku');
 
-  ok(['`effort`', '`medium`', '`high`'].every((s) => sec.includes(s)),
-    'AC2.1: mục baseline nêu quy tắc effort (opus mặc định medium, sonnet high)');
+  ok(['`effort`', '`medium`', '`high`'].every((s) => mr.includes(s)),
+    'AC2.1: model-routing.md nêu quy tắc effort (opus mặc định medium, sonnet high)');
 
   ok(['code.claude.com/docs/en/prompt-caching', 'code.claude.com/docs/en/sub-agents', 'code.claude.com/docs/en/costs',
-    'anthropic.com/engineering/multi-agent-research-system'].every((s) => sec.includes(s)),
+    'anthropic.com/engineering/multi-agent-research-system'].every((s) => mr.includes(s)),
     'AC2.2: số liệu có nguồn');
 
   for (const f of ['README.md', 'README_VI.md']) {

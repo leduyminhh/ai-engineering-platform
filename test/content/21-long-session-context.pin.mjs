@@ -9,18 +9,20 @@ export default async function run({ ok, ctx }) {
   const next = rest.indexOf('\n### ');
   const sec = start < 0 ? '' : tpl.slice(start, next < 0 ? tpl.length : start + 5 + next);
 
-  ok(['handoff.md', 'foreground', '1 hour', 'statusline', 'sends the parent one line', 'bounds its output',
-    'instead of ending the turn', 'cheaper to replace than', 'open a new session from `handoff.md`',
-    'Record each session'].every((s) => sec.includes(s)),
-    'AC1.1: mục có quy tắc phiên dài');
+  const mr = read('core', 'skills', 'plan-execution', 'references', 'model-routing.md');
 
-  ok(['[Inference]', '[Unverified]', 'code.claude.com/docs/en/prompt-caching'].every((s) => sec.includes(s)),
+  ok(['handoff.md', 'foreground', '[Inference]'].every((s) => sec.includes(s))
+    && ['1 hour', 'statusline', 'sends the parent one line', 'bounds its output', 'instead of ending the turn',
+      'cheaper to replace than', 'open a new session from `handoff.md`', 'Record each session'].every((s) => mr.includes(s)),
+    'AC1.1: baseline giữ quy tắc phiên dài cốt lõi, chi tiết ở model-routing.md');
+
+  ok(['[Inference]', '[Unverified]', 'code.claude.com/docs/en/prompt-caching'].every((s) => mr.includes(s)),
     'AC1.2: mọi con số có nguồn hoặc nhãn');
 
-  ok(sec.split('\n').some((l) => l.includes('statusline') && l.includes('hook') && l.includes('cannot')),
+  ok(mr.split('\n').some((l) => l.includes('statusline') && l.includes('hook') && l.includes('cannot')),
     'AC2.2: nêu ai đọc được % context');
 
-  ok(sec.includes('/usage'), 'AC4.1: có quy tắc ghi % context ở cổng phase');
+  ok(mr.includes('/usage'), 'AC4.1: có quy tắc ghi % context ở cổng phase');
 
   const norm = (s) => s.replace(/\r\n/g, '\n');
 

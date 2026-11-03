@@ -169,9 +169,9 @@ export default async function run({ ok, ctx }) {
   // AC4.1: git-worktree theo quy ước baseline, dọn chỉ bằng git worktree remove khi đã merge và sạch, cấm rm -rf
   {
     const t = read('core', 'skills', 'git-worktree', 'SKILL.md');
-    const baseline = read('core', 'agents', 'AGENTS.template.md');
+    const baseline = read('core', 'skills', 'git-worktree', 'references', 'parallel-agents.md');
     ok(baseline.includes('worktree-<slug>-p<nn>') && baseline.includes('.claude/worktrees/<slug>-p<nn>/'),
-      'AC4.1: baseline vẫn có quy ước tên nhánh và thư mục worktree mà skill bám theo');
+      'AC4.1: parallel-agents.md (chuyển từ baseline) vẫn có quy ước tên nhánh và thư mục worktree mà skill bám theo');
     ok(t.includes('git worktree add -b worktree-<slug>-p<nn> .claude/worktrees/<slug>-p<nn> feature/<slug>'),
       'AC4.1: lệnh tạo worktree dùng đúng tên nhánh, thư mục và nhánh gốc theo baseline');
     // Cổng "đã merge và sạch" phải nằm trong chính mục dọn, không chỉ xuất hiện ở đâu đó trong skill.

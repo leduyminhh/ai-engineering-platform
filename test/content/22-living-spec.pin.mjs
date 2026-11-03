@@ -2,18 +2,18 @@
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT } = ctx;
 
-  // AC4.1: baseline có bước gộp spec sống trước khi kết thúc nhánh + bảng bộ nhớ dài hạn có docs/specs/
+  // AC4.1: docs-conventions (chuyển từ baseline) có bước gộp spec sống trước khi kết thúc nhánh + bảng bộ nhớ dài hạn có docs/specs/
   {
-    const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
+    const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'skills', 'artifact-templates', 'references', 'docs-conventions.md'), 'utf8');
     const i = tpl.indexOf('#### Docs location and format');
-    const docs = tpl.slice(i, tpl.indexOf('#### Memory and resume', i)).replace(/\s+/g, ' ');
+    const docs = i < 0 ? '' : tpl.slice(i, tpl.indexOf('#### Memory and resume', i)).replace(/\s+/g, ' ');
     ok(docs.includes('docs/specs/<capability>/spec.md') && docs.includes('Ảnh hưởng spec') && docs.includes('history table')
       && docs.includes('docs/specs/README.md') && docs.includes('check-request.mjs') && docs.includes('--base <ref>')
       && docs.indexOf('docs/specs/<capability>/spec.md') < docs.indexOf('before finishing the branch'),
-    'AC4.1: baseline có bước gộp spec sống trước khi kết thúc nhánh');
+    'AC4.1: docs-conventions có bước gộp spec sống trước khi kết thúc nhánh');
     ok(docs.includes('has a `## Ảnh hưởng spec` section') && docs.includes('`Không ảnh hưởng: <reason>`')
       && docs.includes('_TEMPLATE/design.md') && docs.includes('(W10)'),
-    'AC4.1: baseline nêu mục Ảnh hưởng spec của design.md và lưu ý _TEMPLATE cũ thiếu mục (W10)');
+    'AC4.1: docs-conventions nêu mục Ảnh hưởng spec của design.md và lưu ý _TEMPLATE cũ thiếu mục (W10)');
     const longRow = tpl.split('\n').find((l) => l.startsWith('| Long-term |')) ?? '';
     ok(longRow.includes('docs/specs/'), 'AC4.1: bảng bộ nhớ ghi spec sống ở dòng Long-term');
   }
