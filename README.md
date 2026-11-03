@@ -379,7 +379,7 @@ The scripts fail open: an internal error (empty stdin, broken JSON, missing fiel
 
 **aip does not write your settings.** This is your configuration (the compaction setting values, not the `.claude/settings.json` permissions file that `aip init --full` creates when missing); `aip` neither sets nor changes it. [Unverified] Caveat: when `CLAUDE_CODE_AUTO_COMPACT_WINDOW` is set, the statusline `used_percentage` is still measured against the full window, so it no longer shows when compaction is about to run.
 
-**Agents in CI.** A minimal recipe for `claude -p` (see the baseline section `Agents in CI`); facts about Claude Code below are [Unverified] summaries of [headless](https://code.claude.com/docs/en/headless) and [permissions](https://code.claude.com/docs/en/permissions):
+**Agents in CI.** A minimal recipe for `claude -p` (see skill `using-aip`, `references/agents-in-ci.md`); facts about Claude Code below are [Unverified] summaries of [headless](https://code.claude.com/docs/en/headless) and [permissions](https://code.claude.com/docs/en/permissions):
 
 ```bash
 claude -p "Review the diff and report findings" \
@@ -395,7 +395,7 @@ claude -p "Review the diff and report findings" \
 - Pin third-party actions to a full commit SHA, give the job read-only tokens, and run any workflow that can push in a protected environment with required reviewers.
 - aip adds no workflow file to `templates/init`. A read-only pull request review example is described in [Run reviews in CI](#run-reviews-in-ci).
 
-**Parallel agents.** A convention for running several agents at once, one worktree each (see the baseline section `Parallel agents`). aip does not run agents: it ships the convention and one check script; Claude Code creates the worktrees. Only an agent's `writeScope` plus the `guard-files` hook enforce write scope; the rest is soft guidance, and Bash can still write elsewhere.
+**Parallel agents.** A convention for running several agents at once, one worktree each (see skill `git-worktree`, `references/parallel-agents.md`). aip does not run agents: it ships the convention and one check script; Claude Code creates the worktrees. Only an agent's `writeScope` plus the `guard-files` hook enforce write scope; the rest is soft guidance, and Bash can still write elsewhere.
 
 1. Split the request into independent parts (`## Bảng part` in `design.md`, one `parts/<nn>-<part-slug>/plan.md` each). Give the parts that run together the same label in the `Song song` column; each task lists its `**Files:**`. Parallelism is only between parts, never inside a part. Check the split with `node core/skills/artifact-templates/scripts/check-partition.mjs <request-dir>` (warnings P1 overlapping files, P2 forbidden shared files, P4 an interface consumed from a part of the same group, P5 a `Consumes`/`Produces` with no backticked name that P4 cannot check; P3 a task-level `**Song song:**`, which is removed; `--strict` exits 1).
 2. From the integration branch `feature/<slug>`, create one worktree per part, at most 3 at once: `claude --worktree <slug>-p<nn>` gives branch `worktree-<slug>-p<nn>` in `.claude/worktrees/<slug>-p<nn>/`. By default Claude Code cuts it from the default branch; set `worktree.baseRef` to `"head"` in the Claude Code settings (`{"worktree": {"baseRef": "head"}}`; which settings file is [Unverified], the docs only say "settings") (or create it with `git worktree add`) so it starts at the integration branch tip. Add `.claude/worktrees/` to `.gitignore`.
