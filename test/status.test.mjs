@@ -125,6 +125,25 @@ try {
     } finally { fs.rmSync(r, { recursive: true, force: true }); }
   }
 
+  // Regression trial 2026-11-03: request cỡ nhỏ (chỉ requirement.md) hiện task 0/0, G2 ✓ và nhánh root feature/<slug> dù session gốc ở nhánh khác.
+  {
+    const r = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-small-'));
+    try {
+      fs.mkdirSync(path.join(r, 'docs', 'requests', REQ), { recursive: true });
+      fs.writeFileSync(path.join(r, 'docs', 'requests', REQ, 'requirement.md'), '# Requirement: demo\n');
+      fs.mkdirSync(path.join(r, '.aip', 'runs', REQ, 'root'), { recursive: true });
+      fs.writeFileSync(path.join(r, '.aip', 'runs', REQ, 'root', 'progress.md'), `# Ledger\n${START}\n`);
+      const gitOn = (head) => (args) => (args.join(' ').startsWith('rev-parse --abbrev-ref') ? head : fakeGit(args));
+      for (const [head, want] of [['feature/demo-v2', 'feature/demo-v2'], ['master', 'feature/demo'], ['worktree-demo-p01', 'feature/demo'], ['HEAD', 'feature/demo']]) {
+        const s = build(r, { git: gitOn(head) });
+        ok(s.parts[0].branch === want, `cỡ nhỏ: HEAD ${head} → nhánh root ${want} (nhận ${s.parts[0].branch})`);
+      }
+      const s = build(r);
+      ok(s.totals.tasksDone === 0 && s.totals.tasksTotal === 1 && s.details.root.length === 1, `cỡ nhỏ: task lấy từ ledger → 0/1 (nhận ${JSON.stringify(s.totals)})`);
+      ok(s.gates.map((g) => `${g.id}${g.done ? '+' : '-'}`).join() === 'G1+,G3-,push-', `cỡ nhỏ: không có G2, G1 xong khi task đã chạy (nhận ${JSON.stringify(s.gates)})`);
+    } finally { fs.rmSync(r, { recursive: true, force: true }); }
+  }
+
   // Review Focus (a): Blocked thắng chờ part phụ thuộc (04-docs phụ thuộc 02-api chưa merged)
   {
     const r = fixture({ root: LEDGERS.root, '04-docs': [START, 'Blocked: a'] });
