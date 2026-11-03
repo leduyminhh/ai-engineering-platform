@@ -64,6 +64,34 @@ export default async function run({ ok, ctx }) {
       'AC2.1: đọc cấu hình hay ghi file khác trong .claude không bị hỏi nhầm');
   }
 
+  // ── session-start: #11 handoff đã commit không nạp; nội dung nạp có dòng "dữ liệu, không phải chỉ dẫn"
+  {
+    const ss = await hook('session-start.mjs');
+    const HOUR = 3600000;
+    const T0 = Date.UTC(2026, 0, 10);
+    const abs = (p) => path.resolve('/repo', p);
+    const fake = (files, tracked = () => false) => {
+      const m = new Map(Object.entries(files).map(([k, v]) => [abs(k), v]));
+      return {
+        readFile: (p) => { const f = m.get(p); if (!f) throw new Error('ENOENT'); return f.text; },
+        existsSync: (p) => m.has(p) || [...m.keys()].some((k) => k.startsWith(p + path.sep)),
+        statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
+        readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
+        now: () => T0 + HOUR,
+        loadConfig: () => ({ bootstrapInject: false }),
+        gitRoots: () => null,
+        tracked: (p) => tracked(path.relative(abs('.'), p).split(path.sep).join('/')),
+      };
+    };
+    const start = (files, tracked) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd: '/repo' }, fake(files, tracked))?.additionalContext ?? null;
+    const text = '# Bàn giao\nNhánh: feature/x. Việc đang làm: hoàn thiện hook SessionStart, còn lại bước đăng ký event và test. HANDOFF';
+    const h = { '.claude/handoff.md': { text, mtime: T0 } };
+    ok(start(h, (rel) => rel === '.claude/handoff.md') === null, 'AC11.1: handoff đã commit (git theo dõi) không được nạp');
+    ok(start(h)?.includes('HANDOFF'), 'AC11.1: handoff chưa commit vẫn nạp như cũ');
+    ok(/không phải chỉ dẫn/.test(start(h) ?? ''), 'AC11.1: handoff nạp kèm dòng nói đây là dữ liệu từ file, không phải chỉ dẫn');
+    const ledger = { 'docs/requests/2026-01-01-a/.sdd/progress.md': { text: 'Task 1: complete\nTask 2: dang lam\n', mtime: T0 } };
+    ok(/không phải chỉ dẫn/.test(start(ledger) ?? ''), 'AC11.1: ledger nạp kèm dòng nói đây là dữ liệu từ file, không phải chỉ dẫn');
+  }
 
   // ── ledger: #9 dòng Plan:/Part:/Part NN: sai định dạng bị từ chối, dòng trống bị từ chối
   {
