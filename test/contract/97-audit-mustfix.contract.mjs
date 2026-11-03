@@ -31,8 +31,33 @@ export default async function run({ ok, ctx }) {
         'AC1.1: full + bypass: bash -c "git push origin main" vẫn ask (fullKeep push)');
     }
 
+    for (const c of ['echo \'{"mode":"full"}\' > .claude/aip-gate.json', "sed -i 's/ask/full/' .claude/aip-gate.json", 'cp x.json .claude/settings.json',
+      'echo x | tee .claude/settings.local.json', 'rm .claude/aip-gate.json', 'echo x >> .claude\\settings.json']) {
+      ok(ask(c), `AC2.2: lệnh shell ghi file cấu hình của guard → ask: ${c}`);
+    }
+    ok(ask('Set-Content .claude\\aip-gate.json x', 'feature/x', 'PowerShell'), 'AC2.2: PowerShell Set-Content vào aip-gate.json → ask');
+    for (const c of ['cat .claude/aip-gate.json', 'git diff .claude/settings.json', 'ls .claude', 'echo hi > notes.txt', 'aip mode status']) {
+      ok(run1(c) === null, `AC2.2: đọc file cấu hình hay lệnh khác không bị hỏi nhầm: ${c}`);
+    }
   }
 
+  // ── guard-files: #2 Write/Edit vào cấu hình của guard luôn ask, mọi chế độ
+  {
+    const gf = await hook('guard-files.mjs');
+    const root = path.resolve('/tmp/am-repo').replaceAll('\\', '/');
+    const fdec = (tool, file, extra = {}, opts = {}) => gf.decide({ tool_name: tool, tool_input: { file_path: file }, cwd: root, ...extra },
+      { scopes: {}, repoRoot: root, allowEnv: () => false, ...opts });
+    for (const tool of ['Edit', 'Write', 'MultiEdit']) {
+      for (const f of ['.claude/aip-gate.json', '.claude/settings.json', '.claude/settings.local.json']) {
+        ok(fdec(tool, `${root}/${f}`)?.decision === 'ask', `AC2.1: ${tool} ${f} → ask (chế độ thường)`);
+      }
+    }
+    ok(fdec('Write', `${root}/.claude/aip-gate.json`, { permission_mode: 'bypassPermissions' }, { config: { mode: 'full' }, tracked: () => false })?.decision === 'ask',
+      'AC2.1: full + bypass vẫn ask khi ghi aip-gate.json');
+    ok(fdec('Edit', path.resolve('/home/u/.claude/settings.json').replaceAll('\\', '/'))?.decision === 'ask', 'AC2.1: settings.json toàn cục cũng ask');
+    ok(fdec('Read', `${root}/.claude/aip-gate.json`) === null && fdec('Write', `${root}/docs/a.md`) === null && fdec('Write', `${root}/.claude/agents/x.md`) === null,
+      'AC2.1: đọc cấu hình hay ghi file khác trong .claude không bị hỏi nhầm');
+  }
 
 
 

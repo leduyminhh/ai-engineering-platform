@@ -366,6 +366,11 @@ function matchesAsk(orig) {
   });
 }
 
+// File cấu hình của chính các hook (xem guard-files): lệnh nhắc tên file kèm lệnh ghi thì hỏi.
+// shortcut: heuristic đọc token, `node -e`/script con ghi file vẫn lọt; nâng lên khi cần chặn thật thì dùng quyền hệ thống file.
+const GUARD_CONFIG = /(?:\.claude[\\/]settings(?:\.[\w-]+)?|(?:^|[^\w.-])aip-gate)\.json(?![\w.-])/i;
+const SED_IN_PLACE = /\b(?:sed|perl)\b[^|;&]*\s-[a-z]*i/i;
+
 const NON_ASCII = /[^\x00-\x7F]/;
 const DENY_COMMIT = { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
 
@@ -442,6 +447,10 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   for (const { u, gc, dir, unres } of [...parsed, ...naive]) {
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
+  }
+  const noRedirect = cmd.replace(HARMLESS_REDIRECT, '$1');
+  if (GUARD_CONFIG.test(cmd) && (WRITE_IN_STRING.test(noRedirect) || SED_IN_PLACE.test(noRedirect))) {
+    return { decision: 'ask', reason: 'Lệnh ghi vào cấu hình của hook an toàn (.claude/aip-gate.json hoặc .claude/settings*.json) cần người dùng xác nhận.' };
   }
   if (full()) {
     const roots = rootsOf();

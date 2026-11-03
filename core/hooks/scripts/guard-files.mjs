@@ -72,6 +72,10 @@ function globNamesSecret(glob, probes = SECRET_PROBES) {
     .some((g) => SECRET_WORDS.test(g.replace(/[*?]/g, '')) && probes.some((p) => globToRegExp(g, { ignoreCase: true }).test(p)));
 }
 
+// Cấu hình của chính các hook: agent bị tiêm lệnh không được tự đặt mode:full, fullKeep:[] hay allowEnvFiles:true nên luôn hỏi, kể cả khi full hiệu lực.
+const GUARD_CONFIG = /(^|\/)\.claude\/(aip-gate\.json|settings(\.[\w-]+)?\.json)$/i;
+const GUARD_CONFIG_ASK = { decision: 'ask', reason: 'Ghi vào cấu hình của hook an toàn (.claude/aip-gate.json hoặc .claude/settings*.json) cần người dùng xác nhận.' };
+
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
 // H6: chỉ khi full hiệu lực. Kiểm permission_mode trước để phiên thường không tốn lệnh git đọc cấu hình.
@@ -110,6 +114,7 @@ export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase =
   const confined = confine(input, file, cwd, { repoRoot, config, tracked, reader, secret: isSecretPath(abs, target) });
   if (confined) return confined;
   if (!WRITE_TOOLS.has(input.tool_name)) return null;
+  if (GUARD_CONFIG.test(stripAliases(abs))) return GUARD_CONFIG_ASK;
   const agent = String(input.agent_type || '').split(':').pop();
   const table = scopes || loadScopes();
   const scope = agent && Object.hasOwn(table, agent) ? table[agent] : null;
