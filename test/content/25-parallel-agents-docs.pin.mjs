@@ -16,8 +16,9 @@ export default async function run({ ok, ctx }) {
 
   // baseline-slim AC4.2: hai mục đã rời baseline không còn được gọi là mục baseline trong tài liệu
   {
-    const stale = /baseline section `(Agents in CI|Parallel agents)`|mục baseline `(Agents in CI|Parallel agents)`|quy ước [`"]Parallel agents[`"] của baseline|baseline Parallel agents/;
-    const hits = ['README.md', 'README_VI.md', 'CLAUDE.md', 'core/skills/git-workflow/SKILL.md', 'core/skills/git-worktree/SKILL.md'].filter((f) => stale.test(read(f)));
+    const stale = /baseline section `(Agents in CI|Parallel agents)`|mục baseline `(Agents in CI|Parallel agents)`|quy ước [`"]Parallel agents[`"] của baseline|baseline Parallel agents|quy ước baseline|baseline `AGENTS\.md`/;
+    const hits = ['README.md', 'README_VI.md', 'CLAUDE.md', 'core/skills/git-workflow/SKILL.md', 'core/skills/git-worktree/SKILL.md',
+      'plugins/engineering/skills/engineering-spec-writing/SKILL.md', 'plugins/engineering/skills/engineering-spec-writing/references/spec-structure.md'].filter((f) => stale.test(read(f)));
     ok(!hits.length, `baseline-slim AC4.2: tài liệu trỏ reference thay vì mục baseline đã dời${hits.map((f) => ' ' + f).join('')}`);
   }
 

@@ -43,6 +43,11 @@ export default async function run({ ok, ctx }) {
       cursor: (s, f) => [path.join(BUILD, 'cursor', 'core', '.cursor', 'skills', s, 'references', f)],
       antigravity: (s, f) => fs.readdirSync(path.join(BUILD, 'antigravity')).map((p) => path.join(BUILD, 'antigravity', p, 'docs', 'workflow', s, 'references', f)),
     };
+    // Dòng trỏ thay cho cả mục nên phải giữ từ khoá an toàn: agent không nạp reference vẫn thấy chúng.
+    const lineWith = (s) => tpl.split('\n').find((l) => l.includes(s)) ?? '';
+    ok(['dontAsk', '--allowedTools', '--max-budget-usd'].every((w) => lineWith('references/agents-in-ci.md').includes(w))
+      && lineWith('references/parallel-agents.md').includes('rm -rf') && lineWith('- Parallelize only').includes('between parts'),
+      'baseline-slim AC2.5: dòng trỏ CI/Parallel và bullet song song giữ từ khoá an toàn');
     for (const [s, f] of ptrs) {
       ok(fs.existsSync(path.join(REPO_ROOT, 'core', 'skills', s, 'references', f)), `baseline-slim AC2.5: dòng trỏ ${s}/references/${f} có file nguồn`);
       for (const [prov, at] of Object.entries(builds)) {
