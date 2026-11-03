@@ -1,8 +1,8 @@
 ---
 name: git-worktree
-description: "Tạo và dọn git worktree theo quy ước baseline: kiểm trước, tên nhánh, đường dẫn, merge về nhánh tích hợp, dọn an toàn trên Windows. Dùng khi người dùng muốn \"tạo worktree\", \"chạy song song nhiều part\", \"cô lập nhánh đang làm\", \"dọn worktree\". Không dùng khi chỉ commit hoặc merge trên một cây làm việc → git-workflow."
+description: "Tạo và dọn git worktree theo quy ước Parallel agents: kiểm trước, tên nhánh, đường dẫn, merge về nhánh tích hợp, dọn an toàn trên Windows. Dùng khi người dùng muốn \"tạo worktree\", \"chạy song song nhiều part\", \"cô lập nhánh đang làm\", \"dọn worktree\". Không dùng khi chỉ commit hoặc merge trên một cây làm việc → git-workflow."
 order: 7
-title: "Git Worktree — tạo, merge, dọn worktree theo quy ước baseline (dùng chung)"
+title: "Git Worktree — tạo, merge, dọn worktree theo quy ước Parallel agents (dùng chung)"
 runsIn: execute
 invoke: per-request
 ---
@@ -14,7 +14,7 @@ nhau, hoặc khi cần cô lập việc mới khỏi thay đổi đang dở. Tas
 cây, không cần skill này. Skill dành cho session chính; worktree do `isolation: worktree` của Claude Code tự tạo cho
 subagent thì không thuộc phạm vi skill này.
 
-Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS.md`; skill không đặt quy ước khác. Chỉ song song giữa part (`<nn>` là số part trong Bảng part); bên trong một part các task chạy tuần tự.
+Quy ước dưới đây tóm tắt `references/parallel-agents.md` của skill này; skill không đặt quy ước khác. Chỉ song song giữa part (`<nn>` là số part trong Bảng part); bên trong một part các task chạy tuần tự.
 
 ## Quy trình — tạo worktree
 
@@ -72,6 +72,10 @@ Quy ước dưới đây là quy ước "Parallel agents" của baseline `AGENTS
 - Không tạo worktree khi chưa được người dùng đồng ý; không tạo ngoài `.claude/worktrees/`.
 - Không `rm -rf` hay `Remove-Item -Recurse` lên thư mục worktree; không `git worktree remove --force`; không `git branch -D`.
 - Hai worktree không được ghi cùng một file; kiểm tập file bằng `check-partition.mjs` của `artifact-templates` trước khi chạy song song.
-- [Inference] Chạy tối đa 3 agent cùng lúc, theo heuristic của baseline (không phải giới hạn chính thức của git).
+- [Inference] Chạy tối đa 3 agent cùng lúc, theo heuristic trong `references/parallel-agents.md` (không phải giới hạn chính thức của git).
 - Không push từ worktree; push và PR đi qua `git-workflow` sau khi người dùng duyệt diff cả nhánh tích hợp.
 - Không xoá nhánh tích hợp; không amend hay squash khi chưa được người dùng xác nhận.
+
+## Tham chiếu
+
+- [references/parallel-agents.md](references/parallel-agents.md): quy ước chạy nhiều agent song song theo part (nhánh, worktree, merge, dọn), chuyển từ baseline.

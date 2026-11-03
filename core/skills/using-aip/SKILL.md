@@ -42,6 +42,10 @@ nói rõ bỏ qua một skill thì bỏ qua; không tự suy ra điều đó t�
 | "Cần thêm ngữ cảnh rồi mới chọn" | Chọn skill trước; skill nói cách thu ngữ cảnh. |
 | "Chỉ commit thôi" | Commit, push, branch đi qua `git-workflow`. |
 
+## Tham chiếu
+
+- [references/agents-in-ci.md](references/agents-in-ci.md): chạy agent trong CI (cờ `claude -p`, quyền, môi trường bảo vệ), chuyển từ baseline.
+
 ## Ranh giới an toàn
 
 - Skill này không cấp quyền mới và không nới hook, quy tắc commit hay ranh giới an toàn của skill khác.

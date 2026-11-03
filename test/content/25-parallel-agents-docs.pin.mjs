@@ -7,11 +7,19 @@ export default async function run({ ok, ctx }) {
   // AC1.1: baseline có mục Parallel agents nằm giữa Agents in CI và Model and session routing
   {
     const tpl = read('core', 'agents', 'AGENTS.template.md');
-    const i = tpl.indexOf('### Parallel agents');
-    const sec = i < 0 ? '' : flat(tpl.slice(i, tpl.indexOf('\n### ', i + 5)));
-    const need = ['worktree-<slug>-p<nn>', '.claude/worktrees/', 'merge --no-ff', 'integration branch', '3 agents', 'disjoint', 'rm -rf', 'junction', 'once'];
-    ok(i >= 0 && need.every((w) => sec.includes(w)), 'P3 AC1.1: baseline có mục Parallel agents với tên nhánh, thư mục worktree, merge --no-ff, integration branch, giới hạn 3, disjoint, rm -rf/junction, once');
-    ok(i > tpl.indexOf('### Agents in CI') && i < tpl.indexOf('### Model and session routing'), 'P3 AC1.1: mục Parallel agents nằm giữa Agents in CI và Model and session routing');
+    const i = tpl.indexOf('references/parallel-agents.md');
+    const sec = flat(read('core', 'skills', 'git-worktree', 'references', 'parallel-agents.md'));
+    const need = ['worktree-<slug>-p<nn>', '.claude/worktrees/', 'merge --no-ff', 'integration branch', '3 agents', 'disjoint', 'rm -rf', 'junction', 'once', 'autonomy.partRunner'];
+    ok(need.every((w) => sec.includes(w)), 'P3 AC1.1, baseline-slim AC2.4: parallel-agents.md (chuyển từ baseline) có mục Parallel agents với tên nhánh, thư mục worktree, merge --no-ff, integration branch, giới hạn 3, disjoint, rm -rf/junction, once');
+    ok(i > tpl.indexOf('### Agents in CI') && i < tpl.indexOf('### Model and session routing'), 'P3 AC1.1, baseline-slim AC3.2: dòng trỏ Parallel agents nằm giữa Agents in CI và Model and session routing');
+  }
+
+  // baseline-slim AC4.2: hai mục đã rời baseline không còn được gọi là mục baseline trong tài liệu
+  {
+    const stale = /baseline section `(Agents in CI|Parallel agents)`|mục baseline `(Agents in CI|Parallel agents)`|quy ước [`"]Parallel agents[`"] của baseline|baseline Parallel agents|quy ước baseline|baseline `AGENTS\.md`/;
+    const hits = ['README.md', 'README_VI.md', 'CLAUDE.md', 'core/skills/git-workflow/SKILL.md', 'core/skills/git-worktree/SKILL.md',
+      'plugins/engineering/skills/engineering-spec-writing/SKILL.md', 'plugins/engineering/skills/engineering-spec-writing/references/spec-structure.md'].filter((f) => stale.test(read(f)));
+    ok(!hits.length, `baseline-slim AC4.2: tài liệu trỏ reference thay vì mục baseline đã dời${hits.map((f) => ' ' + f).join('')}`);
   }
 
   // AC1.2: README EN/VI có đoạn Parallel agents / Agent song song; CLAUDE.md nhắc script và quy ước nhánh

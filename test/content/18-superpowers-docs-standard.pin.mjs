@@ -77,14 +77,15 @@ export default async function run({ ok, ctx }) {
   {
     const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
     const sp = tpl.slice(tpl.indexOf('### Workflow defaults'), tpl.indexOf('### Language'));
+    const dc = fs.readFileSync(path.join(REPO_ROOT, 'core', 'skills', 'artifact-templates', 'references', 'docs-conventions.md'), 'utf8');
     ok(sp.includes('docs/requests/<yyyy-mm-dd>-<slug>/design.md') && sp.includes('`plan.md` in the same folder')
       && sp.includes('skill `engineering-spec-writing`') && sp.includes('skill `engineering-plan-writing`'), 'AC1.1: baseline đặt vị trí docs theo skill aip');
-    ok(sp.includes('`AC<n>.<m>`') && sp.includes('Given/When/Then') && sp.includes('`Tiêu chí chấp nhận`')
-      && sp.includes('`requirement.md` if it exists, otherwise in') && sp.includes('`**Phủ AC:**`') && sp.includes('`Không đổi`'), 'AC1.2: baseline có quy ước AC');
-    ok(sp.includes('| Short-term |') && sp.includes('| Long-term |') && sp.includes('first task with no `complete` line')
-      && sp.includes('never create a second folder'), 'AC1.4: baseline có bảng bộ nhớ + quy tắc resume');
-    ok(sp.includes('only when it contains `design.md`') && sp.includes('`artifact-templates`')
-      && sp.includes('check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/'), 'P1/P3: baseline trỏ template core + script kiểm tra');
+    ok(dc.includes('`AC<n>.<m>`') && dc.includes('Given/When/Then') && dc.includes('`Tiêu chí chấp nhận`')
+      && dc.includes('`requirement.md` if it exists, otherwise in') && dc.includes('`**Phủ AC:**`') && dc.includes('`Không đổi`'), 'AC1.2: docs-conventions có quy ước AC');
+    ok(dc.includes('| Short-term |') && dc.includes('| Long-term |') && dc.includes('first task with no `complete` line')
+      && sp.includes('never create a second folder'), 'AC1.4: docs-conventions có bảng bộ nhớ, baseline giữ quy tắc resume');
+    ok(dc.includes('only when it contains `design.md`') && dc.includes('`artifact-templates`')
+      && dc.includes('check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/'), 'P1/P3: docs-conventions trỏ template core + script kiểm tra');
   }
 
   // AC3.1, AC3.3: skill engineering dùng ID AC, không dựng khung plan.md; task-breakdown dùng lại ID của nguồn

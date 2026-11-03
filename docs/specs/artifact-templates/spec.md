@@ -1,6 +1,6 @@
 # Spec: artifact-templates
 
-Cập nhật: 2026-11-01
+Cập nhật: 2026-11-03
 
 ## Mục đích
 
@@ -26,6 +26,7 @@ Một nguồn template duy nhất cho các loại artifact của bộ, cùng val
 - **artifact-templates/R11** — Task trong `plan.md` có thể ghi dòng `**TDD:**` với hai dạng: `có` hoặc `không — <lý do>`; thiếu dòng thì mặc định theo kind (`BE` = có, kind khác = không). `có` chỉ hợp lệ với kind `BE` và `TOOLING` (`TDD_ALLOWED_KINDS` trong `check-request.mjs`). `check-request.mjs` báo W21 khi giá trị lạ, khi `không` thiếu lý do, hoặc khi `có` ở kind ngoài tập đó (kể cả task thiếu `**Kind:**`, vì mặc định theo kind là `không`); chỉ cảnh báo (exit 0) như các W khác, và plan không có dòng `**TDD:**` thì không có W21. Nguồn: [2026-10-30-request-parts-aip-workspace](../../requests/2026-10-30-request-parts-aip-workspace/design.md) (thêm)
 - **artifact-templates/R12** — Mục lục của `artifact-templates` có loại `brief` (`references/brief.template.md`, validator `scripts/check-request.mjs`): tài liệu `docs/requests/<ngày>-<slug>/brief.md` do skill `brainstorming` ghi, có khối `## Định tuyến` với các khoá `loại-việc`, `phạm-vi`, `đầu-ra-mong-đợi`, `rủi-ro`, `ứng-viên-route`, `route-đã-duyệt`; `loại-việc` và `phạm-vi` trong template trùng `TYPES` và `SCOPES` export từ `core/skills/brainstorming/scripts/route.mjs` (contract kiểm hai phía). `check-request.mjs` đọc thêm `brief.md` và không báo W1 khi thư mục chỉ có `brief.md` (không có `requirement.md`, `design.md`, `tasks.md` hay plan); `check-request.mjs` không kiểm nội dung brief. Nguồn: [2026-10-31-brainstorming-routing](../../requests/2026-10-31-brainstorming-routing/design.md) (thêm); test `test/contract/35-artifact-templates.contract.mjs`
 - **artifact-templates/R13** — `check-request.mjs` cảnh báo **W22** khi khối `calc: <biểu thức> = <kết quả>` (trong backtick) ở `requirement.md`, `design.md` hoặc `parts/*/design.md` tính ra khác kết quả ghi (sai số 1e-9), hoặc biểu thức không hợp lệ (kể cả vế rỗng). Biểu thức chỉ gồm số (thập phân dùng `.`), `+ - * / %`, ngoặc, `floor` `ceil` `round` `min` `max` `abs`, tính bằng `evalCalc` (tokenizer + đệ quy giảm dần, không `eval`/`Function`, export); kết quả tách ở dấu `=` cuối, dấu phẩy chỉ nhận ở nhóm hàng nghìn. Khối rỗng hoặc có một vế đúng là chỗ trống mẫu (`<biểu thức>`, `<kết quả>`, `<số>`, `…`) là câu văn, không kiểm. AC thiếu `calc:` không bị W22. Template `requirement`/`design` có dòng hướng dẫn `calc:`; `SKILL.md` ghi semantics `round` (Math.round) và `%`. Nguồn: [2026-11-02-aip-scope-discipline](../../requests/2026-11-02-aip-scope-discipline/design.md) (thêm); test `test/contract/35-artifact-templates.contract.mjs`
+- **artifact-templates/R14** — `references/docs-conventions.md` là nguồn chi tiết của quy ước tài liệu request (AC `AC<n>.<m>`, `**Phủ AC:**`, `check-request.mjs` và W7/W9/W10, `## Ảnh hưởng spec`, bước gộp spec sống, bảng bộ nhớ), chuyển nguyên chữ từ baseline; `SKILL.md` trỏ tới file này và baseline giữ một dòng trỏ. Nguồn: [2026-11-03-baseline-slim](../../requests/2026-11-03-baseline-slim/design.md) (thêm); test `test/content/18-superpowers-docs-standard.pin.mjs`, `test/content/22-living-spec.pin.mjs`
 
 ## Lịch sử
 
@@ -46,3 +47,4 @@ Một nguồn template duy nhất cho các loại artifact của bộ, cùng val
 | 2026-10-30 | [2026-10-30-request-parts-aip-workspace](../../requests/2026-10-30-request-parts-aip-workspace/design.md) | artifact-templates/R8 | đổi |
 | 2026-11-01 | [2026-10-31-brainstorming-routing](../../requests/2026-10-31-brainstorming-routing/design.md) | artifact-templates/R12 | thêm |
 | 2026-11-02 | [2026-11-02-aip-scope-discipline](../../requests/2026-11-02-aip-scope-discipline/design.md) | artifact-templates/R13 | thêm |
+| 2026-11-03 | [2026-11-03-baseline-slim](../../requests/2026-11-03-baseline-slim/design.md) | artifact-templates/R14 | thêm |

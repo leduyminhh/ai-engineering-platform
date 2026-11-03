@@ -12,13 +12,48 @@ export default async function run({ ok, ctx }) {
     ok(fs.existsSync(a), 'AGENTS.md (repo) tồn tại');
     if (fs.existsSync(a) && fs.existsSync(t)) {
       const norm = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
-      ok(norm(a) === norm(t), 'AGENTS.md == AGENTS.template.md (không drift)');
+      ok(norm(a) === norm(t), 'AGENTS.md == AGENTS.template.md (không drift; baseline-slim AC1.3)');
       const body = norm(a);
       ok(body.includes('Comments are documentation, not narration')
         && body.includes('Quality gate')
         && body.includes('Assume the reader is an experienced engineer')
         && /explain \*why\*/.test(body),
         'AGENTS.md: comment policy (why-only + quality gate + senior reader)');
+    }
+  }
+
+  // Template được chiếu vào CLAUDE.md/AGENTS.md của project đích; docs Claude Code khuyến nghị dưới 200 dòng vì file dài giảm mức tuân thủ.
+  {
+    const MAX = 200;
+    const countLines = (s) => (s.replace(/\r\n/g, '\n').match(/\n/g) ?? []).length;
+    const withinLimit = (s) => countLines(s) <= MAX;
+    ok(!withinLimit('x\n'.repeat(MAX + 1)) && withinLimit('x\r\n'.repeat(MAX)), 'baseline-slim AC1.2: kiểm giới hạn đỏ với 201 dòng, xanh với 200 dòng');
+    const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
+    ok(withinLimit(tpl), `baseline-slim AC1.1: AGENTS.template.md ≤ ${MAX} dòng (đo được ${countLines(tpl)})`);
+    ok(tpl.split('<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->').length === 2 && tpl.split('<!-- AI-ENGINEERING:END AGENTS_BASELINE -->').length === 2,
+      'baseline-slim AC1.4: đúng một cặp marker managed block');
+
+    const moved = { 'artifact-templates': 'docs-conventions.md', 'using-aip': 'agents-in-ci.md', 'git-worktree': 'parallel-agents.md', 'plan-execution': 'model-routing.md' };
+    const ptrs = [...tpl.matchAll(/skill `([a-z-]+)`, `references\/([a-z-]+\.md)`/g)].map((m) => [m[1], m[2]]);
+    ok(Object.entries(moved).every(([s, f]) => ptrs.filter(([ps, pf]) => ps === s && pf === f).length === 1),
+      'baseline-slim AC2.5: baseline có đúng một dòng trỏ cho mỗi mục đã chuyển');
+    const builds = {
+      claude: (s, f) => [path.join(BUILD, 'claude', 'plugins', 'core', 'skills', s, 'references', f)],
+      codex: (s, f) => [path.join(BUILD, 'codex', 'core', 'skills', s, 'references', f)],
+      cursor: (s, f) => [path.join(BUILD, 'cursor', 'core', '.cursor', 'skills', s, 'references', f)],
+      antigravity: (s, f) => fs.readdirSync(path.join(BUILD, 'antigravity')).map((p) => path.join(BUILD, 'antigravity', p, 'docs', 'workflow', s, 'references', f)),
+    };
+    // Dòng trỏ thay cho cả mục nên phải giữ từ khoá an toàn: agent không nạp reference vẫn thấy chúng.
+    const lineWith = (s) => tpl.split('\n').find((l) => l.includes(s)) ?? '';
+    ok(['dontAsk', '--allowedTools', '--max-budget-usd'].every((w) => lineWith('references/agents-in-ci.md').includes(w))
+      && lineWith('references/parallel-agents.md').includes('rm -rf') && lineWith('- Parallelize only').includes('between parts'),
+      'baseline-slim AC2.5: dòng trỏ CI/Parallel và bullet song song giữ từ khoá an toàn');
+    for (const [s, f] of ptrs) {
+      ok(fs.existsSync(path.join(REPO_ROOT, 'core', 'skills', s, 'references', f)), `baseline-slim AC2.5: dòng trỏ ${s}/references/${f} có file nguồn`);
+      for (const [prov, at] of Object.entries(builds)) {
+        if (!fs.existsSync(path.join(BUILD, prov))) continue;
+        ok(at(s, f).some((p) => fs.existsSync(p)), `baseline-slim AC2.5: ${prov} build có ${s}/references/${f}`);
+      }
     }
   }
 

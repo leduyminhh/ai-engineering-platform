@@ -372,7 +372,7 @@ Script fail-open: lỗi nội bộ (stdin rỗng, JSON hỏng, thiếu trường
 
 **aip không ghi settings của bạn** (aip does not write your settings). Đây là cấu hình của bạn (giá trị cài đặt compaction, không phải file quyền `.claude/settings.json` mà `aip init --full` tạo khi chưa có); `aip` không đặt và không sửa nó. [Unverified] Lưu ý: khi đặt `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, `used_percentage` của statusline vẫn đo trên cửa sổ đầy, nên không còn chỉ đúng lúc nén sắp chạy.
 
-**Agent trong CI.** Công thức tối thiểu cho `claude -p` (xem mục baseline `Agents in CI`); các khẳng định về Claude Code dưới đây là [Unverified], tóm tắt từ [headless](https://code.claude.com/docs/en/headless) và [permissions](https://code.claude.com/docs/en/permissions):
+**Agent trong CI.** Công thức tối thiểu cho `claude -p` (xem skill `using-aip`, `references/agents-in-ci.md`); các khẳng định về Claude Code dưới đây là [Unverified], tóm tắt từ [headless](https://code.claude.com/docs/en/headless) và [permissions](https://code.claude.com/docs/en/permissions):
 
 ```bash
 claude -p "Review the diff and report findings" \
@@ -388,7 +388,7 @@ claude -p "Review the diff and report findings" \
 - Ghim action bên thứ ba theo commit SHA đầy đủ, cấp token chỉ đọc cho job, và chạy mọi workflow có thể push trong môi trường được bảo vệ, cần người duyệt (required reviewers).
 - aip không thêm file workflow vào `templates/init`. Ví dụ review pull request chỉ đọc được mô tả ở [Chạy review trong CI](#chạy-review-trong-ci).
 
-**Agent song song.** Quy ước chạy nhiều agent cùng lúc, mỗi agent một worktree (xem mục baseline `Parallel agents`). aip không tự chạy agent: aip chỉ phân phối quy ước và một script kiểm tra; Claude Code tạo worktree. Chỉ `writeScope` của agent cộng với hook `guard-files` mới ép phạm vi ghi; phần còn lại là hướng dẫn mềm, và Bash vẫn ghi được ở nơi khác.
+**Agent song song.** Quy ước chạy nhiều agent cùng lúc, mỗi agent một worktree (xem skill `git-worktree`, `references/parallel-agents.md`). aip không tự chạy agent: aip chỉ phân phối quy ước và một script kiểm tra; Claude Code tạo worktree. Chỉ `writeScope` của agent cộng với hook `guard-files` mới ép phạm vi ghi; phần còn lại là hướng dẫn mềm, và Bash vẫn ghi được ở nơi khác.
 
 1. Chia request thành các part độc lập (`## Bảng part` trong `design.md`, mỗi part một `parts/<nn>-<part-slug>/plan.md`). Các part chạy cùng lúc ghi cùng nhãn ở cột `Song song`; mỗi task có danh sách `**Files:**`. Chỉ song song giữa các part, không song song trong một part. Kiểm bằng `node core/skills/artifact-templates/scripts/check-partition.mjs <thư-mục-request>` (cảnh báo P1 file giao nhau, P2 file chung bị cấm, P4 interface lấy từ part cùng nhóm, P5 `Consumes`/`Produces` không có tên trong backtick nên P4 không kiểm được; P3 khi còn `**Song song:**` cấp task, đã bỏ; `--strict` exit 1).
 2. Từ nhánh tích hợp `feature/<slug>`, tạo mỗi part một worktree, tối đa 3 cùng lúc: `claude --worktree <slug>-p<nn>` cho nhánh `worktree-<slug>-p<nn>` tại `.claude/worktrees/<slug>-p<nn>/`. Mặc định Claude Code cắt từ default branch; đặt `worktree.baseRef` là `"head"` trong cài đặt Claude Code (`{"worktree": {"baseRef": "head"}}`; file cài đặt cụ thể là [Unverified], tài liệu chỉ nói "settings") (hoặc tạo bằng `git worktree add`) để bắt đầu từ đỉnh nhánh tích hợp. Thêm `.claude/worktrees/` vào `.gitignore`.
