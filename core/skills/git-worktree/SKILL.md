@@ -1,8 +1,8 @@
 ---
 name: git-worktree
-description: "Tạo và dọn git worktree theo quy ước baseline: kiểm trước, tên nhánh, đường dẫn, merge về nhánh tích hợp, dọn an toàn trên Windows. Dùng khi người dùng muốn \"tạo worktree\", \"chạy song song nhiều part\", \"cô lập nhánh đang làm\", \"dọn worktree\". Không dùng khi chỉ commit hoặc merge trên một cây làm việc → git-workflow."
+description: "Tạo và dọn git worktree theo quy ước Parallel agents: kiểm trước, tên nhánh, đường dẫn, merge về nhánh tích hợp, dọn an toàn trên Windows. Dùng khi người dùng muốn \"tạo worktree\", \"chạy song song nhiều part\", \"cô lập nhánh đang làm\", \"dọn worktree\". Không dùng khi chỉ commit hoặc merge trên một cây làm việc → git-workflow."
 order: 7
-title: "Git Worktree — tạo, merge, dọn worktree theo quy ước baseline (dùng chung)"
+title: "Git Worktree — tạo, merge, dọn worktree theo quy ước Parallel agents (dùng chung)"
 runsIn: execute
 invoke: per-request
 ---
@@ -14,7 +14,7 @@ nhau, hoặc khi cần cô lập việc mới khỏi thay đổi đang dở. Tas
 cây, không cần skill này. Skill dành cho session chính; worktree do `isolation: worktree` của Claude Code tự tạo cho
 subagent thì không thuộc phạm vi skill này.
 
-Quy ước dưới đây nằm ở `references/parallel-agents.md` của skill này; skill không đặt quy ước khác. Chỉ song song giữa part (`<nn>` là số part trong Bảng part); bên trong một part các task chạy tuần tự.
+Quy ước dưới đây tóm tắt `references/parallel-agents.md` của skill này; skill không đặt quy ước khác. Chỉ song song giữa part (`<nn>` là số part trong Bảng part); bên trong một part các task chạy tuần tự.
 
 ## Quy trình — tạo worktree
 

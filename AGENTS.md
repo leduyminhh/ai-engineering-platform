@@ -165,8 +165,8 @@ them. They apply when the aip workflows and skills are installed.
 
 ### Agents in CI and Parallel agents
 
-- Agents in CI (`claude -p` flags, read-only tokens, protected environment): skill `using-aip`, `references/agents-in-ci.md`.
-- Several agents at once (one worktree per part, disjoint files, `merge --no-ff`): skill `git-worktree`, `references/parallel-agents.md`.
+- Agents in CI (`claude -p` with `--permission-mode dontAsk`, explicit `--allowedTools`, `--max-turns`, `--max-budget-usd`; read-only tokens; protected environment for push): skill `using-aip`, `references/agents-in-ci.md`.
+- Several agents at once (one worktree per part, disjoint files, `merge --no-ff`; clean up with `git worktree remove`, never `rm -rf`): skill `git-worktree`, `references/parallel-agents.md`.
 
 ### Model and session routing
 | Tier | Work | Default model | Step up when |
@@ -180,7 +180,7 @@ them. They apply when the aip workflows and skills are installed.
 - Choose model and effort when creating a session or calling a subagent; never switch model on a session that already has context, hand off to a new session instead. Other tools: ignore model names, apply the session and messaging rules.
 - One session handles one work package; when it is done, or context passes ~40% (soft) / ~60% (hard) of the window ([Inference] team heuristics), write `handoff.md` and open a new session.
 - Do not message only to announce or check in; a child session reports only when a task is done, it is blocked, or the user must decide.
-- Parallelize only tasks independent in files and each large enough (tightly coupled coding runs sequentially); when the next step depends on a subagent's result, run it in the foreground.
+- Parallelize only between parts, never inside a part, and only tasks independent in files and each large enough (tightly coupled coding runs sequentially); when the next step depends on a subagent's result, run it in the foreground.
 - Effort defaults, model order, monitoring, long sessions and sources: skill `plan-execution`, `references/model-routing.md`.
 
 ### Language

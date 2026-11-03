@@ -1,6 +1,6 @@
 # Spec: artifact-templates
 
-Cập nhật: 2026-11-01
+Cập nhật: 2026-11-03
 
 ## Mục đích
 

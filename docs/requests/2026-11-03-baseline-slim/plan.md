@@ -130,3 +130,31 @@
 - [ ] **Step 1:** bump `core/.manifest.json` minor (từ `1.26.15`), `npm run build`, `node cli/lib/versions.mjs --lock`.
 - [ ] **Step 2:** spec sống theo `## Ảnh hưởng spec` (baseline: đổi R2, R3, R4, R6, R7, thêm R9; artifact-templates: thêm R14) + dòng Lịch sử; `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-11-03-baseline-slim/ --base master` → không W10–W14.
 - [ ] **Step 3:** `npm test` → exit 0; commit.
+
+### Task 5: Gói minor sau review cuối (G3: sửa rồi merge)
+**Kind:** TOOLING
+**TDD:** có
+**Phủ AC:** AC2.5, AC4.2, AC5.1, AC5.3
+**Files:**
+- Modify: `core/agents/AGENTS.template.md`
+- Modify: `AGENTS.md`
+- Modify: `plugins/engineering/skills/engineering-spec-writing/SKILL.md`
+- Modify: `plugins/engineering/skills/engineering-spec-writing/references/spec-structure.md`
+- Modify: `core/skills/git-worktree/SKILL.md`
+- Modify: `CLAUDE.md`
+- Modify: `docs/specs/baseline/spec.md`
+- Modify: `docs/specs/artifact-templates/spec.md`
+- Modify: `core/.manifest.json`
+- Modify: `plugins/engineering/.manifest.json`
+- Modify: `plugins/backend/.manifest.json`
+- Modify: `plugins/frontend/.manifest.json`
+- Modify: `plugins/_versions.lock.json`
+- Test: `test/contract/30-templates.contract.mjs`
+- Test: `test/content/25-parallel-agents-docs.pin.mjs`
+
+**Interfaces:**
+- Consumes: không có
+- Produces: không có
+
+- [ ] **Step 1:** test đỏ: dòng trỏ CI trong baseline chứa `dontAsk`, `--allowedTools`, `--max-budget-usd`; dòng trỏ Parallel chứa `rm -rf`; bullet song song của routing chứa `between parts`; kiểm AC4.2 bao thêm `engineering-spec-writing` (`baseline \`AGENTS.md\``) và `quy ước baseline` của `git-worktree`. Chạy `node test/validate.mjs --only templates` và `--only 25-parallel` → đỏ; commit test.
+- [ ] **Step 2:** sửa trên chính các dòng (template vẫn ≤ 200 dòng, `AGENTS.md` byte-identical); trỏ `engineering-spec-writing` về skill `artifact-templates`, `references/docs-conventions.md`; sửa `description`/`title`/dòng 17 của `git-worktree` (giữ trigger, ≤ 500 ký tự); câu `CLAUDE.md:73`; spec R2/R3/R7 + dòng `Cập nhật`. Bump core 1.27.1, engineering, backend, frontend (patch); `npm run build`, `node cli/lib/versions.mjs --lock`; test xanh; commit.
