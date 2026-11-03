@@ -1,6 +1,6 @@
 # Thiết kế: rút gọn baseline AGENTS.template.md xuống ≤ 200 dòng
 - Ngày: 2026-11-03
-- Trạng thái: approved
+- Trạng thái: merged 41c54e49
 - Requirement: không có
 ## Vấn đề và lý do
 `core/agents/AGENTS.template.md` dài 324 dòng (đo bằng `wc -l`, khớp `AGENTS.md` gốc repo). Khối giữa marker `AI-ENGINEERING:BEGIN/END` được chiếu vào `AGENTS.md`/`CLAUDE.md` của mọi project đích, dùng chung cho Claude, Codex, Cursor, Antigravity. Người dùng dẫn docs Claude Code khuyến nghị "target under 200 lines per CLAUDE.md file; longer files consume more context and reduce adherence" [Unverified — trích lại từ người dùng, chưa tự kiểm với docs]. Repo này vừa import `AGENTS.md` vào `CLAUDE.md` (commit `031aca28`), nên cả 324 dòng nằm trong context mỗi phiên.
