@@ -26,9 +26,10 @@ export default async function run({ ok, ctx }) {
   {
     const MAX = 200;
     const countLines = (s) => (s.replace(/\r\n/g, '\n').match(/\n/g) ?? []).length;
-    ok(countLines('x\n'.repeat(MAX + 1)) > MAX && countLines('x\r\n'.repeat(MAX)) === MAX, 'baseline-slim AC1.2: bộ đếm phân biệt 200 và 201 dòng');
+    const withinLimit = (s) => countLines(s) <= MAX;
+    ok(!withinLimit('x\n'.repeat(MAX + 1)) && withinLimit('x\r\n'.repeat(MAX)), 'baseline-slim AC1.2: kiểm giới hạn đỏ với 201 dòng, xanh với 200 dòng');
     const tpl = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
-    ok(countLines(tpl) <= MAX, `baseline-slim AC1.1: AGENTS.template.md ≤ ${MAX} dòng (đo được ${countLines(tpl)})`);
+    ok(withinLimit(tpl), `baseline-slim AC1.1: AGENTS.template.md ≤ ${MAX} dòng (đo được ${countLines(tpl)})`);
     ok(tpl.split('<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->').length === 2 && tpl.split('<!-- AI-ENGINEERING:END AGENTS_BASELINE -->').length === 2,
       'baseline-slim AC1.4: đúng một cặp marker managed block');
 

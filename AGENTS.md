@@ -177,10 +177,10 @@ them. They apply when the aip workflows and skills are installed.
 | Execution session (one phase/branch) | orchestrates the subagents of one work package | `sonnet`, chosen at session creation | design-heavy or hard-debug package → `opus` at creation |
 | Root orchestration session | hands work between sessions, batches questions for the user | `opus` | — |
 
-- Choose model and effort when creating a session or calling a subagent; never switch model on a session that already has context, hand off to a new session instead. Other tools: ignore model names, keep the session rules.
+- Choose model and effort when creating a session or calling a subagent; never switch model on a session that already has context, hand off to a new session instead. Other tools: ignore model names, apply the session and messaging rules.
 - One session handles one work package; when it is done, or context passes ~40% (soft) / ~60% (hard) of the window ([Inference] team heuristics), write `handoff.md` and open a new session.
 - Do not message only to announce or check in; a child session reports only when a task is done, it is blocked, or the user must decide.
-- Parallelize only tasks independent in files; when the next step depends on a subagent's result, run it in the foreground.
+- Parallelize only tasks independent in files and each large enough (tightly coupled coding runs sequentially); when the next step depends on a subagent's result, run it in the foreground.
 - Effort defaults, model order, monitoring, long sessions and sources: skill `plan-execution`, `references/model-routing.md`.
 
 ### Language
