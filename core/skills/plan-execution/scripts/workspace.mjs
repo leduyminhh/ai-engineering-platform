@@ -35,8 +35,10 @@ export function resolveWorkspace(planArg, deps = {}) {
   let main = cwd;
   let top = cwd;
   try {
-    main = path.dirname(fwd(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd)));
+    const common = fwd(git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd));
     top = fwd(git(['rev-parse', '--show-toplevel'], cwd));
+    // Submodule: common-dir là <cha>/.git/modules/<tên>, dirname của nó nằm trong .git của repo cha; dùng gốc của chính submodule (cùng guard với route.mjs).
+    main = path.basename(common) === '.git' ? path.dirname(common) : top;
   } catch { /* không phải repo hoặc không có git: dùng cwd */ }
 
   const create = (root) => {

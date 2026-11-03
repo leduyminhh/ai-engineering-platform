@@ -27,7 +27,11 @@ export function resolveGate(dir) {
   let top;
   try { top = git(d, ['rev-parse', '--show-toplevel']); } catch { return null; }
   let main = null;
-  try { main = path.dirname(git(d, ['rev-parse', '--path-format=absolute', '--git-common-dir'])); } catch { /* chỉ còn gốc worktree */ }
+  try {
+    const common = git(d, ['rev-parse', '--path-format=absolute', '--git-common-dir']);
+    // Submodule: common-dir là <cha>/.git/modules/<tên>, dirname của nó nằm trong .git của repo cha; dùng gốc của chính submodule (cùng guard với route.mjs).
+    main = path.basename(common) === '.git' ? path.dirname(common) : top;
+  } catch { /* chỉ còn gốc worktree */ }
   const roots = [...new Set([top, main].filter(Boolean).map((r) => path.resolve(r)))];
   const own = readState(top);
   const base = { roots, top: path.resolve(top), main: main ? path.resolve(main) : null };

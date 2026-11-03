@@ -61,4 +61,54 @@ export default async function run({ ok, ctx }) {
 
 
 
+  // ── AC8.1: gốc repo chính trong submodule là gốc của chính submodule, không phải <cha>/.git
+  {
+    const inGit = (p) => /[\\/]\.git([\\/]|$)/.test(p);
+    const fwd = (p) => p.replace(/\\/g, '/');
+    const fakeGit = (top, common) => (args) => {
+      if (args.includes('--show-toplevel')) return top;
+      if (args.includes('--git-common-dir')) return common;
+      throw new Error(`git lạ: ${args.join(' ')}`);
+    };
+    const sub = path.resolve('/tmp/am-super/mod');
+    const common = path.resolve('/tmp/am-super/.git/modules/mod');
+    const { mainRoot } = await import(pathToFileURL(path.join(REPO_ROOT, 'cli', 'lib', 'status.mjs')).href);
+    ok(fwd(mainRoot(sub, fakeGit(sub, common))) === fwd(sub), 'AC8.1: status.mainRoot trong submodule = gốc submodule');
+    ok(fwd(mainRoot(sub, fakeGit(sub, path.join(sub, '.git')))) === fwd(sub), 'AC8.1: status.mainRoot repo thường không đổi');
+    const { resolveWorkspace } = await load(CORE_DIR, 'skills', 'plan-execution', 'scripts', 'workspace.mjs');
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-sm-ws-'));
+    try {
+      const reqDir = path.join(tmp, 'docs', 'requests', '2026-11-03-x');
+      fs.mkdirSync(reqDir, { recursive: true });
+      const ws = resolveWorkspace(reqDir, { cwd: tmp, git: fakeGit(tmp, path.join(path.dirname(tmp), '.git', 'modules', 'mod')), stderr: () => {} });
+      ok(!inGit(ws.dir) && fwd(ws.dir).startsWith(fwd(tmp)), `AC8.1: workspace.mjs trong submodule ghi .aip trong submodule, không trong .git (${ws.dir})`);
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+    const { resolveAutonomy } = await load(CORE_DIR, 'skills', 'plan-execution', 'scripts', 'autonomy.mjs');
+    const sm = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-sm-au-'));
+    try {
+      const topDir = path.join(sm, 'mod');
+      const gitDir = path.join(sm, '.git');
+      fs.mkdirSync(topDir, { recursive: true });
+      // File giả nằm trong <cha>/.git/modules/.claude: chỉ đọc được nếu "gốc chính" bị tính nhầm thành dirname(common-dir).
+      fs.mkdirSync(path.join(gitDir, 'modules', '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(gitDir, 'modules', '.claude', 'aip-gate.json'), JSON.stringify({ autonomy: { mergeLocal: true } }));
+      const r = resolveAutonomy(topDir, { git: fakeGit(topDir, path.join(gitDir, 'modules', 'mod')), tracked: () => false });
+      ok(r.value.mergeLocal === false, 'AC8.1: autonomy.mjs trong submodule không đọc cấu hình từ <cha>/.git/modules');
+    } finally { fs.rmSync(sm, { recursive: true, force: true }); }
+
+    // gate-config dùng git thật: dựng một submodule thật.
+    const { resolveGate } = await hook('gate-config.mjs');
+    const tmpR = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-sm-real-'));
+    try {
+      const g = (cwd, ...a) => execFileSync('git', ['-c', 'protocol.file.allow=always', '-c', 'user.name=t', '-c', 'user.email=t@t.test', ...a], { cwd, stdio: 'pipe', encoding: 'utf8' });
+      const lib = path.join(tmpR, 'lib');
+      const sup = path.join(tmpR, 'sup');
+      fs.mkdirSync(lib); fs.mkdirSync(sup);
+      g(lib, 'init', '-q'); fs.writeFileSync(path.join(lib, 'a.txt'), 'x'); g(lib, 'add', '.'); g(lib, 'commit', '-qm', 'x');
+      g(sup, 'init', '-q'); g(sup, 'submodule', 'add', '-q', lib, 'mod');
+      const gate = resolveGate(path.join(sup, 'mod'));
+      ok(gate && gate.roots.every((r) => !inGit(r)) && fwd(gate.main) === fwd(path.join(sup, 'mod')),
+        `AC8.1: gate-config.resolveGate trong submodule thật: main = gốc submodule (${gate?.roots?.join(', ')})`);
+    } finally { fs.rmSync(tmpR, { recursive: true, force: true }); }
+  }
 }

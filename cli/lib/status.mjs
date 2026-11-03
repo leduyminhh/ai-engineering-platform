@@ -33,7 +33,9 @@ export function staleMinutesOf(config) {
 
 export function mainRoot(cwd = process.cwd(), git = defaultGit) {
   const common = tryGit(git, ['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd);
-  return common ? path.dirname(common) : cwd;
+  if (!common) return cwd;
+  // Submodule: common-dir là <cha>/.git/modules/<tên>, dirname của nó nằm trong .git của repo cha; dùng gốc của chính submodule (cùng guard với route.mjs).
+  return path.basename(common) === '.git' ? path.dirname(common) : (tryGit(git, ['rev-parse', '--show-toplevel'], cwd) ?? cwd);
 }
 
 const runsDir = (runsRoot, request) => path.join(runsRoot, '.aip', 'runs', ...(request ? [request] : []));
