@@ -12,7 +12,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 - Chỉ xét task có `**Interfaces:**` nối nhau (`Produces` của task A là `Consumes` của task B) hoặc cùng sửa một file:
   tên, kiểu, chữ ký phải khớp từng ký tự; lệch thì phán một hướng và ghi `Ruling:`.
 - Không có task nào chung interface hay file → không cần ghi gì thêm.
-- Bước rà này không thay `check-request.mjs`; plan còn cảnh báo ngoài W9 thì quay lại `engineering-plan-writing`.
+- Bước rà này không thay `check-request.mjs`; plan còn cảnh báo ngoài W9 và W11 của năng lực chỉ khai `thêm` mà chưa có `docs/specs/<năng-lực>/spec.md` (finish.md tạo spec ở bước gộp) thì quay lại `engineering-plan-writing`.
 
 ## Các bước của một task
 

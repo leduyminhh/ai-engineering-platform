@@ -21,5 +21,5 @@ node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/reques
 ```
 
 Đường dẫn script theo nơi skill `artifact-templates` được cài. Script chỉ cảnh báo (exit 0). Ngay sau khi viết plan,
-W9 (file test liệt kê chưa tồn tại) là bình thường; mọi cảnh báo khác phải được sửa hoặc nêu lý do. Không xoá
+W9 (file test liệt kê chưa tồn tại) và W11 của năng lực chỉ khai `thêm` mà chưa có `docs/specs/<năng-lực>/spec.md` (finish.md tạo spec ở bước gộp) là bình thường; mọi cảnh báo khác phải được sửa hoặc nêu lý do. Không xoá
 `**Files:**` hay mục test để tắt cảnh báo.

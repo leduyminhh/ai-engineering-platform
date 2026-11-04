@@ -9,7 +9,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
    những gì đã làm; ghi các file docs đã đụng vào `docs_updated` của `workflow_result`.
 2. **Cập nhật spec sống.** Làm theo mục `## Ảnh hưởng spec` của design: thêm, sửa hoặc gạch bỏ `R<n>` trong
    `docs/specs/<capability>/spec.md`, thêm một hàng vào bảng lịch sử của spec; capability mới thì thêm vào
-   `docs/specs/README.md`. Design ghi "Không ảnh hưởng" thì bỏ qua và ghi lý do. Design ghi "Không ảnh hưởng" mà chưa có `docs/specs/README.md` thì không tự tạo README; cảnh báo W23 còn lại ghi vào `remaining_risks` kèm gợi ý chạy skill `engineering-spec-backfill`.
+   `docs/specs/README.md`. Design ghi "Không ảnh hưởng" thì bỏ qua và ghi lý do. Design ghi "Không ảnh hưởng" mà repo chưa có `docs/specs/<năng-lực>/spec.md` nào thì không tự tạo spec; cảnh báo W23 còn lại ghi vào `remaining_risks` kèm gợi ý chạy skill `engineering-spec-backfill` (plugin `engineering`).
    - Capability chưa có `spec.md`: tạo từ `<thư mục skill artifact-templates>/references/spec.template.md`. Bỏ khối
      `<!-- artifact-template … -->` đầu file, điền Mục đích, Phạm vi, các `R<n>` đúng số design khai và một dòng Lịch sử.
      Project đã chạy `aip init --full` thì `docs/specs/_TEMPLATE.md` có sẵn cùng khung.

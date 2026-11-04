@@ -1,6 +1,6 @@
 # Mẫu báo cáo lệch (chạy lại)
 
-Nạp ở bước 7 khi `docs/specs/` đã có spec. Báo cáo nằm trong chat, không ghi file. Skill không sửa spec.
+Nạp ở bước 7, cho từng năng lực đã có `docs/specs/<năng-lực>/spec.md`. Báo cáo nằm trong chat, không ghi file. Skill không sửa spec đó; năng lực chưa có spec không vào báo cáo này (được ghi ở bước 3). Một lần chạy có thể vừa ghi spec mới vừa trả báo cáo này.
 
 ## Mẫu
 
@@ -25,7 +25,7 @@ Nạp ở bước 7 khi `docs/specs/` đã có spec. Báo cáo nằm trong chat,
 
 ### Kết luận ngắn
 - Nhóm 1: <n> R. Nhóm 2: <m> hành vi.
-- Không có file nào bị ghi trong lần chạy này.
+- Không có file spec nào của năng lực đã đối chiếu bị ghi.
 ```
 
 ## Quy tắc viết

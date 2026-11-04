@@ -299,9 +299,12 @@ export function listOpenRequests({ docsRoot, git = defaultGit }) {
     const token = line ? requestStatusToken(line) : null;
     if (CLOSED.has(token)) continue;
     const branch = `feature/${e.name.replace(/^\d{4}-\d{2}-\d{2}-/, '')}`;
-    // Chỉ là gợi ý: merge squash/rebase hay nhánh đã xoá thì không nhận ra, và trạng thái không bao giờ bị đổi ở đây.
-    const suspectMerged = tryGit(git, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`], docsRoot) !== null
-      && tryGit(git, ['merge-base', '--is-ancestor', branch, 'HEAD'], docsRoot) !== null;
+    // Gợi ý thôi: squash/rebase hay nhánh đã xoá không nhận ra. Nhánh vừa tạo chưa có commit riêng trùng HEAD nên cũng là tổ tiên: loại để không báo merge giả.
+    // show-ref (không --quiet vì --quiet nuốt luôn sha) lấy sha tại đúng refs/heads/, không để tên nhánh bị đọc thành revision khác.
+    const ref = `refs/heads/${branch}`;
+    const tip = tryGit(git, ['show-ref', '--verify', '--hash', ref], docsRoot);
+    const suspectMerged = !!tip && tip !== tryGit(git, ['rev-parse', 'HEAD'], docsRoot)
+      && tryGit(git, ['merge-base', '--is-ancestor', ref, 'HEAD'], docsRoot) !== null;
     out.push({ name: e.name, status: STATUSES.includes(token) ? token : null, suspectMerged });
   }
   return out;

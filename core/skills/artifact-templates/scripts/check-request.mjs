@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới, mục "Ảnh hưởng spec" của design.md (W10–W14, W23 khi chưa có docs/specs/README.md) và thư mục parts/ (Bảng part W19, AC trong design của part W20), khối `calc:` của AC tính lại bằng evalCalc (W22).
+// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới, mục "Ảnh hưởng spec" của design.md (W10–W14, W23 khi repo chưa có spec sống nào) và thư mục parts/ (Bảng part W19, AC trong design của part W20), khối `calc:` của AC tính lại bằng evalCalc (W22).
 // Cách dùng: <thư-mục> [--tests <path>…] [--base <ref>] [--strict]. --base <ref> bật W13 (spec bị ảnh hưởng chưa đổi kể từ ref) và giới hạn W7 vào dòng test thêm từ ref. Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -241,7 +241,7 @@ export function parseSpec(text, folder) {
   return { reqs, problems, links };
 }
 
-export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs, legacy, partDirs, specsIndex } = {}) {
+export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs, legacy, partDirs, hasSpecs } = {}) {
   const warnings = [];
   const warn = (file, line, code, msg) => warnings.push({ file, line, code, msg });
   const lines = {};
@@ -350,8 +350,8 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     const imp = parseImpact(lines['design.md']);
     if (legacy === true) { /* thư mục request cũ: miễn W10 */ } else if (!imp.found) warn('design.md', 1, 'W10', 'design.md thiếu mục "## Ảnh hưởng spec" (liệt kê năng lực bị ảnh hưởng hoặc "Không ảnh hưởng: <lý do>")');
     else if (!imp.entries.length && !imp.none?.reason) warn('design.md', imp.line, 'W10', 'Mục "Ảnh hưởng spec" cần ít nhất một dòng "- <năng-lực>: thêm|đổi|bỏ R<n>" hoặc "Không ảnh hưởng: <lý do>" với lý do không rỗng');
-    // Xét theo file tồn tại chứ không theo chữ lý do: chưa có spec nào thì mọi "Không ảnh hưởng" giữ vòng lặp không bao giờ có spec đầu tiên.
-    else if (imp.none && specsIndex === false) warn('design.md', imp.line, 'W23', 'Repo chưa có docs/specs/README.md nên "Không ảnh hưởng" giữ spec sống trống mãi: chạy skill engineering-spec-backfill cho project đã có code, hoặc khai "- <năng-lực>: thêm R1" cho năng lực request này tạo');
+    // Xét theo việc có spec.md nào chưa chứ không theo chữ lý do hay README.md: chưa có spec nào thì mọi "Không ảnh hưởng" giữ vòng lặp không bao giờ có spec đầu tiên.
+    else if (imp.none && hasSpecs === false) warn('design.md', imp.line, 'W23', 'Repo chưa có spec sống nào (docs/specs/<năng-lực>/spec.md) nên "Không ảnh hưởng" giữ spec sống trống mãi: chạy skill engineering-spec-backfill (plugin engineering) cho project đã có code, hoặc khai "- <năng-lực>: thêm R1" cho năng lực request này tạo');
     // Mỗi spec đọc và kiểm W14 một lần dù nhiều mục nhắc tới; tên sai định dạng không bao giờ tới readSpec để không đọc ngoài docs/specs.
     const cache = new Map();
     const load = (cap) => {
@@ -604,8 +604,10 @@ export function main(argv) {
   const legacy = !dated || dated[1] < SPEC_SINCE;
   const root = projectRoot(dir);
   const readTest = base === undefined ? readTestFrom(root) : readTestSince(root, base, readTestFrom(root));
-  const specsIndex = fs.existsSync(path.join(specsDir, 'README.md'));
-  const warnings = checkRequest(texts, { legacy, partDirs, readTest, override, readSpec, linkExists, specsIndex, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
+  // Chỉ README.md hay thư mục rỗng chưa phải spec: bootstrap cần ít nhất một <năng-lực>/spec.md.
+  let hasSpecs = false;
+  try { hasSpecs = fs.readdirSync(specsDir, { withFileTypes: true }).some((e) => e.isDirectory() && fs.existsSync(path.join(specsDir, e.name, 'spec.md'))); } catch { /* chưa có docs/specs/ */ }
+  const warnings = checkRequest(texts, { legacy, partDirs, readTest, override, readSpec, linkExists, hasSpecs, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
   for (const w of warnings) console.log(`WARN ${w.file}:${w.line} [${w.code}] ${w.msg}`);
   console.log(`${warnings.length} cảnh báo`);
   return strict && warnings.length ? 1 : 0;

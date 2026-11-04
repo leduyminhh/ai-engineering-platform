@@ -1,6 +1,6 @@
 # Prompt mẫu cho subagent backfill (một năng lực)
 
-Nạp ở bước 3. Session chính điền các chỗ `<…>` rồi giao cho một subagent `general-purpose` (model `sonnet`).
+Nạp ở bước 3 (năng lực chưa có spec) và bước 7 (năng lực đã có spec). Session chính điền các chỗ `<…>` rồi giao cho một subagent `general-purpose` (model `sonnet`).
 Subagent không thấy skill này: mọi quy tắc cần thiết phải nằm trong prompt. Mỗi năng lực một prompt, một subagent.
 
 ## Mẫu prompt
@@ -79,7 +79,7 @@ agent_result:
 
 ## Chế độ chạy lại (bước 7)
 
-Dùng khi đã có `docs/specs/<tên-kebab>/spec.md`. Thay phần "Được phép" và "Cấu trúc file cần ghi" bằng:
+Dùng cho năng lực đã có `docs/specs/<tên-kebab>/spec.md`, kể cả khi cùng đợt có năng lực khác đang được ghi. Thay phần "Được phép" và "Cấu trúc file cần ghi" bằng:
 
 ```text
 ## Chế độ chạy lại: chỉ đọc

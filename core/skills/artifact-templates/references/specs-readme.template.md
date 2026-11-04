@@ -2,7 +2,7 @@
 type: specs-readme
 version: 1
 validator: scripts/check-request.mjs
-sources: docs/requests/2026-11-04-living-spec-bootstrap/design.md (W23 kiểm file này có tồn tại)
+sources: docs/requests/2026-11-04-living-spec-bootstrap/design.md
 Bỏ khối này khi chép template ra dùng.
 -->
 
@@ -15,7 +15,7 @@ Bỏ khối này khi chép template ra dùng.
 
 Spec sống tạo dần: request chạm tới một năng lực khai ảnh hưởng ở mục `## Ảnh hưởng spec` của `design.md`, rồi bước gộp cập nhật spec của năng lực đó (tạo mới nếu chưa có, kèm một dòng trong bảng trên). Yêu cầu bị bỏ không xoá mà gạch ngang (`~~…~~`), kèm liên kết tới request đã bỏ nó.
 
-Project đã có code nhưng bảng trên còn trống: chạy skill `engineering-spec-backfill` để dựng spec ban đầu từ docs, request đã merge và code.
+Project đã có code nhưng bảng trên còn trống: chạy skill `engineering-spec-backfill` (plugin `engineering`) để dựng spec ban đầu từ docs, request đã merge và code.
 
 ## Bản đồ docs
 

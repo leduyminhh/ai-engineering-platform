@@ -10,8 +10,8 @@ argument-hint: "[phạm vi: cả repo | thư mục con]"
 
 # Spec Backfill — dựng spec sống ban đầu (skill dùng chung)
 
-Dùng cho project **đã có code** nhưng chưa có `docs/specs/`. Skill đề xuất năng lực theo nghiệp vụ, rồi mỗi
-năng lực một subagent `general-purpose` viết `docs/specs/<năng-lực>/spec.md`. Mỗi yêu cầu `R<n>` phải có một
+Dùng cho project **đã có code** nhưng chưa có (đủ) `docs/specs/`. Skill đề xuất năng lực theo nghiệp vụ, rồi mỗi
+năng lực **chưa có spec** một subagent `general-purpose` viết `docs/specs/<năng-lực>/spec.md`; năng lực đã có spec chỉ nhận báo cáo lệch. Mỗi yêu cầu `R<n>` phải có một
 nguồn truy được (request đã merge, `file:line` + tên test, `[Unverified]`, hoặc `lệch: <request>`).
 
 Khác `engineering-spec-writing` (đặc tả tính năng mới trong `docs/requests/`): skill này mô tả hành vi **đã có**.
@@ -32,34 +32,39 @@ Khác `engineering-spec-writing` (đặc tả tính năng mới trong `docs/requ
 - **Request chưa `merged` không là nguồn.** Token lấy từ dòng `- Trạng thái:` của `design.md`; chỉ `merged` đủ điều kiện.
 - **Hai cổng của người dùng không bỏ qua**: không tạo subagent trước khi người dùng duyệt danh sách năng lực;
   không commit trước khi người dùng duyệt diff `docs/specs/`.
-- **Chạy lại không ghi.** Khi đã có spec, skill chỉ trả báo cáo lệch; không thêm `R<n>`, không sửa câu chữ đã duyệt.
+- **Năng lực đã có spec không bị ghi.** Năng lực đã có `docs/specs/<năng-lực>/spec.md` chỉ nhận báo cáo lệch; không thêm `R<n>`, không sửa câu chữ đã duyệt. Năng lực chưa có spec được ghi như lần đầu.
 - Không tự chạy skill từ `aip init`, `aip install` hay hook; chỉ khi người dùng gọi.
 
 ## Quy trình — backfill
 
 Sao checklist này vào phản hồi và đánh dấu từng bước khi làm:
 
-- [ ] 1. **Kiểm kê nguồn và xác định lần chạy.** Đọc nguồn theo thứ tự rẻ → đắt ([references/sources.md](references/sources.md)), dừng khi đủ để đề xuất năng lực, không đọc toàn bộ code. Có `docs/specs/*/spec.md` nào thì là **chạy lại** (bước 7); chỉ có `docs/specs/README.md` với bảng trống (từ `aip init --full`) hoặc chưa có gì thì là **lần đầu**.
-- [ ] 2. **Đề xuất năng lực ⏸ cổng duyệt.** Bảng theo nghiệp vụ, không theo module/package: tên kebab, mục đích, Gồm / Không gồm, thư mục nguồn, request liên quan. Liệt kê rõ phần chưa kiểm kê. Dừng và chờ người dùng gộp, tách, đổi tên hoặc bỏ năng lực. Trước câu duyệt: chưa ghi file nào, chưa tạo subagent.
-- [ ] 3. **Giao subagent.** Mỗi năng lực đã duyệt một `general-purpose` (model `sonnet`, [references/subagent-prompt.md](references/subagent-prompt.md)). Các con chỉ ghi `docs/specs/<năng-lực>/spec.md` của mình nên chạy song song được. Kiểm `changes` của mỗi báo cáo: file ngoài `docs/specs/<năng-lực>/spec.md` là **ghi nhận và báo người dùng**, không tự xoá; sau đó mới giao lại cho chính con đó (tối đa 2 lần).
+- [ ] 1. **Kiểm kê nguồn và xếp từng năng lực.** Đọc nguồn theo thứ tự rẻ → đắt ([references/sources.md](references/sources.md)), dừng khi đủ để đề xuất năng lực, không đọc toàn bộ code. Rồi xếp từng năng lực: đã có `docs/specs/<năng-lực>/spec.md` → **chỉ báo lệch** (bước 7); chưa có → **ghi như lần đầu** (bước 2–6). `docs/specs/README.md` với bảng trống (từ `aip init --full`) không tính là spec. Một lần chạy có thể có cả hai nhóm.
+- [ ] 2. **Đề xuất năng lực ⏸ cổng duyệt.** Bảng theo nghiệp vụ, không theo module/package: tên kebab, mục đích, Gồm / Không gồm, thư mục nguồn, request liên quan. Liệt kê rõ phần chưa kiểm kê. Bảng chỉ gồm năng lực chưa có spec; năng lực đã có spec ghi thành dòng riêng "chỉ báo lệch" cùng thông điệp. Dừng và chờ người dùng gộp, tách, đổi tên hoặc bỏ năng lực. Trước câu duyệt: chưa ghi file nào, chưa tạo subagent.
+- [ ] 3. **Giao subagent.** Mỗi năng lực đã duyệt (chưa có spec) một `general-purpose` (model `sonnet`, [references/subagent-prompt.md](references/subagent-prompt.md)). Các con chỉ ghi `docs/specs/<năng-lực>/spec.md` của mình nên chạy song song được. Kiểm `changes` của mỗi báo cáo: file ngoài `docs/specs/<năng-lực>/spec.md` là **ghi nhận và báo người dùng**, không tự xoá; sau đó mới giao lại cho chính con đó (tối đa 2 lần).
 - [ ] 4. **Ghi README.** Nếu chưa có `docs/specs/README.md`, tạo từ `<thư mục skill artifact-templates>/references/specs-readme.template.md` (skill `artifact-templates`, core) rồi điền bảng năng lực đã duyệt. Đã có thì chỉ thêm dòng năng lực vào bảng, không đổi phần khác.
-- [ ] 5. **Kiểm cơ học.** Chạy đủ bốn mục; chỉ (b) ghi file, và chỉ vào thư mục tạm. Trước khi chạy, thay mọi `<…>` trong lệnh bằng đường dẫn hoặc giá trị thật: `<` chưa thay là chuyển hướng của bash.
+- [ ] 5. **Kiểm cơ học.** Chạy đủ bốn mục; chỉ (b) ghi file, và chỉ vào thư mục tạm. Trước khi chạy, thay mọi `<…>` trong lệnh bằng đường dẫn hoặc giá trị thật. Trong ngoặc kép `<` không phải chuyển hướng, nhưng chưa thay thì `mkdir` tạo thư mục tên chữ `<thư mục scratchpad>` ngay trong repo; hai guard dưới chặn việc đó. Chỉ kiểm năng lực vừa ghi ở bước 3 (spec cũ do request ghi không đúng dạng của skill này):
+    ```bash
+    NEW="<các năng lực vừa ghi, cách nhau bằng dấu cách>"
+    case "$NEW" in *'<'*) echo "chưa thay <các năng lực vừa ghi>"; exit 1;; esac
+    ```
   - (a) **Trích dẫn** `file:line` tồn tại:
     ```bash
-    node <thư mục skill>/scripts/check-citations.mjs docs/specs --root <gốc repo>
+    for c in $NEW; do node <thư mục skill>/scripts/check-citations.mjs "docs/specs/$c/spec.md" --root <gốc repo>; done
     ```
     Kỳ vọng exit 0 và `0 trích dẫn hỏng`.
   - (b) **W14** (cấu trúc spec). W14 chỉ kiểm spec qua một thư mục request khai năng lực, nên chạy trên một request tạm: copy cả `docs/` của project vào thư mục tạm (link `../../decisions/…`, `../../requests/…` trong spec phải resolve được), rồi khai mọi năng lực có `spec.md` trong một design giả:
     ```bash
     TMP="<thư mục scratchpad>/w14-check"   # nếu còn sót từ lần trước thì dọn bằng lệnh node ở cuối mục này trước
+    case "$TMP" in *'<'*) echo "chưa thay <thư mục scratchpad>"; exit 1;; esac
     mkdir -p "$TMP"
     cp -r docs "$TMP/docs"
     REQ="$TMP/docs/requests/$(date +%F)-backfill-check"
     mkdir -p "$REQ"
     printf '## Ảnh hưởng spec\n' > "$REQ/design.md"
-    for d in docs/specs/*/; do [ -f "$d/spec.md" ] && printf -- "- $(basename "$d"): thêm R1\n" >> "$REQ/design.md"; done
+    for c in $NEW; do printf -- '- %s: thêm R1\n' "$c" >> "$REQ/design.md"; done
     ```
-    Mỗi năng lực có `spec.md` thành một dòng `- <năng-lực>: thêm R1` (lần đầu: năng lực vừa ghi; chạy lại: tất cả). Rồi chạy:
+    Mỗi năng lực vừa ghi thành một dòng `- <năng-lực>: thêm R1`. Rồi chạy:
     ```bash
     node <thư mục skill artifact-templates>/scripts/check-request.mjs "$REQ/" | grep -E '\[(W11|W14)\]'
     ```
@@ -69,14 +74,15 @@ Sao checklist này vào phản hồi và đánh dấu từng bước khi làm:
     ```
   - (c) **Nguồn của từng R** (chỉ đọc). Ba lệnh, mỗi lệnh kỳ vọng không in gì:
     ```bash
+    FILES=$(for c in $NEW; do echo "docs/specs/$c/spec.md"; done)
     # R thiếu Nguồn:
-    grep -nE '^\s*[-*]\s+\*\*[a-z0-9-]+/R[0-9]+\*\*' docs/specs/*/spec.md | grep -v 'Nguồn:'
+    grep -nE '^\s*[-*]\s+\*\*[a-z0-9-]+/R[0-9]+\*\*' $FILES | grep -v 'Nguồn:'
     # Nguồn không đúng dạng của bốn loại (loại 3 có hai dạng):
-    grep -nE 'Nguồn:' docs/specs/*/spec.md | grep -vE 'Nguồn: \[[^]]+\]\(\.\./\.\./requests/[^)]+/design\.md\)$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` \(test .+\)$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` \[Unverified\]$|Nguồn: \[Unverified\] [^ ].*$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` lệch: \[[^]]+\]\(\.\./\.\./requests/[^)]+/design\.md\)$'
+    grep -nE 'Nguồn:' $FILES | grep -vE 'Nguồn: \[[^]]+\]\(\.\./\.\./requests/[^)]+/design\.md\)$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` \(test .+\)$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` \[Unverified\]$|Nguồn: \[Unverified\] [^ ].*$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` lệch: \[[^]]+\]\(\.\./\.\./requests/[^)]+/design\.md\)$'
     # Request làm nguồn R (chỉ dòng Nguồn, không tính mục Lịch sử) phải có dòng "- Trạng thái: merged":
-    for f in $(grep -h 'Nguồn:' docs/specs/*/spec.md | grep -ohE '\.\./\.\./requests/[^)]+/design\.md' | sort -u | sed 's#^\.\./\.\./#docs/#'); do grep -qE '^-\s+Trạng thái\s*:\s*merged\b' "$f" || echo "chưa merged: $f"; done
+    grep -h 'Nguồn:' $FILES | grep -ohE '\.\./\.\./requests/[^)]+/design\.md' | sort -u | sed 's#^\.\./\.\./#docs/#' | while IFS= read -r f; do grep -qE '^-\s+Trạng thái\s*:\s*merged\b' "$f" || echo "chưa merged: $f"; done
     ```
-    Ba lệnh này áp cho spec do skill này ghi. Spec sống do request ghi (có `(thêm)`/`(đổi)`, nhiều link trong một dòng, link trong Lịch sử) không đúng dạng này: không kiểm bằng (c).
+    Ba lệnh này áp cho spec do skill này ghi (`$FILES` chỉ có năng lực vừa ghi). Spec sống do request ghi (có `(thêm)`/`(đổi)`, nhiều link trong một dòng, link trong Lịch sử) không đúng dạng này: không kiểm bằng (c).
     Dòng nào in ra thì sửa trước cổng duyệt: đưa về đúng dạng của bốn loại (xem **Vòng kiểm**).
   - (d) **Phạm vi file**: mọi thay đổi phải nằm dưới `docs/specs/`:
     ```bash
@@ -86,11 +92,11 @@ Sao checklist này vào phản hồi và đánh dấu từng bước khi làm:
 
   **Vòng kiểm:** trích dẫn hỏng thì sửa thành `file:line` đúng (đọc lại file để chọn dòng). Không tìm được dòng đúng thì bỏ token `file:line` hỏng và ghi `Nguồn: [Unverified] <mô tả ngắn chỗ suy ra>` (loại 3). `## Câu hỏi mở` chỉ dành cho hành vi mơ hồ, không dùng để chứa R có trích dẫn hỏng. Sửa xong → chạy lại (a) đến (d) → chỉ qua bước 6 khi sạch. Sau 3 vòng vẫn lỗi thì dừng và báo người dùng; không nới checker.
 - [ ] 6. **Cổng duyệt diff ⏸ rồi commit.** Trình `git diff` và danh sách file mới của `docs/specs/`. Sau khi người dùng duyệt, commit qua `core:git-workflow` trên nhánh không protected (không `main`/`master`/`dev`/`develop`), header `docs(specs): …`, không thêm dòng `Co-authored-by`. Không push.
-- [ ] 7. **Chạy lại (khi đã có spec, chỉ đọc).** Đường đã chọn: subagent chỉ đọc, mỗi năng lực một con (chế độ "chạy lại" trong [references/subagent-prompt.md](references/subagent-prompt.md)), đối chiếu R với code và nguồn của chính nó, trả findings. Session chính:
-  1. chạy `check-citations.mjs docs/specs --root <gốc repo>` (như bước 5a) và điền số vào dòng "Citation hỏng" của báo cáo;
+- [ ] 7. **Báo lệch cho năng lực đã có spec (chỉ đọc).** Áp cho từng năng lực đã có `docs/specs/<năng-lực>/spec.md`, giao cùng đợt với bước 3 được. Đường đã chọn: subagent chỉ đọc, mỗi năng lực một con (chế độ "chạy lại" trong [references/subagent-prompt.md](references/subagent-prompt.md)), đối chiếu R với code và nguồn của chính nó, trả findings. Session chính:
+  1. chạy `check-citations.mjs docs/specs/<năng-lực>/spec.md --root <gốc repo>` cho từng năng lực đã có spec và cộng số vào dòng "Citation hỏng" của báo cáo;
   2. gom findings thành hai nhóm theo [references/drift-report.md](references/drift-report.md) và trả trong chat.
 
-  Không ghi file. Sau lần chạy `git status --porcelain docs/specs/` phải rỗng. Muốn sửa spec thì dùng request thường (`Ảnh hưởng spec` → bước gộp).
+  Không ghi file của các năng lực này: `git status --porcelain -- docs/specs/<năng-lực>/` của từng năng lực đã có spec phải rỗng. Muốn sửa spec thì dùng request thường (`Ảnh hưởng spec` → bước gộp).
 
 ## Quy tắc viết R (dùng ở bước 3)
 
@@ -123,20 +129,20 @@ Mỗi dòng yêu cầu là một câu hành vi đo được, có đúng một lo
 
 ## Ranh giới đầu ra
 
-- Khi chạy lần đầu, spec ghi mục `Lịch sử` mỗi R một dòng `| <ngày> | backfill <ngày> | <năng-lực>/R<n> | thêm |`, thay cho link request khi không có request gốc.
+- Khi ghi spec cho năng lực chưa có, spec ghi mục `Lịch sử` mỗi R một dòng `| <ngày> | backfill <ngày> | <năng-lực>/R<n> | thêm |`, thay cho link request khi không có request gốc.
 - Không tạo năng lực mới ngoài danh sách đã duyệt; gộp, tách hay đổi tên chỉ theo lựa chọn ở bước 2.
 
 ## Verification (trước khi báo hoàn thành)
 
-- Bước 5(a) exit 0 (in `0 trích dẫn hỏng`).
+- Bước 5(a) exit 0 (in `0 trích dẫn hỏng`) cho từng năng lực vừa ghi.
 - Bước 5(b): không có dòng `[W11]` hay `[W14]` từ thư mục request tạm; thư mục tạm đã dọn.
-- Bước 5(c): ba lệnh không in gì; mọi R có đúng một loại nguồn.
+- Bước 5(c): ba lệnh không in gì; mọi R vừa ghi có đúng một loại nguồn.
 - Bước 5(d): `git status --porcelain` không có dòng ngoài `docs/specs/`.
-- Lần chạy lại: báo cáo có hai nhóm và số citation hỏng; `git status --porcelain docs/specs/` rỗng.
+- Năng lực đã có spec: báo cáo có hai nhóm và số citation hỏng; file spec của chúng không đổi.
 - Báo residual risk: phần chưa kiểm kê, R dựa trên `[Unverified]`, mục Câu hỏi mở còn lại.
 
 ## Bản đồ tài liệu
 
 - [references/sources.md](references/sources.md): thứ tự kiểm kê nguồn rẻ → đắt, cách lọc request `merged`, bảng nguồn của R. Nạp ở bước 1.
-- [references/subagent-prompt.md](references/subagent-prompt.md): prompt mẫu cho mỗi năng lực (ghi và chạy lại), quy tắc ghi, định dạng báo cáo. Nạp ở bước 3 và 7.
-- [references/drift-report.md](references/drift-report.md): mẫu báo cáo lệch khi chạy lại (hai nhóm, số citation hỏng). Nạp ở bước 7.
+- [references/subagent-prompt.md](references/subagent-prompt.md): prompt mẫu cho mỗi năng lực (ghi; chỉ đọc cho năng lực đã có spec), quy tắc ghi, định dạng báo cáo. Nạp ở bước 3 và 7.
+- [references/drift-report.md](references/drift-report.md): mẫu báo cáo lệch cho năng lực đã có spec (hai nhóm, số citation hỏng). Nạp ở bước 7.
