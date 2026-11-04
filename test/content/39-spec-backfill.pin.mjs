@@ -25,6 +25,7 @@ export default async function run({ ok, ctx }) {
       { name: 'khoảng trắng sau số', body: '- **x/R1** — a. Nguồn: `src/a.js:3 `', want: 1 },
       { name: 'khoảng trắng sau dấu hai chấm', body: '- **x/R1** — a. Nguồn: `src/a.js: 3`', want: 1 },
       { name: 'URL không phải trích dẫn', body: '- **x/R1** — a. Gọi `http://localhost/x`', want: 0 },
+      { name: 'khoá: giá trị không phải trích dẫn', body: '- **x/R1** — trả `status: 200`, `max_attempts: 2`, `localhost:8080`', want: 0 },
       { name: 'file CRLF, dòng cuối', body: '- **x/R1** — a. Nguồn: `src/crlf.js:5`', want: 0 },
       { name: 'file CRLF, vượt cuối', body: '- **x/R1** — a. Nguồn: `src/crlf.js:6`', want: 1 },
       { name: '[Unverified] không có file:line', body: '- **x/R1** — a. Nguồn: [Unverified] suy từ code', want: 0 },

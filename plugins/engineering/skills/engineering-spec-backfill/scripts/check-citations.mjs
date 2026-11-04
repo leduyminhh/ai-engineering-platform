@@ -5,8 +5,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// Hậu tố bắt đầu bằng số mới là trích dẫn (không bắt `http://…`); range, danh sách hay cột phải bị báo, không lặng lẽ bỏ qua.
-const CITE_RE = /`([^`\s:]+):(\s*\d[^`]*)`/g;
+// Phần trước dấu hai chấm phải trông như đường dẫn (có `.` hoặc `/`) để `status: 200` hay `host:8080` không bị coi là trích dẫn;
+// hậu tố bắt đầu bằng số (không bắt `http://…`), range, danh sách hay cột phải bị báo, không lặng lẽ bỏ qua.
+const CITE_RE = /`([^`\s:]*[./][^`\s:]*):(\s*\d[^`]*)`/g;
 
 function lineCount(text) {
   const n = text.split(/\r\n|\r|\n/).length;
