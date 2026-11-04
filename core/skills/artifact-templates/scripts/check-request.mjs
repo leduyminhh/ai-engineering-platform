@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới, mục "Ảnh hưởng spec" của design.md (W10–W14) và thư mục parts/ (Bảng part W19, AC trong design của part W20), khối `calc:` của AC tính lại bằng evalCalc (W22).
+// Kiểm thư mục docs/requests/<ngày>-<slug>/: nguồn AC, ID AC, header plan.md, độ phủ AC bởi plan.md/tasks.md, AC nào chưa có test nhắc tới, mục "Ảnh hưởng spec" của design.md (W10–W14, W23 khi chưa có docs/specs/README.md) và thư mục parts/ (Bảng part W19, AC trong design của part W20), khối `calc:` của AC tính lại bằng evalCalc (W22).
 // Cách dùng: <thư-mục> [--tests <path>…] [--base <ref>] [--strict]. --base <ref> bật W13 (spec bị ảnh hưởng chưa đổi kể từ ref) và giới hạn W7 vào dòng test thêm từ ref. Chỉ cảnh báo; exit 1 chỉ khi --strict mà có cảnh báo, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -101,6 +101,12 @@ export const SPEC_SINCE = '2026-10-21';
 
 // Vòng đời một request: token đầu của dòng "- Trạng thái:" trong design.md.
 export const STATUSES = ['draft', 'approved', 'in-progress', 'merged', 'abandoned'];
+const STATUS_LINE_RE = /^-\s+Trạng thái\s*:/;
+
+export function requestStatusToken(line) {
+  if (!STATUS_LINE_RE.test(line)) return null;
+  return line.replace(/^-\s+Trạng thái\s*:\s*/, '').split(/[\s—–]/)[0].toLowerCase();
+}
 
 // Loại task của plan.md; workflow vòng task dùng kind để chọn agent/skill (xem **Kind:** trong plan template).
 export const TASK_KINDS = ['BE', 'FE-UI', 'FE-INT', 'E2E', 'DB', 'CT', 'DOCS', 'TOOLING'];
@@ -235,7 +241,7 @@ export function parseSpec(text, folder) {
   return { reqs, problems, links };
 }
 
-export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs, legacy, partDirs } = {}) {
+export function checkRequest(texts, { readTest, override, readSpec, linkExists, changedSpecs, legacy, partDirs, specsIndex } = {}) {
   const warnings = [];
   const warn = (file, line, code, msg) => warnings.push({ file, line, code, msg });
   const lines = {};
@@ -344,6 +350,8 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
     const imp = parseImpact(lines['design.md']);
     if (legacy === true) { /* thư mục request cũ: miễn W10 */ } else if (!imp.found) warn('design.md', 1, 'W10', 'design.md thiếu mục "## Ảnh hưởng spec" (liệt kê năng lực bị ảnh hưởng hoặc "Không ảnh hưởng: <lý do>")');
     else if (!imp.entries.length && !imp.none?.reason) warn('design.md', imp.line, 'W10', 'Mục "Ảnh hưởng spec" cần ít nhất một dòng "- <năng-lực>: thêm|đổi|bỏ R<n>" hoặc "Không ảnh hưởng: <lý do>" với lý do không rỗng');
+    // Xét theo file tồn tại chứ không theo chữ lý do: chưa có spec nào thì mọi "Không ảnh hưởng" giữ vòng lặp không bao giờ có spec đầu tiên.
+    else if (imp.none && specsIndex === false) warn('design.md', imp.line, 'W23', 'Repo chưa có docs/specs/README.md nên "Không ảnh hưởng" giữ spec sống trống mãi: chạy skill engineering-spec-backfill cho project đã có code, hoặc khai "- <năng-lực>: thêm R1" cho năng lực request này tạo');
     // Mỗi spec đọc và kiểm W14 một lần dù nhiều mục nhắc tới; tên sai định dạng không bao giờ tới readSpec để không đọc ngoài docs/specs.
     const cache = new Map();
     const load = (cap) => {
@@ -376,9 +384,9 @@ export function checkRequest(texts, { readTest, override, readSpec, linkExists, 
   }
   // Chỉ kiểm khi design.md có dòng "- Trạng thái:" để design cũ (không có dòng này) không bị cảnh báo hàng loạt.
   if (lines['design.md']) {
-    const at = lines['design.md'].findIndex((l) => /^-\s+Trạng thái\s*:/.test(l));
+    const at = lines['design.md'].findIndex((l) => STATUS_LINE_RE.test(l));
     if (at >= 0) {
-      const status = lines['design.md'][at].replace(/^-\s+Trạng thái\s*:\s*/, '').split(/[\s—–]/)[0].toLowerCase();
+      const status = requestStatusToken(lines['design.md'][at]);
       if (!STATUSES.includes(status)) warn('design.md', at + 1, 'W15', `Trạng thái "${status}" không hợp lệ, cần một trong: ${STATUSES.join(' | ')}`);
       else if (status === 'merged' || status === 'abandoned') {
         for (const pf of planFiles) warn(pf, 1, 'W16', `Request đã ${status}: xoá ${pf} (checklist thực thi, không còn giá trị)`);
@@ -596,7 +604,8 @@ export function main(argv) {
   const legacy = !dated || dated[1] < SPEC_SINCE;
   const root = projectRoot(dir);
   const readTest = base === undefined ? readTestFrom(root) : readTestSince(root, base, readTestFrom(root));
-  const warnings = checkRequest(texts, { legacy, partDirs, readTest, override, readSpec, linkExists, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
+  const specsIndex = fs.existsSync(path.join(specsDir, 'README.md'));
+  const warnings = checkRequest(texts, { legacy, partDirs, readTest, override, readSpec, linkExists, specsIndex, changedSpecs: base === undefined ? null : changedSpecsSince(dir, base, specsDir) });
   for (const w of warnings) console.log(`WARN ${w.file}:${w.line} [${w.code}] ${w.msg}`);
   console.log(`${warnings.length} cảnh báo`);
   return strict && warnings.length ? 1 : 0;
