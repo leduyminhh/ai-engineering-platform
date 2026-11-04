@@ -120,7 +120,7 @@ Mọi ca dùng sandbox riêng (`AIE_INSTALL_ROOT`, thư mục tạm); không `rm
 Thay đổi nằm ở `cli/`, không chiếu ra project đích, nên không bắt buộc bump version. [giả định] Nếu builder sửa file dưới `core/` hoặc `plugins/` (vd nhắc `aip init` trong một skill) thì bump `.manifest.json` của plugin chứa nó rồi `node cli/lib/versions.mjs --lock` sau `npm run build`. Project đích đã init cần chạy lại `aip init` để làm mới khối; đây là cách làm mới duy nhất.
 
 ## Ảnh hưởng spec
-- install-lifecycle: đổi R5, đổi R6, đổi R7, đổi R11, thêm R13
+- install-lifecycle: đổi R2, đổi R5, đổi R6, đổi R7, đổi R11, thêm R13
 - cli-wizard: thêm R8
 ## Ngoài phạm vi và anti-goal
 - Không đổi nội dung `core/agents/AGENTS.template.md` và `AGENTS.md` của chính repo (baseline/R1).

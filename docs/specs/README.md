@@ -5,7 +5,7 @@ Mỗi năng lực của `aip` có một spec sống tại `docs/specs/<tên>/spe
 | Năng lực | Mô tả | Spec |
 |---|---|---|
 | `projection` | Build, adapter, định dạng file theo provider | [`docs/specs/projection/spec.md`](projection/spec.md) |
-| `install-lifecycle` | install/uninstall/update/check, manifest, managed block | [`docs/specs/install-lifecycle/spec.md`](install-lifecycle/spec.md) |
+| `install-lifecycle` | install/uninstall/update/check, manifest, gỡ khối baseline legacy, cảnh báo check | [`docs/specs/install-lifecycle/spec.md`](install-lifecycle/spec.md) |
 | `hooks-gates` | guard-bash/files, gate-stop, session-start, `aip-gate.json` | [`docs/specs/hooks-gates/spec.md`](hooks-gates/spec.md) |
 | `workflows` | Workflow, orchestrator, graph | [`docs/specs/workflows/spec.md`](workflows/spec.md) |
 | `artifact-templates` | Template, `check-request`, quy ước `docs/requests` | [`docs/specs/artifact-templates/spec.md`](artifact-templates/spec.md) |

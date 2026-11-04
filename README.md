@@ -4,8 +4,8 @@
 canonical source** of AI-agent capability content and projects it into the native
 layout of **Codex, Claude Code, Cursor, and Google Antigravity**. Author a
 capability once under `plugins/` and `core/`; the CLI generates the per-provider
-skills, marketplace, rules, and workflow docs into a target project, and merges an
-"AI Engineering" baseline block into that project's `AGENTS.md` / `CLAUDE.md`.
+skills, marketplace, rules, and workflow docs into a target project. `aip init` writes an
+"AI Engineering" baseline block into that project's `AGENTS.md`; `CLAUDE.md` imports it.
 
 Pure ESM, **zero runtime dependencies**, no build step. Node.js 20+.
 
@@ -78,7 +78,7 @@ aip install --provider all --yes
 ```
 
 **5. Review the result** in the project with `aip check` — it lists each skill and written
-file (e.g. `.claude/skills/…`, `.cursor/rules/…`, baseline block in `CLAUDE.md` / `AGENTS.md`).
+file (e.g. `.claude/skills/…`, `.cursor/rules/…`). The baseline block lives in `AGENTS.md`, written by `aip init`, not by install.
 
 To update the package later:
 
@@ -259,7 +259,7 @@ Every command runs `node cli/index.mjs`.
 ```bash
 aip                 # menu wizard: init | install | uninstall | update | build
 aip --all           # wizard listing EVERY skill incl. drafts + all workflows (source installs)
-aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md importing @AGENTS.md; --full adds templates/init and .claude/settings.json (permission policy, only if missing); skips existing files
+aip init      [--full]    # creates AGENTS.md, or refreshes the baseline block between its markers (re-run to refresh; text outside the markers is kept); CLAUDE.md importing @AGENTS.md; --full adds templates/init and .claude/settings.json (permission policy, only if missing); other existing files are skipped
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
 aip uninstall [--provider ...] [--plugin ...] [--skill <a,b>] [-g] [--yes]   # alias: remove
 aip build     --provider all|<p>...   # alias flag: --target
@@ -282,7 +282,7 @@ aip status [<request>] [--json | --html [--watch]] [--part <nn>]   # read-only p
   (default-on with a whole plugin, narrow it out with an explicit `--skill core/...`).
 - **Install** is symlink-first (junctions on Windows) with a copy fallback, and is
   additive — installing another plugin or skill unions with what is already there. It
-  also merges the baseline managed block into the project's instruction file.
+  does not write the baseline block into any instruction file; `aip init` owns that block.
 - **`--as-plugin`** (Claude only) installs via the `claude` CLI as a real plugin
   (marketplace + namespaced `<id>:<skill>`) instead of flat `.claude/skills/`;
   requires `claude` on PATH. It installs the whole plugin of each selected skill
@@ -294,7 +294,8 @@ aip status [<request>] [--json | --html [--watch]] [--part <nn>]   # read-only p
   `(draft)`) and all workflows — instead of only what `plugins/_published.json` offers. It does not
   switch off the wizard; non-interactive `aip install --plugin all` already installs everything.
 - **Uninstall** (alias `remove`) removes only tracked paths (never link targets),
-  prunes emptied directories, and reference-counts the shared managed block.
+  and prunes emptied directories. Global uninstall also removes the legacy baseline block that older aip versions wrote to `~/.claude/CLAUDE.md` or `~/.codex/AGENTS.md` (a symlink is skipped with a warning); project scope never edits instruction files.
+- **`aip check`** (read-only, exit 0) warns when `~/.claude/CLAUDE.md` or `~/.codex/AGENTS.md` still holds a baseline block (duplicate with the project's `AGENTS.md`; run `aip update -g`), when the project's `AGENTS.md` block differs from the template or `CLAUDE.md` lacks `@AGENTS.md` or still holds a block (run `aip init`), and on broken markers.
 - **`aip stats`** reads the Claude Code transcripts of the current project. Without flags it prints a table of the top 10 sessions sorted by peak context (turns, first, peak, last); `--session <path>` prints the full breakdown of one session; `--json` prints raw JSON. `--usage [--since <days|yyyy-mm-dd>]` (default 7 days, filtered by each line's timestamp) aggregates tokens and money per model, main session vs subagents, plus cache signals (model switches, idle gaps over 60 minutes before a large cache write, cache writes above 50% of context). Money comes from the `cost-state` records that Claude Code writes: it covers the whole session including subagents, is not split by the `--since` window, and can differ from invoices. aip has no price table (no price list of its own) and does not predict plan limits; a session without `cost-state` shows `—` for money. [Unverified] It relies on the layout `~/.claude/projects/<slug>/*.jsonl` and on the meaning of `cost-state`, both internal to Claude Code and not a public contract. The table shows only the subagent share; the per-agent breakdown is in `--json`. `--since yyyy-mm-dd` means 00:00 UTC of that day. Each `message.id` is counted once across the whole project, including fork/resume copies; a session that lost such turns is marked in the table (money from `cost-state` is not reduced). It only reads, never prints conversation content, and writes nothing.
 - **`aip statusline`** reads the JSON Claude Code sends to a `statusLine` command and prints one line: model, context % (a warning from `--soft`, default 40, and an urgent one from `--hard`, default 60, the baseline's session-rotation thresholds), how many minutes the prompt cache stays warm, session cost and the 5-hour rate limit. It only uses fields Claude Code already sends and never reads the transcript. Add it to `settings.json` yourself: `{"statusLine":{"type":"command","command":"aip statusline","refreshInterval":60}}` (`refreshInterval` keeps the cache countdown moving while the session is idle). Colors follow `NO_COLOR` or `--no-color`. [Unverified] not yet observed inside a live Claude Code session; the 40/60 thresholds are the baseline's untested heuristics.
 - **`aip status`** shows the progress of a request (default: the request whose ledger in `.aip/runs/` is unfinished and was written last): header, gates G1 → G2 → G3 → push, "Cần bạn xử lý" (blocked or silent parts), totals, the part table, dependency edges labelled from `**Interfaces:**`, task detail and the event timeline. Part state, in priority order: blocked (latest `Blocked:` with no `Unblocked:`/`complete` after it), merged, done awaiting merge, waiting for a dependency, silent too long (no ledger line or commit for `statusStaleMinutes` from `.claude/aip-gate.json`, default 30), active, not started. `--json` prints the model, `--html` writes a self-contained `.aip/runs/<request>/status.html`, `--watch` rewrites it every 10 seconds, `--part <nn>` prints one part's detail. It reads design, plans, ledgers, `events.jsonl` and `git log` of the part branches; it writes only `status.html`.
@@ -490,10 +491,12 @@ One measured run on 2026-10-23 (n=3–5 per arm, Windows) is in the results tabl
 
 | Provider | Build output | Installed into (project scope) |
 | --- | --- | --- |
-| Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core as a dependency plugin) | `.claude/skills/<skill>`; baseline block → `CLAUDE.md` (project: → `AGENTS.md` when `CLAUDE.md` imports `@AGENTS.md`) |
+| Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core as a dependency plugin) | `.claude/skills/<skill>` |
 | Cursor | `<id>/.cursor/rules/<id>-00-principles.mdc` + `.cursor/skills/<skill>/` | `.cursor/rules` + `.cursor/skills` |
-| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agents stay in `.codex/agents/`); baseline block → `AGENTS.md` |
-| Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | on explicit install; baseline block → `AGENTS.md` |
+| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agents stay in `.codex/agents/`) |
+| Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | on explicit install |
+
+The baseline block is not a build output and no provider's install writes it. `aip init` writes it into the project's `AGENTS.md`, and `CLAUDE.md` imports that file.
 
 Any skill that ships a `references/` folder ships it to **every** provider (parity,
 enforced by `test/validate.mjs`).
