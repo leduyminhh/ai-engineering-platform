@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
-import { mergeManagedBlock, removeManagedBlock, hasOnlyWhitespace, importsAgentsMd } from "../cli/lib/managed-block.mjs";
+import { mergeManagedBlock, removeManagedBlock, hasOnlyWhitespace, importsAgentsMd, extractBaselineBlock } from "../cli/lib/managed-block.mjs";
 
 const BEGIN = "<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->";
 const END = "<!-- AI-ENGINEERING:END AGENTS_BASELINE -->";
@@ -70,4 +70,12 @@ test("merge template mới thay block cũ chứa Superpowers workflow defaults",
   assert.match(out, /BOTTOM/);
   assert.equal(out.split(BEGIN).length - 1, 1);
   assert.equal(out.split(END).length - 1, 1);
+});
+
+test("baseline-init AC1.1: extractBaselineBlock trả vùng BEGIN..END của template, ném khi thiếu marker", () => {
+  const tpl = readFileSync(new URL("../core/agents/AGENTS.template.md", import.meta.url), "utf8");
+  const block = extractBaselineBlock(tpl);
+  assert.ok(block.startsWith(BEGIN) && block.endsWith(END));
+  assert.equal(tpl.indexOf(block), tpl.indexOf(BEGIN));
+  assert.throws(() => extractBaselineBlock("# không có marker\n"), /marker/);
 });

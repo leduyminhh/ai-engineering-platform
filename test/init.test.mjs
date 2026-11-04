@@ -6,7 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { init } from "../cli/lib/init.mjs";
 import { initDocFiles } from "../cli/lib/templates.mjs";
-import { BEGIN, importsAgentsMd } from "../cli/lib/managed-block.mjs";
+import { BEGIN, END, importsAgentsMd, extractBaselineBlock } from "../cli/lib/managed-block.mjs";
+import { execFileSync } from "node:child_process";
 import { loadPolicy } from "../cli/lib/permissions.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -89,15 +90,160 @@ test("AC2.2: init --full không ghi đè docs/specs/_TEMPLATE.md đã có", () =
   assert.ok(r.skipped.includes("docs/specs/_TEMPLATE.md"));
 });
 
-test("init không ghi đè file đã có, cảnh báo khi CLAUDE.md có sẵn chưa import", () => {
-  for (const [claude, warns] of [["# Rule cũ\n", 1], ["@AGENTS.md\n# Rule cũ\n", 0]]) {
+// ── baseline-init (docs/requests/2026-11-04-project-baseline-init) ─────────────
+const TEMPLATE = fs.readFileSync(path.join(REPO, "core/agents/AGENTS.template.md"), "utf8");
+const BLOCK = extractBaselineBlock(TEMPLATE);
+const OLD_BLOCK = `${BEGIN}\nbaseline cũ\n${END}`;
+const write = (root, rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+const snapshot = (root) => Object.fromEntries(listFiles(root).sort().map((f) => [f, read(root, f)]));
+const bucketOf = (r, f) => ["created", "refreshed", "unchanged", "skipped"].filter((k) => r[k].includes(f));
+
+test("baseline-init AC1.1: init trên thư mục trống tạo AGENTS.md nguyên văn template + CLAUDE.md", () => {
+  const root = tmp();
+  const r = init({ root });
+  assert.equal(read(root, "AGENTS.md"), TEMPLATE);
+  assert.equal(read(root, "CLAUDE.md"), read(REPO, "templates/init-minimal/CLAUDE.md"));
+  assert.deepEqual([...r.created].sort(), ["AGENTS.md", "CLAUDE.md"]);
+  assert.deepEqual([r.refreshed, r.unchanged, r.skipped], [[], [], []]);
+});
+
+test("baseline-init AC1.2: AGENTS.md có khối cũ → thay vùng giữa marker, giữ nguyên ngoài marker", () => {
+  const root = tmp();
+  write(root, "AGENTS.md", `# Rule riêng\ntrên\n\n${OLD_BLOCK}\n\n## Dưới\nrule dưới\n`);
+  write(root, "CLAUDE.md", "@AGENTS.md\n");
+  const r = init({ root });
+  assert.equal(read(root, "AGENTS.md"), `# Rule riêng\ntrên\n\n${BLOCK}\n\n## Dưới\nrule dưới\n`);
+  assert.deepEqual(bucketOf(r, "AGENTS.md"), ["refreshed"]);
+});
+
+test("baseline-init AC1.3: chạy init lần hai không ghi AGENTS.md (kể cả file CRLF có khối bằng template)", () => {
+  for (const eol of ["\n", "\r\n"]) {
     const root = tmp();
-    fs.writeFileSync(path.join(root, "CLAUDE.md"), claude);
+    const text = `# Riêng${eol}${eol}${BLOCK.replace(/\n/g, eol)}${eol}`;
+    write(root, "AGENTS.md", text);
+    write(root, "CLAUDE.md", "@AGENTS.md\n");
+    const before = fs.statSync(path.join(root, "AGENTS.md")).mtimeMs;
     const r = init({ root });
-    assert.equal(read(root, "CLAUDE.md"), claude);
-    assert.deepEqual(r.skipped, ["CLAUDE.md"]);
-    assert.equal(r.warnings.length, warns, JSON.stringify(claude));
+    assert.equal(read(root, "AGENTS.md"), text, JSON.stringify(eol));
+    assert.equal(fs.statSync(path.join(root, "AGENTS.md")).mtimeMs, before);
+    assert.deepEqual(bucketOf(r, "AGENTS.md"), ["unchanged"]);
   }
+});
+
+test("baseline-init AC1.4: AGENTS.md không có marker → nối khối sau nội dung cũ", () => {
+  const root = tmp();
+  write(root, "AGENTS.md", "# Rule riêng\nchỉ của project\n");
+  write(root, "CLAUDE.md", "@AGENTS.md\n");
+  const r = init({ root });
+  assert.equal(read(root, "AGENTS.md"), `# Rule riêng\nchỉ của project\n\n${BLOCK}\n`);
+  assert.deepEqual(bucketOf(r, "AGENTS.md"), ["refreshed"]);
+});
+
+for (const [name, broken] of [["BEGIN không có END", `${BEGIN}\nx\n`], ["END trước BEGIN", `${END}\nx\n${BEGIN}\n`]]) {
+  for (const full of [false, true]) {
+    test(`baseline-init AC1.5: AGENTS.md marker hỏng (${name})${full ? " --full" : ""} → ném, không ghi file nào`, () => {
+      const root = tmp();
+      write(root, "AGENTS.md", broken);
+      write(root, "CLAUDE.md", "# Rule cũ\n");
+      const before = snapshot(root);
+      assert.throws(() => init({ root, full }), /AGENTS\.md/);
+      assert.deepEqual(snapshot(root), before);
+    });
+  }
+}
+
+for (const rel of ["AGENTS.md", "CLAUDE.md"]) {
+  test(`baseline-init AC1.6: ${rel} là symlink → bỏ qua, file đích không đổi`, () => {
+    const root = tmp();
+    const outside = tmp();
+    const target = path.join(outside, rel);
+    fs.writeFileSync(target, `# đích\n${OLD_BLOCK}\n`);
+    fs.symlinkSync(target, path.join(root, rel), "file");
+    const r = init({ root });
+    assert.equal(fs.readFileSync(target, "utf8"), `# đích\n${OLD_BLOCK}\n`);
+    assert.deepEqual(bucketOf(r, rel), ["skipped"]);
+    assert.ok(r.warnings.some((w) => w.includes(rel)), r.warnings.join("\n"));
+  });
+}
+
+test("baseline-init AC1.7: init --full vẫn giữ nguyên plan _TEMPLATE và settings.json đã có", () => {
+  const root = tmp();
+  write(root, "docs/requests/_TEMPLATE/plan.md", "# Plan cũ\n");
+  write(root, ".claude/settings.json", "{}\n");
+  const r = init({ root, full: true });
+  assert.equal(read(root, "docs/requests/_TEMPLATE/plan.md"), "# Plan cũ\n");
+  assert.equal(read(root, ".claude/settings.json"), "{}\n");
+  assert.ok(r.skipped.includes("docs/requests/_TEMPLATE/plan.md") && r.skipped.includes(".claude/settings.json"));
+});
+
+for (const [name, bom, eol] of [["LF", "", "\n"], ["CRLF", "", "\r\n"], ["BOM", "﻿", "\n"]]) {
+  test(`baseline-init AC2.1: CLAUDE.md có sẵn chưa import (${name}) → chèn @AGENTS.md ở đầu`, () => {
+    const root = tmp();
+    const old = `# Rule cũ${eol}dòng 2${eol}`;
+    write(root, "CLAUDE.md", bom + old);
+    const r = init({ root });
+    const text = read(root, "CLAUDE.md");
+    assert.ok(importsAgentsMd(text));
+    assert.equal(text.replace(/^﻿/, "").split(/\r?\n/)[0], "@AGENTS.md");
+    assert.ok(text.endsWith(old));
+    assert.deepEqual(bucketOf(r, "CLAUDE.md"), ["refreshed"]);
+    assert.ok(!r.warnings.some((w) => w.includes("chưa import")));
+  });
+}
+
+test("baseline-init AC2.2: CLAUDE.md đã import, không có khối → không đổi byte", () => {
+  const root = tmp();
+  write(root, "CLAUDE.md", "@AGENTS.md\n# Rule cũ\n");
+  const r = init({ root });
+  assert.equal(read(root, "CLAUDE.md"), "@AGENTS.md\n# Rule cũ\n");
+  assert.deepEqual(bucketOf(r, "CLAUDE.md"), ["unchanged"]);
+});
+
+for (const head of ["", "@AGENTS.md\n"]) {
+  test(`baseline-init AC2.3: CLAUDE.md chứa khối baseline${head ? " (đã import)" : ""} → gỡ khối, baseline chỉ còn ở AGENTS.md`, () => {
+    const root = tmp();
+    write(root, "CLAUDE.md", `${head}# Trên\n\n${OLD_BLOCK}\n\n# Dưới\n`);
+    const r = init({ root });
+    const claude = read(root, "CLAUDE.md");
+    assert.ok(importsAgentsMd(claude));
+    assert.ok(claude.includes("# Trên") && claude.includes("# Dưới") && !claude.includes("baseline cũ"));
+    assert.ok(read(root, "AGENTS.md").includes(BLOCK));
+    assert.equal((read(root, "AGENTS.md") + claude).split(BEGIN).length - 1, 1);
+    assert.deepEqual(bucketOf(r, "CLAUDE.md"), ["refreshed"]);
+  });
+}
+
+test("baseline-init AC2.4: AGENTS.md là symlink → CLAUDE.md giữ nguyên, có cảnh báo", () => {
+  const root = tmp();
+  const target = path.join(tmp(), "AGENTS.md");
+  fs.writeFileSync(target, OLD_BLOCK);
+  fs.symlinkSync(target, path.join(root, "AGENTS.md"), "file");
+  const claude = `# Trên\n${OLD_BLOCK}\n`;
+  write(root, "CLAUDE.md", claude);
+  const r = init({ root });
+  assert.equal(read(root, "CLAUDE.md"), claude);
+  assert.ok(r.warnings.some((w) => w.includes("CLAUDE.md") && w.includes("AGENTS.md")), r.warnings.join("\n"));
+});
+
+test("baseline-init AC5.1: mỗi file nằm đúng một nhóm created/refreshed/unchanged/skipped", () => {
+  const root = tmp();
+  write(root, "AGENTS.md", OLD_BLOCK);
+  write(root, "CLAUDE.md", "# chưa import\n");
+  write(root, "README.md", "# có sẵn\n");
+  const r = init({ root, full: true });
+  assert.deepEqual(bucketOf(r, "AGENTS.md"), ["refreshed"]);
+  assert.deepEqual(bucketOf(r, "CLAUDE.md"), ["refreshed"]);
+  assert.deepEqual(bucketOf(r, "README.md"), ["skipped"]);
+  const all = [...r.created, ...r.refreshed, ...r.unchanged, ...r.skipped];
+  assert.equal(new Set(all).size, all.length);
+});
+
+test("baseline-init AC5.2: aip init in dòng làm mới AGENTS.md", () => {
+  const root = tmp();
+  write(root, "AGENTS.md", OLD_BLOCK);
+  const out = execFileSync(process.execPath, [path.join(REPO, "cli/index.mjs"), "init"], { cwd: root, encoding: "utf8", env: { ...process.env, AIE_INSTALL_ROOT: root } });
+  assert.match(out, /^\s*~ AGENTS\.md/m);
+  assert.match(out, /marker/);
 });
 
 test("AC1.2: init --full sinh .claude/settings.json: deny = nhóm secrets, ask = ba nhóm còn lại", () => {
