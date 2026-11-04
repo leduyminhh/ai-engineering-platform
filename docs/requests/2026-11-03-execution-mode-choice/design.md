@@ -12,9 +12,13 @@
 - `core/skills/plan-execution/references/task-loop.md`, mục "Chế độ part", bước 3: `partRunner: subagent` không hỏi. Bước 7
   merge `Part: complete <hash>` ngay khi subagent báo xong, chỉ chạy full suite. Review duy nhất của part đó là review cuối
   toàn nhánh.
-- `AGENTS.md:152` và `CLAUDE.md:109` ghi "do not ask again how to execute once the plan is approved"; `AGENTS.md:220` ghi
-  việc merge part "not asked when `autonomy.partRunner` is `subagent`". Pin `test/content/32-superpowers-gap.pin.mjs`
+- `AGENTS.md:152` (xuống dòng giữa "how to" và "execute") và `CLAUDE.md:111` ghi "do not ask again how to execute once the plan
+  is approved". Câu về merge part "not asked when `autonomy.partRunner` is `subagent`" từng nằm ở `AGENTS.md:220`; request
+  `2026-11-03-baseline-slim` (master 41c54e49) đã dời mục Parallel agents sang `core/skills/git-worktree/references/parallel-agents.md:13`
+  và baseline chỉ còn dòng trỏ (`AGENTS.md:169`, không còn "partRunner"). Pin `test/content/32-superpowers-gap.pin.mjs`
   (AC5.1) giữ câu "Không hỏi người dùng chọn cách thực thi".
+- Baseline đã kín 200/200 dòng (`AGENTS.md` và `core/agents/AGENTS.template.md`; contract `test/contract/30-templates.contract.mjs`
+  đặt `MAX = 200`): mọi sửa baseline của request này phải đổi tại chỗ hoặc tự nhường chỗ, không thêm dòng ròng.
 
 Yêu cầu của người dùng (2026-11-03):
 1. Bắt buộc hỏi chọn cách thực thi (tuần tự hay subagent) trước khi `plan-execution` chạy vòng task.
@@ -49,8 +53,9 @@ Người dùng chốt:
   thì vào mục "Part vướng" như lỗi chặn (hàng người dùng). Sạch thì merge như cũ. Review part có thể chạy song song với part khác
   đang code. Phiên riêng và Tuần tự đã có review từng task nên không có review part. Review cuối toàn nhánh giữ nguyên.
 - **R6** — Sửa xung đột: `AGENTS.md` và `core/agents/AGENTS.template.md` (giữ byte-identical) cùng `CLAUDE.md` bỏ "do not ask
-  again how to execute", thay bằng quy tắc hỏi một lần ở G2. Câu "not asked when `autonomy.partRunner` is `subagent`" ở mục
-  Parallel agents sửa theo R4. `inline.md` bỏ "Không hỏi người dùng chọn cách thực thi", thêm điều kiện bật thứ ba "người dùng
+  again how to execute", thay bằng quy tắc hỏi một lần ở G2 (đổi tại chỗ, không thêm dòng: baseline đã 200/200). Câu "not asked
+  when `autonomy.partRunner` is `subagent`" nay nằm ở `core/skills/git-worktree/references/parallel-agents.md:13` (baseline
+  chỉ còn dòng trỏ), sửa ở đó theo R4; không đưa câu về `partRunner` trở lại baseline. `inline.md` bỏ "Không hỏi người dùng chọn cách thực thi", thêm điều kiện bật thứ ba "người dùng
   chọn Tuần tự". Pin AC5.1 của `32-superpowers-gap.pin.mjs` đổi theo (pin cũ vô hiệu vì hành vi đổi theo yêu cầu người dùng).
 - **R7** — Spec sống bị ảnh hưởng: `docs/specs/workflows/spec.md` (R7, R14 và requirement liên quan plan-execution),
   `docs/specs/hooks-gates/spec.md` R15 (nghĩa khoá `partRunner`), `docs/specs/cli-wizard/spec.md` R6 nếu câu chữ nói "không hỏi".
@@ -122,7 +127,7 @@ Số đầu `n` của mỗi AC là số R trong mục "Quyết định đã ch�
 - [ ] **AC5.2** — Given review trả `spec_verdict` khác `compliant`, hoặc có finding `blocker`/`major` trong phạm vi When xử lý Then giao subagent mới (`general-purpose`, `sonnet`) sửa trong worktree cũ và commit trên nhánh part, re-review có phạm vi; tối đa 2 vòng sửa; còn lỗi sau 2 vòng thì session gốc ghi `Blocked:` vào ledger part, dừng nhóm, đưa vào mục "Part vướng" và không merge
 - [ ] **AC5.3** — Given mỗi vòng review part, kể cả vòng dẫn tới sửa When ghi kết quả Then ledger part nhận dòng `Part review: <vòng> <spec_verdict> <blocker>/<major>/<minor>` (`ledger.mjs` exit 0 và `validateLine` không đổi); review sạch thì merge như cũ; `task-loop.md` ghi đúng mẫu dòng này (kiểm bằng pin 39)
 - [ ] **AC5.4** — Given part chạy Phiên riêng hoặc Tuần tự When merge Then không chạy review part; `task-loop.md` nêu rõ điều này
-- [ ] **AC6.1** — Given `AGENTS.md`, `core/agents/AGENTS.template.md` và `CLAUDE.md` When sau thay đổi Then không còn "do not ask again how to execute" và không còn "not asked when `autonomy.partRunner`"; `cmp AGENTS.md core/agents/AGENTS.template.md` báo giống nhau; `CLAUDE.md` có quy tắc hỏi một lần ở G2
+- [ ] **AC6.1** — Given `AGENTS.md`, `core/agents/AGENTS.template.md`, `CLAUDE.md` và `core/skills/git-worktree/references/parallel-agents.md` When sau thay đổi Then (a) không tệp nào trong bốn tệp còn "do not ask again how to execute" (so sau khi gộp xuống dòng, vì `AGENTS.md` xuống dòng giữa "how to" và "execute"); (b) không tệp nào còn "not asked when `autonomy.partRunner`", và `parallel-agents.md` (nơi câu này nằm sau baseline-slim) nêu khoá `partRunner` chỉ đặt lựa chọn đứng đầu còn merge part là đồng ý theo lựa chọn ở G2; (c) `cmp AGENTS.md core/agents/AGENTS.template.md` báo giống nhau, hai tệp vẫn ≤ 200 dòng theo `test/contract/30-templates.contract.mjs` và vẫn giữ dòng trỏ tới `git-worktree` / `references/parallel-agents.md`; (d) `CLAUDE.md` có quy tắc hỏi một lần ở G2
 - [ ] **AC6.2** — Given `test/content/32-superpowers-gap.pin.mjs` AC5.1 When sau thay đổi Then điều kiện "người dùng nói rõ" và "không có tool subagent" vẫn được kiểm trên `inline.md`; cặp kiểm "Không hỏi người dùng chọn cách thực thi" và `!/hỏi (người dùng )?(chọn|có muốn) (cách )?(thực thi|chạy) inline/i` được thay bằng pin 39, và pin 32 vẫn xanh
 - [ ] **AC6.3** — Given `README.md` và `README_VI.md`, mục Autonomy When đọc Then câu về part subagent nêu lựa chọn ở G2 quyết định cách chạy, không còn ngụ ý chạy nền mà không hỏi
 - [ ] **AC7.1** — Given bước gộp của request này When cập nhật spec sống Then `docs/specs/workflows/spec.md` có R18, R19 mới và bản đổi của R7, R12, R14; `docs/specs/hooks-gates/spec.md` có R15 đổi; `docs/specs/baseline/spec.md` có R6, R8 đổi; mỗi mục có dòng trong bảng Lịch sử trỏ tới request này; `check-request.mjs` trên thư mục request không báo W10, W11, W12, W14
@@ -201,8 +206,12 @@ Review part không chặn các part khác đang code, vì chạy trên nhánh pa
   dòng 16 (Ruling đầu ledger thay bằng tham chiếu dòng `root/`, mẫu chung); mục "Subagent part" (vòng sửa part, hash dòng cuối).
 - `core/skills/plan-execution/references/prompts/part-review.md`: mới (A6).
 - `core/skills/git-worktree/SKILL.md` dòng 21: câu trả lời "phiên riêng hay tuần tự" ở G2 thay câu hỏi tạo worktree.
-- `core/agents/AGENTS.template.md` và `AGENTS.md` (byte-identical): dòng 152, dòng 220.
-- `CLAUDE.md` (repo, không được projected): dòng 109.
+- `core/agents/AGENTS.template.md` và `AGENTS.md` (byte-identical): chỉ dòng 152 (Execution, đổi tại chỗ trong cùng hai dòng).
+  Dòng trỏ Parallel agents (169) không đổi. Baseline đã 200/200 dòng (contract `30-templates`), nên không thêm dòng.
+- `core/skills/git-worktree/references/parallel-agents.md` dòng 13: bỏ "not asked when `autonomy.partRunner` is `subagent`", thay
+  bằng: việc merge part được duyệt bằng lựa chọn ở G2 (lối dự phòng `plan-execution` khi không qua G2), khoá `partRunner` chỉ đặt
+  lựa chọn đứng đầu (R4). Đây là nơi duy nhất còn nói về khoá này; core bump đã có trong A12.
+- `CLAUDE.md` (repo, không được projected): dòng 111.
 - `workflows/feature/WORKFLOW.md`: Bước 4 (G2 hỏi cách thực thi, trỏ tới `ask-user.md`), Bước 5 (dòng 159–162: bỏ "thiếu khoá thì hỏi
   một lần trước mỗi nhóm"), dòng 168 (ngoại lệ subagent part), bảng Checkpoint hàng 4 (G2), đoạn Checkpoint (dòng 246, 255–256).
 - `plugins/engineering/skills/engineering-plan-writing/SKILL.md` dòng 50 (bước 7 Checkpoint plan): chỉ trỏ tới hàng G2 của
@@ -245,7 +254,8 @@ Nội dung R18 và R19 xem mục Thiết kế, "Nội dung R18 và R19". `cli-wi
 ## Ràng buộc
 - Giữ nguyên, đã kiểm trong thiết kế: P1/P2/P4 chạy tuần tự; `mergeLocal` và `cleanup` không đổi; review cuối toàn nhánh
   không đổi; push luôn hỏi và chỉ ở bước kết thúc nhánh; không merge hay push khi người dùng chưa chọn.
-- `AGENTS.md` giữ byte-identical với `core/agents/AGENTS.template.md`.
+- `AGENTS.md` giữ byte-identical với `core/agents/AGENTS.template.md`, và cả hai không vượt 200 dòng (đang 200/200; contract
+  `test/contract/30-templates.contract.mjs`). Sửa baseline chỉ đổi tại chỗ; cần thêm dòng thì tự nhường chỗ.
 - Zero-dependency; không thêm script mới; không đổi `cli/`.
 - Bump theo A12, chạy `node cli/lib/versions.mjs --lock` sau build, `npm test` xanh trước khi báo hoàn thành.
 - Tiếng Việt có dấu, UTF-8 không BOM, LF.
@@ -253,6 +263,8 @@ Nội dung R18 và R19 xem mục Thiết kế, "Nội dung R18 và R19". `cli-wi
 ## Kiểm thử
 - AC1.1–AC1.3, AC2.1, AC2.2, AC3.1, AC3.2, AC3.4, AC5.1, AC5.2, AC5.4, AC6.1, AC6.3: pin nội dung
   `test/content/39-execution-mode-choice.pin.mjs`, kiểm các câu quy tắc chính (không khớp toàn đoạn văn).
+- AC6.1: pin 39 đọc cả bốn tệp (template, `AGENTS.md`, `CLAUDE.md`, `parallel-agents.md`), gộp xuống dòng trước khi so câu, và
+  kiểm câu `partRunner` mới ở `parallel-agents.md`; giới hạn 200 dòng đã có ở contract `30-templates`, không lặp lại.
 - AC1.4, AC5.3: trong pin 39, gọi `ledger.mjs` `main` với tệp tạm, theo mẫu AC5.2 của pin 32 (exit 0 cho dòng `Ruling:` và
   `Part review:`; chưa thêm mẫu vào `EVENT_FORMATS`), cộng pin nội dung cho mẫu dòng trong `task-loop.md` và `SKILL.md`.
 - AC3.3: pin 24 `check-partition` đã có; pin 39 chỉ kiểm câu quy tắc trong `task-loop.md`.
