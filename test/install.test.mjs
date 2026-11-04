@@ -589,6 +589,18 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
       `baseline-init AC4.4: check ${name} → ${warn ? 'cảnh báo marker hỏng' : 'không cảnh báo'}, không ném`);
     ok(r.untouched, `baseline-init AC4.5: check ${name} không tạo/sửa file`);
   }
+  // init bỏ qua symlink nên check không được gợi ý `aip init` cho file là link (hoặc cho CLAUDE.md khi AGENTS.md là link).
+  for (const rel of ['AGENTS.md', 'CLAUDE.md']) {
+    const dir = mkTmp('cwf-bi-4l-');
+    process.env.AIE_INSTALL_ROOT = dir;
+    const target = path.join(mkTmp('cwf-bi-4lt-'), rel);
+    fs.writeFileSync(target, `# đích\n${BLOCK}\n`);
+    try { fs.symlinkSync(target, path.join(dir, rel), 'file'); } catch (e) { if (e.code !== 'EPERM') throw e; console.log('  (bỏ qua baseline-init AC4.2 symlink: không tạo được symlink)'); continue; }
+    fs.writeFileSync(path.join(dir, rel === 'AGENTS.md' ? 'CLAUDE.md' : 'AGENTS.md'), rel === 'AGENTS.md' ? '# Rule chưa import\n' : `${CUR}\n`);
+    let r = null;
+    withFakeClaude(() => { r = check({ scope: 'project', doctor: true }); });
+    ok(r.baseline.warnings.length === 0, `baseline-init AC4.2: check không gợi ý aip init khi ${rel} là symlink (${r.baseline.warnings.join(' | ')})`);
+  }
   {
     const dir = mkTmp('cwf-bi-45-');
     fs.writeFileSync(path.join(dir, 'AGENTS.md'), `# Riêng\n${BLOCK}\n`);

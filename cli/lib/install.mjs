@@ -862,16 +862,18 @@ function baselineWarnings(scope) {
   }
   if (scope !== 'project') return warnings;
   const root = scopeRoot('project');
-  const agents = read(path.join(root, 'AGENTS.md'));
+  // init bỏ qua file là symlink/junction (và bỏ qua CLAUDE.md khi AGENTS.md là link), nên check không gợi ý init cho chúng.
+  const agentsLink = isLinkPath(path.join(root, 'AGENTS.md'));
+  const agents = agentsLink ? null : read(path.join(root, 'AGENTS.md'));
   const ra = agents == null ? null : region(agents);
   if (ra === false) warnings.push('AGENTS.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
   else if (ra && ra !== extractBaselineBlock(read(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'))).replace(/\r\n/g, '\n')) {
     warnings.push('AGENTS.md có khối baseline cũ — chạy "aip init" để làm mới.');
   }
-  const claude = read(path.join(root, 'CLAUDE.md'));
+  const claude = isLinkPath(path.join(root, 'CLAUDE.md')) ? null : read(path.join(root, 'CLAUDE.md'));
   const rc = claude == null ? null : region(claude);
-  // AGENTS.md chưa có marker = project chưa init; AGENTS.md là link thì init bỏ qua CLAUDE.md: không nhắc import/khối.
-  const inited = ra !== null && !isLinkPath(path.join(root, 'AGENTS.md'));
+  // AGENTS.md chưa có khối hợp lệ = project chưa init (hoặc init sẽ ném vì marker hỏng): không nhắc import/khối.
+  const inited = typeof ra === 'string';
   if (rc === false) warnings.push('CLAUDE.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
   else if (inited && rc) warnings.push('CLAUDE.md còn khối baseline — chạy "aip init" để gỡ.');
   else if (inited && claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
