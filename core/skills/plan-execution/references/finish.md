@@ -10,6 +10,11 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 2. **Cập nhật spec sống.** Làm theo mục `## Ảnh hưởng spec` của design: thêm, sửa hoặc gạch bỏ `R<n>` trong
    `docs/specs/<capability>/spec.md`, thêm một hàng vào bảng lịch sử của spec; capability mới thì thêm vào
    `docs/specs/README.md`. Design ghi "Không ảnh hưởng" thì bỏ qua và ghi lý do.
+   - Capability chưa có `spec.md`: tạo từ `<thư mục skill artifact-templates>/references/spec.template.md`. Bỏ khối
+     `<!-- artifact-template … -->` đầu file, điền Mục đích, Phạm vi, các `R<n>` đúng số design khai và một dòng Lịch sử.
+     Project đã chạy `aip init --full` thì `docs/specs/_TEMPLATE.md` có sẵn cùng khung.
+   - Chưa có `docs/specs/README.md`: tạo từ `<thư mục skill artifact-templates>/references/specs-readme.template.md`,
+     bỏ khối `<!-- artifact-template … -->`, rồi thêm dòng capability vào bảng.
 3. **Chạy `check-request.mjs`** trên thư mục request (`node <thư mục skill artifact-templates>/scripts/check-request.mjs
    docs/requests/<ngày>-<slug>/`, kèm `--base <nhánh gốc>` để W7 chỉ tính test thêm trong nhánh và W13 kiểm spec sống). Cảnh báo nào còn lại phải sửa hoặc ghi vào
    `remaining_risks`; không xoá mục `**Files:**` hay test để làm cảnh báo biến mất.
@@ -42,7 +47,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 |---|---|---|
 | 1 | merge local | Chuyển sang nhánh gốc, merge nhánh feature (`--no-ff`). |
 | 2 | push + PR | Push nhánh feature (tên đã nêu ở G3) và mở PR qua `git-workflow`. |
-| 3 | giữ nguyên | Không làm gì thêm; báo tên nhánh và commit đầu/cuối. |
+| 3 | giữ nguyên | Commit docs ghi `Trạng thái` (xem "Chi tiết từng lựa chọn"); báo tên nhánh và commit đầu/cuối. |
 
 Không merge nhánh `feature/<slug>` vào nhánh gốc, không push khi người dùng chưa chọn (merge nhánh part vào `feature/<slug>` đã làm ở "Chế độ part" của `task-loop.md`; `mergeLocal: true` đã là chọn merge local); không trả lời rõ → áp lựa chọn mặc định (giữ nguyên) và nói như vậy.
 
@@ -64,6 +69,17 @@ Chỉ khi `mergeLocal: true` và người dùng đã duyệt rõ G3:
 
 ## Chi tiết từng lựa chọn
 
+Ghi `Trạng thái` trong `design.md` bằng một commit docs trước khi kết thúc, theo lựa chọn đã chọn:
+
+| Lựa chọn | Trạng thái ghi | Thời điểm |
+|---|---|---|
+| merge local (theo khoá hoặc tay) | `merged <hash merge>` | như bước 3 của "Merge local theo khoá" (kèm xoá plan) |
+| push + PR | `in-progress — PR nhánh <tên nhánh feature>` | commit docs trước khi push |
+| giữ nguyên | `in-progress — nhánh <tên nhánh feature>` | commit docs trên nhánh feature |
+
+Với hai trạng thái `in-progress`, báo cáo cuối nhắc: khi nhánh được merge tay hoặc qua PR, đặt `Trạng thái: merged <hash>`
+và xoá `plan.md`/`parts/*/plan.md` (W16 chỉ đòi xoá plan khi `merged`/`abandoned`).
+
 - **merge local** (lựa chọn tay, khi thiếu khoá `mergeLocal`; với `mergeLocal` xem "Merge local theo khoá"): nhánh gốc là nhánh protected thì cần người dùng đã chọn tường minh lựa chọn này. Sau khi merge xong,
   chạy lại full suite trên kết quả merge; đỏ → dừng, không xoá gì, báo người dùng. Xanh → `cleanup: true` thì dọn như
   "Dọn theo khoá" rồi đóng phiên con như "Đóng phiên con"; không thì hỏi một câu gộp xoá nhánh feature và đóng phiên
@@ -72,7 +88,7 @@ Chỉ khi `mergeLocal: true` và người dùng đã duyệt rõ G3:
   tên nhánh). Mô tả PR bằng tiếng Việt, tóm
   tắt thay đổi, kết quả test, các `Ruling:`; không thêm dòng `Co-Authored-By` hay attribution. Push và tạo PR theo
   `git-workflow`.
-- **giữ nguyên**: đây là lựa chọn mặc định, nhánh và (nếu có) worktree để nguyên.
+- **giữ nguyên**: đây là lựa chọn mặc định; chỉ thêm commit docs ghi `Trạng thái` (bảng trên), nhánh và (nếu có) worktree để nguyên.
 
 ## Xoá và huỷ
 

@@ -78,6 +78,10 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
 - **Ràng buộc** — giới hạn kỹ thuật/thời gian người xây phải tuân.
 - **Để builder quyết** — chi tiết triển khai giao cho người xây (tên hàm, cấu trúc nội bộ…) để builder check bỏ qua.
 - **Rủi ro và câu hỏi mở** — kèm **[giả định]** chưa xác nhận.
+- **Ảnh hưởng spec** — mục `## Ảnh hưởng spec` (khung của `design.md`): đọc `docs/specs/README.md` trước để biết năng lực
+  đã có. Mỗi năng lực bị chạm một dòng `- <năng-lực>: thêm R<n>, đổi R<m>, bỏ R<k>`; năng lực chưa có spec khai
+  `- <năng-lực>: thêm R1…`. `Không ảnh hưởng: <lý do>` chỉ khi không năng lực nào bị chạm; "repo chưa có spec" không
+  phải lý do hợp lệ. Năng lực mới cần `spec.md` ở bước gộp (`finish.md`).
 
 Quyết định lớn (khó đảo ngược, ảnh hưởng nhiều nơi) → ADR qua `engineering-adr`, `design.md` chỉ link.
 
