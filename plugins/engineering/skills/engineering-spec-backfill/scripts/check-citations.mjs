@@ -21,10 +21,10 @@ export function checkCitations(specText, { root }) {
       const ref = `${rel}:${num}`;
       const abs = path.resolve(root, rel);
       const back = path.relative(root, abs);
-      if (back.startsWith('..') || path.isAbsolute(back)) { errors.push({ line: i + 1, ref, reason: 'đường dẫn nằm ngoài root' }); continue; }
+      if (back === '..' || back.startsWith(`..${path.sep}`) || path.isAbsolute(back)) { errors.push({ line: i + 1, ref, reason: 'đường dẫn nằm ngoài root' }); continue; }
       if (!counts.has(abs)) {
         let n = null;
-        try { if (fs.statSync(abs).isFile()) n = lineCount(fs.readFileSync(abs, 'utf8')); } catch { /* n giữ null */ }
+        try { if (fs.statSync(abs).isFile()) n = lineCount(fs.readFileSync(abs, 'utf8')); } catch {}
         counts.set(abs, n);
       }
       const n = counts.get(abs);
