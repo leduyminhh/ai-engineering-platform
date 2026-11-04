@@ -37,7 +37,7 @@ export async function runWizard(action, deps = defaultDeps, { all = false } = {}
 
   if (!action) {
     const picked = await d.selectOne('aip · Chọn thao tác', [
-      { label: 'init      — tạo AGENTS.md + CLAUDE.md cho thư mục hiện tại', value: 'init' },
+      { label: 'init      — tạo hoặc làm mới AGENTS.md + CLAUDE.md cho thư mục hiện tại', value: 'init' },
       { label: 'install   — cài workflow', value: 'install' },
       { label: 'uninstall — gỡ workflow đã cài', value: 'uninstall' },
       { label: 'update    — cập nhật plugin đã cài (pull → build → cài lại)', value: 'update' },

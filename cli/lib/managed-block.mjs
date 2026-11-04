@@ -17,6 +17,16 @@ export function mergeManagedBlock(existing, baseline, relativePath) {
   return `${existing.slice(0, start)}${baseline.trim()}${existing.slice(end + END.length)}`;
 }
 
+/** Khối baseline = vùng BEGIN..END của template; phần trước BEGIN là preamble project-owned, không thuộc khối. */
+export function extractBaselineBlock(templateText) {
+  const start = templateText.indexOf(BEGIN);
+  const end = templateText.indexOf(END);
+  if (start === -1 || end === -1 || end < start) {
+    throw new Error("core/agents/AGENTS.template.md thiếu marker managed block hợp lệ");
+  }
+  return templateText.slice(start, end + END.length);
+}
+
 export function removeManagedBlock(existing) {
   const start = existing.indexOf(BEGIN);
   const end = existing.indexOf(END);

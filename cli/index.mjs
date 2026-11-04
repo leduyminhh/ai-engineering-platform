@@ -66,6 +66,9 @@ function reportInstall(r) {
 function reportInit(r) {
   console.log(`\n✓ aip init tại: ${r.root}`);
   for (const f of r.created) console.log(`  + ${f}`);
+  for (const f of r.refreshed) console.log(`  ~ ${f}`);
+  if (r.refreshed.includes('AGENTS.md')) console.log('    (vùng giữa marker AI-ENGINEERING của AGENTS.md do aip quản lý; rule riêng đặt ngoài marker)');
+  if (r.unchanged.length) console.log(`  (đã đúng, không ghi: ${r.unchanged.join(', ')})`);
   if (r.skipped.length) console.log(`  (giữ nguyên ${r.skipped.length} file đã có: ${r.skipped.join(', ')})`);
   for (const w of r.warnings) console.log(`  ⚠ ${w}`);
   console.log('  Tiếp theo: aip install --provider claude --plugin core   (Codex: chạy thêm với --provider codex)');
