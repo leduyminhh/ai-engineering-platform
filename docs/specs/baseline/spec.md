@@ -1,6 +1,6 @@
 # Spec: baseline
 
-Cập nhật: 2026-11-03
+Cập nhật: 2026-11-04
 
 ## Mục đích
 

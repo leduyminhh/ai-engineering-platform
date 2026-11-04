@@ -582,6 +582,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     ['chưa có AGENTS.md, CLAUDE.md riêng chưa import', { 'CLAUDE.md': '# Rule riêng\n' }, null],
     ['chưa có AGENTS.md, CLAUDE.md marker hỏng', { 'CLAUDE.md': `${MARK}\nthiếu END\n` }, 'CLAUDE.md'],
     ['AGENTS.md không marker', { 'AGENTS.md': '# Riêng\n', 'CLAUDE.md': '@AGENTS.md\n' }, null],
+    ['AGENTS.md không marker, CLAUDE.md riêng chưa import', { 'AGENTS.md': '# Riêng\n', 'CLAUDE.md': '# Rule\n' }, null],
   ]) {
     const r = checkWarnings(files);
     ok(!r.err && (warn ? has(r.warnings, warn, /hỏng/) : r.warnings.length === 0),

@@ -858,7 +858,7 @@ function baselineWarnings(scope) {
     const text = read(path.join(scopeRoot('global'), rel));
     const r = text == null ? null : region(text);
     if (r === false) warnings.push(`${rel} (global) có marker khối baseline hỏng — sửa tay.`);
-    else if (r) warnings.push(`${rel} (global) còn khối baseline, nạp trùng với AGENTS.md của project — chạy "aip update -g" để gỡ.`);
+    else if (r) warnings.push(`${rel} (global) còn khối baseline, nạp vào mọi project và trùng với AGENTS.md do aip init ghi — chạy "aip update -g" để gỡ (manifest global không còn ghi file này thì xoá tay vùng giữa marker AI-ENGINEERING).`);
   }
   if (scope !== 'project') return warnings;
   const root = scopeRoot('project');
@@ -870,10 +870,11 @@ function baselineWarnings(scope) {
   }
   const claude = read(path.join(root, 'CLAUDE.md'));
   const rc = claude == null ? null : region(claude);
-  // Chưa có AGENTS.md = project chưa init: chỉ báo marker hỏng, không nhắc import/khối cho CLAUDE.md riêng của nó.
+  // AGENTS.md chưa có marker = project chưa init; AGENTS.md là link thì init bỏ qua CLAUDE.md: không nhắc import/khối.
+  const inited = ra !== null && !isLinkPath(path.join(root, 'AGENTS.md'));
   if (rc === false) warnings.push('CLAUDE.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
-  else if (agents != null && rc) warnings.push('CLAUDE.md còn khối baseline — chạy "aip init" để gỡ.');
-  else if (agents != null && claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
+  else if (inited && rc) warnings.push('CLAUDE.md còn khối baseline — chạy "aip init" để gỡ.');
+  else if (inited && claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
   return warnings;
 }
 
