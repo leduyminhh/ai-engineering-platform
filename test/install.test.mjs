@@ -420,8 +420,11 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     ['claude plugin', { providers: 'claude', plugins: 'backend', mode: 'plugin' }, true],
     ['codex', { providers: 'codex', plugins: 'core' }, false],
     ['cursor', { providers: 'cursor', plugins: 'core' }, false],
+    ['antigravity', { providers: 'antigravity', plugins: 'backend' }, false],
   ]) {
     for (const seeded of [false, true]) {
+      // AGENTS.md sinh sẵn của antigravity là artifact skill (symlink vào build/), không phải khối baseline: chỉ kiểm ca đã init.
+      if (name === 'antigravity' && !seeded) continue;
       const dir = mkTmp('cwf-bi-31-');
       process.env.AIE_INSTALL_ROOT = dir;
       if (seeded) { fs.writeFileSync(path.join(dir, 'AGENTS.md'), `# Riêng\n\n${BLOCK}\n`); fs.writeFileSync(path.join(dir, 'CLAUDE.md'), '@AGENTS.md\n'); }
@@ -471,14 +474,17 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     ['install', () => install({ providers: 'codex', plugins: 'core', scope: 'project' })],
     ['update', () => update({ scope: 'project', pull: false })],
     ['uninstall', () => uninstall({ providers: 'codex', scope: 'project' })],
+    ['update (plugin-refresh)', () => update({ scope: 'project', pull: false }), true],
   ]) {
     for (const rel of ['AGENTS.md', 'CLAUDE.md']) {
       const dir = mkTmp('cwf-bi-34-');
       process.env.AIE_INSTALL_ROOT = dir;
-      install({ providers: 'codex', plugins: 'core', scope: 'project' });
-      addLegacyManaged(dir, [rel]);
-      fs.writeFileSync(path.join(dir, rel), `# Riêng\n${BLOCK}\n`);
-      act();
+      withFakeClaude(() => {
+        install(name.includes('plugin') ? { providers: 'claude', plugins: 'backend', mode: 'plugin', scope: 'project' } : { providers: 'codex', plugins: 'core', scope: 'project' });
+        addLegacyManaged(dir, [rel]);
+        fs.writeFileSync(path.join(dir, rel), `# Riêng\n${BLOCK}\n`);
+        act();
+      });
       ok(readAt(dir, rel) === `# Riêng\n${BLOCK}\n`, `baseline-init AC3.4: ${name} ở project không sửa ${rel} có khối`);
       ok(noManaged(dir), `baseline-init AC3.4: ${name} ở project bỏ managed khỏi manifest`);
     }
@@ -495,8 +501,11 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     const target = path.join(mkTmp('cwf-bi-35t-'), 'CLAUDE.md');
     const content = kind === 'marker hỏng' ? `# Riêng\n${MARK}\nthiếu END\n` : `# Riêng\n${BLOCK}\n`;
     fs.rmSync(abs, { force: true });
-    if (kind === 'symlink') { fs.writeFileSync(target, content); fs.symlinkSync(target, abs, 'file'); }
-    else fs.writeFileSync(abs, content);
+    if (kind === 'symlink') {
+      fs.writeFileSync(target, content);
+      // Windows không bật Developer Mode thì symlinkSync ném EPERM: bỏ ca, harness ok() không bắt ngoại lệ.
+      try { fs.symlinkSync(target, abs, 'file'); } catch (e) { if (e.code !== 'EPERM') throw e; console.log('  (bỏ qua baseline-init AC3.5 symlink: không tạo được symlink)'); continue; }
+    } else fs.writeFileSync(abs, content);
     let err = null;
     const warned = warnings(() => { try { uninstall({ providers: 'claude', scope: 'global' }); } catch (e) { err = e; } });
     if (kind === 'thường') ok(!err && readAt(dir, '.claude/CLAUDE.md') === '# Riêng\n\n', 'baseline-init AC3.5: uninstall -g gỡ khối legacy');
@@ -1086,7 +1095,7 @@ try {
   fs.rmSync(TMP_PK, { recursive: true, force: true });
 }
 
-// ── audit 2026-11-03: manifest hỏng, cài dở khi managed block hỏng, managed block xuyên symlink ─────────
+// ── audit 2026-11-03: manifest hỏng, ghi manifest sau từng provider, không ghi xuyên symlink ─────────
 {
   const MARK = '<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->';
   const withRoot = (prefix, fn) => {
