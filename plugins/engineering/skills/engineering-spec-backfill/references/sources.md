@@ -53,7 +53,7 @@ Mỗi R chỉ có một loại nguồn. Loại được chọn theo bằng chứ
 |---|---|---|---|
 | 1. Request đã merge | Design có token `merged` và code khớp hành vi | `[<slug>](../../requests/<ngày>-<slug>/design.md)` | Kiểm code còn khớp trước khi chọn loại này |
 | 2. Code và test | Có test đặt tên theo hành vi | `` `file:line` `` + tên test trong ngoặc | Dòng `file:line` là dòng khai báo test hoặc dòng thực thi hành vi |
-| 3. Chỉ suy từ code | Không có test hay doc xác nhận | `` `file:line` `` + `[Unverified]` | Ghi rõ đang suy từ code; không viết như sự thật đã kiểm |
+| 3. Chỉ suy từ code | Không có test hay doc xác nhận | `` `file:line` `` + `[Unverified]`; không chỉ ra được một dòng: `[Unverified] <mô tả ngắn chỗ suy ra>` | Ghi rõ đang suy từ code; không viết như sự thật đã kiểm |
 | 4. Design lệch code | Design `merged` nhưng code làm khác | `` `file:line` `` (code) + `lệch: [<slug>](…/design.md)` | R theo code, không theo design |
 
 Quy tắc chung:

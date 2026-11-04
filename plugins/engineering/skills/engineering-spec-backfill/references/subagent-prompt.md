@@ -34,9 +34,11 @@ Bạn dựng spec sống cho một năng lực của project <tên project>. Ch�
 - Đúng một loại nguồn:
   1. Request đã `merged` mô tả hành vi và code khớp: `[<slug>](../../requests/<ngày>-<slug>/design.md)`
   2. Chỉ có code và test: `` `file:line` `` + tên test trong ngoặc
-  3. Chỉ suy từ code: `` `file:line` `` + `[Unverified]`
+  3. Chỉ suy từ code: `` `file:line` `` + `[Unverified]`; không chỉ ra được một dòng: `[Unverified] <mô tả ngắn chỗ suy ra>`
   4. Design `merged` nhưng code khác: `` `file:line` `` (code) + `lệch: [<slug>](../../requests/<ngày>-<slug>/design.md)`
-- Trích dẫn `` `file:line` `` viết liền, không dấu cách, không range, không `dòng:cột`.
+- Trích dẫn `` `file:line` `` viết liền trong một cặp backtick, đường dẫn tính từ gốc repo, đúng một số nguyên sau dấu hai chấm: không dấu cách, không range, không danh sách, không `dòng:cột`.
+- Phần trước dấu hai chấm phải có `.` hoặc `/`: file không đuôi ghi `./Makefile:3`, không ghi `Makefile:3`.
+- Không chắc dòng nào thì không đoán `file:line`; dùng dạng `[Unverified] <mô tả>` của loại 3.
 
 ## Cấu trúc file cần ghi
 # Spec: <tên-kebab>

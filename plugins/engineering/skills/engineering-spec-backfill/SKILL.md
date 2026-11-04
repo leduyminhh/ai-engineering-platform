@@ -51,7 +51,7 @@ Sao checklist này vào phản hồi và đánh dấu từng bước khi làm:
     Kỳ vọng exit 0 và `0 trích dẫn hỏng`.
   - (b) **W14** (cấu trúc spec). W14 chỉ kiểm spec qua một thư mục request khai năng lực, nên chạy trên một request tạm: copy cả `docs/` của project vào thư mục tạm (link `../../decisions/…`, `../../requests/…` trong spec phải resolve được), rồi khai mọi năng lực có `spec.md` trong một design giả:
     ```bash
-    TMP="/đường/dẫn/thật/ngoài/repo/w14-check"         # thay bằng thư mục scratchpad thật; nếu còn sót từ lần trước thì dọn bằng node trước
+    TMP="<thư mục scratchpad>/w14-check"   # nếu còn sót từ lần trước thì dọn bằng lệnh node ở cuối mục này trước
     mkdir -p "$TMP"
     cp -r docs "$TMP/docs"
     REQ="$TMP/docs/requests/$(date +%F)-backfill-check"
@@ -71,20 +71,20 @@ Sao checklist này vào phản hồi và đánh dấu từng bước khi làm:
     ```bash
     # R thiếu Nguồn:
     grep -nE '^\s*[-*]\s+\*\*[a-z0-9-]+/R[0-9]+\*\*' docs/specs/*/spec.md | grep -v 'Nguồn:'
-    # Nguồn không đúng một trong bốn dạng:
-    grep -nE 'Nguồn:' docs/specs/*/spec.md | grep -vE 'Nguồn: \[[^]]+\]\(\.\./\.\./requests/[^)]+/design\.md\)$|Nguồn: `[^` ]+:[0-9]+` \(test .+\)$|Nguồn: `[^` ]+:[0-9]+` \[Unverified\]$|Nguồn: `[^` ]+:[0-9]+` lệch: \[[^]]+\]\(\.\./\.\./requests/[^)]+/design\.md\)$'
+    # Nguồn không đúng dạng của bốn loại (loại 3 có hai dạng):
+    grep -nE 'Nguồn:' docs/specs/*/spec.md | grep -vE 'Nguồn: \[[^]]+\]\(\.\./\.\./requests/[^)]+/design\.md\)$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` \(test .+\)$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` \[Unverified\]$|Nguồn: \[Unverified\] [^ ].*$|Nguồn: `[^`: ]*[./][^`: ]*:[0-9]+` lệch: \[[^]]+\]\(\.\./\.\./requests/[^)]+/design\.md\)$'
     # Request làm nguồn R (chỉ dòng Nguồn, không tính mục Lịch sử) phải có dòng "- Trạng thái: merged":
     for f in $(grep -h 'Nguồn:' docs/specs/*/spec.md | grep -ohE '\.\./\.\./requests/[^)]+/design\.md' | sort -u | sed 's#^\.\./\.\./#docs/#'); do grep -qE '^-\s+Trạng thái\s*:\s*merged\b' "$f" || echo "chưa merged: $f"; done
     ```
     Ba lệnh này áp cho spec do skill này ghi. Spec sống do request ghi (có `(thêm)`/`(đổi)`, nhiều link trong một dòng, link trong Lịch sử) không đúng dạng này: không kiểm bằng (c).
-    Dòng nào in ra thì sửa trước cổng duyệt: đưa về đúng dạng bốn loại; không đủ `file:line` thì chuyển R sang `## Câu hỏi mở`.
+    Dòng nào in ra thì sửa trước cổng duyệt: đưa về đúng dạng của bốn loại (xem **Vòng kiểm**).
   - (d) **Phạm vi file**: mọi thay đổi phải nằm dưới `docs/specs/`:
     ```bash
     git status --porcelain | grep -vE '^.. docs/specs/'
     ```
     Kỳ vọng rỗng. Dòng còn lại là thay đổi có sẵn trước khi chạy hoặc lỗi: liệt kê cho người dùng, không tự xử lý.
 
-  **Vòng kiểm:** lỗi thì sửa đúng `file:line` (đọc lại file để chọn dòng). Không tìm được dòng đúng thì chuyển R đó sang mục `## Câu hỏi mở` của spec, không để Nguồn thiếu `file:line`. Sửa xong → chạy lại (a) đến (d) → chỉ qua bước 6 khi sạch. Sau 3 vòng vẫn lỗi thì dừng và báo người dùng; không nới checker.
+  **Vòng kiểm:** trích dẫn hỏng thì sửa thành `file:line` đúng (đọc lại file để chọn dòng). Không tìm được dòng đúng thì bỏ token `file:line` hỏng và ghi `Nguồn: [Unverified] <mô tả ngắn chỗ suy ra>` (loại 3). `## Câu hỏi mở` chỉ dành cho hành vi mơ hồ, không dùng để chứa R có trích dẫn hỏng. Sửa xong → chạy lại (a) đến (d) → chỉ qua bước 6 khi sạch. Sau 3 vòng vẫn lỗi thì dừng và báo người dùng; không nới checker.
 - [ ] 6. **Cổng duyệt diff ⏸ rồi commit.** Trình `git diff` và danh sách file mới của `docs/specs/`. Sau khi người dùng duyệt, commit qua `core:git-workflow` trên nhánh không protected (không `main`/`master`/`dev`/`develop`), header `docs(specs): …`, không thêm dòng `Co-authored-by`. Không push.
 - [ ] 7. **Chạy lại (khi đã có spec, chỉ đọc).** Đường đã chọn: subagent chỉ đọc, mỗi năng lực một con (chế độ "chạy lại" trong [references/subagent-prompt.md](references/subagent-prompt.md)), đối chiếu R với code và nguồn của chính nó, trả findings. Session chính:
   1. chạy `check-citations.mjs docs/specs --root <gốc repo>` (như bước 5a) và điền số vào dòng "Citation hỏng" của báo cáo;
@@ -102,6 +102,7 @@ Mỗi dòng yêu cầu là một câu hành vi đo được, có đúng một lo
 - **billing/R1** — Hoá đơn quá hạn 30 ngày được đánh dấu `overdue` khi chạy job nhắc nợ. Nguồn: `src/billing/overdue.ts:41` (test "marks invoice overdue after 30 days")
 - **billing/R2** — Hoàn tiền một phần không vượt số tiền đã thu. Nguồn: [refund-partial](../../requests/2026-03-02-refund-partial/design.md)
 - **billing/R3** — Phí trễ hạn tính theo ngày lịch. Nguồn: `src/billing/late-fee.ts:18` [Unverified]
+- **billing/R4** — Job nhắc nợ chạy mỗi ngày một lần. Nguồn: [Unverified] lịch cron trong cấu hình deploy, không chỉ ra được một dòng
 
 ## Câu hỏi mở
 
@@ -112,11 +113,12 @@ Mỗi dòng yêu cầu là một câu hành vi đo được, có đúng một lo
 |---|---|---|
 | 1 | Design `merged` mô tả hành vi và code khớp | link `../../requests/<ngày>-<slug>/design.md` |
 | 2 | Chỉ có code và test | `` `file:line` `` + tên test trong `(test "…")` |
-| 3 | Chỉ suy từ code, không test hay doc nào xác nhận | `` `file:line` `` + `[Unverified]` |
+| 3 | Chỉ suy từ code, không test hay doc nào xác nhận | ưu tiên `` `file:line` `` + `[Unverified]`; không chỉ ra được một dòng thì `[Unverified] <mô tả ngắn chỗ suy ra>` |
 | 4 | Design `merged` nhưng code khác design | theo code: `` `file:line` `` + `lệch: [<slug>](…/design.md)` |
 
 - Mơ hồ, không biết đúng hay sai → không thành R; đưa vào `## Câu hỏi mở`.
-- Mọi trích dẫn `` `file:line` `` là đúng một số nguyên sau dấu hai chấm. Không dùng khoảng (hai số nối bằng gạch ngang), không dùng danh sách (số ngăn bằng dấu phẩy), không dùng cột (thêm dấu hai chấm và số thứ hai). Checker báo lỗi các dạng đó.
+- Mọi trích dẫn `` `file:line` `` viết liền trong một cặp backtick, đường dẫn tính từ gốc repo, rồi đúng một số nguyên sau dấu hai chấm. Không dùng khoảng (hai số nối bằng gạch ngang), không dùng danh sách (số ngăn bằng dấu phẩy), không dùng cột (thêm dấu hai chấm và số thứ hai), không có dấu cách; checker báo lỗi các dạng đó.
+- Phần trước dấu hai chấm phải có `.` hoặc `/`, nếu không checker coi là chữ thường và bỏ qua: file không đuôi ghi `./Makefile:3`, không ghi `Makefile:3`.
 - ID tăng dần từ `R1`, không tái dùng số đã bỏ.
 
 ## Ranh giới đầu ra
