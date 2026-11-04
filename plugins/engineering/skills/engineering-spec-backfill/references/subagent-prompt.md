@@ -77,7 +77,7 @@ agent_result:
 
 ## Chế độ chạy lại (bước 7)
 
-Dùng khi đã có `docs/specs/<tên-kebab>/spec.md`. Thay phần "Được phép" và "Cấu trúc file" bằng:
+Dùng khi đã có `docs/specs/<tên-kebab>/spec.md`. Thay phần "Được phép" và "Cấu trúc file cần ghi" bằng:
 
 ```text
 ## Chế độ chạy lại: chỉ đọc
