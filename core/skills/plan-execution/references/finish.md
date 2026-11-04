@@ -31,7 +31,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
    `git remote`: kết quả rỗng thì repo chưa có remote, lựa chọn push + PR ghi "không khả dụng: repo chưa có remote" và
    không gợi ý lệnh `git push`.
 7. **G3.** Theo `ask-user.md`: mở diff cả nhánh ở pane diff trước, rồi hỏi bằng lựa chọn bấm được (`mergeLocal: true`: Duyệt / Sửa thêm / Giữ nguyên; thiếu khoá: 3 lựa chọn bên dưới), không chỉ viết câu hỏi bằng chữ. Một tin nhắn: diff cả nhánh + `rulings` + finding còn lại (`remaining_risks`) + tên nhánh feature và nhánh gốc
-   (bước 6), rồi rẽ theo khoá `mergeLocal` của `autonomy.mjs` (đã đọc ở bước Chuẩn bị của skill):
+   (bước 6), dòng nhắc merge tay (cho lựa chọn 2 hoặc 3, xem "Ghi nhận"), rồi rẽ theo khoá `mergeLocal` của `autonomy.mjs` (đã đọc ở bước Chuẩn bị của skill):
    - `mergeLocal: true`: bản trình G3 nêu tên nhánh gốc và hai commit sẽ tạo trên đó: commit merge `--no-ff` của nhánh
      feature, rồi một commit docs (Trạng thái `merged <hash>`, xoá `plan.md` và `parts/*/plan.md`); và xin một câu duyệt
      rõ (vd "duyệt" hoặc "merge"). Câu trả lời mơ hồ thì hỏi lại đúng một lần; vẫn không rõ thì không merge, áp lựa chọn
@@ -39,13 +39,13 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
      chủ đích của "dừng trước mỗi commit" trên nhánh protected, chỉ cho đúng hai commit này). Làm theo mục "Merge local
      theo khoá" bên dưới, không hỏi thêm; push/PR hỏi riêng một lần sau khi merge local xong (bước 5 của mục đó).
    - Thiếu khoá (hoặc `mergeLocal: false`): đưa đúng 3 lựa chọn dưới đây ngay trong câu hỏi G3, lựa chọn mặc định là giữ
-     nguyên. Push + PR là lựa chọn 2 của chính câu hỏi này: chọn nó là đồng ý push nhánh feature đã nêu tên, không hỏi lại.
+     nguyên. Lựa chọn 1 gồm hai commit (merge `--no-ff` và commit docs `merged <hash>`): chọn nó là đồng ý cả hai, như đường `mergeLocal: true`. Push + PR là lựa chọn 2 của chính câu hỏi này: chọn nó là đồng ý push nhánh feature đã nêu tên, không hỏi lại.
 
    Không khoá nào bật push.
 
 | # | Lựa chọn | Việc làm |
 |---|---|---|
-| 1 | merge local | Chuyển sang nhánh gốc, merge nhánh feature (`--no-ff`). |
+| 1 | merge local | Chuyển sang nhánh gốc, merge nhánh feature (`--no-ff`), rồi commit docs đặt `Trạng thái: merged <hash>` (xem "Chi tiết từng lựa chọn"); chọn lựa chọn này là đồng ý cả hai commit. |
 | 2 | push + PR | Push nhánh feature (tên đã nêu ở G3) và mở PR qua `git-workflow`. |
 | 3 | giữ nguyên | Commit docs ghi `Trạng thái` (xem "Chi tiết từng lựa chọn"); báo tên nhánh và commit đầu/cuối. |
 
