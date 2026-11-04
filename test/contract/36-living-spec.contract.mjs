@@ -79,7 +79,7 @@ export default async function run({ ok, ctx }) {
       { name: 'thư mục legacy', impact: 'Không ảnh hưởng: x', opts: { specsIndex: false, legacy: true }, want: 0 },
       { name: 'không truyền specsIndex', impact: 'Không ảnh hưởng: x', opts: {}, want: 0 },
     ];
-    for (const c of cases) ok(w23(c.impact, c.opts).length === c.want, `AC2.1–AC2.4: W23 — ${c.name}`);
+    for (const c of cases) ok(w23(c.impact, c.opts).length === c.want, `AC2.1 AC2.2 AC2.3 AC2.4: W23 — ${c.name}`);
     const one = w23('Không ảnh hưởng: x', { specsIndex: false })[0];
     ok(one && one.file === 'design.md' && one.line === 5 && one.msg.includes('engineering-spec-backfill') && one.msg.includes('thêm R1'),
       'AC2.1: W23 ở dòng heading, gợi ý engineering-spec-backfill và cách khai năng lực mới');
