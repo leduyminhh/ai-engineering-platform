@@ -27,6 +27,7 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | adr | [adr.template.md](references/adr.template.md) | chưa có | MADR 4.0.0 (adr.github.io/madr); Nygard 2011 (Documenting Architecture Decisions) |
 | handoff | [handoff.template.md](references/handoff.template.md) | chưa có | docs/requests/2026-10-21-long-session-context/design.md (D4); Claude Code prompt-caching (session rotation) |
 | spec | [spec.template.md](references/spec.template.md) | `scripts/check-request.mjs` | docs/requests/2026-10-21-living-spec/design.md (P7); Kiro specs; GitHub Spec Kit; Thoughtworks Technology Radar "spec-anchored" |
+| specs-readme | [specs-readme.template.md](references/specs-readme.template.md) | `scripts/check-request.mjs` | docs/requests/2026-11-04-living-spec-bootstrap/design.md (W23 kiểm file này có tồn tại) |
 | brief | [brief.template.md](references/brief.template.md) | `scripts/check-request.mjs` | docs/requests/2026-10-31-brainstorming-routing/design.md |
 | project-knowledge | [project-knowledge/](references/project-knowledge/) | chưa có | Chuyển nguyên từ templates/init/project-knowledge (giữ nội dung); tech-stack.yml không có khối header |
 

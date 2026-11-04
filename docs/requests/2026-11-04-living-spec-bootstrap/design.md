@@ -25,7 +25,7 @@ Người dùng chốt (session chính, 2026-11-04), không bàn lại:
 1. **A1.** `engineering-spec-writing` thêm bước điền `## Ảnh hưởng spec`: đọc `docs/specs/README.md`; năng lực chưa có spec thì khai `- <năng-lực>: thêm R1…`; "chưa có spec" không phải lý do hợp lệ cho `Không ảnh hưởng`.
 2. **A2.** `check-request.mjs` thêm cảnh báo **W23** khi design ghi `Không ảnh hưởng` mà `docs/specs/README.md` (theo `specsDir` mà `check-request` đang dùng) không tồn tại. Thông điệp gợi ý chạy skill `engineering-spec-backfill` hoặc khai năng lực mới. Điều kiện dựa vào việc file có tồn tại, không so chữ lý do. Chỉ áp cho thư mục request mà W10 kiểm (miễn legacy như W10). Vẫn chỉ cảnh báo.
 3. **A3.** `finish.md` bước 2: năng lực chưa có `spec.md` thì tạo từ `spec.template.md`; chưa có `docs/specs/README.md` thì tạo (bảng năng lực + bản đồ docs). Ghi trạng thái ở mọi lựa chọn G3: merge local → `merged <hash>`; push + PR → `in-progress — PR <link hoặc nhánh>`; giữ nguyên → `in-progress — nhánh <tên>`; kèm hướng dẫn "khi merge tay sau này, đặt `merged <hash>`".
-4. **A4.** `templates/init/docs/specs/README.md` để `aip init --full` tạo sẵn (không ghi đè file có sẵn, đúng hành vi init hiện tại).
+4. **A4.** `core/skills/artifact-templates/references/specs-readme.template.md` để `aip init --full` tạo sẵn (không ghi đè file có sẵn, đúng hành vi init hiện tại).
 
 **B. Skill mới `engineering-spec-backfill`** trong plugin `engineering`:
 1. Kiểm kê nguồn từ rẻ đến đắt: docs có sẵn (ARD, overview, docs project, ADR `docs/decisions/`, contracts) → `design.md` của request đã hiện thực → điểm vào code (API/route, job/worker, schema) → tên test.
@@ -70,13 +70,13 @@ Mọi ca test dùng thư mục tạm; không `rm -rf` sandbox có junction, dọ
 - [ ] **AC2.4** — Given thư mục request cũ (trước 2026-10-21 hoặc không có tiền tố ngày), hoặc lời gọi không truyền `specsIndex` When chạy Then không W23; và chạy CLI `check-request.mjs` trên thư mục thật không có `docs/specs/README.md` thì in W23 với exit 0 (exit 1 chỉ khi `--strict`).
 
 **`finish.md`: spec đầu tiên và trạng thái (R3).**
-- [ ] **AC3.1** — Given design khai năng lực chưa có `docs/specs/<năng-lực>/spec.md` When `finish.md` bước "Cập nhật spec sống" Then bước nói tạo `spec.md` từ `spec.template.md` (bỏ khối `<!-- artifact-template -->`, có bảng Lịch sử), và khi chưa có `docs/specs/README.md` thì tạo nó theo mẫu của `templates/init/docs/specs/README.md` rồi thêm dòng năng lực.
+- [ ] **AC3.1** — Given design khai năng lực chưa có `docs/specs/<năng-lực>/spec.md` When `finish.md` bước "Cập nhật spec sống" Then bước nói tạo `spec.md` từ `spec.template.md` (bỏ khối `<!-- artifact-template -->`, có bảng Lịch sử), và khi chưa có `docs/specs/README.md` thì tạo nó theo mẫu của `core/skills/artifact-templates/references/specs-readme.template.md` rồi thêm dòng năng lực.
 - [ ] **AC3.2** — Given người dùng chọn "push + PR" ở G3 When `finish.md` hướng dẫn ghi nhận Then `design.md` được đặt `Trạng thái: in-progress — PR …` (có nhánh hoặc link) trong một commit docs trước khi push.
 - [ ] **AC3.3** — Given người dùng chọn "giữ nguyên" ở G3 When `finish.md` hướng dẫn ghi nhận Then `design.md` được đặt `Trạng thái: in-progress — nhánh <tên>` trong một commit docs trên nhánh feature, và đường merge local vẫn đặt `merged <hash>` như hiện tại.
 - [ ] **AC3.4** — Given kết quả cuối (`workflow_result` hoặc báo cáo G3) của lựa chọn push + PR hoặc giữ nguyên When đọc Then có dòng nhắc người merge tay hoặc qua PR sau này đặt `Trạng thái: merged <hash>` và xoá `plan.md` (W16).
 
 **`aip init --full` tạo `docs/specs/README.md` (R4).**
-- [ ] **AC4.1** — Given thư mục chưa có `docs/specs/README.md` When `init({root, full: true})` Then file được tạo từ `templates/init/docs/specs/README.md`, nằm trong `created`, có ba phần (bảng năng lực, bản đồ docs, lệnh `aip status --requests`) và không có bảng request đang mở.
+- [ ] **AC4.1** — Given thư mục chưa có `docs/specs/README.md` When `init({root, full: true})` Then file được tạo từ `core/skills/artifact-templates/references/specs-readme.template.md`, nằm trong `created`, có ba phần (bảng năng lực, bản đồ docs, lệnh `aip status --requests`) và không có bảng request đang mở.
 - [ ] **AC4.2** — Given `docs/specs/README.md` đã có nội dung khác When `init({root, full: true})` Then file không đổi byte và nằm trong `skipped`; `init` không `--full` không tạo file này.
 
 **Skill `engineering-spec-backfill` (R5).**
@@ -95,7 +95,7 @@ Mọi ca test dùng thư mục tạm; không `rm -rf` sandbox có junction, dọ
 - [ ] **AC6.5** — Given không có `docs/requests/` hoặc không request nào đang mở When `aip status --requests` Then in một dòng nói không có request đang mở và exit 0.
 
 **`docs/specs/README.md` dạng mới và bản đồ docs (R7).**
-- [ ] **AC7.1** — Given `docs/specs/README.md` của repo này và `templates/init/docs/specs/README.md` When đọc Then mỗi file có bảng năng lực, bản đồ docs sáu dòng (làm gì → specs; cấu trúc → ARD/overview; vì sao → decisions; giao tiếp → contracts; vận hành → runbooks; đang làm → lệnh `aip status --requests`), không có bảng request đang mở; riêng README của repo này giữ nguyên bảng 7 năng lực hiện có và đoạn giải thích cách spec sống tạo dần.
+- [ ] **AC7.1** — Given `docs/specs/README.md` của repo này và `core/skills/artifact-templates/references/specs-readme.template.md` When đọc Then mỗi file có bảng năng lực, bản đồ docs sáu dòng (làm gì → specs; cấu trúc → ARD/overview; vì sao → decisions; giao tiếp → contracts; vận hành → runbooks; đang làm → lệnh `aip status --requests`), không có bảng request đang mở; riêng README của repo này giữ nguyên bảng 7 năng lực hiện có và đoạn giải thích cách spec sống tạo dần.
 
 **Phát hành và tài liệu (R8).**
 - [ ] **AC8.1** — Given nhánh `feature/living-spec-bootstrap` sau mọi task When `npm test` Then exit 0 (baseline 2026-11-04: `npm test` exit 0, validate 6103 pass; số test giảm chỉ khi test bị thay có chủ đích).
@@ -109,7 +109,7 @@ Mọi ca test dùng thư mục tạm; không `rm -rf` sandbox có junction, dọ
 | Viết design (`engineering-spec-writing`) | Không nhắc spec; agent ghi `Không ảnh hưởng: chưa có spec` | Bước điền `Ảnh hưởng spec`: đọc `docs/specs/README.md`, khai năng lực mới là `thêm R1` (A1) |
 | `check-request.mjs` | W10 chỉ đòi lý do không rỗng | Thêm W23 khi `Không ảnh hưởng` mà không có `docs/specs/README.md` (A2) |
 | Gộp spec ở `finish.md` | Bỏ qua khi `Không ảnh hưởng`; năng lực mới chỉ "thêm vào README" | Năng lực mới → tạo `spec.md` từ template; chưa có README → tạo (A3) |
-| `aip init --full` | Không có `docs/specs/README.md` | Tạo sẵn từ `templates/init/docs/specs/README.md` (A4) |
+| `aip init --full` | Không có `docs/specs/README.md` | Tạo sẵn từ `core/skills/artifact-templates/references/specs-readme.template.md` (A4) |
 | Project đã có code, chưa có spec | Không có đường nào | Skill `engineering-spec-backfill` (B) |
 | Trạng thái sau G3 | Chỉ `merged <hash>` ở merge local | Mọi lựa chọn đều ghi trạng thái (A3) |
 
@@ -124,7 +124,7 @@ Thêm vào `plugins/engineering/skills/engineering-spec-writing/SKILL.md` (bư�
 
 ### A3: `finish.md`
 Sửa `core/skills/plan-execution/references/finish.md`:
-- Bước 2 "Cập nhật spec sống": thêm hai việc. Năng lực chưa có `spec.md` → tạo từ `core/skills/artifact-templates/references/spec.template.md` (bỏ khối chú thích đầu, điền Mục đích, Phạm vi, các `R<n>` đúng số design khai, một dòng Lịch sử). `docs/specs/README.md` chưa có → tạo theo mẫu `templates/init/docs/specs/README.md` rồi thêm dòng năng lực vào bảng. Giữ nguyên dòng "Design ghi `Không ảnh hưởng` thì bỏ qua và ghi lý do".
+- Bước 2 "Cập nhật spec sống": thêm hai việc. Năng lực chưa có `spec.md` → tạo từ `core/skills/artifact-templates/references/spec.template.md` (bỏ khối chú thích đầu, điền Mục đích, Phạm vi, các `R<n>` đúng số design khai, một dòng Lịch sử). `docs/specs/README.md` chưa có → tạo theo mẫu `core/skills/artifact-templates/references/specs-readme.template.md` rồi thêm dòng năng lực vào bảng. Giữ nguyên dòng "Design ghi `Không ảnh hưởng` thì bỏ qua và ghi lý do".
 - Mục "Ghi nhận" (hoặc bước 7 và "Chi tiết từng lựa chọn"): mỗi lựa chọn G3 ghi `Trạng thái` trong `design.md` bằng một commit docs trước khi kết thúc:
 
 | Lựa chọn | Trạng thái ghi | Thời điểm |
@@ -136,8 +136,8 @@ Sửa `core/skills/plan-execution/references/finish.md`:
 - Với hai trạng thái `in-progress`, kết quả cuối nhắc: khi nhánh được merge tay hoặc qua PR, đặt `Trạng thái: merged <hash>` và xoá `plan.md`/`parts/*/plan.md` (W16). `in-progress` là token hợp lệ của W15 (`STATUSES` đã có), và W16 chỉ đòi xoá plan với `merged`/`abandoned`, nên plan còn ở nhánh chờ merge không bị cảnh báo.
 - `workflows/feature/WORKFLOW.md` Bước 7 đã trỏ `finish.md`; chỉ sửa nếu bảng 3 lựa chọn ở đó mô tả khác (builder rà).
 
-### A4: `templates/init/docs/specs/README.md`
-Tệp mẫu một trang: tiêu đề, bảng năng lực rỗng (`| Năng lực | Mô tả | Spec |`), đoạn "spec sống tạo dần" rút từ README của repo này, bản đồ docs sáu dòng, dòng `aip status --requests`, và một dòng trỏ tới skill `engineering-spec-backfill` cho project đã có code. `init.mjs` đã chép mọi file dưới `templates/init/` mà không ghi đè (`listFiles` + `existsSync`), nên không cần đổi mã; chỉ kiểm bằng test.
+### A4: `core/skills/artifact-templates/references/specs-readme.template.md`
+Tệp mẫu một trang: tiêu đề, bảng năng lực rỗng (`| Năng lực | Mô tả | Spec |`), đoạn "spec sống tạo dần" rút từ README của repo này, bản đồ docs sáu dòng, dòng `aip status --requests`, và một dòng trỏ tới skill `engineering-spec-backfill` cho project đã có code. Mẫu nằm trong skill `artifact-templates` (có ở mọi project đã cài core, nên `finish.md` dùng được); `init --full` sinh `docs/specs/README.md` từ nó qua `INIT_DOC_MAP` của `cli/lib/templates.mjs` (bỏ khối header, không ghi đè), như `docs/specs/_TEMPLATE.md`. Đổi sau G1: bản đầu đặt ở `templates/init/`, không tới được project đích (người dùng chọn chuyển, 2026-11-04).
 
 ### B: skill `engineering-spec-backfill`
 Cấu trúc đề xuất: `plugins/engineering/skills/engineering-spec-backfill/SKILL.md` (khung H2 `## Quy trình…`, `## Ranh giới an toàn…`) cùng `references/` (quy tắc nguồn của `R<n>`; mẫu prompt subagent; mẫu báo cáo lệch). Description đề xuất (builder đếm ký tự và chạy contract): "Dựng spec sống ban đầu cho project đã có code từ docs, request đã merge và code theo năng lực nghiệp vụ, mỗi R có Nguồn. Dùng khi người dùng muốn "backfill spec", "dựng docs/specs từ code", "tạo spec cho project cũ", "kiểm spec lệch code". Không dùng khi cần đặc tả tính năng mới → engineering-spec-writing; chỉ ghi quyết định kiến trúc → engineering-adr."
@@ -175,13 +175,13 @@ Skill không gọi model ngoài subagent, không đụng `src/` hay test, và kh
 ### Điểm chạm
 - Sửa mã: `core/skills/artifact-templates/scripts/check-request.mjs`, `cli/lib/status.mjs`, `cli/lib/args.mjs`, `cli/index.mjs`.
 - Sửa nội dung chiếu: `core/skills/plan-execution/references/finish.md`, `core/skills/artifact-templates/` (`SKILL.md` hoặc `references/docs-conventions.md` nhắc W23, `docs/specs/README.md` và bước gộp), `plugins/engineering/skills/engineering-spec-writing/` (`SKILL.md`, `references/spec-structure.md`), `plugins/engineering/skills/engineering-spec-backfill/` (mới), `plugins/engineering/.manifest.json` (số skill trong mô tả).
-- Thêm file mẫu: `templates/init/docs/specs/README.md`.
+- Thêm file mẫu: `core/skills/artifact-templates/references/specs-readme.template.md`.
 - Tài liệu và spec: `docs/specs/README.md`, ba spec ở "Ảnh hưởng spec", `README.md`, `README_VI.md`, `CLAUDE.md` của repo (cảnh báo W1–W22, "11 skills", lệnh `aip status`).
 - `plugins/_published.json` không phải sửa: mục `engineering` đã publish cả plugin (đã đọc), nên skill mới được wizard offer.
 - Test sẽ thêm hoặc đổi: `test/contract/36-living-spec.contract.mjs` (W23), `test/status.test.mjs` (`--requests`), `test/init.test.mjs` (README của `init --full`); các test đếm skill hoặc pin chữ có thể phải cập nhật (`grep` "11" và `engineering-spec-writing` trong `test/`). Builder nêu tên test sửa trong commit.
 
 ### Spec sống
-- `artifact-templates` (R14 cuối): đổi R3 (danh sách file `init --full` sinh có thêm `docs/specs/README.md`); thêm R15 (W23: điều kiện, miễn legacy, chỉ cảnh báo, theo file tồn tại); thêm R16 (skill `engineering-spec-backfill`: kiểm kê, cổng năng lực, quy tắc `Nguồn:`, chỉ ghi `docs/specs/`, chạy lại chỉ báo lệch); thêm R17 (`docs/specs/README.md` là điểm vào: bảng năng lực, bản đồ docs, request đang mở chỉ là lệnh; mẫu `templates/init/docs/specs/README.md`).
+- `artifact-templates` (R14 cuối): đổi R3 (danh sách file `init --full` sinh có thêm `docs/specs/README.md`); thêm R15 (W23: điều kiện, miễn legacy, chỉ cảnh báo, theo file tồn tại); thêm R16 (skill `engineering-spec-backfill`: kiểm kê, cổng năng lực, quy tắc `Nguồn:`, chỉ ghi `docs/specs/`, chạy lại chỉ báo lệch); thêm R17 (`docs/specs/README.md` là điểm vào: bảng năng lực, bản đồ docs, request đang mở chỉ là lệnh; mẫu `core/skills/artifact-templates/references/specs-readme.template.md`).
 - `workflows` (R17 cuối): thêm R18 (`engineering-spec-writing` điền `Ảnh hưởng spec` theo A1); thêm R19 (`finish.md` tạo `spec.md` và README khi thiếu, ghi trạng thái ở mọi lựa chọn G3).
 - `cli-wizard` (R8 cuối): thêm R9 (`aip status --requests`).
 - `artifact-templates/R7` giữ nguyên chữ vì W10 không đổi; chỉ cần R15 mô tả W23. Khi gộp, thêm dòng vào bảng Lịch sử của ba spec và, vì không có năng lực mới, không thêm dòng vào bảng của `docs/specs/README.md` (chỉ sửa mô tả cột nếu cần).

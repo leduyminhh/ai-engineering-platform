@@ -17,7 +17,7 @@
 | `cli/lib/args.mjs` | Cờ `--requests` | Task 2 |
 | `cli/index.mjs` | Dòng help của `status` | Task 2 |
 | `test/status.test.mjs` | Test `--requests` (git giả + CLI thật) | Task 2 |
-| `templates/init/docs/specs/README.md` | Mẫu điểm vào spec sống cho `init --full` | Task 3 |
+| `core/skills/artifact-templates/references/specs-readme.template.md` | Mẫu điểm vào spec sống cho `init --full` | Task 3 |
 | `docs/specs/README.md` | Điểm vào spec của repo này, dạng mới | Task 3 |
 | `test/init.test.mjs` | Test `init --full` tạo/không ghi đè README | Task 3 |
 | `core/skills/plan-execution/references/finish.md` | Tạo spec/README khi thiếu; trạng thái ở mọi lựa chọn G3 | Task 4 |
@@ -90,16 +90,16 @@
 **TDD:** có
 **Phủ AC:** AC4.1, AC4.2, AC7.1
 **Files:**
-- Create: `templates/init/docs/specs/README.md`
+- Create: `core/skills/artifact-templates/references/specs-readme.template.md`
 - Modify: `docs/specs/README.md`
 - Test: `test/init.test.mjs`
 
 **Interfaces:**
 - Consumes: lệnh `aip status --requests` (Task 2, chỉ nhắc tên trong README)
-- Produces: `templates/init/docs/specs/README.md` (mẫu Task 4 và Task 6 trỏ tới)
+- Produces: `core/skills/artifact-templates/references/specs-readme.template.md` (mẫu Task 4 và Task 6 trỏ tới)
 
 - [ ] **Step 1:** Thêm test `AC4.1/AC4.2` vào `init.test.mjs`: `init({root, full:true})` trên thư mục tạm → `docs/specs/README.md` có trong `created` và chứa `aip status --requests`; file có sẵn khác nội dung → không đổi byte, nằm trong `skipped`; `init({root})` không `--full` → không có file. Chạy `node test/init.test.mjs` → đỏ.
-- [ ] **Step 2:** Tạo `templates/init/docs/specs/README.md`: tiêu đề, bảng năng lực rỗng `| Năng lực | Mô tả | Spec |`, đoạn "spec sống tạo dần", bản đồ docs sáu dòng (Global Constraints), dòng `aip status --requests`, một dòng trỏ skill `engineering-spec-backfill` cho project đã có code. Chạy lại → xanh.
+- [ ] **Step 2:** Tạo `core/skills/artifact-templates/references/specs-readme.template.md`: tiêu đề, bảng năng lực rỗng `| Năng lực | Mô tả | Spec |`, đoạn "spec sống tạo dần", bản đồ docs sáu dòng (Global Constraints), dòng `aip status --requests`, một dòng trỏ skill `engineering-spec-backfill` cho project đã có code. Chạy lại → xanh.
 - [ ] **Step 3:** Đổi `docs/specs/README.md` của repo sang dạng mới: giữ bảng 7 năng lực và đoạn tạo dần, rút đoạn "Backfill 2026-10-23" thành một dòng, thêm bản đồ docs (cột "cấu trúc" trỏ `CLAUDE.md` mục Architecture vì repo không có ARD; "vận hành" ghi "chưa có" nếu không có runbook) và dòng lệnh. Kiểm `AC7.1` bằng đọc lại hai file. Chạy `node test/validate.mjs --build` → xanh (đã có `npm run build`).
 - [ ] **Step 4:** Commit `feat(init): scaffold docs/specs/README.md as the living spec entry point`.
 
@@ -113,11 +113,11 @@
 - Test: `test/validate.mjs`
 
 **Interfaces:**
-- Consumes: `templates/init/docs/specs/README.md`
+- Consumes: `core/skills/artifact-templates/references/specs-readme.template.md`
 - Produces: không có
 
 - [ ] **Step 1:** `engineering-spec-writing`: thêm quy tắc điền `## Ảnh hưởng spec` (đọc `docs/specs/README.md`; năng lực chưa có spec → `- <năng-lực>: thêm R1…`; "chưa có spec" không phải lý do `Không ảnh hưởng`; nhắc năng lực mới cần `spec.md` ở bước gộp). Giữ khung H2 và độ dài description.
-- [ ] **Step 2:** `finish.md` bước 2: năng lực chưa có `spec.md` → tạo từ `spec.template.md` (bỏ khối chú thích, có bảng Lịch sử); chưa có `docs/specs/README.md` → tạo theo `templates/init/docs/specs/README.md` rồi thêm dòng năng lực. Bước G3/"Chi tiết từng lựa chọn": bảng trạng thái ba lựa chọn (Global Constraints) và dòng nhắc người merge tay đặt `merged <hash>` + xoá `plan.md` (W16). Rà `workflows/feature/WORKFLOW.md` Bước 7, chỉ sửa nếu mâu thuẫn.
+- [ ] **Step 2:** `finish.md` bước 2: năng lực chưa có `spec.md` → tạo từ `spec.template.md` (bỏ khối chú thích, có bảng Lịch sử); chưa có `docs/specs/README.md` → tạo theo `core/skills/artifact-templates/references/specs-readme.template.md` rồi thêm dòng năng lực. Bước G3/"Chi tiết từng lựa chọn": bảng trạng thái ba lựa chọn (Global Constraints) và dòng nhắc người merge tay đặt `merged <hash>` + xoá `plan.md` (W16). Rà `workflows/feature/WORKFLOW.md` Bước 7, chỉ sửa nếu mâu thuẫn.
 - [ ] **Step 3:** `npm run build` rồi `node test/validate.mjs --build` → xanh (contract khung H2, description, pin hiện có của `finish.md`).
 - [ ] **Step 4:** Commit `docs(plan-execution): create first living spec and record status on every G3 choice`.
 
@@ -150,7 +150,7 @@
 - Test: `test/validate.mjs`
 
 **Interfaces:**
-- Consumes: `checkCitations` CLI (Task 5); `templates/init/docs/specs/README.md` (Task 3)
+- Consumes: `checkCitations` CLI (Task 5); `core/skills/artifact-templates/references/specs-readme.template.md` (Task 3)
 - Produces: skill id `engineering-spec-backfill`
 
 - [ ] **Step 1:** Viết `SKILL.md` theo `skill.template.md` và mục "Adding capability content" của `CLAUDE.md`: frontmatter đủ khoá (`order` sau `engineering-spec-writing`), description theo design (đếm ≤ 500 ký tự, trigger không trùng skill khác), `## Quy trình…` 7 bước của design mục B (cổng duyệt năng lực trước khi tạo subagent; mỗi năng lực một `general-purpose`; bước kiểm chạy `check-request.mjs` W14 + `scripts/check-citations.mjs`; cổng duyệt diff + `core:git-workflow`; chạy lại chỉ báo lệch), `## Ranh giới an toàn…` (chỉ ghi `docs/specs/`, không sửa code, không push, request chưa `merged` không là nguồn).
