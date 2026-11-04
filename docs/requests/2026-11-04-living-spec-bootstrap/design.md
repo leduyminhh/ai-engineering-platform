@@ -1,6 +1,6 @@
 # Thiết kế: spec sống không bị kẹt ở project chưa có spec, dựng spec đầu bằng backfill
 - Ngày: 2026-11-04
-- Trạng thái: approved — người dùng duyệt G1 ngày 2026-11-04, giữ 6 quyết định của agent
+- Trạng thái: merged da05aa0f
 - Requirement: không có
 ## Vấn đề và lý do
 Spec sống (`docs/specs/<năng-lực>/spec.md`) chỉ được tạo ở bước gộp của một request, và bước đó bị bỏ qua khi design ghi `Không ảnh hưởng`. Ở project chưa có `docs/specs/` thì agent ghi đúng câu đó, nên spec đầu tiên không bao giờ ra đời. Repo aip này có 7 spec chỉ nhờ một lần backfill viết tay ngày 2026-10-23 (`docs/specs/README.md`).
