@@ -35,4 +35,5 @@ Nạp ở bước 7 khi `docs/specs/` đã có spec. Báo cáo nằm trong chat,
 - Không đánh giá chất lượng code; báo lệch so với spec là đủ.
 - Hướng xử lý luôn qua request thường: design khai `## Ảnh hưởng spec` rồi bước gộp cập nhật spec. Skill không tự sửa spec.
 - Mục chưa đối chiếu luôn có, kể cả khi rỗng ("không có").
+- Nguồn của báo cáo: findings của các subagent chỉ đọc (bước 7 của skill) và số citation hỏng từ `check-citations.mjs`; session chính không tự đánh giá lại code.
 - Nếu một R có Nguồn là request đã `merged` nhưng code lệch, ghi vào nhóm 1 và nêu cả request lẫn code.

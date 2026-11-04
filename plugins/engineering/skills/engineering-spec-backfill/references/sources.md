@@ -11,8 +11,7 @@ Dừng ở bước nào thì đủ để đề xuất năng lực thì dừng �
    `docs/runbooks/`. Docs cũ chỉ là gợi ý; code là nguồn cuối khi hai bên lệch.
 2. **Request đã hiện thực.** Liệt kê `docs/requests/*/design.md` và lấy token đầu của dòng `- Trạng thái:`.
    Chỉ token `merged` mới là nguồn loại 1. Thiếu dòng hoặc token khác (`approved`, `in-progress`, `draft`,
-   `abandoned`) thì không dùng làm nguồn. Có CLI `aip` thì `aip status --requests --json` liệt kê sẵn; không có
-   thì dùng grep:
+   `abandoned`) thì không dùng làm nguồn. Lệnh chỉ đọc:
 
    ```bash
    grep -H -m1 -E '^-\s+Trạng thái\s*:' docs/requests/*/design.md
@@ -23,12 +22,14 @@ Dừng ở bước nào thì đủ để đề xuất năng lực thì dừng �
    không theo tên module kỹ thuật:
 
    ```bash
+   git ls-files | grep -icE 'controller|handler|route|job|worker|migration'   # đếm trước; trên 100 thì head cắt kết quả, thu hẹp theo thư mục
    git ls-files | grep -iE 'controller|handler|route|job|worker|migration' | head -100
    ```
 
 4. **Tên test.** Tên test thường là câu hành vi có sẵn, dùng làm bằng chứng loại 2:
 
    ```bash
+   grep -rnE "(^|\s)(it|test|describe)\(|def test_|@Test" <thư mục nguồn> | wc -l   # đếm trước; trên 200 thì head cắt, thu hẹp thư mục
    grep -rnE "(^|\s)(it|test|describe)\(|def test_|@Test" <thư mục nguồn> | head -200
    ```
 

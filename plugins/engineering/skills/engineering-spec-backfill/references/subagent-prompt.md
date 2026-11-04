@@ -16,7 +16,7 @@ Bạn dựng spec sống cho một năng lực của project <tên project>. Ch�
 - Thư mục nguồn trong code: <đường dẫn>
 - Request đã merge liên quan: <đường dẫn docs/requests/<ngày>-<slug>/design.md>, hoặc "không có"
 - Request KHÔNG có token `merged`: không đọc, không dùng làm nguồn.
-- Mẫu spec: <đường dẫn spec.template.md, hoặc đoạn mẫu trong prompt này>
+- Cấu trúc file: theo mục "Cấu trúc file cần ghi" bên dưới.
 
 ## Được phép
 - Đọc: Read, Grep, Glob, và `git log` / `git ls-files` (chỉ đọc).
@@ -88,7 +88,7 @@ Dùng khi đã có `docs/specs/<tên-kebab>/spec.md`. Thay phần "Được phé
 
 ## Kiểm đầu ra ở session chính
 
-- `changes` chỉ có `docs/specs/<tên-kebab>/spec.md`. Khác thì đầu ra hỏng: giao lại kèm đúng luật vi phạm (tối đa 2 lần).
+- `changes` chỉ có `docs/specs/<tên-kebab>/spec.md`. File khác: ghi nhận tên file, báo người dùng (không tự xoá), rồi giao lại cho chính con đó kèm đúng luật vi phạm (tối đa 2 lần).
 - `status: blocked` với `questions[]`: session chính không hỏi người dùng thay subagent; xem câu hỏi có thể trả lời từ docs và request hay không, không thì đưa thành mục Câu hỏi mở và ghi lý do vào báo cáo cuối.
 - `status: completed` nhưng `remaining_risks` không rỗng: ghi vào báo cáo cuối của skill, không coi là lỗi.
 - Sau khi mọi subagent xong, chạy `check-citations.mjs` trên `docs/specs` (bước 5 của skill), không tin vào `validation` tự khai của con.
