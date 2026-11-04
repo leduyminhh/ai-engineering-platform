@@ -868,12 +868,12 @@ function baselineWarnings(scope) {
   else if (ra && ra !== extractBaselineBlock(read(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'))).replace(/\r\n/g, '\n')) {
     warnings.push('AGENTS.md có khối baseline cũ — chạy "aip init" để làm mới.');
   }
-  // Chưa có AGENTS.md = project chưa init: CLAUDE.md riêng của nó không phải việc của aip.
-  const claude = agents == null ? null : read(path.join(root, 'CLAUDE.md'));
+  const claude = read(path.join(root, 'CLAUDE.md'));
   const rc = claude == null ? null : region(claude);
+  // Chưa có AGENTS.md = project chưa init: chỉ báo marker hỏng, không nhắc import/khối cho CLAUDE.md riêng của nó.
   if (rc === false) warnings.push('CLAUDE.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
-  else if (rc) warnings.push('CLAUDE.md còn khối baseline (khối thuộc AGENTS.md) — chạy "aip init" để gỡ.');
-  else if (claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
+  else if (agents != null && rc) warnings.push('CLAUDE.md còn khối baseline — chạy "aip init" để gỡ.');
+  else if (agents != null && claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
   return warnings;
 }
 
