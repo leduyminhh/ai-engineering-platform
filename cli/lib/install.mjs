@@ -7,7 +7,7 @@ import { REPO_ROOT, loadPlugins, loadCore, loadMarketplace, loadPublished, loadW
 import { expandWorkflowDeps, missingDeps, WORKFLOW_PROVIDERS } from './workflows.mjs';
 import { scopeRoot, manifestPath, PROVIDER_LAYOUT, PROVIDERS } from './paths.mjs';
 import { pack } from './pack.mjs';
-import { BEGIN as MB_BEGIN, END as MB_END, mergeManagedBlock, removeManagedBlock, importsAgentsMd } from './managed-block.mjs';
+import { BEGIN as MB_BEGIN, END as MB_END, removeManagedBlock, importsAgentsMd, extractBaselineBlock } from './managed-block.mjs';
 
 // ── phát hiện môi trường ───────────────────────────────────────────────────
 /** true nếu kit chạy từ trong node_modules (đã cài như package) → KHÔNG link vào đó
@@ -98,75 +98,34 @@ function writeManifest(scope, m) {
   fs.renameSync(tmp, p);
 }
 
-// ── managed block (graft) ──────────────────────────────────────────────────────
-// Chèn khối baseline "AI Engineering" vào file chỉ dẫn (AGENTS.md/CLAUDE.md) tại scope root
-// của project ĐÍCH — augment file có sẵn của người dùng, chỉ ghi vùng giữa marker. Track theo
-// entry (field `managed`) + reference-count khi gỡ để không xoá khối khi provider khác còn dùng.
-/** Khối baseline = vùng BEGIN..END TRÍCH từ core/agents/AGENTS.template.md (template đã chứa sẵn
- *  marker; phần trước BEGIN là preamble project-owned, KHÔNG thuộc khối managed). */
-function baselineBlock() {
-  const full = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
-  const start = full.indexOf(MB_BEGIN);
-  const end = full.indexOf(MB_END);
-  if (start === -1 || end === -1 || end < start) {
-    throw new Error('core/agents/AGENTS.template.md thiếu marker managed block hợp lệ');
-  }
-  return full.slice(start, end + MB_END.length);
-}
-/** File chỉ dẫn (rel scope root) mỗi provider nhận khối. cursor + antigravity: bỏ qua — governance đã
- *  inline sẵn (cursor vào .cursor/rules; antigravity vào AGENTS.md sinh sẵn). Nếu trả 'AGENTS.md' cho
- *  antigravity, applyManagedBlock sẽ ghi XUYÊN symlink (AGENTS.md là artifact ship từ build) vào nguồn
- *  build, đồng thời trùng file với codex.
- *  claude project: CLAUDE.md đã `@AGENTS.md` thì khối vào AGENTS.md — ghi vào CLAUDE.md sẽ nạp baseline 2 lần. */
-function instructionFiles(provider, scope, root) {
-  if (provider === 'claude') {
-    if (scope === 'global') return ['.claude/CLAUDE.md'];
-    const claudeMd = path.join(root, 'CLAUDE.md');
-    return fs.existsSync(claudeMd) && importsAgentsMd(fs.readFileSync(claudeMd, 'utf8')) ? ['AGENTS.md'] : ['CLAUDE.md'];
-  }
-  if (provider === 'codex') return [scope === 'global' ? '.codex/AGENTS.md' : 'AGENTS.md'];
-  return [];
-}
-/** Tính (không ghi) nội dung mới của từng file chỉ dẫn; ném khi file có managed block hỏng. */
-function planManagedBlock(root, rels) {
-  const block = baselineBlock();
-  return rels.map((rel) => {
-    const abs = path.join(root, rel);
-    // File chỉ dẫn là symlink/junction (vd AGENTS.md của antigravity trỏ vào build/): ghi sẽ xuyên vào nguồn, nên không đụng tới.
-    if (isLinkPath(abs)) return { rel, abs, link: true };
-    const existing = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
-    return { rel, abs, next: existing.trim() === '' ? `${block}\n` : mergeManagedBlock(existing, block, rel) };
-  });
-}
-/** Merge khối baseline vào từng file; trả các rel đã ghi (để lưu vào manifest entry). */
-function applyManagedBlock(root, rels) {
-  const written = [];
-  for (const { rel, abs, next, link } of planManagedBlock(root, rels)) {
-    if (link) {
-      console.warn(`[aip] Bỏ qua managed block ở ${rel}: là symlink/junction, ghi sẽ xuyên vào file nguồn.`);
+// ── khối baseline legacy ───────────────────────────────────────────────────────
+// Khối baseline thuộc `aip init` ở project; install không ghi nữa. aip cũ ghi khối vào file chỉ dẫn
+// global (~/.claude/CLAUDE.md, ~/.codex/AGENTS.md) và lưu `managed[]` trong entry: chỉ ở scope global
+// mới gỡ, vì ở project khối đó nay do init sở hữu.
+function cleanLegacyManaged(root, scope, entries) {
+  if (scope !== 'global') return;
+  for (const rel of new Set(entries.flatMap((e) => e.managed || []))) {
+    // manifest có thể bị sửa tay: không đụng file ngoài root.
+    const abs = typeof rel === 'string' && !path.isAbsolute(rel) ? path.join(root, rel) : null;
+    const back = abs && path.relative(root, abs);
+    if (!abs || back.startsWith('..') || path.isAbsolute(back)) {
+      console.warn(`[aip] Bỏ qua managed[] không hợp lệ trong manifest (ngoài ${root} hoặc không phải đường dẫn tương đối): ${JSON.stringify(rel)}`);
       continue;
     }
-    fs.mkdirSync(path.dirname(abs), { recursive: true });
-    fs.writeFileSync(abs, next);
-    written.push(rel);
+    if (isLinkPath(abs)) {
+      console.warn(`[aip] Bỏ qua khối baseline cũ ở ${rel}: là symlink/junction, gỡ sẽ sửa file đích.`);
+      continue;
+    }
+    if (!fs.existsSync(abs)) continue;
+    const text = fs.readFileSync(abs, 'utf8');
+    const next = removeManagedBlock(text);
+    if (next === text) {
+      if (text.includes(MB_BEGIN) || text.includes(MB_END)) console.warn(`[aip] ${rel} có marker khối baseline hỏng — giữ nguyên, sửa tay.`);
+      continue;
+    }
+    if (next.trim() === '') removeFileAndPruneEmpty(abs, root);
+    else fs.writeFileSync(abs, next);
   }
-  return written;
-}
-/** Gỡ khối baseline khỏi 1 file; xoá file (+ prune) nếu sau khi gỡ chỉ còn rỗng. */
-function cleanManagedBlock(root, rel) {
-  const abs = path.join(root, rel);
-  if (!fs.existsSync(abs)) return;
-  const next = removeManagedBlock(fs.readFileSync(abs, 'utf8'));
-  if (next.trim() === '') removeFileAndPruneEmpty(abs, root);
-  else fs.writeFileSync(abs, next);
-}
-/** PURE: file managed cần gỡ = có ở entry bị gỡ mà KHÔNG entry giữ lại nào còn dùng (reference-count). */
-export function managedFilesToClean(removeEntries, keepEntries) {
-  const kept = new Set();
-  for (const e of keepEntries) for (const f of (e.managed || [])) kept.add(f);
-  const out = new Set();
-  for (const e of removeEntries) for (const f of (e.managed || [])) if (!kept.has(f)) out.add(f);
-  return out;
 }
 
 // ── build ensure ─────────────────────────────────────────────────────────────
@@ -755,8 +714,6 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
   const results = [];
   for (const provider of provs) {
     ensureBuilt(provider);
-    // Managed block hỏng phải lộ ra trước khi gỡ bản cũ hay đặt file: ném sau đó thì file đã đặt không còn được manifest theo dõi.
-    planManagedBlock(root, instructionFiles(provider, scope, root));
 
     if (provider === 'claude' && mode === 'plugin') {
       // plugin-mode CHỈ cài NGUYÊN plugin (claude CLI không tách skill). Suy tập plugin DOMAIN từ
@@ -771,13 +728,12 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
       // CỘNG DỒN: gộp với plugin đã cài cùng mode (install thêm, không thay thế); cùng plugin → refresh.
       const prev = m.installs.find((e) => e.provider === 'claude' && e.mode === 'plugin');
       const effPlugins = prev ? [...new Set([...(prev.plugins || []), ...inferred])] : inferred;
-      uninstallEntries(m, root, (e) => e.provider === 'claude'); // gỡ bản claude cũ (skills HOẶC plugin)
+      uninstallEntries(m, root, scope, (e) => e.provider === 'claude'); // gỡ bản claude cũ (skills HOẶC plugin)
       const info = installClaudePlugin({ pluginIds: effPlugins, scope });
-      const managed = applyManagedBlock(root, instructionFiles('claude', scope, root));
       m.installs.push({
         provider: 'claude', mode: 'plugin', plugins: effPlugins, scope,
         marketplace: info.marketplace, cliScope: info.cliScope,
-        files: [], links: [], managed, installedAt: new Date().toISOString(),
+        files: [], links: [], installedAt: new Date().toISOString(),
       });
       results.push({ provider: 'claude', plugins: effPlugins, mode: 'plugin', marketplace: info.marketplace });
       writeManifest(scope, m); // ghi sau từng provider: provider sau lỗi không được làm mất dấu provider đã xong
@@ -799,14 +755,13 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
     // Ném TRƯỚC khi gỡ bản cũ để lỗi không để lại bản cài dở.
     if (miss.length) throw new Error(`Workflow cần skill không có trong bản cài nguồn: ${miss.join(', ')}`);
     // Chỉ thay bản skills-mode: bản plugin-mode của claude do `claude` CLI quản lý, gỡ nó ở đây là gỡ cả plugin của máy.
-    uninstallEntries(m, root, (e) => e.provider === provider && e.mode !== 'plugin');
+    uninstallEntries(m, root, scope, (e) => e.provider === provider && e.mode !== 'plugin');
     const effSet = effectiveSkills(entry);
     if (provider === 'claude') warnClaudePluginDuplicates(effSet, root);
     const { files, links } = installOne(provider, effSet, scope);
     const rel = (arr) => arr.map((f) => path.relative(root, f).split(path.sep).join('/'));
     const relF = rel(files), relL = rel(links);
-    const managed = applyManagedBlock(root, instructionFiles(provider, scope, root));
-    m.installs.push({ ...entry, files: relF, links: relL, managed, installedAt: new Date().toISOString() });
+    m.installs.push({ ...entry, files: relF, links: relL, installedAt: new Date().toISOString() });
     results.push({ provider, plugins: entry.plugins, skills: entry.skills, linked: relL.length, copied: relF.length, count: relF.length + relL.length, pulled: deps.pulled });
     writeManifest(scope, m);
   }
@@ -818,7 +773,7 @@ export function install({ providers, plugins, skills, scope = 'project', mode = 
   return { root, scope, results, coworkPack };
 }
 
-function uninstallEntries(m, root, predicate) {
+function uninstallEntries(m, root, scope, predicate) {
   const keep = [], remove = [];
   for (const e of m.installs) (predicate(e) ? remove : keep).push(e);
   const dropMkts = marketplacesToRemove(remove, keep); // marketplace không còn ai giữ lại dùng
@@ -836,8 +791,7 @@ function uninstallEntries(m, root, predicate) {
       removed += e.files.length + (e.links || []).length;
     }
   }
-  // Gỡ khối managed khỏi file chỉ dẫn khi không entry giữ lại nào còn dùng (reference-count).
-  for (const rel of managedFilesToClean(remove, keep)) cleanManagedBlock(root, rel);
+  cleanLegacyManaged(root, scope, remove);
   m.installs = keep;
   return removed;
 }
@@ -890,10 +844,45 @@ export function uninstall({ providers, plugins, skills, scope = 'project' }) {
     }
   }
 
-  const removed = uninstallEntries(m, root, matched);
+  const removed = uninstallEntries(m, root, scope, matched);
   writeManifest(scope, m);
   for (const r of reinstall) install(r); // cài lại phần GIỮ (install tự ghi manifest)
   return { root, scope, removed };
+}
+
+/** Chỉ đọc. File global còn khối thì nạp trùng với AGENTS.md của project; project lệch template thì gợi ý chạy lại `aip init`. */
+function baselineWarnings(scope) {
+  const read = (abs) => { try { return fs.readFileSync(abs, 'utf8'); } catch { return null; } };
+  // null = không có marker, false = marker hỏng, chuỗi = khối (đã chuẩn hoá \r\n).
+  const region = (text) => {
+    const s = text.indexOf(MB_BEGIN), e = text.indexOf(MB_END);
+    if (s === -1 && e === -1) return null;
+    return s !== -1 && e > s ? text.slice(s, e + MB_END.length).replace(/\r\n/g, '\n') : false;
+  };
+  const warnings = [];
+  for (const rel of ['.claude/CLAUDE.md', '.codex/AGENTS.md']) {
+    const text = read(path.join(scopeRoot('global'), rel));
+    const r = text == null ? null : region(text);
+    if (r === false) warnings.push(`${rel} (global) có marker khối baseline hỏng — sửa tay.`);
+    else if (r) warnings.push(`${rel} (global) còn khối baseline, nạp vào mọi project và trùng với AGENTS.md do aip init ghi — chạy "aip update -g" để gỡ (manifest global không còn ghi file này thì xoá tay vùng giữa marker AI-ENGINEERING).`);
+  }
+  if (scope !== 'project') return warnings;
+  const root = scopeRoot('project');
+  // init bỏ qua file là symlink/junction (và bỏ qua CLAUDE.md khi AGENTS.md là link), nên check không gợi ý init cho chúng.
+  const agentsLink = isLinkPath(path.join(root, 'AGENTS.md'));
+  const agents = agentsLink ? null : read(path.join(root, 'AGENTS.md'));
+  const ra = agents == null ? null : region(agents);
+  if (ra === false) warnings.push('AGENTS.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
+  else if (ra && ra !== extractBaselineBlock(read(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'))).replace(/\r\n/g, '\n')) {
+    warnings.push('AGENTS.md có khối baseline cũ — chạy "aip init" để làm mới.');
+  }
+  const claude = isLinkPath(path.join(root, 'CLAUDE.md')) ? null : read(path.join(root, 'CLAUDE.md'));
+  const rc = claude == null ? null : region(claude);
+  // Khối còn trong CLAUDE.md luôn báo (init gỡ được khi cả hai file không là link); "thiếu import" chỉ khi AGENTS.md đã có khối hợp lệ = project đã init.
+  if (rc === false) warnings.push('CLAUDE.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
+  else if (rc && !agentsLink) warnings.push('CLAUDE.md còn khối baseline — chạy "aip init" để gỡ.');
+  else if (typeof ra === 'string' && claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
+  return warnings;
 }
 
 /** Liệt kê đã cài gì ở scope (đọc manifest) + tồn tại file thực tế. */
@@ -905,6 +894,7 @@ export function check({ scope = 'project', doctor = false } = {}) {
     scope,
     manifest: manifestPath(scope),
     claude: doctor ? claudeDoctor(root) : null,
+    baseline: doctor ? { warnings: baselineWarnings(scope) } : null,
     installs: m.installs.map((e) => {
       if (e.mode === 'plugin') {
         // do `claude` CLI quản lý (cache + settings.json) → không soi file ở scope root.
@@ -970,6 +960,14 @@ export function update({ scope = 'project', pull = true, providers, plugins, ski
   const targets = m.installs.filter((e) => entryMatches(e, provs, plugSel, skillSel));
   if (!targets.length) return { scope, root, pulled, built: [], entries: [], empty: false, noMatch: true };
 
+  // Nhánh plugin-refresh giữ nguyên entry (không qua uninstallEntries) nên dọn `managed[]` legacy ở đây;
+  // ghi manifest trước vòng lặp vì nhánh reinstall bên dưới tự đọc/ghi lại manifest.
+  const legacy = targets.filter((e) => e.mode === 'plugin' && 'managed' in e);
+  if (legacy.length) {
+    cleanLegacyManaged(root, scope, legacy);
+    for (const e of legacy) delete e.managed;
+    writeManifest(scope, m);
+  }
   const providersToBuild = [...new Set(targets.map((e) => e.provider))];
   for (const p of providersToBuild) ensureBuilt(p); // "run build" cho đúng provider có entry khớp
 

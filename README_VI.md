@@ -4,8 +4,8 @@
 duy nhất** cho nội dung năng lực AI-agent và chiếu (project) nó ra layout gốc của
 **Codex, Claude Code, Cursor, và Google Antigravity**. Viết năng lực MỘT LẦN dưới
 `plugins/` và `core/`; CLI sinh skill/marketplace/rules/workflow cho từng provider
-vào project đích, và chèn khối baseline "AI Engineering" vào `AGENTS.md` / `CLAUDE.md`
-của project đó.
+vào project đích. `aip init` ghi khối baseline "AI Engineering" vào `AGENTS.md` của project
+đó; `CLAUDE.md` import file này.
 
 Pure ESM, **zero runtime dependency**, không có bước build. Node.js 20+.
 
@@ -77,7 +77,7 @@ aip install --provider all --yes
 ```
 
 **5. Kiểm tra kết quả** trong project: `aip check` liệt kê từng skill và file đã ghi
-(ví dụ `.claude/skills/…`, `.cursor/rules/…`, khối baseline trong `CLAUDE.md` / `AGENTS.md`).
+(ví dụ `.claude/skills/…`, `.cursor/rules/…`). Khối baseline nằm trong `AGENTS.md`, do `aip init` ghi, không do install ghi.
 
 Sau này cập nhật gói:
 
@@ -253,7 +253,7 @@ Mọi lệnh chạy `node cli/index.mjs`.
 ```bash
 aip                 # menu wizard: init | install | uninstall | update | build
 aip --all           # wizard liệt kê MỌI skill kể cả draft + mọi workflow (cài từ source)
-aip init      [--full]    # AGENTS.md (baseline) + CLAUDE.md import @AGENTS.md; --full thêm khung templates/init và .claude/settings.json (chính sách quyền, chỉ khi chưa có); bỏ qua file đã có
+aip init      [--full]    # tạo AGENTS.md, hoặc làm mới khối baseline giữa marker (chạy lại để làm mới; nội dung ngoài marker giữ nguyên); CLAUDE.md import @AGENTS.md; --full thêm khung templates/init và .claude/settings.json (chính sách quyền, chỉ khi chưa có); file khác đã có thì bỏ qua
 aip install   --provider all|<p>... [--plugin all|<id>...] [--skill <a,b>] [-g] [--yes] [--as-plugin]
 aip uninstall [--provider ...] [--plugin ...] [--skill <a,b>] [-g] [--yes]   # alias: remove
 aip build     --provider all|<p>...   # cờ alias: --target
@@ -275,7 +275,7 @@ aip status [<request>] [--json | --html [--watch]] [--part <nn>]   # xem tiến 
   (ép bật); `core/git-workflow` chọn lẻ được (mặc định bật cùng plugin nguyên khối, muốn bỏ thì
   dùng `--skill core/...` tường minh).
 - **Install** ưu tiên symlink (junction trên Windows) + fallback copy, và **cộng dồn** —
-  cài thêm plugin hay skill sẽ hợp với cái đã có. Đồng thời chèn khối baseline vào file chỉ dẫn của project.
+  cài thêm plugin hay skill sẽ hợp với cái đã có. Install không ghi khối baseline vào file chỉ dẫn nào; khối đó thuộc `aip init`.
 - **`--as-plugin`** (chỉ Claude) cài qua CLI `claude` như PLUGIN THẬT (marketplace +
   namespaced `<id>:<skill>`) thay vì copy phẳng vào `.claude/skills/`; cần có `claude` trên PATH.
   Nó cài NGUYÊN plugin của mỗi skill được chọn (plugin-mode không tách skill) và cảnh báo khi
@@ -287,7 +287,11 @@ aip status [<request>] [--json | --html [--watch]] [--part <nn>]   # xem tiến 
   `(draft)`) và toàn bộ workflow — thay vì chỉ phần `plugins/_published.json` cho phép offer. Cờ này
   không tắt wizard; lệnh non-interactive `aip install --plugin all` vốn đã cài tất cả.
 - **Uninstall** (alias `remove`) chỉ gỡ path đã track (không đụng target của link), prune thư mục
-  rỗng, và đếm-tham-chiếu khối managed dùng chung.
+  rỗng. Uninstall `-g` còn bỏ khối baseline legacy mà bản aip cũ ghi vào `~/.claude/CLAUDE.md` hoặc
+  `~/.codex/AGENTS.md`, cho các file có trong `managed[]` của entry bị gỡ (symlink thì bỏ qua kèm cảnh báo); scope project không sửa file chỉ dẫn.
+- **`aip check`** (chỉ đọc, thoát mã 0) cảnh báo khi `~/.claude/CLAUDE.md` hoặc `~/.codex/AGENTS.md` còn khối baseline
+  (nạp vào mọi project, trùng với `AGENTS.md` do `aip init` ghi; chạy `aip update -g`, lệnh này chỉ gỡ được khi manifest global còn ghi file đó trong `managed[]`, không thì xoá tay vùng giữa marker AI-ENGINEERING), khi khối trong `AGENTS.md` của project khác template
+  hoặc `CLAUDE.md` còn khối hợp lệ (chạy `aip init`, báo cả khi `AGENTS.md` chưa có hoặc không có marker; file là symlink thì bỏ qua như `aip init`), khi `CLAUDE.md` thiếu `@AGENTS.md` (chỉ khi `AGENTS.md` có khối hợp lệ), và khi marker hỏng.
 - **`aip stats`** đọc các transcript Claude Code của project hiện tại. Không cờ thì in bảng 10 phiên đầu theo đỉnh context (số lượt, đầu, đỉnh, cuối); `--session <path>` in phân rã đầy đủ một phiên; `--json` in JSON thô. `--usage [--since <số ngày|yyyy-mm-dd>]` (mặc định 7 ngày, lọc theo timestamp của từng dòng) tổng hợp token và tiền theo model, phiên chính so với subagent, kèm tín hiệu cache (đổi model, khoảng nghỉ trên 60 phút trước lượt ghi cache lớn, lượt ghi cache trên 50% context). Tiền lấy từ bản ghi `cost-state` do Claude Code ghi: tính cho cả phiên gồm subagent, không chia theo cửa sổ `--since`, và có thể lệch hóa đơn. aip không có bảng giá (không tự giữ bảng giá) và không dự đoán hạn mức gói; phiên thiếu `cost-state` hiển thị `—` cho tiền. [Unverified] Lệnh dựa vào layout `~/.claude/projects/<slug>/*.jsonl` và ý nghĩa của `cost-state`, đều là nội bộ của Claude Code, không phải hợp đồng công khai. Bảng chỉ hiện tỷ lệ subagent; phân rã theo từng agent nằm ở `--json`. `--since yyyy-mm-dd` nghĩa là 0h UTC của ngày đó. Mỗi `message.id` chỉ tính một lần trên toàn project, kể cả bản sao fork/resume; phiên bị bỏ lượt như vậy được đánh dấu trong bảng (tiền từ `cost-state` không bị trừ). Lệnh chỉ đọc, không in nội dung hội thoại và không ghi gì.
 - **`aip statusline`** đọc JSON Claude Code gửi cho lệnh `statusLine` và in một dòng: model, context % (cảnh báo từ `--soft`, mặc định 40, và khẩn cấp từ `--hard`, mặc định 60, là hai ngưỡng xoay phiên của baseline), số phút cache prompt còn ấm, tiền phiên và hạn mức 5 giờ. Lệnh chỉ dùng các trường Claude Code đã gửi sẵn, không đọc transcript. Bạn tự thêm vào `settings.json`: `{"statusLine":{"type":"command","command":"aip statusline","refreshInterval":60}}` (`refreshInterval` giữ số phút của cache chạy khi phiên rảnh). Màu theo `NO_COLOR` hoặc `--no-color`. [Unverified] chưa quan sát trong phiên Claude Code thật; ngưỡng 40/60 là heuristic chưa kiểm của baseline.
 - **`aip status`** hiện tiến trình một request (mặc định: request có ledger dở trong `.aip/runs/` được ghi gần nhất): đầu trang, dải cổng G1 → G2 → G3 → push, "Cần bạn xử lý" (part vướng hoặc im lặng), số tổng, bảng part, cạnh phụ thuộc có nhãn từ `**Interfaces:**`, chi tiết task và dòng sự kiện. Trạng thái part theo thứ tự ưu tiên: vướng (dòng `Blocked:` mới nhất chưa có `Unblocked:`/`complete` sau nó), merged, xong chờ merge, chờ part phụ thuộc, im lặng quá lâu (không có dòng ledger hay commit mới quá `statusStaleMinutes` trong `.claude/aip-gate.json`, mặc định 30), đang làm, chưa làm. `--json` in mô hình, `--html` ghi `.aip/runs/<request>/status.html` tự chứa, `--watch` ghi lại mỗi 10 giây, `--part <nn>` in chi tiết một part. Lệnh đọc design, plan, ledger, `events.jsonl` và `git log` nhánh part; chỉ ghi `status.html`.
@@ -483,10 +487,12 @@ Một lần đo ngày 2026-10-23 (n=3–5 mỗi nhánh, Windows) nằm trong b�
 
 | Provider | Đầu ra build | Cài vào (scope project) |
 | --- | --- | --- |
-| Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core là plugin dependency) | `.claude/skills/<skill>`; khối baseline → `CLAUDE.md` (project: → `AGENTS.md` khi `CLAUDE.md` import `@AGENTS.md`) |
+| Claude | `.claude-plugin/marketplace.json` + `plugins/<id>/` (core là plugin dependency) | `.claude/skills/<skill>` |
 | Cursor | `<id>/.cursor/rules/<id>-00-principles.mdc` + `.cursor/skills/<skill>/` | `.cursor/rules` + `.cursor/skills` |
-| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agent giữ ở `.codex/agents/`); khối baseline → `AGENTS.md` |
-| Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | khi cài tường minh; khối baseline → `AGENTS.md` |
+| Codex | `<id>/skills/<skill>/SKILL.md` (native skills) | `.agents/skills/<skill>` (global: `~/.agents/skills`; agent giữ ở `.codex/agents/`) |
+| Antigravity | `<id>/AGENTS.md` + `docs/workflow/<skill>/` | khi cài tường minh |
+
+Khối baseline không phải đầu ra build, và không provider nào được install ghi nó. `aip init` ghi khối vào `AGENTS.md` của project; `CLAUDE.md` import file đó.
 
 Skill nào ship thư mục `references/` thì ship tới **mọi** provider (parity, do
 `test/validate.mjs` bắt buộc).

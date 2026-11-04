@@ -1,6 +1,6 @@
 # Spec: baseline
 
-Cập nhật: 2026-11-03
+Cập nhật: 2026-11-04
 
 ## Mục đích
 
@@ -9,7 +9,7 @@ Baseline `AGENTS.md` (managed block) đặt quy tắc làm việc chung cho agen
 ## Phạm vi
 
 - Gồm: nội dung `core/agents/AGENTS.template.md` và bản sao `AGENTS.md` ở gốc repo.
-- Không gồm: cách khối được ghi vào project đích (`install-lifecycle`), hook thực thi quy tắc (`hooks-gates`), validator của quy ước docs (`artifact-templates`).
+- Không gồm: cách khối được ghi vào project đích (`cli-wizard`, lệnh `aip init`), hook thực thi quy tắc (`hooks-gates`), validator của quy ước docs (`artifact-templates`).
 - Các quy tắc chung đầu file (Priority, Rules, Comments, Testing, Language, Definition of Done) không có request trong `docs/requests/` đưa ra riêng; spec này chưa ghi chúng.
 
 ## Yêu cầu

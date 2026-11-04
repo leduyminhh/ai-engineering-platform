@@ -66,6 +66,9 @@ function reportInstall(r) {
 function reportInit(r) {
   console.log(`\n✓ aip init tại: ${r.root}`);
   for (const f of r.created) console.log(`  + ${f}`);
+  for (const f of r.refreshed) console.log(`  ~ ${f}`);
+  if (r.refreshed.includes('AGENTS.md')) console.log('    (vùng giữa marker AI-ENGINEERING của AGENTS.md do aip quản lý; rule riêng đặt ngoài marker)');
+  if (r.unchanged.length) console.log(`  (đã đúng, không ghi: ${r.unchanged.join(', ')})`);
   if (r.skipped.length) console.log(`  (giữ nguyên ${r.skipped.length} file đã có: ${r.skipped.join(', ')})`);
   for (const w of r.warnings) console.log(`  ⚠ ${w}`);
   console.log('  Tiếp theo: aip install --provider claude --plugin core   (Codex: chạy thêm với --provider codex)');
@@ -108,6 +111,7 @@ function reportStaleClaude(r) {
 
 function reportCheck(r) {
   console.log(`\nĐã cài ở scope=${r.scope} (${r.root}):`);
+  for (const w of (r.baseline && r.baseline.warnings) || []) console.log(`  ⚠ ${w}`);
   if (!r.installs.length) { console.log('  (trống)'); reportStaleClaude(r); return; }
   for (const e of r.installs) {
     if (e.mode === 'plugin') { // do Claude quản lý (cache + settings.json) — không soi file, không bịa present/files
@@ -211,8 +215,9 @@ CÁCH DÙNG
   Mẹo: chạy lệnh KHÔNG cờ để vào wizard chọn bằng phím (Space chọn, ↑/↓, Enter, b quay lại, q huỷ).
 
 LỆNH
-  init                      tạo file chỉ dẫn agent ở thư mục hiện tại: AGENTS.md (baseline) + CLAUDE.md
-                            (import @AGENTS.md); bỏ qua file đã có, không cài skill. --full: thêm khung
+  init                      tạo hoặc làm mới khối baseline trong AGENTS.md (chạy lại để làm mới, giữ phần
+                            ngoài marker); CLAUDE.md thêm @AGENTS.md; file khác đã có thì bỏ qua,
+                            không cài skill. --full: thêm khung
                             templates/init (project-knowledge/, docs/, src/, tests/...)
                             và .claude/settings.json (chính sách quyền, chỉ khi chưa có)
   install                   cài workflow (không cờ → wizard step-by-step; có --provider/--plugin → non-interactive)
