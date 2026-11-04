@@ -106,4 +106,6 @@ export default async function run({ ok, ctx }) {
   const TBF = TB.replace(/\n\s*/g, ' ');
   ok(/Trần `minor` chỉ áp khi finding ghi `file:line` khai báo nội bộ và không có đường dữ liệu từ ngoài tới đó; không chứng minh được thì giữ mức gốc/.test(TBF), 'Audit F2: trần minor cần file:line khai báo nội bộ và không có đường dữ liệu từ ngoài, không chứng minh được thì giữ mức gốc');
   ok(/Cấu hình runtime ngoài repo \(biến môi trường, Consul, DB, giao diện quản trị\) không phải "nội bộ"/.test(TBF), 'Audit F2: cấu hình runtime ngoài repo không phải nội bộ');
+
+  ok(/Test phủ AC ghi ID AC của dòng `\*\*Phủ AC:\*\*` trong tên test hoặc comment \(`AC1\.2`; hàm Python `ac1_2`\)/.test(flat(`${PE}/prompts/implementer.md`)), 'implementer: test phủ AC ghi ID AC trong tên test hoặc comment (W7)');
 }
