@@ -57,6 +57,7 @@ chọn workflow: chỉ nêu skill cần gọi và kết thúc (không phải l�
 | "OpenAPI", "contract-first" (chỉ chốt contract, chưa code) | `backend-api-contract` | — | — | — |
 | "cập nhật tài liệu", "sync docs", "viết runbook" | Session chính sửa trực tiếp; ghi quyết định kiến trúc → `engineering-adr` | tài-liệu | * | — |
 | "quyết định", "chọn phương án", "ADR" | `engineering-adr` (plugin `engineering`) | quyết-định | * | — |
+| "backfill spec", "dựng docs/specs từ code", "tạo spec cho project cũ" | `engineering-spec-backfill` (plugin `engineering`) | tài-liệu | code-be, code-fe, fullstack | — |
 | "khởi tạo backend", "scaffold API/service", "setup project backend mới" | `backend-init` (model không tự gọi được: đề nghị người dùng gõ `/backend:backend-init` khi cài dạng plugin, `/backend-init` khi cài dạng skills) | — | — | — |
 | "khởi tạo frontend", "setup project React mới", "scaffold tài liệu nền frontend" | `frontend-init` (model không tự gọi được: đề nghị người dùng gõ `/frontend:frontend-init` khi cài dạng plugin, `/frontend-init` khi cài dạng skills) | — | — | — |
 | "chuyển .env sang Vault/Consul", "externalize config/secret", "đưa secret vào Vault" | `backend-migrate-vault-consul` | — | — | — |
