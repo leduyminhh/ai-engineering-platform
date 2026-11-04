@@ -298,17 +298,21 @@ try {
     }), 'AC6.1: --requests liệt kê draft/approved/in-progress và ba ca "không rõ"; bỏ merged, abandoned, _TEMPLATE, file thường');
 
     // Mã thoát 1 của merge-base --is-ancestor (không là tổ tiên) và lỗi git đều phải ra "không đánh dấu".
-    const gitWith = (onAncestor, branchExists = true) => (args) => {
+    // Nhánh vừa tạo chưa có commit riêng có sha trùng HEAD: không được tính là đã merge dù merge-base trả 0.
+    const SHA = 'f'.repeat(40);
+    const gitWith = (onAncestor, branchExists = true, branchSha = SHA, headSha = 'a'.repeat(40)) => (args) => {
       const s = args.join(' ');
-      if (s.startsWith('rev-parse --verify')) { if (branchExists) return 'f'.repeat(40); throw Object.assign(new Error('exit 1'), { status: 1 }); }
+      if (s.startsWith('show-ref --verify')) { if (branchExists) return branchSha; throw Object.assign(new Error('exit 1'), { status: 1 }); }
+      if (s === 'rev-parse HEAD') return headSha;
       if (s.startsWith('merge-base --is-ancestor')) return onAncestor(s);
       throw new Error('lệnh lạ');
     };
-    const ancestorOf = (slug) => (s) => { if (s.includes(`feature/${slug} `)) return ''; throw Object.assign(new Error('exit 1'), { status: 1 }); };
+    const ancestorOf = (slug) => (s) => { if (s.includes(`refs/heads/feature/${slug} `)) return ''; throw Object.assign(new Error('exit 1'), { status: 1 }); };
     const cases = [
       { name: 'nhánh là tổ tiên của HEAD', git: gitWith(ancestorOf('b-approved')), want: ['2026-11-01-b-approved'] },
       { name: 'không là tổ tiên (exit 1)', git: gitWith(() => { throw Object.assign(new Error('exit 1'), { status: 1 }); }), want: [] },
       { name: 'nhánh không tồn tại', git: gitWith(() => '', false), want: [] },
+      { name: 'đầu nhánh trùng HEAD (chưa có commit riêng)', git: gitWith(ancestorOf('b-approved'), true, SHA, SHA), want: [] },
       { name: 'git ném lỗi', git: noGit, want: [] },
     ];
     for (const c of cases) {
