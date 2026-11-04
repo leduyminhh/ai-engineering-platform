@@ -2,6 +2,7 @@
 // Test round-trip: install -> check -> uninstall vào thư mục tạm (AIE_INSTALL_ROOT).
 // Zero-dependency. Chạy: node test/install.test.mjs
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -514,6 +515,87 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
         `baseline-init AC3.5: uninstall -g ${kind} — file không đổi, không ném`);
       ok(warned.some((w) => w.includes('.claude/CLAUDE.md')), `baseline-init AC3.5: uninstall -g ${kind} — có cảnh báo nêu file`);
     }
+  }
+
+  // AC4.x: aip check (doctor) cảnh báo khối baseline, chỉ đọc
+  const END_MARK = '<!-- AI-ENGINEERING:END AGENTS_BASELINE -->';
+  const TPL = fs.readFileSync(path.join(REPO, 'core/agents/AGENTS.template.md'), 'utf8');
+  const CUR = TPL.slice(TPL.indexOf(MARK), TPL.indexOf(END_MARK) + END_MARK.length);
+  const snapshotDir = (root) => {
+    const out = {};
+    const walk = (d) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const a = path.join(d, e.name);
+        if (e.isDirectory()) walk(a); else out[a] = [fs.readFileSync(a, 'utf8'), fs.statSync(a).mtimeMs];
+      }
+    };
+    walk(root);
+    return JSON.stringify(out);
+  };
+  const checkWarnings = (files, scope = 'project') => {
+    const dir = mkTmp('cwf-bi-4-');
+    process.env.AIE_INSTALL_ROOT = dir;
+    for (const [rel, text] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      fs.writeFileSync(path.join(dir, rel), text);
+    }
+    const before = snapshotDir(dir);
+    let r = null, err = null;
+    withFakeClaude(() => { try { r = check({ scope, doctor: true }); } catch (e) { err = e; } });
+    return { warnings: (r && r.baseline && r.baseline.warnings) || [], err, untouched: snapshotDir(dir) === before };
+  };
+  const has = (ws, ...parts) => ws.some((w) => parts.every((x) => (x instanceof RegExp ? x.test(w) : w.includes(x))));
+
+  for (const scope of ['project', 'global']) {
+    for (const rel of ['.claude/CLAUDE.md', '.codex/AGENTS.md']) {
+      const r = checkWarnings({ [rel]: `# Riêng\n${CUR}\n` }, scope);
+      ok(!r.err && has(r.warnings, rel, 'aip update -g'), `baseline-init AC4.1: check ${scope} cảnh báo khối baseline ở ${rel} (gợi ý aip update -g)`);
+    }
+    const none = checkWarnings({ '.claude/CLAUDE.md': '# Riêng\n' }, scope);
+    ok(!none.err && none.warnings.length === 0, `baseline-init AC4.1: check ${scope} không cảnh báo khi file global không có khối`);
+  }
+
+  for (const [name, text, stale] of [
+    ['khối cũ', `# Riêng\n${BLOCK}\n`, true],
+    ['khối bằng template', `# Riêng\n${CUR}\n`, false],
+    ['khối bằng template, CRLF', `# Riêng\r\n${CUR.replace(/\n/g, '\r\n')}\r\n`, false],
+  ]) {
+    const r = checkWarnings({ 'AGENTS.md': text, 'CLAUDE.md': '@AGENTS.md\n' });
+    ok(!r.err && has(r.warnings, 'AGENTS.md', 'aip init') === stale && r.warnings.length === (stale ? 1 : 0),
+      `baseline-init AC4.2: check project ${name} → ${stale ? 'cảnh báo cũ' : 'không cảnh báo'}`);
+  }
+
+  for (const [name, claude, warn] of [
+    ['thiếu import', '# Rule\n', true],
+    ['còn khối', `@AGENTS.md\n${CUR}\n`, true],
+    ['đã import, không khối', '@AGENTS.md\n# Rule\n', false],
+  ]) {
+    const r = checkWarnings({ 'AGENTS.md': `${CUR}\n`, 'CLAUDE.md': claude });
+    ok(!r.err && has(r.warnings, 'CLAUDE.md', 'aip init') === warn && r.warnings.length === (warn ? 1 : 0),
+      `baseline-init AC4.3: check project CLAUDE.md ${name} → ${warn ? 'cảnh báo' : 'không cảnh báo'}`);
+  }
+
+  for (const [name, files, warn] of [
+    ['AGENTS.md marker hỏng', { 'AGENTS.md': `${MARK}\nthiếu END\n`, 'CLAUDE.md': '@AGENTS.md\n' }, 'AGENTS.md'],
+    ['CLAUDE.md marker hỏng', { 'AGENTS.md': `${CUR}\n`, 'CLAUDE.md': `@AGENTS.md\n${MARK}\n` }, 'CLAUDE.md'],
+    ['chưa có AGENTS.md', {}, null],
+    ['AGENTS.md không marker', { 'AGENTS.md': '# Riêng\n', 'CLAUDE.md': '@AGENTS.md\n' }, null],
+  ]) {
+    const r = checkWarnings(files);
+    ok(!r.err && (warn ? has(r.warnings, warn, /hỏng/) : r.warnings.length === 0),
+      `baseline-init AC4.4: check ${name} → ${warn ? 'cảnh báo marker hỏng' : 'không cảnh báo'}, không ném`);
+    ok(r.untouched, `baseline-init AC4.5: check ${name} không tạo/sửa file`);
+  }
+  {
+    const dir = mkTmp('cwf-bi-45-');
+    fs.writeFileSync(path.join(dir, 'AGENTS.md'), `# Riêng\n${BLOCK}\n`);
+    const BIN = mkTmp('cwf-bi-45bin-');
+    fs.writeFileSync(path.join(BIN, 'claude.cmd'), '@exit /b 0\r\n');
+    fs.writeFileSync(path.join(BIN, 'claude'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+    const res = spawnSync(process.execPath, [path.join(REPO, 'cli/index.mjs'), 'check'],
+      { cwd: dir, encoding: 'utf8', env: { ...process.env, AIE_INSTALL_ROOT: dir, PATH: `${BIN}${path.delimiter}${process.env.PATH}` } });
+    ok(res.status === 0 && /AGENTS\.md/.test(res.stdout) && /aip init/.test(res.stdout),
+      `baseline-init AC4.5: aip check in cảnh báo và thoát mã 0 (status ${res.status})`);
   }
   process.env.AIE_INSTALL_ROOT = TMP;
 }
