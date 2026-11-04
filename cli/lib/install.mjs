@@ -7,7 +7,7 @@ import { REPO_ROOT, loadPlugins, loadCore, loadMarketplace, loadPublished, loadW
 import { expandWorkflowDeps, missingDeps, WORKFLOW_PROVIDERS } from './workflows.mjs';
 import { scopeRoot, manifestPath, PROVIDER_LAYOUT, PROVIDERS } from './paths.mjs';
 import { pack } from './pack.mjs';
-import { BEGIN as MB_BEGIN, END as MB_END, removeManagedBlock } from './managed-block.mjs';
+import { BEGIN as MB_BEGIN, END as MB_END, removeManagedBlock, importsAgentsMd, extractBaselineBlock } from './managed-block.mjs';
 
 // ── phát hiện môi trường ───────────────────────────────────────────────────
 /** true nếu kit chạy từ trong node_modules (đã cài như package) → KHÔNG link vào đó
@@ -845,6 +845,38 @@ export function uninstall({ providers, plugins, skills, scope = 'project' }) {
 }
 
 /** Liệt kê đã cài gì ở scope (đọc manifest) + tồn tại file thực tế. */
+/** Chỉ đọc. File global còn khối thì nạp trùng với AGENTS.md của project; project lệch template thì gợi ý chạy lại `aip init`. */
+function baselineWarnings(scope) {
+  const read = (abs) => { try { return fs.readFileSync(abs, 'utf8'); } catch { return null; } };
+  // null = không có marker, false = marker hỏng, chuỗi = khối (đã chuẩn hoá \r\n).
+  const region = (text) => {
+    const s = text.indexOf(MB_BEGIN), e = text.indexOf(MB_END);
+    if (s === -1 && e === -1) return null;
+    return s !== -1 && e > s ? text.slice(s, e + MB_END.length).replace(/\r\n/g, '\n') : false;
+  };
+  const warnings = [];
+  for (const rel of ['.claude/CLAUDE.md', '.codex/AGENTS.md']) {
+    const text = read(path.join(scopeRoot('global'), rel));
+    const r = text == null ? null : region(text);
+    if (r === false) warnings.push(`${rel} (global) có marker khối baseline hỏng — sửa tay.`);
+    else if (r) warnings.push(`${rel} (global) còn khối baseline, nạp trùng với AGENTS.md của project — chạy "aip update -g" để gỡ.`);
+  }
+  if (scope !== 'project') return warnings;
+  const root = scopeRoot('project');
+  const agents = read(path.join(root, 'AGENTS.md'));
+  const ra = agents == null ? null : region(agents);
+  if (ra === false) warnings.push('AGENTS.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
+  else if (ra && ra !== extractBaselineBlock(read(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'))).replace(/\r\n/g, '\n')) {
+    warnings.push('AGENTS.md có khối baseline cũ — chạy "aip init" để làm mới.');
+  }
+  const claude = read(path.join(root, 'CLAUDE.md'));
+  const rc = claude == null ? null : region(claude);
+  if (rc === false) warnings.push('CLAUDE.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
+  else if (rc) warnings.push('CLAUDE.md còn khối baseline, nạp hai lần với AGENTS.md — chạy "aip init" để gỡ.');
+  else if (claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
+  return warnings;
+}
+
 export function check({ scope = 'project', doctor = false } = {}) {
   const root = scopeRoot(scope);
   const m = readManifest(scope);
@@ -853,6 +885,7 @@ export function check({ scope = 'project', doctor = false } = {}) {
     scope,
     manifest: manifestPath(scope),
     claude: doctor ? claudeDoctor(root) : null,
+    baseline: doctor ? { warnings: baselineWarnings(scope) } : null,
     installs: m.installs.map((e) => {
       if (e.mode === 'plugin') {
         // do `claude` CLI quản lý (cache + settings.json) → không soi file ở scope root.

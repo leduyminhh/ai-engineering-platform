@@ -111,6 +111,7 @@ function reportStaleClaude(r) {
 
 function reportCheck(r) {
   console.log(`\nĐã cài ở scope=${r.scope} (${r.root}):`);
+  for (const w of (r.baseline && r.baseline.warnings) || []) console.log(`  ⚠ ${w}`);
   if (!r.installs.length) { console.log('  (trống)'); reportStaleClaude(r); return; }
   for (const e of r.installs) {
     if (e.mode === 'plugin') { // do Claude quản lý (cache + settings.json) — không soi file, không bịa present/files
