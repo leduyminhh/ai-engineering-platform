@@ -1,6 +1,6 @@
 # Thiết kế: khối baseline thuộc `aip init` ở project, bỏ khỏi `aip install`
 - Ngày: 2026-11-04
-- Trạng thái: approved (G1 2026-11-04, nhánh feature/project-baseline-init)
+- Trạng thái: merged 85ea0210
 - Requirement: không có
 ## Vấn đề và lý do
 Hôm nay `aip install` ghi khối baseline (vùng `<!-- AI-ENGINEERING:BEGIN AGENTS_BASELINE -->`..`END`, trích từ `core/agents/AGENTS.template.md`) vào hai nơi: file global (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`) khi cài `-g`, và `AGENTS.md`/`CLAUDE.md` của project khi cài ở scope project. `aip init` chỉ chép nguyên template thành `AGENTS.md` khi file chưa có và không bao giờ ghi đè (`cli/lib/init.mjs`), nên một project đã init không có cách nào làm mới khối khi template đổi.
