@@ -65,6 +65,41 @@ export default async function run({ ok, ctx }) {
       'AC3.1: không có design.md → không W10');
   }
 
+  // W23: theo việc docs/specs/README.md có tồn tại, không theo chữ lý do.
+  {
+    const base = ['# Thiết kế', '## Tiêu chí chấp nhận', '- [ ] **AC1.1** — Given a When b Then c', ''];
+    const w23 = (impact, opts) =>
+      cr.checkRequest({ 'design.md': [...base, '## Ảnh hưởng spec', impact].join('\n') }, { readSpec: () => null, ...opts }).filter((w) => w.code === 'W23');
+    const cases = [
+      { name: 'Không ảnh hưởng + specsIndex false', impact: 'Không ảnh hưởng: repo chưa có docs/specs/', opts: { specsIndex: false }, want: 1 },
+      { name: 'lý do không nhắc spec', impact: 'Không ảnh hưởng: chỉ sửa chính tả', opts: { specsIndex: false }, want: 1 },
+      { name: 'lý do một từ', impact: 'Không ảnh hưởng: docs', opts: { specsIndex: false }, want: 1 },
+      { name: 'specsIndex true', impact: 'Không ảnh hưởng: repo chưa có docs/specs/', opts: { specsIndex: true }, want: 0 },
+      { name: 'khai thêm R thay cho Không ảnh hưởng', impact: '- a: thêm R1', opts: { specsIndex: false }, want: 0 },
+      { name: 'thư mục legacy', impact: 'Không ảnh hưởng: x', opts: { specsIndex: false, legacy: true }, want: 0 },
+      { name: 'không truyền specsIndex', impact: 'Không ảnh hưởng: x', opts: {}, want: 0 },
+    ];
+    for (const c of cases) ok(w23(c.impact, c.opts).length === c.want, `AC2.1–AC2.4: W23 — ${c.name}`);
+    const one = w23('Không ảnh hưởng: x', { specsIndex: false })[0];
+    ok(one && one.file === 'design.md' && one.line === 5 && one.msg.includes('engineering-spec-backfill') && one.msg.includes('thêm R1'),
+      'AC2.1: W23 ở dòng heading, gợi ý engineering-spec-backfill và cách khai năng lực mới');
+    ok(cr.checkRequest({ 'design.md': base.join('\n') }, { specsIndex: false }).every((w) => w.code !== 'W23'),
+      'AC2.4: không cấp readSpec → không W23');
+  }
+
+  // requestStatusToken: W15 và `aip status --requests` đọc chung một token.
+  {
+    const cases = [
+      ['- Trạng thái: approved — người dùng duyệt', 'approved'],
+      ['- Trạng thái: Merged 85ea0210', 'merged'],
+      ['- Trạng thái: in-progress—nhánh x', 'in-progress'],
+      ['- Trạng thái: Đã duyệt (người dùng)', 'đã'],
+      ['Trạng thái: approved', null],
+      ['- Ngày: 2026-11-04', null],
+    ];
+    for (const [line, want] of cases) ok(cr.requestStatusToken(line) === want, `AC6.1: requestStatusToken(${JSON.stringify(line)}) = ${want}`);
+  }
+
   // parseImpact: heading con (H3+) nằm trong mục, không cắt các mục sau.
   ok(parse('## Ảnh hưởng spec\n- a: thêm R1\n### Ghi chú\n- b: đổi R2\n## Khác\n- c: thêm R3\n').entries.map((e) => e.cap).join() === 'a,b',
     'AC3.1: parseImpact — heading H3 trong mục không làm rơi mục sau');
@@ -277,6 +312,34 @@ export default async function run({ ok, ctx }) {
       ok(/\[W10\]/.test(cur.out) && cur.code === 1, 'W10-legacy: CLI thư mục 2026-10-21 (biên, không legacy) → W10, --strict exit 1');
       const undated = runCli('legacy-z', false);
       ok(!/W10/.test(undated.out), 'W10-legacy: CLI thư mục không có tiền tố ngày → không W10');
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }
+
+  // W23 qua CLI: specsIndex lấy từ <specsDir>/README.md, kể cả bố cục lồng repo/pkg/docs/...
+  {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const runMain = (argv) => {
+      const lines = [];
+      const [log, err] = [console.log, console.error];
+      console.log = (m) => lines.push(String(m));
+      console.error = () => {};
+      let code;
+      try { code = cr.main(argv); } finally { console.log = log; console.error = err; }
+      return { code, out: lines.join('\n') };
+    };
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'living-w23-'));
+    try {
+      const root = path.join(tmp, 'pkg');
+      const req = path.join(root, 'docs', 'requests', '2026-11-04-x');
+      fs.mkdirSync(req, { recursive: true });
+      fs.writeFileSync(path.join(req, 'design.md'), '# D\n## Tiêu chí chấp nhận\n- [ ] **AC1.1** — a\n## Ảnh hưởng spec\nKhông ảnh hưởng: x\n');
+      const loose = runMain([req]);
+      ok(loose.code === 0 && /\[W23\]/.test(loose.out), 'AC2.4: CLI không có docs/specs/README.md → W23, exit 0');
+      ok(runMain([req, '--strict']).code === 1, 'AC2.4: CLI --strict có W23 → exit 1');
+      fs.mkdirSync(path.join(root, 'docs', 'specs'), { recursive: true });
+      fs.writeFileSync(path.join(root, 'docs', 'specs', 'README.md'), '# Spec\n');
+      ok(!/\[W23\]/.test(runMain([req]).out), 'AC2.4: CLI có <specsDir>/README.md (bố cục lồng) → không W23');
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   }
 }
