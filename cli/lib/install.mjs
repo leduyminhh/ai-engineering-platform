@@ -844,7 +844,6 @@ export function uninstall({ providers, plugins, skills, scope = 'project' }) {
   return { root, scope, removed };
 }
 
-/** Liệt kê đã cài gì ở scope (đọc manifest) + tồn tại file thực tế. */
 /** Chỉ đọc. File global còn khối thì nạp trùng với AGENTS.md của project; project lệch template thì gợi ý chạy lại `aip init`. */
 function baselineWarnings(scope) {
   const read = (abs) => { try { return fs.readFileSync(abs, 'utf8'); } catch { return null; } };
@@ -869,14 +868,16 @@ function baselineWarnings(scope) {
   else if (ra && ra !== extractBaselineBlock(read(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'))).replace(/\r\n/g, '\n')) {
     warnings.push('AGENTS.md có khối baseline cũ — chạy "aip init" để làm mới.');
   }
-  const claude = read(path.join(root, 'CLAUDE.md'));
+  // Chưa có AGENTS.md = project chưa init: CLAUDE.md riêng của nó không phải việc của aip.
+  const claude = agents == null ? null : read(path.join(root, 'CLAUDE.md'));
   const rc = claude == null ? null : region(claude);
   if (rc === false) warnings.push('CLAUDE.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
-  else if (rc) warnings.push('CLAUDE.md còn khối baseline, nạp hai lần với AGENTS.md — chạy "aip init" để gỡ.');
+  else if (rc) warnings.push('CLAUDE.md còn khối baseline (khối thuộc AGENTS.md) — chạy "aip init" để gỡ.');
   else if (claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
   return warnings;
 }
 
+/** Liệt kê đã cài gì ở scope (đọc manifest) + tồn tại file thực tế. */
 export function check({ scope = 'project', doctor = false } = {}) {
   const root = scopeRoot(scope);
   const m = readManifest(scope);

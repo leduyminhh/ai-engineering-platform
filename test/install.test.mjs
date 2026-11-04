@@ -579,6 +579,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     ['AGENTS.md marker hỏng', { 'AGENTS.md': `${MARK}\nthiếu END\n`, 'CLAUDE.md': '@AGENTS.md\n' }, 'AGENTS.md'],
     ['CLAUDE.md marker hỏng', { 'AGENTS.md': `${CUR}\n`, 'CLAUDE.md': `@AGENTS.md\n${MARK}\n` }, 'CLAUDE.md'],
     ['chưa có AGENTS.md', {}, null],
+    ['chưa có AGENTS.md, CLAUDE.md riêng chưa import', { 'CLAUDE.md': '# Rule riêng\n' }, null],
     ['AGENTS.md không marker', { 'AGENTS.md': '# Riêng\n', 'CLAUDE.md': '@AGENTS.md\n' }, null],
   ]) {
     const r = checkWarnings(files);
