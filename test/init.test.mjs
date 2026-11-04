@@ -96,6 +96,11 @@ const BLOCK = extractBaselineBlock(TEMPLATE);
 const OLD_BLOCK = `${BEGIN}\nbaseline cũ\n${END}`;
 const write = (root, rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
 const snapshot = (root) => Object.fromEntries(listFiles(root).sort().map((f) => [f, read(root, f)]));
+// Windows không bật Developer Mode thì symlinkSync ném EPERM: bỏ ca thay vì đỏ vì môi trường.
+const linkOrSkip = (t, target, link) => {
+  try { fs.symlinkSync(target, link, "file"); return true; }
+  catch (e) { if (e.code !== "EPERM") throw e; t.skip("không tạo được symlink trên máy này (EPERM)"); return false; }
+};
 const bucketOf = (r, f) => ["created", "refreshed", "unchanged", "skipped"].filter((k) => r[k].includes(f));
 
 test("baseline-init AC1.1: init trên thư mục trống tạo AGENTS.md nguyên văn template + CLAUDE.md", () => {
@@ -153,12 +158,12 @@ for (const [name, broken] of [["BEGIN không có END", `${BEGIN}\nx\n`], ["END t
 }
 
 for (const rel of ["AGENTS.md", "CLAUDE.md"]) {
-  test(`baseline-init AC1.6: ${rel} là symlink → bỏ qua, file đích không đổi`, () => {
+  test(`baseline-init AC1.6: ${rel} là symlink → bỏ qua, file đích không đổi`, (t) => {
     const root = tmp();
     const outside = tmp();
     const target = path.join(outside, rel);
     fs.writeFileSync(target, `# đích\n${OLD_BLOCK}\n`);
-    fs.symlinkSync(target, path.join(root, rel), "file");
+    if (!linkOrSkip(t, target, path.join(root, rel))) return;
     const r = init({ root });
     assert.equal(fs.readFileSync(target, "utf8"), `# đích\n${OLD_BLOCK}\n`);
     assert.deepEqual(bucketOf(r, rel), ["skipped"]);
@@ -213,16 +218,16 @@ for (const head of ["", "@AGENTS.md\n"]) {
   });
 }
 
-test("baseline-init AC2.4: AGENTS.md là symlink → CLAUDE.md giữ nguyên, có cảnh báo", () => {
+test("baseline-init AC2.4: AGENTS.md là symlink → CLAUDE.md giữ nguyên, có cảnh báo", (t) => {
   const root = tmp();
   const target = path.join(tmp(), "AGENTS.md");
   fs.writeFileSync(target, OLD_BLOCK);
-  fs.symlinkSync(target, path.join(root, "AGENTS.md"), "file");
+  if (!linkOrSkip(t, target, path.join(root, "AGENTS.md"))) return;
   const claude = `# Trên\n${OLD_BLOCK}\n`;
   write(root, "CLAUDE.md", claude);
   const r = init({ root });
   assert.equal(read(root, "CLAUDE.md"), claude);
-  assert.ok(r.warnings.some((w) => w.includes("CLAUDE.md") && w.includes("AGENTS.md")), r.warnings.join("\n"));
+  assert.ok(r.warnings.some((w) => w.includes("CLAUDE.md") && w.includes("AGENTS.md") && /symlink|junction/.test(w)), r.warnings.join("\n"));
 });
 
 test("baseline-init AC5.1: mỗi file nằm đúng một nhóm created/refreshed/unchanged/skipped", () => {
