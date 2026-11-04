@@ -9,7 +9,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
    những gì đã làm; ghi các file docs đã đụng vào `docs_updated` của `workflow_result`.
 2. **Cập nhật spec sống.** Làm theo mục `## Ảnh hưởng spec` của design: thêm, sửa hoặc gạch bỏ `R<n>` trong
    `docs/specs/<capability>/spec.md`, thêm một hàng vào bảng lịch sử của spec; capability mới thì thêm vào
-   `docs/specs/README.md`. Design ghi "Không ảnh hưởng" thì bỏ qua và ghi lý do.
+   `docs/specs/README.md`. Design ghi "Không ảnh hưởng" thì bỏ qua và ghi lý do. Design ghi "Không ảnh hưởng" mà chưa có `docs/specs/README.md` thì không tự tạo README; cảnh báo W23 còn lại ghi vào `remaining_risks` kèm gợi ý chạy skill `engineering-spec-backfill`.
    - Capability chưa có `spec.md`: tạo từ `<thư mục skill artifact-templates>/references/spec.template.md`. Bỏ khối
      `<!-- artifact-template … -->` đầu file, điền Mục đích, Phạm vi, các `R<n>` đúng số design khai và một dòng Lịch sử.
      Project đã chạy `aip init --full` thì `docs/specs/_TEMPLATE.md` có sẵn cùng khung.
@@ -77,11 +77,10 @@ Ghi `Trạng thái` trong `design.md` bằng một commit docs trước khi kế
 | push + PR | `in-progress — PR nhánh <tên nhánh feature>` | commit docs trước khi push |
 | giữ nguyên | `in-progress — nhánh <tên nhánh feature>` | commit docs trên nhánh feature |
 
-Với hai trạng thái `in-progress`, báo cáo cuối nhắc: khi nhánh được merge tay hoặc qua PR, đặt `Trạng thái: merged <hash>`
-và xoá `plan.md`/`parts/*/plan.md` (W16 chỉ đòi xoá plan khi `merged`/`abandoned`).
+Với hai trạng thái `in-progress`, dòng nhắc merge tay (xem mục "Ghi nhận") đi kèm tin nhắn G3 và `next_actions`.
 
 - **merge local** (lựa chọn tay, khi thiếu khoá `mergeLocal`; với `mergeLocal` xem "Merge local theo khoá"): nhánh gốc là nhánh protected thì cần người dùng đã chọn tường minh lựa chọn này. Sau khi merge xong,
-  chạy lại full suite trên kết quả merge; đỏ → dừng, không xoá gì, báo người dùng. Xanh → `cleanup: true` thì dọn như
+  chạy lại full suite trên kết quả merge; đỏ → dừng, không xoá gì, báo người dùng. Xanh → commit docs đặt `Trạng thái: merged <hash merge>` và xoá `plan.md`/`parts/*/plan.md` như bước 3 của "Merge local theo khoá"; rồi `cleanup: true` thì dọn như
   "Dọn theo khoá" rồi đóng phiên con như "Đóng phiên con"; không thì hỏi một câu gộp xoá nhánh feature và đóng phiên
   con (xem "Đóng phiên con").
 - **push + PR**: không push lên nhánh protected; chỉ push nhánh feature đã nêu tên ở G3 (chọn lựa chọn này là xác nhận
@@ -124,3 +123,5 @@ archive các phiên con đã mở cho request này (phiên part, phiên thực t
 Khi người dùng đã chọn (hoặc duyệt G3 với `mergeLocal: true`) và việc của lựa chọn đó xong (kể cả giữ nguyên), ghi
 `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md gốc> "Plan: complete"` rồi trả `workflow_result` có `rulings` đã gom. Truyền đường dẫn `plan.md` gốc kể cả khi file đã bị xoá ở bước 3 của "Merge local theo khoá" (script tính workspace từ đường dẫn, không cần file còn), không truyền đường dẫn `progress.md`. `Plan: complete` chỉ ghi ở ledger `root/` (plan gốc), không bao giờ ở ledger part. Dòng
 `Plan: complete` làm hook `session-start` ngừng nạp ledger.
+
+Với push + PR hoặc giữ nguyên, tin nhắn G3 và `workflow_result` (`next_actions`) nhắc: khi nhánh được merge tay hoặc qua PR, đặt `Trạng thái: merged <hash>` và xoá `plan.md`/`parts/*/plan.md` (W16 chỉ đòi xoá plan khi `merged`/`abandoned`).

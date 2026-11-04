@@ -80,7 +80,7 @@ chấp nhận`) và **mở rộng** nó bằng các mục dưới đây — KHÔ
 - **Rủi ro và câu hỏi mở** — kèm **[giả định]** chưa xác nhận.
 - **Ảnh hưởng spec** — mục `## Ảnh hưởng spec` (khung của `design.md`): đọc `docs/specs/README.md` trước để biết năng lực
   đã có. Mỗi năng lực bị chạm một dòng `- <năng-lực>: thêm R<n>, đổi R<m>, bỏ R<k>`; năng lực chưa có spec khai
-  `- <năng-lực>: thêm R1…`. `Không ảnh hưởng: <lý do>` chỉ khi không năng lực nào bị chạm; "repo chưa có spec" không
+  `- <năng-lực>: thêm R1…`. `Không ảnh hưởng: <lý do>` chỉ khi không có năng lực nào bị chạm; "repo chưa có spec" không
   phải lý do hợp lệ. Năng lực mới cần `spec.md` ở bước gộp (`finish.md`).
 
 Quyết định lớn (khó đảo ngược, ảnh hưởng nhiều nơi) → ADR qua `engineering-adr`, `design.md` chỉ link.

@@ -8,7 +8,7 @@ Bỏ khối này khi chép template ra dùng.
 
 # Spec sống theo năng lực
 
-Điểm vào để biết project **đang có** gì. Mỗi năng lực có một spec sống tại `docs/specs/<năng-lực>/spec.md` (khung: `docs/specs/_TEMPLATE.md`); mỗi yêu cầu có ID `<năng-lực>/R<n>` và một câu hành vi đo được.
+Điểm vào để biết project **đang có** gì. Mỗi năng lực có một spec sống tại `docs/specs/<năng-lực>/spec.md` (khung: `docs/specs/_TEMPLATE.md` khi project đã chạy `aip init --full`; không thì `spec.template.md` của skill `artifact-templates`); mỗi yêu cầu có ID `<năng-lực>/R<n>` và một câu hành vi đo được.
 
 | Năng lực | Mô tả | Spec |
 |---|---|---|

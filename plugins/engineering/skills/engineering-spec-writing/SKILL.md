@@ -97,9 +97,7 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    vd `AC1.2`), viết Given/When/Then, để `plan.md` và `tasks.md` phủ/truy vết đúng ID. AC nêu kết quả số phải kèm khối `calc: <biểu thức> = <kết quả>` trong backtick; `check-request.mjs` tính lại (W22).
    Skill này KHÔNG dựng `plan.md`
    (kế hoạch triển khai thuộc `engineering-plan-writing` sau khi spec được duyệt).
-   Điền `## Ảnh hưởng spec` của `design.md` theo `references/spec-structure.md` (mục "Điền `design.md`"): đọc
-   `docs/specs/README.md` trước; năng lực chưa có spec khai `- <năng-lực>: thêm R1…`. "Repo chưa có spec" không phải
-   lý do `Không ảnh hưởng`. Câu trả về cho session chính nhắc năng lực mới cần `spec.md` ở bước gộp (`finish.md`).
+   Điền `## Ảnh hưởng spec` của `design.md` theo `references/spec-structure.md` (mục "Điền `design.md`"); "chưa có spec" không phải lý do `Không ảnh hưởng`, và báo cáo trả session chính nêu năng lực mới cần `spec.md` ở bước gộp.
 
 8. **Ghi ADR cho quyết định lớn.**
    Với mỗi quyết định thiết kế/nghiệp vụ đáng lưu (chọn phương án, đánh đổi phạm vi, ràng buộc kỹ thuật lớn):
