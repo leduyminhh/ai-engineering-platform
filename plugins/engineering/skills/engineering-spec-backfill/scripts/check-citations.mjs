@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CITE_RE = /`([^`\s]+):(\d+)`/g;
+// Hậu tố bắt đầu bằng số mới là trích dẫn (không bắt `http://…`); range, danh sách hay cột phải bị báo, không lặng lẽ bỏ qua.
+const CITE_RE = /`([^`\s:]+):(\d[^`]*)`/g;
 
 function lineCount(text) {
   const n = text.split(/\r\n|\r|\n/).length;
@@ -28,8 +29,9 @@ export function checkCitations(specText, { root }) {
         counts.set(abs, n);
       }
       const n = counts.get(abs);
+      if (!/^\d+$/.test(num)) { errors.push({ line: i + 1, ref, reason: 'dòng phải là một số nguyên (không range, danh sách hay cột)' }); continue; }
       const at = Number(num);
-      if (n === null) errors.push({ line: i + 1, ref, reason: 'file không tồn tại' });
+      if (n === null) errors.push({ line: i + 1, ref, reason: 'không phải file hoặc không tồn tại' });
       else if (at < 1 || at > n) errors.push({ line: i + 1, ref, reason: `dòng ${at} ngoài khoảng 1–${n}` });
     }
   });
