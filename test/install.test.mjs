@@ -517,6 +517,21 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     }
   }
 
+  // AC3.5: managed[] trong manifest bị sửa tay (đường dẫn ngoài root, không phải chuỗi) → bỏ qua kèm cảnh báo, không đụng file ngoài
+  {
+    const dir = mkTmp('cwf-bi-35o-');
+    process.env.AIE_INSTALL_ROOT = dir;
+    install({ providers: 'claude', plugins: 'core', scope: 'global' });
+    const victim = path.join(mkTmp('cwf-bi-35v-'), 'victim.md');
+    const victimText = `# Của người khác\n${BLOCK}\n`;
+    fs.writeFileSync(victim, victimText);
+    addLegacyManaged(dir, [path.relative(dir, victim), 42]);
+    let err = null;
+    const warned = warnings(() => { try { uninstall({ providers: 'claude', scope: 'global' }); } catch (e) { err = e; } });
+    ok(!err && fs.readFileSync(victim, 'utf8') === victimText, 'baseline-init AC3.5: uninstall -g không sửa file managed[] ngoài root, không ném');
+    ok(warned.some((w) => w.includes('victim.md')) && warned.some((w) => w.includes('42')), 'baseline-init AC3.5: uninstall -g cảnh báo nêu giá trị managed[] ngoài root');
+  }
+
   // AC4.x: aip check (doctor) cảnh báo khối baseline, chỉ đọc
   const END_MARK = '<!-- AI-ENGINEERING:END AGENTS_BASELINE -->';
   const TPL = fs.readFileSync(path.join(REPO, 'core/agents/AGENTS.template.md'), 'utf8');
@@ -587,6 +602,16 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
     const r = checkWarnings(files);
     ok(!r.err && (warn ? has(r.warnings, warn, /hỏng/) : r.warnings.length === 0),
       `baseline-init AC4.4: check ${name} → ${warn ? 'cảnh báo marker hỏng' : 'không cảnh báo'}, không ném`);
+    ok(r.untouched, `baseline-init AC4.5: check ${name} không tạo/sửa file`);
+  }
+  // CLAUDE.md còn khối hợp lệ luôn bị nhắc gỡ, kể cả khi AGENTS.md chưa có hoặc chưa có khối; "thiếu @AGENTS.md" thì không.
+  for (const [name, files] of [
+    ['chưa có AGENTS.md, CLAUDE.md chứa khối', { 'CLAUDE.md': `# Rule\n${CUR}\n` }],
+    ['AGENTS.md không marker, CLAUDE.md chứa khối', { 'AGENTS.md': '# Riêng\n', 'CLAUDE.md': `# Rule\n${CUR}\n` }],
+  ]) {
+    const r = checkWarnings(files);
+    ok(!r.err && r.warnings.length === 1 && has(r.warnings, 'CLAUDE.md', 'còn khối', 'aip init') && !has(r.warnings, '@AGENTS.md'),
+      `baseline-init AC4.4: check ${name} → cảnh báo còn khối, không báo thiếu @AGENTS.md`);
     ok(r.untouched, `baseline-init AC4.5: check ${name} không tạo/sửa file`);
   }
   // init bỏ qua symlink nên check không được gợi ý `aip init` cho file là link (hoặc cho CLAUDE.md khi AGENTS.md là link).

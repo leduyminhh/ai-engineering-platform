@@ -105,7 +105,13 @@ function writeManifest(scope, m) {
 function cleanLegacyManaged(root, scope, entries) {
   if (scope !== 'global') return;
   for (const rel of new Set(entries.flatMap((e) => e.managed || []))) {
-    const abs = path.join(root, rel);
+    // manifest có thể bị sửa tay: không đụng file ngoài root.
+    const abs = typeof rel === 'string' && !path.isAbsolute(rel) ? path.join(root, rel) : null;
+    const back = abs && path.relative(root, abs);
+    if (!abs || back.startsWith('..') || path.isAbsolute(back)) {
+      console.warn(`[aip] Bỏ qua managed[] không hợp lệ trong manifest (ngoài ${root} hoặc không phải đường dẫn tương đối): ${JSON.stringify(rel)}`);
+      continue;
+    }
     if (isLinkPath(abs)) {
       console.warn(`[aip] Bỏ qua khối baseline cũ ở ${rel}: là symlink/junction, gỡ sẽ sửa file đích.`);
       continue;
@@ -872,11 +878,10 @@ function baselineWarnings(scope) {
   }
   const claude = isLinkPath(path.join(root, 'CLAUDE.md')) ? null : read(path.join(root, 'CLAUDE.md'));
   const rc = claude == null ? null : region(claude);
-  // AGENTS.md chưa có khối hợp lệ = project chưa init (hoặc init sẽ ném vì marker hỏng): không nhắc import/khối.
-  const inited = typeof ra === 'string';
+  // Khối còn trong CLAUDE.md luôn báo (init gỡ được khi cả hai file không là link); "thiếu import" chỉ khi AGENTS.md đã có khối hợp lệ = project đã init.
   if (rc === false) warnings.push('CLAUDE.md có marker khối baseline hỏng — sửa tay rồi chạy "aip init".');
-  else if (inited && rc) warnings.push('CLAUDE.md còn khối baseline — chạy "aip init" để gỡ.');
-  else if (inited && claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
+  else if (rc && !agentsLink) warnings.push('CLAUDE.md còn khối baseline — chạy "aip init" để gỡ.');
+  else if (typeof ra === 'string' && claude != null && !importsAgentsMd(claude)) warnings.push('CLAUDE.md thiếu dòng @AGENTS.md — chạy "aip init" để thêm.');
   return warnings;
 }
 

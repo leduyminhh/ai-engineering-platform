@@ -33,6 +33,15 @@ const isLink = (p) => { try { fs.readlinkSync(p); return true; } catch { return 
 const eolOf = (text) => (text.includes('\r\n') ? '\r\n' : '\n');
 const norm = (text) => text.replace(/\r\n/g, '\n');
 
+// Ghi lại file UTF-16/nhị phân bằng utf8 sẽ phá nội dung cũ, nên từ chối trước mọi ghi. BOM UTF-8 vẫn hợp lệ.
+function readUtf8(abs, name) {
+  const buf = fs.readFileSync(abs);
+  const text = buf.toString('utf8');
+  const utf16Bom = buf.length >= 2 && ((buf[0] === 0xff && buf[1] === 0xfe) || (buf[0] === 0xfe && buf[1] === 0xff));
+  if (utf16Bom || buf.includes(0) || text.includes(String.fromCharCode(0xfffd))) throw new Error(`${name} không phải UTF-8 (UTF-16 hoặc nhị phân) — chuyển sang UTF-8 rồi chạy lại aip init; chưa ghi file nào.`);
+  return text;
+}
+
 /** Kế hoạch cho AGENTS.md + CLAUDE.md có sẵn, tính hết trước khi ghi: marker hỏng ở AGENTS.md ném tại đây. */
 function planInstructionFiles(root) {
   const template = fs.readFileSync(AGENTS_TEMPLATE, 'utf8');
@@ -46,7 +55,7 @@ function planInstructionFiles(root) {
   } else if (!fs.existsSync(agentsAbs)) {
     plan.set('AGENTS.md', { state: 'created', content: template });
   } else {
-    const existing = fs.readFileSync(agentsAbs, 'utf8');
+    const existing = readUtf8(agentsAbs, 'AGENTS.md');
     const s = existing.indexOf(BEGIN), e = existing.indexOf(END);
     if (existing.trim() === '') plan.set('AGENTS.md', { state: 'refreshed', content: template });
     else if (s !== -1 && e > s && norm(existing.slice(s, e + END.length)) === norm(block)) plan.set('AGENTS.md', { state: 'unchanged' });
@@ -61,7 +70,7 @@ function planInstructionFiles(root) {
     plan.set('CLAUDE.md', { state: 'skipped' });
     warnings.push('CLAUDE.md là symlink/junction — bỏ qua, không thêm @AGENTS.md.');
   } else if (fs.existsSync(claudeAbs)) {
-    const text = fs.readFileSync(claudeAbs, 'utf8');
+    const text = readUtf8(claudeAbs, 'CLAUDE.md');
     let next = text;
     const s = text.indexOf(BEGIN), e = text.indexOf(END);
     if (s !== -1 || e !== -1) {

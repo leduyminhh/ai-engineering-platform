@@ -157,6 +157,20 @@ for (const [name, broken] of [["BEGIN không có END", `${BEGIN}\nx\n`], ["END t
   }
 }
 
+// UTF-16LE có BOM (PowerShell 5 `>`) đọc bằng utf8 thành rác rồi bị ghi đè; init phải từ chối trước mọi ghi.
+for (const bad of ["AGENTS.md", "CLAUDE.md"]) {
+  test(`baseline-init AC1.5: ${bad} không phải UTF-8 (UTF-16LE) → ném nêu tên file, không ghi file nào`, () => {
+    const root = tmp();
+    write(root, "AGENTS.md", "# Rule cũ\n");
+    write(root, "CLAUDE.md", "# Rule cũ\n");
+    fs.writeFileSync(path.join(root, bad), Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("# Rule cũ\r\n", "utf16le")]));
+    const raw = (r) => Object.fromEntries(listFiles(r).sort().map((f) => [f, fs.readFileSync(path.join(r, f)).toString("hex")]));
+    const before = raw(root);
+    assert.throws(() => init({ root }), (e) => e.message.includes(bad) && /UTF-8/.test(e.message));
+    assert.deepEqual(raw(root), before);
+  });
+}
+
 for (const rel of ["AGENTS.md", "CLAUDE.md"]) {
   test(`baseline-init AC1.6: ${rel} là symlink → bỏ qua, file đích không đổi`, (t) => {
     const root = tmp();
