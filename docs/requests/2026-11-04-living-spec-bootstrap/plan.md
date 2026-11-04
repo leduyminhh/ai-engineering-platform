@@ -186,6 +186,49 @@
 - [ ] **Step 4:** `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-11-04-living-spec-bootstrap/ --base master` → không W10–W14, W23 (W7 cho AC chỉ kiểm bằng review được ghi vào `remaining_risks`); `npm test` → exit 0 (AC8.1).
 - [ ] **Step 5:** Commit `docs(specs): merge living-spec-bootstrap into living specs and bump versions`.
 
+### Task 8: Sửa sau review cuối
+**Kind:** TOOLING
+**TDD:** có
+**Phủ AC:** AC2.1, AC2.2, AC2.3, AC2.4, AC5.5, AC6.2
+**Files:**
+- Modify: `core/skills/artifact-templates/scripts/check-request.mjs`
+- Modify: `cli/lib/status.mjs`
+- Modify: `plugins/engineering/skills/engineering-spec-backfill/SKILL.md`
+- Modify: `plugins/engineering/skills/engineering-spec-backfill/references/drift-report.md`
+- Modify: `plugins/engineering/skills/engineering-spec-backfill/references/subagent-prompt.md`
+- Modify: `core/skills/plan-execution/references/finish.md`
+- Modify: `core/skills/plan-execution/references/task-loop.md`
+- Modify: `workflows/feature/WORKFLOW.md`
+- Modify: `plugins/engineering/skills/engineering-plan-writing/SKILL.md`
+- Modify: `plugins/engineering/skills/engineering-plan-writing/references/self-review.md`
+- Modify: `core/skills/artifact-templates/SKILL.md`
+- Modify: `core/skills/artifact-templates/references/docs-conventions.md`
+- Modify: `core/skills/artifact-templates/references/specs-readme.template.md`
+- Modify: `docs/specs/artifact-templates/spec.md`
+- Modify: `docs/specs/workflows/spec.md`
+- Modify: `docs/specs/cli-wizard/spec.md`
+- Modify: `README.md`
+- Modify: `README_VI.md`
+- Modify: `CLAUDE.md`
+- Modify: `core/.manifest.json`
+- Modify: `plugins/engineering/.manifest.json`
+- Modify: `plugins/backend/.manifest.json`
+- Modify: `plugins/frontend/.manifest.json`
+- Modify: `workflows/.manifest.json`
+- Modify: `plugins/_versions.lock.json`
+- Test: `test/contract/36-living-spec.contract.mjs`
+- Test: `test/status.test.mjs`
+
+**Interfaces:**
+- Consumes: `checkRequest(texts, opts)`, `listOpenRequests({ docsRoot, git })`
+- Produces: `opts.hasSpecs` của `checkRequest` (thay `opts.specsIndex`)
+
+- [ ] **Step 1:** Test đỏ: W23 theo `hasSpecs` (đổi các ca của `specsIndex`), ca CLI: có `docs/specs/README.md` mà không có `spec.md` → W23; có một `docs/specs/x/spec.md` → không W23. `listOpenRequests`: git giả trả cùng sha cho `refs/heads/feature/<slug>` và `HEAD` → không đánh dấu; tên nhánh đi qua `show-ref --verify`. Chạy `node test/validate.mjs --only living-spec` và `node test/status.test.mjs` → đỏ.
+- [ ] **Step 2:** Code: `main()` tính `hasSpecs` = có ít nhất một `<specsDir>/*/spec.md`; W23 đọc `hasSpecs`; thông điệp W23 ghi "(plugin `engineering`)". `listOpenRequests` dùng `git show-ref --verify --quiet refs/heads/<nhánh>` lấy sha, bỏ qua khi sha bằng `git rev-parse HEAD`, rồi `merge-base --is-ancestor refs/heads/<nhánh> HEAD`. Chạy lại → xanh.
+- [ ] **Step 3:** Nội dung: backfill xét theo từng năng lực (bước 1, bước 7, drift-report, subagent-prompt); cổng W11 của `thêm` ở `workflows/feature/WORKFLOW.md` Bước 4, `engineering-plan-writing` (SKILL.md bước 6 + self-review.md) và `task-loop.md` mục "Rà plan"; `finish.md` câu W23 theo điều kiện mới; minor từ review cuối (README.md mô tả đầu ra `--requests` đúng chữ thật, danh sách file `init --full` sinh có `docs/specs/_TEMPLATE.md` và `docs/specs/README.md` ở cả hai README, `sources:` của `specs-readme.template.md` và dòng mục lục, "(plugin `engineering`)" ở các chỗ gợi ý backfill, `printf '- %s: thêm R1\n'` và guard placeholder `TMP` trong SKILL.md backfill); spec `artifact-templates` R15/R16, `workflows` R18 (cổng W11), `cli-wizard` R9 viết lại theo hành vi mới.
+- [ ] **Step 4:** Bump patch core, engineering, backend, frontend, workflows; `npm run build`; `node cli/lib/versions.mjs --lock`; `npm test` → exit 0.
+- [ ] **Step 5:** Commit `fix(artifact-templates): apply final review decisions for living spec bootstrap` (test đỏ commit riêng trước).
+
 ## Rủi ro còn lại
 - AC1.1, AC3.1–AC3.4, AC5.2, AC5.3, AC5.5, AC5.6, AC7.1, AC8.4 kiểm bằng review và `grep`, không có test nhắc ID (AGENTS.md: không pin văn xuôi), nên W7 sẽ báo chúng; ghi vào `remaining_risks` khi kết thúc nhánh.
 - AC5.2–AC5.6 chỉ có bằng chứng thật khi chạy skill trên một project mẫu (vd `content-automation-platform`); việc đó nằm ngoài nhánh này.
