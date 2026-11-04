@@ -6,7 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Hậu tố bắt đầu bằng số mới là trích dẫn (không bắt `http://…`); range, danh sách hay cột phải bị báo, không lặng lẽ bỏ qua.
-const CITE_RE = /`([^`\s:]+):(\d[^`]*)`/g;
+const CITE_RE = /`([^`\s:]+):(\s*\d[^`]*)`/g;
 
 function lineCount(text) {
   const n = text.split(/\r\n|\r|\n/).length;
