@@ -1,6 +1,6 @@
 # Spec sống theo năng lực
 
-Mỗi năng lực của `aip` có một spec sống tại `docs/specs/<tên>/spec.md`. Template: `core/skills/artifact-templates/references/spec.template.md`.
+Điểm vào để biết `aip` **đang có** gì. Mỗi năng lực có một spec sống tại `docs/specs/<tên>/spec.md`. Template: `core/skills/artifact-templates/references/spec.template.md`.
 
 | Năng lực | Mô tả | Spec |
 |---|---|---|
@@ -14,4 +14,15 @@ Mỗi năng lực của `aip` có một spec sống tại `docs/specs/<tên>/spe
 
 Spec sống tạo dần: request chạm tới một năng lực thì cập nhật spec của nó ở bước gộp (tạo mới nếu năng lực chưa có). Mỗi yêu cầu có ID `<năng-lực>/R<n>`, và request chạm tới năng lực khai báo ảnh hưởng ở mục `## Ảnh hưởng spec` của `design.md`. Yêu cầu bị bỏ không bị xoá mà giữ lại dạng gạch ngang (`~~…~~`), kèm liên kết tới request đã bỏ nó. Request tạo năng lực mới cũng thêm dòng tương ứng vào bảng này ở bước gộp.
 
-Backfill 2026-10-23: `projection`, `install-lifecycle`, `artifact-templates`, `baseline` được viết lại từ các `design.md` đã merge và từ code; `workflows` được mở rộng thêm graph. Yêu cầu không có request gốc (`install-lifecycle`, một phần `projection`) ghi nguồn là đường dẫn code và nhãn [Unverified] khi chưa kiểm. Spec `hooks-gates` chưa phủ `guard-bash`/`guard-files`/`gate-stop`/`session-start` ngoài các request đã nêu trong spec đó, và `cli-wizard` chưa phủ wizard/`args`.
+Lịch sử: backfill tay 2026-10-23 dựng `projection`, `install-lifecycle`, `artifact-templates`, `baseline` từ `design.md` đã merge và code; `hooks-gates` chưa phủ `guard-bash`/`guard-files`/`gate-stop`/`session-start` ngoài các request đã nêu trong spec đó, `cli-wizard` chưa phủ wizard/`args`. Phần còn thiếu đối chiếu được bằng skill `engineering-spec-backfill` (chạy lại trên repo đã có spec chỉ báo lệch).
+
+## Bản đồ docs
+
+| Câu hỏi | Nơi trả lời |
+|---|---|
+| Hệ thống làm gì | `docs/specs/` (file này và spec từng năng lực) |
+| Cấu trúc ra sao | `CLAUDE.md` mục Architecture (repo chưa có ARD hay `project-knowledge/`) |
+| Vì sao chọn như vậy | `docs/decisions/` (ADR) |
+| Các phần giao tiếp thế nào | chưa có `docs/contracts/`; định dạng file chiếu ra provider nằm ở spec `projection` |
+| Chạy và vận hành | `README.md` / `README_VI.md` (lệnh `aip`), `CLAUDE.md` mục Commands |
+| Đang làm dở | lệnh `aip status --requests` (request trong `docs/requests/` chưa `merged`/`abandoned`) |

@@ -43,7 +43,7 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
 5. **Có `tasks.md`?** Task trong `plan.md` trỏ ID task của `tasks.md` thay vì chia lại, và hai file dùng chung một
    checkpoint duyệt. Không có `tasks.md` → plan tự chia task, không bắt buộc tạo `tasks.md`.
 6. **Tự soát.** Chạy 5 mục trong [references/self-review.md](references/self-review.md), sửa tại chỗ, rồi chạy
-   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Còn cảnh báo ngoài W9 → sửa `plan.md`; không xoá `**Files:**`/test để
+   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Còn cảnh báo ngoài W9 và W11 của năng lực chỉ khai `thêm` mà chưa có `docs/specs/<năng-lực>/spec.md` → sửa `plan.md`; không xoá `**Files:**`/test để
    tắt cảnh báo. Request chia part (có `## Bảng part`): mỗi part một `parts/<nn>-<part-slug>/plan.md`
    ([references/plan-structure.md](references/plan-structure.md) mục "Request chia part"), chạy thêm
    `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` sau `check-request.mjs`.

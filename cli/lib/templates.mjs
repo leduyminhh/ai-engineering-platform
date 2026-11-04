@@ -14,6 +14,7 @@ const INIT_DOC_MAP = [
   ['plan.template.md', 'docs/requests/_TEMPLATE/plan.md'],
   ['adr.template.md', 'docs/decisions/_TEMPLATE.md'],
   ['spec.template.md', 'docs/specs/_TEMPLATE.md'],
+  ['specs-readme.template.md', 'docs/specs/README.md'],
   ['project-knowledge/', 'project-knowledge/'],
 ];
 

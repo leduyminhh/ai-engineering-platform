@@ -26,10 +26,12 @@ Moved verbatim from the `### Workflow defaults` section of the AI Engineering ba
   the tests are written, and use `--strict` in CI only from then on.
 - `design.md` has a `## Ảnh hưởng spec` section: one line `- <capability>: thêm|đổi|bỏ R<n>` per affected
   capability, or `Không ảnh hưởng: <reason>`. An older `docs/requests/_TEMPLATE/design.md` may lack it; add the
-  section by hand, since the validator warns (W10) when it is missing.
+  section by hand, since the validator warns (W10) when it is missing. W23 warns when the design says
+  `Không ảnh hưởng` but the repo has no `docs/specs/<capability>/spec.md` at all (a README alone does not count): declare the capability or run `engineering-spec-backfill` (plugin `engineering`).
 - Merge step: update `docs/specs/<capability>/spec.md` as the design's `## Ảnh hưởng spec` section says
   (add, edit or strike through requirements `<capability>/R<n>`, add a row to the spec's history table; if you
-  created a new capability, also add it to `docs/specs/README.md`), then run `check-request.mjs` (with
+  created a new capability, also add it to `docs/specs/README.md`, the entry point: a capability table, a docs map
+  and the `aip status --requests` command, never a table of open requests; template `specs-readme.template.md`), then run `check-request.mjs` (with
   `--base <ref>` in CI). Do this before finishing the branch (`plan-execution`).
 
 #### Memory and resume

@@ -128,11 +128,11 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Ràng buộc:** trình plan để duyệt theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó) (mở `plan.md` ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng); chỉ ghi `plan.md` gốc (nếu có) và `parts/*/plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
   ở bước này (đổi cột Song song thì quay lại Bước 3); không xoá `**Files:**` hay test để tắt cảnh báo.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part), hoặc dòng ghi rõ bỏ qua vì cỡ "thay đổi nhỏ".
-- **Gate:** `check-request.mjs` không còn cảnh báo ngoài W9 (file test chưa tồn tại lúc lập plan); khi có part, `check-partition.mjs` không còn cảnh báo, hoặc nhóm còn bị báo P1/P2/P4 đã được đổi sang chạy tuần tự (cột Song song `—` hoặc dòng `Ruling:` như trên); mọi acceptance
+- **Gate:** `check-request.mjs` không còn cảnh báo ngoài W9 (file test chưa tồn tại lúc lập plan) và W11 của năng lực chỉ khai `thêm` mà chưa có `docs/specs/<năng-lực>/spec.md` (spec được tạo ở bước gộp, nên W11 này bình thường lúc lập plan); khi có part, `check-partition.mjs` không còn cảnh báo, hoặc nhóm còn bị báo P1/P2/P4 đã được đổi sang chạy tuần tự (cột Song song `—` hoặc dòng `Ruling:` như trên); mọi acceptance
   criterion có task phủ trong `plan.md` gốc (nếu có) và `parts/*/plan.md`; người dùng đã duyệt plan (cỡ dự án) — cỡ "thay đổi nhỏ" không có gate này.
-- **Khi fail:** `check-request.mjs` còn cảnh báo ngoài W9 mà sửa `plan.md` không hết vì lỗi nằm ở tài liệu → quay
+- **Khi fail:** `check-request.mjs` còn cảnh báo ngoài W9 và W11 của `thêm` mà sửa `plan.md` không hết vì lỗi nằm ở tài liệu → quay
   lại Bước 3; plan còn điểm mơ hồ về phạm vi hay thứ tự → hỏi người dùng ở checkpoint.
-- **Evidence:** đường dẫn `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (số cảnh báo, chỉ còn W9 hoặc 0) + output `check-partition.mjs` khi có part, hoặc dòng bỏ qua.
+- **Evidence:** đường dẫn `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (số cảnh báo, chỉ còn W9, W11 của `thêm` hoặc 0) + output `check-partition.mjs` khi có part, hoặc dòng bỏ qua.
 
 ### Bước 5 — Vòng task
 
@@ -249,7 +249,7 @@ Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 d
 |---|---|---|
 | 2 (làm rõ, không phải cổng) | Một tin nhắn gom mọi câu hỏi làm rõ, kèm tóm tắt hướng/cỡ việc/phạm vi/bảng e2e/quyết định tách task | Người dùng trả lời tin nhắn gom (hoặc không còn câu cần hỏi); bỏ qua phần hỏi thì các quyết định của agent được nêu nổi bật |
 | 3 (G1) | Hướng đã chọn (kèm hướng bị loại) + cỡ việc + phạm vi BE/FE/fullstack + bảng ứng viên e2e (nếu có); `requirement.md` (+ `design.md` cỡ dự án) + kết quả builder check; contract OpenAPI (nếu có) hoặc ghi chú "không có API"; ADR (nếu có) | Người dùng xác nhận hướng, cỡ việc (và bảng e2e, tính là duyệt E2), tài liệu, contract/ADR, hoặc đồng ý không cần |
-| 4 (G2) | `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (+ `check-partition.mjs` khi có part) (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9; `check-partition.mjs` không còn cảnh báo (hoặc nhóm bị báo chạy tuần tự) |
+| 4 (G2) | `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (+ `check-partition.mjs` khi có part) (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9 và W11 của `thêm`; `check-partition.mjs` không còn cảnh báo (hoặc nhóm bị báo chạy tuần tự) |
 | 7 (G3) | Diff cả nhánh (code + test + docs) + `rulings` + finding `major` còn lại trong `remaining_risks` + kết quả full suite | Người dùng duyệt diff cả nhánh, chấp nhận các `Ruling:`/`major` còn lại; có `mergeLocal: true` thì đó là đồng ý merge local, không thì chọn một trong 3 lựa chọn |
 
 Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution` và câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và không gửi dòng trạng thái giữa chừng (kể cả khi phiên con hoặc subagent xong một lượt): session chính chỉ nói ở G1, G2, G3, câu hỏi push, câu hỏi cách chạy part, loại dừng hoặc lỗi chặn (định nghĩa ở mục "Báo cáo" của `task-loop.md` trong skill `plan-execution`). Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
@@ -266,7 +266,7 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | `agent_result` hỏng (Bước 5) | Giao lại cho chính agent đó, tối đa 2 lần rồi hỏi người dùng |
 | Yêu cầu mơ hồ (Bước 2–3) | Dừng, gom mọi câu hỏi vào một tin nhắn rồi hỏi người dùng (cả Bước 2 lẫn builder check) |
 | Việc rõ và nhỏ (Bước 2) | Không chạy workflow; làm thẳng và báo người dùng |
-| `check-request.mjs` còn cảnh báo ngoài W9 (Bước 4) | Sửa `plan.md`; lỗi ở tài liệu → quay lại Bước 3, tối đa 2 lần rồi hỏi người dùng |
+| `check-request.mjs` còn cảnh báo ngoài W9 và W11 của `thêm` (Bước 4) | Sửa `plan.md`; lỗi ở tài liệu → quay lại Bước 3, tối đa 2 lần rồi hỏi người dùng |
 | Finding `blocker` trong phạm vi sau review cuối (Bước 6; ngoài AC đã có `Ruling:` thì trình ở Bước 7) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
 | Full suite đỏ (Bước 7) | Dừng, không đưa G3 hay 3 lựa chọn (và không merge dù `mergeLocal: true`); sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
 | Merge local theo khoá `mergeLocal`: cây bẩn, conflict hoặc suite đỏ trên cây đã merge (Bước 7) | Lỗi chặn: cây bẩn thì không checkout; conflict hoặc đỏ thì `git merge --abort` (nhánh gốc giữ nguyên); dừng, báo người dùng, không dọn |
@@ -286,7 +286,7 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
 - [ ] Hướng, cỡ việc và phạm vi có xác nhận người dùng (hoặc quyết định của agent nêu rõ khi bỏ qua phần hỏi) — evidence: Bước 2
 - [ ] Acceptance criteria đo được, builder check xong, người dùng duyệt tài liệu; contract OpenAPI hợp lệ hoặc ghi rõ
   không có API / không có contract vì cỡ thay đổi nhỏ — evidence: Bước 3
-- [ ] `plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part) qua `check-request.mjs` (chỉ còn W9) và `check-partition.mjs`, và được duyệt, hoặc ghi rõ bỏ qua vì cỡ "thay đổi nhỏ" — evidence: Bước 4
+- [ ] `plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part) qua `check-request.mjs` (chỉ còn W9 hoặc W11 của `thêm`) và `check-partition.mjs`, và được duyệt, hoặc ghi rõ bỏ qua vì cỡ "thay đổi nhỏ" — evidence: Bước 4
 - [ ] Mọi task `complete` trong ledger (có part thì mọi part `merged <hash>` hoặc `bỏ`), mỗi task đã qua task review và có commit; build xanh cho phần backend/frontend có
   đụng — evidence: Bước 5
 - [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass (e2e `not_run` vì thiếu môi trường BE/DB test là

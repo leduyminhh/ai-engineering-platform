@@ -41,6 +41,7 @@ export function parse(argv) {
     else if (v === '--no-color') a.noColor = true;
     else if (v === '--html') a.html = true;
     else if (v === '--watch') a.watch = true;
+    else if (v === '--requests') a.requests = true;
     else if (v === '--part') a.part = argv[++i];
     else if (v.startsWith('--part=')) a.part = v.slice(7);
     else if (v === '--as-plugin') { a.mode = 'plugin'; a.explicit = true; } // claude: cài như plugin (qua `claude` CLI)

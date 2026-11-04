@@ -90,6 +90,27 @@ test("AC2.2: init --full không ghi đè docs/specs/_TEMPLATE.md đã có", () =
   assert.ok(r.skipped.includes("docs/specs/_TEMPLATE.md"));
 });
 
+test("AC4.1: init --full tạo docs/specs/README.md làm điểm vào spec sống", () => {
+  const root = tmp();
+  const r = init({ root, full: true });
+  assert.ok(r.created.includes("docs/specs/README.md"));
+  const text = read(root, "docs/specs/README.md");
+  assert.ok(text.includes("aip status --requests"));
+  assert.ok(text.includes("| Năng lực | Mô tả | Spec |"));
+});
+
+test("AC4.2: init --full giữ nguyên docs/specs/README.md đã có; init thường không tạo", () => {
+  const root = tmp();
+  const old = "# Spec của project\n";
+  write(root, "docs/specs/README.md", old);
+  const r = init({ root, full: true });
+  assert.equal(read(root, "docs/specs/README.md"), old);
+  assert.ok(r.skipped.includes("docs/specs/README.md"));
+  const plain = tmp();
+  init({ root: plain });
+  assert.ok(!fs.existsSync(path.join(plain, "docs/specs/README.md")));
+});
+
 // ── baseline-init (docs/requests/2026-11-04-project-baseline-init) ─────────────
 const TEMPLATE = fs.readFileSync(path.join(REPO, "core/agents/AGENTS.template.md"), "utf8");
 const BLOCK = extractBaselineBlock(TEMPLATE);

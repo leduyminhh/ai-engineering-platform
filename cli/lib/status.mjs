@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { parsePartTable } from '../../core/skills/artifact-templates/scripts/check-request.mjs';
+import { parsePartTable, requestStatusToken, STATUSES } from '../../core/skills/artifact-templates/scripts/check-request.mjs';
 import { parsePartition, normPath } from '../../core/skills/artifact-templates/scripts/check-partition.mjs';
 import { readGateConfig } from '../../core/hooks/scripts/gate-config.mjs';
 
@@ -286,10 +286,46 @@ ${model.needs.length ? `<section id="needs" class="needs"><h2>Cần bạn xử l
 `;
 }
 
+const CLOSED = new Set(['merged', 'abandoned']);
+
+// Request đang mở: mọi thư mục của docs/requests/ trừ _TEMPLATE và trạng thái đã đóng; token lạ hay thiếu dòng là null ("không rõ").
+export function listOpenRequests({ docsRoot, git = defaultGit }) {
+  const dir = path.join(docsRoot, 'docs', 'requests');
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return []; }
+  const out = [];
+  for (const e of entries.filter((d) => d.isDirectory() && d.name !== '_TEMPLATE').sort((a, b) => a.name.localeCompare(b.name))) {
+    const line = linesOf(readText(path.join(dir, e.name, 'design.md'))).find((l) => requestStatusToken(l) !== null);
+    const token = line ? requestStatusToken(line) : null;
+    if (CLOSED.has(token)) continue;
+    const branch = `feature/${e.name.replace(/^\d{4}-\d{2}-\d{2}-/, '')}`;
+    // Gợi ý thôi: squash/rebase hay nhánh đã xoá không nhận ra. Nhánh vừa tạo chưa có commit riêng trùng HEAD nên cũng là tổ tiên: loại để không báo merge giả.
+    // show-ref (không --quiet vì --quiet nuốt luôn sha) lấy sha tại đúng refs/heads/, không để tên nhánh bị đọc thành revision khác.
+    const ref = `refs/heads/${branch}`;
+    const tip = tryGit(git, ['show-ref', '--verify', '--hash', ref], docsRoot);
+    const suspectMerged = !!tip && tip !== tryGit(git, ['rev-parse', 'HEAD'], docsRoot)
+      && tryGit(git, ['merge-base', '--is-ancestor', ref, 'HEAD'], docsRoot) !== null;
+    out.push({ name: e.name, status: STATUSES.includes(token) ? token : null, suspectMerged });
+  }
+  return out;
+}
+
+function runRequests(args, { docsRoot, out, err, git }) {
+  const extra = [args._[1] !== undefined && '<request>', args.html && '--html', args.watch && '--watch', 'part' in args && '--part'].filter(Boolean);
+  if (extra.length) { err(`--requests chỉ đi cùng --json, không đi cùng ${extra.join(', ')}.`); return 2; }
+  const list = listOpenRequests({ docsRoot, git });
+  if (args.json) { out(JSON.stringify({ requests: list }, null, 2)); return 0; }
+  if (!list.length) { out('Không có request đang mở trong docs/requests/.'); return 0; }
+  const width = Math.max(...list.map((r) => r.name.length));
+  for (const r of list) out(`${r.name.padEnd(width)}  ${r.status ?? 'không rõ'}${r.suspectMerged ? '  nghi đã merge' : ''}`);
+  return 0;
+}
+
 // CLI: trả exit code; --watch giữ tiến trình và ghi lại HTML mỗi 10 giây.
 export function runStatus(args, { cwd = process.cwd(), out = console.log, err = console.error, git = defaultGit, rename = fs.renameSync } = {}) {
   const runsRoot = mainRoot(cwd, git);
   const docsRoot = tryGit(git, ['rev-parse', '--show-toplevel'], cwd) ?? cwd;
+  if (args.requests) return runRequests(args, { docsRoot, out, err, git });
   if ('part' in args && !args.part) { err('--part cần số part, vd --part 02.'); return 2; }
   const request = args._[1] ?? pickRequest(runsRoot);
   if (!request) { out('Không có request nào đang chạy (chưa có ledger dở trong .aip/runs/).'); return 0; }

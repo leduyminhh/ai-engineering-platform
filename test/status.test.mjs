@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { buildStatus, pickRequest, renderText, renderHtml, countBlocked, staleMinutesOf, runStatus } from '../cli/lib/status.mjs';
+import { buildStatus, pickRequest, renderText, renderHtml, countBlocked, staleMinutesOf, runStatus, listOpenRequests } from '../cli/lib/status.mjs';
 import { parse } from '../cli/lib/args.mjs';
 
 const CLI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'cli', 'index.mjs');
@@ -269,6 +269,86 @@ try {
   ok(np.status === 2 && np.stderr.includes('--part'), '--part thiếu giá trị → exit 2, báo lỗi');
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
+}
+
+// aip status --requests: request đang mở đọc từ dòng "- Trạng thái:" của design.md, git chỉ để gợi ý "nghi đã merge".
+{
+  const reqRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-requests-'));
+  try {
+    const reqs = path.join(reqRoot, 'docs', 'requests');
+    const put = (name, file, text) => { fs.mkdirSync(path.join(reqs, name), { recursive: true }); fs.writeFileSync(path.join(reqs, name, file), text); };
+    const design = (status) => `# D\n- Ngày: 2026-11-04\n${status === undefined ? '' : `- Trạng thái: ${status}\n`}`;
+    put('2026-11-01-a-draft', 'design.md', design('draft — chờ duyệt'));
+    put('2026-11-01-b-approved', 'design.md', design('approved—đã duyệt'));
+    put('2026-11-01-c-progress', 'design.md', design('in-progress — nhánh feature/c-progress'));
+    put('2026-11-01-d-merged', 'design.md', design('Merged 85ea0210'));
+    put('2026-11-01-e-abandoned', 'design.md', design('abandoned'));
+    put('2026-11-01-f-noline', 'design.md', design(undefined));
+    put('2026-11-01-g-odd', 'design.md', design('Đã duyệt (người dùng)'));
+    put('2026-11-01-h-req', 'requirement.md', '# R\n');
+    put('_TEMPLATE', 'design.md', design('draft'));
+    fs.writeFileSync(path.join(reqs, 'note.md'), '# không phải thư mục\n');
+
+    const noGit = () => { throw new Error('không phải repo'); };
+    const list = listOpenRequests({ docsRoot: reqRoot, git: noGit });
+    const got = Object.fromEntries(list.map((r) => [r.name, r.status]));
+    ok(JSON.stringify(got) === JSON.stringify({
+      '2026-11-01-a-draft': 'draft', '2026-11-01-b-approved': 'approved', '2026-11-01-c-progress': 'in-progress',
+      '2026-11-01-f-noline': null, '2026-11-01-g-odd': null, '2026-11-01-h-req': null,
+    }), 'AC6.1: --requests liệt kê draft/approved/in-progress và ba ca "không rõ"; bỏ merged, abandoned, _TEMPLATE, file thường');
+
+    // Mã thoát 1 của merge-base --is-ancestor (không là tổ tiên) và lỗi git đều phải ra "không đánh dấu".
+    // Nhánh vừa tạo chưa có commit riêng có sha trùng HEAD: không được tính là đã merge dù merge-base trả 0.
+    const SHA = 'f'.repeat(40);
+    const gitWith = (onAncestor, branchExists = true, branchSha = SHA, headSha = 'a'.repeat(40)) => (args) => {
+      const s = args.join(' ');
+      if (s.startsWith('show-ref --verify')) { if (branchExists) return branchSha; throw Object.assign(new Error('exit 1'), { status: 1 }); }
+      if (s === 'rev-parse HEAD') return headSha;
+      if (s.startsWith('merge-base --is-ancestor')) return onAncestor(s);
+      throw new Error('lệnh lạ');
+    };
+    const ancestorOf = (slug) => (s) => { if (s.includes(`refs/heads/feature/${slug} `)) return ''; throw Object.assign(new Error('exit 1'), { status: 1 }); };
+    const cases = [
+      { name: 'nhánh là tổ tiên của HEAD', git: gitWith(ancestorOf('b-approved')), want: ['2026-11-01-b-approved'] },
+      { name: 'không là tổ tiên (exit 1)', git: gitWith(() => { throw Object.assign(new Error('exit 1'), { status: 1 }); }), want: [] },
+      { name: 'nhánh không tồn tại', git: gitWith(() => '', false), want: [] },
+      { name: 'đầu nhánh trùng HEAD (chưa có commit riêng)', git: gitWith(ancestorOf('b-approved'), true, SHA, SHA), want: [] },
+      { name: 'git ném lỗi', git: noGit, want: [] },
+    ];
+    for (const c of cases) {
+      let threw = false;
+      let marked = [];
+      try { marked = listOpenRequests({ docsRoot: reqRoot, git: c.git }).filter((r) => r.suspectMerged).map((r) => r.name); } catch { threw = true; }
+      ok(!threw && JSON.stringify(marked) === JSON.stringify(c.want), `AC6.2/AC6.3: nghi đã merge — ${c.name}`);
+    }
+
+    const lines = [];
+    const rc = runStatus({ _: ['status'], requests: true }, { cwd: reqRoot, out: (m) => lines.push(m), err: () => {}, git: gitWith(ancestorOf('b-approved')) });
+    const text = lines.join('\n');
+    ok(rc === 0 && text.includes('2026-11-01-b-approved') && /nghi đã merge/.test(text) && text.includes('không rõ') && !text.includes('d-merged'),
+      'AC6.3: --requests in text có "không rõ" và "nghi đã merge", exit 0');
+
+    const before = fs.readdirSync(reqRoot, { recursive: true }).length;
+    const cliIn = (cwd, ...a) => spawnSync(process.execPath, [CLI, 'status', ...a], { cwd, encoding: 'utf8' });
+    const j = cliIn(reqRoot, '--requests', '--json');
+    let parsed = null;
+    try { parsed = JSON.parse(j.stdout); } catch { /* parsed giữ null */ }
+    ok(j.status === 0 && Array.isArray(parsed?.requests) && parsed.requests.length === 6
+      && parsed.requests.every((r) => 'name' in r && 'status' in r && typeof r.suspectMerged === 'boolean')
+      && fs.readdirSync(reqRoot, { recursive: true }).length === before, 'AC6.4: --requests --json parse được, đủ khoá, không ghi file');
+    for (const extra of [['--html'], ['--watch'], ['--part', '01'], ['2026-11-01-a-draft']]) {
+      const r = cliIn(reqRoot, '--requests', ...extra);
+      ok(r.status === 2 && r.stderr.trim().length > 0, `AC6.4: --requests kèm ${extra.join(' ')} → exit 2`);
+    }
+    ok(parse(['status', '--requests']).requests === true, 'AC6.4: parse() nhận --requests');
+
+    const none = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-status-norequests-'));
+    const n = cliIn(none, '--requests');
+    ok(n.status === 0 && n.stdout.trim().split('\n').length === 1, 'AC6.5: không có docs/requests/ → một dòng, exit 0');
+    fs.rmSync(none, { recursive: true, force: true });
+  } finally {
+    fs.rmSync(reqRoot, { recursive: true, force: true });
+  }
 }
 
 if (fails.length) { console.error(`FAIL ${fails.length}:\n- ${fails.join('\n- ')}`); process.exit(1); }

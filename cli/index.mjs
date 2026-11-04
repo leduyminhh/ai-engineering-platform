@@ -240,7 +240,9 @@ LỆNH
                             cache còn ấm bao lâu, tiền phiên, hạn mức 5h, ⚠ <n> vướng khi request đang chạy có part vướng); --soft <n> --hard <n> (mặc định 40/60), --no-color.
                             Cấu hình: {"statusLine":{"type":"command","command":"aip statusline","refreshInterval":60}}
   status [<request>]        xem tiến trình request chia part, chỉ đọc (mặc định: request có ledger dở ghi gần nhất);
-                            --json, --html (ghi .aip/runs/<request>/status.html), --watch (ghi lại mỗi 10 giây), --part <nn>
+                            --json, --html (ghi .aip/runs/<request>/status.html), --watch (ghi lại mỗi 10 giây), --part <nn>;
+                            --requests [--json]: liệt kê request trong docs/requests/ chưa merged/abandoned, đánh dấu
+                            "nghi đã merge" khi nhánh feature/<slug> đã nằm trong HEAD
   mode <full|ask|status>    chế độ quyền của project (chỉ project, không nhận -g): full = ghi mode=full vào
                             .claude/aip-gate.json (hook bỏ xác nhận khi phiên chạy bypassPermissions); ask = bỏ khóa mode
                             và sinh lại .claude/settings.json chuẩn nếu là bản full do aip sinh; status = xem hiện trạng
