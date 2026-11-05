@@ -1,6 +1,6 @@
 # Thiết kế: hướng dẫn hai ca biên của "Merge local theo khoá"
 - Ngày: 2026-11-05
-- Trạng thái: in-progress — nhánh claude/finish-merge-edge-cases-12ddeb
+- Trạng thái: merged 2e4b6fc3
 - Requirement: không có
 ## Vấn đề và lý do
 Mục "Merge local theo khoá" của `core/skills/plan-execution/references/finish.md` (áp cho `mergeLocal: true` lẫn lựa chọn 1 tay ở G3) chỉ nêu ba kết quả của bước 2: xanh thì commit, conflict hoặc suite đỏ thì `git merge --abort`. Hai ca sau chưa có hướng dẫn, agent phải đoán:

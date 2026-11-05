@@ -1,6 +1,6 @@
 # Thiết kế: merge local tay đi cùng cơ chế `--no-commit` như merge local theo khoá
 - Ngày: 2026-11-04
-- Trạng thái: in-progress — nhánh feature/finish-manual-merge-no-commit
+- Trạng thái: merged 2e4b6fc3
 - Requirement: không có
 ## Vấn đề và lý do
 `core/skills/plan-execution/references/finish.md` có hai đường merge local. Đường `mergeLocal: true` (mục "Merge local theo khoá") đã an toàn: cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, xanh mới commit, đỏ hoặc conflict thì `git merge --abort`. Đường tay (lựa chọn 1 của G3 khi thiếu khoá, bullet "merge local" ở "Chi tiết từng lựa chọn") merge `--no-ff` trước rồi mới chạy full suite; suite đỏ thì commit merge vẫn nằm trên nhánh gốc, có thể là nhánh protected, và finish.md chỉ bảo "dừng, không xoá gì".
