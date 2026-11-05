@@ -8,11 +8,13 @@ phrase when it is used literally.
 | Cụm | Thay bằng |
 |---|---|
 | In today's fast-paced world | cut, start with the point |
+| In today’s fast-paced world | cut, start with the point |
 | In the realm of | in |
 | It's important to note that | cut, state the fact |
 | It’s important to note that | cut, state the fact |
 | It is worth noting that | cut, state the fact |
 | Let's dive in | cut |
+| Let’s dive in | cut |
 | Certainly! | cut |
 | Great question | cut |
 | As an AI language model | cut |
