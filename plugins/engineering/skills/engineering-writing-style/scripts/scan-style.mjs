@@ -30,24 +30,25 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Ranh giới theo ký tự chữ Unicode để "robust" không khớp "robustness" và vẫn chạy với tiếng Việt;
 // \p{M} giữ dấu tổ hợp (NFD) khỏi bị coi là ranh giới.
 export function scanText(text, patterns) {
-  const compiled = patterns.map((p) => ({ ...p, re: new RegExp(`(?<![\p{L}\p{N}\p{M}])${escapeRe(p.phrase)}(?![\p{L}\p{N}\p{M}])`, 'iu') }));
+  const compiled = patterns.map((p) => ({ ...p, re: new RegExp(`(?<![\\p{L}\\p{N}\\p{M}])${escapeRe(p.phrase)}(?![\\p{L}\\p{N}\\p{M}])`, 'giu') }));
   const hits = [];
   // Theo CommonMark: fence chỉ đóng bằng cùng ký tự, độ dài >= fence mở; fence không đóng thì phần còn lại của file là code.
   let fence = null;
+  // Khớp fence trên dòng đã bỏ thụt lề vì fence trong list item có thể thụt ≥ 4 khoảng trắng.
   text.normalize('NFC').split(/\r\n|\r|\n/).forEach((raw, i) => {
+    const lead = raw.trimStart();
     if (fence) {
-      const close = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(raw);
+      const close = /^(`{3,}|~{3,})[ \t]*$/.exec(lead);
       if (close && close[1][0] === fence.ch && close[1].length >= fence.len) fence = null;
       return;
     }
-    const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(raw);
+    const open = /^(`{3,}|~{3,})(.*)$/.exec(lead);
     if (open && !(open[1][0] === '`' && open[2].includes('`'))) { fence = { ch: open[1][0], len: open[1].length }; return; }
     if (raw.trim().startsWith('>')) return;
     const line = raw.replace(/(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)/g, ' ').replace(/https?:\/\/\S+/g, ' ');
     const found = [];
     for (const p of compiled) {
-      const m = p.re.exec(line);
-      if (m) found.push({ line: i + 1, phrase: p.phrase, replacement: p.replacement, start: m.index, end: m.index + m[0].length });
+      for (const m of line.matchAll(p.re)) found.push({ line: i + 1, phrase: p.phrase, replacement: p.replacement, start: m.index, end: m.index + m[0].length });
     }
     // Giữ khớp dài nhất: "Tóm lại" nằm trong "Nói tóm lại" không báo hai lần.
     for (const h of found) {

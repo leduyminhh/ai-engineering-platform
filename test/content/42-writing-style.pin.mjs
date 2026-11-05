@@ -23,6 +23,12 @@ export default async function run({ ok, ctx }) {
     { name: 'inline code nhiều backtick', text: '``a`b delve`` thật', want: [] },
     { name: 'văn bản NFD vẫn khớp', text: 'Tóm lại, xong.'.normalize('NFD'), want: [1] },
     { name: 'khớp dài nhất, không báo trùng', text: 'Nói tóm lại, xong.', want: [1] },
+    { name: 'ranh giới: tiền tố chữ không khớp', text: 'xrobust thing', want: [] },
+    { name: 'ranh giới: hậu tố có dấu không khớp', text: 'Tóm lạiệ', want: [] },
+    { name: 'ranh giới: tiền tố có dấu không khớp', text: 'ệTóm lại', want: [] },
+    { name: 'ranh giới: hậu tố chữ không khớp', text: 'delvedd', want: [] },
+    { name: 'fence thụt 4 khoảng trắng trong list item', text: '- Bước:\n    ```bash\n    echo Tóm lại\n    ```\nxong', want: [] },
+    { name: 'nhiều lần khớp trên một dòng', text: 'Nói tóm lại. Tóm lại, xong.', want: [1, 1] },
     { name: 'sau fenced block vẫn quét', text: '```\nx\n```\nTóm lại', want: [4] },
   ];
   for (const c of cases) {
