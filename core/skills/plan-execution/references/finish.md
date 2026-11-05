@@ -45,7 +45,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 
 | # | Lựa chọn | Việc làm |
 |---|---|---|
-| 1 | merge local | Chuyển sang nhánh gốc, merge nhánh feature (`--no-ff`), rồi commit docs đặt `Trạng thái: merged <hash>` (xem "Chi tiết từng lựa chọn"); chọn lựa chọn này là đồng ý cả hai commit. |
+| 1 | merge local | Làm theo "Merge local theo khoá" (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, xanh mới commit merge, rồi commit docs đặt `Trạng thái: merged <hash>`); chọn lựa chọn này là đồng ý cả hai commit. |
 | 2 | push + PR | Push nhánh feature (tên đã nêu ở G3) và mở PR qua `git-workflow`. |
 | 3 | giữ nguyên | Commit docs ghi `Trạng thái` (xem "Chi tiết từng lựa chọn"); báo tên nhánh và commit đầu/cuối. |
 
@@ -53,7 +53,7 @@ Không merge nhánh `feature/<slug>` vào nhánh gốc, không push khi người
 
 ## Merge local theo khoá
 
-Chỉ khi `mergeLocal: true` và người dùng đã duyệt rõ G3:
+Áp cho hai cách kích hoạt: `mergeLocal: true` và người dùng đã duyệt rõ G3, hoặc người dùng chọn lựa chọn 1 (merge local) ở G3 khi thiếu khoá:
 
 1. Trước khi chuyển sang nhánh gốc, cây làm việc phải sạch ở file đã theo dõi (`git status --porcelain --untracked-files=no`
    rỗng). Còn thay đổi → lỗi chặn (`task-loop.md`, mục "Báo cáo"): dừng, báo người dùng, không checkout, không stash.
@@ -65,7 +65,7 @@ Chỉ khi `mergeLocal: true` và người dùng đã duyệt rõ G3:
    `check-request.mjs` W16 đòi xoá plan khi request đã `merged`. Commit thay đổi docs này qua `git-workflow` (commit thứ hai
    đã được G3 đồng ý), rồi chạy lại `check-request.mjs` trên thư mục request; cảnh báo còn lại ghi vào `remaining_risks`.
 4. `cleanup: true` → dọn như mục "Dọn theo khoá" bên dưới, rồi đóng phiên con như mục "Đóng phiên con". `cleanup` không phải `true` (thiếu hoặc `false`) → hỏi một câu gộp xoá nhánh feature và đóng phiên con (xem "Đóng phiên con").
-5. Push/PR hỏi riêng một lần sau bước này; không trả lời rõ → không push.
+5. Chỉ với `mergeLocal: true`: push/PR hỏi riêng một lần sau bước này; không trả lời rõ → không push. Đường tay không hỏi push: push là lựa chọn 2 của chính câu hỏi G3.
 
 ## Chi tiết từng lựa chọn
 
@@ -79,10 +79,8 @@ Ghi `Trạng thái` trong `design.md` bằng một commit docs trước khi kế
 
 Với hai trạng thái `in-progress`, dòng nhắc merge tay (xem mục "Ghi nhận") đi kèm tin nhắn G3 và `next_actions`.
 
-- **merge local** (lựa chọn tay, khi thiếu khoá `mergeLocal`; với `mergeLocal` xem "Merge local theo khoá"): nhánh gốc là nhánh protected thì cần người dùng đã chọn tường minh lựa chọn này. Sau khi merge xong,
-  chạy lại full suite trên kết quả merge; đỏ → dừng, không xoá gì, báo người dùng. Xanh → commit docs đặt `Trạng thái: merged <hash merge>` và xoá `plan.md`/`parts/*/plan.md` như bước 3 của "Merge local theo khoá"; rồi `cleanup: true` thì dọn như
-  "Dọn theo khoá" rồi đóng phiên con như "Đóng phiên con"; không thì hỏi một câu gộp xoá nhánh feature và đóng phiên
-  con (xem "Đóng phiên con").
+- **merge local** (lựa chọn tay, khi thiếu khoá `mergeLocal`; với `mergeLocal` xem "Merge local theo khoá"): nhánh gốc là nhánh protected thì cần người dùng đã chọn tường minh lựa chọn này. Làm bước 1–4 của "Merge local theo khoá"
+  (cây sạch, `git merge --no-ff --no-commit`, suite trên cây đã merge; đỏ hoặc conflict thì `git merge --abort`; xanh mới commit merge rồi commit docs), rồi dọn hoặc hỏi dọn theo `cleanup` như bước 4 của mục đó.
 - **push + PR**: không push lên nhánh protected; chỉ push nhánh feature đã nêu tên ở G3 (chọn lựa chọn này là xác nhận
   tên nhánh). Mô tả PR bằng tiếng Việt, tóm
   tắt thay đổi, kết quả test, các `Ruling:`; không thêm dòng `Co-Authored-By` hay attribution. Push và tạo PR theo
@@ -99,7 +97,7 @@ Với hai trạng thái `in-progress`, dòng nhắc merge tay (xem mục "Ghi nh
 
 ## Dọn theo khoá
 
-Chỉ khi `cleanup: true` và merge local đã xanh (full suite trên cây đã merge: bước 2 của "Merge local theo khoá", hoặc full suite sau merge ở "Chi tiết từng lựa chọn"): tự gỡ
+Chỉ khi `cleanup: true` và merge local đã xanh (full suite trên cây đã merge, bước 2 của "Merge local theo khoá"): tự gỡ
 worktree sạch thuộc `.claude/worktrees/` (theo `git-worktree`) và xoá nhánh mà `git merge-base --is-ancestor <nhánh> <nhánh gốc>`
 báo là tổ tiên của nhánh gốc. Phạm vi: nhánh feature vừa merge và các nhánh part `worktree-<slug>-p<nn>` của request. Xoá bằng
 `git branch -d <nhánh>` (git từ chối khi chưa merge; không dùng `-D`). Nhánh chưa merge và worktree còn thay đổi (kể cả
