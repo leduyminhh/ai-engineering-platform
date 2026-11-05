@@ -133,8 +133,8 @@ chạy part, loại dừng, lỗi chặn hoặc thẻ vướng của mục "Part
 
 **Lỗi chặn** là: việc đã hết số lần thử theo "Khi fail" của bước hoặc vòng sửa mà vẫn cần người dùng (vd "tối đa 2 lần rồi
 hỏi người dùng"); agent trả `blocked` mà session chính không tự trả lời được từ spec/plan/design; subagent part trả
-`blocked`/`failed` hoặc kết thúc mà ledger part không có `Part: complete` và mục "Part vướng" xếp vào hàng "người dùng" hoặc đã hết giới hạn của hàng "session gốc, không hỏi" (vd đã khởi động lại một lần; "Chế độ part" bước 7); conflict, suite đỏ hoặc
-cây làm việc bẩn khi merge local nhánh feature vào nhánh gốc theo khoá `mergeLocal` (`finish.md`); conflict ngoài write set của part (mục "Part vướng"). Lỗi chặn được báo ngay, kèm `questions[]` khi có.
+`blocked`/`failed` hoặc kết thúc mà ledger part không có `Part: complete` và mục "Part vướng" xếp vào hàng "người dùng" hoặc đã hết giới hạn của hàng "session gốc, không hỏi" (vd đã khởi động lại một lần; "Chế độ part" bước 7); mọi lỗi chặn của mục "Merge local theo khoá"
+trong `finish.md` khi merge local nhánh feature vào nhánh gốc (theo khoá `mergeLocal` hoặc lựa chọn 1 tay); conflict ngoài write set của part (mục "Part vướng"). Lỗi chặn được báo ngay, kèm `questions[]` khi có.
 
 ## Part vướng
 
