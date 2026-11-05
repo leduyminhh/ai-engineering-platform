@@ -8,5 +8,5 @@ export default async function run({ ok, ctx }) {
 
   ok(/git merge --no-ff --no-commit/.test(mech) && /git merge --abort/.test(mech), 'AC5.1: mục "Merge local theo khoá" có --no-commit và --abort');
   ok(manual !== '' && /Merge local theo khoá/.test(manual) && !/kết quả merge/.test(fin),
-    'AC5.1: bullet merge local tay trỏ tới cơ chế --no-commit/--abort và finish.md không còn "full suite trên kết quả merge"');
+    'AC1.1, AC5.1: bullet merge local tay trỏ tới cơ chế --no-commit/--abort và finish.md không còn "full suite trên kết quả merge"');
 }
