@@ -30,6 +30,9 @@ export default async function run({ ok, ctx }) {
     { name: 'fence thụt 4 khoảng trắng trong list item', text: '- Bước:\n    ```bash\n    echo Tóm lại\n    ```\nxong', want: [] },
     { name: 'nhiều lần khớp trên một dòng', text: 'Nói tóm lại. Tóm lại, xong.', want: [1, 1] },
     { name: 'sau fenced block vẫn quét', text: '```\nx\n```\nTóm lại', want: [4] },
+    { name: 'dòng ``` thụt 4 trong văn xuôi không mở fence', text: 'Đoạn trước.\n    ```\nTóm lại, xong.\n', want: [3] },
+    { name: 'dòng ~~~ thụt 4 trong văn xuôi không mở fence', text: 'Đoạn\n    ~~~\nTóm lại\n', want: [3] },
+    { name: 'fence thụt 3 trong list có số, sau đóng vẫn quét', text: '1. Bước\n\n   ```\n   Tóm lại\n   ```\nTóm lại\n', want: [6] },
   ];
   for (const c of cases) {
     const got = scanText(c.text, patterns).map((h) => h.line);

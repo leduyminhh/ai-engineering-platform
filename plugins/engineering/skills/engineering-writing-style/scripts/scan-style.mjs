@@ -34,16 +34,24 @@ export function scanText(text, patterns) {
   const hits = [];
   // Theo CommonMark: fence chỉ đóng bằng cùng ký tự, độ dài >= fence mở; fence không đóng thì phần còn lại của file là code.
   let fence = null;
-  // Khớp fence trên dòng đã bỏ thụt lề vì fence trong list item có thể thụt ≥ 4 khoảng trắng.
+  // Fence trong list item được thụt tới cột nội dung của item + 3; ngoài list, thụt ≥ 4 là văn xuôi/indented code, không mở fence.
+  // shortcut: chỉ nhớ list marker gần nhất, không dựng cây list lồng nhau; nâng cấp khi gặp list lồng nhiều cấp báo sai.
+  let listIndent = 0;
+  const width = (s) => s.replace(/\t/g, '    ').length;
   text.normalize('NFC').split(/\r\n|\r|\n/).forEach((raw, i) => {
-    const lead = raw.trimStart();
+    const ws = /^[ \t]*/.exec(raw)[0];
+    const indent = width(ws);
+    const lead = raw.slice(ws.length);
     if (fence) {
       const close = /^(`{3,}|~{3,})[ \t]*$/.exec(lead);
-      if (close && close[1][0] === fence.ch && close[1].length >= fence.len) fence = null;
+      if (close && close[1][0] === fence.ch && close[1].length >= fence.len && indent <= fence.indent + 3) fence = null;
       return;
     }
-    const open = /^(`{3,}|~{3,})(.*)$/.exec(lead);
-    if (open && !(open[1][0] === '`' && open[2].includes('`'))) { fence = { ch: open[1][0], len: open[1].length }; return; }
+    const open = indent <= listIndent + 3 && /^(`{3,}|~{3,})(.*)$/.exec(lead);
+    if (open && !(open[1][0] === '`' && open[2].includes('`'))) { fence = { ch: open[1][0], len: open[1].length, indent }; return; }
+    const marker = /^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/.exec(raw);
+    if (marker) listIndent = width(marker[0]);
+    else if (lead && indent === 0) listIndent = 0;
     if (raw.trim().startsWith('>')) return;
     const line = raw.replace(/(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)/g, ' ').replace(/https?:\/\/\S+/g, ' ');
     const found = [];
