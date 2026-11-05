@@ -30,7 +30,9 @@ nghĩa thì giữ.
 | liền mạch | bỏ, hoặc nêu bước được bỏ; chỉ khi dùng làm từ nhấn |
 | nâng tầm | bỏ, nêu kết quả |
 | tối ưu hóa trải nghiệm | nêu thay đổi và số đo |
+| tối ưu hoá trải nghiệm | nêu thay đổi và số đo |
 | mở khóa sức mạnh | bỏ |
+| mở khoá sức mạnh | bỏ |
 
 ## Câu kết lặp
 
@@ -40,6 +42,7 @@ nghĩa thì giữ.
 | Nói tóm lại | bỏ khi chỉ nhắc lại thân bài |
 | Tựu trung lại | bỏ |
 | Hy vọng bài viết này | bỏ |
+| Hi vọng bài viết này | bỏ |
 | Hãy cho tôi biết nếu bạn cần | bỏ, hoặc hỏi một câu cụ thể |
 | Chúc bạn thành công | bỏ |
 

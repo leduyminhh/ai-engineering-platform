@@ -23,9 +23,9 @@ const HOUR_MS = 3600000;
 const BOOTSTRAP = 'AIP — quy tắc nền của phiên này. Nếu có khả năng, dù nhỏ, một skill áp dụng cho việc đang làm thì gọi skill đó trước khi trả lời, '
   + 'hỏi lại hay đọc code; skill `using-aip` nêu thứ tự ưu tiên và các dấu hiệu tự biện minh để bỏ qua skill. '
   + 'Yêu cầu của người dùng và quy tắc project (CLAUDE.md, AGENTS.md) ưu tiên hơn skill. '
-  + 'Skill đã đọc mà không áp dụng thì nói một dòng rồi bỏ qua; ngoài ra chỉ bỏ qua khi người dùng nói rõ. Agent worker được giao một task cụ thể thì bỏ qua đoạn này. '
+  + 'Skill đã đọc mà không áp dụng thì nói một dòng rồi bỏ qua; ngoài ra chỉ bỏ qua khi người dùng nói rõ. '
   + 'Văn bản cho người đọc (README, docs, mô tả PR, release notes, body commit, trả lời chat) viết tự nhiên, không sáo rỗng, theo skill `engineering-writing-style` nếu có; '
-  + 'không áp cho code, comment code, header commit, config, log, output cho máy đọc, prompt giao agent và trích dẫn.';
+  + 'không áp cho code, comment code, header commit, config, log, output cho máy đọc, prompt giao agent và trích dẫn. Agent worker được giao một task cụ thể thì bỏ qua phần gọi skill ở trên.';
 
 function within(root, p) {
   const rel = path.relative(root, p);

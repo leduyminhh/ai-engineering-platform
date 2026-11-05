@@ -43,7 +43,10 @@ export default async function run({ ok, ctx }) {
 
   for (const lang of ['vi', 'en']) {
     const rows = patterns.filter((p) => p.file === `patterns-${lang}.md`);
+    const tableLines = fs.readFileSync(path.join(skill, 'references', `patterns-${lang}.md`), 'utf8').split(/\r?\n/).map((l) => l.trim())
+      .filter((l) => l.startsWith('|') && !/^\|\s*Cụm\s*\|\s*Thay bằng\s*\|$/.test(l) && !/^\|[\s:|-]+\|$/.test(l));
     ok(rows.length >= 15 && rows.every((p) => p.phrase.length > 0), `AC2.2: patterns-${lang}.md có ≥ 15 hàng, không phrase rỗng (${rows.length})`);
+    ok(rows.length === tableLines.length, `AC2.2: patterns-${lang}.md loadPatterns đọc đủ ${tableLines.length} dòng bảng (${rows.length})`);
   }
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'writing-style-'));
@@ -58,6 +61,14 @@ export default async function run({ ok, ctx }) {
     ok(cli(clean).status === 0, 'AC2.1: CLI file sạch → exit 0');
     const r = cli(dirty);
     ok(r.status === 1 && r.out.includes(`${dirty}:2:`), 'AC2.1: CLI có cụm → exit 1, output có file:line');
+    // loadPatterns luôn đọc references cạnh script nên dựng bản sao script trong thư mục tạm để có references rỗng hoặc thiếu.
+    const copy = path.join(dir, 'copy');
+    fs.mkdirSync(path.join(copy, 'scripts'), { recursive: true });
+    fs.copyFileSync(script, path.join(copy, 'scripts', 'scan-style.mjs'));
+    const cliCopy = () => { try { execFileSync(process.execPath, [path.join(copy, 'scripts', 'scan-style.mjs'), clean], { stdio: 'pipe' }); return 0; } catch (e) { return e.status; } };
+    ok(cliCopy() === 2, 'AC2.1: CLI thiếu thư mục references → exit 2');
+    fs.mkdirSync(path.join(copy, 'references'));
+    ok(cliCopy() === 2, 'AC2.1: CLI references không có bảng cụm → exit 2, không báo sạch');
     ok(cli().status === 2, 'AC2.1: CLI không đối số → exit 2');
     ok(cli(path.join(dir, 'khong-co.md')).status === 2, 'AC2.1: CLI file không tồn tại → exit 2');
   } finally {

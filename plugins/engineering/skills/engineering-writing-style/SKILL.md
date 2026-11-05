@@ -1,6 +1,6 @@
 ---
 name: engineering-writing-style
-description: "Soạn hoặc viết lại văn bản cho người đọc theo giọng tự nhiên: bỏ cụm sáo rỗng của văn AI, giữ nguyên nghĩa, số liệu, thuật ngữ; phủ tiếng Việt và tiếng Anh. Dùng khi người dùng muốn \"viết lại cho tự nhiên\", \"bỏ văn AI\", \"humanize\", \"sửa văn phong\", \"soạn README/PR cho tự nhiên\". Không dùng khi viết release notes từ git → engineering-release-notes; viết spec → engineering-spec-writing."
+description: "Soạn hoặc viết lại văn bản cho người đọc theo giọng tự nhiên: bỏ cụm sáo rỗng của văn AI, giữ nguyên nghĩa, số liệu, thuật ngữ; phủ tiếng Việt và tiếng Anh. Dùng khi người dùng muốn \"viết lại cho tự nhiên\", \"bỏ văn AI\", \"humanize\", \"sửa văn phong\", \"soạn README/PR cho tự nhiên\". Không dùng khi cần gom lịch sử git thành release notes → engineering-release-notes; cần làm rõ yêu cầu và viết spec → engineering-spec-writing."
 order: 13
 title: "Writing Style — soạn và viết lại văn bản cho người đọc"
 runsIn: execute
@@ -21,7 +21,7 @@ Hai chế độ:
 
 ## Quy trình
 
-1. **Xác định loại văn bản.** Đối chiếu [references/scope.md](references/scope.md). Loại "không cần" (code, comment,
+1. **Xác định loại văn bản.** Đối chiếu [references/scope.md](references/scope.md). Loại "không cần" (ví dụ code, comment,
    header commit, config, log, output cho máy đọc, prompt giao agent, trích dẫn) thì agent không tự áp. Khi người
    dùng yêu cầu rõ vẫn làm, sau khi nêu một dòng rủi ro: đổi chữ có thể đổi hành vi hoặc phá so khớp, test pin.
 2. **Dò.** Tìm cụm trong [references/patterns-vi.md](references/patterns-vi.md) và
@@ -30,7 +30,7 @@ Hai chế độ:
    đầu dòng khi nội dung là văn xuôi, bỏ câu kết chỉ nhắc lại thân bài. Câu ngắn là chính, tránh mọi câu cùng
    độ dài.
 4. **Quét.** Khi văn bản nằm trong file, chạy `node <thư mục skill>/scripts/scan-style.mjs <file>` (exit 0 sạch,
-   1 còn cụm, 2 sai đối số). Văn bản không nằm trong file (như câu trả lời chat) thì bỏ bước này. Cụm dùng đúng
+   1 còn cụm, 2 sai đối số, file không đọc được hoặc bảng cụm hỏng). Văn bản không nằm trong file (như câu trả lời chat) thì bỏ bước này. Cụm dùng đúng
    nghĩa thì giữ.
 5. **Tự soát.** Khi viết lại, so bản mới với bản gốc: nghĩa, số liệu, ngày, tên, thuật ngữ kỹ thuật không đổi;
    không thêm hay bớt thông tin. Khi soạn mới, đối chiếu với nguồn của nội dung (diff, kết quả chạy, yêu cầu).
@@ -42,7 +42,7 @@ Hai chế độ:
 - Loại "không cần" trong `references/scope.md`: agent không tự áp. Người dùng yêu cầu rõ thì nêu rủi ro một dòng
   rồi làm theo yêu cầu.
 - Script chỉ để tự soát, không phải cổng chặn: danh sách cụm cố định nên bỏ sót văn AI không dùng cụm trong
-  bảng và có thể báo nhầm cụm đúng nghĩa. Fence code không đóng được coi là code đến hết file.
+  bảng và có thể báo nhầm cụm đúng nghĩa. Fence code không đóng được coi là code đến hết file. Indented code block (thụt 4, không fence, ngoài list) bị quét như văn xuôi; fence nằm ngay trên dòng list marker hoặc sau dòng lazy continuation có thể bị quét.
 - Không tự viết lại văn bản của người dùng khi họ không yêu cầu.
 
 ## Đầu ra

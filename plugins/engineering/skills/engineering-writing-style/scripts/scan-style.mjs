@@ -34,7 +34,7 @@ export function scanText(text, patterns) {
   const hits = [];
   // Theo CommonMark: fence chỉ đóng bằng cùng ký tự, độ dài >= fence mở; fence không đóng thì phần còn lại của file là code.
   let fence = null;
-  // Fence trong list item được thụt tới cột nội dung của item + 3; ngoài list, thụt ≥ 4 là văn xuôi/indented code, không mở fence.
+  // Fence trong list item được thụt tới cột nội dung của item + 3; ngoài list, thụt ≥ 4 không mở fence và dòng đó bị quét như văn xuôi (indented code block không được bỏ qua).
   // shortcut: chỉ nhớ list marker gần nhất, không dựng cây list lồng nhau; nâng cấp khi gặp list lồng nhiều cấp báo sai.
   let listIndent = 0;
   const width = (s) => s.replace(/\t/g, '    ').length;
@@ -58,6 +58,7 @@ export function scanText(text, patterns) {
     for (const p of compiled) {
       for (const m of line.matchAll(p.re)) found.push({ line: i + 1, phrase: p.phrase, replacement: p.replacement, start: m.index, end: m.index + m[0].length });
     }
+    // shortcut: O(h²) theo số khớp trên một dòng, nâng cấp khi quét file máy sinh có dòng cực dài.
     // Giữ khớp dài nhất: "Tóm lại" nằm trong "Nói tóm lại" không báo hai lần.
     for (const h of found) {
       if (!found.some((o) => o !== h && o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start)) hits.push({ line: h.line, phrase: h.phrase, replacement: h.replacement });
@@ -68,7 +69,9 @@ export function scanText(text, patterns) {
 
 function main(files) {
   if (files.length === 0) { console.error('Dùng: node scan-style.mjs <file…>'); return 2; }
-  const patterns = loadPatterns(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'references'));
+  let patterns;
+  try { patterns = loadPatterns(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'references')); } catch (e) { console.error(`Không đọc được bảng cụm: ${e.message}`); return 2; }
+  if (patterns.length === 0) { console.error('Không đọc được bảng cụm: references/patterns-*.md không có hàng nào'); return 2; }
   let found = false;
   for (const f of files) {
     let text;

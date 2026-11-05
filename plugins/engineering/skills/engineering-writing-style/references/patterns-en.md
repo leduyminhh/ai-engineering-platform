@@ -10,6 +10,7 @@ phrase when it is used literally.
 | In today's fast-paced world | cut, start with the point |
 | In the realm of | in |
 | It's important to note that | cut, state the fact |
+| It’s important to note that | cut, state the fact |
 | It is worth noting that | cut, state the fact |
 | Let's dive in | cut |
 | Certainly! | cut |
@@ -23,10 +24,12 @@ phrase when it is used literally.
 | Cụm | Thay bằng |
 |---|---|
 | delve | look at, examine |
+| delving | looking at, examining |
 | game-changer | cut, state the concrete change |
 | seamless | cut, or name the step removed; only when used as filler |
 | robust | cut, or give a measure; only when used as filler |
 | leverage | use; only when used as filler |
+| leveraged | used; only when used as filler |
 | cutting-edge | cut, or name the technology |
 | unlock the power of | cut |
 | a testament to | shows |
