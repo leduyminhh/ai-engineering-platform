@@ -1,6 +1,6 @@
 # Thiết kế: checkout nhánh gốc thất bại trong "Merge local theo khoá"
 - Ngày: 2026-11-05
-- Trạng thái: in-progress — nhánh claude/finish-merge-edge-cases-12ddeb
+- Trạng thái: merged 2465d031
 - Requirement: không có
 ## Vấn đề và lý do
 Bước 2 của mục "Merge local theo khoá" (`core/skills/plan-execution/references/finish.md`) bảo "chuyển sang nhánh gốc đã nêu ở G3" rồi chạy `git merge --no-ff --no-commit <nhánh feature>`, nhưng không nói gì khi bước chuyển nhánh thất bại. Finding F2 của review cuối request `2026-11-05-finish-merge-edge-cases` (đã kiểm trên git 2.47.1): nhánh gốc đang được một worktree khác giữ (bố cục thường gặp: phiên chạy trong `.claude/worktrees/…`, còn `master` hoặc nhánh gốc đang checkout ở gốc repo chính) thì `git checkout <nhánh gốc>` thoát 128 ("already used by worktree at …"). Agent cứ chạy tiếp `git merge …` trên nhánh feature thì git báo "Already up to date", thoát 0, không có `MERGE_HEAD`: ca này không khớp gạch đầu dòng nào của bước 2 (ca "git từ chối bắt đầu" đòi thoát khác 0), nên agent có thể coi như merge xong rồi chạy full suite và commit docs `merged <hash>` sai.
