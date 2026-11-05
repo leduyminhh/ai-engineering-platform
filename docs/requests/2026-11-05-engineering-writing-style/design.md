@@ -1,6 +1,6 @@
 # Thiết kế: skill chuẩn văn phong `engineering-writing-style` và nhắc trong bootstrap
 - Ngày: 2026-11-05
-- Trạng thái: draft
+- Trạng thái: merged 9f704a9d
 - Requirement: không có (cỡ thay đổi nhỏ, AC nằm trong file này)
 ## Vấn đề và lý do
 Văn bản agent viết cho người đọc (README, mô tả PR, release notes, câu trả lời chat) hay mang dấu hiệu "văn AI": câu mở sáo rỗng, từ nhấn rỗng, gom ba ý ở mọi câu, câu kết lặp lại thân bài. Trong bộ chỉ có vài quy tắc rải rác: mục "Văn phong & trình bày" của `engineering-release-notes/references/user-facing-writing.md` (chỉ cho release notes) và một dòng "không sáo rỗng" trong checklist của `engineering-spec-writing`. Chưa có skill riêng, chưa có danh sách cụm cần bỏ, và hook không nói khi nào phải viết theo văn phong con người.
