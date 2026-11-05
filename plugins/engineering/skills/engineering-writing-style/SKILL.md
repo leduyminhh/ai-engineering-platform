@@ -42,7 +42,7 @@ Hai chế độ:
 - Loại "không cần" trong `references/scope.md`: agent không tự áp. Người dùng yêu cầu rõ thì nêu rủi ro một dòng
   rồi làm theo yêu cầu.
 - Script chỉ để tự soát, không phải cổng chặn: danh sách cụm cố định nên bỏ sót văn AI không dùng cụm trong
-  bảng và có thể báo nhầm cụm đúng nghĩa. Fence code không đóng được coi là code đến hết file. Indented code block (thụt 4, không fence, ngoài list) bị quét như văn xuôi; fence nằm ngay trên dòng list marker hoặc sau dòng lazy continuation có thể bị quét.
+  bảng và có thể báo nhầm cụm đúng nghĩa. Fence code không đóng được coi là code đến hết file. Indented code block (thụt 4, không fence, ngoài list) bị quét như văn xuôi.
 - Không tự viết lại văn bản của người dùng khi họ không yêu cầu.
 
 ## Đầu ra

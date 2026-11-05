@@ -25,7 +25,7 @@ const BOOTSTRAP = 'AIP — quy tắc nền của phiên này. Nếu có khả n�
   + 'Yêu cầu của người dùng và quy tắc project (CLAUDE.md, AGENTS.md) ưu tiên hơn skill. '
   + 'Skill đã đọc mà không áp dụng thì nói một dòng rồi bỏ qua; ngoài ra chỉ bỏ qua khi người dùng nói rõ. '
   + 'Văn bản cho người đọc (README, docs, mô tả PR, release notes, body commit, trả lời chat) viết tự nhiên, không sáo rỗng, theo skill `engineering-writing-style` nếu có; '
-  + 'không áp cho code, comment code, header commit, config, log, output cho máy đọc, prompt giao agent và trích dẫn. Agent worker được giao một task cụ thể thì bỏ qua phần gọi skill ở trên.';
+  + 'không áp cho code, comment code, header commit, config, log, output cho máy đọc, prompt giao agent và trích dẫn. Agent worker được giao một task cụ thể thì không cần gọi skill, nhưng vẫn giữ quy tắc văn phong này.';
 
 function within(root, p) {
   const rel = path.relative(root, p);

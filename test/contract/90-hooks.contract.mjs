@@ -758,7 +758,9 @@ export default async function run({ ok, ctx }) {
     }
     const bootstrap = start({});
     const skillIds = new Set([core, ...plugins].flatMap((u) => u.stages.map((s) => s.id)));
-    const named = [...bootstrap.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/g)].map((m) => m[1]);
+    // Chỉ token mang tiền tố plugin hoặc `using-` mới là id skill; token code khác như `aip-gate` không bị đòi có skill.
+    const prefixes = ['using', ...plugins.map((p) => p.id)].join('|');
+    const named = [...bootstrap.matchAll(new RegExp(`\`((?:${prefixes})-[a-z0-9-]+)\``, 'g'))].map((m) => m[1]);
     ok(named.length >= 2 && named.every((id) => skillIds.has(id)),
       `AC3.2: mọi id skill bootstrap nhắc đều có trong nguồn (thiếu: ${named.filter((id) => !skillIds.has(id)).join(', ') || 'không'})`);
     const full = start({ ...handoff, ...ledger });

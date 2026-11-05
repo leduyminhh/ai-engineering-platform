@@ -33,6 +33,10 @@ export default async function run({ ok, ctx }) {
     { name: 'dòng ``` thụt 4 trong văn xuôi không mở fence', text: 'Đoạn trước.\n    ```\nTóm lại, xong.\n', want: [3] },
     { name: 'dòng ~~~ thụt 4 trong văn xuôi không mở fence', text: 'Đoạn\n    ~~~\nTóm lại\n', want: [3] },
     { name: 'fence thụt 3 trong list có số, sau đóng vẫn quét', text: '1. Bước\n\n   ```\n   Tóm lại\n   ```\nTóm lại\n', want: [6] },
+    { name: 'dòng lazy continuation không đóng list', text: '- Bước đầu\nDòng lazy\n    ```bash\n    Tóm lại\n    ```\n', want: [] },
+    { name: 'dòng cột 0 sau dòng trống đóng list', text: '- item\n\nĐoạn\n    ```\nTóm lại\n', want: [5] },
+    { name: 'fence ngay trên dòng list marker', text: '- ```js\n  Tóm lại\n  ```\nTóm lại\n', want: [4] },
+    { name: 'nháy cong: Let’s dive in', text: 'Let’s dive in.', want: [1] },
   ];
   for (const c of cases) {
     const got = scanText(c.text, patterns).map((h) => h.line);
