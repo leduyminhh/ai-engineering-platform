@@ -1,0 +1,51 @@
+// Pin nội dung: scan-style.mjs của engineering-writing-style (AC2.1, AC2.2) và bảng cụm vi/en (AC1.2).
+export default async function run({ ok, ctx }) {
+  const { fs, path, os, execFileSync, pathToFileURL, PLUGINS_DIR } = ctx;
+  const skill = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-writing-style');
+  const script = path.join(skill, 'scripts', 'scan-style.mjs');
+  const { loadPatterns, scanText } = await import(pathToFileURL(script).href);
+  const patterns = loadPatterns(path.join(skill, 'references'));
+
+  const cases = [
+    { name: 'văn xuôi tiếng Việt', text: 'Mở đầu.\nTóm lại, xong.', want: [2] },
+    { name: 'văn xuôi tiếng Anh', text: 'We delve into it.', want: [1] },
+    { name: 'không phân biệt hoa thường', text: 'TÓM LẠI xong. IN CONCLUSION done.', want: [1] },
+    { name: 'fenced block ```', text: '```\nTóm lại\n```\nxong', want: [] },
+    { name: 'fenced block ~~~', text: '~~~\ndelve\n~~~', want: [] },
+    { name: 'inline code', text: 'Gọi `delve` và `Tóm lại` ở đây.', want: [] },
+    { name: 'URL', text: 'Xem https://example.com/delve/tóm-lại ở đây.', want: [] },
+    { name: 'dòng trích dẫn', text: '  > Tóm lại, delve', want: [] },
+    { name: 'ranh giới từ: robustness không khớp robust', text: 'Test the robustness of it.', want: [] },
+    { name: 'ranh giới từ: robust khớp', text: 'A robust system.', want: [1] },
+    { name: 'sau fenced block vẫn quét', text: '```\nx\n```\nTóm lại', want: [4] },
+  ];
+  for (const c of cases) {
+    const got = scanText(c.text, patterns).map((h) => h.line);
+    ok(JSON.stringify([...new Set(got)]) === JSON.stringify(c.want), `AC2.1: scanText — ${c.name}`);
+  }
+  const hit = scanText('Tóm lại, xong.', patterns)[0];
+  ok(hit && hit.phrase === 'Tóm lại' && hit.replacement.length > 0, 'AC2.2: hit mang cụm và gợi ý thay');
+
+  for (const lang of ['vi', 'en']) {
+    const rows = patterns.filter((p) => p.file === `patterns-${lang}.md`);
+    ok(rows.length >= 15 && rows.every((p) => p.phrase.length > 0), `AC2.2: patterns-${lang}.md có ≥ 15 hàng, không phrase rỗng (${rows.length})`);
+  }
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'writing-style-'));
+  try {
+    const cli = (...a) => {
+      try { return { status: 0, out: execFileSync(process.execPath, [script, ...a], { stdio: 'pipe', encoding: 'utf8' }) }; } catch (e) { return { status: e.status, out: String(e.stdout) }; }
+    };
+    const clean = path.join(dir, 'clean.md');
+    const dirty = path.join(dir, 'dirty.md');
+    fs.writeFileSync(clean, 'Đã thêm cờ `--yes`.\n');
+    fs.writeFileSync(dirty, 'Dòng một.\nTóm lại, xong.\n');
+    ok(cli(clean).status === 0, 'AC2.1: CLI file sạch → exit 0');
+    const r = cli(dirty);
+    ok(r.status === 1 && r.out.includes(`${dirty}:2:`), 'AC2.1: CLI có cụm → exit 1, output có file:line');
+    ok(cli().status === 2, 'AC2.1: CLI không đối số → exit 2');
+    ok(cli(path.join(dir, 'khong-co.md')).status === 2, 'AC2.1: CLI file không tồn tại → exit 2');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
