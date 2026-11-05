@@ -7,6 +7,6 @@ export default async function run({ ok, ctx }) {
   const manual = (fin.match(/^- \*\*merge local\*\*[\s\S]*?(?=^- \*\*|^## )/m) ?? [''])[0];
 
   ok(/git merge --no-ff --no-commit/.test(mech) && /git merge --abort/.test(mech), 'AC5.1: mục "Merge local theo khoá" có --no-commit và --abort');
-  ok(manual !== '' && /Merge local theo khoá/.test(manual) && !/kết quả merge/.test(fin),
+  ok(manual !== '' && /--no-commit/.test(manual) && /--abort/.test(manual) && !/kết quả merge/.test(fin),
     'AC1.1, AC5.1: bullet merge local tay trỏ tới cơ chế --no-commit/--abort và finish.md không còn "full suite trên kết quả merge"');
 }
