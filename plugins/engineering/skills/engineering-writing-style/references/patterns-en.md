@@ -24,11 +24,10 @@ phrase when it is used literally.
 |---|---|
 | delve | look at, examine |
 | game-changer | cut, state the concrete change |
-| seamless | cut, or name the step removed |
-| robust | cut, or give a measure |
-| leverage | use |
+| seamless | cut, or name the step removed; only when used as filler |
+| robust | cut, or give a measure; only when used as filler |
+| leverage | use; only when used as filler |
 | cutting-edge | cut, or name the technology |
-| tapestry | cut |
 | unlock the power of | cut |
 | a testament to | shows |
 | ever-evolving | cut |
@@ -52,6 +51,6 @@ The script does not scan this section; check by eye.
 - "Not only … but also …" used as a template across consecutive sentences.
 - Bold everywhere: when many phrases in a paragraph are bold, none stands out.
 - Emoji at the start of lines or headings in technical text.
-- Bullet points for content that is really continuous prose.
+- Bullet points for content that is really continuous prose. Exception: release notes, CHANGELOGs and genuine lists (independent items) use bullets by convention.
 - A closing sentence that restates the body in different words.
 - Long sentences of near-equal length with the same rhythm.

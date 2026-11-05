@@ -19,7 +19,7 @@ export function loadPatterns(dir) {
       if (!t.startsWith('|')) { inTable = false; continue; }
       if (SEPARATOR_RE.test(t)) continue;
       const [phrase = '', replacement = ''] = t.replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
-      if (phrase) out.push({ phrase, replacement, file });
+      if (phrase) out.push({ phrase: phrase.normalize('NFC'), replacement, file });
     }
   }
   return out;
@@ -27,17 +27,32 @@ export function loadPatterns(dir) {
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Ranh giới theo ký tự chữ Unicode để "robust" không khớp "robustness" và vẫn chạy với tiếng Việt.
+// Ranh giới theo ký tự chữ Unicode để "robust" không khớp "robustness" và vẫn chạy với tiếng Việt;
+// \p{M} giữ dấu tổ hợp (NFD) khỏi bị coi là ranh giới.
 export function scanText(text, patterns) {
-  const compiled = patterns.map((p) => ({ ...p, re: new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(p.phrase)}(?![\\p{L}\\p{N}])`, 'iu') }));
+  const compiled = patterns.map((p) => ({ ...p, re: new RegExp(`(?<![\p{L}\p{N}\p{M}])${escapeRe(p.phrase)}(?![\p{L}\p{N}\p{M}])`, 'iu') }));
   const hits = [];
-  let fence = false;
-  text.split(/\r\n|\r|\n/).forEach((raw, i) => {
-    const t = raw.trim();
-    if (/^(```|~~~)/.test(t)) { fence = !fence; return; }
-    if (fence || t.startsWith('>')) return;
-    const line = raw.replace(/`[^`]*`/g, ' ').replace(/https?:\/\/\S+/g, ' ');
-    for (const p of compiled) if (p.re.test(line)) hits.push({ line: i + 1, phrase: p.phrase, replacement: p.replacement });
+  // Theo CommonMark: fence chỉ đóng bằng cùng ký tự, độ dài >= fence mở; fence không đóng thì phần còn lại của file là code.
+  let fence = null;
+  text.normalize('NFC').split(/\r\n|\r|\n/).forEach((raw, i) => {
+    if (fence) {
+      const close = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(raw);
+      if (close && close[1][0] === fence.ch && close[1].length >= fence.len) fence = null;
+      return;
+    }
+    const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(raw);
+    if (open && !(open[1][0] === '`' && open[2].includes('`'))) { fence = { ch: open[1][0], len: open[1].length }; return; }
+    if (raw.trim().startsWith('>')) return;
+    const line = raw.replace(/(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)/g, ' ').replace(/https?:\/\/\S+/g, ' ');
+    const found = [];
+    for (const p of compiled) {
+      const m = p.re.exec(line);
+      if (m) found.push({ line: i + 1, phrase: p.phrase, replacement: p.replacement, start: m.index, end: m.index + m[0].length });
+    }
+    // Giữ khớp dài nhất: "Tóm lại" nằm trong "Nói tóm lại" không báo hai lần.
+    for (const h of found) {
+      if (!found.some((o) => o !== h && o.start <= h.start && o.end >= h.end && o.end - o.start > h.end - h.start)) hits.push({ line: h.line, phrase: h.phrase, replacement: h.replacement });
+    }
   });
   return hits;
 }

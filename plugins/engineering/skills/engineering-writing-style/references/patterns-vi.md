@@ -25,10 +25,9 @@ nghĩa thì giữ.
 | đóng vai trò quan trọng | nêu vai trò cụ thể |
 | vô cùng quan trọng | nêu hậu quả nếu bỏ qua |
 | giải pháp toàn diện | nêu giải pháp làm gì |
-| mạnh mẽ | bỏ, hoặc số đo |
-| không ngừng | bỏ |
+| mạnh mẽ | bỏ, hoặc số đo; chỉ khi dùng làm từ nhấn |
 | đột phá | bỏ, nêu thay đổi cụ thể |
-| liền mạch | bỏ, hoặc nêu bước được bỏ |
+| liền mạch | bỏ, hoặc nêu bước được bỏ; chỉ khi dùng làm từ nhấn |
 | nâng tầm | bỏ, nêu kết quả |
 | tối ưu hóa trải nghiệm | nêu thay đổi và số đo |
 | mở khóa sức mạnh | bỏ |
@@ -52,6 +51,6 @@ Script không quét mục này; tự soát bằng mắt.
 - "Không chỉ … mà còn …" dùng làm khuôn cho nhiều câu liên tiếp.
 - In đậm tràn lan: nhiều cụm đậm trong một đoạn thì không cụm nào còn nổi.
 - Emoji ở đầu dòng hoặc đầu mục trong văn bản kỹ thuật.
-- Gạch đầu dòng cho nội dung vốn là văn xuôi liền mạch.
+- Gạch đầu dòng cho nội dung vốn là văn xuôi liền mạch. Ngoại lệ: release notes, CHANGELOG và danh sách thật (các mục độc lập) thì gạch đầu dòng là chuẩn.
 - Câu kết lặp lại thân bài bằng chữ khác.
 - Các câu dài gần bằng nhau, cùng nhịp.

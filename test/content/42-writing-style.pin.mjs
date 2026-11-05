@@ -9,7 +9,7 @@ export default async function run({ ok, ctx }) {
   const cases = [
     { name: 'văn xuôi tiếng Việt', text: 'Mở đầu.\nTóm lại, xong.', want: [2] },
     { name: 'văn xuôi tiếng Anh', text: 'We delve into it.', want: [1] },
-    { name: 'không phân biệt hoa thường', text: 'TÓM LẠI xong. IN CONCLUSION done.', want: [1] },
+    { name: 'không phân biệt hoa thường', text: 'TÓM LẠI xong. IN CONCLUSION done.', want: [1, 1] },
     { name: 'fenced block ```', text: '```\nTóm lại\n```\nxong', want: [] },
     { name: 'fenced block ~~~', text: '~~~\ndelve\n~~~', want: [] },
     { name: 'inline code', text: 'Gọi `delve` và `Tóm lại` ở đây.', want: [] },
@@ -17,11 +17,17 @@ export default async function run({ ok, ctx }) {
     { name: 'dòng trích dẫn', text: '  > Tóm lại, delve', want: [] },
     { name: 'ranh giới từ: robustness không khớp robust', text: 'Test the robustness of it.', want: [] },
     { name: 'ranh giới từ: robust khớp', text: 'A robust system.', want: [1] },
+    { name: 'fence ``` chứa ~~~ bên trong, sau khi đóng vẫn quét', text: '```\n~~~\ndelve\n```\nTóm lại', want: [5] },
+    { name: 'fence 4 backtick chứa dòng ``` không đóng sớm', text: '````\n```\ndelve\n````\nTóm lại', want: [5] },
+    { name: 'fence không đóng: phần còn lại là code', text: '```\nTóm lại', want: [] },
+    { name: 'inline code nhiều backtick', text: '``a`b delve`` thật', want: [] },
+    { name: 'văn bản NFD vẫn khớp', text: 'Tóm lại, xong.'.normalize('NFD'), want: [1] },
+    { name: 'khớp dài nhất, không báo trùng', text: 'Nói tóm lại, xong.', want: [1] },
     { name: 'sau fenced block vẫn quét', text: '```\nx\n```\nTóm lại', want: [4] },
   ];
   for (const c of cases) {
     const got = scanText(c.text, patterns).map((h) => h.line);
-    ok(JSON.stringify([...new Set(got)]) === JSON.stringify(c.want), `AC2.1: scanText — ${c.name}`);
+    ok(JSON.stringify(got) === JSON.stringify(c.want), `AC2.1: scanText — ${c.name}`);
   }
   const hit = scanText('Tóm lại, xong.', patterns)[0];
   ok(hit && hit.phrase === 'Tóm lại' && hit.replacement.length > 0, 'AC2.2: hit mang cụm và gợi ý thay');
