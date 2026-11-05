@@ -96,13 +96,16 @@ Chi tiết từng chặng và ví dụ: [references/release-flow.md](references/
 3. **Chặng chưa phải cuối:** `git switch <chặng>` → `git merge --no-ff --no-edit release/X.Y.Z` → ⏸
    `git push origin <chặng> release/X.Y.Z` → dừng để người dùng deploy/test, báo chạy lại `release finish` khi đạt.
 4. **Chặng cuối:** `git switch <production>` → `git merge --no-ff --no-edit release/X.Y.Z` →
-   `git tag -a vX.Y.Z -m "Release X.Y.Z"` trên merge commit → có integration branch thì `git switch <integration>` → `git merge --no-ff
+   ghi notes file tạm ngoài repo: dòng `Release X.Y.Z`, dòng trống, rồi nội dung mục `[X.Y.Z]` của CHANGELOG
+   (`changelog: none` → `git log --no-merges --format='- %s' <tag trước>..release/X.Y.Z`) →
+   `git tag -a vX.Y.Z -F <notes file> --cleanup=whitespace` trên merge commit (cleanup mặc định `strip` xoá dòng
+   `#`, mất heading markdown) → có integration branch thì `git switch <integration>` → `git merge --no-ff
    --no-edit release/X.Y.Z` → project dùng hậu tố dev thì bump integration lên `nextDev` + hậu tố, ⏸ diff, commit
    `chore(release): start <nextDev>-SNAPSHOT` (hoặc `.dev0`).
 5. ⏸ `git push --atomic origin <production> <integration nếu có> vX.Y.Z`.
-6. ⏸ GitHub Release, chỉ khi `origin` trỏ GitHub và `gh auth status` thành công: trích mục `[X.Y.Z]` của
-   CHANGELOG ra file tạm, `gh release create vX.Y.Z --title "vX.Y.Z" --notes-file <file>`. Thiếu điều kiện → ghi
-   "bỏ qua tạo GitHub Release" vào báo cáo, không coi là lỗi.
+6. ⏸ GitHub Release, chỉ khi `origin` trỏ GitHub và `gh auth status` thành công: `gh release create vX.Y.Z
+   --title "vX.Y.Z" --notes-file <notes file của bước 4>`. Thiếu điều kiện → ghi "bỏ qua tạo GitHub Release" vào
+   báo cáo, không coi là lỗi; notes vẫn nằm trong tag.
 7. ⏸ Xoá branch theo policy (`ask` mặc định): `git branch -d release/X.Y.Z` và `git push origin --delete release/X.Y.Z`.
 8. Báo cáo theo [references/output-template-vi.md](references/output-template-vi.md).
 
@@ -129,7 +132,7 @@ làm tiếp. (c) Bước CHANGELOG (bước 2) chỉ chạy khi có commit sau c
 ## Verification (trước khi báo hoàn thành)
 
 - `git log --oneline --graph -15 --all` khớp luồng đã chạy; tag trỏ đúng merge commit của chặng cuối
-  (`git rev-list -n 1 vX.Y.Z`).
+  (`git rev-list -n 1 vX.Y.Z`); `git tag -l vX.Y.Z --format='%(contents)'` có notes, không chỉ một dòng.
 - Mọi lệnh push đã chạy đều có xác nhận của người dùng; phần chưa push ghi "còn chờ".
 - Body tiếng Việt của commit do skill tạo còn nguyên dấu (`git log -1 --format=%B`).
 
