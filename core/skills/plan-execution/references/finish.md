@@ -80,7 +80,7 @@ Ghi `Trạng thái` trong `design.md` bằng một commit docs trước khi kế
 Với hai trạng thái `in-progress`, dòng nhắc merge tay (xem mục "Ghi nhận") đi kèm tin nhắn G3 và `next_actions`.
 
 - **merge local** (lựa chọn tay, khi thiếu khoá `mergeLocal`; với `mergeLocal` xem "Merge local theo khoá"): nhánh gốc là nhánh protected thì cần người dùng đã chọn tường minh lựa chọn này. Làm bước 1–4 của "Merge local theo khoá"
-  (cây sạch, `git merge --no-ff --no-commit`, suite trên cây đã merge; đỏ hoặc conflict thì `git merge --abort`; xanh mới commit merge rồi commit docs), rồi dọn hoặc hỏi dọn theo `cleanup` như bước 4 của mục đó.
+  (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge; đỏ hoặc conflict thì `git merge --abort`; xanh mới commit merge rồi commit docs, dọn hoặc hỏi dọn theo `cleanup`).
 - **push + PR**: không push lên nhánh protected; chỉ push nhánh feature đã nêu tên ở G3 (chọn lựa chọn này là xác nhận
   tên nhánh). Mô tả PR bằng tiếng Việt, tóm
   tắt thay đổi, kết quả test, các `Ruling:`; không thêm dòng `Co-Authored-By` hay attribution. Push và tạo PR theo
