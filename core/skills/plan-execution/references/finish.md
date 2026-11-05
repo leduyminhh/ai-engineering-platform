@@ -45,7 +45,7 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 
 | # | Lựa chọn | Việc làm |
 |---|---|---|
-| 1 | merge local | Làm theo "Merge local theo khoá" (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, xanh mới commit merge, rồi commit docs đặt `Trạng thái: merged <hash>`); chọn lựa chọn này là đồng ý cả hai commit. |
+| 1 | merge local | Làm theo "Merge local theo khoá" (cây sạch, `git merge --no-ff --no-commit`, full suite trên cây đã merge, đỏ hoặc conflict thì `git merge --abort`, xanh mới commit merge, rồi commit docs đặt `Trạng thái: merged <hash>`); chọn lựa chọn này là đồng ý cả hai commit. |
 | 2 | push + PR | Push nhánh feature (tên đã nêu ở G3) và mở PR qua `git-workflow`. |
 | 3 | giữ nguyên | Commit docs ghi `Trạng thái` (xem "Chi tiết từng lựa chọn"); báo tên nhánh và commit đầu/cuối. |
 
