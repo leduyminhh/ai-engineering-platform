@@ -60,9 +60,9 @@ Không merge nhánh `feature/<slug>` vào nhánh gốc, không push khi người
 2. Trước checkout, chạy `git merge-base --is-ancestor <nhánh feature> <nhánh gốc>`. Thoát 0 (nhánh feature đã là tổ tiên của nhánh gốc) → lỗi chặn: dừng, báo hash tip nhánh feature (`git rev-parse <nhánh feature>`) và tên nhánh gốc; không merge, không commit rỗng, không chạy bước 3–5 (không đặt `merged`, không xoá plan, không dọn); người dùng quyết có đặt `merged <hash>` và xoá plan không.
    Thoát khác 0 (nhánh feature không phải tổ tiên): chạy `git checkout <nhánh gốc>` (nhánh gốc đã nêu ở G3).
    - Checkout thoát khác 0 (vd nhánh gốc đang được worktree khác giữ) → lỗi chặn: dừng, báo tên nhánh gốc và nơi đang giữ nó (`git worktree list`); không `git merge`, không `git merge --abort`, không dọn; người dùng merge ở worktree đó hoặc chọn nhánh gốc khác.
-   - Checkout thoát 0: chạy `git merge --no-ff --no-commit <nhánh feature>` (local, không push).
-   - Git từ chối bắt đầu (thoát khác 0 và `git rev-parse -q --verify MERGE_HEAD` không in gì; vd file chưa theo dõi bị ghi đè) → lỗi chặn: dừng, báo, không `git merge --abort` (không có merge để abort), không dọn.
-   - Có `MERGE_HEAD`: chạy full suite trên cây đã merge (chưa commit). Conflict hoặc suite đỏ → `git merge --abort` (nhánh gốc giữ nguyên như trước merge), dừng, báo là lỗi chặn, không dọn gì. Xanh mới commit merge (`git commit --no-edit`, message merge mặc định của git).
+   - Checkout thoát 0: chạy `git merge --no-ff --no-commit <nhánh feature>` (local, không push), rồi xét kết quả:
+     - Git từ chối bắt đầu (thoát khác 0 và `git rev-parse -q --verify MERGE_HEAD` không in gì; vd file chưa theo dõi bị ghi đè) → lỗi chặn: dừng, báo, không `git merge --abort` (không có merge để abort), không dọn.
+     - Có `MERGE_HEAD`: chạy full suite trên cây đã merge (chưa commit). Conflict hoặc suite đỏ → `git merge --abort` (nhánh gốc giữ nguyên như trước merge), dừng, báo là lỗi chặn, không dọn gì. Xanh mới commit merge (`git commit --no-edit`, message merge mặc định của git).
 3. Đặt `Trạng thái` trong `design.md` thành `merged <hash merge>`, và xoá `plan.md` cùng `parts/*/plan.md` (nếu có):
    `check-request.mjs` W16 đòi xoá plan khi request đã `merged`. Commit thay đổi docs này qua `git-workflow` (commit thứ hai
    đã được G3 đồng ý), rồi chạy lại `check-request.mjs` trên thư mục request; cảnh báo còn lại ghi vào `remaining_risks`.
