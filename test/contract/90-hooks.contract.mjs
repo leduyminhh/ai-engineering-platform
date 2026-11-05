@@ -757,6 +757,10 @@ export default async function run({ ok, ctx }) {
       ok(!!out && out.includes('using-aip') && out.length <= 1200, `AC1.1: ${source} không handoff → chỉ có bootstrap ≤ 1200 ký tự, nhắc using-aip`);
     }
     const bootstrap = start({});
+    const skillIds = new Set([core, ...plugins].flatMap((u) => u.stages.map((s) => s.id)));
+    const named = [...bootstrap.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/g)].map((m) => m[1]);
+    ok(named.length >= 2 && named.every((id) => skillIds.has(id)),
+      `AC3.2: mọi id skill bootstrap nhắc đều có trong nguồn (thiếu: ${named.filter((id) => !skillIds.has(id)).join(', ') || 'không'})`);
     const full = start({ ...handoff, ...ledger });
     ok(full.startsWith(bootstrap) && full.length <= 9000 && full.includes('Ledger (') && full.endsWith('CUOI'),
       'AC1.1: bootstrap đứng đầu; handoff dài + ledger dài vẫn tổng ≤ 9000, ledger còn nguyên');
