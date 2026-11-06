@@ -35,6 +35,9 @@ export default async function run({ ok, ctx }) {
   // ─────────────────────────────────────────────────────────────────────────────
   {
     ok(checkSkillBody('## Quy trình\nx\n## Ranh giới an toàn\nx').length === 0, 'checkSkillBody: đủ 2 heading → hợp lệ');
+    const head = '## Quy trình\n## Ranh giới an toàn\n';
+    ok(checkSkillBody(head + 'x\n'.repeat(498)).length === 0 && checkSkillBody(head + 'x\n'.repeat(499)).some((e) => /dài 501 dòng/.test(e)),
+      'checkSkillBody: thân 500 dòng hợp lệ, 501 dòng báo lỗi trần');
     ok(checkSkillBody('## Quy trình (trung tính stack) — cổng\n## Ranh giới an toàn (CLAUDE.md)').length === 0,
       'checkSkillBody: cho phép hậu tố sau dấu cách');
     ok(checkSkillBody('## Luồng viết spec\n## Ranh giới an toàn').some((e) => e.includes('Quy trình')),

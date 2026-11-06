@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Gom commit list (kèm file đổi của từng commit) + diff --stat + diff -U10 của khoảng base..head vào một file cho reviewer.
+// Gom commit list (kèm file đổi của từng commit) + diff --stat + dấu hiệu nới kiểm + diff -U10 của khoảng base..head vào một file cho reviewer.
 // Cách dùng: <base> <head> [--plan <plan.md>] [--out <file>] — --out thắng; chỉ có --plan thì ghi vào workspace .aip của plan và in đường dẫn; không có cả hai thì in ra stdout. Exit 1 khi khoảng commit không hợp lệ, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -9,6 +9,29 @@ import { pathToFileURL } from 'node:url';
 import { resolveWorkspace } from './workspace.mjs';
 
 const git = (args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+
+// Dấu hiệu bỏ qua test hoặc tắt cảnh báo: agent hay dùng để "xanh" thay vì sửa lỗi thật.
+// shortcut: chỉ khớp chuỗi trên dòng thêm mới, không bắt ngưỡng số bị nới (coverage, timeout); cần thì thêm so sánh base..head.
+const WEAKENING = /@Disabled|@Ignore\b|@SuppressWarnings|@SuppressFBWarnings|@Test\([^)]*enabled\s*=\s*false|pytest\.(?:mark\.)?skip|\bxfail\b|unittest\.skip|\b(?:it|test|describe)\.(?:skip|only)\(|\b[xf](?:it|describe)\(|\bt\.Skip\w*\(|NOSONAR|#\s*nosec|#\s*noqa|pylint:\s*disable|\/\/\s*nolint|pragma: no cover|istanbul ignore|eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|#\s*type:\s*ignore/;
+
+// Liệt kê dòng thêm mới khớp WEAKENING, kèm file, để reviewer buộc phải xét từng chỗ.
+export function findWeakening(diff) {
+  const hits = [];
+  let file = '';
+  // Dòng thêm có nội dung "++ x" cũng bắt đầu bằng "+++ ": chỉ coi là header khi đang ở giữa "diff --git" và "@@".
+  let inHeader = false;
+  for (const line of diff.split('\n')) {
+    if (line.startsWith('diff --git ')) { inHeader = true; continue; }
+    if (line.startsWith('@@')) { inHeader = false; continue; }
+    if (inHeader) {
+      if (line.startsWith('+++ ')) file = line.replace(/^\+\+\+ (?:b\/)?/, '').replace(/[\t\r]+$/, '');
+      continue;
+    }
+    // Markdown chỉ nhắc tên annotation, không tắt được test nào.
+    if (line.startsWith('+') && !file.endsWith('.md') && WEAKENING.test(line)) hits.push(`- ${file}: ${line.slice(1).trim()}`);
+  }
+  return hits;
+}
 
 // `run(args) -> stdout` chạy git (không qua shell); quy ước run ném lỗi khi git exit khác 0.
 export function buildPackage({ base, head, run = git }) {
@@ -23,6 +46,8 @@ export function buildPackage({ base, head, run = git }) {
     throw new Error(`Không kiểm được ${base}..${head}: ref không tồn tại hoặc git lỗi (${String(e?.message ?? e).trim()})`);
   }
   const range = `${base}..${head}`;
+  const diff = run(['diff', '-U10', range]).trimEnd();
+  const weakening = findWeakening(diff);
   return [
     `# Review package: ${range}`,
     '',
@@ -32,8 +57,11 @@ export function buildPackage({ base, head, run = git }) {
     '## Stat',
     run(['diff', '--stat', range]).trimEnd(),
     '',
+    '## Dấu hiệu nới kiểm',
+    weakening.length ? weakening.join('\n') : '(không có)',
+    '',
     '## Diff (-U10)',
-    run(['diff', '-U10', range]).trimEnd(),
+    diff,
     '',
   ].join('\n');
 }

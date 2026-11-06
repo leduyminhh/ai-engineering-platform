@@ -6,8 +6,8 @@ trực tiếp với người dùng), không chạy trong subagent. Chỉ hỏi p
 
 ## Nguyên tắc hỏi
 
-- **Một câu mỗi tin nhắn:** tin nhắn kết thúc bằng đúng một câu hỏi, không kèm danh sách ví dụ hay bảng câu hỏi;
-  đợi trả lời rồi mới sang câu tiếp.
+- **Gom một thẻ mỗi lượt:** mọi câu còn thiếu đi vào một thẻ hỏi theo `ask-user.md` của skill `plan-execution`
+  (tối đa 4 câu, mỗi câu kèm đáp án khuyến nghị, đúng một câu mở); không hỏi từng câu qua nhiều lượt.
 - **Câu mở trước, đoán để họ sửa, playback từng phần:** theo mục "Nguyên tắc hỏi" và mục "Playback — tóm tắt lại từng
   phần" của `references/clarify-core.md` (skill `brainstorming`, bản cài plugin: `core:brainstorming`). Ví dụ câu mở
   cho spec: "lần gần nhất chuyện này xảy ra thế nào?".

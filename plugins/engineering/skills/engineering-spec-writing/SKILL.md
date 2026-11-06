@@ -59,9 +59,10 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    rồi viết tài liệu (bước 6–8) với mọi lựa chọn đánh dấu **quyết định của agent**, nêu nổi bật ở checkpoint (chỉ
    nêu riêng lựa chọn công nghệ/nền tảng quan trọng) để người dùng sửa khi duyệt.
 
-3. **Hỏi từng câu.**
-   Mỗi tin nhắn kết thúc bằng **một câu hỏi**, không kèm danh sách ví dụ; câu mở trước, chỉ đưa lựa chọn khi
-   người dùng bí; neo vào tình huống cụ thể; đoán để họ sửa thường tốt hơn hỏi. Tám nhóm của
+3. **Hỏi gom một thẻ.**
+   Gom mọi câu còn thiếu vào **một thẻ** theo `ask-user.md` của skill `plan-execution` (tối đa 4 câu, mỗi câu kèm đáp
+   án khuyến nghị, đúng một câu mở), như bước hỏi của `brainstorming` và Bước 2 `workflow-feature`; không hỏi từng câu
+   qua nhiều lượt. Neo vào tình huống cụ thể; đoán để họ sửa thường tốt hơn hỏi. Tám nhóm của
    [references/elicitation.md](references/elicitation.md) là **vùng phủ** để không bỏ sót, không đọc ra thành câu.
    Ưu tiên câu mở khoá AC. Ca biên theo mục "Rà ca biên" của `references/clarify-core.md` (skill `brainstorming` / `core:brainstorming`): ca có mặc định dẫn code đi vào tin nhắn hỏi gom đầu tiên. Chuyện kỹ thuật/nền tảng: hỏi người dùng muốn tự chọn hay giao agent; agent chọn thì ghi
    **quyết định của agent**.
@@ -122,6 +123,15 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
     liệt kê; ADR ghi cho quyết định lớn; đặt đúng `docs/requests/<ngày>-<slug>/`; tiếng Việt có dấu. Chạy
     `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/` để soát ID AC
     và cấu trúc thư mục request. Nêu rõ phần còn thiếu (fail-loud); con người **duyệt**.
+
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Yêu cầu rõ rồi, viết spec luôn" | Qua cổng "đủ thông tin" trước; chỉ việc rõ và nhỏ mới bỏ quy trình. |
+| "Chỗ này tôi đoán được, khỏi hỏi" | Ghi **[giả định]** kèm cơ sở và đưa vào câu hỏi mở; lựa chọn khi người dùng bỏ qua phần hỏi là **quyết định của agent**. |
+| "AC này khó đo, viết chung chung cũng được" | AC phải đo được theo Given/When/Then; có kết quả số thì kèm `calc:`. |
+| "Hỏi thêm vài lượt cho chắc" | Gom một thẻ mỗi lượt; builder check chỉ chạy một lần. |
 
 ## Verification (trước khi báo hoàn thành)
 

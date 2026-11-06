@@ -87,6 +87,16 @@ không cần khai báo model riêng cho từng task.
 - Thang severity và định dạng `agent_result`, `spec_verdict`, `tdd`, `rulings` theo contract đầu ra (`core:principles`);
   skill này không định nghĩa lại.
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Task nhỏ, bỏ review cho nhanh" | Mỗi task có review; task nhỏ thì review cũng nhanh. Chỉ chế độ inline và part chạy bằng subagent bỏ review từng task (`references/inline.md`). |
+| "Agent báo xanh rồi" | Báo cáo agent là ý định. Đối chiếu bằng diff và lần chạy test của chính session chính. |
+| "Finding này ngoài AC, sửa luôn cho tiện" | Theo mục "Nhận review" của `references/task-loop.md`: đổi hành vi ngoài AC là thẻ G3, không tự sửa. |
+| "Plan hơi lệch, tôi tự chỉnh rồi chạy tiếp" | Đổi AC đã duyệt hoặc mọi hướng đều là đoán là một trong 6 trường hợp phải dừng hỏi. |
+| "Skip test này tạm thời để task qua" | Mục `## Dấu hiệu nới kiểm` của review package sẽ hiện dòng đó; không có lý do thì là `major`. |
+
 ## Tham chiếu
 
 - [references/task-loop.md](references/task-loop.md): giao thức từng task, vòng sửa, breaker, ledger.

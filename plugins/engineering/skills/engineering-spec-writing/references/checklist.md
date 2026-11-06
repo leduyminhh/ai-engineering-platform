@@ -34,7 +34,7 @@ không đánh dấu xong khi chưa đủ.
 
 ## Làm rõ & builder check
 
-- [ ] Đã qua cổng "đủ thông tin"; hỏi từng câu (một câu mỗi tin nhắn) và playback từng phần, hoặc người dùng đã bỏ qua phần hỏi.
+- [ ] Đã qua cổng "đủ thông tin"; hỏi gom một thẻ mỗi lượt (không hỏi từng câu qua nhiều lượt) và playback từng phần, hoặc người dùng đã bỏ qua phần hỏi.
 - [ ] Có 2–3 hướng + 1 khuyến nghị + đánh đổi (đặt sau playback), hoặc ghi rõ vì sao không có (bỏ qua phần hỏi / thay đổi nhỏ).
 - [ ] Mọi lựa chọn không do người dùng chốt được ghi **quyết định của agent**, tách khỏi "Quyết định đã chốt".
 - [ ] Cỡ việc đã xếp (việc rõ và nhỏ / thay đổi nhỏ / dự án) và tài liệu đúng cỡ: thay đổi nhỏ không có `design.md`, `plan.md`.

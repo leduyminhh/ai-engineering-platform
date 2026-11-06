@@ -33,6 +33,7 @@ backup, link thông báo…). Chưa kiểm → ghi **chưa đạt** (fail-loud),
 
 ### 6. Feature flag
 - [ ] Phần rủi ro cao được bọc **feature flag** (tắt nhanh không cần redeploy) khi khả thi.
+- [ ] Mỗi flag mới có **owner** và **hạn gỡ** (ngày hoặc điều kiện); flag không owner là nợ không ai dọn.
 
 ### 7. Smoke e2e trước deploy (tuỳ chọn, chỉ khi project có `e2e/`)
 - [ ] Chạy 1–3 luồng e2e giá trị cao **đã có** trên đúng commit/tag sẽ phát hành, chỉ ở local/test (không trỏ

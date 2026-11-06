@@ -56,6 +56,15 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
   `plan.md` bám `tasks.md`.
 - Một checkpoint duyệt chung cho cả hai, không hỏi người duyệt hai lần.
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Thêm AC này cho đủ" | Plan chỉ phủ AC đã có ở `design.md`/`requirement.md`; thiếu thì báo. |
+| "Chép code vào plan cho agent đỡ nghĩ" | Không chép thân hàm; plan ghi giao diện và chuỗi nguyên văn (mục "Độ mịn"). |
+| "Cảnh báo W7/W9 phiền, bỏ dòng test đi" | Không xoá `**Files:**`/test để tắt cảnh báo. |
+| "Chia task sau, viết code trước" | Vẽ bản đồ file trước khi chia task; người dùng duyệt plan trước khi code. |
+
 ## Verification (trước khi báo hoàn thành)
 
 - Mọi `AC<n>.<m>` của design xuất hiện ở `**Phủ AC:**` của ít nhất một task.

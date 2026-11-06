@@ -47,7 +47,8 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
 
 1. Chạy `git status --short` và đọc diff liên quan.
 2. Quyết định worktree là MỘT thay đổi logic hay NHIỀU nhóm commit — tách commit khi
-   trộn nhiều mục tiêu; giữ code + test + docs phụ trợ đi cùng nếu phục vụ một mục tiêu.
+   trộn nhiều mục tiêu; giữ code + test + docs phụ trợ đi cùng nếu phục vụ một mục tiêu. Một commit khoảng 300 dòng
+   logic trở lên (`git diff --cached --shortstat`, bỏ file sinh tự động và lockfile) thì xét tách theo mục tiêu.
 3. Nếu cần branch mới: nạp [references/branch-convention.md](references/branch-convention.md)
    và tạo/chuyển branch theo quy ước (xem Quy tắc ưu tiên branch ở trên).
 4. Stage đúng các file của nhóm commit hiện tại.

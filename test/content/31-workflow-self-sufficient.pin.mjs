@@ -105,7 +105,7 @@ export default async function run({ ok, ctx }) {
     ok(/200–300 từ/.test(clarifyCore), 'AC1.1: clarify-core (playback dùng chung) nêu độ dài 200–300 từ');
     ok(/lệch có chủ đích[^]*chủ repo yêu cầu có đề xuất/.test(clarifyCore),
       'AC1.1: clarify-core nêu lệch có chủ đích kèm lý do chủ repo yêu cầu có đề xuất');
-    const step2 = between('2. **Cổng', '3. **Hỏi từng câu');
+    const step2 = between('2. **Cổng', '3. **Hỏi gom một thẻ');
     ok(/tự chọn hướng/.test(step2) && /2–3 hướng/.test(step2) && !/bước 5–7/.test(step2),
       'AC1.1: SKILL bước 2 — bỏ qua phần hỏi: agent tự chọn hướng, vẫn ghi 2–3 hướng');
     const verif = between('## Verification', '## Ghi chú');
@@ -272,7 +272,16 @@ export default async function run({ ok, ctx }) {
       msg = '';
       try { rp.buildPackage({ base: 'a', head: 'nope', run: mk(false, 128) }); } catch (e) { msg = e.message; }
       ok(/ref không tồn tại/.test(msg) && !/không là tổ tiên/.test(msg), 'AC3.6: merge-base lỗi khác exit 1 → báo ref không tồn tại/git lỗi, không báo "không là tổ tiên"');
+      const hunk = (f, body) => `diff --git a/${f} b/${f}\n--- a/${f}\n+++ b/${f}\n@@ -1 +1 @@\n${body}`;
+      const wd = hunk('T.java', '+  @Disabled("flaky")\n-  @Disabled\n   @Disabled ngữ cảnh\n+++ @Disabled\n+@Test(enabled = false)\n')
+        + hunk('t.py', '+@pytest.mark.skip\n+x = 1  # noqa\n+ok = 1\n')
+        + hunk('a b.test.ts\t', '+it.only("x", f)\n+fit("y", g)\n+// @ts-nocheck\n')
+        + hunk('SKILL.md', '+Cấm `@Disabled` mới\n');
+      ok(JSON.stringify(rp.findWeakening(wd)) === JSON.stringify(['- T.java: @Disabled("flaky")', '- T.java: ++ @Disabled', '- T.java: @Test(enabled = false)',
+        '- t.py: @pytest.mark.skip', '- t.py: x = 1  # noqa', '- a b.test.ts: it.only("x", f)', '- a b.test.ts: fit("y", g)', '- a b.test.ts: // @ts-nocheck']),
+        'findWeakening chỉ lấy dòng thêm mới khớp dấu hiệu skip/suppress, kèm tên file; dòng thêm "++ x" không bị coi là header');
       const pkg = rp.buildPackage({ base: 'a', head: 'b', run: mk(true) });
+      ok(/## Dấu hiệu nới kiểm\n\(không có\)/.test(pkg), 'buildPackage ghi "(không có)" khi diff không có dấu hiệu nới kiểm');
       ok(pkg.includes('abc1234 feat: x') && pkg.includes('a.js | 2 +-') && pkg.includes('diff --git a/a.js'),
         'AC3.6: buildPackage gồm commit list, stat và diff');
       const calls = [];

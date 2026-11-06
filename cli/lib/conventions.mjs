@@ -10,9 +10,15 @@ export const SKILL_HEADINGS = [
 // Heading trong khối code là ví dụ, không phải mục thật của skill; bỏ khối code trước khi kiểm.
 const FENCE = /^(```|~~~)[^\n]*\n[\s\S]*?^\1[^\n]*$/gm;
 
+// SKILL.md nạp nguyên vào context mỗi lần gọi; phần dài hơn đưa sang references/ để chỉ nạp khi cần.
+export const SKILL_BODY_MAX_LINES = 500;
+
 export function checkSkillBody(body) {
   const text = body.replace(FENCE, '');
-  return SKILL_HEADINGS.filter(([, re]) => !re.test(text)).map(([h]) => `thiếu heading "## ${h}"`);
+  const errs = SKILL_HEADINGS.filter(([, re]) => !re.test(text)).map(([h]) => `thiếu heading "## ${h}"`);
+  const lines = body.replace(/\n$/, '').split('\n').length;
+  if (lines > SKILL_BODY_MAX_LINES) errs.push(`thân SKILL.md dài ${lines} dòng, trần ${SKILL_BODY_MAX_LINES}: chuyển phần chi tiết sang references/`);
+  return errs;
 }
 
 // Trần của repo thấp hơn trần 1.536 ký tự của Claude (description + when_to_use bị cắt ở mức này trong danh sách skill,
