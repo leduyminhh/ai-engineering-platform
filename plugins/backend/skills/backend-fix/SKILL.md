@@ -71,6 +71,16 @@ re-scan Bước 9 sạch.
 - **Ngôn ngữ đo được:** báo bằng oracle đỏ → xanh với lệnh THẬT + exit code, `file:line` đã sửa. KHÔNG dùng
   "đảm bảo / loại bỏ / không còn lỗi". LUÔN nêu **residual risk** (chỗ cùng pattern chưa sửa vì ngoài phạm vi).
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Test này sai, sửa test cho khớp" | Không đụng test. Test sai thật thì báo để `backend-testing` xử lý ở lượt riêng. |
+| "Tạm `@Disabled` cho CI xanh" | Che triệu chứng, bị cấm ở Ranh giới an toàn. |
+| "Sửa thêm file kế bên cho gọn" | Ngoài danh sách file thì DỪNG, trả `blocked` kèm file đề nghị thêm. |
+| "Thử hai thay đổi một lúc cho nhanh" | Một thay đổi mỗi lượt; bản sửa hỏng phải revert trước khi thử lại. |
+| "Chắc đúng rồi, khỏi chạy lại oracle" | Báo bằng oracle đỏ → xanh với lệnh thật và exit code. |
+
 ## Quy trình — cổng F1–F5
 
 ### 0. Nạp context

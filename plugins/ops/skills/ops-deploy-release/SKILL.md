@@ -49,6 +49,9 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
    Chạy [references/release-checklist.md](references/release-checklist.md): build/test/lint xanh, **migration**
    sẵn sàng và đảo được, **backup + điểm rollback** đã có, **thông báo** bên liên quan, **feature flag** cho
    phần rủi ro. Mỗi mục là tiêu chí **đo được** (đạt / chưa đạt), không đánh dấu "xong" khi chưa kiểm.
+   Kết thúc bằng **đề xuất GO/NO-GO** cho người duyệt: bảng mục đạt/chưa đạt + **rollback plan** (lệnh hoặc thao tác,
+   điểm khôi phục, ngưỡng kích hoạt, người thực thi). Thiếu rollback plan hoặc còn mục chặn chưa đạt → đề xuất NO-GO.
+   Người duyệt quyết định GO; agent không tự chuyển sang bước 3.
 
 2. **Chọn chiến lược triển khai.**
    Theo [references/rollback-strategies.md](references/rollback-strategies.md): chọn **rolling / blue-green /

@@ -136,6 +136,16 @@ hình) ghi là suspected/cần kiểm.
 - Test kèm PR có **giòn** không (phụ thuộc timer/thứ tự/DOM nội bộ; query theo `data-testid`/class thay vì
   role; assert chi tiết cài đặt)? Sâu về chiến lược test → route `frontend-testing`.
 
+## Cỡ thay đổi
+
+Đếm dòng đổi bằng `git diff --shortstat` (bỏ file sinh tự động, lockfile, snapshot). Ngưỡng dưới là mặc định của
+skill; project ghi đè trong `project-knowledge/code-convention.md`.
+
+- Khoảng **300 dòng** logic trở lên, hoặc trộn nhiều mục tiêu (refactor + tính năng, đổi tên hàng loạt + sửa hành vi)
+  → finding `minor` "nên tách", kèm cách tách gợi ý (theo mục tiêu, theo component, tách refactor cơ học ra trước).
+- Khoảng **1000 dòng** trở lên → ghi rõ trong phần "chưa soát" rằng review có thể sót, nêu phần đã đọc kỹ. Cỡ diff
+  không tự thành `major`: không có lỗi cụ thể thì không chặn.
+
 ## Đọc phần liên quan (caller/callee của symbol bị đổi)
 
 Diff chỉ cho thấy nơi đổi, không cho thấy ai phụ thuộc vào nó. Với **tối đa 5 symbol công khai** mà diff đổi
