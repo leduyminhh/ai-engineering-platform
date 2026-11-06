@@ -40,24 +40,7 @@ node test/install.test.mjs
 
 Tests that exercise install/uninstall read from `build/`; if validate fails with a missing `SKILL.md`, rebuild first (`npm run build`).
 
-End-user lifecycle (run from inside a *target* project, after `npm link`):
-
-```bash
-aip                 # interactive menu wizard (init | install | uninstall | update | build)
-aip init      [--full]      # creates or refreshes the baseline block in AGENTS.md (re-run to refresh) and adds @AGENTS.md to CLAUDE.md; --full adds templates/init; never overwrites other files
-aip install   --provider all --plugin all [-g] [--yes]
-aip uninstall [--provider ...] [--plugin ...] [-g] [--yes]
-aip build     --provider all
-aip check     [-g]
-aip update    [-g]          # git pull + rebuild + reinstall tracked installs
-aip list
-aip mode full|ask|status   # per-project permission mode (project scope only): writes `mode` in .claude/aip-gate.json
-aip autonomy high|safe|status   # how often plan-execution asks (project scope only): writes/removes `autonomy` in .claude/aip-gate.json; push always asks, G1/G2/G3 still stop
-aip stats [--session <path>] [--json] [--usage [--since <days|yyyy-mm-dd>]]   # context size per Claude Code session, or token + cost per model (--usage; money = Claude Code cost-state, no price table), from ~/.claude/projects transcripts (layout and the meaning of cost-state are [Unverified], internal to Claude Code)
-aip statusline [--soft <n>] [--hard <n>] [--no-color]   # one line from Claude Code statusLine JSON on stdin (context % vs baseline thresholds 40/60, cache minutes left, cost); reads no transcript
-aip status [<request>] [--json | --html [--watch]] [--part <nn>]   # read-only progress of a request split into parts (cli/lib/status.mjs: Bảng part, plans, ledgers + events.jsonl, git log of part branches); --html writes .aip/runs/<request>/status.html
-aip status --requests [--json]   # read-only list of open requests in docs/requests/ (status token from design.md, "nghi đã merge" hint from feature/<slug> ancestry); writes nothing
-```
+End-user `aip` commands (run inside a *target* project after `npm link`): `node cli/index.mjs --help`.
 
 Every command runs `node cli/index.mjs` — no tsc/dist. `node cli/dist.mjs [--dry-run]` is separate: it builds a local `dist` git branch holding `build/claude` (minus `drafts/`) for `claude plugin marketplace add <owner>/<repo>@dist`; it never pushes and needs git >= 2.42 (`git worktree add --orphan`).
 
@@ -90,13 +73,7 @@ Every lifecycle command takes a scope: **project** (default, cwd) or **global** 
 `cli/lib/pack-guard.mjs` + `pack.config.json` verify (on `prepack`) that the npm-publish file set stays within an allowlist (fail-loud). The npm package ships **core only**: any `plugins/<id>/` not listed in `pack.config.json` `shipPlugins` (empty) and all of `workflows/` are rejected, and a plugin listed in `shipPlugins` must be present. `plugins/_published.json` gates what the wizard offers from source and what the Claude marketplace lists: draft skills (and agents using them) build to `build/claude/drafts/<plugin>/…` (skills-mode install still reads them; plugin-mode install does not — it warns about dropped draft skills) and `node cli/build.mjs --include-draft` restores the single-tree layout; users install plugins/workflows from source (`npm link`). This is separate from `cli/lib/pack.mjs`, a zero-dep deterministic ZIP packer that bundles the `_cowork.json` skill set for Anthropic Cowork upload.
 
 ### Adding capability content
-- New skill → add `plugins/<id>/skills/<skill-id>/SKILL.md` (frontmatter: `name`, `description`, `order`, `title`, `runsIn`, `invoke`). The body must have `## Quy trình…` and `## Ranh giới an toàn…` H2 headings (a suffix after a space is allowed; checked by `cli/lib/conventions.mjs`). The `description` follows the Phase 1 template — one action sentence (≤ 200 chars), then `Dùng khi người dùng muốn "…", "…", "…"` (3–5 quoted triggers), then `Không dùng khi <case> → <id>.` pointing at real skill/workflow/agent ids — at most 500 characters (target 450; workflow descriptions are capped at 500 too), no boilerplate, and must not repeat another skill's quoted trigger verbatim; agent descriptions are ≤ 260 chars and end with `Dùng khi …` (checked by `cli/lib/conventions.mjs`). Optional passthrough keys (`SKILL_PASSTHROUGH`: `argument-hint`, `arguments`, `user-invocable`, `disable-model-invocation`, `allowed-tools`, `disallowed-tools`, `effort`, `paths`, `compatibility`, `metadata`) are type-checked and projected per provider (`PROVIDER_SKILL_KEYS`); a value that starts with `[` and is meant as text (e.g. `argument-hint`) must be quoted, otherwise the YAML parser reads it as a list and the loader rejects it. The loader fails loud on any frontmatter key outside `SOURCE_KEYS`. It is auto-discovered; run `npm run build` to verify output. In a plugin published per-skill in `plugins/_published.json` (currently `backend`, `frontend` and `data`), the new skill stays draft — not offered by the wizard — until its `<plugin>/<skill>` entry is added there.
-- New agent → `plugins/<id>/agents/<id>-<slug>.md` (frontmatter `name`, `description`, `mode`, `skills`, optional `tools` allowlist / `maxTurns` / `isolation` / `writeScope`; body 4 heading). Claude agents preload the first skill of `skills`; `permissionMode` is not supported because Claude ignores it for plugin agents. A read-only agent with a `tools` allowlist must include `Skill` when it lists more than one skill. `writeScope` (write-mode agents only) is a YAML list of globs matched against the path relative to the git root: `/` separators, `*` = one segment, `**` = any depth, not starting with `./`, `/` or `..`, no `\`, `{` or `?`; the `core` hook `guard-files` denies Edit/Write outside it for that agent (it guards write tools only — an agent with Bash can still write elsewhere).
-- New workflow → only for a pipeline that chains ≥ 2 different capabilities; copy `core/skills/artifact-templates/references/workflow.template.md`, dropping its `<!-- artifact-template … -->` header block, to `workflows/<slug>/WORKFLOW.md`, add a row to the registry in `workflows/orchestrator/WORKFLOW.md`, and add `workflows/<slug>/graph.json` from `core/skills/artifact-templates/references/workflow.graph.template.json` (checked by `checkGraph`/`checkGraphAgainstBody` in tests and by `aip build`, which exits 1 on any graph error). Every backward `on_fail` edge (target `n` ≤ the step's `n`) needs `"max_attempts": 2`, except a human gate's `gate.reject` edge and edges to `blocked`/`ask_user`; the Supervisor rules live in `core/principles/workflow-output-contract.md`. A single-capability request gets a row in the orchestrator's "Yêu cầu chạy trực tiếp bằng skill" table instead.
-- New provider behavior → edit `adapters/<provider>/adapter.mjs`; keep it a pure `build(plugins, ctx) -> fileEntry[]`.
-- Changes affecting projection should be covered by `test/*.test.mjs` and the `test/validate.mjs` contract.
-- Tests layout: `test/validate.mjs` is a thin entry; `test/harness.mjs` (`ok`/`fails`, `--only`) and `test/context.mjs` (loads source once, runs the build when `--build`, exposes shared helpers/fixtures as `ctx`) feed the modules. `test/contract/*.contract.mjs` hold generic checks applied to every skill/agent/workflow; `test/content/*.pin.mjs` hold per-spec/per-skill wording pins that retire once a rule becomes a contract. Numeric filename prefixes fix the run order (contract first, then content); a module is `export default async function run({ ok, ctx })`.
-- Any content change → bump the owning plugin's version and re-run `node cli/lib/versions.mjs --lock` (see Version gate above). `workflows/.manifest.json` `hardDependencies` lists the plugins the `workflows` plugin depends on; a workflow needing another plugin (e.g. `ops`) gets a "Plugin cần có" preamble line instead.
+Checklist for a new skill, agent, workflow or provider behavior (frontmatter rules, conventions, version bump): project skill `aip-add-content` (`.claude/skills/aip-add-content/SKILL.md`).
 
 ## Conventions
 
