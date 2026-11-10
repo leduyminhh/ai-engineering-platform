@@ -26,7 +26,7 @@ export default async function run({ ok, ctx }) {
   ok(m.positive.hit === 1 && m.positive.total === 2 && m.positive.pct === 50, 'AC1.3 measure: đếm hit/total/pct của positive');
   ok(m.negative.hit === 1 && m.negative.total === 2 && m.negative.pct === 50, 'AC1.3 measure: negative đạt khi id không ở hạng 1');
   ok(m.misses.length === 2, 'AC1.3 measure: liệt kê miss');
-  ok(S.measure({ docs, data: { 'a-spec': { positive: ['x', 'y', 'z'], negative: [] } } }).positive.pct === 0, 'AC1.3 measure: pct làm tròn xuống');
+  ok(S.measure({ docs, data: { 'a-spec': { positive: ['đặc tả yêu cầu', 'commit git', 'commit git'], negative: [] } } }).positive.pct === 33, 'AC1.3 measure: pct làm tròn xuống');
 
   const lk = (p, n) => ({ positive: { threshold: p }, negative: { threshold: n } });
   const meas = (p, n) => ({ positive: { pct: p }, negative: { pct: n } });
