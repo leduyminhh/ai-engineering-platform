@@ -10,7 +10,7 @@ export default async function run({ ok, ctx }) {
 
   for (const f of ['plugins/backend/skills/backend-implement', 'plugins/frontend/skills/frontend-implement', 'plugins/frontend/skills/frontend-data-integration']) {
     const body = read(`${f}/SKILL.md`);
-    const s0 = (body.match(/^### 0\.[^\n]*\n([\s\S]*?)(?=^### 1\.)/m) || [, ''])[1];
+    const s0 = (body.match(/^### 0\.[^\n]*\n([\s\S]*?)(?=^### I?1.)/m) || [, ''])[1];
     ok(/Kiểm nguồn/.test(s0) && /core:principles/.test(s0), `AC2.2: ${f.split('/').pop()} trỏ mục Kiểm nguồn của core:principles ở bước 0`);
   }
 }

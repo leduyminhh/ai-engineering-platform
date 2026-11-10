@@ -32,6 +32,7 @@ gọi khi cần — không thuộc chuỗi bắt buộc.
   antd / Chakra); có Tailwind + `tailwind.config` không; TypeScript; alias import (`@/...`).
 - Đối chiếu blueprint kiến trúc ship kèm ở `architecture/react-<feature-based|fsd|micro-frontend>.template.md`
   để biết **cây `src/`, tầng/slice và import boundary** đích. Đây là nguồn quyết định "đặt file ở đâu".
+- Kiểm API thư viện theo phiên bản thật trước khi gọi: theo mục "Kiểm nguồn" của skill `principles` (bản cài plugin: `core:principles`).
 
 ### 1. Chuẩn hoá đầu vào → "design intent"
 Nhận diện dạng đầu vào rồi rút một mô tả trung gian (cấu trúc/layout + token quan sát + phần tử UI +
