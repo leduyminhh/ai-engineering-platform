@@ -1,6 +1,6 @@
 // Contract 56: scorer routing tất định (scripts/routing-score.mjs) — unit của scorer (AC1.3, AC1.4).
 export default async function run({ ok, ctx }) {
-  const { path, pathToFileURL, REPO_ROOT } = ctx;
+  const { fs, path, pathToFileURL, REPO_ROOT } = ctx;
   const S = await import(pathToFileURL(path.join(REPO_ROOT, 'scripts', 'routing-score.mjs')).href);
   const { findWeakening } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'skills', 'plan-execution', 'scripts', 'review-package.mjs')).href);
 
@@ -52,4 +52,24 @@ export default async function run({ ok, ctx }) {
     ' }',
   ].join('\n');
   ok(findWeakening(diff).length === 1, 'AC1.4 findWeakening: hạ "threshold" trong file khoá bị bắt đúng một dòng');
+
+  // Dữ liệu thật: mỗi id published có file prompt mẫu, và số đo không tụt dưới ngưỡng khoá (AC1.1, AC1.2).
+  const realDocs = S.loadRoutingDocs();
+  const realData = S.loadRoutingData();
+  const names = realDocs.map((d) => d.id);
+  ok(new Set(names).size === names.length, 'AC1.1 id trần của tập chấm không trùng nhau');
+  for (const id of names) {
+    const d = realData[id];
+    ok(!!d && d.positive?.length >= 3 && d.negative?.length >= 2, `AC1.1 test/routing/${id}.json có ≥ 3 positive và ≥ 2 negative`);
+  }
+  for (const id of Object.keys(realData)) ok(names.includes(id), `AC1.1 test/routing/${id}.json thuộc tập id published`);
+  const lockPath = path.join(REPO_ROOT, 'test', 'routing', 'rank1.lock.json');
+  ok(fs.existsSync(lockPath), 'AC1.2 có test/routing/rank1.lock.json');
+  if (fs.existsSync(lockPath)) {
+    const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    const real = S.measure({ docs: realDocs, data: realData });
+    for (const k of ['positive', 'negative']) {
+      ok(real[k].pct >= lock[k].threshold, `AC1.2 ${k} rank-1 ${real[k].pct}% >= ngưỡng khoá ${lock[k].threshold}%`);
+    }
+  }
 }

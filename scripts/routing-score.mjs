@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Chấm routing tất định: prompt mẫu (test/routing/<id>.json) xếp hạng với `description` của mọi id published bằng TF-IDF + cosine.
 // Cách dùng: [--lock] — in số đo positive/negative và các miss; --lock ghi test/routing/rank1.lock.json khi số đo tăng, exit 1 khi tụt.
-// Hằng số: idf = log((N+1)/(df+1)) + 1; tf = số lần xuất hiện; điểm = cosine; token = unigram + bigram sau normalize (bỏ dấu, đ → d).
+// Hằng số: idf = log((N+1)/(df+1)) + 1; tf = số lần xuất hiện; điểm = cosine; token = unigram + bigram sau normalize (bỏ dấu, đ → d), bỏ token 1 ký tự.
+// Chọn cấu hình (đo trên 50 id): bigram+bỏ 1 ký tự 70%/94%, bigram+giữ 1 ký tự 70%/93%, không bigram 68%/93% (positive/negative).
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -15,7 +16,7 @@ export const normalize = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 export function tokens(text) {
-  const w = normalize(text).split(' ').filter(Boolean);
+  const w = normalize(text).split(' ').filter((x) => x.length >= 2);
   return [...w, ...w.slice(1).map((x, i) => `${w[i]} ${x}`)];
 }
 
