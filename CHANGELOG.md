@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Thu hẹp bốn mảng học từ agent-skills (`docs/requests/2026-11-10-agent-skills-gap-closure`; core 1.32.2, backend 1.14.1, frontend 1.15.1, engineering 2.14.0, ops 2.1.0, data 1.7.0): `npm test` chấm routing tất định trên `description` của 50 skill/workflow published (`scripts/routing-score.mjs`, dữ liệu viết mù ở `test/routing/`, ngưỡng khoá positive 70%, negative 94%, `--lock` chỉ nâng) cùng ba case eval "phải im lặng"; mục "Kiểm nguồn" trong skill `principles` (`core/principles/source-check.md`), được `backend-implement`, `frontend-implement`, `frontend-data-integration` trỏ ở bước 0; template `quality-bar` và `review-package.mjs` liệt kê khi `project-knowledge/quality-bar.md` bị nới; bảng "Dấu hiệu đang tự biện minh" cho 8 skill review, refactor, quality gate, deploy, migration, git.
+
 - Bổ sung lớp kỷ luật hành vi (`docs/requests/2026-10-29-superpowers-gap-closure`): skill `core:using-aip` (gọi skill trước khi hành động), `core:git-worktree` (tạo, merge, dọn worktree theo baseline), `engineering-tdd`, `engineering-debugging`; chế độ inline của `plan-execution` (`references/inline.md`, `ledger.mjs` từ chối dòng inline thiếu `tests: <lệnh> exit 0`); ba case eval mới (chưa chạy thật).
 
 - `aip statusline`: statusLine command for Claude Code. Reads the session JSON from stdin and prints one line with model, context % (warns at `--soft` 40 and urgently at `--hard` 60, the baseline's session-rotation thresholds), minutes of prompt cache left, session cost and the 5-hour rate limit; uses only fields Claude Code already sends, never the transcript, and always exits 0 on bad input. [Unverified] not yet observed in a live session.
