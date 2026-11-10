@@ -4,7 +4,7 @@
     "Push nhánh hiện tại lên origin giúp mình, nhưng xem diff trước đã.",
     "Tạo branch mới cho task này rồi chuẩn bị luôn PR notes giúp mình.",
     "Working tree đang trộn nhiều thay đổi, tách ra thành vài commit hợp lý cho mình được không?",
-    "Tóm tắt các commit từ tag v2.4.0 đến v2.5.0 thành ghi chú phát hành cho người dùng cuối."
+    "Diff này đang trộn cả sửa lỗi lẫn đổi tên file, tách thành các commit gọn rồi commit giúp mình nhé."
   ],
   "negative": [
     "Bump version lên 2.5.0, tạo release branch và đặt tag cho bản phát hành này.",
