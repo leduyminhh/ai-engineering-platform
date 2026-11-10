@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Cho mình khung chuẩn để viết một workflow mới, đừng tự nghĩ cấu trúc.",
+    "Lấy template ADR rồi điền giúp mình, nhớ chạy validator kiểm lại.",
+    "Mình cần mẫu chuẩn cho requirement và design, điền xong thì kiểm bằng script nhé.",
+    "Tạo file mới từ template artifact đúng loại, giữ nguyên heading mà validator đọc."
+  ],
+  "negative": [
+    "Viết nội dung đặc tả yêu cầu cho tính năng đăng nhập bằng OTP, hỏi mình những gì còn thiếu.",
+    "Ghi lại quyết định chọn Kafka thay RabbitMQ, so sánh phương án và đánh đổi.",
+    "Vẽ sequence diagram cho luồng thanh toán bằng PlantUML."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Viết test cho component React này bằng Testing Library và msw giúp mình.",
+    "Màn hình cũ chưa có test, trước khi refactor mình muốn khoá hành vi hiện tại lại.",
+    "Thêm unit test cho custom hook useCart, kiểm các state loading, empty, error.",
+    "Dự án FE đang thiếu test, viết bộ test đúng tầng rồi báo độ phủ và chỗ còn hở."
+  ],
+  "negative": [
+    "Viết vài luồng Playwright e2e chạy xuyên từ frontend đến database.",
+    "Test báo đỏ vì code bug, sửa luôn code production cho test qua giúp mình.",
+    "Viết test cho service Java Spring bên backend, có integration test với DB."
+  ]
+}

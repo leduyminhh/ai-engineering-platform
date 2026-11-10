@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Soát lỗ hổng bảo mật toàn bộ module thanh toán giúp mình, theo chuẩn OWASP và dựng luôn threat model.",
+    "Mình nghi ngờ có lỗ hổng IDOR ở các endpoint đơn hàng, quét và xác nhận từng finding giúp.",
+    "Lỡ commit AWS key lên git rồi, cần rà soát lộ secret và lên kế hoạch xử lý.",
+    "Trước khi go-live nhờ bạn security review cả luồng auth, rồi sửa các lỗi nghiêm trọng kèm test."
+  ],
+  "negative": [
+    "Chỉ cần chạy SonarQube một lần rồi đọc report cho mình thôi, không cần quy trình dài.",
+    "Review giúp mình PR này xem logic và đặt tên có ổn không.",
+    "Hệ thống đang bị tấn công DDoS ngay lúc này, cần khoanh vùng và xử lý sự cố."
+  ]
+}

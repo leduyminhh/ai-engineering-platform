@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Project React của mình đang xếp thư mục theo type, muốn đổi sang Feature-Based, bắt đầu từ đâu?",
+    "Chuyển src sang FSD giúp mình, dời file từng lô nhỏ và thêm eslint boundaries để ép import.",
+    "Dự án React của mình thư mục đang lộn xộn, bạn giúp sắp xếp lại theo kiểu Feature-Based, chạy ra kết quả y như cũ, làm từng đợt ít file thôi.",
+    "Restructure lại cấu trúc frontend theo kiến trúc mới, lập bảng ánh xạ file sang layer trước khi dời."
+  ],
+  "negative": [
+    "Chỉ gom mấy component trùng lặp trong feature hiện tại, không đổi kiến trúc.",
+    "Nối API thật vào màn hình danh sách sản phẩm bằng TanStack Query.",
+    "Dựng component React từ file Figma này."
+  ]
+}

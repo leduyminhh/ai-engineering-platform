@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Repo này code chạy lâu rồi mà chưa có spec nào, dựng lại spec cho các chức năng hiện có giúp mình.",
+    "Backfill docs/specs từ code hiện tại, đề xuất danh sách năng lực trước rồi mình duyệt.",
+    "Spec cũ có còn khớp code không, kiểm xem chỗ nào lệch giúp mình.",
+    "Mình cần tài liệu đặc tả sống cho dự án legacy, suy ngược từ source ra, mỗi quy tắc kèm file:line."
+  ],
+  "negative": [
+    "Thêm tính năng mới và cập nhật spec sống kèm theo request đó.",
+    "Viết spec yêu cầu mới cho chức năng chưa code, có AC đo được.",
+    "Ghi lại quyết định chọn Kafka thay RabbitMQ thành ADR."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Component OrderList của mình dài cả nghìn dòng, dọn lại giúp mà đừng đổi hành vi nhé.",
+    "Tách logic trong JSX ra custom hook, bỏ luôn prop drilling mấy tầng này giùm mình.",
+    "Refactor đống useEffect thừa trong module profile, nhưng phải đảm bảo test với build vẫn xanh.",
+    "Mình muốn colocate state và extract component cho màn hình checkout, làm từng bước nhỏ, mỗi bước một commit."
+  ],
+  "negative": [
+    "Chuyển toàn bộ cấu trúc src sang Feature-Sliced Design giúp mình.",
+    "Có bug khi bấm nút submit bị gọi 2 lần, sửa giúp mình.",
+    "Review PR frontend này xem có vấn đề gì không, đừng sửa gì cả."
+  ]
+}

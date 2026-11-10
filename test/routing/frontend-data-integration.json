@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "UI đã dựng xong rồi, giờ nối với API backend thật theo OpenAPI contract giúp mình.",
+    "Sinh type từ contract rồi viết hook useQuery cho trang danh sách, nhớ xử lý loading, error, empty.",
+    "Màn hình còn TODO chỗ dữ liệu, gắn data thật vào container và map lỗi 401, 500 giúp mình.",
+    "Làm task FE-INT UC01-FE-02 trong tasks.md, nối dữ liệu cho page đã có."
+  ],
+  "negative": [
+    "Dựng giao diện từ mockup thành React component presentational, chưa cần gọi API.",
+    "Thiết kế lại OpenAPI contract cho endpoint đơn hàng và kiểm drift với backend.",
+    "Viết test Playwright chạy luồng đăng nhập xuyên FE đến DB."
+  ]
+}

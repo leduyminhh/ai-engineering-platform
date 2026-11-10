@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Cho mình xem tiến độ request đang chạy, part nào xong rồi, part nào chưa.",
+    "Cho mình xem trang trạng thái với, có part nào bị kẹt cần mình ra tay xử lý không?",
+    "Xử lý vướng part 02 giúp mình.",
+    "Mở trang status ở panel bên cho mình xem tổng quan các part."
+  ],
+  "negative": [
+    "Làm tiếp plan từ task chưa hoàn thành, chạy vòng review từng task.",
+    "Tạo worktree riêng cho part 3 để chạy song song.",
+    "Viết release notes tổng hợp những gì đã làm trong request này."
+  ]
+}

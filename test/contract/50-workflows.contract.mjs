@@ -372,10 +372,11 @@ export default async function run({ ok, ctx }) {
     ok(tErrs.length === 0, `AC3.2: template graph hợp lệ và khớp template workflow${tErrs.length ? ' — ' + tErrs.join(' | ') : ''}`);
 
     const skillMd = fs.readFileSync(path.join(CORE_DIR, 'skills', 'artifact-templates', 'SKILL.md'), 'utf8');
-    const claudeMd = fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
-    const newWf = claudeMd.split('\n').find((l) => l.startsWith('- New workflow')) || '';
+    // Checklist thêm nội dung đã rời CLAUDE.md sang skill dự án aip-add-content (167a3520).
+    const addContent = fs.readFileSync(path.join(REPO_ROOT, '.claude', 'skills', 'aip-add-content', 'SKILL.md'), 'utf8');
+    const newWf = addContent.split('\n').find((l) => l.startsWith('- New workflow')) || '';
     ok(skillMd.includes('workflow.graph.template.json') && newWf.includes('graph.json'),
-      'AC3.2: SKILL.md artifact-templates và CLAUDE.md nhắc graph.json');
+      'AC3.2: SKILL.md artifact-templates và skill aip-add-content nhắc graph.json');
 
     if (workflows && fs.existsSync(claudeDir)) {
       const codexDir = path.join(BUILD, 'codex');

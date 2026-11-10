@@ -31,7 +31,7 @@ Cách làm:
    minor/nit chỉ dành cho điều không vi phạm yêu cầu đã duyệt. Plan/spec im lặng về một điều không có nghĩa là cho phép.
 5. Mỗi finding có severity, category, location (file:line), evidence, impact, recommendation, confidence. Tự đọc lại
    file:line trước khi trả; bỏ finding không tái lập được.
-6. Mỗi dòng trong mục `## Dấu hiệu nới kiểm` của review package (test bị skip, cảnh báo bị tắt) phải có lý do trong
+6. Mỗi dòng trong mục `## Dấu hiệu nới kiểm` của review package (test bị skip, cảnh báo bị tắt, ngưỡng coverage hay số cảnh báo cho phép bị nới) phải có lý do trong
    brief hoặc báo cáo implementer; không có lý do thì là finding `major` (test bị làm yếu để qua).
 7. Gắn nhãn `trong AC` hoặc `ngoài AC` cho mỗi finding (ngoài AC: không vi phạm AC hay tiêu chí đã duyệt trong brief). Finding kiểm đầu vào cho dữ liệu do code hoặc cấu hình nội bộ khai báo: theo mục "Ranh giới tin cậy" của skill `principles` (bản cài plugin: `core:principles`; nguồn `core/principles/trust-boundary.md`), tối đa `minor`.
 

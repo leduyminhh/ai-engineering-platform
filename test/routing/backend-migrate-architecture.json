@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Project này đang layered, mình muốn chuyển sang Onion+DDD mà không đổi hành vi, giúp với.",
+    "Áp dụng Hexagonal cho backend hiện có, lập bảng ánh xạ file sang tầng trước khi di chuyển.",
+    "Domain đang import thẳng ORM, đảo phụ thuộc và thêm ArchUnit để ép ranh giới nhé.",
+    "Đổi cấu trúc src của service Python sang CQRS, kèm import-linter kiểm chiều phụ thuộc."
+  ],
+  "negative": [
+    "Mình chỉ muốn tách vài hàm dài trong một class cho gọn, giữ nguyên cấu trúc hiện tại, dọn giúp mình thôi.",
+    "Dựng khung dự án backend mới từ đầu với kiến trúc Hexagonal.",
+    "Ghi lại quyết định chọn Kafka thay vì RabbitMQ thành tài liệu ADR."
+  ]
+}

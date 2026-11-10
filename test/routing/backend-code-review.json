@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Xem giúp mình pull request phía backend này, soát correctness, kiến trúc và lỗi N+1 query.",
+    "Đọc diff nhánh feature/orders so với develop rồi cho finding kèm file:line nhé.",
+    "Có thể xem giúp module payment Java có vi phạm Dependency Rule không?",
+    "Mình vừa sửa theo comment review, kiểm lại xem các finding trước đã được xử lý đúng chưa."
+  ],
+  "negative": [
+    "Review phần React component trong PR này, kiểm a11y và hook.",
+    "Quét lỗ hổng thư viện phụ thuộc bằng Black Duck và đọc report giúp mình.",
+    "Tách god class OrderService này thành nhiều class nhỏ giúp mình."
+  ]
+}

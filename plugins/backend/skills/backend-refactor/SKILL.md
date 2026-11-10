@@ -108,6 +108,16 @@ giữ dữ liệu)… Ưu tiên move gỡ được nhiều phức tạp/trùng l
 | G4 | Hồi quy so baseline + boundary check (ArchUnit/import-linter) XANH; con người duyệt diff | 5 | Không tuyên bố hoàn tất |
 | G5 | 1 bước = 1 commit, duyệt diff trước merge/push, không push main; giữ boundary/kiểu kiến trúc | Xuyên suốt | — |
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Test đang đỏ sẵn, refactor luôn rồi tính" | Gate G1: baseline build/test/lint phải xanh, vùng thiếu test có characterization; chưa có thì DỪNG. |
+| "Gộp luôn một bước sửa bug nhỏ" | Gate G2: mỗi bước giữ hành vi; dời, tách trước, đổi hành vi tách riêng. |
+| "Làm một mạch xong rồi chạy test một lần" | Gate G2: build/test/lint xanh sau mỗi bước; bước đỏ thì sửa hoặc revert, không đi tiếp. |
+| "Áp pattern này cho gọn, khỏi hỏi" | Gate G3: pattern chỉ khi gỡ phức tạp thật và hỏi duyệt trước pattern lớn; nếu không thì chọn move đơn giản hơn. |
+| "Test xanh rồi, khỏi đối chiếu boundary" | Gate G4: hồi quy so baseline và boundary check xanh, con người duyệt diff, rồi mới tuyên bố hoàn tất. |
+
 ## Sau khi xong
 Tóm tắt: các move đã áp (+ `file:line`), pattern đã dùng (nếu có) kèm lý do, kết quả build/test/lint
 so baseline (số THẬT), phần **chưa soát + residual risk**. Refactor giữ hành vi — đổi hành vi có oracle

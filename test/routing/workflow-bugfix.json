@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "API trả về sai tổng tiền khi áp mã giảm giá, giúp mình tìm nguyên nhân rồi sửa với.",
+    "Mình vừa dán stacktrace NullPointerException ở đây, bạn debug và fix bug này giúp mình nhé.",
+    "Nút Lưu bấm xong không có gì xảy ra, hôm qua vẫn chạy bình thường mà. Điều tra và sửa đi.",
+    "Có lỗi kết quả báo cáo lệch so với DB, cần tái hiện bằng test rồi fix tối thiểu."
+  ],
+  "negative": [
+    "Production đang sập, user không đăng nhập được, cần điều tra sự cố khẩn cấp ngay.",
+    "Thêm cho mình tính năng xuất báo cáo ra Excel, làm từ yêu cầu đến code luôn nhé.",
+    "Trang danh sách load chậm quá, hãy đo p95 và tối ưu giúp mình."
+  ]
+}

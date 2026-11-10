@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Kiểm tra module orders xem tên file với tên class có đúng code-convention của team không.",
+    "Soát cấu trúc thư mục trong src có lệch so với kiến trúc đã chọn không, chỉ báo thôi.",
+    "Convention check cho thư mục payment, liệt kê chỗ nào vi phạm kèm file:line.",
+    "Có file nào đặt sai tầng không, ví dụ controller nằm trong thư mục domain?"
+  ],
+  "negative": [
+    "Team muốn đổi quy ước đặt tên sang kebab-case, ghi quyết định này lại giúp.",
+    "Review PR xem logic đúng chưa, có N+1 hay thiếu test không.",
+    "Chạy SonarQube quét code smell và lỗ hổng bảo mật cho cả repo."
+  ]
+}

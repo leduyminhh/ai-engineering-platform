@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Từ 2 giờ sáng API trả 500 hàng loạt, khoanh vùng xem lỗi ở tầng nào giúp mình.",
+    "Có sự cố production, đọc log với metric tương quan với lần deploy gần nhất để tìm nguyên nhân.",
+    "Soạn giúp mình bản cập nhật cho stakeholder về sự cố đang xử lý, nêu severity và blast radius.",
+    "Sự cố qua rồi, viết RCA có timeline và hành động khắc phục giúp mình."
+  ],
+  "negative": [
+    "Thực thi rollback theo chiến lược canary cho bản deploy vừa rồi.",
+    "Thiết kế SLO và alert rule cho service thanh toán để phát hiện sớm hơn.",
+    "Test bị lỗi trên local, debug giúp mình stacktrace này."
+  ]
+}

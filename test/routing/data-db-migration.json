@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Project mình còn dùng ddl-auto=update, giúp mình chuyển sang Flyway hoặc Liquibase được không?",
+    "Cần thêm cột mới vào bảng users có hàng triệu dòng mà không khoá bảng, viết migration giúp mình.",
+    "Tách đổi tên cột thành các pha expand rồi contract, đảm bảo bản app cũ vẫn chạy được.",
+    "So sánh Flyway với Liquibase dựa trên repo hiện tại để mình chọn công cụ."
+  ],
+  "negative": [
+    "Viết repository và service dùng cột mới sau khi migration xong.",
+    "Thiết kế schema OLTP từ đầu cho hệ thống mới, vẽ luôn ERD.",
+    "Chạy migration thẳng lên database production luôn cho nhanh."
+  ]
+}

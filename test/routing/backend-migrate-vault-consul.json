@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Chuyển cấu hình trong .env sang Consul và Vault giúp mình, secret vào Vault, config vào Consul.",
+    "Bọn mình muốn externalize config và đưa secret ra khỏi file env, làm sao với Spring Boot?",
+    "Phân loại biến môi trường nào là secret, biến nào là config thường rồi seed lên Consul/Vault.",
+    "Đổi application.properties sang yaml và nối app vào Vault, Consul theo từng profile dev/staging/prod."
+  ],
+  "negative": [
+    "Quét xem trong mã nguồn có secret nào bị hardcode hay lộ không.",
+    "Dựng cụm Consul và Vault bằng docker-compose giúp mình.",
+    "Viết Flyway migration thêm cột vào bảng users."
+  ]
+}

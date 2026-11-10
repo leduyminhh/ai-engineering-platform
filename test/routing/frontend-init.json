@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Khởi tạo project frontend React mới, dựng sẵn cấu trúc thư mục và tài liệu nền giúp mình.",
+    "Scaffold dự án FE từ đầu, chọn giúp mình kiến trúc Feature-Based hay FSD cho hợp.",
+    "Mình bắt đầu app React mới, cần khung project-knowledge, ADR và docs cơ bản trước khi code.",
+    "Setup bộ khung cho frontend team mình, chưa cần code, chỉ cần cấu trúc và tài liệu."
+  ],
+  "negative": [
+    "Project React cũ đã có rồi, chuyển src sang kiến trúc FSD giúp mình.",
+    "Dựng component React từ file Figma này cho mình.",
+    "Khởi tạo project backend Spring Boot mới với cấu trúc Onion."
+  ]
+}

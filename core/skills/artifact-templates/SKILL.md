@@ -29,6 +29,7 @@ và `sources`. Skill chỉ cấp khung và chỉ đường tới validator; nộ
 | spec | [spec.template.md](references/spec.template.md) | `scripts/check-request.mjs` | docs/requests/2026-10-21-living-spec/design.md (P7); Kiro specs; GitHub Spec Kit; Thoughtworks Technology Radar "spec-anchored" |
 | specs-readme | [specs-readme.template.md](references/specs-readme.template.md) | `scripts/check-request.mjs` | docs/requests/2026-11-04-living-spec-bootstrap/design.md |
 | brief | [brief.template.md](references/brief.template.md) | `scripts/check-request.mjs` | docs/requests/2026-10-31-brainstorming-routing/design.md |
+| quality-bar | [quality-bar.template.md](references/quality-bar.template.md) | chưa có | docs/requests/2026-11-10-agent-skills-gap-closure/design.md (D4) |
 | project-knowledge | [project-knowledge/](references/project-knowledge/) | chưa có | Chuyển nguyên từ templates/init/project-knowledge (giữ nội dung); tech-stack.yml không có khối header |
 
 Cột Validator ghi `chưa có` khi loại đó chưa có kiểm tra máy; khi đó chỉ đối chiếu heading và mẫu dòng của template.

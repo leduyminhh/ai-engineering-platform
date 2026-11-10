@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Gom commit list (kèm file đổi của từng commit) + diff --stat + dấu hiệu nới kiểm + diff -U10 của khoảng base..head vào một file cho reviewer.
+// Gom commit list (kèm file đổi của từng commit) + diff --stat + dấu hiệu nới kiểm (diff và project-knowledge/quality-bar.md) + diff -U10 của khoảng base..head vào một file cho reviewer.
 // Cách dùng: <base> <head> [--plan <plan.md>] [--out <file>] — --out thắng; chỉ có --plan thì ghi vào workspace .aip của plan và in đường dẫn; không có cả hai thì in ra stdout. Exit 1 khi khoảng commit không hợp lệ, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -11,26 +11,120 @@ import { resolveWorkspace } from './workspace.mjs';
 const git = (args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
 
 // Dấu hiệu bỏ qua test hoặc tắt cảnh báo: agent hay dùng để "xanh" thay vì sửa lỗi thật.
-// shortcut: chỉ khớp chuỗi trên dòng thêm mới, không bắt ngưỡng số bị nới (coverage, timeout); cần thì thêm so sánh base..head.
-const WEAKENING = /@Disabled|@Ignore\b|@SuppressWarnings|@SuppressFBWarnings|@Test\([^)]*enabled\s*=\s*false|pytest\.(?:mark\.)?skip|\bxfail\b|unittest\.skip|\b(?:it|test|describe)\.(?:skip|only)\(|\b[xf](?:it|describe)\(|\bt\.Skip\w*\(|NOSONAR|#\s*nosec|#\s*noqa|pylint:\s*disable|\/\/\s*nolint|pragma: no cover|istanbul ignore|eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|#\s*type:\s*ignore/;
+const WEAKENING =/@Disabled|@Ignore\b|@SuppressWarnings|@SuppressFBWarnings|@Test\([^)]*enabled\s*=\s*false|pytest\.(?:mark\.)?skip|\bxfail\b|unittest\.skip|\b(?:it|test|describe)\.(?:skip|only)\(|\b[xf](?:it|describe)\(|\bt\.Skip\w*\(|NOSONAR|#\s*nosec|#\s*noqa|pylint:\s*disable|\/\/\s*nolint|pragma: no cover|istanbul ignore|eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|#\s*type:\s*ignore/;
 
-// Liệt kê dòng thêm mới khớp WEAKENING, kèm file, để reviewer buộc phải xét từng chỗ.
+// Ngưỡng hạ xuống là nới (coverage tối thiểu) và ngưỡng nâng lên là nới (số cảnh báo/lỗi cho phép).
+// Khoá phải đi liền một con số để tên biến thường như `lines` trong code không bị bắt nhầm.
+// shortcut: không bắt timeout (tăng có thể là sửa đúng) và ngưỡng đổi tên khoá; cần thì thêm danh sách khoá theo project.
+const MIN_KEY = /(?:fail[_-]?under|minimum|threshold|coveredratio|\b(?:lines|branches|functions|statements))["'>]?\s*[:=>]?\s*["']?-?\d/i;
+const MAX_KEY = /(?:max[_-]?(?:warnings|complexity|violations|issues|failures)|allowed[_-]?failures)["'>]?\s*[:=]?\s*["']?-?\d/i;
+const NUM = /-?\d+(?:\.\d+)?/g;
+
+// Dòng xoá và dòng thêm chỉ khác số trên cùng khoá ngưỡng, đổi theo hướng nới → "cũ → mới"; còn lại → null.
+export function loosenedThreshold(oldLine, newLine) {
+  const dir = MAX_KEY.test(newLine) ? 1 : MIN_KEY.test(newLine) ? -1 : 0;
+  if (!dir || oldLine.replace(NUM, '#') !== newLine.replace(NUM, '#')) return null;
+  const a = oldLine.match(NUM);
+  const b = newLine.match(NUM);
+  const i = a.findIndex((x, k) => Number(x) !== Number(b[k]));
+  if (i < 0) return null;
+  return Math.sign(Number(b[i]) - Number(a[i])) === dir ? `${a[i]} → ${b[i]}` : null;
+}
+
+const ROUTING_DATA = /^test\/routing\/(?!rank1\.lock\.json$)[^/]+\.json$/;
+const PROMPT_LINE = /^\s*".*",?\s*$/;
+
+// Liệt kê dòng thêm mới khớp WEAKENING hoặc nới ngưỡng, kèm file, để reviewer buộc phải xét từng chỗ.
 export function findWeakening(diff) {
   const hits = [];
   let file = '';
   // Dòng thêm có nội dung "++ x" cũng bắt đầu bằng "+++ ": chỉ coi là header khi đang ở giữa "diff --git" và "@@".
   let inHeader = false;
+  // Dòng xoá của khối thay đổi hiện tại; dòng ngữ cảnh hay hunk mới kết thúc khối.
+  let removed = [];
+  // File mẫu routing: xoá bớt câu là cách nâng điểm mà file khoá không thấy, nên đếm câu xoá/thêm theo file.
+  let routing = '';
+  const counts = new Map();
+  const bump = (key) => { const c = counts.get(routing) ?? { removed: 0, added: 0 }; c[key]++; counts.set(routing, c); };
   for (const line of diff.split('\n')) {
-    if (line.startsWith('diff --git ')) { inHeader = true; continue; }
-    if (line.startsWith('@@')) { inHeader = false; continue; }
+    if (line.startsWith('diff --git ')) {
+      inHeader = true; removed = [];
+      const p = line.slice(line.lastIndexOf(' b/') + 3);
+      routing = ROUTING_DATA.test(p) ? p : '';
+      continue;
+    }
+    if (line.startsWith('@@')) { inHeader = false; removed = []; continue; }
     if (inHeader) {
       if (line.startsWith('+++ ')) file = line.replace(/^\+\+\+ (?:b\/)?/, '').replace(/[\t\r]+$/, '');
       continue;
     }
-    // Markdown chỉ nhắc tên annotation, không tắt được test nào.
-    if (line.startsWith('+') && !file.endsWith('.md') && WEAKENING.test(line)) hits.push(`- ${file}: ${line.slice(1).trim()}`);
+    if (line.startsWith('-')) {
+      removed.push(line.slice(1));
+      if (routing && PROMPT_LINE.test(line.slice(1))) bump('removed');
+      continue;
+    }
+    if (!line.startsWith('+')) { removed = []; continue; }
+    if (routing && PROMPT_LINE.test(line.slice(1))) bump('added');
+    // Markdown chỉ nhắc tên annotation hay con số, không tắt được test nào.
+    if (file.endsWith('.md')) continue;
+    const added = line.slice(1);
+    if (WEAKENING.test(line)) hits.push(`- ${file}: ${added.trim()}`);
+    for (const old of removed) {
+      const change = loosenedThreshold(old, added);
+      if (change) { hits.push(`- ${file}: ngưỡng nới ${change}: ${added.trim()}`); break; }
+    }
   }
+  for (const [f, c] of counts) if (c.removed > c.added) hits.push(`- ${f}: số câu mẫu routing giảm ${c.removed} → ${c.added} (xoá câu đang trượt làm điểm tăng)`);
   return hits;
+}
+
+const QUALITY_BAR = 'project-knowledge/quality-bar.md';
+const THRESHOLD = /^(.*?)\s*(>=|<=)\s*(-?\d+(?:\.\d+)?)$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Hàng bảng của mục "## <heading>" → mảng ô (bỏ backtick và khoảng trắng); bỏ dòng tiêu đề cột và dòng ngăn.
+function tableRows(text, heading) {
+  const body = text.replace(/\r\n/g, '\n').split(new RegExp('^## ' + heading + '\\s*$', 'm'))[1]?.split(/^## /m)[0] ?? '';
+  return body.split('\n').filter((l) => l.trim().startsWith('|')).slice(2)
+    .map((l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.replace(/`/g, '').trim()));
+}
+
+// So hai bản quality-bar.md, trả dòng báo cho mọi chỗ nới; thêm lệnh, siết ngưỡng, bỏ ngoại lệ, rút hạn không báo.
+export function qualityBarLoosening(oldText, newText) {
+  const out = [];
+  const say = (s) => out.push('- ' + QUALITY_BAR + ': ' + s);
+  const newCmds = new Map(tableRows(newText, 'Lệnh kiểm').map(([c, th]) => [c, th ?? '']));
+  for (const [cmd, oldTh = ''] of tableRows(oldText, 'Lệnh kiểm')) {
+    if (!newCmds.has(cmd)) { say('bỏ lệnh kiểm ' + cmd); continue; }
+    const newTh = newCmds.get(cmd);
+    if (newTh === oldTh) continue;
+    const a = oldTh.match(THRESHOLD);
+    const b = newTh.match(THRESHOLD);
+    if (a && b && a[1] === b[1] && a[2] === b[2]) {
+      const d = Number(b[3]) - Number(a[3]);
+      if (a[2] === '>=' ? d < 0 : d > 0) say('ngưỡng nới ' + cmd + ': ' + oldTh + ' → ' + newTh);
+    } else say('đổi ngưỡng, cần xét ' + cmd + ': ' + oldTh + ' → ' + newTh);
+  }
+  const oldExc = new Map(tableRows(oldText, 'Ngoại lệ').map((r) => [r[0], r[3] ?? '']));
+  for (const [name, , , due = ''] of tableRows(newText, 'Ngoại lệ')) {
+    if (!oldExc.has(name)) say('thêm ngoại lệ ' + name);
+    else if (ISO_DATE.test(oldExc.get(name)) && !ISO_DATE.test(due)) say('đổi hạn, cần xét ' + name + ': ' + oldExc.get(name) + ' → ' + due);
+    else if (ISO_DATE.test(due) && ISO_DATE.test(oldExc.get(name)) && due > oldExc.get(name)) say('gia hạn ngoại lệ ' + name + ': ' + oldExc.get(name) + ' → ' + due);
+  }
+  return out;
+}
+
+// Chỉ đọc hai bản khi khoảng đổi đúng file này; chưa có ở base thì không có gì để so, bị xoá ở head thì mọi lệnh cũ là bỏ.
+// Đổi tên/dời (-M) vẫn bị báo và so tiếp với bản ở chỗ mới, nếu không thì dời file rồi nới sẽ lọt.
+function qualityBarHits(range, base, head, run) {
+  const row = run(['diff', '--name-status', '-M', range]).split('\n').map((l) => l.split('\t')).find((r) => r[1]?.trim() === QUALITY_BAR);
+  if (!row) return [];
+  const show = (ref, file) => { try { return run(['show', ref + ':' + file]); } catch { return null; } };
+  const oldText = show(base, QUALITY_BAR);
+  if (oldText === null) return [];
+  const moved = row[0].startsWith('R') ? row[2].trim() : QUALITY_BAR;
+  const hits = moved === QUALITY_BAR ? [] : ['- ' + QUALITY_BAR + ': đổi tên/dời sang ' + moved + ', cần xét'];
+  return [...hits, ...qualityBarLoosening(oldText, show(head, moved) ?? '')];
 }
 
 // `run(args) -> stdout` chạy git (không qua shell); quy ước run ném lỗi khi git exit khác 0.
@@ -47,7 +141,7 @@ export function buildPackage({ base, head, run = git }) {
   }
   const range = `${base}..${head}`;
   const diff = run(['diff', '-U10', range]).trimEnd();
-  const weakening = findWeakening(diff);
+  const weakening = [...findWeakening(diff), ...qualityBarHits(range, base, head, run)];
   return [
     `# Review package: ${range}`,
     '',

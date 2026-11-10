@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Ghi lại quyết định dùng PostgreSQL thay MongoDB thành ADR, liệt kê phương án và đánh đổi.",
+    "Team đang phân vân giữa monolith và microservice, giúp mình phân tích rồi ghi lại thành ADR trong docs/decisions.",
+    "Viết ADR theo MADR cho việc chọn Redis làm cache, đánh số nối tiếp trong docs/decisions.",
+    "Giúp mình ghi lại lý do vì sao quyết định đi theo hướng này, để sau này khỏi phải cãi nhau lại."
+  ],
+  "negative": [
+    "Viết đặc tả yêu cầu cho tính năng giỏ hàng với acceptance criteria.",
+    "Kiểm giúp mình xem code hiện tại có đặt tên biến và cấu trúc thư mục lệch quy ước của team không.",
+    "Vẽ sơ đồ so sánh hai kiến trúc để mình đưa vào slide."
+  ]
+}

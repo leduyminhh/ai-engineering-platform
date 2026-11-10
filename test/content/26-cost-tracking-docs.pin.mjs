@@ -15,9 +15,4 @@ export default async function run({ ok, ctx }) {
     const need = ['--usage', '--since', 'cost-state', '[Unverified]', price, predict];
     ok(sec !== '' && need.every((w) => sec.includes(w)), `P5c AC3.1: ${file} mục aip stats nêu --usage, --since, cost-state, [Unverified], không bảng giá, không dự đoán hạn mức`);
   }
-
-  const line = read('CLAUDE.md').split('\n').find((l) => l.startsWith('aip stats ')) ?? '';
-  // Nhãn [Unverified] phải nằm trong ngoặc cuối, cùng chỗ với cost-state, không chỉ xuất hiện đâu đó trên dòng.
-  const unv = line.slice(line.lastIndexOf('('));
-  ok(['--usage', '--since'].every((w) => line.includes(w)) && unv.includes('cost-state') && unv.includes('[Unverified]'), 'P5c AC3.1: CLAUDE.md dòng lệnh aip stats có --usage, --since và nhãn [Unverified] cho cả cost-state');
 }

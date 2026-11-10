@@ -38,6 +38,7 @@ export default async function run({ ok, ctx }) {
   }
 
   const claude = raw('CLAUDE.md');
-  ok(/^aip mode\s+full\|ask\|status/m.test(claude) && ['mode', 'fullKeep', 'fullRoots'].every((w) => claude.includes('`' + w + '`')),
-    'P4e AC3.2: CLAUDE.md có lệnh aip mode full|ask|status và nhắc mode/fullKeep/fullRoots');
+  // Dòng lệnh `aip mode` đã rời CLAUDE.md (167a3520); README ở trên vẫn pin lệnh, CLAUDE.md chỉ còn các khoá cấu hình.
+  ok(['mode', 'fullKeep', 'fullRoots'].every((w) => claude.includes('`' + w + '`')),
+    'P4e AC3.2: CLAUDE.md nhắc khoá mode/fullKeep/fullRoots');
 }
