@@ -72,4 +72,18 @@ export default async function run({ ok, ctx }) {
       ok(real[k].pct >= lock[k].threshold, `AC1.2 ${k} rank-1 ${real[k].pct}% >= ngưỡng khoá ${lock[k].threshold}%`);
     }
   }
+
+  // Case eval "phải im lặng": skill đúng được gọi (min 1), skill dễ nhầm không được gọi (max 0) (AC1.5).
+  const quiet = [
+    ['engineering/tdd-quiet-on-bug', 'workflow-bugfix', 'engineering-tdd'],
+    ['backend/code-review-quiet-on-scan', 'engineering-quality-gate', 'backend-code-review'],
+    ['core/release-quiet-on-commit', 'git-workflow', 'git-release'],
+  ];
+  for (const [dir, want, silent] of quiet) {
+    const gdir = path.join(REPO_ROOT, 'evals', dir, 'graders');
+    const gs = fs.existsSync(gdir) ? fs.readdirSync(gdir).filter((f) => f.endsWith('.md')).map((f) => ctx.parseFrontmatter(fs.readFileSync(path.join(gdir, f), 'utf8')).meta) : [];
+    const hits = (id) => gs.filter((g) => g.type === 'tool_used' && g.tool === 'Skill' && g.input_match && new RegExp(g.input_match).test(`"skill": "${id}"`) && new RegExp(g.input_match).test(`"skill":"core:${id}"`));
+    ok(hits(want).some((g) => g.min === 1), `AC1.5 evals/${dir}: skill ${want} phải được gọi (min: 1)`);
+    ok(hits(silent).some((g) => g.min === 0 && g.max === 0), `AC1.5 evals/${dir}: skill ${silent} phải im lặng (max: 0)`);
+  }
 }
