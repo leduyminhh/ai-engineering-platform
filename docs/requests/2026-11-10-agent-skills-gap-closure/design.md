@@ -1,6 +1,6 @@
 # Thiết kế: thu hẹp bốn mảng agent-skills mạnh hơn aip
 - Ngày: 2026-11-10
-- Trạng thái: approved — G1 2026-11-10
+- Trạng thái: merged bb2d1d00 — vào feature/core-threshold-guard-skill-length-warn
 - Requirement: không có (brief: [brief.md](brief.md))
 
 ## Vấn đề và lý do
