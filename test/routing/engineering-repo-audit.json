@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mới tiếp quản repo này, quét giúp mình xem chỗ nào rủi ro nhất cần để ý trước.",
+    "Trước release, audit cả codebase giúp mình, liệt kê các vấn đề quan trọng xếp theo mức độ.",
+    "Repo này lớn quá, file nào hay sửa mà thiếu test, đọc giúp mình tìm bug tiềm ẩn.",
+    "Nghi ngờ code có chỗ chậm và lỗi logic, soát tổng thể rồi cho mình top 3 việc nên làm trước."
+  ],
+  "negative": [
+    "Review giúp mình PR này, chỉ diff của backend thôi.",
+    "Chạy SonarQube với Black Duck rồi sửa theo report cho mình.",
+    "Đo p95 của endpoint này, profile xem bottleneck nằm ở đâu."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Viết unit test cho service tính phí vận chuyển, mock repository giúp mình.",
+    "Cần integration test cho repository dùng Testcontainers với Postgres thật.",
+    "Code cũ này chưa có test nào, tạo test khóa hành vi hiện tại trước khi mình sửa.",
+    "Test controller với MockMvc kiểm tra validation và mã lỗi HTTP giúp mình."
+  ],
+  "negative": [
+    "Test đang đỏ vì code production có bug, sửa code cho test qua giúp mình.",
+    "Viết test E2E Playwright cho luồng đăng nhập ở phía frontend.",
+    "Review PR backend này và chỉ ra chỗ thiếu test kèm severity."
+  ]
+}

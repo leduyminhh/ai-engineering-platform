@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mở phiên mới, trước khi làm gì kiểm xem có quy trình nào áp dụng cho việc này không.",
+    "Mình không chắc nên dùng công cụ nào cho yêu cầu này, bạn chọn giúp trước khi bắt tay vào.",
+    "Có hướng dẫn nào nên đọc trước khi mình bắt đầu sửa module này không?",
+    "Đừng lao vào code ngay, kiểm tra các quy trình có sẵn trước, rồi mới trả lời mình."
+  ],
+  "negative": [
+    "Yêu cầu này nên đi theo pipeline nào trong số các pipeline đã cài, phân loại giúp mình.",
+    "Mình còn mơ hồ về ý tưởng, ngồi nghĩ cùng mình rồi ghi lại thành brief nhé.",
+    "Viết giúp mình đặc tả cho tính năng xuất báo cáo PDF."
+  ]
+}

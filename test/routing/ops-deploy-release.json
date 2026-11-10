@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mình sắp release version mới lên prod, lập checklist tiền deploy và rollback plan giúp mình.",
+    "Nên chọn blue-green hay canary cho service này khi deploy?",
+    "Chuẩn bị lệnh deploy lên staging kèm các điểm health-check sau mỗi bước.",
+    "Deploy xong rồi, kiểm tra error rate, latency, smoke test và nêu tiêu chí rollback."
+  ],
+  "negative": [
+    "Production đang sập, 500 liên tục, điều tra giúp mình ngay.",
+    "Tạo release branch, bump version và tag theo Gitflow.",
+    "Viết changelog và release notes cho phiên bản này."
+  ]
+}

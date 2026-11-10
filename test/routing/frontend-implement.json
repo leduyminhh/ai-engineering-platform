@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Có file Figma màn hình đăng nhập, code thành React component TypeScript giúp mình.",
+    "Chuyển cái HTML/CSS này sang component React dùng Tailwind với shadcn nhé.",
+    "Mình có screenshot mockup dashboard, dựng UI theo ảnh này, chưa cần nối API.",
+    "Lấy task FE-UI trong tasks.md, dựng giao diện React đúng theo bản thiết kế có sẵn giúp mình."
+  ],
+  "negative": [
+    "Giao diện đã dựng xong, giờ nối với API thật theo OpenAPI contract giúp mình.",
+    "Viết test render và tương tác cho component này.",
+    "Thiết kế giúp mình màn hình mới từ đầu, chưa có mockup nào, cần ý tưởng layout và màu sắc."
+  ]
+}

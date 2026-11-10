@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Làm tính năng mới end-to-end, từ làm rõ yêu cầu, viết tài liệu, lập plan đến code và review.",
+    "Làm user story thêm endpoint đổi mật khẩu, đi trọn quy trình từ spec tới lúc kết thúc nhánh nhé.",
+    "Thêm chức năng lọc đơn hàng theo trạng thái, chạy baseline test trước rồi làm rõ yêu cầu với mình.",
+    "Mình cần làm một feature mới, dẫn mình qua các bước từ requirement đến merge nhánh."
+  ],
+  "negative": [
+    "Trang đăng nhập đang trả sai kết quả, tái hiện bằng test rồi tìm root cause giúp mình.",
+    "Chỉ viết plan.md từ design đã duyệt, chưa cần thực thi.",
+    "Quét OWASP và review bảo mật cho module thanh toán hiện tại."
+  ]
+}

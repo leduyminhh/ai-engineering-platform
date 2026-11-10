@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Refactor class OrderService quá dài này, tách ra nhưng đảm bảo hành vi không đổi.",
+    "Gom đoạn code trùng lặp ở mấy service Python này về một chỗ, test phải vẫn xanh.",
+    "Dọn code Java này giúp mình: extract method, bỏ magic number, đổi tên cho rõ.",
+    "Method có quá nhiều tham số và if-else lồng nhau, tái cấu trúc từng bước nhỏ giúp mình."
+  ],
+  "negative": [
+    "Chuyển toàn bộ src từ layered sang Hexagonal+CQRS giúp mình, kèm ADR.",
+    "Viết thêm tính năng mới cho module đơn hàng, đừng chỉ dọn code.",
+    "Refactor các component React có prop drilling bên frontend."
+  ]
+}

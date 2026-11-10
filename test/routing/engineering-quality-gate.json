@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Chạy SonarQube với Black Duck quét repo, tổng hợp lỗi theo mức độ nghiêm trọng giúp mình.",
+    "Review bảo mật source theo OWASP, map từng lỗ hổng sang CWE kèm evidence.",
+    "Đây là file report SARIF, sửa các finding trong đó giúp mình, đừng đụng chỗ khác.",
+    "Dependency nào đang dính CVE đã có bản vá thì bump lên và báo residual risk."
+  ],
+  "negative": [
+    "Review PR này xem logic đúng không, đặt tên với kiến trúc ổn chưa.",
+    "Làm full quy trình security review có threat model và regression test cho cả hệ thống.",
+    "Kiểm tra đặt tên file và cấu trúc thư mục có đúng quy ước không."
+  ]
+}

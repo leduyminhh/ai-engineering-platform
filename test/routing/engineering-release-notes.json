@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Viết release notes cho bản v2.3 từ các commit giữa v2.2 và v2.3 giúp mình.",
+    "Tóm tắt thay đổi tuần qua thành changelog cho người dùng cuối dễ hiểu.",
+    "Cập nhật CHANGELOG.md theo Keep a Changelog, nhớ nêu rõ breaking change và cách migrate.",
+    "Soạn what's new cho bản phát hành mới, bỏ mấy commit chore với refactor nội bộ."
+  ],
+  "negative": [
+    "Tính version tiếp theo, tạo tag v2.3.0 rồi merge release branch vào main.",
+    "Gom lịch sử commit từ tag cũ đến giờ thành danh sách thô cho mình.",
+    "Lập checklist deploy với kế hoạch rollback cho đợt phát hành này."
+  ]
+}

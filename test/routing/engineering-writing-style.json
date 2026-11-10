@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Đoạn mô tả PR này đọc cứng như AI viết, sửa lại cho giống người viết bình thường giúp mình.",
+    "Viết lại README này, bớt văn mẫu sáo rỗng, vào thẳng ý chính.",
+    "Rà bài tài liệu này xem có cụm từ kiểu AI hay dùng không rồi sửa giúp mình.",
+    "Mình cần soạn thông báo gửi team, ngắn gọn, không dài dòng kiểu văn máy."
+  ],
+  "negative": [
+    "Viết changelog và release notes cho bản 2.3 dựa trên lịch sử git.",
+    "Đặt tên biến và comment trong code này cho chuẩn convention của dự án.",
+    "Dịch đoạn tài liệu này sang tiếng Anh giúp mình."
+  ]
+}

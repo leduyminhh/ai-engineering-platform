@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mình có bản use case với ARD rồi, giúp mình chia ra task BE/FE cho team dev nhé.",
+    "Tách yêu cầu này thành các task theo từng lát dọc, có size S/M/L và phụ thuộc rõ ràng.",
+    "Breakdown requirement.md thành bảng task cho backend với frontend, cuối cùng xuất ra Excel cho teamlead duyệt.",
+    "Sếp cần danh sách task chi tiết từ tài liệu yêu cầu để giao cho từng bạn, làm sao đây?"
+  ],
+  "negative": [
+    "Yêu cầu còn mơ hồ lắm, chưa có actor hay tiêu chí chấp nhận, giúp mình khảo sát và viết spec trước.",
+    "Có task rồi, giờ lập plan.md thực thi cho agent chạy từng bước giúp mình.",
+    "Làm luôn feature này end-to-end từ làm rõ yêu cầu tới merge nhánh."
+  ]
+}

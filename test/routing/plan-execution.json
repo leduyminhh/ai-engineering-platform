@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Plan.md duyệt rồi, chạy luôn đi, làm từng task và review sau mỗi task.",
+    "Tiếp tục chạy plan.md đang dang dở, bắt đầu từ task chưa xong, đừng làm lại phần đã commit nhé.",
+    "Thực thi kế hoạch này, mỗi task giao cho agent rồi review, sửa tối đa vài vòng.",
+    "Implement theo plan đã chốt, xong hết task thì review cả nhánh và chốt nhánh giúp mình."
+  ],
+  "negative": [
+    "Viết plan triển khai chi tiết từ design đã duyệt, chia task theo từng loại.",
+    "Chỉ commit và merge nhánh này giúp mình, không cần chạy cả vòng task.",
+    "Chia yêu cầu thành bảng task BE/FE để giao cho từng người trong team."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Cho hàm tính phí này, cho test đỏ trước rồi mới code cho xanh, đi đúng vòng red-green-refactor nhé.",
+    "Mình muốn làm theo red-green-refactor cho tính năng mới, bắt đầu từ test đỏ.",
+    "Fix bug này, nhớ viết test tái hiện cho nó đỏ trước rồi mới sửa.",
+    "Implement logic tính chiết khấu, test trước, code tối thiểu cho xanh, sau đó dọn lại."
+  ],
+  "negative": [
+    "Test case này chạy lúc được lúc không, giúp mình tìm nguyên nhân flaky.",
+    "Viết giúp mình bộ test React Testing Library cho component form đăng nhập.",
+    "Refactor class này cho gọn, không đổi hành vi, không cần viết thêm test."
+  ]
+}

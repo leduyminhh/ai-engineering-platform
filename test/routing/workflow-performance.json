@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "API search chậm quá, p95 đang 2 giây, mình muốn xuống dưới 500ms, làm sao đo và tối ưu?",
+    "Hãy profile endpoint này, tìm bottleneck rồi tối ưu và benchmark lại để so sánh trước sau.",
+    "Memory của service tăng dần theo thời gian, cần đo đạc và giảm mức tiêu thụ.",
+    "Trang chủ LCP đang 4 giây, nhờ bạn đo baseline rồi cải thiện hiệu năng có số liệu."
+  ],
+  "negative": [
+    "Kết quả API trả sai chứ không phải chậm, giúp mình debug cái này.",
+    "Thêm cache Redis cho tính năng mới mà mình đang thiết kế, viết spec luôn nhé.",
+    "Review diff này xem có N+1 query hay không, chỉ đọc code thôi, không cần đo."
+  ]
+}

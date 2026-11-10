@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mình không biết nên dùng quy trình nào cho việc này, chọn giúp mình rồi chạy luôn.",
+    "Làm giúp mình việc này theo đúng quy trình, bạn tự phân loại xem thuộc loại nào.",
+    "Brief đã duyệt rồi, chạy workflow phù hợp với nó đi.",
+    "Phân loại yêu cầu này, đề xuất một hoặc hai workflow ứng viên để mình xác nhận."
+  ],
+  "negative": [
+    "Prod đang down, alert nổ liên tục, điều tra nguyên nhân gấp giúp mình.",
+    "Mình chỉ muốn sửa bug lỗi sai kết quả này, bạn thực hiện luôn không cần chọn gì.",
+    "Ngồi nghĩ cùng mình xem việc này có đáng làm không, chưa cần chạy quy trình nào."
+  ]
+}

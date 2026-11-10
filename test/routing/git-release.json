@@ -1,0 +1,14 @@
+{
+  "positive": [
+    "Bắt đầu release mới, tính version tiếp theo từ các commit đã merge vào develop giúp mình.",
+    "Release/1.8.0 test xong rồi, merge qua staging rồi main và đặt tag luôn đi.",
+    "Production có lỗi nghiêm trọng, mở hotfix từ tag mới nhất để vá rồi phát hành patch.",
+    "Dựa vào Conventional Commits thì bản này nên lên minor hay major? Tạo branch release luôn.",
+    "Release xong rồi, merge-back về develop và tạo GitHub Release giúp mình."
+  ],
+  "negative": [
+    "Commit đống thay đổi này với message chuẩn rồi push lên feature branch giúp mình.",
+    "Viết changelog thân thiện với người dùng cho các thay đổi tuần này.",
+    "Lập checklist deploy và kế hoạch rollback cho đợt lên production tối nay."
+  ]
+}

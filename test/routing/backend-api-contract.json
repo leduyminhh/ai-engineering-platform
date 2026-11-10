@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Chốt giúp mình OpenAPI contract cho nhóm endpoint đơn hàng trước khi BE với FE bắt tay vào code.",
+    "FE đang tự đoán field response mỗi nơi một kiểu, bạn chốt OpenAPI contract chung để hai bên cùng bám theo được không?",
+    "Mình lỡ đổi kiểu một field trong response, vậy có tính là breaking change không và nên bump version thế nào?",
+    "Kiểm tra giúp xem openapi.json với controller thật có bị lệch nhau không, chỉ báo thôi đừng sửa."
+  ],
+  "negative": [
+    "Code luôn endpoint tạo đơn hàng theo contract đã chốt rồi, viết use-case với adapter giúp mình.",
+    "Chạy openapi-generator sinh TypeScript client cho FE giúp mình luôn đi.",
+    "Làm trọn feature thanh toán từ spec, plan, code đến test và commit."
+  ]
+}

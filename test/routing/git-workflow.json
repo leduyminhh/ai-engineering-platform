@@ -1,0 +1,14 @@
+{
+  "positive": [
+    "Code xong rồi, giúp mình commit với message chuẩn Conventional Commits nhé, body viết tiếng Việt.",
+    "Push nhánh hiện tại lên origin giúp mình, nhưng xem diff trước đã.",
+    "Tạo branch mới cho task này rồi chuẩn bị luôn PR notes giúp mình.",
+    "Working tree đang trộn nhiều thay đổi, tách ra thành vài commit hợp lý cho mình được không?",
+    "Tóm tắt các commit từ tag v2.4.0 đến v2.5.0 thành ghi chú phát hành cho người dùng cuối."
+  ],
+  "negative": [
+    "Bump version lên 2.5.0, tạo release branch và đặt tag cho bản phát hành này.",
+    "Hotfix production gấp, mở hotfix branch từ tag gần nhất rồi merge về main.",
+    "Review giúp mình PR này xem logic có đúng không, có bug nào không."
+  ]
+}

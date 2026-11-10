@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Vẽ sequence diagram cho luồng đăng nhập OAuth bằng PlantUML giúp mình.",
+    "Sinh ERD cho mấy bảng order, order_item, customer từ schema hiện tại.",
+    "Cần sơ đồ kiến trúc tổng quan để thuyết trình với lãnh đạo, dùng PlantUML nhé.",
+    "Lưu cái diagram này vào docs/diagram và chỉ mình cách render ra SVG."
+  ],
+  "negative": [
+    "Viết spec đầy đủ cho tính năng này, kèm diagram minh hoạ trong tài liệu.",
+    "Ghi ADR giải thích vì sao chọn kiến trúc microservice.",
+    "Làm giúp mình trang HTML tương tác có biểu đồ kiến trúc cho đẹp."
+  ]
+}

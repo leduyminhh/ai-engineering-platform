@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mình có ý tưởng tính năng xuất báo cáo, hỏi mình vài câu rồi viết spec yêu cầu giúp.",
+    "Viết requirement với acceptance criteria dạng Given/When/Then cho chức năng đăng ký thành viên.",
+    "Tìm hiểu và làm rõ requirement cho module hoàn tiền, đề xuất vài hướng thiết kế kèm trade-off giúp mình.",
+    "Bỏ qua phần hỏi đi, bạn tự chọn hướng rồi ghi design.md cho mình duyệt."
+  ],
+  "negative": [
+    "Spec duyệt rồi, lập plan.md triển khai chia task cho agent đi.",
+    "Ghi lại quyết định chọn Kafka thay RabbitMQ thành một ADR.",
+    "Chia yêu cầu này thành danh sách task BE/FE để giao cho từng dev."
+  ]
+}

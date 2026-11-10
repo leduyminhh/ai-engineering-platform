@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Tạo worktree riêng cho từng phần việc để mấy agent chạy song song không đạp lên nhau.",
+    "Merge nhánh worktree của part 2 về nhánh feature giúp mình bằng no-ff.",
+    "Part này merge xong rồi, dọn worktree và nhánh phụ đi.",
+    "Git worktree remove bị lỗi trên Windows vì junction node_modules, xử lý sao cho an toàn?"
+  ],
+  "negative": [
+    "Chạy plan.md theo từng task, review rồi commit sau mỗi task.",
+    "Tạo branch feature mới theo quy ước đặt tên rồi commit code lên.",
+    "Xem tiến độ các part đang chạy, part nào đang bị vướng."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Đã có test đỏ tái hiện bug, sửa tối thiểu trong mấy file này để test xanh, đừng đụng chỗ khác.",
+    "Fix lỗi race condition trong component này theo oracle đã có, chỉ được sửa danh sách file đã cho.",
+    "Áp bản vá cho finding bảo mật đã xác nhận ở frontend, không động vào test và snapshot.",
+    "Bản sửa trước vẫn đỏ, revert đúng phần đó rồi thử giả thuyết khác, mỗi lượt chỉ đổi một thứ."
+  ],
+  "negative": [
+    "Mình chưa có test tái hiện, giúp mình điều tra nguyên nhân lỗi này trước.",
+    "Tách component và đổi style cho gọn code luôn đi.",
+    "Đo hiệu năng trang chủ bằng Lighthouse xem LCP bao nhiêu."
+  ]
+}
