@@ -84,6 +84,16 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
 Báo cáo branch, commit, push, PR, verification và ghi chú bằng tiếng Việt theo
 [references/output-template-vi.md](references/output-template-vi.md).
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Diff chắc ổn, commit luôn" | Ranh giới an toàn: không commit khi chưa đọc diff; bước 1 là `git status --short` và đọc diff liên quan. |
+| "Stage hết cho nhanh" | Bước 4 và ranh giới an toàn: chỉ stage file thuộc nhóm commit hiện tại, thay đổi không liên quan để nguyên. |
+| "Message tiếng Việt truyền thẳng qua -m" | Bước 8: dùng `git commit -F <file>`; check ở bước 6 fail thì sửa xử lý UTF-8, không bỏ dấu để lách. |
+| "Nhánh này chắc không phải protected, khỏi dừng" | Bước 7: nhánh protected luôn dừng cho người dùng duyệt diff trước mỗi commit. |
+| "Thêm dòng Co-Authored-By cho đủ" | Ranh giới an toàn: không thêm dòng `Co-authored-by` hay attribution của assistant vào commit, PR body, tag. |
+
 ## Kết thúc nhánh
 
 Khi nhánh feature đã chạy xong plan: làm theo `plan-execution/references/finish.md` (cổng G3: khoá

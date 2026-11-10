@@ -90,6 +90,16 @@ Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải ch�
    Residual risk**, các bước verify đã chạy, secret đã mask. Con người **duyệt diff** trước merge/push
    (protected branch: mỗi commit).
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Không có token Sonar, tự suy ra kết quả quét" | Bước 1: thiếu cấu hình và report thì nói rõ (fail-loud) và xin người dùng cung cấp, không tự bịa. |
+| "Scanner sạch là xong, bỏ review source" | Bước 2: output scanner chỉ là enrichment; security review source-first vẫn phải chạy và gộp chung danh sách. |
+| "Auto-fix luôn lỗi auth cho nhanh" | Bước 4: thay đổi bảo mật rủi ro cao hoặc breaking thiếu test thì đánh dấu để người quyết, không auto-fix. |
+| "Ghi giá trị secret vào report cho rõ" | Ranh giới an toàn: mask mọi giá trị secret, chỉ nêu tên khoá và `file:line`. |
+| "Quét sạch nghĩa là đã loại bỏ lỗ hổng" | Bước 5 và ranh giới an toàn: report nêu residual risk, kết quả chỉ phản ánh thời điểm quét. |
+
 ## Verification (trước khi báo hoàn thành)
 
 - Đã dò cấu hình, **chốt scope + stack**, và **nêu rõ chế độ** đang dùng (chạy scanner / đọc report /
