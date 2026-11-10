@@ -510,5 +510,11 @@ export default async function run({ ok, ctx }) {
     'AC6.2: khối bàn giao nêu plan của part, ba script và ledger part ở <gốc repo chính>/.aip/runs/<request>/<nn>-<part-slug>/progress.md');
     ok(mode.includes('ngay sau merge') && mode.includes('trước commit cập nhật Bảng part') && mode.includes('HEAD nhánh part sau commit task cuối'),
       'AC6.2: định nghĩa <hash>: Part: complete = HEAD nhánh part; merged song song = HEAD feature/<slug> ngay sau merge, trước commit cập nhật Bảng part');
+
+    // Phiên part phải báo về phiên gốc bằng SendMessage và không kết thúc lượt chỉ để chờ subagent
+    ok(mode.includes('id phiên gốc') && /\*\*bắt buộc\*\* gọi `SendMessage`/.test(mode) && mode.includes('foreground') && mode.includes('không kết thúc lượt chỉ để chờ'),
+      'Chế độ part bước 6: khối bàn giao có id phiên gốc, phiên part bắt buộc SendMessage khi xong/vướng và chạy subagent ở foreground');
+    ok(mode.includes('kết thúc lượt ngay') && mode.includes('đọc ledger part'),
+      'Chế độ part bước 7: note chỉ báo "đang chờ" thì kết thúc lượt; part kết thúc mà chưa có báo thì đọc ledger part');
   }
 }
