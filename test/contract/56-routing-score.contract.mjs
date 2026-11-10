@@ -53,6 +53,13 @@ export default async function run({ ok, ctx }) {
   ].join('\n');
   ok(findWeakening(diff).length === 1, 'AC1.4 findWeakening: hạ "threshold" trong file khoá bị bắt đúng một dòng');
 
+  // Xoá câu mẫu đang trượt để nâng điểm thì file khoá không thấy: review package phải báo; thay câu (xoá = thêm) thì không.
+  const routeDiff = (file, lines) => ['diff --git a/' + file + ' b/' + file, '--- a/' + file, '+++ b/' + file, '@@ -1,5 +1,4 @@', ...lines].join('\n');
+  ok(findWeakening(routeDiff('test/routing/x.json', ['-    "câu trượt",', ' ]'])).length === 1, 'findWeakening: xoá một câu mẫu routing bị bắt đúng một dòng');
+  ok(findWeakening(routeDiff('test/routing/x.json', ['-    "câu trượt",', '+    "câu mới",'])).length === 0, 'findWeakening: thay câu mẫu routing (xoá = thêm) không bị bắt');
+  ok(findWeakening(routeDiff('test/routing/x.json', ['-    "a",', '-    "b"', '+    "a"'])).length === 1, 'findWeakening: xoá nhiều hơn thêm trong một file bị bắt dù có thêm lại');
+  ok(findWeakening(routeDiff('docs/other.json', ['-    "câu",', ' ]'])).length === 0, 'findWeakening: chỉ file test/routing/<id>.json được đếm câu');
+
   // Dữ liệu thật: mỗi id published có file prompt mẫu, và số đo không tụt dưới ngưỡng khoá (AC1.1, AC1.2).
   const realDocs = S.loadRoutingDocs();
   const realData = S.loadRoutingData();

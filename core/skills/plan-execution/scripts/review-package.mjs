@@ -31,6 +31,9 @@ export function loosenedThreshold(oldLine, newLine) {
   return Math.sign(Number(b[i]) - Number(a[i])) === dir ? `${a[i]} → ${b[i]}` : null;
 }
 
+const ROUTING_DATA = /^test\/routing\/(?!rank1\.lock\.json$)[^/]+\.json$/;
+const PROMPT_LINE = /^\s*".*",?\s*$/;
+
 // Liệt kê dòng thêm mới khớp WEAKENING hoặc nới ngưỡng, kèm file, để reviewer buộc phải xét từng chỗ.
 export function findWeakening(diff) {
   const hits = [];
@@ -39,15 +42,29 @@ export function findWeakening(diff) {
   let inHeader = false;
   // Dòng xoá của khối thay đổi hiện tại; dòng ngữ cảnh hay hunk mới kết thúc khối.
   let removed = [];
+  // File mẫu routing: xoá bớt câu là cách nâng điểm mà file khoá không thấy, nên đếm câu xoá/thêm theo file.
+  let routing = '';
+  const counts = new Map();
+  const bump = (key) => { const c = counts.get(routing) ?? { removed: 0, added: 0 }; c[key]++; counts.set(routing, c); };
   for (const line of diff.split('\n')) {
-    if (line.startsWith('diff --git ')) { inHeader = true; removed = []; continue; }
+    if (line.startsWith('diff --git ')) {
+      inHeader = true; removed = [];
+      const p = line.slice(line.lastIndexOf(' b/') + 3);
+      routing = ROUTING_DATA.test(p) ? p : '';
+      continue;
+    }
     if (line.startsWith('@@')) { inHeader = false; removed = []; continue; }
     if (inHeader) {
       if (line.startsWith('+++ ')) file = line.replace(/^\+\+\+ (?:b\/)?/, '').replace(/[\t\r]+$/, '');
       continue;
     }
-    if (line.startsWith('-')) { removed.push(line.slice(1)); continue; }
+    if (line.startsWith('-')) {
+      removed.push(line.slice(1));
+      if (routing && PROMPT_LINE.test(line.slice(1))) bump('removed');
+      continue;
+    }
     if (!line.startsWith('+')) { removed = []; continue; }
+    if (routing && PROMPT_LINE.test(line.slice(1))) bump('added');
     // Markdown chỉ nhắc tên annotation hay con số, không tắt được test nào.
     if (file.endsWith('.md')) continue;
     const added = line.slice(1);
@@ -57,6 +74,7 @@ export function findWeakening(diff) {
       if (change) { hits.push(`- ${file}: ngưỡng nới ${change}: ${added.trim()}`); break; }
     }
   }
+  for (const [f, c] of counts) if (c.removed > c.added) hits.push(`- ${f}: số câu mẫu routing giảm ${c.removed} → ${c.added} (xoá câu đang trượt làm điểm tăng)`);
   return hits;
 }
 
@@ -97,12 +115,16 @@ export function qualityBarLoosening(oldText, newText) {
 }
 
 // Chỉ đọc hai bản khi khoảng đổi đúng file này; chưa có ở base thì không có gì để so, bị xoá ở head thì mọi lệnh cũ là bỏ.
+// Đổi tên/dời (-M) vẫn bị báo và so tiếp với bản ở chỗ mới, nếu không thì dời file rồi nới sẽ lọt.
 function qualityBarHits(range, base, head, run) {
-  if (!run(['diff', '--name-only', range]).split('\n').some((l) => l.trim() === QUALITY_BAR)) return [];
-  const show = (ref) => { try { return run(['show', ref + ':' + QUALITY_BAR]); } catch { return null; } };
-  const oldText = show(base);
+  const row = run(['diff', '--name-status', '-M', range]).split('\n').map((l) => l.split('\t')).find((r) => r[1]?.trim() === QUALITY_BAR);
+  if (!row) return [];
+  const show = (ref, file) => { try { return run(['show', ref + ':' + file]); } catch { return null; } };
+  const oldText = show(base, QUALITY_BAR);
   if (oldText === null) return [];
-  return qualityBarLoosening(oldText, show(head) ?? '');
+  const moved = row[0].startsWith('R') ? row[2].trim() : QUALITY_BAR;
+  const hits = moved === QUALITY_BAR ? [] : ['- ' + QUALITY_BAR + ': đổi tên/dời sang ' + moved + ', cần xét'];
+  return [...hits, ...qualityBarLoosening(oldText, show(head, moved) ?? '')];
 }
 
 // `run(args) -> stdout` chạy git (không qua shell); quy ước run ném lỗi khi git exit khác 0.
