@@ -131,6 +131,16 @@ quan sát ngoài diff ghi riêng, không thành finding và không kéo dài vò
 | R4 | READ-ONLY — không sửa/commit khi chưa được yêu cầu; route đúng skill | 4 | Trả về đề xuất, không tự sửa |
 | R5 | Nêu phần chưa soát + residual risk, không tuyên bố "hết bug" | 3 | Bổ sung trước khi kết luận |
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Diff nhỏ, đọc lướt là đủ" | Gate R1: phải đọc diff thật và chốt scope ở bước 0 trước khi review; diff nhỏ không miễn bước này. |
+| "Chỗ này có mùi, ghi blocker cho chắc" | Gate R3: finding chỉ có mùi là suspected; không thổi thành blocker, severity bám tác động thật. |
+| "Finding hơi chung chung nhưng chắc đúng" | Gate R2: thiếu `file:line`, trục và rationale thì bỏ finding, không đưa vào báo cáo. |
+| "Sửa luôn cho nhanh, khỏi trả finding" | Gate R4: review READ-ONLY; chỉ sửa khi người dùng nói rõ "sửa luôn", cần tái cấu trúc thì route sang `backend-refactor`. |
+| "Soát xong, kết luận hết bug" | Gate R5: nêu phần chưa soát và residual risk, không tuyên bố hết bug. |
+
 ## Sau khi xong
 Tóm tắt: số finding theo severity, các mục **cần người quyết**, phần **chưa soát + residual risk**. Con người
 đọc review và **tự quyết** hướng xử lý (sửa / hoãn / route). Nếu gặp ràng buộc mâu thuẫn (stack ngoài

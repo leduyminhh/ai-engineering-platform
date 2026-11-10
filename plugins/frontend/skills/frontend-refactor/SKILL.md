@@ -108,6 +108,16 @@ component-style (gom về nơi đúng tầng + token design-system), `useEffect`
 | G3 | Hồi quy so baseline + boundary check (eslint-plugin-boundaries/Steiger) XANH; con người duyệt diff | 4 | Không tuyên bố hoàn tất |
 | G4 | 1 bước = 1 commit, duyệt diff trước merge/push, không push main; giữ boundary/kiểu kiến trúc | Xuyên suốt | — |
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Test đang đỏ sẵn, refactor luôn rồi tính" | Gate G1: baseline build/test/lint phải xanh, vùng thiếu test có characterization; chưa có thì DỪNG. |
+| "Tiện tay đổi luôn UI hơi sai" | Gate G2: mỗi bước giữ hành vi; tách, dời trước, đổi hành vi tách riêng. |
+| "Làm một mạch xong rồi chạy tsc/test một lần" | Gate G2: tsc/test/lint/build xanh sau mỗi bước; bước đỏ thì sửa hoặc revert, không đi tiếp. |
+| "Test xanh rồi, khỏi đối chiếu boundary" | Gate G3: hồi quy so baseline và boundary check xanh, con người duyệt diff, rồi mới tuyên bố hoàn tất. |
+| "Gom nhiều bước vào một commit cho gọn" | Gate G4: một bước một commit, duyệt diff trước merge hoặc push. |
+
 ## Sau khi xong
 Tóm tắt: các move đã áp (+ `file:line`), kết quả `tsc`/test/lint/build so baseline (số THẬT), phần
 **chưa soát + residual risk**. Refactor giữ hành vi — đổi hành vi có oracle đỏ, route `frontend-fix`;
