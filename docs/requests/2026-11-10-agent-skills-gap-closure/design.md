@@ -147,7 +147,7 @@ của `task-loop.md`), nên chỉ session gốc giao được việc viết mù.
 
 | Part | Phụ thuộc | Song song | Trạng thái |
 |---|---|---|---|
-| 01-routing-score | — | A | đang làm |
+| 01-routing-score | — | A | merged 3c6a3361 |
 | 02-source-check | — | A | merged 0f8088b1 |
 | 03-quality-bar | — | A | merged d8e5dde6 |
 | 04-rationalization-tables | — | A | merged b527e08a |
