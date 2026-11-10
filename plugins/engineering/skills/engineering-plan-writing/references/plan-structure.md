@@ -7,12 +7,20 @@ Khung chép từ `plan.template.md` của skill `artifact-templates`. File này 
 Trước khi chia task, liệt kê mọi file sẽ tạo hoặc sửa, mỗi file **một trách nhiệm**, bám pattern và layout đang có của
 repo (đọc file cùng loại trước khi quyết định tên và chỗ đặt). Ghi bảng `File | Trách nhiệm | Task`. Mục đích: chốt sớm
 quyết định phân rã; file nào có hai trách nhiệm thì tách ngay ở đây, không để tới lúc code. Không cần script kiểm.
+Bảng phải gồm cả file chỉ bị kéo theo: caller, chỗ inject bean và test của mọi symbol bị gỡ hoặc đổi (mục 6 "Files đủ"
+của `self-review.md`); file thiếu ở đây làm implementer dừng `blocked` giữa task.
 
 ## Độ mịn task
 
 - Một task là đơn vị nhỏ nhất **có chu trình test riêng** và **đáng một lần review**. Setup hoặc docs cần cho task nào
   thì gộp vào task đó, không tách thành task rỗng.
 - Task quá lớn để review một lần → tách; task chỉ là một dòng sửa không có test riêng → gộp vào task gần nhất.
+- Mỗi task có dòng `**Ước lượng:** <phút>'` sau `**TDD:**`: thời gian từ giao implementer tới review sạch, gồm cả chạy test
+  của task (test tích hợp dựng container tính cả thời gian khởi động). Trần: một task không quá 30 phút và không sửa quá
+  5 file production; vượt một trong hai thì tách theo chu trình test (vd tách nối dây khỏi test tích hợp kiểm giả định,
+  tách gỡ API cũ khỏi viết lại test). Ngoại lệ trần file: thay đổi không tách được mà vẫn biên dịch và xanh (gỡ hay đổi
+  tên API có nhiều caller) được vượt 5 file, ghi lý do một vế ở task và nêu ở G2; trần 30 phút vẫn áp. Tổng ước lượng
+  của plan trình ở G2 để người dùng biết khi nào tới G3.
 
 ## Độ mịn step
 

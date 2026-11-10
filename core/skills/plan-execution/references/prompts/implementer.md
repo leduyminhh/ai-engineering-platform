@@ -26,6 +26,8 @@ Việc cần làm:
 4. Test phủ AC ghi ID AC của dòng `**Phủ AC:**` trong tên test hoặc comment (`AC1.2`; hàm Python `ac1_2`), để `check-request.mjs` không báo W7.
 5. Chạy test hẹp phủ phần vừa làm, không chạy full suite.
 6. Tự soát diff trước khi báo: đủ yêu cầu brief? có làm thừa? test kiểm hành vi thật hay chỉ lặp lại mock?
+7. Số đo hay thử nghiệm bạn nêu trong báo cáo (thời gian chặn, hành vi thư viện, kết quả trái giả định) phải tái lập được từ nhánh:
+   chạy bằng test hoặc script nằm trong Files; báo kèm lệnh chạy lại. Đo bằng code tạm ngoài repo thì ghi rõ [Unverified].
 
 Không được: commit, push, gọi agent khác hay reviewer. Session chính sẽ commit và review sau khi bạn báo.
 

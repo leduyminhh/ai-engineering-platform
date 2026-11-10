@@ -56,8 +56,8 @@ export default async function run({ ok, ctx }) {
 
     const self = read('references', 'self-review.md');
     const items = (self.match(/^[1-9]\. /gm) || []).join('');
-    ok(items === '1. 2. 3. 4. 5. ', 'AC2.2: self-review.md có đúng 5 mục đánh số 1.–5.');
-    ok(self.includes('check-request.mjs'), 'AC2.2: self-review chạy check-request.mjs sau 5 mục');
+    ok(items === '1. 2. 3. 4. 5. 6. ', 'AC2.2: self-review.md có đúng 6 mục đánh số 1.–6.');
+    ok(self.includes('check-request.mjs'), 'AC2.2: self-review chạy check-request.mjs sau 6 mục');
 
     const tb = fs.readFileSync(path.join(REPO_ROOT, 'plugins', 'engineering', 'skills', 'engineering-task-breakdown', 'SKILL.md'), 'utf8');
     ok(tb.includes('ID task') && tb.includes('một checkpoint'),

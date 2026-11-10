@@ -117,6 +117,13 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    làm một phần: mục đó vẫn nêu ở checkpoint duyệt design như điều chưa được duyệt, không ghi là quyết định của agent.
    **Không có tool subagent** → session chính tự đọc tài liệu như builder theo cùng prompt.
 
+   **Spike giả định (sau builder check, trước checkpoint).** Mỗi giả định [Unverified] về hành vi thư viện, framework hay
+   hạ tầng mà hướng đã chọn dựa vào (đoán sai thì phải đổi hướng, không chỉ sửa một AC) được kiểm bằng một spike trước
+   checkpoint: một test hoặc script nhỏ, chạy được trong repo, tối đa khoảng 15 phút mỗi giả định, không đưa vào nhánh
+   nếu không cần giữ. Kết quả ghi vào `design.md` (mục rủi ro/giả định) kèm lệnh chạy lại; giả định bị bác thì sửa hướng
+   trước checkpoint. Không spike được (thiếu hạ tầng, tốn quá giới hạn) thì nêu ở checkpoint như rủi ro chặn hướng để
+   người dùng chọn, không để tới lúc task tích hợp mới phát hiện.
+
 10. **Verify.**
     Chạy checklist [references/checklist.md](references/checklist.md): đủ mục; mỗi requirement truy vết được
     (nguồn/actor/mục tiêu); acceptance criteria đo được; scope + out-of-scope rõ; rủi ro/giả định/câu hỏi mở
