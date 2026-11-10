@@ -280,6 +280,15 @@ export default async function run({ ok, ctx }) {
       ok(JSON.stringify(rp.findWeakening(wd)) === JSON.stringify(['- T.java: @Disabled("flaky")', '- T.java: ++ @Disabled', '- T.java: @Test(enabled = false)',
         '- t.py: @pytest.mark.skip', '- t.py: x = 1  # noqa', '- a b.test.ts: it.only("x", f)', '- a b.test.ts: fit("y", g)', '- a b.test.ts: // @ts-nocheck']),
         'findWeakening chỉ lấy dòng thêm mới khớp dấu hiệu skip/suppress, kèm tên file; dòng thêm "++ x" không bị coi là header');
+      const td = hunk('jest.config.js', '-    lines: 80,\n+    lines: 70,\n-    branches: 60,\n+    branches: 75,\n')
+        + hunk('pom.xml', '-<minimum>0.80</minimum>\n+<minimum>0.5</minimum>\n')
+        + hunk('package.json', '-  "lint": "eslint . --max-warnings 0"\n+  "lint": "eslint . --max-warnings 10"\n')
+        + hunk('setup.cfg', '-fail_under = 80\n ngữ cảnh\n+fail_under = 50\n')
+        + hunk('src/a.js', '-const lines = text.split(1);\n+const lines = text.split(0);\n')
+        + hunk('README.md', '-lines: 80\n+lines: 10\n');
+      ok(JSON.stringify(rp.findWeakening(td)) === JSON.stringify(['- jest.config.js: ngưỡng nới 80 → 70: lines: 70,',
+        '- pom.xml: ngưỡng nới 0.80 → 0.5: <minimum>0.5</minimum>', '- package.json: ngưỡng nới 0 → 10: "lint": "eslint . --max-warnings 10"']),
+        'findWeakening bắt ngưỡng min bị hạ và ngưỡng max bị nâng; bỏ qua ngưỡng siết, dòng xoá đã cách bởi ngữ cảnh, biến code thường và file .md');
       const pkg = rp.buildPackage({ base: 'a', head: 'b', run: mk(true) });
       ok(/## Dấu hiệu nới kiểm\n\(không có\)/.test(pkg), 'buildPackage ghi "(không có)" khi diff không có dấu hiệu nới kiểm');
       ok(pkg.includes('abc1234 feat: x') && pkg.includes('a.js | 2 +-') && pkg.includes('diff --git a/a.js'),

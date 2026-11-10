@@ -1,6 +1,6 @@
 // Contract conventions: frontmatter, khung H2, description, trùng lặp và các mẫu chuẩn hoá áp mọi skill/agent.
 export default async function run({ ok, ctx }) {
-  const { fs, path, execFileSync, pathToFileURL, REPO_ROOT, PLUGINS_DIR, CORE_DIR, agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar, checkSkillBody, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, lineOverlap, stepOverlap, titleOverlap, listFilesRec, core, plugins, allAgents, workflows, BUILD, fxCore } = ctx;
+  const { fs, path, execFileSync, pathToFileURL, REPO_ROOT, PLUGINS_DIR, CORE_DIR, agentsFiles, whenToUse, WHEN_TO_USE_MAX, principlesDigest, frontmatter, yamlScalar, checkSkillBody, skillBodyWarning, checkDescription, notForTargets, quotedPhrases, triggerCollisions, checkFrontmatterYaml, checkDescriptionStyle, checkAgentDescription, DESCRIPTION_TARGET, AGENT_DESCRIPTION_MAX, SOURCE_KEYS, checkSourceKeys, lineOverlap, stepOverlap, titleOverlap, listFilesRec, core, plugins, allAgents, workflows, BUILD, fxCore } = ctx;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 24. Chuẩn hoá A1: frontmatter không còn trường chết (spec 2026-10-06 §4.1)
@@ -38,6 +38,9 @@ export default async function run({ ok, ctx }) {
     const head = '## Quy trình\n## Ranh giới an toàn\n';
     ok(checkSkillBody(head + 'x\n'.repeat(498)).length === 0 && checkSkillBody(head + 'x\n'.repeat(499)).some((e) => /dài 501 dòng/.test(e)),
       'checkSkillBody: thân 500 dòng hợp lệ, 501 dòng báo lỗi trần');
+    ok(skillBodyWarning(head + 'x\n'.repeat(298)) === null && /dài 301 dòng/.test(skillBodyWarning(head + 'x\n'.repeat(299)))
+      && skillBodyWarning(head + 'x\n'.repeat(499)) === null,
+      'skillBodyWarning: 300 dòng im, 301 dòng cảnh báo, quá trần 500 để checkSkillBody báo lỗi');
     ok(checkSkillBody('## Quy trình (trung tính stack) — cổng\n## Ranh giới an toàn (CLAUDE.md)').length === 0,
       'checkSkillBody: cho phép hậu tố sau dấu cách');
     ok(checkSkillBody('## Luồng viết spec\n## Ranh giới an toàn').some((e) => e.includes('Quy trình')),
@@ -53,6 +56,8 @@ export default async function run({ ok, ctx }) {
     for (const s of [...core.stages, ...plugins.flatMap((p) => p.stages)]) {
       const errs = checkSkillBody(s.body);
       ok(errs.length === 0, `${s.id}: khung SKILL.md hợp lệ${errs.length ? ' — ' + errs.join('; ') : ''}`);
+      const warn = skillBodyWarning(s.body);
+      if (warn) console.warn(`[warn] ${s.id}: ${warn}`);
     }
   }
 

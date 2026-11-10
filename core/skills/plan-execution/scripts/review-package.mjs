@@ -11,24 +11,51 @@ import { resolveWorkspace } from './workspace.mjs';
 const git = (args) => execFileSync('git', args, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
 
 // Dấu hiệu bỏ qua test hoặc tắt cảnh báo: agent hay dùng để "xanh" thay vì sửa lỗi thật.
-// shortcut: chỉ khớp chuỗi trên dòng thêm mới, không bắt ngưỡng số bị nới (coverage, timeout); cần thì thêm so sánh base..head.
-const WEAKENING = /@Disabled|@Ignore\b|@SuppressWarnings|@SuppressFBWarnings|@Test\([^)]*enabled\s*=\s*false|pytest\.(?:mark\.)?skip|\bxfail\b|unittest\.skip|\b(?:it|test|describe)\.(?:skip|only)\(|\b[xf](?:it|describe)\(|\bt\.Skip\w*\(|NOSONAR|#\s*nosec|#\s*noqa|pylint:\s*disable|\/\/\s*nolint|pragma: no cover|istanbul ignore|eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|#\s*type:\s*ignore/;
+const WEAKENING =/@Disabled|@Ignore\b|@SuppressWarnings|@SuppressFBWarnings|@Test\([^)]*enabled\s*=\s*false|pytest\.(?:mark\.)?skip|\bxfail\b|unittest\.skip|\b(?:it|test|describe)\.(?:skip|only)\(|\b[xf](?:it|describe)\(|\bt\.Skip\w*\(|NOSONAR|#\s*nosec|#\s*noqa|pylint:\s*disable|\/\/\s*nolint|pragma: no cover|istanbul ignore|eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|#\s*type:\s*ignore/;
 
-// Liệt kê dòng thêm mới khớp WEAKENING, kèm file, để reviewer buộc phải xét từng chỗ.
+// Ngưỡng hạ xuống là nới (coverage tối thiểu) và ngưỡng nâng lên là nới (số cảnh báo/lỗi cho phép).
+// Khoá phải đi liền một con số để tên biến thường như `lines` trong code không bị bắt nhầm.
+// shortcut: không bắt timeout (tăng có thể là sửa đúng) và ngưỡng đổi tên khoá; cần thì thêm danh sách khoá theo project.
+const MIN_KEY = /(?:fail[_-]?under|minimum|threshold|coveredratio|\b(?:lines|branches|functions|statements))["'>]?\s*[:=>]?\s*["']?-?\d/i;
+const MAX_KEY = /(?:max[_-]?(?:warnings|complexity|violations|issues|failures)|allowed[_-]?failures)["'>]?\s*[:=]?\s*["']?-?\d/i;
+const NUM = /-?\d+(?:\.\d+)?/g;
+
+// Dòng xoá và dòng thêm chỉ khác số trên cùng khoá ngưỡng, đổi theo hướng nới → "cũ → mới"; còn lại → null.
+export function loosenedThreshold(oldLine, newLine) {
+  const dir = MAX_KEY.test(newLine) ? 1 : MIN_KEY.test(newLine) ? -1 : 0;
+  if (!dir || oldLine.replace(NUM, '#') !== newLine.replace(NUM, '#')) return null;
+  const a = oldLine.match(NUM);
+  const b = newLine.match(NUM);
+  const i = a.findIndex((x, k) => Number(x) !== Number(b[k]));
+  if (i < 0) return null;
+  return Math.sign(Number(b[i]) - Number(a[i])) === dir ? `${a[i]} → ${b[i]}` : null;
+}
+
+// Liệt kê dòng thêm mới khớp WEAKENING hoặc nới ngưỡng, kèm file, để reviewer buộc phải xét từng chỗ.
 export function findWeakening(diff) {
   const hits = [];
   let file = '';
   // Dòng thêm có nội dung "++ x" cũng bắt đầu bằng "+++ ": chỉ coi là header khi đang ở giữa "diff --git" và "@@".
   let inHeader = false;
+  // Dòng xoá của khối thay đổi hiện tại; dòng ngữ cảnh hay hunk mới kết thúc khối.
+  let removed = [];
   for (const line of diff.split('\n')) {
-    if (line.startsWith('diff --git ')) { inHeader = true; continue; }
-    if (line.startsWith('@@')) { inHeader = false; continue; }
+    if (line.startsWith('diff --git ')) { inHeader = true; removed = []; continue; }
+    if (line.startsWith('@@')) { inHeader = false; removed = []; continue; }
     if (inHeader) {
       if (line.startsWith('+++ ')) file = line.replace(/^\+\+\+ (?:b\/)?/, '').replace(/[\t\r]+$/, '');
       continue;
     }
-    // Markdown chỉ nhắc tên annotation, không tắt được test nào.
-    if (line.startsWith('+') && !file.endsWith('.md') && WEAKENING.test(line)) hits.push(`- ${file}: ${line.slice(1).trim()}`);
+    if (line.startsWith('-')) { removed.push(line.slice(1)); continue; }
+    if (!line.startsWith('+')) { removed = []; continue; }
+    // Markdown chỉ nhắc tên annotation hay con số, không tắt được test nào.
+    if (file.endsWith('.md')) continue;
+    const added = line.slice(1);
+    if (WEAKENING.test(line)) hits.push(`- ${file}: ${added.trim()}`);
+    for (const old of removed) {
+      const change = loosenedThreshold(old, added);
+      if (change) { hits.push(`- ${file}: ngưỡng nới ${change}: ${added.trim()}`); break; }
+    }
   }
   return hits;
 }
