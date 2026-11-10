@@ -1,7 +1,7 @@
 {
   "positive": [
     "Plan.md duyệt rồi, chạy luôn đi, làm từng task và review sau mỗi task.",
-    "Tiếp tục chạy plan.md đang dang dở, bắt đầu từ task chưa xong, đừng làm lại phần đã commit nhé.",
+    "Kế hoạch triển khai mình duyệt xong rồi, bạn làm lần lượt từng nhiệm vụ trong đó và nhờ người soát lại sau mỗi nhiệm vụ nhé.",
     "Thực thi kế hoạch này, mỗi task giao cho agent rồi review, sửa tối đa vài vòng.",
     "Implement theo plan đã chốt, xong hết task thì review cả nhánh và chốt nhánh giúp mình."
   ],
