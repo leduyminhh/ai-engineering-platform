@@ -149,7 +149,7 @@ của `task-loop.md`), nên chỉ session gốc giao được việc viết mù.
 |---|---|---|---|
 | 01-routing-score | — | A | đang làm |
 | 02-source-check | — | A | merged 0f8088b1 |
-| 03-quality-bar | — | A | đang làm |
+| 03-quality-bar | — | A | merged d8e5dde6 |
 | 04-rationalization-tables | — | A | đang làm |
 
 Tập file của bốn part rời nhau (P1: `scripts/routing-score.mjs`, `test/routing/rank1.lock.json`, contract 56, 3 thư mục case
