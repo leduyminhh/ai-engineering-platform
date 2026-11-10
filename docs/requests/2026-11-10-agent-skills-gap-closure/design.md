@@ -74,9 +74,10 @@ Chốt thêm ở design (quyết định của agent):
 - [ ] **AC3.3** — Given khoảng base..head đổi `project-knowledge/quality-bar.md` When `buildPackage` chạy Then các dòng ở AC3.2
   nằm trong mục `## Dấu hiệu nới kiểm`; file chưa có ở base (`git show` lỗi, được bắt, `buildPackage` không ném) thì không báo;
   file bị xoá ở head thì mỗi lệnh kiểm cũ là một dòng "bỏ lệnh kiểm".
-- [ ] **AC4.1** — Given 9 skill `backend-code-review`, `frontend-code-review`, `backend-refactor`, `frontend-refactor`,
-  `engineering-quality-gate`, `engineering-debugging`, `ops-deploy-release`, `data-db-migration`, `git-workflow` When đọc Then
-  mỗi skill có `## Dấu hiệu đang tự biện minh` với 4–6 dòng `| "…" | … |`, và thân `SKILL.md` ≤ 300 dòng.
+- [ ] **AC4.1** — Given 8 skill `backend-code-review`, `frontend-code-review`, `backend-refactor`, `frontend-refactor`,
+  `engineering-quality-gate`, `ops-deploy-release`, `data-db-migration`, `git-workflow` When đọc Then mỗi skill có
+  `## Dấu hiệu đang tự biện minh` với 4–6 dòng `| "…" | … |`, và thân `SKILL.md` ≤ 300 dòng; `engineering-debugging` giữ
+  bảng sẵn có `## Dấu hiệu đang đoán thay vì điều tra` (4–6 dòng, không sửa file) — người dùng chốt ở G2.
 
 ## Thiết kế
 
@@ -127,7 +128,7 @@ Chốt thêm ở design (quyết định của agent):
 
 ### P4 — Bảng tự biện minh
 
-- Mỗi skill trong 9 skill thêm `## Dấu hiệu đang tự biện minh` trước `## Tham chiếu` (hoặc cuối file nếu không có), bảng
+- Mỗi skill trong 8 skill (trừ `engineering-debugging`, giữ bảng sẵn có) thêm `## Dấu hiệu đang tự biện minh` trước `## Tham chiếu` (hoặc cuối file nếu không có), bảng
   `| Suy nghĩ | Thực tế |` 4–6 dòng, cột Thực tế trỏ về một bước, cổng hay ranh giới đã có trong chính skill đó (không thêm luật
   mới). Viết theo `engineering-writing-style`, không chép câu của agent-skills.
 - Test: `test/content/47-rationalization-tables.pin.mjs` (AC4.1).
