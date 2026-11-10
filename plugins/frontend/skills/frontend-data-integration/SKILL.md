@@ -64,6 +64,7 @@ nối); không dùng "đảm bảo / an toàn tuyệt đối"; luôn nêu rủi 
   liên quan; F4 → 4 trạng thái; F9 → test mock bằng msw. AC + DoD của task là tiêu chí xong, "Lệnh verify" là lệnh
   phải chạy. Mục còn `[giả định]` (endpoint, map lỗi) → hỏi lại. Kết thúc: báo trạng thái đề xuất cho session chính;
   KHÔNG sửa `tasks.md`.
+- Kiểm API thư viện theo phiên bản thật trước khi gọi: theo mục "Kiểm nguồn" của skill `principles` (bản cài plugin: `core:principles`).
 
 ### I1. Contract
 
