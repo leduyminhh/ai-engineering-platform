@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Design đã duyệt xong rồi, viết plan.md triển khai cho mình nhé.",
+    "Từ design này viết plan.md giúp mình, chia task theo kind và ghi rõ file nào tạo mới, file nào sửa.",
+    "Mình cần plan để giao việc cho agent, có interface giữa các task và phần review focus.",
+    "Từ AC trong design, vẽ bản đồ file rồi chia task đi, xong tự soát luôn."
+  ],
+  "negative": [
+    "Plan đã duyệt rồi, chạy plan đó đi và review từng task giúp mình.",
+    "Chia việc thành bảng task cho từng người trong team BE/FE kèm size ngày công.",
+    "Viết design.md với tiêu chí chấp nhận cho tính năng thanh toán này."
+  ]
+}

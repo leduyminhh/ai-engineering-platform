@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Review giúp mình PR này bên React với, xem có bug hay vi phạm boundary giữa các feature không.",
+    "Đọc diff của component mới thêm rồi chỉ ra chỗ nào thiếu a11y, thiếu test, kèm file:line nhé.",
+    "Trước khi merge, check lại code frontend trong thư mục src/features/cart xem useEffect với dependency array có ổn không.",
+    "Dev kia vừa sửa theo comment, xem lại giúp mình các finding đã được xử lý đúng chưa."
+  ],
+  "negative": [
+    "Quét lỗ hổng bảo mật và dependency bằng SonarQube cho dự án React này giúp mình.",
+    "Tách component Dashboard quá to thành mấy component nhỏ, giữ nguyên hành vi.",
+    "Viết thêm test Testing Library cho hook useCart vừa tạo."
+  ]
+}

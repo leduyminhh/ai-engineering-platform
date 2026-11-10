@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "App ném NullPointerException lúc submit form, giúp mình truy ra root cause thật sự, đừng vá tạm nhé.",
+    "Test chạy riêng thì pass mà chạy chung thì fail, debug giúp mình với.",
+    "Dán stacktrace này, tìm root cause chứ đừng đoán mò rồi vá bừa nhé.",
+    "Từ hôm qua API trả sai kết quả, chưa rõ do đâu, điều tra xem lỗi xuất hiện ở lớp nào."
+  ],
+  "negative": [
+    "Production đang sập, 500 liên tục, cần điều tra sự cố khẩn cấp và viết RCA.",
+    "Bug đã rõ rồi, chạy cả quy trình sửa lỗi có review đa vai trò và commit giúp mình.",
+    "Viết test cho tính năng mới theo từng bước đỏ xanh, chưa có bug nào cả."
+  ]
+}

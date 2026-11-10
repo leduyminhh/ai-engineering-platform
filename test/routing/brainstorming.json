@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mình có ý tưởng mà vẫn mơ hồ không biết bắt đầu từ đâu, ngồi brainstorm cùng mình rồi ghi lại nhé.",
+    "Chưa biết bài toán này nên xử lý thành feature hay sửa bug, bàn thử với mình được không?",
+    "Nghĩ cùng mình xem có nên refactor module thanh toán hay để yên, chốt hướng rồi hẵng làm.",
+    "Trao đổi ý tưởng này với mình, đưa vài hướng đi kèm trade-off rồi ghi lại thành brief giúp mình."
+  ],
+  "negative": [
+    "Mình đã rõ yêu cầu rồi, viết spec đầy đủ với acceptance criteria đo được cho mình.",
+    "Brief đã duyệt xong, chọn giúp workflow nào để chạy tiếp.",
+    "Thêm endpoint lấy danh sách đơn hàng theo contract đã chốt, làm luôn đi."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Viết test e2e bằng Playwright cho luồng thanh toán từ giỏ hàng đến xác nhận đơn.",
+    "Chọn vài luồng giá trị cao rồi viết test end-to-end, đăng nhập một lần dùng storageState.",
+    "Test e2e của mình chạy lúc xanh lúc đỏ, ổn định lại giúp mình bằng repeat-each.",
+    "Mình cần kiểm chứng luồng đăng ký chạy xuyên frontend, backend và database test."
+  ],
+  "negative": [
+    "Viết unit test cho hook useDebounce bằng Testing Library.",
+    "Test e2e đỏ vì bug thật trong code production, sửa luôn code giúp mình.",
+    "Dựng docker compose cho môi trường staging có DB."
+  ]
+}

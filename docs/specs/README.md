@@ -11,6 +11,7 @@
 | `artifact-templates` | Template, `check-request`, quy ước `docs/requests` | [`docs/specs/artifact-templates/spec.md`](artifact-templates/spec.md) |
 | `baseline` | Baseline `AGENTS.md`: quy tắc, routing model/phiên | [`docs/specs/baseline/spec.md`](baseline/spec.md) |
 | `cli-wizard` | init, wizard, stats, args | [`docs/specs/cli-wizard/spec.md`](cli-wizard/spec.md) |
+| `skill-quality` | Đo routing skill tất định, case eval phải im lặng | [`docs/specs/skill-quality/spec.md`](skill-quality/spec.md) |
 
 Spec sống tạo dần: request chạm tới một năng lực thì cập nhật spec của nó ở bước gộp (tạo mới nếu năng lực chưa có). Mỗi yêu cầu có ID `<năng-lực>/R<n>`, và request chạm tới năng lực khai báo ảnh hưởng ở mục `## Ảnh hưởng spec` của `design.md`. Yêu cầu bị bỏ không bị xoá mà giữ lại dạng gạch ngang (`~~…~~`), kèm liên kết tới request đã bỏ nó. Request tạo năng lực mới cũng thêm dòng tương ứng vào bảng này ở bước gộp.
 

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Test này đang đỏ, sửa tối thiểu trong mấy file này cho nó xanh, đừng đụng vào file test nhé.",
+    "Finding bảo mật đã xác nhận rồi, vá đúng chỗ đó thôi, không refactor lung tung.",
+    "Đã profile ra bottleneck ở hàm này, tối ưu từng thay đổi một rồi chạy lại test xem sao.",
+    "Bản fix vừa rồi vẫn fail, revert phần đó rồi thử giả thuyết khác, nhưng đừng git reset --hard."
+  ],
+  "negative": [
+    "Mình chưa biết bug do đâu, tái hiện lỗi và tìm root cause giúp mình trước đã.",
+    "Viết thêm test cho module thanh toán để tăng coverage đi.",
+    "Nhân tiện dọn luôn code trùng lặp trong class này, tách hàm cho gọn."
+  ]
+}

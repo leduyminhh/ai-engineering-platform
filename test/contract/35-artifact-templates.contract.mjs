@@ -39,9 +39,9 @@ export default async function run({ ok, ctx }) {
   const skillText = fs.existsSync(skillFile) ? read(skillFile) : '';
   const index = templateIndex(skillText);
   ok(index.length > 0, 'mục lục artifact-templates có ít nhất một dòng');
-  const TYPES = ['skill', 'agent', 'workflow', 'requirement', 'design', 'plan', 'task', 'adr', 'project-knowledge', 'handoff', 'spec', 'brief', 'specs-readme'];
+  const TYPES = ['skill', 'agent', 'workflow', 'requirement', 'design', 'plan', 'task', 'adr', 'project-knowledge', 'handoff', 'spec', 'brief', 'specs-readme', 'quality-bar'];
   ok(JSON.stringify(index.map((r) => r.type).sort()) === JSON.stringify([...TYPES].sort()),
-    `mục lục artifact-templates có đúng 13 loại (đang có: ${index.map((r) => r.type).join(', ')})`);
+    `mục lục artifact-templates có đúng 14 loại (đang có: ${index.map((r) => r.type).join(', ')})`);
   const tplOf = (type) => {
     const row = index.find((r) => r.type === type);
     return row ? read(path.join(path.dirname(skillFile), row.file)) : '';
@@ -85,6 +85,12 @@ export default async function run({ ok, ctx }) {
       'AC2.1: mục Ảnh hưởng spec nằm sau ## Thiết kế');
     ok(/^- <năng-lực>: thêm R<n>, đổi R<m>, bỏ R<k>/m.test(tpl) && /^Không ảnh hưởng: <lý do>/m.test(tpl),
       'AC2.1: design.template.md có cả hai dạng mẫu');
+  }
+
+  {
+    const tpl = tplOf('quality-bar');
+    ok(/^## Lệnh kiểm\s*$/m.test(tpl) && tpl.includes('| Lệnh | Ngưỡng | Owner |'), 'AC3.1: quality-bar.template.md có mục ## Lệnh kiểm và bảng | Lệnh | Ngưỡng | Owner |');
+    ok(/^## Ngoại lệ\s*$/m.test(tpl) && tpl.includes('| Ngoại lệ | Lý do | Owner | Hạn |'), 'AC3.1: quality-bar.template.md có mục ## Ngoại lệ và bảng | Ngoại lệ | Lý do | Owner | Hạn |');
   }
 
   // 3. Workflow template qua validator workflow hiện có.

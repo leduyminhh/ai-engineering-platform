@@ -133,6 +133,16 @@ integration test cho repository/query bị đụng → `backend-testing`; review
 N+1) cùng SQL bù → `backend-code-review`; commit qua `core:git-workflow`, duyệt diff trước merge/push
 (protected branch: mỗi commit).
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Chọn Flyway luôn cho nhanh" | Bước A4 là cổng cứng: chưa ghi file nào trước khi người dùng chọn công cụ. |
+| "Sửa file migration cũ cho gọn" | Ranh giới an toàn: file đã có trên base branch là bất biến; lỡ sửa thì huỷ thay đổi và viết file mới (C3). |
+| "Drop cột luôn, code cũ chắc không dùng nữa" | Bước C2: thao tác phá huỷ cần xác nhận tường minh; code đang chạy còn dùng cột thì DỪNG (evidence grep `file:line`). |
+| "Exit code 0 là migration đã áp" | Bước A7 và C4: evidence gồm cả số migration/changeSet đọc từ log; 0 migration áp là chưa verify. |
+| "Chạy thử trên DB staging có sẵn cho tiện" | Bước C4: xác nhận DB đích là DB test trước khi chạy; không có DB test thì `not_run` kèm lý do; không bao giờ chạy trên production. |
+
 ## Report trả về
 
 ```yaml

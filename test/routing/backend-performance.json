@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "API search đang chậm, đo baseline p95 bằng k6 giúp mình, chạy ít nhất 3 lần nhé.",
+    "Sau khi tối ưu, chạy lại benchmark cùng điều kiện cũ để so sánh trước với sau.",
+    "Endpoint này nghi bị N+1 query, profile xem bottleneck nằm ở DB hay CPU.",
+    "Lấy flame graph bằng async-profiler lúc có tải rồi chỉ ra hàm nào đáng sửa."
+  ],
+  "negative": [
+    "Bottleneck rõ rồi, sửa code để giảm thời gian xử lý hàm đó đi.",
+    "Service production đang timeout hàng loạt, điều tra log với metric giúp mình ngay.",
+    "Dựng dashboard Grafana với alert cho latency của hệ thống."
+  ]
+}

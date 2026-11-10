@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Trang chủ load chậm, đo baseline LCP, TBT, CLS bằng Lighthouse trên bản build production giúp mình.",
+    "Bundle size phình to quá, phân tích xem chunk nào nặng và dependency nào đáng ngờ.",
+    "Dùng React Profiler tìm component render thừa, đưa ra giả thuyết kèm bằng chứng.",
+    "Sau khi tối ưu, chạy benchmark lại cùng điều kiện đo để so với số trước."
+  ],
+  "negative": [
+    "Áp code-splitting và lazy load để giảm bundle luôn giúp mình.",
+    "Tối ưu query chậm ở backend, đo p95 bằng load test.",
+    "Thiết lập dashboard Grafana và alert cho latency của service."
+  ]
+}

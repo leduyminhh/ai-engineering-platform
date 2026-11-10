@@ -1,6 +1,6 @@
 # Spec: artifact-templates
 
-Cập nhật: 2026-11-04
+Cập nhật: 2026-11-10
 
 ## Mục đích
 
@@ -13,7 +13,7 @@ Một nguồn template duy nhất cho các loại artifact của bộ, cùng val
 
 ## Yêu cầu
 
-- **artifact-templates/R1** — Skill `core/skills/artifact-templates/` có `SKILL.md` làm mục lục (loại → template → validator → nguồn) và `references/` chứa template của các loại workflow, skill, agent, requirement, design, plan, task, adr, handoff, spec, project-knowledge; mỗi template mở bằng khối `<!-- artifact-template … -->` có `type`, `version`, `validator`, `sources`, và khối này bị bỏ khi chép ra dùng. Nguồn: [2026-10-20-artifact-templates](../../requests/2026-10-20-artifact-templates/design.md) (thêm); `handoff` do [2026-10-21-long-session-context](../../requests/2026-10-21-long-session-context/design.md) thêm, `spec` do [2026-10-21-living-spec](../../requests/2026-10-21-living-spec/design.md) thêm.
+- **artifact-templates/R1** — Skill `core/skills/artifact-templates/` có `SKILL.md` làm mục lục (loại → template → validator → nguồn) và `references/` chứa template của các loại workflow, skill, agent, requirement, design, plan, task, adr, handoff, spec, project-knowledge, quality-bar; mỗi template mở bằng khối `<!-- artifact-template … -->` có `type`, `version`, `validator`, `sources`, và khối này bị bỏ khi chép ra dùng. Nguồn: [2026-10-20-artifact-templates](../../requests/2026-10-20-artifact-templates/design.md) (thêm); `handoff` do [2026-10-21-long-session-context](../../requests/2026-10-21-long-session-context/design.md) thêm, `spec` do [2026-10-21-living-spec](../../requests/2026-10-21-living-spec/design.md) thêm. Template `quality-bar` nằm ngoài `references/project-knowledge/` nên `aip init --full` không sinh `project-knowledge/quality-bar.md`: [2026-11-10-agent-skills-gap-closure](../../requests/2026-11-10-agent-skills-gap-closure/design.md) (đổi).
 - **artifact-templates/R2** — Template loại có validator (skill, agent, workflow, task) qua đúng validator đó khi điền giá trị mẫu; template loại chưa có validator được pin heading và mẫu dòng bắt buộc trong `test/contract/35-artifact-templates.contract.mjs`. Nguồn: [2026-10-20-artifact-templates](../../requests/2026-10-20-artifact-templates/design.md) (thêm)
 - **artifact-templates/R3** — `aip init --full` sinh `docs/requests/_TEMPLATE/{requirement,design,plan}.md`, `docs/decisions/_TEMPLATE.md`, `docs/specs/_TEMPLATE.md`, `docs/specs/README.md` (từ `specs-readme.template.md`) và `project-knowledge/` từ `references/` (khối chú thích bị bỏ) và không ghi đè file đã có. Nguồn: [2026-10-20-artifact-templates](../../requests/2026-10-20-artifact-templates/design.md), [2026-10-21-living-spec](../../requests/2026-10-21-living-spec/design.md) (thêm); [2026-11-04-living-spec-bootstrap](../../requests/2026-11-04-living-spec-bootstrap/design.md) (đổi; test `test/init.test.mjs`)
 - **artifact-templates/R4** — Quy ước AC: ID `AC<n>.<m>` dạng Given/When/Then, nằm ở đúng một nơi (`requirement.md` hoặc mục "Tiêu chí chấp nhận" của `design.md`); `plan.md` có `**Goal:**`, `**Spec:**` và mỗi task ghi `**Phủ AC:**`; `check-request.mjs` cảnh báo W1 (không có nguồn AC), W2 (AC ở cả hai file), W3 (trùng ID), W4 (sai định dạng), W5 (plan thiếu header), W6 (AC chưa task nào phủ), mỗi dòng dạng `WARN <file>:<dòng> [W<n>] …`; mỗi task trong `plan.md` còn có `**Kind:**` (xem R9). Nguồn: [2026-10-20-superpowers-docs-standard](../../requests/2026-10-20-superpowers-docs-standard/design.md) (thêm); [2026-10-23-workflow-self-sufficient](../../requests/2026-10-23-workflow-self-sufficient/design.md) (đổi)
@@ -55,3 +55,4 @@ Một nguồn template duy nhất cho các loại artifact của bộ, cùng val
 | 2026-11-04 | [2026-11-04-living-spec-bootstrap](../../requests/2026-11-04-living-spec-bootstrap/design.md) | artifact-templates/R15 | thêm |
 | 2026-11-04 | [2026-11-04-living-spec-bootstrap](../../requests/2026-11-04-living-spec-bootstrap/design.md) | artifact-templates/R16 | thêm |
 | 2026-11-04 | [2026-11-04-living-spec-bootstrap](../../requests/2026-11-04-living-spec-bootstrap/design.md) | artifact-templates/R17 | thêm |
+| 2026-11-10 | [2026-11-10-agent-skills-gap-closure](../../requests/2026-11-10-agent-skills-gap-closure/design.md) | artifact-templates/R1 | đổi |

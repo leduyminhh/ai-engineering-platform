@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Code giúp mình use-case đăng ký thành viên, kèm port, adapter và test lõi nhé.",
+    "Sinh endpoint hủy đơn hàng theo đúng kiến trúc Hexagonal mà project đang dùng.",
+    "Mình có contract OpenAPI rồi, hiện thực phần backend cho API này theo contract đó.",
+    "Viết một vertical slice cho chức năng đổi mật khẩu: aggregate, use-case, repository, mapper."
+  ],
+  "negative": [
+    "Contract API chưa chốt, giúp mình thiết kế OpenAPI và versioning trước đã.",
+    "Chỉ viết thêm test cho các use-case đã có thôi, đừng đụng code production.",
+    "Làm trọn tính năng giỏ hàng từ làm rõ yêu cầu đến plan rồi code, cả backend lẫn frontend."
+  ]
+}

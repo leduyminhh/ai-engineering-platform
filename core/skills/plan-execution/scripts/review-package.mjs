@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Gom commit list (kèm file đổi của từng commit) + diff --stat + dấu hiệu nới kiểm + diff -U10 của khoảng base..head vào một file cho reviewer.
+// Gom commit list (kèm file đổi của từng commit) + diff --stat + dấu hiệu nới kiểm (diff và project-knowledge/quality-bar.md) + diff -U10 của khoảng base..head vào một file cho reviewer.
 // Cách dùng: <base> <head> [--plan <plan.md>] [--out <file>] — --out thắng; chỉ có --plan thì ghi vào workspace .aip của plan và in đường dẫn; không có cả hai thì in ra stdout. Exit 1 khi khoảng commit không hợp lệ, exit 2 khi sai đối số.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
@@ -60,6 +60,51 @@ export function findWeakening(diff) {
   return hits;
 }
 
+const QUALITY_BAR = 'project-knowledge/quality-bar.md';
+const THRESHOLD = /^(.*?)\s*(>=|<=)\s*(-?\d+(?:\.\d+)?)$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Hàng bảng của mục "## <heading>" → mảng ô (bỏ backtick và khoảng trắng); bỏ dòng tiêu đề cột và dòng ngăn.
+function tableRows(text, heading) {
+  const body = text.replace(/\r\n/g, '\n').split(new RegExp('^## ' + heading + '\\s*$', 'm'))[1]?.split(/^## /m)[0] ?? '';
+  return body.split('\n').filter((l) => l.trim().startsWith('|')).slice(2)
+    .map((l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.replace(/`/g, '').trim()));
+}
+
+// So hai bản quality-bar.md, trả dòng báo cho mọi chỗ nới; thêm lệnh, siết ngưỡng, bỏ ngoại lệ, rút hạn không báo.
+export function qualityBarLoosening(oldText, newText) {
+  const out = [];
+  const say = (s) => out.push('- ' + QUALITY_BAR + ': ' + s);
+  const newCmds = new Map(tableRows(newText, 'Lệnh kiểm').map(([c, th]) => [c, th ?? '']));
+  for (const [cmd, oldTh = ''] of tableRows(oldText, 'Lệnh kiểm')) {
+    if (!newCmds.has(cmd)) { say('bỏ lệnh kiểm ' + cmd); continue; }
+    const newTh = newCmds.get(cmd);
+    if (newTh === oldTh) continue;
+    const a = oldTh.match(THRESHOLD);
+    const b = newTh.match(THRESHOLD);
+    if (a && b && a[1] === b[1] && a[2] === b[2]) {
+      const d = Number(b[3]) - Number(a[3]);
+      if (a[2] === '>=' ? d < 0 : d > 0) say('ngưỡng nới ' + cmd + ': ' + oldTh + ' → ' + newTh);
+    } else say('đổi ngưỡng, cần xét ' + cmd + ': ' + oldTh + ' → ' + newTh);
+  }
+  const oldExc = new Map(tableRows(oldText, 'Ngoại lệ').map((r) => [r[0], r[3] ?? '']));
+  for (const [name, , , due = ''] of tableRows(newText, 'Ngoại lệ')) {
+    if (!oldExc.has(name)) say('thêm ngoại lệ ' + name);
+    else if (ISO_DATE.test(oldExc.get(name)) && !ISO_DATE.test(due)) say('đổi hạn, cần xét ' + name + ': ' + oldExc.get(name) + ' → ' + due);
+    else if (ISO_DATE.test(due) && ISO_DATE.test(oldExc.get(name)) && due > oldExc.get(name)) say('gia hạn ngoại lệ ' + name + ': ' + oldExc.get(name) + ' → ' + due);
+  }
+  return out;
+}
+
+// Chỉ đọc hai bản khi khoảng đổi đúng file này; chưa có ở base thì không có gì để so, bị xoá ở head thì mọi lệnh cũ là bỏ.
+function qualityBarHits(range, base, head, run) {
+  if (!run(['diff', '--name-only', range]).split('\n').some((l) => l.trim() === QUALITY_BAR)) return [];
+  const show = (ref) => { try { return run(['show', ref + ':' + QUALITY_BAR]); } catch { return null; } };
+  const oldText = show(base);
+  if (oldText === null) return [];
+  return qualityBarLoosening(oldText, show(head) ?? '');
+}
+
 // `run(args) -> stdout` chạy git (không qua shell); quy ước run ném lỗi khi git exit khác 0.
 export function buildPackage({ base, head, run = git }) {
   // Ref bắt đầu bằng '-' sẽ bị git hiểu là option.
@@ -74,7 +119,7 @@ export function buildPackage({ base, head, run = git }) {
   }
   const range = `${base}..${head}`;
   const diff = run(['diff', '-U10', range]).trimEnd();
-  const weakening = findWeakening(diff);
+  const weakening = [...findWeakening(diff), ...qualityBarHits(range, base, head, run)];
   return [
     `# Review package: ${range}`,
     '',

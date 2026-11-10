@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mình sắp bắt đầu một dự án backend mới, dựng khung thư mục và tài liệu nền giúp mình.",
+    "Khởi tạo project Python với kiến trúc Hexagonal, tạo sẵn project-knowledge và ADR đầu tiên nhé.",
+    "Repo trống trơn, cần scaffold cấu trúc docs, contracts, src chuẩn cho backend Java.",
+    "Bootstrap giúp mình một backend project mới có sẵn template yêu cầu và tài liệu kiến trúc."
+  ],
+  "negative": [
+    "Viết endpoint tạo đơn hàng theo kiến trúc đã chọn, có use-case và repository luôn.",
+    "Project đã chạy lâu rồi, chuyển cấu trúc src từ layered sang Onion giúp mình.",
+    "Tạo schema database và migration Flyway cho bảng người dùng."
+  ]
+}

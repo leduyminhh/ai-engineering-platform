@@ -1,0 +1,8 @@
+{
+  "positive": {
+    "threshold": 70
+  },
+  "negative": {
+    "threshold": 94
+  }
+}

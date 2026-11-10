@@ -74,6 +74,16 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
    khoảng, thông báo kết quả, ghi lại version + thay đổi + quyết định. Nêu **residual risk**: phần chưa verify
    được, cửa sổ theo dõi còn lại, giả định về môi trường thật.
 
+## Dấu hiệu đang tự biện minh
+
+| Suy nghĩ | Thực tế |
+|---|---|
+| "Staging ổn rồi, chạy luôn prod" | Bước 3: không tự chạy lệnh deploy prod; nêu lệnh, thứ tự bước và điểm health-check rồi chờ người xác nhận. |
+| "Rollback plan để sau, deploy trước" | Bước 1: thiếu rollback plan hoặc còn mục chặn chưa đạt thì đề xuất NO-GO; người duyệt mới quyết GO. |
+| "Checklist gần xong, đánh dấu xong hết" | Bước 1: mỗi mục có trạng thái đo được (đạt/chưa đạt), không đánh dấu xong khi chưa kiểm. |
+| "Health endpoint trả 200 là đủ" | Bước 4: kiểm cả metric (error rate, latency, saturation) và smoke test theo ngưỡng đã đặt; vượt ngưỡng thì đề xuất rollback và chờ người xác nhận trước khi rollback prod. |
+| "Cấu hình thiếu thì đoán theo mẫu" | Bước 0: thiếu cấu hình thì nói rõ (fail-loud) và xin người cung cấp, không tự bịa. |
+
 ## Verification (trước khi báo hoàn thành)
 
 - Đã dò cấu hình deploy/CI, **chốt scope release** (version/artifact/service + môi trường), nêu rõ nguồn cấu hình.

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Đánh giá giúp mình độ phủ observability của các service: đã đủ metrics, log, trace chưa?",
+    "Đặt SLI, SLO và error budget cho API đặt hàng như thế nào cho hợp lý?",
+    "Soạn alert rule theo triệu chứng, tránh alert fatigue, mỗi alert gắn runbook.",
+    "Làm sao để nối log với trace bằng correlation id trong hệ thống microservice này?"
+  ],
+  "negative": [
+    "Hệ thống đang lỗi, đọc log tìm root cause và viết RCA giúp mình.",
+    "Lên kế hoạch deploy canary và checklist rollback cho release tuần này.",
+    "Đo p95 latency bằng load test trước và sau khi tối ưu."
+  ]
+}
