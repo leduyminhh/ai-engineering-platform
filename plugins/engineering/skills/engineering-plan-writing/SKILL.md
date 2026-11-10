@@ -1,6 +1,6 @@
 ---
 name: engineering-plan-writing
-description: "Lập plan.md thực thi từ design đã duyệt: bản đồ file, task theo kind, Interfaces, Global Constraints, Review Focus, tự soát 5 mục rồi chạy check-request.mjs. Dùng khi người dùng muốn \"viết plan\", \"lập kế hoạch triển khai\", \"plan.md từ design\", \"tách việc cho agent\". Không dùng khi cần bảng việc giao cho người → engineering-task-breakdown."
+description: "Lập plan.md thực thi từ design đã duyệt: bản đồ file, task theo kind, Interfaces, Global Constraints, Review Focus, tự soát 6 mục rồi chạy check-request.mjs. Dùng khi người dùng muốn \"viết plan\", \"lập kế hoạch triển khai\", \"plan.md từ design\", \"tách việc cho agent\". Không dùng khi cần bảng việc giao cho người → engineering-task-breakdown."
 order: 8
 title: "Plan Writing — lập plan.md thực thi cho agent từ design đã duyệt"
 runsIn: execute
@@ -42,7 +42,7 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
    [references/plan-structure.md](references/plan-structure.md); ghi `kind` theo bảng ánh xạ cũng ở đó.
 5. **Có `tasks.md`?** Task trong `plan.md` trỏ ID task của `tasks.md` thay vì chia lại, và hai file dùng chung một
    checkpoint duyệt. Không có `tasks.md` → plan tự chia task, không bắt buộc tạo `tasks.md`.
-6. **Tự soát.** Chạy 5 mục trong [references/self-review.md](references/self-review.md), sửa tại chỗ, rồi chạy
+6. **Tự soát.** Chạy 6 mục trong [references/self-review.md](references/self-review.md), sửa tại chỗ, rồi chạy
    `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/`. Còn cảnh báo ngoài W9 và W11 của năng lực chỉ khai `thêm` mà chưa có `docs/specs/<năng-lực>/spec.md` → sửa `plan.md`; không xoá `**Files:**`/test để
    tắt cảnh báo. Request chia part (có `## Bảng part`): mỗi part một `parts/<nn>-<part-slug>/plan.md`
    ([references/plan-structure.md](references/plan-structure.md) mục "Request chia part"), chạy thêm
@@ -69,7 +69,7 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
 
 - Mọi `AC<n>.<m>` của design xuất hiện ở `**Phủ AC:**` của ít nhất một task.
 - Mọi task có `**Kind:**` thuộc tập đóng, `**Files:**` có `- Test:`, `**Interfaces:**`.
-- Đã chạy tự soát 5 mục và `check-request.mjs`; còn cảnh báo nào thì nêu rõ lý do (fail-loud).
+- Đã chạy tự soát 6 mục và `check-request.mjs`; còn cảnh báo nào thì nêu rõ lý do (fail-loud).
 - Không có `plan.md` cho cỡ "thay đổi nhỏ".
 - Tiếng Việt còn nguyên dấu.
 
@@ -77,4 +77,4 @@ từng task); `tasks.md` là bảng việc để teamlead giao cho người. Hai
 
 - [references/plan-structure.md](references/plan-structure.md): bản đồ file, độ mịn task/step, `kind` → chuỗi agent,
   Interfaces, Global Constraints, Review Focus, request chia part.
-- [references/self-review.md](references/self-review.md): tự soát 5 mục, rồi `check-request.mjs`.
+- [references/self-review.md](references/self-review.md): tự soát 6 mục, rồi `check-request.mjs`.

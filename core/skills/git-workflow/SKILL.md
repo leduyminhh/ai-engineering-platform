@@ -63,7 +63,9 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
    trước mỗi commit. Trên nhánh feature đang chạy plan đã duyệt: session chính commit theo từng
    task qua skill này, không dừng; mỗi task ít nhất 1 commit (vòng sửa có thể thêm commit); không
    amend/squash khi người dùng chưa xác nhận (ngoại lệ duy nhất: sửa encoding ở bước 10). Cỡ
-   "thay đổi nhỏ" không có `plan.md`: `requirement.md` đã duyệt được tính là plan đã duyệt. Người
+   "thay đổi nhỏ" không có `plan.md`: `requirement.md` đã duyệt được tính là plan đã duyệt. Trên nhánh
+   feature, kế hoạch C2 của `data-db-migration` đã duyệt (cho commit migration của nó) và `brief.md` đã duyệt
+   (cho commit chính file đó) cũng tính là plan đã duyệt, không dừng hỏi lại. Người
    dùng duyệt toàn bộ diff branch trước merge/push.
 8. Sau khi xác nhận (hoặc khi bước 7 không yêu cầu dừng): commit bằng `git commit -F <file>`
    (KHÔNG truyền tiếng Việt qua tham số shell). Check ở bước 6 fail: sửa xử lý UTF-8, không được

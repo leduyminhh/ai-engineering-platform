@@ -14,7 +14,12 @@ phát hiện thì sửa `plan.md` rồi đọc lại mục đó.
 5. **Tỉ lệ độ dài plan so với design.** Plan dài nhiều lần `design.md` thường là chép chương trình vào plan → quay lại
    mục 2 và rút gọn; plan ngắn hơn đáng kể mà task còn mơ hồ thì thiếu step.
 
-Sau 5 mục, chạy script tất định:
+6. **Files đủ.** Với mỗi symbol mà task gỡ, đổi tên, đổi chữ ký hoặc đổi hành vi lỗi (vd từ nuốt lỗi sang ném lỗi, bỏ một
+   bean), grep toàn repo tìm caller, lớp hiện thực, chỗ inject bean hoặc dùng generic của bean đó và test gọi tới nó. Mọi
+   file khớp phải nằm trong `**Files:**` của task đó (kèm lý do một vế), hoặc task trước đã đổi nó. Đồng thời kiểm mỗi task
+   có `**Ước lượng:**` không quá 30 phút và không quá 5 file production (`plan-structure.md`, mục "Độ mịn task"); vượt thì tách.
+
+Sau 6 mục, chạy script tất định:
 
 ```bash
 node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/

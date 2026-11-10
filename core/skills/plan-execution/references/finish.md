@@ -6,7 +6,9 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
 ## Thứ tự
 
 1. **Cập nhật docs.** Docs của thay đổi (README, hướng dẫn, `design.md`/`requirement.md` đổi trạng thái) theo đúng
-   những gì đã làm; ghi các file docs đã đụng vào `docs_updated` của `workflow_result`.
+   những gì đã làm; ghi các file docs đã đụng vào `docs_updated` của `workflow_result`. Ledger nằm trong `.aip/` không vào
+   nhánh, nên mọi `Ruling:` đổi hay bổ sung quyết định của design và mọi số đo mà quyết định dựa vào (kèm lệnh chạy lại)
+   được chép vào `design.md` ở bước này; comment trong code không trỏ tới ledger.
 2. **Cập nhật spec sống.** Làm theo mục `## Ảnh hưởng spec` của design: thêm, sửa hoặc gạch bỏ `R<n>` trong
    `docs/specs/<capability>/spec.md`, thêm một hàng vào bảng lịch sử của spec; capability mới thì thêm vào
    `docs/specs/README.md`. Design ghi "Không ảnh hưởng" thì bỏ qua và ghi lý do. Design ghi "Không ảnh hưởng" mà repo chưa có `docs/specs/<năng-lực>/spec.md` nào thì không tự tạo spec; cảnh báo W23 còn lại ghi vào `remaining_risks` kèm gợi ý chạy skill `engineering-spec-backfill` (plugin `engineering`).

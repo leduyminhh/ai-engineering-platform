@@ -7,6 +7,12 @@
 2. Trình người dùng: `profile=… host=… database=…` (đã mask). Hỏi: "Đây là DB test, không phải production?"
 3. Chỉ đi tiếp khi người dùng xác nhận rõ ràng. Cấu hình kết nối đổi giữa chừng → hỏi lại.
 
+Ngoại lệ, chỉ cho lệnh chạy test của app (vd `mvn test` có Flyway bật): DB đích là container tạm do chính test đó dựng
+bằng Testcontainers (sinh trong lần chạy, huỷ khi test xong) thì không hỏi bước 2–3; vẫn ghi DB đích (image, cách dựng)
+vào báo cáo C4. Không thuộc ngoại lệ, vẫn hỏi: lệnh chạy ngoài test (vd `java -jar … migration`), dịch vụ `docker compose`
+(có thể giữ volume), container bật reuse (`withReuse`, `testcontainers.reuse.enable`) và cấu hình `TC_*`/`jdbc:tc:` trỏ
+host có sẵn.
+
 DB test ưu tiên DB tạm: dịch vụ trong `docker compose` của project hoặc Testcontainers mà test của project đã dùng.
 Dựng container mới (vd `docker run … postgres:<major version của production>`) là việc của người dùng hoặc cần người
 dùng đồng ý. Không có DB test → ghi `not_run` + lý do, không tự dựng hạ tầng.

@@ -33,7 +33,9 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    - `completed` kèm `remaining_risks` → xong kèm lo ngại: đọc từng lo ngại; liên quan đúng/phạm vi thì xử lý trước khi
      review, không thì chuyển cho reviewer.
    - `blocked` kèm `questions[]` → session chính thử trả lời từ spec/plan/design; trả lời được thì gửi lại câu trả lời
-     (ghi `Ruling:` nếu là quyết định), không hỏi người dùng. Chỉ hỏi người dùng khi thuộc loại dừng bên dưới.
+     (ghi `Ruling:` nếu là quyết định), không hỏi người dùng. Chỉ hỏi người dùng khi thuộc loại dừng bên dưới. Blocked vì
+     thiếu file trong `**Files:**`: mở rộng theo đúng hai loại của mục "Nhận review" (đoạn sau ba nhóm); file ngoài hai loại
+     là đổi hành vi ngoài AC, đi thẻ G3.
    - `failed` → đừng bắt cùng agent thử lại y nguyên: đổi bối cảnh, tách task nhỏ hơn hoặc dùng agent mạnh hơn; vẫn không
      được thì coi như plan hỏng cho task đó.
 5. **Kiểm chứng của session chính**: tự chạy lệnh test nêu trong task (chỉ test hẹp, không chạy full suite ở từng task)
@@ -73,6 +75,12 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
 - **ngoài AC, đổi hành vi hoặc API** (ném lỗi mới, mã lý do mới, tham số mới) → thẻ G3 kèm hệ quả, không sửa; "làm" thành follow-up sau khi nhánh xong (`finish.md`). Ghi một dòng ledger `Ruling: ngoài AC, đổi hành vi — <mức gốc> <finding> — task <n> — <hệ quả>` để G3 (`finish.md`, bước 5) vẫn thấy sau compact.
 
 Nhãn phạm vi của reviewer được đổi tự do theo chiều `ngoài AC` → trong phạm vi; đây là đổi nhãn phạm vi, không đổi severity. Hạ nhãn (trong phạm vi → ngoài AC) phải có `Ruling:` nêu AC cụ thể không liên quan hoặc lý do đầu vào không hợp lệ; không đủ thì giữ trong phạm vi. Đầu vào hợp lệ là đầu vào đúng kiểu và đúng miền mà design mô tả.
+
+Ba nhóm trên áp như nhau cho mọi mức severity, kể cả `minor` và rủi ro do implementer hay session chính tự phát hiện:
+không có ngoại lệ "nhỏ nên gộp luôn". `Ruling:` không mở rộng `**Files:**` để làm thay đổi hành vi ngoài AC; nó chỉ mở
+rộng `**Files:**` cho file thuộc một trong hai loại: file phải đổi để đạt AC đã duyệt (vd adapter nuốt lỗi làm AC "ném lại
+lỗi" vô hiệu), hoặc caller/test mà thay đổi của task làm hỏng biên dịch hay làm đỏ test vốn không đổi hành vi (loại mục 6
+"Files đủ" của `self-review.md` lẽ ra đã liệt kê). Ngoài hai loại đó đi thẻ G3.
 
 `Ruling:` không được thêm hành vi không có trong AC. `review clean` = không còn blocker/major mở **trong phạm vi**: finding blocker/major ngoài AC đã hoãn bằng `Ruling:` không chặn `Task <n>: complete`, và mọi `Ruling:` đó được liệt kê ở G3.
 
@@ -119,22 +127,49 @@ thấy; nhãn `minor (deferred)` chỉ dành cho finding `minor`/`nit`. Phán xo
 3. tác động ngoài repo (merge, push, publish, gọi dịch vụ ngoài); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` mà người dùng đã đồng ý ở bước 3 của "Chế độ part" (câu trả lời, hoặc khoá `partRunner: subagent`) là merge local, không dừng;
 4. finding chạm schema DB;
 5. plan hỏng đến mức mọi hướng đều là đoán;
-6. phải đổi nghĩa hoặc câu chữ một AC người dùng đã duyệt, kể cả khi reviewer trả câu hỏi trong `questions[]`.
+6. phải đổi nghĩa hoặc câu chữ một AC người dùng đã duyệt, kể cả khi reviewer trả câu hỏi trong `questions[]`; hoặc kết
+   quả chạy thật (test, số đo) bác một giả định mà hướng đã duyệt ở G1 dựa vào. Hỏi ngay ở task đó (giữ hướng kèm rủi ro /
+   đổi hướng / dừng), không để tới G3 và không chạy tiếp task sau trên giả định đã bị bác.
 
 Các trường hợp còn lại (mơ hồ nhỏ, xung đột giữa hai task, finding không load-bearing) session chính tự quyết, ghi
 `Ruling:` và chạy tiếp. Mọi dòng `Ruling:` phải đi vào `rulings` của `workflow_result` lúc kết thúc.
 
+Số đo hay thử nghiệm mà một `Ruling:` hoặc quyết định dựa vào phải tái lập được từ nhánh: một test hoặc script nằm trong
+repo, và dòng `Ruling:` ghi lệnh chạy lại. Ledger nằm trong `.aip/` (git bỏ qua) nên chỉ trỏ tới lệnh đó; số đo chỉ có
+trong ledger hay trong báo cáo agent không phải bằng chứng cho người duyệt G3.
+
 **Báo cáo.** Ngoài 6 loại dừng trên, chỉ có ba cổng cố định G1 (design), G2 (plan), G3 (diff cả nhánh; thiếu khoá
 `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3), câu hỏi push riêng một lần sau merge local (chỉ khi
 `mergeLocal: true`, `finish.md`) và, khi `partRunner` là `session` hoặc thiếu khoá, câu hỏi cách chạy part ở bước 3 của
-"Chế độ part". Giữa G2 và G3 session chính không gửi dòng trạng thái giữa chừng, kể cả khi phiên con hoặc subagent xong
-một lượt không cần người dùng quyết (nhận note thì đọc ledger, chạy tiếp); chỉ nói ở cổng, câu hỏi push, câu hỏi cách
-chạy part, loại dừng, lỗi chặn hoặc thẻ vướng của mục "Part vướng".
+"Chế độ part". Giữa G2 và G3 session chính không hỏi người dùng ngoài các điểm trên; nó báo tiến độ theo mục "Báo tiến
+độ" (không chờ trả lời). Note "đang chờ" của phiên con hay subagent không sinh dòng nào (nhận note thì đọc ledger, chạy
+tiếp); câu hỏi chỉ ở cổng, câu hỏi push, câu hỏi cách chạy part, loại dừng, lỗi chặn hoặc thẻ vướng của mục "Part vướng".
 
 **Lỗi chặn** là: việc đã hết số lần thử theo "Khi fail" của bước hoặc vòng sửa mà vẫn cần người dùng (vd "tối đa 2 lần rồi
 hỏi người dùng"); agent trả `blocked` mà session chính không tự trả lời được từ spec/plan/design; subagent part trả
 `blocked`/`failed` hoặc kết thúc mà ledger part không có `Part: complete` và mục "Part vướng" xếp vào hàng "người dùng" hoặc đã hết giới hạn của hàng "session gốc, không hỏi" (vd đã khởi động lại một lần; "Chế độ part" bước 7); mọi lỗi chặn của mục "Merge local theo khoá"
 trong `finish.md` khi merge local nhánh feature vào nhánh gốc (theo khoá `mergeLocal` hoặc lựa chọn 1 tay); conflict ngoài write set của part (mục "Part vướng"). Lỗi chặn được báo ngay, kèm `questions[]` khi có.
+
+## Báo tiến độ
+
+Người dùng theo dõi qua danh sách task của công cụ và một dòng tiến độ, không phải đọc ledger.
+
+- **Trước Task 1** (ngay sau G2): đăng lên danh sách task của công cụ (Claude Code: `update_plan` của app hoặc `TodoWrite`;
+  công cụ khác: danh sách tương đương, không có thì bỏ) mọi task của plan theo đúng thứ tự, kèm `**Ước lượng:**` của task,
+  rồi hai mục cuối "review cuối toàn nhánh" và "G3 duyệt diff". Task 1 ở trạng thái đang làm.
+- **Sau mỗi dòng `Task <n>: complete`** trong ledger: chuyển task đó sang xong, task kế sang đang làm, và gửi đúng một dòng tiến độ:
+  `Tiến độ: Task <n>/<N> xong — <tiêu đề> · đã chạy <phút>' (task này <phút>') · còn lại <k> task ≈<phút>' · minor hoãn <m> · Ruling <r>`.
+  `đã chạy` tính từ thời điểm dòng `Task 1: start` (trường `ts` của dòng đó trong `events.jsonl` cạnh ledger); `còn lại` cộng
+  `**Ước lượng:**` của các task chưa xong (task thiếu dòng này thì bỏ phần `≈`, chỉ đếm số task); `minor hoãn` và `Ruling`
+  là số dòng `minor (deferred)` và `Ruling:` trong ledger. Request chia part: `<N>` và `đã chạy` tính cho cả request (tổng
+  task mọi part, từ `Task 1: start` sớm nhất trong các ledger). Task vượt ước lượng hơn 50% thì thêm
+  `vượt ước lượng: <lý do một vế>` vào dòng.
+- Cùng một dòng như vậy khi merge xong một part (`Part <nn>: merged`; lúc mới nhận `Part: complete` thì vẫn không báo,
+  như bước 7 của "Chế độ part"), khi bắt đầu review cuối và khi chuyển sang G3.
+- Dòng tiến độ không phải câu hỏi, không chờ trả lời và không thay cổng nào; lượt vẫn chạy tiếp ngay sau đó. Không gửi dòng
+  cho các bước giữa task (giao agent, chờ reviewer, vòng sửa); vòng sửa và blocked chỉ hiện qua thời gian `task này` và
+  số `Ruling`.
+- Người dùng hỏi tiến độ giữa chừng: trả bằng cùng định dạng (task đang làm, đã chạy, còn lại), không kể lại từng bước.
 
 ## Part vướng
 

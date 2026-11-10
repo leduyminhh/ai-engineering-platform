@@ -36,7 +36,7 @@ câu trả lời rồi gõ lại.
 | Lượt hỏi đầu của `brainstorming` | không có file | không | tối đa 4 câu, mỗi câu có đáp án khuyến nghị; thêm lựa chọn "Bỏ qua phần hỏi, bạn tự quyết" ở câu đầu |
 | Thẻ duyệt brief | `brief.md`, file code/tài liệu brief nêu | `brief.md` (pane file) | Duyệt brief và route đề xuất / Chọn route khác (nêu các ứng viên) / Sửa brief / Dừng; yêu cầu đầu nói rõ làm luôn khi chốt xong (xem bước 10 của `brainstorming`) và route là workflow/skill: đúng 4 lựa chọn Duyệt và chạy `<route>` ngay / Duyệt brief, chưa chạy / Sửa brief hoặc đổi route / Dừng; route Risk `high`/`critical`: lựa chọn duyệt ghi rõ "chấp nhận rủi ro cao" |
 | G1 duyệt design | `design.md`, `requirement.md` và `brief.md` nếu có, ADR/spec sống trong `## Ảnh hưởng spec`, file code design nêu sẽ chạm | `design.md` (pane file) | Duyệt / Sửa design / Dừng |
-| G2 duyệt plan | `plan.md`, `design.md`, mọi file trong `**Files:**` của các task (gom theo task) | `plan.md` (pane file) + kết quả `check-request` | Duyệt (chạy liền tới G3) / Sửa plan / Dừng |
+| G2 duyệt plan | `plan.md`, `design.md`, mọi file trong `**Files:**` của các task (gom theo task) | `plan.md` (pane file) + kết quả `check-request` + bảng task kèm `**Ước lượng:**` và tổng ước lượng tới G3 trong tin nhắn | Duyệt (chạy liền tới G3) / Sửa plan / Dừng |
 | G3 duyệt diff | file đổi trong `git diff --stat <nhánh gốc>...HEAD` (nhóm theo thư mục) kèm docs/ledger | diff cả nhánh (pane diff) | `mergeLocal: true`: Duyệt (merge local và commit docs) / Sửa thêm / Giữ nguyên; thiếu khoá: merge local / push + PR / giữ nguyên |
 | Push/PR sau merge local | không | không | Push + mở PR / Không push |
 | Cách chạy part | Bảng part | không | Phiên riêng cho từng part / Tuần tự trong session gốc |

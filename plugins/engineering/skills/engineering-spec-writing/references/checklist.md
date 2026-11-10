@@ -26,6 +26,8 @@ không đánh dấu xong khi chưa đủ.
       thành câu hỏi mở.
 - [ ] **Feature-level:** không lẫn bước triển khai/code vào requirement.
 - [ ] **Giả định đánh dấu:** mọi **[giả định]** hiện diện rõ và nằm trong mục câu hỏi mở, không âm thầm điền.
+- [ ] **Spike giả định chịu tải:** giả định [Unverified] mà hướng đã chọn dựa vào đã có kết quả spike kèm lệnh chạy lại
+      trong `design.md`, hoặc được nêu ở checkpoint như rủi ro chặn hướng.
 
 ## Quyết định & liên kết
 
