@@ -203,3 +203,19 @@ bar. workflows/R20: review package báo nới quality bar.)
 - Prompt viết mù có thể lệch cách người dùng thật gõ; người dùng bổ sung câu thật dần (brief).
 - Thêm khoảng 6–8 dòng mỗi `SKILL.md` ở P4 và 1 câu ở P2 làm tăng context mỗi lần nạp skill.
 - Case im lặng chỉ chạy khi gọi tay `scripts/eval-run.mjs` (tốn tiền model), `npm test` chỉ kiểm cấu trúc.
+
+## Kết quả thực thi
+
+Số đo routing lần đầu (chạy lại: `node scripts/routing-score.mjs`): positive 142/202 = 70%, negative 141/150 = 94%, 69 miss;
+`test/routing/rank1.lock.json` khoá 70/94. Cấu hình chọn: unigram + bigram sau bỏ dấu, bỏ token 1 ký tự, idf =
+log((N+1)/(df+1)) + 1, cosine (bỏ bigram: positive 68%).
+
+Quyết định ghi trong ledger trong lúc chạy:
+- Bốn part chạy bằng subagent (`partRunner: subagent`), không review từng task; review cuối toàn nhánh bắt lỗi.
+- Part 02–04 bắt đầu khi plan gốc Task 1 còn chạy (tập file rời, không dùng dữ liệu routing).
+- Phép kiểm "lộ description" của dữ liệu: chỉ tính cụm trích dẫn ≥ 3 âm tiết của `description` mà đoạn quy trình người viết
+  thấy không có; 18 câu như vậy đã viết lại bằng subagent mù. Cụm ngắn như "unit test", "rollback" là thuật ngữ nghề, giữ.
+- Pin 45 cắt bước 0 tới `### I?1\.` vì bước kế của `frontend-data-integration` là `### I1.`.
+- Không sửa dữ liệu routing sau review cuối: file khoá không còn biên, đổi một câu hit thành miss làm contract 56 đỏ; ba câu
+  review cuối nêu (`engineering-tdd` "Fix bug này…", `frontend-migrate-architecture` "tách Micro-Frontend", `plan-execution`
+  "chạy plan.md") trình người dùng ở G3.

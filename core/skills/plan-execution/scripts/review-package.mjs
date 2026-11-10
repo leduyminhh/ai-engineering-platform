@@ -66,7 +66,7 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Hàng bảng của mục "## <heading>" → mảng ô (bỏ backtick và khoảng trắng); bỏ dòng tiêu đề cột và dòng ngăn.
 function tableRows(text, heading) {
-  const body = text.replace(/\r\n/g, '\n').split(new RegExp('^## ' + heading + '\s*$', 'm'))[1]?.split(/^## /m)[0] ?? '';
+  const body = text.replace(/\r\n/g, '\n').split(new RegExp('^## ' + heading + '\\s*$', 'm'))[1]?.split(/^## /m)[0] ?? '';
   return body.split('\n').filter((l) => l.trim().startsWith('|')).slice(2)
     .map((l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.replace(/`/g, '').trim()));
 }
@@ -90,6 +90,7 @@ export function qualityBarLoosening(oldText, newText) {
   const oldExc = new Map(tableRows(oldText, 'Ngoại lệ').map((r) => [r[0], r[3] ?? '']));
   for (const [name, , , due = ''] of tableRows(newText, 'Ngoại lệ')) {
     if (!oldExc.has(name)) say('thêm ngoại lệ ' + name);
+    else if (ISO_DATE.test(oldExc.get(name)) && !ISO_DATE.test(due)) say('đổi hạn, cần xét ' + name + ': ' + oldExc.get(name) + ' → ' + due);
     else if (ISO_DATE.test(due) && ISO_DATE.test(oldExc.get(name)) && due > oldExc.get(name)) say('gia hạn ngoại lệ ' + name + ': ' + oldExc.get(name) + ' → ' + due);
   }
   return out;

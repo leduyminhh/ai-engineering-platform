@@ -5,4 +5,4 @@ allowed_tools: [Read, Glob, Grep, Skill]
 tags: [routing, quiet, backend]
 ---
 
-Chạy quét lỗ hổng bảo mật cho dự án backend này và cho tôi báo cáo theo mức độ nghiêm trọng.
+Tôi muốn quét SonarQube và lỗ hổng dependency (SCA) cho repo backend này, rồi báo kết quả theo mức nghiêm trọng.

@@ -17,6 +17,7 @@ export default async function run({ ok, ctx }) {
     ...exc.map(([n, h]) => '| ' + n + ' | tạm | qa | ' + h + ' |'), '',
   ].join('\n');
   const base = bar([['`npm test`', 'exit 0'], ['cov', 'coverage >= 80'], ['lint', 'warnings <= 5']], [['legacy', '2026-12-01']]);
+  const trail = (t) => t.replace('## Lệnh kiểm', '## Lệnh kiểm ').replace('## Ngoại lệ', '## Ngoại lệ ');
   const L = (s) => '- ' + QB + ': ' + s;
 
   // AC3.2: mỗi loại nới một ca, mỗi loại không nới một ca rỗng.
@@ -33,9 +34,15 @@ export default async function run({ ok, ctx }) {
     ['bỏ ngoại lệ', base.replace('| legacy | tạm | qa | 2026-12-01 |\n', ''), []],
     ['rút hạn', base.replace('2026-12-01', '2026-11-20'), []],
     ['không đổi', base, []],
+    // Heading có khoảng trắng cuối dòng vẫn phải được nhận ra ở cả hai bản.
+    ['heading có khoảng trắng cuối: hạ ngưỡng >=', trail(base.replace('>= 80', '>= 70')), [L('ngưỡng nới cov: coverage >= 80 → coverage >= 70')], trail(base)],
+    ['heading có khoảng trắng cuối: bỏ lệnh kiểm', trail(bar([['cov', 'coverage >= 80'], ['lint', 'warnings <= 5']], [['legacy', '2026-12-01']])), [L('bỏ lệnh kiểm npm test')], trail(base)],
+    ['heading chỉ bản mới có khoảng trắng, nội dung y hệt', trail(base), []],
+    ['Hạn bị xoá', base.replace('2026-12-01', ''), [L('đổi hạn, cần xét legacy: 2026-12-01 → ')]],
+    ['Hạn thành không hạn', base.replace('2026-12-01', 'không hạn'), [L('đổi hạn, cần xét legacy: 2026-12-01 → không hạn')]],
   ];
-  for (const [name, next, want] of cases) {
-    const got = rp.qualityBarLoosening(base, next);
+  for (const [name, next, want, prev = base] of cases) {
+    const got = rp.qualityBarLoosening(prev, next);
     ok(JSON.stringify(got) === JSON.stringify(want), 'AC3.2: ' + name + ' → ' + JSON.stringify(want) + ' (nhận ' + JSON.stringify(got) + ')');
   }
   ok(rp.qualityBarLoosening(

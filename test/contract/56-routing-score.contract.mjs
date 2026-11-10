@@ -57,19 +57,19 @@ export default async function run({ ok, ctx }) {
   const realDocs = S.loadRoutingDocs();
   const realData = S.loadRoutingData();
   const names = realDocs.map((d) => d.id);
-  ok(new Set(names).size === names.length, 'AC1.1 id trần của tập chấm không trùng nhau');
+  ok(new Set(names).size === names.length, 'AC1.2 id trần của tập chấm không trùng nhau');
   for (const id of names) {
     const d = realData[id];
-    ok(!!d && d.positive?.length >= 3 && d.negative?.length >= 2, `AC1.1 test/routing/${id}.json có ≥ 3 positive và ≥ 2 negative`);
+    ok(!!d && d.positive?.length >= 3 && d.negative?.length >= 2, `AC1.2 test/routing/${id}.json có ≥ 3 positive và ≥ 2 negative`);
   }
-  for (const id of Object.keys(realData)) ok(names.includes(id), `AC1.1 test/routing/${id}.json thuộc tập id published`);
+  for (const id of Object.keys(realData)) ok(names.includes(id), `AC1.2 test/routing/${id}.json thuộc tập id published`);
   const lockPath = path.join(REPO_ROOT, 'test', 'routing', 'rank1.lock.json');
-  ok(fs.existsSync(lockPath), 'AC1.2 có test/routing/rank1.lock.json');
+  ok(fs.existsSync(lockPath), 'AC1.1 có test/routing/rank1.lock.json');
   if (fs.existsSync(lockPath)) {
     const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
     const real = S.measure({ docs: realDocs, data: realData });
     for (const k of ['positive', 'negative']) {
-      ok(real[k].pct >= lock[k].threshold, `AC1.2 ${k} rank-1 ${real[k].pct}% >= ngưỡng khoá ${lock[k].threshold}%`);
+      ok(real[k].pct >= lock[k].threshold, `AC1.1 ${k} rank-1 ${real[k].pct}% >= ngưỡng khoá ${lock[k].threshold}%`);
     }
   }
 

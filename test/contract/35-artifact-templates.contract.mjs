@@ -89,8 +89,8 @@ export default async function run({ ok, ctx }) {
 
   {
     const tpl = tplOf('quality-bar');
-    ok(/^## Lệnh kiểms*$/m.test(tpl) && tpl.includes('| Lệnh | Ngưỡng | Owner |'), 'AC3.1: quality-bar.template.md có mục ## Lệnh kiểm và bảng | Lệnh | Ngưỡng | Owner |');
-    ok(/^## Ngoại lệs*$/m.test(tpl) && tpl.includes('| Ngoại lệ | Lý do | Owner | Hạn |'), 'AC3.1: quality-bar.template.md có mục ## Ngoại lệ và bảng | Ngoại lệ | Lý do | Owner | Hạn |');
+    ok(/^## Lệnh kiểm\s*$/m.test(tpl) && tpl.includes('| Lệnh | Ngưỡng | Owner |'), 'AC3.1: quality-bar.template.md có mục ## Lệnh kiểm và bảng | Lệnh | Ngưỡng | Owner |');
+    ok(/^## Ngoại lệ\s*$/m.test(tpl) && tpl.includes('| Ngoại lệ | Lý do | Owner | Hạn |'), 'AC3.1: quality-bar.template.md có mục ## Ngoại lệ và bảng | Ngoại lệ | Lý do | Owner | Hạn |');
   }
 
   // 3. Workflow template qua validator workflow hiện có.

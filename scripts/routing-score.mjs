@@ -12,7 +12,7 @@ import { offeredCatalog } from '../cli/lib/install.mjs';
 const ROUTING_DIR = path.join(REPO_ROOT, 'test', 'routing');
 const LOCK_FILE = path.join(ROUTING_DIR, 'rank1.lock.json');
 
-export const normalize = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd')
+export const normalize = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd')
   .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 export function tokens(text) {
