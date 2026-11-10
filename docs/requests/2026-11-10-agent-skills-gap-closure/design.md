@@ -148,9 +148,9 @@ của `task-loop.md`), nên chỉ session gốc giao được việc viết mù.
 | Part | Phụ thuộc | Song song | Trạng thái |
 |---|---|---|---|
 | 01-routing-score | — | A | chưa làm |
-| 02-source-check | — | A | chưa làm |
-| 03-quality-bar | — | A | chưa làm |
-| 04-rationalization-tables | — | A | chưa làm |
+| 02-source-check | — | A | đang làm |
+| 03-quality-bar | — | A | đang làm |
+| 04-rationalization-tables | — | A | đang làm |
 
 Tập file của bốn part rời nhau (P1: `scripts/routing-score.mjs`, `test/routing/rank1.lock.json`, contract 56, 3 thư mục case
 mới; dữ liệu `test/routing/<id>.json` do plan gốc tạo; P2: `core/principles/`, 3
