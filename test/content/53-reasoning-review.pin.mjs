@@ -34,4 +34,29 @@ export default async function run({ ok, ctx }) {
   ok(/[Gg]iả định ngầm[^.]*(không khai|chưa khai)[^.]*finding/.test(tr), 'AC1.4: giả định ngầm thấy trong diff mà báo cáo không khai thành finding');
   ok(/giả định mới/.test(rr) && /assumption_review\[\]/.test(rr) && /`wrong`[^.]*`blocker`\/`major`[^.]*vòng sửa/.test(rr),
     'AC1.4: re-review chỉ xét giả định mới, wrong mức blocker/major giữ task trong vòng sửa');
+
+  const loop = flat(read(...PE, 'references', 'task-loop.md'));
+  const fr = flat(read(...PE, 'references', 'prompts', 'final-review.md'));
+  const skill = flat(read(...PE, 'SKILL.md'));
+  const fin = flat(read(...PE, 'references', 'finish.md'));
+  const inl = flat(read(...PE, 'references', 'inline.md'));
+  const RULINGS = /ledger\.mjs <plan\.md(?: gốc)?> --rulings/;
+
+  // AC1.5: loại dừng 6 có vế giả định wrong; cú pháp chạy lại; xử lý assumption_review[]
+  ok(/6\. phải đổi nghĩa[^]*?giả định `wrong`[^.]*G1/.test(loop), 'AC1.5: loại dừng 6 gồm giả định wrong mà hướng G1 dựa vào');
+  ok(/— chạy lại: `<lệnh>`/.test(loop), 'AC1.5: task-loop nêu cú pháp — chạy lại: `<lệnh>`');
+  ok(/`assumption_review\[\]`[^.]*`wrong`[^.]*finding[^.]*`unverifiable`[^.]*`cannot_verify`/.test(loop),
+    'AC1.5: task-loop xử lý wrong như finding, unverifiable như cannot_verify');
+
+  // AC3.1: final-review dùng --rulings, chạy lại lệnh chỉ đọc, nhãn cần người dùng quyết
+  ok(RULINGS.test(fr), 'AC3.1: final-review nhận output ledger.mjs --rulings');
+  ok(/chạy lại:[^.]*chỉ đọc[^.]*`rerun`/.test(fr) && /declined_to_judge/.test(fr), 'AC3.1: reviewer chạy lệnh chỉ đọc, ghi rerun; lệnh ghi/ngoài repo vào declined_to_judge');
+  ok(/`matches: false`[^.]*`số đo không có lệnh chạy lại`[^.]*lý do sai với code[^.]*cần người dùng quyết/.test(fr),
+    'AC3.1: matches false, cờ số đo, lý do sai với code → nhãn cần người dùng quyết');
+
+  // AC3.2, AC3.3: G3 tách Ruling cần người dùng quyết; gom Ruling bằng --rulings
+  ok(/cần người dùng quyết[^.]*(riêng|tách)/.test(fin) && RULINGS.test(fin), 'AC3.2: finish.md gom bằng --rulings và nêu riêng Ruling cần người dùng quyết ở G3');
+  ok(RULINGS.test(skill), 'AC3.3: SKILL.md bước 3 trỏ --rulings');
+  ok(/11\. [^]*?--rulings/.test(loop.split('## Review cuối và các điểm cố định')[0]), 'AC3.3: Chế độ part bước 11 gom Ruling bằng --rulings');
+  ok(RULINGS.test(inl.split('## Review cuối')[1] ?? ''), 'AC3.3: review cuối inline đọc --rulings');
 }
