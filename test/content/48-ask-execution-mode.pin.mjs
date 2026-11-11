@@ -118,7 +118,7 @@ export default async function run({ ok, ctx }) {
     ok(/không có tool subagent/.test(skill) && /nói rõ/.test(skill) && /người dùng nói rõ/.test(inline), 'AC1.3: SKILL.md và inline.md nêu hai trường hợp không hỏi (không có tool subagent, người dùng nói rõ)');
     ok(/grep[^.]*ledger `root\/`[^.]*`\^Ruling: cách chạy`/.test(skill) && /Ruling: cách chạy <[^>]*> — </.test(skill) && /Ruling: cách chạy/.test(inline) && !/Ruling: thực thi inline/.test(inline),
       'AC1.4: SKILL.md grep cả ledger root/ tìm Ruling: cách chạy và nêu mẫu dòng; inline.md dùng cùng mẫu');
-    ok(/Task 1: start/.test(skill.slice(skill.indexOf('Cách thực thi'))) && /người dùng chọn inline/.test(inline), 'AC1.4: thẻ đặt trước Task 1: start; inline.md nêu điều kiện người dùng chọn inline');
+    ok(/Task 1: start/.test(skill.slice(skill.indexOf('Cách thực thi'))) && /người dùng chọn inline/i.test(inline), 'AC1.4: thẻ đặt trước Task 1: start; inline.md nêu điều kiện người dùng chọn inline');
     ok(/phiên part và subagent part không hỏi/i.test(skill) && /không hỏi cách chạy/i.test(inline), 'AC1.5: phiên part và subagent part không hỏi cách chạy');
     ok(/autonomy\.mjs --set planRunner=/.test(skill) && /không dùng Write\/Edit/i.test(skill), 'AC3.6: SKILL.md lưu gợi ý bằng autonomy.mjs --set, không dùng Write/Edit lên aip-gate.json');
   }
@@ -134,7 +134,7 @@ export default async function run({ ok, ctx }) {
     ok(!/`subagent`: không hỏi/.test(loop) && !/`sequential`: không hỏi/.test(loop) && !/Khoá `subagent` cũng là sự đồng ý/.test(loop) && !/khi `partRunner` là `session` hoặc thiếu khoá/.test(loop),
       'AC2.1: task-loop.md không còn nhánh khoá bỏ câu hỏi');
     ok(/check-partition\.mjs[^.]*P1\/P2\/P4[^.]*không hỏi, chạy tuần tự/.test(loop), 'AC2.2: nhóm bị P1/P2/P4 không hỏi, chạy tuần tự');
-    ok(/Câu trả lời `subagent` hoặc `session` cũng là sự đồng ý tạo worktree và `merge --no-ff`/.test(loop) && /`sequential`: không tạo worktree/.test(loop),
+    ok(/Câu trả lời `subagent` hoặc `session` cũng là sự đồng ý để tạo worktree và `merge --no-ff`/.test(loop) && /`sequential`: không tạo worktree/.test(loop),
       'AC2.3: câu trả lời subagent/session là đồng ý tạo worktree và merge local; sequential không tạo worktree');
     ok(/không có nhóm Song song[^.]*thẻ Cách thực thi/.test(loop), 'AC2.4: plan có part mà không nhóm Song song vẫn qua thẻ Cách thực thi');
     ok(/phiên part và subagent part không hỏi cách chạy/i.test(loop), 'AC1.5: task-loop.md nêu phiên part và subagent part không hỏi cách chạy');
