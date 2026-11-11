@@ -18,4 +18,11 @@ export default async function run({ ok, ctx }) {
   ok(/chọn số cao hơn/.test(all), 'AC6.1: số đã bị giữ thì chọn số cao hơn');
   ok(/phiên gốc/.test(all) && /trước (khi chạy )?nhóm song song/.test(all), 'AC6.1: phiên gốc ghi dải trước nhóm song song');
   ok(/chỉ chọn số trong dải/.test(all), 'AC6.1: part chỉ chọn số trong dải của mình');
+  ok(/nhánh số thấp merge trước/.test(all), "AC6.2: nhánh số thấp merge trước");
+  ok(/trùng số/.test(all) && /đổi số của nhánh chưa phát hành/.test(all) && /`Ruling:`/.test(all), "AC6.2: trùng số thì đổi số nhánh chưa phát hành và ghi Ruling");
+  ok(/không đổi số hay nội dung migration đã áp lên DB dùng chung/i.test(all) && /checksum/.test(all), "AC6.2: không đổi số/nội dung migration đã áp lên DB dùng chung (checksum)");
+  const st = lines.findIndex((l) => l.trim() === "## Dấu hiệu đang tự biện minh");
+  let en = lines.findIndex((l, i) => i > st && /^## /.test(l)); if (en < 0) en = lines.length;
+  const rows = st < 0 ? 0 : lines.slice(st, en).filter((l) => l.startsWith("| \"")).length;
+  ok(rows === 6, `AC6.2: bảng tự biện minh tăng đúng một dòng (5 → 6, có ${rows})`);
 }
