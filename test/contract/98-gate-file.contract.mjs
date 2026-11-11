@@ -148,6 +148,47 @@ export default async function run({ ok, ctx }) {
     ok(gf.lintGate({ autonomy: [] }).badType.includes('autonomy') && gf.lintGate({ fullKeep: null }).badType.includes('fullKeep'), 'AC2.4: mảng không phải object, null không phải array');
   }
 
+  // ── AC1.2: không còn hàm đọc aip-gate.json riêng ngoài hai bản gate-file.mjs
+  {
+    const { REPO_ROOT } = ctx;
+    const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : e.name.endsWith('.mjs') ? [path.join(d, e.name)] : []));
+    const sources = [...walk(path.join(REPO_ROOT, 'core')), ...walk(path.join(REPO_ROOT, 'cli'))].filter((f) => path.basename(f) !== 'gate-file.mjs');
+    const OLD = ['readState', 'readAt', 'readGateAt', 'gateOf', 'trackedByGit', 'locateGate'];
+    const defs = [];
+    for (const f of sources) {
+      const text = fs.readFileSync(f, 'utf8');
+      for (const name of OLD) if (new RegExp(`(?:function\\s+${name}\\s*\\(|const\\s+${name}\\s*=)`).test(text)) defs.push(`${path.relative(REPO_ROOT, f)}: ${name}`);
+    }
+    ok(defs.length === 0, `AC1.2: còn hàm đọc riêng ngoài gate-file.mjs: ${defs.join('; ')}`);
+    const initSrc = fs.readFileSync(path.join(REPO_ROOT, 'cli', 'lib', 'init.mjs'), 'utf8');
+    const body = /export function readAllowEnvFiles[\s\S]*?\n}\n/.exec(initSrc)?.[0] ?? '';
+    ok(body && !body.includes('readFileSync'), 'AC1.2: readAllowEnvFiles của init.mjs không tự đọc file');
+  }
+
+  // ── AC5.2, AC5.3: chỉ import node:; script plan-execution chạy được từ bản sao khi vắng core/hooks và cli
+  {
+    const text = fs.readFileSync(src, 'utf8');
+    const specs = [...text.matchAll(/^\s*import\s[^'"]*['"]([^'"]+)['"]/gm)].map((m) => m[1]);
+    ok(specs.length > 0 && specs.every((s) => s.startsWith('node:')), `AC5.2: gate-file.mjs chỉ import node: (${specs.join(', ')})`);
+    const t2 = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-gf-s-')));
+    try {
+      const scripts = path.join(t2, 'plugin', 'skills', 'plan-execution', 'scripts');
+      fs.cpSync(path.join(CORE_DIR, 'skills', 'plan-execution', 'scripts'), scripts, { recursive: true });
+      const proj = path.join(t2, 'proj');
+      makeRepo(proj);
+      const runScript = () => execFileSync(process.execPath, [path.join(scripts, 'autonomy.mjs')], { cwd: proj, encoding: 'utf8' }).trim();
+      const SAFE = '{"mergeLocal":false,"cleanup":false,"partRunner":"session","planRunner":"subagent"}';
+      let out = null;
+      try { out = runScript(); } catch (e) { out = `lỗi: ${e.message}`; }
+      ok(out === SAFE, `AC5.2: autonomy.mjs chạy từ bản chép không có core/hooks, cli → JSON bốn khoá (được ${out})`);
+      writeRaw(proj, JSON.stringify({ autonomy: { mergeLocal: true } }));
+      git(proj, 'add', '.claude/aip-gate.json');
+      git(proj, 'commit', '-q', '-m', 'gate');
+      try { out = runScript(); } catch (e) { out = `lỗi: ${e.message}`; }
+      ok(out === SAFE, `AC5.3: bản chép vẫn bỏ qua khoá autonomy của file đã bị theo dõi (được ${out})`);
+    } finally { fs.rmSync(t2, { recursive: true, force: true }); }
+  }
+
   // ── AC5.1: bản sao giống hệt byte
   {
     const read = (f) => (fs.existsSync(f) ? fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n') : null);

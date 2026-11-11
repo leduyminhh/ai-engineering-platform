@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { init } from "../cli/lib/init.mjs";
+import { init, readAllowEnvFiles } from "../cli/lib/init.mjs";
 import { initDocFiles } from "../cli/lib/templates.mjs";
 import { BEGIN, END, importsAgentsMd, extractBaselineBlock } from "../cli/lib/managed-block.mjs";
 import { execFileSync } from "node:child_process";
@@ -301,7 +301,6 @@ const GATE_CASES = [
   ['chuỗi "true"', '{"allowEnvFiles": "true"}', false],
   ['false', '{"allowEnvFiles": false}', false],
   ['số 1', '{"allowEnvFiles": 1}', false],
-  ['JSON hỏng', '{allowEnvFiles: ', false],
   ['thiếu file', null, false],
 ];
 for (const [name, content, omit] of GATE_CASES) {
@@ -357,4 +356,42 @@ test("init rồi install claude core: baseline nằm ở AGENTS.md đúng 1 lầ
   install({ providers: "claude", plugins: "core", scope: "project" });
   assert.equal(read(root, "AGENTS.md").split(BEGIN).length - 1, 1);
   assert.ok(!read(root, "CLAUDE.md").includes(BEGIN));
+});
+
+// Request 2026-11-11-aip-gate-config-flow: init --full đọc aip-gate.json qua gate-file.mjs.
+const CLI_PATH = path.join(REPO, "cli", "index.mjs");
+const gitIn = (cwd, ...a) => execFileSync("git", ["-c", "commit.gpgsign=false", "-c", "user.name=t", "-c", "user.email=t@example.com", ...a], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+
+test("gate-config-flow AC4.1: init --full với aip-gate.json hỏng → stderr nêu đường dẫn, exit 1, không ghi file nào", () => {
+  for (const bad of ["{allowEnvFiles: ", "[]"]) {
+    const root = tmp();
+    const gate = path.join(root, ".claude", "aip-gate.json");
+    fs.mkdirSync(path.dirname(gate), { recursive: true });
+    fs.writeFileSync(gate, bad);
+    const r = spawnSync(process.execPath, [CLI_PATH, "init", "--full"], { cwd: root, encoding: "utf8" });
+    assert.equal(r.status, 1, `exit với ${bad}: ${r.stderr}`);
+    assert.ok(r.stderr.includes("aip-gate.json"), r.stderr);
+    assert.deepEqual(fs.readdirSync(root), [".claude"]);
+    assert.deepEqual(fs.readdirSync(path.join(root, ".claude")), ["aip-gate.json"]);
+  }
+});
+
+test("gate-config-flow AC4.4: allowEnvFiles trong aip-gate.json đã bị git theo dõi → init --full giữ quy tắc .env", () => {
+  const root = tmp();
+  gitIn(root, "init", "-q");
+  const gate = path.join(root, ".claude", "aip-gate.json");
+  fs.mkdirSync(path.dirname(gate), { recursive: true });
+  fs.writeFileSync(gate, '{"allowEnvFiles": true}');
+  gitIn(root, "add", ".claude/aip-gate.json");
+  gitIn(root, "commit", "-q", "-m", "gate");
+  init({ root, full: true });
+  const { permissions } = JSON.parse(read(root, ".claude/settings.json"));
+  assert.deepEqual(permissions.deny, loadPolicy().groups.secrets.rules);
+
+  const open = tmp();
+  gitIn(open, "init", "-q");
+  fs.mkdirSync(path.join(open, ".claude"), { recursive: true });
+  fs.writeFileSync(path.join(open, ".claude", "aip-gate.json"), '{"allowEnvFiles": true}');
+  assert.equal(readAllowEnvFiles(open), true, "file chưa theo dõi → bỏ quy tắc .env");
+  assert.equal(readAllowEnvFiles(open, { tracked: () => null }), false, "không xác định trạng thái git → giữ quy tắc .env");
 });
