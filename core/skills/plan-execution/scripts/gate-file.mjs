@@ -15,9 +15,10 @@ export const GATE_KEYS = Object.freeze({
   exemptAgents: { type: 'array', trust: 'untracked' },
   // Mẫu như "." biến mọi lệnh thành lệnh test, tức tắt Stop gate mà không cần stopGate: false.
   testCommands: { type: 'array', trust: 'untracked' },
-  fullKeep: { type: 'array', trust: 'any' },
-  fullRoots: { type: 'array', trust: 'any' },
-  fullReadRoots: { type: 'array', trust: 'any' },
+  // Chép file đã commit sang worktree rồi chạy aip mode full sẽ mở push và cho ghi ngoài project, nên ba khoá full* cũng là khoá nới quyền.
+  fullKeep: { type: 'array', trust: 'untracked' },
+  fullRoots: { type: 'array', trust: 'untracked' },
+  fullReadRoots: { type: 'array', trust: 'untracked' },
   mcpAllow: { type: 'array', trust: 'any' },
   mcpDeny: { type: 'array', trust: 'any' },
   bootstrapInject: { type: 'boolean', trust: 'any' },
@@ -51,8 +52,12 @@ export function locateGate(cwd, { git = defaultGit } = {}) {
   while (!existsSync(d) && path.dirname(d) !== d) d = path.dirname(d);
   let top;
   try { top = path.resolve(git(['rev-parse', '--show-toplevel'], d)); } catch {
-    const own = readGateAt(d);
-    return { inRepo: false, top: d, main: null, roots: [d], ...pick(own, d), mainInvalid: null };
+    // git lỗi nhưng có .git ở trên: vẫn là repo (không xác định được trạng thái theo dõi), không được coi là ngoài repo.
+    let up = d;
+    while (!existsSync(path.join(up, '.git')) && path.dirname(up) !== up) up = path.dirname(up);
+    const found = existsSync(path.join(up, '.git'));
+    const at = found ? up : d;
+    return { inRepo: found, gitUnknown: found, top: at, main: null, roots: [at], ...pick(readGateAt(at), at), mainInvalid: null };
   }
   let main = null;
   try {
@@ -61,7 +66,7 @@ export function locateGate(cwd, { git = defaultGit } = {}) {
     main = path.resolve(path.basename(common) === '.git' ? path.dirname(common) : top);
   } catch { /* chỉ còn gốc worktree */ }
   const roots = [...new Set([top, main].filter(Boolean))];
-  const base = { inRepo: true, top, main, roots, mainInvalid: null };
+  const base = { inRepo: true, gitUnknown: false, top, main, roots, mainInvalid: null };
   const own = readGateAt(top);
   // File worktree hỏng vẫn che file repo chính: rơi về repo chính sẽ dùng một cấu hình mà người dùng đã cố ghi đè.
   if (own || !main || main === top) return { ...base, ...pick(own, top) };

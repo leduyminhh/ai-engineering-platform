@@ -91,8 +91,8 @@ export function cliGate(root, { run } = {}) {
 export function gateLines({ ignored, why, lint }) {
   return [
     ...(ignored.length ? [`Khoá bị bỏ qua (${why}): ${ignored.join(', ')}`] : []),
-    ...(lint.unknown.length ? [`Khoá lạ: ${lint.unknown.join(', ')}`] : []),
-    ...(lint.badType.length ? [`Khoá sai kiểu: ${lint.badType.map((k) => `${k} (cần ${GATE_KEYS[k].type})`).join(', ')}`] : []),
+    ...(lint.unknown.length ? [`Khoá lạ: ${lint.unknown.map((k) => JSON.stringify(k)).join(', ')}`] : []),
+    ...(lint.badType.length ? [`Khoá sai kiểu: ${lint.badType.map((k) => `${JSON.stringify(k)} (cần ${GATE_KEYS[k].type})`).join(', ')}`] : []),
   ];
 }
 
@@ -154,8 +154,9 @@ function runModeUnsafe(sub, { root, out, err, run }) {
   const allowEnvFiles = !info.ignored.includes('allowEnvFiles') && info.config?.allowEnvFiles === true;
 
   if (sub === 'status') {
-    const s = statusOf({ ...info.config, allowEnvFiles }, settingsText);
-    out(`Chế độ: ${s.mode}${info.config?.mode === undefined ? ' (mặc định, aip-gate.json không có khóa mode)' : ''}`);
+    const modeIgnored = info.ignored.includes('mode');
+    const s = statusOf({ ...info.config, mode: modeIgnored ? undefined : info.config?.mode, allowEnvFiles }, settingsText);
+    out(`Chế độ: ${s.mode}${info.config?.mode === undefined ? ' (mặc định, aip-gate.json không có khóa mode)' : modeIgnored ? ' (khoá mode bị bỏ qua, xem dòng "Khoá bị bỏ qua")' : ''}`);
     out(`Nguồn: ${!found.file ? 'không có' : found.source === 'main' ? `${found.file} (repo chính; worktree này chưa có aip-gate.json)` : found.file}`);
     out(`settings.json: ${SETTINGS_LABEL[s.settings]}`);
     for (const r of s.leftoverRules) out(`  - ${r}`);
@@ -171,7 +172,7 @@ function runModeUnsafe(sub, { root, out, err, run }) {
     out(`✓ mode=full tại ${root}`);
     const gs = gitStateOf(gateFile, run && { run });
     if (gs === 'tracked') {
-      out('  ⚠ aip-gate.json đang được git theo dõi nên full bị bỏ qua (repo clone không tự cấp được full). Gỡ theo dõi: git rm --cached .claude/aip-gate.json');
+      out('  ⚠ aip-gate.json đang được git theo dõi nên full bị bỏ qua (repo clone không tự cấp được full). Gỡ theo dõi: mở file, xem lại từng khoá rồi mới git rm --cached .claude/aip-gate.json');
     } else if (gs === 'open') {
       out('  ⚠ aip-gate.json chưa được gitignore; nếu bị commit, full sẽ bị bỏ qua. Thêm dòng này vào .gitignore: .claude/aip-gate.json (aip không tự sửa .gitignore).');
     }

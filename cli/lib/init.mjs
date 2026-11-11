@@ -6,7 +6,7 @@ import { REPO_ROOT } from './plugins.mjs';
 import { BEGIN, END, importsAgentsMd, mergeManagedBlock, removeManagedBlock, extractBaselineBlock } from './managed-block.mjs';
 import { initDocFiles } from './templates.mjs';
 import { buildClaudePermissions, loadPolicy } from './permissions.mjs';
-import { locateGate, trustedValue, gateTracked, lsFiles } from '../../core/hooks/scripts/gate-file.mjs';
+import { locateGate, readGateAt, trustedValue, gateTracked, lsFiles } from '../../core/hooks/scripts/gate-file.mjs';
 
 const AGENTS_TEMPLATE = path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md');
 const MINIMAL_DIR = path.join(REPO_ROOT, 'templates', 'init-minimal');
@@ -26,6 +26,12 @@ function listFiles(dir, base = dir) {
 // File hỏng thì ném trước mọi lần ghi (im lặng coi là false sẽ sinh settings.json theo cấu hình chưa sửa); tracked mặc định bỏ cache vì trạng thái git đổi được trong một tiến trình.
 export function readAllowEnvFiles(root, { tracked = (f) => gateTracked(f, { run: (dir, spec) => lsFiles(dir, spec) }) } = {}) {
   const g = locateGate(root);
+  // Thư mục con của repo tự có file riêng (hoặc không có): không thừa kế file của gốc git, như trước khi gom về locateGate.
+  if (g.inRepo && !g.gitUnknown && path.resolve(root) !== g.top) {
+    const own = readGateAt(root);
+    if (own?.invalid) throw new Error(`${path.join(root, '.claude', 'aip-gate.json')} không phải đối tượng JSON hợp lệ — sửa tay rồi chạy lại aip init --full; chưa ghi file nào.`);
+    return own ? trustedValue({ inRepo: true, file: path.join(root, '.claude', 'aip-gate.json'), config: own.config }, 'allowEnvFiles', { tracked }) === true : false;
+  }
   const bad = g.source === 'worktree-invalid' ? g.file : g.mainInvalid;
   if (bad) throw new Error(`${bad} không phải đối tượng JSON hợp lệ — sửa tay rồi chạy lại aip init --full; chưa ghi file nào.`);
   return trustedValue(g, 'allowEnvFiles', { tracked }) === true;

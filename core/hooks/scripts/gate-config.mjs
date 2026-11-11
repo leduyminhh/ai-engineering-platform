@@ -8,7 +8,8 @@ export { gateTracked, lsFiles };
 // Hook chỉ nhận cấu hình trong repo git (R4): thư mục ngoài repo không có gốc nào để neo, kể cả khi thư mục cha có file.
 export function resolveGate(dir) {
   const g = locateGate(dir);
-  return g.inRepo ? g : null;
+  // gitUnknown: không xác định được repo, giữ hành vi như ngoài repo.
+  return g.inRepo && !g.gitUnknown ? g : null;
 }
 
 export function readGate(dir) {
