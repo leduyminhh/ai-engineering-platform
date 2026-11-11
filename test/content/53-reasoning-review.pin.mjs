@@ -43,7 +43,7 @@ export default async function run({ ok, ctx }) {
   const RULINGS = /ledger\.mjs <plan\.md(?: gốc)?> --rulings/;
 
   // AC1.5: loại dừng 6 có vế giả định wrong; cú pháp chạy lại; xử lý assumption_review[]
-  ok(/6\. phải đổi nghĩa[^]*?giả định `wrong`[^.]*G1/.test(loop), 'AC1.5: loại dừng 6 gồm giả định wrong mà hướng G1 dựa vào');
+  ok(/6\. phải đổi nghĩa[^]*?[Gg]iả định `wrong`[^.]*G1/.test(loop), 'AC1.5: loại dừng 6 gồm giả định wrong mà hướng G1 dựa vào');
   ok(/— chạy lại: `<lệnh>`/.test(loop), 'AC1.5: task-loop nêu cú pháp — chạy lại: `<lệnh>`');
   ok(/`assumption_review\[\]`[^.]*`wrong`[^.]*finding[^.]*`unverifiable`[^.]*`cannot_verify`/.test(loop),
     'AC1.5: task-loop xử lý wrong như finding, unverifiable như cannot_verify');

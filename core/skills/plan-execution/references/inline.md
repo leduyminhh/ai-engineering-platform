@@ -49,6 +49,7 @@ không ghi là quyết định bí mật. Chạy liên tục giữa các task; c
   `scripts/review-package.mjs <base> <head> --plan <plan.md>` thay vì dựa vào trí nhớ. Ghi `Ruling: review cuối là tự review — không có tool subagent —
   không có góc nhìn thứ hai` vào ledger và đưa mục này vào `remaining_risks` khi trình người dùng. Finding `blocker`/`major`
   trong phạm vi tự tìm ra thì sửa một lượt rồi tự đọc lại đúng phần diff vừa sửa; không có làn sửa thứ hai.
+- Cả hai trường hợp: các dòng `Ruling:` đưa vào review cuối lấy bằng `ledger.mjs <plan.md> --rulings` (cờ và lệnh chạy lại), như vòng task thường.
 
 Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một lần, G3 (rẽ theo khoá `mergeLocal`), `Plan: complete`.
 

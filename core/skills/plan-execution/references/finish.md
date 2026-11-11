@@ -24,8 +24,8 @@ nhánh về trạng thái người dùng có thể quyết định, không tự 
    theo từng test. Nếu thay đổi cần bước phát hành theo quy ước dự án (bump version, cập nhật lock), làm trước lần chạy
    này. Đỏ → dừng: sửa trong phạm vi plan rồi chạy lại, hoặc báo `blocked`. Không đưa menu khi suite còn đỏ.
 5. **Gom `Ruling:`.** Đọc ledger (request chia part: ledger `root/` và mọi ledger part), liệt kê mọi dòng `Ruling:` (cùng `minor (deferred)` còn mở) và đưa vào trường `rulings`
-   của `workflow_result` (định dạng theo contract đầu ra, `core:principles`). Trình các dòng này cho người dùng cùng
-   diff cả nhánh ở G3 (bước 7); dòng nào thuộc loại dừng hỏi của `task-loop.md` thì nêu riêng để người dùng quyết.
+   của `workflow_result` (định dạng theo contract đầu ra, `core:principles`); `Ruling:` lấy bằng `ledger.mjs <plan.md gốc> --rulings`. Trình các dòng này cho người dùng cùng
+   diff cả nhánh ở G3 (bước 7); dòng nào thuộc loại dừng hỏi của `task-loop.md` thì nêu riêng để người dùng quyết. Ruling mà review cuối gắn nhãn cần người dùng quyết (`ruling_review[]`: `matches: false`, cờ số đo không có lệnh chạy lại, lý do sai với code) cũng nêu riêng trong thẻ G3, kèm nhãn và lý do, không gộp vào danh sách Ruling thường.
    Liệt kê trong thẻ G3 mọi finding **ngoài AC, đổi hành vi hoặc API** (`task-loop.md`, mục "Nhận review"), mỗi mục kèm hệ quả.
    Người dùng chọn "làm" cho mục nào thì ghi mục đó thành follow-up (request hoặc task riêng, làm sau khi nhánh xong); không chạy tiếp trong nhánh và không thêm lane mới.
 6. **Chọn nhánh gốc đề xuất** (nhánh sẽ merge vào hoặc làm đích của PR), không hỏi riêng: một ứng viên thì nêu nó trong
