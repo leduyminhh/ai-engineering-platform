@@ -94,4 +94,17 @@ export default async function run({ ok, ctx }) {
   }
   const rules = routing.split('\n').filter((l) => /^\d+\. /.test(l));
   ok(rules.length === 18, `AC2.4: 18 quy tắc đánh số của model-routing.md không đổi (có ${rules.length})`);
+
+  // AC2.5
+  const gw = read('core/skills/git-workflow/SKILL.md');
+  ok(/xoá file đã tracked/.test(gw) && /một commit chỉ gồm các file bị xoá/.test(gw), 'AC2.5: git-workflow có luật xoá file đã tracked → commit chỉ-xoá');
+  ok(/liệt kê/.test(gw) && /lý do/.test(gw) && /commit riêng sau/.test(gw), 'AC2.5: body liệt kê file và lý do; sửa tham chiếu là commit riêng sau đó');
+  ok(/build có thể đỏ giữa hai commit/.test(gw) && /không gộp/.test(gw) && /không viết lại lịch sử/.test(gw), 'AC2.5: build đỏ giữa hai commit chấp nhận được, không gộp, không viết lại lịch sử');
+  ok(gw.split('\n').length <= 300, 'AC2.5: git-workflow SKILL.md ≤ 300 dòng');
+
+  // AC2.6
+  const gt = read('core/skills/git-worktree/SKILL.md');
+  ok(/isolation: worktree/.test(gt) && /origin\/<nhánh gốc>/.test(gt), 'AC2.6: git-worktree có đoạn worktree isolation: worktree dựng từ origin/<nhánh gốc>');
+  ok(/git merge-base --is-ancestor <hash đỉnh feature> HEAD/.test(gt) && /blocked/.test(gt), 'AC2.6: kiểm merge-base --is-ancestor, không đạt trả blocked');
+  ok(/cherry-pick/.test(gt) && /worktree-agent-\*/.test(gt) && /feature\/<slug>/.test(gt) && /reset --hard/.test(gt), 'AC2.6: session chính cherry-pick nhánh worktree-agent-* về feature/<slug>, không reset --hard');
 }

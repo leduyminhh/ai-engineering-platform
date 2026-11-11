@@ -34,6 +34,13 @@ Quy ước dưới đây tóm tắt `references/parallel-agents.md` của skill 
    implement trên baseline đỏ.
 5. **Làm việc.** Hook `core` đọc `.claude/aip-gate.json` từ gốc worktree rồi từ gốc repo chính, nên cấu hình gate vẫn áp dụng.
 
+## Quy trình — worktree do `isolation: worktree` tạo
+
+Công cụ giao agent với `isolation: worktree` tự tạo worktree và nhánh `worktree-agent-*`, dựng từ `origin/<nhánh gốc>` chứ không từ đỉnh `feature/<slug>` ở máy. Commit chưa push trên `feature/<slug>` có thể vắng mặt trong worktree đó.
+
+1. Việc đầu tiên của agent: `git merge-base --is-ancestor <hash đỉnh feature> HEAD`, hash do session chính ghi trong brief. Không đạt thì trả `blocked` kèm lý do, không làm tiếp trên nền sai.
+2. Xong việc, session chính `cherry-pick` các commit của nhánh `worktree-agent-*` về `feature/<slug>`; không `reset --hard` nhánh tích hợp theo nhánh agent, vì mất commit chưa push.
+
 ## Quy trình — merge về nhánh tích hợp
 
 1. Chạy ở cây tích hợp (session chính): `git merge --no-ff worktree-<slug>-p<nn>`; sau mỗi merge chạy test của các component
