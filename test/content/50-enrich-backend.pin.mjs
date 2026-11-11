@@ -30,4 +30,24 @@ export default async function run({ ok, ctx }) {
     ok(txt.split(String.fromCharCode(10)).length <= 300, `AC4.2: ${id} SKILL.md ≤ 300 dòng`);
     ok(fs.existsSync(path.join(ctx.claudeSkillDir('backend', id), 'robustness', 'robustness-checklist.md')), `AC4.2: build có robustness/robustness-checklist.md cạnh ${id}`);
   }
+
+  // AC4.3: skill backend-llm-integration, description nguyên văn D6, phủ 7 chủ đề.
+  const llm = read('plugins/backend/skills/backend-llm-integration/SKILL.md');
+  const llmRef = read('plugins/backend/skills/backend-llm-integration/references/llm-call-checklist.md');
+  const D6 = 'Thêm hoặc rà tính năng backend gọi LLM: ngân sách theo ngày, backoff, fail-soft có đánh dấu, ghi usage, redact output, hash input, prompt dự phòng. Dùng khi người dùng muốn "thêm tính năng gọi LLM", "gọi model AI từ backend", "ngân sách token theo ngày", "fail-soft khi LLM lỗi", "ghi usage gọi LLM". Không dùng khi code slice thường không gọi LLM → backend-implement; review diff tổng quát → backend-code-review.';
+  const fm = ctx.parseFrontmatter ? ctx.parseFrontmatter(llm) : null;
+  const desc = fm?.data?.description ?? fm?.meta?.description ?? fm?.description;
+  ok(desc === D6, 'AC4.3: description đúng nguyên văn D6');
+  ok(/^name: backend-llm-integration$/m.test(llm), 'AC4.3: name đúng');
+  ok(/^## Quy trình/m.test(llm) && /^## Ranh giới an toàn/m.test(llm), 'AC4.3: có ## Quy trình và ## Ranh giới an toàn');
+  ok(llm.split(String.fromCharCode(10)).length <= 300, 'AC4.3: SKILL.md ≤ 300 dòng');
+  const topics = [
+    ['ngân sách theo ngày', /ngân sách theo ngày/i], ['đặt chỗ trước khi gọi', /đặt chỗ/i], ['backoff luỹ thừa có jitter', /jitter/i],
+    ['lỗi 4xx không retry', /4xx/], ['cờ degraded', /degraded/], ['dòng log có lý do', /lý do/],
+    ['cờ biến lỗi thành thất bại cứng', /thất bại cứng/], ['hoàn tất job không chứng minh lời gọi thật', /không chứng minh/],
+    ['ghi usage chỉ token', /usage[^\n]*token|token[^\n]*usage/i], ['redact output', /redact/i], ['hash input', /hash/i],
+    ['prompt dự phòng', /prompt dự phòng/i], ['khoá nhà cung cấp không vào log, lỗi hay prompt', /khoá[^\n]*(log)[^\n]*(lỗi)[^\n]*(prompt)/i],
+  ];
+  for (const [name, re] of topics) ok(re.test(llm), 'AC4.3: SKILL.md phủ ' + name);
+  ok(llm.includes('references/llm-call-checklist.md') && llmRef.length > 0, 'AC4.3: có references/llm-call-checklist.md và SKILL.md trỏ tới');
 }
