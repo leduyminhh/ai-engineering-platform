@@ -40,4 +40,24 @@ export default async function run({ ok, ctx }) {
   ok(iSize >= 0 && iGom > iSize, 'AC2.1: mục cỡ task đặt trước "Gom task nhỏ"');
   ok(/task-loop\.md[^\n]*Cỡ task|Cỡ task và review từng task/.test(skillMd), 'AC2.1: SKILL.md trỏ mục cỡ task');
   ok(skillMd.split('\n').length <= 300, 'AC2.1: plan-execution SKILL.md ≤ 300 dòng');
+
+  // AC2.2
+  const sizeAll = `${(section(taskLoop, H_SIZE) || []).join('\n')}\n${taskSize}`;
+  ok(/git diff --name-only <BASE>\.\.HEAD/.test(sizeAll) && /\*\*Files:\*\*/.test(sizeAll), 'AC2.2: có bước đối chiếu git diff --name-only <BASE>..HEAD với **Files:**');
+  ok(/nâng lên (cỡ )?Lớn/.test(sizeAll) && /đường dẫn nhạy cảm/.test(sizeAll), 'AC2.2: nhánh lệch hoặc nhạy cảm nâng lên cỡ Lớn');
+  ok(/cỡ nhỏ/.test(sizeAll) && /partRunner: session/.test(sizeAll) && /subagent/.test(sizeAll) && /inline/.test(sizeAll), 'AC2.2: nêu phạm vi chế độ (session, không đổi ở inline và subagent)');
+  const d9 = taskLoop.split('\n').find((l) => /^Task <n>: complete \(commits <a>\.\.<b>, review cuối — cỡ nhỏ\)$/.test(l));
+  ok(!!d9, 'AC2.2: bảng Ledger có dòng D9 "review cuối — cỡ nhỏ"');
+  if (d9) {
+    const { spawnSync } = await import('node:child_process');
+    const os = await import('node:os');
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ac2-2-'));
+    try {
+      const plan = path.join(tmp, 'plan.md');
+      fs.writeFileSync(plan, '# Plan\n');
+      const line = d9.replace('<n>', '1').replace('<a>', 'abc1234').replace('<b>', 'def5678');
+      const r = spawnSync(process.execPath, [path.join(REPO_ROOT, PE, 'scripts/ledger.mjs'), plan, line], { encoding: 'utf8' });
+      ok(r.status === 0, `AC2.2: ledger.mjs chấp nhận dòng D9 (exit ${r.status}) ${(r.stderr || '').trim()}`);
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  }
 }

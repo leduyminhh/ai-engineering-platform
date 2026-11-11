@@ -209,6 +209,11 @@ Cỡ suy ra từ `**Kind:**`, `**TDD:**` và `**Files:**` của task, không c�
 
 Task cỡ Nhỏ bỏ task review và vòng sửa, chỉ chịu review cuối toàn nhánh; implementer, brief, commit và ledger giữ nguyên. Phạm vi: các chế độ còn review từng task (tuần tự không part; part với `partRunner: session`). Chế độ inline và part `partRunner: subagent` không đổi vì vốn đã bỏ review từng task.
 
+**Đối chiếu sau commit.** Với task cỡ Nhỏ, ngay sau commit session chính chạy `git diff --name-only <BASE>..HEAD` và so với `**Files:**` của task:
+
+- Có file ngoài `**Files:**`, hoặc một file chạm đường dẫn nhạy cảm của điều kiện (4): nâng task lên cỡ Lớn, giao task review thường theo các bước trên (không ghi dòng cỡ nhỏ).
+- Không lệch: ghi dòng `Task <n>: complete (commits <a>..<b>, review cuối — cỡ nhỏ)` và sang task kế; final-review đọc kỹ diff các task ghi `cỡ nhỏ`.
+
 ## Gom task nhỏ
 
 Nhiều task nhỏ cùng khuôn (vd đổi một dòng ở nhiều file) có thể giao một lần và review như một đơn vị, miễn brief liệt kê
@@ -266,6 +271,7 @@ Task <n>: review <vòng> <compliant|issues|cannot_verify> <blocker>/<major>/<min
 Ruling: <quyết định> — <lý do> — <chi phí nếu sai>
 minor (deferred): <finding minor/nit> — task <n>
 Task <n>: complete (commits <a>..<b>, review clean|<k> ruled[, red: <lệnh> exit <n khác 0>][, tests: <lệnh> exit 0])
+Task <n>: complete (commits <a>..<b>, review cuối — cỡ nhỏ)
 Blocked: <lý do>
 Unblocked: <cách giải>
 Plan: complete
