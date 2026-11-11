@@ -143,6 +143,20 @@ export default async function run({ ok, ctx }) {
       'AC1.1/AC2.1: ask-user.md có hàng Cách thực thi (hai lựa chọn) và hàng Cách chạy part (ba lựa chọn), đoạn mở đầu nêu cách thực thi');
   }
 
+  // AC6.1: baseline và CLAUDE.md bỏ câu cấm hỏi cách thực thi; hai file baseline giữ giống hệt nhau, không quá 200 dòng
+  {
+    const raw = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8');
+    const flat = (s) => s.replace(/\s+/g, ' ');
+    const template = raw('core', 'agents', 'AGENTS.template.md');
+    ok(template === raw('AGENTS.md') && template.split('\n').length <= 201, 'AC6.1: AGENTS.md giống hệt template và không quá 200 dòng');
+    for (const [name, text] of [['template', template], ['CLAUDE.md', raw('CLAUDE.md')]]) {
+      const t = flat(text);
+      ok(!/do not ask again how to execute/.test(t), `AC6.1: ${name} không còn "do not ask again how to execute"`);
+      ok(/plan-execution`[^.;]*asks how to run \(subagent per task or inline\) before each execution and remembers the answer as a suggestion/.test(t), `AC6.1: ${name} nêu plan-execution hỏi cách chạy trước mỗi lần thực thi và nhớ câu trả lời làm gợi ý`);
+    }
+    ok(/planRunner/.test(raw('CLAUDE.md')), 'AC6.1: CLAUDE.md liệt kê planRunner trong khoá autonomy');
+  }
+
   // AC3.5: lệnh --set không bị guard-bash hỏi (lệnh không nêu tên aip-gate.json), còn ghi file bằng lệnh nêu tên vẫn hỏi
   {
     const { decide } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'hooks', 'scripts', 'guard-bash.mjs')).href);
