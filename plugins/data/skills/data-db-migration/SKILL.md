@@ -111,7 +111,18 @@ chưa được xác nhận, hoặc code bản đang chạy vẫn dùng cột/b�
 chờ người dùng duyệt.
 
 #### C3. Viết
-Chỉ thêm file mới (file đã có trên base branch là bất biến); đặt tên theo quy ước tìm được ở C1 (chỉ dùng
+Chỉ thêm file mới (file đã có trên base branch là bất biến). **Trước khi chọn số kế tiếp**, đọc số lớn nhất trên nhánh
+tích hợp và trên mọi nhánh/worktree đang mở:
+
+```bash
+git worktree list
+git branch --list
+git ls-tree -r --name-only <nhánh> -- <thư mục migration>
+```
+
+Số đã bị nhánh khác giữ thì chọn số cao hơn. Request chia part: đọc mục `## Dự trữ số migration` trong `design.md` của
+request (bảng `| Part | Dải số | Trạng thái |`) — phiên gốc ghi mục này trước khi chạy nhóm song song, part
+chỉ chọn số trong dải của mình. Đặt tên theo quy ước tìm được ở C1 (chỉ dùng
 `CONVENTIONS.md` của kit khi project dựng từ kit); đặt `lock_timeout`; backfill theo lô, tách khỏi migration đổi cấu
 trúc; Liquibase: mỗi changeSet có `rollback`. Lỡ sửa file đã có trên base → huỷ thay đổi đó, viết file mới.
 Có thể giao bước viết cho agent `data-migration-writer` (truyền kế hoạch C2 + số dòng bảng); session chính ghi mốc
