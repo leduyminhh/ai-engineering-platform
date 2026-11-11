@@ -6,14 +6,16 @@ review cuối.
 
 ## Khi nào dùng
 
-- Người dùng nói rõ trong yêu cầu rằng muốn chạy inline hoặc không dùng subagent; hoặc
+- Người dùng nói rõ trong yêu cầu rằng muốn chạy inline hoặc không dùng subagent;
+- người dùng chọn Inline ở thẻ Cách thực thi của `SKILL.md` (bước Chuẩn bị); hoặc
 - session không có tool subagent. Không bịa lệnh giao việc: chạy plan tại chỗ.
 
-Không hỏi người dùng chọn cách thực thi. Plan đã duyệt thì mặc định là vòng task có subagent (`AGENTS.md`, mục Workflow
-defaults); inline chỉ bật theo một trong hai điều kiện trên. Subagent part do `partRunner: subagent` giao là trường hợp
-riêng, xem mục "Subagent part".
+Thẻ Cách thực thi hỏi mỗi lần thực thi và `planRunner` chỉ đặt lựa chọn đứng đầu (`SKILL.md`); không chọn inline thì chạy vòng
+task có subagent. Subagent part do nhóm Song song chọn Subagent là trường hợp riêng, xem mục "Subagent part"; phiên part và
+subagent part không hỏi cách chạy.
 
-Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <người dùng chọn | không có tool subagent | subagent part> — <chi phí nếu sai>`.
+Dòng ledger: `Ruling: cách chạy inline — <người dùng chọn | không có tool subagent | người dùng nói rõ> — <chi phí nếu sai>`, ghi theo `SKILL.md`
+trước `Task 1: start` (subagent part ghi `Ruling: cách chạy inline — subagent part — <chi phí nếu sai>` vào ledger part).
 
 ## Vòng một task
 
@@ -52,7 +54,7 @@ Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một l�
 
 ## Subagent part
 
-Với `partRunner: subagent` (`task-loop.md`, "Chế độ part" bước 3), mỗi part do một subagent nền (`general-purpose`,
+Khi nhóm Song song chọn Subagent (`task-loop.md`, "Chế độ part" bước 3), mỗi part do một subagent nền (`general-purpose`,
 `model: sonnet`) làm theo "Vòng một task" của file này, chỉ cho plan của part mình, đóng vai session của part:
 
 - Code, test và commit chỉ trong worktree `.claude/worktrees/<slug>-p<nn>/`, trên nhánh `worktree-<slug>-p<nn>`. Mọi lệnh dùng

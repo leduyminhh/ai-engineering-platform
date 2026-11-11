@@ -109,10 +109,10 @@ export default async function run({ ok, ctx }) {
   // AC1.1–AC1.5, AC3.6: SKILL.md và inline.md hỏi cách thực thi trước Task 1
   {
     const read = (...p) => fs.readFileSync(path.join(skillDir, ...p), 'utf8');
-    const flat = (s) => s.replace(/s+/g, ' ');
+    const flat = (s) => s.replace(/\s+/g, ' ');
     const skill = flat(read('SKILL.md'));
     const inline = flat(read('references', 'inline.md'));
-    ok(/thẻ Cách thực thi/.test(skill) && /Subagent + review từng task/.test(skill) && /Inline/.test(skill), 'AC1.1: SKILL.md có thẻ Cách thực thi với hai lựa chọn Subagent + review từng task / Inline');
+    ok(/thẻ Cách thực thi/.test(skill) && /Subagent \+ review từng task/.test(skill) && /Inline/.test(skill), 'AC1.1: SKILL.md có thẻ Cách thực thi với hai lựa chọn Subagent + review từng task / Inline');
     ok(/`planRunner`[^.]*gợi ý/.test(skill) && /không bỏ (qua )?câu hỏi/.test(skill), 'AC1.2: SKILL.md nêu planRunner chỉ là gợi ý, không bỏ câu hỏi');
     ok(!/Không hỏi người dùng chọn cách thực thi/i.test(skill + inline) && !/khi `partRunner` là `session` hoặc thiếu khoá/.test(skill), 'AC1.2: không còn câu cấm hỏi cách thực thi hay điều kiện hỏi theo khoá');
     ok(/không có tool subagent/.test(skill) && /nói rõ/.test(skill) && /người dùng nói rõ/.test(inline), 'AC1.3: SKILL.md và inline.md nêu hai trường hợp không hỏi (không có tool subagent, người dùng nói rõ)');

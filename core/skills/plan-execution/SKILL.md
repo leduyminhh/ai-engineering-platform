@@ -27,8 +27,16 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    Chạy `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan.md> "# Ledger — plan: <đường dẫn plan.md>"` để tạo workspace `.aip/` và dòng đầu ledger;
    ledger đã có thì đọc phần cuối và làm tiếp từ task chưa `complete`, không làm lại task đã xong. Bước này đồng thời
    rà trước các cặp task chung file hoặc nối interface (xem `references/task-loop.md`, mục "Rà plan trước khi chạy") và
-   chạy `node <thư mục skill plan-execution>/scripts/autonomy.mjs` một lần để lấy `mergeLocal`, `cleanup`, `partRunner`
-   (thiếu khoá hoặc sai giá trị = mặc định an toàn: hỏi merge local, hỏi dọn, hỏi cách chạy part).
+   chạy `node <thư mục skill plan-execution>/scripts/autonomy.mjs` một lần để lấy `mergeLocal`, `cleanup`, `partRunner`, `planRunner`
+   (thiếu khoá hoặc sai giá trị = mặc định an toàn: hỏi merge local, hỏi dọn; `partRunner` và `planRunner` chỉ là gợi ý nên không làm bỏ qua câu hỏi cách chạy).
+   Rồi thẻ Cách thực thi, trước `Task 1: start`, mỗi lần thực thi một plan (chia part hay không), theo thứ tự: (a) grep cả ledger `root/` tìm `^Ruling: cách chạy`
+   (hook chỉ chèn phần cuối): có thì dùng giá trị đó, không hỏi, vì cùng một lần thực thi; (b) không có tool subagent, hoặc yêu cầu của người dùng đã nói rõ chạy inline
+   hay không dùng subagent: `inline`, không hỏi; phiên part và subagent part không hỏi cách chạy (đã định trong khối bàn giao và `references/inline.md`);
+   (c) còn lại hỏi một câu theo `references/ask-user.md` (hàng "Cách thực thi"): "Subagent + review từng task" (`subagent`) hoặc "Inline" (`inline`),
+   lựa chọn theo `planRunner` đứng đầu kèm "(Recommended)" (mặc định Subagent); khoá không bỏ câu hỏi. Ghi
+   `Ruling: cách chạy <subagent|inline> — <người dùng chọn | không có tool subagent | người dùng nói rõ> — <chi phí nếu sai>` bằng `ledger.mjs`, rồi lưu giá trị làm gợi ý lần sau:
+   `node <thư mục skill plan-execution>/scripts/autonomy.mjs --set planRunner=<giá trị>` (kể cả ở (b); không dùng Write/Edit lên `.claude/aip-gate.json`, hook hỏi người dùng khi ghi file đó).
+   `subagent` chạy vòng task bên dưới, `inline` chạy theo `references/inline.md`.
 2. **Vòng task**, lần lượt từng task chưa `complete`, theo `references/task-loop.md`. Đọc hết file đó trước task đầu tiên
    (cả cỡ "thay đổi nhỏ"), và giao việc bằng đúng mẫu trong `references/prompts/`, không tự soạn prompt; bước này chỉ tóm
    tắt, luật vòng sửa, xếp finding và dòng ledger nằm ở `task-loop.md`:
@@ -44,11 +52,11 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    `Plan: complete` vào ledger khi plan xong.
 
 Request chia part (`## Bảng part` trong `design.md`): thứ tự part, song song và merge theo mục "Chế độ part" của
-`references/task-loop.md` (rẽ theo `partRunner`); `Plan: complete` chỉ ghi ở ledger `root/`.
+`references/task-loop.md` (hỏi trước mỗi nhóm Song song, `partRunner` chỉ là gợi ý); `Plan: complete` chỉ ghi ở ledger `root/`.
 
 **Điểm dừng và báo cáo.** Mọi lần dừng chờ người dùng đều theo [references/ask-user.md](references/ask-user.md): mở file hoặc diff cần duyệt ở pane và hỏi bằng lựa chọn bấm được, không kết thúc lượt bằng câu hỏi suông. Chờ người dùng chỉ ở G1 (duyệt design), G2 (duyệt plan), G3 (duyệt diff cả nhánh; thiếu khoá
 `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3), câu hỏi push/PR riêng một lần sau merge local (chỉ khi
-`mergeLocal: true`), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), và 6 loại dừng bên dưới;
+`mergeLocal: true`), thẻ Cách thực thi trước Task 1, câu hỏi cách chạy part trước mỗi nhóm Song song (cả hai luôn hỏi, khoá chỉ là gợi ý), và 6 loại dừng bên dưới;
 giữa G2 và G3 chạy liền, không hỏi ngoài các điểm dừng trên hoặc khi gặp lỗi chặn (định nghĩa ở mục "Báo cáo" của
 `references/task-loop.md`). Người dùng vẫn thấy tiến độ tổng thể: danh sách task của công cụ đăng đủ mọi task trước Task 1
 và cập nhật sau mỗi task, kèm một dòng tiến độ không chờ trả lời (mục "Báo tiến độ" của `references/task-loop.md`).
@@ -58,12 +66,12 @@ và cập nhật sau mỗi task, kèm một dòng tiến độ không chờ tr�
 | Việc | Người làm |
 |---|---|
 | Điều phối, ghi ledger, trả lời `questions[]` từ spec/plan, phán `Ruling:` | session chính |
-| Commit sau mỗi task (qua `git-workflow`) | session chính — agent không tự commit (ngoại lệ: subagent part của `partRunner: subagent`, xem `references/inline.md`) |
+| Commit sau mỗi task (qua `git-workflow`) | session chính — agent không tự commit (ngoại lệ: subagent part của nhóm Song song chọn Subagent, xem `references/inline.md`) |
 | Implement, viết test | agent domain theo `kind`; task `DOCS`: `general-purpose` |
 | Sửa finding (vòng sửa, lần sửa sau review cuối) | agent domain theo `kind`, kể cả khi bản sửa chỉ vài dòng; session chính không tự sửa code |
 | Task review, re-review, review cuối | `backend-reviewer` / `frontend-reviewer` (chỉ đọc); DOCS/TOOLING dùng `general-purpose` |
 | Quality/security gate | `engineering-quality-auditor`, chỉ ở review cuối |
-| Chế độ inline (người dùng nói rõ chạy inline, hoặc không có tool subagent) | session chính làm mọi task theo `references/inline.md`; không hỏi người dùng chọn cách thực thi |
+| Chế độ inline (người dùng chọn inline ở thẻ Cách thực thi, nói rõ chạy inline, hoặc không có tool subagent) | session chính làm mọi task theo `references/inline.md` |
 
 Model khi gọi agent (tham số `model`): implementer mặc định `sonnet`; task review của task code (mọi kind trừ `DOCS`) dùng
 `sonnet`; re-review, task `DOCS` và task review của task `DOCS` dùng `haiku` (haiku sai một lần trong task đó → gọi lại bằng `sonnet`); vòng 3 của vòng sửa và reviewer của review cuối toàn nhánh dùng `opus`; lần sửa sau review cuối dùng `sonnet`. Plan
@@ -75,11 +83,11 @@ không cần khai báo model riêng cho từng task.
   hỏi trước mỗi commit theo `git-workflow`.
 - Agent không commit, không push, không gọi agent khác. Session chính commit sau mỗi task bằng `git-workflow`
   (`git commit -F`, header tiếng Anh, body tiếng Việt, không `Co-Authored-By`); mỗi task có ≥ 1 commit; không amend hay
-  squash khi người dùng chưa xác nhận. Ngoại lệ duy nhất: subagent part (`partRunner: subagent`) đóng vai session của
+  squash khi người dùng chưa xác nhận. Ngoại lệ duy nhất: subagent part (nhóm Song song chọn Subagent) đóng vai session của
   part và tự commit trên nhánh part theo `references/inline.md`.
 - Chạy liên tục giữa các task, nhưng **dừng hỏi người dùng** (không ghi `Ruling:` rồi chạy tiếp) trong 6 trường hợp:
   việc không đảo ngược được hoặc phá huỷ; bảo mật; tác động ngoài repo (merge, push, publish; ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` mà người dùng đã đồng ý ở
-  bước 3 của "Chế độ part" (câu trả lời, hoặc khoá `partRunner: subagent`) là merge local, không dừng); finding chạm schema DB; plan hỏng đến mức mọi hướng đều là đoán;
+  bước 3 của "Chế độ part" (câu trả lời của câu hỏi nhóm Song song) là merge local, không dừng); finding chạm schema DB; plan hỏng đến mức mọi hướng đều là đoán;
   phải đổi một AC người dùng đã duyệt, hoặc kết quả chạy thật bác giả định mà hướng đã duyệt ở G1 dựa vào. Chi tiết ở `references/task-loop.md`.
 - Không merge, không push khi người dùng chưa chọn ở bước kết thúc nhánh (trừ merge part local đã được đồng ý, xem trên; `mergeLocal: true` biến duyệt G3 thành chọn merge local; không khoá nào bật push); không xoá nhánh khi chưa được xác nhận rõ (trừ `cleanup: true`: chỉ nhánh đã là tổ tiên của nhánh gốc, xem `references/finish.md`).
 - Không tuyên bố task hoặc plan xong khi chưa có evidence lệnh kiểm chứng; kết quả agent báo "xanh" phải đối chiếu bằng
