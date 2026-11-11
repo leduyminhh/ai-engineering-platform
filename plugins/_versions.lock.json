@@ -4,8 +4,8 @@
     "hash": "6f3ccd75bc05f471d99944f68b20a2862a0befacc452be4dd7ffc9e48ec5ef8b"
   },
   "core": {
-    "version": "1.32.4",
-    "hash": "a0917e36264a2cfc8432a62b2a0b7ce8e10857688f243d848b55d5b1bbd87614"
+    "version": "1.33.0",
+    "hash": "67d4410353b44496fd47b51c42263cd66126b64040f062631ff4fbb6f6c9e217"
   },
   "data": {
     "version": "1.7.0",
@@ -24,7 +24,7 @@
     "hash": "ec138aebe264b0d023365a11e6ee94cb84b6ed43d3ceb4022ac6606a8d5e5fd9"
   },
   "workflows": {
-    "version": "3.15.0",
-    "hash": "cc6ccb881bd842fc95865e4c0458795750bb14db2068565c0d92ef403d1b2414"
+    "version": "3.16.0",
+    "hash": "64927d6398e097b1298a81a246574b829db72e7cdc957141dac294d1e9983579"
   }
 }

@@ -319,7 +319,7 @@ Sửa: `plugins/data/skills/data-db-migration/SKILL.md` (C1–C3, bảng tự bi
 
 | Part | Phụ thuộc | Song song | Trạng thái |
 |---|---|---|---|
-| 01-core | — | A | đang làm |
+| 01-core | — | A | merged f21c3842 |
 | 02-engineering | — | A | đang làm |
 | 03-backend | — | A | đang làm |
 | 04-frontend | — | A | đang làm |
