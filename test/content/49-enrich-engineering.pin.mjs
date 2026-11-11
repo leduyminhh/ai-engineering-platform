@@ -31,4 +31,25 @@ export default async function run({ ok, ctx }) {
   ok(/Quyết định đã chốt[^.]*brief\.md/.test(CL), 'AC3.2: checklist đối chiếu AC với "Quyết định đã chốt" và brief.md');
   ok(/câu hỏi mở[^.]*trước checkpoint/.test(CL), 'AC3.2: AC lệch thì sửa hoặc đưa vào câu hỏi mở trước checkpoint');
   ok(SWS.split('\n').length <= 300, 'AC3.2: SKILL.md spec-writing không quá 300 dòng');
+
+  // AC3.4: skill engineering-api-research
+  const AR = 'plugins/engineering/skills/engineering-api-research';
+  const ARS = read(`${AR}/SKILL.md`);
+  const fm = (ARS.match(/^---\n([\s\S]*?)\n---/) || [, ''])[1];
+  ok(/^name: engineering-api-research$/m.test(fm), 'AC3.4: frontmatter name đúng');
+  const desc = 'Nghiên cứu API hoặc dịch vụ ngoài, hoặc làm spike kỹ thuật nhỏ, rồi ghi file facts mỗi khẳng định có nhãn [Verified]/[Inference]/[Unverified] kèm nguồn và ngày đọc. Dùng khi người dùng muốn \\"tìm hiểu API của dịch vụ ngoài\\", \\"đọc docs rồi ghi lại sự thật\\", \\"spike thử thư viện\\", \\"lập file facts\\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; ghi quyết định chọn phương án → engineering-adr.';
+  ok(fm.includes(`description: "${desc}"`), 'AC3.4: description nguyên văn D6');
+  ok(desc.length <= 500, 'AC3.4: description không quá 500 ký tự');
+  for (const k of ['order', 'title', 'runsIn', 'invoke']) ok(new RegExp(`^${k}:`, 'm').test(fm), `AC3.4: frontmatter có ${k}`);
+  const proc = (ARS.match(/^## Quy trình[^\n]*\n([\s\S]*?)(?=^## )/m) || [, ''])[1];
+  const safe = (ARS.match(/^## Ranh giới an toàn[^\n]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m) || [, ''])[1];
+  ok(proc !== '' && safe !== '', 'AC3.4: có ## Quy trình và ## Ranh giới an toàn');
+  ok(/câu hỏi cần trả lời/.test(proc), 'AC3.4: quy trình chốt câu hỏi cần trả lời');
+  ok(/docs chính thức[\s\S]{0,200}phiên bản/.test(proc) && /Kiểm nguồn/.test(proc) && /core:principles/.test(proc), 'AC3.4: đọc docs chính thức đúng phiên bản theo mục Kiểm nguồn của core:principles');
+  ok(/spike[\s\S]{0,300}lệnh chạy lại/.test(proc), 'AC3.4: spike nhỏ chạy được, kết quả ghi kèm lệnh chạy lại');
+  ok(/\[Verified\][\s\S]{0,200}URL sau chuyển hướng[\s\S]{0,100}ngày đọc/.test(proc) && /\[Inference\]/.test(proc) && /\[Unverified\]/.test(proc), 'AC3.4: file facts có nhãn Verified (nguồn, URL sau chuyển hướng, ngày đọc), Inference, Unverified');
+  ok(/tính tiền/.test(safe) && /dữ liệu thật/.test(safe) && /duyệt/.test(safe), 'AC3.4: không gọi API tính tiền hay ghi dữ liệu thật khi chưa được duyệt');
+  ok(/khoá thật/.test(safe) && /facts/.test(safe), 'AC3.4: không đưa khoá thật vào file facts');
+  ok(read(`${AR}/references/facts.template.md`) !== '', 'AC3.4: có references/facts.template.md');
+  ok(ARS.split('\n').length <= 300, 'AC3.4: SKILL.md api-research không quá 300 dòng');
 }
