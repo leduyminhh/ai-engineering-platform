@@ -31,7 +31,7 @@ export default async function run({ ok, ctx }) {
   // AC1.4: task-review xét từng giả định; re-review chỉ xét giả định mới
   ok(/assumption_review\[\]/.test(tr) && /từng giả định/.test(tr) && /`wrong`[^.]*major/.test(tr),
     'AC1.4: task-review đòi assumption_review[] cho từng giả định, wrong vi phạm AC/brief là major trở lên');
-  ok(/giả định ngầm[^.]*(không khai|chưa khai)[^.]*finding/.test(tr), 'AC1.4: giả định ngầm thấy trong diff mà báo cáo không khai thành finding');
+  ok(/[Gg]iả định ngầm[^.]*(không khai|chưa khai)[^.]*finding/.test(tr), 'AC1.4: giả định ngầm thấy trong diff mà báo cáo không khai thành finding');
   ok(/giả định mới/.test(rr) && /assumption_review\[\]/.test(rr) && /`wrong`[^.]*`blocker`\/`major`[^.]*vòng sửa/.test(rr),
     'AC1.4: re-review chỉ xét giả định mới, wrong mức blocker/major giữ task trong vòng sửa');
 }
