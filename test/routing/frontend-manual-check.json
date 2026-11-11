@@ -1,0 +1,14 @@
+{
+  "positive": [
+    "Mình vừa làm xong màn hình đặt lịch, soạn giúp mình danh sách các bước để tự bấm kiểm từng tiêu chí chấp nhận trên giao diện, kèm kết quả cần nhìn thấy.",
+    "Bạn mở trình duyệt đi qua luồng đăng ký như người dùng thật, xem request mạng với console sau mỗi bước, rồi báo bước nào đạt bước nào lỗi.",
+    "Trước buổi demo mình cần một bản hướng dẫn kiểm bằng tay: dữ liệu mẫu cần chuẩn bị, từng thao tác, chỗ nào chưa kiểm được thì ghi rõ lý do.",
+    "Lập bảng kiểm thủ công cho tính năng lọc đơn hàng, mỗi tiêu chí chấp nhận phải có ít nhất một bước, rồi mình chạy tay và điền đạt hay không."
+  ],
+  "negative": [
+    "Viết test Playwright tự động cho luồng thanh toán để chạy trong CI.",
+    "Viết test React Testing Library cho component bảng dữ liệu giúp mình.",
+    "Review giúp mình đoạn diff giao diện này, xem có vấn đề về a11y không.",
+    "CPU server production vượt 90% từ chiều, thiết lập cảnh báo và giám sát giúp mình."
+  ]
+}

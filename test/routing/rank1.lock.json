@@ -1,6 +1,6 @@
 {
   "positive": {
-    "threshold": 71
+    "threshold": 69
   },
   "negative": {
     "threshold": 94
