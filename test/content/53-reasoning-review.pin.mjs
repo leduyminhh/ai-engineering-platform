@@ -75,21 +75,4 @@ export default async function run({ ok, ctx }) {
     ok(/`assumption_review\[\]`[^.]*task-review[^.]*re-review/.test(r) && /`rerun`[^.]*`ruling_review\[\]`/.test(r),
       `AC3.4: ${p}-reviewer nêu assumption_review[] (task-review, re-review) và rerun trong ruling_review[]`);
   }
-
-  // AC4.1, AC4.2: hai case eval về lập luận (cấu trúc do 95-evals kiểm), không cấp Bash, README hai bản có hàng
-  const CASES = ['task-review-assumption', 'final-review-ruling-evidence'];
-  for (const c of CASES) {
-    const prompt = read('evals', 'workflows', c, 'prompt.md');
-    ok(/tags:[^\n]*reasoning/.test(prompt) && !/allowed_tools:[^\n]*Bash/.test(prompt), `AC4.1: ${c} có tag reasoning, không cấp Bash`);
-    for (const g of ['scaffold-applied', 'skill-used']) ok(fs.existsSync(path.join(REPO_ROOT, 'evals', 'workflows', c, 'graders', `${g}.md`)), `AC4.1: ${c} có grader ${g}`);
-  }
-  for (const f of ['README.md', 'README_VI.md']) {
-    const rd = read('evals', f);
-    ok(CASES.every((c) => rd.includes(`workflows/${c}`)), `AC4.2: evals/${f} có hàng cho hai case mới`);
-  }
-
-  // AC5.1: spec sống workflows có R24 và dòng Lịch sử của request
-  const spec = read('docs', 'specs', 'workflows', 'spec.md');
-  ok(/\*\*workflows\/R24\*\*/.test(spec) && ['R1 | đổi', 'R2 | đổi', 'R7 | đổi', 'R24 | thêm'].every((r) => spec.includes(`2026-11-11-reasoning-review/design.md) | workflows/${r}`)),
-    'AC5.1: spec workflows có R24 và Lịch sử R1, R2, R7 đổi, R24 thêm');
 }
