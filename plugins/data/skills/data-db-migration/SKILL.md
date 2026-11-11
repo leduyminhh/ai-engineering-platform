@@ -122,7 +122,12 @@ git ls-tree -r --name-only <nhánh> -- <thư mục migration>
 
 Số đã bị nhánh khác giữ thì chọn số cao hơn. Request chia part: đọc mục `## Dự trữ số migration` trong `design.md` của
 request (bảng `| Part | Dải số | Trạng thái |`) — phiên gốc ghi mục này trước khi chạy nhóm song song, part
-chỉ chọn số trong dải của mình. Đặt tên theo quy ước tìm được ở C1 (chỉ dùng
+chỉ chọn số trong dải của mình.
+
+Thứ tự merge: nhánh số thấp merge trước. Trùng số khi merge sau thì đổi số của nhánh chưa phát hành (chưa áp lên DB nào
+ngoài container test) và ghi `Ruling:`. Không đổi số hay nội dung migration đã áp lên DB dùng chung (checksum lệch).
+
+Đặt tên theo quy ước tìm được ở C1 (chỉ dùng
 `CONVENTIONS.md` của kit khi project dựng từ kit); đặt `lock_timeout`; backfill theo lô, tách khỏi migration đổi cấu
 trúc; Liquibase: mỗi changeSet có `rollback`. Lỡ sửa file đã có trên base → huỷ thay đổi đó, viết file mới.
 Có thể giao bước viết cho agent `data-migration-writer` (truyền kế hoạch C2 + số dòng bảng); session chính ghi mốc
@@ -152,6 +157,7 @@ N+1) cùng SQL bù → `backend-code-review`; commit qua `core:git-workflow`, du
 | "Sửa file migration cũ cho gọn" | Ranh giới an toàn: file đã có trên base branch là bất biến; lỡ sửa thì huỷ thay đổi và viết file mới (C3). |
 | "Drop cột luôn, code cũ chắc không dùng nữa" | Bước C2: thao tác phá huỷ cần xác nhận tường minh; code đang chạy còn dùng cột thì DỪNG (evidence grep `file:line`). |
 | "Exit code 0 là migration đã áp" | Bước A7 và C4: evidence gồm cả số migration/changeSet đọc từ log; 0 migration áp là chưa verify. |
+| "Số này chắc chưa ai lấy" | Bước C3: đọc số lớn nhất trên mọi nhánh/worktree bằng ba lệnh git và theo dải dự trữ trước khi chọn; trùng số thì đổi nhánh chưa phát hành, không đổi migration đã áp. |
 | "Chạy thử trên DB staging có sẵn cho tiện" | Bước C4: xác nhận DB đích là DB test trước khi chạy; không có DB test thì `not_run` kèm lý do; không bao giờ chạy trên production. |
 
 ## Report trả về
