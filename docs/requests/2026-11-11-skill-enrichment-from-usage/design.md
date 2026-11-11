@@ -1,6 +1,6 @@
 # Thiết kế: làm giàu bộ skill từ dữ liệu dùng thật
 - Ngày: 2026-11-11
-- Trạng thái: draft — chờ người duyệt G1
+- Trạng thái: merged 5a76c8a4
 - Requirement: không có (brief: [brief.md](brief.md))
 
 ## Vấn đề và lý do
