@@ -36,7 +36,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    `references/prompts/implementer.md` → nhận `agent_result` → session chính commit → gom diff bằng
    `scripts/review-package.mjs` → task review (`references/prompts/task-review.md`, trả `spec_verdict` + finding) →
    sửa tối đa 3 vòng, mỗi vòng một re-review có phạm vi (`references/prompts/re-review.md`) → ghi
-   `Task <n>: complete (…)` vào ledger.
+   `Task <n>: complete (…)` vào ledger. Task cỡ Nhỏ bỏ hai bước review: xem mục "Cỡ task và review từng task" của `references/task-loop.md`.
 3. **Review cuối toàn nhánh** sau task cuối, theo `references/prompts/final-review.md`: reviewer chạy opus, nhận Review
    Focus + các dòng `Ruling:` + finding minor đã hoãn; `engineering-quality-auditor` chỉ chạy ở bước này.
 4. **Kết thúc nhánh** theo `references/finish.md` (đọc file trước khi làm bước này): docs + spec sống + `check-request.mjs` + full suite, rồi trình G3
