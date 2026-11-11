@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { parsePartTable, requestStatusToken, STATUSES } from '../../core/skills/artifact-templates/scripts/check-request.mjs';
 import { parsePartition, normPath } from '../../core/skills/artifact-templates/scripts/check-partition.mjs';
 import { readGateConfig } from '../../core/hooks/scripts/gate-config.mjs';
+import { locateGate, trustedValue, gateTracked, lsFiles } from '../../core/hooks/scripts/gate-file.mjs';
 
 export const DEFAULT_STALE_MINUTES = 30;
 export const STATE_LABELS = {
@@ -335,7 +336,9 @@ export function runStatus(args, { cwd = process.cwd(), out = console.log, err = 
   const docs = hasDocs(docsRoot) ? docsRoot : hasDocs(runsRoot) ? runsRoot : null;
   if (!docs && !fs.existsSync(runsDir(runsRoot, request))) { err(`Không tìm thấy request ${request}.`); return 2; }
   const config = readGateConfig(cwd);
-  const make = () => buildStatus({ docsRoot: docs ?? docsRoot, runsRoot, request, git, staleMinutes: staleMinutesOf(config), autonomy: config?.autonomy ?? null });
+  // Bỏ cache gateTracked như cliGate: trạng thái git đổi được trong một tiến trình.
+  const autonomy = trustedValue(locateGate(cwd), 'autonomy', { tracked: (f) => gateTracked(f, { run: (dir, spec) => lsFiles(dir, spec) }) });
+  const make = () => buildStatus({ docsRoot: docs ?? docsRoot, runsRoot, request, git, staleMinutes: staleMinutesOf(config), autonomy: autonomy ?? null });
   const html = path.join(runsDir(runsRoot, request), 'status.html');
   const writeHtml = (watch) => {
     fs.mkdirSync(path.dirname(html), { recursive: true });

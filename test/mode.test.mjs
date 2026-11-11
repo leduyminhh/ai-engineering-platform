@@ -405,3 +405,111 @@ test("autonomy-gates AC8.1: trong worktree, safe chép khóa repo chính trừ a
   for (const sub of ["high", "safe", "status"]) assert.equal(run(sub).code, 1, sub);
   assert.equal(fs.existsSync(gatePath(wt)), false, "không tạo file che repo chính hỏng");
 });
+
+// Request 2026-11-11-aip-gate-config-flow: aip mode và aip autonomy đọc qua gate-file.mjs.
+const gitC = (cwd, ...a) => execFileSync("git", ["-c", "commit.gpgsign=false", "-c", "user.name=t", "-c", "user.email=t@example.com", ...a], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+const mainWithWt = (tag) => {
+  const main = fs.realpathSync.native(tmp());
+  put(path.join(main, "README.md"), "x");
+  gitC(main, "add", "README.md");
+  gitC(main, "commit", "-q", "-m", "init");
+  const wt = path.join(path.dirname(main), `${path.basename(main)}-${tag}`);
+  dirs.push(wt);
+  gitC(main, "worktree", "add", "-q", wt, "-b", `gcf-${tag}`);
+  return { main, wt };
+};
+const cmd = (fn, sub, root, extra = {}) => { const out = [], err = []; const code = fn(sub, { root, out: (l) => out.push(l), err: (l) => err.push(l), ...extra }); return { code, out: out.join("\n"), err: err.join("\n") }; };
+const commitGate = (root, obj) => { put(gatePath(root), JSON.stringify(obj)); gitC(root, "add", ".claude/aip-gate.json"); gitC(root, "commit", "-q", "-m", "gate"); };
+
+test("gate-config-flow AC4.1: file repo chính hỏng, worktree trống ⇒ aip mode và aip autonomy báo lỗi, exit 1, không ghi", () => {
+  const { main, wt } = mainWithWt("main-bad");
+  put(gatePath(main), "{ hỏng");
+  for (const [fn, subs] of [[runMode, ["status", "full", "ask"]], [runAutonomy, ["status", "high", "safe"]]]) {
+    for (const sub of subs) {
+      const r = cmd(fn, sub, wt);
+      assert.equal(r.code, 1, `${fn.name} ${sub}`);
+      assert.ok(r.err.includes(gatePath(main)), `${fn.name} ${sub}: stderr nêu đường dẫn file hỏng (${r.err})`);
+      assert.equal(fs.existsSync(gatePath(wt)) || fs.existsSync(setPath(wt)), false, `${fn.name} ${sub}: không ghi file nào`);
+    }
+  }
+});
+
+test("gate-config-flow AC4.2: status liệt kê khoá nới quyền bị bỏ qua kèm lý do", () => {
+  const root = tmp();
+  commitGate(root, { stopGate: false, allowEnvFiles: true, mcpDeny: ["x"] });
+  for (const fn of [runMode, runAutonomy]) {
+    const t = cmd(fn, "status", root).out;
+    assert.match(t, /bị bỏ qua \(đang được git theo dõi\): .*stopGate/, `${fn.name}: ${t}`);
+    assert.match(t, /bị bỏ qua.*allowEnvFiles/);
+    assert.doesNotMatch(t.split("\n").find((l) => l.includes("bị bỏ qua")) ?? "", /mcpDeny/);
+    assert.match(cmd(fn, "status", root, { run: () => null }).out, /bị bỏ qua \(không xác định được trạng thái git\): .*stopGate/);
+  }
+  const open = tmp();
+  put(gatePath(open), JSON.stringify({ stopGate: false, allowEnvFiles: true }));
+  for (const fn of [runMode, runAutonomy]) assert.doesNotMatch(cmd(fn, "status", open).out, /bị bỏ qua/, `${fn.name}: file không bị theo dõi`);
+});
+
+test("gate-config-flow AC4.3: status liệt kê khoá lạ và khoá sai kiểu", () => {
+  const root = tmp();
+  put(gatePath(root), JSON.stringify({ foo: 1, stopGate: "no" }));
+  for (const fn of [runMode, runAutonomy]) {
+    const t = cmd(fn, "status", root).out;
+    assert.match(t, /Khoá lạ: "foo"/, `${fn.name}: ${t}`);
+    assert.match(t, /Khoá sai kiểu: "stopGate" \(cần boolean\)/);
+  }
+  put(gatePath(root), JSON.stringify({ stopGate: true, mcpDeny: [] }));
+  for (const fn of [runMode, runAutonomy]) assert.doesNotMatch(cmd(fn, "status", root).out, /Khoá lạ|Khoá sai kiểu/);
+});
+
+test("gate-config-flow AC4.5: không chép khoá nới quyền của file repo chính đã bị theo dõi sang file worktree", () => {
+  const HIGH = { mergeLocal: true, cleanup: true, partRunner: "subagent" };
+  const loose = { allowEnvFiles: true, stopGate: false, exemptAgents: ["x"], autonomy: { mergeLocal: true, planRunner: "inline" } };
+  const read = (wt) => JSON.parse(fs.readFileSync(gatePath(wt), "utf8"));
+
+  const t = mainWithWt("trk");
+  commitGate(t.main, { ...loose, mode: "full", mcpDeny: ["evil"], foo: 1 });
+  assert.equal(cmd(runMode, "full", t.wt).code, 0);
+  assert.deepEqual(read(t.wt), { mode: "full", mcpDeny: ["evil"], foo: 1 });
+  fs.rmSync(gatePath(t.wt));
+  assert.equal(cmd(runAutonomy, "high", t.wt).code, 0);
+  assert.deepEqual(read(t.wt), { mcpDeny: ["evil"], foo: 1, autonomy: HIGH });
+
+  const u = mainWithWt("open");
+  put(gatePath(u.main), JSON.stringify({ ...loose, mode: "full", mcpDeny: ["evil"] }));
+  assert.equal(cmd(runMode, "ask", u.wt).code, 0);
+  assert.deepEqual(read(u.wt), { ...loose, mcpDeny: ["evil"] });
+  fs.rmSync(gatePath(u.wt));
+  assert.equal(cmd(runAutonomy, "high", u.wt).code, 0);
+  assert.deepEqual(read(u.wt), { ...loose, mcpDeny: ["evil"], autonomy: { ...HIGH, planRunner: "inline" } });
+});
+
+test("gate-config-flow: aip mode ask sinh lại settings giữ quy tắc .env khi allowEnvFiles nằm trong file đã bị theo dõi", () => {
+  const root = tmp();
+  commitGate(root, { allowEnvFiles: true, mode: "full" });
+  put(setPath(root), EMPTY);
+  assert.equal(cmd(runMode, "ask", root).code, 0);
+  assert.equal(fs.readFileSync(setPath(root), "utf8"), gen(false));
+});
+
+test("gate-config-flow AC4.3: khoá lạ và khoá sai kiểu in qua JSON.stringify, không lọt ESC hay xuống dòng", () => {
+  const root = tmp();
+  const key = "x\u001b[31m\ny";
+  put(gatePath(root), JSON.stringify({ [key]: 1 }));
+  for (const fn of [runMode, runAutonomy]) {
+    const t = cmd(fn, "status", root).out;
+    const line = t.split("\n").find((l) => l.startsWith("Khoá lạ:")) ?? "";
+    assert.ok(line.includes(JSON.stringify(key)) && !t.includes("\u001b"), fn.name + ": " + JSON.stringify(t));
+  }
+});
+
+test("gate-config-flow AC4.2: status chỉ hiện mode đáng tin; gợi ý gỡ theo dõi nhắc xem lại từng khoá", () => {
+  const root = tmp();
+  commitGate(root, { mode: "full", autonomy: { mergeLocal: true } });
+  const t = cmd(runMode, "status", root).out;
+  assert.match(t, /Chế độ: ask/, t);
+  assert.doesNotMatch(t, /Chế độ: full/);
+  assert.match(t, /mode.*bỏ qua|bỏ qua.*mode/i);
+  assert.match(cmd(runMode, "full", root).out, /xem lại/);
+  assert.match(cmd(runAutonomy, "status", root).out, /xem lại/);
+  assert.match(cmd(runAutonomy, "high", root).out, /xem lại/);
+});

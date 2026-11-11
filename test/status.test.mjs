@@ -351,5 +351,21 @@ try {
   }
 }
 
+// Review cuối: autonomy của file đã bị git theo dõi không được hiện ở aip status.
+{
+  const r = fixture();
+  try {
+    const g = (...a) => spawnSync('git', ['-c', 'commit.gpgsign=false', '-c', 'user.name=t', '-c', 'user.email=t@example.com', ...a], { cwd: r, encoding: 'utf8' });
+    g('init', '-q');
+    fs.mkdirSync(path.join(r, '.claude'), { recursive: true });
+    fs.writeFileSync(path.join(r, '.claude', 'aip-gate.json'), '{"autonomy":{"mergeLocal":true}}');
+    const run = () => JSON.parse(spawnSync(process.execPath, [CLI, 'status', REQ, '--json'], { cwd: r, encoding: 'utf8' }).stdout);
+    ok(JSON.stringify(run().header.autonomy) === '{"mergeLocal":true}', 'gate-config-flow: file chưa theo dõi → status hiện autonomy');
+    g('add', '.claude/aip-gate.json');
+    g('commit', '-q', '-m', 'gate');
+    ok(run().header.autonomy === null, 'gate-config-flow: file đã theo dõi → status không hiện autonomy của file');
+  } finally { fs.rmSync(r, { recursive: true, force: true }); }
+}
+
 if (fails.length) { console.error(`FAIL ${fails.length}:\n- ${fails.join('\n- ')}`); process.exit(1); }
 console.log(`status: ${pass} OK`);

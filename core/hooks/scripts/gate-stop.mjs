@@ -3,7 +3,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readGateConfig, resolveGate, classifyPath } from './gate-config.mjs';
+import { resolveGate, classifyPath } from './gate-config.mjs';
+import { trustedValue, gateTracked } from './gate-file.mjs';
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SHELL_TOOLS = new Set(['Bash', 'PowerShell']);
@@ -103,22 +104,25 @@ function currentTurn(text, wholeFile) {
 
 export function decide(input, deps = {}) {
   try {
-    const { readFile = (p) => readFileSync(p, 'utf8'), loadConfig: load = readGateConfig, env = process.env, resolveRoots = (d) => resolveGate(d)?.roots } = deps;
+    const { readFile = (p) => readFileSync(p, 'utf8'), loadConfig, loadGate = resolveGate, tracked = gateTracked, env = process.env, resolveRoots = (d) => resolveGate(d)?.roots } = deps;
     if (input?.stop_hook_active === true || String(env.AIP_STOP_GATE || '').toLowerCase() === 'off') return null;
     const cwd = path.resolve(input?.cwd || '.');
-    const cfg = load(cwd);
+    // `loadConfig` (seam test) tiêm cấu hình không có `file`, nên được coi là đáng tin như cấu hình tiêm ở fullEffective.
+    const gate = loadConfig ? { config: loadConfig(cwd) } : loadGate(cwd);
     // File ngoài project (vd script tạm trong scratchpad) không có test nào của project chạy được; chỉ xét file dưới cwd hoặc gốc git.
     const roots = [cwd, ...(resolveRoots(cwd) ?? [])];
-    if (cfg?.stopGate === false) return null;
+    if (trustedValue(gate, 'stopGate', { tracked }) === false) return null;
     const sub = input?.hook_event_name === 'SubagentStop';
     if (sub) {
-      const exempt = Array.isArray(cfg?.exemptAgents) ? cfg.exemptAgents : DEFAULT_EXEMPT_AGENTS;
+      const listed = trustedValue(gate, 'exemptAgents', { tracked });
+      const exempt = Array.isArray(listed) ? listed : DEFAULT_EXEMPT_AGENTS;
       if (exempt.includes(String(input.agent_type || '').split(':').pop())) return null;
     }
     const file = sub ? input.agent_transcript_path : input?.transcript_path;
     if (typeof file !== 'string' || !file) return null;
     const extra = [];
-    for (const s of Array.isArray(cfg?.testCommands) ? cfg.testCommands : []) {
+    const listedTests = trustedValue(gate, 'testCommands', { tracked });
+    for (const s of Array.isArray(listedTests) ? listedTests : []) {
       if (typeof s !== 'string') continue;
       try { extra.push(new RegExp(s)); } catch { /* regex sai chỉ bỏ qua mẫu đó */ }
     }
@@ -143,10 +147,12 @@ export function decide(input, deps = {}) {
       }
     }
     if (lastEdit < 0 || lastTest > lastEdit) return null;
+    // Chỉ gợi ý "stopGate": false khi khoá đó sẽ có hiệu lực; file đã bị git theo dõi thì khoá bị bỏ qua (hỏi git lúc chặn, hiếm).
+    const fileOff = !gate?.file || tracked(gate.file) === false;
     return {
       decision: 'block',
       reason: `Lượt này đã sửa ${edited.length} file code (${edited.slice(0, 3).join(', ')}${edited.length > 3 ? ', …' : ''}) nhưng chưa chạy test/lint/build nào sau lần sửa cuối. `
-        + 'Hãy chạy kiểm tra liên quan và báo kết quả, hoặc nói rõ vì sao bỏ qua. (Người dùng có thể tắt gate này bằng AIP_STOP_GATE=off hoặc "stopGate": false trong .claude/aip-gate.json.)',
+        + `Hãy chạy kiểm tra liên quan và báo kết quả, hoặc nói rõ vì sao bỏ qua. (Người dùng có thể tắt gate này bằng AIP_STOP_GATE=off${fileOff ? ' hoặc "stopGate": false trong .claude/aip-gate.json' : ''}.)`,
     };
   } catch { return null; }
 }

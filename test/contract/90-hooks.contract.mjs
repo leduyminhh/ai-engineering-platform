@@ -819,4 +819,101 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   }
+  // Request 2026-11-11-aip-gate-config-flow: khoá nới quyền trong aip-gate.json đã bị git theo dõi bị bỏ qua.
+  {
+    const { pathToFileURL, CORE_DIR, os, execFileSync } = ctx;
+    const dir = path.join(CORE_DIR, 'hooks', 'scripts');
+    const load = (n) => import(pathToFileURL(path.join(dir, n)).href);
+    const [bash, files, stop, cfgMod, ss] = await Promise.all(['guard-bash.mjs', 'guard-files.mjs', 'gate-stop.mjs', 'gate-config.mjs', 'session-start.mjs'].map(load));
+    const git = (cwd, ...args) => execFileSync('git', ['-c', 'commit.gpgsign=false', '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    const line = (o) => JSON.stringify(o);
+    const dirty = [line({ type: 'user', message: { role: 'user', content: 'sửa' } }),
+      line({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 't1', name: 'Edit', input: { file_path: 'a.js', old_string: 'a', new_string: 'b' } }] } })].join('\n');
+    const blocked = (r) => r?.decision === 'block';
+    const gateText = JSON.stringify({ allowEnvFiles: true, stopGate: false, exemptAgents: ['backend-implementer'] });
+    const tmp = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-trust-')));
+    const wt = path.join(tmp, 'wt');
+    const repo = (name, { commit }) => {
+      const r = path.join(tmp, name);
+      fs.mkdirSync(path.join(r, '.claude'), { recursive: true });
+      git(r, 'init', '-q');
+      fs.writeFileSync(path.join(r, '.claude', 'aip-gate.json'), gateText);
+      if (commit) git(r, 'add', '.claude/aip-gate.json');
+      git(r, 'commit', '-q', '--allow-empty', '-m', 'init');
+      return r;
+    };
+    try {
+      const T = repo('tracked', { commit: true });
+      const U = repo('untracked', { commit: false });
+      const stopAt = (cwd, deps = {}) => stop.decide({ hook_event_name: 'Stop', stop_hook_active: false, transcript_path: 'T', cwd }, { readFile: () => dirty, env: {}, ...deps });
+      const subAt = (cwd, agent_type) => stop.decide({ hook_event_name: 'SubagentStop', stop_hook_active: false, transcript_path: 'M', agent_transcript_path: 'S', agent_type, cwd },
+        { readFile: () => dirty, env: {} });
+
+      // AC3.1: allowEnvFiles
+      const readEnv = (r) => files.decide({ tool_name: 'Read', cwd: r, tool_input: { file_path: path.join(r, '.env') } }, { scopes: {} });
+      const catEnv = (r) => bash.decide({ tool_name: 'Bash', cwd: r, tool_input: { command: 'cat .env' } }, { currentBranch: () => 'feature/x' });
+      ok(readEnv(T)?.decision === 'deny' && catEnv(T)?.decision === 'ask', 'AC3.1: allowEnvFiles trong file đã bị git theo dõi → guard .env vẫn bật');
+      ok(readEnv(U) === null && catEnv(U) === null, 'AC3.1: allowEnvFiles trong file không bị theo dõi → mở .env như trước');
+      ok(cfgMod.envFilesAllowed(U, { tracked: () => null }) === false && cfgMod.envFilesAllowed(U, { tracked: () => false }) === true,
+        'AC3.1: allowEnvFiles khi không xác định trạng thái git → guard .env vẫn bật');
+
+      // AC3.2: stopGate, exemptAgents
+      ok(blocked(stopAt(T)) && stopAt(U) === null, 'AC3.2: stopGate:false chỉ tắt gate khi file không bị theo dõi');
+      ok(blocked(stopAt(U, { tracked: () => null })), 'AC3.2: stopGate:false khi không xác định trạng thái git → gate vẫn chặn');
+      ok(blocked(subAt(T, 'backend:backend-implementer')) && subAt(T, 'data:data-migration-writer') === null,
+        'AC3.2: exemptAgents trong file đã bị theo dõi → về DEFAULT_EXEMPT_AGENTS (không rỗng)');
+      ok(subAt(U, 'backend:backend-implementer') === null, 'AC3.2: exemptAgents trong file không bị theo dõi vẫn ghi đè danh sách mặc định');
+
+      // AC3.3: thông điệp chặn
+      const reasonT = stopAt(T)?.reason ?? '';
+      ok(reasonT.includes('AIP_STOP_GATE=off') && !reasonT.includes('"stopGate": false'), 'AC3.3: file bị theo dõi → reason chỉ nêu AIP_STOP_GATE=off');
+      const reasonUnknown = stopAt(U, { tracked: () => null })?.reason ?? '';
+      ok(!reasonUnknown.includes('"stopGate": false'), 'AC3.3: không xác định trạng thái git → reason không gợi ý "stopGate": false');
+      fs.writeFileSync(path.join(U, '.claude', 'aip-gate.json'), '{}');
+      ok((stopAt(U)?.reason ?? '').includes('"stopGate": false'), 'AC3.3: file không bị theo dõi → reason giữ cả hai cách tắt');
+      const N = path.join(tmp, 'nofile');
+      fs.mkdirSync(N);
+      git(N, 'init', '-q');
+      ok((stopAt(N)?.reason ?? '').includes('"stopGate": false'), 'AC3.3: không có file cấu hình → reason giữ cả hai cách tắt');
+
+      // AC2.1/AC3.2: testCommands nới quyền (mẫu "." biến mọi lệnh thành lệnh test) nên chỉ nhận từ file không bị theo dõi
+      const withEcho = dirty + '\n' + line({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: { command: 'echo hi' } }] } });
+      const echoAt = (cwd) => stop.decide({ hook_event_name: 'Stop', stop_hook_active: false, transcript_path: 'T', cwd }, { readFile: () => withEcho, env: {} });
+      const TC = path.join(tmp, 'tc-tracked');
+      fs.mkdirSync(path.join(TC, '.claude'), { recursive: true });
+      git(TC, 'init', '-q');
+      fs.writeFileSync(path.join(TC, '.claude', 'aip-gate.json'), JSON.stringify({ testCommands: ['.'] }));
+      git(TC, 'add', '.claude/aip-gate.json');
+      git(TC, 'commit', '-q', '-m', 'gate');
+      fs.writeFileSync(path.join(U, '.claude', 'aip-gate.json'), JSON.stringify({ testCommands: ['.'] }));
+      ok(blocked(echoAt(TC)) && echoAt(U) === null, 'AC2.1: testCommands trong file đã bị theo dõi bị bỏ qua; file không bị theo dõi vẫn nhận mẫu thêm');
+
+      // AC3.4: file worktree hỏng che file repo chính, hook im lặng và không coi stopGate của repo chính
+      fs.writeFileSync(path.join(U, '.claude', 'aip-gate.json'), JSON.stringify({ stopGate: false }));
+      git(U, 'worktree', 'add', '-q', wt, '-b', 'wt-b');
+      fs.mkdirSync(path.join(wt, '.claude'), { recursive: true });
+      fs.writeFileSync(path.join(wt, '.claude', 'aip-gate.json'), '{ hỏng');
+      ok(stopAt(U) === null && blocked(stopAt(wt)), 'AC3.4: file worktree hỏng → hook coi cấu hình là none, không rơi về stopGate của repo chính');
+
+      // AC3.5: session-start bỏ handoff đã bị theo dõi; git lỗi (ngoài repo) coi là chưa theo dõi
+      const writeHandoff = (r) => {
+        const f = path.join(r, 'docs', 'requests', '2026-01-01-a', 'handoff.md');
+        fs.mkdirSync(path.dirname(f), { recursive: true });
+        fs.writeFileSync(f, '# Bàn giao\nNhánh: feature/x. Việc đang làm: hoàn thiện hook SessionStart, còn lại bước đăng ký event và test. HANDOFF\n');
+        return f;
+      };
+      const startAt = (cwd) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd }, { loadConfig: () => ({ bootstrapInject: false, ledgerInject: false }), gitRoots: () => null })?.additionalContext ?? '';
+      writeHandoff(T);
+      git(T, 'add', 'docs');
+      git(T, 'commit', '-q', '-m', 'handoff');
+      writeHandoff(N);
+      const O = path.join(tmp, 'outside');
+      writeHandoff(O);
+      ok(!startAt(T).includes('HANDOFF'), 'AC3.5: handoff đã bị git theo dõi → không nạp');
+      ok(startAt(N).includes('HANDOFF') && startAt(O).includes('HANDOFF'), 'AC3.5: handoff chưa theo dõi hoặc ngoài repo git → nạp');
+    } finally {
+      try { git(path.join(tmp, 'untracked'), 'worktree', 'remove', '--force', wt); } catch { /* bỏ qua */ }
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }
 }
