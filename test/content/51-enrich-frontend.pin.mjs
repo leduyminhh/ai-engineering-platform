@@ -26,4 +26,19 @@ export default async function run({ ok, ctx }) {
   ok(desc.length > 0 && desc.length <= 500, 'AC5.3 frontend-manual-check: description ≤ 500 ký tự');
   ok(desc.includes('frontend-e2e-testing') && desc.includes('frontend-testing'),
     'AC5.3 frontend-manual-check: description nêu frontend-e2e-testing và frontend-testing');
+
+  // AC5.2: walkthrough có bốn kết quả, sáu luật an toàn, mẫu báo cáo.
+  const wt = read('references/walkthrough.md');
+  ok(skill.includes('(references/walkthrough.md)'), 'AC5.2 frontend-manual-check: SKILL.md trỏ references/walkthrough.md');
+  ok(['PASS', 'FAIL', 'SKIP-SAFETY', 'SKIP-PRECOND'].every((k) => wt.includes(`| ${k} |`)),
+    'AC5.2 frontend-manual-check: walkthrough có đủ bốn kết quả PASS, FAIL, SKIP-SAFETY, SKIP-PRECOND');
+  ok(/4xx\/5xx/.test(wt) && /console/.test(wt) && /bước tái hiện/.test(wt) && /request lỗi/.test(wt),
+    'AC5.2 frontend-manual-check: điều kiện PASS (4xx/5xx, console) và FAIL (bước tái hiện, request lỗi)');
+  for (let i = 1; i <= 6; i++) {
+    ok(wt.includes(`| L${i} |`), `AC5.2 frontend-manual-check: walkthrough có luật an toàn L${i}`);
+  }
+  ok(/hộp xác nhận/.test(wt) && /OAuth/.test(wt) && /tiền tố/.test(wt) && /file bí mật/.test(wt),
+    'AC5.2 frontend-manual-check: luật nêu hộp xác nhận, OAuth, tiền tố, file bí mật');
+  ok(/Tổng: PASS/.test(wt) && /ID FAIL/.test(wt),
+    'AC5.2 frontend-manual-check: mẫu báo cáo nêu tổng PASS/FAIL/SKIP và danh sách ID FAIL');
 }
