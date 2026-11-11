@@ -24,6 +24,9 @@ không đánh dấu xong khi chưa đủ.
       ("nhanh", "ổn định") mà không kèm ngưỡng.
 - [ ] **Không mâu thuẫn:** các mục nhất quán với nhau và với ADR/contract/project-knowledge; điểm lệch đã ghi
       thành câu hỏi mở.
+- [ ] **Acceptance criteria không mâu thuẫn:** lập từng cặp AC cùng đối tượng (cùng trạng thái, ngưỡng, mã lỗi, thứ tự) và
+      đọc hai AC cạnh nhau; đối chiếu mỗi AC với mục "Quyết định đã chốt" và `brief.md` của request (nếu có). AC lệch thì
+      sửa, hoặc đưa vào câu hỏi mở trước checkpoint.
 - [ ] **Feature-level:** không lẫn bước triển khai/code vào requirement.
 - [ ] **Giả định đánh dấu:** mọi **[giả định]** hiện diện rõ và nằm trong mục câu hỏi mở, không âm thầm điền.
 - [ ] **Spike giả định chịu tải:** giả định [Unverified] mà hướng đã chọn dựa vào đã có kết quả spike kèm lệnh chạy lại
