@@ -74,4 +74,24 @@ export default async function run({ ok, ctx }) {
   const wfStep5 = (wf.split(/^### Bước /m).find((s) => s.startsWith('5 — ')) || '').replace(/\s+/g, ' ');
   ok(/Cỡ task và review từng task/.test(wfStep5) && /cỡ Nhỏ.{0,400}bỏ task review/.test(wfStep5),
     'AC2.3: Bước 5 workflow-feature trỏ mục cỡ task và cho task cỡ Nhỏ bỏ review từng task');
+
+  // AC2.4
+  const routing = read(`${PE}/references/model-routing.md`);
+  const sessionRoles = read(`${PE}/references/session-roles.md`);
+  const secRoles = section(routing, '## Vai phiên gốc và phiên con');
+  ok(secRoles !== null, 'AC2.4: model-routing.md có mục "Vai phiên gốc và phiên con"');
+  if (secRoles) {
+    const bodyR = secRoles.join('\n');
+    ok(secRoles.length <= 20 || /session-roles\.md/.test(bodyR), `AC2.4: mục ≤ 20 dòng hoặc chuyển chi tiết sang session-roles.md (có ${secRoles.length})`);
+    const fullR = secRoles.length <= 20 ? bodyR : `${bodyR}\n${sessionRoles}`;
+    ok(/không chồng file/.test(fullR) && /rảnh/.test(fullR), 'AC2.4: giao việc kế không chồng file cho phiên con vừa xong hoặc rảnh');
+    const lo = fullR.toLowerCase();
+    ok(/xoay mềm/.test(lo) && /xoay cứng|cứng/.test(lo) && /phiên mới trước/.test(lo) && /không dừng phiên con giữa plan/.test(lo),
+      'AC2.4: xoay mềm ở ranh giới task, cứng ngay, mở phiên mới trước rồi dừng phiên cũ, không dừng giữa plan vì hạn mức');
+    ok(/Remote Control/.test(fullR) && /cross-session/.test(fullR) && /chạy tiếp/.test(fullR), 'AC2.4: không mở được phiên (Remote Control, tin cross-session) thì để phiên cũ chạy tiếp');
+    ok(/merge/.test(fullR) && /đóng/.test(fullR) && /không xoay/.test(fullR), 'AC2.4: phiên con xong và merge thì đóng, không xoay');
+    ok(/~40%/.test(fullR) && /~60%/.test(fullR) && /\[Inference\]/.test(fullR), 'AC2.4: ngưỡng ~40%/~60% kèm [Inference]');
+  }
+  const rules = routing.split('\n').filter((l) => /^\d+\. /.test(l));
+  ok(rules.length === 18, `AC2.4: 18 quy tắc đánh số của model-routing.md không đổi (có ${rules.length})`);
 }
