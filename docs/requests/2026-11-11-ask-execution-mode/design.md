@@ -1,6 +1,6 @@
 # Thiết kế: luôn hỏi cách thực thi plan, nhớ câu trả lời làm gợi ý
 - Ngày: 2026-11-11
-- Trạng thái: draft — chờ người duyệt G1
+- Trạng thái: approved — G1 duyệt 2026-11-11
 - Requirement: không có
 
 ## Vấn đề và lý do
