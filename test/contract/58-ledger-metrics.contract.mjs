@@ -88,6 +88,16 @@ export default async function run({ ok, ctx }) {
     const e2 = cli([]);
     ok(e1.status === 1 && e1.stdout === '' && e1.stderr.trim() !== '', 'AC1.5 thư mục không có progress.md: exit 1, stdout rỗng, stderr nêu lý do');
     ok(e2.status === 1 && e2.stdout === '' && e2.stderr.trim() !== '', 'AC1.5 thiếu --project: exit 1, stdout rỗng, stderr nêu lý do');
+
+    // AC1.6: số nền thật của request này.
+    const bfile = path.join(REPO_ROOT, 'docs', 'requests', '2026-11-11-skill-enrichment-from-usage', 'baseline.json');
+    const btext = fs.existsSync(bfile) ? fs.readFileSync(bfile, 'utf8') : '';
+    const b = btext ? JSON.parse(btext) : {};
+    const BKEYS = ['project', 'ledgers', 'requests', 'tasks', 'tasksReview2plus', 'pctReview2plus', 'tasksIssuesAtRound2plus', 'tasksIssuesAtRound3plus', 'rulings', 'rulingsOutsideFiles', 'outsideFilesPerRequest', 'minorDeferred', 'byRequest'];
+    ok(btext !== '' && BKEYS.every((k) => k in b), 'AC1.6 baseline.json có đủ khoá D3');
+    ok(b.ledgers >= 1 && b.tasks >= 1 && b.project === 'source-project', 'AC1.6 baseline.json: ledgers ≥ 1, tasks ≥ 1, project = source-project');
+    ok(b.pctReview2plus === Math.round((b.tasksReview2plus / b.tasks) * 1000) / 10, 'AC1.6 pctReview2plus = tasksReview2plus / tasks * 100 làm tròn 1 chữ số');
+    ok(!/[A-Za-z]:[\\/]/.test(btext) && !/content-automation/i.test(btext), 'AC1.6 baseline.json không có đường dẫn tuyệt đối hay tên riêng');
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
