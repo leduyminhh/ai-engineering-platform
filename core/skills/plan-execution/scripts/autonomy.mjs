@@ -72,6 +72,11 @@ export const readAutonomy = (cwd, deps) => resolveAutonomy(cwd, deps).value;
 
 const SETTABLE = { planRunner: PLAN_RUNNERS, partRunner: RUNNERS };
 
+// true/false khi git check-ignore thoát 0/1; mọi kết quả khác là null.
+function gitIgnored(file) {
+  try { execFileSync('git', ['-C', path.dirname(file), 'check-ignore', '-q', '--', path.basename(file)], { timeout: 3000, stdio: 'ignore' }); return true; } catch (e) { return e?.status === 1 ? false : null; }
+}
+
 // Lưu gợi ý cách chạy. Chỉ hai khoá sở thích: mergeLocal/cleanup/mode không ghi được từ đây nên lệnh này không nâng quyền.
 // code: 0 = đã ghi hoặc bỏ qua có lý do, 1 = file hỏng (không ghi), 2 = sai khoá/giá trị.
 export function setRunner(key, value, cwd = process.cwd(), deps = {}) {
@@ -105,7 +110,11 @@ export function setRunner(key, value, cwd = process.cwd(), deps = {}) {
   const tmp = `${file}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(next, null, 2) + '\n', 'utf8');
   renameSync(tmp, file);
-  return { code: 0, message: `✓ ${key}=${value} → ${file}` };
+  // File chưa gitignore mà bị commit thì khoá autonomy bị bỏ qua (như `aip autonomy high` cảnh báo); null = không xác định, không cảnh báo.
+  const warn = inRepo && (deps.ignored ?? gitIgnored)(file) === false
+    ? `\n  ⚠ ${file} chưa được gitignore; nếu bị commit, khoá autonomy bị bỏ qua. Thêm dòng .claude/aip-gate.json vào .gitignore (aip không tự sửa .gitignore).`
+    : '';
+  return { code: 0, message: `✓ ${key}=${value} → ${file}${warn}` };
 }
 
 // Gate đọc theo cwd: chạy sau khi `cd` vào thư mục skill sẽ đọc aip-gate.json của repo chứa plugin

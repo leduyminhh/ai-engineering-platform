@@ -289,6 +289,17 @@ test("autonomy-gates AC3.4: aip-gate.json đã git add ⇒ status nêu khoá b�
   assert.match(run("high"), /bỏ qua/);
 });
 
+test("autonomy-gates: high và safe giữ gợi ý planRunner đã lưu bằng --set", () => {
+  const root = tmp();
+  put(gatePath(root), JSON.stringify({ mode: "ask", autonomy: { mergeLocal: true, partRunner: "sequential", planRunner: "inline" } }));
+  const run = (sub) => runAutonomy(sub, { root, out: () => {}, err: () => {} });
+  const gate = () => JSON.parse(fs.readFileSync(gatePath(root), "utf8"));
+  assert.equal(run("high"), 0);
+  assert.deepEqual(gate().autonomy, { mergeLocal: true, cleanup: true, partRunner: "subagent", planRunner: "inline" });
+  assert.equal(run("safe"), 0);
+  assert.deepEqual(gate(), { mode: "ask", autonomy: { planRunner: "inline" } }, "safe bỏ bộ high, giữ planRunner");
+});
+
 test("autonomy-gates AC8.1: safe khi chưa có aip-gate.json không tạo file; high tạo .claude/", () => {
   const root = tmp();
   assert.equal(runAutonomy("safe", { root, out: () => {} }), 0);

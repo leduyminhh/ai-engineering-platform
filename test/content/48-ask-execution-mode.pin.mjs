@@ -100,6 +100,10 @@ export default async function run({ ok, ctx }) {
       const cli = (cwd, ...args) => spawnSync(process.execPath, [script, ...args], { cwd, encoding: 'utf8' });
       let c = cli(clean, '--set', 'planRunner=inline');
       ok(c.status === 0 && JSON.parse(fs.readFileSync(file(clean), 'utf8')).autonomy.planRunner === 'inline', 'AC3.1: CLI --set planRunner=inline exit 0 và ghi file');
+      ok(/gitignore/.test(c.stdout), 'AC3.1: --set cảnh báo khi aip-gate.json chưa được gitignore');
+      fs.writeFileSync(path.join(clean, '.gitignore'), '.claude/aip-gate.json\n');
+      c = cli(clean, '--set', 'partRunner=session');
+      ok(c.status === 0 && !/gitignore/.test(c.stdout), 'AC3.1: --set không cảnh báo khi aip-gate.json đã được gitignore');
       c = cli(clean, '--set', 'planRunner');
       ok(c.status === 2, 'AC3.2: CLI --set thiếu "=" → exit 2');
       c = cli(skillDir, '--set', 'planRunner=inline');
@@ -178,8 +182,23 @@ export default async function run({ ok, ctx }) {
     const wf = raw('workflows', 'feature', 'WORKFLOW.md');
     ok(!/khi `partRunner` là `session` hoặc thiếu khoá/.test(wf) && !/hoặc khoá `partRunner: subagent`/.test(wf) && !/thiếu khoá thì hỏi người dùng một lần trước mỗi nhóm/.test(wf) && /thẻ Cách thực thi/.test(wf),
       'AC6.2: WORKFLOW.md feature: không còn khoá bỏ câu hỏi, nêu thẻ Cách thực thi');
+    ok(/thẻ Cách thực thi cho mọi plan/.test(wf), 'AC6.2: WORKFLOW.md Bước 5 nêu thẻ Cách thực thi cho mọi plan, kể cả không chia part');
     ok(!/parallel parts run as background subagents/.test(raw('README.md')) && /`partRunner` and `planRunner` only order the options/.test(raw('README.md')), 'AC6.2: README.md nêu khoá chỉ đặt thứ tự lựa chọn');
     ok(!/part song song chạy bằng subagent nền/.test(raw('README_VI.md')) && /`partRunner` và `planRunner` chỉ đặt lựa chọn đứng đầu/.test(raw('README_VI.md')), 'AC6.2: README_VI.md nêu khoá chỉ đặt lựa chọn đứng đầu');
+  }
+
+  // AC7.1: spec sống ghi request này vào bảng Lịch sử; AC7.2: bốn manifest chạm tới đã bump so với trước request
+  {
+    const raw = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8');
+    for (const spec of ['workflows', 'hooks-gates', 'cli-wizard', 'baseline']) {
+      ok(/\| 2026-11-11 \| \[2026-11-11-ask-execution-mode\]/.test(raw('docs', 'specs', spec, 'spec.md')), `AC7.1: docs/specs/${spec}/spec.md có dòng Lịch sử của request`);
+    }
+    ok(/- \*\*workflows\/R23\*\* — `plan-execution` hỏi cách thực thi/.test(raw('docs', 'specs', 'workflows', 'spec.md')), 'AC7.1: workflows/spec.md có R23');
+    const gt = (v, min) => { const a = v.split('.').map(Number); const b = min.split('.').map(Number); for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
+    for (const [file, min] of [[['core', '.manifest.json'], '1.32.4'], [['workflows', '.manifest.json'], '3.15.0'], [['plugins', 'backend', '.manifest.json'], '1.14.1'], [['plugins', 'frontend', '.manifest.json'], '1.15.1']]) {
+      const { version } = JSON.parse(raw(...file));
+      ok(gt(version, min), `AC7.2: ${file.slice(0, -1).join('/')} version ${version} > ${min}`);
+    }
   }
 
   // AC3.5: lệnh --set không bị guard-bash hỏi (lệnh không nêu tên aip-gate.json), còn ghi file bằng lệnh nêu tên vẫn hỏi

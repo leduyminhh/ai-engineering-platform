@@ -143,7 +143,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** `plan.md` đã duyệt (cỡ "thay đổi nhỏ": không có `plan.md`, brief là `requirement.md`) + `requirement.md`
   (acceptance criteria từ Bước 3) + contract (nếu có) + `design.md`/`tasks.md` (nếu có) + baseline Bước 1 + bảng ứng
   viên e2e đã duyệt ở G1 (Bước 3; đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
-- **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó; chưa nạp skill ở Bước 1 thì gọi nó bằng công cụ gọi skill trước task đầu tiên), với mọi cỡ việc kể cả "thay đổi nhỏ": dòng `Task <n>: start` ghi trước khi giao agent, mỗi vòng sửa có re-review do agent reviewer làm. Chuẩn bị ledger
+- **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó; chưa nạp skill ở Bước 1 thì gọi nó bằng công cụ gọi skill trước task đầu tiên), với mọi cỡ việc kể cả "thay đổi nhỏ": trước Task 1 `plan-execution` hỏi thẻ Cách thực thi cho mọi plan, chia part hay không (trừ các trường hợp không hỏi ở bước 1 của `SKILL.md`), rồi dòng `Task <n>: start` ghi trước khi giao agent, mỗi vòng sửa có re-review do agent reviewer làm. Chuẩn bị ledger
   `<gốc repo chính>/.aip/runs/<request>/<part>/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
   xong). Mỗi task theo thứ tự: ghi BASE → cắt brief → giao agent theo `**Kind:**` (chuỗi agent do
   `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer`
