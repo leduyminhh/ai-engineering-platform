@@ -37,7 +37,7 @@ export default async function run({ ok, ctx }) {
   const ARS = read(`${AR}/SKILL.md`);
   const fm = (ARS.match(/^---\n([\s\S]*?)\n---/) || [, ''])[1];
   ok(/^name: engineering-api-research$/m.test(fm), 'AC3.4: frontmatter name đúng');
-  const desc = 'Nghiên cứu API hoặc dịch vụ ngoài, hoặc làm spike kỹ thuật nhỏ, rồi ghi file facts mỗi khẳng định có nhãn [Verified]/[Inference]/[Unverified] kèm nguồn và ngày đọc. Dùng khi người dùng muốn \\"tìm hiểu API của dịch vụ ngoài\\", \\"đọc docs rồi ghi lại sự thật\\", \\"spike thử thư viện\\", \\"lập file facts\\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; ghi quyết định chọn phương án → engineering-adr.';
+  const desc = 'Nghiên cứu API ngoài từ tài liệu gốc, chạy thử script chỉ đọc, ghi file facts có nhãn [Verified]/[Inference]/[Unverified] kèm nguồn và ngày đọc. Dùng khi người dùng muốn \\"tra docs API\\", \\"hạn mức, xác thực, mã lỗi của dịch vụ ngoài\\", \\"script thử chỉ đọc\\", \\"cái nào đã xác nhận, cái nào suy đoán\\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; ghi quyết định chọn phương án → engineering-adr.';
   ok(fm.includes(`description: "${desc}"`), 'AC3.4: description nguyên văn D6');
   ok(desc.length <= 500, 'AC3.4: description không quá 500 ký tự');
   for (const k of ['order', 'title', 'runsIn', 'invoke']) ok(new RegExp(`^${k}:`, 'm').test(fm), `AC3.4: frontmatter có ${k}`);

@@ -34,7 +34,7 @@ export default async function run({ ok, ctx }) {
   // AC4.3: skill backend-llm-integration, description nguyên văn D6, phủ 7 chủ đề.
   const llm = read('plugins/backend/skills/backend-llm-integration/SKILL.md');
   const llmRef = read('plugins/backend/skills/backend-llm-integration/references/llm-call-checklist.md');
-  const D6 = 'Thêm hoặc rà tính năng backend gọi LLM: ngân sách theo ngày, backoff, fail-soft có đánh dấu, ghi usage, redact output, hash input, prompt dự phòng. Dùng khi người dùng muốn "thêm tính năng gọi LLM", "gọi model AI từ backend", "ngân sách token theo ngày", "fail-soft khi LLM lỗi", "ghi usage gọi LLM". Không dùng khi code slice thường không gọi LLM → backend-implement; review diff tổng quát → backend-code-review.';
+  const D6 = 'Thêm hoặc rà tính năng backend gọi LLM: ngân sách theo ngày, retry khi bị rate limit, fail-soft có đánh dấu, ghi usage, redact output, prompt dự phòng. Dùng khi người dùng muốn "service gọi mô hình ngôn ngữ", "giới hạn chi phí gọi AI theo ngày", "retry khi rate limit", "fail-soft khi LLM lỗi", "ghi token mỗi lần gọi model". Không dùng khi code slice thường không gọi LLM → backend-implement; review diff tổng quát → backend-code-review.';
   const fm = ctx.parseFrontmatter ? ctx.parseFrontmatter(llm) : null;
   const desc = fm?.data?.description ?? fm?.meta?.description ?? fm?.description;
   ok(desc === D6, 'AC4.3: description đúng nguyên văn D6');

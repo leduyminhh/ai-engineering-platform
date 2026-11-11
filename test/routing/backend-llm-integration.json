@@ -1,0 +1,15 @@
+{
+  "positive": [
+    "Service của mình sắp gọi một mô hình ngôn ngữ để tóm tắt nội dung, bạn thiết kế giúp phần giới hạn chi phí theo ngày và retry khi bị rate limit nhé.",
+    "Khi lời gọi AI bị lỗi thì vẫn phải trả được kết quả tạm, có đánh dấu là bản hạ cấp và ghi log lý do, bạn làm giúp mình.",
+    "Mình muốn ghi lại lượng token mỗi lần gọi model nhưng không lưu nội dung prompt, đồng thời che dữ liệu nhạy cảm trong output trước khi log.",
+    "Rà soát giúp mình các chỗ trong backend đang gọi LLM, xem đã có đặt chỗ ngân sách trước khi gọi, backoff có jitter và không để lộ khoá nhà cung cấp trong log chưa.",
+    "Cần một prompt dự phòng cho trường hợp model chính hết quota, và test ép lỗi để chắc nhánh đó chạy đúng."
+  ],
+  "negative": [
+    "Thêm endpoint tạo đơn hàng theo contract đã chốt, làm vertical slice gồm use-case, port và adapter.",
+    "Review giúp mình PR backend này, xem có N+1 query hay thiếu index không.",
+    "API danh sách sản phẩm chậm quá, đo p95 trước và sau khi tối ưu giúp mình.",
+    "Refactor class service này cho gọn, tách bớt trách nhiệm nhưng giữ nguyên hành vi."
+  ]
+}

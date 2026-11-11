@@ -1,12 +1,12 @@
 {
   "id": "frontend",
   "name": "Frontend Cowork→Code",
-  "description": "Workflow frontend (React/TypeScript) Cowork → Code, docs-first, kiến trúc Feature-Based, FSD hoặc Micro-Frontend, không pipeline bắt buộc. Skill: frontend-init, frontend-implement, frontend-testing, frontend-code-review, frontend-refactor, frontend-migrate-architecture, frontend-fix, frontend-data-integration, frontend-e2e-testing, frontend-performance.",
+  "description": "Workflow frontend (React/TypeScript) Cowork → Code, docs-first, kiến trúc Feature-Based, FSD hoặc Micro-Frontend, không pipeline bắt buộc. Skill: frontend-init, frontend-implement, frontend-testing, frontend-code-review, frontend-refactor, frontend-migrate-architecture, frontend-fix, frontend-data-integration, frontend-e2e-testing, frontend-performance, frontend-manual-check.",
   "keywords": [
     "frontend",
     "react",
     "typescript",
     "ui"
   ],
-  "version": "1.15.1"
+  "version": "1.16.0"
 }

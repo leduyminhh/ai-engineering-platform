@@ -59,9 +59,9 @@ Chốt thêm ở design. Quyết định của người dùng (builder check): D
 
   | Skill id | Plugin | `description` |
   |---|---|---|
-  | `engineering-api-research` | engineering | "Nghiên cứu API hoặc dịch vụ ngoài, hoặc làm spike kỹ thuật nhỏ, rồi ghi file facts mỗi khẳng định có nhãn [Verified]/[Inference]/[Unverified] kèm nguồn và ngày đọc. Dùng khi người dùng muốn \"tìm hiểu API của dịch vụ ngoài\", \"đọc docs rồi ghi lại sự thật\", \"spike thử thư viện\", \"lập file facts\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; ghi quyết định chọn phương án → engineering-adr." |
-  | `backend-llm-integration` | backend | "Thêm hoặc rà tính năng backend gọi LLM: ngân sách theo ngày, backoff, fail-soft có đánh dấu, ghi usage, redact output, hash input, prompt dự phòng. Dùng khi người dùng muốn \"thêm tính năng gọi LLM\", \"gọi model AI từ backend\", \"ngân sách token theo ngày\", \"fail-soft khi LLM lỗi\", \"ghi usage gọi LLM\". Không dùng khi code slice thường không gọi LLM → backend-implement; review diff tổng quát → backend-code-review." |
-  | `frontend-manual-check` | frontend | "Viết runbook kiểm tay ánh xạ từng AC (dữ liệu seed, bước, kết quả mong đợi) cho UI chưa có test tự động, kèm walkthrough khám phá bằng Playwright có luật PASS/FAIL/SKIP và luật an toàn. Dùng khi người dùng muốn \"viết checklist kiểm tay UI\", \"runbook kiểm tay theo AC\", \"duyệt thủ công các màn hình\", \"walkthrough UI bằng Playwright\". Không dùng khi cần viết test e2e tự động → frontend-e2e-testing; test component → frontend-testing." |
+  | `engineering-api-research` | engineering | "Nghiên cứu API ngoài từ tài liệu gốc, chạy thử script chỉ đọc, ghi file facts có nhãn [Verified]/[Inference]/[Unverified] kèm nguồn và ngày đọc. Dùng khi người dùng muốn \"tra docs API\", \"hạn mức, xác thực, mã lỗi của dịch vụ ngoài\", \"script thử chỉ đọc\", \"cái nào đã xác nhận, cái nào suy đoán\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; ghi quyết định chọn phương án → engineering-adr." |
+  | `backend-llm-integration` | backend | "Thêm hoặc rà tính năng backend gọi LLM: ngân sách theo ngày, retry khi bị rate limit, fail-soft có đánh dấu, ghi usage, redact output, prompt dự phòng. Dùng khi người dùng muốn \"service gọi mô hình ngôn ngữ\", \"giới hạn chi phí gọi AI theo ngày\", \"retry khi rate limit\", \"fail-soft khi LLM lỗi\", \"ghi token mỗi lần gọi model\". Không dùng khi code slice thường không gọi LLM → backend-implement; review diff tổng quát → backend-code-review." |
+  | `frontend-manual-check` | frontend | "Viết runbook kiểm tay theo từng tiêu chí chấp nhận (dữ liệu mẫu, thao tác, kết quả mong đợi) cho UI chưa có test tự động, kèm walkthrough Playwright có luật PASS/FAIL/SKIP. Dùng khi người dùng muốn \"runbook kiểm tay theo AC\", \"kiểm thủ công màn hình\", \"tự thử UI từng bước\", \"walkthrough bằng Playwright\". Không dùng khi cần viết test e2e tự động → frontend-e2e-testing; test component → frontend-testing." |
 
   Độ dài đã đếm: 409, 413 và 433 ký tự (trần 500). Cụm "Dùng khi" của ba skill không trùng nguyên văn cụm nào của skill cũ
   (đã so với `frontend-e2e-testing`, `frontend-testing`, `backend-implement`, `engineering-spec-writing`); phần "Không dùng khi"
@@ -320,10 +320,10 @@ Sửa: `plugins/data/skills/data-db-migration/SKILL.md` (C1–C3, bảng tự bi
 | Part | Phụ thuộc | Song song | Trạng thái |
 |---|---|---|---|
 | 01-core | — | A | merged f21c3842 |
-| 02-engineering | — | A | đang làm |
-| 03-backend | — | A | đang làm |
-| 04-frontend | — | A | đang làm |
-| 05-data | — | A | đang làm |
+| 02-engineering | — | A | merged 4a584d89 |
+| 03-backend | — | A | merged 57c3f7e7 |
+| 04-frontend | — | A | merged 5b06716e |
+| 05-data | — | A | merged fd699cac |
 
 Plan gốc (`plan.md`) là P0 và chạy trước mọi part (`task-loop.md`, "Chế độ part" bước 1), nên cột Phụ thuộc để `—`.
 Tập file năm part rời nhau theo thư mục: 01 = `core/`, `workflows/`, pin 48; 02 = `plugins/engineering/`, pin 49; 03 =

@@ -1,6 +1,6 @@
 ---
 name: engineering-api-research
-description: "Nghiên cứu API hoặc dịch vụ ngoài, hoặc làm spike kỹ thuật nhỏ, rồi ghi file facts mỗi khẳng định có nhãn [Verified]/[Inference]/[Unverified] kèm nguồn và ngày đọc. Dùng khi người dùng muốn \"tìm hiểu API của dịch vụ ngoài\", \"đọc docs rồi ghi lại sự thật\", \"spike thử thư viện\", \"lập file facts\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; ghi quyết định chọn phương án → engineering-adr."
+description: "Nghiên cứu API ngoài từ tài liệu gốc, chạy thử script chỉ đọc, ghi file facts có nhãn [Verified]/[Inference]/[Unverified] kèm nguồn và ngày đọc. Dùng khi người dùng muốn \"tra docs API\", \"hạn mức, xác thực, mã lỗi của dịch vụ ngoài\", \"script thử chỉ đọc\", \"cái nào đã xác nhận, cái nào suy đoán\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; ghi quyết định chọn phương án → engineering-adr."
 order: 14
 title: "API Research — nghiên cứu dịch vụ ngoài + ghi file facts có nhãn nguồn"
 runsIn: plan

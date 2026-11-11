@@ -199,7 +199,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   ok(beAll && !beAll.skillIds.some((s) => s.includes('db-migration')),
     'skillCatalog: plugin backend không còn skill db-migration');
   const beOff = offeredCatalog().plugins.find((p) => p.id === 'backend');
-  ok(beOff && beOff.skillIds.length === 10, 'offeredCatalog: vẫn offer đủ 10 skill backend đã publish');
+  ok(beOff && beOff.skillIds.length === 11, 'offeredCatalog: vẫn offer đủ 11 skill backend đã publish');
 }
 
 // frontend-data-integration + frontend-e2e-testing đã publish (spec 2026-09-29 §7.3.7, §7.2; publish không chờ pilot).
@@ -208,7 +208,7 @@ ok(claudeCliScope('global') === 'user' && claudeCliScope('project') === 'project
   for (const s of ['frontend/frontend-data-integration', 'frontend/frontend-e2e-testing']) {
     ok(feOff && feOff.skillIds.includes(s), `offeredCatalog: offer ${s} (đã publish)`);
   }
-  ok(feOff && feOff.skillIds.length === 10, 'offeredCatalog: offer đủ 10 skill frontend đã publish');
+  ok(feOff && feOff.skillIds.length === 11, 'offeredCatalog: offer đủ 11 skill frontend đã publish');
 }
 
 // ── unit: wizardReportModel — report "phần nào cài được qua wizard" (offered vs draft) ──

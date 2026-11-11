@@ -1,6 +1,6 @@
 ---
 name: backend-llm-integration
-description: "Thêm hoặc rà tính năng backend gọi LLM: ngân sách theo ngày, backoff, fail-soft có đánh dấu, ghi usage, redact output, hash input, prompt dự phòng. Dùng khi người dùng muốn \"thêm tính năng gọi LLM\", \"gọi model AI từ backend\", \"ngân sách token theo ngày\", \"fail-soft khi LLM lỗi\", \"ghi usage gọi LLM\". Không dùng khi code slice thường không gọi LLM → backend-implement; review diff tổng quát → backend-code-review."
+description: "Thêm hoặc rà tính năng backend gọi LLM: ngân sách theo ngày, retry khi bị rate limit, fail-soft có đánh dấu, ghi usage, redact output, prompt dự phòng. Dùng khi người dùng muốn \"service gọi mô hình ngôn ngữ\", \"giới hạn chi phí gọi AI theo ngày\", \"retry khi rate limit\", \"fail-soft khi LLM lỗi\", \"ghi token mỗi lần gọi model\". Không dùng khi code slice thường không gọi LLM → backend-implement; review diff tổng quát → backend-code-review."
 order: 11
 title: "Backend LLM Integration — Gọi LLM từ backend có ngân sách, fail-soft có đánh dấu (recipe on-demand)"
 runsIn: execute

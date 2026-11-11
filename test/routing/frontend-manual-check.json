@@ -1,0 +1,15 @@
+{
+  "positive": [
+    "Tính năng lọc đơn hàng xong rồi, soạn giúp mình bảng các bước để mình tự bấm thử trên giao diện, mỗi bước ghi kết quả cần thấy, gắn với từng tiêu chí chấp nhận.",
+    "Mình cần một runbook kiểm tay cho màn hình thanh toán: điều kiện, dữ liệu mẫu, từng thao tác và kết quả mong đợi.",
+    "Bạn mở trình duyệt đi qua các bước như người dùng thật rồi báo bước nào đạt, bước nào hỏng, bước nào chưa kiểm được kèm lý do nhé.",
+    "Chưa có test tự động cho màn này, nên lập danh sách bước kiểm thủ công theo AC để cuối sprint QA chạy lại được.",
+    "Chạy thử luồng đăng ký trên môi trường local, xem request mạng và console sau mỗi bước, ghi kết quả từng bước vào bảng."
+  ],
+  "negative": [
+    "Viết test Playwright tự động cho luồng đặt hàng từ giao diện tới database.",
+    "Viết test Testing Library cho component bảng dữ liệu, mock API bằng msw.",
+    "Review giúp mình PR React này, xem có vấn đề a11y hay vỡ ranh giới kiến trúc không.",
+    "Dựng component thẻ sản phẩm từ file Figma này thành React TypeScript."
+  ]
+}
