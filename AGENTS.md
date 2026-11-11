@@ -149,8 +149,8 @@ them. They apply when the aip workflows and skills are installed.
 - Route by request: a feature → `workflow-feature`; a bugfix → `workflow-bugfix`. Clarification and
   `design.md` come from `workflow-feature` steps 2–3 (skill `engineering-spec-writing`); the plan comes
   from skill `engineering-plan-writing`.
-- Execution: skill `plan-execution` (a task loop with a review per task); do not ask again how to
-  execute once the plan is approved.
+- Execution: skill `plan-execution` (a task loop with a review per task); it asks how to run (subagent per
+  task or inline) before each execution and remembers the answer as a suggestion.
 - Commit each task on a feature branch without pausing (see **Safety**); the human reviews the whole
   branch diff before merge or push.
 - Before finishing, run the full suites of every touched component (see **Testing**).
