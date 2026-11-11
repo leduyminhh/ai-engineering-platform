@@ -92,7 +92,7 @@ không cần khai báo model riêng cho từng task.
 
 | Suy nghĩ | Thực tế |
 |---|---|
-| "Task nhỏ, bỏ review cho nhanh" | Mỗi task có review; task nhỏ thì review cũng nhanh. Chỉ chế độ inline và part chạy bằng subagent bỏ review từng task (`references/inline.md`). |
+| "Task nhỏ, bỏ review cho nhanh" | Chỉ task cỡ Nhỏ đủ cả bốn điều kiện ở mục "Cỡ task và review từng task" của `references/task-loop.md` mới bỏ review từng task, và vẫn phải qua bước đối chiếu diff sau commit. Task `BE`, `DB`, `CT`, `FE-INT`, `E2E`, `DOCS` hoặc `**TDD:** có` luôn review. Chế độ inline và part chạy bằng subagent bỏ ở mọi cỡ (`references/inline.md`). |
 | "Agent báo xanh rồi" | Báo cáo agent là ý định. Đối chiếu bằng diff và lần chạy test của chính session chính. |
 | "Finding này ngoài AC, sửa luôn cho tiện" | Theo mục "Nhận review" của `references/task-loop.md`: đổi hành vi ngoài AC là thẻ G3, không tự sửa. |
 | "Rủi ro này nhỏ, gộp vào task sau cho tiện" | Đổi hành vi ngoài AC đi thẻ G3 ở mọi mức severity; `Ruling:` không mở rộng `**Files:**` cho việc đó (`references/task-loop.md`, mục "Nhận review"). |

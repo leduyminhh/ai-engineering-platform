@@ -60,4 +60,18 @@ export default async function run({ ok, ctx }) {
       ok(r.status === 0, `AC2.2: ledger.mjs chấp nhận dòng D9 (exit ${r.status}) ${(r.stderr || '').trim()}`);
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   }
+
+  // AC2.3
+  const rationale = (section(skillMd, '## Dấu hiệu đang tự biện minh') || []);
+  const rowNho = rationale.find((l) => l.startsWith('| "Task nhỏ'));
+  ok(!!rowNho && /Cỡ task và review từng task/.test(rowNho) && !/Mỗi task có review/.test(rowNho),
+    'AC2.3: hàng "Task nhỏ, bỏ review cho nhanh" trỏ mục cỡ task, không còn phủ định chung');
+  const nRows = rationale.filter((l) => l.startsWith('| "')).length;
+  ok(nRows >= 4 && nRows <= 7, `AC2.3: bảng tự biện minh không tăng so với 7 dòng hiện có (có ${nRows})`);
+  const finalReview = read(`${PE}/references/prompts/final-review.md`);
+  ok(/đọc kỹ[^\n]*cỡ nhỏ/i.test(finalReview), 'AC2.3: final-review.md bảo reviewer đọc kỹ diff task ghi "cỡ nhỏ"');
+  const wf = read('workflows/feature/WORKFLOW.md');
+  const wfStep5 = (wf.split(/^### Bước /m).find((s) => s.startsWith('5 — ')) || '').replace(/\s+/g, ' ');
+  ok(/Cỡ task và review từng task/.test(wfStep5) && /cỡ Nhỏ.{0,400}bỏ task review/.test(wfStep5),
+    'AC2.3: Bước 5 workflow-feature trỏ mục cỡ task và cho task cỡ Nhỏ bỏ review từng task');
 }
