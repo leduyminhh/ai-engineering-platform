@@ -14,7 +14,7 @@ export default async function run({ ok, ctx }) {
     'AC5.1 frontend-manual-check: mẫu runbook có ## Điều kiện và ## Kết quả đã chạy');
   ok(tpl.includes('| # | Thao tác | Kết quả mong đợi | AC |'),
     'AC5.1 frontend-manual-check: mẫu runbook có bảng | # | Thao tác | Kết quả mong đợi | AC |');
-  ok(/mỗi `AC<n>\.<m>`[^\n]*ít nhất một bước/.test(skill),
+  ok(/[Mm]ỗi `AC<n>\.<m>`[^\n]*ít nhất một bước/.test(skill),
     'AC5.1 frontend-manual-check: quy trình đòi mỗi AC xuất hiện ở ít nhất một bước');
   ok(/chưa kiểm/.test(skill) && /không để trống/.test(skill),
     'AC5.1 frontend-manual-check: quy trình đòi ghi "chưa kiểm", không để trống');
