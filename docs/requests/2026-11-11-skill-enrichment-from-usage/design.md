@@ -84,7 +84,9 @@ Chốt thêm ở design. Quyết định của người dùng (builder check): D
   review `DOCS` chỉ tốn `haiku`. **Phạm vi áp dụng:** mọi chế độ còn review từng task (chạy tuần tự không part, và part với
   `partRunner: session`). Part chạy bằng subagent và inline đã bỏ review từng task (`SKILL.md:95`, `inline.md:68`) nên không đổi.
   Quyết định ghi thành [ADR-0005](../../decisions/0005-small-task-skips-per-task-review.md).
-  không có dòng review (vòng 0).
+- **D9 — Dòng ledger của task cỡ Nhỏ:** sau commit, diff khớp `**Files:**` và không chạm đường dẫn nhạy cảm của D8 thì ghi
+  `Task <n>: complete (commits <a>..<b>, review cuối — cỡ nhỏ)`. Không ghi dòng `Task <n>: review …` (`EVENT_FORMATS` của
+  `ledger.mjs` chỉ nhận vòng ≥ 1); script đo (D2) tính task này là không có dòng review (vòng 0).
 - **D10 — Bước file dùng chung (người dùng chốt: giữ):** phiên gốc bump `.manifest.json` của plugin vừa merge và
   `plugins/_versions.lock.json` (`node cli/lib/versions.mjs --lock` sau `npm run build`) sau mỗi lần merge part, trước full suite;
   cũng làm `plugins/_published.json`, `test/routing/*.json` của skill mới, `test/routing/rank1.lock.json`, `CHANGELOG.md`,
