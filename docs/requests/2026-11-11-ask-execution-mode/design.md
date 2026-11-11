@@ -70,8 +70,7 @@ Người dùng chốt (không hỏi lại):
 - **A12** — Môi trường không có công cụ hỏi có lựa chọn (headless, Codex, Cowork) theo quy tắc 4 của `ask-user.md`: in danh sách và dừng
   chờ như mọi cổng khác. `claude -p` không người trả lời: [giả định] builder kiểm `using-aip/references/agents-in-ci.md`; nếu luồng CI
   gọi `plan-execution` thì nêu ở đó rằng CI phải nói rõ cách chạy trong prompt (thành điều kiện A5b).
-- **A13** — Version: bump patch `core` (1.32.4 → 1.32.5) và `workflows` (3.15.0 → 3.15.1) vì `workflows/feature/WORKFLOW.md` đổi;
-  `node cli/lib/versions.mjs --lock` sau build.
+- **A13** — Version: bump patch `core` (1.32.4 → 1.32.5) và `workflows` (3.15.0 → 3.15.1) vì `workflows/feature/WORKFLOW.md` đổi; thêm `backend` (1.14.1 → 1.14.2) và `frontend` (1.15.1 → 1.15.2) vì `backend-init`/`frontend-init` chép `core/agents/AGENTS.template.md` vào plugin (phát hiện ở Task 8, cổng version từ chối lock); `node cli/lib/versions.mjs --lock` sau build.
 
 ## Tiêu chí chấp nhận
 
@@ -95,7 +94,7 @@ Người dùng chốt (không hỏi lại):
 - [ ] **AC6.1** — Given `AGENTS.md`, `core/agents/AGENTS.template.md`, `CLAUDE.md` When sau thay đổi Then không còn "do not ask again how to execute" (so sau khi gộp xuống dòng); hai file baseline vẫn giống hệt nhau và không quá 200 dòng; `CLAUDE.md` và baseline nêu `plan-execution` hỏi cách chạy trước mỗi lần thực thi và nhớ câu trả lời làm gợi ý
 - [ ] **AC6.2** — Given `core/skills/plan-execution/SKILL.md`, `references/inline.md`, `references/task-loop.md`, `references/ask-user.md`, `core/skills/git-worktree/SKILL.md`, `references/parallel-agents.md`, `workflows/feature/WORKFLOW.md`, `README.md`, `README_VI.md` When sau thay đổi Then không còn mô tả cũ (khoá `partRunner`/`aip autonomy high` bỏ câu hỏi, "không hỏi người dùng chọn cách thực thi"); `ask-user.md` có hàng "Cách thực thi" và hàng "Cách chạy part" mới; pin 32 AC5.1 đổi theo, không thêm pin song song
 - [ ] **AC7.1** — Given bước gộp When cập nhật spec sống Then `docs/specs/workflows/spec.md` có R21 mới và R14 đổi, `docs/specs/hooks-gates/spec.md` R15 đổi, `docs/specs/cli-wizard/spec.md` R6 đổi, `docs/specs/baseline/spec.md` R8 đổi, mỗi mục có dòng trong bảng Lịch sử trỏ tới request này; `check-request.mjs` với `--base master` không báo W10–W14
-- [ ] **AC7.2** — Given sau thay đổi When chạy `npm run build`, `node cli/lib/versions.mjs --lock` và `npm test` Then `core` > 1.32.4, `workflows` > 3.15.0 và `npm test` exit 0
+- [ ] **AC7.2** — Given sau thay đổi When chạy `npm run build`, `node cli/lib/versions.mjs --lock` và `npm test` Then `core` > 1.32.4, `workflows` > 3.15.0, `backend` > 1.14.1, `frontend` > 1.15.1 và `npm test` exit 0
 
 ## Thiết kế
 

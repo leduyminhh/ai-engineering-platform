@@ -34,7 +34,7 @@
 | `docs/specs/cli-wizard/spec.md` | R6 đổi, Lịch sử | Task 7 |
 | `docs/specs/baseline/spec.md` | R8 đổi, Lịch sử | Task 7 |
 | `docs/requests/2026-11-03-execution-mode-choice/design.md` | Trạng thái `abandoned` (A11) | Task 7 |
-| `core/.manifest.json`, `workflows/.manifest.json`, `plugins/_versions.lock.json` | bump version, lock | Task 8 |
+| `core/.manifest.json`, `workflows/.manifest.json`, `plugins/backend/.manifest.json`, `plugins/frontend/.manifest.json`, `plugins/_versions.lock.json` | bump version, lock (backend/frontend vì init chép AGENTS.template.md) | Task 8 |
 
 ## Global Constraints
 - Khoá `autonomy` hiệu lực có đúng bốn khoá `{ mergeLocal, cleanup, partRunner, planRunner }`; mặc định `{ mergeLocal: false, cleanup: false, partRunner: "session", planRunner: "subagent" }`; `planRunner` ∈ `subagent` | `inline`; `partRunner` ∈ `subagent` | `session` | `sequential`.
@@ -208,6 +208,8 @@
 **Files:**
 - Modify: `core/.manifest.json`
 - Modify: `workflows/.manifest.json`
+- Modify: `plugins/backend/.manifest.json`
+- Modify: `plugins/frontend/.manifest.json`
 - Modify: `plugins/_versions.lock.json`
 - Test: `test/validate.mjs`
 
