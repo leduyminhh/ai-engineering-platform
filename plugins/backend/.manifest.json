@@ -1,7 +1,7 @@
 {
   "id": "backend",
   "name": "Backend Cowork→Code",
-  "description": "Workflow backend (Java/Spring, Python) Cowork → Code, docs-first, không pipeline bắt buộc. Skill: backend-init, backend-implement, backend-testing, backend-code-review, backend-refactor, backend-migrate-architecture, backend-migrate-vault-consul, backend-api-contract, backend-fix, backend-performance.",
+  "description": "Workflow backend (Java/Spring, Python) Cowork → Code, docs-first, không pipeline bắt buộc. Skill: backend-init, backend-implement, backend-testing, backend-code-review, backend-refactor, backend-migrate-architecture, backend-migrate-vault-consul, backend-api-contract, backend-fix, backend-performance, backend-llm-integration.",
   "keywords": [
     "backend",
     "java",
@@ -9,5 +9,5 @@
     "python",
     "api"
   ],
-  "version": "1.14.2"
+  "version": "1.15.1"
 }

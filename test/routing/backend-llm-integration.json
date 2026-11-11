@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Mình sắp gọi mô hình ngôn ngữ để tóm tắt bài viết trong job nền, muốn có trần chi phí mỗi ngày, lỗi thì thử lại hợp lý, và nếu hết sạch hạn mức thì vẫn trả được thứ gì đó.",
+    "Rà giúp mình mấy chỗ gọi AI trong service: log đang in cả câu trả lời lẫn khoá truy cập, cần che bớt và chỉ lưu dấu vết của prompt thôi.",
+    "Khi nhà cung cấp trả lỗi giới hạn tốc độ thì bên mình đang gọi lại liên tục. Chỉnh sao cho chờ tăng dần, không vượt thời gian của job, và kết quả thay thế phải được đánh dấu rõ.",
+    "Cần ghi lại lượng token mỗi lần gọi mô hình để đối chiếu với hạn mức ngày, nhưng không lưu nội dung câu hỏi và không quy ra tiền."
+  ],
+  "negative": [
+    "Viết use-case và adapter cho chức năng đổi mật khẩu theo kiến trúc hexagonal giúp mình.",
+    "Review giúp mình PR backend này, xem có N+1 query hay thiếu index không.",
+    "Endpoint tìm kiếm đang chậm, chạy load test đo p95 trước và sau khi tối ưu giúp mình."
+  ]
+}

@@ -6,7 +6,7 @@ title: "Backend Code Review — Review diff/PR backend theo trục, có evidence
 runsIn: execute
 invoke: per-request
 argument-hint: "[PR | branch | đường dẫn]"
-sharedAssets: templates/architecture
+sharedAssets: templates/architecture, templates/robustness
 ---
 
 # Backend Code Review — Review diff/PR/module backend theo trục (recipe on-demand)
@@ -55,6 +55,7 @@ tầng, map rò kiểu ở biên) — review bám `architecture/ARD.md` mục "D
   `code-convention.md`, `stack-profile`/`tech-stack`) để biết **kiến trúc, quy ước đặt tên, ranh giới an toàn**.
   Đối chiếu blueprint `architecture/<stack>-<kiểu>.template.md` + [architecture/ARD.md](architecture/ARD.md)
   cho Dependency Rule + checklist review PR (mục 7).
+- Đọc [robustness/robustness-checklist.md](robustness/robustness-checklist.md) (5 nhóm: kích thước input, che secret, idempotency, race/CAS, việc mồ côi sau lỗi) và đối chiếu diff với từng nhóm khi review Trục 1.
 - **Dò stack thật** từ chính project (`pom.xml`/`build.gradle`/`pyproject.toml`/`requirements.txt`):
   Java/Spring hay Python, ORM, có ArchUnit/import-linter không — để biết luật nào máy đã ép, luật nào phải
   soát tay.

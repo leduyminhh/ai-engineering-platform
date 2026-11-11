@@ -11,6 +11,7 @@
     "backend/backend-api-contract",
     "backend/backend-fix",
     "backend/backend-performance",
+    "backend/backend-llm-integration",
     "frontend/frontend-init",
     "frontend/frontend-implement",
     "frontend/frontend-testing",
@@ -21,6 +22,7 @@
     "frontend/frontend-data-integration",
     "frontend/frontend-e2e-testing",
     "frontend/frontend-performance",
+    "frontend/frontend-manual-check",
     "data/data-db-migration",
     "engineering",
     "ops"

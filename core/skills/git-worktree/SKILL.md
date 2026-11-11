@@ -12,7 +12,7 @@ invoke: per-request
 Worktree là một cây làm việc riêng của cùng repo. Dùng khi hai agent hoặc hai part chạy cùng lúc với tập file không giao
 nhau, hoặc khi cần cô lập việc mới khỏi thay đổi đang dở. Task chạy tuần tự (mặc định của `plan-execution`, kể cả trong một part) thì ở yên một
 cây, không cần skill này. Skill dành cho session chính; worktree do `isolation: worktree` của Claude Code tự tạo cho
-subagent thì không thuộc phạm vi skill này.
+subagent có quy trình riêng ở mục "worktree do `isolation: worktree` tạo" bên dưới.
 
 Quy ước dưới đây tóm tắt `references/parallel-agents.md` của skill này; skill không đặt quy ước khác. Chỉ song song giữa part (`<nn>` là số part trong Bảng part); bên trong một part các task chạy tuần tự.
 
@@ -33,6 +33,13 @@ Quy ước dưới đây tóm tắt `references/parallel-agents.md` của skill 
 4. **Baseline trong worktree mới.** Cài dependency nếu project cần, rồi chạy build/test hẹp. Đỏ thì dừng và báo; không
    implement trên baseline đỏ.
 5. **Làm việc.** Hook `core` đọc `.claude/aip-gate.json` từ gốc worktree rồi từ gốc repo chính, nên cấu hình gate vẫn áp dụng.
+
+## Quy trình — worktree do `isolation: worktree` tạo
+
+Công cụ giao agent với `isolation: worktree` tự tạo worktree và nhánh `worktree-agent-*`, có thể được dựng từ `origin/<nhánh gốc>` chứ không từ đỉnh `feature/<slug>` ở máy [Unverified: hành vi công cụ, chưa kiểm]. Commit chưa push trên `feature/<slug>` có thể vắng mặt trong worktree đó.
+
+1. Việc đầu tiên của agent: `git merge-base --is-ancestor <hash đỉnh feature> HEAD`, hash do session chính ghi trong brief. Không đạt thì trả `blocked` kèm lý do, không làm tiếp trên nền sai.
+2. Xong việc, session chính `cherry-pick` các commit của nhánh `worktree-agent-*` về `feature/<slug>`; không `reset --hard` nhánh tích hợp theo nhánh agent, vì mất commit chưa push.
 
 ## Quy trình — merge về nhánh tích hợp
 

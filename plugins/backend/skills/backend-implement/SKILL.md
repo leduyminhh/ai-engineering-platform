@@ -6,7 +6,7 @@ title: "Backend Implement — Sinh vertical slice từ use-case/contract"
 runsIn: execute
 invoke: per-request
 argument-hint: "[use case | đường dẫn contract]"
-sharedAssets: templates/architecture
+sharedAssets: templates/architecture, templates/robustness
 ---
 
 # Backend Implement — Sinh vertical slice từ use-case (recipe on-demand)
@@ -36,6 +36,7 @@ gọi khi cần — không thuộc chuỗi bắt buộc.
 - Dò **stack thật** từ `pom.xml` / `build.gradle` / `pyproject.toml` / `requirements.txt`: framework, ORM,
   test runner, công cụ kiểm ranh giới (ArchUnit / import-linter) + **lệnh build/test** thật để chạy ở bước 3 và 5.
 - Kiểm API thư viện theo phiên bản thật trước khi gọi: theo mục "Kiểm nguồn" của skill `principles` (bản cài plugin: `core:principles`).
+- Đọc [robustness/robustness-checklist.md](robustness/robustness-checklist.md) (5 nhóm: kích thước input, che secret, idempotency, race/CAS, việc mồ côi sau lỗi) để thiết kế slice không lọt các lỗi này; dùng lại nó khi tự soát ở bước 5.
 
 ### 1. Chốt use-case
 Từ nguồn đầu vào (mô tả người dùng · `docs/requests/<...>/requirement.md` · contract

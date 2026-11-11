@@ -93,7 +93,7 @@ Người dùng chốt (không hỏi lại):
 - [ ] **AC5.1** — Given `aip autonomy high` When chạy Then ghi đúng `{ mergeLocal: true, cleanup: true, partRunner: "subagent" }` như cũ; `status` in thêm `planRunner`; chữ help trong `cli/index.mjs` và dòng cuối thông báo `high` nêu cách chạy vẫn hỏi mỗi lần; `test/mode.test.mjs` xanh
 - [ ] **AC6.1** — Given `AGENTS.md`, `core/agents/AGENTS.template.md`, `CLAUDE.md` When sau thay đổi Then không còn "do not ask again how to execute" (so sau khi gộp xuống dòng); hai file baseline vẫn giống hệt nhau và không quá 200 dòng; `CLAUDE.md` và baseline nêu `plan-execution` hỏi cách chạy trước mỗi lần thực thi và nhớ câu trả lời làm gợi ý
 - [ ] **AC6.2** — Given `core/skills/plan-execution/SKILL.md`, `references/inline.md`, `references/task-loop.md`, `references/ask-user.md`, `core/skills/git-worktree/SKILL.md`, `references/parallel-agents.md`, `workflows/feature/WORKFLOW.md`, `README.md`, `README_VI.md` When sau thay đổi Then không còn mô tả cũ (khoá `partRunner`/`aip autonomy high` bỏ câu hỏi, "không hỏi người dùng chọn cách thực thi"); `ask-user.md` có hàng "Cách thực thi" và hàng "Cách chạy part" mới; pin 32 AC5.1 đổi theo, không thêm pin song song
-- [ ] **AC7.1** — Given bước gộp When cập nhật spec sống Then `docs/specs/workflows/spec.md` có R21 mới và R14 đổi, `docs/specs/hooks-gates/spec.md` R15 đổi, `docs/specs/cli-wizard/spec.md` R6 đổi, `docs/specs/baseline/spec.md` R8 đổi, mỗi mục có dòng trong bảng Lịch sử trỏ tới request này; `check-request.mjs` với `--base master` không báo W10–W14
+- [ ] **AC7.1** — Given bước gộp When cập nhật spec sống Then `docs/specs/workflows/spec.md` có R23 mới và R14 đổi, `docs/specs/hooks-gates/spec.md` R15 đổi, `docs/specs/cli-wizard/spec.md` R6 đổi, `docs/specs/baseline/spec.md` R8 đổi, mỗi mục có dòng trong bảng Lịch sử trỏ tới request này; `check-request.mjs` với `--base master` không báo W10–W14
 - [ ] **AC7.2** — Given sau thay đổi When chạy `npm run build`, `node cli/lib/versions.mjs --lock` và `npm test` Then `core` > 1.32.4, `workflows` > 3.15.0, `backend` > 1.14.1, `frontend` > 1.15.1 và `npm test` exit 0
 
 ## Thiết kế
@@ -143,11 +143,11 @@ review cuối toàn nhánh, giá trị `HIGH`.
 
 ## Ảnh hưởng spec
 - baseline: đổi R8
-- workflows: đổi R12, đổi R14, thêm R21
+- workflows: đổi R12, đổi R14, thêm R23
 - hooks-gates: đổi R15
 - cli-wizard: đổi R6
 
-R21 (workflows), viết ở bước gộp: `plan-execution` hỏi cách thực thi trước mỗi lần thực thi plan (thẻ ở bước Chuẩn bị; nhóm Song song
+R23 (workflows), viết ở bước gộp: `plan-execution` hỏi cách thực thi trước mỗi lần thực thi plan (thẻ ở bước Chuẩn bị; nhóm Song song
 hỏi thêm `partRunner`); `autonomy.planRunner`/`partRunner` chỉ đặt lựa chọn đứng đầu, không bỏ câu hỏi; câu trả lời lưu bằng
 `autonomy.mjs --set`; trường hợp không hỏi (không có tool subagent, người dùng đã nói rõ, làm tiếp từ ledger); ghi `Ruling: cách chạy`.
 
