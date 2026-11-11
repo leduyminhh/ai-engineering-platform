@@ -143,7 +143,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Đầu vào:** `plan.md` đã duyệt (cỡ "thay đổi nhỏ": không có `plan.md`, brief là `requirement.md`) + `requirement.md`
   (acceptance criteria từ Bước 3) + contract (nếu có) + `design.md`/`tasks.md` (nếu có) + baseline Bước 1 + bảng ứng
   viên e2e đã duyệt ở G1 (Bước 3; đây là duyệt E2 của skill `frontend-e2e-testing`; agent không trình lại)
-- **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó; chưa nạp skill ở Bước 1 thì gọi nó bằng công cụ gọi skill trước task đầu tiên), với mọi cỡ việc kể cả "thay đổi nhỏ": dòng `Task <n>: start` ghi trước khi giao agent, mỗi vòng sửa có re-review do agent reviewer làm. Chuẩn bị ledger
+- **Hành động:** chạy `plan-execution` (mục "Quy trình" 1–2, giao thức trong `task-loop.md` của skill đó; chưa nạp skill ở Bước 1 thì gọi nó bằng công cụ gọi skill trước task đầu tiên), với mọi cỡ việc kể cả "thay đổi nhỏ": trước Task 1 `plan-execution` hỏi thẻ Cách thực thi cho mọi plan, chia part hay không (trừ các trường hợp không hỏi ở bước 1 của `SKILL.md`), rồi dòng `Task <n>: start` ghi trước khi giao agent, mỗi vòng sửa có re-review do agent reviewer làm. Chuẩn bị ledger
   `<gốc repo chính>/.aip/runs/<request>/<part>/progress.md` (đã có thì làm tiếp từ task chưa `complete`, không làm lại task đã
   xong). Mỗi task theo thứ tự: ghi BASE → cắt brief → giao agent theo `**Kind:**` (chuỗi agent do
   `engineering-plan-writing` định nghĩa): `BE` → `backend-implementer`
@@ -159,13 +159,13 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là
   `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
   API thật); phạm vi backend hoặc frontend chạy một task duy nhất, task id `1`; phạm vi fullstack chạy hai task, `1` là
-  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc; cách chạy nhóm Song song theo khoá `partRunner` của `autonomy.mjs`, thiếu khoá thì hỏi người dùng một lần trước mỗi nhóm Song song).
+  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc; trước Task 1 hỏi thẻ Cách thực thi, trước mỗi nhóm Song song hỏi cách chạy part; khoá `planRunner`/`partRunner` của `autonomy.mjs` chỉ đặt lựa chọn đứng đầu, không bỏ câu hỏi).
 - **Ràng buộc:** chỉ sửa file trong `**Files:**` của task; không giả lập data ẩn; không sửa code production để "cho test
   xanh", không xoá hay nới test, không viết test phụ thuộc thứ tự/thời gian thực/mạng thật; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator chưa có codegen/thư viện data → dừng, đề
   xuất, chờ người dùng chọn; không viết tay type trùng contract; không gọi `fetch`/`axios` trong component; e2e chỉ chạy
   trên môi trường local/test — thiếu BE/DB test thì agent trả `not_run` + lý do, không tự dựng hạ tầng; không chạy full
-  suite ở từng task; agent không commit, không push, không gọi agent khác (ngoại lệ: subagent part của `partRunner: subagent` tự commit trên nhánh part theo `inline.md`).
+  suite ở từng task; agent không commit, không push, không gọi agent khác (ngoại lệ: subagent part của nhóm Song song chọn Subagent tự commit trên nhánh part theo `inline.md`).
 - **Đầu ra:** code + test của từng task, mỗi task ≥ 1 commit trên nhánh `feature/`, ledger cập nhật; có part thì Bảng part cập nhật (mọi part `merged <hash>` hoặc `bỏ`).
 - **Gate:** mọi task có dòng `Task <n>: complete` kèm evidence test (lệnh + exit code); có part thì mọi part `merged <hash>` hoặc `bỏ` trong Bảng part; mỗi acceptance criterion ≥ 1 test
   (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào `remaining_risks`); task TDD `có` có `tdd.red` và `tdd.green`; không
@@ -243,7 +243,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ## Checkpoint
 
-Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); thiếu khoá `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3, còn `mergeLocal: true` thì câu hỏi push/PR đứng riêng một lần sau merge local. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá, Bước 5) và 6 loại dừng của `plan-execution`.
+Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); thiếu khoá `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3, còn `mergeLocal: true` thì câu hỏi push/PR đứng riêng một lần sau merge local. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom), thẻ Cách thực thi trước Task 1 và câu hỏi cách chạy part trước mỗi nhóm Song song (Bước 5; khoá chỉ đặt lựa chọn đứng đầu) và 6 loại dừng của `plan-execution`.
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
@@ -252,8 +252,8 @@ Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 d
 | 4 (G2) | `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (+ `check-partition.mjs` khi có part) + bảng task kèm `**Ước lượng:**` từng task và tổng ước lượng tới G3 (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9 và W11 của `thêm`; `check-partition.mjs` không còn cảnh báo (hoặc nhóm bị báo chạy tuần tự) |
 | 7 (G3) | Diff cả nhánh (code + test + docs) + `rulings` + finding `major` còn lại trong `remaining_risks` + kết quả full suite | Người dùng duyệt diff cả nhánh, chấp nhận các `Ruling:`/`major` còn lại; có `mergeLocal: true` thì đó là đồng ý merge local, không thì chọn một trong 3 lựa chọn |
 
-Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution` và câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), còn câu hỏi chỉ ở G1, G2, G3, câu hỏi push, câu hỏi cách chạy part, loại dừng hoặc lỗi chặn (định nghĩa ở mục "Báo cáo" của `task-loop.md` trong skill `plan-execution`). Người dùng vẫn thấy tiến độ tổng thể theo mục "Báo tiến độ" của `task-loop.md`: danh sách task của công cụ đăng đủ mọi task trước Task 1, mỗi task xong có một dòng tiến độ (task n/N, đã chạy, còn lại theo ước lượng) không chờ trả lời. Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
-tag chỉ sau lựa chọn của người dùng ở Bước 7 (`mergeLocal: true` đã là chọn merge local; không khoá nào bật push); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời trước nhóm Song song, hoặc khoá `partRunner: subagent` (Bước 5), là merge local, không chờ Bước 7; agent không tự commit (ngoại lệ: subagent part theo `inline.md`).
+Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution` và thẻ Cách thực thi cùng câu hỏi cách chạy part (khoá chỉ đặt lựa chọn đứng đầu), còn câu hỏi chỉ ở G1, G2, G3, câu hỏi push, thẻ Cách thực thi, câu hỏi cách chạy part, loại dừng hoặc lỗi chặn (định nghĩa ở mục "Báo cáo" của `task-loop.md` trong skill `plan-execution`). Người dùng vẫn thấy tiến độ tổng thể theo mục "Báo tiến độ" của `task-loop.md`: danh sách task của công cụ đăng đủ mọi task trước Task 1, mỗi task xong có một dòng tiến độ (task n/N, đã chạy, còn lại theo ước lượng) không chờ trả lời. Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
+tag chỉ sau lựa chọn của người dùng ở Bước 7 (`mergeLocal: true` đã là chọn merge local; không khoá nào bật push); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời Subagent hoặc Phiên riêng trước nhóm Song song (Bước 5) là merge local, không chờ Bước 7; agent không tự commit (ngoại lệ: subagent part theo `inline.md`).
 
 ## Xử lý lỗi & rollback
 

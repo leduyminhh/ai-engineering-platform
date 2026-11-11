@@ -6,8 +6,9 @@ export default async function run({ ok, ctx }) {
   // AC3.1, AC3.2, AC3.3: readAutonomy đọc gate gốc worktree rồi gốc repo chính, chuẩn hoá từng trường về mặc định an toàn
   {
     const { readAutonomy, resolveAutonomy, DEFAULTS } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'skills', 'plan-execution', 'scripts', 'autonomy.mjs')).href);
-    const SAFE = { mergeLocal: false, cleanup: false, partRunner: 'session' };
-    ok(JSON.stringify(DEFAULTS) === JSON.stringify(SAFE), 'AC3.2: mặc định an toàn { mergeLocal: false, cleanup: false, partRunner: "session" }');
+    const SAFE = { mergeLocal: false, cleanup: false, partRunner: 'session', planRunner: 'subagent' };
+    const P = (o) => ({ ...o, planRunner: o.planRunner ?? 'subagent' });
+    ok(JSON.stringify(DEFAULTS) === JSON.stringify(SAFE), 'AC3.2: mặc định an toàn { mergeLocal: false, cleanup: false, partRunner: "session", planRunner: "subagent" }');
 
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-auto-'));
     const main = path.join(root, 'main');
@@ -35,14 +36,17 @@ export default async function run({ ok, ctx }) {
         ['AC3.2: cleanup sai kiểu chỉ hỏng trường đó', { autonomy: { mergeLocal: true, cleanup: 1, partRunner: 'sequential' } }, { mergeLocal: true, cleanup: false, partRunner: 'sequential' }],
         ['AC3.2: partRunner ngoài tập chỉ hỏng trường đó', { autonomy: { mergeLocal: true, cleanup: true, partRunner: 'parallel' } }, { mergeLocal: true, cleanup: true, partRunner: 'session' }],
         ['AC3.2: gate không phải đối tượng', [1, 2], SAFE],
+        ['AC4.1: planRunner inline', { autonomy: { planRunner: 'inline' } }, { ...SAFE, planRunner: 'inline' }],
+        ['AC4.1: planRunner ngoài tập chỉ hỏng trường đó', { autonomy: { mergeLocal: true, planRunner: 'parallel' } }, { ...SAFE, mergeLocal: true }],
+        ['AC4.1: planRunner sai kiểu chỉ hỏng trường đó', { autonomy: { cleanup: true, planRunner: 1 } }, { ...SAFE, cleanup: true }],
       ];
       for (const [name, gate, want] of cases) {
         put(main, JSON.stringify(gate));
-        ok(read() === JSON.stringify(want), `${name} → ${JSON.stringify(want)}`);
+        ok(read() === JSON.stringify(P(want)), `${name} → ${JSON.stringify(P(want))}`);
       }
 
       put(main, '﻿' + JSON.stringify({ autonomy: { mergeLocal: true, cleanup: false, partRunner: 'subagent' } }));
-      ok(read() === JSON.stringify({ mergeLocal: true, cleanup: false, partRunner: 'subagent' }), 'AC3.1: file có BOM vẫn đọc được');
+      ok(read() === JSON.stringify(P({ mergeLocal: true, cleanup: false, partRunner: 'subagent' })), 'AC3.1: file có BOM vẫn đọc được');
 
       put(main, '{ hỏng');
       ok(read() === JSON.stringify(SAFE), 'AC3.2: JSON hỏng → mặc định cả ba trường');
@@ -53,7 +57,7 @@ export default async function run({ ok, ctx }) {
       // AC3.3: worktree không có gate riêng → gate repo chính; có gate riêng (kể cả hỏng) thì che repo chính như hook
       const inWt = { git: gitFake(wt, path.join(main, '.git')), tracked: () => false };
       put(main, JSON.stringify({ autonomy: { mergeLocal: true, cleanup: true, partRunner: 'subagent' } }));
-      ok(read(inWt) === JSON.stringify({ mergeLocal: true, cleanup: true, partRunner: 'subagent' }), 'AC3.3: worktree không có aip-gate.json → đọc khoá của repo chính');
+      ok(read(inWt) === JSON.stringify(P({ mergeLocal: true, cleanup: true, partRunner: 'subagent' })), 'AC3.3: worktree không có aip-gate.json → đọc khoá của repo chính');
       put(wt, JSON.stringify({ mode: 'ask' }));
       ok(read(inWt) === JSON.stringify(SAFE), 'AC3.3: worktree có aip-gate.json riêng → dùng file đó, không trộn với repo chính');
       put(wt, '{ hỏng');
@@ -76,14 +80,14 @@ export default async function run({ ok, ctx }) {
 
       put(main, JSON.stringify(FULL));
       const noGit = { git: () => { throw new Error('không có git'); } };
-      ok(JSON.stringify(readAutonomy(main, noGit)) === JSON.stringify({ mergeLocal: true, cleanup: true, partRunner: 'subagent' }), 'AC3.3: không có git → đọc gate ở cwd');
+      ok(JSON.stringify(readAutonomy(main, noGit)) === JSON.stringify(P({ mergeLocal: true, cleanup: true, partRunner: 'subagent' })), 'AC3.3: không có git → đọc gate ở cwd');
 
       // AC3.4: git thật (không seam): chưa theo dõi ⇒ có hiệu lực; đã `git add` ⇒ bỏ qua
       const repo = path.join(root, 'repo');
       fs.mkdirSync(repo, { recursive: true });
       execFileSync('git', ['init', '-q'], { cwd: repo });
       put(repo, JSON.stringify(FULL));
-      ok(JSON.stringify(readAutonomy(repo)) === JSON.stringify(FULL.autonomy), 'AC3.4: git thật, file chưa theo dõi → khoá có hiệu lực');
+      ok(JSON.stringify(readAutonomy(repo)) === JSON.stringify(P(FULL.autonomy)), 'AC3.4: git thật, file chưa theo dõi → khoá có hiệu lực');
       execFileSync('git', ['add', '.claude/aip-gate.json'], { cwd: repo });
       ok(JSON.stringify(readAutonomy(repo)) === JSON.stringify(SAFE), 'AC3.4: git thật, file đã theo dõi → mặc định an toàn');
 

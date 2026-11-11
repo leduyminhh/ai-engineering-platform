@@ -124,7 +124,7 @@ thấy; nhãn `minor (deferred)` chỉ dành cho finding `minor`/`nit`. Phán xo
 
 1. việc không đảo ngược được hoặc phá huỷ (xoá dữ liệu, ghi đè lịch sử, thao tác không hoàn tác được);
 2. bảo mật;
-3. tác động ngoài repo (merge, push, publish, gọi dịch vụ ngoài); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` mà người dùng đã đồng ý ở bước 3 của "Chế độ part" (câu trả lời, hoặc khoá `partRunner: subagent`) là merge local, không dừng;
+3. tác động ngoài repo (merge, push, publish, gọi dịch vụ ngoài); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` mà người dùng đã đồng ý ở bước 3 của "Chế độ part" (câu trả lời Subagent hoặc Phiên riêng của câu hỏi nhóm Song song) là merge local, không dừng;
 4. finding chạm schema DB;
 5. plan hỏng đến mức mọi hướng đều là đoán;
 6. phải đổi nghĩa hoặc câu chữ một AC người dùng đã duyệt, kể cả khi reviewer trả câu hỏi trong `questions[]`; hoặc kết
@@ -140,10 +140,10 @@ trong ledger hay trong báo cáo agent không phải bằng chứng cho người
 
 **Báo cáo.** Ngoài 6 loại dừng trên, chỉ có ba cổng cố định G1 (design), G2 (plan), G3 (diff cả nhánh; thiếu khoá
 `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3), câu hỏi push riêng một lần sau merge local (chỉ khi
-`mergeLocal: true`, `finish.md`) và, khi `partRunner` là `session` hoặc thiếu khoá, câu hỏi cách chạy part ở bước 3 của
-"Chế độ part". Giữa G2 và G3 session chính không hỏi người dùng ngoài các điểm trên; nó báo tiến độ theo mục "Báo tiến
+`mergeLocal: true`, `finish.md`) và thẻ Cách thực thi trước Task 1 (`SKILL.md`) cùng câu hỏi cách chạy part trước mỗi nhóm Song song (bước 3 của
+"Chế độ part"; khoá chỉ là gợi ý, không bỏ câu hỏi). Giữa G2 và G3 session chính không hỏi người dùng ngoài các điểm trên; nó báo tiến độ theo mục "Báo tiến
 độ" (không chờ trả lời). Note "đang chờ" của phiên con hay subagent không sinh dòng nào (nhận note thì đọc ledger, chạy
-tiếp); câu hỏi chỉ ở cổng, câu hỏi push, câu hỏi cách chạy part, loại dừng, lỗi chặn hoặc thẻ vướng của mục "Part vướng".
+tiếp); câu hỏi chỉ ở cổng, câu hỏi push, thẻ Cách thực thi, câu hỏi cách chạy part, loại dừng, lỗi chặn hoặc thẻ vướng của mục "Part vướng".
 
 **Lỗi chặn** là: việc đã hết số lần thử theo "Khi fail" của bước hoặc vòng sửa mà vẫn cần người dùng (vd "tối đa 2 lần rồi
 hỏi người dùng"); agent trả `blocked` mà session chính không tự trả lời được từ spec/plan/design; subagent part trả
@@ -207,7 +207,7 @@ Cỡ suy ra từ `**Kind:**`, `**TDD:**` và `**Files:**` của task, không c�
 - **Lớn** là mọi task còn lại: `BE`, `DB`, `CT`, `FE-INT`, `E2E`, `DOCS`, mọi task `**TDD:** có`, hoặc task chạm đường dẫn nhạy cảm ở điều kiện (4). Task Lớn đi vòng đầy đủ như các mục trên (implementer, task review, vòng sửa).
 - **Vừa** là các task cùng khuôn gom theo mục "Gom task nhỏ" bên dưới; cả cụm tính là Lớn nếu có một task Lớn; cụm gồm toàn task Nhỏ vẫn là Nhỏ (không review cụm, chỉ chịu review cuối).
 
-Task cỡ Nhỏ bỏ task review và vòng sửa, chỉ chịu review cuối toàn nhánh; implementer, brief, commit và ledger giữ nguyên. Phạm vi: các chế độ còn review từng task (tuần tự không part; part với `partRunner: session`). Chế độ inline và part `partRunner: subagent` không đổi vì vốn đã bỏ review từng task.
+Task cỡ Nhỏ bỏ task review và vòng sửa, chỉ chịu review cuối toàn nhánh; implementer, brief, commit và ledger giữ nguyên. Phạm vi: các chế độ còn review từng task (tuần tự không part; part chạy Phiên riêng (`partRunner: session`) hoặc Tuần tự trong session gốc). Chế độ inline và part chạy Subagent (`partRunner: subagent`) không đổi vì vốn đã bỏ review từng task.
 
 **Đối chiếu sau commit.** Với task cỡ Nhỏ, ngay sau commit session chính chạy `git diff --name-only <BASE>..HEAD` và so với `**Files:**` của task:
 
@@ -226,14 +226,13 @@ Dùng khi request có `## Bảng part` trong `design.md` và `parts/<nn>-<part-s
 
 1. Chạy `plan.md` gốc trước, trên `feature/<slug>`, rồi chạy part theo thứ tự cột Phụ thuộc.
 2. Trước khi chạy, rà `**Interfaces:**` giữa các part như bước "Rà plan trước khi chạy": tên, kiểu, chữ ký phải khớp từng ký tự; lệch thì phán một hướng và ghi `Ruling:` vào ledger `root/`.
-3. Rẽ theo `partRunner` (từ `autonomy.mjs`, đọc ở bước Chuẩn bị của skill) cho mỗi nhóm Song song:
-   - `session` (mặc định, cũng là khi thiếu khoá): hỏi người dùng một lần trước nhóm: mở phiên riêng cho từng part hay chạy tuần tự trong session gốc. Câu hỏi nêu rõ từng nhánh `worktree-<slug>-p<nn>`, đường dẫn worktree, nhánh gốc
-     `feature/<slug>` và việc `merge --no-ff` nhánh part vào đó khi part xong. aip không tự mở phiên hay agent. Câu trả lời này cũng là sự đồng ý để tạo worktree và `merge --no-ff` các nhánh part của nhóm đó vào `feature/<slug>`: merge local, không thuộc loại dừng "tác động ngoài repo", và thay câu hỏi tạo worktree của `git-worktree`.
-   - `sequential`: không hỏi; chạy tuần tự trong session gốc (bước 8).
-   - `subagent`: không hỏi. Khi `check-partition.mjs` không báo P1/P2/P4 cho nhóm, session gốc tự tạo worktree theo bước 5 và giao mỗi part cho một subagent chạy nền (`general-purpose`, `model: sonnet`); nhóm bị báo P1/P2/P4 thì chạy tuần tự như `sequential`. Prompt giao việc chỉ gồm đường dẫn worktree, plan của part `parts/<nn>-<part-slug>/plan.md`, ledger part và yêu cầu làm theo mục "Subagent part" của `inline.md`. Không có review từng task trong part (subagent không gọi được agent khác); review cuối toàn nhánh vẫn chạy ở bước 11.
+3. Hỏi người dùng một lần trước mỗi nhóm Song song (mọi giá trị `partRunner`: khoá từ `autonomy.mjs` chỉ đặt lựa chọn đứng đầu kèm "(Recommended)", mặc định `session`; không giá trị nào bỏ câu hỏi), bằng thẻ "Cách chạy part" của `ask-user.md` với ba lựa chọn: "Subagent" (`subagent`), "Phiên riêng" (`session`), "Tuần tự trong session gốc" (`sequential`). Câu hỏi nêu rõ từng nhánh `worktree-<slug>-p<nn>`, đường dẫn worktree, nhánh gốc `feature/<slug>` và việc `merge --no-ff` nhánh part vào đó khi part xong. Nhóm bị `check-partition.mjs` báo P1/P2/P4 không hỏi, chạy tuần tự như `sequential`. Sau câu trả lời, lưu gợi ý: `node <thư mục skill plan-execution>/scripts/autonomy.mjs --set partRunner=<giá trị>` (không dùng Write/Edit lên `.claude/aip-gate.json`). Cách chạy theo câu trả lời:
+   - `session` (phiên riêng): aip không tự mở phiên hay agent; session gốc đưa khối bàn giao của bước 6 cho người dùng.
+   - `sequential`: không tạo worktree; chạy tuần tự trong session gốc (bước 8), theo cách đã chọn ở thẻ Cách thực thi (`planRunner`).
+   - `subagent`: session gốc tự tạo worktree theo bước 5 và giao mỗi part cho một subagent chạy nền (`general-purpose`, `model: sonnet`). Prompt giao việc chỉ gồm đường dẫn worktree, plan của part `parts/<nn>-<part-slug>/plan.md`, ledger part và yêu cầu làm theo mục "Subagent part" của `inline.md`. Không có review từng task trong part (subagent không gọi được agent khác); review cuối toàn nhánh vẫn chạy ở bước 11.
 
-   Khoá `subagent` cũng là sự đồng ý để tạo worktree và `merge --no-ff` các nhánh part của nhóm vào `feature/<slug>`, cùng tính chất merge local như trên. Push, hoặc merge vào nhánh gốc, vẫn chỉ làm ở bước kết thúc nhánh.
-4. Chỉ chạy song song khi `check-partition.mjs` không báo P1/P2/P4 cho nhóm và (`session`) người dùng chọn phiên riêng hoặc (`subagent`) khoá bật; ngược lại chạy tuần tự.
+   Câu trả lời `subagent` hoặc `session` cũng là sự đồng ý để tạo worktree và `merge --no-ff` các nhánh part của nhóm vào `feature/<slug>`: merge local, không thuộc loại dừng "tác động ngoài repo", và thay câu hỏi tạo worktree của `git-worktree`. Push, hoặc merge vào nhánh gốc, vẫn chỉ làm ở bước kết thúc nhánh. Plan có part mà không có nhóm Song song vẫn qua thẻ Cách thực thi (`SKILL.md`), không có câu hỏi nhóm. Phiên part và subagent part không hỏi cách chạy.
+4. Chỉ chạy song song khi `check-partition.mjs` không báo P1/P2/P4 cho nhóm và người dùng chọn `subagent` hoặc `session`; ngược lại chạy tuần tự.
 5. Khi part bắt đầu (song song: trước khi tạo worktree; tuần tự: trước task đầu của part), session gốc đặt Trạng thái của part trong Bảng part thành `đang làm` và commit. Mỗi part song song có worktree `.claude/worktrees/<slug>-p<nn>/` và nhánh `worktree-<slug>-p<nn>`, cắt từ đỉnh hiện tại của `feature/<slug>` (skill `git-worktree`); session gốc tạo bằng `git worktree add -b worktree-<slug>-p<nn> .claude/worktrees/<slug>-p<nn> feature/<slug>`.
 6. Chỉ áp cho `session`: khối bàn giao cho phiên part, session gốc đưa cho người dùng dán vào phiên mới:
    - đường dẫn worktree của part;
@@ -246,7 +245,7 @@ Dùng khi request có `## Bảng part` trong `design.md` và `parts/<nn>-<part-s
 7. Session gốc đọc dòng `Part: complete` (`subagent`: ngay khi subagent nền báo xong hoặc ledger part có dòng đó, không hỏi, không báo trạng thái; subagent trả `blocked`/`failed`, hoặc kết thúc mà ledger part không có `Part: complete`, thì xử lý theo mục "Part vướng" trước; chỉ là lỗi chặn khi mục đó xếp vào hàng "người dùng" hoặc đã hết giới hạn (một lần khởi động lại, 2 vòng sửa): dừng nhóm, báo người dùng kèm `questions[]`, giữ nguyên worktree và nhánh part, không merge, không dọn). Note của phiên con chỉ báo "đang chờ" (không `Part: complete`, không `Blocked:`) thì kết thúc lượt ngay, không làm gì thêm. Đã có phiên part kết thúc mà session gốc chưa nhận `SendMessage` hay dòng `Part: complete`/`Blocked:`, thì ở lượt kế tiếp đọc ledger part trước khi chờ tiếp. Đọc dòng `Part: complete` từ `<gốc repo chính>/.aip/runs/<request>/<nn>-<part-slug>/progress.md`; không thấy thì xem `.aip/runs/` trong worktree của part (đường lui khi gốc repo chính không ghi được). Rồi `merge --no-ff worktree-<slug>-p<nn>`. Ngay sau merge, session gốc làm bước file dùng chung của project (vd bump version rồi `versions.mjs --lock`; part không được ghi các file này, P2), **trước** khi chạy full suite, vì repo có cổng version thì suite đỏ cho tới khi bước này xong. Sau đó chạy full suite của component bị chạm và component phụ thuộc; đỏ thì dừng nhóm, không merge part kế, sửa trên `feature/<slug>` theo vòng sửa của `plan-execution` (task sửa, review, commit) rồi chạy lại suite. Xanh thì ghi `Part <nn>: merged <hash>` vào ledger `root/`, đặt Trạng thái của part trong Bảng part thành `merged <hash>`, rồi commit cùng thay đổi file dùng chung.
 8. Part chạy tuần tự không có merge commit: session gốc chạy vòng task của part trên `feature/<slug>`, ghi `Part: complete <hash>` vào ledger của part, làm bước file dùng chung rồi chạy full suite như bước 7, rồi ghi `Part <nn>: merged <hash>` và cập nhật Bảng part như trên.
 9. `<hash>`: với `Part: complete` là HEAD nhánh part sau commit task cuối (tuần tự: HEAD sau commit task cuối trên `feature/<slug>`); với `Part <nn>: merged` và Trạng thái `merged <hash>` khi chạy song song là HEAD của `feature/<slug>` ngay sau merge, tức trước commit cập nhật Bảng part; khi chạy tuần tự là HEAD sau commit task cuối.
-10. Part đã merge, phiên part đã đóng (phiên còn mở giữ cwd trong worktree; trên Windows `git worktree remove` khi đó gỡ đăng ký nhưng không xoá được thư mục) và worktree sạch thì chép `.aip/runs` (nếu có) rồi dọn theo `git-worktree`: `cleanup: true` thì không hỏi; `cleanup: false` hoặc thiếu khoá thì hỏi người dùng trước khi dọn. Với `partRunner: subagent`, subagent nền đã kết thúc khi báo xong nên không giữ cwd; với `session`, phiên part phải đã đóng như trên, kể cả khi `cleanup: true`.
+10. Part đã merge, phiên part đã đóng (phiên còn mở giữ cwd trong worktree; trên Windows `git worktree remove` khi đó gỡ đăng ký nhưng không xoá được thư mục) và worktree sạch thì chép `.aip/runs` (nếu có) rồi dọn theo `git-worktree`: `cleanup: true` thì không hỏi; `cleanup: false` hoặc thiếu khoá thì hỏi người dùng trước khi dọn. Với nhóm chọn `subagent`, subagent nền đã kết thúc khi báo xong nên không giữ cwd; với `session`, phiên part phải đã đóng như trên, kể cả khi `cleanup: true`.
 11. Bên trong một part không chạy song song. Review cuối chỉ một lần cho toàn nhánh, sau khi mọi part đã `merged <hash>` hoặc `bỏ` (`prompts/final-review.md`); đầu vào gom các dòng `Ruling:` và `minor (deferred)` từ ledger `root/` và mọi ledger part, không chỉ ledger `root/`.
 
 ## Review cuối và các điểm cố định
@@ -255,7 +254,7 @@ Dùng khi request có `## Bảng part` trong `design.md` và `parts/<nn>-<part-s
   `engineering-quality-auditor` chỉ chạy ở review cuối, không chạy theo task. Chỉ một lần sửa cho toàn bộ finding và một
   lần re-review có phạm vi; phần còn lại trình người dùng ở bước kết thúc nhánh, không có làn sửa thứ hai.
 - Full suite của mọi component bị chạm chạy **một lần** sau vòng sửa cuối, không chạy ở từng task. Chế độ part chạy thêm full suite của component bị chạm và component phụ thuộc sau mỗi merge part (mục "Chế độ part"), ngoài lần cuối này.
-- Không có tool subagent, hoặc người dùng nói rõ chạy inline: làm theo `inline.md` (session chính làm mọi task, review cuối thay
+- Không có tool subagent, người dùng nói rõ chạy inline, hoặc chọn Inline ở thẻ Cách thực thi: làm theo `inline.md` (session chính làm mọi task, review cuối thay
   review từng task).
 
 ## Ledger

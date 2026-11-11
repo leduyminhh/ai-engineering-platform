@@ -264,13 +264,13 @@ test("autonomy-gates AC8.1: aip autonomy high/safe/status giữ khóa khác; sub
 
   assert.equal(run("high").code, 0);
   assert.deepEqual(gate(), { ...others, autonomy: HIGH });
-  assert.equal(run("high").code, 0);
+  assert.match(run("high").out, /cách chạy vẫn hỏi/, "high không bỏ câu hỏi cách chạy");
   assert.deepEqual(gate(), { ...others, autonomy: HIGH }, "high lần hai không đổi gì");
-  assert.ok(run("status").out.includes(JSON.stringify(HIGH)));
+  assert.ok(run("status").out.includes(JSON.stringify({ ...HIGH, planRunner: "subagent" })));
 
   assert.equal(run("safe").code, 0);
   assert.deepEqual(gate(), others);
-  assert.match(run("status").out, /"mergeLocal":false,"cleanup":false,"partRunner":"session"/);
+  assert.match(run("status").out, /"mergeLocal":false,"cleanup":false,"partRunner":"session","planRunner":"subagent"/);
 
   const before = fs.readFileSync(gatePath(root), "utf8");
   for (const sub of ["bogus", undefined]) assert.equal(run(sub).code, 2, String(sub));
@@ -284,9 +284,20 @@ test("autonomy-gates AC3.4: aip-gate.json đã git add ⇒ status nêu khoá b�
   assert.ok(run("status").includes('"mergeLocal":true'), "chưa theo dõi: khoá có hiệu lực");
   execFileSync("git", ["add", ".claude/aip-gate.json"], { cwd: root });
   const st = run("status");
-  assert.match(st, /"mergeLocal":false,"cleanup":false,"partRunner":"session"/);
+  assert.match(st, /"mergeLocal":false,"cleanup":false,"partRunner":"session","planRunner":"subagent"/);
   assert.match(st, /bỏ qua/);
   assert.match(run("high"), /bỏ qua/);
+});
+
+test("autonomy-gates: high và safe giữ gợi ý planRunner đã lưu bằng --set", () => {
+  const root = tmp();
+  put(gatePath(root), JSON.stringify({ mode: "ask", autonomy: { mergeLocal: true, partRunner: "sequential", planRunner: "inline" } }));
+  const run = (sub) => runAutonomy(sub, { root, out: () => {}, err: () => {} });
+  const gate = () => JSON.parse(fs.readFileSync(gatePath(root), "utf8"));
+  assert.equal(run("high"), 0);
+  assert.deepEqual(gate().autonomy, { mergeLocal: true, cleanup: true, partRunner: "subagent", planRunner: "inline" });
+  assert.equal(run("safe"), 0);
+  assert.deepEqual(gate(), { mode: "ask", autonomy: { planRunner: "inline" } }, "safe bỏ bộ high, giữ planRunner");
 });
 
 test("autonomy-gates AC8.1: safe khi chưa có aip-gate.json không tạo file; high tạo .claude/", () => {
@@ -329,7 +340,7 @@ test("autonomy-gates AC8.1: ngoài repo git, high/safe/status đọc thẳng aip
   assert.equal(run("high").code, 0);
   assert.deepEqual(gate(), { ...others, autonomy: HIGH });
   const st = run("status").out;
-  assert.ok(st.includes(JSON.stringify(HIGH)));
+  assert.ok(st.includes(JSON.stringify({ ...HIGH, planRunner: "subagent" })));
   assert.doesNotMatch(st, /mặc định an toàn/);
   assert.equal(run("safe").code, 0);
   assert.deepEqual(gate(), others);
@@ -384,7 +395,7 @@ test("autonomy-gates AC8.1: trong worktree, safe chép khóa repo chính trừ a
   put(gatePath(main), mainGate);
   const run = (sub) => { const out = []; const code = runAutonomy(sub, { root: wt, out: (l) => out.push(l), err: () => {} }); return { code, out: out.join("\n") }; };
 
-  assert.ok(run("status").out.includes(JSON.stringify(high)), "worktree đọc khóa của repo chính");
+  assert.ok(run("status").out.includes(JSON.stringify({ ...high, planRunner: "subagent" })), "worktree đọc khóa của repo chính");
   assert.equal(run("safe").code, 0);
   assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mcpDeny: ["evil"] }, "mode full của repo chính không được chép sang file worktree chưa theo dõi");
   assert.equal(fs.readFileSync(gatePath(main), "utf8"), mainGate, "file repo chính không bị sửa");

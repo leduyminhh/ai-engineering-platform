@@ -11,15 +11,15 @@ export default async function run({ ok, ctx }) {
     ok(/## Dấu hiệu đang tự biện minh/.test(t) && (t.match(/^\| "/gm) || []).length >= 5, 'AC1.3: using-aip có bảng ≥ 5 dấu hiệu tự biện minh');
   }
 
-  // AC5.1: plan-execution liên kết inline.md, nêu điều kiện bật và không thêm bước hỏi cách thực thi
+  // AC5.1: plan-execution liên kết inline.md và nêu điều kiện bật; từ 2026-11-11 có thẻ hỏi cách thực thi (xem pin 48)
   {
     const skill = read('core', 'skills', 'plan-execution', 'SKILL.md');
     const inline = read('core', 'skills', 'plan-execution', 'references', 'inline.md');
     const loop = read('core', 'skills', 'plan-execution', 'references', 'task-loop.md');
     ok(skill.includes('references/inline.md') && loop.includes('inline.md'), 'AC5.1: SKILL.md và task-loop.md trỏ tới references/inline.md');
-    ok(/người dùng nói rõ/i.test(inline) && /không có tool subagent/i.test(inline), 'AC5.1: inline.md nêu hai điều kiện bật (người dùng nói rõ, không có tool subagent)');
-    ok(/Không hỏi người dùng chọn cách thực thi/.test(inline) && !/hỏi (người dùng )?(chọn|có muốn) (cách )?(thực thi|chạy) inline/i.test(skill + loop),
-      'AC5.1: không có bước hỏi người dùng chọn inline hay subagent');
+    ok(/người dùng nói rõ/i.test(inline) && /không có tool subagent/i.test(inline) && /người dùng chọn inline/i.test(inline), 'AC5.1: inline.md nêu ba điều kiện bật (người dùng nói rõ, không có tool subagent, người dùng chọn inline ở thẻ cách thực thi)');
+    ok(!/Không hỏi người dùng chọn cách thực thi/.test(inline + skill) && /thẻ Cách thực thi/.test(skill),
+      'AC5.1: plan-execution hỏi cách thực thi ở thẻ riêng (đổi theo request 2026-11-11-ask-execution-mode)');
   }
 
   // AC5.2: ledger.mjs từ chối dòng "Task n: complete … inline" thiếu "tests: <lệnh> exit 0", không ghi gì; dòng khác giữ nguyên

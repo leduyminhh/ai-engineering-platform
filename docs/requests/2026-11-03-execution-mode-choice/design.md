@@ -1,6 +1,6 @@
 # Thiết kế: hỏi cách thực thi trước vòng task và review part trước merge
 - Ngày: 2026-11-03
-- Trạng thái: draft — chờ người duyệt G1
+- Trạng thái: abandoned — thay bằng 2026-11-11-ask-execution-mode (phần review part trước merge chưa làm)
 - Requirement: không có
 
 ## Vấn đề và lý do

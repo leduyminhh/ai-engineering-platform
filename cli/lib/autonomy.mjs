@@ -8,6 +8,8 @@ import { gitStateOf } from './mode.mjs';
 
 const HIGH = Object.freeze({ mergeLocal: true, cleanup: true, partRunner: 'subagent' });
 const SUBS = new Set(['high', 'safe', 'status']);
+// `planRunner` lưu bằng `autonomy.mjs --set` là sở thích riêng, không thuộc bộ `high`, nên high/safe giữ nó; `partRunner` thuộc bộ `high` (HIGH ghi nó) nên safe bỏ.
+const HINTS = ['planRunner'];
 
 const GIT_LABEL = {
   tracked: 'aip-gate.json được git theo dõi ⇒ khoá autonomy bị bỏ qua',
@@ -65,13 +67,16 @@ function runUnsafe(sub, { root, out, err, run }) {
   // File repo chính có thể đã commit (hook bỏ qua `full` của nó); chép `mode` sang file worktree chưa theo dõi sẽ âm thầm bật full.
   const droppedMode = g.source === 'main' && 'mode' in next;
   if (droppedMode) delete next.mode;
-  if (sub === 'high') next.autonomy = { ...HIGH };
+  const prior = next.autonomy && typeof next.autonomy === 'object' && !Array.isArray(next.autonomy) ? next.autonomy : {};
+  const kept = Object.fromEntries(HINTS.filter((k) => k in prior).map((k) => [k, prior[k]]));
+  if (sub === 'high') next.autonomy = { ...HIGH, ...kept };
   else if (!('autonomy' in next)) { out(`✓ autonomy=safe tại ${root} (không có khoá autonomy, không ghi gì)`); return 0; }
+  else if (Object.keys(kept).length) next.autonomy = kept;
   else delete next.autonomy;
 
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, dump(next), 'utf8');
-  out(`✓ autonomy=${sub} tại ${root}${sub === 'high' ? `: ${JSON.stringify(HIGH)}` : ''}`);
+  out(`✓ autonomy=${sub} tại ${root}${sub === 'high' ? `: ${JSON.stringify(next.autonomy)}` : ''}`);
   if (g.source === 'main') out(`  ghi ${file}: cấu hình lấy từ repo chính, file của worktree này che file của repo chính từ giờ.`);
   if (droppedMode) out('  không chép khoá mode của repo chính; cần full trong worktree này thì chạy aip mode full.');
   if (sub === 'high') {
@@ -79,7 +84,7 @@ function runUnsafe(sub, { root, out, err, run }) {
     const gs = gitState(file);
     if (gs === 'tracked') out('  ⚠ aip-gate.json đang được git theo dõi nên khoá autonomy bị bỏ qua (repo clone không tự cấp được). Gỡ theo dõi: git rm --cached .claude/aip-gate.json rồi thêm vào .gitignore.');
     else if (gs === 'open') out('  ⚠ aip-gate.json chưa được gitignore; nếu bị commit, khoá autonomy sẽ bị bỏ qua. Thêm dòng này vào .gitignore: .claude/aip-gate.json (aip không tự sửa .gitignore).');
-    out('  Push/PR vẫn luôn hỏi; G1 (design), G2 (plan), G3 (diff cả nhánh) vẫn dừng chờ duyệt.');
+    out('  Push/PR vẫn luôn hỏi; G1 (design), G2 (plan), G3 (diff cả nhánh) vẫn dừng chờ duyệt; cách chạy vẫn hỏi mỗi lần (partRunner chỉ là gợi ý).');
   }
   return 0;
 }

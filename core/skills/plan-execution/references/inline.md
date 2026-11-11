@@ -6,14 +6,16 @@ review cuối.
 
 ## Khi nào dùng
 
-- Người dùng nói rõ trong yêu cầu rằng muốn chạy inline hoặc không dùng subagent; hoặc
+- Người dùng nói rõ trong yêu cầu rằng muốn chạy inline hoặc không dùng subagent;
+- người dùng chọn Inline ở thẻ Cách thực thi của `SKILL.md` (bước Chuẩn bị); hoặc
 - session không có tool subagent. Không bịa lệnh giao việc: chạy plan tại chỗ.
 
-Không hỏi người dùng chọn cách thực thi. Plan đã duyệt thì mặc định là vòng task có subagent (`AGENTS.md`, mục Workflow
-defaults); inline chỉ bật theo một trong hai điều kiện trên. Subagent part do `partRunner: subagent` giao là trường hợp
-riêng, xem mục "Subagent part".
+Thẻ Cách thực thi hỏi mỗi lần thực thi và `planRunner` chỉ đặt lựa chọn đứng đầu (`SKILL.md`); không chọn inline thì chạy vòng
+task có subagent. Subagent part do nhóm Song song chọn Subagent là trường hợp riêng, xem mục "Subagent part"; phiên part và
+subagent part không hỏi cách chạy.
 
-Dòng đầu tiên sau tiêu đề ledger: `Ruling: thực thi inline — <người dùng chọn | không có tool subagent | subagent part> — <chi phí nếu sai>`.
+Dòng ledger: `Ruling: cách chạy inline — <người dùng chọn | không có tool subagent | người dùng nói rõ> — <chi phí nếu sai>`, ghi theo `SKILL.md`
+trước `Task 1: start` (subagent part ghi `Ruling: cách chạy inline — subagent part — <chi phí nếu sai>` vào ledger part).
 
 ## Vòng một task
 
@@ -41,7 +43,7 @@ không ghi là quyết định bí mật. Chạy liên tục giữa các task; c
 
 ## Review cuối
 
-- **Có tool subagent** (người dùng chọn inline): giao review toàn nhánh cho subagent mới theo `prompts/final-review.md`
+- **Có tool subagent** (người dùng chọn hoặc nói rõ chạy inline): giao review toàn nhánh cho subagent mới theo `prompts/final-review.md`
   (model opus) cùng `engineering-quality-auditor`; một lần sửa và một re-review có phạm vi như vòng task thường.
 - **Không có tool subagent**: session chính tự review theo `prompts/final-review.md`, đọc diff qua
   `scripts/review-package.mjs <base> <head> --plan <plan.md>` thay vì dựa vào trí nhớ. Ghi `Ruling: review cuối là tự review — không có tool subagent —
@@ -52,13 +54,14 @@ Sau đó kết thúc nhánh theo `finish.md` như thường: full suite một l�
 
 ## Subagent part
 
-Với `partRunner: subagent` (`task-loop.md`, "Chế độ part" bước 3), mỗi part do một subagent nền (`general-purpose`,
+Khi nhóm Song song chọn Subagent (`task-loop.md`, "Chế độ part" bước 3), mỗi part do một subagent nền (`general-purpose`,
 `model: sonnet`) làm theo "Vòng một task" của file này, chỉ cho plan của part mình, đóng vai session của part:
 
 - Code, test và commit chỉ trong worktree `.claude/worktrees/<slug>-p<nn>/`, trên nhánh `worktree-<slug>-p<nn>`. Mọi lệnh dùng
   đường dẫn tuyệt đối hoặc `git -C <worktree>`, vì cwd có thể bị reset giữa các lệnh Bash. Dùng plan của part
   `parts/<nn>-<part-slug>/plan.md` cho `ledger.mjs`, `task-brief.mjs`, `review-package.mjs --plan`; ba script tự đặt ledger,
   brief và review package ở gốc repo chính, đó là chỗ đúng, không phải ghi ra ngoài worktree.
+- Không hỏi cách chạy và không gọi `autonomy.mjs --set`: ghi `Ruling: cách chạy inline — subagent part — <chi phí nếu sai>` làm dòng `Ruling:` đầu tiên của ledger part.
 - Trước dòng `Ruling:` đầu tiên, tạo tiêu đề ledger part:
   `node <thư mục skill plan-execution>/scripts/ledger.mjs <plan part> "# Ledger — plan: <đường dẫn plan part>"`.
 - Tự commit từng task trên nhánh part qua `git-workflow`: đây là ngoại lệ của luật "agent không commit". Không push, không merge.
