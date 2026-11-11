@@ -123,6 +123,26 @@ export default async function run({ ok, ctx }) {
     ok(/autonomy\.mjs --set planRunner=/.test(skill) && /không dùng Write\/Edit/i.test(skill), 'AC3.6: SKILL.md lưu gợi ý bằng autonomy.mjs --set, không dùng Write/Edit lên aip-gate.json');
   }
 
+  // AC1.5, AC2.1–AC2.4, AC3.6: task-loop.md và ask-user.md hỏi cách chạy part theo từng nhóm Song song
+  {
+    const read = (...p) => fs.readFileSync(path.join(skillDir, ...p), 'utf8');
+    const flat = (s) => s.replace(/\s+/g, ' ');
+    const loop = flat(read('references', 'task-loop.md'));
+    const ask = flat(read('references', 'ask-user.md'));
+    ok(/Hỏi người dùng một lần trước mỗi nhóm Song song \(mọi giá trị `partRunner`/.test(loop) && /ba lựa chọn/.test(loop) && /--set partRunner=/.test(loop),
+      'AC2.1: task-loop.md hỏi ba lựa chọn trước mỗi nhóm Song song ở mọi giá trị partRunner và lưu gợi ý bằng --set');
+    ok(!/`subagent`: không hỏi/.test(loop) && !/`sequential`: không hỏi/.test(loop) && !/Khoá `subagent` cũng là sự đồng ý/.test(loop) && !/khi `partRunner` là `session` hoặc thiếu khoá/.test(loop),
+      'AC2.1: task-loop.md không còn nhánh khoá bỏ câu hỏi');
+    ok(/check-partition\.mjs[^.]*P1\/P2\/P4[^.]*không hỏi, chạy tuần tự/.test(loop), 'AC2.2: nhóm bị P1/P2/P4 không hỏi, chạy tuần tự');
+    ok(/Câu trả lời `subagent` hoặc `session` cũng là sự đồng ý tạo worktree và `merge --no-ff`/.test(loop) && /`sequential`: không tạo worktree/.test(loop),
+      'AC2.3: câu trả lời subagent/session là đồng ý tạo worktree và merge local; sequential không tạo worktree');
+    ok(/không có nhóm Song song[^.]*thẻ Cách thực thi/.test(loop), 'AC2.4: plan có part mà không nhóm Song song vẫn qua thẻ Cách thực thi');
+    ok(/phiên part và subagent part không hỏi cách chạy/i.test(loop), 'AC1.5: task-loop.md nêu phiên part và subagent part không hỏi cách chạy');
+    ok(/không dùng Write\/Edit/i.test(loop), 'AC3.6: task-loop.md không dùng Write/Edit lên aip-gate.json');
+    ok(/\| Cách thực thi \| [^|]* \| [^|]* \| Subagent \+ review từng task \/ Inline/.test(ask) && /\| Cách chạy part \| [^|]* \| [^|]* \| Subagent \/ Phiên riêng \/ Tuần tự/.test(ask) && /cách thực thi/.test(ask.slice(0, 600)),
+      'AC1.1/AC2.1: ask-user.md có hàng Cách thực thi (hai lựa chọn) và hàng Cách chạy part (ba lựa chọn), đoạn mở đầu nêu cách thực thi');
+  }
+
   // AC3.5: lệnh --set không bị guard-bash hỏi (lệnh không nêu tên aip-gate.json), còn ghi file bằng lệnh nêu tên vẫn hỏi
   {
     const { decide } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'hooks', 'scripts', 'guard-bash.mjs')).href);
