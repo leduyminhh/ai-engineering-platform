@@ -1,6 +1,6 @@
 # Thiết kế: một luồng đọc và một chính sách tin cậy cho aip-gate.json
 - Ngày: 2026-11-11
-- Trạng thái: approved
+- Trạng thái: merged 7ba0934c
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
