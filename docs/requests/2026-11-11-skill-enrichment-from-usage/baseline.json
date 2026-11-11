@@ -1,0 +1,88 @@
+{
+  "project": "source-project",
+  "ledgers": 23,
+  "requests": 9,
+  "tasks": 136,
+  "tasksReview2plus": 58,
+  "pctReview2plus": 42.6,
+  "tasksIssuesAtRound2plus": 8,
+  "tasksIssuesAtRound3plus": 3,
+  "rulings": 229,
+  "rulingsOutsideFiles": 12,
+  "outsideFilesPerRequest": 1.33,
+  "minorDeferred": 221,
+  "byRequest": [
+    {
+      "request": "2026-10-31-story-series",
+      "tasks": 5,
+      "tasksReview2plus": 0,
+      "rulings": 32,
+      "rulingsOutsideFiles": 0,
+      "minorDeferred": 20
+    },
+    {
+      "request": "2026-11-01-youtube-topic-intelligence",
+      "tasks": 31,
+      "tasksReview2plus": 18,
+      "rulings": 65,
+      "rulingsOutsideFiles": 2,
+      "minorDeferred": 24
+    },
+    {
+      "request": "2026-11-03-niche-market-intel",
+      "tasks": 29,
+      "tasksReview2plus": 17,
+      "rulings": 63,
+      "rulingsOutsideFiles": 1,
+      "minorDeferred": 55
+    },
+    {
+      "request": "2026-11-04-cross-channel-script-duplicate",
+      "tasks": 5,
+      "tasksReview2plus": 2,
+      "rulings": 13,
+      "rulingsOutsideFiles": 2,
+      "minorDeferred": 17
+    },
+    {
+      "request": "2026-11-05-intel-article-vi-translation",
+      "tasks": 8,
+      "tasksReview2plus": 2,
+      "rulings": 5,
+      "rulingsOutsideFiles": 1,
+      "minorDeferred": 20
+    },
+    {
+      "request": "2026-11-06-provider-catalog",
+      "tasks": 4,
+      "tasksReview2plus": 0,
+      "rulings": 9,
+      "rulingsOutsideFiles": 1,
+      "minorDeferred": 5
+    },
+    {
+      "request": "2026-11-06-research-intel-upgrade",
+      "tasks": 27,
+      "tasksReview2plus": 10,
+      "rulings": 25,
+      "rulingsOutsideFiles": 4,
+      "minorDeferred": 45
+    },
+    {
+      "request": "2026-11-06-stock-footage-broll",
+      "tasks": 15,
+      "tasksReview2plus": 6,
+      "rulings": 9,
+      "rulingsOutsideFiles": 0,
+      "minorDeferred": 21
+    },
+    {
+      "request": "2026-11-10-intel-searxng-web-search",
+      "tasks": 12,
+      "tasksReview2plus": 3,
+      "rulings": 8,
+      "rulingsOutsideFiles": 1,
+      "minorDeferred": 14
+    }
+  ]
+}

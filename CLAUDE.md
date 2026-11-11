@@ -21,6 +21,7 @@ npm run list        # list discovered adapters + plugins
 npm run validate    # node test/validate.mjs (source + build-output contract)
 npm run overlap     # node test/overlap.mjs (skill/workflow overlap report, advisory)
 node scripts/routing-score.mjs [--lock]   # điểm routing rank-1 trên description (npm test kiểm ngưỡng ở test/routing/rank1.lock.json; --lock chỉ nâng)
+node scripts/ledger-metrics.mjs --project <dir> [--label <nhãn>]   # đếm vòng review, ruling, minor từ .aip/runs/**/progress.md (in JSON; số nền ở docs/requests/2026-11-11-skill-enrichment-from-usage/baseline.json)
 npm run pack:verify # pack-guard: assert the npm-publish file set stays within policy
 node scripts/eval-run.mjs --plugin <id> --max-cost-usd <usd> [--runs 3] [--scaffold] [--case <glob>]   # chạy eval thật (tốn tiền model, không nằm trong npm test)
 ```
