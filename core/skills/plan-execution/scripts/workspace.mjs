@@ -16,11 +16,11 @@ const fwd = (p) => (/^[A-Za-z]:[\\/]/.test(p) ? p.replace(/\\/g, '/') : p);
 // Ổ đĩa Windows không phân biệt hoa thường (`e:/repo` = `E:\repo`); đường dẫn POSIX thì có.
 const key = (p) => { const n = fwd(p).replace(/\/+$/, ''); return /^[A-Za-z]:/.test(n) ? n.toLowerCase() : n; };
 
-export function resolveWorkspace(planArg, deps = {}) {
+// Phần tính đường dẫn, không ghi gì: lệnh chỉ đọc (ledger.mjs --rulings) dùng được mà không tạo .aip.
+export function workspaceDirs(planArg, deps = {}) {
   const cwd = deps.cwd ?? process.cwd();
   const git = deps.git ?? defaultGit;
   const fs = { ...nodeFs, ...deps.fs };
-  const stderr = deps.stderr ?? ((s) => process.stderr.write(s));
 
   let abs = path.resolve(cwd, planArg);
   let isDir = false;
@@ -40,6 +40,13 @@ export function resolveWorkspace(planArg, deps = {}) {
     // Submodule: common-dir là <cha>/.git/modules/<tên>, dirname của nó nằm trong .git của repo cha; dùng gốc của chính submodule (cùng guard với route.mjs).
     main = path.basename(common) === '.git' ? path.dirname(common) : top;
   } catch { /* không phải repo hoặc không có git: dùng cwd */ }
+  return { main, top, request, part, plan: abs };
+}
+
+export function resolveWorkspace(planArg, deps = {}) {
+  const fs = { ...nodeFs, ...deps.fs };
+  const stderr = deps.stderr ?? ((s) => process.stderr.write(s));
+  const { main, top, request, part, plan: abs } = workspaceDirs(planArg, deps);
 
   const create = (root) => {
     // Symlink/junction ở bất kỳ cấp nào thì ledger, brief bị ghi ra chỗ nó trỏ tới, ngoài repo: từ chối thay vì đi theo.

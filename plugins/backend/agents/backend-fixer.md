@@ -52,6 +52,7 @@ workflow.
 ## Report trả về
 
 - Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
+- Trong vòng task: `assumptions` (luôn có khoá, có thể rỗng), mỗi mục `{ assumption, basis, if_wrong }` cho điều đã chọn mà brief, AC và Interfaces không nói; thiếu khoá là đầu ra hỏng (contract đầu ra, `core:principles`).
 - Oracle trước/sau, ghi theo loại: (a) `command`, `exit_code`, `status` đỏ → xanh; (b)/(e) ghi `file:line` đã sửa
   cho finding, review/re-scan lại do bước sau của workflow; (c) build/test trước/sau + evidence profile đã dùng;
   (d) kết quả chạy lại bước tái hiện trước/sau.

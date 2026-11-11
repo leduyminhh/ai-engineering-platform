@@ -44,7 +44,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    sửa tối đa 3 vòng, mỗi vòng một re-review có phạm vi (`references/prompts/re-review.md`) → ghi
    `Task <n>: complete (…)` vào ledger. Task cỡ Nhỏ bỏ hai bước review: xem mục "Cỡ task và review từng task" của `references/task-loop.md`.
 3. **Review cuối toàn nhánh** sau task cuối, theo `references/prompts/final-review.md`: reviewer chạy opus, nhận Review
-   Focus + các dòng `Ruling:` + finding minor đã hoãn; `engineering-quality-auditor` chỉ chạy ở bước này.
+   Focus + các dòng `Ruling:` (output của `ledger.mjs <plan.md> --rulings`: cờ và lệnh chạy lại, reviewer chạy lại lệnh chỉ đọc) + finding minor đã hoãn; `engineering-quality-auditor` chỉ chạy ở bước này.
 4. **Kết thúc nhánh** theo `references/finish.md` (đọc file trước khi làm bước này): docs + spec sống + `check-request.mjs` + full suite, rồi trình G3
    (diff cả nhánh); `mergeLocal: true` thì duyệt G3 là đồng ý merge local, không thì đưa đúng 3 lựa chọn; ghi
    `Plan: complete` vào ledger khi plan xong.
@@ -115,4 +115,4 @@ không cần khai báo model riêng cho từng task.
 - [references/finish.md](references/finish.md): kết thúc nhánh.
 - [references/model-routing.md](references/model-routing.md): chi tiết Model and session routing của baseline (chọn model và effort, xoay phiên, nhắn giữa phiên, monitoring, phiên dài).
 - [references/ask-user.md](references/ask-user.md): cách hỏi người dùng ở mọi cổng (lựa chọn bấm được, mở file hoặc diff cần duyệt, mỗi cổng hỏi gì).
-- `scripts/task-brief.mjs`, `scripts/review-package.mjs`, `scripts/ledger.mjs`, `scripts/autonomy.mjs` (in JSON khoá `autonomy` hiệu lực): Node thuần, không cần bash.
+- `scripts/task-brief.mjs`, `scripts/review-package.mjs`, `scripts/ledger.mjs` (`--rulings`: liệt kê Ruling kèm cờ, chỉ đọc), `scripts/autonomy.mjs` (in JSON khoá `autonomy` hiệu lực): Node thuần, không cần bash.

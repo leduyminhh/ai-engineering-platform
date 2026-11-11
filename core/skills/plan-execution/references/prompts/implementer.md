@@ -28,6 +28,9 @@ Việc cần làm:
 6. Tự soát diff trước khi báo: đủ yêu cầu brief? có làm thừa? test kiểm hành vi thật hay chỉ lặp lại mock?
 7. Số đo hay thử nghiệm bạn nêu trong báo cáo (thời gian chặn, hành vi thư viện, kết quả trái giả định) phải tái lập được từ nhánh:
    chạy bằng test hoặc script nằm trong Files; báo kèm lệnh chạy lại. Đo bằng code tạm ngoài repo thì ghi rõ [Unverified].
+8. Khai giả định: điều bạn đã chọn mà brief, AC và Interfaces không nói (đơn vị, cách làm tròn, nghĩa một trường, thứ tự
+   xử lý…). Mỗi giả định một mục `assumption`, `basis` (file:line hay mục brief làm căn cứ, hoặc "không có"), `if_wrong`
+   (hệ quả nếu sai). Không chép lại yêu cầu; không có giả định nào thì trả `assumptions: []`. Reviewer xét từng mục.
 
 Không được: commit, push, gọi agent khác hay reviewer. Session chính sẽ commit và review sau khi bạn báo.
 
@@ -36,8 +39,9 @@ Báo cáo trả về trong tin nhắn cuối, theo khối agent_result của con
 - changes (file thêm/sửa/xoá), validation (lệnh, exit code, tóm tắt).
 - tdd (task TDD `có`): red = lệnh + exit code + lý do đỏ đúng; green = lệnh + exit code.
 - questions[] khi blocked; remaining_risks[] cho điều bạn còn lo (completed kèm remaining_risks = xong kèm lo ngại).
+- assumptions[] (luôn có khoá, có thể rỗng): { assumption, basis, if_wrong } theo việc 8; thiếu khoá là đầu ra hỏng.
 ```
 
 Khi nhận báo cáo: session chính xử lý theo `references/task-loop.md` (bước 4–6). Vòng sửa dùng cùng prompt này nhưng thay
 phần "Việc cần làm" bằng danh sách finding và nhắc: xác minh từng finding trước khi sửa; không đồng ý thì nêu bằng chứng
-trong báo cáo thay vì bỏ qua.
+trong báo cáo thay vì bỏ qua. Báo cáo vòng sửa vẫn có `assumptions`, chỉ gồm giả định mới của vòng sửa.

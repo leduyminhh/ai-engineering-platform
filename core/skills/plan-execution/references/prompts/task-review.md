@@ -21,6 +21,10 @@ Cách làm:
    spec_verdict: compliant | issues | cannot_verify. cannot_verify kèm điều cần kiểm thêm; không đoán.
    AC mơ hồ, hoặc làm đúng chữ AC thì vỡ một bất biến khác (vd giá trị API trả về không gửi lại được): không chọn hướng
    sửa. Ghi vào questions[] gồm AC ID, các cách hiểu, và hệ quả của từng cách hiểu.
+   Giả định: xét từng giả định trong `assumptions` của báo cáo, mỗi giả định một mục assumption_review[]
+   { assumption, verdict: holds | wrong | unverifiable, evidence }. `wrong` kèm một finding: vi phạm AC hay brief thì
+   `major` trở lên (như bước 4), còn lại theo thang; `unverifiable` kèm điều cần kiểm thêm, không đoán. Giả định ngầm bạn
+   thấy trong diff mà báo cáo không khai (vd đơn vị, cách làm tròn tự chọn) thành finding `minor` hoặc cao hơn theo hệ quả.
 3. Phán quyết thứ hai — chất lượng theo các trục của skill review của bạn. Task TDD `có`: kiểm tdd.red/tdd.green có
    trong báo cáo và khớp diff (test có đỏ đúng lý do, kỳ vọng tự tính chứ không chép từ code). Có commit đỏ riêng thì
    kiểm qua mục `## Commits` của review package (file theo từng commit, commit mới liệt kê trước): commit đỏ chỉ chứa
@@ -36,6 +40,7 @@ Cách làm:
 7. Gắn nhãn `trong AC` hoặc `ngoài AC` cho mỗi finding (ngoài AC: không vi phạm AC hay tiêu chí đã duyệt trong brief). Finding kiểm đầu vào cho dữ liệu do code hoặc cấu hình nội bộ khai báo: theo mục "Ranh giới tin cậy" của skill `principles` (bản cài plugin: `core:principles`; nguồn `core/principles/trust-boundary.md`), tối đa `minor`.
 
 Trả khối agent_result, gồm cả spec_verdict (kèm Missing/Extra/Misunderstood nếu issues) lẫn findings[]; thiếu một trong
-hai là đầu ra hỏng. Trường declined_to_judge[]: liệt kê điều bạn bỏ qua và lý do (vd cần chạy hệ thống thật).
+hai là đầu ra hỏng. Báo cáo có `assumptions` không rỗng thì trả thêm assumption_review[] đủ mỗi giả định một mục.
+Trường declined_to_judge[]: liệt kê điều bạn bỏ qua và lý do (vd cần chạy hệ thống thật).
 Không khen, không tóm tắt lại diff.
 ```
