@@ -20,4 +20,15 @@ export default async function run({ ok, ctx }) {
   ok(/\[Unverified\]/.test(docs) && /grep hoặc đọc/.test(docs), 'AC3.3: lệch thì sửa docs hoặc gắn [Unverified]; đối chiếu bằng grep hoặc đọc');
   const item2 = (SR.match(/^2\. \*\*[\s\S]*?(?=^3\. )/m) || [''])[0];
   ok(/DOCS/.test(item2) && /khẳng định/.test(item2), 'AC3.3: mục 2 của self-review nhắc bước đối chiếu khẳng định cho task DOCS');
+
+  // AC3.2: spec-writing bước 10 và checklist có mục kiểm AC mâu thuẫn
+  const SW = 'plugins/engineering/skills/engineering-spec-writing';
+  const SWS = read(`${SW}/SKILL.md`);
+  const step10 = (SWS.match(/^10\. \*\*Verify[\s\S]*?(?=^## )/m) || [''])[0].replace(/\n\s*/g, ' ');
+  ok(/mâu thuẫn/.test(step10) && /checklist\.md/.test(step10), 'AC3.2: bước 10 trỏ checklist cho mục kiểm AC mâu thuẫn');
+  const CL = read(`${SW}/references/checklist.md`).replace(/\n\s*/g, ' ');
+  ok(/cặp AC cùng đối tượng[^.]*trạng thái[^.]*ngưỡng[^.]*mã lỗi[^.]*thứ tự/.test(CL), 'AC3.2: checklist lập cặp AC cùng đối tượng (trạng thái, ngưỡng, mã lỗi, thứ tự)');
+  ok(/Quyết định đã chốt[^.]*brief\.md/.test(CL), 'AC3.2: checklist đối chiếu AC với "Quyết định đã chốt" và brief.md');
+  ok(/câu hỏi mở[^.]*trước checkpoint/.test(CL), 'AC3.2: AC lệch thì sửa hoặc đưa vào câu hỏi mở trước checkpoint');
+  ok(SWS.split('\n').length <= 300, 'AC3.2: SKILL.md spec-writing không quá 300 dòng');
 }

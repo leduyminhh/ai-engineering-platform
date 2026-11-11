@@ -129,7 +129,8 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
     (nguồn/actor/mục tiêu); acceptance criteria đo được; scope + out-of-scope rõ; rủi ro/giả định/câu hỏi mở
     liệt kê; ADR ghi cho quyết định lớn; đặt đúng `docs/requests/<ngày>-<slug>/`; tiếng Việt có dấu. Chạy
     `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<yyyy-mm-dd>-<slug>/` để soát ID AC
-    và cấu trúc thư mục request. Nêu rõ phần còn thiếu (fail-loud); con người **duyệt**.
+    và cấu trúc thư mục request. Kiểm AC mâu thuẫn theo mục "Acceptance criteria không mâu thuẫn" của checklist. Nêu rõ
+    phần còn thiếu (fail-loud); con người **duyệt**.
 
 ## Dấu hiệu đang tự biện minh
 
