@@ -59,4 +59,11 @@ export default async function run({ ok, ctx }) {
   ok(RULINGS.test(skill), 'AC3.3: SKILL.md bước 3 trỏ --rulings');
   ok(/11\. [^]*?--rulings/.test(loop.split('## Review cuối và các điểm cố định')[0]), 'AC3.3: Chế độ part bước 11 gom Ruling bằng --rulings');
   ok(RULINGS.test(inl.split('## Review cuối')[1] ?? ''), 'AC3.3: review cuối inline đọc --rulings');
+
+  // AC3.2, AC3.3: workflow-feature Bước 4 mẫu ba phần, Bước 6 --rulings + chạy lại, Bước 7 tách Ruling cần người dùng quyết
+  const wf = flat(read('workflows', 'feature', 'WORKFLOW.md'));
+  const step = (n) => wf.split(`### Bước ${n} `)[1]?.split('### Bước ')[0] ?? '';
+  ok(/`Ruling: nhóm <nhãn> chạy tuần tự — <lý do> — <chi phí nếu sai>`/.test(step(4)), 'AC3.3: Bước 4 mẫu Ruling nhóm tuần tự có ba phần');
+  ok(/ledger\.mjs <plan\.md> --rulings/.test(step(6)) && /chạy lại/.test(step(6)), 'AC3.3: Bước 6 gom Ruling bằng --rulings và chạy lại lệnh');
+  ok(/cần người dùng quyết[^.]*(riêng|tách)/.test(step(7)), 'AC3.2: Bước 7 nêu riêng Ruling cần người dùng quyết ở G3');
 }
