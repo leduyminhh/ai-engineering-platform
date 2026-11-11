@@ -70,7 +70,7 @@ Người dùng chốt (không hỏi lại):
 - **A12** — Môi trường không có công cụ hỏi có lựa chọn (headless, Codex, Cowork) theo quy tắc 4 của `ask-user.md`: in danh sách và dừng
   chờ như mọi cổng khác. `claude -p` không người trả lời: [giả định] builder kiểm `using-aip/references/agents-in-ci.md`; nếu luồng CI
   gọi `plan-execution` thì nêu ở đó rằng CI phải nói rõ cách chạy trong prompt (thành điều kiện A5b).
-- **A13** — Version: bump patch `core` (1.32.4 → 1.32.5) và `workflows` (3.15.0 → 3.15.1) vì `workflows/feature/WORKFLOW.md` đổi; thêm `backend` (1.14.1 → 1.14.2) và `frontend` (1.15.1 → 1.15.2) vì `backend-init`/`frontend-init` chép `core/agents/AGENTS.template.md` vào plugin (phát hiện ở Task 8, cổng version từ chối lock); `node cli/lib/versions.mjs --lock` sau build.
+- **A13** — Version: bump patch `core` (1.32.4 → 1.32.5) và `workflows` (3.15.0 → 3.15.1) vì `workflows/feature/WORKFLOW.md` đổi; thêm `backend` (1.14.1 → 1.14.2) và `frontend` (1.15.1 → 1.15.2) vì `backend-init`/`frontend-init` chép `core/agents/AGENTS.template.md` vào plugin; `node cli/lib/versions.mjs --lock` sau build.
 
 ## Tiêu chí chấp nhận
 
@@ -143,7 +143,7 @@ review cuối toàn nhánh, giá trị `HIGH`.
 
 ## Ảnh hưởng spec
 - baseline: đổi R8
-- workflows: đổi R14, thêm R21
+- workflows: đổi R12, đổi R14, thêm R21
 - hooks-gates: đổi R15
 - cli-wizard: đổi R6
 

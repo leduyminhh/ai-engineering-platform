@@ -217,6 +217,6 @@
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** Bump `core` 1.32.4 → 1.32.5 và `workflows` 3.15.0 → 3.15.1 trong `.manifest.json` (đọc version hiện tại trước, đổi nếu master đã đi tiếp).
-- [ ] **Step 2:** `npm run build`, rồi `node cli/lib/versions.mjs --lock`; mở diff `plugins/_versions.lock.json`, chỉ đổi hai mục trên.
-- [ ] **Step 3:** `npm test`; exit 0, ghi số pass/fail. Commit (`chore: bump core and workflows for ask-execution-mode`).
+- [ ] **Step 1:** Bump `core` 1.32.4 → 1.32.5, `workflows` 3.15.0 → 3.15.1, `backend` 1.14.1 → 1.14.2 và `frontend` 1.15.1 → 1.15.2 trong `.manifest.json` (đọc version hiện tại trước, đổi nếu master đã đi tiếp; backend/frontend vì `backend-init`/`frontend-init` chép `AGENTS.template.md`).
+- [ ] **Step 2:** `npm run build`, rồi `node cli/lib/versions.mjs --lock`; mở diff `plugins/_versions.lock.json`, chỉ đổi bốn mục trên.
+- [ ] **Step 3:** `npm test`; exit 0, ghi số pass/fail. Commit (`chore: bump core, workflows, backend, frontend for ask-execution-mode`).
