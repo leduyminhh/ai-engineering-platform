@@ -106,6 +106,23 @@ export default async function run({ ok, ctx }) {
     }
   }
 
+  // AC1.1–AC1.5, AC3.6: SKILL.md và inline.md hỏi cách thực thi trước Task 1
+  {
+    const read = (...p) => fs.readFileSync(path.join(skillDir, ...p), 'utf8');
+    const flat = (s) => s.replace(/s+/g, ' ');
+    const skill = flat(read('SKILL.md'));
+    const inline = flat(read('references', 'inline.md'));
+    ok(/thẻ Cách thực thi/.test(skill) && /Subagent + review từng task/.test(skill) && /Inline/.test(skill), 'AC1.1: SKILL.md có thẻ Cách thực thi với hai lựa chọn Subagent + review từng task / Inline');
+    ok(/`planRunner`[^.]*gợi ý/.test(skill) && /không bỏ (qua )?câu hỏi/.test(skill), 'AC1.2: SKILL.md nêu planRunner chỉ là gợi ý, không bỏ câu hỏi');
+    ok(!/Không hỏi người dùng chọn cách thực thi/i.test(skill + inline) && !/khi `partRunner` là `session` hoặc thiếu khoá/.test(skill), 'AC1.2: không còn câu cấm hỏi cách thực thi hay điều kiện hỏi theo khoá');
+    ok(/không có tool subagent/.test(skill) && /nói rõ/.test(skill) && /người dùng nói rõ/.test(inline), 'AC1.3: SKILL.md và inline.md nêu hai trường hợp không hỏi (không có tool subagent, người dùng nói rõ)');
+    ok(/grep[^.]*ledger `root\/`[^.]*`\^Ruling: cách chạy`/.test(skill) && /Ruling: cách chạy <[^>]*> — </.test(skill) && /Ruling: cách chạy/.test(inline) && !/Ruling: thực thi inline/.test(inline),
+      'AC1.4: SKILL.md grep cả ledger root/ tìm Ruling: cách chạy và nêu mẫu dòng; inline.md dùng cùng mẫu');
+    ok(/Task 1: start/.test(skill.slice(skill.indexOf('Cách thực thi'))) && /người dùng chọn inline/.test(inline), 'AC1.4: thẻ đặt trước Task 1: start; inline.md nêu điều kiện người dùng chọn inline');
+    ok(/phiên part và subagent part không hỏi/i.test(skill) && /không hỏi cách chạy/i.test(inline), 'AC1.5: phiên part và subagent part không hỏi cách chạy');
+    ok(/autonomy\.mjs --set planRunner=/.test(skill) && /không dùng Write\/Edit/i.test(skill), 'AC3.6: SKILL.md lưu gợi ý bằng autonomy.mjs --set, không dùng Write/Edit lên aip-gate.json');
+  }
+
   // AC3.5: lệnh --set không bị guard-bash hỏi (lệnh không nêu tên aip-gate.json), còn ghi file bằng lệnh nêu tên vẫn hỏi
   {
     const { decide } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'hooks', 'scripts', 'guard-bash.mjs')).href);
