@@ -341,6 +341,27 @@ workflows/R21: cỡ task và review từng task (D8, D9); R7: Bước 5 của `w
 con ở `model-routing.md`, luật commit chỉ-xoá của `git-workflow`, worktree của `isolation: worktree`. Các năng lực này đã có
 `spec.md` trong `docs/specs/` nên W23 không áp.)
 
+## Quyết định trong lúc chạy
+
+Chép từ ledger (`Ruling:`); chi phí nếu sai ghi theo từng dòng.
+
+- Bảng tự biện minh của `plan-execution` đã có 7 dòng (pin 47 không phủ skill này), nên pin 48 kiểm không tăng quá 7 thay vì 4–6; pin 31 không đỏ. Chi phí nếu sai: bảng dài hơn mức chuẩn 4–6 như cũ.
+- Mục vai phiên dài 8 dòng nên không tạo `session-roles.md` (plan chỉ tạo khi quá 20 dòng); pin 20, 21 không đỏ. Chi phí nếu sai: không có.
+- Không tạo `references/change/migration-numbering.md`: `SKILL.md` mới 179 dòng, xa mốc 300; quy tắc nằm trong `SKILL.md`.
+- Plan gốc P0 chạy như một part (worktree p00, subagent inline) song song với nhóm A, không chạy trước trên `feature/`: P0 chỉ ghi `scripts/`, `test/contract/57-58`, `CLAUDE.md`, `baseline.json`, rời tập file của 5 part. Chi phí nếu sai: part không được contract 57 kiểm lúc làm, bắt ở full suite sau merge. P0 không có review từng task (như part subagent), review cuối opus toàn nhánh phủ.
+- Chạy tối đa 3 subagent part cùng lúc (heuristic của `AGENTS.md`, mục Parallel agents). Chi phí nếu sai: chậm hơn chạy cả 6.
+- P0 merged `15406563`; `npm test` exit 0 (validate 6538 pass); không có nội dung chiếu nên không bump version.
+- `baseline.json` ban đầu giữ nguyên văn stdout nên `byRequest.request` mang tên request của project nguồn (D3), trong khi plan cấm tên riêng. Người dùng chốt: thêm cờ `--anon` (`r1..rN`) và ADR-0005 chuyển Accepted.
+- Routing sau merge 5 part tụt dưới khoá (positive 68 < 69, negative 93 < 94) do 3 skill mới. Vòng sửa chỉnh `description` 3 skill mới (cập nhật D6 và pin 49/50/51), không hạ ngưỡng. Người dùng chốt (G3 sớm, loại dừng 6): viết lại dữ liệu routing mù cho 3 skill mới, bỏ cụm chép đề khỏi `description`, đặt khoá theo số đo thật (positive không dưới 69 của master). Chi phí nếu sai: khoá routing thấp hơn 71.
+- Khoá routing positive 71 → 69 theo số đo trên dữ liệu mù mới, negative 94. Chi phí nếu sai: không.
+- Số skill offer cố định đổi 10 → 11 (`install.test.mjs` backend/frontend, pin 12 frontend) vì thêm skill published; phép kiểm giữ dạng đếm chính xác.
+- Rút manifest description của `engineering` (bỏ chú thích của `engineering-repo-audit`, `engineering-tdd`) để ≤ 500 ký tự sau khi thêm `engineering-api-research`. Chi phí nếu sai: mất 2 chú thích ngắn.
+
+Số đo và lệnh chạy lại:
+
+- Số nền (project nguồn, ẩn danh): `node scripts/ledger-metrics.mjs --project <project nguồn> --label source-project --anon` cho 23 ledger, 9 request, 136 task, 42,6% task review từ vòng 2, 1,33 ruling "ngoài Files" mỗi request.
+- Routing: `node scripts/routing-score.mjs` cho positive 149/214 = 69%, negative 151/160 = 94%.
+
 ## Ngoài phạm vi và anti-goal
 
 - Ngoài phạm vi: ngân sách RAM/compose cho ops, đổi contract Avro/Kafka, bẫy Windows/ffmpeg (brief: bằng chứng mỏng, để đợt
