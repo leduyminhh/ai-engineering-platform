@@ -89,3 +89,16 @@ export function measure(dir, label = 'project') {
       { request, tasks, tasksReview2plus, rulings, rulingsOutsideFiles, minorDeferred })),
   };
 }
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  const argv = process.argv.slice(2);
+  const arg = (name) => { const i = argv.indexOf(name); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : null; };
+  const project = arg('--project');
+  try {
+    if (!project) throw new Error('thiếu --project <dir>');
+    process.stdout.write(`${JSON.stringify(measure(project, arg('--label') || 'project'), null, 2)}\n`);
+  } catch (e) {
+    process.stderr.write(`ledger-metrics: ${e.message}\n`);
+    process.exit(1);
+  }
+}
