@@ -109,7 +109,6 @@ export function decide(input, deps = {}) {
     const cwd = path.resolve(input?.cwd || '.');
     // `loadConfig` (seam test) tiêm cấu hình không có `file`, nên được coi là đáng tin như cấu hình tiêm ở fullEffective.
     const gate = loadConfig ? { config: loadConfig(cwd) } : loadGate(cwd);
-    const cfg = gate?.config;
     // File ngoài project (vd script tạm trong scratchpad) không có test nào của project chạy được; chỉ xét file dưới cwd hoặc gốc git.
     const roots = [cwd, ...(resolveRoots(cwd) ?? [])];
     if (trustedValue(gate, 'stopGate', { tracked }) === false) return null;
@@ -122,7 +121,8 @@ export function decide(input, deps = {}) {
     const file = sub ? input.agent_transcript_path : input?.transcript_path;
     if (typeof file !== 'string' || !file) return null;
     const extra = [];
-    for (const s of Array.isArray(cfg?.testCommands) ? cfg.testCommands : []) {
+    const listedTests = trustedValue(gate, 'testCommands', { tracked });
+    for (const s of Array.isArray(listedTests) ? listedTests : []) {
       if (typeof s !== 'string') continue;
       try { extra.push(new RegExp(s)); } catch { /* regex sai chỉ bỏ qua mẫu đó */ }
     }

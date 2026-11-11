@@ -30,14 +30,14 @@
 | `core/.manifest.json`, `plugins/_versions.lock.json` | bump version core, lock | Task 5 |
 
 ## Global Constraints
-- Khoá `trust: 'untracked'` (đúng 5): `mode`, `autonomy`, `allowEnvFiles`, `stopGate`, `exemptAgents`.
-- Khoá `trust: 'any'` (đúng 13): `fullKeep`, `fullRoots`, `fullReadRoots`, `mcpAllow`, `mcpDeny`, `testCommands`, `bootstrapInject`, `handoffInject`, `ledgerInject`, `resumeWarn`, `handoffPath`, `handoffMaxAgeHours`, `statusStaleMinutes`. `calc: 5 + 13 = 18`.
+- Khoá `trust: 'untracked'` (đúng 6): `mode`, `autonomy`, `allowEnvFiles`, `stopGate`, `exemptAgents`, `testCommands` (thêm khi thực thi Task 5, người dùng duyệt).
+- Khoá `trust: 'any'` (đúng 12): `fullKeep`, `fullRoots`, `fullReadRoots`, `mcpAllow`, `mcpDeny`, `bootstrapInject`, `handoffInject`, `ledgerInject`, `resumeWarn`, `handoffPath`, `handoffMaxAgeHours`, `statusStaleMinutes`. `calc: 6 + 12 = 18`.
 - Kiểu trong `GATE_KEYS`: `mode`/`handoffPath` string; `autonomy` object; `allowEnvFiles`/`stopGate`/`bootstrapInject`/`handoffInject`/`ledgerInject`/`resumeWarn` boolean; `exemptAgents`/`fullKeep`/`fullRoots`/`fullReadRoots`/`mcpAllow`/`mcpDeny`/`testCommands` array; `handoffMaxAgeHours`/`statusStaleMinutes` number.
 - `trustedValue`: khoá `any` → trả nguyên, không gọi git; khoá `untracked` → trả giá trị khi `gate.inRepo === false` hoặc `tracked(file) === false`; `true` hoặc `null` → `undefined`. Chỉ gọi git khi khoá `untracked` có trong config.
 - File hỏng: hook và script coi như không có cấu hình, im lặng, vẫn che file repo chính (hooks-gates/R9); CLI (`aip mode`, `aip autonomy`, `aip init --full`) in đường dẫn file hỏng ra stderr, exit 1, không ghi file nào.
 - `gate-file.mjs` chỉ import specifier `node:`; hai bản giống hệt byte (so sau chuẩn hoá `\r\n`). Sửa một bản thì chép sang bản kia.
 - `fullEffective` không đổi code và seam (A12). Hook không thêm cảnh báo mới; lỗi nội bộ fail-open.
-- Chép khoá sang file worktree (A7): file repo chính bị theo dõi hoặc không xác định → không chép 5 khoá `untracked`; không bị theo dõi → chép như trước; `mode` luôn bị bỏ khi chép từ repo chính.
+- Chép khoá sang file worktree (A7): file repo chính bị theo dõi hoặc không xác định → không chép 6 khoá `untracked`; không bị theo dõi → chép như trước; `mode` luôn bị bỏ khi chép từ repo chính.
 - UTF-8 không BOM, LF; comment theo mục Comments của `AGENTS.md` (tiếng Việt có dấu, chỉ giải thích *vì sao*).
 - Commit mỗi task qua `core:git-workflow`: header `type(scope): summary` tiếng Anh, body tiếng Việt có dấu, `git commit -F`, không dòng `Co-Authored-By`.
 
