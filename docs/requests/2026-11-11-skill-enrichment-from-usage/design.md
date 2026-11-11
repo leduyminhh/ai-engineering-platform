@@ -319,11 +319,11 @@ Sửa: `plugins/data/skills/data-db-migration/SKILL.md` (C1–C3, bảng tự bi
 
 | Part | Phụ thuộc | Song song | Trạng thái |
 |---|---|---|---|
-| 01-core | — | A | chưa làm |
-| 02-engineering | — | A | chưa làm |
-| 03-backend | — | A | chưa làm |
-| 04-frontend | — | A | chưa làm |
-| 05-data | — | A | chưa làm |
+| 01-core | — | A | đang làm |
+| 02-engineering | — | A | đang làm |
+| 03-backend | — | A | đang làm |
+| 04-frontend | — | A | đang làm |
+| 05-data | — | A | đang làm |
 
 Plan gốc (`plan.md`) là P0 và chạy trước mọi part (`task-loop.md`, "Chế độ part" bước 1), nên cột Phụ thuộc để `—`.
 Tập file năm part rời nhau theo thư mục: 01 = `core/`, `workflows/`, pin 48; 02 = `plugins/engineering/`, pin 49; 03 =
