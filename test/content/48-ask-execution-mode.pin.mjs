@@ -157,6 +157,20 @@ export default async function run({ ok, ctx }) {
     ok(/planRunner/.test(raw('CLAUDE.md')), 'AC6.1: CLAUDE.md liệt kê planRunner trong khoá autonomy');
   }
 
+  // AC2.3, AC6.2: git-worktree, WORKFLOW feature và hai README đồng bộ với "luôn hỏi cách chạy"
+  {
+    const raw = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\s+/g, ' ');
+    const wtSkill = raw('core', 'skills', 'git-worktree', 'SKILL.md');
+    const parallel = raw('core', 'skills', 'git-worktree', 'references', 'parallel-agents.md');
+    ok(!/hoặc khoá `partRunner: subagent`/.test(wtSkill) && /câu trả lời Subagent hoặc Phiên riêng/.test(wtSkill), 'AC2.3: git-worktree/SKILL.md: câu trả lời nhóm Song song thay câu hỏi tạo worktree, không còn khoá bỏ câu hỏi');
+    ok(!/not asked when `autonomy\.partRunner` is `subagent`/.test(parallel) && /`partRunner` only orders the options, it never skips the question/.test(parallel), 'AC2.3: parallel-agents.md: partRunner chỉ đặt thứ tự lựa chọn');
+    const wf = raw('workflows', 'feature', 'WORKFLOW.md');
+    ok(!/khi `partRunner` là `session` hoặc thiếu khoá/.test(wf) && !/hoặc khoá `partRunner: subagent`/.test(wf) && !/thiếu khoá thì hỏi người dùng một lần trước mỗi nhóm/.test(wf) && /thẻ Cách thực thi/.test(wf),
+      'AC6.2: WORKFLOW.md feature: không còn khoá bỏ câu hỏi, nêu thẻ Cách thực thi');
+    ok(!/parallel parts run as background subagents/.test(raw('README.md')) && /`partRunner` and `planRunner` only order the options/.test(raw('README.md')), 'AC6.2: README.md nêu khoá chỉ đặt thứ tự lựa chọn');
+    ok(!/part song song chạy bằng subagent nền/.test(raw('README_VI.md')) && /`partRunner` và `planRunner` chỉ đặt lựa chọn đứng đầu/.test(raw('README_VI.md')), 'AC6.2: README_VI.md nêu khoá chỉ đặt lựa chọn đứng đầu');
+  }
+
   // AC3.5: lệnh --set không bị guard-bash hỏi (lệnh không nêu tên aip-gate.json), còn ghi file bằng lệnh nêu tên vẫn hỏi
   {
     const { decide } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'hooks', 'scripts', 'guard-bash.mjs')).href);
