@@ -395,3 +395,24 @@ test("gate-config-flow AC4.4: allowEnvFiles trong aip-gate.json đã bị git th
   assert.equal(readAllowEnvFiles(open), true, "file chưa theo dõi → bỏ quy tắc .env");
   assert.equal(readAllowEnvFiles(open, { tracked: () => null }), false, "không xác định trạng thái git → giữ quy tắc .env");
 });
+
+test("gate-config-flow AC4.4: aip init --full ở thư mục con chỉ đọc file của chính thư mục con", () => {
+  const top = fs.realpathSync.native(tmp());
+  gitIn(top, "init", "-q");
+  const put = (d, text) => { fs.mkdirSync(path.join(d, ".claude"), { recursive: true }); fs.writeFileSync(path.join(d, ".claude", "aip-gate.json"), text); };
+  put(top, '{"allowEnvFiles": true}');
+  const denyOf = (root) => JSON.parse(read(root, ".claude/settings.json")).permissions.deny;
+  const secrets = loadPolicy().groups.secrets.rules;
+  const a = path.join(top, "a");
+  fs.mkdirSync(a);
+  init({ root: a, full: true });
+  assert.deepEqual(denyOf(a), secrets, "thư mục con chưa có file: không thừa kế file của gốc git");
+  const b = path.join(top, "b");
+  put(b, '{"allowEnvFiles": false}');
+  init({ root: b, full: true });
+  assert.deepEqual(denyOf(b), secrets, "file riêng đặt false");
+  const c = path.join(top, "c");
+  put(c, '{"allowEnvFiles": true}');
+  init({ root: c, full: true });
+  assert.notDeepEqual(denyOf(c), secrets, "file riêng chưa theo dõi đặt true → bỏ quy tắc .env");
+});

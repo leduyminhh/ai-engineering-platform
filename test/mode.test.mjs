@@ -454,8 +454,8 @@ test("gate-config-flow AC4.3: status liệt kê khoá lạ và khoá sai kiểu"
   put(gatePath(root), JSON.stringify({ foo: 1, stopGate: "no" }));
   for (const fn of [runMode, runAutonomy]) {
     const t = cmd(fn, "status", root).out;
-    assert.match(t, /Khoá lạ: foo/, `${fn.name}: ${t}`);
-    assert.match(t, /Khoá sai kiểu: stopGate \(cần boolean\)/);
+    assert.match(t, /Khoá lạ: "foo"/, `${fn.name}: ${t}`);
+    assert.match(t, /Khoá sai kiểu: "stopGate" \(cần boolean\)/);
   }
   put(gatePath(root), JSON.stringify({ stopGate: true, mcpDeny: [] }));
   for (const fn of [runMode, runAutonomy]) assert.doesNotMatch(cmd(fn, "status", root).out, /Khoá lạ|Khoá sai kiểu/);
@@ -489,4 +489,27 @@ test("gate-config-flow: aip mode ask sinh lại settings giữ quy tắc .env kh
   put(setPath(root), EMPTY);
   assert.equal(cmd(runMode, "ask", root).code, 0);
   assert.equal(fs.readFileSync(setPath(root), "utf8"), gen(false));
+});
+
+test("gate-config-flow AC4.3: khoá lạ và khoá sai kiểu in qua JSON.stringify, không lọt ESC hay xuống dòng", () => {
+  const root = tmp();
+  const key = "x\u001b[31m\ny";
+  put(gatePath(root), JSON.stringify({ [key]: 1 }));
+  for (const fn of [runMode, runAutonomy]) {
+    const t = cmd(fn, "status", root).out;
+    const line = t.split("\n").find((l) => l.startsWith("Khoá lạ:")) ?? "";
+    assert.ok(line.includes(JSON.stringify(key)) && !t.includes("\u001b"), fn.name + ": " + JSON.stringify(t));
+  }
+});
+
+test("gate-config-flow AC4.2: status chỉ hiện mode đáng tin; gợi ý gỡ theo dõi nhắc xem lại từng khoá", () => {
+  const root = tmp();
+  commitGate(root, { mode: "full", autonomy: { mergeLocal: true } });
+  const t = cmd(runMode, "status", root).out;
+  assert.match(t, /Chế độ: ask/, t);
+  assert.doesNotMatch(t, /Chế độ: full/);
+  assert.match(t, /mode.*bỏ qua|bỏ qua.*mode/i);
+  assert.match(cmd(runMode, "full", root).out, /xem lại/);
+  assert.match(cmd(runAutonomy, "status", root).out, /xem lại/);
+  assert.match(cmd(runAutonomy, "high", root).out, /xem lại/);
 });

@@ -88,22 +88,22 @@ export default async function run({ ok, ctx }) {
   }
 
   // ── AC2.1: bảng khoá
-  const UNTRACKED = ['mode', 'autonomy', 'allowEnvFiles', 'stopGate', 'exemptAgents', 'testCommands'];
-  const ANY = ['fullKeep', 'fullRoots', 'fullReadRoots', 'mcpAllow', 'mcpDeny', 'bootstrapInject', 'handoffInject',
+  const UNTRACKED = ['mode', 'autonomy', 'allowEnvFiles', 'stopGate', 'exemptAgents', 'testCommands', 'fullKeep', 'fullRoots', 'fullReadRoots'];
+  const ANY = ['mcpAllow', 'mcpDeny', 'bootstrapInject', 'handoffInject',
     'ledgerInject', 'resumeWarn', 'handoffPath', 'handoffMaxAgeHours', 'statusStaleMinutes'];
   {
     const keys = Object.keys(gf.GATE_KEYS ?? {});
     const byTrust = (t) => keys.filter((k) => gf.GATE_KEYS[k].trust === t).sort();
     ok(keys.length === 18, `AC2.1: GATE_KEYS có 18 khoá (đang ${keys.length})`);
-    ok(JSON.stringify(byTrust('untracked')) === JSON.stringify([...UNTRACKED].sort()), `AC2.1: đúng 6 khoá untracked: ${byTrust('untracked')}`);
-    ok(JSON.stringify(byTrust('any')) === JSON.stringify([...ANY].sort()), `AC2.1: đúng 12 khoá any: ${byTrust('any')}`);
+    ok(JSON.stringify(byTrust('untracked')) === JSON.stringify([...UNTRACKED].sort()), `AC2.1: đúng 9 khoá untracked: ${byTrust('untracked')}`);
+    ok(JSON.stringify(byTrust('any')) === JSON.stringify([...ANY].sort()), `AC2.1: đúng 9 khoá any: ${byTrust('any')}`);
     const types = new Set(['string', 'boolean', 'number', 'array', 'object']);
     ok(keys.every((k) => types.has(gf.GATE_KEYS[k].type)), 'AC2.1: mọi khoá có type thuộc tập đóng');
   }
 
   // ── AC2.2, AC2.3: trustedValue ở bốn trạng thái, đếm lời gọi seam tracked
   {
-    const value = { mode: 'full', autonomy: { mergeLocal: true }, allowEnvFiles: true, stopGate: false, exemptAgents: ['x'], testCommands: ['.'] };
+    const value = { mode: 'full', autonomy: { mergeLocal: true }, allowEnvFiles: true, stopGate: false, exemptAgents: ['x'], testCommands: ['.'], fullKeep: [], fullRoots: ['/x'], fullReadRoots: ['/y'] };
     const states = [['không bị theo dõi', true, false, true], ['bị theo dõi', true, true, false], ['không xác định', true, null, false], ['ngoài repo git', false, true, true]];
     for (const key of UNTRACKED) {
       for (const [name, inRepo, trackedRes, trusted] of states) {
@@ -136,6 +136,26 @@ export default async function run({ ok, ctx }) {
       ok(gf.gateTracked(gateOf(d), { run: () => { m++; return 0; } }) === true && m <= 2, 'AC2.3: gateTracked file đã theo dõi → true');
       ok(gf.gateTracked(gateOf(d), { run: () => 128 }) === null, 'AC2.3: gateTracked git trả exit lạ → null');
     } finally { fs.rmSync(d, { recursive: true, force: true }); }
+  }
+
+  // ── AC2.2 trạng thái 3: git hỏng nhưng thư mục có .git
+  {
+    const boom = () => { throw new Error('git hỏng'); };
+    const d = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-gf-u-')));
+    try {
+      fs.mkdirSync(path.join(d, '.git'));
+      writeRaw(d, '{"fullKeep":[]}');
+      const sub = path.join(d, 'a', 'b');
+      fs.mkdirSync(sub, { recursive: true });
+      const g = gf.locateGate(sub, { git: boom });
+      ok(g.inRepo === true && g.gitUnknown === true && same(g.top, d) && same(g.file, gateOf(d)) && g.config?.fullKeep?.length === 0, `AC2.2: locateGate git hỏng + có .git → inRepo, gitUnknown, đọc file ở gốc .git: ${JSON.stringify(g)}`);
+      ok(gf.trustedValue(g, 'fullKeep', { tracked: () => null }) === undefined, 'AC2.2: git hỏng ⇒ khoá untracked → undefined');
+    } finally { fs.rmSync(d, { recursive: true, force: true }); }
+    const n = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-gf-n-')));
+    try {
+      const g = gf.locateGate(n, { git: boom });
+      ok(g.inRepo === false && g.gitUnknown === false, `AC2.2: git hỏng, không có .git → inRepo false: ${JSON.stringify(g)}`);
+    } finally { fs.rmSync(n, { recursive: true, force: true }); }
   }
 
   // ── AC2.4: lintGate
