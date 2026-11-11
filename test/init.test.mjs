@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { init, readAllowEnvFiles } from "../cli/lib/init.mjs";
 import { initDocFiles } from "../cli/lib/templates.mjs";
 import { BEGIN, END, importsAgentsMd, extractBaselineBlock } from "../cli/lib/managed-block.mjs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { loadPolicy } from "../cli/lib/permissions.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -368,7 +368,7 @@ test("gate-config-flow AC4.1: init --full với aip-gate.json hỏng → stderr 
     const gate = path.join(root, ".claude", "aip-gate.json");
     fs.mkdirSync(path.dirname(gate), { recursive: true });
     fs.writeFileSync(gate, bad);
-    const r = spawnSync(process.execPath, [CLI_PATH, "init", "--full"], { cwd: root, encoding: "utf8" });
+    const r = spawnSync(process.execPath, [CLI_PATH, "init", "--full"], { cwd: root, encoding: "utf8", env: { ...process.env, AIE_INSTALL_ROOT: root } });
     assert.equal(r.status, 1, `exit với ${bad}: ${r.stderr}`);
     assert.ok(r.stderr.includes("aip-gate.json"), r.stderr);
     assert.deepEqual(fs.readdirSync(root), [".claude"]);

@@ -2,11 +2,13 @@
 // In JSON khoá `autonomy` hiệu lực của <git-root>/.claude/aip-gate.json cho skill plan-execution.
 // Cách dùng: node autonomy.mjs → {"mergeLocal":…,"cleanup":…,"partRunner":…,"planRunner":…}; import: readAutonomy(cwd, deps?).
 // node autonomy.mjs --set <planRunner|partRunner>=<giá trị> lưu gợi ý cách chạy (không phải quyền; chỉ đổi thứ tự lựa chọn của thẻ hỏi).
-// Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì (không import hook của core).
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
+// Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì; đọc aip-gate.json qua bản sao gate-file.mjs cạnh nó
+// (skills mode không có cây hook để import).
+import { existsSync, lstatSync, mkdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { locateGate, readGateAt, gateTracked, lsFiles, trustedValue } from './gate-file.mjs';
 
 export const DEFAULTS = Object.freeze({ mergeLocal: false, cleanup: false, partRunner: 'session', planRunner: 'subagent' });
 const RUNNERS = new Set(['subagent', 'session', 'sequential']);
@@ -14,52 +16,19 @@ const PLAN_RUNNERS = new Set(['subagent', 'inline']);
 
 const defaultGit = (args, cwd) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 
+// Bỏ cache của gateTracked: aip autonomy và test gọi nhiều lần trong một tiến trình, trạng thái git có thể đổi giữa các lần.
+const freshTracked = (file) => gateTracked(file, { run: (dir, spec) => lsFiles(dir, spec) });
+
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
-// true/false khi git trả exit 0/1; mọi kết quả khác là null. Chép rút gọn gateTracked của hook (icase vì FS không phân biệt hoa thường,
-// symlink thì hỏi cả đường dẫn thật) vì script skill phải tự đứng, không import hook.
-function trackedByGit(file) {
-  const ask = (dir, name) => {
-    try { execFileSync('git', ['-C', dir, 'ls-files', '--error-unmatch', '--', `:(icase)${name}`], { timeout: 3000, stdio: 'ignore' }); return true; } catch (e) { return e?.status === 1 ? false : null; }
-  };
-  const root = path.dirname(path.dirname(file));
-  let linked = false;
-  try { linked = lstatSync(path.dirname(file)).isSymbolicLink(); } catch { /* realpath bên dưới báo null */ }
-  const logical = linked ? (ask(root, '.claude') ? true : null) : ask(path.dirname(file), path.basename(file));
-  let real;
-  try { const rp = realpathSync.native(file); real = ask(path.dirname(rp), path.basename(rp)); } catch { real = null; }
-  return logical === true || real === true ? true : logical === null || real === null ? null : false;
-}
-
-// null = không có file; {} = có file nhưng hỏng (vẫn che repo chính như hook gate-config); còn lại = nội dung.
-function readGateAt(root) {
-  let raw;
-  try { raw = readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8'); } catch (e) { return e?.code === 'ENOENT' ? null : {}; }
-  try { const v = JSON.parse(raw.replace(/^﻿/, '')); return isObj(v) ? v : {}; } catch { return {}; }
-}
-
-function locate(cwd, git) {
-  try {
-    const top = git(['rev-parse', '--show-toplevel'], cwd);
-    const common = git(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd);
-    // Submodule: common-dir là <cha>/.git/modules/<tên>, dirname của nó nằm trong .git của repo cha; dùng gốc của chính submodule (cùng guard với route.mjs).
-    return { top, main: path.basename(common) === '.git' ? path.dirname(common) : top, inRepo: true };
-  } catch { /* không phải repo hoặc không có git: chỉ đọc cwd */ return { top: cwd, main: null, inRepo: false }; }
-}
-
-// ignored: 'tracked' | 'unknown' khi file có khoá autonomy bị bỏ qua (xem dưới), ngược lại null.
+// ignored: 'tracked' | 'unknown' khi file có khoá autonomy bị bỏ qua (khoá `untracked` của gate-file.mjs), ngược lại null.
+// File hỏng của worktree vẫn che repo chính và cho mặc định an toàn, như hook.
 export function resolveAutonomy(cwd = process.cwd(), deps = {}) {
-  const git = deps.git ?? defaultGit;
-  const { top, main, inRepo } = locate(cwd, git);
-  const own = readGateAt(top);
-  const mainGate = own ? null : main ? readGateAt(main) : null;
-  const gate = own ?? mainGate ?? {};
-  const file = path.join(own ? top : main ?? top, '.claude', 'aip-gate.json');
-  // File đã commit đến từ clone nên không được tự cấp merge local/dọn không hỏi (như `mode: full` ở hook); không xác định được cũng bỏ qua.
-  // Ngoài repo git không có clone nào để tin, nên đọc như cũ. Chỉ hỏi git khi file thật sự có khoá.
-  const tracked = gate.autonomy !== undefined && inRepo ? (deps.tracked ?? trackedByGit)(file) : false;
-  const ignored = tracked === true ? 'tracked' : tracked === null ? 'unknown' : null;
-  const a = !ignored && isObj(gate.autonomy) ? gate.autonomy : {};
+  const g = locateGate(cwd, { git: deps.git ?? defaultGit });
+  let state = false;
+  const raw = trustedValue(g, 'autonomy', { tracked: (f) => (state = (deps.tracked ?? freshTracked)(f)) });
+  const ignored = state === true ? 'tracked' : state === null ? 'unknown' : null;
+  const a = isObj(raw) ? raw : {};
   return { ignored, value: {
     mergeLocal: typeof a.mergeLocal === 'boolean' ? a.mergeLocal : DEFAULTS.mergeLocal,
     cleanup: typeof a.cleanup === 'boolean' ? a.cleanup : DEFAULTS.cleanup,
@@ -84,7 +53,7 @@ export function setRunner(key, value, cwd = process.cwd(), deps = {}) {
   if (!allowed || !allowed.has(value)) {
     return { code: 2, message: `--set chỉ nhận planRunner=${[...PLAN_RUNNERS].join('|')} hoặc partRunner=${[...RUNNERS].join('|')} (nhận: ${JSON.stringify(key)}=${JSON.stringify(value)})` };
   }
-  const { top, main, inRepo } = locate(cwd, deps.git ?? defaultGit);
+  const { top, main, inRepo } = locateGate(cwd, { git: deps.git ?? defaultGit });
   const at = (root) => path.join(root, '.claude', 'aip-gate.json');
   // Cùng thứ tự với resolveAutonomy: file của worktree che file repo chính; chưa có file nào thì tạo ở repo chính để còn lại khi worktree bị dọn.
   const file = existsSync(at(top)) ? at(top) : main && existsSync(at(main)) ? at(main) : at(main ?? top);
@@ -92,13 +61,12 @@ export function setRunner(key, value, cwd = process.cwd(), deps = {}) {
   const linked = (p) => { try { return lstatSync(p).isSymbolicLink(); } catch { return false; } };
   if (linked(file) || linked(path.dirname(file))) return { code: 0, message: `Bỏ qua: ${file} hoặc thư mục .claude là symlink/junction, không lưu gợi ý ${key}.` };
   let gate = {};
-  if (existsSync(file)) {
-    try {
-      gate = JSON.parse(readFileSync(file, 'utf8').replace(/^﻿/, ''));
-    } catch { gate = null; }
-    if (!isObj(gate)) return { code: 1, message: `${file} không phải đối tượng JSON hợp lệ; sửa tay trước khi lưu gợi ý.` };
+  const read = readGateAt(path.dirname(path.dirname(file)));
+  if (read) {
+    if (read.invalid) return { code: 1, message: `${file} không phải đối tượng JSON hợp lệ; sửa tay trước khi lưu gợi ý.` };
+    gate = read.config;
     // File đã commit: ghi vào làm bẩn cây, và khoá autonomy của nó bị bỏ qua nên gợi ý cũng không có hiệu lực.
-    const tracked = inRepo ? (deps.tracked ?? trackedByGit)(file) : false;
+    const tracked = inRepo ? (deps.tracked ?? freshTracked)(file) : false;
     if (tracked !== false) {
       return { code: 0, message: `Bỏ qua: ${file} ${tracked ? 'đang được git theo dõi' : 'không xác định được trạng thái git'}, không lưu gợi ý ${key}.` };
     }
