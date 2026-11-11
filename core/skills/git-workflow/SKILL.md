@@ -49,6 +49,9 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
 2. Quyết định worktree là MỘT thay đổi logic hay NHIỀU nhóm commit — tách commit khi
    trộn nhiều mục tiêu; giữ code + test + docs phụ trợ đi cùng nếu phục vụ một mục tiêu. Một commit khoảng 300 dòng
    logic trở lên (`git diff --cached --shortstat`, bỏ file sinh tự động và lockfile) thì xét tách theo mục tiêu.
+   **Khi xoá file đã tracked:** một commit chỉ gồm các file bị xoá, body liệt kê từng file và lý do xoá. Việc sửa tham chiếu tới
+   các file đó (import, đường dẫn, tài liệu) là commit riêng sau đó. Chấp nhận build có thể đỏ giữa hai commit: không gộp
+   hai commit cho xanh và không viết lại lịch sử để che chỗ đỏ.
 3. Nếu cần branch mới: nạp [references/branch-convention.md](references/branch-convention.md)
    và tạo/chuyển branch theo quy ước (xem Quy tắc ưu tiên branch ở trên).
 4. Stage đúng các file của nhóm commit hiện tại.

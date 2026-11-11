@@ -22,7 +22,8 @@ không gọi agent khác.
   ở trên, kèm mức gốc.
 
 Cách làm:
-1. Tìm lỗi mà review từng task không thấy: tích hợp giữa các task, interface lệch tên/kiểu, hồi quy, phần plan hứa mà
+1. Đọc kỹ diff của các task ledger ghi `cỡ nhỏ` (đã bỏ review từng task, chỉ có đối chiếu `**Files:**` sau commit): đây là lần review đầu của chúng.
+   Rồi tìm lỗi mà review từng task không thấy: tích hợp giữa các task, interface lệch tên/kiểu, hồi quy, phần plan hứa mà
    không ai làm, từng mục Review Focus có test phủ thật không.
 2. Xét từng Ruling: có đúng không, chi phí nếu sai có chấp nhận được không; Ruling nào chạm không-đảo-ngược, bảo mật,
    schema DB hay tác động ngoài repo thì gắn nhãn cần người dùng quyết.

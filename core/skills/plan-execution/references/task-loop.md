@@ -199,6 +199,21 @@ của part) rồi ghi `Unblocked: <cách giải>` vào ledger của chính part 
 chưa trả lời thì không nhắc lại, vướng mới gộp vào cùng thẻ (vướng chưa gỡ vẫn hiện ở trang `aip status`: đó là trạng thái, không tính là nhắc lại). Ngoài ra session gốc đưa trang `aip status` (skill
 `aip-status`) ở G3 và khi một part chuyển sang vướng cần người dùng (G1, G2 diễn ra trước khi có ledger nên chưa có trang để đưa); việc này không phải dòng trạng thái giữa chừng.
 
+## Cỡ task và review từng task
+
+Cỡ suy ra từ `**Kind:**`, `**TDD:**` và `**Files:**` của task, không cần trường mới trong plan. Quyết định ở [ADR-0005](../../../../docs/decisions/0005-small-task-skips-per-task-review.md); cách đọc từng điều kiện nằm ở [task-size.md](task-size.md).
+
+- **Nhỏ** khi đủ cả bốn: (1) `Kind` là `FE-UI` hoặc `TOOLING`; (2) `**TDD:** không`; (3) không quá 5 file production; (4) `**Files:**` không có đường dẫn migration, auth/phân quyền, secret/credential, CI hoặc hook, và task không đổi contract API hay schema.
+- **Lớn** là mọi task còn lại: `BE`, `DB`, `CT`, `FE-INT`, `E2E`, `DOCS`, mọi task `**TDD:** có`, hoặc task chạm đường dẫn nhạy cảm ở điều kiện (4). Task Lớn đi vòng đầy đủ như các mục trên (implementer, task review, vòng sửa).
+- **Vừa** là các task cùng khuôn gom theo mục "Gom task nhỏ" bên dưới; cả cụm tính là Lớn nếu có một task Lớn.
+
+Task cỡ Nhỏ bỏ task review và vòng sửa, chỉ chịu review cuối toàn nhánh; implementer, brief, commit và ledger giữ nguyên. Phạm vi: các chế độ còn review từng task (tuần tự không part; part với `partRunner: session`). Chế độ inline và part `partRunner: subagent` không đổi vì vốn đã bỏ review từng task.
+
+**Đối chiếu sau commit.** Với task cỡ Nhỏ, ngay sau commit session chính chạy `git diff --name-only <BASE>..HEAD` và so với `**Files:**` của task:
+
+- Có file ngoài `**Files:**`, hoặc một file chạm đường dẫn nhạy cảm của điều kiện (4): nâng task lên cỡ Lớn, giao task review thường theo các bước trên (không ghi dòng cỡ nhỏ).
+- Không lệch: ghi dòng `Task <n>: complete (commits <a>..<b>, review cuối — cỡ nhỏ)` và sang task kế; final-review đọc kỹ diff các task ghi `cỡ nhỏ`.
+
 ## Gom task nhỏ
 
 Nhiều task nhỏ cùng khuôn (vd đổi một dòng ở nhiều file) có thể giao một lần và review như một đơn vị, miễn brief liệt kê
@@ -256,6 +271,7 @@ Task <n>: review <vòng> <compliant|issues|cannot_verify> <blocker>/<major>/<min
 Ruling: <quyết định> — <lý do> — <chi phí nếu sai>
 minor (deferred): <finding minor/nit> — task <n>
 Task <n>: complete (commits <a>..<b>, review clean|<k> ruled[, red: <lệnh> exit <n khác 0>][, tests: <lệnh> exit 0])
+Task <n>: complete (commits <a>..<b>, review cuối — cỡ nhỏ)
 Blocked: <lý do>
 Unblocked: <cách giải>
 Plan: complete
