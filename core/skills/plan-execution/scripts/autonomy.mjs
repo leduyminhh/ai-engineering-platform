@@ -3,7 +3,7 @@
 // Cách dùng: node autonomy.mjs → {"mergeLocal":…,"cleanup":…,"partRunner":…,"planRunner":…}; import: readAutonomy(cwd, deps?).
 // node autonomy.mjs --set <planRunner|partRunner>=<giá trị> lưu gợi ý cách chạy (không phải quyền; chỉ đổi thứ tự lựa chọn của thẻ hỏi).
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì (không import hook của core).
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -77,12 +77,15 @@ const SETTABLE = { planRunner: PLAN_RUNNERS, partRunner: RUNNERS };
 export function setRunner(key, value, cwd = process.cwd(), deps = {}) {
   const allowed = Object.hasOwn(SETTABLE, key) ? SETTABLE[key] : null;
   if (!allowed || !allowed.has(value)) {
-    return { code: 2, message: `--set chỉ nhận planRunner=${[...PLAN_RUNNERS].join('|')} hoặc partRunner=${[...RUNNERS].join('|')} (nhận: ${key}=${value})` };
+    return { code: 2, message: `--set chỉ nhận planRunner=${[...PLAN_RUNNERS].join('|')} hoặc partRunner=${[...RUNNERS].join('|')} (nhận: ${JSON.stringify(key)}=${JSON.stringify(value)})` };
   }
   const { top, main, inRepo } = locate(cwd, deps.git ?? defaultGit);
   const at = (root) => path.join(root, '.claude', 'aip-gate.json');
   // Cùng thứ tự với resolveAutonomy: file của worktree che file repo chính; chưa có file nào thì tạo ở repo chính để còn lại khi worktree bị dọn.
   const file = existsSync(at(top)) ? at(top) : main && existsSync(at(main)) ? at(main) : at(main ?? top);
+  // Ghi xuyên symlink/junction (file hoặc thư mục .claude) có thể tạo file ngoài project; bỏ qua như file đã theo dõi.
+  const linked = (p) => { try { return lstatSync(p).isSymbolicLink(); } catch { return false; } };
+  if (linked(file) || linked(path.dirname(file))) return { code: 0, message: `Bỏ qua: ${file} hoặc thư mục .claude là symlink/junction, không lưu gợi ý ${key}.` };
   let gate = {};
   if (existsSync(file)) {
     try {
@@ -98,7 +101,10 @@ export function setRunner(key, value, cwd = process.cwd(), deps = {}) {
   if (isObj(gate.autonomy) && gate.autonomy[key] === value) return { code: 0, message: `${key}=${value} đã có trong ${file}` };
   const next = { ...gate, autonomy: { ...(isObj(gate.autonomy) ? gate.autonomy : {}), [key]: value } };
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, JSON.stringify(next, null, 2) + '\n', 'utf8');
+  // Ghi tạm rồi đổi tên: ngắt giữa chừng hay hai phiên cùng ghi không để file cụt (hook coi file hỏng là che cấu hình repo chính).
+  const tmp = `${file}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(next, null, 2) + '\n', 'utf8');
+  renameSync(tmp, file);
   return { code: 0, message: `✓ ${key}=${value} → ${file}` };
 }
 

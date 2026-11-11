@@ -29,7 +29,7 @@
 | `core/skills/git-worktree/references/parallel-agents.md` | khoá `partRunner` chỉ là gợi ý | Task 6 |
 | `workflows/feature/WORKFLOW.md` | Bước 5 và đoạn Checkpoint | Task 6 |
 | `README.md`, `README_VI.md` | mục Autonomy | Task 6 |
-| `docs/specs/workflows/spec.md` | R14 đổi, R21 thêm, Lịch sử | Task 7 |
+| `docs/specs/workflows/spec.md` | R14 đổi, R23 thêm, Lịch sử | Task 7 |
 | `docs/specs/hooks-gates/spec.md` | R15 đổi, Lịch sử | Task 7 |
 | `docs/specs/cli-wizard/spec.md` | R6 đổi, Lịch sử | Task 7 |
 | `docs/specs/baseline/spec.md` | R8 đổi, Lịch sử | Task 7 |
@@ -196,7 +196,7 @@
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** Đọc `design.md` mục "Ảnh hưởng spec" và R21; sửa `workflows` R14 (câu hỏi trước nhóm Song song theo mọi giá trị khoá, khoá chỉ là gợi ý) và thêm R21 (Nguồn trỏ request này); sửa `hooks-gates` R15 (bốn khoá, `planRunner`, `--set`, nghĩa gợi ý), `cli-wizard` R6 (`status` in bốn khoá; chữ `high`), `baseline` R8 (câu Execution). Thêm dòng bảng Lịch sử cho từng R đổi hoặc thêm (ngày 2026-11-11, trỏ `2026-11-11-ask-execution-mode`).
+- [ ] **Step 1:** Đọc `design.md` mục "Ảnh hưởng spec" và R23; sửa `workflows` R14 (câu hỏi trước nhóm Song song theo mọi giá trị khoá, khoá chỉ là gợi ý) và thêm R21 (Nguồn trỏ request này); sửa `hooks-gates` R15 (bốn khoá, `planRunner`, `--set`, nghĩa gợi ý), `cli-wizard` R6 (`status` in bốn khoá; chữ `high`), `baseline` R8 (câu Execution). Thêm dòng bảng Lịch sử cho từng R đổi hoặc thêm (ngày 2026-11-11, trỏ `2026-11-11-ask-execution-mode`).
 - [ ] **Step 2:** Đặt Trạng thái của `2026-11-03-execution-mode-choice/design.md` thành `abandoned — thay bằng 2026-11-11-ask-execution-mode (phần review part chưa làm)`.
 - [ ] **Step 3:** Đối chiếu khẳng định với code (bảng `khẳng định → file:line → khớp|lệch`: tên khoá, giá trị mặc định, lệnh `--set`, exit code). Chạy `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-11-11-ask-execution-mode/ --base master`; không còn W10–W14. Commit (`docs(specs): record ask-execution-mode in living specs`).
 

@@ -40,7 +40,7 @@ export default async function run({ ok, ctx }) {
       ok(text(main).endsWith('\n') && !text(main).startsWith('﻿'), 'AC3.1: file ghi UTF-8 không BOM, kết thúc bằng LF');
 
       const kept = text(main);
-      for (const [k, v] of [['mergeLocal', 'true'], ['cleanup', 'true'], ['mode', 'full'], ['planRunner', 'parallel'], ['partRunner', 'inline'], ['planRunner', 'session'], ['', 'x']]) {
+      for (const [k, v] of [['mergeLocal', 'true'], ['cleanup', 'true'], ['mode', 'full'], ['planRunner', 'parallel'], ['partRunner', 'inline'], ['planRunner', 'session'], ['', 'x'], ['__proto__', 'inline'], ['constructor', 'inline'], ['toString', 'x']]) {
         r = set(k, v);
         ok(r.code === 2 && text(main) === kept, `AC3.2: --set ${k}=${v} bị từ chối (exit 2), không ghi`);
       }
@@ -69,6 +69,17 @@ export default async function run({ ok, ctx }) {
       r = set('planRunner', 'subagent', wt, inWt);
       ok(r.code === 0 && text(main) === JSON.stringify({ autonomy: { planRunner: 'subagent' } }, null, 2) + '\n' && !fs.existsSync(file(wt)),
         'AC3.4: chưa có file nào → tạo ở gốc repo chính, chỉ gồm khoá vừa đặt');
+
+      // symlink/junction: không ghi xuyên link ra ngoài project (ca bị bỏ nếu máy không tạo được link)
+      const lk = path.join(root, 'lk');
+      const outside = path.join(root, 'outside');
+      fs.mkdirSync(lk, { recursive: true });
+      fs.mkdirSync(outside, { recursive: true });
+      try { fs.symlinkSync(outside, path.join(lk, '.claude'), 'junction'); } catch { /* không tạo được link */ }
+      if (fs.existsSync(path.join(lk, '.claude'))) {
+        r = set('planRunner', 'inline', lk, { git: gitFake(lk, path.join(lk, '.git')), tracked: () => false });
+        ok(r.code === 0 && !fs.existsSync(path.join(outside, 'aip-gate.json')) && /symlink/.test(r.message), 'AC3.3: .claude là symlink/junction → không ghi xuyên link, nêu lý do');
+      }
 
       // git thật: file đã git add thì không ghi
       const repo = path.join(root, 'repo');
@@ -162,8 +173,8 @@ export default async function run({ ok, ctx }) {
     const raw = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\s+/g, ' ');
     const wtSkill = raw('core', 'skills', 'git-worktree', 'SKILL.md');
     const parallel = raw('core', 'skills', 'git-worktree', 'references', 'parallel-agents.md');
-    ok(!/hoặc khoá `partRunner: subagent`/.test(wtSkill) && /câu trả lời Subagent hoặc Phiên riêng/.test(wtSkill), 'AC2.3: git-worktree/SKILL.md: câu trả lời nhóm Song song thay câu hỏi tạo worktree, không còn khoá bỏ câu hỏi');
-    ok(!/not asked when `autonomy\.partRunner` is `subagent`/.test(parallel) && /autonomy\.partRunner` only orders the options, it never skips the question/.test(parallel), 'AC2.3: parallel-agents.md: partRunner chỉ đặt thứ tự lựa chọn');
+    ok(!/hoặc khoá `partRunner: subagent`/.test(wtSkill) && /câu trả lời Subagent hoặc Phiên riêng/.test(wtSkill) && /Tuần tự không tạo worktree/.test(wtSkill), 'AC2.3: git-worktree/SKILL.md: câu trả lời nhóm Song song thay câu hỏi tạo worktree, không còn khoá bỏ câu hỏi');
+    ok(!/not asked when `autonomy\.partRunner` is `subagent`/.test(parallel) && /autonomy\.partRunner` only orders the options, it never skips the question/.test(parallel) && /Sequential creates none/.test(parallel), 'AC2.3: parallel-agents.md: partRunner chỉ đặt thứ tự lựa chọn');
     const wf = raw('workflows', 'feature', 'WORKFLOW.md');
     ok(!/khi `partRunner` là `session` hoặc thiếu khoá/.test(wf) && !/hoặc khoá `partRunner: subagent`/.test(wf) && !/thiếu khoá thì hỏi người dùng một lần trước mỗi nhóm/.test(wf) && /thẻ Cách thực thi/.test(wf),
       'AC6.2: WORKFLOW.md feature: không còn khoá bỏ câu hỏi, nêu thẻ Cách thực thi');

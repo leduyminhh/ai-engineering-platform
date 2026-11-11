@@ -249,7 +249,7 @@ LỆNH
   autonomy <high|safe|status> mức hỏi của luồng plan-execution (chỉ project, không nhận -g): high = ghi autonomy
                             {mergeLocal: true, cleanup: true, partRunner: "subagent"} vào .claude/aip-gate.json; safe = bỏ khóa
                             (hỏi như mặc định); status = in giá trị hiệu lực. partRunner/planRunner chỉ là gợi ý lựa chọn đứng đầu
-                            của câu hỏi cách chạy. Push luôn hỏi; G1/G2/G3 và cách chạy vẫn hỏi
+                            của câu hỏi cách chạy. Push luôn hỏi; G1/G2/G3 và cách chạy vẫn hỏi mỗi lần
   list                      liệt kê adapter + plugin tìm được
   help                      hiện trợ giúp này (hoặc -h, --help)
 

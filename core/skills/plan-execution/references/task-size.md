@@ -21,4 +21,4 @@ Cỡ tính từ `**Files:**` do plan khai, mà plan có thể sót, nên task c�
 2. So từng file với danh sách `**Files:**` (kể cả dòng `Test:`). Có file ngoài danh sách, hoặc file nằm ở đường dẫn nhạy cảm: nâng lên Lớn và giao review thường. Không có thì task giữ cỡ Nhỏ.
 3. Task giữ cỡ Nhỏ thì ghi dòng `Task <n>: complete (commits <a>..<b>, review cuối — cỡ nhỏ)`. Dòng này không bắt đầu bằng `Task <n>: review`, vì `ledger.mjs` chỉ nhận dạng dòng review có vòng và verdict.
 
-Phạm vi: các chế độ còn review từng task, tức tuần tự không part và part với `partRunner: session`. Chế độ inline và part `partRunner: subagent` không đổi: chúng bỏ review từng task ở mọi cỡ và ghi dòng `complete` riêng của `inline.md`.
+Phạm vi: các chế độ còn review từng task, tức tuần tự không part và part chạy Phiên riêng (`partRunner: session`) hoặc Tuần tự trong session gốc. Chế độ inline và part chạy Subagent (`partRunner: subagent`) không đổi: chúng bỏ review từng task ở mọi cỡ và ghi dòng `complete` riêng của `inline.md`.

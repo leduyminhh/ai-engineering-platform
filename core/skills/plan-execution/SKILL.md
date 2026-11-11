@@ -30,7 +30,7 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    chạy `node <thư mục skill plan-execution>/scripts/autonomy.mjs` một lần để lấy `mergeLocal`, `cleanup`, `partRunner`, `planRunner`
    (thiếu khoá hoặc sai giá trị = mặc định an toàn: hỏi merge local, hỏi dọn; `partRunner` và `planRunner` chỉ là gợi ý nên không làm bỏ qua câu hỏi cách chạy).
    Rồi hỏi thẻ Cách thực thi, trước `Task 1: start`, mỗi lần thực thi một plan (chia part hay không). Phiên part và subagent part không hỏi cách chạy, cũng không `--set` (khối bàn giao và `references/inline.md` đã định sẵn); session giữ cả request làm theo thứ tự:
-   (a) grep cả ledger `root/` tìm `^Ruling: cách chạy` (hook chỉ chèn phần cuối): có thì dùng giá trị đó, không hỏi, vì cùng một lần thực thi;
+   (a) grep cả ledger `root/` tìm `^Ruling: cách chạy` (hoặc dòng cũ `^Ruling: thực thi inline`, tính là `inline`; hook chỉ chèn phần cuối): có thì dùng giá trị đó, không hỏi, vì cùng một lần thực thi;
    (b) không có tool subagent, hoặc yêu cầu của người dùng đã nói rõ chạy inline hay không dùng subagent: `inline`, không hỏi;
    (c) còn lại hỏi một câu theo `references/ask-user.md` (hàng "Cách thực thi"): "Subagent + review từng task" (`subagent`) hoặc "Inline" (`inline`), lựa chọn theo `planRunner` đứng đầu kèm "(Recommended)" (mặc định Subagent); khoá không bỏ câu hỏi.
    Ở (b) và (c), ghi `Ruling: cách chạy <subagent|inline> — <người dùng chọn | không có tool subagent | người dùng nói rõ> — <chi phí nếu sai>` bằng `ledger.mjs`, rồi lưu giá trị làm gợi ý lần sau: `node <thư mục skill plan-execution>/scripts/autonomy.mjs --set planRunner=<giá trị>` (không dùng Write/Edit lên `.claude/aip-gate.json`, hook hỏi người dùng khi ghi file đó).

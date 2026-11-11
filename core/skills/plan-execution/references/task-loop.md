@@ -207,7 +207,7 @@ Cỡ suy ra từ `**Kind:**`, `**TDD:**` và `**Files:**` của task, không c�
 - **Lớn** là mọi task còn lại: `BE`, `DB`, `CT`, `FE-INT`, `E2E`, `DOCS`, mọi task `**TDD:** có`, hoặc task chạm đường dẫn nhạy cảm ở điều kiện (4). Task Lớn đi vòng đầy đủ như các mục trên (implementer, task review, vòng sửa).
 - **Vừa** là các task cùng khuôn gom theo mục "Gom task nhỏ" bên dưới; cả cụm tính là Lớn nếu có một task Lớn; cụm gồm toàn task Nhỏ vẫn là Nhỏ (không review cụm, chỉ chịu review cuối).
 
-Task cỡ Nhỏ bỏ task review và vòng sửa, chỉ chịu review cuối toàn nhánh; implementer, brief, commit và ledger giữ nguyên. Phạm vi: các chế độ còn review từng task (tuần tự không part; part với `partRunner: session`). Chế độ inline và part `partRunner: subagent` không đổi vì vốn đã bỏ review từng task.
+Task cỡ Nhỏ bỏ task review và vòng sửa, chỉ chịu review cuối toàn nhánh; implementer, brief, commit và ledger giữ nguyên. Phạm vi: các chế độ còn review từng task (tuần tự không part; part chạy Phiên riêng (`partRunner: session`) hoặc Tuần tự trong session gốc). Chế độ inline và part chạy Subagent (`partRunner: subagent`) không đổi vì vốn đã bỏ review từng task.
 
 **Đối chiếu sau commit.** Với task cỡ Nhỏ, ngay sau commit session chính chạy `git diff --name-only <BASE>..HEAD` và so với `**Files:**` của task:
 
