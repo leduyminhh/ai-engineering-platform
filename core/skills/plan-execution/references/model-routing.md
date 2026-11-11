@@ -86,3 +86,12 @@ model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
 
 [Unverified] How much a cache read weighs against a subscription's usage limit is not documented; the rules above
 still hold because they cut the number of turns on large contexts.
+
+## Vai phiên gốc và phiên con
+
+Phiên gốc điều phối; mỗi phiên con làm một gói việc (một part, một nhánh). Quy tắc 4 và 8 ở trên vẫn áp dụng; mục này chỉ nêu vai của hai bên.
+
+- **Giao việc kế.** Phiên con vừa xong hoặc đang rảnh được giao ngay gói kế tiếp, miễn không chồng file với gói đang chạy (đối chiếu `**Files:**`). Không để phiên con chờ phiên gốc rảnh tay mới có việc.
+- **Xoay context.** Xoay mềm khi context chạm ~40% và task đang chạy xong (ranh giới task); xoay cứng ngay khi chạm ~60%, kể cả giữa task. Mở phiên mới trước (kèm `handoff.md`), xác nhận phiên mới chạy được, rồi mới dừng phiên cũ. Không dừng phiên con giữa plan chỉ vì hạn mức. [Inference] Hai ngưỡng là heuristic của nhóm, như ghi ở quy tắc 4.
+- **Không mở được phiên.** Phiên điều khiển qua Remote Control, hoặc lượt do tin nhắn cross-session khởi động, thì không mở được phiên mới: để phiên cũ chạy tiếp, báo ngưỡng đã vượt trong dòng báo cáo kế.
+- **Phiên con xong.** Part xong và đã merge thì đóng phiên con, không xoay: không còn việc để chuyển.

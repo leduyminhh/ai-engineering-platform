@@ -79,8 +79,8 @@ export default async function run({ ok, ctx }) {
     ok(/^\d+\.\d+\.\d+$/.test(feMan23.version) && feMan23.description.includes('frontend-performance'),
       'frontend manifest: version semver, description nêu frontend-performance');
     const offFe23 = offeredCatalog().plugins.find((p) => p.id === 'frontend');
-    ok(!!offFe23 && offFe23.skillIds.includes('frontend/frontend-performance') && offFe23.skillIds.length === 10,
-      'offeredCatalog: plugin frontend offer 10 skill gồm frontend-performance');
+    ok(!!offFe23 && offFe23.skillIds.includes('frontend/frontend-performance') && offFe23.skillIds.length === 11,
+      'offeredCatalog: plugin frontend offer 11 skill gồm frontend-performance');
 
     const fpaPath = path.join(PLUGINS_DIR, 'frontend', 'agents', 'frontend-performance-analyst.md');
     const fpa = fs.existsSync(fpaPath) ? fs.readFileSync(fpaPath, 'utf8') : '';

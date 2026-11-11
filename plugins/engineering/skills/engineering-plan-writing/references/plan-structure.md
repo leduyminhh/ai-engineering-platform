@@ -48,6 +48,15 @@ W18 khi kind ngoài tập. Kind quyết định chuỗi agent:
 
 Task trộn hai phía (vd BE + FE-UI) → tách thành hai task, mỗi task một kind.
 
+## Task DOCS — đối chiếu khẳng định với code
+
+Task `DOCS` luôn có một step bắt buộc, đặt sau step viết nội dung và trước commit:
+
+1. Liệt kê từng khẳng định kiểm được trong phần vừa viết: tên hàm, số, đường dẫn, lệnh, giá trị mặc định.
+2. Đối chiếu từng khẳng định với code bằng grep hoặc đọc file nguồn.
+3. Ghi vào báo cáo task bảng `khẳng định → file:line → khớp|lệch`.
+4. Dòng `lệch` thì sửa docs cho đúng code, hoặc gắn `[Unverified]` khi chưa kiểm được; không để dòng `lệch` tồn tại mà không xử lý.
+
 ## Trường TDD
 
 `**TDD:** có` hoặc `**TDD:** không — <lý do>` (dấu `—`, lý do không rỗng), đặt sau `**Kind:**`. Thiếu dòng thì mặc định theo

@@ -1,0 +1,13 @@
+{
+  "positive": [
+    "Trước khi chốt cách tích hợp cổng thanh toán, bạn tra giúp mình hạn mức gọi mỗi phút và mã lỗi khi vượt hạn mức của họ, cái nào chắc chắn cái nào chưa kiểm được thì ghi rõ nhé.",
+    "Thư viện gửi mail mình đang dùng vừa lên bản mới, bạn đọc tài liệu đúng phiên bản xem cách xác thực có đổi không, kèm đường dẫn nguồn giúp mình.",
+    "Tài liệu của dịch vụ bản đồ nói mập mờ về định dạng phản hồi khi không có kết quả. Chạy thử một đoạn script nhỏ gọi đường chỉ đọc rồi đối chiếu với tài liệu giùm mình.",
+    "Mình cần biết gói miễn phí của dịch vụ lưu trữ ảnh cho bao nhiêu dung lượng và giá khi vượt gói. Đi tìm số liệu thật từ trang chính thức, đừng đoán."
+  ],
+  "negative": [
+    "Viết giúp mình bản đặc tả yêu cầu cho tính năng đăng ký nhận thông báo, có tiêu chí chấp nhận đo được.",
+    "Ghi lại quyết định chọn Kafka thay vì RabbitMQ thành tài liệu quyết định kiến trúc, nêu rõ các phương án và đánh đổi.",
+    "API trả lỗi 500 mỗi khi gửi file lớn, đây là stacktrace, tìm nguyên nhân giúp mình."
+  ]
+}
