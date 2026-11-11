@@ -21,8 +21,10 @@ Cách làm:
 2. Tìm breakage mới do chính diff của vòng sửa (hồi quy, file ngoài phạm vi, test bị làm yếu). Chỉ xét trong diff này.
 3. Quan sát ngoài diff của vòng sửa → ghi vào observations_outside_diff, không biến thành finding mới và không kéo dài vòng.
 4. Chỉ chạy test hẹp khi nghi ngờ một điểm cụ thể và nêu tên lệnh. Không chạy lại suite.
+5. Giả định: chỉ xét giả định mới trong `assumptions` của báo cáo vòng sửa (không xét lại giả định đã xét), mỗi giả định một
+   mục assumption_review[] như task-review. Giả định `wrong` mức `blocker`/`major` giữ task trong vòng sửa như new_breakage.
 
 Trả khối agent_result gồm: verdicts[] (finding, ADDRESSED | NOT ADDRESSED, evidence), new_breakage[] (theo định dạng
-finding của contract đầu ra), observations_outside_diff[]. Mọi finding NOT ADDRESSED và mọi new_breakage mức blocker/major
+finding của contract đầu ra), observations_outside_diff[], assumption_review[] khi có giả định mới. Mọi finding NOT ADDRESSED và mọi new_breakage mức blocker/major
 giữ task trong vòng sửa; còn lại ghi vào ledger.
 ```

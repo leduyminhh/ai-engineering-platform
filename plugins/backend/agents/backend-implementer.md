@@ -47,6 +47,7 @@ Implementer backend: nhận một use-case/feature/contract được giao, sinh 
 ## Report trả về
 
 - Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
+- Trong vòng task: `assumptions` (luôn có khoá, có thể rỗng), mỗi mục `{ assumption, basis, if_wrong }` cho điều đã chọn mà brief, AC và Interfaces không nói; thiếu khoá là đầu ra hỏng (contract đầu ra, `core:principles`).
 - `workflow_result`-style: slice đã sinh (aggregate/use-case/port/adapter, `file:line` các điểm chính), file
   contract đã cập nhật (nếu có).
 - Evidence lệnh đã chạy (`command`, `exit_code`, `status`, `summary`) cho build + test; không chạy được →

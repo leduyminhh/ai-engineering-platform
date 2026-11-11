@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: final-review-ruling-evidence
+description: Plan đã xong; ledger có hai dòng Ruling hoãn major, một viện dẫn số đo không kèm lệnh chạy lại, một nói AC2.1 đã có test trong khi test không có ca đó; review cuối phải gắn nhãn cả hai và không tuyên bố nhánh sạch.
+context:
+  scaffold_script: scaffold.sh

@@ -122,7 +122,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** cỡ "thay đổi nhỏ" → bỏ qua bước này, ghi rõ "bỏ qua: cỡ thay đổi nhỏ, không có `plan.md`" và sang
   Bước 5 không có plan (brief là `requirement.md`, số task và kind theo Bước 5). Cỡ dự án: viết `plan.md` theo skill (bản đồ
   file, Global Constraints, task có Kind/Interfaces/Phủ AC, Review Focus), tự soát 6 mục; request lớn có `## Bảng part` ở `design.md` thì plan chia thành `plan.md` gốc + `parts/<nn>-<part-slug>/plan.md`, rồi chạy
-  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` và, khi có part, `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` (chỉ là cảnh báo; nhóm bị báo P1/P2/P4 thì sửa plan hoặc đổi nhóm sang chạy tuần tự: quay lại Bước 3 đặt cột Song song của các part đó thành `—` trong `design.md`, hoặc giữ bảng và ghi `Ruling: nhóm <nhãn> chạy tuần tự — <lý do>` vào ledger `root/` bằng `ledger.mjs`). Có `tasks.md` →
+  `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` và, khi có part, `node <thư mục skill artifact-templates>/scripts/check-partition.mjs docs/requests/<ngày>-<slug>/` (chỉ là cảnh báo; nhóm bị báo P1/P2/P4 thì sửa plan hoặc đổi nhóm sang chạy tuần tự: quay lại Bước 3 đặt cột Song song của các part đó thành `—` trong `design.md`, hoặc giữ bảng và ghi `Ruling: nhóm <nhãn> chạy tuần tự — <lý do> — <chi phí nếu sai>` vào ledger `root/` bằng `ledger.mjs`). Có `tasks.md` →
   task trong `plan.md` trỏ ID task của `tasks.md`, và Checkpoint 2 của `engineering-task-breakdown` được duyệt cùng
   `plan.md` (không hỏi hai lần).
 - **Ràng buộc:** trình plan để duyệt theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó) (mở `plan.md` ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng); chỉ ghi `plan.md` gốc (nếu có) và `parts/*/plan.md` trong thư mục request; không sinh mã nguồn; không sửa `requirement.md`/`design.md`
@@ -193,10 +193,10 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `engineering-quality-auditor` (model mặc định). Diff toàn nhánh không chạm backend hay frontend thì `general-purpose`
   `model: opus` thay hai reviewer đó.
 - **Đầu vào:** toàn nhánh `MERGE_BASE..HEAD` (gom bằng `plan-execution` `scripts/review-package.mjs <MERGE_BASE> <HEAD> --plan <plan.md>`), Review Focus
-  của `plan.md`, các dòng `Ruling:` và `minor (deferred)` trong ledger, contract (nếu có)
+  của `plan.md`, các dòng `Ruling:` (gom bằng `plan-execution` `scripts/ledger.mjs <plan.md> --rulings`, kèm cờ và lệnh chạy lại) và `minor (deferred)` trong ledger, contract (nếu có)
 - **Hành động:** theo mẫu `final-review.md` của `plan-execution`: reviewer tìm lỗi mà review từng task không
   thấy (tích hợp giữa các task, interface lệch tên/kiểu, hồi quy, phần plan hứa mà không ai làm, từng mục Review Focus
-  có test phủ thật không) và xét từng `Ruling:`; `engineering-quality-auditor` chạy quality/security gate (chỉ ở bước
+  có test phủ thật không) và xét từng `Ruling:` (đối chiếu lý do với code, chạy lại lệnh `chạy lại:` chỉ đọc); `engineering-quality-auditor` chạy quality/security gate (chỉ ở bước
   này, không chạy theo task); validate lại từng finding (đọc `file:line`, loại finding không tái lập được). Phạm vi có
   API (Bước 3 có contract): reviewer đối chiếu endpoint/DTO thực tế với contract (thiếu/thừa field, kiểu sai, endpoint
   lệch — drift contract↔code); auditor kiểm authorization của endpoint mới/đổi (kiểm quyền theo vai trò/chủ sở hữu tài
@@ -222,7 +222,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   sống `docs/specs/<capability>/spec.md` theo `## Ảnh hưởng spec` (không ảnh hưởng thì ghi lý do); chạy
   `node <thư mục skill artifact-templates>/scripts/check-request.mjs docs/requests/<ngày>-<slug>/` (kèm `--base <nhánh
   gốc>` để W7 chỉ tính test thêm trong nhánh và W13 kiểm spec sống); bump version/lock theo quy ước dự án nếu cần; chạy full suite của mọi component bị chạm và
-  component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings`; trình diff cả nhánh (G3) để người dùng duyệt, cùng tên nhánh gốc đề xuất (nhiều ứng viên thì hỏi chọn ngay trong tin nhắn G3). Khoá `mergeLocal` bật thì bản trình G3 nêu nhánh gốc và hai commit sẽ tạo, duyệt rõ G3 là
+  component phụ thuộc, một lần; gom mọi dòng `Ruling:` vào `rulings` (Ruling review cuối gắn nhãn cần người dùng quyết thì nêu riêng trong thẻ G3, kèm lý do); trình diff cả nhánh (G3) để người dùng duyệt, cùng tên nhánh gốc đề xuất (nhiều ứng viên thì hỏi chọn ngay trong tin nhắn G3). Khoá `mergeLocal` bật thì bản trình G3 nêu nhánh gốc và hai commit sẽ tạo, duyệt rõ G3 là
   đồng ý merge local, push/PR hỏi riêng một lần sau merge local; thiếu khoá thì đưa
   đúng 3 lựa chọn ngay trong câu hỏi G3: merge local / push + PR / giữ nguyên (mặc định), chọn push + PR là đồng ý push, không hỏi lại. Merge local (theo khoá hoặc lựa chọn tay) dùng chung một cơ chế: cây sạch, kiểm `git merge-base --is-ancestor` trước checkout (đã là tổ tiên của nhánh gốc → lỗi chặn, không merge, không commit rỗng), checkout nhánh gốc thất bại → lỗi chặn (không merge, không `--abort`, không dọn), `git merge --no-ff --no-commit`; git từ chối bắt đầu (không `MERGE_HEAD`) → lỗi chặn, không `--abort`; có `MERGE_HEAD`: full suite trên cây đã merge, xanh mới commit merge, đỏ hoặc conflict thì `git merge --abort`; rồi một commit docs đặt `merged` và xoá plan trên nhánh gốc, rồi dọn theo `cleanup`, xem `finish.md`. Ghi `Plan: complete` vào ledger sau khi việc của lựa
   chọn xong.

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 // Sổ tiến độ của một plan: <gốc repo chính>/.aip/runs/<request>/<part>/progress.md (xem workspace.mjs; git bỏ qua .aip).
 // Cách dùng: <plan.md | requestDir> "<dòng>" — thêm một dòng vào ledger, in đường dẫn file. Exit 2 khi thiếu đối số hoặc dòng bị từ chối.
+// Dòng có `chạy lại: `lệnh`` truyền trong nháy đơn: nháy kép làm bash thay backtick bằng kết quả lệnh, ledger mất lệnh.
+// <plan.md | requestDir> --rulings — chỉ đọc: in mọi dòng Ruling: của request (root và part) kèm cờ và lệnh chạy lại; exit 0 kể cả khi có cờ.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { resolveWorkspace } from './workspace.mjs';
+import { resolveWorkspace, workspaceDirs } from './workspace.mjs';
 import { extractTask, effectiveTdd, taskField } from './task-brief.mjs';
 
 const DONE_RE = /^Plan: complete\s*$/m;
@@ -105,6 +107,44 @@ export function readTail(file, max) {
   return text.slice(Math.max(0, text.length - max));
 }
 
+// Phần lệnh chạy lại tách trước khi đếm phần, neo cuối dòng: lệnh chứa " — " không làm đếm sai.
+const RERUN_RE = / — chạy lại: `([^`]+)`\s*$/;
+// Bộ hẹp có ranh giới chữ: "lần", "pass", "đo" trần báo nhầm quá nhiều; cờ chỉ là gợi ý cho reviewer, không chặn.
+const MEASURE_RE = /\d+(?:[.,]\d+)?\s?(?:ms|s|giây|phút|%|KB|MB|GB|req\/s)(?![\p{L}\p{N}])|\bexit \d+|(?<![\p{L}\p{N}])(?:test xanh|benchmark|đã đo)(?![\p{L}\p{N}])/iu;
+
+export function rulingFlags(line) {
+  const rerun = line.match(RERUN_RE)?.[1] ?? null;
+  const body = line.replace(RERUN_RE, '').replace(/^Ruling:\s*/, '');
+  const flags = [];
+  if (body.split(' — ').length < 3) flags.push('thiếu phần');
+  if (!rerun && MEASURE_RE.test(body)) flags.push('số đo không có lệnh chạy lại');
+  return { flags, rerun };
+}
+
+// Đọc mọi ledger của request (root trước, part theo tên) ở gốc repo chính và gốc worktree khi khác; chỉ đọc, không tạo .aip.
+function listRulings(planArg, deps) {
+  const fsx = { ...fs, ...deps?.fs };
+  const { main, top, request } = workspaceDirs(planArg, deps);
+  const out = [];
+  for (const base of new Set([path.resolve(main), path.resolve(top)])) {
+    const runs = path.join(base, '.aip', 'runs', request);
+    let parts = [];
+    try { parts = fsx.readdirSync(runs); } catch (e) { if (e?.code !== 'ENOENT') throw e; }
+    parts.sort((a, b) => (a === 'root' ? -1 : b === 'root' ? 1 : a.localeCompare(b)));
+    for (const part of parts) {
+      let text;
+      try { text = fsx.readFileSync(path.join(runs, part, 'progress.md'), 'utf8'); } catch { continue; }
+      for (const l of text.split(LINE_SPLIT).filter((x) => x.startsWith('Ruling:'))) {
+        const { flags, rerun } = rulingFlags(l);
+        out.push(`- [${part}] ${l}`);
+        if (rerun) out.push(`  chạy lại: ${rerun}`);
+        if (flags.length) out.push(`  cờ: ${flags.join(', ')}`);
+      }
+    }
+  }
+  return out.length ? out.join('\n') : '(không có Ruling)';
+}
+
 // Đọc plan trực tiếp, không qua resolveWorkspace, để dòng bị từ chối không tạo thư mục .aip; plan không đọc được hay không có task thì không có ctx.
 function taskCtx(planArg, line) {
   const n = line.match(/^Task (\d+): complete\b/i)?.[1];
@@ -118,8 +158,18 @@ function taskCtx(planArg, line) {
 
 export function main(argv, deps) {
   const [planArg, line] = argv;
+  const usage = 'Cách dùng: ledger.mjs <plan.md|requestDir> "<dòng>" | ledger.mjs <plan.md|requestDir> --rulings';
+  // Rẽ trước mọi kiểm dòng và trước ledgerFile: "--rulings" không bao giờ được ghi thành dòng ledger.
+  if (planArg === '--rulings') {
+    console.error(usage);
+    return 2;
+  }
+  if (line === '--rulings') {
+    console.log(listRulings(planArg, deps));
+    return 0;
+  }
   if (!planArg || line === undefined) {
-    console.error('Cách dùng: ledger.mjs <plan.md|requestDir> "<dòng>"');
+    console.error(usage);
     return 2;
   }
   // Mỗi dòng mang số task của chính nó, nên ctx dựng theo từng dòng.

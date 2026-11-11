@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: task-review-assumption
+description: Implementer khai giả định "now tính bằng giây" trái design (mili-giây), test xanh vì chỉ dùng mã không có expiresAt; agent phải bác giả định bằng bằng chứng từ design và không đánh dấu complete.
+context:
+  scaffold_script: scaffold.sh

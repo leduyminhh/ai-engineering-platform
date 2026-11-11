@@ -52,7 +52,7 @@ Một lượt đọc `plan.md` trước Task 1, ghi kết quả vào ledger bằ
    `prompts/task-review.md`. Reviewer trả **cả hai**: `spec_verdict` (Missing / Extra / Misunderstood) và finding chất
    lượng; thiếu một trong hai là đầu ra hỏng. Task có chuỗi hai agent (vd FE-UI) chỉ review một lần, sau cả hai. Task `TOOLING` review bằng `general-purpose` không nạp skill domain, tiêu chí là `prompts/task-review.md`; đưa reviewer đường dẫn `task-<n>-report.md` (bước 3) cùng review package.
 8. **Xử lý kết quả review**: `spec_verdict: cannot_verify` do session chính giải quyết (đọc code, chạy lệnh) rồi mới
-   tiếp. Xếp từng finding theo mục "Nhận review". Chỉ finding `blocker`/`major` trong phạm vi hoặc `spec_verdict` khác `compliant` mới vào vòng sửa; `minor`/`nit` ghi vào
+   tiếp. Trong `assumption_review[]`, mục `wrong` được xử lý như finding đi kèm nó, mục `unverifiable` như `cannot_verify` (session chính kiểm, không đoán); giả định `wrong` mà hướng đã duyệt ở G1 dựa vào là loại dừng 6. Xếp từng finding theo mục "Nhận review". Chỉ finding `blocker`/`major` trong phạm vi hoặc `spec_verdict` khác `compliant` mới vào vòng sửa; `minor`/`nit` ghi vào
    ledger dạng `minor (deferred): <finding> — task <n>` để chuyển cho review cuối. Sau mỗi lần review (task review, rồi
    mỗi re-review) ghi `Task <n>: review <vòng> <spec_verdict> <blocker>/<major>/<minor>` (`<vòng>` đếm lần review của task
    từ 1; `spec_verdict` ∈ `compliant` | `issues` | `cannot_verify`; ba số là số finding trong phạm vi còn mở theo severity; finding ngoài AC đã ghi `Ruling:` hoặc `minor (deferred)` không tính). Mục plan bắt buộc mà thiếu vẫn là
@@ -129,14 +129,17 @@ thấy; nhãn `minor (deferred)` chỉ dành cho finding `minor`/`nit`. Phán xo
 5. plan hỏng đến mức mọi hướng đều là đoán;
 6. phải đổi nghĩa hoặc câu chữ một AC người dùng đã duyệt, kể cả khi reviewer trả câu hỏi trong `questions[]`; hoặc kết
    quả chạy thật (test, số đo) bác một giả định mà hướng đã duyệt ở G1 dựa vào. Hỏi ngay ở task đó (giữ hướng kèm rủi ro /
-   đổi hướng / dừng), không để tới G3 và không chạy tiếp task sau trên giả định đã bị bác.
+   đổi hướng / dừng), không để tới G3 và không chạy tiếp task sau trên giả định đã bị bác. Giả định `wrong` trong `assumption_review[]` mà hướng G1 dựa vào cũng thuộc loại này.
 
 Các trường hợp còn lại (mơ hồ nhỏ, xung đột giữa hai task, finding không load-bearing) session chính tự quyết, ghi
 `Ruling:` và chạy tiếp. Mọi dòng `Ruling:` phải đi vào `rulings` của `workflow_result` lúc kết thúc.
 
 Số đo hay thử nghiệm mà một `Ruling:` hoặc quyết định dựa vào phải tái lập được từ nhánh: một test hoặc script nằm trong
 repo, và dòng `Ruling:` ghi lệnh chạy lại. Ledger nằm trong `.aip/` (git bỏ qua) nên chỉ trỏ tới lệnh đó; số đo chỉ có
-trong ledger hay trong báo cáo agent không phải bằng chứng cho người duyệt G3.
+trong ledger hay trong báo cáo agent không phải bằng chứng cho người duyệt G3. Cú pháp: thêm phần thứ tư
+`Ruling: <quyết định> — <lý do> — <chi phí nếu sai> — chạy lại: `<lệnh>``, bắt buộc khi lý do dựa vào số đo, kết quả test
+hay thử nghiệm; `ledger.mjs <plan.md> --rulings` gắn cờ `số đo không có lệnh chạy lại` cho dòng thiếu phần này.
+Dòng `Ruling:` có `chạy lại:` phải truyền cho `ledger.mjs` trong nháy đơn (bash và PowerShell giữ nguyên backtick trong nháy đơn; nháy kép làm shell chạy hoặc nuốt lệnh); lệnh chạy lại không chứa nháy đơn.
 
 **Báo cáo.** Ngoài 6 loại dừng trên, chỉ có ba cổng cố định G1 (design), G2 (plan), G3 (diff cả nhánh; thiếu khoá
 `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3), câu hỏi push riêng một lần sau merge local (chỉ khi
@@ -246,7 +249,7 @@ Dùng khi request có `## Bảng part` trong `design.md` và `parts/<nn>-<part-s
 8. Part chạy tuần tự không có merge commit: session gốc chạy vòng task của part trên `feature/<slug>`, ghi `Part: complete <hash>` vào ledger của part, làm bước file dùng chung rồi chạy full suite như bước 7, rồi ghi `Part <nn>: merged <hash>` và cập nhật Bảng part như trên.
 9. `<hash>`: với `Part: complete` là HEAD nhánh part sau commit task cuối (tuần tự: HEAD sau commit task cuối trên `feature/<slug>`); với `Part <nn>: merged` và Trạng thái `merged <hash>` khi chạy song song là HEAD của `feature/<slug>` ngay sau merge, tức trước commit cập nhật Bảng part; khi chạy tuần tự là HEAD sau commit task cuối.
 10. Part đã merge, phiên part đã đóng (phiên còn mở giữ cwd trong worktree; trên Windows `git worktree remove` khi đó gỡ đăng ký nhưng không xoá được thư mục) và worktree sạch thì chép `.aip/runs` (nếu có) rồi dọn theo `git-worktree`: `cleanup: true` thì không hỏi; `cleanup: false` hoặc thiếu khoá thì hỏi người dùng trước khi dọn. Với nhóm chọn `subagent`, subagent nền đã kết thúc khi báo xong nên không giữ cwd; với `session`, phiên part phải đã đóng như trên, kể cả khi `cleanup: true`.
-11. Bên trong một part không chạy song song. Review cuối chỉ một lần cho toàn nhánh, sau khi mọi part đã `merged <hash>` hoặc `bỏ` (`prompts/final-review.md`); đầu vào gom các dòng `Ruling:` và `minor (deferred)` từ ledger `root/` và mọi ledger part, không chỉ ledger `root/`.
+11. Bên trong một part không chạy song song. Review cuối chỉ một lần cho toàn nhánh, sau khi mọi part đã `merged <hash>` hoặc `bỏ` (`prompts/final-review.md`); đầu vào gom các dòng `Ruling:` và `minor (deferred)` từ ledger `root/` và mọi ledger part, không chỉ ledger `root/` (`Ruling:` gom bằng `ledger.mjs <plan.md gốc> --rulings`, lệnh này đọc sẵn mọi ledger part).
 
 ## Review cuối và các điểm cố định
 

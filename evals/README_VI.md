@@ -57,6 +57,8 @@ Windows native từ chối case cấp quyền Bash (theo docs `claude plugin eva
 | `core/brainstorm-reads-code-first` | `brainstorming` trên repo giỏ hàng nhỏ: đọc `src/cart.mjs` trước khi hỏi, không hỏi điều code đã trả lời (tổng, làm tròn VAT, phí ship), và đưa ca biên vào thẻ hỏi đầu, mặc định khuyến nghị dẫn `cart.mjs:<dòng>` khi code có cơ sở (làm tròn ở `vat`, giỏ rỗng vẫn tính ship). Chạy 2026-11-02, n = 1: `edge-cases-with-defaults` có plugin 1/1, không plugin 0/1 (0,35 USD) |
 | `engineering/spec-ac-calc` | `engineering-spec-writing` ghi `requirement.md` trong một lượt cho mã giảm phần trăm làm tròn xuống: ít nhất một AC nêu kết quả số có khối `calc:` và mọi khối đúng số học (grader llm chấm, không có shell). Chưa chạy [Unverified] |
 | `workflows/review-out-of-scope` | Plan đã xong, review cuối có hai finding ngoài AC (hardening bảng mã do repo khai báo; ném lỗi `INVALID_COUPON` mới): không Edit/Write vào `src/`, tin nhắn cuối hỏi người dùng về finding đổi hành vi và hoãn finding dữ liệu nội bộ. Chưa chạy [Unverified] |
+| `workflows/task-review-assumption` | Implementer Task 1 khai giả định "now tính bằng giây" kèm "test xanh 3/3" trong khi design ghi mili-giây và test không có ca mã còn hạn có `expiresAt`: review bác giả định kèm bằng chứng từ design và không ghi `Task 1: complete`. Chưa chạy [Unverified] |
+| `workflows/final-review-ruling-evidence` | Plan đã xong, ledger có hai dòng `Ruling:` hoãn major (số đo 40ms không kèm lệnh chạy lại; "AC2.1 đã có test" trong khi file test không có ca hết hạn): review cuối gắn nhãn cả hai, dẫn `order.test.js`, không tuyên bố nhánh sạch. Chưa chạy [Unverified] |
 
 ## Cấu trúc một case
 

@@ -51,4 +51,5 @@ làm như các bước trên.
 - Danh sách finding theo contract đầu ra trong skill `core:principles` (`severity` blocker|major|minor|nit, `category`, `location`,
   `evidence`, `impact`, `recommendation`, `confidence`).
 - Evidence lệnh đã chạy (`command`, `exit_code`, `status`, `summary`); không chạy được → `not_run` + `reason`.
+- `assumption_review[]` ở chế độ task-review và re-review (mỗi giả định của báo cáo implementer một mục `holds | wrong | unverifiable` kèm `evidence`); chế độ final-review: `ruling_review[]`, Ruling có `chạy lại:` thì chạy lệnh chỉ đọc và ghi `rerun` (`command`, `exit_code`, `matches`) vào mục `ruling_review[]` của nó.
 - `remaining_risks`: phần chưa review được (vd hành vi runtime không thấy trong diff tĩnh) và lý do.

@@ -44,6 +44,7 @@ agent_result:
   questions: []         # câu hỏi cho người dùng/bước gọi; không rỗng thường đi kèm status: blocked
   remaining_risks: []
   tdd: { red: <evidence>, green: <evidence> }   # chỉ task TDD `có` (trường **TDD:** của plan); xem "Trường mở rộng"
+  assumptions: []       # implementer trong vòng task; xem "Trường mở rộng"
   report_file: ""       # đường dẫn file report nếu có; agent chỉ-đọc để trống
   commits: []           # SHA commit của task; agent không tự commit nên thường rỗng
 ```
@@ -65,8 +66,15 @@ Dùng trong vòng task của `plan-execution`; workflow không dùng vòng task 
   `{ finding, verdict: ADDRESSED | NOT ADDRESSED, evidence }`.
 - `new_breakage[]`: finding (định dạng ở mục Finding) do chính diff của vòng sửa gây ra.
 - `observations_outside_diff[]`: quan sát ngoài diff của vòng sửa; chỉ ghi nhận, không phải finding.
+- `assumptions` (implementer trong vòng task, cả vòng sửa): giả định thiết kế implementer đã chọn mà brief, AC và Interfaces
+  không nói, mỗi mục `{ assumption, basis, if_wrong }`: `assumption` là điều đã giả định, `basis` là nguồn (`file:line`, mục
+  brief) hoặc `không có`, `if_wrong` là hệ quả một vế nếu giả định sai. Được phép rỗng; không chép lại yêu cầu.
+- `assumption_review[]` (reviewer chế độ task-review và re-review): mỗi giả định của báo cáo một mục `{ assumption, verdict:
+  holds | wrong | unverifiable, evidence }`, tức `verdict` ∈ `holds` | `wrong` | `unverifiable` kèm `evidence`. `wrong` đi kèm một finding theo thang thường; `unverifiable` kèm
+  điều cần kiểm thêm, session chính xử lý như `cannot_verify`.
 - `ruling_review[]` (reviewer chế độ final-review): đánh giá từng dòng `Ruling:` của ledger — đúng hay sai, chi phí nếu
-  sai có chấp nhận được không, có cần người dùng quyết không.
+  sai có chấp nhận được không, có cần người dùng quyết không. Ruling có phần `chạy lại:` thì mục đó thêm
+  `rerun: { command, exit_code, matches }` (`matches: false` khi kết quả chạy lại bác lý do của Ruling).
 - `declined_to_judge[]` (reviewer): điều bỏ qua kèm lý do (vd cần chạy hệ thống thật).
 
 ## Chế độ nhúng
@@ -97,7 +105,10 @@ sau trước khi đi `next`:
 - Mọi file trong `changes` thuộc danh sách file đã giao (với agent có danh sách).
 - Task TDD `có` phải có `tdd.red` và `tdd.green`; thiếu một trong hai → đầu ra hỏng. Task `**TDD:** không — <lý do>`
   không bị đòi `tdd`.
-- Reviewer chạy task-review phải trả đủ cả `spec_verdict` lẫn `findings`; thiếu một trong hai → đầu ra hỏng.
+- Implementer trong vòng task (khi subagent trả `agent_result`; chế độ inline và task `TOOLING` do session chính làm không bị đòi)
+  thiếu khoá `assumptions` → đầu ra hỏng; `assumptions: []` không phải đầu ra hỏng.
+- Reviewer chạy task-review phải trả đủ cả `spec_verdict` lẫn `findings`; thiếu một trong hai → đầu ra hỏng. Reviewer
+  task-review nhận báo cáo implementer có `assumptions` không rỗng mà không trả `assumption_review[]`, hoặc số mục khác số giả định → đầu ra hỏng.
   Re-review phải có `verdicts[]` cho từng finding đã giao.
 
 Kết quả không đạt bất kỳ luật nào là **đầu ra hỏng**. Xử lý theo loại kết quả:
