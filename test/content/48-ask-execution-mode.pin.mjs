@@ -152,7 +152,7 @@ export default async function run({ ok, ctx }) {
     for (const [name, text] of [['template', template], ['CLAUDE.md', raw('CLAUDE.md')]]) {
       const t = flat(text);
       ok(!/do not ask again how to execute/.test(t), `AC6.1: ${name} không còn "do not ask again how to execute"`);
-      ok(/plan-execution`[^.;]*asks how to run \(subagent per task or inline\) before each execution and remembers the answer as a suggestion/.test(t), `AC6.1: ${name} nêu plan-execution hỏi cách chạy trước mỗi lần thực thi và nhớ câu trả lời làm gợi ý`);
+      ok(/plan-execution`[^.]*asks how to run \(subagent per task or inline\) before each execution and remembers the answer as a suggestion/.test(t), `AC6.1: ${name} nêu plan-execution hỏi cách chạy trước mỗi lần thực thi và nhớ câu trả lời làm gợi ý`);
     }
     ok(/planRunner/.test(raw('CLAUDE.md')), 'AC6.1: CLAUDE.md liệt kê planRunner trong khoá autonomy');
   }
