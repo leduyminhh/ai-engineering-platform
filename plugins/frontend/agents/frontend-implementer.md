@@ -42,6 +42,7 @@ component TypeScript ở mức presentational + tương tác cơ bản, bám ki�
 ## Report trả về
 
 - Trả khối `agent_result` theo contract đầu ra (`core:principles`); các ý dưới là nội dung riêng của agent này.
+- Trong vòng task: `assumptions` (luôn có khoá, có thể rỗng), mỗi mục `{ assumption, basis, if_wrong }` cho điều đã chọn mà brief, AC và Interfaces không nói; thiếu khoá là đầu ra hỏng (contract đầu ra, `core:principles`).
 - Component đã sinh (`file:line` các điểm chính), phần ước lượng từ ảnh/screenshot (nếu có) được đánh dấu rõ.
 - Evidence lệnh đã chạy (`command`, `exit_code`, `status`, `summary`) cho `tsc`/lint/build; không chạy được →
   `not_run` + `reason`.
