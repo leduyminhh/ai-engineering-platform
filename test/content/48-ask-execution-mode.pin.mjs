@@ -1,0 +1,118 @@
+// Pin: docs/requests/2026-11-11-ask-execution-mode — luôn hỏi cách thực thi plan, nhớ câu trả lời làm gợi ý (planRunner/partRunner).
+export default async function run({ ok, ctx }) {
+  const { fs, path, os, REPO_ROOT, pathToFileURL } = ctx;
+  const { execFileSync } = await import('node:child_process');
+  const skillDir = path.join(REPO_ROOT, 'core', 'skills', 'plan-execution');
+  const auto = await import(pathToFileURL(path.join(skillDir, 'scripts', 'autonomy.mjs')).href);
+
+  // AC3.1–AC3.4: setRunner ghi gợi ý, chỉ hai khoá, không đụng khoá khác, không làm bẩn file đã theo dõi
+  {
+    ok(typeof auto.setRunner === 'function', 'AC3.1: autonomy.mjs xuất setRunner');
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-set-'));
+    const main = path.join(root, 'main');
+    const wt = path.join(root, 'wt');
+    const gitFake = (top, common) => (args) => {
+      if (args.includes('--show-toplevel')) return top;
+      if (args.includes('--git-common-dir')) return common;
+      throw new Error(`git lạ: ${args.join(' ')}`);
+    };
+    const file = (dir) => path.join(dir, '.claude', 'aip-gate.json');
+    const put = (dir, text) => { fs.mkdirSync(path.dirname(file(dir)), { recursive: true }); fs.writeFileSync(file(dir), text); };
+    const clear = (dir) => fs.rmSync(path.join(dir, '.claude'), { recursive: true, force: true });
+    const text = (dir) => fs.readFileSync(file(dir), 'utf8');
+    const inMain = { git: gitFake(main, path.join(main, '.git')), tracked: () => false };
+    const inWt = { git: gitFake(wt, path.join(main, '.git')), tracked: () => false };
+    const set = (k, v, cwd = main, deps = inMain) => (typeof auto.setRunner === 'function' ? auto.setRunner(k, v, cwd, deps) : { code: -1, message: '' });
+    try {
+      fs.mkdirSync(main, { recursive: true });
+      fs.mkdirSync(wt, { recursive: true });
+
+      put(main, JSON.stringify({ mode: 'ask', autonomy: { mergeLocal: true, partRunner: 'session' } }));
+      let r = set('planRunner', 'inline');
+      let g = JSON.parse(text(main));
+      ok(r.code === 0 && g.autonomy.planRunner === 'inline' && g.autonomy.mergeLocal === true && g.autonomy.partRunner === 'session' && g.mode === 'ask',
+        'AC3.1: --set planRunner=inline ghi autonomy.planRunner và giữ mọi khoá khác');
+      const before = text(main);
+      r = set('planRunner', 'inline');
+      ok(r.code === 0 && text(main) === before, 'AC3.1: đặt lại cùng giá trị không đổi file');
+      r = set('partRunner', 'subagent');
+      ok(r.code === 0 && JSON.parse(text(main)).autonomy.partRunner === 'subagent', 'AC3.1: --set partRunner=subagent');
+      ok(text(main).endsWith('\n') && !text(main).startsWith('﻿'), 'AC3.1: file ghi UTF-8 không BOM, kết thúc bằng LF');
+
+      const kept = text(main);
+      for (const [k, v] of [['mergeLocal', 'true'], ['cleanup', 'true'], ['mode', 'full'], ['planRunner', 'parallel'], ['partRunner', 'inline'], ['planRunner', 'session'], ['', 'x']]) {
+        r = set(k, v);
+        ok(r.code === 2 && text(main) === kept, `AC3.2: --set ${k}=${v} bị từ chối (exit 2), không ghi`);
+      }
+
+      put(main, '{ hỏng');
+      r = set('planRunner', 'inline');
+      ok(r.code === 1 && text(main) === '{ hỏng', 'AC3.3: file hỏng → exit 1, không ghi');
+
+      for (const [label, tracked] of [['đã theo dõi', () => true], ['không xác định', () => null]]) {
+        put(main, JSON.stringify({ autonomy: { partRunner: 'session' } }));
+        const b = text(main);
+        r = set('planRunner', 'inline', main, { ...inMain, tracked });
+        ok(r.code === 0 && text(main) === b && /theo dõi|xác định/.test(r.message), `AC3.3: file ${label} → exit 0, không ghi, nêu lý do`);
+      }
+
+      // AC3.4: worktree không có file mà repo chính có → ghi file repo chính; cả hai không có → tạo ở gốc repo chính
+      put(main, JSON.stringify({ autonomy: { cleanup: true } }));
+      clear(wt);
+      r = set('planRunner', 'inline', wt, inWt);
+      ok(r.code === 0 && JSON.parse(text(main)).autonomy.planRunner === 'inline' && !fs.existsSync(file(wt)), 'AC3.4: worktree không có file → ghi vào file repo chính');
+      put(wt, JSON.stringify({ mode: 'ask' }));
+      r = set('partRunner', 'sequential', wt, inWt);
+      ok(r.code === 0 && JSON.parse(text(wt)).autonomy.partRunner === 'sequential' && JSON.parse(text(main)).autonomy.partRunner === undefined, 'AC3.4: worktree có file riêng → ghi file đó');
+      clear(main);
+      clear(wt);
+      r = set('planRunner', 'subagent', wt, inWt);
+      ok(r.code === 0 && text(main) === JSON.stringify({ autonomy: { planRunner: 'subagent' } }, null, 2) + '\n' && !fs.existsSync(file(wt)),
+        'AC3.4: chưa có file nào → tạo ở gốc repo chính, chỉ gồm khoá vừa đặt');
+
+      // git thật: file đã git add thì không ghi
+      const repo = path.join(root, 'repo');
+      fs.mkdirSync(repo, { recursive: true });
+      execFileSync('git', ['init', '-q'], { cwd: repo });
+      put(repo, JSON.stringify({ autonomy: {} }));
+      execFileSync('git', ['add', '.claude/aip-gate.json'], { cwd: repo });
+      const b = text(repo);
+      r = auto.setRunner('planRunner', 'inline', repo);
+      ok(r.code === 0 && text(repo) === b, 'AC3.3: git thật, file đã theo dõi → không ghi');
+
+      // CLI: --set chạy từ gốc project đích; từ trong thư mục skill bị từ chối như lệnh đọc
+      const { spawnSync } = await import('node:child_process');
+      const script = path.join(skillDir, 'scripts', 'autonomy.mjs');
+      const clean = path.join(root, 'cli');
+      fs.mkdirSync(clean, { recursive: true });
+      execFileSync('git', ['init', '-q'], { cwd: clean });
+      const cli = (cwd, ...args) => spawnSync(process.execPath, [script, ...args], { cwd, encoding: 'utf8' });
+      let c = cli(clean, '--set', 'planRunner=inline');
+      ok(c.status === 0 && JSON.parse(fs.readFileSync(file(clean), 'utf8')).autonomy.planRunner === 'inline', 'AC3.1: CLI --set planRunner=inline exit 0 và ghi file');
+      c = cli(clean, '--set', 'planRunner');
+      ok(c.status === 2, 'AC3.2: CLI --set thiếu "=" → exit 2');
+      c = cli(skillDir, '--set', 'planRunner=inline');
+      ok(c.status === 2, 'AC3.1: CLI --set chạy từ trong thư mục skill → exit 2');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+
+  // AC1.4: ledger.mjs nhận dòng Ruling của thẻ cách thực thi
+  {
+    const lg = await import(pathToFileURL(path.join(skillDir, 'scripts', 'ledger.mjs')).href);
+    for (const l of ['Ruling: cách chạy inline — người dùng chọn — chi phí nếu sai: mất review từng task', 'Ruling: cách chạy subagent — không có tool subagent — chi phí nếu sai: không']) {
+      ok(lg.validateLine(l) === null, `AC1.4: validateLine chấp nhận ${JSON.stringify(l)}`);
+    }
+  }
+
+  // AC3.5: lệnh --set không bị guard-bash hỏi (lệnh không nêu tên aip-gate.json), còn ghi file bằng lệnh nêu tên vẫn hỏi
+  {
+    const { decide } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'hooks', 'scripts', 'guard-bash.mjs')).href);
+    const on = { currentBranch: () => 'feature/x' };
+    const bash = (command) => ({ tool_name: 'Bash', cwd: '.', tool_input: { command } });
+    const hint = 'node core/skills/plan-execution/scripts/autonomy.mjs --set planRunner=inline';
+    ok(decide(bash(hint), on) === null, 'AC3.5: guard-bash không hỏi lệnh autonomy.mjs --set');
+    ok(decide(bash('echo {} > .claude/aip-gate.json'), on)?.decision === 'ask', 'AC3.5: ghi aip-gate.json bằng lệnh nêu tên file vẫn bị hỏi');
+  }
+}
