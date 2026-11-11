@@ -1,6 +1,6 @@
 # Thiết kế: review soát giả định của implementer và bằng chứng của `Ruling:`
 - Ngày: 2026-11-11
-- Trạng thái: in-progress — nhánh feature/reasoning-review
+- Trạng thái: merged 39ef1f1f
 - Requirement: không có
 - Brief: [2026-11-11-process-discernment/brief.md](../2026-11-11-process-discernment/brief.md) (hướng B, người dùng đã chọn)
 
