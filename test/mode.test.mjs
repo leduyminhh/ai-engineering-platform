@@ -264,7 +264,7 @@ test("autonomy-gates AC8.1: aip autonomy high/safe/status giữ khóa khác; sub
 
   assert.equal(run("high").code, 0);
   assert.deepEqual(gate(), { ...others, autonomy: HIGH });
-  assert.equal(run("high").code, 0);
+  assert.match(run("high").out, /cách chạy vẫn hỏi/, "high không bỏ câu hỏi cách chạy");
   assert.deepEqual(gate(), { ...others, autonomy: HIGH }, "high lần hai không đổi gì");
   assert.ok(run("status").out.includes(JSON.stringify({ ...HIGH, planRunner: "subagent" })));
 
