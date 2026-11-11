@@ -99,6 +99,17 @@ Ngoài repo git: hook không có cấu hình (R4); CLI và script đọc `<cwd>/
 
 Khoá siết (`mcpDeny`, `mcpAllow`) hay trung tính xếp `any` vì file đã commit chỉ làm hook chặt hơn hoặc đổi thông tin hiển thị, không nới quyền. Rủi ro còn lại (người dùng chấp nhận): file đã commit đặt `bootstrapInject: false` bỏ đoạn quy tắc gọi skill ở SessionStart; đó là chỉ dẫn, không phải quyền.
 
+### Quyết định khi thực thi
+
+Các quyết định dưới đây đổi hoặc bổ sung design trong lúc chạy plan (bản đầy đủ nằm trong ledger `.aip/runs/2026-11-11-aip-gate-config-flow/root/progress.md`, không vào nhánh):
+- `testCommands` chuyển sang `untracked` (review Task 5; người dùng chọn): mẫu `.` biến mọi lệnh thành lệnh test, tức tắt Stop gate. Kiểm lại: `node test/validate.mjs --only hooks` (ca AC2.1 testCommands của test 90).
+- `fullKeep`, `fullRoots`, `fullReadRoots` chuyển sang `untracked` (quality gate sau review cuối; người dùng chọn): để `any` thì chúng bị chép từ file repo chính đã commit sang file worktree chưa theo dõi, rồi `aip mode full` mở push và ghi ngoài project. AC2.1 thành 9 + 9.
+- `locateGate`: `git rev-parse` lỗi mà thư mục hay thư mục cha có `.git` thì `inRepo: true`, `gitUnknown: true` (khoá `untracked` rơi về mặc định); hook vẫn coi như không có cấu hình (hooks-gates/R4). Trước sửa, CLI và script tin cả khoá `untracked` khi git lỗi trong repo thật (tái hiện bằng `GIT_DIR` trỏ sai). Kiểm lại: `node test/validate.mjs --only gate-file`.
+- `aip init --full` ở thư mục con (không phải gốc git) chỉ đọc `<root>/.claude/aip-gate.json`, như trước nhánh; Ruling ban đầu "đọc theo gốc git" bị bác ở review cuối vì bỏ quy tắc `.env` dù thư mục con đặt `false`. Kiểm lại: `node test/init.test.mjs`.
+- Lệnh status in tên khoá lạ, sai kiểu qua `JSON.stringify` (chặn escape sequence từ file clone); `aip mode status` và `aip status` hiển thị `mode`, `autonomy` đáng tin; lời gợi ý gỡ theo dõi nhắc xem lại từng khoá trước (người dùng chọn).
+- `aip mode` sinh hoặc so `settings.json` theo `allowEnvFiles` đáng tin (khoá bị bỏ qua thì giữ quy tắc `.env`), suy từ anti-goal.
+- Giữ nguyên, ghi follow-up (người dùng chọn): CLI ghi xuyên symlink `.claude/aip-gate.json` đã commit; `session-start` tốn khoảng 78 ms mỗi handoff ứng viên; gợi ý `"stopGate": false` vẫn hiện khi ngoài repo git.
+
 ## Ảnh hưởng spec
 - hooks-gates: thêm R20, đổi R19
 - cli-wizard: đổi R4, đổi R6, đổi R8
