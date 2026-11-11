@@ -163,7 +163,7 @@ export default async function run({ ok, ctx }) {
     const wtSkill = raw('core', 'skills', 'git-worktree', 'SKILL.md');
     const parallel = raw('core', 'skills', 'git-worktree', 'references', 'parallel-agents.md');
     ok(!/hoặc khoá `partRunner: subagent`/.test(wtSkill) && /câu trả lời Subagent hoặc Phiên riêng/.test(wtSkill), 'AC2.3: git-worktree/SKILL.md: câu trả lời nhóm Song song thay câu hỏi tạo worktree, không còn khoá bỏ câu hỏi');
-    ok(!/not asked when `autonomy\.partRunner` is `subagent`/.test(parallel) && /`partRunner` only orders the options, it never skips the question/.test(parallel), 'AC2.3: parallel-agents.md: partRunner chỉ đặt thứ tự lựa chọn');
+    ok(!/not asked when `autonomy\.partRunner` is `subagent`/.test(parallel) && /autonomy\.partRunner` only orders the options, it never skips the question/.test(parallel), 'AC2.3: parallel-agents.md: partRunner chỉ đặt thứ tự lựa chọn');
     const wf = raw('workflows', 'feature', 'WORKFLOW.md');
     ok(!/khi `partRunner` là `session` hoặc thiếu khoá/.test(wf) && !/hoặc khoá `partRunner: subagent`/.test(wf) && !/thiếu khoá thì hỏi người dùng một lần trước mỗi nhóm/.test(wf) && /thẻ Cách thực thi/.test(wf),
       'AC6.2: WORKFLOW.md feature: không còn khoá bỏ câu hỏi, nêu thẻ Cách thực thi');
