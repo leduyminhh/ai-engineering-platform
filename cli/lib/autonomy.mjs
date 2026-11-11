@@ -79,7 +79,7 @@ function runUnsafe(sub, { root, out, err, run }) {
     const gs = gitState(file);
     if (gs === 'tracked') out('  ⚠ aip-gate.json đang được git theo dõi nên khoá autonomy bị bỏ qua (repo clone không tự cấp được). Gỡ theo dõi: git rm --cached .claude/aip-gate.json rồi thêm vào .gitignore.');
     else if (gs === 'open') out('  ⚠ aip-gate.json chưa được gitignore; nếu bị commit, khoá autonomy sẽ bị bỏ qua. Thêm dòng này vào .gitignore: .claude/aip-gate.json (aip không tự sửa .gitignore).');
-    out('  Push/PR vẫn luôn hỏi; G1 (design), G2 (plan), G3 (diff cả nhánh) vẫn dừng chờ duyệt.');
+    out('  Push/PR vẫn luôn hỏi; G1 (design), G2 (plan), G3 (diff cả nhánh) vẫn dừng chờ duyệt; cách chạy vẫn hỏi mỗi lần (partRunner chỉ là gợi ý).');
   }
   return 0;
 }
