@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Sổ tiến độ của một plan: <gốc repo chính>/.aip/runs/<request>/<part>/progress.md (xem workspace.mjs; git bỏ qua .aip).
 // Cách dùng: <plan.md | requestDir> "<dòng>" — thêm một dòng vào ledger, in đường dẫn file. Exit 2 khi thiếu đối số hoặc dòng bị từ chối.
+// Dòng có `chạy lại: `lệnh`` truyền trong nháy đơn: nháy kép làm bash thay backtick bằng kết quả lệnh, ledger mất lệnh.
 // <plan.md | requestDir> --rulings — chỉ đọc: in mọi dòng Ruling: của request (root và part) kèm cờ và lệnh chạy lại; exit 0 kể cả khi có cờ.
 // Chỉ dùng built-in của Node để chạy được ở project đích mà không cài thêm gì.
 import fs from 'node:fs';

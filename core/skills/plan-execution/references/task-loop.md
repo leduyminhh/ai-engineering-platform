@@ -139,6 +139,7 @@ repo, và dòng `Ruling:` ghi lệnh chạy lại. Ledger nằm trong `.aip/` (g
 trong ledger hay trong báo cáo agent không phải bằng chứng cho người duyệt G3. Cú pháp: thêm phần thứ tư
 `Ruling: <quyết định> — <lý do> — <chi phí nếu sai> — chạy lại: `<lệnh>``, bắt buộc khi lý do dựa vào số đo, kết quả test
 hay thử nghiệm; `ledger.mjs <plan.md> --rulings` gắn cờ `số đo không có lệnh chạy lại` cho dòng thiếu phần này.
+Dòng `Ruling:` có `chạy lại:` phải truyền cho `ledger.mjs` trong nháy đơn (bash và PowerShell giữ nguyên backtick trong nháy đơn; nháy kép làm shell chạy hoặc nuốt lệnh); lệnh chạy lại không chứa nháy đơn.
 
 **Báo cáo.** Ngoài 6 loại dừng trên, chỉ có ba cổng cố định G1 (design), G2 (plan), G3 (diff cả nhánh; thiếu khoá
 `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3), câu hỏi push riêng một lần sau merge local (chỉ khi
