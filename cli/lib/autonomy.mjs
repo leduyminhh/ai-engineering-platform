@@ -2,9 +2,8 @@
 // Khác `aip mode` (quyền công cụ): không đụng settings.json. Zero-dependency.
 import fs from 'node:fs';
 import path from 'node:path';
-import { resolveGate } from '../../core/hooks/scripts/gate-config.mjs';
 import { resolveAutonomy } from '../../core/skills/plan-execution/scripts/autonomy.mjs';
-import { gitStateOf } from './mode.mjs';
+import { gitStateOf, cliGate, gateLines } from './mode.mjs';
 
 const HIGH = Object.freeze({ mergeLocal: true, cleanup: true, partRunner: 'subagent' });
 const SUBS = new Set(['high', 'safe', 'status']);
@@ -20,34 +19,16 @@ const GIT_LABEL = {
 
 const dump = (obj) => JSON.stringify(obj, null, 2) + '\n';
 
-// null = thiếu file; { invalid } = không đọc/parse được hoặc không phải đối tượng; { config } = hợp lệ.
-function readAt(root) {
-  let raw;
-  try { raw = fs.readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8'); } catch (e) { return e?.code === 'ENOENT' ? null : { invalid: true }; }
-  try { const v = JSON.parse(raw.replace(/^﻿/, '')); return v && typeof v === 'object' && !Array.isArray(v) ? { config: v } : { invalid: true }; } catch { return { invalid: true }; }
-}
-
-// resolveGate trả null ngoài repo git; khi đó đọc thẳng file của root (như readAutonomy) để high không ghi đè mất khoá khác.
-function gateOf(root) {
-  const g = resolveGate(root);
-  if (g) return g;
-  const file = path.join(root, '.claude', 'aip-gate.json');
-  const own = readAt(root);
-  if (own?.invalid) return { config: null, file, source: 'worktree-invalid', main: null };
-  return { config: own?.config ?? null, file: own ? file : null, source: own ? 'worktree' : null, main: null };
-}
-
 export function runAutonomy(sub, { root, out = console.log, err = console.error, run }) {
   if (!SUBS.has(sub)) { err(`Cách dùng: aip autonomy high|safe|status${sub ? ` (giá trị không hợp lệ: "${sub}")` : ''}`); return 2; }
   try { return runUnsafe(sub, { root, out, err, run }); } catch (e) { err(`Lỗi: ${e.message}`); return 1; }
 }
 
 function runUnsafe(sub, { root, out, err, run }) {
-  const g = gateOf(root);
-  // resolveGate bỏ qua lặng lẽ file hỏng của repo chính; aip mode báo lỗi nên aip autonomy cũng báo, không ghi file che nó.
-  const bad = g.source === 'worktree-invalid' ? g.file
-    : !g.source && g.main && readAt(g.main)?.invalid ? path.join(g.main, '.claude', 'aip-gate.json') : null;
-  if (bad) { err(`Lỗi: ${bad} không phải đối tượng JSON hợp lệ; sửa tay trước khi chạy aip autonomy.`); return 1; }
+  const info = cliGate(root, { run });
+  // File hỏng của repo chính cũng chặn: ghi file worktree lúc đó sẽ che nó mà người dùng chưa sửa.
+  if (info.bad) { err(`Lỗi: ${info.bad} không phải đối tượng JSON hợp lệ; sửa tay trước khi chạy aip autonomy.`); return 1; }
+  const g = info.g;
 
   const file = path.join(root, '.claude', 'aip-gate.json');
   const gitState = (f) => gitStateOf(f, run && { run });
@@ -59,13 +40,14 @@ function runUnsafe(sub, { root, out, err, run }) {
     out(`autonomy: ${JSON.stringify(eff.value)}${why}`);
     out(`Nguồn: ${g.file ? `${g.file}${g.source === 'main' ? ' (repo chính; worktree này chưa có aip-gate.json)' : ''}` : 'không có'}`);
     out(`git: ${GIT_LABEL[gitState(g.file ?? file)]}`);
+    for (const l of gateLines(info)) out(l);
     return 0;
   }
 
-  // Ghi vào gốc hiện tại như `aip mode`: worktree chưa có file thì chép khoá của repo chính sang để không mất chúng.
-  const next = { ...(g.config || {}) };
-  // File repo chính có thể đã commit (hook bỏ qua `full` của nó); chép `mode` sang file worktree chưa theo dõi sẽ âm thầm bật full.
-  const droppedMode = g.source === 'main' && 'mode' in next;
+  // Ghi vào gốc hiện tại như `aip mode`: worktree chưa có file thì chép khoá của repo chính sang để không mất chúng (trừ khoá bị bỏ qua, xem cliGate).
+  const next = { ...info.copy };
+  // `mode` luôn bỏ khi chép từ repo chính, kể cả file chưa theo dõi: aip autonomy không phải lệnh bật full.
+  const droppedMode = g.source === 'main' && 'mode' in (info.config ?? {});
   if (droppedMode) delete next.mode;
   const prior = next.autonomy && typeof next.autonomy === 'object' && !Array.isArray(next.autonomy) ? next.autonomy : {};
   const kept = Object.fromEntries(HINTS.filter((k) => k in prior).map((k) => [k, prior[k]]));

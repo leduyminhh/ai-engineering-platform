@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { buildClaudePermissions, loadPolicy } from './permissions.mjs';
-import { resolveGate, gateTracked, lsFiles } from '../../core/hooks/scripts/gate-config.mjs';
+import { locateGate, gateTracked, lsFiles, trustedValue, lintGate, GATE_KEYS } from '../../core/hooks/scripts/gate-file.mjs';
 
 const EMPTY_PERMISSIONS = JSON.stringify({ permissions: { deny: [], ask: [] } }, null, 2) + '\n';
 
@@ -72,18 +72,28 @@ function gitRoot(cwd) {
 /** Gốc project = toplevel git của cwd; ngoài repo dùng chính cwd, không thừa kế thư mục cha. */
 export function modeRoot(cwd = process.cwd()) { return path.resolve(gitRoot(cwd)); }
 
-// Cùng thứ tự với hook (readGate): file của worktree trước, thiếu thì lấy file của repo chính.
-function locateGate(root) {
-  const own = path.join(root, '.claude', 'aip-gate.json');
-  const ownRaw = readText(own);
-  if (ownRaw != null) return { file: own, raw: ownRaw, source: 'own' };
-  const main = resolveGate(root)?.main;
-  if (main && path.resolve(main).toLowerCase() !== path.resolve(root).toLowerCase()) {
-    const file = path.join(main, '.claude', 'aip-gate.json');
-    const raw = readText(file);
-    if (raw != null) return { file, raw, source: 'main' };
-  }
-  return { file: own, raw: null, source: null };
+// aip-gate.json cho lệnh CLI, cùng thứ tự đọc với hook. `bad` = đường dẫn file hỏng (lệnh phải dừng, không ghi).
+// `ignored` = khoá nới quyền mà hook bỏ qua vì file bị git theo dõi hoặc không xác định; `copy` = phần được chép khi worktree tạo file
+// riêng từ file repo chính, bỏ các khoá đó để file worktree chưa theo dõi không đưa lại hiệu lực cho chúng.
+export function cliGate(root, { run } = {}) {
+  const g = locateGate(root);
+  const bad = g.source === 'worktree-invalid' ? g.file : g.mainInvalid;
+  if (bad) return { g, bad };
+  // Bỏ cache của gateTracked: trạng thái git có thể đổi giữa hai lần gọi trong cùng một tiến trình.
+  let state;
+  const tracked = (f) => (state === undefined ? (state = gateTracked(f, { run: run ?? ((dir, spec) => lsFiles(dir, spec)) })) : state);
+  const config = g.config ?? {};
+  const ignored = Object.keys(config).filter((k) => GATE_KEYS[k]?.trust === 'untracked' && trustedValue(g, k, { tracked }) === undefined);
+  const copy = Object.fromEntries(Object.entries(config).filter(([k]) => !(g.source === 'main' && ignored.includes(k))));
+  return { g, config: g.config, ignored, why: state === true ? 'đang được git theo dõi' : 'không xác định được trạng thái git', lint: lintGate(config), copy };
+}
+
+export function gateLines({ ignored, why, lint }) {
+  return [
+    ...(ignored.length ? [`Khoá bị bỏ qua (${why}): ${ignored.join(', ')}`] : []),
+    ...(lint.unknown.length ? [`Khoá lạ: ${lint.unknown.join(', ')}`] : []),
+    ...(lint.badType.length ? [`Khoá sai kiểu: ${lint.badType.map((k) => `${k} (cần ${GATE_KEYS[k].type})`).join(', ')}`] : []),
+  ];
 }
 
 function readText(file) {
@@ -135,23 +145,22 @@ function runModeUnsafe(sub, { root, out, err, run }) {
   const gateFile = path.join(root, '.claude', 'aip-gate.json');
   const settingsFile = path.join(root, '.claude', 'settings.json');
 
-  let gate = null;
-  const found = locateGate(root);
-  const gateRaw = found.raw;
-  if (gateRaw != null) {
-    try { gate = JSON.parse(stripBom(gateRaw)); } catch (e) { err(`Lỗi: ${found.file} không phải JSON hợp lệ (${e.message}).`); return 1; }
-    if (gate === null || typeof gate !== 'object' || Array.isArray(gate)) { err(`Lỗi: ${found.file} phải là một đối tượng JSON.`); return 1; }
-  }
+  const info = cliGate(root, { run });
+  if (info.bad) { err(`Lỗi: ${info.bad} không phải đối tượng JSON hợp lệ; sửa tay trước khi chạy aip mode.`); return 1; }
+  const found = info.g;
+  const gate = info.config ? info.copy : null;
   const settingsText = readText(settingsFile);
-  const allowEnvFiles = gate?.allowEnvFiles === true;
+  // allowEnvFiles bị bỏ qua thì settings sinh ra phải giữ quy tắc .env, như hook.
+  const allowEnvFiles = !info.ignored.includes('allowEnvFiles') && info.config?.allowEnvFiles === true;
 
   if (sub === 'status') {
-    const s = statusOf(gate, settingsText);
-    out(`Chế độ: ${s.mode}${gate?.mode === undefined ? ' (mặc định, aip-gate.json không có khóa mode)' : ''}`);
-    out(`Nguồn: ${gateRaw == null ? 'không có' : found.source === 'main' ? `${found.file} (repo chính; worktree này chưa có aip-gate.json)` : found.file}`);
+    const s = statusOf({ ...info.config, allowEnvFiles }, settingsText);
+    out(`Chế độ: ${s.mode}${info.config?.mode === undefined ? ' (mặc định, aip-gate.json không có khóa mode)' : ''}`);
+    out(`Nguồn: ${!found.file ? 'không có' : found.source === 'main' ? `${found.file} (repo chính; worktree này chưa có aip-gate.json)` : found.file}`);
     out(`settings.json: ${SETTINGS_LABEL[s.settings]}`);
     for (const r of s.leftoverRules) out(`  - ${r}`);
-    out(`git: ${GIT_LABEL[gitStateOf(found.file, run && { run })]}`);
+    out(`git: ${GIT_LABEL[gitStateOf(found.file ?? gateFile, run && { run })]}`);
+    for (const l of gateLines(info)) out(l);
     return 0;
   }
 
@@ -183,7 +192,7 @@ function runModeUnsafe(sub, { root, out, err, run }) {
   }
 
   const r = applyAsk(gate, settingsText, { allowEnvFiles });
-  if (gateRaw != null) writeText(gateFile, dump(r.gate));
+  if (info.config) writeText(gateFile, dump(r.gate));
   if (r.settingsAction === 'regenerated') writeText(settingsFile, r.settingsText);
   out(`✓ mode=ask tại ${root}`);
   if (found.source === 'main') out(`  ghi ${gateFile} (không có khóa mode): file này che file aip-gate.json của repo chính cho worktree này.`);
