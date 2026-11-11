@@ -66,4 +66,13 @@ export default async function run({ ok, ctx }) {
   ok(/`Ruling: nhóm <nhãn> chạy tuần tự — <lý do> — <chi phí nếu sai>`/.test(step(4)), 'AC3.3: Bước 4 mẫu Ruling nhóm tuần tự có ba phần');
   ok(/ledger\.mjs <plan\.md> --rulings/.test(step(6)) && /chạy lại/.test(step(6)), 'AC3.3: Bước 6 gom Ruling bằng --rulings và chạy lại lệnh');
   ok(/cần người dùng quyết[^.]*(riêng|tách)/.test(step(7)), 'AC3.2: Bước 7 nêu riêng Ruling cần người dùng quyết ở G3');
+
+  // AC3.4: agent file đồng bộ với prompt
+  const report = (plugin, agent) => flat(read('plugins', plugin, 'agents', `${agent}.md`)).split('## Report trả về')[1] ?? '';
+  for (const p of ['backend', 'frontend']) {
+    for (const a of [`${p}-implementer`, `${p}-fixer`]) ok(/`assumptions`/.test(report(p, a)), `AC3.4: ${a} Report trả về nêu assumptions`);
+    const r = report(p, `${p}-reviewer`);
+    ok(/`assumption_review\[\]`[^.]*task-review[^.]*re-review/.test(r) && /`rerun`[^.]*`ruling_review\[\]`/.test(r),
+      `AC3.4: ${p}-reviewer nêu assumption_review[] (task-review, re-review) và rerun trong ruling_review[]`);
+  }
 }
