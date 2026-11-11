@@ -29,12 +29,12 @@ Người dùng đã duyệt brief ([brief.md](brief.md), `route-đã-duyệt: wo
 
 *Quyết định của agent* (người dùng chưa xét riêng; soát và đảo được ở lúc duyệt design):
 - **A1** — API của `gate-file.mjs` (zero-dep, chỉ import `node:`): `readGateAt(root)` → `null` | `{ invalid: true }` | `{ config }` (bỏ BOM, phải là đối tượng); `locateGate(cwd, { git })` → `{ inRepo, top, main, roots, file, config, source, mainInvalid }` với `source` ∈ `'worktree' | 'main' | 'worktree-invalid' | null`; `gateTracked(file, { run })` chuyển từ `gate-config.mjs` sang (giữ icase, symlink, cache, cùng hành vi R6); `GATE_KEYS`; `trustedValue(gate, key, { tracked })`; `lintGate(config)` → `{ unknown, badType }`. Ngoài repo git `locateGate` đọc thẳng `<cwd>/.claude/aip-gate.json` và đặt `inRepo: false`.
-- **A2** — Danh sách `trust: 'untracked'` (nới quyền): `mode`, `autonomy`, `allowEnvFiles`, `stopGate`, `exemptAgents`, `testCommands` (mẫu như `.` biến mọi lệnh thành lệnh test, tức tắt Stop gate; thêm khi thực thi Task 5, người dùng duyệt). 12 khoá còn lại `trust: 'any'`: `fullKeep`, `fullRoots`, `fullReadRoots` (chỉ dùng khi `full` hiệu lực, mà `full` đã đòi file chưa commit), `mcpAllow`, `mcpDeny`, `bootstrapInject`, `handoffInject`, `ledgerInject`, `resumeWarn`, `handoffPath`, `handoffMaxAgeHours`, `statusStaleMinutes`. Mức tin cậy tính theo cả khoá, không theo hướng của giá trị.
+- **A2** — Danh sách `trust: 'untracked'` (nới quyền): `mode`, `autonomy`, `allowEnvFiles`, `stopGate`, `exemptAgents`, `testCommands` (mẫu như `.` biến mọi lệnh thành lệnh test, tức tắt Stop gate; thêm khi thực thi Task 5, người dùng duyệt), `fullKeep`, `fullRoots`, `fullReadRoots` (thêm sau review cuối, người dùng duyệt: chúng chỉ dùng khi `full` hiệu lực, nhưng xếp `any` thì bị chép từ file repo chính đã commit sang file worktree chưa theo dõi rồi `aip mode full` mở push và ghi ngoài project). 9 khoá còn lại `trust: 'any'`: `mcpAllow`, `mcpDeny`, `bootstrapInject`, `handoffInject`, `ledgerInject`, `resumeWarn`, `handoffPath`, `handoffMaxAgeHours`, `statusStaleMinutes`. Mức tin cậy tính theo cả khoá, không theo hướng của giá trị.
 - **A3** — `trustedValue` chỉ hỏi git khi khoá `untracked` thật sự có trong config (phiên thường không spawn git). `inRepo === false` hoặc `tracked === false` → trả giá trị; `tracked === true` hoặc `null` → `undefined`, consumer rơi về mặc định của khoá. Trạng thái `unknown` theo chính sách có sẵn (R6, R15): trong repo git, khoá nới quyền bị bỏ qua.
 - **A4** — `gateTracked` được tổng quát hoá một dòng: nhánh `.claude` là symlink hiện hỏi `ask(root, '.claude')`; đổi thành hỏi thư mục cha trực tiếp của file (`ask(dirname(dirname(file)), basename(dirname(file)))`). Với file cấu hình kết quả không đổi, và `session-start` dùng được cho `handoff.md`.
 - **A5** — `session-start` dùng `gateTracked` cho handoff (ledger vẫn không kiểm tracked, như hiện nay); `null` (không xác định) coi là chưa theo dõi (giữ R19, vì handoff là dữ liệu, không phải quyền). Hệ quả: so tên handoff bắt đầu không phân biệt hoa/thường và đi qua symlink (xem Rủi ro).
 - **A6** — Bản sao `core/skills/plan-execution/scripts/gate-file.mjs` commit trong cây nguồn; test contract kiểm byte-identical (như cặp `AGENTS.md` ↔ `core/agents/AGENTS.template.md`). Chạy từ source vẫn được, không thêm bước build.
-- **A7** — Lệnh ghi (`aip mode full|ask`, `aip autonomy high|safe`) chép khoá từ file repo chính sang file worktree mới (`cli/lib/mode.mjs` qua `applyFull`/`applyAsk`, `cli/lib/autonomy.mjs:66–69`). Khoá `untracked` mà `trustedValue` bỏ qua ở file nguồn (bị theo dõi hoặc không xác định) không được chép sang, áp cho cả 6 khoá `untracked` (gồm `autonomy`, kể cả gợi ý `partRunner`/`planRunner` bên trong); file nguồn không bị theo dõi thì các khoá này được chép như hiện nay; `mode` vẫn luôn bị bỏ như hiện nay. Lý do: không có bước này, chép `allowEnvFiles`/`stopGate`/`exemptAgents` từ file đã commit vào file worktree chưa theo dõi sẽ đưa lại hiệu lực cho khoá vừa bị bỏ qua (cùng kiểu lỗ hổng mà `droppedMode` đã chặn cho `mode`).
+- **A7** — Lệnh ghi (`aip mode full|ask`, `aip autonomy high|safe`) chép khoá từ file repo chính sang file worktree mới (`cli/lib/mode.mjs` qua `applyFull`/`applyAsk`, `cli/lib/autonomy.mjs:66–69`). Khoá `untracked` mà `trustedValue` bỏ qua ở file nguồn (bị theo dõi hoặc không xác định) không được chép sang, áp cho cả 9 khoá `untracked` (gồm `autonomy`, kể cả gợi ý `partRunner`/`planRunner` bên trong); file nguồn không bị theo dõi thì các khoá này được chép như hiện nay; `mode` vẫn luôn bị bỏ như hiện nay. Lý do: không có bước này, chép `allowEnvFiles`/`stopGate`/`exemptAgents` từ file đã commit vào file worktree chưa theo dõi sẽ đưa lại hiệu lực cho khoá vừa bị bỏ qua (cùng kiểu lỗ hổng mà `droppedMode` đã chặn cho `mode`).
 - **A8** — `lintGate` chỉ xét tên khoá và kiểu (`string`, `boolean`, `number`, `array`, `object`), không xét miền giá trị (vd `mode: "foo"` không bị báo; consumer đã coi giá trị lạ như mặc định) và không xét khoá con của `autonomy`.
 - **A9** — Khi `gate-stop` chặn, đoạn gợi ý `"stopGate": false` chỉ hiện nếu file không tồn tại hoặc không bị theo dõi; hỏi git lúc dựng thông điệp (lúc chặn, hiếm) chứ không phải mỗi lượt.
 - **A10** — Hook không thêm cảnh báo mới (theo lựa chọn của người dùng ở brief). Người dùng chỉ thấy khoá bị bỏ qua qua `aip mode status` và `aip autonomy status`.
@@ -73,7 +73,7 @@ Người dùng đã duyệt brief ([brief.md](brief.md), `route-đã-duyệt: wo
 |---|---|---|---|---|
 | `guard-bash`, `guard-files` | `readGate` → `resolveGate` | `allowEnvFiles` (`untracked`) | config `none`, im lặng | guard `.env` bật |
 | `gate-stop` | `readGateConfig` | `stopGate`, `exemptAgents`, `testCommands` (`untracked`) | config `none`, im lặng | Stop gate bật, `exemptAgents` = `DEFAULT_EXEMPT_AGENTS` |
-| `guard-bash`/`guard-files`/`guard-mcp` (`full`) | `fullEffective` | `mode` (`untracked`), `fullKeep`/`fullRoots`/`fullReadRoots`/`mcpAllow`/`mcpDeny` (`any`) | `ask` | chạy như `ask` (R6, không đổi) |
+| `guard-bash`/`guard-files`/`guard-mcp` (`full`) | `fullEffective` | `mode`, `fullKeep`/`fullRoots`/`fullReadRoots` (`untracked`), `mcpAllow`/`mcpDeny` (`any`) | `ask` | chạy như `ask` (R6, không đổi) |
 | `session-start` | `readGateConfig` | khoá `any`; handoff dùng `gateTracked` | config `none` | handoff tracked bị bỏ; `null` coi chưa theo dõi |
 | `aip mode`, `aip autonomy` | `locateGate` | cả hai in khoá bị bỏ qua | stderr, exit 1, không ghi | `status` liệt kê khoá bị bỏ qua |
 | `aip init --full` | `locateGate` + `trustedValue` | `allowEnvFiles` | ném lỗi, không ghi gì | giữ quy tắc `.env` trong `settings.json` |
@@ -90,7 +90,7 @@ Ngoài repo git: hook không có cấu hình (R4); CLI và script đọc `<cwd>/
 | `allowEnvFiles` | boolean | `untracked` | `false` (guard `.env` bật) |
 | `stopGate` | boolean | `untracked` | bật (chỉ `false` mới tắt) |
 | `exemptAgents` | array | `untracked` | `DEFAULT_EXEMPT_AGENTS` |
-| `fullKeep`, `fullRoots`, `fullReadRoots` | array | `any` | `["push"]`, `[]`, `[]` |
+| `fullKeep`, `fullRoots`, `fullReadRoots` | array | `untracked` | `["push"]`, `[]`, `[]` |
 | `mcpAllow`, `mcpDeny` | array | `any` | không lọc |
 | `testCommands` | array | `untracked` | không có mẫu thêm |
 | `bootstrapInject`, `handoffInject`, `ledgerInject`, `resumeWarn` | boolean | `any` | bật |
@@ -120,7 +120,7 @@ Ghi chú lệch với đề bài giao: cli-wizard thêm R8 ngoài R4/R6 vì `aip
 
 ## Kiểm thử
 - Tầng thấp nhất cho từng hành vi, một test tham số cho nhiều đầu vào:
-  - AC1.1, AC2.1–AC2.4, AC5.1, AC5.2: contract test mới trên module (`locateGate`, `trustedValue` 6 khoá × 4 trạng thái bằng seam `tracked`/`run`, đếm lời gọi git, `lintGate`, byte-identical, quét import, chạy `autonomy.mjs` từ bản sao ở thư mục tạm).
+  - AC1.1, AC2.1–AC2.4, AC5.1, AC5.2: contract test mới trên module (`locateGate`, `trustedValue` 9 khoá × 4 trạng thái bằng seam `tracked`/`run`, đếm lời gọi git, `lintGate`, byte-identical, quét import, chạy `autonomy.mjs` từ bản sao ở thư mục tạm).
   - AC1.2: quét nguồn trong cùng contract test.
   - AC3.1–AC3.4: `test/contract/90-hooks.contract.mjs` (allowEnvFiles, stopGate, gate-stop reason, session-start handoff) và `93`/`94` (file hỏng che repo chính, `full`) với seam `tracked` có sẵn; chỉ thêm ca chưa có.
   - AC3.5, AC3.6: ca của `90` và `94` hiện có, giữ xanh.

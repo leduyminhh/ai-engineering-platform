@@ -30,14 +30,14 @@
 | `core/.manifest.json`, `plugins/_versions.lock.json` | bump version core, lock | Task 5 |
 
 ## Global Constraints
-- Khoá `trust: 'untracked'` (đúng 6): `mode`, `autonomy`, `allowEnvFiles`, `stopGate`, `exemptAgents`, `testCommands` (thêm khi thực thi Task 5, người dùng duyệt).
-- Khoá `trust: 'any'` (đúng 12): `fullKeep`, `fullRoots`, `fullReadRoots`, `mcpAllow`, `mcpDeny`, `bootstrapInject`, `handoffInject`, `ledgerInject`, `resumeWarn`, `handoffPath`, `handoffMaxAgeHours`, `statusStaleMinutes`. `calc: 6 + 12 = 18`.
+- Khoá `trust: 'untracked'` (đúng 9): `mode`, `autonomy`, `allowEnvFiles`, `stopGate`, `exemptAgents`, `testCommands` (thêm khi thực thi Task 5), `fullKeep`, `fullRoots`, `fullReadRoots` (thêm sau review cuối); người dùng duyệt cả hai lần.
+- Khoá `trust: 'any'` (đúng 9): `mcpAllow`, `mcpDeny`, `bootstrapInject`, `handoffInject`, `ledgerInject`, `resumeWarn`, `handoffPath`, `handoffMaxAgeHours`, `statusStaleMinutes`. `calc: 9 + 9 = 18`.
 - Kiểu trong `GATE_KEYS`: `mode`/`handoffPath` string; `autonomy` object; `allowEnvFiles`/`stopGate`/`bootstrapInject`/`handoffInject`/`ledgerInject`/`resumeWarn` boolean; `exemptAgents`/`fullKeep`/`fullRoots`/`fullReadRoots`/`mcpAllow`/`mcpDeny`/`testCommands` array; `handoffMaxAgeHours`/`statusStaleMinutes` number.
 - `trustedValue`: khoá `any` → trả nguyên, không gọi git; khoá `untracked` → trả giá trị khi `gate.inRepo === false` hoặc `tracked(file) === false`; `true` hoặc `null` → `undefined`. Chỉ gọi git khi khoá `untracked` có trong config.
 - File hỏng: hook và script coi như không có cấu hình, im lặng, vẫn che file repo chính (hooks-gates/R9); CLI (`aip mode`, `aip autonomy`, `aip init --full`) in đường dẫn file hỏng ra stderr, exit 1, không ghi file nào.
 - `gate-file.mjs` chỉ import specifier `node:`; hai bản giống hệt byte (so sau chuẩn hoá `\r\n`). Sửa một bản thì chép sang bản kia.
 - `fullEffective` không đổi code và seam (A12). Hook không thêm cảnh báo mới; lỗi nội bộ fail-open.
-- Chép khoá sang file worktree (A7): file repo chính bị theo dõi hoặc không xác định → không chép 6 khoá `untracked`; không bị theo dõi → chép như trước; `mode` luôn bị bỏ khi chép từ repo chính.
+- Chép khoá sang file worktree (A7): file repo chính bị theo dõi hoặc không xác định → không chép 9 khoá `untracked`; không bị theo dõi → chép như trước; `mode` luôn bị bỏ khi chép từ repo chính.
 - UTF-8 không BOM, LF; comment theo mục Comments của `AGENTS.md` (tiếng Việt có dấu, chỉ giải thích *vì sao*).
 - Commit mỗi task qua `core:git-workflow`: header `type(scope): summary` tiếng Anh, body tiếng Việt có dấu, `git commit -F`, không dòng `Co-Authored-By`.
 
@@ -180,3 +180,39 @@
 - [ ] **Step 4:** Bump `core/.manifest.json` lên version lớn hơn `1.33.1` (patch), chạy `npm run build` rồi `node cli/lib/versions.mjs --lock`.
 - [ ] **Step 5:** Chạy `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-11-11-aip-gate-config-flow/ --base master` → không W10–W14; chạy `npm test` → exit 0.
 - [ ] **Step 6:** Commit `docs(specs): record aip-gate key trust policy`.
+
+### Task 6: Sửa sau review cuối
+**Kind:** TOOLING
+**TDD:** có
+**Ước lượng:** 30'
+**Phủ AC:** AC2.1, AC2.2, AC4.2, AC4.3, AC4.4
+**Files:**
+- Modify: `core/hooks/scripts/gate-file.mjs`
+- Modify: `core/skills/plan-execution/scripts/gate-file.mjs`
+- Modify: `core/hooks/scripts/gate-config.mjs`
+- Modify: `cli/lib/init.mjs`
+- Modify: `cli/lib/mode.mjs`
+- Modify: `cli/lib/autonomy.mjs`
+- Modify: `cli/lib/status.mjs`
+- Modify: `docs/specs/hooks-gates/spec.md`
+- Modify: `core/.manifest.json`
+- Modify: `plugins/_versions.lock.json`
+- Test: `test/contract/98-gate-file.contract.mjs`
+- Test: `test/init.test.mjs`
+- Test: `test/mode.test.mjs`
+- Test: `test/status.test.mjs`
+
+**Interfaces:**
+- Consumes: `locateGate(cwd, { git })`, `trustedValue(gate, key, { tracked })`, `cliGate(root, { run })`, `gateLines(info)`
+- Produces: `locateGate` trả thêm trường `gitUnknown` (boolean) khi `git rev-parse` lỗi mà thư mục hoặc thư mục cha có `.git`; khi đó `inRepo: true`
+
+- [ ] **Step 1:** Test đỏ:
+  - AC2.1/AC2.2 (`98`): `GATE_KEYS` có 9 khoá `untracked` (thêm `fullKeep`, `fullRoots`, `fullReadRoots`) và 9 khoá `any`; bảng 9 khoá × 4 trạng thái của `trustedValue`.
+  - AC2.2 trạng thái 3 (`98`): `locateGate` với seam `git` luôn ném, cwd có `.git` (thư mục) → `inRepo: true`, `gitUnknown: true`, đọc file ở thư mục chứa `.git`; `trustedValue` khoá `untracked` → `undefined` (seam `tracked` trả `null`); không có `.git` ở thư mục hay cha → `inRepo: false` như cũ.
+  - AC4.4 (`init.test.mjs`): gốc git có file chưa theo dõi `{"allowEnvFiles": true}`, `aip init --full` ở thư mục con chưa có file → giữ quy tắc `.env`; thư mục con có file `{"allowEnvFiles": false}` → giữ quy tắc `.env`; thư mục con có file chưa theo dõi `{"allowEnvFiles": true}` → bỏ quy tắc `.env`.
+  - AC4.3 (`mode.test.mjs`): khoá lạ chứa `\u001b` và `\n` → dòng `Khoá lạ:` in tên khoá qua `JSON.stringify`, không có byte ESC hay xuống dòng thô.
+  - AC4.2 (`mode.test.mjs`): `mode: "full"` trong file đã bị theo dõi → `aip mode status` in `Chế độ: ask` (kèm lý do bị bỏ qua), không in `Chế độ: full`; lời gợi ý gỡ theo dõi của `aip mode` và `aip autonomy` có cụm "xem lại".
+  - (`status.test.mjs`): `aip status` lấy `autonomy` đáng tin (file đã bị theo dõi → không hiện `autonomy` của file).
+- [ ] **Step 2:** Chạy `node test/validate.mjs --only gate-file`, `node test/init.test.mjs`, `node test/mode.test.mjs`, `node test/status.test.mjs` → thấy đỏ; commit test đỏ.
+- [ ] **Step 3:** Sửa: `GATE_KEYS` (2 bản giống hệt byte); `locateGate` nhánh `gitUnknown`; `resolveGate` của `gate-config.mjs` trả `null` khi `gitUnknown` (hook giữ hành vi R4); `readAllowEnvFiles` đọc file ở chính `root` khi `root` không phải gốc git (thiếu file ⇒ `false`), ở gốc git thì dùng `locateGate`; `gateLines` in tên khoá bằng `JSON.stringify`; `runMode` status hiển thị `mode` đáng tin; câu gợi ý gỡ theo dõi thêm "mở file, xem lại từng khoá rồi mới"; `status.mjs` lấy `autonomy` qua `trustedValue`; spec R20: bảng 9 + 9, câu gợi ý.
+- [ ] **Step 4:** Chạy lại 4 lệnh ở Step 2 → xanh; bump `core/.manifest.json` 1.33.3 → 1.33.4, `npm run build`, `node cli/lib/versions.mjs --lock`; commit.
