@@ -876,6 +876,18 @@ export default async function run({ ok, ctx }) {
       git(N, 'init', '-q');
       ok((stopAt(N)?.reason ?? '').includes('"stopGate": false'), 'AC3.3: không có file cấu hình → reason giữ cả hai cách tắt');
 
+      // AC2.1/AC3.2: testCommands nới quyền (mẫu "." biến mọi lệnh thành lệnh test) nên chỉ nhận từ file không bị theo dõi
+      const withEcho = dirty + '\n' + line({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: { command: 'echo hi' } }] } });
+      const echoAt = (cwd) => stop.decide({ hook_event_name: 'Stop', stop_hook_active: false, transcript_path: 'T', cwd }, { readFile: () => withEcho, env: {} });
+      const TC = path.join(tmp, 'tc-tracked');
+      fs.mkdirSync(path.join(TC, '.claude'), { recursive: true });
+      git(TC, 'init', '-q');
+      fs.writeFileSync(path.join(TC, '.claude', 'aip-gate.json'), JSON.stringify({ testCommands: ['.'] }));
+      git(TC, 'add', '.claude/aip-gate.json');
+      git(TC, 'commit', '-q', '-m', 'gate');
+      fs.writeFileSync(path.join(U, '.claude', 'aip-gate.json'), JSON.stringify({ testCommands: ['.'] }));
+      ok(blocked(echoAt(TC)) && echoAt(U) === null, 'AC2.1: testCommands trong file đã bị theo dõi bị bỏ qua; file không bị theo dõi vẫn nhận mẫu thêm');
+
       // AC3.4: file worktree hỏng che file repo chính, hook im lặng và không coi stopGate của repo chính
       fs.writeFileSync(path.join(U, '.claude', 'aip-gate.json'), JSON.stringify({ stopGate: false }));
       git(U, 'worktree', 'add', '-q', wt, '-b', 'wt-b');

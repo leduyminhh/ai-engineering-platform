@@ -88,22 +88,22 @@ export default async function run({ ok, ctx }) {
   }
 
   // ── AC2.1: bảng khoá
-  const UNTRACKED = ['mode', 'autonomy', 'allowEnvFiles', 'stopGate', 'exemptAgents'];
-  const ANY = ['fullKeep', 'fullRoots', 'fullReadRoots', 'mcpAllow', 'mcpDeny', 'testCommands', 'bootstrapInject', 'handoffInject',
+  const UNTRACKED = ['mode', 'autonomy', 'allowEnvFiles', 'stopGate', 'exemptAgents', 'testCommands'];
+  const ANY = ['fullKeep', 'fullRoots', 'fullReadRoots', 'mcpAllow', 'mcpDeny', 'bootstrapInject', 'handoffInject',
     'ledgerInject', 'resumeWarn', 'handoffPath', 'handoffMaxAgeHours', 'statusStaleMinutes'];
   {
     const keys = Object.keys(gf.GATE_KEYS ?? {});
     const byTrust = (t) => keys.filter((k) => gf.GATE_KEYS[k].trust === t).sort();
     ok(keys.length === 18, `AC2.1: GATE_KEYS có 18 khoá (đang ${keys.length})`);
-    ok(JSON.stringify(byTrust('untracked')) === JSON.stringify([...UNTRACKED].sort()), `AC2.1: đúng 5 khoá untracked: ${byTrust('untracked')}`);
-    ok(JSON.stringify(byTrust('any')) === JSON.stringify([...ANY].sort()), `AC2.1: đúng 13 khoá any: ${byTrust('any')}`);
+    ok(JSON.stringify(byTrust('untracked')) === JSON.stringify([...UNTRACKED].sort()), `AC2.1: đúng 6 khoá untracked: ${byTrust('untracked')}`);
+    ok(JSON.stringify(byTrust('any')) === JSON.stringify([...ANY].sort()), `AC2.1: đúng 12 khoá any: ${byTrust('any')}`);
     const types = new Set(['string', 'boolean', 'number', 'array', 'object']);
     ok(keys.every((k) => types.has(gf.GATE_KEYS[k].type)), 'AC2.1: mọi khoá có type thuộc tập đóng');
   }
 
   // ── AC2.2, AC2.3: trustedValue ở bốn trạng thái, đếm lời gọi seam tracked
   {
-    const value = { mode: 'full', autonomy: { mergeLocal: true }, allowEnvFiles: true, stopGate: false, exemptAgents: ['x'] };
+    const value = { mode: 'full', autonomy: { mergeLocal: true }, allowEnvFiles: true, stopGate: false, exemptAgents: ['x'], testCommands: ['.'] };
     const states = [['không bị theo dõi', true, false, true], ['bị theo dõi', true, true, false], ['không xác định', true, null, false], ['ngoài repo git', false, true, true]];
     for (const key of UNTRACKED) {
       for (const [name, inRepo, trackedRes, trusted] of states) {
