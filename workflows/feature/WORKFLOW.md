@@ -287,7 +287,7 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
 - [ ] Acceptance criteria đo được, builder check xong, người dùng duyệt tài liệu; contract OpenAPI hợp lệ hoặc ghi rõ
   không có API / không có contract vì cỡ thay đổi nhỏ — evidence: Bước 3
 - [ ] `plan.md` gốc (nếu có) và `parts/*/plan.md` (nếu có part) qua `check-request.mjs` (chỉ còn W9 hoặc W11 của `thêm`) và `check-partition.mjs`, và được duyệt, hoặc ghi rõ bỏ qua vì cỡ "thay đổi nhỏ" — evidence: Bước 4
-- [ ] Mọi task `complete` trong ledger (có part thì mọi part `merged <hash>` hoặc `bỏ`), mỗi task đã qua task review và có commit; build xanh cho phần backend/frontend có
+- [ ] Mọi task `complete` trong ledger (có part thì mọi part `merged <hash>` hoặc `bỏ`), mỗi task có commit và đã qua task review (task cỡ Nhỏ chỉ chịu review cuối, theo mục "Cỡ task và review từng task" của `plan-execution`); build xanh cho phần backend/frontend có
   đụng — evidence: Bước 5
 - [ ] Mỗi acceptance criterion có ≥1 test và toàn bộ test pass (e2e `not_run` vì thiếu môi trường BE/DB test là
   hợp lệ, ghi vào `remaining_risks`) — evidence: Bước 5

@@ -201,11 +201,11 @@ chưa trả lời thì không nhắc lại, vướng mới gộp vào cùng th�
 
 ## Cỡ task và review từng task
 
-Cỡ suy ra từ `**Kind:**`, `**TDD:**` và `**Files:**` của task, không cần trường mới trong plan. Quyết định ở [ADR-0005](../../../../docs/decisions/0005-small-task-skips-per-task-review.md); cách đọc từng điều kiện nằm ở [task-size.md](task-size.md).
+Cỡ suy ra từ `**Kind:**`, `**TDD:**` và `**Files:**` của task, không cần trường mới trong plan. Lý do: task Nhỏ (giao diện thuần hoặc tooling, ít file, không TDD, không đường dẫn nhạy cảm) ít rủi ro hơn chi phí một lượt review riêng, nên dồn về review cuối toàn nhánh; cách đọc từng điều kiện nằm ở [task-size.md](task-size.md).
 
 - **Nhỏ** khi đủ cả bốn: (1) `Kind` là `FE-UI` hoặc `TOOLING`; (2) `**TDD:** không`; (3) không quá 5 file production; (4) `**Files:**` không có đường dẫn migration, auth/phân quyền, secret/credential, CI hoặc hook, và task không đổi contract API hay schema.
 - **Lớn** là mọi task còn lại: `BE`, `DB`, `CT`, `FE-INT`, `E2E`, `DOCS`, mọi task `**TDD:** có`, hoặc task chạm đường dẫn nhạy cảm ở điều kiện (4). Task Lớn đi vòng đầy đủ như các mục trên (implementer, task review, vòng sửa).
-- **Vừa** là các task cùng khuôn gom theo mục "Gom task nhỏ" bên dưới; cả cụm tính là Lớn nếu có một task Lớn.
+- **Vừa** là các task cùng khuôn gom theo mục "Gom task nhỏ" bên dưới; cả cụm tính là Lớn nếu có một task Lớn; cụm gồm toàn task Nhỏ vẫn là Nhỏ (không review cụm, chỉ chịu review cuối).
 
 Task cỡ Nhỏ bỏ task review và vòng sửa, chỉ chịu review cuối toàn nhánh; implementer, brief, commit và ledger giữ nguyên. Phạm vi: các chế độ còn review từng task (tuần tự không part; part với `partRunner: session`). Chế độ inline và part `partRunner: subagent` không đổi vì vốn đã bỏ review từng task.
 
@@ -218,7 +218,7 @@ Task cỡ Nhỏ bỏ task review và vòng sửa, chỉ chịu review cuối to�
 
 Nhiều task nhỏ cùng khuôn (vd đổi một dòng ở nhiều file) có thể giao một lần và review như một đơn vị, miễn brief liệt kê
 từng file và reviewer kiểm **mỗi file có hunk tương ứng**; file nào không có hunk là `Missing`. Ledger vẫn ghi một dòng
-`Task <n>: complete` cho từng task.
+`Task <n>: complete` cho từng task. Cụm toàn task Nhỏ: bỏ review cụm, đối chiếu `git diff --name-only <BASE>..HEAD` với hợp các `**Files:**` của cụm, rồi ghi dòng `review cuối — cỡ nhỏ` cho từng task; cụm có một task Lớn thì review như một đơn vị theo đoạn trên.
 
 ## Chế độ part
 

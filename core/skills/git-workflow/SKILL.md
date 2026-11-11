@@ -50,7 +50,7 @@ Dùng khi người dùng yêu cầu: commit, push, commit & push, tạo branch, 
    trộn nhiều mục tiêu; giữ code + test + docs phụ trợ đi cùng nếu phục vụ một mục tiêu. Một commit khoảng 300 dòng
    logic trở lên (`git diff --cached --shortstat`, bỏ file sinh tự động và lockfile) thì xét tách theo mục tiêu.
    **Khi xoá file đã tracked:** một commit chỉ gồm các file bị xoá, body liệt kê từng file và lý do xoá. Việc sửa tham chiếu tới
-   các file đó (import, đường dẫn, tài liệu) là commit riêng sau đó. Chấp nhận build có thể đỏ giữa hai commit: không gộp
+   các file đó (import, đường dẫn, tài liệu) là commit riêng sau đó. Chấp nhận build có thể đỏ giữa hai commit (kể cả test), chỉ khi đỏ vì file bị xoá còn được tham chiếu; ngoại lệ này không áp cho lint hay hook. Không dùng `--no-verify`; hook chặn commit chỉ-xoá thì dừng và hỏi người dùng; không gộp
    hai commit cho xanh và không viết lại lịch sử để che chỗ đỏ.
 3. Nếu cần branch mới: nạp [references/branch-convention.md](references/branch-convention.md)
    và tạo/chuyển branch theo quy ước (xem Quy tắc ưu tiên branch ở trên).

@@ -43,11 +43,11 @@ Chốt thêm ở design. Quyết định của người dùng (builder check): D
 - **D3 — Khoá JSON của script:** `project`, `ledgers`, `requests`, `tasks`, `tasksReview2plus`, `pctReview2plus` (1 chữ số thập
   phân), `tasksIssuesAtRound2plus`, `tasksIssuesAtRound3plus` (task có dòng `review <v> issues|cannot_verify` với v ≥ 2, v ≥ 3),
   `rulings`, `rulingsOutsideFiles`, `outsideFilesPerRequest` (= `rulingsOutsideFiles / requests`, 2 chữ số thập phân),
-  `minorDeferred`, `byRequest[]` (`request`, `tasks`, `tasksReview2plus`, `rulings`, `rulingsOutsideFiles`, `minorDeferred`).
+  `minorDeferred`, `byRequest[]` (`request`, `tasks`, `tasksReview2plus`, `rulings`, `rulingsOutsideFiles`, `minorDeferred`). Cờ `--anon` (người dùng đã chốt ẩn danh) thay `request` bằng `r1..rN` theo thứ tự tên đã sắp.
   Chỉ số thành công của brief: `pctReview2plus` và `outsideFilesPerRequest`.
 - **D4 — Số nền:** `docs/requests/2026-11-11-skill-enrichment-from-usage/baseline.json` = stdout nguyên văn của script chạy trên
-  project nguồn ở máy người dùng: `node scripts/ledger-metrics.mjs --project <thư mục project nguồn> --label source-project > baseline.json`
-  (project nguồn chỉ đọc). Khoá `project` là nhãn trung lập từ `--label`, file không chứa tên thư mục, tên riêng hay đường dẫn tuyệt đối.
+  project nguồn ở máy người dùng: `node scripts/ledger-metrics.mjs --project <thư mục project nguồn> --label source-project --anon > baseline.json`
+  (project nguồn chỉ đọc; `--anon` để `byRequest[].request` là `r1..rN`, không lộ tên request). Khoá `project` là nhãn trung lập từ `--label`, file không chứa tên thư mục, tên riêng hay đường dẫn tuyệt đối.
   Các request sau chạy cùng lệnh rồi so hai khoá của D3. `.aip/` nằm ngoài git của project nguồn, nên không có gì để commit ở đó.
 - **D5 — Danh sách tên riêng cấm và cách grep:** một contract `test/contract/57-skill-neutral.contract.mjs` quét `core/`,
   `plugins/`, `workflows/`, `test/routing/` (file `.md`, `.json`, `.mjs`; không quét `docs/`, không quét chính contract) và fail khi
@@ -59,9 +59,9 @@ Chốt thêm ở design. Quyết định của người dùng (builder check): D
 
   | Skill id | Plugin | `description` |
   |---|---|---|
-  | `engineering-api-research` | engineering | "Nghiên cứu API ngoài từ tài liệu gốc, chạy thử script chỉ đọc, ghi file facts có nhãn [Verified]/[Inference]/[Unverified] kèm nguồn và ngày đọc. Dùng khi người dùng muốn \"tra docs API\", \"hạn mức, xác thực, mã lỗi của dịch vụ ngoài\", \"script thử chỉ đọc\", \"cái nào đã xác nhận, cái nào suy đoán\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; ghi quyết định chọn phương án → engineering-adr." |
-  | `backend-llm-integration` | backend | "Thêm hoặc rà tính năng backend gọi LLM: ngân sách theo ngày, retry khi bị rate limit, fail-soft có đánh dấu, ghi usage, redact output, prompt dự phòng. Dùng khi người dùng muốn \"service gọi mô hình ngôn ngữ\", \"giới hạn chi phí gọi AI theo ngày\", \"retry khi rate limit\", \"fail-soft khi LLM lỗi\", \"ghi token mỗi lần gọi model\". Không dùng khi code slice thường không gọi LLM → backend-implement; review diff tổng quát → backend-code-review." |
-  | `frontend-manual-check` | frontend | "Viết runbook kiểm tay theo từng tiêu chí chấp nhận (dữ liệu mẫu, thao tác, kết quả mong đợi) cho UI chưa có test tự động, kèm walkthrough Playwright có luật PASS/FAIL/SKIP. Dùng khi người dùng muốn \"runbook kiểm tay theo AC\", \"kiểm thủ công màn hình\", \"tự thử UI từng bước\", \"walkthrough bằng Playwright\". Không dùng khi cần viết test e2e tự động → frontend-e2e-testing; test component → frontend-testing." |
+  | `engineering-api-research` | engineering | "Nghiên cứu API ngoài từ tài liệu gốc, thử script chỉ đọc, rồi ghi file facts có nhãn nguồn và ngày đọc. Dùng khi người dùng muốn \"tra docs API ngoài\", \"tài liệu hạn mức, xác thực, mã lỗi của dịch vụ\", \"thử API chỉ đọc\". Không dùng khi cần viết spec yêu cầu → engineering-spec-writing; chọn phương án → engineering-adr." |
+  | `backend-llm-integration` | backend | "Thêm hoặc rà phần backend gọi nhà cung cấp LLM: ngân sách, thử lại, fail-soft có đánh dấu, ghi usage, redact output, prompt dự phòng. Dùng khi người dùng muốn \"tích hợp LLM vào backend\", \"fail-soft khi LLM lỗi\", \"ngân sách cho lời gọi LLM\", \"redact output của LLM\". Không dùng khi code slice không gọi LLM → backend-implement; review diff chung → backend-code-review." |
+  | `frontend-manual-check` | frontend | "Viết runbook kiểm tay theo từng tiêu chí chấp nhận (dữ liệu mẫu, thao tác, kết quả mong đợi) cho UI chưa có test, kèm walkthrough Playwright có luật PASS/FAIL/SKIP. Dùng khi người dùng muốn \"runbook kiểm tay theo AC\", \"checklist nghiệm thu UI\", \"walkthrough bằng Playwright\". Không dùng khi cần test e2e tự động → frontend-e2e-testing; test component → frontend-testing." |
 
   Độ dài đã đếm: 409, 413 và 433 ký tự (trần 500). Cụm "Dùng khi" của ba skill không trùng nguyên văn cụm nào của skill cũ
   (đã so với `frontend-e2e-testing`, `frontend-testing`, `backend-implement`, `engineering-spec-writing`); phần "Không dùng khi"
@@ -123,7 +123,7 @@ Chốt thêm ở design. Quyết định của người dùng (builder check): D
   stderr nêu lý do (không thấy ledger / thiếu đối số), stdout rỗng.
 - [ ] **AC1.6** — Given `baseline.json` ở thư mục request When đọc Then có đủ khoá của D3, `ledgers` ≥ 1, `tasks` ≥ 1, `project` bằng
   nhãn trung lập `source-project` (từ `--label`, không phải tên thư mục hay tên riêng), `pctReview2plus` bằng
-  `tasksReview2plus / tasks * 100` làm tròn 1 chữ số; lệnh chạy lại được ghi ở mục "Số nền" của file này; không có đường dẫn
+  `tasksReview2plus / tasks * 100` làm tròn 1 chữ số, `byRequest[].request` có dạng `r<N>` (chạy với `--anon`); lệnh chạy lại được ghi ở mục "Số nền" của file này; không có đường dẫn
   tuyệt đối trong file.
 - [ ] **AC2.1** — Given `core/skills/plan-execution/references/task-loop.md` When đọc Then có mục "Cỡ task và review từng task" nêu
   đủ bốn điều kiện cỡ Nhỏ của D8, nêu `BE`, `DB`, `CT`, `FE-INT`, `E2E`, `DOCS` và task `**TDD:** có` luôn review từng task, và
@@ -248,12 +248,12 @@ ledger khi worktree bị xoá" (01b). Ba mục thu hẹp: 01b (chỉ phần vai 
   ghi ledger giả theo AC1.2–AC1.4, gọi `measure`, assert từng số và assert thư mục không có file mới (AC1.1); AC1.5 chạy CLI bằng
   `child_process` trên thư mục rỗng; AC1.6 đọc `baseline.json` thật. Xoá thư mục tạm bằng `fs.rmSync`.
 - `test/contract/57-skill-neutral.contract.mjs` theo D5.
-- Task cuối của plan gốc: chạy `node scripts/ledger-metrics.mjs --project <project nguồn> --label source-project > baseline.json` (project nguồn ở máy người dùng, chỉ đọc), đọc lại kiểm AC1.6, commit.
+- Task cuối của plan gốc: chạy `node scripts/ledger-metrics.mjs --project <project nguồn> --label source-project --anon > baseline.json` (project nguồn ở máy người dùng, chỉ đọc), đọc lại kiểm AC1.6, commit.
 - Dòng lệnh `node scripts/ledger-metrics.mjs <dir>` thêm vào mục Commands của `CLAUDE.md` (file dùng chung, plan gốc làm).
 
 ### Số nền
 
-Chạy lại (máy có project nguồn): `node scripts/ledger-metrics.mjs --project <thư mục project nguồn> --label source-project > docs/requests/2026-11-11-skill-enrichment-from-usage/baseline.json`.
+Chạy lại (máy có project nguồn): `node scripts/ledger-metrics.mjs --project <thư mục project nguồn> --label source-project --anon > docs/requests/2026-11-11-skill-enrichment-from-usage/baseline.json`.
 Sau đợt này, mỗi request mới của project nguồn đo lại bằng cùng lệnh (cùng `--label`) rồi so `pctReview2plus` và `outsideFilesPerRequest` với file này.
 Số liệu mới chỉ mang ý nghĩa khi có vài request chạy bằng skill đã sửa; không đo ngay lúc merge (xem rủi ro).
 

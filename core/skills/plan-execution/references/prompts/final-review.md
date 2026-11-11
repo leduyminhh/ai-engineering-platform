@@ -18,6 +18,7 @@ không gọi agent khác.
 - Review Focus của plan (các failure mode design ngụ ý mà test từng task có thể chưa phủ): <dán mục Review Focus>.
 - Request chia part: Bảng part (`## Bảng part` của design) và các interface giữa part (`**Interfaces:**` Produces/Consumes qua ranh giới part) là Review Focus bắt buộc: <dán Bảng part và danh sách interface giữa part>.
 - Các dòng Ruling: đã ghi trong ledger (quyết định của session chính trong lúc chạy; request chia part: ledger `root/` và mọi ledger part `<nn>-<part-slug>/`): <dán nguyên các dòng Ruling:>.
+- Danh sách task ghi `cỡ nhỏ` (lấy từ các dòng ledger `review cuối — cỡ nhỏ`; ghi "không có" nếu rỗng): <dán danh sách task và commit>.
 - Finding minor/nit đã hoãn (cùng các ledger như trên): <dán các dòng minor (deferred)>. Finding blocker/major đã hoãn nằm trong các dòng Ruling:
   ở trên, kèm mức gốc.
 

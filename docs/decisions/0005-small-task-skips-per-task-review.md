@@ -1,8 +1,8 @@
 # ADR-0005: Task cỡ Nhỏ bỏ review từng task, chỉ review cuối
 
-- Trạng thái: Proposed
+- Trạng thái: Accepted
 - Ngày: 2026-11-11
-- Người quyết định: người dùng (chờ chốt Status)
+- Người quyết định: người dùng (đã chốt 2026-11-11)
 
 Liên kết:
 - Thiết kế: [`2026-11-11-skill-enrichment-from-usage/design.md`](../requests/2026-11-11-skill-enrichment-from-usage/design.md) (D8, D9).

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Đo ledger của một project: đọc <project>/.aip/runs/<request>/**/progress.md, in JSON ra stdout, không ghi gì.
-// Cách dùng: --project <dir> [--label <nhãn>]. Thiếu --project hoặc không thấy progress.md: exit 1, lý do ra stderr.
+// Cách dùng: --project <dir> [--label <nhãn>] [--anon] (--anon thay tên request bằng r1..rN theo thứ tự tên đã sắp). Thiếu --project hoặc không thấy progress.md: exit 1, lý do ra stderr.
 // Dòng nhận: `Task <n>: complete` (không phân biệt hoa thường, loại `complete?`; nhiều dòng của một task đếm một lần),
 // `Task <n>: review <vòng> <compliant|issues|cannot_verify> a/b/c`, `Ruling:`, `minor (deferred)`; chỉ task đã complete vào mẫu số.
 // Hai chỉ số thành công: pctReview2plus (% task cần review từ vòng 2) và outsideFilesPerRequest (ruling "ngoài Files" trên mỗi request).
@@ -44,7 +44,7 @@ function findLedgers(dir) {
   return out;
 }
 
-export function measure(dir, label = 'project') {
+export function measure(dir, label = 'project', anon = false) {
   const runs = path.join(dir, '.aip', 'runs');
   const byReq = new Map();
   let ledgers = 0;
@@ -85,8 +85,8 @@ export function measure(dir, label = 'project') {
     rulingsOutsideFiles: sum('rulingsOutsideFiles'),
     outsideFilesPerRequest: round2(sum('rulingsOutsideFiles') / rows.length),
     minorDeferred: sum('minorDeferred'),
-    byRequest: rows.map(({ request, tasks, tasksReview2plus, rulings, rulingsOutsideFiles, minorDeferred }) => (
-      { request, tasks, tasksReview2plus, rulings, rulingsOutsideFiles, minorDeferred })),
+    byRequest: rows.map(({ request, tasks, tasksReview2plus, rulings, rulingsOutsideFiles, minorDeferred }, i) => (
+      { request: anon ? `r${i + 1}` : request, tasks, tasksReview2plus, rulings, rulingsOutsideFiles, minorDeferred })),
   };
 }
 
@@ -96,7 +96,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const project = arg('--project');
   try {
     if (!project) throw new Error('thiếu --project <dir>');
-    process.stdout.write(`${JSON.stringify(measure(project, arg('--label') || 'project'), null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(measure(project, arg('--label') || 'project', argv.includes('--anon')), null, 2)}\n`);
   } catch (e) {
     process.stderr.write(`ledger-metrics: ${e.message}\n`);
     process.exit(1);

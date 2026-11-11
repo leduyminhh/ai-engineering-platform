@@ -82,6 +82,9 @@ export default async function run({ ok, ctx }) {
     const dflt = cli(['--project', path.join(tmp, 'p')]);
     ok(dflt.status === 0 && JSON.parse(dflt.stdout).project === 'project', 'AC1.1 --label mặc định là `project`');
     ok(!r.stdout.includes(tmp), 'AC1.1 stdout không chứa đường dẫn tuyệt đối');
+    const an = cli(['--project', path.join(tmp, 'p'), '--anon']);
+    const aj = an.status === 0 ? JSON.parse(an.stdout) : null;
+    ok(aj && aj.byRequest.map((x) => x.request).join() === 'r1,r2' && !/req-[ab]/.test(an.stdout) && aj.byRequest[0].tasks === 4, 'AC1.6 --anon: byRequest dùng r1..rN theo thứ tự tên, không còn tên thư mục request, số liệu giữ nguyên');
 
     fs.mkdirSync(path.join(tmp, 'empty'));
     const e1 = cli(['--project', path.join(tmp, 'empty')]);
@@ -97,6 +100,7 @@ export default async function run({ ok, ctx }) {
     ok(btext !== '' && BKEYS.every((k) => k in b), 'AC1.6 baseline.json có đủ khoá D3');
     ok(b.ledgers >= 1 && b.tasks >= 1 && b.project === 'source-project', 'AC1.6 baseline.json: ledgers ≥ 1, tasks ≥ 1, project = source-project');
     ok(b.pctReview2plus === Math.round((b.tasksReview2plus / b.tasks) * 1000) / 10, 'AC1.6 pctReview2plus = tasksReview2plus / tasks * 100 làm tròn 1 chữ số');
+    ok(b.byRequest.every((x) => /^r[0-9]+$/.test(x.request)), 'AC1.6 baseline.json: byRequest[].request ẩn danh dạng r<N>');
     ok(!/[A-Za-z]:[\\/]/.test(btext) && !/content-automation/i.test(btext), 'AC1.6 baseline.json không có đường dẫn tuyệt đối hay tên riêng');
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });

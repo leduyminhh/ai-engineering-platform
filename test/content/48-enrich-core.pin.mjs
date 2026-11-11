@@ -56,7 +56,7 @@ export default async function run({ ok, ctx }) {
       const plan = path.join(tmp, 'plan.md');
       fs.writeFileSync(plan, '# Plan\n');
       const line = d9.replace('<n>', '1').replace('<a>', 'abc1234').replace('<b>', 'def5678');
-      const r = spawnSync(process.execPath, [path.join(REPO_ROOT, PE, 'scripts/ledger.mjs'), plan, line], { encoding: 'utf8' });
+      const r = spawnSync(process.execPath, [path.join(REPO_ROOT, PE, 'scripts/ledger.mjs'), plan, line], { encoding: 'utf8', cwd: tmp });
       ok(r.status === 0, `AC2.2: ledger.mjs chấp nhận dòng D9 (exit ${r.status}) ${(r.stderr || '').trim()}`);
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   }

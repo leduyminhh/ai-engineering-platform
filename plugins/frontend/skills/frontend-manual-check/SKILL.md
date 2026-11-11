@@ -1,6 +1,6 @@
 ---
 name: frontend-manual-check
-description: "Viết runbook kiểm tay theo từng tiêu chí chấp nhận (dữ liệu mẫu, thao tác, kết quả mong đợi) cho UI chưa có test tự động, kèm walkthrough Playwright có luật PASS/FAIL/SKIP. Dùng khi người dùng muốn \"runbook kiểm tay theo AC\", \"kiểm thủ công màn hình\", \"tự thử UI từng bước\", \"walkthrough bằng Playwright\". Không dùng khi cần viết test e2e tự động → frontend-e2e-testing; test component → frontend-testing."
+description: "Viết runbook kiểm tay theo từng tiêu chí chấp nhận (dữ liệu mẫu, thao tác, kết quả mong đợi) cho UI chưa có test, kèm walkthrough Playwright có luật PASS/FAIL/SKIP. Dùng khi người dùng muốn \"runbook kiểm tay theo AC\", \"checklist nghiệm thu UI\", \"walkthrough bằng Playwright\". Không dùng khi cần test e2e tự động → frontend-e2e-testing; test component → frontend-testing."
 order: 11
 title: "Frontend Manual Check — Runbook kiểm tay theo AC và walkthrough Playwright (recipe on-demand)"
 runsIn: execute
