@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 // SessionStart: nạp quy tắc bootstrap gọi skill, handoff.md và đuôi ledger của plan đang chạy khi mở phiên mới (startup/clear/compact) và cảnh báo khi resume/fork phiên đã nguội cache.
 import { readFileSync, existsSync, statSync, readdirSync, realpathSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readGateConfig, resolveGate } from './gate-config.mjs';
+import { readGateConfig, resolveGate, gateTracked } from './gate-config.mjs';
 
 // Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Bootstrap, ledger và handoff chia chung ngân sách này.
 const MAX_TOTAL = 9000;
@@ -32,13 +31,9 @@ function within(root, p) {
   return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
-// File do git theo dõi đến từ clone (mtime mới sau khi clone), không phải do phiên trước ghi; git lỗi hoặc không phải repo thì coi là chưa theo dõi.
-function trackedByGit(file) {
-  try {
-    execFileSync('git', ['-C', path.dirname(file), 'ls-files', '--error-unmatch', '--', path.basename(file)], { timeout: 3000, stdio: 'ignore' });
-    return true;
-  } catch { return false; }
-}
+// File do git theo dõi đến từ clone (mtime mới sau khi clone), không phải do phiên trước ghi; git lỗi hoặc không phải repo (null)
+// thì coi là chưa theo dõi vì handoff là dữ liệu, không cấp quyền gì.
+const handoffTracked = (file) => gateTracked(file) === true;
 
 function gitInfo(cwd, d) {
   if (!('git' in d)) {
@@ -209,7 +204,7 @@ function resumeLine(input, handoff, cwd) {
 
 export function decide(input, deps = {}) {
   try {
-    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, tracked: trackedByGit, loadConfig: readGateConfig, gitRoots: (dir) => { const g = resolveGate(dir); return g && { top: g.top, main: g.main }; }, ...deps };
+    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, tracked: handoffTracked, loadConfig: readGateConfig, gitRoots: (dir) => { const g = resolveGate(dir); return g && { top: g.top, main: g.main }; }, ...deps };
     const cwd = path.resolve(input?.cwd || '.');
     const cfg = d.loadConfig(cwd);
     const source = input?.source;

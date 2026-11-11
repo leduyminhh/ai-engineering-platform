@@ -1,50 +1,19 @@
 // Đọc <git-root>/.claude/aip-gate.json cho các hook của core; không phải hook, chỉ được import.
-import { readFileSync, existsSync, realpathSync, lstatSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
+import { locateGate, gateTracked, lsFiles, trustedValue } from './gate-file.mjs';
 
-function git(dir, args) {
-  return execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-}
+export { gateTracked, lsFiles };
 
-// null = file thiếu hẳn; { invalid } = tồn tại nhưng không đọc/parse được hoặc không phải đối tượng; { config } = hợp lệ.
-function readState(root) {
-  let raw;
-  try { raw = readFileSync(path.join(root, '.claude', 'aip-gate.json'), 'utf8'); } catch (e) { return e?.code === 'ENOENT' ? null : { invalid: true }; }
-  try {
-    const config = JSON.parse(raw.replace(/^﻿/, ''));
-    return config && typeof config === 'object' && !Array.isArray(config) ? { config } : { invalid: true };
-  } catch { return { invalid: true }; }
-}
-
-// Gốc worktree trước rồi tới gốc repo chính: worktree con tạo trước khi commit file cấu hình vẫn theo project.
-// Thư mục có thể chưa tồn tại (Write tạo mới) nên đi lên thư mục cha gần nhất đã có.
-// `roots` gồm gốc worktree và gốc repo chính (loại trùng) để hook `full` biết file đích thuộc project nào.
+// Hook chỉ nhận cấu hình trong repo git (R4): thư mục ngoài repo không có gốc nào để neo, kể cả khi thư mục cha có file.
 export function resolveGate(dir) {
-  let d = path.resolve(dir || '.');
-  while (!existsSync(d) && path.dirname(d) !== d) d = path.dirname(d);
-  let top;
-  try { top = git(d, ['rev-parse', '--show-toplevel']); } catch { return null; }
-  let main = null;
-  try {
-    const common = git(d, ['rev-parse', '--path-format=absolute', '--git-common-dir']);
-    // Submodule: common-dir là <cha>/.git/modules/<tên>, dirname của nó nằm trong .git của repo cha; dùng gốc của chính submodule (cùng guard với route.mjs).
-    main = path.basename(common) === '.git' ? path.dirname(common) : top;
-  } catch { /* chỉ còn gốc worktree */ }
-  const roots = [...new Set([top, main].filter(Boolean).map((r) => path.resolve(r)))];
-  const own = readState(top);
-  const base = { roots, top: path.resolve(top), main: main ? path.resolve(main) : null };
-  // File worktree hỏng vẫn che file repo chính: rơi về repo chính sẽ cấp `full` từ một cấu hình mà người dùng đã cố ghi đè.
-  if (own?.invalid) return { ...base, config: null, file: path.resolve(top, '.claude', 'aip-gate.json'), source: 'worktree-invalid' };
-  const config = own?.config ?? (main ? readState(main)?.config : null) ?? null;
-  const file = config ? path.resolve(own ? top : main, '.claude', 'aip-gate.json') : null;
-  return { ...base, config, file, source: own ? 'worktree' : (config ? 'main' : null) };
+  const g = locateGate(dir);
+  return g.inRepo ? g : null;
 }
 
 export function readGate(dir) {
   const g = resolveGate(dir);
-  return g?.config ? { config: g.config, roots: g.roots, file: g.file } : null;
+  return g?.config ? g : null;
 }
 
 export function readGateConfig(dir) {
@@ -54,33 +23,6 @@ export function readGateConfig(dir) {
 // `full` chỉ hiệu lực khi cả cấu hình lẫn phiên đều đồng ý: bypassPermissions do người dùng bật, không do repo tự quyết.
 export function effectiveMode(config, input) {
   return input?.permission_mode === 'bypassPermissions' && config && typeof config === 'object' && config.mode === 'full' ? 'full' : 'ask';
-}
-
-const trackedCache = new Map();
-export const lsFiles = (dir, spec) => { execFileSync('git', ['-C', dir, 'ls-files', '--error-unmatch', '--', spec], { timeout: 3000, stdio: ['ignore', 'ignore', 'ignore'] }); return 0; };
-
-// true/false khi git trả đúng exit 0/1; mọi kết quả khác (128, không có git, quá giờ, run trả không phải số) là null.
-// Hỏi repo thật sự chứa file (realpath: .claude có thể là symlink hay submodule) bằng pathspec icase: FS không phân biệt hoa thường
-// còn pathspec thì có, nên AIP-GATE.json đã commit vẫn được hook đọc mà ls-files thường báo chưa theo dõi.
-// Symlink: file hay `.claude` là link đã commit thì đích có thể chưa theo dõi nên kiểm cả đường dẫn logic lẫn đường dẫn thật;
-// một trong hai theo dõi ⇒ true, không xác định được ⇒ null. Tối đa 2 lời gọi git mỗi file.
-// Có `run` (seam test) thì bỏ qua cache để đếm lời gọi xác định.
-export function gateTracked(file, { run = lsFiles } = {}) {
-  const useCache = run === lsFiles;
-  if (useCache && trackedCache.has(file)) return trackedCache.get(file);
-  const ask = (dir, name) => {
-    try { const r = run(dir, `:(icase)${name}`); return r === 0 ? true : r === 1 ? false : null; } catch (e) { return e?.status === 1 ? false : null; }
-  };
-  const root = path.dirname(path.dirname(file));
-  let linkedDir = false;
-  try { linkedDir = lstatSync(path.dirname(file)).isSymbolicLink(); } catch { /* realpath bên dưới sẽ báo null */ }
-  // `.claude` là link: ls-files không báo lỗi mà trả exit 1 cho đường dẫn xuyên link, nên hỏi chính mục `.claude`; link chưa commit ⇒ không đoán được ⇒ null.
-  const logical = linkedDir ? (ask(root, '.claude') === true ? true : null) : ask(path.dirname(file), path.basename(file));
-  let real;
-  try { const rp = realpathSync.native(file); real = ask(path.dirname(rp), path.basename(rp)); } catch { real = null; }
-  const res = logical === true || real === true ? true : logical === null || real === null ? null : false;
-  if (useCache) trackedCache.set(file, res);
-  return res;
 }
 
 // Repo không đáng tin tự cấp `full`: file cấu hình đã commit đến từ clone nên bị bỏ qua; exit lạ ⇒ không full (hỏi thừa là hướng an toàn).
@@ -105,8 +47,8 @@ export function fullRoots(config) {
   return v.filter((x) => typeof x === 'string' && path.isAbsolute(x)).map((x) => path.resolve(x));
 }
 
-export function envFilesAllowed(dir) {
-  return readGateConfig(dir)?.allowEnvFiles === true;
+export function envFilesAllowed(dir, { tracked } = {}) {
+  return trustedValue(resolveGate(dir), 'allowEnvFiles', { tracked }) === true;
 }
 
 // Git Bash/Cygwin đưa đường dẫn kiểu /e/x hay /cygdrive/e/x; Node trên Windows sẽ hiểu thành E:\e\x (sai ổ) nếu không đổi trước.
