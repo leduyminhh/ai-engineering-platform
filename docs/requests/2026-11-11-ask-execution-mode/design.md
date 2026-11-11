@@ -1,6 +1,6 @@
 # Thiết kế: luôn hỏi cách thực thi plan, nhớ câu trả lời làm gợi ý
 - Ngày: 2026-11-11
-- Trạng thái: approved — G1 duyệt 2026-11-11
+- Trạng thái: in-progress — G1, G2 duyệt 2026-11-11; G3 giữ nguyên, nhánh feature/ask-execution-mode chờ merge
 - Requirement: không có
 
 ## Vấn đề và lý do
