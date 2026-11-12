@@ -95,4 +95,16 @@ export default async function run({ ok, ctx }) {
       ok(asks(c, { full: true }), `AC2.3: full — chuỗi con có lệnh ghi vẫn hỏi: ${c}`);
     }
   }
+
+  // ── Task 3: file bí mật bỏ qua lệnh metadata và mẫu tìm kiếm (AC2.2)
+  {
+    for (const c of ['git log -- .env', 'git log --oneline -5 -- credentials', 'ls credentials', 'grep -rn credentials src', 'npm test -- --grep "credentials"',
+      'npm test -- --grep=credentials', 'rg --glob "*.ts" credentials', 'ls -la .env', 'grep -e credentials src', 'git log --format=%H --name-only -3 -- id_rsa']) {
+      ok(bash(c) === null, `AC2.2: lệnh metadata hoặc mẫu tìm kiếm không in nội dung file bí mật → không hỏi: ${c}`);
+    }
+    for (const c of ['git log -p -- .env', 'git log --patch -- .env', 'git log -S token -- .env', 'git log -L1,5:.env', 'git log --textconv -- .env', 'git diff -- .env', 'grep x .env',
+      'grep -rn credentials credentials.json', 'grep -e foo .env', 'cat .env', 'git log -- .env | xargs cat', 'ls .env > out', 'grep -- .env src', 'ls $(cat .env)']) {
+      ok(asks(c), `AC2.2: lệnh có thể in nội dung file bí mật vẫn hỏi: ${c}`);
+    }
+  }
 }
