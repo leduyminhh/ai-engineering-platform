@@ -160,6 +160,42 @@ export default async function run({ ok, ctx }) {
     }
   }
 
+  // ── Task 4: guard-bash reason theo khuôn, kèm dòng "Lệnh gồm" (AC1.1–AC1.4)
+  {
+    const cases = [
+      ['push nhánh bảo vệ', 'git push origin master', {}, ['master']],
+      ['push force', 'git push --force origin x', {}, []],
+      ['push không biết nhánh đích', 'git push origin $B', {}, []],
+      ['ghi cấu hình quyền', 'echo x > .claude/aip-gate.json', {}, ['aip-gate.json']],
+      ['nhắc file bí mật .env', 'cat .env', {}, ['.env']],
+      ['nhắc file bí mật .pem', 'cat certs/server.pem', {}, ['server.pem']],
+      ['commit nháy chưa đóng', 'git commit -m "é', {}, []],
+      ['full + đường dẫn không rõ', 'rm -rf $X', { full: true }, []],
+    ];
+    for (const [name, cmd, o, tokens] of cases) {
+      const r = bash(cmd, o);
+      ok(r?.decision === 'ask' && shapeOk(r.reason) && tokens.every((t) => r.reason.includes(t)) && r.reason.split('\n').length <= 2,
+        `AC1.1/AC1.2: guard-bash — ${name} → ask theo khuôn, nêu token khớp: ${cmd}`);
+    }
+    // Phiên không chạy ở chế độ bỏ qua hỏi quyền trong project full
+    const nb = gb.decide({ tool_name: 'Bash', cwd: '.', permission_mode: 'default', tool_input: { command: 'curl http://x' } },
+      { config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false, currentBranch: () => 'feature/x' });
+    ok(nb?.decision === 'ask' && shapeOk(nb.reason) && nb.reason.includes('aip mode ask'), 'AC1.1: guard-bash — full nhưng phiên không bỏ qua hỏi quyền → ask theo khuôn, còn gợi ý aip mode ask');
+
+    const chain = bash('git add -A && git commit -m x && git push origin master');
+    const line = chain?.reason.split('\n').find((l) => l.startsWith('Lệnh gồm:')) ?? '';
+    const order = ['git add', 'git commit', 'git push'].map((w) => line.indexOf(w));
+    ok(order.every((i) => i >= 0) && order[0] < order[1] && order[1] < order[2], 'AC1.3: dòng "Lệnh gồm:" liệt kê các bước theo thứ tự');
+    const long = bash('echo 1; echo 2; echo 3; echo 4; echo 5; echo 6; echo 7; git push origin master')?.reason.split('\n').find((l) => l.startsWith('Lệnh gồm:')) ?? '';
+    ok(long.includes('2 bước khác') && !long.includes('git push'), 'AC1.3: lệnh 8 bước chỉ liệt kê 6, nêu "2 bước khác"');
+
+    const deny = bash('rm /popup-elsewhere/x', { full: true });
+    ok(deny?.decision === 'deny' && deny.reason.includes('fullRoots'), 'AC1.4: guard-bash — deny full ngoài project vẫn nhắc fullRoots');
+
+    const { showArg } = await hook('gate-config.mjs');
+    ok(!new RegExp('[\p{Cc}\p{Cf}\u2028\u2029`]', 'u').test(showArg('a`b[31m‮c de')), 'AC1.1: showArg bỏ ký tự điều khiển, bidi và backtick');
+  }
+
   // ── Task 3: file bí mật bỏ qua lệnh metadata và mẫu tìm kiếm (AC2.2)
   {
     for (const c of ['git log -- .env', 'git log --oneline -5 -- credentials', 'ls credentials', 'grep -rn credentials src', 'npm test -- --grep "credentials"',
