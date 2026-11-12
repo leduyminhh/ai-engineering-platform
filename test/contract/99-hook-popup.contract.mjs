@@ -281,6 +281,30 @@ export default async function run({ ok, ctx }) {
     for (const [cmd, why] of mustStop) {
       ok(bash(cmd.replaceAll('\\n', '\n'), withScratch) !== null, `AC6.3: full — không tin phép gán (${why}) nên vẫn bị hỏi hoặc chặn: ${cmd.replace(/\\n/g, '⏎')}`);
     }
+    // Vòng sửa 2: dòng chứa << phải đơn giản (cat/tee, delimiter có nháy, không | ; &), \s không được gồm BOM/NBSP, . file và S[0]= cũng đổi biến
+    const heredocMustStop = [
+      ["S=" + T + "\ncat <<'EOF' > /etc/x\nx\nEOF", 'cat <<EOF ghi ra ngoài root'],
+      ["S=" + T + "\ncat <<'EOF' >> /etc/x\nx\nEOF", 'cat <<EOF >> ngoài root'],
+      ["S=" + T + "\ncat <<'EOF' | tee /etc/x\nx\nEOF", 'cat <<EOF | tee ngoài root'],
+      ["S=" + T + "\ncat <<'EOF'; rm -rf /etc/x\nx\nEOF", 'cat <<EOF; rm'],
+      ["S=" + T + "\ncat <<'EOF' && rm -rf /etc/x\nx\nEOF", 'cat <<EOF && rm'],
+      ["S=" + T + "\ntee <<'EOF' /etc/x\nx\nEOF", 'tee <<EOF ngoài root'],
+      ["S=" + T + "\ncat <<'EOF' | bash\nrm -rf /etc/x\nEOF", 'heredoc đưa vào bash qua pipe'],
+      ["S=" + T + "\ncat x | bash <<'EOF'\nrm -rf /etc/x\nEOF", 'bash <<EOF sau pipe'],
+      ["S=" + T + "\ncat x; bash <<'EOF'\nrm -rf /etc/x\nEOF", 'bash <<EOF sau ;'],
+      ["S=" + T + "\nbash <<\\EOF\nrm -rf $S/etc\nEOF", 'delimiter dạng <<\\EOF'],
+      [String.fromCharCode(0xfeff) + "S=" + T + "; rm -rf $S/etc", 'BOM đứng trước phép gán'],
+      [String.fromCharCode(0xa0) + "S=" + T + "; rm -rf $S/etc", 'NBSP đứng trước phép gán'],
+      [String.fromCharCode(0x0b) + "S=" + T + "; rm -rf $S/etc", 'VT đứng trước phép gán'],
+      ["S=" + T + "; . ./v.sh; rm -rf $S/etc", '. file ngay sau phép gán'],
+      ["S=" + T + ";\t. ./v.sh; rm -rf $S/etc", '. file sau tab'],
+      ["S=" + T + "; S[0]=/etc; rm -rf $S/x", 'gán phần tử mảng'],
+      ['rm -rf ' + fwd(tmpRoot) + '/*', 'glob ngay dưới thư mục gốc claude'],
+    ];
+    for (const [cmd, why] of heredocMustStop) {
+      ok(bash(cmd, withScratch) !== null, `AC6.3: full — ${why} vẫn bị hỏi hoặc chặn: ${cmd.replace(/\n/g, '⏎')}`);
+    }
+    ok(bash("S=" + T + "\ncat <<'EOF' > $S/bin/x\nbody\nEOF\nchmod +x $S/bin/x", withScratch) === null, 'AC6.2: full — cat <<EOF > $S/bin/x trong scratchpad vẫn không hỏi');
     ok(bash(String.raw`S=${scratch}\x; rm -rf $S/x`, withScratch) !== null, 'AC6.3: full — giá trị bare có dấu \\ không được tin');
     ok(bash(`S=${T}/a; Remove-Item -Recurse -Force $S/Users`, { ...withScratch, tool: 'PowerShell' }) !== null && bash(`S=${T}; Get-Content $S/.env`, { ...withScratch, tool: 'PowerShell' }) !== null,
       'AC6.3: PowerShell không dùng phép gán S=… của bash nên không giải biến');
