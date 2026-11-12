@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef, showArg } from './gate-config.mjs';
+import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef, showArg, claudeTmpRoots } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 // Biên gồm cả > : ` @ { , (vd x>.env, HEAD:.env, @.env, {a,.env}) vì tên file dính các ký tự này vẫn được lệnh đọc/ghi.
@@ -269,9 +269,16 @@ function expandShells(segs, depth = 0) {
   return segs.flatMap((t) => [t, ...(depth < 6 ? expandShells(innerSegs(t), depth + 1) : [])]);
 }
 
+// Chỉ phần dưới <tmpdir>/claude là root: xoá hay di chuyển cả thư mục gốc của Claude vẫn bị chặn.
+function isClaudeTmpRoot(p, dir) {
+  const a = path.resolve(dir, p).replace(/[\\/]+$/, '');
+  return claudeTmpRoots().some((r) => (process.platform === 'win32' ? a.toLowerCase() === r.toLowerCase() : a === r));
+}
+
 function classifyTarget(raw, dir, unres, roots, msys = true) {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
+  if (!hasUnresolvedRef(p) && !GLOB.test(p) && isClaudeTmpRoot(p, dir)) return 'outside';
   const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
   if (!absolute && (unres || hasUnresolvedRef(p))) return 'unknown';
   if (GLOB.test(p)) {
@@ -545,33 +552,46 @@ function withoutSearchPatterns(t) {
   return out;
 }
 // Giải biến gán ngay trong cùng lệnh, chỉ để H6 ở chế độ full phân loại đường dẫn (`S=$(cygpath -u '<đường dẫn>'); mkdir -p $S/bin`).
-// Chỉ nhận phép gán đứng đầu lệnh cấp cao nhất (đầu chuỗi, sau `;` hoặc xuống dòng) và nằm trước dấu `<<` đầu tiên, để thân heredoc không giả được phép gán.
-// Giá trị phải là chuỗi literal tuyệt đối không có khoảng trắng, hoặc $(cygpath [cờ] '<literal>'); phép gán khác của cùng tên (vd NAME=$X) xoá giá trị đã biết.
-// Dùng trước khi gán thì không thay. Phép gán có điều kiện (trong if/then xuống dòng) hook tin là đã chạy: rủi ro còn lại, chỉ ở full vốn là heuristic không phải sandbox.
-const ASSIGN_AT = /(^|[\n;])[ \t]*([A-Za-z_]\w*)=/g;
-const ASSIGN_CYGPATH = /\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+(?:'([^']*)'|"([^"$`]*)")\s*\)/y;
-const ASSIGN_LITERAL = /(?:'([^']*)'|"([^"$`]*)"|([^\s'"$`;&|()<>*?[\]{}~]+)(?=[\s;&|)]|$))/y;
+// Chỉ nhận khối phép gán ở ĐẦU chuỗi, mỗi phép gán kết thúc đúng bằng `;` hoặc xuống dòng (nên chắc chắn đã chạy ở cấp cao nhất); giá trị là literal tuyệt đối không có khoảng trắng hoặc $(cygpath [cờ] '<literal>').
+// Bỏ tên biến khi phần còn lại của lệnh nhắc tới việc gán hay đổi nó (NAME=, NAME+=, NAME in, unset/read/eval/source…); không áp cho PowerShell (S=… không phải phép gán ở đó);
+// heredoc chỉ được phép với cat/tee và delimiter có nháy (thân không chạy lệnh, không có $( )); thân heredoc được bỏ trước khi tách. Không thoả điều kiện nào thì trả nguyên lệnh (hỏi như cũ).
+const ASSIGN_LEAD = /\s*([A-Za-z_]\w*)=/y;
+const ASSIGN_VALUE = /(?:\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+'([^']*)'\s*\)|\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+"([^"$`\\]*)"\s*\)|'([^']*)'|"([^"$`\\]*)"|([^\s'"$`;&|()<>*?[\]{}~\\]+))(?=[ \t]*(?:;|\r?\n|$))/y;
+const ASSIGN_TAIL = /[ \t]*(?:;|\r?\n)?/y;
+const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|(?:^|[;&|\n(]\s*)\.\s/;
 const absoluteLiteral = (v) => typeof v === 'string' && v !== '' && !/[\s$`*?[\]{}~]/.test(v) && (v.startsWith('/') || /^[A-Za-z]:[\\/]/.test(v));
-function substituteVars(cmd) {
-  const heredoc = cmd.indexOf('<<');
-  const head = heredoc < 0 ? cmd : cmd.slice(0, heredoc);
-  const events = [];
-  for (const m of head.matchAll(ASSIGN_AT)) {
-    const at = m.index + m[0].length;
-    ASSIGN_CYGPATH.lastIndex = at;
-    ASSIGN_LITERAL.lastIndex = at;
-    const c = ASSIGN_CYGPATH.exec(head);
-    const l = c ? null : ASSIGN_LITERAL.exec(head);
-    const hit = c ?? l;
-    const value = hit ? (hit[1] ?? hit[2] ?? hit[3]) : undefined;
-    events.push({ name: m[2], pos: at + (hit ? hit[0].length : 0), value: absoluteLiteral(value) ? value : null });
+function substituteVars(cmd, tool) {
+  if (tool === 'PowerShell') return cmd;
+  const known = new Map();
+  let pos = 0;
+  for (;;) {
+    ASSIGN_LEAD.lastIndex = pos;
+    const lead = ASSIGN_LEAD.exec(cmd);
+    if (!lead) break;
+    ASSIGN_VALUE.lastIndex = ASSIGN_LEAD.lastIndex;
+    const v = ASSIGN_VALUE.exec(cmd);
+    if (!v) break;
+    const value = v[1] ?? v[2] ?? v[3] ?? v[4] ?? v[5];
+    known.set(lead[1], absoluteLiteral(value) ? value : null);
+    ASSIGN_TAIL.lastIndex = ASSIGN_VALUE.lastIndex;
+    ASSIGN_TAIL.exec(cmd);
+    if (ASSIGN_TAIL.lastIndex === ASSIGN_VALUE.lastIndex) { pos = ASSIGN_TAIL.lastIndex; break; }
+    pos = ASSIGN_TAIL.lastIndex;
   }
-  if (!events.length) return cmd;
-  return cmd.replace(/\$(?:\{([A-Za-z_]\w*)\}|([A-Za-z_]\w*))/g, (whole, braced, plain, p) => {
-    const name = braced ?? plain;
-    const last = events.filter((e) => e.name === name && e.pos <= p).pop();
-    return last?.value ?? whole;
-  });
+  const rest = cmd.slice(pos);
+  if (![...known.values()].some(Boolean) || /<<</.test(rest) || VAR_MUTATORS.test(rest)) return cmd;
+  let hasHeredoc = false;
+  for (const m of rest.matchAll(/<<-?[ \t]*(['"]?)(\w+)\1/g)) {
+    hasHeredoc = true;
+    const before = rest.slice(rest.lastIndexOf('\n', m.index) + 1, m.index);
+    if (m[1] === '' || !/^\s*(?:cat|tee)\b/.test(before)) return cmd;
+  }
+  let out = rest;
+  for (const [name, value] of known) {
+    if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*\+?=|\b${name}\s+in\b`).test(rest)) continue;
+    out = out.replace(new RegExp(String.raw`\$(?:\{${name}\}|${name}(?![A-Za-z0-9_]))`, 'g'), () => value);
+  }
+  return cmd.slice(0, pos) + (hasHeredoc ? stripHeredocs(out) : out);
 }
 
 // Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
@@ -633,7 +653,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (full()) {
     const roots = rootsOf();
     let unknownPath = false;
-    const resolved = substituteVars(cmd);
+    const resolved = substituteVars(cmd, input?.tool_name);
     const [fullOuter, fullNaive] = resolved === cmd ? [outer, naiveOuter] : [parse(resolved).segs, naiveSegments(resolved)];
     for (const { t, dir, unres } of [...trackDirs(fullOuter, cwd, msys), ...trackDirs(fullNaive, cwd, msys)]) {
       const r = confineSegment(t, dir, unres, roots, msys);
@@ -648,7 +668,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     return ask(FULL_NO_BYPASS_TEXT);
   }
   // Ở full, đường dẫn bí mật cũng được giải biến gán cùng lệnh như H6 (tính một lần, chỉ khi cần).
-  const variableLists = () => { const r = substituteVars(cmd); return r === cmd ? [outer, naiveOuter] : [parse(r).segs, naiveSegments(r)]; };
+  const variableLists = () => { const r = substituteVars(cmd, input?.tool_name); return r === cmd ? [outer, naiveOuter] : [parse(r).segs, naiveSegments(r)]; };
   const hits = (re) => re.test(secretScanText(cmd)) || re.test(secretScanText(raw));
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
   const secretName = (re) => { for (const text of [secretScanText(cmd), secretScanText(raw)]) { const m = re.exec(text); if (m) return m[2]; } return ''; };
