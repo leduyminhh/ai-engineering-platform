@@ -338,9 +338,9 @@ function writeTargets(t) {
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
       if (colon) { targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
-      // Chỉ `-t DIR`, `-tDIR`, `--target-directory[=]DIR` đổi vai đối số vị trí; cờ gộp (`-rt`, `-vt`) hoặc cờ PowerShell có chữ `t` (`-Filter`)
+      // Chỉ `-t DIR` (tách rời) và `--target-directory[=]DIR` đổi vai đối số vị trí; `-tDIR`, cờ gộp (`-rt`) hay cờ PowerShell (`-toSession`, `-Filter`)
       // không phân biệt được nên vừa thêm một đích write phỏng đoán vừa giữ kiểm đích vị trí mặc định, không để cờ nào làm mất đích thật.
-      const exact = gnu && (a === '-t' || a === '--target-directory' ? args[++i] : /^--target-directory=(.+)$/.exec(a)?.[1] ?? /^-t(.+)$/.exec(a)?.[1]);
+      const exact = gnu && (a === '-t' || a === '--target-directory' ? args[++i] : /^--target-directory=(.+)$/.exec(a)?.[1]);
       if (exact) { toDir = true; targets.push(exact); needs.push(['write']); continue; }
       const bundle = gnu ? /^-[A-Za-z]*?t(.*)$/.exec(a) : null;
       if (bundle) {
