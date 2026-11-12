@@ -466,13 +466,15 @@ const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(nam
 const MAX_STEPS = 6;
 // Chỉ dùng thông tin có sẵn từ parse (tên lệnh, lệnh con git, đích chuyển hướng); không đoán số file vì git commit -m không nêu file nào.
 function summarize(cmd) {
-  const p = parse(cmd);
+  const p = parse(stripSimpleHeredocs(cmd) ?? cmd);
   const steps = [];
   let total = 0;
+  let nested = false;
   for (const t of expandShells(p.segs)) {
     const [tk, k] = unwrap(t);
     if (k >= tk.length || String(tk[k]).startsWith('#')) continue;
     total++;
+    if (/\$\(|`|<\(/.test(tk.join(' '))) nested = true;
     if (steps.length >= MAX_STEPS) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
     const target = writeTargets(t).targets.find((x) => !NULL_DEVICE.test(x));
@@ -480,7 +482,7 @@ function summarize(cmd) {
   }
   if (!total) return '';
   const more = total > MAX_STEPS ? `, … và ${total - MAX_STEPS} bước khác` : '';
-  const open = p.unclosed ? ' (nháy chưa đóng: danh sách có thể thiếu bước)' : '';
+  const open = (p.unclosed ? ' (nháy chưa đóng: danh sách có thể thiếu bước)' : '') + (nested ? ' (có lệnh lồng trong nháy: xem khối lệnh bên dưới)' : '');
   return `Lệnh gồm: ${steps.join(', ')}${more}.${open}`;
 }
 
@@ -705,9 +707,11 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   }
   // Ở full, đường dẫn bí mật cũng được giải biến gán cùng lệnh như H6 (tính một lần, chỉ khi cần).
   const variableLists = () => { const r = substituteVars(cmd, input?.tool_name); return r === cmd ? [outer, naiveOuter] : [parse(r).segs, naiveSegments(r)]; };
-  const hits = (re) => re.test(secretScanText(cmd)) || re.test(secretScanText(raw));
+  let scanned;
+  const scans = () => (scanned ??= [secretScanText(cmd), secretScanText(raw)]);
+  const hits = (re) => scans().some((text) => re.test(text));
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
-  const secretName = (re) => { for (const text of [secretScanText(cmd), secretScanText(raw)]) { const m = re.exec(text); if (m) return m[2]; } return ''; };
+  const secretName = (re) => { for (const text of scans()) { const m = re.exec(text); if (m) return m[2]; } return ''; };
   const secretAsk = (re) => ask(secretText(secretName(re)));
   if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk(hits(KEY_SECRET) ? KEY_SECRET : SECRET);
   // Ở full, bí mật chỉ mở trong root của project: đường dẫn bí mật nằm ngoài root hoặc không xác định được vẫn hỏi (khớp guard-files).
