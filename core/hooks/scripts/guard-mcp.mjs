@@ -2,7 +2,7 @@
 // PreToolUse(mcp__.*): chặn tool của server MCP theo mcpAllow/mcpDeny trong <git-root>/.claude/aip-gate.json; chặn start_session thiếu model.
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { readGate, fullEffective } from './gate-config.mjs';
+import { gateForGuard, fullEffective } from './gate-config.mjs';
 
 // mcp__<server>__<tool> → server; mcp__plugin_<plugin>_<server>__<tool> → "plugin:<plugin>:<server>" (tên plugin không chứa "_").
 export function parseMcpTool(name) {
@@ -29,12 +29,15 @@ function startSessionWithoutModel(input) {
   return typeof ti?.model !== 'string' || !ti.model.trim();
 }
 
-export function decide(input, { config, tracked } = {}) {
+export function decide(input, { config, tracked, locate = gateForGuard } = {}) {
   const t = parseMcpTool(input?.tool_name);
   if (!t) return null;
   // Chạy trước cấu hình: không phụ thuộc aip-gate.json và không đổi mcpAllow/mcpDeny (các nhánh dưới vẫn chạy khi có model).
   if (startSessionWithoutModel(input)) return { decision: 'deny', reason: 'start_session thiếu `model` nên phiên mới kế thừa model của phiên cha (thường opus). Truyền `model`: phiên thực thi mặc định là sonnet (mục "Model and session routing" của baseline); cần opus thì truyền tường minh.' };
-  const gate = config === undefined ? readGate(input?.cwd) : { config };
+  const found = config === undefined ? locate(input?.cwd) : { gate: { config }, invalid: null };
+  // Không đọc được mcpDeny thì không biết server này có bị chặn không: hỏi thay vì cho qua im lặng.
+  if (found.invalid) return { decision: 'ask', reason: `Không đọc được file cấu hình quyền \`${found.invalid}\` (JSON hỏng) nên không biết server MCP "${t.server}" có nằm trong danh sách chặn của bạn không. Cho phép thì tool chạy mà không qua danh sách đó. Nên từ chối, sửa file rồi chạy lại.` };
+  const gate = found.gate;
   const cfg = gate?.config;
   if (!cfg || typeof cfg !== 'object') return null;
   const deny = nameList(cfg.mcpDeny);

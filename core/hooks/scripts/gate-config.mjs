@@ -17,6 +17,13 @@ export function readGate(dir) {
   return g?.config ? g : null;
 }
 
+// Cho khoá chỉ siết (mcpAllow/mcpDeny): gitUnknown vẫn dùng file đã đọc được, file hỏng được báo riêng để hook hỏi thay vì bỏ qua im lặng.
+export function gateForGuard(dir) {
+  const g = locateGate(dir);
+  if (!g.inRepo) return { gate: null, invalid: null };
+  return { gate: g.config ? g : null, invalid: g.source === 'worktree-invalid' ? g.file : (g.mainInvalid ?? null) };
+}
+
 export function readGateConfig(dir) {
   return readGate(dir)?.config ?? null;
 }
