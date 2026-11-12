@@ -12,7 +12,7 @@ export default async function run({ ok, ctx }) {
     const none = () => ({ gate: null, invalid: null });
 
     const bad = call('mcp__a__t', broken('/repo/.claude/aip-gate.json'));
-    ok(bad?.decision === 'ask' && bad.reason.includes('/repo/.claude/aip-gate.json') && bad.reason.includes('a'),
+    ok(bad?.decision === 'ask' && bad.reason.includes('/repo/.claude/aip-gate.json') && bad.reason.includes('"a"'),
       'AC3.2: file aip-gate.json hỏng → ask mọi tool MCP, lý do nêu đường dẫn file');
     ok(call('Bash', broken('/repo/.claude/aip-gate.json')) === null, 'AC3.2: tool không phải MCP không bị ảnh hưởng khi file hỏng');
     const START = 'mcp__ccd_session__start_session';
@@ -41,6 +41,34 @@ export default async function run({ ok, ctx }) {
       ok(mcp.decide({ tool_name: 'mcp__b__t', cwd: outside }, {}) === null, 'AC3.3: ngoài repo git → null (R3/R4)');
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
+    }
+
+    // AC3.2 trong git repo thật: CLI trả ask khi file hỏng ở repo chính, cả khi chạy từ worktree liên kết (nhánh mainInvalid)
+    const real = fs.mkdtempSync(path.join(os.tmpdir(), 'aip-popup-git-'));
+    const main = path.join(real, 'main');
+    const wt = path.join(real, 'wt');
+    const git = (...a) => execFileSync('git', ['-C', main, '-c', 'user.name=t', '-c', 'user.email=t@t', ...a], { stdio: 'ignore' });
+    try {
+      fs.mkdirSync(main);
+      git('init', '-q');
+      git('commit', '-q', '--allow-empty', '-m', 'init');
+      git('worktree', 'add', '-q', wt, '-b', 'wt-branch');
+      fs.mkdirSync(path.join(main, '.claude'));
+      const gateFile = path.join(main, '.claude', 'aip-gate.json');
+      fs.writeFileSync(gateFile, '{ hỏng');
+      const cli = (cwd) => {
+        const out = execFileSync(process.execPath, [path.join(CORE_DIR, 'hooks', 'scripts', 'guard-mcp.mjs')], { input: JSON.stringify({ tool_name: 'mcp__a__t', cwd }), encoding: 'utf8' });
+        return out ? JSON.parse(out).hookSpecificOutput : null;
+      };
+      for (const [where, cwd] of [['repo chính', main], ['worktree liên kết', wt]]) {
+        const o = cli(cwd);
+        ok(o?.permissionDecision === 'ask' && o.permissionDecisionReason.includes('aip-gate.json'), `AC3.2: CLI trong git repo thật, file hỏng ở repo chính, chạy từ ${where} → ask`);
+      }
+      fs.writeFileSync(gateFile, JSON.stringify({ mcpDeny: ['a'] }));
+      ok(cli(wt)?.permissionDecision === 'deny', 'AC3.1: CLI từ worktree đọc mcpDeny của repo chính → deny');
+    } finally {
+      try { git('worktree', 'remove', '--force', wt); } catch { /* dọn thư mục bên dưới */ }
+      fs.rmSync(real, { recursive: true, force: true });
     }
   }
   // ── guard-bash helpers dùng chung cho Task 2–4
