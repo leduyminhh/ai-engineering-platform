@@ -173,7 +173,7 @@ const LAST_ONLY = new Set(['cp', 'copy', 'copy-item']);
 const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content']);
 const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
-const SHELLS = new Set(['bash', 'sh', 'zsh', 'pwsh', 'powershell']);
+const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh', 'tcsh', 'cmd', 'pwsh', 'powershell']);
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
 const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul|\$null)$/i;
 const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
@@ -191,7 +191,19 @@ function unwrap(tokens) {
   let k = 0;
   while (k < t.length) {
     const n = cmdName(t[k]);
-    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec'].includes(n)) { k++; continue; }
+    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec', 'busybox'].includes(n)) {
+      k++;
+      if (n === 'command') while (t[k]?.startsWith('-')) k++;
+      continue;
+    }
+    // Các tiền tố bọc ít gặp: bỏ cờ của chúng để lệnh thật (cp, tee, rm…) lộ ra cho H6 và kiểm cấu hình hook.
+    if (n === 'time') { k++; while (t[k]?.startsWith('-')) k++; continue; }
+    if (n === 'doas' || n === 'ionice' || n === 'stdbuf') {
+      k++;
+      const value = n === 'doas' ? /^-[uC]$/ : n === 'ionice' ? /^-[cnpP]$/ : /^-[ioe]$/;
+      while (t[k]?.startsWith('-')) k += value.test(t[k]) ? 2 : 1;
+      continue;
+    }
     if (n === 'sudo') {
       k++;
       while (k < t.length && t[k].startsWith('-')) k += SUDO_VALUE_OPT.test(t[k]) ? 2 : 1;
@@ -227,7 +239,7 @@ function unwrap(tokens) {
   return [t, k];
 }
 
-const SHELL_CMD_FLAG = /^(-[a-z]*c|-command)$/i;
+const SHELL_CMD_FLAG = /^(-[a-z]*c|-command|\/[ck])$/i;
 const EVAL_CMDS = new Set(['eval', 'iex', 'invoke-expression']);
 
 // Chuỗi lệnh con của `bash -c "…"`, `pwsh -Command …`, `eval …`, `iex …`: gitCmd chỉ nhận token đúng tên `git`, nên push nằm trong chuỗi bị che.
@@ -244,9 +256,9 @@ function innerSegs(t) {
   return inner ? parse(inner).segs : [];
 }
 
-// Đoạn con đặt ngay sau đoạn cha để trackDirs giữ đúng thứ tự cd; sâu quá 3 cấp thì dừng.
+// Đoạn con đặt ngay sau đoạn cha để trackDirs giữ đúng thứ tự cd; sâu quá 6 cấp thì dừng.
 function expandShells(segs, depth = 0) {
-  return segs.flatMap((t) => [t, ...(depth < 3 ? expandShells(innerSegs(t), depth + 1) : [])]);
+  return segs.flatMap((t) => [t, ...(depth < 6 ? expandShells(innerSegs(t), depth + 1) : [])]);
 }
 
 function classifyTarget(raw, dir, unres, roots, msys = true) {
@@ -289,11 +301,14 @@ function writeTargets(t) {
   const [tk, k] = unwrap(rest);
   const name = k < tk.length ? cmdName(tk[k]) : '';
   const args = tk.slice(k + 1);
+  let allPos = [];
   if (WRITE_CMDS.has(name)) {
     let pos = [];
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) targets.push(args[++i]); continue; }
+      const colon = /^-(?:path|literalpath|filepath|destination):(.+)$/i.exec(a);
+      if (colon) { targets.push(colon[1]); continue; }
       // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
       if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
       if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
@@ -302,20 +317,23 @@ function writeTargets(t) {
     }
     if (SKIP_FIRST.has(name)) pos = pos.slice(1);
     if (LAST_ONLY.has(name)) pos = pos.slice(-1);
+    // Set-Content/Out-File: cờ có giá trị (-Encoding utf8, -Value x) làm đối số đầu không còn là đích thật; allPos giữ mọi đối số cho kiểm cấu hình hook.
+    allPos = pos;
     if (FIRST_ONLY.has(name)) pos = pos.slice(0, 1);
     targets.push(...pos);
   }
-  return { targets, name, args };
+  return { targets, name, args, allPos };
 }
 
 // Chuỗi con của `bash -c`/`eval` có ghi gì không: đọc bằng parse nên `>` trong nháy của awk hay tên lệnh nằm trong đối số không bị tính.
 // Nháy không đóng làm parse mất cấu trúc: rơi về regex thô như bản cũ (hỏi thừa còn hơn bỏ sót).
-function stringWrites(s) {
+function stringWrites(str) {
+  const s = str.replace(/>\|/g, '>');
   const p = parse(s);
   if (p.unclosed) return WRITE_IN_STRING.test(s);
   return [...expandShells(p.segs), ...expandShells(naiveSegments(s))].some((t) => {
     const w = writeTargets(t);
-    return w.targets.some((x) => !NULL_DEVICE.test(x)) || WRITE_CMDS.has(w.name);
+    return w.targets.some((x) => !NULL_DEVICE.test(x)) || WRITE_CMDS.has(w.name) || indirectWrite(t, w);
   });
 }
 
@@ -391,9 +409,18 @@ const GUARD_CONFIG = /(?:\.claude[\\/]settings(?:\.[\w-]+)?|(?:^|[^\w.-])aip-gat
 const IN_PLACE_FLAG = /^(?:-[a-z]*i|--in-place)/i;
 
 // Chỉ đích ghi mới tính: tên file cấu hình nằm trong message hay đối số đọc không làm lệnh bị hỏi.
+// xargs/find/parallel nhận lệnh ghi qua đối số hay đầu vào pipe nên không có đích ghi nhìn thấy được: coi là ghi khi đoạn có tên lệnh ghi hoặc -exec/-delete.
+const INDIRECT = new Set(['xargs', 'find', 'parallel']);
+const indirectWrite = (t, w = writeTargets(t)) => INDIRECT.has(w.name) && w.args.some((a) => WRITE_CMDS.has(cmdName(a)) || /^-(exec|execdir|delete)$/.test(a));
+
+// Tên file cấu hình đến từ đoạn khác (`echo cfg | xargs rm`) hay từ placeholder: có đoạn ghi gián tiếp và một token giống đường dẫn cấu hình ở bất kỳ đâu thì hỏi.
+function pipedIndirectConfigWrite(list) {
+  return list.some((t) => indirectWrite(t)) && list.some((t) => t.some((x) => !/\s/.test(x) && GUARD_CONFIG.test(x)));
+}
+
 function writesGuardConfig(t) {
-  const { targets, name, args } = writeTargets(t);
-  if (targets.some((p) => GUARD_CONFIG.test(p))) return true;
+  const { targets, name, args, allPos } = writeTargets(t);
+  if (targets.some((p) => GUARD_CONFIG.test(p)) || (FIRST_ONLY.has(name) && allPos.some((p) => GUARD_CONFIG.test(p)))) return true;
   return (name === 'sed' || name === 'perl') && args.some((a) => IN_PLACE_FLAG.test(a)) && args.some((a) => GUARD_CONFIG.test(a));
 }
 
@@ -441,7 +468,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
   // Shell POSIX nối dòng bằng \<xuống dòng>; không nối thì \ thành refspec và che nhánh phía sau. PowerShell đã nối bằng backtick ở psNormalize.
-  const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw.replace(/\\\r?\n/g, ' ');
+  const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw.replace(/\\\r?\n/g, ' ').replace(/>\|/g, '>');
   const cwd = input?.cwd || '.';
   const msys = input?.tool_name !== 'PowerShell';
   // Kiểm rẻ (permission_mode) trước; chỉ đọc cấu hình (tốn lời gọi git) khi một nhánh H1–H3 thật sự cần quyết định.
@@ -475,7 +502,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
   }
-  if ([...segs, ...naiveAll].some(writesGuardConfig)) {
+  if ([...segs, ...naiveAll].some(writesGuardConfig) || pipedIndirectConfigWrite([...segs, ...naiveAll])) {
     return { decision: 'ask', reason: 'Lệnh ghi vào cấu hình của hook an toàn (.claude/aip-gate.json hoặc .claude/settings*.json) cần người dùng xác nhận.' };
   }
   if (full()) {
