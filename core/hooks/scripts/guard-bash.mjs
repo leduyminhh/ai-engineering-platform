@@ -466,6 +466,45 @@ function hasCommitWithMessageFlag(cmd) {
 // Đoạn chỉ đọc metadata (git check-ignore/ls-files, echo, printf) nhắc tên file bí mật mà không đọc nội dung thì không hỏi.
 // Chỉ miễn khi đoạn không chuyển hướng, không pipe sang lệnh sau và cả lệnh không có $( ), `` hay <( ): các đường đó đưa tên file sang lệnh đọc nội dung.
 const META_GIT = new Set(['check-ignore', 'ls-files']);
+const META_NAMES = new Set(['echo', 'printf', 'ls', 'dir']);
+// git log chỉ miễn khi mọi cờ nằm trong danh sách này: -p/--patch/-S/-G/-L/--textconv và cờ lạ in được nội dung file nên vẫn bị hỏi.
+const LOG_SAFE_FLAG = /^(--(oneline|stat|shortstat|numstat|name-only|name-status|follow|all|graph|decorate|abbrev-commit|no-merges)|--(format|pretty|date|since|until|author|max-count|skip)=.*|-\d+|-n\d*)$/;
+function isMetaOnly(t) {
+  const name = cmdName(t[0]);
+  if (META_NAMES.has(name)) return true;
+  const g = name === 'git' ? gitCmd(t) : null;
+  if (!g) return false;
+  if (META_GIT.has(g.sub)) return true;
+  if (g.sub !== 'log') return false;
+  const dd = t.indexOf('--', g.i + 1);
+  return t.slice(g.i + 1, dd < 0 ? undefined : dd).every((a) => !a.startsWith('-') || LOG_SAFE_FLAG.test(a));
+}
+
+// Mẫu tìm kiếm là chuỗi cần tìm chứ không phải file được mở: bỏ khỏi văn bản quét bí mật. Đối số còn lại (đường dẫn) vẫn được quét.
+// Chỉ đối số dương đầu tiên trước mọi "--" của lệnh tìm kiếm, giá trị của -e/--regexp, và giá trị của --grep/--testNamePattern/--filter ở mọi lệnh.
+const SEARCH_CMDS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'ack', 'findstr', 'select-string']);
+const SEARCH_VALUE_FLAGS = new Set(['-f', '--file', '-m', '--max-count', '-A', '-B', '-C', '--glob', '-g', '-t', '--type', '-d', '-D', '--include', '--exclude']);
+function withoutSearchPatterns(t) {
+  const [tk, k] = unwrap(t);
+  const out = tk.slice(0, k + 1);
+  const grepLike = SEARCH_CMDS.has(cmdName(tk[k] ?? ''));
+  let patternSeen = false;
+  let afterDashes = false;
+  for (let i = k + 1; i < tk.length; i++) {
+    const a = tk[i];
+    if (/^--(grep|testNamePattern|filter)=/.test(a)) continue;
+    if (/^--(grep|testNamePattern|filter)$/.test(a)) { out.push(a); i++; continue; }
+    if (!grepLike || afterDashes) { out.push(a); continue; }
+    if (a === '--') { afterDashes = true; out.push(a); continue; }
+    if (/^(-e|--regexp|-[A-Za-z]+e)$/.test(a)) { patternSeen = true; out.push(a); i++; continue; }
+    if (/^--regexp=/.test(a)) { patternSeen = true; continue; }
+    if (SEARCH_VALUE_FLAGS.has(a)) { out.push(a); if (i + 1 < tk.length) out.push(tk[++i]); continue; }
+    if (a.startsWith('-')) { out.push(a); continue; }
+    if (!patternSeen) { patternSeen = true; continue; }
+    out.push(a);
+  }
+  return out;
+}
 // Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
 const HARMLESS_REDIRECT = /(^|\s)(?:\d*>>?&\d+|(?:\d*|&)>>?\s*(?:\/dev\/null|nul|\$null))(?=\s|$|[;&|])/gi;
 function secretScanText(cmd) {
@@ -474,11 +513,10 @@ function secretScanText(cmd) {
   const p = parse(c);
   if (p.unclosed) return cmd;
   const keep = (list) => list.filter((t, k) => {
-    const name = cmdName(t[0]);
-    const meta = name === 'echo' || name === 'printf' || (name === 'git' && META_GIT.has(gitCmd(t)?.sub));
+    const meta = isMetaOnly(t);
     return !meta || list[k + 1]?.op === '|' || t.some((x) => /[<>]/.test(x));
   });
-  return [...keep(p.segs), ...keep(naiveSegments(c))].map((t) => t.join(' ')).join('\n');
+  return [...keep(p.segs), ...keep(naiveSegments(c))].map((t) => withoutSearchPatterns(t).join(' ')).join('\n');
 }
 
 export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked, reader = readGate } = {}) {
