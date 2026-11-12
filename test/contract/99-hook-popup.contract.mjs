@@ -2,6 +2,12 @@
 export default async function run({ ok, ctx }) {
   const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR } = ctx;
   const hook = (name) => import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', name)).href);
+  // Khuôn của reason `ask` (AC1.1): không thuật ngữ nội bộ, có lời khuyên cho phép/từ chối, ngắn; không ghim cả câu.
+  const BANNED = ['nguyên tắc nền', 'hook an toàn', 'fullRoots', 'bypass', 'root'];
+  const shapeOk = (reason) => {
+    const main = String(reason).split('\n').filter((l) => !l.startsWith('Lệnh gồm')).join(' ');
+    return typeof reason === 'string' && !BANNED.some((w) => reason.toLowerCase().includes(w.toLowerCase())) && /cho phép|từ chối/i.test(main) && main.length <= 500;
+  };
 
   // ── Task 1: guard-mcp (AC3.x)
   {
@@ -111,6 +117,25 @@ export default async function run({ ok, ctx }) {
     for (const c of ['bash -c "rm /x"', 'bash -c "echo a > /x"', 'eval "rm /x"', 'bash -c "echo \'x > y\\" ; rm z"']) {
       ok(asks(c, { full: true }), `AC2.3: full — chuỗi con có lệnh ghi vẫn hỏi: ${c}`);
     }
+  }
+
+  // ── Task 5: guard-files reason theo khuôn (AC1.1, AC1.2, AC1.4)
+  {
+    const gf = await hook('guard-files.mjs');
+    const proj = path.resolve('/tmp/popup-proj');
+    const outsideFile = path.resolve('/tmp/popup-elsewhere/notes.txt');
+    const dec = (tool, file, { bypass = false } = {}) => gf.decide(
+      { tool_name: tool, tool_input: { file_path: file }, cwd: proj, ...(bypass ? { permission_mode: 'bypassPermissions' } : {}) },
+      { scopes: {}, repoRoot: proj, allowEnv: () => false, ...(bypass ? { config: { mode: 'full' }, tracked: () => false } : {}) });
+    const cfg = dec('Write', path.join(proj, '.claude', 'aip-gate.json'));
+    ok(cfg?.decision === 'ask' && shapeOk(cfg.reason) && cfg.reason.includes('aip-gate.json'), 'AC1.1: guard-files — ghi cấu hình quyền → ask theo khuôn, nêu tên file');
+    const rd = dec('Read', outsideFile, { bypass: true });
+    ok(rd?.decision === 'ask' && shapeOk(rd.reason) && rd.reason.includes(outsideFile), 'AC1.2: guard-files — đọc ngoài project ở full → ask theo khuôn, nêu đường dẫn');
+    const unk = dec('Read', '$HOME/x.txt', { bypass: true });
+    ok(unk?.decision === 'ask' && shapeOk(unk.reason) && unk.reason.includes('$HOME/x.txt'), 'AC1.1: guard-files — đường dẫn không xác định được → ask theo khuôn');
+    const wr = dec('Write', outsideFile, { bypass: true });
+    ok(wr?.decision === 'deny' && wr.reason.includes('fullRoots'), 'AC1.4: guard-files — ghi ngoài project ở full vẫn deny nhắc fullRoots');
+    ok(!/Lệnh gồm/.test(cfg.reason + rd.reason), 'AC1.3: reason của guard-files không có dòng "Lệnh gồm"');
   }
 
   // ── Task 3: file bí mật bỏ qua lệnh metadata và mẫu tìm kiếm (AC2.2)
