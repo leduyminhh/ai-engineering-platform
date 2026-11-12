@@ -301,9 +301,20 @@ export default async function run({ ok, ctx }) {
       ["S=" + T + "; S[0]=/etc; rm -rf $S/x", 'gán phần tử mảng'],
       ['rm -rf ' + fwd(tmpRoot) + '/*', 'glob ngay dưới thư mục gốc claude'],
     ];
+    heredocMustStop.push(
+      ["S=" + T + "\ncat f # <<'X'\nrm -rf /etc/x\nX", '<<\'X\' nằm trong chú thích'],
+      ["S=" + T + "\ncat \"<<'X'\"\nrm -rf /etc/x\nX", '<<\'X\' nằm trong nháy kép'],
+      ["S=" + T + "\ncat '<<\"X\"'\nrm -rf /etc/x\nX", '<<"X" nằm trong nháy đơn'],
+      ["S=" + T + "\ntee f # <<'X'\nrm -rf /etc/x\nX", 'tee kèm chú thích có <<'],
+      ["S=" + T + "\ncat > f # note <<-\"EOF\"\nrm -rf /etc/x\nEOF", 'chú thích có <<-"EOF"'],
+      ["S=" + T + "\necho \"x\ncat <<'X'\n\"; rm -rf /etc/x\nX", 'dòng << nằm trong chuỗi nháy kép nhiều dòng'],
+      ["S=" + T + "\necho 'x\ncat <<\"X\"\n'; rm -rf /etc/x\nX", 'dòng << nằm trong chuỗi nháy đơn nhiều dòng'],
+      ["S=" + T + "\ncat f # <<'X'\nrm -rf $S/../../victim\nX", 'chú thích có << rồi dùng $S ra ngoài'],
+    );
     for (const [cmd, why] of heredocMustStop) {
       ok(bash(cmd, withScratch) !== null, `AC6.3: full — ${why} vẫn bị hỏi hoặc chặn: ${cmd.replace(/\n/g, '⏎')}`);
     }
+    ok(bash("S=" + T + "\ncat > \"$S/bin/x\" <<'EOF'\nbody\nEOF\nchmod +x \"$S/bin/x\"", withScratch) === null, 'AC6.2: full — cat > "$S/bin/x" <<EOF (đích có nháy) vẫn không hỏi');
     ok(bash("S=" + T + "\ncat <<'EOF' > $S/bin/x\nbody\nEOF\nchmod +x $S/bin/x", withScratch) === null, 'AC6.2: full — cat <<EOF > $S/bin/x trong scratchpad vẫn không hỏi');
     ok(bash(String.raw`S=${scratch}\x; rm -rf $S/x`, withScratch) !== null, 'AC6.3: full — giá trị bare có dấu \\ không được tin');
     ok(bash(`S=${T}/a; Remove-Item -Recurse -Force $S/Users`, { ...withScratch, tool: 'PowerShell' }) !== null && bash(`S=${T}; Get-Content $S/.env`, { ...withScratch, tool: 'PowerShell' }) !== null,
