@@ -560,20 +560,41 @@ function withoutSearchPatterns(t) {
 // Chỉ nhận khối phép gán ở ĐẦU chuỗi, mỗi phép gán kết thúc đúng bằng `;` hoặc xuống dòng (nên chắc chắn đã chạy ở cấp cao nhất); giá trị là literal tuyệt đối không có khoảng trắng hoặc $(cygpath [cờ] '<literal>').
 // Bỏ tên biến khi phần còn lại của lệnh nhắc tới việc gán hay đổi nó (NAME=, NAME+=, NAME in, unset/read/eval/source…); không áp cho PowerShell (S=… không phải phép gán ở đó);
 // heredoc chỉ được phép với cat/tee và delimiter có nháy (thân không chạy lệnh, không có $( )); thân heredoc được bỏ trước khi tách. Không thoả điều kiện nào thì trả nguyên lệnh (hỏi như cũ).
-// Bỏ thân heredoc có delimiter trong nháy (đã được substituteVars kiểm là cat/tee), quét tuyến tính theo dòng: thân chưa có dòng đóng thì phần còn lại là thân, như shell.
-function dropHeredocBodies(text) {
+// Quét từng dòng để bỏ thân heredoc, chỉ khi dòng chứa << là heredoc thật và đơn giản; trả null khi gặp dòng không chắc (substituteVars khi đó không giải biến).
+// `<<` phải nằm ngoài nháy, không có `#` (chú thích che `<<` mà shell vẫn chạy dòng sau), lệnh trước nó là cat/tee, delimiter có nháy, không có | ; & < ( ) hay backtick;
+// dòng mở một chuỗi nháy nhiều dòng (không cân nháy) cũng bị loại vì dòng `<<` kế tiếp khi đó chỉ là nội dung chuỗi. Thân chưa có dòng đóng thì phần còn lại là thân, như shell.
+function lineQuotes(line) {
+  let q = null;
+  const ops = [];
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) { if (q === '"' && c === '\\') { i++; continue; } if (c === q) q = null; continue; }
+    if (c === '\\') { i++; continue; }
+    if (c === '"' || c === "'") { q = c; continue; }
+    if (c === '<' && line[i + 1] === '<') { ops.push(i); i++; }
+  }
+  return { open: q !== null, ops };
+}
+const HEREDOC_BEFORE = /^[ \t]*(?:cat|tee)\b[^|;&<`()#\n]*$/;
+const HEREDOC_AFTER = /^-?[ \t]*(['"])(\w+)\1[^|;&<`()#\n]*$/;
+function stripSimpleHeredocs(rest) {
   const out = [];
   let end = null;
-  for (const line of text.split('\n')) {
+  for (const raw of rest.split('\n')) {
+    const line = raw.replace(/\r$/, '');
     if (end !== null) { if (line.trim() === end) end = null; continue; }
-    out.push(line);
-    const m = /<<-?[ \t]*(['"])(\w+)\1/.exec(line);
-    if (m) end = m[2];
+    const { open, ops } = lineQuotes(line);
+    if (open || ops.length > 1) return null;
+    if (ops.length === 1) {
+      const m = HEREDOC_AFTER.exec(line.slice(ops[0] + 2));
+      if (!m || !HEREDOC_BEFORE.test(line.slice(0, ops[0]))) return null;
+      end = m[2];
+    }
+    out.push(raw);
   }
   return out.join('\n');
 }
 
-const HEREDOC_LINE = /^[ \t]*(?:cat|tee)\b[^|;&<`()\n]*<<-?[ \t]*(['"])(\w+)\1[^|;&<`()\n]*$/;
 const ASSIGN_LEAD = /[ \t\r\n]*([A-Za-z_]\w*)=/y;
 const ASSIGN_VALUE = /(?:\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+'([^']*)'\s*\)|\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+"([^"$`\\]*)"\s*\)|'([^']*)'|"([^"$`\\]*)"|([^\s'"$`;&|()<>*?[\]{}~\\]+))(?=[ \t]*(?:;|\r?\n|$))/y;
 const ASSIGN_TAIL = /[ \t]*(?:;|\r?\n)?/y;
@@ -599,18 +620,14 @@ function substituteVars(cmd, tool) {
   }
   const rest = cmd.slice(pos);
   if (![...known.values()].some(Boolean) || /<<</.test(rest) || VAR_MUTATORS.test(rest)) return cmd;
-  let hasHeredoc = false;
-  for (const line of rest.split('\n')) {
-    if (!line.includes('<<')) continue;
-    hasHeredoc = true;
-    if (!HEREDOC_LINE.test(line.replace(/\r$/, ''))) return cmd;
-  }
-  let out = rest;
+  const stripped = stripSimpleHeredocs(rest);
+  if (stripped === null) return cmd;
+  let out = stripped;
   for (const [name, value] of known) {
     if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*(?:\[[^\]]*\])?\+?=|\b${name}\s+in\b`).test(rest)) continue;
     out = out.replace(new RegExp(String.raw`\$(?:\{${name}\}|${name}(?![A-Za-z0-9_]))`, 'g'), () => value);
   }
-  return cmd.slice(0, pos) + (hasHeredoc ? dropHeredocBodies(out) : out);
+  return cmd.slice(0, pos) + out;
 }
 
 // Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
