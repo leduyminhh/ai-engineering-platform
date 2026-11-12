@@ -121,6 +121,25 @@ export default async function run({ ok, ctx }) {
       [`cat ${D}/.env`, 'ask', 'AC6.3'], [`cat ${T}/.env`, null, 'AC6.3'],
     ]);
 
+    const OUT = u(path.join(tb, 'out'));
+    expectAll([
+      [`mv ${T}/a ${O}/b`, null, 'AC3.6'], [`mv ${T}/a`, null, 'AC3.6'],
+      [`mv ${O}/a ${O}/b`, 'deny', 'AC3.6'], [`mv ${T}/a ${D}/b`, 'deny', 'AC3.6'], [`mv ${D}/a ${T}/b`, 'deny', 'AC3.6'], [`mv ${O}/a`, 'deny', 'AC3.6'],
+      [`mv -t ${O} ${T}/a`, null, 'AC3.7'], [`mv --target-directory=${O} ${T}/a`, null, 'AC3.7'], [`mv --target-directory ${O} ${T}/a`, null, 'AC3.7'], [`mv -t${O} ${T}/a`, null, 'AC3.7'],
+      [`mv -t ${T} ${O}/a`, 'deny', 'AC3.7'], [`mv -t ${D} ${T}/a`, 'deny', 'AC3.7'],
+      [`cp -t ${O} x`, null, 'AC3.8'], [`cp --target-directory=${O} x`, null, 'AC3.8'], [`cp -t ${D} x`, 'deny', 'AC3.8'],
+    ]);
+    expectAll([
+      [`Move-Item ${T}/a ${O}/b`, null, 'AC3.9'], [`Move-Item -Path ${T}/a -Destination ${O}/b`, null, 'AC3.9'], [`Move-Item -LiteralPath ${T}/a -Destination ${O}/b`, null, 'AC3.9'],
+      [`Move-Item ${O}/a ${O}/b`, 'deny', 'AC3.9'], [`Move-Item -Path ${T}/a -Destination:${D}/b`, 'deny', 'AC3.9'], [`Move-Item -Path:${O}/a -Destination ${T}/b`, 'deny', 'AC3.9'],
+      [`Move-Item -LiteralPath:${O}/a -Destination ${T}/b`, 'deny', 'AC3.9'], [`Move-Item -LiteralPath ${O}/a -Destination ${T}/b`, 'deny', 'AC3.9'],
+      [`Copy-Item -Path ${D}/a -Destination ${O}/b`, null, 'AC3.10'], [`Copy-Item -Path:${D}/a -Destination:${O}/b`, null, 'AC3.10'], [`Copy-Item -LiteralPath ${D}/a -Destination ${O}/b`, null, 'AC3.10'],
+      [`Copy-Item -Path ${O}/a -Destination ${D}/b`, 'deny', 'AC3.10'], [`Copy-Item -Path ${O}/a -Destination:${D}/b`, 'deny', 'AC3.10'],
+      [`Copy-Item -Path ${OUT}/a -Destination ${O}/b`, 'ask', 'AC3.10'], [`Copy-Item -Path:${OUT}/a -Destination ${O}/b`, 'ask', 'AC3.10'],
+      [`Set-Content -Path:${D}/f -Value x`, 'deny', 'AC3.4'], [`Out-File -FilePath ${D}/f`, 'deny', 'AC3.4'], [`Out-File -FilePath ${O}/f`, null, 'AC3.4'],
+      [`Remove-Item -Path ${O}/f`, 'deny', 'AC3.3'], [`Remove-Item -LiteralPath:${O}/f`, 'deny', 'AC3.3'], [`Remove-Item -Path:${T}/f`, null, 'AC3.3'],
+    ], { tool: 'PowerShell' });
+
     const denyW = bd(`cp x ${D}/f`);
     const denyD = bd(`rm ${D}/f`);
     ok([denyW, denyD].every((d) => /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason)) && /write/.test(denyW.reason) && /delete/.test(denyD.reason), 'AC6.2: reason deny nêu fullPaths, fullRoots và quyền thiếu');
