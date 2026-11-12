@@ -432,6 +432,37 @@ const indirectWrite = (t, w = writeTargets(t)) => INDIRECT.has(w.name) && writeS
 const isConfigPath = (x) => !/\s/.test(x) && GUARD_CONFIG.test(x);
 
 // Tên file cấu hình đến từ đoạn khác (`echo cfg | xargs rm`) hay từ placeholder: có đoạn ghi gián tiếp và một token giống đường dẫn cấu hình ở bất kỳ đâu thì hỏi.
+// Đích ghi là biến ($F), sed/perl tại-chỗ trên biến, hoặc awk/python/node… tự ghi file: không đọc được đích nên hỏi khi chính lệnh nhắc tên file cấu hình hook.
+const INTERPRETERS = new Set(['awk', 'gawk', 'mawk', 'python', 'python2', 'python3', 'node', 'nodejs', 'perl', 'ruby', 'php', 'lua']);
+function opaqueConfigWrite(list, cmd) {
+  if (!GUARD_CONFIG.test(cmd)) return false;
+  return list.some((t) => {
+    const w = writeTargets(t);
+    if (w.targets.some(hasUnresolvedRef)) return true;
+    if ((w.name === 'sed' || w.name === 'perl') && w.args.some((x) => IN_PLACE_FLAG.test(x)) && w.args.some(hasUnresolvedRef)) return true;
+    return INTERPRETERS.has(w.name) && w.args.some((x) => /[>]|open\(|write/i.test(x));
+  });
+}
+
+// parse coi $( ) và backtick trong nháy là một token: bóc chuỗi bên trong (tối đa 4 lớp) để kiểm cấu hình hook như lệnh thường.
+function substitutedCommands(list) {
+  const found = [];
+  const re = new RegExp('\\$\\(([^()]*)\\)|`([^`]*)`', 'g');
+  for (const t of list) {
+    for (const x of t) {
+      if (!/\$\(|`/.test(x)) continue;
+      let rest = x;
+      for (let depth = 0; depth < 4 && rest.length; depth++) {
+        const inner = [...rest.matchAll(re)].map((m) => m[1] ?? m[2]);
+        if (!inner.length) break;
+        found.push(...inner);
+        rest = rest.replace(re, ' ');
+      }
+    }
+  }
+  return found.flatMap((str) => expandShells(parse(str).segs));
+}
+
 function pipedIndirectConfigWrite(list) {
   return list.some((t) => indirectWrite(t)) && list.some((t) => t.some(isConfigPath));
 }
@@ -460,7 +491,7 @@ const pushText = (r) => (r.kind === 'protected'
 const CONFIG_TEXT = 'Lệnh sửa file cấu hình quyền (.claude/aip-gate.json hoặc settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.';
 const FULL_PATH_TEXT = 'Lệnh ghi hoặc xoá ở đường dẫn chỉ biết lúc chạy (`$VAR`, `~`, `*`), không chắc nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.';
 const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy. Project bật chế độ full nhưng phiên này không chạy ở chế độ bỏ qua hỏi quyền nên vẫn hỏi bạn như bình thường. Cho phép hoặc từ chối từng lần; muốn đổi thì chạy `aip mode ask`.';
-const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
+const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent hoặc bị gửi ra ngoài. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
 
 // Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
 const MAX_STEPS = 6;
@@ -531,7 +562,7 @@ function isMetaOnly(t) {
 // Chỉ bỏ khi chắc chắn: mọi cờ của lệnh tìm kiếm đều là cờ boolean đã biết (hoặc đúng -e/--regexp tách rời); gặp cờ lạ (-f nạp mẫu từ file, -efoo dính liền, --glob, -Path…)
 // thì không bỏ gì, vì khi đó đối số dương đầu có thể chính là file bí mật.
 const SEARCH_CMDS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'ack']);
-const SEARCH_BOOL_FLAG = /^(-[rRniIvwxclLhHsaEFGPoqzuU]+|--(recursive|ignore-case|line-number|count|files-with-matches|files-without-match|invert-match|word-regexp|line-regexp|fixed-strings|extended-regexp|perl-regexp|no-filename|with-filename|quiet|silent|only-matching|text|no-messages|smart-case|hidden|no-ignore))$/;
+const SEARCH_BOOL_FLAG = /^(-[rRniIvwxclLhHsaEFPoqzuU]+|--(recursive|ignore-case|line-number|count|files-with-matches|files-without-match|invert-match|word-regexp|line-regexp|fixed-strings|extended-regexp|perl-regexp|no-filename|with-filename|quiet|silent|only-matching|text|no-messages|smart-case|hidden|no-ignore))$/;
 // Cờ --grep/--testNamePattern/--filter chỉ được bỏ giá trị ở các lệnh chạy test/log đã biết, không phải mọi lệnh.
 const FILTER_RUNNERS = new Set(['npm', 'npx', 'pnpm', 'yarn', 'jest', 'vitest', 'mocha', 'pytest', 'git', 'mvn', 'gradle']);
 function withoutSearchPatterns(t) {
@@ -543,7 +574,7 @@ function withoutSearchPatterns(t) {
   const dd = rest.indexOf('--');
   const flags = (dd < 0 ? rest : rest.slice(0, dd)).filter((a) => a.startsWith('-'));
   const known = SEARCH_CMDS.has(name) && flags.every((a) => a === '-e' || a === '--regexp' || SEARCH_BOOL_FLAG.test(a));
-  let patternSeen = false;
+  let patternSeen = (dd < 0 ? rest : rest.slice(0, dd)).some((a) => a === '-e' || a === '--regexp');
   let afterDashes = false;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
@@ -558,13 +589,7 @@ function withoutSearchPatterns(t) {
   }
   return out;
 }
-// Giải biến gán ngay trong cùng lệnh, chỉ để H6 ở chế độ full phân loại đường dẫn (`S=$(cygpath -u '<đường dẫn>'); mkdir -p $S/bin`).
-// Chỉ nhận khối phép gán ở ĐẦU chuỗi, mỗi phép gán kết thúc đúng bằng `;` hoặc xuống dòng (nên chắc chắn đã chạy ở cấp cao nhất); giá trị là literal tuyệt đối không có khoảng trắng hoặc $(cygpath [cờ] '<literal>').
-// Bỏ tên biến khi phần còn lại của lệnh nhắc tới việc gán hay đổi nó (NAME=, NAME+=, NAME in, unset/read/eval/source…); không áp cho PowerShell (S=… không phải phép gán ở đó);
-// heredoc chỉ được phép với cat/tee và delimiter có nháy (thân không chạy lệnh, không có $( )); thân heredoc được bỏ trước khi tách. Không thoả điều kiện nào thì trả nguyên lệnh (hỏi như cũ).
-// Quét từng dòng để bỏ thân heredoc, chỉ khi dòng chứa << là heredoc thật và đơn giản; trả null khi gặp dòng không chắc (substituteVars khi đó không giải biến).
-// `<<` phải nằm ngoài nháy, không có `#` (chú thích che `<<` mà shell vẫn chạy dòng sau), lệnh trước nó là cat/tee, delimiter có nháy, không có | ; & < ( ) hay backtick;
-// dòng mở một chuỗi nháy nhiều dòng (không cân nháy) cũng bị loại vì dòng `<<` kế tiếp khi đó chỉ là nội dung chuỗi. Thân chưa có dòng đóng thì phần còn lại là thân, như shell.
+// Theo dõi nháy của một dòng và vị trí các `<<` ngoài nháy; trạng thái mở nháy nghĩa là dòng sau chỉ là nội dung chuỗi.
 function lineQuotes(line) {
   let q = null;
   const ops = [];
@@ -577,8 +602,9 @@ function lineQuotes(line) {
   }
   return { open: q !== null, ops };
 }
-const HEREDOC_BEFORE = /^[ \t]*(?:cat|tee)\b[^|;&<`()#\n]*$/;
+const HEREDOC_BEFORE = /^[ \t]*(?:cat|tee)(?=[ \t<])[^|;&<`()#\n]*$/;
 const HEREDOC_AFTER = /^-?[ \t]*(['"])(\w+)\1(?=[ \t]|$)[^|;&<`()#\n]*$/;
+// Bỏ thân heredoc bằng quét từng dòng, chỉ khi dòng có << là heredoc thật và đơn giản (cat/tee, delimiter có nháy kết thúc ở khoảng trắng, không # | ; & < ( ) hay $' ${ $[); null nếu không chắc.
 function stripSimpleHeredocs(rest) {
   const out = [];
   let end = null;
@@ -586,7 +612,7 @@ function stripSimpleHeredocs(rest) {
     const line = raw.replace(/\r$/, '');
     if (end !== null) { if (line.trim() === end) end = null; continue; }
     const { open, ops } = lineQuotes(line);
-    if (open || ops.length > 1 || line.includes("$'")) return null;
+    if (open || ops.length > 1 || /\$['{[(]/.test(line)) return null;
     if (ops.length === 1) {
       const m = HEREDOC_AFTER.exec(line.slice(ops[0] + 2));
       if (!m || !HEREDOC_BEFORE.test(line.slice(0, ops[0]))) return null;
@@ -597,13 +623,15 @@ function stripSimpleHeredocs(rest) {
   return out.join('\n');
 }
 
+// Giải biến gán ở đầu chuỗi cho H6 ở full (`S=$(cygpath -u '<đường dẫn>'); mkdir -p $S/bin`); điều kiện nhận nằm ở ASSIGN_* và VAR_MUTATORS, không thoả thì trả nguyên lệnh.
 const ASSIGN_LEAD = /[ \t\r\n]*([A-Za-z_]\w*)=/y;
 const ASSIGN_VALUE = /(?:\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+'([^']*)'\s*\)|\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+"([^"$`\\]*)"\s*\)|'([^']*)'|"([^"$`\\]*)"|([^\s'"$`;&|()<>*?[\]{}~\\]+))(?=[ \t]*(?:;|\r?\n|$))/y;
 const ASSIGN_TAIL = /[ \t]*(?:;|\r?\n)?/y;
-const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
-const absoluteLiteral = (v) => typeof v === 'string' && v !== '' && !/[\s$`*?[\]{}~]/.test(v) && (v.startsWith('/') || /^[A-Za-z]:[\\/]/.test(v));
+const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
+// Chỉ ký tự đường dẫn thường: nháy, ; # ( ) < > = bị loại vì giá trị được chèn lại vào lệnh rồi parse lại.
+const absoluteLiteral = (v) => typeof v === 'string' && /^[A-Za-z0-9_.\/:\\@%+,-]+$/.test(v) && (v.startsWith('/') || /^[A-Za-z]:[\\/]/.test(v));
 function substituteVars(cmd, tool) {
-  if (tool === 'PowerShell') return cmd;
+  if (tool === 'PowerShell' || cmd.length > 20000) return cmd;
   const known = new Map();
   let pos = 0;
   for (;;) {
@@ -614,6 +642,8 @@ function substituteVars(cmd, tool) {
     const v = ASSIGN_VALUE.exec(cmd);
     if (!v) break;
     const value = v[1] ?? v[2] ?? v[3] ?? v[4] ?? v[5];
+    // IFS đổi cách shell tách $S thành nhiều từ nên mọi phép thay thế sau đó đều sai.
+    if (lead[1] === 'IFS') return cmd;
     known.set(lead[1], absoluteLiteral(value) ? value : null);
     ASSIGN_TAIL.lastIndex = ASSIGN_VALUE.lastIndex;
     ASSIGN_TAIL.exec(cmd);
@@ -621,12 +651,12 @@ function substituteVars(cmd, tool) {
     pos = ASSIGN_TAIL.lastIndex;
   }
   const rest = cmd.slice(pos);
-  if (![...known.values()].some(Boolean) || /<<</.test(rest) || VAR_MUTATORS.test(rest)) return cmd;
+  if (known.size > 20 || ![...known.values()].some(Boolean) || /<<</.test(rest) || VAR_MUTATORS.test(rest)) return cmd;
   const stripped = stripSimpleHeredocs(rest);
   if (stripped === null) return cmd;
   let out = stripped;
   for (const [name, value] of known) {
-    if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*(?:\[[^\]]*\])?\+?=|\b${name}\s+in\b`).test(rest)) continue;
+    if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*(?:\[[^\]\s]{0,64}\])?\+?=|\b${name}\s+in\b`).test(rest)) continue;
     out = out.replace(new RegExp(String.raw`\$(?:\{${name}\}|${name}(?![A-Za-z0-9_]))`, 'g'), () => value);
   }
   return cmd.slice(0, pos) + out;
@@ -685,7 +715,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return ask(pushText(why));
   }
-  if ([...segs, ...naiveAll].some(writesGuardConfig) || pipedIndirectConfigWrite([...segs, ...naiveAll])) {
+  if ([...segs, ...naiveAll].some(writesGuardConfig) || pipedIndirectConfigWrite([...segs, ...naiveAll]) || opaqueConfigWrite([...segs, ...naiveAll], cmd) || substitutedCommands([...segs, ...naiveAll]).some(writesGuardConfig)) {
     return ask(CONFIG_TEXT);
   }
   if (full()) {
