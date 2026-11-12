@@ -64,8 +64,8 @@ export default async function run({ ok, ctx }) {
     const config = { mode: 'full', fullPaths: [
       { path: D, allow: ['read'] }, { path: O, allow: ['read', 'write'] }, { path: T, allow: ['read', 'write', 'delete'] }, { path: W, allow: ['write'] },
     ] };
-    const dec = (tool, file) => files.decide({ tool_name: tool, tool_input: { file_path: file }, cwd: P, permission_mode: 'bypassPermissions' },
-      { scopes: {}, repoRoot: P, allowEnv: () => false, config });
+    const dec = (tool, file, { cfg = config, extra = {}, opts = {} } = {}) => files.decide({ tool_name: tool, tool_input: { file_path: file }, cwd: P, permission_mode: 'bypassPermissions', ...extra },
+      { scopes: {}, repoRoot: P, allowEnv: () => false, config: cfg, ...opts });
     const WRITES = ['Write', 'Edit', 'MultiEdit', 'NotebookEdit'];
     for (const dir of [D, O, T]) for (const tool of ['Read', 'Grep']) ok(dec(tool, path.join(dir, 'a.txt')) === null, `AC3.1: ${tool} vào ${path.basename(dir)} → cho qua`);
     for (const tool of WRITES) {
@@ -81,6 +81,31 @@ export default async function run({ ok, ctx }) {
     const asks = [rw, dec('Read', path.join(D, '.env')), dec('Write', path.join(O, '.env')), dec('Read', path.join(X, 'a.txt'))];
     ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask theo khuôn (cả ask .env và đọc ngoài mọi mục)');
     ok(asks[3].reason.includes(path.join(X, 'a.txt')), 'AC3.11: Read ngoài mọi mục → ask nêu đường dẫn');
+
+    const kindF = (tool, file, opt) => dec(tool, file, opt)?.decision ?? null;
+    const S = path.join(tmp, 's');
+    const CP = path.join(os.tmpdir(), 'claude', 'p');
+    const ro = (p) => ({ path: p, allow: ['read'] });
+    const rows = [
+      ['AC4.1', { mode: 'full', fullReadRoots: [D], fullPaths: [{ path: path.join(D, 'out'), allow: ['read', 'write'] }] }, {}, [['Write', path.join(D, 'out', 'f'), null], ['Write', path.join(D, 'x'), 'deny'], ['Read', path.join(D, 'x'), null]]],
+      ['AC4.2', { mode: 'full', fullRoots: [T], fullPaths: [ro(path.join(T, 'keep')), ro(path.join(P, 'sub')), ro(path.join(S, 'sub')), ro(CP)] }, { scratchpad_dir: S },
+        [['Write', path.join(T, 'keep', 'f'), null], ['Write', path.join(P, 'sub', 'f'), null], ['Write', path.join(S, 'sub', 'f'), null], ['Write', path.join(CP, 'x'), null]]],
+      ['AC4.3', { mode: 'full', fullPaths: [ro(W), { path: W, allow: ['write'] }] }, {}, [['Write', path.join(W, 'a.txt'), null], ['Read', path.join(W, 'a.txt'), null]]],
+      ['AC5.2', { mode: 'full', fullReadRoots: [D] }, {}, [['Read', path.join(D, 'f'), null], ['Grep', path.join(D, 'f'), null], ['Write', path.join(D, 'f'), 'deny']]],
+    ];
+    for (const [ac, cfg, extra, cases] of rows) for (const [tool, file, want] of cases) ok(kindF(tool, file, { cfg, extra }) === want, `${ac}: ${tool} ${path.relative(tmp, file)} → ${want}`);
+
+    // AC5.1: fullRoots: [T] đồng nghĩa mục đủ ba quyền; AC6.1: full không hiệu lực thì fullPaths không đổi kết quả.
+    const probes = [['Read', T], ['Write', T], ['Write', D], ['Read', D], ['Read', O], ['Write', O], ['Read', X], ['Write', X], ['Read', path.join(T, '.env')], ['Write', path.join(T, '.env')]]
+      .map(([tool, dir]) => [tool, path.join(dir, dir.endsWith('.env') ? '' : 'a.txt')]);
+    const same = (a, b, extra = {}, optB = {}) => probes.every(([tool, f]) => JSON.stringify(dec(tool, f, { cfg: a, extra })) === JSON.stringify(dec(tool, f, { cfg: b, extra, opts: optB })));
+    ok(same({ mode: 'full', fullRoots: [T] }, { mode: 'full', fullPaths: [{ path: T, allow: ['read', 'write', 'delete'] }] }), 'AC5.1: guard-files fullRoots: [T] ≡ mục đủ ba quyền');
+    const withPaths = config.fullPaths;
+    ok(same({ mode: 'ask', fullPaths: withPaths }, { mode: 'ask' }), 'AC6.1: guard-files mode ask → y hệt khi không có fullPaths');
+    ok(same({ mode: 'full', fullPaths: withPaths }, { mode: 'full' }, { permission_mode: 'default' }), 'AC6.1: guard-files phiên không bypass → y hệt khi không có fullPaths');
+    const trackedGate = (cfg) => ({ reader: () => ({ config: cfg, file: path.join(P, '.claude', 'aip-gate.json'), roots: [P] }), tracked: () => true });
+    ok(probes.every(([tool, f]) => JSON.stringify(files.decide({ tool_name: tool, tool_input: { file_path: f }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full', fullPaths: withPaths }) }))
+      === JSON.stringify(files.decide({ tool_name: tool, tool_input: { file_path: f }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full' }) }))), 'AC6.1: guard-files aip-gate.json bị git theo dõi → y hệt khi không có fullPaths');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 
   // guard-bash: quyền ghi/xoá theo thư mục (full + bypass).
@@ -96,8 +121,8 @@ export default async function run({ ok, ctx }) {
     const config = { mode: 'full', fullPaths: [
       { path: D, allow: ['read'] }, { path: O, allow: ['read', 'write'] }, { path: T, allow: ['read', 'write', 'delete'] },
     ] };
-    const bd = (cmd, { tool = 'Bash', cfg = config } = {}) => bash.decide({ tool_name: tool, tool_input: { command: cmd }, cwd: P, permission_mode: 'bypassPermissions' },
-      { repoRoot: P, config: cfg, allowEnv: () => false, currentBranch: () => 'feature/x' });
+    const bd = (cmd, { tool = 'Bash', cfg = config, extra = {}, opts = {} } = {}) => bash.decide({ tool_name: tool, tool_input: { command: cmd }, cwd: P, permission_mode: 'bypassPermissions', ...extra },
+      { repoRoot: P, config: cfg, allowEnv: () => false, currentBranch: () => 'feature/x', ...opts });
     const kind = (cmd, opt) => bd(cmd, opt)?.decision ?? null;
     const expectAll = (rows, opt) => { for (const [cmd, want, ac] of rows) ok(kind(cmd, opt) === want, `${ac}: \`${cmd.replaceAll(tb.replace(/\\/g, '/'), '~')}\` → ${want}`); };
 
@@ -156,6 +181,37 @@ export default async function run({ ok, ctx }) {
     const CT = u(path.join(os.tmpdir(), 'claude'));
     expectAll([[`Copy-Item -Path ${CT} -Destination ${O}/b`, 'deny', 'D8'], [`Copy-Item -Path ${CT}/* -Destination ${O}/b`, 'deny', 'D8']], { tool: 'PowerShell' });
     expectAll([[`cp -Path ${D}/a -Destination ${O}/b`, null, 'AC3.10'], [`cp -LiteralPath ${D}/a -Destination ${O}/b`, null, 'AC3.10']], { tool: 'PowerShell' });
+
+    // AC4.1–AC4.4: hợp quyền giữa root, scratchpad, <tmpdir>/claude và fullPaths; D11 chuẩn hoá đường dẫn.
+    const S = u(path.join(tb, 's'));
+    const CP = `${CT}/p`;
+    const all = ['read', 'write', 'delete'];
+    expectAll([[`rm ${D}/out/f`, 'deny', 'AC4.1'], [`cp x ${D}/out/f`, null, 'AC4.1'], [`cp x ${D}/x`, 'deny', 'AC4.1']],
+      { cfg: { mode: 'full', fullReadRoots: [D], fullPaths: [{ path: `${D}/out`, allow: ['read', 'write'] }] } });
+    expectAll([[`rm ${T}/keep/f`, null, 'AC4.2'], [`rm ${P}/sub/f`, null, 'AC4.2'], [`cp x ${P}/sub/f`, null, 'AC4.2'], [`rm ${S}/sub/f`, null, 'AC4.2'], [`rm ${CP}/x`, null, 'AC4.2']],
+      { cfg: { mode: 'full', fullRoots: [T], fullPaths: [`${T}/keep`, `${P}/sub`, `${S}/sub`, CP].map((p) => ({ path: p, allow: ['read'] })) }, extra: { scratchpad_dir: S } });
+    expectAll([[`rm ${T2}/f`, null, 'AC4.3'], [`cp x ${T2}/f`, null, 'AC4.3'], [`rm ${CT}`, 'deny', 'D8']],
+      { cfg: { mode: 'full', fullPaths: [{ path: T2, allow: ['delete'] }, { path: T2, allow: ['write'] }, { path: CT, allow: all }] } });
+    const tOpO = { mode: 'full', fullPaths: [{ path: T, allow: all }, { path: O, allow: ['read', 'write'] }] };
+    expectAll([[`rm ${T}/../${path.basename(O)}/f`, 'deny', 'AC4.4'], [`rm ${T}/sub/../f`, null, 'AC4.4']], { cfg: tOpO });
+    expectAll([[`rm ${T}/f`, null, 'AC4.4']], { cfg: { mode: 'full', fullPaths: [{ path: `${T}/`, allow: all }] } });
+    if (process.platform === 'win32') {
+      expectAll([[`rm ${T.toUpperCase()}/f`, null, 'AC4.4']], { cfg: { mode: 'full', fullPaths: [{ path: T.toLowerCase(), allow: all }] } });
+      ok(fullPaths({ fullPaths: [{ path: T, allow: ['read'] }, { path: T.toUpperCase(), allow: ['write'] }] }).length === 1, 'AC4.4: hai mục chỉ khác hoa/thường gộp thành một');
+    }
+
+    // AC5.1/AC5.2/AC6.1: fullRoots ≡ ba quyền; fullReadRoots chỉ đọc; full không hiệu lực thì fullPaths vô tác dụng.
+    const cmds = [`rm ${T}/f`, `rm ${O}/f`, `rm ${D}/f`, `cp x ${T}/f`, `cp x ${O}/f`, `cp x ${D}/f`, `mv ${T}/a ${T}/b`, `mv ${T}/a ${O}/b`, `mv ${O}/a ${T}/b`, `mv ${D}/a ${T}/b`, `mv -t ${T} ${T}/a`, `cp -t ${T} x`,
+      `rm ${OUT}/f`, `cat ${T}/.env`, 'rm $X/f'];
+    const same = (a, b, optA = {}, optB = {}) => cmds.every((c) => JSON.stringify(bd(c, { cfg: a, ...optA })) === JSON.stringify(bd(c, { cfg: b, ...optB })));
+    ok(same({ mode: 'full', fullRoots: [T] }, { mode: 'full', fullPaths: [{ path: T, allow: all }] }), 'AC5.1: guard-bash fullRoots: [T] ≡ mục đủ ba quyền');
+    expectAll([[`rm ${T}/f`, null, 'AC5.1'], [`mv ${T}/a ${T}/b`, null, 'AC5.1'], [`cp x ${T}/f`, null, 'AC5.1'], [`rm ${O}/f`, 'deny', 'AC5.1']], { cfg: { mode: 'full', fullRoots: [T] } });
+    expectAll([[`rm ${D}/f`, 'deny', 'AC5.2'], [`cp x ${D}/f`, 'deny', 'AC5.2'], [`mv ${D}/a ${T}/b`, 'deny', 'AC5.2']], { cfg: { mode: 'full', fullReadRoots: [D] } });
+    const bare = { mode: 'full' };
+    ok(same({ ...bare, mode: 'ask', fullPaths: config.fullPaths }, { mode: 'ask' }), 'AC6.1: guard-bash mode ask → y hệt khi không có fullPaths');
+    ok(same({ ...bare, fullPaths: config.fullPaths }, bare, { extra: { permission_mode: 'default' } }, { extra: { permission_mode: 'default' } }), 'AC6.1: guard-bash phiên không bypass → y hệt khi không có fullPaths');
+    const trackedGate = (cfg) => ({ config: undefined, reader: () => ({ config: cfg, file: `${P}/.claude/aip-gate.json`, roots: [P] }), tracked: () => true });
+    ok(same(null, null, { opts: trackedGate({ ...bare, fullPaths: config.fullPaths }) }, { opts: trackedGate(bare) }), 'AC6.1: guard-bash aip-gate.json bị git theo dõi → y hệt khi không có fullPaths');
 
     const denyW = bd(`cp x ${D}/f`);
     const denyD = bd(`rm ${D}/f`);
