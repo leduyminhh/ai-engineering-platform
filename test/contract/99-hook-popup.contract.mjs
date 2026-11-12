@@ -108,6 +108,22 @@ export default async function run({ ok, ctx }) {
       ok(asks(c), `AC2.1: đường ghi cấu hình qua dạng bọc/chuyển hướng ít gặp vẫn hỏi: ${c}`);
     }
     ok(bash('find . -name aip-gate.json') === null && bash('echo x | xargs echo .claude/aip-gate.json') === null, 'AC2.1: find/xargs chỉ nhắc tên file cấu hình, không có lệnh ghi → không hỏi');
+    // Vòng sửa 2: khối lệnh/cấu trúc shell, cmd /c không nháy, xargs/parallel với sed -i hoặc sh -c
+    for (const c of ['{ cp x .claude/settings.json; }', 'if true; then cp x .claude/settings.json; fi', 'for i in 1; do cp x .claude/settings.json; done',
+      'while true; do tee .claude/aip-gate.json; done', '! cp x .claude/settings.json', 'true && ! cp x .claude/settings.json', 'if true; then rm .claude/aip-gate.json; fi',
+      String.raw`cmd /c copy x .claude\settings.json`, 'echo .claude/settings.json | xargs sed -i s/a/b/', 'echo .claude/settings.json | xargs perl -pi -e s/a/b/',
+      'parallel sed -i s/a/b/ ::: .claude/settings.json', "find . -name x -exec sh -c 'echo a > .claude/settings.json' \\;",
+      'echo .claude/settings.json | xargs -I{} bash -c "echo x > {}"']) {
+      ok(asks(c), `AC2.1: ghi cấu hình qua cấu trúc shell hoặc wrapper vẫn hỏi: ${c}`);
+    }
+    for (const c of [String.raw`& { Set-Content .claude\aip-gate.json x }`, String.raw`if ($true) { Set-Content .claude\aip-gate.json x }`, String.raw`ForEach-Object { Set-Content .claude\aip-gate.json x }`,
+      String.raw`cmd.exe /c copy x .claude\settings.json`]) {
+      ok(asks(c, { tool: 'PowerShell' }), `AC2.1: PowerShell ghi cấu hình qua khối script vẫn hỏi: ${c}`);
+    }
+    for (const c of ['{ cat .claude/settings.json; }', 'for f in .claude/settings.json; do cat $f; done', 'if grep x .claude/aip-gate.json; then echo ok; fi', 'cat .claude/settings.json | xargs echo']) {
+      ok(bash(c) === null, `AC2.1: chỉ đọc cấu hình trong khối lệnh → không hỏi: ${c}`);
+    }
+    ok(asks('bash -c "{ rm /x; }"', { full: true }) && asks('bash -c "if true; then rm /x; fi"', { full: true }), 'AC2.3: full — lệnh ghi trong khối { } hay if trong chuỗi bash -c vẫn hỏi');
     for (const c of ['bash -c "time rm /x"', 'bash -c "ls | xargs rm"', 'bash -c "find . -exec rm {} \\;"']) {
       ok(asks(c, { full: true }), `AC2.3: full — chuỗi con ghi qua wrapper vẫn hỏi: ${c}`);
     }
