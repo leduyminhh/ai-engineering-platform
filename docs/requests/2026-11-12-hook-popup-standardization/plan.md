@@ -11,15 +11,15 @@
 ## Bản đồ file
 | File | Trách nhiệm | Task |
 |---|---|---|
-| `core/hooks/scripts/gate-config.mjs` | `gateForGuard(dir)`: bọc `locateGate`, trả `{ gate, invalid, gitUnknown }` | Task 1 |
+| `core/hooks/scripts/gate-config.mjs` | `gateForGuard(dir)`: bọc `locateGate`, trả `{ gate, invalid }`; `showArg` (Task 5); `allowedRoots` thêm root tạm của Claude (Task 7) | Task 1, 5, 7 |
 | `core/hooks/scripts/guard-mcp.mjs` | dùng `gateForGuard`; ask khi file hỏng; honor config khi `gitUnknown` | Task 1 |
-| `core/hooks/scripts/guard-bash.mjs` | `writeTargets`, `stringWrites`, cấu hình theo đích (Task 2); `secretScanText` mở rộng (Task 3); `pushReason` trả `{kind,branch}`, `askReason`, `summarize` (Task 4) | Task 2, 3, 4 |
+| `core/hooks/scripts/guard-bash.mjs` | `writeTargets`, `stringWrites`, cấu hình theo đích (Task 2); `secretScanText` mở rộng (Task 3); `pushReason` trả `{kind,branch}`, `askReason`, `summarize` (Task 4); `substituteVars` cho nhánh full (Task 7) | Task 2, 3, 4, 7 |
 | `core/hooks/scripts/guard-files.mjs` | tách reason `ask`/`deny` ở `confine`; sửa `GUARD_CONFIG_ASK` | Task 5 |
 | `test/contract/99-hook-popup.contract.mjs` | file test mới: mọi AC1–AC3 | Task 1–5 |
 | `test/contract/94-permission-modes.contract.mjs` | dòng 264 bỏ `--permission-mode bypassPermissions` khỏi assert (thuật ngữ bị cấm trong reason ask), giữ `aip mode ask` | Task 4 |
 | `core/agents/AGENTS.template.md`, `AGENTS.md` | một dòng rule mỗi lệnh Bash một việc; gộp để ≤ 200 dòng | Task 6 |
-| `docs/specs/hooks-gates/spec.md`, `README.md`, `README_VI.md` | gộp spec sống R3, R7, R18 (đổi), R21, R22 (thêm); mục Hooks | Task 7 |
-| `core/.manifest.json`, `plugins/_versions.lock.json` | bump core 1.33.6 → 1.33.7, lock | Task 7 |
+| `docs/specs/hooks-gates/spec.md`, `README.md`, `README_VI.md` | gộp spec sống R3, R7, R18 (đổi), R21, R22 (thêm); mục Hooks | Task 8 |
+| `core/.manifest.json`, `plugins/_versions.lock.json` | bump core 1.33.6 → 1.33.7, lock | Task 8 |
 
 ## Global Constraints
 - Zero-dependency; không sửa `core/hooks/scripts/gate-file.mjs` hay bản sao ở `core/skills/plan-execution/scripts/`.
@@ -27,7 +27,7 @@
 - Reason `ask` không chứa "nguyên tắc nền", "hook an toàn", "fullRoots", "bypass", "root"; reason `deny` và `DENY_COMMIT` không đổi.
 - Test reason chỉ kiểm khuôn (từ cấm, cụm "cho phép"/"từ chối", ≤ 500 ký tự) và token khớp; không ghim cả câu.
 - Mỗi task: test đỏ đúng lý do trước, sửa, test xanh; commit riêng trên `feature/hook-popup-standardization` qua `core:git-workflow`; không push.
-- Sau khi sửa file hook, chạy `node test/validate.mjs --only hooks` (nếu không có nhóm đó thì `node test/validate.mjs --build`); chạy `npm test` một lần ở Task 7.
+- Sau khi sửa file hook, chạy `node test/validate.mjs --only hooks` (nếu không có nhóm đó thì `node test/validate.mjs --build`); chạy `npm test` một lần ở Task 8.
 
 ## Review Focus
 - Task 2: `echo x > a; cat .claude/settings.json` không hỏi nhưng `bash -c "echo x > .claude/aip-gate.json"`, `cp x .claude/settings.json`, `Set-Content` PowerShell vẫn hỏi; chuỗi nháy không đóng rơi về regex cũ.
@@ -140,7 +140,25 @@
 - [ ] **Step 2:** đối chiếu khẳng định với code: dòng rule có khớp hành vi `guard-bash` (hỏi cả chuỗi lệnh); ghi bảng `khẳng định → file:line → khớp|lệch`. Chạy `node test/validate.mjs --build`: xanh.
 - [ ] **Step 3:** commit `docs(agents): one Bash command per call`.
 
-### Task 7: spec sống, README, bump version, full suite
+### Task 7: root tạm của Claude và biến gán trong cùng lệnh ở chế độ full
+**Kind:** TOOLING
+**TDD:** có
+**Ước lượng:** 30'
+**Phủ AC:** AC6.1, AC6.2, AC6.3
+**Files:**
+- Modify: `core/hooks/scripts/gate-config.mjs`
+- Modify: `core/hooks/scripts/guard-bash.mjs`
+- Test: `test/contract/99-hook-popup.contract.mjs`
+
+**Interfaces:**
+- Consumes: `allowedRoots(gate, input)` (gate-config), nhánh `full()` của `decide` trong `guard-bash.mjs`
+- Produces: `allowedRoots` kèm `<os.tmpdir()>/claude`; `substituteVars(cmd)` (nội bộ, không export)
+
+- [ ] **Step 1:** thêm test AC6: (a) `allowedRoots` có root tạm; `mkdir -p <tmpdir>/claude/p/s/scratchpad/bin` ở full không ask, `guard-files` Write/Read dưới `<tmpdir>/claude/…` không ask/deny, Write `<tmpdir>/x.txt` vẫn deny; (b) lệnh nhiều dòng của ảnh popup (`S=$(cygpath -u '<scratchpad_dir>'); R=/e/x; mkdir -p $S/bin && cd $S`, heredoc, `chmod +x`, `PATH="$S/bin:$PATH" bash $R/run.sh`) ở full + `scratchpad_dir` → null; (c) ca an toàn AC6.3 (`S=/etc; rm $S/x` deny, dùng trước khi gán, `S=$X`, gán giả trong thân heredoc, giá trị có khoảng trắng) vẫn bị chặn như cũ; lệnh không ở full không đổi. Chạy: đỏ.
+- [ ] **Step 2:** thêm root tạm vào `allowedRoots`; viết `substituteVars` (quét từ trái sang phải trước dấu `<<` đầu tiên, nhận `NAME=<literal>` và `NAME=$(cygpath [cờ] '<literal>')` ở đầu lệnh, thay `$NAME`/`${NAME}` về sau, gán lại bằng giá trị không giải được thì xoá) và dùng cho `outer`/`naiveOuter` trong nhánh `full()` (H6 và `secretOutsideRoots`). Chạy toàn bộ contract hook: xanh.
+- [ ] **Step 3:** commit `feat(hooks): treat Claude temp folders and same-command variables as inside the project in full mode`.
+
+### Task 8: spec sống, README, bump version, full suite
 **Kind:** DOCS
 **TDD:** không — tài liệu và version; `npm test` kiểm lock và spec
 **Ước lượng:** 25'

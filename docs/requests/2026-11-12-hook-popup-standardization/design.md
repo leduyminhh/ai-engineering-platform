@@ -24,6 +24,8 @@ Phạm vi A, B, E do người dùng duyệt ngày 2026-11-12. Không làm: hook 
 - **B1 — cấu hình hook theo đích ghi.** Tách khỏi `confineSegment` hàm `writeTargets(t)` trả đích ghi của một đoạn (chuyển hướng `>`/`>>`, đối số của `WRITE_CMDS`, cờ đường dẫn PowerShell) cộng tên lệnh đã bỏ tiền tố bọc. `GUARD_CONFIG` chỉ so với từng đích; `sed`/`perl` có cờ tại-chỗ (`-i`, `-pi`, `--in-place`) hỏi khi một đối số khớp `GUARD_CONFIG`. Quét `[...segs, ...naiveAll]` (đã bung `bash -c`/`eval`), nên `bash -c "echo x > .claude/aip-gate.json"` vẫn bị hỏi. Heuristic giữ giới hạn cũ: `node -e`, `git restore`, `curl -o` không bị bắt.
 - **B2 — bí mật: bỏ qua metadata và đối số tìm kiếm.** Trong `secretScanText`: (a) mở rộng nhóm metadata: `ls`, `dir`, và `git log` chỉ khi mọi cờ nằm trong danh sách an toàn (`--oneline`, `--stat`, `--name-only`, `--name-status`, `--follow`, `--all`, `--graph`, `--decorate`, `-<n>`, `-n<k>`, `--format=`, `--pretty=`, `--date=`…); `-p`/`--patch`/`-u`/`-c`/`--cc`/`-L`/`-G`/`-S` hay cờ lạ → vẫn hỏi, vì chúng in nội dung file. Điều kiện hiện có (không chuyển hướng, không pipe sang lệnh sau, không `$()`/backtick) giữ nguyên. (b) Bỏ token mẫu tìm kiếm trước khi so `SECRET`: đối số dương đầu tiên (không phải cờ, không sau `--`) của `grep`/`egrep`/`fgrep`/`rg`/`ag`/`ack`/`findstr`/`select-string`, giá trị của `-e`/`--regexp`, và giá trị của `--grep`, `-t`, `--testNamePattern`, `--filter`, `-k` ở mọi lệnh (dạng `=` và dạng tách). Đối số còn lại (đường dẫn) vẫn so như cũ nên `grep x .env` vẫn hỏi.
 - **B3 — chuỗi `bash -c`/`eval` ở full.** Thay `WRITE_IN_STRING.test(args.join(' '))` bằng `stringWrites(inner)`: parse chuỗi con (`parse` + `naiveSegments`, như phần còn lại của hook) và hỏi khi một đoạn có đích ghi hoặc là `WRITE_CMDS`. Chuỗi con nháy không đóng thì rơi về regex cũ. Vẫn là `ask` (không chuyển thành `deny`), đúng R7.
+- **C1 — thư mục tạm do Claude sinh ra là root hợp lệ ở full (bổ sung 2026-11-12 theo yêu cầu người dùng sau khi xem popup thật).** `allowedRoots` thêm `<os.tmpdir()>/claude` (mọi thư mục tạm của phiên Claude Code, gồm scratchpad); `scratchpad_dir` của stdin vẫn là root như cũ. Dùng chung cho `guard-bash` (H6, bí mật ngoài root) và `guard-files` (confine). [Unverified] Bố cục `<tmpdir>/claude` lấy từ đường dẫn scratchpad thấy trong popup trên Windows; chưa kiểm trên POSIX.
+- **C2 — biến gán trong cùng lệnh được giải ở full.** Ảnh popup thật: `S=$(cygpath -u 'C:…scratchpad'); mkdir -p $S/bin && cd $S …` bị hỏi "đường dẫn không xác định được" vì `$S`. Trước khi tách lệnh cho H6 (chỉ ở full), thay `$NAME`/`${NAME}` bằng giá trị của phép gán đứng trước nó trong cùng lệnh khi phép gán là `NAME=<literal>` hoặc `NAME=$(cygpath [cờ] '<literal>')` ở đầu một lệnh, nằm trước dấu `<<` đầu tiên (thân heredoc không được coi là gán), giá trị tuyệt đối, không chứa khoảng trắng, `$`, backtick hay glob. Dùng trước khi gán, gán lại bằng giá trị không giải được, hay giá trị ngoài root thì không được miễn (vẫn ask hoặc deny như cũ). Không đổi hành vi ngoài full.
 - **E — mcpDeny khi không đọc được cấu hình.** `guard-mcp` gọi `locateGate` (qua một hàm mới ở `gate-config.mjs`) thay `readGate`: (a) `gitUnknown` mà đọc được file → dùng config đó cho `mcpAllow`/`mcpDeny` (cả hai chỉ siết; `full` vẫn không hiệu lực vì `tracked` không xác định); (b) file `aip-gate.json` tồn tại nhưng hỏng (`source: 'worktree-invalid'` hoặc `mainInvalid`) trong repo git → `ask` cho mọi tool MCP, lý do nêu file hỏng và cách sửa; (c) ngoài repo git, không có file → như cũ (null, R3/R4). Quy tắc `start_session` thiếu model vẫn chạy trước.
 
 ## Tiêu chí chấp nhận
@@ -39,6 +41,15 @@ Phạm vi A, B, E do người dùng duyệt ngày 2026-11-12. Không làm: hook 
 - [ ] **AC3.1** — Given `gitUnknown` (git lỗi, có `.git` ở trên) và file có `mcpDeny: ["a"]` When tool `mcp__a__t` Then deny nêu `mcpDeny`; `mcpAllow` cũng áp.
 - [ ] **AC3.2** — Given `aip-gate.json` hỏng (JSON sai hoặc không phải đối tượng) ở worktree hoặc ở repo chính khi chạy trong worktree When tool MCP bất kỳ Then ask, lý do nêu đường dẫn file; tool không phải MCP và `start_session` thiếu model không đổi (deny như R16).
 - [ ] **AC3.3** — Given không có file, hoặc ngoài repo git, hoặc file hợp lệ không có `mcpDeny` When tool MCP Then như trước (null / theo `mcpAllow`).
+- [ ] **AC6.1** — Given full hiệu lực, `scratchpad_dir` có hoặc không có trong stdin When `guard-bash` nhận `mkdir -p <tmpdir>/claude/p/s/scratchpad/bin` và `guard-files` nhận Write/Read vào `<tmpdir>/claude/p/s/x.txt` Then không ask, không deny; ghi vào `<tmpdir>/x.txt` (ngoài thư mục `claude`) vẫn deny.
+- [ ] **AC6.2** — Given full + bypass, `scratchpad_dir` = `<tmpdir>/claude/p/s/scratchpad` When lệnh dạng `S=$(cygpath -u '<scratchpad_dir>'); R=/e/x; mkdir -p $S/bin && cd $S; cat > bin/docker <<'EOF'
+stub
+EOF
+chmod +x bin/docker; PATH="$S/bin:$PATH" bash $R/run.sh` Then không ask (bản trước: ask "đường dẫn không xác định được").
+- [ ] **AC6.3** — Given full When `S=/etc; rm $S/x`, `rm $S/x; S=/tmp/claude/a`, `S=$X; rm $S/x`, `cat > f <<'EOF'
+S=/tmp/claude/a
+EOF
+rm -rf $S/x`, `S="/tmp/claude/a b"; rm $S` Then vẫn bị chặn như cũ (deny với ngoài root, ask với không xác định); lệnh không ở full không đổi.
 - [ ] **AC4.1** — Given các sửa trên When `npm run build`, `node cli/lib/versions.mjs --lock`, `npm test` Then xanh; `core/.manifest.json` tăng version.
 
 ## Thiết kế
@@ -49,6 +60,7 @@ Tác động và vị trí:
 - `core/hooks/scripts/gate-config.mjs`: thêm `gateForGuard(dir)` (bọc `locateGate`: `{ gate, invalid, gitUnknown }`); `guard-mcp.mjs` dùng nó, seam test `locate`.
 - `core/agents/AGENTS.template.md` và `AGENTS.md`: một dòng rule.
 - Test: `test/contract/94-permission-modes.contract.mjs` và `90-hooks.contract.mjs` (bảng ca AC1–AC2), `91-guard-mcp.contract.mjs` (AC3). Test reason chỉ kiểm khuôn (từ cấm, cụm "cho phép/từ chối", độ dài) và token khớp, không ghim cả câu.
+- `core/hooks/scripts/gate-config.mjs`: `allowedRoots` thêm root tạm của Claude; `core/hooks/scripts/guard-bash.mjs`: `substituteVars(cmd)` dùng trong nhánh full.
 - Spec sống `docs/specs/hooks-gates/spec.md`; `README.md`/`README_VI.md` mục Hooks (guard-bash, guard-mcp, mục "Không phát hiện"); `core/.manifest.json` 1.33.6 → 1.33.7; `plugins/_versions.lock.json` qua `versions.mjs --lock`.
 
 ## Ảnh hưởng spec
@@ -58,6 +70,7 @@ Tác động và vị trí:
 - Không đổi câu `deny` và câu `DENY_COMMIT`; không thêm hook mới; không đổi `gate-file.mjs` (hai bản sao giữ byte-identical); không đổi `session-start`/`gate-stop`.
 - Không bắt thêm đường ghi cấu hình (`git restore`, `node -e`, `curl -o`): giới hạn heuristic đã ghi ở R18.
 - Anti-goal: không hạ mức hỏi của lệnh đọc nội dung file bí mật; chỉ bỏ hỏi khi lệnh không thể in nội dung.
+- C2 không phải bộ giải biến tổng quát: không giải `$(…)` khác, mảng, `export`, gán trong `if`/`||`/hàm; phép gán có điều kiện mà hook tin là đã chạy là rủi ro còn lại ([Inference]: chỉ ở full, vốn là heuristic không phải sandbox).
 
 ## Ràng buộc
 - Zero-dependency; hook fail-open với lỗi nội bộ; không thêm lời gọi git ở đường nóng (`guard-mcp` vẫn một `locateGate`).
