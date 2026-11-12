@@ -177,7 +177,7 @@ const needsOf = (name) => (DELETE_CMDS.has(name) ? ['delete'] : MOVE_CMDS.has(na
 // Vai của cờ đường dẫn PowerShell theo (lệnh, cờ): đích → write, nguồn của Move/Remove-Item → delete, nguồn của Copy-Item → read.
 const flagNeeds = (name, flag) => {
   const f = flag.toLowerCase().replace(/^-/, '');
-  return f === 'destination' || f === 'filepath' ? ['write'] : DELETE_CMDS.has(name) || MOVE_CMDS.has(name) ? ['delete'] : name === 'copy-item' ? ['read'] : ['write'];
+  return f === 'destination' || f === 'filepath' ? ['write'] : DELETE_CMDS.has(name) || MOVE_CMDS.has(name) ? ['delete'] : LAST_ONLY.has(name) ? ['read'] : ['write'];
 };
 const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content']);
 const SKIP_FIRST = new Set(['chmod', 'chown']);
@@ -287,7 +287,7 @@ function isClaudeTmpRoot(p, dir) {
 function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
-  if (!hasUnresolvedRef(p) && !GLOB.test(p) && isClaudeTmpRoot(p, dir)) return 'outside';
+  if (!hasUnresolvedRef(p) && !GLOB.test(p) && isClaudeTmpRoot(p, dir)) return 'blocked';
   const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
   if (!absolute && (unres || hasUnresolvedRef(p))) return 'unknown';
   if (GLOB.test(p)) {
@@ -295,7 +295,7 @@ function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
     const first = parts.findIndex((x) => x !== '');
     const g = parts.findIndex((x) => GLOB.test(x));
     if (g <= first) return 'unknown';
-    if (isClaudeTmpRoot(parts.slice(0, g).join('/'), dir)) return 'outside';
+    if (isClaudeTmpRoot(parts.slice(0, g).join('/'), dir)) return 'blocked';
     return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots, msys, need);
   }
   return classifyPath(p, dir, roots, msys, need);
@@ -339,7 +339,8 @@ function writeTargets(t) {
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
       if (colon) { targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
       // -t/--target-directory chỉ dò cho mv/cp; cờ GNU gộp kiểu `-vt DIR` không được phân tích.
-      const tdir = gnu && (/^(-t|--target-directory)$/.test(a) ? args[++i] : /^--target-directory=(.+)$/.exec(a)?.[1] ?? /^-t(.+)$/.exec(a)?.[1]);
+      const bundle = gnu ? /^-[A-Za-z]*?t(.*)$/.exec(a) : null;
+      const tdir = gnu && (a === '--target-directory' || bundle?.[1] === '' ? args[++i] : /^--target-directory=(.+)$/.exec(a)?.[1] ?? bundle?.[1]);
       if (tdir) { toDir = true; targets.push(tdir); needs.push(['write']); continue; }
       // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
       if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
@@ -384,9 +385,9 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   for (const [i, p] of targets.entries()) {
     for (const need of needs[i]) {
       const c = classifyTarget(p, dir, unres, roots, msys, need);
-      // Thiếu read chỉ hỏi (như Read ở guard-files), không deny.
+      // Thiếu read chỉ hỏi (như Read ở guard-files); gốc <tmpdir>/claude ('blocked') luôn deny (D8).
       if (c === 'outside' && need === 'read') unknown = true;
-      else if (c === 'outside') return { deny: need };
+      else if (c === 'outside' || c === 'blocked') return { deny: need };
       if (c === 'unknown') unknown = true;
     }
   }
@@ -403,7 +404,7 @@ function secretOutsideRoots(lists, cwd, roots, re, msys = true) {
       found = true;
       const p = tok.slice(Math.max(tok.lastIndexOf('='), tok.lastIndexOf('@'), tok.lastIndexOf('<'), tok.lastIndexOf('(')) + 1);
       // D7: file bí mật chỉ được miễn khi thư mục có đủ ba quyền.
-      if (['read', 'write', 'delete'].some((need) => ['outside', 'unknown'].includes(classifyTarget(p, dir, unres, roots, msys, need)))) return true;
+      if (['read', 'write', 'delete'].some((need) => ['outside', 'blocked', 'unknown'].includes(classifyTarget(p, dir, unres, roots, msys, need)))) return true;
     }
   }
   return !found;
