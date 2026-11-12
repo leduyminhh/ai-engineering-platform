@@ -151,6 +151,7 @@ export default async function run({ ok, ctx }) {
     // PowerShell nhận tiền tố tham số: `-t` là `-ToSession`, không phải GNU `-t DIR`.
     expectAll([[`cp -t s x ${OUT}/b`, 'deny', 'AC3.8'], [`mv -t s ${T}/a ${OUT}/b`, 'deny', 'AC3.7'], [`cp --target-directory=${O} x ${OUT}/b`, 'deny', 'AC3.8'],
       ['cp -t s x .claude/aip-gate.json', 'ask', 'AC3.8']], { tool: 'PowerShell' });
+    expectAll([['echo "$(cp -t .claude/aip-gate.json x)"', 'ask', 'AC3.8']]);
     // D8: gốc <tmpdir>/claude luôn bị chặn, kể cả khi chỉ cần read.
     const CT = u(path.join(os.tmpdir(), 'claude'));
     expectAll([[`Copy-Item -Path ${CT} -Destination ${O}/b`, 'deny', 'D8'], [`Copy-Item -Path ${CT}/* -Destination ${O}/b`, 'deny', 'D8']], { tool: 'PowerShell' });
