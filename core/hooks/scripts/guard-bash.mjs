@@ -461,22 +461,26 @@ const FULL_PATH_TEXT = 'Lệnh ghi hoặc xoá ở đường dẫn chỉ biết 
 const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy. Project bật chế độ full nhưng phiên này không chạy ở chế độ bỏ qua hỏi quyền nên vẫn hỏi bạn như bình thường. Cho phép hoặc từ chối từng lần; muốn đổi thì chạy `aip mode ask`.';
 const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
 
-// Thân heredoc là dữ liệu, không phải lệnh: bỏ trước khi tóm tắt để dòng "Lệnh gồm" không liệt kê nội dung file được tạo.
-const stripHeredocs = (c) => c.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2(?=\n|$)/g, '<<');
+// Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
 const MAX_STEPS = 6;
 // Chỉ dùng thông tin có sẵn từ parse (tên lệnh, lệnh con git, đích chuyển hướng); không đoán số file vì git commit -m không nêu file nào.
 function summarize(cmd) {
+  const p = parse(cmd);
   const steps = [];
-  for (const t of parse(stripHeredocs(cmd)).segs) {
+  let total = 0;
+  for (const t of expandShells(p.segs)) {
     const [tk, k] = unwrap(t);
     if (k >= tk.length || String(tk[k]).startsWith('#')) continue;
+    total++;
+    if (steps.length >= MAX_STEPS) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
     const target = writeTargets(t).targets.find((x) => !NULL_DEVICE.test(x));
-    steps.push(`${g ? `git ${g.sub}` : showArg(cmdName(tk[k]), 40)}${target ? ` (ghi vào ${showArg(target, 60)})` : ''}`);
+    steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${target ? ` (ghi vào ${showArg(target, 60)})` : ''}`);
   }
-  if (!steps.length) return '';
-  const more = steps.length > MAX_STEPS ? `, … và ${steps.length - MAX_STEPS} bước khác` : '';
-  return `Lệnh gồm: ${steps.slice(0, MAX_STEPS).join(', ')}${more}.`;
+  if (!total) return '';
+  const more = total > MAX_STEPS ? `, … và ${total - MAX_STEPS} bước khác` : '';
+  const open = p.unclosed ? ' (nháy chưa đóng: danh sách có thể thiếu bước)' : '';
+  return `Lệnh gồm: ${steps.join(', ')}${more}.${open}`;
 }
 
 const NON_ASCII = /[^\x00-\x7F]/;
@@ -555,6 +559,19 @@ function withoutSearchPatterns(t) {
 // Chỉ nhận khối phép gán ở ĐẦU chuỗi, mỗi phép gán kết thúc đúng bằng `;` hoặc xuống dòng (nên chắc chắn đã chạy ở cấp cao nhất); giá trị là literal tuyệt đối không có khoảng trắng hoặc $(cygpath [cờ] '<literal>').
 // Bỏ tên biến khi phần còn lại của lệnh nhắc tới việc gán hay đổi nó (NAME=, NAME+=, NAME in, unset/read/eval/source…); không áp cho PowerShell (S=… không phải phép gán ở đó);
 // heredoc chỉ được phép với cat/tee và delimiter có nháy (thân không chạy lệnh, không có $( )); thân heredoc được bỏ trước khi tách. Không thoả điều kiện nào thì trả nguyên lệnh (hỏi như cũ).
+// Bỏ thân heredoc có delimiter trong nháy (đã được substituteVars kiểm là cat/tee), quét tuyến tính theo dòng: thân chưa có dòng đóng thì phần còn lại là thân, như shell.
+function dropHeredocBodies(text) {
+  const out = [];
+  let end = null;
+  for (const line of text.split('\n')) {
+    if (end !== null) { if (line.trim() === end) end = null; continue; }
+    out.push(line);
+    const m = /<<-?[ \t]*(['"])(\w+)\1/.exec(line);
+    if (m) end = m[2];
+  }
+  return out.join('\n');
+}
+
 const ASSIGN_LEAD = /\s*([A-Za-z_]\w*)=/y;
 const ASSIGN_VALUE = /(?:\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+'([^']*)'\s*\)|\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+"([^"$`\\]*)"\s*\)|'([^']*)'|"([^"$`\\]*)"|([^\s'"$`;&|()<>*?[\]{}~\\]+))(?=[ \t]*(?:;|\r?\n|$))/y;
 const ASSIGN_TAIL = /[ \t]*(?:;|\r?\n)?/y;
@@ -591,7 +608,7 @@ function substituteVars(cmd, tool) {
     if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*\+?=|\b${name}\s+in\b`).test(rest)) continue;
     out = out.replace(new RegExp(String.raw`\$(?:\{${name}\}|${name}(?![A-Za-z0-9_]))`, 'g'), () => value);
   }
-  return cmd.slice(0, pos) + (hasHeredoc ? stripHeredocs(out) : out);
+  return cmd.slice(0, pos) + (hasHeredoc ? dropHeredocBodies(out) : out);
 }
 
 // Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
@@ -629,7 +646,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   let fe;
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
-  const ask = (text) => { const line = summarize(cmd); return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
+  const ask = (text) => { let line = ''; try { line = summarize(cmd); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
   const parsedCmd = parse(cmd);
   const { unclosed } = parsedCmd;
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
@@ -673,7 +690,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
   const secretName = (re) => { for (const text of [secretScanText(cmd), secretScanText(raw)]) { const m = re.exec(text); if (m) return m[2]; } return ''; };
   const secretAsk = (re) => ask(secretText(secretName(re)));
-  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk(SECRET);
+  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk(hits(KEY_SECRET) ? KEY_SECRET : SECRET);
   // Ở full, bí mật chỉ mở trong root của project: đường dẫn bí mật nằm ngoài root hoặc không xác định được vẫn hỏi (khớp guard-files).
   if (hits(SECRET) && full()) {
     // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
