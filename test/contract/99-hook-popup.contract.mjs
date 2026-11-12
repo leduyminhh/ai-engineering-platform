@@ -234,12 +234,22 @@ export default async function run({ ok, ctx }) {
   // ── Task 3: file bí mật bỏ qua lệnh metadata và mẫu tìm kiếm (AC2.2)
   {
     for (const c of ['git log -- .env', 'git log --oneline -5 -- credentials', 'ls credentials', 'grep -rn credentials src', 'npm test -- --grep "credentials"',
-      'npm test -- --grep=credentials', 'rg --glob "*.ts" credentials', 'ls -la .env', 'grep -e credentials src', 'git log --format=%H --name-only -3 -- id_rsa']) {
+      'npm test -- --grep=credentials', 'rg -i credentials src', 'ls -la .env', 'grep -e credentials src', 'git log --format=%H --name-only -3 -- id_rsa']) {
       ok(bash(c) === null, `AC2.2: lệnh metadata hoặc mẫu tìm kiếm không in nội dung file bí mật → không hỏi: ${c}`);
     }
     for (const c of ['git log -p -- .env', 'git log --patch -- .env', 'git log -S token -- .env', 'git log -L1,5:.env', 'git log --textconv -- .env', 'git diff -- .env', 'grep x .env',
       'grep -rn credentials credentials.json', 'grep -e foo .env', 'cat .env', 'git log -- .env | xargs cat', 'ls .env > out', 'grep -- .env src', 'ls $(cat .env)']) {
       ok(asks(c), `AC2.2: lệnh có thể in nội dung file bí mật vẫn hỏi: ${c}`);
+    }
+    // Vòng sửa 1: cờ nạp mẫu từ file hoặc dính liền làm đối số dương đầu không còn là mẫu; cờ lạ thì không bỏ gì
+    for (const c of ['grep -f pats .env', 'grep -f pats -r .env', 'grep --file=pats .env', 'grep --file pats .env', 'grep -fpats .env', 'egrep -f p .env', 'rg -f pats .env',
+      'grep -f p id_rsa', 'grep -f p credentials.json', 'sudo grep -f p .env', 'timeout 5 grep -f p .env', 'grep -efoo .env', 'grep -iefoo .env', 'grep -E -efoo .env',
+      'grep --reg=OTHER .env', 'ag -f pat .env', 'ag -t pat .env', 'ack --filter x .env', 'node a.js --filter .env', 'rg --glob "*.ts" credentials .env', "git -c 'core.pager=cat .env' log --oneline",
+      'git -c pager.log=cat log --oneline -- .env']) {
+      ok(asks(c), `AC2.2: grep -f/-e dính liền, cờ lạ hoặc git -c không làm mất đường dẫn bí mật khỏi quét: ${c}`);
+    }
+    for (const c of ['Select-String -Path .env -Pattern x', 'Select-String -LiteralPath .env -Pattern x', 'Select-String -Path .env x']) {
+      ok(asks(c, { tool: 'PowerShell' }), `AC2.2: PowerShell Select-String vào file bí mật vẫn hỏi: ${c}`);
     }
   }
 }
