@@ -1,6 +1,6 @@
 # Thiết kế: bốn follow-up của aip-gate-config-flow
 - Ngày: 2026-11-12
-- Trạng thái: draft — chờ người dùng duyệt (G1)
+- Trạng thái: in-progress — design và plan đã duyệt (G1, G2); chờ duyệt diff cả nhánh (G3)
 - Requirement: không có
 
 ## Vấn đề và lý do
