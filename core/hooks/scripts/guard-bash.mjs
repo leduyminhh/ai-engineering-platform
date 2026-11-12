@@ -444,23 +444,41 @@ function opaqueConfigWrite(list, cmd) {
   });
 }
 
-// parse coi $( ) và backtick trong nháy là một token: bóc chuỗi bên trong (tối đa 4 lớp) để kiểm cấu hình hook như lệnh thường.
-function substitutedCommands(list) {
-  const found = [];
-  const re = new RegExp('\\$\\(([^()]*)\\)|`([^`]*)`', 'g');
-  for (const t of list) {
-    for (const x of t) {
-      if (!/\$\(|`/.test(x)) continue;
-      let rest = x;
-      for (let depth = 0; depth < 4 && rest.length; depth++) {
-        const inner = [...rest.matchAll(re)].map((m) => m[1] ?? m[2]);
-        if (!inner.length) break;
-        found.push(...inner);
-        rest = rest.replace(re, ' ');
-      }
+// parse coi $( ) và backtick trong nháy là một token: bóc chuỗi bên trong (ngoặc cân bằng, tối đa 4 lớp, 200 chuỗi) để kiểm cấu hình hook như lệnh thường.
+// Vượt trần thì trả truncated để người gọi hỏi, không đoán; vòng lặp thay cho spread vì input lớn làm tràn stack.
+const MAX_INNER = 200;
+function innerCommands(s, out) {
+  for (let i = s.indexOf('$('); i >= 0 && out.length <= MAX_INNER;) {
+    let depth = 1;
+    let j = i + 2;
+    for (; j < s.length && depth; j++) {
+      if (s[j] === '(') depth++;
+      else if (s[j] === ')') depth--;
     }
+    out.push(s.slice(i + 2, depth ? s.length : j - 1));
+    i = s.indexOf('$(', j);
   }
-  return found.flatMap((str) => expandShells(parse(str).segs));
+  for (let k = s.indexOf('`'); k >= 0 && out.length <= MAX_INNER;) {
+    const e = s.indexOf('`', k + 1);
+    if (e < 0) break;
+    out.push(s.slice(k + 1, e));
+    k = s.indexOf('`', e + 1);
+  }
+}
+const hasSubstitution = (x) => x.includes('$(') || x.includes('`');
+function substitutedConfigWrite(list, cmd) {
+  const found = [];
+  let layer = [];
+  for (const t of list) for (const x of t) if (hasSubstitution(x)) layer.push(x);
+  for (let depth = 0; layer.length; depth++) {
+    if (depth >= 4 || found.length > MAX_INNER) return GUARD_CONFIG.test(cmd);
+    const next = [];
+    for (const x of layer) innerCommands(x, next);
+    for (const x of next) found.push(x);
+    layer = next.filter(hasSubstitution);
+  }
+  if (found.length > MAX_INNER) return GUARD_CONFIG.test(cmd);
+  return found.some((str) => expandShells(parse(str).segs).some(writesGuardConfig));
 }
 
 function pipedIndirectConfigWrite(list) {
@@ -656,7 +674,7 @@ function substituteVars(cmd, tool) {
   if (stripped === null) return cmd;
   let out = stripped;
   for (const [name, value] of known) {
-    if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*(?:\[[^\]\s]{0,64}\])?\+?=|\b${name}\s+in\b`).test(rest)) continue;
+    if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*(?:\[|\+?=)|\b${name}\s+in\b`).test(rest)) continue;
     out = out.replace(new RegExp(String.raw`\$(?:\{${name}\}|${name}(?![A-Za-z0-9_]))`, 'g'), () => value);
   }
   return cmd.slice(0, pos) + out;
@@ -715,7 +733,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return ask(pushText(why));
   }
-  if ([...segs, ...naiveAll].some(writesGuardConfig) || pipedIndirectConfigWrite([...segs, ...naiveAll]) || opaqueConfigWrite([...segs, ...naiveAll], cmd) || substitutedCommands([...segs, ...naiveAll]).some(writesGuardConfig)) {
+  if ([...segs, ...naiveAll].some(writesGuardConfig) || pipedIndirectConfigWrite([...segs, ...naiveAll]) || opaqueConfigWrite([...segs, ...naiveAll], cmd) || substitutedConfigWrite([...segs, ...naiveAll], cmd)) {
     return ask(CONFIG_TEXT);
   }
   if (full()) {
