@@ -88,6 +88,23 @@ export default async function run({ ok, ctx }) {
       ok(asks(c), `AC2.1: ghi vào file cấu hình vẫn hỏi: ${c}`);
     }
     ok(asks(String.raw`Set-Content .claude\aip-gate.json x`, { tool: 'PowerShell' }), 'AC2.1: PowerShell Set-Content vào aip-gate.json vẫn hỏi');
+    // Vòng sửa 1: các đường ghi mà regex toàn lệnh cũ bắt được, cách đọc theo đích ghi không được bỏ sót
+    for (const c of [String.raw`Out-File -Encoding utf8 .claude\settings.json`, String.raw`Set-Content -Encoding utf8 .claude\aip-gate.json x`, String.raw`Set-Content -Value x .claude\aip-gate.json`,
+      String.raw`Set-Content -Path:.claude\aip-gate.json x`]) {
+      ok(asks(c, { tool: 'PowerShell' }), `AC2.1: PowerShell ghi cấu hình qua cờ có giá trị vẫn hỏi: ${c}`);
+    }
+    for (const c of ['echo x >| .claude/aip-gate.json', 'echo x >|.claude/settings.json', 'bash -c "echo x >|.claude/aip-gate.json"',
+      String.raw`cmd /c "echo x > .claude\settings.json"`, 'dash -c "echo x > .claude/aip-gate.json"', "ksh -c 'echo x > .claude/aip-gate.json'", "busybox sh -c 'echo x > .claude/aip-gate.json'",
+      `bash -c "bash -c \\"bash -c \\\\\\"bash -c 'echo x > .claude/aip-gate.json'\\\\\\"\\""`,
+      'time cp x .claude/settings.json', 'command -p cp x .claude/settings.json', 'doas cp x .claude/settings.json', 'ionice -c3 cp x .claude/settings.json',
+      'stdbuf -o0 tee .claude/aip-gate.json', 'xargs -I{} cp {} .claude/settings.json', 'echo x | xargs -I% cp % .claude/settings.json',
+      'echo .claude/aip-gate.json | xargs rm', 'find . -name x -exec cp {} .claude/settings.json \\;']) {
+      ok(asks(c), `AC2.1: đường ghi cấu hình qua dạng bọc/chuyển hướng ít gặp vẫn hỏi: ${c}`);
+    }
+    ok(bash('find . -name aip-gate.json') === null && bash('echo x | xargs echo .claude/aip-gate.json') === null, 'AC2.1: find/xargs chỉ nhắc tên file cấu hình, không có lệnh ghi → không hỏi');
+    for (const c of ['bash -c "time rm /x"', 'bash -c "ls | xargs rm"', 'bash -c "find . -exec rm {} \\;"']) {
+      ok(asks(c, { full: true }), `AC2.3: full — chuỗi con ghi qua wrapper vẫn hỏi: ${c}`);
+    }
     for (const c of ['bash -c "awk \'$1>2\' f"', 'bash -c "grep -rm 1 x ."', 'bash -c "echo hi 2>&1"', 'bash -c "echo hi > /dev/null"']) {
       ok(bash(c, { full: true }) === null, `AC2.3: full — chuỗi con không ghi → không hỏi: ${c}`);
     }
