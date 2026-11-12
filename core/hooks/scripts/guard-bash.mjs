@@ -472,9 +472,9 @@ function summarize(cmd) {
   let nested = false;
   for (const t of expandShells(p.segs)) {
     const [tk, k] = unwrap(t);
+    if (/\$\(|`|<\(/.test(t.join(' '))) nested = true;
     if (k >= tk.length || String(tk[k]).startsWith('#')) continue;
     total++;
-    if (/\$\(|`|<\(/.test(tk.join(' '))) nested = true;
     if (steps.length >= MAX_STEPS) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
     const target = writeTargets(t).targets.find((x) => !NULL_DEVICE.test(x));
@@ -578,7 +578,7 @@ function lineQuotes(line) {
   return { open: q !== null, ops };
 }
 const HEREDOC_BEFORE = /^[ \t]*(?:cat|tee)\b[^|;&<`()#\n]*$/;
-const HEREDOC_AFTER = /^-?[ \t]*(['"])(\w+)\1[^|;&<`()#\n]*$/;
+const HEREDOC_AFTER = /^-?[ \t]*(['"])(\w+)\1(?=[ \t]|$)[^|;&<`()#\n]*$/;
 function stripSimpleHeredocs(rest) {
   const out = [];
   let end = null;
@@ -586,7 +586,7 @@ function stripSimpleHeredocs(rest) {
     const line = raw.replace(/\r$/, '');
     if (end !== null) { if (line.trim() === end) end = null; continue; }
     const { open, ops } = lineQuotes(line);
-    if (open || ops.length > 1) return null;
+    if (open || ops.length > 1 || line.includes("$'")) return null;
     if (ops.length === 1) {
       const m = HEREDOC_AFTER.exec(line.slice(ops[0] + 2));
       if (!m || !HEREDOC_BEFORE.test(line.slice(0, ops[0]))) return null;
