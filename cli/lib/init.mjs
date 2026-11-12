@@ -22,12 +22,20 @@ function listFiles(dir, base = dir) {
   return out.sort();
 }
 
+// So gốc bằng đường dẫn thật: git trả `top` đã qua realpath, còn root có thể là symlink/junction hoặc khác hoa/thường ổ đĩa (win32).
+// realpath lỗi thì so chuỗi như trước.
+const sameDir = (a, b) => {
+  const real = (p) => { try { return fs.realpathSync.native(p); } catch { return path.resolve(p); } };
+  const [x, y] = [real(a), real(b)];
+  return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y;
+};
+
 // Chỉ `true` đúng kiểu và đáng tin (file không bị git theo dõi, hoặc thư mục ngoài repo git) mới bỏ quy tắc .env, khớp hook.
 // File hỏng thì ném trước mọi lần ghi (im lặng coi là false sẽ sinh settings.json theo cấu hình chưa sửa); tracked mặc định bỏ cache vì trạng thái git đổi được trong một tiến trình.
 export function readAllowEnvFiles(root, { tracked = (f) => gateTracked(f, { run: (dir, spec) => lsFiles(dir, spec) }) } = {}) {
   const g = locateGate(root);
   // Thư mục con của repo tự có file riêng (hoặc không có): không thừa kế file của gốc git, như trước khi gom về locateGate.
-  if (g.inRepo && !g.gitUnknown && path.resolve(root) !== g.top) {
+  if (g.inRepo && !g.gitUnknown && !sameDir(root, g.top)) {
     const own = readGateAt(root);
     if (own?.invalid) throw new Error(`${path.join(root, '.claude', 'aip-gate.json')} không phải đối tượng JSON hợp lệ — sửa tay rồi chạy lại aip init --full; chưa ghi file nào.`);
     return own ? trustedValue({ inRepo: true, file: path.join(root, '.claude', 'aip-gate.json'), config: own.config }, 'allowEnvFiles', { tracked }) === true : false;

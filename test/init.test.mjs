@@ -416,3 +416,25 @@ test("gate-config-flow AC4.4: aip init --full ở thư mục con chỉ đọc fi
   init({ root: c, full: true });
   assert.notDeepEqual(denyOf(c), secrets, "file riêng chưa theo dõi đặt true → bỏ quy tắc .env");
 });
+
+test("gate-followups AC4.1: gốc worktree viết qua symlink/junction hay khác hoa/thường ổ đĩa vẫn rơi về file của repo chính", () => {
+  const main = fs.realpathSync.native(tmp());
+  gitIn(main, "init", "-q");
+  gitIn(main, "commit", "-q", "--allow-empty", "-m", "init");
+  fs.mkdirSync(path.join(main, ".claude"));
+  fs.writeFileSync(path.join(main, ".claude", "aip-gate.json"), '{"allowEnvFiles": true}');
+  const wt = path.join(fs.realpathSync.native(tmp()), "wt");
+  gitIn(main, "worktree", "add", "-q", wt, "-b", "wt-b");
+  try {
+    assert.equal(readAllowEnvFiles(wt), true, "gốc worktree viết đúng: dùng file repo chính");
+    const link = path.join(fs.realpathSync.native(tmp()), "link");
+    fs.symlinkSync(wt, link, "junction");
+    assert.equal(readAllowEnvFiles(link), true, "gốc worktree qua symlink/junction");
+    if (process.platform === "win32") {
+      assert.equal(readAllowEnvFiles(wt.replace(/^./, (c) => c.toLowerCase())), true, "ổ đĩa viết thường");
+      assert.equal(readAllowEnvFiles(wt.toUpperCase()), true, "đường dẫn viết hoa");
+    }
+  } finally {
+    try { gitIn(main, "worktree", "remove", "--force", wt); } catch { /* bỏ qua */ }
+  }
+});
