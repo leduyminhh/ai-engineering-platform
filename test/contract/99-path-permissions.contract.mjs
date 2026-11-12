@@ -140,6 +140,15 @@ export default async function run({ ok, ctx }) {
       [`Remove-Item -Path ${O}/f`, 'deny', 'AC3.3'], [`Remove-Item -LiteralPath:${O}/f`, 'deny', 'AC3.3'], [`Remove-Item -Path:${T}/f`, null, 'AC3.3'],
     ], { tool: 'PowerShell' });
 
+    expectAll([
+      [`cp -rt ${OUT} x`, 'deny', 'AC3.8'], [`cp -rt ${O} x`, null, 'AC3.8'], [`cp -rt${O} x`, null, 'AC3.8'], [`cp -rt${OUT} x`, 'deny', 'AC3.8'],
+      [`mv -vt ${O} ${T}/a`, null, 'AC3.7'], [`mv -vt ${T} ${O}/a`, 'deny', 'AC3.7'],
+    ]);
+    // D8: gốc <tmpdir>/claude luôn bị chặn, kể cả khi chỉ cần read.
+    const CT = u(path.join(os.tmpdir(), 'claude'));
+    expectAll([[`Copy-Item -Path ${CT} -Destination ${O}/b`, 'deny', 'D8'], [`Copy-Item -Path ${CT}/* -Destination ${O}/b`, 'deny', 'D8']], { tool: 'PowerShell' });
+    expectAll([[`cp -Path ${D}/a -Destination ${O}/b`, null, 'AC3.10'], [`cp -LiteralPath ${D}/a -Destination ${O}/b`, null, 'AC3.10']], { tool: 'PowerShell' });
+
     const denyW = bd(`cp x ${D}/f`);
     const denyD = bd(`rm ${D}/f`);
     ok([denyW, denyD].every((d) => /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason)) && /write/.test(denyW.reason) && /delete/.test(denyD.reason), 'AC6.2: reason deny nêu fullPaths, fullRoots và quyền thiếu');
