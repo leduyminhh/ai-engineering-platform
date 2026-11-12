@@ -286,6 +286,7 @@ function classifyTarget(raw, dir, unres, roots, msys = true) {
     const first = parts.findIndex((x) => x !== '');
     const g = parts.findIndex((x) => GLOB.test(x));
     if (g <= first) return 'unknown';
+    if (isClaudeTmpRoot(parts.slice(0, g).join('/'), dir)) return 'outside';
     return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots, msys);
   }
   return classifyPath(p, dir, roots, msys);
@@ -572,10 +573,11 @@ function dropHeredocBodies(text) {
   return out.join('\n');
 }
 
-const ASSIGN_LEAD = /\s*([A-Za-z_]\w*)=/y;
+const HEREDOC_LINE = /^[ \t]*(?:cat|tee)\b[^|;&<`()\n]*<<-?[ \t]*(['"])(\w+)\1[^|;&<`()\n]*$/;
+const ASSIGN_LEAD = /[ \t\r\n]*([A-Za-z_]\w*)=/y;
 const ASSIGN_VALUE = /(?:\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+'([^']*)'\s*\)|\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+"([^"$`\\]*)"\s*\)|'([^']*)'|"([^"$`\\]*)"|([^\s'"$`;&|()<>*?[\]{}~\\]+))(?=[ \t]*(?:;|\r?\n|$))/y;
 const ASSIGN_TAIL = /[ \t]*(?:;|\r?\n)?/y;
-const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|(?:^|[;&|\n(]\s*)\.\s/;
+const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
 const absoluteLiteral = (v) => typeof v === 'string' && v !== '' && !/[\s$`*?[\]{}~]/.test(v) && (v.startsWith('/') || /^[A-Za-z]:[\\/]/.test(v));
 function substituteVars(cmd, tool) {
   if (tool === 'PowerShell') return cmd;
@@ -598,14 +600,14 @@ function substituteVars(cmd, tool) {
   const rest = cmd.slice(pos);
   if (![...known.values()].some(Boolean) || /<<</.test(rest) || VAR_MUTATORS.test(rest)) return cmd;
   let hasHeredoc = false;
-  for (const m of rest.matchAll(/<<-?[ \t]*(['"]?)(\w+)\1/g)) {
+  for (const line of rest.split('\n')) {
+    if (!line.includes('<<')) continue;
     hasHeredoc = true;
-    const before = rest.slice(rest.lastIndexOf('\n', m.index) + 1, m.index);
-    if (m[1] === '' || !/^\s*(?:cat|tee)\b/.test(before)) return cmd;
+    if (!HEREDOC_LINE.test(line.replace(/\r$/, ''))) return cmd;
   }
   let out = rest;
   for (const [name, value] of known) {
-    if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*\+?=|\b${name}\s+in\b`).test(rest)) continue;
+    if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*(?:\[[^\]]*\])?\+?=|\b${name}\s+in\b`).test(rest)) continue;
     out = out.replace(new RegExp(String.raw`\$(?:\{${name}\}|${name}(?![A-Za-z0-9_]))`, 'g'), () => value);
   }
   return cmd.slice(0, pos) + (hasHeredoc ? dropHeredocBodies(out) : out);
