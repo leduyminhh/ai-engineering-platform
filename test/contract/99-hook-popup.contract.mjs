@@ -230,6 +230,39 @@ export default async function run({ ok, ctx }) {
       ok(bash(cmd, withScratch)?.decision === want, `AC6.3: full — ${why}: ${cmd.replace(/\n/g, '⏎')}`);
     }
     ok(bash('S=/etc; rm $S/x') === null, 'AC6.3: ngoài chế độ full lệnh không đổi (không có H6)');
+    // Vòng sửa 1: chỉ khối gán ở đầu chuỗi, kết thúc đúng token, không bị gán lại/đổi; không áp cho PowerShell; heredoc chỉ cho cat/tee có nháy
+    const T = fwd(scratch);
+    const mustStop = [
+      ["S='" + T + "'/../../..; rm -rf $S/victim", 'phần chữ dính sau giá trị có nháy'],
+      ['S="' + T + '"/../../..; rm -rf $S/victim', 'phần chữ dính sau giá trị nháy kép'],
+      ["S=$(cygpath -u '" + T + "')/../../..; rm -rf $S/victim", 'phần chữ dính sau $(cygpath …)'],
+      ['S="' + T + '"$X; rm -rf $S/victim', 'giá trị ghép với biến khác'],
+      ['S=' + T + ' rm -rf $S/etc', 'gán chỉ cho một lệnh (env-prefix)'],
+      ['S=' + T + ' | cat; rm -rf $S/etc', 'gán ở vế pipe'],
+      ['S=' + T + ' & rm -rf $S/etc', 'gán ở lệnh nền'],
+      ['echo hi # x; S=' + T + '\nrm -rf $S/etc', 'gán nằm trong chú thích'],
+      ['S=' + T + '; unset S; rm -rf $S/etc', 'unset'],
+      ['S=' + T + '; S+=/../../victim; rm -rf $S', '+='],
+      ['S=' + T + '; for S in /etc; do rm -rf $S/x; done', 'for S in'],
+      ['S=' + T + '; read S; rm -rf $S/x', 'read'],
+      ['S=' + T + '; true && S=/etc; rm -rf $S/x', 'gán lại sau &&'],
+      ['S=' + T + '; eval S=/etc; rm -rf $S/x', 'eval'],
+      ['S=' + T + "; cat <<'EOF'\nx\nEOF\nS=/etc\nrm -rf $S/x", 'gán lại sau heredoc'],
+      ['S=' + T + "; bash <<'EOF'\nrm -rf $S/etc\nEOF", 'heredoc cho shell con'],
+      ['S=' + T + '; cat <<EOF\n$(rm -rf $S/etc)\nEOF', 'heredoc không nháy có $( )'],
+      ['echo hi\nS=' + T + '\nrm -rf $S/etc', 'gán không ở đầu chuỗi'],
+      ['if false; then\nS=' + T + '\nfi\nrm -rf $S/x', 'gán trong if xuống dòng'],
+      ['(S=' + T + '); rm -rf $S/x', 'gán trong subshell'],
+      ['f() { S=' + T + '; }; rm -rf $S/x', 'gán trong hàm chưa gọi'],
+      ['S=' + T + "; cat <<<x; rm -rf $S/../../x", 'here-string'],
+    ];
+    for (const [cmd, why] of mustStop) {
+      ok(bash(cmd.replaceAll('\\n', '\n'), withScratch) !== null, `AC6.3: full — không tin phép gán (${why}) nên vẫn bị hỏi hoặc chặn: ${cmd.replace(/\\n/g, '⏎')}`);
+    }
+    ok(bash(String.raw`S=${scratch}\x; rm -rf $S/x`, withScratch) !== null, 'AC6.3: full — giá trị bare có dấu \\ không được tin');
+    ok(bash(`S=${T}/a; Remove-Item -Recurse -Force $S/Users`, { ...withScratch, tool: 'PowerShell' }) !== null && bash(`S=${T}; Get-Content $S/.env`, { ...withScratch, tool: 'PowerShell' }) !== null,
+      'AC6.3: PowerShell không dùng phép gán S=… của bash nên không giải biến');
+    ok(bash(`rm -rf ${fwd(tmpRoot)}`, { full: true }) !== null, 'AC6.1: full — xoá cả thư mục <tmpdir>/claude vẫn bị chặn (chỉ phần dưới nó là root)');
   }
 
   // ── Task 3: file bí mật bỏ qua lệnh metadata và mẫu tìm kiếm (AC2.2)
