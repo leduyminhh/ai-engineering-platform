@@ -24,17 +24,17 @@ request**, and state the assumption.
 2. **Surgical changes.** Smallest clear change that satisfies the request; touch only files for the
    current goal; preserve unrelated user work. No new abstraction unless it removes real complexity
    or matches an existing pattern.
-3. **Match conventions.** Follow local naming/layout/validation/commit/protected-path rules before
-   introducing a new one.
+3. **Match conventions.** Follow local naming/layout/validation/commit/protected-path rules before adding new ones.
 4. **Surface conflicts.** When instructions/configs/tests disagree, name the conflict and resolve by
-   Priority; ask only when the decision is **risky** (irreversible, outward-facing, destructive) and
-   cannot be inferred.
+   Priority; ask only when **risky** (irreversible, outward-facing, destructive) and not inferable.
 5. **Verify intent.** Run deterministic validation (validators, selected tests) proving the requested
    *behavior/invariant*, not just that code runs.
 6. **Fail loud.** No completion claim without evidence. Report blockers, skipped checks, uncertainty,
    and residual risk. Never present unverified output as fact.
 7. **Comments are documentation, not narration.** Follow **Comments** below. Never narrate what the
    code already expresses; explain *why* only when the gate passes.
+8. **One Bash command per call.** No long `&&` chains: the permission prompt shows the whole chain, so
+   the user cannot review it step by step.
 
 > **Long / ambiguous tasks:** define the success condition up front; checkpoint after
 > plan/edit/verify/publish; prefer targeted reads over broad scans.

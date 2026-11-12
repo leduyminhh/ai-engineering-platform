@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef } from './gate-config.mjs';
+import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef, showArg, claudeTmpRoots } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 // Biên gồm cả > : ` @ { , (vd x>.env, HEAD:.env, @.env, {a,.env}) vì tên file dính các ký tự này vẫn được lệnh đọc/ghi.
@@ -119,18 +119,18 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true
     pos.push(a);
   }
   const specs = pos.slice(1);
-  if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return 'push dạng force/xoá/mirror/all';
+  if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return { kind: 'force' };
   // Refspec chứa biến/~/backtick không biết đích thật (có thể là nhánh bảo vệ): hỏi như -C không resolve được.
-  if (specs.some(hasUnresolvedRef)) return 'push có refspec chứa biến/~ không xác định được nhánh đích';
+  if (specs.some(hasUnresolvedRef)) return { kind: 'unknown' };
   // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
   const unresolvable = cdUnresolved || gc.dirs.some(hasUnresolvedRef);
   const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs.map((d) => np(d, msys))) : cwd;
   const refs = specs.map((r) => r.split(':').pop().replace(/^refs\/heads\//, ''));
   const wantsHead = (refs.length ? refs : ['HEAD']).some((r) => r === 'HEAD' || r === '@');
-  if (unresolvable && wantsHead) return 'push không xác định được nhánh hiện tại (đường dẫn -C/cd chứa biến/~)';
+  if (unresolvable && wantsHead) return { kind: 'unknown' };
   const targets = (refs.length ? refs : ['HEAD']).map((r) => (r === 'HEAD' || r === '@' ? currentBranch(dir) : r));
   const hit = targets.find((r) => r && PROTECTED.has(r));
-  return hit ? `push vào nhánh bảo vệ "${hit}"` : null;
+  return hit ? { kind: 'protected', branch: hit } : null;
 }
 
 // Git Bash đổi /e/x thành E:/x; PowerShell giải /e/x theo ổ hiện tại (E:\e\x) nên không được đổi.
@@ -173,7 +173,7 @@ const LAST_ONLY = new Set(['cp', 'copy', 'copy-item']);
 const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content']);
 const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
-const SHELLS = new Set(['bash', 'sh', 'zsh', 'pwsh', 'powershell']);
+const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh', 'tcsh', 'cmd', 'pwsh', 'powershell']);
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
 const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul|\$null)$/i;
 const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
@@ -181,6 +181,7 @@ const GLOB = /[*?[]/;
 
 const cmdName = (x) => String(x).split(/[\\/]/).pop().toLowerCase().replace(/\.exe$/, '');
 
+const SHELL_KEYWORDS = new Set(['{', '!', 'if', 'then', 'else', 'elif', 'do', 'while', 'until']);
 const SUDO_VALUE_OPT = /^(-[A-Za-z]*[ughpCrtUDRT]|--(user|group|host|prompt|chdir|role|type|other-user|close-from))$/;
 const ENV_SPLIT = /^(-S|--split-string=?)([\s\S]*)$/;
 
@@ -191,7 +192,21 @@ function unwrap(tokens) {
   let k = 0;
   while (k < t.length) {
     const n = cmdName(t[k]);
-    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec'].includes(n)) { k++; continue; }
+    // Từ khoá cấu trúc đứng ở vị trí lệnh (khối { }, if/then, for/do, !): lệnh thật là token kế, nếu không WRITE_CMDS không khớp.
+    if (SHELL_KEYWORDS.has(t[k])) { k++; continue; }
+    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec', 'busybox'].includes(n)) {
+      k++;
+      if (n === 'command') while (t[k]?.startsWith('-')) k++;
+      continue;
+    }
+    // Các tiền tố bọc ít gặp: bỏ cờ của chúng để lệnh thật (cp, tee, rm…) lộ ra cho H6 và kiểm cấu hình hook.
+    if (n === 'time') { k++; while (t[k]?.startsWith('-')) k++; continue; }
+    if (n === 'doas' || n === 'ionice' || n === 'stdbuf') {
+      k++;
+      const value = n === 'doas' ? /^-[uC]$/ : n === 'ionice' ? /^-[cnpP]$/ : /^-[ioe]$/;
+      while (t[k]?.startsWith('-')) k += value.test(t[k]) ? 2 : 1;
+      continue;
+    }
     if (n === 'sudo') {
       k++;
       while (k < t.length && t[k].startsWith('-')) k += SUDO_VALUE_OPT.test(t[k]) ? 2 : 1;
@@ -227,7 +242,8 @@ function unwrap(tokens) {
   return [t, k];
 }
 
-const SHELL_CMD_FLAG = /^(-[a-z]*c|-command)$/i;
+const SHELL_CMD_FLAG = /^(-[a-z]*c|-command|\/[ck])$/i;
+const REST_AS_COMMAND = /^(-command|\/[ck])$/i;
 const EVAL_CMDS = new Set(['eval', 'iex', 'invoke-expression']);
 
 // Chuỗi lệnh con của `bash -c "…"`, `pwsh -Command …`, `eval …`, `iex …`: gitCmd chỉ nhận token đúng tên `git`, nên push nằm trong chuỗi bị che.
@@ -235,23 +251,34 @@ function innerSegs(t) {
   const [tk, k] = unwrap(t);
   const name = k < tk.length ? cmdName(tk[k]) : '';
   const args = tk.slice(k + 1);
-  let inner = null;
-  if (SHELLS.has(name)) {
-    const i = args.findIndex((a) => SHELL_CMD_FLAG.test(a));
-    // -Command nhận phần còn lại làm lệnh, -c chỉ nhận đối số kế (các đối số sau là $0, $1…).
-    if (i >= 0) inner = /^-command$/i.test(args[i]) ? args.slice(i + 1).join(' ') : args[i + 1];
-  } else if (EVAL_CMDS.has(name)) inner = args.join(' ');
+  const inner = shellString(name, args);
   return inner ? parse(inner).segs : [];
 }
 
-// Đoạn con đặt ngay sau đoạn cha để trackDirs giữ đúng thứ tự cd; sâu quá 3 cấp thì dừng.
+// -Command (PowerShell) và /c, /k (cmd) nhận phần còn lại làm lệnh, -c chỉ nhận đối số kế (các đối số sau là $0, $1…).
+function shellString(name, args) {
+  if (SHELLS.has(name)) {
+    const i = args.findIndex((a) => SHELL_CMD_FLAG.test(a));
+    return i < 0 ? null : REST_AS_COMMAND.test(args[i]) ? args.slice(i + 1).join(' ') : args[i + 1];
+  }
+  return EVAL_CMDS.has(name) ? args.join(' ') : null;
+}
+
+// Đoạn con đặt ngay sau đoạn cha để trackDirs giữ đúng thứ tự cd; sâu quá 6 cấp thì dừng.
 function expandShells(segs, depth = 0) {
-  return segs.flatMap((t) => [t, ...(depth < 3 ? expandShells(innerSegs(t), depth + 1) : [])]);
+  return segs.flatMap((t) => [t, ...(depth < 6 ? expandShells(innerSegs(t), depth + 1) : [])]);
+}
+
+// Chỉ phần dưới <tmpdir>/claude là root: xoá hay di chuyển cả thư mục gốc của Claude vẫn bị chặn.
+function isClaudeTmpRoot(p, dir) {
+  const a = path.resolve(dir, p).replace(/[\\/]+$/, '');
+  return claudeTmpRoots().some((r) => (process.platform === 'win32' ? a.toLowerCase() === r.toLowerCase() : a === r));
 }
 
 function classifyTarget(raw, dir, unres, roots, msys = true) {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
+  if (!hasUnresolvedRef(p) && !GLOB.test(p) && isClaudeTmpRoot(p, dir)) return 'outside';
   const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
   if (!absolute && (unres || hasUnresolvedRef(p))) return 'unknown';
   if (GLOB.test(p)) {
@@ -259,13 +286,14 @@ function classifyTarget(raw, dir, unres, roots, msys = true) {
     const first = parts.findIndex((x) => x !== '');
     const g = parts.findIndex((x) => GLOB.test(x));
     if (g <= first) return 'unknown';
+    if (isClaudeTmpRoot(parts.slice(0, g).join('/'), dir)) return 'outside';
     return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots, msys);
   }
   return classifyPath(p, dir, roots, msys);
 }
 
-// Trả 'deny' | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
-function confineSegment(t, dir, unres, roots, msys = true) {
+// Đích ghi của một đoạn lệnh (chuyển hướng, đối số của WRITE_CMDS, cờ đường dẫn PowerShell) kèm tên lệnh và đối số sau khi bỏ tiền tố bọc.
+function writeTargets(t) {
   const rest = [];
   const targets = [];
   for (let i = 0; i < t.length; i++) {
@@ -289,14 +317,14 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   const [tk, k] = unwrap(rest);
   const name = k < tk.length ? cmdName(tk[k]) : '';
   const args = tk.slice(k + 1);
-  let ask = false;
-  if (SHELLS.has(name) && args.some((a) => /^(-[a-z]*c|-command)$/i.test(a)) && WRITE_IN_STRING.test(args.join(' '))) ask = true;
-  if (name === 'eval' && WRITE_IN_STRING.test(args.join(' '))) ask = true;
+  let allPos = [];
   if (WRITE_CMDS.has(name)) {
     let pos = [];
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) targets.push(args[++i]); continue; }
+      const colon = /^-(?:path|literalpath|filepath|destination):(.+)$/i.exec(a);
+      if (colon) { targets.push(colon[1]); continue; }
       // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
       if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
       if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
@@ -305,9 +333,31 @@ function confineSegment(t, dir, unres, roots, msys = true) {
     }
     if (SKIP_FIRST.has(name)) pos = pos.slice(1);
     if (LAST_ONLY.has(name)) pos = pos.slice(-1);
+    // Set-Content/Out-File: cờ có giá trị (-Encoding utf8, -Value x) làm đối số đầu không còn là đích thật; allPos giữ mọi đối số cho kiểm cấu hình hook.
+    allPos = pos;
     if (FIRST_ONLY.has(name)) pos = pos.slice(0, 1);
     targets.push(...pos);
   }
+  return { targets, name, args, allPos };
+}
+
+// Chuỗi con của `bash -c`/`eval` có ghi gì không: đọc bằng parse nên `>` trong nháy của awk hay tên lệnh nằm trong đối số không bị tính.
+// Nháy không đóng làm parse mất cấu trúc: rơi về regex thô như bản cũ (hỏi thừa còn hơn bỏ sót).
+function stringWrites(str) {
+  const s = str.replace(/>\|/g, '>');
+  const p = parse(s);
+  if (p.unclosed) return WRITE_IN_STRING.test(s);
+  return [...expandShells(p.segs), ...expandShells(naiveSegments(s))].some((t) => {
+    const w = writeTargets(t);
+    return w.targets.some((x) => !NULL_DEVICE.test(x)) || WRITE_CMDS.has(w.name) || indirectWrite(t, w);
+  });
+}
+
+// Trả 'deny' | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
+function confineSegment(t, dir, unres, roots, msys = true) {
+  const { targets, name, args } = writeTargets(t);
+  const inner = name === 'eval' || SHELLS.has(name) ? shellString(name, args) : null;
+  const ask = Boolean(inner) && stringWrites(inner);
   let unknown = false;
   for (const p of targets) {
     const c = classifyTarget(p, dir, unres, roots, msys);
@@ -371,12 +421,124 @@ function matchesAsk(orig) {
 // File cấu hình của chính các hook (xem guard-files): lệnh nhắc tên file kèm lệnh ghi thì hỏi.
 // shortcut: heuristic đọc token, `node -e`/script con ghi file vẫn lọt; nâng lên khi cần chặn thật thì dùng quyền hệ thống file.
 const GUARD_CONFIG = /(?:\.claude[\\/]settings(?:\.[\w-]+)?|(?:^|[^\w.-])aip-gate)\.json(?![\w.-])/i;
-const SED_IN_PLACE = /\b(?:sed|perl)\b[^|;&]*\s-[a-z]*i/i;
+const IN_PLACE_FLAG = /^(?:-[a-z]*i|--in-place)/i;
+
+// Chỉ đích ghi mới tính: tên file cấu hình nằm trong message hay đối số đọc không làm lệnh bị hỏi.
+// xargs/find/parallel nhận lệnh ghi qua đối số hay đầu vào pipe nên không có đích ghi nhìn thấy được: coi là ghi khi đoạn có tên lệnh ghi hoặc -exec/-delete.
+const INDIRECT = new Set(['xargs', 'find', 'parallel']);
+const inPlaceEdit = (all) => all.some((x) => x === 'sed' || x === 'perl') && all.some((x) => IN_PLACE_FLAG.test(x));
+const writeSignal = (all, indirect) => all.some((x) => WRITE_CMDS.has(cmdName(x)) || (indirect && (SHELLS.has(cmdName(x)) || /^-(exec|execdir|delete)$/.test(x)))) || inPlaceEdit(all);
+const indirectWrite = (t, w = writeTargets(t)) => INDIRECT.has(w.name) && writeSignal(w.args, true);
+const isConfigPath = (x) => !/\s/.test(x) && GUARD_CONFIG.test(x);
+
+// Tên file cấu hình đến từ đoạn khác (`echo cfg | xargs rm`) hay từ placeholder: có đoạn ghi gián tiếp và một token giống đường dẫn cấu hình ở bất kỳ đâu thì hỏi.
+// Đích ghi là biến ($F), sed/perl tại-chỗ trên biến, hoặc awk/python/node… tự ghi file: không đọc được đích nên hỏi khi chính lệnh nhắc tên file cấu hình hook.
+const INTERPRETERS = new Set(['awk', 'gawk', 'mawk', 'python', 'python2', 'python3', 'node', 'nodejs', 'perl', 'ruby', 'php', 'lua']);
+function opaqueConfigWrite(list, cmd) {
+  if (!GUARD_CONFIG.test(cmd)) return false;
+  return list.some((t) => {
+    const w = writeTargets(t);
+    if (w.targets.some(hasUnresolvedRef)) return true;
+    if ((w.name === 'sed' || w.name === 'perl') && w.args.some((x) => IN_PLACE_FLAG.test(x)) && w.args.some(hasUnresolvedRef)) return true;
+    return INTERPRETERS.has(w.name) && w.args.some((x) => /[>]|open\(|write/i.test(x));
+  });
+}
+
+// parse coi $( ) và backtick trong nháy là một token: bóc chuỗi bên trong (ngoặc cân bằng, tối đa 4 lớp, 200 chuỗi) để kiểm cấu hình hook như lệnh thường.
+// Vượt trần thì trả truncated để người gọi hỏi, không đoán; vòng lặp thay cho spread vì input lớn làm tràn stack.
+const MAX_INNER = 200;
+function innerCommands(s, out) {
+  for (let i = s.indexOf('$('); i >= 0 && out.length <= MAX_INNER;) {
+    let depth = 1;
+    let j = i + 2;
+    for (; j < s.length && depth; j++) {
+      if (s[j] === '(') depth++;
+      else if (s[j] === ')') depth--;
+    }
+    out.push(s.slice(i + 2, depth ? s.length : j - 1));
+    i = s.indexOf('$(', j);
+  }
+  for (let k = s.indexOf('`'); k >= 0 && out.length <= MAX_INNER;) {
+    const e = s.indexOf('`', k + 1);
+    if (e < 0) break;
+    out.push(s.slice(k + 1, e));
+    k = s.indexOf('`', e + 1);
+  }
+}
+const hasSubstitution = (x) => x.includes('$(') || x.includes('`');
+function substitutedConfigWrite(list, cmd) {
+  const found = [];
+  let layer = [];
+  for (const t of list) for (const x of t) if (hasSubstitution(x)) layer.push(x);
+  for (let depth = 0; layer.length; depth++) {
+    if (depth >= 4 || found.length > MAX_INNER) return GUARD_CONFIG.test(cmd);
+    const next = [];
+    for (const x of layer) innerCommands(x, next);
+    for (const x of next) found.push(x);
+    layer = next.filter(hasSubstitution);
+  }
+  if (found.length > MAX_INNER) return GUARD_CONFIG.test(cmd);
+  return found.some((str) => expandShells(parse(str).segs).some(writesGuardConfig));
+}
+
+function pipedIndirectConfigWrite(list) {
+  return list.some((t) => indirectWrite(t)) && list.some((t) => t.some(isConfigPath));
+}
+
+function writesGuardConfig(t) {
+  const { targets, name, args, allPos } = writeTargets(t);
+  if (targets.some((p) => GUARD_CONFIG.test(p)) || (FIRST_ONLY.has(name) && allPos.some((p) => GUARD_CONFIG.test(p)))) return true;
+  // Lệnh không thuộc WRITE_CMDS (khối script PowerShell, xargs, find, parallel…): không đọc được đích ghi thì hỏi khi cùng đoạn có đường dẫn cấu hình và tín hiệu ghi.
+  if (name !== 'sed' && name !== 'perl' && !WRITE_CMDS.has(name)) {
+    const all = [name, ...args];
+    // xargs/find/parallel đưa chuỗi `sh -c '… > cfg'` làm một đối số có khoảng trắng nên tên file nằm trong chuỗi vẫn tính.
+    const indirect = INDIRECT.has(name);
+    if (all.some((x) => (indirect ? GUARD_CONFIG.test(x) : isConfigPath(x))) && writeSignal(all, indirect)) return true;
+  }
+  return (name === 'sed' || name === 'perl') && args.some((a) => IN_PLACE_FLAG.test(a)) && args.some((a) => GUARD_CONFIG.test(a));
+}
+
+// Câu hỏi hiện trong popup cho người dùng: nói việc lệnh làm, vì sao hỏi, cho phép thì sao và nên chọn gì, không dùng thuật ngữ nội bộ.
+const PUSH_TEXT = {
+  force: 'Lệnh push này có thể ghi đè hoặc xoá nhánh trên remote; commit bị mất không lấy lại được. Hãy từ chối, trừ khi chính bạn yêu cầu.',
+  unknown: 'Không đoán được lệnh sẽ push vào nhánh nào (tên nhánh hoặc thư mục là biến). Xem lệnh bên dưới; chỉ cho phép khi chắc đó không phải nhánh bảo vệ.',
+};
+const pushText = (r) => (r.kind === 'protected'
+  ? `Đẩy code lên nhánh bảo vệ \`${r.branch}\` trên remote. Sau khi đẩy, người khác thấy ngay và khó rút lại. Chỉ cho phép nếu bạn đã duyệt diff; nếu không, hãy từ chối để agent đẩy lên nhánh feature.`
+  : PUSH_TEXT[r.kind]);
+const CONFIG_TEXT = 'Lệnh sửa file cấu hình quyền (.claude/aip-gate.json hoặc settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.';
+const FULL_PATH_TEXT = 'Lệnh ghi hoặc xoá ở đường dẫn chỉ biết lúc chạy (`$VAR`, `~`, `*`), không chắc nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.';
+const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy. Project bật chế độ full nhưng phiên này không chạy ở chế độ bỏ qua hỏi quyền nên vẫn hỏi bạn như bình thường. Cho phép hoặc từ chối từng lần; muốn đổi thì chạy `aip mode ask`.';
+const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent hoặc bị gửi ra ngoài. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
+
+// Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
+const MAX_STEPS = 6;
+// Chỉ dùng thông tin có sẵn từ parse (tên lệnh, lệnh con git, đích chuyển hướng); không đoán số file vì git commit -m không nêu file nào.
+function summarize(cmd) {
+  const p = parse(stripSimpleHeredocs(cmd) ?? cmd);
+  const steps = [];
+  let total = 0;
+  let nested = false;
+  for (const t of expandShells(p.segs)) {
+    const [tk, k] = unwrap(t);
+    if (/\$\(|`|<\(/.test(t.join(' '))) nested = true;
+    if (k >= tk.length || String(tk[k]).startsWith('#')) continue;
+    total++;
+    if (steps.length >= MAX_STEPS) continue;
+    const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
+    const target = writeTargets(t).targets.find((x) => !NULL_DEVICE.test(x));
+    steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${target ? ` (ghi vào ${showArg(target, 60)})` : ''}`);
+  }
+  if (!total) return '';
+  const more = total > MAX_STEPS ? `, … và ${total - MAX_STEPS} bước khác` : '';
+  const open = (p.unclosed ? ' (nháy chưa đóng: danh sách có thể thiếu bước)' : '') + (nested ? ' (có lệnh lồng trong nháy: xem khối lệnh bên dưới)' : '');
+  return `Lệnh gồm: ${steps.join(', ')}${more}.${open}`;
+}
 
 const NON_ASCII = /[^\x00-\x7F]/;
 const DENY_COMMIT = { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
 
-const ASK_UNPARSABLE = { decision: 'ask', reason: 'Không phân tích chắc chắn được lệnh (nháy không đóng) nhưng có vẻ là git commit -m kèm ký tự non-ASCII. Dùng `git commit -F <file>` (skill git-workflow) hoặc xác nhận thủ công.' };
+const UNPARSABLE_TEXT = 'Không đọc chắc được lệnh commit (dấu nháy chưa đóng). Nên từ chối để agent viết lại bằng `git commit -F`, hoặc cho phép nếu bạn đã tự kiểm tra lệnh.';
 
 // Kiểm tuyến tính theo dòng/đoạn (không regex lồng) để input dài không gây backtracking bậc hai.
 function hasCommitWithMessageFlag(cmd) {
@@ -398,6 +560,126 @@ function hasCommitWithMessageFlag(cmd) {
 // Đoạn chỉ đọc metadata (git check-ignore/ls-files, echo, printf) nhắc tên file bí mật mà không đọc nội dung thì không hỏi.
 // Chỉ miễn khi đoạn không chuyển hướng, không pipe sang lệnh sau và cả lệnh không có $( ), `` hay <( ): các đường đó đưa tên file sang lệnh đọc nội dung.
 const META_GIT = new Set(['check-ignore', 'ls-files']);
+const META_NAMES = new Set(['echo', 'printf', 'ls', 'dir']);
+// git log chỉ miễn khi mọi cờ nằm trong danh sách này: -p/--patch/-S/-G/-L/--textconv và cờ lạ in được nội dung file nên vẫn bị hỏi.
+const LOG_SAFE_FLAG = /^(--(oneline|stat|shortstat|numstat|name-only|name-status|follow|all|graph|decorate|abbrev-commit|no-merges)|--(format|pretty|date|since|until|author|max-count|skip)=.*|-\d+|-n\d*)$/;
+function isMetaOnly(t) {
+  const name = cmdName(t[0]);
+  if (META_NAMES.has(name)) return true;
+  const g = name === 'git' ? gitCmd(t) : null;
+  if (!g) return false;
+  if (META_GIT.has(g.sub)) return true;
+  if (g.sub !== 'log') return false;
+  // `git -c core.pager=…` chạy lệnh tuỳ ý khi mở pager: cấu hình truyền qua dòng lệnh làm git log không còn là lệnh metadata thuần.
+  if (t.slice(1, g.i).some((x) => x === '-c' || x.startsWith('--config-env'))) return false;
+  const dd = t.indexOf('--', g.i + 1);
+  return t.slice(g.i + 1, dd < 0 ? undefined : dd).every((a) => !a.startsWith('-') || LOG_SAFE_FLAG.test(a));
+}
+
+// Mẫu tìm kiếm là chuỗi cần tìm chứ không phải file được mở: bỏ khỏi văn bản quét bí mật. Đối số còn lại (đường dẫn) vẫn được quét.
+// Chỉ bỏ khi chắc chắn: mọi cờ của lệnh tìm kiếm đều là cờ boolean đã biết (hoặc đúng -e/--regexp tách rời); gặp cờ lạ (-f nạp mẫu từ file, -efoo dính liền, --glob, -Path…)
+// thì không bỏ gì, vì khi đó đối số dương đầu có thể chính là file bí mật.
+const SEARCH_CMDS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'ack']);
+const SEARCH_BOOL_FLAG = /^(-[rRniIvwxclLhHsaEFPoqzuU]+|--(recursive|ignore-case|line-number|count|files-with-matches|files-without-match|invert-match|word-regexp|line-regexp|fixed-strings|extended-regexp|perl-regexp|no-filename|with-filename|quiet|silent|only-matching|text|no-messages|smart-case|hidden|no-ignore))$/;
+// Cờ --grep/--testNamePattern/--filter chỉ được bỏ giá trị ở các lệnh chạy test/log đã biết, không phải mọi lệnh.
+const FILTER_RUNNERS = new Set(['npm', 'npx', 'pnpm', 'yarn', 'jest', 'vitest', 'mocha', 'pytest', 'git', 'mvn', 'gradle']);
+function withoutSearchPatterns(t) {
+  const [tk, k] = unwrap(t);
+  const name = cmdName(tk[k] ?? '');
+  const rest = tk.slice(k + 1);
+  const out = tk.slice(0, k + 1);
+  const runner = FILTER_RUNNERS.has(name);
+  const dd = rest.indexOf('--');
+  const flags = (dd < 0 ? rest : rest.slice(0, dd)).filter((a) => a.startsWith('-'));
+  const known = SEARCH_CMDS.has(name) && flags.every((a) => a === '-e' || a === '--regexp' || SEARCH_BOOL_FLAG.test(a));
+  let patternSeen = (dd < 0 ? rest : rest.slice(0, dd)).some((a) => a === '-e' || a === '--regexp');
+  let afterDashes = false;
+  for (let i = 0; i < rest.length; i++) {
+    const a = rest[i];
+    if (runner && /^--(grep|testNamePattern|filter)=/.test(a)) continue;
+    if (runner && /^--(grep|testNamePattern|filter)$/.test(a)) { out.push(a); i++; continue; }
+    if (!known || afterDashes) { out.push(a); continue; }
+    if (a === '--') { afterDashes = true; out.push(a); continue; }
+    if (a === '-e' || a === '--regexp') { patternSeen = true; out.push(a); i++; continue; }
+    if (a.startsWith('-')) { out.push(a); continue; }
+    if (!patternSeen) { patternSeen = true; continue; }
+    out.push(a);
+  }
+  return out;
+}
+// Theo dõi nháy của một dòng và vị trí các `<<` ngoài nháy; trạng thái mở nháy nghĩa là dòng sau chỉ là nội dung chuỗi.
+function lineQuotes(line) {
+  let q = null;
+  const ops = [];
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) { if (q === '"' && c === '\\') { i++; continue; } if (c === q) q = null; continue; }
+    if (c === '\\') { i++; continue; }
+    if (c === '"' || c === "'") { q = c; continue; }
+    if (c === '<' && line[i + 1] === '<') { ops.push(i); i++; }
+  }
+  return { open: q !== null, ops };
+}
+const HEREDOC_BEFORE = /^[ \t]*(?:cat|tee)(?=[ \t<])[^|;&<`()#\n]*$/;
+const HEREDOC_AFTER = /^-?[ \t]*(['"])(\w+)\1(?=[ \t]|$)[^|;&<`()#\n]*$/;
+// Bỏ thân heredoc bằng quét từng dòng, chỉ khi dòng có << là heredoc thật và đơn giản (cat/tee, delimiter có nháy kết thúc ở khoảng trắng, không # | ; & < ( ) hay $' ${ $[); null nếu không chắc.
+function stripSimpleHeredocs(rest) {
+  const out = [];
+  let end = null;
+  for (const raw of rest.split('\n')) {
+    const line = raw.replace(/\r$/, '');
+    if (end !== null) { if (line.trim() === end) end = null; continue; }
+    const { open, ops } = lineQuotes(line);
+    if (open || ops.length > 1 || /\$['{[(]/.test(line)) return null;
+    if (ops.length === 1) {
+      const m = HEREDOC_AFTER.exec(line.slice(ops[0] + 2));
+      if (!m || !HEREDOC_BEFORE.test(line.slice(0, ops[0]))) return null;
+      end = m[2];
+    }
+    out.push(raw);
+  }
+  return out.join('\n');
+}
+
+// Giải biến gán ở đầu chuỗi cho H6 ở full (`S=$(cygpath -u '<đường dẫn>'); mkdir -p $S/bin`); điều kiện nhận nằm ở ASSIGN_* và VAR_MUTATORS, không thoả thì trả nguyên lệnh.
+const ASSIGN_LEAD = /[ \t\r\n]*([A-Za-z_]\w*)=/y;
+const ASSIGN_VALUE = /(?:\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+'([^']*)'\s*\)|\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+"([^"$`\\]*)"\s*\)|'([^']*)'|"([^"$`\\]*)"|([^\s'"$`;&|()<>*?[\]{}~\\]+))(?=[ \t]*(?:;|\r?\n|$))/y;
+const ASSIGN_TAIL = /[ \t]*(?:;|\r?\n)?/y;
+const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
+// Chỉ ký tự đường dẫn thường: nháy, ; # ( ) < > = bị loại vì giá trị được chèn lại vào lệnh rồi parse lại.
+const absoluteLiteral = (v) => typeof v === 'string' && /^[A-Za-z0-9_.\/:\\@%+,-]+$/.test(v) && (v.startsWith('/') || /^[A-Za-z]:[\\/]/.test(v));
+function substituteVars(cmd, tool) {
+  if (tool === 'PowerShell' || cmd.length > 20000) return cmd;
+  const known = new Map();
+  let pos = 0;
+  for (;;) {
+    ASSIGN_LEAD.lastIndex = pos;
+    const lead = ASSIGN_LEAD.exec(cmd);
+    if (!lead) break;
+    ASSIGN_VALUE.lastIndex = ASSIGN_LEAD.lastIndex;
+    const v = ASSIGN_VALUE.exec(cmd);
+    if (!v) break;
+    const value = v[1] ?? v[2] ?? v[3] ?? v[4] ?? v[5];
+    // IFS đổi cách shell tách $S thành nhiều từ nên mọi phép thay thế sau đó đều sai.
+    if (lead[1] === 'IFS') return cmd;
+    known.set(lead[1], absoluteLiteral(value) ? value : null);
+    ASSIGN_TAIL.lastIndex = ASSIGN_VALUE.lastIndex;
+    ASSIGN_TAIL.exec(cmd);
+    if (ASSIGN_TAIL.lastIndex === ASSIGN_VALUE.lastIndex) { pos = ASSIGN_TAIL.lastIndex; break; }
+    pos = ASSIGN_TAIL.lastIndex;
+  }
+  const rest = cmd.slice(pos);
+  if (known.size > 20 || ![...known.values()].some(Boolean) || /<<</.test(rest) || VAR_MUTATORS.test(rest)) return cmd;
+  const stripped = stripSimpleHeredocs(rest);
+  if (stripped === null) return cmd;
+  let out = stripped;
+  for (const [name, value] of known) {
+    if (!value || new RegExp(String.raw`(?<![\w$])${name}\s*(?:\[|\+?=)|\b${name}\s+in\b`).test(rest)) continue;
+    out = out.replace(new RegExp(String.raw`\$(?:\{${name}\}|${name}(?![A-Za-z0-9_]))`, 'g'), () => value);
+  }
+  return cmd.slice(0, pos) + out;
+}
+
 // Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
 const HARMLESS_REDIRECT = /(^|\s)(?:\d*>>?&\d+|(?:\d*|&)>>?\s*(?:\/dev\/null|nul|\$null))(?=\s|$|[;&|])/gi;
 function secretScanText(cmd) {
@@ -406,18 +688,17 @@ function secretScanText(cmd) {
   const p = parse(c);
   if (p.unclosed) return cmd;
   const keep = (list) => list.filter((t, k) => {
-    const name = cmdName(t[0]);
-    const meta = name === 'echo' || name === 'printf' || (name === 'git' && META_GIT.has(gitCmd(t)?.sub));
+    const meta = isMetaOnly(t);
     return !meta || list[k + 1]?.op === '|' || t.some((x) => /[<>]/.test(x));
   });
-  return [...keep(p.segs), ...keep(naiveSegments(c))].map((t) => t.join(' ')).join('\n');
+  return [...keep(p.segs), ...keep(naiveSegments(c))].map((t) => withoutSearchPatterns(t).join(' ')).join('\n');
 }
 
 export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked, reader = readGate } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
   // Shell POSIX nối dòng bằng \<xuống dòng>; không nối thì \ thành refspec và che nhánh phía sau. PowerShell đã nối bằng backtick ở psNormalize.
-  const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw.replace(/\\\r?\n/g, ' ');
+  const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw.replace(/\\\r?\n/g, ' ').replace(/>\|/g, '>');
   const cwd = input?.cwd || '.';
   const msys = input?.tool_name !== 'PowerShell';
   // Kiểm rẻ (permission_mode) trước; chỉ đọc cấu hình (tốn lời gọi git) khi một nhánh H1–H3 thật sự cần quyết định.
@@ -434,6 +715,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   let fe;
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
+  const ask = (text) => { let line = ''; try { line = summarize(cmd); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
   const parsedCmd = parse(cmd);
   const { unclosed } = parsedCmd;
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
@@ -444,41 +726,47 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const parsed = withDirs(segs, cwd, msys);
   if (parsed.some(({ u, gc }) => gc.sub === 'commit' && commitMessages(u, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;
   // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → hỏi người dùng (ask) khi có dấu bất kỳ.
-  if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd) && !full()) return ASK_UNPARSABLE;
+  if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd) && !full()) return ask(UNPARSABLE_TEXT);
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
   const naive = withDirs(naiveAll, cwd, msys);
   for (const { u, gc, dir, unres } of [...parsed, ...naive]) {
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
-    if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
+    if (why && !(full() && !fullKeep(gate()).includes('push'))) return ask(pushText(why));
   }
-  const noRedirect = cmd.replace(HARMLESS_REDIRECT, '$1');
-  if (GUARD_CONFIG.test(cmd) && (WRITE_IN_STRING.test(noRedirect) || SED_IN_PLACE.test(noRedirect))) {
-    return { decision: 'ask', reason: 'Lệnh ghi vào cấu hình của hook an toàn (.claude/aip-gate.json hoặc .claude/settings*.json) cần người dùng xác nhận.' };
+  if ([...segs, ...naiveAll].some(writesGuardConfig) || pipedIndirectConfigWrite([...segs, ...naiveAll]) || opaqueConfigWrite([...segs, ...naiveAll], cmd) || substitutedConfigWrite([...segs, ...naiveAll], cmd)) {
+    return ask(CONFIG_TEXT);
   }
   if (full()) {
     const roots = rootsOf();
-    let ask = false;
-    for (const { t, dir, unres } of [...trackDirs(outer, cwd, msys), ...trackDirs(naiveOuter, cwd, msys)]) {
+    let unknownPath = false;
+    const resolved = substituteVars(cmd, input?.tool_name);
+    const [fullOuter, fullNaive] = resolved === cmd ? [outer, naiveOuter] : [parse(resolved).segs, naiveSegments(resolved)];
+    for (const { t, dir, unres } of [...trackDirs(fullOuter, cwd, msys), ...trackDirs(fullNaive, cwd, msys)]) {
       const r = confineSegment(t, dir, unres, roots, msys);
       if (r === 'deny') return { decision: 'deny', reason: 'Chế độ full: lệnh ghi/xoá đường dẫn ngoài root của project. Thêm thư mục vào "fullRoots" trong .claude/aip-gate.json nếu thật sự cần.' };
-      if (r === 'ask') ask = true;
+      if (r === 'ask') unknownPath = true;
     }
-    if (ask) return { decision: 'ask', reason: 'Chế độ full: lệnh ghi/xoá có đường dẫn không xác định được (biến, ~, glob đầu đường dẫn, bash -c) — cần người dùng xác nhận.' };
+    if (unknownPath) return ask(FULL_PATH_TEXT);
   }
   // Phiên không bypass trong project full: settings.json không còn quy tắc ask nào chắc chắn áp dụng nên hook hỏi thay.
   // Chỉ đọc cấu hình sau khi một đoạn khớp tiền tố, để lệnh thường không tốn lời gọi git.
   if (!bypass && [...segs, ...naiveAll].some(matchesAsk) && gate()?.mode === 'full') {
-    return { decision: 'ask', reason: 'Chế độ full: phiên không bypass nên lệnh push/mạng/deploy production cần người dùng xác nhận. Chạy `aip mode ask` hoặc khởi động với `--permission-mode bypassPermissions` nếu muốn đổi.' };
+    return ask(FULL_NO_BYPASS_TEXT);
   }
-  const hits = (re) => re.test(secretScanText(cmd)) || re.test(secretScanText(raw));
+  // Ở full, đường dẫn bí mật cũng được giải biến gán cùng lệnh như H6 (tính một lần, chỉ khi cần).
+  const variableLists = () => { const r = substituteVars(cmd, input?.tool_name); return r === cmd ? [outer, naiveOuter] : [parse(r).segs, naiveSegments(r)]; };
+  let scanned;
+  const scans = () => (scanned ??= [secretScanText(cmd), secretScanText(raw)]);
+  const hits = (re) => scans().some((text) => re.test(text));
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
-  const secretAsk = { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
-  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk;
+  const secretName = (re) => { for (const text of scans()) { const m = re.exec(text); if (m) return m[2]; } return ''; };
+  const secretAsk = (re) => ask(secretText(secretName(re)));
+  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk(hits(KEY_SECRET) ? KEY_SECRET : SECRET);
   // Ở full, bí mật chỉ mở trong root của project: đường dẫn bí mật nằm ngoài root hoặc không xác định được vẫn hỏi (khớp guard-files).
   if (hits(SECRET) && full()) {
     // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
     const secretRe = hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET;
-    if (hits(secretRe) && secretOutsideRoots([outer, naiveOuter], cwd, rootsOf(), secretRe, msys)) return secretAsk;
+    if (hits(secretRe) && secretOutsideRoots(variableLists(), cwd, rootsOf(), secretRe, msys)) return secretAsk(secretRe);
   }
   return null;
 }

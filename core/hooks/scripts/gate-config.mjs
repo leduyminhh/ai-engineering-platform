@@ -17,6 +17,13 @@ export function readGate(dir) {
   return g?.config ? g : null;
 }
 
+// Cho khoá chỉ siết (mcpAllow/mcpDeny): gitUnknown vẫn dùng file đã đọc được, file hỏng được báo riêng để hook hỏi thay vì bỏ qua im lặng.
+export function gateForGuard(dir) {
+  const g = locateGate(dir);
+  if (!g.inRepo) return { gate: null, invalid: null };
+  return { gate: g.config ? g : null, invalid: g.source === 'worktree-invalid' ? g.file : (g.mainInvalid ?? null) };
+}
+
 export function readGateConfig(dir) {
   return readGate(dir)?.config ?? null;
 }
@@ -52,6 +59,12 @@ export function envFilesAllowed(dir, { tracked } = {}) {
   return trustedValue(resolveGate(dir), 'allowEnvFiles', { tracked }) === true;
 }
 
+// Chuỗi do agent cung cấp (đường dẫn, token lệnh) đi vào reason hiện cho người dùng: bỏ xuống dòng/backtick để không làm giả dòng hay đóng khối trích, cắt giữ phần đuôi (tên file) để lời khuyên không bị đẩy ra ngoài.
+export function showArg(s, max = 120) {
+  const t = String(s).replace(new RegExp('[\\p{Cc}\\p{Cf}\\u2028\\u2029`]+', 'gu'), ' ').trim();
+  return t.length > max ? `…${t.slice(-max)}` : t;
+}
+
 // Git Bash/Cygwin đưa đường dẫn kiểu /e/x hay /cygdrive/e/x; Node trên Windows sẽ hiểu thành E:\e\x (sai ổ) nếu không đổi trước.
 export function normalizeMsysPath(p, platform = process.platform) {
   if (platform !== 'win32' || typeof p !== 'string') return p;
@@ -78,9 +91,12 @@ export function classifyPath(p, cwd, roots, msys = true) {
   return roots.some((r) => { const n = norm(path.resolve(r)); return abs === n || abs.startsWith(`${n}/`); }) ? 'inside' : 'outside';
 }
 
+// Thư mục tạm do chính Claude Code sinh ra (scratchpad, thư mục kết quả tool): không phải "ngoài project" với agent. [Unverified] Bố cục <tmpdir>/claude đo trên Windows, chưa kiểm POSIX.
+export const claudeTmpRoots = (tmp = os.tmpdir()) => [path.join(tmp, 'claude')];
+
 export function allowedRoots(gate, input) {
   const sp = input?.scratchpad_dir;
-  return [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config)];
+  return [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config), ...claudeTmpRoots()];
 }
 
 export function fullReadRoots(config) {
