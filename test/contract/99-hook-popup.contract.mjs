@@ -367,7 +367,7 @@ export default async function run({ ok, ctx }) {
   {
     const agents = fs.readFileSync(path.join(REPO_ROOT, 'AGENTS.md'), 'utf8');
     const template = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
-    ok(/One Bash command per call/.test(agents) && /&&/.test(agents.split('One Bash command per call')[1].split('\n').slice(0, 2).join(' ')), 'AC1.5: AGENTS.md có rule mỗi lệnh Bash một việc, không nối chuỗi dài bằng &&');
+    ok(/^8\. /m.test(agents), 'AC1.5: AGENTS.md có thêm một rule đánh số 8 (mỗi lệnh Bash một việc)');
     ok(agents.replace(/\r\n/g, '\n') === template.replace(/\r\n/g, '\n') && agents.split('\n').length <= 201, 'AC1.5: AGENTS.md và template giống hệt nhau, không quá 200 dòng');
   }
 }

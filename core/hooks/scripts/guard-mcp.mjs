@@ -36,7 +36,7 @@ export function decide(input, { config, tracked, locate = gateForGuard } = {}) {
   if (startSessionWithoutModel(input)) return { decision: 'deny', reason: 'start_session thiếu `model` nên phiên mới kế thừa model của phiên cha (thường opus). Truyền `model`: phiên thực thi mặc định là sonnet (mục "Model and session routing" của baseline); cần opus thì truyền tường minh.' };
   const found = config === undefined ? locate(input?.cwd) : { gate: { config }, invalid: null };
   // Không đọc được mcpDeny thì không biết server này có bị chặn không: hỏi thay vì cho qua im lặng.
-  if (found.invalid) return { decision: 'ask', reason: `Không đọc được file cấu hình quyền \`${found.invalid}\` (JSON hỏng) nên không biết server MCP "${t.server}" có nằm trong danh sách chặn của bạn không. Cho phép thì tool chạy mà không qua danh sách đó. Nên từ chối, sửa file rồi chạy lại.` };
+  if (found.invalid) return { decision: 'ask', reason: `Không đọc được file cấu hình quyền \`${found.invalid}\` (JSON hỏng hoặc không phải đối tượng) nên không biết server MCP "${t.server}" có nằm trong danh sách chặn của bạn không. Cho phép thì tool chạy mà không qua danh sách đó. Nên từ chối, sửa file rồi chạy lại.` };
   const gate = found.gate;
   const cfg = gate?.config;
   if (!cfg || typeof cfg !== 'object') return null;
