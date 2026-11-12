@@ -1,6 +1,6 @@
 # Thiết kế: popup hook dễ hiểu, bớt bắt nhầm, giữ mcpDeny
 - Ngày: 2026-11-12
-- Trạng thái: draft
+- Trạng thái: merged 7a8c68c2
 - Requirement: không có
 
 ## Vấn đề và lý do
@@ -92,3 +92,15 @@ Tác động và vị trí:
 - E(b) đổi file hỏng từ "cho qua" thành "hỏi mỗi lần gọi MCP". Người dùng có file hỏng sẽ thấy popup lặp lại cho tới khi sửa; thông báo nêu đường dẫn. Chưa có số liệu mức độ file hỏng gặp ngoài thực tế.
 - E(a) làm hook đọc cấu hình khi git lỗi; quyết định trước đó ("gitUnknown: giữ hành vi như ngoài repo") nhằm khoá `untracked`, còn `mcpAllow`/`mcpDeny` chỉ siết nên an toàn; chỉ đổi ở `guard-mcp`.
 - Câu mở cho người duyệt: (1) file hỏng thì `ask` (đề xuất) hay `deny` mọi tool MCP; (2) chấp nhận dòng "Lệnh gồm" liệt kê bước thay vì đếm file; (3) cách gộp để `AGENTS.md` không vượt 200 dòng khi thêm rule (builder chọn dòng ít giá trị nhất, trình ở G3).
+
+## Quyết định khi thực thi
+
+Chép từ ledger `.aip/runs/…/root/progress.md` (không nằm trong nhánh). Chạy lại các kiểm: `node test/validate.mjs --only hook-popup`.
+
+- Cách chạy: subagent + review từng task (người dùng chọn).
+- Rule 8 trong AGENTS.md giữ tiếng Anh; AC1.5 kiểm nghĩa, không kiểm chuỗi.
+- Ca `rg --glob` đổi từ null sang hỏi: cờ có giá trị có thể che đường dẫn thật nên chọn hỏi thừa.
+- Sửa tại chỗ không thêm vòng review độc lập: delimiter heredoc dính chữ (G3), gán `x="$(…)"`, chuỗi `$'…\'…'` (N6, người dùng đồng ý), các lệch docs của Task 8, và ba lỗi R1–R3 của re-review cuối (đệm `$( )` làm tràn stack, `$( )` lồng ngoặc, chỉ số mảng dài). Có thể còn dạng nháy hoặc ngoặc khác chưa thấy.
+- Số đo: `decide` trên input 256 KB chạy dưới 600 ms; ở full chậm khoảng gấp đôi chế độ thường.
+- Hoãn (minor): root `<tmpdir>/claude` rộng hơn scratchpad của phiên và chứa dữ liệu của phiên khác; symlink trong root không resolve; phép gán trong khối điều kiện xuống dòng không được tin nên hỏi thừa; header commit `51c2517c` ghép hai type.
+- Lỗi có sẵn, chưa sửa: xử lý `cd a;` bậc hai; `git push` trong `"$(…)"` nằm trong nháy.
