@@ -525,6 +525,14 @@ export default async function run({ ok, ctx }) {
     ok(start(one, { source: 'resume', extra: cold, cfg: { resumeWarn: false } }) === null, 'AC3.2: resumeWarn false → null');
     ok(!String(start({}, { source: 'resume', extra: { prompt_cache_likely_expired: true } })?.additionalContext).match(/undefined|NaN/),
       'AC3.2: thiếu số liệu thì bỏ phần đó, không bịa');
+
+    // gate-followups AC2.1/AC2.3: nhiều handoff ứng viên chỉ tốn một lần ls-files mỗi gốc; git lỗi rơi về từng file
+    const many = Object.fromEntries(Array.from({ length: 25 }, (_, i) => [`docs/requests/2026-01-${String(i + 10)}-r${i}/handoff.md`, { text: body(`R${i}`), mtime: T0 + (30 - i) * 1000 }]));
+    let listed = 0;
+    const withList = (listTracked) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd: '/repo' }, { ...fake(many), listTracked })?.additionalContext ?? '';
+    const newest = withList((dir) => { listed++; ok(dir === abs('.'), 'AC2.1: ls-files chạy ở gốc ứng viên'); return ['docs/requests/2026-01-10-r0/handoff.md']; });
+    ok(listed === 1 && newest.includes('R1') && !newest.includes('R0'), 'AC2.1: 25 ứng viên, một lần liệt kê; ứng viên mới nhất đã theo dõi bị bỏ, ứng viên kế được nạp');
+    ok(withList(() => { throw new Error('git lỗi'); }).includes('R0'), 'AC2.3: liệt kê lỗi → rơi về từng file, git lỗi coi là chưa theo dõi (nạp như trước)');
   }
   // SessionStart nạp đuôi ledger của plan đang chạy (D6), sau phần handoff
   {
@@ -875,6 +883,11 @@ export default async function run({ ok, ctx }) {
       fs.mkdirSync(N);
       git(N, 'init', '-q');
       ok((stopAt(N)?.reason ?? '').includes('"stopGate": false'), 'AC3.3: không có file cấu hình → reason giữ cả hai cách tắt');
+      // gate-followups AC3.1: ngoài repo git hook không đọc aip-gate.json nên không mời đặt stopGate
+      const OUT = path.join(tmp, 'outside-stop');
+      fs.mkdirSync(OUT);
+      const reasonOut = stopAt(OUT)?.reason ?? '';
+      ok(reasonOut.includes('AIP_STOP_GATE=off') && !reasonOut.includes('"stopGate": false'), 'gate-followups AC3.1: ngoài repo git → reason chỉ nêu AIP_STOP_GATE=off');
 
       // AC2.1/AC3.2: testCommands nới quyền (mẫu "." biến mọi lệnh thành lệnh test) nên chỉ nhận từ file không bị theo dõi
       const withEcho = dirty + '\n' + line({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 't2', name: 'Bash', input: { command: 'echo hi' } }] } });
@@ -911,6 +924,20 @@ export default async function run({ ok, ctx }) {
       writeHandoff(O);
       ok(!startAt(T).includes('HANDOFF'), 'AC3.5: handoff đã bị git theo dõi → không nạp');
       ok(startAt(N).includes('HANDOFF') && startAt(O).includes('HANDOFF'), 'AC3.5: handoff chưa theo dõi hoặc ngoài repo git → nạp');
+      // gate-followups AC2.2: git thật, tập ls-files một lần; file đã commit bị bỏ, file chưa theo dõi ở nguồn sau vẫn nạp
+      fs.writeFileSync(path.join(T, '.claude', 'handoff.md'), '# Bàn giao\nNhánh: feature/y. Việc đang làm: hoàn thiện hook SessionStart, còn lại bước đăng ký event và test. UNTRACKED\n');
+      const inT = startAt(T);
+      ok(inT.includes('UNTRACKED') && !inT.includes('HANDOFF'), 'gate-followups AC2.2: handoff đã commit bị bỏ, handoff chưa theo dõi được nạp');
+      if (process.platform === 'win32') {
+        // FS không phân biệt hoa thường: file commit dưới tên HANDOFF.md vẫn là file ứng viên handoff.md
+        const C = path.join(tmp, 'icase');
+        fs.mkdirSync(path.join(C, 'docs', 'requests', 'a'), { recursive: true });
+        git(C, 'init', '-q');
+        fs.writeFileSync(path.join(C, 'docs', 'requests', 'a', 'HANDOFF.md'), '# Bàn giao\nNhánh: feature/x. Việc đang làm: hoàn thiện hook SessionStart, còn lại bước đăng ký event và test. ICASE\n');
+        git(C, 'add', 'docs');
+        git(C, 'commit', '-q', '-m', 'handoff');
+        ok(!startAt(C).includes('ICASE'), 'gate-followups AC2.2: handoff đã commit khác hoa/thường không được nạp');
+      }
     } finally {
       try { git(path.join(tmp, 'untracked'), 'worktree', 'remove', '--force', wt); } catch { /* bỏ qua */ }
       fs.rmSync(tmp, { recursive: true, force: true });

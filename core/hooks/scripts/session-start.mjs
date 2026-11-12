@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // SessionStart: nạp quy tắc bootstrap gọi skill, handoff.md và đuôi ledger của plan đang chạy khi mở phiên mới (startup/clear/compact) và cảnh báo khi resume/fork phiên đã nguội cache.
 import { readFileSync, existsSync, statSync, readdirSync, realpathSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readGateConfig, resolveGate, gateTracked } from './gate-config.mjs';
@@ -33,7 +34,27 @@ function within(root, p) {
 
 // File do git theo dõi đến từ clone (mtime mới sau khi clone), không phải do phiên trước ghi; git lỗi hoặc không phải repo (null)
 // thì coi là chưa theo dõi vì handoff là dữ liệu, không cấp quyền gì.
-const handoffTracked = (file) => gateTracked(file) === true;
+const listTrackedHandoffs = (dir) => execFileSync('git', ['-C', dir, 'ls-files', '-z', '--', ':(icase,glob)**/handoff.md'],
+  { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 24 }).split('\0').filter(Boolean);
+
+// Một lần ls-files cho mọi handoff.md đã theo dõi dưới mỗi gốc, thay vì 1–2 lần git cho từng ứng viên (~78 ms mỗi lần trên Windows).
+// Ứng viên không phải handoff.md thường (tên khác, đi qua symlink) hoặc git lỗi thì hỏi từng file bằng gateTracked như trước.
+// shortcut: file trong submodule không có trong danh sách của repo cha nên coi là chưa theo dõi; bố cục đó không thuộc quy ước.
+function handoffTracked(d, file, root) {
+  const plain = path.basename(file).toLowerCase() === 'handoff.md' && within(root, file)
+    && real(d, file).toLowerCase() === path.join(real(d, root), path.relative(root, file)).toLowerCase();
+  if (plain) {
+    const sets = (d.trackedSets ??= new Map());
+    if (!sets.has(root)) {
+      let set = null;
+      try { set = new Set(d.listTracked(root).map((r) => path.join(root, r).toLowerCase())); } catch { /* git lỗi: hỏi từng file */ }
+      sets.set(root, set);
+    }
+    const set = sets.get(root);
+    if (set) return set.has(file.toLowerCase());
+  }
+  return gateTracked(file) === true;
+}
 
 function gitInfo(cwd, d) {
   if (!('git' in d)) {
@@ -93,7 +114,7 @@ function usableHandoff(cwd, cfg, d) {
       if (!d.existsSync(p) || !inside(d, root, p)) return null;
       const t = d.statSync(p).mtimeMs;
       // Kiểm git sau cùng vì tốn một lời gọi tiến trình mỗi ứng viên.
-      return d.now() - t > maxAge * HOUR_MS || d.tracked(p) ? null : { file: p, t };
+      return d.now() - t > maxAge * HOUR_MS || d.tracked(p, root) ? null : { file: p, t };
     } catch { return null; }
   };
   const load = (c) => {
@@ -204,7 +225,8 @@ function resumeLine(input, handoff, cwd) {
 
 export function decide(input, deps = {}) {
   try {
-    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, tracked: handoffTracked, loadConfig: readGateConfig, gitRoots: (dir) => { const g = resolveGate(dir); return g && { top: g.top, main: g.main }; }, ...deps };
+    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, listTracked: listTrackedHandoffs, loadConfig: readGateConfig, gitRoots: (dir) => { const g = resolveGate(dir); return g && { top: g.top, main: g.main }; }, ...deps };
+    d.tracked ??= (p, root) => handoffTracked(d, p, root);
     const cwd = path.resolve(input?.cwd || '.');
     const cfg = d.loadConfig(cwd);
     const source = input?.source;

@@ -147,8 +147,8 @@ export function decide(input, deps = {}) {
       }
     }
     if (lastEdit < 0 || lastTest > lastEdit) return null;
-    // Chỉ gợi ý "stopGate": false khi khoá đó sẽ có hiệu lực; file đã bị git theo dõi thì khoá bị bỏ qua (hỏi git lúc chặn, hiếm).
-    const fileOff = !gate?.file || tracked(gate.file) === false;
+    // Chỉ gợi ý "stopGate": false khi khoá đó sẽ có hiệu lực: ngoài repo git (gate null) hook không đọc aip-gate.json, file đã bị git theo dõi thì khoá bị bỏ qua (hỏi git lúc chặn, hiếm).
+    const fileOff = gate != null && (!gate.file || tracked(gate.file) === false);
     return {
       decision: 'block',
       reason: `Lượt này đã sửa ${edited.length} file code (${edited.slice(0, 3).join(', ')}${edited.length > 3 ? ', …' : ''}) nhưng chưa chạy test/lint/build nào sau lần sửa cuối. `

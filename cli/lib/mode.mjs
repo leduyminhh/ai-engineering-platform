@@ -100,6 +100,14 @@ function readText(file) {
   try { return fs.readFileSync(file, 'utf8'); } catch (e) { if (e.code === 'ENOENT') return null; e.message = `không đọc được ${file}: ${e.message}`; throw e; }
 }
 
+// Ghi xuyên symlink/junction (file hoặc thư mục chứa nó) có thể tạo hay đổi file ngoài project; kiểm hết trước khi ghi để không ghi dở.
+export function assertNotLinked(files) {
+  const linked = (p) => { try { return fs.lstatSync(p).isSymbolicLink(); } catch { return false; } };
+  for (const f of files) {
+    if (linked(f) || linked(path.dirname(f))) throw new Error(`${f} hoặc thư mục .claude là symlink/junction; aip không ghi xuyên link, sửa file ở đích thật hoặc bỏ link.`);
+  }
+}
+
 function writeText(file, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, text, 'utf8');
@@ -167,6 +175,7 @@ function runModeUnsafe(sub, { root, out, err, run }) {
 
   if (sub === 'full') {
     const r = applyFull(gate, settingsText, { allowEnvFiles });
+    assertNotLinked([gateFile, ...(r.settingsAction === 'replaced' ? [settingsFile] : [])]);
     writeText(gateFile, dump(r.gate));
     if (r.settingsAction === 'replaced') writeText(settingsFile, r.settingsText);
     out(`✓ mode=full tại ${root}`);
@@ -193,6 +202,7 @@ function runModeUnsafe(sub, { root, out, err, run }) {
   }
 
   const r = applyAsk(gate, settingsText, { allowEnvFiles });
+  assertNotLinked([...(info.config ? [gateFile] : []), ...(r.settingsAction === 'regenerated' ? [settingsFile] : [])]);
   if (info.config) writeText(gateFile, dump(r.gate));
   if (r.settingsAction === 'regenerated') writeText(settingsFile, r.settingsText);
   out(`✓ mode=ask tại ${root}`);
