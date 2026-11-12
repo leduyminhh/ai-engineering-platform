@@ -196,6 +196,41 @@ export default async function run({ ok, ctx }) {
     ok(!new RegExp('[\p{Cc}\p{Cf}\u2028\u2029`]', 'u').test(showArg('a`b[31m‮c de')), 'AC1.1: showArg bỏ ký tự điều khiển, bidi và backtick');
   }
 
+  // ── Task 7: thư mục tạm do Claude sinh ra và biến gán trong cùng lệnh ở full (AC6.1–AC6.3)
+  {
+    const tmpRoot = path.join(os.tmpdir(), 'claude');
+    const scratch = path.join(tmpRoot, 'p', 's', 'scratchpad');
+    const fwd = (p) => p.replaceAll('\\', '/');
+    const withScratch = { full: true, extra: { scratchpad_dir: scratch } };
+    ok(bash(`mkdir -p ${fwd(scratch)}/bin`, { full: true }) === null, 'AC6.1: full — mkdir trong <tmpdir>/claude (không cần scratchpad_dir) → không hỏi');
+    ok(bash(`rm ${fwd(path.join(os.tmpdir(), 'popup-outside.txt'))}`, { full: true })?.decision === 'deny', 'AC6.1: full — ghi ngoài thư mục claude của tmpdir vẫn deny');
+    const gf = await hook('guard-files.mjs');
+    const fdec = (tool, file) => gf.decide({ tool_name: tool, tool_input: { file_path: file }, cwd: path.resolve('.'), permission_mode: 'bypassPermissions' },
+      { scopes: {}, repoRoot: path.resolve('.'), allowEnv: () => false, config: { mode: 'full' }, tracked: () => false });
+    ok(fdec('Write', path.join(tmpRoot, 'p', 's', 'x.txt')) === null && fdec('Read', path.join(tmpRoot, 'p', 's', 'x.txt')) === null, 'AC6.1: guard-files — Write/Read dưới <tmpdir>/claude ở full → không hỏi');
+    ok(fdec('Write', path.join(os.tmpdir(), 'x.txt'))?.decision === 'deny', 'AC6.1: guard-files — Write vào <tmpdir>/x.txt (ngoài claude) vẫn deny');
+
+    const popupCmd = [`S=$(cygpath -u '${scratch}'); R=/e/Mine/BE/be-documents; mkdir -p $S/bin && cd $S`, '# stub docker: always fails', "cat > bin/docker <<'EOF'",
+      '#!/usr/bin/env bash', 'echo "docker stub: $*" >&2; exit 1', 'EOF', 'chmod +x bin/docker', 'echo "--- smoke-test with failing docker";',
+      'PATH="$S/bin:$PATH" bash $R/src/secrets/vault-consul/scripts/smoke-test.sh; echo "exit=$?"'].join('\n');
+    ok(bash(popupCmd, withScratch) === null, 'AC6.2: full — lệnh của ảnh popup (S=$(cygpath -u …), heredoc, chmod, PATH=$S/bin) → không hỏi');
+    ok(bash(`S=${fwd(scratch)}; rm $S/x`, withScratch) === null, 'AC6.2: full — S=<literal trong scratchpad>; rm $S/x → không hỏi');
+
+    const stay = [
+      ['S=/etc; rm $S/x', 'deny', 'gán ra ngoài root → deny như viết thẳng đường dẫn'],
+      [`rm $S/x; S=${fwd(scratch)}`, 'ask', 'dùng trước khi gán'],
+      ['S=$X; rm $S/x', 'ask', 'giá trị không giải được'],
+      [`S=${fwd(scratch)}; S=$X; rm $S/x`, 'ask', 'gán lại bằng giá trị không giải được'],
+      [`cat > f <<'EOF'\nS=${fwd(scratch)}\nEOF\nrm -rf $S/x`, 'ask', 'phép gán giả trong thân heredoc'],
+      [`S="${fwd(scratch)}/a b"; rm $S`, 'ask', 'giá trị có khoảng trắng'],
+      [`if false; then S=${fwd(scratch)}; fi; rm -rf $S/x`, 'ask', 'phép gán không ở đầu lệnh cấp cao nhất'],
+    ];
+    for (const [cmd, want, why] of stay) {
+      ok(bash(cmd, withScratch)?.decision === want, `AC6.3: full — ${why}: ${cmd.replace(/\n/g, '⏎')}`);
+    }
+    ok(bash('S=/etc; rm $S/x') === null, 'AC6.3: ngoài chế độ full lệnh không đổi (không có H6)');
+  }
+
   // ── Task 3: file bí mật bỏ qua lệnh metadata và mẫu tìm kiếm (AC2.2)
   {
     for (const c of ['git log -- .env', 'git log --oneline -5 -- credentials', 'ls credentials', 'grep -rn credentials src', 'npm test -- --grep "credentials"',
