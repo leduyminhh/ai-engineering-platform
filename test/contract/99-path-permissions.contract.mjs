@@ -82,4 +82,49 @@ export default async function run({ ok, ctx }) {
     ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask theo khuôn (cả ask .env và đọc ngoài mọi mục)');
     ok(asks[3].reason.includes(path.join(X, 'a.txt')), 'AC3.11: Read ngoài mọi mục → ask nêu đường dẫn');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+
+  // guard-bash: quyền ghi/xoá theo thư mục (full + bypass).
+  const bash = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'guard-bash.mjs')).href);
+  const tb = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-pp-gb-')));
+  try {
+    const u = (p) => p.replace(/\\/g, '/');
+    const P = u(path.join(tb, 'proj'));
+    const D = u(path.join(tb, 'd'));
+    const O = u(path.join(tb, 'o'));
+    const T = u(path.join(tb, 't'));
+    const T2 = u(path.join(tb, 't2'));
+    const config = { mode: 'full', fullPaths: [
+      { path: D, allow: ['read'] }, { path: O, allow: ['read', 'write'] }, { path: T, allow: ['read', 'write', 'delete'] },
+    ] };
+    const bd = (cmd, { tool = 'Bash', cfg = config } = {}) => bash.decide({ tool_name: tool, tool_input: { command: cmd }, cwd: P, permission_mode: 'bypassPermissions' },
+      { repoRoot: P, config: cfg, allowEnv: () => false, currentBranch: () => 'feature/x' });
+    const kind = (cmd, opt) => bd(cmd, opt)?.decision ?? null;
+    const expectAll = (rows, opt) => { for (const [cmd, want, ac] of rows) ok(kind(cmd, opt) === want, `${ac}: \`${cmd.replaceAll(tb.replace(/\\/g, '/'), '~')}\` → ${want}`); };
+
+    expectAll([
+      [`rm ${D}/f`, 'deny', 'AC3.3'], [`rm ${O}/f`, 'deny', 'AC3.3'], [`rmdir ${O}/d`, 'deny', 'AC3.3'],
+      [`rm ${T}/f`, null, 'AC3.3'], [`rm ${P}/f`, null, 'AC3.3'], [`rm ${T}/a ${O}/b`, 'deny', 'AC3.3'],
+    ]);
+    expectAll([[`Remove-Item ${O}/f`, 'deny', 'AC3.3'], [`Remove-Item ${T}/f`, null, 'AC3.3']], { tool: 'PowerShell' });
+    const WRITES = (d) => [`cp x ${d}/f`, `touch ${d}/f`, `mkdir ${d}/n`, `chmod 600 ${d}/f`, `tee ${d}/f`, `truncate -s0 ${d}/f`, `echo x > ${d}/f`, `echo x >> ${d}/f`];
+    expectAll(WRITES(D).map((c) => [c, 'deny', 'AC3.4']));
+    expectAll([...WRITES(O), ...WRITES(T)].map((c) => [c, null, 'AC3.4']));
+    expectAll([[`Set-Content -Path ${D}/f -Value x`, 'deny', 'AC3.4'], [`Set-Content -Path ${O}/f -Value x`, null, 'AC3.4'], [`Set-Content -Path ${T}/f -Value x`, null, 'AC3.4']], { tool: 'PowerShell' });
+
+    const only = { mode: 'full', fullPaths: [{ path: T2, allow: ['delete'] }] };
+    expectAll([[`cp x ${T2}/f`, 'deny', 'AC3.5'], [`touch ${T2}/f`, 'deny', 'AC3.5'], [`echo x > ${T2}/f`, 'deny', 'AC3.5'], [`rm ${T2}/f`, null, 'AC3.5']], { cfg: only });
+    const star = { mode: 'full', fullPaths: [{ path: `${D}/*`, allow: ['read', 'write', 'delete'] }] };
+    expectAll([[`rm ${D}/a`, 'deny', 'AC2.2']], { cfg: star });
+    expectAll([[`rm ${O}/*`, 'deny', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`cp x ${D}/*`, 'deny', 'AC4.5']]);
+    expectAll([
+      ['rm $X/f', 'ask', 'AC3.11'], ['cat > ~/f', 'ask', 'AC3.11'], ['rm `pwd`/f', 'ask', 'AC3.11'], [`bash -c "rm ${T}/f"`, 'ask', 'AC3.11'],
+      [`cat ${D}/.env`, 'ask', 'AC6.3'], [`cat ${T}/.env`, null, 'AC6.3'],
+    ]);
+
+    const denyW = bd(`cp x ${D}/f`);
+    const denyD = bd(`rm ${D}/f`);
+    ok([denyW, denyD].every((d) => /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason)) && /write/.test(denyW.reason) && /delete/.test(denyD.reason), 'AC6.2: reason deny nêu fullPaths, fullRoots và quyền thiếu');
+    const asks = ['rm $X/f', `cat ${D}/.env`].map((c) => bd(c));
+    ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask của guard-bash theo khuôn');
+  } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
