@@ -181,6 +181,7 @@ const GLOB = /[*?[]/;
 
 const cmdName = (x) => String(x).split(/[\\/]/).pop().toLowerCase().replace(/\.exe$/, '');
 
+const SHELL_KEYWORDS = new Set(['{', '!', 'if', 'then', 'else', 'elif', 'do', 'while', 'until']);
 const SUDO_VALUE_OPT = /^(-[A-Za-z]*[ughpCrtUDRT]|--(user|group|host|prompt|chdir|role|type|other-user|close-from))$/;
 const ENV_SPLIT = /^(-S|--split-string=?)([\s\S]*)$/;
 
@@ -191,6 +192,8 @@ function unwrap(tokens) {
   let k = 0;
   while (k < t.length) {
     const n = cmdName(t[k]);
+    // Từ khoá cấu trúc đứng ở vị trí lệnh (khối { }, if/then, for/do, !): lệnh thật là token kế, nếu không WRITE_CMDS không khớp.
+    if (SHELL_KEYWORDS.has(t[k])) { k++; continue; }
     if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec', 'busybox'].includes(n)) {
       k++;
       if (n === 'command') while (t[k]?.startsWith('-')) k++;
@@ -240,6 +243,7 @@ function unwrap(tokens) {
 }
 
 const SHELL_CMD_FLAG = /^(-[a-z]*c|-command|\/[ck])$/i;
+const REST_AS_COMMAND = /^(-command|\/[ck])$/i;
 const EVAL_CMDS = new Set(['eval', 'iex', 'invoke-expression']);
 
 // Chuỗi lệnh con của `bash -c "…"`, `pwsh -Command …`, `eval …`, `iex …`: gitCmd chỉ nhận token đúng tên `git`, nên push nằm trong chuỗi bị che.
@@ -247,13 +251,17 @@ function innerSegs(t) {
   const [tk, k] = unwrap(t);
   const name = k < tk.length ? cmdName(tk[k]) : '';
   const args = tk.slice(k + 1);
-  let inner = null;
+  const inner = shellString(name, args);
+  return inner ? parse(inner).segs : [];
+}
+
+// -Command (PowerShell) và /c, /k (cmd) nhận phần còn lại làm lệnh, -c chỉ nhận đối số kế (các đối số sau là $0, $1…).
+function shellString(name, args) {
   if (SHELLS.has(name)) {
     const i = args.findIndex((a) => SHELL_CMD_FLAG.test(a));
-    // -Command nhận phần còn lại làm lệnh, -c chỉ nhận đối số kế (các đối số sau là $0, $1…).
-    if (i >= 0) inner = /^-command$/i.test(args[i]) ? args.slice(i + 1).join(' ') : args[i + 1];
-  } else if (EVAL_CMDS.has(name)) inner = args.join(' ');
-  return inner ? parse(inner).segs : [];
+    return i < 0 ? null : REST_AS_COMMAND.test(args[i]) ? args.slice(i + 1).join(' ') : args[i + 1];
+  }
+  return EVAL_CMDS.has(name) ? args.join(' ') : null;
 }
 
 // Đoạn con đặt ngay sau đoạn cha để trackDirs giữ đúng thứ tự cd; sâu quá 6 cấp thì dừng.
@@ -340,8 +348,7 @@ function stringWrites(str) {
 // Trả 'deny' | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
 function confineSegment(t, dir, unres, roots, msys = true) {
   const { targets, name, args } = writeTargets(t);
-  const flag = SHELLS.has(name) ? args.findIndex((a) => SHELL_CMD_FLAG.test(a)) : -1;
-  const inner = flag < 0 ? (name === 'eval' ? args.join(' ') : null) : (/^-command$/i.test(args[flag]) ? args.slice(flag + 1).join(' ') : args[flag + 1]);
+  const inner = name === 'eval' || SHELLS.has(name) ? shellString(name, args) : null;
   const ask = Boolean(inner) && stringWrites(inner);
   let unknown = false;
   for (const p of targets) {
@@ -411,16 +418,26 @@ const IN_PLACE_FLAG = /^(?:-[a-z]*i|--in-place)/i;
 // Chỉ đích ghi mới tính: tên file cấu hình nằm trong message hay đối số đọc không làm lệnh bị hỏi.
 // xargs/find/parallel nhận lệnh ghi qua đối số hay đầu vào pipe nên không có đích ghi nhìn thấy được: coi là ghi khi đoạn có tên lệnh ghi hoặc -exec/-delete.
 const INDIRECT = new Set(['xargs', 'find', 'parallel']);
-const indirectWrite = (t, w = writeTargets(t)) => INDIRECT.has(w.name) && w.args.some((a) => WRITE_CMDS.has(cmdName(a)) || /^-(exec|execdir|delete)$/.test(a));
+const inPlaceEdit = (all) => all.some((x) => x === 'sed' || x === 'perl') && all.some((x) => IN_PLACE_FLAG.test(x));
+const writeSignal = (all, indirect) => all.some((x) => WRITE_CMDS.has(cmdName(x)) || (indirect && (SHELLS.has(cmdName(x)) || /^-(exec|execdir|delete)$/.test(x)))) || inPlaceEdit(all);
+const indirectWrite = (t, w = writeTargets(t)) => INDIRECT.has(w.name) && writeSignal(w.args, true);
+const isConfigPath = (x) => !/\s/.test(x) && GUARD_CONFIG.test(x);
 
 // Tên file cấu hình đến từ đoạn khác (`echo cfg | xargs rm`) hay từ placeholder: có đoạn ghi gián tiếp và một token giống đường dẫn cấu hình ở bất kỳ đâu thì hỏi.
 function pipedIndirectConfigWrite(list) {
-  return list.some((t) => indirectWrite(t)) && list.some((t) => t.some((x) => !/\s/.test(x) && GUARD_CONFIG.test(x)));
+  return list.some((t) => indirectWrite(t)) && list.some((t) => t.some(isConfigPath));
 }
 
 function writesGuardConfig(t) {
   const { targets, name, args, allPos } = writeTargets(t);
   if (targets.some((p) => GUARD_CONFIG.test(p)) || (FIRST_ONLY.has(name) && allPos.some((p) => GUARD_CONFIG.test(p)))) return true;
+  // Lệnh không thuộc WRITE_CMDS (khối script PowerShell, xargs, find, parallel…): không đọc được đích ghi thì hỏi khi cùng đoạn có đường dẫn cấu hình và tín hiệu ghi.
+  if (name !== 'sed' && name !== 'perl' && !WRITE_CMDS.has(name)) {
+    const all = [name, ...args];
+    // xargs/find/parallel đưa chuỗi `sh -c '… > cfg'` làm một đối số có khoảng trắng nên tên file nằm trong chuỗi vẫn tính.
+    const indirect = INDIRECT.has(name);
+    if (all.some((x) => (indirect ? GUARD_CONFIG.test(x) : isConfigPath(x))) && writeSignal(all, indirect)) return true;
+  }
   return (name === 'sed' || name === 'perl') && args.some((a) => IN_PLACE_FLAG.test(a)) && args.some((a) => GUARD_CONFIG.test(a));
 }
 

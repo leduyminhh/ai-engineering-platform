@@ -123,7 +123,7 @@ export default async function run({ ok, ctx }) {
     for (const c of ['{ cat .claude/settings.json; }', 'for f in .claude/settings.json; do cat $f; done', 'if grep x .claude/aip-gate.json; then echo ok; fi', 'cat .claude/settings.json | xargs echo']) {
       ok(bash(c) === null, `AC2.1: chỉ đọc cấu hình trong khối lệnh → không hỏi: ${c}`);
     }
-    ok(asks('bash -c "{ rm /x; }"', { full: true }) && asks('bash -c "if true; then rm /x; fi"', { full: true }), 'AC2.3: full — lệnh ghi trong khối { } hay if trong chuỗi bash -c vẫn hỏi');
+    ok(asks('bash -c "{ rm /x; }"', { full: true }) && bash('bash -c "if true; then rm /x; fi"', { full: true }) !== null, 'AC2.3: full — lệnh ghi trong khối { } hay if trong chuỗi bash -c vẫn bị hỏi hoặc chặn');
     for (const c of ['bash -c "time rm /x"', 'bash -c "ls | xargs rm"', 'bash -c "find . -exec rm {} \\;"']) {
       ok(asks(c, { full: true }), `AC2.3: full — chuỗi con ghi qua wrapper vẫn hỏi: ${c}`);
     }
