@@ -144,6 +144,9 @@ export default async function run({ ok, ctx }) {
       [`cp -rt ${OUT} x`, 'deny', 'AC3.8'], [`cp -rt ${O} x`, null, 'AC3.8'], [`cp -rt${O} x`, null, 'AC3.8'], [`cp -rt${OUT} x`, 'deny', 'AC3.8'],
       [`mv -vt ${O} ${T}/a`, null, 'AC3.7'], [`mv -vt ${T} ${O}/a`, 'deny', 'AC3.7'],
     ]);
+    // Cờ PowerShell có chữ `t` không được làm mất việc kiểm đích thật.
+    expectAll(['-Filter a', '-WhatIf', '-filter a', '-Container', '-Force -Filter a'].map((f) => [`cp ${f} x ${OUT}/b`, 'deny', 'AC3.8']));
+    expectAll([[`cp -Filter a x ${O}/b`, null, 'AC3.8']]);
     // D8: gốc <tmpdir>/claude luôn bị chặn, kể cả khi chỉ cần read.
     const CT = u(path.join(os.tmpdir(), 'claude'));
     expectAll([[`Copy-Item -Path ${CT} -Destination ${O}/b`, 'deny', 'D8'], [`Copy-Item -Path ${CT}/* -Destination ${O}/b`, 'deny', 'D8']], { tool: 'PowerShell' });
