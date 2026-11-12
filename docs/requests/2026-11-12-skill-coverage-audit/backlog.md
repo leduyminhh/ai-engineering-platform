@@ -78,6 +78,13 @@ Theo chốt của người dùng: ghi riêng, chỉ vào xếp hạng khi có b�
 - Skill cục bộ của bộ `superpowers` (chỉ đọc tên và mô tả): `receiving-code-review`, `verification-before-completion`, `writing-skills`. [Inference] aip không có skill riêng cho ba việc này: ý "nhận phản hồi review" rải rác ở `plan-execution`, "kiểm trước khi báo xong" nằm ở hook Stop (`gate-stop.mjs`), "viết skill" chỉ có skill dự án `aip-add-content` không ship. Chưa thấy bằng chứng dùng thật trong ba project nên không xếp hạng.
 - Web, tất cả [Unverified] vì chỉ đọc đoạn trích tìm kiếm: bài "Skill Coverage: A Test Adequacy Metric for Agent Skills" ([alphaxiv](https://www.alphaxiv.org/abs/2606.20659)) chia chỉ dẫn của skill thành ràng buộc kiểm được rồi xem quỹ đạo chạy có chạm chúng không; một skill cộng đồng ([claudskills](https://claudskills.com/skills/skill-compliance-auditor/SKILL.md)) chia prompt đo kích hoạt thành explicit, implicit và competing. Gợi ý phương pháp cho một request sau: `test/routing/` hiện chia positive/negative, chưa có lớp "competing" (hai skill cùng đáng gọi). Không dùng làm bằng chứng cho gap cụ thể.
 
+## Lựa chọn của người dùng (2026-11-12)
+
+- Lấy **top 5** gap đầu bảng xếp hạng (hạng 1 đến 5) cho đợt làm tiếp.
+- Mỗi gap là **một request riêng**, không gom một brief chung. Lý do người dùng chọn theo khuyến nghị: các gap chạm file khác nhau (nội dung skill so với `description` và đo routing) nên chạy riêng được.
+- Chưa mở request nào. Mỗi request bắt đầu bằng brainstorming hoặc spec riêng; trước khi design, đọc thân các skill gần nhất của gap đó (xem mục "Chưa xem và giới hạn").
+- Tình huống riêng của người dùng chưa được bổ sung; nếu có thì thêm vào đây và xếp hạng lại một lần.
+
 ## Chưa xem và giới hạn
 
 - Thân `SKILL.md` đã đọc chọn lọc: bốn skill `*-init`. Các gap "mỏng" còn lại dựa trên bằng chứng từ ledger và mô tả skill gần nhất, nên cột "Độ chắc" ghi `[Inference]` ở phần liên hệ skill; cần đọc thân skill đó trước khi design.
