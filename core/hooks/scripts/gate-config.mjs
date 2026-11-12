@@ -61,7 +61,7 @@ export function envFilesAllowed(dir, { tracked } = {}) {
 
 // Chuỗi do agent cung cấp (đường dẫn, token lệnh) đi vào reason hiện cho người dùng: bỏ xuống dòng/backtick để không làm giả dòng hay đóng khối trích, cắt giữ phần đuôi (tên file) để lời khuyên không bị đẩy ra ngoài.
 export function showArg(s, max = 120) {
-  const t = String(s).replace(/[\r\n\t`]+/g, ' ').trim();
+  const t = String(s).replace(new RegExp('[\\p{Cc}\\p{Cf}\\u2028\\u2029`]+', 'gu'), ' ').trim();
   return t.length > max ? `…${t.slice(-max)}` : t;
 }
 

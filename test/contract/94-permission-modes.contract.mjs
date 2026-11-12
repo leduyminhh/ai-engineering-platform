@@ -261,7 +261,7 @@ export default async function run({ ok, ctx }) {
     }
   }
   const askReason = bdec('curl http://x', fullCfg, 'default')?.reason ?? '';
-  ok(askReason.includes('aip mode ask') && askReason.includes('--permission-mode bypassPermissions'), 'P4e AC1.8: lý do nhắc aip mode ask và bypassPermissions');
+  ok(askReason.includes('aip mode ask'), 'P4e AC1.8: lý do nhắc aip mode ask');
   ok(bdec('ls', fullCfg, 'default') === null && bdec('echo curl', fullCfg, 'default') === null, 'P4e AC1.8: lệnh thường không bị ask');
   for (const cfgX of [{}, { mode: 'ask' }, null]) {
     ok(bdec('curl http://x', cfgX, 'default') === null, `P4e AC1.8: config ${JSON.stringify(cfgX)} → không có ask của hook`);

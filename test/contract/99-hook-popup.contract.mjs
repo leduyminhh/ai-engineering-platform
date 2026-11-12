@@ -169,7 +169,7 @@ export default async function run({ ok, ctx }) {
       ['ghi cấu hình quyền', 'echo x > .claude/aip-gate.json', {}, ['aip-gate.json']],
       ['nhắc file bí mật .env', 'cat .env', {}, ['.env']],
       ['nhắc file bí mật .pem', 'cat certs/server.pem', {}, ['server.pem']],
-      ['commit nháy chưa đóng', 'git commit -m "é', {}, []],
+      ['commit nháy chưa đóng', ['git commit -m "$(cat <<\'EOF\'', 'feat: x', '', 'fix "x', 'sửa lỗi', 'EOF', ')"'].join('\n'), {}, []],
       ['full + đường dẫn không rõ', 'rm -rf $X', { full: true }, []],
     ];
     for (const [name, cmd, o, tokens] of cases) {
@@ -193,7 +193,8 @@ export default async function run({ ok, ctx }) {
     ok(deny?.decision === 'deny' && deny.reason.includes('fullRoots'), 'AC1.4: guard-bash — deny full ngoài project vẫn nhắc fullRoots');
 
     const { showArg } = await hook('gate-config.mjs');
-    ok(!new RegExp('[\p{Cc}\p{Cf}\u2028\u2029`]', 'u').test(showArg('a`b[31m‮c de')), 'AC1.1: showArg bỏ ký tự điều khiển, bidi và backtick');
+    const dirty = ['a`b', String.fromCharCode(27) + '[31m', String.fromCharCode(0x202e) + 'c', String.fromCharCode(0x2028) + 'd', String.fromCharCode(7) + 'e'].join('');
+    ok(!new RegExp('[\\p{Cc}\\p{Cf}\\u2028\\u2029`]', 'u').test(showArg(dirty)) && showArg(dirty).includes('c') && showArg(dirty).includes('e'), 'AC1.1: showArg bỏ ký tự điều khiển, bidi và backtick, giữ chữ');
   }
 
   // ── Task 7: thư mục tạm do Claude sinh ra và biến gán trong cùng lệnh ở full (AC6.1–AC6.3)

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef } from './gate-config.mjs';
+import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, allowedRoots, normalizeMsysPath, hasUnresolvedRef, showArg } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 // Biên gồm cả > : ` @ { , (vd x>.env, HEAD:.env, @.env, {a,.env}) vì tên file dính các ký tự này vẫn được lệnh đọc/ghi.
@@ -119,18 +119,18 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true
     pos.push(a);
   }
   const specs = pos.slice(1);
-  if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return 'push dạng force/xoá/mirror/all';
+  if (force || specs.some((r) => r.startsWith('+') || r.startsWith(':'))) return { kind: 'force' };
   // Refspec chứa biến/~/backtick không biết đích thật (có thể là nhánh bảo vệ): hỏi như -C không resolve được.
-  if (specs.some(hasUnresolvedRef)) return 'push có refspec chứa biến/~ không xác định được nhánh đích';
+  if (specs.some(hasUnresolvedRef)) return { kind: 'unknown' };
   // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
   const unresolvable = cdUnresolved || gc.dirs.some(hasUnresolvedRef);
   const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs.map((d) => np(d, msys))) : cwd;
   const refs = specs.map((r) => r.split(':').pop().replace(/^refs\/heads\//, ''));
   const wantsHead = (refs.length ? refs : ['HEAD']).some((r) => r === 'HEAD' || r === '@');
-  if (unresolvable && wantsHead) return 'push không xác định được nhánh hiện tại (đường dẫn -C/cd chứa biến/~)';
+  if (unresolvable && wantsHead) return { kind: 'unknown' };
   const targets = (refs.length ? refs : ['HEAD']).map((r) => (r === 'HEAD' || r === '@' ? currentBranch(dir) : r));
   const hit = targets.find((r) => r && PROTECTED.has(r));
-  return hit ? `push vào nhánh bảo vệ "${hit}"` : null;
+  return hit ? { kind: 'protected', branch: hit } : null;
 }
 
 // Git Bash đổi /e/x thành E:/x; PowerShell giải /e/x theo ổ hiện tại (E:\e\x) nên không được đổi.
@@ -441,10 +441,41 @@ function writesGuardConfig(t) {
   return (name === 'sed' || name === 'perl') && args.some((a) => IN_PLACE_FLAG.test(a)) && args.some((a) => GUARD_CONFIG.test(a));
 }
 
+// Câu hỏi hiện trong popup cho người dùng: nói việc lệnh làm, vì sao hỏi, cho phép thì sao và nên chọn gì, không dùng thuật ngữ nội bộ.
+const PUSH_TEXT = {
+  force: 'Lệnh push này có thể ghi đè hoặc xoá nhánh trên remote; commit bị mất không lấy lại được. Hãy từ chối, trừ khi chính bạn yêu cầu.',
+  unknown: 'Không đoán được lệnh sẽ push vào nhánh nào (tên nhánh hoặc thư mục là biến). Xem lệnh bên dưới; chỉ cho phép khi chắc đó không phải nhánh bảo vệ.',
+};
+const pushText = (r) => (r.kind === 'protected'
+  ? `Đẩy code lên nhánh bảo vệ \`${r.branch}\` trên remote. Sau khi đẩy, người khác thấy ngay và khó rút lại. Chỉ cho phép nếu bạn đã duyệt diff; nếu không, hãy từ chối để agent đẩy lên nhánh feature.`
+  : PUSH_TEXT[r.kind]);
+const CONFIG_TEXT = 'Lệnh sửa file cấu hình quyền (.claude/aip-gate.json hoặc settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.';
+const FULL_PATH_TEXT = 'Lệnh ghi hoặc xoá ở đường dẫn chỉ biết lúc chạy (`$VAR`, `~`, `*`), không chắc nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.';
+const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy. Project bật chế độ full nhưng phiên này không chạy ở chế độ bỏ qua hỏi quyền nên vẫn hỏi bạn như bình thường. Cho phép hoặc từ chối từng lần; muốn đổi thì chạy `aip mode ask`.';
+const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
+
+// Thân heredoc là dữ liệu, không phải lệnh: bỏ trước khi tóm tắt để dòng "Lệnh gồm" không liệt kê nội dung file được tạo.
+const stripHeredocs = (c) => c.replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2(?=\n|$)/g, '<<');
+const MAX_STEPS = 6;
+// Chỉ dùng thông tin có sẵn từ parse (tên lệnh, lệnh con git, đích chuyển hướng); không đoán số file vì git commit -m không nêu file nào.
+function summarize(cmd) {
+  const steps = [];
+  for (const t of parse(stripHeredocs(cmd)).segs) {
+    const [tk, k] = unwrap(t);
+    if (k >= tk.length || String(tk[k]).startsWith('#')) continue;
+    const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
+    const target = writeTargets(t).targets.find((x) => !NULL_DEVICE.test(x));
+    steps.push(`${g ? `git ${g.sub}` : showArg(cmdName(tk[k]), 40)}${target ? ` (ghi vào ${showArg(target, 60)})` : ''}`);
+  }
+  if (!steps.length) return '';
+  const more = steps.length > MAX_STEPS ? `, … và ${steps.length - MAX_STEPS} bước khác` : '';
+  return `Lệnh gồm: ${steps.slice(0, MAX_STEPS).join(', ')}${more}.`;
+}
+
 const NON_ASCII = /[^\x00-\x7F]/;
 const DENY_COMMIT = { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
 
-const ASK_UNPARSABLE = { decision: 'ask', reason: 'Không phân tích chắc chắn được lệnh (nháy không đóng) nhưng có vẻ là git commit -m kèm ký tự non-ASCII. Dùng `git commit -F <file>` (skill git-workflow) hoặc xác nhận thủ công.' };
+const UNPARSABLE_TEXT = 'Không đọc chắc được lệnh commit (dấu nháy chưa đóng). Nên từ chối để agent viết lại bằng `git commit -F`, hoặc cho phép nếu bạn đã tự kiểm tra lệnh.';
 
 // Kiểm tuyến tính theo dòng/đoạn (không regex lồng) để input dài không gây backtracking bậc hai.
 function hasCommitWithMessageFlag(cmd) {
@@ -548,6 +579,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   let fe;
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
+  const ask = (text) => { const line = summarize(cmd); return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
   const parsedCmd = parse(cmd);
   const { unclosed } = parsedCmd;
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
@@ -558,40 +590,41 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const parsed = withDirs(segs, cwd, msys);
   if (parsed.some(({ u, gc }) => gc.sub === 'commit' && commitMessages(u, gc.i + 1).some((m) => NON_ASCII.test(m))) && !full()) return DENY_COMMIT;
   // Nháy lẻ làm parse() mất cấu trúc: không tin được việc tách message → hỏi người dùng (ask) khi có dấu bất kỳ.
-  if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd) && !full()) return ASK_UNPARSABLE;
+  if (unclosed && NON_ASCII.test(cmd) && hasCommitWithMessageFlag(cmd) && !full()) return ask(UNPARSABLE_TEXT);
   // Hợp của hai cách tách: bắt push dù nháy lẻ khiến một trong hai cách bỏ sót.
   const naive = withDirs(naiveAll, cwd, msys);
   for (const { u, gc, dir, unres } of [...parsed, ...naive]) {
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
-    if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
+    if (why && !(full() && !fullKeep(gate()).includes('push'))) return ask(pushText(why));
   }
   if ([...segs, ...naiveAll].some(writesGuardConfig) || pipedIndirectConfigWrite([...segs, ...naiveAll])) {
-    return { decision: 'ask', reason: 'Lệnh ghi vào cấu hình của hook an toàn (.claude/aip-gate.json hoặc .claude/settings*.json) cần người dùng xác nhận.' };
+    return ask(CONFIG_TEXT);
   }
   if (full()) {
     const roots = rootsOf();
-    let ask = false;
+    let unknownPath = false;
     for (const { t, dir, unres } of [...trackDirs(outer, cwd, msys), ...trackDirs(naiveOuter, cwd, msys)]) {
       const r = confineSegment(t, dir, unres, roots, msys);
       if (r === 'deny') return { decision: 'deny', reason: 'Chế độ full: lệnh ghi/xoá đường dẫn ngoài root của project. Thêm thư mục vào "fullRoots" trong .claude/aip-gate.json nếu thật sự cần.' };
-      if (r === 'ask') ask = true;
+      if (r === 'ask') unknownPath = true;
     }
-    if (ask) return { decision: 'ask', reason: 'Chế độ full: lệnh ghi/xoá có đường dẫn không xác định được (biến, ~, glob đầu đường dẫn, bash -c) — cần người dùng xác nhận.' };
+    if (unknownPath) return ask(FULL_PATH_TEXT);
   }
   // Phiên không bypass trong project full: settings.json không còn quy tắc ask nào chắc chắn áp dụng nên hook hỏi thay.
   // Chỉ đọc cấu hình sau khi một đoạn khớp tiền tố, để lệnh thường không tốn lời gọi git.
   if (!bypass && [...segs, ...naiveAll].some(matchesAsk) && gate()?.mode === 'full') {
-    return { decision: 'ask', reason: 'Chế độ full: phiên không bypass nên lệnh push/mạng/deploy production cần người dùng xác nhận. Chạy `aip mode ask` hoặc khởi động với `--permission-mode bypassPermissions` nếu muốn đổi.' };
+    return ask(FULL_NO_BYPASS_TEXT);
   }
   const hits = (re) => re.test(secretScanText(cmd)) || re.test(secretScanText(raw));
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
-  const secretAsk = { decision: 'ask', reason: 'Lệnh nhắc tới file bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa file bí mật khi chưa được duyệt.' };
-  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk;
+  const secretName = (re) => { for (const text of [secretScanText(cmd), secretScanText(raw)]) { const m = re.exec(text); if (m) return m[2]; } return ''; };
+  const secretAsk = (re) => ask(secretText(secretName(re)));
+  if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk(SECRET);
   // Ở full, bí mật chỉ mở trong root của project: đường dẫn bí mật nằm ngoài root hoặc không xác định được vẫn hỏi (khớp guard-files).
   if (hits(SECRET) && full()) {
     // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
     const secretRe = hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET;
-    if (hits(secretRe) && secretOutsideRoots([outer, naiveOuter], cwd, rootsOf(), secretRe, msys)) return secretAsk;
+    if (hits(secretRe) && secretOutsideRoots([outer, naiveOuter], cwd, rootsOf(), secretRe, msys)) return secretAsk(secretRe);
   }
   return null;
 }
