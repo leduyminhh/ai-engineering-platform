@@ -75,6 +75,8 @@ export function normalizeMsysPath(p, platform = process.platform) {
 // Chỉ `~` đứng đầu mới được shell bung thành home; `~` giữa tên (tên rút gọn 8.3 như LDMLE~1) là ký tự thường.
 export const hasUnresolvedRef = (s) => /[$`]/.test(s) || s.startsWith('~');
 
+const PERMS = ['read', 'write', 'delete'];
+
 const norm = (x) => {
   const n = x.replace(/\\/g, '/').replace(/\/+$/, '');
   return process.platform === 'win32' ? n.toLowerCase() : n;
@@ -83,20 +85,53 @@ const norm = (x) => {
 // Ổ đĩa/UNC trên nền không phải win32 không resolve được thành đường dẫn thật nên luôn coi là ngoài root.
 // Không realpath: symlink trong root trỏ ra ngoài không bị phát hiện (ghi nhận ở Rủi ro của design).
 // msys=false: đường dẫn từ PowerShell, không đổi /e/x.
-export function classifyPath(p, cwd, roots, msys = true) {
+export function classifyPath(p, cwd, roots, msys = true, need = 'write') {
   const s = msys ? normalizeMsysPath(String(p ?? '')) : String(p ?? '');
   if (!s || hasUnresolvedRef(s)) return 'unknown';
   if (process.platform !== 'win32' && (/^[A-Za-z]:[\\/]/.test(s) || s.startsWith('\\\\'))) return 'outside';
   const abs = norm(path.resolve(cwd, s.replace(/\\/g, '/')));
-  return roots.some((r) => { const n = norm(path.resolve(r)); return abs === n || abs.startsWith(`${n}/`); }) ? 'inside' : 'outside';
+  const segs = abs.split('/');
+  return roots.some((r) => {
+    const g = typeof r === 'string' ? { path: r, allow: PERMS } : r;
+    if (!g.allow.includes(need)) return false;
+    const n = norm(path.resolve(g.path));
+    if (!g.glob) return abs === n || abs.startsWith(`${n}/`);
+    const seg = n.split('/');
+    return segs.length >= seg.length && seg.every((x, i) => (x === '*' ? segs[i] !== '' : x === segs[i]));
+  }) ? 'inside' : 'outside';
 }
 
 // Thư mục tạm do chính Claude Code sinh ra (scratchpad, thư mục kết quả tool): không phải "ngoài project" với agent. [Unverified] Bố cục <tmpdir>/claude đo trên Windows, chưa kiểm POSIX.
 export const claudeTmpRoots = (tmp = os.tmpdir()) => [path.join(tmp, 'claude')];
 
-export function allowedRoots(gate, input) {
+// Mục sai cú pháp bị bỏ hoặc mất quyền (D4): sai chính tả chỉ làm ít quyền đi, không bao giờ nhiều hơn. `path` không có wildcard.
+export function fullPaths(config) {
+  const v = config?.fullPaths;
+  if (!Array.isArray(v)) return [];
+  const merged = new Map();
+  for (const e of v) {
+    if (!e || typeof e !== 'object' || typeof e.path !== 'string' || !path.isAbsolute(e.path) || !Array.isArray(e.allow)) continue;
+    const p = path.resolve(e.path);
+    const m = merged.get(norm(p)) ?? { path: p, allow: new Set() };
+    for (const a of e.allow) if (PERMS.includes(a)) m.allow.add(a);
+    merged.set(norm(p), m);
+  }
+  return [...merged.values()].map((m) => ({ path: m.path, allow: PERMS.filter((a) => m.allow.has(a)) }));
+}
+
+export function grantsOf(gate, input) {
   const sp = input?.scratchpad_dir;
-  return [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config), ...claudeTmpRoots()];
+  const full = [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config), ...claudeTmpRoots()];
+  return [
+    ...full.map((p) => ({ path: p, allow: [...PERMS] })),
+    ...fullReadRoots(gate?.config).map((p) => ({ path: p, allow: ['read'] })),
+    ...defaultReadRoots(input).map((p) => ({ path: p, allow: ['read'], glob: true })),
+    ...fullPaths(gate?.config),
+  ];
+}
+
+export function allowedRoots(gate, input) {
+  return grantsOf(gate, input).filter((g) => PERMS.every((a) => g.allow.includes(a))).map((g) => g.path);
 }
 
 export function fullReadRoots(config) {
