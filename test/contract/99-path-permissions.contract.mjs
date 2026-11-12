@@ -223,6 +223,28 @@ export default async function run({ ok, ctx }) {
     const trackedGate = (cfg) => ({ config: undefined, reader: () => ({ config: cfg, file: `${P}/.claude/aip-gate.json`, roots: [P] }), tracked: () => true });
     ok(same(null, null, { opts: trackedGate({ ...bare, fullPaths: config.fullPaths }) }, { opts: trackedGate(bare) }), 'AC6.1: guard-bash aip-gate.json bị git theo dõi → y hệt khi không có fullPaths');
 
+    // mv với -t gộp/dính: nguồn cuối vẫn bị xoá nên mọi đối số cần delete+write.
+    expectAll([[`mv -vt ${T} ${T}/a ${O}/b`, 'deny', 'AC3.7'], [`mv -t${T} ${T}/a ${O}/b`, 'deny', 'AC3.7'], [`mv -vt${T} ${T}/a ${O}/b`, 'deny', 'AC3.7'],
+      [`mv -vt ${T} ${T}/a ${T}/b`, null, 'AC3.7']]);
+    // PowerShell viết tắt tham số: không nhận ra cờ thì mọi đối số vị trí cần delete+write.
+    expectAll([[`Move-Item -Dest ${T}/b ${O}/a`, 'deny', 'AC3.9'], [`Move-Item -Dest ${T}/b -Pa ${O}/a`, 'deny', 'AC3.9'], [`Move-Item -Dest:${O}/b ${T}/a`, 'deny', 'AC3.9'],
+      [`Move-Item -Dest ${T}/b ${T}/a`, null, 'AC3.9']], { tool: 'PowerShell' });
+    // cp -t vẫn để kiểm cấu hình hook thấy đối số vị trí (mode ask, phiên thường).
+    const askMode = { cfg: { mode: 'ask' }, extra: { permission_mode: 'default' } };
+    expectAll([['cp -t .claude aip-gate.json', 'ask', 'AC3.8'], ['cp --target-directory=.claude /s/aip-gate.json', 'ask', 'AC3.8'], ['cp -t .claude .claude/settings.local.json', 'ask', 'AC3.8']], askMode);
+    expectAll([[`cp -t ${O} x`, null, 'AC3.8']]);
+    // Glob kèm `..` sau đoạn glob đầu có thể thoát ra ngoài thư mục đã phân loại.
+    expectAll([[`rm ${T}/*/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/?/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/[a]/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`rm ${O}/*`, 'deny', 'AC4.5']]);
+    // Token cờ gộp dài kết thúc bằng xuống dòng không được làm regex chạy bậc hai.
+    const t0 = performance.now();
+    bd(`cp "-${'t'.repeat(50000)}\n" x`);
+    ok(performance.now() - t0 < 1000, 'AC3.8: token cờ gộp 50k ký tự chạy dưới 1s');
+    // Thiếu read hỏi bằng câu riêng và dòng tóm tắt gắn nhãn đúng vai.
+    const rd = bd(`Copy-Item -Path ${u(path.join(tb, 'out'))}/a -Destination ${O}/b`, { tool: 'PowerShell' });
+    ok(rd?.decision === 'ask' && shapeOk(rd.reason) && /đọc/.test(rd.reason) && !/\$VAR/.test(rd.reason) && !/ghi vào/.test(rd.reason), 'AC3.10: thiếu read → ask câu riêng, tóm tắt không ghi nhầm "ghi vào"');
+    const blk = bd(`Copy-Item -Path ${CT} -Destination ${O}/b`, { tool: 'PowerShell' });
+    ok(blk?.decision === 'deny' && /luôn/.test(blk.reason) && !/fullRoots/.test(blk.reason), 'AC3.10: gốc <tmpdir>/claude → deny câu riêng, không gợi ý mở bằng cấu hình');
+
     const denyW = bd(`cp x ${D}/f`);
     const denyD = bd(`rm ${D}/f`);
     ok([denyW, denyD].every((d) => /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason)) && /write/.test(denyW.reason) && /delete/.test(denyD.reason), 'AC6.2: reason deny nêu fullPaths, fullRoots và quyền thiếu');

@@ -94,8 +94,8 @@ export default async function run({ ok, ctx }) {
   {
     const keys = Object.keys(gf.GATE_KEYS ?? {});
     const byTrust = (t) => keys.filter((k) => gf.GATE_KEYS[k].trust === t).sort();
-    ok(keys.length === 19, `AC2.1: GATE_KEYS có 19 khoá (đang ${keys.length})`);
-    ok(JSON.stringify(byTrust('untracked')) === JSON.stringify([...UNTRACKED].sort()), `AC2.1: đúng 10 khoá untracked: ${byTrust('untracked')}`);
+    ok(keys.length === 19, `AC2.1/AC1.1: GATE_KEYS có 19 khoá, gồm fullPaths (đang ${keys.length})`);
+    ok(JSON.stringify(byTrust('untracked')) === JSON.stringify([...UNTRACKED].sort()), `AC2.1/AC1.1: đúng 10 khoá untracked (gồm fullPaths): ${byTrust('untracked')}`);
     ok(JSON.stringify(byTrust('any')) === JSON.stringify([...ANY].sort()), `AC2.1: đúng 9 khoá any: ${byTrust('any')}`);
     const types = new Set(['string', 'boolean', 'number', 'array', 'object']);
     ok(keys.every((k) => types.has(gf.GATE_KEYS[k].type)), 'AC2.1: mọi khoá có type thuộc tập đóng');
