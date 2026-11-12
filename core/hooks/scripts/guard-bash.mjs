@@ -171,9 +171,14 @@ function withDirs(segs, cwd, msys = true) {
 const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'mv', 'move', 'move-item', 'cp', 'copy', 'copy-item', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content']);
 const LAST_ONLY = new Set(['cp', 'copy', 'copy-item']);
 const DELETE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item']);
-// mv/move: Task 5 chia vai nguồn (delete) và đích (write); tạm thời mọi đối số cần cả hai.
 const MOVE_CMDS = new Set(['mv', 'move', 'move-item']);
+// Một đối số mv: không biết là nguồn hay đích nên cần cả hai quyền.
 const needsOf = (name) => (DELETE_CMDS.has(name) ? ['delete'] : MOVE_CMDS.has(name) ? ['delete', 'write'] : ['write']);
+// Vai của cờ đường dẫn PowerShell theo (lệnh, cờ): đích → write, nguồn của Move/Remove-Item → delete, nguồn của Copy-Item → read.
+const flagNeeds = (name, flag) => {
+  const f = flag.toLowerCase().replace(/^-/, '');
+  return f === 'destination' || f === 'filepath' ? ['write'] : DELETE_CMDS.has(name) || MOVE_CMDS.has(name) ? ['delete'] : name === 'copy-item' ? ['read'] : ['write'];
+};
 const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content']);
 const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
@@ -325,12 +330,17 @@ function writeTargets(t) {
   let allPos = [];
   if (WRITE_CMDS.has(name)) {
     const nd = needsOf(name);
+    const gnu = name === 'mv' || name === 'cp';
+    let toDir = false;
     let pos = [];
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
-      if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) { targets.push(args[++i]); needs.push(nd); } continue; }
-      const colon = /^-(?:path|literalpath|filepath|destination):(.+)$/i.exec(a);
-      if (colon) { targets.push(colon[1]); needs.push(nd); continue; }
+      if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
+      const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
+      if (colon) { targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
+      // -t/--target-directory chỉ dò cho mv/cp; cờ GNU gộp kiểu `-vt DIR` không được phân tích.
+      const tdir = gnu && (/^(-t|--target-directory)$/.test(a) ? args[++i] : /^--target-directory=(.+)$/.exec(a)?.[1] ?? /^-t(.+)$/.exec(a)?.[1]);
+      if (tdir) { toDir = true; targets.push(tdir); needs.push(['write']); continue; }
       // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
       if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
       if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
@@ -342,8 +352,13 @@ function writeTargets(t) {
     // Set-Content/Out-File: cờ có giá trị (-Encoding utf8, -Value x) làm đối số đầu không còn là đích thật; allPos giữ mọi đối số cho kiểm cấu hình hook.
     allPos = pos;
     if (FIRST_ONLY.has(name)) pos = pos.slice(0, 1);
-    targets.push(...pos);
-    needs.push(...pos.map(() => nd));
+    if (gnu && toDir) {
+      // Có -t DIR: đối số vị trí là nguồn; cp không xét nguồn.
+      if (name === 'mv') { targets.push(...pos); needs.push(...pos.map(() => ['delete'])); }
+    } else {
+      targets.push(...pos);
+      needs.push(...pos.map((_, i) => (MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
+    }
   }
   return { targets, needs, name, args, allPos };
 }
@@ -369,7 +384,9 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   for (const [i, p] of targets.entries()) {
     for (const need of needs[i]) {
       const c = classifyTarget(p, dir, unres, roots, msys, need);
-      if (c === 'outside') return { deny: need };
+      // Thiếu read chỉ hỏi (như Read ở guard-files), không deny.
+      if (c === 'outside' && need === 'read') unknown = true;
+      else if (c === 'outside') return { deny: need };
       if (c === 'unknown') unknown = true;
     }
   }
