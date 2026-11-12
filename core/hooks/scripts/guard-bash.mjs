@@ -295,6 +295,8 @@ function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
     const first = parts.findIndex((x) => x !== '');
     const g = parts.findIndex((x) => GLOB.test(x));
     if (g <= first) return 'unknown';
+    // `..` sau đoạn glob có thể kéo đường dẫn ra khỏi thư mục đã phân loại, mà glob thì không resolve được.
+    if (parts.slice(g + 1).includes('..')) return 'unknown';
     if (isClaudeTmpRoot(parts.slice(0, g).join('/'), dir)) return 'blocked';
     return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots, msys, need);
   }
@@ -333,18 +335,28 @@ function writeTargets(t, msys = true) {
     // Chỉ Bash: PowerShell nhận tiền tố tham số nên `-t` ở đó là `-ToSession` của Copy-Item, không phải GNU `-t DIR`.
     const gnu = msys && (name === 'mv' || name === 'cp');
     let toDir = false;
+    // Cờ bó/viết tắt không phân biệt được nguồn với đích: mọi đối số vị trí của mv phải đủ cả delete lẫn write.
+    let blurred = false;
     let pos = [];
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
       if (colon) { targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
+      // PowerShell chấp nhận viết tắt tham số (`-Dest`, `-Pa`) nên cờ lạ có thể đã gắn đối số vị trí vào -Path của nguồn.
+      if (!msys && MOVE_CMDS.has(name) && /^-[A-Za-z]/.test(a)) {
+        blurred = true;
+        const val = /^-[A-Za-z]+:(.+)$/.exec(a);
+        if (val) { targets.push(val[1]); needs.push(['delete', 'write']); }
+        continue;
+      }
       // Chỉ `-t DIR` (tách rời) và `--target-directory[=]DIR` đổi vai đối số vị trí; `-tDIR`, cờ gộp (`-rt`) hay cờ PowerShell (`-toSession`, `-Filter`)
       // không phân biệt được nên vừa thêm một đích write phỏng đoán vừa giữ kiểm đích vị trí mặc định, không để cờ nào làm mất đích thật.
       const exact = gnu && (a === '-t' || a === '--target-directory' ? args[++i] : /^--target-directory=(.+)$/.exec(a)?.[1]);
       if (exact) { toDir = true; targets.push(exact); needs.push(['write']); continue; }
-      const bundle = gnu ? /^-[A-Za-z]*?t(.*)$/.exec(a) : null;
+      const bundle = gnu ? /^-[A-Za-z]*?t([\s\S]*)$/.exec(a) : null;
       if (bundle) {
+        if (name === 'mv') blurred = true;
         const d = bundle[1] || args[++i];
         if (d) { targets.push(d); needs.push(['write']); }
         continue;
@@ -356,16 +368,18 @@ function writeTargets(t, msys = true) {
       pos.push(a);
     }
     if (SKIP_FIRST.has(name)) pos = pos.slice(1);
+    const sources = pos;
     if (LAST_ONLY.has(name)) pos = pos.slice(-1);
     // Set-Content/Out-File: cờ có giá trị (-Encoding utf8, -Value x) làm đối số đầu không còn là đích thật; allPos giữ mọi đối số cho kiểm cấu hình hook.
     allPos = pos;
     if (FIRST_ONLY.has(name)) pos = pos.slice(0, 1);
     if (gnu && toDir) {
-      // Có -t DIR: đối số vị trí là nguồn; cp không xét nguồn.
+      // Có -t DIR: đối số vị trí là nguồn; cp không xét quyền nguồn nhưng vẫn đưa vào targets để kiểm file cấu hình hook.
       if (name === 'mv') { targets.push(...pos); needs.push(...pos.map(() => ['delete'])); }
+      else { targets.push(...sources); needs.push(...sources.map(() => [])); }
     } else {
       targets.push(...pos);
-      needs.push(...pos.map((_, i) => (MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
+      needs.push(...pos.map((_, i) => (blurred ? ['delete', 'write'] : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
     }
   }
   return { targets, needs, name, args, allPos };
@@ -389,16 +403,17 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   const inner = name === 'eval' || SHELLS.has(name) ? shellString(name, args) : null;
   const ask = Boolean(inner) && stringWrites(inner);
   let unknown = false;
+  let readAsk = false;
   for (const [i, p] of targets.entries()) {
     for (const need of needs[i]) {
       const c = classifyTarget(p, dir, unres, roots, msys, need);
-      // Thiếu read chỉ hỏi (như Read ở guard-files); gốc <tmpdir>/claude ('blocked') luôn deny (D8).
-      if (c === 'outside' && need === 'read') unknown = true;
-      else if (c === 'outside' || c === 'blocked') return { deny: need };
+      // Thiếu read chỉ hỏi (như Read ở guard-files); gốc <tmpdir>/claude ('blocked') luôn deny dù cấu hình cấp gì.
+      if (c === 'outside' && need === 'read') readAsk = true;
+      else if (c === 'outside' || c === 'blocked') return { deny: need, blocked: c === 'blocked' };
       if (c === 'unknown') unknown = true;
     }
   }
-  return unknown || ask ? 'ask' : null;
+  return unknown || ask ? 'ask' : readAsk ? 'ask-read' : null;
 }
 
 // Token (hoặc phần tách theo khoảng trắng trong chuỗi nháy) khớp mẫu bí mật → lấy phần sau `=`/`@`/`<`/`(` làm đường dẫn rồi phân loại theo cwd đã theo dõi.
@@ -410,7 +425,7 @@ function secretOutsideRoots(lists, cwd, roots, re, msys = true) {
       if (!re.test(tok)) continue;
       found = true;
       const p = tok.slice(Math.max(tok.lastIndexOf('='), tok.lastIndexOf('@'), tok.lastIndexOf('<'), tok.lastIndexOf('(')) + 1);
-      // D7: file bí mật chỉ được miễn khi thư mục có đủ ba quyền.
+      // File bí mật chỉ được miễn hỏi khi đường dẫn có đủ ba quyền hiệu lực.
       if (['read', 'write', 'delete'].some((need) => ['outside', 'blocked', 'unknown'].includes(classifyTarget(p, dir, unres, roots, msys, need)))) return true;
     }
   }
@@ -542,6 +557,8 @@ const pushText = (r) => (r.kind === 'protected'
   : PUSH_TEXT[r.kind]);
 const CONFIG_TEXT = 'Lệnh sửa file cấu hình quyền (.claude/aip-gate.json hoặc settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.';
 const FULL_PATH_TEXT = 'Lệnh ghi hoặc xoá ở đường dẫn chỉ biết lúc chạy (`$VAR`, `~`, `*`), không chắc nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.';
+const READ_OUTSIDE_TEXT = 'Lệnh đọc file ngoài các thư mục đã cấp quyền đọc cho agent. Cho phép thì nội dung file có thể vào hội thoại hoặc được chép sang nơi khác. Chỉ cho phép khi chắc file đó an toàn để agent xem; không chắc thì từ chối.';
+const BLOCKED_TEXT = 'Thư mục tạm gốc của Claude luôn bị chặn ở chế độ full, kể cả khi cấu hình cấp quyền; chỉ làm việc với thư mục con của nó.';
 const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy. Project bật chế độ full nhưng phiên này không chạy ở chế độ bỏ qua hỏi quyền nên vẫn hỏi bạn như bình thường. Cho phép hoặc từ chối từng lần; muốn đổi thì chạy `aip mode ask`.';
 const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent hoặc bị gửi ra ngoài. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
 
@@ -560,8 +577,11 @@ function summarize(cmd) {
     total++;
     if (steps.length >= MAX_STEPS) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
-    const target = writeTargets(t).targets.find((x) => !NULL_DEVICE.test(x));
-    steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${target ? ` (ghi vào ${showArg(target, 60)})` : ''}`);
+    const w = writeTargets(t);
+    const ti = w.targets.findIndex((x) => !NULL_DEVICE.test(x));
+    const nd = w.needs[ti] ?? [];
+    const verb = nd.includes('delete') ? (nd.includes('write') ? 'xoá hoặc ghi' : 'xoá') : nd.includes('read') ? 'đọc' : 'ghi vào';
+    steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${ti >= 0 ? ` (${verb} ${showArg(w.targets[ti], 60)})` : ''}`);
   }
   if (!total) return '';
   const more = total > MAX_STEPS ? `, … và ${total - MAX_STEPS} bước khác` : '';
@@ -773,14 +793,17 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (full()) {
     const roots = rootsOf();
     let unknownPath = false;
+    let readOutside = false;
     const resolved = substituteVars(cmd, input?.tool_name);
     const [fullOuter, fullNaive] = resolved === cmd ? [outer, naiveOuter] : [parse(resolved).segs, naiveSegments(resolved)];
     for (const { t, dir, unres } of [...trackDirs(fullOuter, cwd, msys), ...trackDirs(fullNaive, cwd, msys)]) {
       const r = confineSegment(t, dir, unres, roots, msys);
-      if (r?.deny) return { decision: 'deny', reason: `Chế độ full chỉ cho phép lệnh này ở thư mục có quyền ${r.deny}; đường dẫn đích chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "${r.deny}") hoặc "fullRoots" trong .claude/aip-gate.json.` };
+      if (r?.deny) return { decision: 'deny', reason: r.blocked ? BLOCKED_TEXT : `Chế độ full chỉ cho phép lệnh này ở thư mục có quyền ${r.deny}; đường dẫn chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "${r.deny}") hoặc "fullRoots" trong .claude/aip-gate.json.` };
       if (r === 'ask') unknownPath = true;
+      if (r === 'ask-read') readOutside = true;
     }
     if (unknownPath) return ask(FULL_PATH_TEXT);
+    if (readOutside) return ask(READ_OUTSIDE_TEXT);
   }
   // Phiên không bypass trong project full: settings.json không còn quy tắc ask nào chắc chắn áp dụng nên hook hỏi thay.
   // Chỉ đọc cấu hình sau khi một đoạn khớp tiền tố, để lệnh thường không tốn lời gọi git.

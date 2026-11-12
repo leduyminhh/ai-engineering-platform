@@ -88,7 +88,7 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   if (!fullEffective(gate, input, { tracked })) return null;
   const grants = grantsOf(gate, input);
   const where = classifyPath(String(file), cwd, grants, true, write ? 'write' : 'read');
-  // D7: file bí mật chỉ được miễn khi thư mục có đủ ba quyền; thiếu thì hỏi người dùng.
+  // File bí mật chỉ được miễn hỏi khi đường dẫn có đủ ba quyền hiệu lực; thiếu thì hỏi người dùng.
   if (where === 'inside' && !(secret && ['read', 'write', 'delete'].some((a) => classifyPath(String(file), cwd, grants, true, a) !== 'inside'))) return null;
   // deny do agent đọc nên giữ gợi ý hành động (fullPaths/fullRoots); ask hiện cho người dùng nên chỉ nói điều họ quyết được.
   if (write && where === 'outside') return { decision: 'deny', reason: 'Chế độ full chỉ cho phép ghi vào thư mục có quyền write; đường dẫn này chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.' };
