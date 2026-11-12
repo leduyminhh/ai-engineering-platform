@@ -4,7 +4,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { envFilesAllowed, fullEffective, readGate, classifyPath, allowedRoots, normalizeMsysPath, fullReadRoots, defaultReadRoots, inReadRoot } from './gate-config.mjs';
+import { envFilesAllowed, fullEffective, readGate, classifyPath, allowedRoots, normalizeMsysPath, fullReadRoots, defaultReadRoots, inReadRoot, showArg } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
@@ -74,7 +74,7 @@ function globNamesSecret(glob, probes = SECRET_PROBES) {
 
 // Cấu hình của chính các hook: agent bị tiêm lệnh không được tự đặt mode:full, fullKeep:[] hay allowEnvFiles:true nên luôn hỏi, kể cả khi full hiệu lực.
 const GUARD_CONFIG = /(^|\/)\.claude\/(aip-gate\.json|settings(\.[\w-]+)?\.json)$/i;
-const guardConfigAsk = (file) => ({ decision: 'ask', reason: `Agent muốn ghi vào file cấu hình quyền \`${path.basename(file)}\` (cùng nhóm với .claude/settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.` });
+const guardConfigAsk = (file) => ({ decision: 'ask', reason: `Agent muốn ghi vào file cấu hình quyền \`${showArg(path.basename(file))}\` (cùng nhóm với .claude/settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.` });
 
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
@@ -93,8 +93,8 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   // deny do agent đọc nên giữ gợi ý hành động (fullRoots); ask hiện cho người dùng nên chỉ nói điều họ quyết được.
   if (write && where === 'outside') return { decision: 'deny', reason: 'Chế độ full chỉ cho phép thao tác trong root của project; đường dẫn nằm ngoài root. Cần mở rộng → thêm vào "fullRoots" trong .claude/aip-gate.json.' };
   const reason = where === 'unknown'
-    ? `Agent muốn ${write ? 'ghi' : 'đọc'} đường dẫn chỉ biết lúc chạy (\`${file}\`), nên không chắc nó nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.`
-    : `Agent muốn đọc file ngoài thư mục project (\`${file}\`). Cho phép nếu file đó an toàn để agent xem; nếu không, hãy từ chối.`;
+    ? `Agent muốn ${write ? 'ghi' : 'đọc'} đường dẫn chỉ biết lúc chạy (\`${showArg(file)}\`), nên không chắc nó nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.`
+    : `Agent muốn đọc file ngoài thư mục project (\`${showArg(file)}\`). Cho phép nếu file đó an toàn để agent xem; nếu không, hãy từ chối.`;
   return { decision: 'ask', reason };
 }
 

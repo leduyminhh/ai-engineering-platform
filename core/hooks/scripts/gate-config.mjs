@@ -59,6 +59,12 @@ export function envFilesAllowed(dir, { tracked } = {}) {
   return trustedValue(resolveGate(dir), 'allowEnvFiles', { tracked }) === true;
 }
 
+// Chuỗi do agent cung cấp (đường dẫn, token lệnh) đi vào reason hiện cho người dùng: bỏ xuống dòng/backtick để không làm giả dòng hay đóng khối trích, cắt giữ phần đuôi (tên file) để lời khuyên không bị đẩy ra ngoài.
+export function showArg(s, max = 120) {
+  const t = String(s).replace(/[\r\n\t`]+/g, ' ').trim();
+  return t.length > max ? `…${t.slice(-max)}` : t;
+}
+
 // Git Bash/Cygwin đưa đường dẫn kiểu /e/x hay /cygdrive/e/x; Node trên Windows sẽ hiểu thành E:\e\x (sai ổ) nếu không đổi trước.
 export function normalizeMsysPath(p, platform = process.platform) {
   if (platform !== 'win32' || typeof p !== 'string') return p;
