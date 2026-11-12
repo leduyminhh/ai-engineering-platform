@@ -338,10 +338,16 @@ function writeTargets(t) {
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
       if (colon) { targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
-      // -t/--target-directory chỉ dò cho mv/cp; cờ GNU gộp kiểu `-vt DIR` không được phân tích.
+      // Chỉ `-t DIR`, `-tDIR`, `--target-directory[=]DIR` đổi vai đối số vị trí; cờ gộp (`-rt`, `-vt`) hoặc cờ PowerShell có chữ `t` (`-Filter`)
+      // không phân biệt được nên vừa thêm một đích write phỏng đoán vừa giữ kiểm đích vị trí mặc định, không để cờ nào làm mất đích thật.
+      const exact = gnu && (a === '-t' || a === '--target-directory' ? args[++i] : /^--target-directory=(.+)$/.exec(a)?.[1] ?? /^-t(.+)$/.exec(a)?.[1]);
+      if (exact) { toDir = true; targets.push(exact); needs.push(['write']); continue; }
       const bundle = gnu ? /^-[A-Za-z]*?t(.*)$/.exec(a) : null;
-      const tdir = gnu && (a === '--target-directory' || bundle?.[1] === '' ? args[++i] : /^--target-directory=(.+)$/.exec(a)?.[1] ?? bundle?.[1]);
-      if (tdir) { toDir = true; targets.push(tdir); needs.push(['write']); continue; }
+      if (bundle) {
+        const d = bundle[1] || args[++i];
+        if (d) { targets.push(d); needs.push(['write']); }
+        continue;
+      }
       // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
       if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
       if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
