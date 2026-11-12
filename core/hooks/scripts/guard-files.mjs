@@ -74,7 +74,7 @@ function globNamesSecret(glob, probes = SECRET_PROBES) {
 
 // Cấu hình của chính các hook: agent bị tiêm lệnh không được tự đặt mode:full, fullKeep:[] hay allowEnvFiles:true nên luôn hỏi, kể cả khi full hiệu lực.
 const GUARD_CONFIG = /(^|\/)\.claude\/(aip-gate\.json|settings(\.[\w-]+)?\.json)$/i;
-const GUARD_CONFIG_ASK = { decision: 'ask', reason: 'Ghi vào cấu hình của hook an toàn (.claude/aip-gate.json hoặc .claude/settings*.json) cần người dùng xác nhận.' };
+const guardConfigAsk = (file) => ({ decision: 'ask', reason: `Agent muốn ghi vào file cấu hình quyền \`${path.basename(file)}\` (cùng nhóm với .claude/settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.` });
 
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
@@ -90,8 +90,12 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   if (where === 'inside') return null;
   // Root chỉ-đọc không nằm trong allowedRoots nên lệnh ghi vẫn rơi xuống deny bên dưới; đường dẫn bí mật không được miễn.
   if (!write && !secret && inReadRoot(String(file), cwd, [...fullReadRoots(gate.config), ...defaultReadRoots(input)])) return null;
-  const reason = `Chế độ full chỉ cho phép thao tác trong root của project; đường dẫn ${where === 'unknown' ? 'không xác định được' : 'nằm ngoài root'}. Cần mở rộng → thêm vào "fullRoots" trong .claude/aip-gate.json.`;
-  return { decision: write && where === 'outside' ? 'deny' : 'ask', reason };
+  // deny do agent đọc nên giữ gợi ý hành động (fullRoots); ask hiện cho người dùng nên chỉ nói điều họ quyết được.
+  if (write && where === 'outside') return { decision: 'deny', reason: 'Chế độ full chỉ cho phép thao tác trong root của project; đường dẫn nằm ngoài root. Cần mở rộng → thêm vào "fullRoots" trong .claude/aip-gate.json.' };
+  const reason = where === 'unknown'
+    ? `Agent muốn ${write ? 'ghi' : 'đọc'} đường dẫn chỉ biết lúc chạy (\`${file}\`), nên không chắc nó nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.`
+    : `Agent muốn đọc file ngoài thư mục project (\`${file}\`). Cho phép nếu file đó an toàn để agent xem; nếu không, hãy từ chối.`;
+  return { decision: 'ask', reason };
 }
 
 export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked, reader = readGate } = {}) {
@@ -114,7 +118,7 @@ export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase =
   const confined = confine(input, file, cwd, { repoRoot, config, tracked, reader, secret: isSecretPath(abs, target) });
   if (confined) return confined;
   if (!WRITE_TOOLS.has(input.tool_name)) return null;
-  if (GUARD_CONFIG.test(stripAliases(abs))) return GUARD_CONFIG_ASK;
+  if (GUARD_CONFIG.test(stripAliases(abs))) return guardConfigAsk(abs);
   const agent = String(input.agent_type || '').split(':').pop();
   const table = scopes || loadScopes();
   const scope = agent && Object.hasOwn(table, agent) ? table[agent] : null;
