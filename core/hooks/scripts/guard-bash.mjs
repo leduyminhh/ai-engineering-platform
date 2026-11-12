@@ -476,29 +476,37 @@ function isMetaOnly(t) {
   if (!g) return false;
   if (META_GIT.has(g.sub)) return true;
   if (g.sub !== 'log') return false;
+  // `git -c core.pager=…` chạy lệnh tuỳ ý khi mở pager: cấu hình truyền qua dòng lệnh làm git log không còn là lệnh metadata thuần.
+  if (t.slice(1, g.i).some((x) => x === '-c' || x.startsWith('--config-env'))) return false;
   const dd = t.indexOf('--', g.i + 1);
   return t.slice(g.i + 1, dd < 0 ? undefined : dd).every((a) => !a.startsWith('-') || LOG_SAFE_FLAG.test(a));
 }
 
 // Mẫu tìm kiếm là chuỗi cần tìm chứ không phải file được mở: bỏ khỏi văn bản quét bí mật. Đối số còn lại (đường dẫn) vẫn được quét.
-// Chỉ đối số dương đầu tiên trước mọi "--" của lệnh tìm kiếm, giá trị của -e/--regexp, và giá trị của --grep/--testNamePattern/--filter ở mọi lệnh.
-const SEARCH_CMDS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'ack', 'findstr', 'select-string']);
-const SEARCH_VALUE_FLAGS = new Set(['-f', '--file', '-m', '--max-count', '-A', '-B', '-C', '--glob', '-g', '-t', '--type', '-d', '-D', '--include', '--exclude']);
+// Chỉ bỏ khi chắc chắn: mọi cờ của lệnh tìm kiếm đều là cờ boolean đã biết (hoặc đúng -e/--regexp tách rời); gặp cờ lạ (-f nạp mẫu từ file, -efoo dính liền, --glob, -Path…)
+// thì không bỏ gì, vì khi đó đối số dương đầu có thể chính là file bí mật.
+const SEARCH_CMDS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'ack']);
+const SEARCH_BOOL_FLAG = /^(-[rRniIvwxclLhHsaEFGPoqzuU]+|--(recursive|ignore-case|line-number|count|files-with-matches|files-without-match|invert-match|word-regexp|line-regexp|fixed-strings|extended-regexp|perl-regexp|no-filename|with-filename|quiet|silent|only-matching|text|no-messages|smart-case|hidden|no-ignore))$/;
+// Cờ --grep/--testNamePattern/--filter chỉ được bỏ giá trị ở các lệnh chạy test/log đã biết, không phải mọi lệnh.
+const FILTER_RUNNERS = new Set(['npm', 'npx', 'pnpm', 'yarn', 'jest', 'vitest', 'mocha', 'pytest', 'git', 'mvn', 'gradle']);
 function withoutSearchPatterns(t) {
   const [tk, k] = unwrap(t);
+  const name = cmdName(tk[k] ?? '');
+  const rest = tk.slice(k + 1);
   const out = tk.slice(0, k + 1);
-  const grepLike = SEARCH_CMDS.has(cmdName(tk[k] ?? ''));
+  const runner = FILTER_RUNNERS.has(name);
+  const dd = rest.indexOf('--');
+  const flags = (dd < 0 ? rest : rest.slice(0, dd)).filter((a) => a.startsWith('-'));
+  const known = SEARCH_CMDS.has(name) && flags.every((a) => a === '-e' || a === '--regexp' || SEARCH_BOOL_FLAG.test(a));
   let patternSeen = false;
   let afterDashes = false;
-  for (let i = k + 1; i < tk.length; i++) {
-    const a = tk[i];
-    if (/^--(grep|testNamePattern|filter)=/.test(a)) continue;
-    if (/^--(grep|testNamePattern|filter)$/.test(a)) { out.push(a); i++; continue; }
-    if (!grepLike || afterDashes) { out.push(a); continue; }
+  for (let i = 0; i < rest.length; i++) {
+    const a = rest[i];
+    if (runner && /^--(grep|testNamePattern|filter)=/.test(a)) continue;
+    if (runner && /^--(grep|testNamePattern|filter)$/.test(a)) { out.push(a); i++; continue; }
+    if (!known || afterDashes) { out.push(a); continue; }
     if (a === '--') { afterDashes = true; out.push(a); continue; }
-    if (/^(-e|--regexp|-[A-Za-z]+e)$/.test(a)) { patternSeen = true; out.push(a); i++; continue; }
-    if (/^--regexp=/.test(a)) { patternSeen = true; continue; }
-    if (SEARCH_VALUE_FLAGS.has(a)) { out.push(a); if (i + 1 < tk.length) out.push(tk[++i]); continue; }
+    if (a === '-e' || a === '--regexp') { patternSeen = true; out.push(a); i++; continue; }
     if (a.startsWith('-')) { out.push(a); continue; }
     if (!patternSeen) { patternSeen = true; continue; }
     out.push(a);
