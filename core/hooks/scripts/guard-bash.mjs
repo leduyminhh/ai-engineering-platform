@@ -544,6 +544,36 @@ function withoutSearchPatterns(t) {
   }
   return out;
 }
+// Giải biến gán ngay trong cùng lệnh, chỉ để H6 ở chế độ full phân loại đường dẫn (`S=$(cygpath -u '<đường dẫn>'); mkdir -p $S/bin`).
+// Chỉ nhận phép gán đứng đầu lệnh cấp cao nhất (đầu chuỗi, sau `;` hoặc xuống dòng) và nằm trước dấu `<<` đầu tiên, để thân heredoc không giả được phép gán.
+// Giá trị phải là chuỗi literal tuyệt đối không có khoảng trắng, hoặc $(cygpath [cờ] '<literal>'); phép gán khác của cùng tên (vd NAME=$X) xoá giá trị đã biết.
+// Dùng trước khi gán thì không thay. Phép gán có điều kiện (trong if/then xuống dòng) hook tin là đã chạy: rủi ro còn lại, chỉ ở full vốn là heuristic không phải sandbox.
+const ASSIGN_AT = /(^|[\n;])[ \t]*([A-Za-z_]\w*)=/g;
+const ASSIGN_CYGPATH = /\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+(?:'([^']*)'|"([^"$`]*)")\s*\)/y;
+const ASSIGN_LITERAL = /(?:'([^']*)'|"([^"$`]*)"|([^\s'"$`;&|()<>*?[\]{}~]+)(?=[\s;&|)]|$))/y;
+const absoluteLiteral = (v) => typeof v === 'string' && v !== '' && !/[\s$`*?[\]{}~]/.test(v) && (v.startsWith('/') || /^[A-Za-z]:[\\/]/.test(v));
+function substituteVars(cmd) {
+  const heredoc = cmd.indexOf('<<');
+  const head = heredoc < 0 ? cmd : cmd.slice(0, heredoc);
+  const events = [];
+  for (const m of head.matchAll(ASSIGN_AT)) {
+    const at = m.index + m[0].length;
+    ASSIGN_CYGPATH.lastIndex = at;
+    ASSIGN_LITERAL.lastIndex = at;
+    const c = ASSIGN_CYGPATH.exec(head);
+    const l = c ? null : ASSIGN_LITERAL.exec(head);
+    const hit = c ?? l;
+    const value = hit ? (hit[1] ?? hit[2] ?? hit[3]) : undefined;
+    events.push({ name: m[2], pos: at + (hit ? hit[0].length : 0), value: absoluteLiteral(value) ? value : null });
+  }
+  if (!events.length) return cmd;
+  return cmd.replace(/\$(?:\{([A-Za-z_]\w*)\}|([A-Za-z_]\w*))/g, (whole, braced, plain, p) => {
+    const name = braced ?? plain;
+    const last = events.filter((e) => e.name === name && e.pos <= p).pop();
+    return last?.value ?? whole;
+  });
+}
+
 // Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
 const HARMLESS_REDIRECT = /(^|\s)(?:\d*>>?&\d+|(?:\d*|&)>>?\s*(?:\/dev\/null|nul|\$null))(?=\s|$|[;&|])/gi;
 function secretScanText(cmd) {
@@ -603,7 +633,9 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (full()) {
     const roots = rootsOf();
     let unknownPath = false;
-    for (const { t, dir, unres } of [...trackDirs(outer, cwd, msys), ...trackDirs(naiveOuter, cwd, msys)]) {
+    const resolved = substituteVars(cmd);
+    const [fullOuter, fullNaive] = resolved === cmd ? [outer, naiveOuter] : [parse(resolved).segs, naiveSegments(resolved)];
+    for (const { t, dir, unres } of [...trackDirs(fullOuter, cwd, msys), ...trackDirs(fullNaive, cwd, msys)]) {
       const r = confineSegment(t, dir, unres, roots, msys);
       if (r === 'deny') return { decision: 'deny', reason: 'Chế độ full: lệnh ghi/xoá đường dẫn ngoài root của project. Thêm thư mục vào "fullRoots" trong .claude/aip-gate.json nếu thật sự cần.' };
       if (r === 'ask') unknownPath = true;
@@ -615,6 +647,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (!bypass && [...segs, ...naiveAll].some(matchesAsk) && gate()?.mode === 'full') {
     return ask(FULL_NO_BYPASS_TEXT);
   }
+  // Ở full, đường dẫn bí mật cũng được giải biến gán cùng lệnh như H6 (tính một lần, chỉ khi cần).
+  const variableLists = () => { const r = substituteVars(cmd); return r === cmd ? [outer, naiveOuter] : [parse(r).segs, naiveSegments(r)]; };
   const hits = (re) => re.test(secretScanText(cmd)) || re.test(secretScanText(raw));
   // Cấu hình chỉ đọc khi lệnh đã nhắc tới file bí mật: lệnh thường không tốn thêm lời gọi git.
   const secretName = (re) => { for (const text of [secretScanText(cmd), secretScanText(raw)]) { const m = re.exec(text); if (m) return m[2]; } return ''; };
@@ -624,7 +658,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (hits(SECRET) && full()) {
     // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
     const secretRe = hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET;
-    if (hits(secretRe) && secretOutsideRoots([outer, naiveOuter], cwd, rootsOf(), secretRe, msys)) return secretAsk(secretRe);
+    if (hits(secretRe) && secretOutsideRoots(variableLists(), cwd, rootsOf(), secretRe, msys)) return secretAsk(secretRe);
   }
   return null;
 }

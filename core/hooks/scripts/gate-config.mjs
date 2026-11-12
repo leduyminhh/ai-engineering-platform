@@ -91,9 +91,12 @@ export function classifyPath(p, cwd, roots, msys = true) {
   return roots.some((r) => { const n = norm(path.resolve(r)); return abs === n || abs.startsWith(`${n}/`); }) ? 'inside' : 'outside';
 }
 
+// Thư mục tạm do chính Claude Code sinh ra (scratchpad, thư mục kết quả tool): không phải "ngoài project" với agent. [Unverified] Bố cục <tmpdir>/claude đo trên Windows, chưa kiểm POSIX.
+export const claudeTmpRoots = (tmp = os.tmpdir()) => [path.join(tmp, 'claude')];
+
 export function allowedRoots(gate, input) {
   const sp = input?.scratchpad_dir;
-  return [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config)];
+  return [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config), ...claudeTmpRoots()];
 }
 
 export function fullReadRoots(config) {
