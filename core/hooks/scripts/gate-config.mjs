@@ -124,7 +124,7 @@ export function grantsOf(gate, input) {
   const full = [...(gate?.roots ?? []), ...(typeof sp === 'string' && path.isAbsolute(sp) ? [sp] : []), ...fullRoots(gate?.config), ...claudeTmpRoots()];
   return [
     ...full.map((p) => ({ path: p, allow: [...PERMS] })),
-    ...fullReadRoots(gate?.config).map((p) => ({ path: p, allow: ['read'] })),
+    ...fullReadRoots(gate?.config).map((p) => ({ path: p, allow: ['read'], glob: true })),
     ...defaultReadRoots(input).map((p) => ({ path: p, allow: ['read'], glob: true })),
     ...fullPaths(gate?.config),
   ];
