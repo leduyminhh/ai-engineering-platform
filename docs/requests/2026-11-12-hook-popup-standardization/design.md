@@ -25,7 +25,7 @@ Phạm vi A, B, E do người dùng duyệt ngày 2026-11-12. Không làm: hook 
 - **B2 — bí mật: bỏ qua metadata và đối số tìm kiếm.** Trong `secretScanText`: (a) mở rộng nhóm metadata: `ls`, `dir`, và `git log` chỉ khi mọi cờ nằm trong danh sách an toàn (`--oneline`, `--stat`, `--name-only`, `--name-status`, `--follow`, `--all`, `--graph`, `--decorate`, `-<n>`, `-n<k>`, `--format=`, `--pretty=`, `--date=`…); `-p`/`--patch`/`-u`/`-c`/`--cc`/`-L`/`-G`/`-S` hay cờ lạ → vẫn hỏi, vì chúng in nội dung file. Điều kiện hiện có (không chuyển hướng, không pipe sang lệnh sau, không `$()`/backtick) giữ nguyên. (b) Bỏ token mẫu tìm kiếm trước khi so `SECRET`: đối số dương đầu tiên (không phải cờ, không sau `--`) của `grep`/`egrep`/`fgrep`/`rg`/`ag`/`ack`/`findstr`/`select-string`, giá trị của `-e`/`--regexp`, và giá trị của `--grep`, `-t`, `--testNamePattern`, `--filter`, `-k` ở mọi lệnh (dạng `=` và dạng tách). Đối số còn lại (đường dẫn) vẫn so như cũ nên `grep x .env` vẫn hỏi.
 - **B3 — chuỗi `bash -c`/`eval` ở full.** Thay `WRITE_IN_STRING.test(args.join(' '))` bằng `stringWrites(inner)`: parse chuỗi con (`parse` + `naiveSegments`, như phần còn lại của hook) và hỏi khi một đoạn có đích ghi hoặc là `WRITE_CMDS`. Chuỗi con nháy không đóng thì rơi về regex cũ. Vẫn là `ask` (không chuyển thành `deny`), đúng R7.
 - **C1 — thư mục tạm do Claude sinh ra là root hợp lệ ở full (bổ sung 2026-11-12 theo yêu cầu người dùng sau khi xem popup thật).** `allowedRoots` thêm `<os.tmpdir()>/claude` (mọi thư mục tạm của phiên Claude Code, gồm scratchpad); `scratchpad_dir` của stdin vẫn là root như cũ. Dùng chung cho `guard-bash` (H6, bí mật ngoài root) và `guard-files` (confine). [Unverified] Bố cục `<tmpdir>/claude` lấy từ đường dẫn scratchpad thấy trong popup trên Windows; chưa kiểm trên POSIX.
-- **C2 — biến gán trong cùng lệnh được giải ở full.** Ảnh popup thật: `S=$(cygpath -u 'C:…scratchpad'); mkdir -p $S/bin && cd $S …` bị hỏi "đường dẫn không xác định được" vì `$S`. Trước khi tách lệnh cho H6 (chỉ ở full), thay `$NAME`/`${NAME}` bằng giá trị của phép gán đứng trước nó trong cùng lệnh khi phép gán là `NAME=<literal>` hoặc `NAME=$(cygpath [cờ] '<literal>')` ở đầu một lệnh, nằm trước dấu `<<` đầu tiên (thân heredoc không được coi là gán), giá trị tuyệt đối, không chứa khoảng trắng, `$`, backtick hay glob. Dùng trước khi gán, gán lại bằng giá trị không giải được, hay giá trị ngoài root thì không được miễn (vẫn ask hoặc deny như cũ). Không đổi hành vi ngoài full.
+- **C2 — biến gán trong cùng lệnh được giải ở full.** Ảnh popup thật: `S=$(cygpath -u 'C:\…\scratchpad'); mkdir -p $S/bin && cd $S …` bị hỏi "đường dẫn không xác định được" vì `$S`. Trước khi tách lệnh cho H6 (chỉ ở full, không áp cho PowerShell), thay `$NAME`/`${NAME}` bằng giá trị lấy từ khối phép gán ở ĐẦU chuỗi: mỗi phép gán `NAME=<literal tuyệt đối không khoảng trắng>` hoặc `NAME=$(cygpath [cờ] '<literal>')` kết thúc đúng bằng `;` hoặc xuống dòng. Không thay khi phần sau nhắc `NAME=`/`NAME+=`/`NAME in`, hoặc có `unset`/`read`/`eval`/`source`/…/here-string, hoặc heredoc không phải `cat`/`tee` với delimiter có nháy. Phép gán ở chỗ khác không được tin. (Bản đầu quét văn bản thô nên reviewer tái lập nhiều đường thoát; đã thu hẹp sau review.)
 - **E — mcpDeny khi không đọc được cấu hình.** `guard-mcp` gọi `locateGate` (qua một hàm mới ở `gate-config.mjs`) thay `readGate`: (a) `gitUnknown` mà đọc được file → dùng config đó cho `mcpAllow`/`mcpDeny` (cả hai chỉ siết; `full` vẫn không hiệu lực vì `tracked` không xác định); (b) file `aip-gate.json` tồn tại nhưng hỏng (`source: 'worktree-invalid'` hoặc `mainInvalid`) trong repo git → `ask` cho mọi tool MCP, lý do nêu file hỏng và cách sửa; (c) ngoài repo git, không có file → như cũ (null, R3/R4). Quy tắc `start_session` thiếu model vẫn chạy trước.
 
 ## Tiêu chí chấp nhận
@@ -49,7 +49,7 @@ chmod +x bin/docker; PATH="$S/bin:$PATH" bash $R/run.sh` Then không ask (bản 
 - [ ] **AC6.3** — Given full When `S=/etc; rm $S/x`, `rm $S/x; S=/tmp/claude/a`, `S=$X; rm $S/x`, `cat > f <<'EOF'
 S=/tmp/claude/a
 EOF
-rm -rf $S/x`, `S="/tmp/claude/a b"; rm $S` Then vẫn bị chặn như cũ (deny với ngoài root, ask với không xác định); lệnh không ở full không đổi.
+rm -rf $S/x`, `S="/tmp/claude/a b"; rm $S` Then vẫn bị chặn (deny khi giải ra ngoài root, ask khi không xác định được; riêng `S=/etc; rm $S/x` bản trước chỉ ask); lệnh không ở full không đổi; gán không ở đầu chuỗi, `S=… cmd`, `unset`/`+=`/`for S in`/`read`/`eval`, gán lại sau heredoc và PowerShell đều không được tin.
 - [ ] **AC4.1** — Given các sửa trên When `npm run build`, `node cli/lib/versions.mjs --lock`, `npm test` Then xanh; `core/.manifest.json` tăng version.
 
 ## Thiết kế
@@ -64,7 +64,7 @@ Tác động và vị trí:
 - Spec sống `docs/specs/hooks-gates/spec.md`; `README.md`/`README_VI.md` mục Hooks (guard-bash, guard-mcp, mục "Không phát hiện"); `core/.manifest.json` 1.33.6 → 1.33.7; `plugins/_versions.lock.json` qua `versions.mjs --lock`.
 
 ## Ảnh hưởng spec
-- hooks-gates: đổi R3, đổi R7, đổi R18, thêm R21, thêm R22
+- hooks-gates: đổi R3, đổi R7, đổi R18, thêm R21, thêm R22, thêm R23
 
 ## Ngoài phạm vi và anti-goal
 - Không đổi câu `deny` và câu `DENY_COMMIT`; không thêm hook mới; không đổi `gate-file.mjs` (hai bản sao giữ byte-identical); không đổi `session-start`/`gate-stop`.

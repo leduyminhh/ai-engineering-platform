@@ -1,6 +1,6 @@
 // Contract 99: request 2026-11-12-hook-popup-standardization (reason dễ hiểu, bớt bắt nhầm, guard-mcp giữ mcpDeny).
 export default async function run({ ok, ctx }) {
-  const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR } = ctx;
+  const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR, REPO_ROOT } = ctx;
   const hook = (name) => import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', name)).href);
   // Khuôn của reason `ask` (AC1.1): không thuật ngữ nội bộ, có lời khuyên cho phép/từ chối, ngắn; không ghim cả câu.
   const BANNED = ['nguyên tắc nền', 'hook an toàn', 'fullRoots', 'bypass', 'root'];
@@ -361,5 +361,13 @@ export default async function run({ ok, ctx }) {
     for (const c of ['Select-String -Path .env -Pattern x', 'Select-String -LiteralPath .env -Pattern x', 'Select-String -Path .env x']) {
       ok(asks(c, { tool: 'PowerShell' }), `AC2.2: PowerShell Select-String vào file bí mật vẫn hỏi: ${c}`);
     }
+  }
+
+  // ── Task 6: rule AGENTS.md (AC1.5); AC4.1 (build, versions lock, npm test) chạy ngoài file này
+  {
+    const agents = fs.readFileSync(path.join(REPO_ROOT, 'AGENTS.md'), 'utf8');
+    const template = fs.readFileSync(path.join(REPO_ROOT, 'core', 'agents', 'AGENTS.template.md'), 'utf8');
+    ok(/One Bash command per call/.test(agents) && /&&/.test(agents.split('One Bash command per call')[1].split('\n').slice(0, 2).join(' ')), 'AC1.5: AGENTS.md có rule mỗi lệnh Bash một việc, không nối chuỗi dài bằng &&');
+    ok(agents.replace(/\r\n/g, '\n') === template.replace(/\r\n/g, '\n') && agents.split('\n').length <= 201, 'AC1.5: AGENTS.md và template giống hệt nhau, không quá 200 dòng');
   }
 }
