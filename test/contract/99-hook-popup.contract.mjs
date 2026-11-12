@@ -409,6 +409,28 @@ export default async function run({ ok, ctx }) {
     ok(bash('F=notes.txt; echo x > $F') === null, 'AC2.1: đích là biến nhưng lệnh không nhắc file cấu hình thì không hỏi');
   }
 
+  // ── Re-review (R1–R3): đệm làm decide ném lỗi, $( ) lồng ngoặc, chỉ số mảng dài hoặc có khoảng trắng
+  {
+    const scratch = path.join(os.tmpdir(), 'claude', 'p', 's', 'scratchpad');
+    const T = scratch.replaceAll('\\', '/');
+    const full = { full: true, extra: { scratchpad_dir: scratch } };
+    const BT = String.fromCharCode(96);
+    for (const pad of [BT.repeat(130000), '$()'.repeat(130000)]) {
+      let r;
+      try { r = gb.decide({ tool_name: 'Bash', tool_input: { command: 'cat .env; echo "' + pad + '"' } }, { currentBranch: 'feature/x' }); } catch (e) { r = 'throw ' + e.message; }
+      ok(r?.decision === 'ask', 'AC1.3: đệm nhiều $( ) hoặc backtick không làm decide ném lỗi và vẫn quét bí mật (' + (typeof r === 'string' ? r : r?.decision) + ')');
+    }
+    for (const c of ['echo "$( (cp x .claude/aip-gate.json) )"', 'echo "$(true && (cp x .claude/aip-gate.json))"', 'echo "$(cp x .claude/aip-gate.json; (true))"',
+      'git commit -m "$( (cp x .claude/aip-gate.json) )"', 'echo "$( (echo {} > .claude/aip-gate.json) )"',
+      'echo "$(echo "$(echo "$(echo "$(echo "$(cp x .claude/aip-gate.json)")")")")"']) {
+      ok(asks(c), `AC2.1: $( ) có ngoặc lồng hoặc lồng sâu vẫn hỏi khi ghi cấu hình hook: ${c}`);
+    }
+    for (const sub of ['a'.repeat(70), '0+0+'.repeat(20) + '0', ' 0 ', '1 - 1']) {
+      const c = 'S=' + T + '; S[' + sub + ']=/etc; rm -rf $S/x';
+      ok(bash(c, full) !== null, 'AC6.3: chỉ số mảng dài hoặc có khoảng trắng không được tin $S: ' + c.slice(0, 60));
+    }
+  }
+
   // ── Task 6: rule AGENTS.md (AC1.5); AC4.1 (build, versions lock, npm test) chạy ngoài file này
   {
     const agents = fs.readFileSync(path.join(REPO_ROOT, 'AGENTS.md'), 'utf8');
