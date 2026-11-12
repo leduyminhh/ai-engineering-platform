@@ -43,4 +43,28 @@ export default async function run({ ok, ctx }) {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   }
+  // ── guard-bash helpers dùng chung cho Task 2–4
+  const gb = await hook('guard-bash.mjs');
+  const bash = (command, { tool = 'Bash', branch = 'feature/x', full = false, extra = {} } = {}) => gb.decide(
+    { tool_name: tool, cwd: '.', tool_input: { command }, ...(full ? { permission_mode: 'bypassPermissions' } : {}), ...extra },
+    { currentBranch: () => branch, ...(full ? { config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false } : {}) });
+  const asks = (c, o) => bash(c, o)?.decision === 'ask';
+
+  // ── Task 2: cấu hình hook chỉ hỏi theo đích ghi; chuỗi bash -c ở full theo parse (AC2.1, AC2.3)
+  {
+    for (const c of ['git commit -m "docs: aip-gate.json" > m2.txt', 'cat .claude/settings.json | tee x', 'echo x > a; cat .claude/aip-gate.json', 'cp .claude/settings.json backup.json']) {
+      ok(bash(c) === null, `AC2.1: không ghi vào file cấu hình → không hỏi: ${c}`);
+    }
+    for (const c of ['bash -c "echo x > .claude/aip-gate.json"', 'sed -i s/a/b/ .claude/settings.json', 'perl -pi -e s/a/b/ .claude/aip-gate.json', 'cp x .claude/settings.json',
+      String.raw`echo x >> .claude\settings.json`, 'echo y | sudo tee .claude/settings.local.json', 'git commit -m x > .claude/aip-gate.json']) {
+      ok(asks(c), `AC2.1: ghi vào file cấu hình vẫn hỏi: ${c}`);
+    }
+    ok(asks(String.raw`Set-Content .claude\aip-gate.json x`, { tool: 'PowerShell' }), 'AC2.1: PowerShell Set-Content vào aip-gate.json vẫn hỏi');
+    for (const c of ['bash -c "awk \'$1>2\' f"', 'bash -c "grep -rm 1 x ."', 'bash -c "echo hi 2>&1"', 'bash -c "echo hi > /dev/null"']) {
+      ok(bash(c, { full: true }) === null, `AC2.3: full — chuỗi con không ghi → không hỏi: ${c}`);
+    }
+    for (const c of ['bash -c "rm /x"', 'bash -c "echo a > /x"', 'eval "rm /x"', 'bash -c "echo \'x > y\\" ; rm z"']) {
+      ok(asks(c, { full: true }), `AC2.3: full — chuỗi con có lệnh ghi vẫn hỏi: ${c}`);
+    }
+  }
 }
