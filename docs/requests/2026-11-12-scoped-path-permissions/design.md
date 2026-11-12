@@ -157,6 +157,19 @@ Ví dụ (full hiệu lực, `P` là gốc project, mọi đường dẫn tuyệ
 - AC7.1: `test/content` pin chỉ các hợp đồng vận hành (tên khoá `fullPaths`, ba giá trị `allow`), không pin cả đoạn văn.
 - AC8.1: `npm run build`, `versions.mjs --lock`, `npm test`.
 
+## Quyết định khi thực thi
+
+Chép từ `Ruling:` của ledger (`.aip/` không vào nhánh); kiểm lại bằng `node test/validate.mjs --only path-permissions`.
+
+- D7 hiểu theo quyền hiệu lực: file bí mật được miễn hỏi khi hợp các mục cho đường dẫn đủ ba quyền, không đòi một mục đủ ba (khớp D1, AC4.3).
+- Cờ `-t`: chỉ `-t DIR` tách rời và `--target-directory[=]DIR` đổi vai đích, và chỉ khi tool là Bash (PowerShell hiểu `-t` là `-ToSession`). `-tDIR` dính và cờ gộp có chữ `t` (`-rt`, `-vt`, `-Filter`) đi đường thận trọng: DIR thêm làm đích ghi, đối số vị trí vẫn được kiểm; với `mv`, mọi đối số vị trí cần `delete` và `write`. Lý do: không phân biệt được với cờ PowerShell như `-toSession`.
+- PowerShell `Move-Item`/`mv`/`move` có cờ không nhận ra chính xác (vd viết tắt `-Dest`): mọi đối số vị trí cần `delete` và `write`.
+- `cp -t` vẫn đưa nguồn vào danh sách đích (không kiểm quyền) để bước kiểm ghi cấu hình hook còn thấy.
+- Glob có đoạn `..` phía sau thì hỏi.
+- Gốc `<tmpdir>/claude` chỉ bị `guard-bash` chặn mọi quyền (kể cả đọc qua `Copy-Item`); `guard-files` không có ngoại lệ này, như trước request.
+- `fullReadRoots` giữ `*` là wildcard một đoạn như master (sửa hồi quy trong lúc làm; AC5.2).
+- Câu hỏi khi đọc file bí mật dưới root chỉ-đọc đổi chữ sang "chưa được cấp đủ ba quyền" (quyết định vẫn là hỏi). Thiếu quyền đọc ở `guard-bash` có câu hỏi riêng; dòng "Lệnh gồm" gắn nhãn đọc/xoá/ghi theo quyền cần.
+
 ## Để builder quyết
 
 - Tên hàm/tham số nội bộ (`grantsOf`, `need`, `needs`) và cách tách `classifyPath` (một hàm hay hai) miễn giữ chữ ký cũ chạy được.
