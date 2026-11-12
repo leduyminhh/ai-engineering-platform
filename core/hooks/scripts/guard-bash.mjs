@@ -512,7 +512,7 @@ function substitutedConfigWrite(list, cmd) {
     layer = next.filter(hasSubstitution);
   }
   if (found.length > MAX_INNER) return GUARD_CONFIG.test(cmd);
-  return found.some((str) => expandShells(parse(str).segs).some(writesGuardConfig));
+  return found.some((str) => expandShells(parse(str).segs).some((t) => writesGuardConfig(t)));
 }
 
 function pipedIndirectConfigWrite(list) {
