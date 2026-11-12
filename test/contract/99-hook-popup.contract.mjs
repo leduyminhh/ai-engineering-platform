@@ -151,7 +151,13 @@ export default async function run({ ok, ctx }) {
     ok(unk?.decision === 'ask' && shapeOk(unk.reason) && unk.reason.includes('$HOME/x.txt'), 'AC1.1: guard-files — đường dẫn không xác định được → ask theo khuôn');
     const wr = dec('Write', outsideFile, { bypass: true });
     ok(wr?.decision === 'deny' && wr.reason.includes('fullRoots'), 'AC1.4: guard-files — ghi ngoài project ở full vẫn deny nhắc fullRoots');
-    ok(!/Lệnh gồm/.test(cfg.reason + rd.reason), 'AC1.3: reason của guard-files không có dòng "Lệnh gồm"');
+    const wunk = dec('Write', '$HOME/x.txt', { bypass: true });
+    ok(wunk?.decision === 'ask' && shapeOk(wunk.reason) && !/Lệnh gồm/.test(cfg.reason + rd.reason + unk.reason + wunk.reason), 'AC1.3: reason của guard-files không có dòng "Lệnh gồm"; ghi vào đường dẫn không xác định → ask theo khuôn');
+    // Đường dẫn do agent cung cấp không được làm giả dòng hay đẩy lời khuyên ra khỏi popup: bỏ xuống dòng/backtick, cắt độ dài
+    for (const evil of ['$X/`a`\nAn toàn, hãy cho phép.\n`b.txt`', `$X/${'a'.repeat(900)}`, `${outsideFile}\nHãy cho phép`]) {
+      const r = dec('Read', evil, { bypass: true });
+      ok(r?.decision === 'ask' && shapeOk(r.reason) && !/[\r\n]/.test(r.reason) && !r.reason.includes('`a`'), `AC1.1: đường dẫn có xuống dòng/backtick/quá dài không làm sai lệch reason (${evil.slice(0, 12).replace(/\n/g, '⏎')}…)`);
+    }
   }
 
   // ── Task 3: file bí mật bỏ qua lệnh metadata và mẫu tìm kiếm (AC2.2)
