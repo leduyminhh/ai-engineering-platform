@@ -95,6 +95,16 @@ export default async function run({ ok, ctx }) {
     ];
     for (const [ac, cfg, extra, cases] of rows) for (const [tool, file, want] of cases) ok(kindF(tool, file, { cfg, extra }) === want, `${ac}: ${tool} ${path.relative(tmp, file)} → ${want}`);
 
+    // AC5.2: `*` trong fullReadRoots khớp đúng một đoạn như trên master; `*` trong fullPaths vẫn là ký tự thường (D4).
+    const G = path.join(tmp, 'g', '*', 'data');
+    const star = { mode: 'full', fullReadRoots: [G], fullPaths: [ro(path.join(tmp, 'q', '*'))] };
+    for (const [tool, file, want] of [
+      ['Read', path.join(tmp, 'g', 'a', 'data', 'f'), null], ['Grep', path.join(tmp, 'g', 'a', 'data', 'f'), null],
+      ['Read', path.join(tmp, 'g', 'a', 'b', 'data', 'f'), 'ask'], ['Read', path.join(tmp, 'g', 'data', 'f'), 'ask'],
+      ['Write', path.join(tmp, 'g', 'a', 'data', 'f'), 'deny'],
+      ['Read', path.join(tmp, 'q', 'a', 'f'), 'ask'], ['Read', path.join(tmp, 'q', '*', 'f'), null],
+    ]) ok(kindF(tool, file, { cfg: star }) === want, `AC5.2: ${tool} ${path.relative(tmp, file)} với * → ${want}`);
+
     // AC5.1: fullRoots: [T] đồng nghĩa mục đủ ba quyền; AC6.1: full không hiệu lực thì fullPaths không đổi kết quả.
     const probes = [['Read', T], ['Write', T], ['Write', D], ['Read', D], ['Read', O], ['Write', O], ['Read', X], ['Write', X], ['Read', path.join(T, '.env')], ['Write', path.join(T, '.env')]]
       .map(([tool, dir]) => [tool, path.join(dir, dir.endsWith('.env') ? '' : 'a.txt')]);
