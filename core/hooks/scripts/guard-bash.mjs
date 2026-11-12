@@ -302,7 +302,7 @@ function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
 }
 
 // Đích ghi của một đoạn lệnh (chuyển hướng, đối số của WRITE_CMDS, cờ đường dẫn PowerShell) kèm tên lệnh và đối số sau khi bỏ tiền tố bọc.
-function writeTargets(t) {
+function writeTargets(t, msys = true) {
   const rest = [];
   const targets = [];
   const needs = [];
@@ -330,7 +330,8 @@ function writeTargets(t) {
   let allPos = [];
   if (WRITE_CMDS.has(name)) {
     const nd = needsOf(name);
-    const gnu = name === 'mv' || name === 'cp';
+    // Chỉ Bash: PowerShell nhận tiền tố tham số nên `-t` ở đó là `-ToSession` của Copy-Item, không phải GNU `-t DIR`.
+    const gnu = msys && (name === 'mv' || name === 'cp');
     let toDir = false;
     let pos = [];
     for (let i = 0; i < args.length; i++) {
@@ -384,7 +385,7 @@ function stringWrites(str) {
 
 // Trả { deny: <quyền thiếu> } | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
 function confineSegment(t, dir, unres, roots, msys = true) {
-  const { targets, needs, name, args } = writeTargets(t);
+  const { targets, needs, name, args } = writeTargets(t, msys);
   const inner = name === 'eval' || SHELLS.has(name) ? shellString(name, args) : null;
   const ask = Boolean(inner) && stringWrites(inner);
   let unknown = false;
@@ -518,8 +519,8 @@ function pipedIndirectConfigWrite(list) {
   return list.some((t) => indirectWrite(t)) && list.some((t) => t.some(isConfigPath));
 }
 
-function writesGuardConfig(t) {
-  const { targets, name, args, allPos } = writeTargets(t);
+function writesGuardConfig(t, msys = true) {
+  const { targets, name, args, allPos } = writeTargets(t, msys);
   if (targets.some((p) => GUARD_CONFIG.test(p)) || (FIRST_ONLY.has(name) && allPos.some((p) => GUARD_CONFIG.test(p)))) return true;
   // Lệnh không thuộc WRITE_CMDS (khối script PowerShell, xargs, find, parallel…): không đọc được đích ghi thì hỏi khi cùng đoạn có đường dẫn cấu hình và tín hiệu ghi.
   if (name !== 'sed' && name !== 'perl' && !WRITE_CMDS.has(name)) {
@@ -766,7 +767,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return ask(pushText(why));
   }
-  if ([...segs, ...naiveAll].some(writesGuardConfig) || pipedIndirectConfigWrite([...segs, ...naiveAll]) || opaqueConfigWrite([...segs, ...naiveAll], cmd) || substitutedConfigWrite([...segs, ...naiveAll], cmd)) {
+  if ([...segs, ...naiveAll].some((t) => writesGuardConfig(t, msys)) || pipedIndirectConfigWrite([...segs, ...naiveAll]) || opaqueConfigWrite([...segs, ...naiveAll], cmd) || substitutedConfigWrite([...segs, ...naiveAll], cmd)) {
     return ask(CONFIG_TEXT);
   }
   if (full()) {
