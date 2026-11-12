@@ -513,3 +513,33 @@ test("gate-config-flow AC4.2: status chỉ hiện mode đáng tin; gợi ý gỡ
   assert.match(cmd(runAutonomy, "status", root).out, /xem lại/);
   assert.match(cmd(runAutonomy, "high", root).out, /xem lại/);
 });
+
+// Windows: junction không cần quyền admin; symlink file có thể bị từ chối (EPERM) nên ca đó bỏ qua khi không tạo được.
+function linked(kind) {
+  const root = tmp();
+  const ext = tmpNoGit();
+  put(path.join(ext, "aip-gate.json"), JSON.stringify({ mode: "full", autonomy: { mergeLocal: true } }));
+  put(path.join(ext, "settings.json"), EMPTY);
+  if (kind === "dir") fs.symlinkSync(ext, path.join(root, ".claude"), "junction");
+  else {
+    fs.mkdirSync(path.join(root, ".claude"));
+    try { fs.symlinkSync(path.join(ext, "aip-gate.json"), gatePath(root), "file"); } catch (e) { if (e.code === "EPERM") return null; throw e; }
+  }
+  return { root, ext };
+}
+const snapshot = (d) => Object.fromEntries(fs.readdirSync(d).map((f) => [f, fs.readFileSync(path.join(d, f), "utf8")]));
+
+test("gate-followups AC1.1: aip mode/autonomy từ chối ghi khi .claude hoặc aip-gate.json là symlink/junction", () => {
+  for (const kind of ["dir", "file"]) {
+    const l = linked(kind);
+    if (!l) continue;
+    const before = snapshot(l.ext);
+    for (const [fn, sub] of [[runMode, "full"], [runMode, "ask"], [runAutonomy, "high"], [runAutonomy, "safe"]]) {
+      const r = cmd(fn, sub, l.root);
+      assert.equal(r.code, 1, `${kind} ${sub}: ${r.out}${r.err}`);
+      assert.match(r.err, /symlink|junction/, `${kind} ${sub}`);
+      assert.deepEqual(snapshot(l.ext), before, `${kind} ${sub}: file đích không đổi`);
+    }
+    assert.equal(cmd(runMode, "status", l.root).code, 0, `${kind}: status vẫn đọc được`);
+  }
+});

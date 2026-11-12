@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { resolveAutonomy } from '../../core/skills/plan-execution/scripts/autonomy.mjs';
-import { gitStateOf, cliGate, gateLines } from './mode.mjs';
+import { gitStateOf, cliGate, gateLines, assertNotLinked } from './mode.mjs';
 
 const HIGH = Object.freeze({ mergeLocal: true, cleanup: true, partRunner: 'subagent' });
 const SUBS = new Set(['high', 'safe', 'status']);
@@ -56,6 +56,7 @@ function runUnsafe(sub, { root, out, err, run }) {
   else if (Object.keys(kept).length) next.autonomy = kept;
   else delete next.autonomy;
 
+  assertNotLinked([file]);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, dump(next), 'utf8');
   out(`✓ autonomy=${sub} tại ${root}${sub === 'high' ? `: ${JSON.stringify(next.autonomy)}` : ''}`);
