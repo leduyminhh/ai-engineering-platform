@@ -264,8 +264,8 @@ function classifyTarget(raw, dir, unres, roots, msys = true) {
   return classifyPath(p, dir, roots, msys);
 }
 
-// Trả 'deny' | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
-function confineSegment(t, dir, unres, roots, msys = true) {
+// Đích ghi của một đoạn lệnh (chuyển hướng, đối số của WRITE_CMDS, cờ đường dẫn PowerShell) kèm tên lệnh và đối số sau khi bỏ tiền tố bọc.
+function writeTargets(t) {
   const rest = [];
   const targets = [];
   for (let i = 0; i < t.length; i++) {
@@ -289,9 +289,6 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   const [tk, k] = unwrap(rest);
   const name = k < tk.length ? cmdName(tk[k]) : '';
   const args = tk.slice(k + 1);
-  let ask = false;
-  if (SHELLS.has(name) && args.some((a) => /^(-[a-z]*c|-command)$/i.test(a)) && WRITE_IN_STRING.test(args.join(' '))) ask = true;
-  if (name === 'eval' && WRITE_IN_STRING.test(args.join(' '))) ask = true;
   if (WRITE_CMDS.has(name)) {
     let pos = [];
     for (let i = 0; i < args.length; i++) {
@@ -308,6 +305,26 @@ function confineSegment(t, dir, unres, roots, msys = true) {
     if (FIRST_ONLY.has(name)) pos = pos.slice(0, 1);
     targets.push(...pos);
   }
+  return { targets, name, args };
+}
+
+// Chuỗi con của `bash -c`/`eval` có ghi gì không: đọc bằng parse nên `>` trong nháy của awk hay tên lệnh nằm trong đối số không bị tính.
+// Nháy không đóng làm parse mất cấu trúc: rơi về regex thô như bản cũ (hỏi thừa còn hơn bỏ sót).
+function stringWrites(s) {
+  const p = parse(s);
+  if (p.unclosed) return WRITE_IN_STRING.test(s);
+  return [...expandShells(p.segs), ...expandShells(naiveSegments(s))].some((t) => {
+    const w = writeTargets(t);
+    return w.targets.some((x) => !NULL_DEVICE.test(x)) || WRITE_CMDS.has(w.name);
+  });
+}
+
+// Trả 'deny' | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
+function confineSegment(t, dir, unres, roots, msys = true) {
+  const { targets, name, args } = writeTargets(t);
+  const flag = SHELLS.has(name) ? args.findIndex((a) => SHELL_CMD_FLAG.test(a)) : -1;
+  const inner = flag < 0 ? (name === 'eval' ? args.join(' ') : null) : (/^-command$/i.test(args[flag]) ? args.slice(flag + 1).join(' ') : args[flag + 1]);
+  const ask = Boolean(inner) && stringWrites(inner);
   let unknown = false;
   for (const p of targets) {
     const c = classifyTarget(p, dir, unres, roots, msys);
@@ -371,7 +388,14 @@ function matchesAsk(orig) {
 // File cấu hình của chính các hook (xem guard-files): lệnh nhắc tên file kèm lệnh ghi thì hỏi.
 // shortcut: heuristic đọc token, `node -e`/script con ghi file vẫn lọt; nâng lên khi cần chặn thật thì dùng quyền hệ thống file.
 const GUARD_CONFIG = /(?:\.claude[\\/]settings(?:\.[\w-]+)?|(?:^|[^\w.-])aip-gate)\.json(?![\w.-])/i;
-const SED_IN_PLACE = /\b(?:sed|perl)\b[^|;&]*\s-[a-z]*i/i;
+const IN_PLACE_FLAG = /^(?:-[a-z]*i|--in-place)/i;
+
+// Chỉ đích ghi mới tính: tên file cấu hình nằm trong message hay đối số đọc không làm lệnh bị hỏi.
+function writesGuardConfig(t) {
+  const { targets, name, args } = writeTargets(t);
+  if (targets.some((p) => GUARD_CONFIG.test(p))) return true;
+  return (name === 'sed' || name === 'perl') && args.some((a) => IN_PLACE_FLAG.test(a)) && args.some((a) => GUARD_CONFIG.test(a));
+}
 
 const NON_ASCII = /[^\x00-\x7F]/;
 const DENY_COMMIT = { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
@@ -451,8 +475,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return { decision: 'ask', reason: `Nguyên tắc nền: ${why} cần người dùng xác nhận trước.` };
   }
-  const noRedirect = cmd.replace(HARMLESS_REDIRECT, '$1');
-  if (GUARD_CONFIG.test(cmd) && (WRITE_IN_STRING.test(noRedirect) || SED_IN_PLACE.test(noRedirect))) {
+  if ([...segs, ...naiveAll].some(writesGuardConfig)) {
     return { decision: 'ask', reason: 'Lệnh ghi vào cấu hình của hook an toàn (.claude/aip-gate.json hoặc .claude/settings*.json) cần người dùng xác nhận.' };
   }
   if (full()) {
