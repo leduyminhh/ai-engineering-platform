@@ -116,6 +116,21 @@ export default async function run({ ok, ctx }) {
     const trackedGate = (cfg) => ({ reader: () => ({ config: cfg, file: path.join(P, '.claude', 'aip-gate.json'), roots: [P] }), tracked: () => true });
     ok(probes.every(([tool, f]) => JSON.stringify(files.decide({ tool_name: tool, tool_input: { file_path: f }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full', fullPaths: withPaths }) }))
       === JSON.stringify(files.decide({ tool_name: tool, tool_input: { file_path: f }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full' }) }))), 'AC6.1: guard-files aip-gate.json bị git theo dõi → y hệt khi không có fullPaths');
+
+    // AC2.1/AC2.2: chính <tmpdir>/claude bị chặn ở mọi công cụ file kể cả khi fullPaths cấp quyền; phần dưới nó vẫn là root.
+    const CTF = path.join(os.tmpdir(), 'claude');
+    const allTools = ['Read', 'Grep', ...WRITES];
+    const grantTmp = { mode: 'full', fullPaths: [{ path: CTF, allow: ['read', 'write', 'delete'] }] };
+    for (const tool of allTools) for (const f of [CTF, CTF + path.sep]) for (const cfg of [config, grantTmp]) {
+      const d = dec(tool, f, { cfg });
+      ok(d?.decision === 'deny' && /luôn/.test(d.reason) && !/fullRoots|fullPaths/.test(d.reason), `AC2.1: ${tool} vào gốc <tmpdir>/claude${f === CTF ? '' : '/'} → deny, không gợi ý khoá`);
+    }
+    ok(allTools.every((tool) => dec(tool, path.join(CTF, 'p', 'x')) === null), 'AC2.1: mọi công cụ vào dưới <tmpdir>/claude → cho qua');
+    const OTHER = path.join(os.tmpdir(), 'aip-pp-khac', 'x');
+    ok(dec('Write', OTHER)?.decision === 'deny' && dec('Read', OTHER)?.decision === 'ask', 'AC2.1: <tmpdir> ngoài thư mục claude → như cũ (Write deny, Read ask)');
+    ok(allTools.every((tool) => dec(tool, CTF, { cfg: { mode: 'ask' } }) === null && dec(tool, CTF, { extra: { permission_mode: 'default' } }) === null
+      && files.decide({ tool_name: tool, tool_input: { file_path: CTF }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full' }) }) === null),
+    'AC2.2: mode ask, phiên không bypass hoặc aip-gate.json bị git theo dõi → gốc <tmpdir>/claude không bị chặn bởi mục này');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 
   // guard-bash: quyền ghi/xoá theo thư mục (full + bypass).
@@ -233,8 +248,70 @@ export default async function run({ ok, ctx }) {
     const askMode = { cfg: { mode: 'ask' }, extra: { permission_mode: 'default' } };
     expectAll([['cp -t .claude aip-gate.json', 'ask', 'AC3.8'], ['cp --target-directory=.claude /s/aip-gate.json', 'ask', 'AC3.8'], ['cp -t .claude .claude/settings.local.json', 'ask', 'AC3.8']], askMode);
     expectAll([[`cp -t ${O} x`, null, 'AC3.8']]);
+
+    // R18: cp/mv vào thư mục .claude với nguồn tên file cấu hình hook phải hỏi ở mọi chế độ.
+    const r18 = (rows, opt) => { expectAll(rows, askMode); expectAll(rows, opt); };
+    r18([...['cp settings.json .claude/', 'cp -t .claude settings.json', 'cp -t .claude /s/settings.local.json', 'mv -t .claude settings.json', 'mv settings.json .claude',
+      'cp aip-gate.json .claude', 'cp --target-directory=.claude settings.json', 'cp a settings.json .claude/', 'cp Settings.JSON .CLAUDE/',
+      'cp settings.json .claude/.', 'cp settings.json .claude/./', 'cp -t .claude/. settings.json', 'cp settings.json .claude/sub/..'].map((c) => [c, 'ask', 'AC1.1']),
+    ...['cp x.json .claude/', 'cp settings.json out/', 'cp .claude/settings.json out/x'].map((c) => [c, null, 'AC1.3'])], {});
+    const psAsk = { ...askMode, tool: 'PowerShell' };
+    const psRows = ['Copy-Item settings.json .claude\\', 'Copy-Item -Path settings.json -Destination .claude', 'Copy-Item -Path settings.json -Destination .claude\\', 'Move-Item settings.json .claude',
+      'Copy-Item -Path:settings.json -Destination .claude', 'Copy-Item -Destination:.claude -Path:settings.json', 'Copy-Item settings.json,aip-gate.json .claude', 'Copy-Item -Path settings.json,x.json -Destination .claude', 'Copy-Item settings.json .claude\\sub\\..'].map((c) => [c, 'ask', 'AC1.2']);
+    expectAll(psRows, psAsk);
+    expectAll(psRows, { tool: 'PowerShell' });
+    // Nguồn chỉ đọc không phải đích ghi: không hỏi R18 khi .claude/settings.json chỉ là nguồn (AC1.3).
+    const readOnlyCfg = [['Copy-Item -Path .claude/settings.json -Destination out\\x', null, 'AC1.3']];
+    expectAll(readOnlyCfg, psAsk);
+    expectAll(readOnlyCfg, { tool: 'PowerShell' });
+    r18([['cp -t backup .claude settings.json', null, 'AC1.3']], {});
+
+    // AC3.1–AC3.3: nguồn vị trí của cp/Copy-Item cần read, Move-Item -Path chỉ đòi write ở đích vị trí.
+    expectAll([
+      ...[`cp ${OUT}/a ${O}/b`, `cp ${OUT}/a ${OUT}/b2 ${O}/`, `cp -t ${O} ${OUT}/a`, `cp ${OUT}/* ${O}/`, 'cp $X/a ' + `${O}/b`].map((c) => [c, 'ask', 'AC3.1']),
+      ...[`cp ${T}/a ${O}/b`, `cp ${D}/a ${O}/b`, `cp -t ${O} ${D}/a`, `cp x ${O}/b`].map((c) => [c, null, 'AC3.1']),
+      [`cp ${OUT}/a ${D}/b`, 'deny', 'AC3.1'], [`cp -rt ${O} ${OUT}/a`, 'deny', 'AC3.1'],
+    ]);
+    expectAll([
+      ...[`Copy-Item ${OUT}/a ${O}/b`, `cp ${OUT}/a ${O}/b`, `copy ${OUT}/a ${O}/b`, `Copy-Item -Destination ${O}/b ${OUT}/a`, `Copy-Item -Path ${OUT}/a ${O}/b`].map((c) => [c, 'ask', 'AC3.2']),
+      ...[`Copy-Item ${D}/a ${O}/b`, `Copy-Item -Destination ${O}/b ${D}/a`, `Copy-Item -Path ${D}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
+      [`Copy-Item ${D}/a ${D}/b`, 'deny', 'AC3.2'],
+      ...[`Move-Item -Path ${T}/a ${O}/b`, `Move-Item -LiteralPath ${T}/a ${O}/b`, `Move-Item -Destination ${O}/b ${T}/a`, `Move-Item ${T}/a ${O}/b`].map((c) => [c, null, 'AC3.3']),
+      ...[`Move-Item -Path ${O}/a ${O}/b`, `Move-Item -Path ${T}/a ${D}/b`, `Move-Item -Destination ${O}/b ${O}/a`, `Move-Item -Dest ${T}/b ${O}/a`].map((c) => [c, 'deny', 'AC3.3']),
+      // Mảng dấu phẩy của PowerShell: mỗi phần tử là một đích riêng, một phần tử ngoài root là đủ để chặn/hỏi.
+      ...[`Move-Item -Path ${T}/a,${OUT}/b ${O}/x`, `Move-Item -Path ${T}/a,${OUT}/b -Destination ${T}/x`, `Remove-Item ${T}/a,${OUT}/b`, `Remove-Item -Path ${T}/a,${OUT}/b`,
+        `Set-Content -Path ${O}/a,${OUT}/b -Value x`].map((c) => [c, 'deny', 'AC3.3']),
+      ...[`Copy-Item -Path ${T}/a,${OUT}/b ${O}/x`, `Copy-Item ${D}/a,${OUT}/b ${O}/x`].map((c) => [c, 'ask', 'AC3.2']),
+      ...[`Remove-Item ${T}/a,${T}/b`, `Move-Item -Path ${T}/a,${T}/b ${O}/x`].map((c) => [c, null, 'AC3.3']),
+      // Tham số có giá trị đứng trước đối số vị trí không được làm lệch slot Path/Destination.
+      ...[`Copy-Item -Filter *.txt ${D}/a ${O}/b`, `Copy-Item -Include *.txt ${D}/a ${O}/b`, `Copy-Item -Exclude x ${D}/a ${O}/b`, `Copy-Item -Credential c ${D}/a ${O}/b`,
+        `Copy-Item -Force -Filter *.txt -Recurse ${D}/a ${O}/b`, `Move-Item -Filter *.txt ${T}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
+      ...[`Copy-Item -Filter *.txt ${OUT}/a ${O}/b`, `Copy-Item -ToSession s ${OUT}/a ${O}/b`].map((c) => [c, 'ask', 'AC3.2']),
+      [`Copy-Item -Filter *.txt ${O}/a ${D}/b`, 'deny', 'AC3.2'],
+      // Tham số chung có giá trị (-ErrorAction, -OutVariable…) cũng không được làm lệch slot.
+      ...[`Copy-Item -ErrorAction SilentlyContinue ${D}/a ${O}/b`, `Copy-Item -ErrorAction Stop ${D}/a ${O}/b`, `Copy-Item -OutVariable v ${D}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
+      [`Copy-Item -Recurse -ErrorAction Stop ${OUT}/a ${O}/b`, 'ask', 'AC3.2'],
+      // Chuỗi trong nháy có dấu phẩy là một đường dẫn literal: vẫn phải xét cả token gốc, không chỉ các phần đã tách (phần sau `..` resolve theo cwd khác).
+      ...[`cd ${P}/a/b; Remove-Item '${T}/x,m/../../${path.basename(OUT)}/f'`, `cd ${P}/a/b; Set-Content -Path '${O}/x,m/../../${path.basename(OUT)}/f' -Value y`].map((c) => [c, 'deny', 'AC3.3']),
+      // Đường dẫn rỗng là không xác định: không được bị bỏ khi tách dấu phẩy.
+      ...[`Remove-Item ''`, `Remove-Item ${T}/a ''`].map((c) => [c, 'ask', 'AC3.3']),
+    ], { tool: 'PowerShell' });
+
     // Glob kèm `..` sau đoạn glob đầu có thể thoát ra ngoài thư mục đã phân loại.
     expectAll([[`rm ${T}/*/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/?/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/[a]/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`rm ${O}/*`, 'deny', 'AC4.5']]);
+    // AC4.1: đoạn glob khớp được `..` (bash < 5.2, dash) thoát khỏi thư mục đã phân loại nên phải hỏi; đoạn không khớp được `..` giữ nguyên.
+    expectAll([
+      ...[`rm ${T}/.?/d/f`, `rm ${T}/..*/d/f`, `rm ${T}/.[.]/d/f`, `rm ${T}/.*/d/f`, `rm ${T}/.*`, `cp x ${T}/.?/f`].map((c) => [c, 'ask', 'AC4.1']),
+      ...[`rm ${T}/.[!.]*/f`, `rm ${T}/.git*/f`, `rm ${T}/*/d/f`, `rm ${T}/a?/f`, `rm ${T}/.?x/f`].map((c) => [c, null, 'AC4.1']),
+      // Lớp ký tự POSIX khớp `..` trên dash; biến trong đoạn glob hoặc sau nó có thể là `.`/`..`.
+      ...[`rm ${T}/.[[:punct:]]/d/f`, `rm ${T}/.[![:alpha:]]/d/f`, `rm ${T}/.[[=.=]]/d/f`, `X=.; rm ${T}/$X?/d/f`, `X=.; rm ${T}/$X*/d/f`, `rm ${T}/*/$X/f`].map((c) => [c, 'ask', 'AC4.1']),
+      // Thư mục trước đoạn glob đã thiếu quyền thì vẫn deny như trước, không hạ xuống ask.
+      ...[`rm ${O}/.*`, `rm ${OUT}/.*`, `rm ${O}/.?/d/f`].map((c) => [c, 'deny', 'AC4.1']),
+    ]);
+    // Dãy `*` dài kết thúc bằng ký tự thường không được làm regex backtrack bậc hai.
+    const tGlob = performance.now();
+    bd(`rm ${T}/.${'*'.repeat(10000)}x/d/f`);
+    ok(performance.now() - tGlob < 1000, 'AC4.1: đoạn glob 10k dấu * chạy dưới 1s');
     // Token cờ gộp dài kết thúc bằng xuống dòng không được làm regex chạy bậc hai.
     const t0 = performance.now();
     bd(`cp "-${'t'.repeat(50000)}\n" x`);
@@ -244,6 +321,10 @@ export default async function run({ ok, ctx }) {
     ok(rd?.decision === 'ask' && shapeOk(rd.reason) && /đọc/.test(rd.reason) && !/\$VAR/.test(rd.reason) && !/ghi vào/.test(rd.reason), 'AC3.10: thiếu read → ask câu riêng, tóm tắt không ghi nhầm "ghi vào"');
     const blk = bd(`Copy-Item -Path ${CT} -Destination ${O}/b`, { tool: 'PowerShell' });
     ok(blk?.decision === 'deny' && /luôn/.test(blk.reason) && !/fullRoots/.test(blk.reason), 'AC3.10: gốc <tmpdir>/claude → deny câu riêng, không gợi ý mở bằng cấu hình');
+
+    // Dòng "Lệnh gồm" của popup nêu đích ghi (thứ gây ra câu hỏi), không nêu nguồn đọc đứng đầu.
+    const sum = bd('cp x $X/b');
+    ok(sum?.decision === 'ask' && /ghi vào \$X\/b/.test(sum.reason) && !/\(đọc x\)/.test(sum.reason), 'AC3.1: dòng "Lệnh gồm" nêu đích ghi, không nêu nguồn đọc');
 
     const denyW = bd(`cp x ${D}/f`);
     const denyD = bd(`rm ${D}/f`);
