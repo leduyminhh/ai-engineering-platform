@@ -5,7 +5,7 @@ Khác với test e2e tự động (`frontend-e2e-testing`): không để lại f
 
 ## Điều kiện bắt đầu
 
-Kiểm đủ các điều sau trước khi mở trình duyệt. Thiếu một điều thì các bước liên quan là SKIP-PRECOND, không đoán.
+Kiểm đủ các điều sau trước khi mở trình duyệt. Thiếu một điều thì các bước liên quan là SKIP-PRECOND, không đoán (khi chạy nhúng từ workflow-feature mà thiếu công cụ trình duyệt hoặc môi trường: cả lượt trả `not_run`, xem SKILL.md).
 
 - Runbook đã được người dùng duyệt (chế độ độc lập; khi chạy nhúng từ workflow-feature xem `## Chế độ nhúng` của SKILL.md); mỗi bước có kết quả mong đợi cụ thể.
 - Ứng dụng đang chạy ở host local hoặc test; URL lấy từ runbook. Host staging hoặc production thì dừng toàn bộ.
@@ -67,7 +67,7 @@ Khi AC mô tả một thông báo lỗi hay thành công: kiểm thông báo có
 | L3 | Không đi theo OAuth hay chuyển hướng ra ngoài localhost | Bấm tới lúc URL sắp rời host local thì dừng, ghi URL đích (bỏ tham số nhạy cảm), quay lại. Bước đánh SKIP-SAFETY. |
 | L4 | Không tải file về máy | Không bấm xuất hoặc tải xuống. Kiểm tới mức nút có đúng trạng thái và request đúng phát đi khi runbook cho phép; phần còn lại SKIP-SAFETY. |
 | L5 | Dữ liệu tạo mới có tiền tố riêng | Mọi bản ghi tạo trong lần chạy mang tiền tố của runbook (ví dụ `manual-check-<ngày>-`). Liệt kê bản ghi đã tạo trong báo cáo để người dùng dọn. Không sửa hay xoá dữ liệu có sẵn không mang tiền tố. |
-| L6 | Không sửa code hay cấu hình, không đọc file bí mật | Walkthrough chỉ quan sát và thao tác qua UI. Không sửa mã nguồn, cấu hình, biến môi trường; không mở `.env`, khoá, chứng chỉ, kho bí mật. Phát hiện lỗi thì báo cáo, không sửa. |
+| L6 | Không sửa code hay cấu hình, không đọc file bí mật | Walkthrough chỉ quan sát và thao tác qua UI, hoặc chặn/giả request ở tầng trình duyệt trong chính phiên walkthrough. Không sửa mã nguồn, cấu hình, biến môi trường; không mở `.env`, khoá, chứng chỉ, kho bí mật. Phát hiện lỗi thì báo cáo, không sửa. |
 
 Gặp tình huống ngoài sáu luật mà có thể gây hậu quả không đảo ngược hoặc ảnh hưởng người khác thì coi như SKIP-SAFETY và hỏi người dùng.
 
@@ -91,5 +91,5 @@ Dữ liệu đã tạo (tiền tố <tiền tố>): <danh sách bản ghi cần 
 Chưa kiểm và rủi ro còn lại: <liệt kê>
 ```
 
-Báo cáo dùng số đếm thật từ `## Kết quả đã chạy`; tổng PASS, FAIL, SKIP phải cộng đúng bằng số bước của runbook.
+Báo cáo dùng số đếm thật từ `## Kết quả đã chạy`; tổng PASS, FAIL, SKIP và chưa kiểm cộng đúng bằng số bước của runbook.
 PASS trong walkthrough là "quan sát được khớp ở lần chạy này", không phải bằng chứng ứng dụng không còn lỗi.
