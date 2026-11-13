@@ -31,6 +31,7 @@ Chỉ tên khoá, không giá trị.
 | `<tên-khoá>` | `<file:line>` | <dùng ở đâu, nếu thấy> |
 
 Giá trị không ghi trong tài liệu này. Muốn biết giá trị, xem file cấu hình trong môi trường chạy.
+Tên khoá cấu hình và các từ password, secret, token luôn viết trong cặp backtick; không đặt `:` hoặc `=` ngay sau chúng trong câu văn thường (bước quét secret sẽ báo).
 
 ## Phụ thuộc
 | Module | Cách phụ thuộc | Bằng chứng |
@@ -95,20 +96,21 @@ Cách điền:
 2. Thay `<...>` bằng nội dung có bằng chứng (`file:line`) hoặc `[Unverified] <mô tả>`. Không để `<...>` trong file đầu ra.
 3. `source-structure.md`: template giả định `src/` và các quy ước mẫu. Chỉ giữ quy ước đã thấy trong code, kèm `file:line`; bỏ dòng trỏ tới `docs/decisions/0001-*.md` nếu không có file đó.
 4. `architecture.md`, mục "Quyết định kiến trúc chính": trỏ tới `docs/decisions/` chỉ khi thư mục có thật.
-5. `tech-stack.yml`: version chỉ ghi khi có `file:line` trong nguồn được phép: `package.json` (dependencies, devDependencies), `requirements.txt`, lock file (`package-lock.json`, `yarn.lock`, `poetry.lock`). Maven và Gradle không có nguồn được phép (không mở `pom.xml`, `build.gradle`), nên ghi `"[Unverified]"`. Không mở file cấu hình để lấy version.
+5. `tech-stack.yml`: version chỉ ghi khi có `file:line` trong nguồn được phép: `package.json` (dependencies, devDependencies), `requirements.txt`, lock file (`package-lock.json`, `yarn.lock`, `poetry.lock`). Maven và Gradle không có nguồn được phép (không mở `pom.xml`, `build.gradle`), nên ghi `"[Unverified]"`. Không mở file cấu hình để lấy version. Các file nguồn được phép được `Read` nhưng không chép URL có `user:pass@` hoặc `token@`.
 6. Mermaid trong `architecture.md` luôn kèm bảng chữ cùng nội dung.
 
 ## Luật file có sẵn (README, project-knowledge)
 
-Cổng 1 đã chọn một trong các lựa chọn. Không ghi đè file có sẵn trong mọi trường hợp.
+Cùng chữ với mục C của `subagent-prompts.md`, không sửa một bản mà bỏ bản kia.
 
-- Giữ: không đụng file. Không đưa file đó vào `changes`.
+Cổng 1 đã chọn cho mỗi file có sẵn một lựa chọn: giữ | khối marker | bỏ. Không ghi đè file có sẵn trong mọi trường hợp.
+- Giữ: không đụng file; không đưa file đó vào `changes`.
 - Khối marker: file phải có đúng một cặp marker:
-  ```
   <!-- aip:onboarding begin -->
   ...nội dung do skill ghi...
   <!-- aip:onboarding end -->
-  ```
-  Chỉ thay phần giữa hai marker, giữ nguyên hai dòng marker. Chưa có cặp marker (không có begin lẫn end): thêm khối vào cuối file, không sửa phần trên. Chỉ có begin mà thiếu end, chỉ có end mà thiếu begin, hoặc có nhiều hơn một cặp: dừng, báo `blocked`, không ghi.
+  Chỉ thay phần giữa hai marker, giữ nguyên hai dòng marker. Không có cặp marker: thêm khối vào cuối file, không sửa phần trên.
+  Nội dung khối là phần do skill sinh theo khung, không lặp H1 của file có sẵn.
+  Chỉ có begin mà thiếu end, chỉ có end mà thiếu begin, hoặc có nhiều hơn một cặp: dừng, trả `status: blocked`, không ghi file đó.
 - Bỏ: không tạo file này trong lần chạy. File có sẵn không bị sửa hay xoá.
-- `tech-stack.yml` chỉ có giữ hoặc bỏ. Không dùng marker vì nối khối vào YAML có sẵn gây trùng khoá cấp một.
+- tech-stack.yml chỉ có giữ hoặc bỏ, không dùng marker (nối khối vào YAML có sẵn gây trùng khoá cấp một).

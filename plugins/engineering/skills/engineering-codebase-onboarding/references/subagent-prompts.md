@@ -10,10 +10,11 @@ Các khối dùng chung (dán nguyên, không sửa chữ) nằm ở mục A, B,
 
 ```text
 ## Luật file cấu hình
-- Cấm Read, cat, head, tail, less, sed, awk, Grep chế độ nội dung, hoặc bất kỳ lệnh nào in nội dung của file cấu hình. File cấu hình gồm: application*.yml, application*.yaml, application*.properties, bootstrap*.yml, .env và .env.*, appsettings*.json, *.pem, *.key, *.jks, *.p12, config.json chứa kết nối, docker-compose*.yml có khối environment, và mọi file trong thư mục resources có tên chứa secret, credential hoặc config.
+- Cấm Read, cat, head, tail, less, sed, awk, Grep chế độ nội dung, hoặc bất kỳ lệnh nào in nội dung của file cấu hình. File cấu hình gồm: application*.yml, application*.yaml, application*.properties, bootstrap*.yml, .env và .env.*, appsettings*.json, *.pem, *.key, *.jks, *.p12, *.keystore, *.pfx, *.p8, config.json chứa kết nối, docker-compose*.yml có khối environment, gradle.properties, settings.xml của Maven, .npmrc, .netrc, .pgpass, *.tfvars, values*.yaml của Helm, secrets.*, credentials*, config.js, config.ts, settings.py, *.sql có nghi chứa mật khẩu (không Read file .sql ngoài đường dẫn có migration hoặc schema), và mọi file trong thư mục resources có tên chứa secret, credential hoặc config.
 - Không mở pom.xml, build.gradle, settings.gradle. Thông tin module và phụ thuộc lấy từ trường kiểm kê (declaredDeps).
 - Chỉ lấy tên khoá và số dòng bằng lệnh sau, không đổi, không thêm cờ. Đầu ra mỗi dòng chỉ là `<số dòng> <tên khoá>`:
-  grep -nE '^[[:space:]]*[A-Za-z0-9_.-]{1,30}[[:space:]]*(:$|[:=][^=])' <file> | sed -E 's/^([0-9]+):[[:space:]]*([A-Za-z0-9_.-]+).*/\1 \2/' | grep -E '^[0-9]+ [A-Za-z0-9_.-]+$'
+  grep -nE '^[[:space:]]*[A-Za-z0-9_.-]{1,30}[[:space:]]*(:$|[:=][^=])' -- '<file>' | sed -E 's/^([0-9]+):[[:space:]]*([A-Za-z0-9_.-]+).*/\1 \2/' | grep -E '^[0-9]+ [A-Za-z0-9_.-]+$'
+- Tên file đặt trong nháy đơn sau `--`. Tên file chứa dấu nháy đơn: bỏ qua file đó, ghi vào `not_read` với lý do "cấu hình".
 - Một file mỗi lần, không truyền nhiều file: với nhiều file, `grep` in tiền tố tên file, `sed` không bỏ được và dòng gốc (có giá trị) có thể lọt. Bộ lọc `grep -E` cuối chỉ giữ dòng dạng `<số> <khoá>`.
 - Không dùng `grep -o` (hoặc `-oE`) cho việc này: `-o` in mọi ký tự nằm trong đoạn khớp, kể cả ký tự đầu của giá trị. Không đưa ký tự giá trị vào mẫu. Dòng gốc chỉ đi vào pipe; đầu ra chỉ có số dòng và tên khoá.
 - Không in ký tự giá trị: lệnh không dùng `-o`, và `sed` bỏ mọi thứ sau khoá. `[:=][^=]` chỉ loại hai dạng: dòng có `==` ngay sau khoá (`KEY==x`) và dòng có dấu phân cách rồi hết dòng (`A=`). Dòng `C=abc==` vẫn lấy khoá `C`. Khoá quá 30 ký tự, khoá có dấu nháy kép (JSON), và dòng không khớp: ghi vào `not_read` với lý do "cấu hình".
@@ -29,6 +30,7 @@ Các khối dùng chung (dán nguyên, không sửa chữ) nằm ở mục A, B,
   - Viết liền trong một cặp backtick, đường dẫn tính từ gốc project, đúng một số nguyên sau dấu hai chấm. Không range (12-15), không danh sách (12,13), không dạng dòng:cột.
   - Phần trước dấu hai chấm có `.` hoặc `/`. File không đuôi viết `./Makefile:3`.
   - Không chắc số dòng thì không đoán. Ghi "suy từ tên" hoặc `[Unverified] <mô tả ngắn>`.
+- Tên khoá cấu hình và các từ password, secret, token luôn viết trong cặp backtick; không đặt `:` hoặc `=` ngay sau chúng trong câu văn thường (bước quét secret sẽ báo).
 - Số liệu nằm trong file cấu hình: chỉ thấy tên khoá, nên ghi `file:line` của tên khoá và `[Unverified] giá trị không đọc được`.
 - Mũi tên có lời gọi thấy trong code: nét liền, kèm `file:line` của lời gọi.
 - Mũi tên chỉ có trong declaredDeps: nét đứt, nhãn "chỉ khai báo".
@@ -46,9 +48,10 @@ Cổng 1 đã chọn cho mỗi file có sẵn một lựa chọn: giữ | khối
   ...nội dung do skill ghi...
   <!-- aip:onboarding end -->
   Chỉ thay phần giữa hai marker, giữ nguyên hai dòng marker. Không có cặp marker: thêm khối vào cuối file, không sửa phần trên.
+  Nội dung khối là phần do skill sinh theo khung, không lặp H1 của file có sẵn.
   Chỉ có begin mà thiếu end, chỉ có end mà thiếu begin, hoặc có nhiều hơn một cặp: dừng, trả `status: blocked`, không ghi file đó.
 - Bỏ: không tạo file này trong lần chạy. File có sẵn không bị sửa hay xoá.
-- tech-stack.yml chỉ có giữ hoặc bỏ, không dùng marker.
+- tech-stack.yml chỉ có giữ hoặc bỏ, không dùng marker (nối khối vào YAML có sẵn gây trùng khoá cấp một).
 ```
 
 ## Mục D. Khối agent_result (dán nguyên, subagent phải trả đúng khối này)
@@ -75,19 +78,20 @@ agent_result:
   questions: []
   remaining_risks: ["<phần chưa đọc, khẳng định dựa trên [Unverified], rủi ro log>"]
 ```
-```
 
 ## Mục E. Luật lệnh, Dockerfile và CI (dán nguyên)
 
 ```text
 ## Luật lệnh, Dockerfile và CI
-- Áp cho mọi lệnh chép ra bất kỳ tài liệu nào (README module, README gốc, project-knowledge, findings, báo cáo), kể cả dòng `RUN` của Dockerfile, dòng `run` của CI, `CMD`, `ENTRYPOINT` và mục `scripts` của package.json:
-  - Bỏ tiền tố gán biến môi trường: `TÊN=giá-trị lệnh` thành `<tên-biến> lệnh`.
-  - Cờ có tên chứa `password`, `passwd`, `pwd`, `secret`, `token` hoặc `key`: thay giá trị bằng `<giá-trị>`, cả dạng `--tên giá-trị` và `--tên=giá-trị`.
-  - Cờ ngắn ghép dính giá trị (ví dụ `-p<giá-trị>`): không chép lệnh đó; ghi `[Unverified] lệnh có cờ mang giá trị`.
-- Dockerfile: chỉ chép dòng `RUN` có lệnh build hoặc test, `CMD` và `ENTRYPOINT`. Không chép dòng `ENV`, `ARG`, hay cờ `--build-arg` và `-e` có giá trị.
+- Áp cho mọi lệnh chép ra bất kỳ tài liệu nào (README module, README gốc, project-knowledge, findings, báo cáo), kể cả dòng `RUN` của Dockerfile, dòng `run` của CI, `CMD`, `ENTRYPOINT`, mục `scripts` của package.json, lệnh clone và dòng của requirements.txt:
+  - Bỏ tiền tố gán biến môi trường: `TÊN=giá-trị lệnh` thành `<tên-biến> lệnh`. Cùng luật cho `export`, `set`, `$env:TÊN=`, `cross-env`, `docker run -e` và `-D<tên>=<giá-trị>`.
+  - Thay bằng `<giá-trị>` mọi giá trị chữ đứng sau cờ (dính liền hoặc cách bằng dấu cách) hoặc sau `TÊN=`, mọi phần `user:pass` trong URL (clone, `--extra-index-url`, `git+https://token@`) và mọi giá trị sau `-u`. Ví dụ: `mysql -u <giá-trị> -p <giá-trị>`, `curl -u <giá-trị> <url>`.
+  - Khớp tên cờ và `TÊN` không phân biệt hoa thường với `pass`, `pwd`, `secret`, `token`, `key`, `auth`, `dsn`, `credential`, `connection`; cờ ngắn một chữ cái luôn che giá trị.
+  - Không chắc cờ có mang giá trị thì không chép lệnh; ghi `[Unverified] lệnh có cờ mang giá trị`.
+- Dockerfile: chỉ chép dòng `RUN` có lệnh build hoặc test, `CMD` và `ENTRYPOINT`, với giá trị đã che theo luật trên (`--build-arg` và `-e` giữ tên, che giá trị). Không chép dòng `ENV` và `ARG`.
 - File CI: chỉ chép dòng `run` có lệnh build hoặc test. Không chép khối `env`, `with`, hay mọi khối có giá trị.
 - Dockerfile và file CI có thể đọc bằng Read. Giá trị trong đó không được chép vào bất kỳ file hay trường nào; ghi `"Read đưa giá trị trong <tên file> vào log phiên"` vào `remaining_risks`.
+- package.json, requirements.txt và lock file được Read; không chép URL có `user:pass@` hoặc `token@` từ chúng.
 ```
 
 ## 1. Prompt nhóm module
@@ -104,7 +108,7 @@ Bạn đọc code của một nhóm module trong project <tên project> để vi
 - Khung README: dán nguyên mục "Khung README module" của references/readme-structure.md.
 
 ## Được đọc
-- Glob, Grep (chỉ liệt kê tên file hoặc đếm), Read với file mã nguồn có đuôi trong trường kiểm kê, README có sẵn của module, và Dockerfile hoặc file CI của module (theo mục E).
+- Glob, Grep (chỉ liệt kê tên file hoặc đếm), Read với file mã nguồn có đuôi `java kt groovy scala js jsx ts tsx mjs cjs py go cs rs rb php vue sql` (không thuộc danh sách file cấu hình ở mục A; file `.sql` chỉ khi đường dẫn có `migration` hoặc `schema`), README có sẵn của module, và Dockerfile hoặc file CI của module (theo mục E).
 - `git ls-files`, `git log --oneline -n 20 -- <đường dẫn>`.
 - Lệnh lấy tên khoá theo mục A, bắt buộc cho mục 5 của mức đọc; không dùng cách nào khác để mở file cấu hình.
 
@@ -177,6 +181,7 @@ Bạn viết README.md ở gốc và bốn file project-knowledge của project 
 
 ## Được đọc
 - README của từng module, trường kiểm kê, file template ở thư mục template, file có sẵn cần cho lựa chọn "khối marker".
+- package.json, requirements.txt và lock file ở gốc hoặc module, chỉ để lấy `scripts` và version (theo mục E).
 - Không đọc mã nguồn. Không đọc file cấu hình.
 
 ## Không được
@@ -212,7 +217,7 @@ Bạn kiểm README của một module trong project <tên project>. Chỉ đọ
 ## Việc cần làm
 - Mỗi mũi tên có `file:line`: mở đúng dòng và kết luận: đúng (dòng có lời gọi tới module được nêu), sai (dòng không có lời gọi đó), không xác minh được.
 - Mỗi số liệu có `file:line`: mở đúng dòng và kết luận: đúng, sai, không xác minh được.
-- Mở dòng mã nguồn: `sed -n '<n>p' <file>` với một số `<n>`. Chỉ áp dụng cho file mã nguồn.
+- Mở dòng mã nguồn: `sed -n '<n>p' <file>` với một số `<n>`. Chỉ áp dụng cho file mã nguồn không thuộc danh sách file cấu hình ở mục A. Dòng chứa secret cứng thì giá trị vào log phiên: không chép dòng đó, kết luận chỉ ghi đúng, sai hoặc không xác minh được.
 - Số liệu nằm trong file cấu hình: không mở dòng, không in giá trị; dùng lệnh tên khoá theo mục A để xác nhận tên khoá có ở dòng đó; kết luận giá trị là "không xác minh được".
 
 ## Không được
@@ -220,6 +225,7 @@ Bạn kiểm README của một module trong project <tên project>. Chỉ đọ
 - Vượt 30 lần gọi công cụ [giả định]. Hết ngân sách: dừng và ghi số mục chưa kiểm vào `not_read`.
 
 ## Đầu ra
+Bạn không ghi file nào: `changes` luôn rỗng; bỏ qua câu "Ghi các file được phép" trong khối đầu ra bên dưới.
 Mỗi kết luận "sai" hoặc "không xác minh được" là một mục `findings`, loại `trích-dẫn-sai` hoặc `không-xác-minh`; `label: proven` khi dòng đọc được mâu thuẫn, `suspected` khi chỉ nghi.
 
 <dán nguyên mục A>
@@ -231,10 +237,10 @@ Mỗi kết luận "sai" hoặc "không xác minh được" là một mục `fin
 
 ## 5. Mục kiểm đầu ra ở session chính
 
-- `changes` chỉ có đường dẫn trong danh sách đã giao. File ngoài danh sách: ghi tên, báo người dùng, giao lại đúng subagent đó kèm luật vi phạm, tối đa 2 lần. Không tự xoá.
+- `changes` chỉ có đường dẫn trong danh sách đã giao. File ngoài danh sách: ghi tên và báo người dùng. Không tự giao lại, không tự xoá.
 - `read` có file cấu hình: ghi vi phạm vào báo cáo cuối, coi kết quả nhóm đó là chưa tin cậy, giao lại nhóm đó nếu còn ngân sách.
 - `status: blocked` có `questions[]`: session chính không trả lời thay người dùng. Nếu docs và request đã có đáp án thì giao lại kèm đáp án; nếu không thì đưa vào mục "Chưa kiểm" của báo cáo cuối.
 - `status: blocked` do lệch cặp marker: báo người dùng, không ghi file đó.
 - `not_read` không rỗng hoặc `remaining_risks` không rỗng: không phải lỗi; đưa vào báo cáo cuối.
-- `validation` tự khai không đủ để tin. Sau khi mọi subagent xong, chạy bước 6(a) và 6(b) của SKILL.md trên các file đã ghi, có nhánh `not_run` khi thiếu check-citations; kỳ vọng exit 0 của scan-secrets. Khớp của scan-secrets thì sửa file, không nới script.
+- `validation` tự khai không đủ để tin. Sau khi mọi subagent xong, chạy bước 6(a) và 6(b) của SKILL.md trên các file đã ghi, có nhánh `not_run` khi thiếu check-citations; kỳ vọng exit 0 của `<thư mục skill>/scripts/scan-secrets.mjs`. Khớp của scan-secrets thì sửa file, không nới script.
 - `findings` loại bảo mật (loại trùng tên của `scan-secrets.mjs`) ghi vào `.aip/runs/onboarding-<slug>/security-findings.md`, chỉ có loại, `file:line` và nhãn. Loại `trích-dẫn-sai` và `không-xác-minh` ghi vào báo cáo cuối, không vào file đó. Không chép giá trị vào file nào.

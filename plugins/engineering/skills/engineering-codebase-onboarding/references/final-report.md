@@ -1,6 +1,6 @@
 # Mẫu báo cáo cuối
 
-Session chính điền mẫu này sau khi đã kiểm cơ học và trước khi trình cổng 2. Mọi số lấy từ kết quả lệnh hoặc agent_result, không ước lượng. Số không có thì ghi `[Unverified]`.
+Session chính điền mẫu này ở bước 8, sau cổng 2 và commit. Mọi số lấy từ kết quả lệnh hoặc agent_result, không ước lượng. Số không có thì ghi `[Unverified]`.
 
 ```markdown
 # Báo cáo onboarding: <tên project> (onboarding-<slug>)
@@ -14,9 +14,9 @@ Session chính điền mẫu này sau khi đã kiểm cơ học và trước khi
 | `<id>` | `<path>` | <nhóm> | <n> / <m> | <danh sách, lý do> | <n> |
 
 ## 2. Kiểm cơ học
-- `node <thư mục skill engineering-spec-backfill>/scripts/check-citations.mjs <đường dẫn đã ghi> --root <gốc>`: exit <n>; trích dẫn hỏng: <n>; file: <danh sách>. Nếu không chạy được: `not_run`, lý do.
-- `scan-secrets.mjs` trên file đã ghi: exit <n>; khớp: <n>.
-- `git status --porcelain` so với nền: <n> đường dẫn ngoài danh sách đã duyệt: <danh sách hoặc "không có">.
+- `node <thư mục skill engineering-spec-backfill>/scripts/check-citations.mjs <file đã ghi> --root <gốc>`, mỗi file Markdown đã ghi một lần gọi, không truyền thư mục gốc: exit <n>; trích dẫn hỏng: <n>; file: <danh sách>. Nếu không chạy được: `not_run`, lý do.
+- `node <thư mục skill>/scripts/scan-secrets.mjs` trên file `.md` đã ghi, `project-knowledge/tech-stack.yml` và `security-findings.md`: exit <n>; khớp: <n>.
+- `git status --porcelain --untracked-files=all` so với nền: <n> đường dẫn ngoài danh sách đã duyệt: <danh sách hoặc "không có">. Người dùng đã xác nhận tiếp tục khi cây làm việc có file đã sửa trước khi chạy: <có | không>; nếu có, thay đổi tiếp trên file đã sửa đó không phát hiện được.
 
 ## 3. Phát hiện (bảo mật và chất lượng trích dẫn)
 - Bảo mật (loại trùng `scan-secrets.mjs`): <n> (proven: <a>; suspected: <b>). Chỉ loại này vào `.aip/runs/onboarding-<slug>/security-findings.md`. File đó không vào commit và chỉ có loại, `file:line` và nhãn, không có giá trị.
@@ -45,5 +45,6 @@ Session chính điền mẫu này sau khi đã kiểm cơ học và trước khi
 ## 8. Rủi ro còn lại
 - Chưa kiểm được log phiên: nếu một lệnh đã in giá trị cấu hình, giá trị đó có thể đã nằm trong log phiên và skill không kiểm được log này.
 - Mã nguồn có secret cứng: lệnh Read đưa cả file vào log phiên, nên giá trị có thể đã nằm trong log. `scan-secrets.mjs` không quét log phiên, nên không kiểm được điều này.
+- Reviewer mở dòng mã nguồn bằng `sed -n '<n>p'`: nếu dòng đó chứa secret cứng, giá trị vào log phiên và không kiểm được.
 - <rủi ro khác từ `remaining_risks`, mỗi dòng một mục>.
 ```

@@ -4,18 +4,24 @@
 // Exit 0 sạch, 1 có khớp, 2 sai đối số hoặc file không đọc được.
 // Đường dẫn file được in nguyên văn (tên file chứa giá trị sẽ lộ); số phiên bản bốn phần trong dải 10.x bị báo nhầm là IP.
 // Heuristic: sạch không chứng minh log phiên sạch hay không còn secret dạng tự do (mật khẩu không kèm tên khoá, chuỗi mã hoá lạ).
+// Giới hạn đã biết, không bắt được: ô bảng Markdown (`| DB_PASSWORD | <giá trị> |`), giá trị nằm ở dòng sau tên khoá,
+// câu văn kiểu "mật khẩu ... là ...". Nên viết tên khoá trong cặp backtick và không đặt `:` hay `=` ngay sau chúng.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Chỉ khớp trọn giá trị: `your.*` hay `example.*` trần sẽ để lọt mật khẩu thật như `yourcompany123`.
-const PLACEHOLDER = /^(<.*|\$.*|\{\{.*|\*+|x{3,}|changeme|change-me|null|none|true|false|\.{3}|…|string|required|optional|password|pass|secret|example|your[-_]?(?:api[-_]?)?(?:key|password|pass|token|secret)(?:[-_]?here)?|example[-_]?(?:key|password|token|secret)|\[[A-Za-z_ -]*\])$/i;
+// `<...>` phải đóng ngoặc và `$` chỉ là tham chiếu biến: `$` hay `<` đứng đầu chuỗi dài không được miễn.
+const PLACEHOLDER = /^(<[^>]*>|\$\{?[A-Za-z_]\w*\}?|\{\{.*|\*+|x{3,}|changeme|change-me|null|none|true|false|\.{3}|…|string|required|optional|password|pass|secret|example|your[-_]?(?:api[-_]?)?(?:key|password|pass|token|secret)(?:[-_]?here)?|example[-_]?(?:key|password|token|secret)|\[[A-Za-z_ -]*\])$/i;
 // Truy cập biến môi trường hoặc cấu hình (os.environ["X"], getenv(...)) là tham chiếu, không phải giá trị cứng.
 const ENV_REF = /^(?:os\.environ|os\.getenv|getenv|System\.getenv|process\.env|env|config|settings)[.([]/i;
 const isPlaceholder = (v) => v.length < 4 || PLACEHOLDER.test(v) || ENV_REF.test(v);
 
 // `max_tokens: 4096` không phải tên khoá bí mật nên token đứng sau tiền tố đếm-token bị loại.
-const SECRET_KEY = /(?:passwords?|passwd|pwd|secrets?|(?<!(?:max|min|total|prompt|completion|input|output)_)tokens?|api[_-]?key|access[_-]?key|private[_-]?key|credentials?)["']?\s*[:=]\s*["'`]?([^\s"'`,;|]*)/gi;
+// Giá trị dạng `<...>` có thể chứa dấu cách (`<your password>`), giới hạn 100 ký tự để không quét bậc hai khi nhiều `<` không đóng.
+const SECRET_KEY = /(?:passwords?|passphrases?|passwd|pwd|secrets?|(?<!(?:max|min|total|prompt|completion|input|output)_)tokens?|api[_-]?key|access[_-]?key|private[_-]?key|credentials?)["']?\s*[:=]\s*["'`]?(<[^>\n]{0,100}>(?=[\s"'`,;|]|$)|[^\s"'`,;|]*)/gi;
+const BEARER = /\bauthorization["']?\s*[:=]\s*["']?bearer\s+([A-Za-z0-9._~+/=-]{8,})/gi;
+const ACCOUNT_KEY = /\baccountkey\s*=\s*([^\s"'`;]{16,})/gi;
 // Scheme giới hạn 20 ký tự và chỉ chạy khi dòng có "://" và "@": không thì dòng base64 dài gây quét bậc hai.
 const URL_CRED = /[a-z][a-z0-9+.-]{0,19}:\/\/[^\s/:@<>]+:([^\s/@<>]+)@/gi;
 // Octet phải ≤ 255; dải 127.*, 0.0.0.0 và 192.0.2.* không nằm trong ba dải riêng nên không khớp.
@@ -27,7 +33,7 @@ const RULES = [
   ['cloud-key-id', (l) => [...l.matchAll(/\b(?:AKIA|ASIA)[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bAIza[0-9A-Za-z_-]{35}\b|\bxox[abprs]-[0-9A-Za-z-]{10,}/g)].some((m) => !m[0].endsWith('EXAMPLE'))],
   ['jwt', (l) => /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/.test(l)],
   ['url-credentials', (l) => l.includes('://') && l.includes('@') && [...l.matchAll(URL_CRED)].some((m) => !isPlaceholder(m[1]))],
-  ['secret-assignment', (l) => [...l.matchAll(SECRET_KEY)].some((m) => !isPlaceholder(m[1]))],
+  ['secret-assignment', (l) => [SECRET_KEY, BEARER, ACCOUNT_KEY].some((re) => [...l.matchAll(re)].some((m) => !isPlaceholder(m[1])))],
   ['private-ip', (l) => [...l.matchAll(PRIVATE_IP)].some((m) => m[1].split('.').every((o) => Number(o) <= 255))],
 ];
 

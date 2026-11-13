@@ -137,6 +137,54 @@ export default async function run({ ok, ctx }) {
     ok(commented.modules.length === 1 && commented.modules[0].path === '.' && commented.notes.length === 0, 'AC2.2: chữ include trong comment không làm settings thành aggregator');
     const fx = inv.inventoryModules(mk({ 'build.gradle': '\n', 'src/main/java/A.java': 'a\n', 'src/test/resources/fx/settings.gradle': 'include "z"\n' }));
     ok(fx.modules.length === 1 && fx.modules[0].kind === 'gradle', 'AC2.2: settings.gradle trong fixture không làm mất build.gradle ở gốc');
+    // Regex cũ quay lui về nhánh không lấy `(` rồi `\S` khớp `(`: include chuỗi dạng gọi hàm bị ghi chú nhầm là động.
+    for (const line of ['include(":a")', "include(':a')", 'include ":a"', 'include(":a", ":b")']) {
+      const r = inv.inventoryModules(mk({ 'settings.gradle.kts': `${line}\n`, 'a/build.gradle.kts': '\n', 'b/build.gradle.kts': '\n' }));
+      ok(r.notes.length === 0 && r.modules.length >= 1, `AC2.2: ${line} là include chuỗi, không ghi chú include động`);
+    }
+    const dynReal = inv.inventoryModules(mk({ 'settings.gradle.kts': 'include(":a")\ninclude(*names.toTypedArray())\n', 'a/build.gradle.kts': '\n' }));
+    ok(dynReal.notes.filter((x) => x.includes('include động')).length === 1, 'AC2.2: include động thật vẫn có đúng một ghi chú');
+    const escapedNames = mk({
+      'settings.gradle': "include '../../x', ':a:..:..:y', '/abs/z', ':ok'\n",
+      'ok/build.gradle': '\n', 'a/build.gradle': '\n',
+    });
+    const esc = inv.inventoryModules(escapedNames);
+    ok(esc.modules.length === 1 && esc.modules[0].path === 'ok' && esc.notes.some((x) => x.includes("'..'")) && !esc.notes.join(' ').includes('/abs/z'),
+      'AC2.2: tên module có `..` hoặc tuyệt đối bị bỏ và ghi chú, không in tên');
+    const bigXml = (open, close) => `<project><artifactId>x</artifactId>${open.repeat(20000)}${close}</project>`;
+    for (const [open, close] of [['<!--', ''], ['<parent>', '']]) {
+      const t0 = Date.now();
+      const r = inv.inventoryModules(mk({ 'pom.xml': bigXml(open, close) }));
+      ok(Date.now() - t0 < 3000 && r.modules.length === 1, `AC2.1: pom có 20.000 lần ${open} không đóng không gây quét bậc hai`);
+    }
+    const t1 = Date.now();
+    inv.inventoryModules(mk({ 'settings.gradle': `include${' '.repeat(200000)}x\n${'include ('.repeat(20000)}\n${'/*'.repeat(20000)}\n` }));
+    ok(Date.now() - t1 < 3000, 'AC2.2: settings.gradle nhiều `include (` và `/*` không đóng không gây quét bậc hai');
+    const huge = inv.inventoryModules(mk({ 'pom.xml': `<project><artifactId>big</artifactId></project>${' '.repeat((1 << 20) + 1)}`, 'package.json': '{"name":"ok"}' }));
+    ok(huge.notes.some((x) => x.includes('pom.xml') && x.includes('1 MB')) && !huge.modules.some((x) => x.id === 'big'), 'AC2.1: build file lớn hơn 1 MB bị bỏ qua và ghi chú');
+
+    const sub = mk({ 'sub/pkg/package.json': '{"name":"pkg"}', 'sub/pkg/src/a.js': 'a\n', 'sub/.venv/lib/requirements.txt': 'x\n', 'sub/.venv/lib/site.py': 'x\n' });
+    ok(JSON.stringify(inv.inventoryModules(path.join(sub, 'sub')).modules.map((x) => x.id)) === '["pkg"]', 'AC2.1: phạm vi thư mục con (không git) bỏ .venv, không biến requirements.txt trong đó thành module');
+    spawnSync('git', ['init', '-q'], { cwd: sub });
+    ok(JSON.stringify(inv.inventoryModules(path.join(sub, 'sub')).modules.map((x) => x.id)) === '["pkg"]', 'AC2.1: phạm vi thư mục con của repo git cũng bỏ .venv');
+    const subFiles = inv.inventoryModules(path.join(sub, 'sub'));
+    ok(subFiles.modules[0].sourceFiles === 1, 'AC2.1: phạm vi thư mục con của repo git chỉ đếm file dưới thư mục đó');
+
+    // Symlink tracked/untracked trỏ ra ngoài gốc: git ls-files liệt kê, readFileSync đi theo link; cả hai chế độ phải bỏ.
+    const outside = mk({ 'secret.js': 'o1\no2\no3\no4\n' });
+    for (const withGit of [false, true]) {
+      const lroot = mk({ 'mod/package.json': '{"name":"mod"}', 'mod/src/ok.js': 'a\n' });
+      let sym = false;
+      try { fs.symlinkSync(path.join(outside, 'secret.js'), path.join(lroot, 'mod', 'src', 'leak.js')); sym = true; } catch { /* không tạo được symlink */ }
+      if (withGit) spawnSync('git', ['init', '-q'], { cwd: lroot });
+      const lr = inv.inventoryModules(lroot);
+      ok(!sym || (byId(lr, 'mod')?.sourceFiles === 1 && byId(lr, 'mod').lines === 1), `AC2.3: symlink ra ngoài gốc không được đếm (${withGit ? 'git' : 'walk'})`);
+    }
+
+    const dirty54 = inv.inventoryModules(mk({ 'm/package.json': '{"name":"a|b\\nc\\u0007d"}' }));
+    ok(dirty54.modules[0].id === 'abcd', 'AC2.3: id bỏ ký tự điều khiển và `|` (chống chèn vào bảng markdown và prompt)');
+    const longName = inv.inventoryModules(mk({ 'package.json': `{"name":"${'n'.repeat(300)}"}` }));
+    ok(longName.modules[0].id.length === 100, 'AC2.3: id cắt ở 100 ký tự');
 
     const scan = await import(pathToFileURL(path.join(skillDir, 'scripts', 'scan-secrets.mjs')).href);
     // Chuỗi giống secret ghép từ mảnh để chính file test không chứa nguyên chuỗi.
@@ -160,8 +208,15 @@ export default async function run({ ok, ctx }) {
     ok(hit.length === 1 && hit[0].line === 2 && hit[0].kind === 'secret-assignment', 'AC3.1: scanText trả line và kind');
     ok(scan.scanText(pw('`hunter22xyz`')).length === 1, 'AC3.1: giá trị bọc code inline vẫn bị báo');
     // Giá trị bắt đầu bằng từ khoá placeholder hoặc chứa ngoặc vẫn là secret thật; số nhiều của tên khoá cũng vậy.
-    for (const line of ['secret: example-prod-key', 'token: yourcompany123', 'api_key: yourcompany-live-7f3a9b2c1d', pw('Yourpass99'), pw('abc(123)xyz'), 'passwords: hunter22xyz', 'access_token: abcdefgh1234']) {
+    const kv = (k, v) => [k, ': ', v].join('');
+    const bearer = ['Authoriz', 'ation: Bear', 'er abcd1234efgh'].join('');
+    for (const line of [kv('secret', 'example-prod-key'), kv('token', 'yourcompany123'), kv('api_key', 'yourcompany-live-7f3a9b2c1d'), pw('Yourpass99'), pw('abc(123)xyz'), kv('passwords', 'hunter22xyz'), kv('access_token', 'abcdefgh1234'),
+      // `$` và `<` đứng đầu chỉ được miễn khi là tham chiếu biến hoặc cặp ngoặc đóng; thêm tên khoá passphrase, Bearer, AccountKey.
+      pw('$hunter-22xyz'), pw('<hunter22xyz'), pw('<ab>hunter22'), kv('passphrase', 'hunter22xyz'), bearer, ['Account', 'Key=', 'abcdefghijklmnop12345'].join('')]) {
       ok(scan.scanText(line).length === 1, `AC3.1: không bỏ sót "${line.slice(0, 12)}…"`);
+    }
+    for (const line of [pw('<your-password>'), pw('<your password here>'), pw('<giá-trị>'), pw('${DB_PASSWORD}'), pw('$DB_PASSWORD'), 'Authorization: Bearer <token>', 'Authorization: Bearer $TOKEN', ['Account', 'Key=<account-key-value>'].join('')]) {
+      ok(scan.scanText(line).length === 0, `AC3.2: placeholder không bị báo "${line.slice(0, 24)}…"`);
     }
     const started = Date.now();
     scan.scanText(`http://u:${'b'.repeat(80000)}\n${'a://'.repeat(20000)}\n${'a'.repeat(80000)}`);

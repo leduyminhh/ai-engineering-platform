@@ -20,7 +20,7 @@ Lệnh: `node <thư mục skill>/scripts/inventory-modules.mjs <gốc> --format 
 | `unclaimed` | gốc | Thư mục cấp một có file nhưng không thuộc module nào |
 | `rootFiles` | gốc | Số file mã nguồn nằm ở gốc, ngoài mọi module |
 | `projectKnowledge` | gốc | Bốn file `project-knowledge/`: `true` khi đã có |
-| `notes` | gốc | Cảnh báo: không nhận ra build file, hoặc `include` động trong Gradle |
+| `notes` | gốc | Cảnh báo: không nhận ra build file, `include` động trong Gradle, tên module Gradle thoát gốc, build file lớn hơn 1 MB bị bỏ qua |
 
 Không nhận ra build file nào thì `modules` rỗng, `notes` có một dòng, lệnh vẫn thoát 0. Khi đó kiểm kê tay ở cổng 1 và ghi rõ vào bảng.
 
