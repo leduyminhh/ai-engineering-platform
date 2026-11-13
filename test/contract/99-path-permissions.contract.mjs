@@ -233,6 +233,17 @@ export default async function run({ ok, ctx }) {
     const askMode = { cfg: { mode: 'ask' }, extra: { permission_mode: 'default' } };
     expectAll([['cp -t .claude aip-gate.json', 'ask', 'AC3.8'], ['cp --target-directory=.claude /s/aip-gate.json', 'ask', 'AC3.8'], ['cp -t .claude .claude/settings.local.json', 'ask', 'AC3.8']], askMode);
     expectAll([[`cp -t ${O} x`, null, 'AC3.8']]);
+
+    // R18: cp/mv vào thư mục .claude với nguồn tên file cấu hình hook phải hỏi ở mọi chế độ.
+    const r18 = (rows, opt) => { expectAll(rows, askMode); expectAll(rows, opt); };
+    r18([...['cp settings.json .claude/', 'cp -t .claude settings.json', 'cp -t .claude /s/settings.local.json', 'mv -t .claude settings.json', 'mv settings.json .claude',
+      'cp aip-gate.json .claude', 'cp --target-directory=.claude settings.json', 'cp a settings.json .claude/'].map((c) => [c, 'ask', 'AC1.1']),
+    ...['cp x.json .claude/', 'cp settings.json out/', 'cp .claude/settings.json out/x'].map((c) => [c, null, 'AC1.3'])], {});
+    const psAsk = { ...askMode, tool: 'PowerShell' };
+    const psRows = ['Copy-Item settings.json .claude\\', 'Copy-Item -Path settings.json -Destination .claude', 'Copy-Item -Path settings.json -Destination .claude\\', 'Move-Item settings.json .claude'].map((c) => [c, 'ask', 'AC1.2']);
+    expectAll(psRows, psAsk);
+    expectAll(psRows, { tool: 'PowerShell' });
+
     // Glob kèm `..` sau đoạn glob đầu có thể thoát ra ngoài thư mục đã phân loại.
     expectAll([[`rm ${T}/*/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/?/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/[a]/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`rm ${O}/*`, 'deny', 'AC4.5']]);
     // Token cờ gộp dài kết thúc bằng xuống dòng không được làm regex chạy bậc hai.
