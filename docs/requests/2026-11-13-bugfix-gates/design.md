@@ -1,7 +1,7 @@
 # Thiết kế: Gate của `workflow-bugfix` không bị bỏ khi bug "đã rõ" (N2)
 
 - Ngày: 2026-11-13
-- Trạng thái: draft — chờ G1 (người dùng duyệt)
+- Trạng thái: approved — G1 duyệt 2026-11-13, chưa có plan
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
@@ -16,7 +16,13 @@ Nguyên nhân bỏ bước, đều [Inference] vì chỉ có một lượt chạ
 
 ## Quyết định đã chốt
 
-Chưa có quyết định nào của người dùng. Mọi lựa chọn dưới đây là **quyết định của agent**, chờ duyệt ở G1; bốn câu cần người dùng chốt nằm ở mục "Rủi ro và câu hỏi mở".
+G1, người dùng chọn "Duyệt, có eval" (nhận đủ bốn khuyến nghị ở mục "Rủi ro và câu hỏi mở"):
+1. Hướng 1, không có lối nhanh; giữ AC5.1 (test đỏ sẵn thoả Bước 3).
+2. Headless: dừng lượt kèm `status: blocked` và câu hỏi ở `next_actions`.
+3. Nhánh `bugfix/<slug>` bắt buộc khi đang ở nhánh được bảo vệ.
+4. Làm eval: viết case (AC8.1) và chạy (AC8.2) sau khi các AC khác xong. Trần `--max-cost-usd 5` và ngưỡng 2/3 chưa được duyệt riêng: AC8.2 chỉ chạy sau khi người dùng duyệt chi phí khi case đã viết xong.
+
+Các lựa chọn còn lại ở trên (câu chữ thêm vào, vị trí chèn, cụm trigger của `frontend-fix`, `next_actions` thay cho `questions[]`) là **quyết định của agent**, người dùng duyệt gộp ở G1.
 
 ## Thiết kế
 
