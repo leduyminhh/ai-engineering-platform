@@ -82,6 +82,19 @@ export default async function run({ ok, ctx }) {
   ok(/spike/i.test(field('Evidence')), 'AC3.1: Bước 3 Evidence ghi lệnh và kết quả spike');
   ok(doing.includes('[Unverified]') && doing.includes('G1'),
     'AC4.1: Bước 3 Hành động nêu giữ [Unverified] và đưa lên G1 khi không kiểm được');
+  const boundary = ['thư mục tạm', 'không cài vào project', '`npx --yes`'];
+  ok(boundary.every((t) => doing.includes(t)),
+    'N3b AC1.1: Bước 3 Hành động nêu ranh giới chỉ đọc của spike (thư mục tạm, không cài vào project, không `npx --yes`)');
+  ok(!field('Thực hiện').includes('thư mục tạm') && !field('Khi fail').includes('thư mục tạm'),
+    'N3b AC1.1: ranh giới chỉ đọc không nằm ở Thực hiện hay Khi fail');
+
+  // engineering-spec-writing: đoạn Spike giả định ở bước 9 có cùng ranh giới cho giả định công cụ/thư viện.
+  const sws = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-spec-writing', 'SKILL.md'), 'utf8');
+  const spikeAt = sws.indexOf('**Spike giả định');
+  const spikeEnd = sws.indexOf('10. **Verify.**');
+  const spikePara = spikeAt >= 0 && spikeEnd > spikeAt ? sws.slice(spikeAt, spikeEnd).replace(/\s+/g, ' ') : '';
+  ok(spikePara.length > 0 && boundary.every((t) => spikePara.includes(t)),
+    'N3b AC1.3: spec-writing, đoạn Spike giả định nêu ranh giới chỉ đọc cho giả định công cụ/thư viện');
   ok(!/spike/i.test(field('Thực hiện')) && !/spike/i.test(field('Khi fail')),
     'AC3.2: chữ spike không nằm ở Thực hiện hay Khi fail (checkGraphAgainstBody suy graph từ hai trường này)');
 }
