@@ -36,7 +36,7 @@ Người dùng giao hướng cho agent (yêu cầu của phiên cha: "bỏ giá 
 - **D5 — kiểm cấu hình hook (R18) không đổi.** `allPos` là mảng ứng viên; giá trị của cờ có giá trị bị bỏ nên `Set-Content -Value .claude/aip-gate.json x` (nội dung, không phải đích) không bị hỏi nhầm; ca đích thật (`Set-Content -Encoding utf8 .claude\aip-gate.json x`, `Set-Content -Value x .claude\aip-gate.json`, đã có ở `99-hook-popup`) vẫn `ask`.
 - **D6 — áp bất kể tool.** Tên `Set-Content`/`Out-File`/`Add-Content` chỉ tồn tại ở PowerShell, và nhánh cờ đường dẫn hiện tại cũng không kiểm `msys`; nên D1–D3 không điều kiện hoá theo `msys`, để chuỗi lồng `pwsh -Command "…"` (đọc `msys=true`) cũng được hưởng.
 - **D7 — không thêm câu hỏi mới, không đổi chữ ký.** `classifyPath`/`grantsOf` giữ nguyên; kết quả là `deny` (thiếu `write`) hoặc `ask` (đường dẫn chưa biết) qua câu có sẵn, đã qua `shapeOk` của `99-hook-popup`.
-- **D8 — version.** `core/.manifest.json` 1.33.14 → 1.33.17 (1.33.15 và 1.33.16 đã bị khoá trước hai lần sửa sau review cuối; cổng version từ chối lock khi nội dung đổi mà version giữ nguyên), `npm run build`, `node cli/lib/versions.mjs --lock`.
+- **D8 — version.** `core/.manifest.json` 1.33.14 → 1.33.18 (1.33.15, 1.33.16 và 1.33.17 đã bị khoá trước ba lần sửa sau review cuối; cổng version từ chối lock khi nội dung đổi mà version giữ nguyên), `npm run build`, `node cli/lib/versions.mjs --lock`.
 
 ## Hướng đã cân nhắc
 
