@@ -16,8 +16,8 @@
     "hash": "6da47087dbf04f1fbc4290f9a93cf92dd05d21a3f43ba6ad89e09b608e70381b"
   },
   "frontend": {
-    "version": "1.16.3",
-    "hash": "8b542a88088c9c1355a443d7c0fb5af045fc095447e7bc8881f56a819ff31d5f"
+    "version": "1.16.4",
+    "hash": "1210e2a9f4341b070addedacaec06ec6d60a468d778ec7b1890b8a566399f57f"
   },
   "ops": {
     "version": "2.1.1",
