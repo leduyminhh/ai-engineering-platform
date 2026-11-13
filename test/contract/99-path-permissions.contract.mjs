@@ -370,14 +370,19 @@ export default async function run({ ok, ctx }) {
         `Set-Content -PSPath:${OUT}/x v`, `Set-Content -Lit:${OUT}/x v`, `Set-Content -LiteralPa:${OUT}/x v`, `Add-Content -PSPath:${D}/x v`,
         `Out-File -Fi:${OUT}/x`, `Out-File -File:${OUT}/x`, `Out-File -FilePa:${OUT}/x`,
         // Đường dẫn trong nháy bắt đầu bằng `-` (cwd là project, nằm cạnh out và d).
-        `Set-Content '-x/../../out/y' v`, `Out-File '-a/../../out/y'`, `Set-Content '-x/../../${path.basename(D)}/y' v`].map((c) => [c, 'deny']),
+        `Set-Content '-x/../../out/y' v`, `Out-File '-a/../../out/y'`, `Set-Content '-x/../../${path.basename(D)}/y' v`,
+        // Cờ có giá trị bỏ trống rồi tới token bắt đầu bằng `-`: PowerShell 5.1 lấy token đó làm giá trị, cờ ấy không được nuốt đường dẫn thật.
+        `Set-Content -Value: -Encoding ${OUT}/x`, `Set-Content -Value: -Value ${D}/x`, `Set-Content -Val: -ea: ${OUT}/x`, `Add-Content -Val: -Stream: ${O}/x,${OUT}/y`,
+        `Set-Content -ov -Encoding ${OUT}/x y`, `Out-File -OutVariable -Value ${OUT}/x`, `Out-File -ov -Stream ${OUT}/x`, `Out-File -ov -Filter ${OUT}/x`,
+        `Set-Content -ov -Width ${OUT}/x y`, `Set-Content -ov -InputObject ${OUT}/x y`, `Add-Content -ev -Width ${OUT}/x y`].map((c) => [c, 'deny']),
       // Nội dung (giá trị của cờ có giá trị đứng trơn) và đối số trong root không bị hỏi thừa.
       ...[`Out-File ${O}/x utf8`, `Set-Content -Value ${OUT}/y ${O}/x`, `Set-Content -Path ${O}/x -Encoding utf8 -Value ${OUT}/y`, `Set-Content -Path ${O}/x -Value a, b`,
-        `Set-Content -Path ${O}/x -Value $text`, `Set-Content ${O}/x -Value 'a b'`, `Set-Content -Encoding utf8 ${O}/x -Value y`, `Set-Content -Path ${O}/x -Force`,
-        `Set-Content ${O}/x y`].map((c) => [c, null]),
+        `Set-Content -Path ${O}/x -Value $text`, `Set-Content ${O}/x -Value 'a b'`, `Set-Content -Path ${O}/x -Force`,
+        `Set-Content ${O}/x y`, `Set-Content ${O}/x -Value -5`, `Set-Content ${O}/x -Value -Encoding`].map((c) => [c, null]),
     ]);
     psw('AC1.3', [[`Set-Content -Enc utf8 ${OUT}/x -Val y`, 'deny'], [`Set-Content -Foo a ${OUT}/x y`, 'deny'], [`Set-Content -Enc utf8 ${O}/x y`, null]]);
     // Các ca `ask` của R18 đã có ở 99-hook-popup; ở đây chỉ giữ ca nội dung (không phải đích) không bị hỏi nhầm.
-    psw('AC1.4', [['Set-Content -Value .claude\\aip-gate.json x', null]], psAsk);
+    psw('AC1.4', [['Set-Content -Value .claude\\aip-gate.json x', null], ['Set-Content -Value: -Encoding .claude\\aip-gate.json', 'ask'], ['Add-Content -ea: -Value .claude\\aip-gate.json', 'ask'],
+      ['Set-Content -Value: -Value .claude\\settings.json', 'ask']], psAsk);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }

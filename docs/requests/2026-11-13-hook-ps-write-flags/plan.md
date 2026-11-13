@@ -15,7 +15,7 @@
 | `test/contract/99-path-permissions.contract.mjs` | bảng ca mới AC1.1–AC1.4 cạnh các ca PowerShell sẵn có (dòng ~189) | Task 1 |
 | `docs/specs/hooks-gates/spec.md` | R24: thêm quy tắc cờ của `Set-Content`/`Out-File`/`Add-Content`, bỏ mục đó khỏi "Giới hạn đã biết"; dòng Phạm vi; dòng Lịch sử | Task 2 |
 | `README.md`, `README_VI.md` | mục Hooks đoạn `fullPaths`: bỏ giới hạn cũ (dòng ~446), nêu quy tắc mới ở bảng vai (dòng ~453) | Task 2 |
-| `core/.manifest.json`, `plugins/_versions.lock.json` | bump core 1.33.14 → 1.33.15, lock | Task 3 |
+| `core/.manifest.json`, `plugins/_versions.lock.json` | bump core 1.33.14 → 1.33.19, lock | Task 3 |
 
 Không đổi: `classifyPath`/`grantsOf`/`gate-config.mjs`, `guard-files.mjs`, `Copy-Item`/`Move-Item`/`rm` và `PS_VALUE_FLAGS` hiện có; `94-permission-modes`, `99-hook-popup`, `90-hooks`, `97-audit-mustfix` giữ nguyên làm bằng chứng tương thích (AC2.1).
 
@@ -71,7 +71,7 @@ Không đổi: `classifyPath`/`grantsOf`/`gate-config.mjs`, `guard-files.mjs`, `
 - Consumes: hành vi đã chốt ở Task 1 (danh sách cờ, D2, D3, D4 của `design.md`)
 - Produces: không có
 
-- [ ] **Step 1:** sửa R24 trong `spec.md`: thêm câu quy tắc (cờ có giá trị và công tắc của `Set-Content`/`Out-File`/`Add-Content` bị bỏ; cờ lạ thì mọi đối số vị trí là ứng viên đích; đã gọi tên `-Path`/`-LiteralPath`/`-FilePath` thì đối số vị trí là Value; Value/Encoding vị trí không kiểm); xoá mục `Set-Content`/`Out-File`/`Add-Content` khỏi "Giới hạn đã biết"; thêm dòng Phạm vi (request `2026-11-13-hook-ps-write-flags`), dòng Nguồn của R24 và một dòng Lịch sử `hooks-gates/R24 | đổi`.
+- [ ] **Step 1:** sửa R24 trong `spec.md`: thêm câu quy tắc (mọi token là ứng viên đích trừ tên cờ đã biết và giá trị của cờ có giá trị đứng trơn); xoá mục `Set-Content`/`Out-File`/`Add-Content` khỏi "Giới hạn đã biết"; thêm dòng Phạm vi (request `2026-11-13-hook-ps-write-flags`), dòng Nguồn của R24 và một dòng Lịch sử `hooks-gates/R24 | đổi`.
 - [ ] **Step 2:** sửa `README.md` (dòng ~446 bỏ giới hạn cũ; bảng vai dòng ~453 hoặc câu kế nêu quy tắc mới) và `README_VI.md` (cùng chỗ), khớp spec.
 - [ ] **Step 3 (đối chiếu khẳng định với code):** liệt kê từng khẳng định kiểm được (tên cờ, alias, danh sách công tắc, hành vi cờ lạ), đối chiếu với `guard-bash.mjs` bằng grep, ghi bảng `khẳng định → file:line → khớp|lệch` vào báo cáo task; sửa dòng `lệch`.
 - [ ] **Step 4:** chạy `node test/validate.mjs --only content`: xanh. Commit `docs(hooks): document Set-Content value flag handling in R24`.
@@ -90,6 +90,6 @@ Không đổi: `classifyPath`/`grantsOf`/`gate-config.mjs`, `guard-files.mjs`, `
 - Consumes: kết quả Task 1 và Task 2
 - Produces: không có
 
-- [ ] **Step 1:** `core/.manifest.json` version 1.33.14 → 1.33.15.
+- [ ] **Step 1:** `core/.manifest.json` version 1.33.14 → 1.33.19.
 - [ ] **Step 2:** `npm run build`, rồi `node cli/lib/versions.mjs --lock` (mỗi lệnh một lần gọi Bash).
-- [ ] **Step 3:** `npm test` một lần: xanh. Commit `chore(core): bump to 1.33.15`.
+- [ ] **Step 3:** `npm test` một lần: xanh. Commit `chore(core): bump to 1.33.19`.

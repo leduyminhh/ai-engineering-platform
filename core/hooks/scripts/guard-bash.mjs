@@ -339,7 +339,12 @@ function psWriteCandidates(args) {
   const out = [];
   const flagOf = (a) => /^-([A-Za-z][A-Za-z0-9]*)(:([\s\S]*))?$/.exec(a);
   // Dấu phẩy, backtick hoặc `--` làm ranh giới token mơ hồ (sau `--` PowerShell có thể đọc `-X:giá-trị` thành đường dẫn): kiểm hết, không nuốt giá trị của cờ nào.
-  const strict = args.some((a) => /^,|,$|`|^--$/.test(a));
+  // Cờ có giá trị (đã biết, hoặc bất kỳ cờ dạng `-X:` vì có thể là viết tắt như `-Val:`) bỏ trống mà token kế bắt đầu bằng `-`:
+  // PowerShell 5.1 lấy chính token đó làm giá trị, hook không phân biệt được với một cờ thật.
+  const strict = args.some((a, i) => {
+    const m = flagOf(a);
+    return /^,|,$|`|^--$/.test(a) || (m && !m[3] && (m[2] !== undefined || PS_WRITE_VALUE.has(m[1].toLowerCase())) && args[i + 1]?.startsWith('-'));
+  });
   // Token kế của cờ đường dẫn là ứng viên kể cả khi bắt đầu bằng `-`, trừ dạng dính `-X:val` (có thể là cờ thật đứng sau một cờ giả trong nháy).
   const takeNext = (i) => (i + 1 < args.length && !/^-[A-Za-z][A-Za-z0-9]*:/.test(args[i + 1]) ? (out.push(args[i + 1]), i + 1) : i);
   for (let i = 0; i < args.length; i++) {
