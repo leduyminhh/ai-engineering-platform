@@ -1,6 +1,6 @@
 # Thiết kế: quyền đọc/ghi/xoá riêng theo thư mục ở chế độ full
 - Ngày: 2026-11-12
-- Trạng thái: approved — làm sau khi `feature/hook-popup-standardization` merge vào master; nhánh mới tách từ master sau đó
+- Trạng thái: merged 85710e93
 - Requirement: không có
 
 ## Vấn đề và lý do
@@ -169,6 +169,13 @@ Chép từ `Ruling:` của ledger (`.aip/` không vào nhánh); kiểm lại b�
 - Gốc `<tmpdir>/claude` chỉ bị `guard-bash` chặn mọi quyền (kể cả đọc qua `Copy-Item`); `guard-files` không có ngoại lệ này, như trước request.
 - `fullReadRoots` giữ `*` là wildcard một đoạn như master (sửa hồi quy trong lúc làm; AC5.2).
 - Câu hỏi khi đọc file bí mật dưới root chỉ-đọc đổi chữ sang "chưa được cấp đủ ba quyền" (quyết định vẫn là hỏi). Thiếu quyền đọc ở `guard-bash` có câu hỏi riêng; dòng "Lệnh gồm" gắn nhãn đọc/xoá/ghi theo quyền cần.
+
+## Follow-up (người dùng chọn ở G3, làm sau)
+
+- `cp`/`mv` vào thư mục `.claude` với nguồn tên `settings*.json` hoặc `aip-gate.json` (`cp settings.json .claude/`, `cp -t .claude settings.json`) không bị hỏi khi ghi đè cấu hình hook; có từ trước request.
+- `guard-files` chưa chặn gốc `<tmpdir>/claude` như `guard-bash`.
+- `Copy-Item` nguồn là đối số vị trí chưa kiểm `read`; `Move-Item -Path` đích vị trí đang bị kiểm cả `delete`.
+- Glob có đoạn khớp được `..` (`T/.?/x`, `T/..*/x`) trên bash < 5.2 hoặc dash: nên hỏi.
 
 ## Để builder quyết
 
