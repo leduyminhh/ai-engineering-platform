@@ -1,7 +1,7 @@
 # Thiết kế: Đối chiếu giao diện đã render với mockup trong đường feature của plugin frontend
 
 - Ngày: 2026-11-13
-- Trạng thái: draft — chờ G1
+- Trạng thái: approved — G1 duyệt 2026-11-13, người dùng đồng ý nguyên khuyến nghị Q1–Q4 và ba quyết định của builder check
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
@@ -14,7 +14,7 @@ Skill `frontend-manual-check` đã có phần lớn công cụ (runbook theo AC,
 
 Từ yêu cầu của phiên cha (người dùng đã giao): route `workflow-feature`, cỡ dự án (có `requirement.md` và `design.md`, `plan.md` làm sau G1), phạm vi file ở mục Thiết kế, không sửa file của N2, bump version khi đổi nội dung chiếu.
 
-Bốn điểm dưới đây chưa được người dùng chốt. Tôi ghi hướng khuyến nghị để thiết kế đi tiếp; **G1 là lúc người dùng xác nhận hoặc đổi**. Đổi điểm nào thì mục Thiết kế tương ứng đổi theo, AC giữ nguyên trừ chỗ nêu ở cột cuối.
+Bốn điểm dưới đây đã được người dùng duyệt ở G1 (2026-11-13) với đúng khuyến nghị ở cột giữa. Cột "Đổi thì sửa AC" giữ lại để biết chỗ nào phải đổi nếu sau này đổi ý.
 
 | # | Câu hỏi | Khuyến nghị (quyết định của agent, chờ G1) | Phương án khác | Đổi thì sửa AC |
 |---|---|---|---|---|
