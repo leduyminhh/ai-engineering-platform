@@ -1,6 +1,6 @@
 # Thiết kế: siết bảo mật và độ chính xác của chỉ dẫn kiểm tương thích công cụ codegen (N3b)
 - Ngày: 2026-11-13
-- Trạng thái: draft — chờ duyệt G1; nhánh `claude/frontend-codegen-compat-harden-3570f2` cắt từ N3 (`cb9ecb86`, chưa merge)
+- Trạng thái: approved — G1 duyệt 2026-11-13 (Q1: cả hai nơi); nhánh `claude/frontend-codegen-compat-harden-3570f2` cắt từ N3 (`cb9ecb86`, chưa merge)
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
@@ -25,13 +25,13 @@ Từ N3, không hỏi lại: kiểm tương thích bắt buộc có lối thoát
 - **D4 — `SKILL.md:57` (dòng dò stack ở mục 0) giữ nguyên.** Đó là danh sách tên để dò dấu hiệu trong `package.json`, cùng loại với bảng dò mục 2; chỉ dòng 84 (I2, gắn với `npm view`) đổi. README: grep không thấy file nào dưới `plugins/frontend/` nhắc tên này, nên không có gì để sửa.
 - **D5 — hệ quả của mục 1 cần biết:** spike ở Bước 3 chạy trước G1, tức là trước khi người dùng duyệt công cụ, nên chỉ được dùng `npm view` và `npm install --dry-run --ignore-scripts` (không thực thi mã của gói). Lần chạy thật công cụ (kiểu Spike 3 của N3: `npx --yes -p …`) chỉ làm được sau khi người dùng chọn ghim, tức là ở hoặc sau G1. Không có AC nào của N3 phụ thuộc lần chạy đó trước G1 (AC5.2 của N3 là kiểm tay của người bảo trì).
 
-### Câu cần chốt ở G1
+### Đã chốt ở G1
 
-**Q1 — Có đưa ranh giới chỉ-đọc vào `engineering-spec-writing` (quy tắc "Spike giả định", `SKILL.md:120–125`) hay chỉ ở workflow Bước 3?** Khuyến nghị: **chỉ workflow Bước 3**. Lý do: quy tắc spike của spec-writing nói về mọi loại giả định (test hoặc script chạy trong repo, kể cả hạ tầng), nên một câu "không cài vào project" ở đó mâu thuẫn với chính định nghĩa spike; sửa nó là đổi plugin `engineering`, thêm bump version và một vùng file ngoài ba file đã giới hạn. Chi phí nếu sai: một lần chạy `engineering-spec-writing` ngoài `workflow-feature` vẫn có thể `npx --yes` gói chưa duyệt khi spike; ranh giới ở Bước 3 không phủ ca đó. Phương án khác: thêm một câu chỉ-đọc cho giả định về công cụ vào bước 9 của spec-writing (cùng nội dung, hai nơi, thêm bump `engineering`); nếu chọn, mục "Thiết kế" thêm mục 6 và AC1.3.
+**Q1 — ranh giới chỉ-đọc đặt ở cả `engineering-spec-writing` (quy tắc "Spike giả định", `SKILL.md:120–125`) và workflow Bước 3** (người dùng chọn 2026-11-13, trái với khuyến nghị ban đầu của agent là chỉ workflow). Hệ quả đã tính: đổi thêm plugin `engineering` (bump version, AC1.3, mục 7 dưới đây); câu mới chỉ áp cho giả định về công cụ hoặc thư viện, không đổi định nghĩa spike "test hoặc script nhỏ chạy được trong repo" cho các loại giả định khác, nên không mâu thuẫn với nó. Pin `43-progress-plan-quality` đòi đoạn spike có `[Unverified]`, `hướng đã chọn`, `trước checkpoint`: câu thêm không được làm mất ba cụm đó.
 
 ## Thiết kế
 
-Bốn file nội dung và một pin; không thêm bước, không đổi `graph.json`.
+Năm file nội dung và một pin; không thêm bước, không đổi `graph.json`.
 
 **1. `workflows/feature/WORKFLOW.md` Bước 3, Hành động (AC1.1).** Thêm vào câu spike, ngay sau "kiểm được bằng một lệnh (…)": "Spike chỉ đọc hoặc chạy thử trong thư mục tạm, không cài vào project, không `npx --yes` hay chạy gói chưa được người dùng duyệt;". Gate: thêm "kiểm theo ranh giới chỉ đọc đó" vào vế "đã có kết quả spike" (một cụm). Evidence: không cần đổi (đã có "lệnh spike + kết quả"). Không chạm Thực hiện, Khi fail.
 
@@ -52,9 +52,11 @@ Package manager khác npm: giữ câu hiện có.
 - Ca xung đột peer và người dùng đã chọn ghim: dạng `npx --yes -p typescript@<x.y.z> -p openapi-typescript@<x.y.z> openapi-typescript …` (giữ ở bảng phương án mục 2a, một ví dụ script thứ hai ở mục 3).
 - Câu audit chỉ nằm ở dòng "Ghim công cụ bằng `npx`" của bảng 2a, mở đầu bằng `[Inference]`: gói chạy bằng `npx` không nằm trong `package.json` và lockfile nên `npm audit` có thể không quét nó; ghi vào ADR. Bỏ bản lặp ở mục 3.
 
-**5. Pin `test/content/54-codegen-compat.pin.mjs` (AC5.1, AC5.2).** Lấy mục 2a bằng cắt từ `## 2a.` tới `## 3.`, chuẩn hoá khoảng trắng; thêm: `includes('npm install --dry-run --ignore-scripts')`, `includes('không ghi vào project')`, `.npmrc`, `EBADENGINE`, `@openapitools/openapi-generator-cli`; ngoài đó, sau khi xoá `@openapitools/openapi-generator-cli` khỏi mục 2a và I2 thì không còn token `openapi-generator`. Bước 3: tách bằng `parseSteps` (hàm `field` có sẵn), Hành động có `thư mục tạm`, `không cài vào project`, `` `npx --yes` ``. Sửa dòng pin script `api:types` theo D3: dòng script mặc định không chứa `npx`, dòng `npx` ghim `<gói>@(<x.y.z>|ba số)`. Giữ tên file và các pin còn lại.
+**5. Pin `test/content/54-codegen-compat.pin.mjs` (AC5.1, AC5.2).** Lấy mục 2a bằng cắt từ `## 2a.` tới `## 3.`, chuẩn hoá khoảng trắng; thêm: `includes('npm install --dry-run --ignore-scripts')`, `includes('không ghi vào project')`, `.npmrc`, `EBADENGINE`, `@openapitools/openapi-generator-cli`; ngoài đó, sau khi xoá `@openapitools/openapi-generator-cli` khỏi mục 2a và I2 thì không còn token `openapi-generator`. Bước 3: tách bằng `parseSteps` (hàm `field` có sẵn), Hành động có `thư mục tạm`, `không cài vào project`, `` `npx --yes` ``. Sửa dòng pin script `api:types` theo D3: dòng script mặc định không chứa `npx`, dòng `npx` ghim `<gói>@(<x.y.z>|ba số)`. Giữ tên file và các pin còn lại. Thêm pin cho AC1.3: đoạn `**Spike giả định` của `engineering-spec-writing/SKILL.md` (cắt từ đó tới dòng `10. **Verify.**`) có ba cụm trên.
 
-**6. Version và spec sống (AC6.1, AC6.2).** Bump `plugins/frontend/.manifest.json` 1.16.5 → 1.16.6 và `workflows/.manifest.json` 3.16.3 → 3.16.4, rồi `node cli/lib/versions.mjs --lock`. Spec sống: sửa R25 trong `docs/specs/workflows/spec.md` (thêm ranh giới chỉ đọc và rằng chạy thử bỏ qua `.npmrc`) và thêm dòng `đổi` ở Lịch sử.
+**6. Version và spec sống (AC6.1, AC6.2).** Bump `plugins/frontend/.manifest.json` 1.16.5 → 1.16.6, `workflows/.manifest.json` 3.16.3 → 3.16.4 và `plugins/engineering/.manifest.json` 2.15.0 → 2.15.1, rồi `node cli/lib/versions.mjs --lock`. Spec sống: sửa R25 trong `docs/specs/workflows/spec.md` (thêm ranh giới chỉ đọc của spike ở Bước 3 và spec-writing, và rằng chạy thử bỏ qua `.npmrc`) và thêm dòng `đổi` ở Lịch sử. Không có spec sống riêng cho `engineering`.
+
+**7. `engineering-spec-writing/SKILL.md` bước 9, đoạn "Spike giả định" (AC1.3).** Thêm một câu vào cuối đoạn: giả định về công cụ hoặc thư viện (gói npm, công cụ sinh code, CLI) chỉ kiểm bằng lệnh đọc hoặc chạy thử trong thư mục tạm, không cài vào project, không `npx --yes` hay chạy gói chưa được người dùng duyệt; cần vượt ranh giới đó mới kiểm được thì coi là không spike được và nêu ở checkpoint như rủi ro chặn hướng. Chỉ đổi đoạn này; `references/checklist.md` giữ nguyên.
 
 ## Ảnh hưởng spec
 
@@ -64,7 +66,7 @@ Package manager khác npm: giữ câu hiện có.
 
 - Đổi công cụ codegen mặc định đề xuất (`openapi-typescript` giữ nguyên), script kiểm peer, eval, hỗ trợ đầy đủ `pnpm`/`yarn`.
 - Mở rộng kiểm tương thích sang thư viện không phải codegen.
-- Sửa `engineering-spec-writing` (trừ khi G1 chọn phương án khác ở Q1) và mọi bước khác của `workflow-feature` hay `workflow-bugfix` (N1, N2).
+- Sửa `engineering-spec-writing` ngoài đoạn "Spike giả định" ở bước 9, và mọi bước khác của `workflow-feature` hay `workflow-bugfix` (N1, N2).
 - Tên `openapi-generator` ở `plugins/backend/skills/backend-api-contract/SKILL.md:89` và `test/routing/backend-api-contract.json:10`: thuộc plugin backend, không gắn với lệnh `npm view`/`npx`.
 - Chạy lại trial để đo hiệu quả.
 
@@ -76,7 +78,7 @@ Như `requirement.md`. Thêm: một lệnh Bash mỗi lần gọi; commit qua `c
 
 | AC | Tầng | Cách kiểm |
 |---|---|---|
-| AC1.1, AC2.1–2.3, AC3.1, AC4.1, AC4.2, AC5.1, AC5.2 | pin nội dung | `test/content/54-codegen-compat.pin.mjs` (`node test/validate.mjs --only codegen-compat`); chỉ ghim lệnh, ranh giới an toàn và tên gói, không ghim văn xuôi |
+| AC1.1, AC1.3, AC2.1–2.3, AC3.1, AC4.1, AC4.2, AC5.1, AC5.2 | pin nội dung | `test/content/54-codegen-compat.pin.mjs` (`node test/validate.mjs --only codegen-compat`); chỉ ghim lệnh, ranh giới an toàn và tên gói, không ghim văn xuôi |
 | AC1.2 | pin + git | số bước 7 và đối chiếu graph do `test/contract/50-workflows.contract.mjs` và `test/content/08-publish.pin.mjs` giữ sẵn; `git diff cb9ecb86 -- workflows/feature/WORKFLOW.md` chỉ có hunk trong Hành động/Gate/Evidence của Bước 3, kiểm tay lúc kết thúc |
 | AC2.2 (ca `workspaces`/`file:`), AC4.2 | tay | `npm install --dry-run` ở Spike 2–3; không vào `npm test` vì cần mạng |
 | AC6.1 | toàn bộ | `npm run build`, `node cli/lib/versions.mjs --lock`, `npm test` |
@@ -104,4 +106,4 @@ Chạy lại: các lệnh trên, mỗi lệnh trong một thư mục rỗng có 
 - [Unverified] `E401` (registry yêu cầu đăng nhập, không có `.npmrc` trong thư mục tạm) cho exit khác 0 khác `ERESOLVE`: chưa có registry riêng để thử; luật (a) dựa trên `E404` đã kiểm và trên mô tả của brief.
 - [Unverified] `npm install --dry-run` với `pnpm`/`yarn` (kế thừa từ N3): chỉ dẫn vẫn chỉ hứa cho npm.
 - [Unverified] Dry-run có tải tarball của gói để đọc peer của dependency con hay chỉ đọc metadata: chưa kiểm; không đổi kết luận, vì `--ignore-scripts` chặn chạy mã cài đặt.
-- Câu mở cho G1: Q1 ở trên; và D1 (luật theo nội dung `package.json` thay vì mã `ENOENT` của brief) đúng ý chưa.
+- Còn mở cho G1: D1 (luật theo nội dung `package.json` thay vì mã `ENOENT` của brief); người dùng duyệt G1 mà không sửa D1–D5 thì coi là đồng ý.
