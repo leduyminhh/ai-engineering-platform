@@ -104,6 +104,19 @@ Lệnh: `node scripts/eval-run.mjs --plugin workflows --max-cost-usd 5 --runs 3 
 
 Kết luận, có giới hạn: ngưỡng 2/3 của AC8.2 không đạt (0/3), grader không chỉnh. [Inference] Số đo này không đo chữ mới ở Bước 5: workflow chưa được nạp nên chữ không có cơ hội tác dụng; nó chỉ cho thấy với prompt "test đỏ, nguyên nhân rõ rồi, sửa nhanh, đừng hỏi nhiều" (không có chữ "bug" hay "lỗi") agent không chọn `workflow-bugfix`. n = 3 mỗi nhánh, một prompt.
 
+### Kết quả đo (eval AC8.2, lần 2, prompt thêm "Sửa bug" và "Lỗi nằm ở")
+
+Cùng lệnh, cùng build, chỉ đổi `prompt.md` (commit `f093fee8`; không nhắc tên skill, grader giữ nguyên). Chi phí thật 0,65 USD.
+
+| Nhánh | `root-cause-before-edit` | `scaffold-applied` | `skill-used` (chỉ báo) |
+|---|---|---|---|
+| có plugin | 0/3 | 3/3 | 1/3 |
+| không plugin | 0/3 | 3/3 | — |
+
+Trace (chuỗi công cụ): nhánh có plugin lượt 1 `Skill:workflows:workflow-bugfix` → `Read` ×3, `Grep`, `Read` → `Edit` `src/discount.js`; lượt 2 và 3 `Read` ×3 → `Edit`, không nạp skill. Ba lượt không plugin: `Read` ×3 → `Edit`. Cả sáu lượt lời cuối nói đã sửa và chưa chạy test (không có shell), không lượt nào hỏi xác nhận trước khi sửa. [Verified] trace của lượt 1 có plugin chứa chuỗi mới "không phải lý do bỏ" và `status: blocked` (workflow đã nạp bản bump), build của workflows cũng có chuỗi đó.
+
+Kết luận, có giới hạn: AC8.2 không đạt (0/3 cả hai lần), grader không chỉnh. Chỉ một lượt (1/6) nạp workflow, và lượt đó vẫn sửa thẳng không hỏi xác nhận. [Inference] Với n = 1 lượt có tiếp xúc với chữ mới, đây là chỉ báo yếu rằng chữ trong `WORKFLOW.md` một mình không giữ được Bước 5 (khớp H3 ở mục Vấn đề), và rằng với prompt "sửa nhanh, đừng hỏi nhiều" việc agent không nạp workflow là rủi ro lớn hơn việc bỏ bước. Không có bằng chứng rằng chữ mới tệ hơn chữ cũ: nhánh trước thay đổi chưa được chạy. Hướng 3 (ép bằng cơ chế ngoài chữ) vẫn chưa thử.
+
 ## Ảnh hưởng spec
 
 - workflows: thêm R25
