@@ -91,7 +91,7 @@ Walkthrough chạm vào một ứng dụng đang chạy nên giữ sáu luật s
 - Không đi theo OAuth hay chuyển hướng ra ngoài localhost.
 - Không tải file về máy.
 - Dữ liệu tạo mới có tiền tố riêng của lần kiểm.
-- Không sửa code hay cấu hình, không đọc file bí mật (`.env`, khoá, chứng chỉ).
+- Không sửa code hay cấu hình, không đọc file bí mật (`.env`, khoá, chứng chỉ); chặn/giả request ở tầng trình duyệt chỉ để dựng trạng thái loading hoặc lỗi, không giả phản hồi thành công.
 
 Ngoài ra:
 

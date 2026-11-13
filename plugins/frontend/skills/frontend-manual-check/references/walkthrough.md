@@ -46,7 +46,7 @@ Mỗi màn hình mà AC hoặc mockup nêu được chụp ở các trạng thá
 - Trạng thái không dựng được thì ghi SKIP-PRECOND kèm điều kiện thiếu, không gán PASS.
 - Cách gây trạng thái, theo thứ tự (không sửa mã nguồn hay cấu hình, L6):
   1. Dữ liệu seed nêu trong `## Điều kiện` của runbook (ví dụ tài khoản không có bản ghi nào để thấy trạng thái rỗng).
-  2. Dùng chặn hoặc giả request ở tầng trình duyệt: trả lỗi cho một request để thấy trạng thái lỗi, hoãn phản hồi để thấy loading. Tên công cụ thực hiện việc này `[Unverified]`, khác nhau giữa các bản cài. Đây là thao tác ở tầng trình duyệt trong chính phiên walkthrough, không đổi gì ở mã nguồn, cấu hình, mock server hay dữ liệu của ứng dụng, nên vẫn nằm trong L6. Hai cách trên đều không đủ thì SKIP-PRECOND.
+  2. Dùng chặn hoặc giả request ở tầng trình duyệt: trả lỗi cho một request để thấy trạng thái lỗi, hoãn phản hồi để thấy loading; không giả phản hồi thành công (L6). Tên công cụ thực hiện việc này `[Unverified]`, khác nhau giữa các bản cài. Đây là thao tác ở tầng trình duyệt trong chính phiên walkthrough, không đổi gì ở mã nguồn, cấu hình, mock server hay dữ liệu của ứng dụng, nên vẫn nằm trong L6. Hai cách trên đều không đủ thì SKIP-PRECOND.
 
 ## Focus và thông báo
 
@@ -67,7 +67,7 @@ Khi AC mô tả một thông báo lỗi hay thành công: kiểm thông báo có
 | L3 | Không đi theo OAuth hay chuyển hướng ra ngoài localhost | Bấm tới lúc URL sắp rời host local thì dừng, ghi URL đích (bỏ tham số nhạy cảm), quay lại. Bước đánh SKIP-SAFETY. |
 | L4 | Không tải file về máy | Không bấm xuất hoặc tải xuống. Kiểm tới mức nút có đúng trạng thái và request đúng phát đi khi runbook cho phép; phần còn lại SKIP-SAFETY. |
 | L5 | Dữ liệu tạo mới có tiền tố riêng | Mọi bản ghi tạo trong lần chạy mang tiền tố của runbook (ví dụ `manual-check-<ngày>-`). Liệt kê bản ghi đã tạo trong báo cáo để người dùng dọn. Không sửa hay xoá dữ liệu có sẵn không mang tiền tố. |
-| L6 | Không sửa code hay cấu hình, không đọc file bí mật | Walkthrough chỉ quan sát và thao tác qua UI, hoặc chặn/giả request ở tầng trình duyệt trong chính phiên walkthrough. Không sửa mã nguồn, cấu hình, biến môi trường; không mở `.env`, khoá, chứng chỉ, kho bí mật. Phát hiện lỗi thì báo cáo, không sửa. |
+| L6 | Không sửa code hay cấu hình, không đọc file bí mật | Walkthrough chỉ quan sát và thao tác qua UI, hoặc chặn/giả request ở tầng trình duyệt trong chính phiên walkthrough. Chặn/giả request chỉ để dựng trạng thái loading hoặc lỗi mà AC nêu, không giả phản hồi thành công; bước đã dùng request bị chặn/giả thì không gán PASS cho luồng dữ liệu thật và ghi rõ điều đó trong ghi chú của bước. Không sửa mã nguồn, cấu hình, biến môi trường; không mở `.env`, khoá, chứng chỉ, kho bí mật. Phát hiện lỗi thì báo cáo, không sửa. |
 
 Gặp tình huống ngoài sáu luật mà có thể gây hậu quả không đảo ngược hoặc ảnh hưởng người khác thì coi như SKIP-SAFETY và hỏi người dùng.
 
