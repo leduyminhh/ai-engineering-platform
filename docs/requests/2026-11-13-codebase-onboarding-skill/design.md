@@ -1,6 +1,6 @@
 # Thiết kế: skill `engineering-codebase-onboarding` (G7) quét project có sẵn, viết README từng module và `project-knowledge/`
 - Ngày: 2026-11-13
-- Trạng thái: draft
+- Trạng thái: approved — người dùng duyệt G1 ngày 2026-11-13
 - Requirement: không có (AC nằm trong file này; brief đã duyệt ở `brief.md` cùng thư mục)
 ## Vấn đề và lý do
 AIP chưa có skill nào đọc một project đã có code rồi viết tài liệu mô tả nó. `engineering-spec-backfill` ghi spec theo năng lực nghiệp vụ và chủ đích không đọc hết code; `engineering-repo-audit` xếp hạng rủi ro; các skill `*-init` điền `project-knowledge/` từ câu trả lời, không quét. Một phiên làm tay ở repo khác (monorepo 12 module Maven, micro-frontend React, tool Node/Python) đã chạy việc này với 6 subagent haiku và hỏng ở bốn chỗ: không có cổng duyệt danh sách module trước khi giao agent; `grep` của agent in dòng cấu hình có giá trị ra log phiên; không có checker máy cho trích dẫn; ba khẳng định trong brief hoá ra sai khi đối chiếu code (nguồn: `docs/specs/readme-scan-summary-and-aip-comparison.md` ở checkout chính, mục 4, 5 và 8; chưa có trong nhánh này).
