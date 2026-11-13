@@ -55,6 +55,7 @@ sửa sau khi chốt, từ chối so sánh. Cần đổi điều kiện thì qua
 - Độ lệch > ngưỡng → **cảnh báo, không kết luận**. Giảm nhiễu: tăng số lần lặp, tắt tiến trình nền nặng (IDE
   indexing, build khác), cắm sạc laptop và chọn power plan hiệu năng cao `[Unverified]`, đóng tab/extension
   chiếm CPU. Mọi thay đổi ghi vào bảng và áp **cho cả baseline lẫn lần đo sau**.
+- Median bằng 0 (hay gặp ở CLS và TBT khi không có long task) → độ lệch "không xác định": không cảnh báo P3 cho chỉ số đó, báo dãy thô.
 
 ## Mẫu bảng kết quả baseline vs sau
 

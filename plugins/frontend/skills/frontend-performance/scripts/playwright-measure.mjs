@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Script mẫu đo LCP, CLS và TBT xấp xỉ bằng Playwright trên bản build production phục vụ ở local.
 // Chép vào perf/<phía>/ của project (vd perf/frontend/measure.mjs): ESM resolve `playwright` theo vị trí file script, nên file phải nằm trong cây có node_modules.
-// Cách dùng: node perf/frontend/measure.mjs --url http://localhost:4173/ [--runs 5] [--out perf/frontend/results] [--cpu-slowdown 4] [--executable-path <chromium>]
-// Exit 0 đo xong, 2 sai đối số hoặc URL ngoài local, 3 không mở được trình duyệt (agent báo not_run).
+// Cách dùng: node perf/frontend/measure.mjs --url http://localhost:4173/ [--runs 5] [--out perf/frontend/results/playwright] [--cpu-slowdown 4] [--executable-path <chromium>]
+// Exit 0 đo xong, 1 lỗi đo khác (không nạp được gói, không lấy được LCP, redirect ra host ngoài trong lúc đo), 2 sai đối số hoặc URL đầu vào ngoài local, 3 không mở được trình duyệt (agent báo not_run).
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -19,7 +19,7 @@ export function assertLocalUrl(url) {
 }
 
 export function parseArgs(argv) {
-  const opts = { url: null, runs: 5, out: 'perf/frontend/results', cpuSlowdown: 4, executablePath: null };
+  const opts = { url: null, runs: 5, out: 'perf/frontend/results/playwright', cpuSlowdown: 4, executablePath: null };
   for (let i = 0; i < argv.length; i += 2) {
     const [flag, value] = [argv[i], argv[i + 1]];
     if (value === undefined) throw new Error(`thiếu giá trị cho ${flag}`);
@@ -63,7 +63,7 @@ async function loadChromium() {
       if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
     }
   }
-  throw new Error('không nạp được playwright hay @playwright/test; chép script vào cây thư mục của project đã khai Playwright (có node_modules ở thư mục cha)');
+  throw new Error('không nạp được playwright hay @playwright/test; chép script vào cây thư mục của project đã khai Playwright (node_modules ở thư mục chứa script hoặc thư mục tổ tiên)');
 }
 
 // Context mới mỗi lần để cache lạnh; PerformanceObserver gắn trước khi trang chạy để không mất entry sớm.
@@ -84,7 +84,7 @@ async function measureOnce(browser, url, cpuSlowdown) {
       watch('longtask', (e) => m.long.push([e.startTime, e.duration]));
     });
     await page.goto(url, { waitUntil: 'load' });
-    // App local có thể redirect ra host ngoài (vd đăng nhập OAuth); P1 phải giữ cả sau điều hướng.
+    // Chỉ kiểm một lần ngay sau điều hướng ban đầu (app local redirect ra host ngoài, vd OAuth); không chặn request con và không bắt redirect bằng JS về sau.
     assertLocalUrl(page.url());
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
@@ -139,6 +139,10 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// realpath vì chạy qua symlink/junction thì argv[1] là đường dẫn link còn import.meta.url là đường dẫn thật; so lệch sẽ thoát 0 im lặng, trái fail-loud.
+const invoked = (() => {
+  try { return !!process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href; } catch { return false; }
+})();
+if (invoked) {
   main().catch((e) => { console.error(`lỗi: ${e.message}`); process.exit(1); });
 }

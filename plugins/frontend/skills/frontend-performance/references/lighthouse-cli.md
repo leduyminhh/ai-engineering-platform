@@ -34,6 +34,8 @@ npx lighthouse http://localhost:4173/orders \
 # Lặp run-2, run-3 với cùng lệnh, chỉ đổi số trong --output-path (vẫn trong results/lighthouse/).
 ```
 
+Tạo thư mục trước khi chạy: `mkdir -p perf/frontend/results/lighthouse` (Windows PowerShell: `New-Item -ItemType Directory -Force perf/frontend/results/lighthouse`); `[Unverified]` chưa kiểm Lighthouse CLI có tự tạo thư mục trong `--output-path` không.
+
 - Cờ throttle (CPU slowdown, network) nếu đổi khỏi mặc định phải ghi nguyên văn vào hàng Thiết bị/throttle.
 - Host chỉ là `localhost`/`127.0.0.1`. URL ngoài (staging, production, site công khai) → từ chối, báo.
 - Luồng cần đăng nhập: dùng tài khoản test, token/cookie qua biến môi trường, chỉ nêu tên biến; Lighthouse CLI
@@ -58,11 +60,13 @@ const pick = (r) => ({
 const runs = files.map((f) => pick(JSON.parse(fs.readFileSync(f, 'utf8'))));
 const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 // Số lần chẵn: lấy phần tử trên giữa, không nội suy, để số báo cáo luôn là một giá trị đo thật.
-const spread = (xs) => (Math.max(...xs) - Math.min(...xs)) / median(xs);
+// Median bằng 0 (hay gặp ở CLS và TBT) thì độ lệch tương đối vô nghĩa: trả null thay vì Infinity hoặc NaN.
+const spread = (xs) => (median(xs) === 0 ? null : (Math.max(...xs) - Math.min(...xs)) / median(xs));
 
 for (const k of ['lcp', 'tbt', 'cls']) {
   const xs = runs.map((r) => r[k]);
-  console.log(k, 'median', median(xs), 'độ lệch', spread(xs).toFixed(3), 'thô', xs.join(', '));
+  const sp = spread(xs);
+  console.log(k, 'median', median(xs), 'độ lệch', sp === null ? 'không xác định' : sp.toFixed(3), 'thô', xs.join(', '));
 }
 ```
 

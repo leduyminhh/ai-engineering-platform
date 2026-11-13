@@ -16,7 +16,7 @@ component-based). Chạy MỘT LẦN khi bắt đầu project mới. CHỈ scaff
 skeleton, KHÔNG thuộc pipeline nào.
 
 ## Tiền đề
-- Project mới hoặc chưa có cấu trúc. Nếu đã tồn tại: KHÔNG ghi đè — báo lại.
+- Project mới hoặc chưa có cấu trúc. Nếu đã tồn tại: KHÔNG ghi đè — báo lại (trừ `.gitignore`, xem bước 2).
 - Mọi bối cảnh nằm trong FILE. Con người giữ 2 chốt: chọn phương án UX/IA + duyệt diff.
 
 ## Quy trình
@@ -34,10 +34,10 @@ Nếu project CHƯA có `AGENTS.md`: copy `AGENTS.template.md` (đi kèm skill) 
 có thì giữ nguyên.
 
 ### 2. `.gitignore` (ngoại lệ có chủ đích của "chỉ thêm file chưa có")
-Mục đích: artefact đo và build không lọt vào git. Chỉ thêm dòng còn thiếu; không sửa, không xoá dòng có sẵn.
-- Đã có `./.gitignore`: với mỗi dòng `.playwright-mcp/`, `perf/**/results/`, `dist/` chưa có nguyên văn trong file, thêm vào cuối file. Không thêm `node_modules/`.
+Mục đích: artefact đo và build không lọt vào git. Chỉ thêm dòng còn thiếu; không ghi đè, không sửa, không xoá dòng có sẵn.
+- Đã có `./.gitignore`: với mỗi dòng `.playwright-mcp/`, `perf/**/results/`, `dist/` chưa có nguyên văn trong file, thêm vào cuối file. Không thêm `node_modules/`. "Chưa có nguyên văn" = so khớp từng dòng đầy đủ sau khi trim khoảng trắng đầu/cuối. Dòng cuối của file không kết thúc bằng xuống dòng thì xuống dòng trước khi thêm.
 - Chưa có `./.gitignore`: tạo file với bốn dòng `.playwright-mcp/`, `perf/**/results/`, `dist/`, `node_modules/`.
-- Nếu cấu hình build của stack đã chọn ghi ra thư mục khác (ví dụ `.next/`): thêm dòng thư mục đó.
+- Nếu stack chốt ở bước 3 ghi build ra thư mục khác (ví dụ `.next/`): thêm dòng thư mục build đó sau khi chốt stack (chỉ thư mục output build, không phải `src/` hay thư mục chứa mã).
 - Không thêm dòng liên quan env hay secret.
 - Báo người dùng từng dòng đã thêm; nếu không thêm dòng nào thì báo đã đủ.
 
@@ -67,6 +67,6 @@ Mục đích: artefact đo và build không lọt vào git. Chỉ thêm dòng c�
 ## Ranh giới an toàn
 
 - Cấu trúc đã tồn tại → KHÔNG ghi đè, báo lại; khi copy `templates/` chỉ thêm file chưa có.
-- `.gitignore` là ngoại lệ có chủ đích: chỉ thêm dòng còn thiếu, không ghi đè và không xoá dòng có sẵn.
+- `.gitignore` là ngoại lệ có chủ đích của cả "chỉ thêm file chưa có" lẫn "chỉ scaffold tài liệu" (file cấu hình, không phải tài liệu hay code): chỉ thêm dòng còn thiếu, không ghi đè và không xoá dòng có sẵn. Khác `frontend-performance` (không tự sửa `.gitignore`, chỉ đề xuất): skill này chỉ chạy khi người dùng chủ động gọi.
 - CHỈ scaffold tài liệu: KHÔNG copy/sinh skeleton code, KHÔNG viết code thực thi.
 - Con người chốt phương án UX/IA và duyệt diff.

@@ -1,7 +1,7 @@
 # Thiết kế: Script đo hiệu năng frontend lưu trong `perf/` và `.gitignore` cho artefact đo
 
 - Ngày: 2026-11-13
-- Trạng thái: approved — người dùng duyệt G1 (requirement + design) 2026-11-13, chưa có plan
+- Trạng thái: approved — G1 và G2 đã duyệt, đang thực thi 2026-11-13
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
@@ -49,7 +49,7 @@ Chưa có quyết định nào được người dùng chốt; mọi lựa chọ
    điều kiện. Bước 6 từ chối so với baseline đo bằng công cụ khác hoặc cửa sổ khác (đã có nguyên tắc "điều kiện lệch →
    từ chối"). Không thêm hàng mới vào bảng điều kiện (bảng cũ không bị coi là thiếu hàng); chỉ điền thêm vào hàng "Công
    cụ + phiên bản", "Thiết bị/throttle" và mục văn xuôi "Chỉ số báo cáo".
-6. **Script ép P1 và P3 trong code:** từ chối host ngoài `localhost`/`127.0.0.1`/`[::1]`, từ chối `--runs` < 3, mỗi lần
+6. **Script kiểm P1 và P3 trong code:** kiểm URL đầu vào và URL sau điều hướng ban đầu là `localhost`/`127.0.0.1`/`[::1]` (request tài nguyên con không bị chặn, residual risk), từ chối `--runs` < 3, mỗi lần
    chạy dùng context trình duyệt mới (cache lạnh), throttle CPU qua CDP và ghi nguyên văn vào kết quả. Sửa sau spike
    (Task 1, người dùng duyệt 2026-11-13): throttle CPU mặc định 4× (`--cpu-slowdown 0` tắt; không throttle thì LCP vài
    chục ms nhiễu quá lớn, độ lệch 128% trên `dist` của trial); thêm **một lần warm-up không tính vào median** (lần
@@ -100,7 +100,7 @@ File đổi (kiểm lại ở plan):
 
 Luồng khi `measure` (project có Playwright, không có Lighthouse): chốt bảng điều kiện → chép script mẫu vào
 `perf/frontend/measure.mjs` → phục vụ bản build production → `node perf/frontend/measure.mjs --url http://localhost:4173/…
---runs 5 --out perf/frontend/results` → script in median, độ lệch, dãy thô và ghi JSON thô → report ghi lệnh nguyên văn.
+--runs 5 --out perf/frontend/results/playwright` → script in median, độ lệch, dãy thô và ghi JSON thô → report ghi lệnh nguyên văn.
 Bước 6 băm lại script, build + phục vụ lại, chạy lại đúng lệnh.
 
 ## Ảnh hưởng spec
@@ -167,6 +167,7 @@ skill-quality), không năng lực nào mô tả nội dung từng skill, và `d
   đo. Chấp nhận.
 - `frontend-init` có `disable-model-invocation: true` và chạy một lần ở project mới, nên bước `.gitignore` không cứu project
   đã có (như project trial); phần đó do AC3.2 của `frontend-performance` xử lý (báo + đề xuất dòng).
+- Hoãn sang G3 (chưa làm, residual risk): chặn request tài nguyên con và redirect bằng JS sau điều hướng ban đầu, giới hạn `--out` trong project, cận trên `--runs`, từ chối URL có userinfo, kiểm `--executable-path`. [Inference] Độ lệch (max − min) / median có thể không giảm khi tăng số lần đo (khoảng rộng của mẫu tăng theo cỡ mẫu), nên "tăng số lần lặp" của P3 không bảo đảm đưa độ lệch xuống dưới ngưỡng.
 - Câu hỏi mở cho G1: (1) chấp nhận quyết định 1 (Playwright dependency có sẵn = tool có sẵn) hay vẫn muốn hỏi trước mỗi
   lần? (2) Chấp nhận hướng B (có script mẫu + test) hay chỉ sửa chữ (hướng A)? (3) Cỡ: giữ dự án nhỏ gọn hay hạ xuống
   thay đổi nhỏ?

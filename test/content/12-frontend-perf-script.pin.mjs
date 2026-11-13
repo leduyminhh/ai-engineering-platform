@@ -9,7 +9,7 @@ export default async function run({ ok, ctx }) {
   ok([assertLocalUrl, parseArgs, median, spread, summarize].every((f) => typeof f === 'function'),
     'import script không cần Playwright và không mở trình duyệt');
 
-  const throws = (fn) =>{ try { fn(); return false; } catch { return true; } };
+  const throws = (fn) => { try { fn(); return false; } catch { return true; } };
 
   // AC1.3: P1 — chỉ host local, kể cả host lừa có tiền tố local.
   for (const [url, valid] of [
@@ -31,8 +31,8 @@ export default async function run({ ok, ctx }) {
     ok(throws(() => parseArgs([...base, '--runs', runs])) === !valid, `AC1.4 --runs ${runs} ${valid ? 'hợp lệ' : 'bị từ chối'}`);
   }
   const dflt = parseArgs(base);
-  ok(dflt.runs === 5 && dflt.cpuSlowdown === 4 && dflt.executablePath === null && dflt.out === 'perf/frontend/results',
-    'AC1.4 mặc định: runs 5, cpuSlowdown 4, executablePath null, out perf/frontend/results');
+  ok(dflt.runs === 5 && dflt.cpuSlowdown === 4 && dflt.executablePath === null && dflt.out === 'perf/frontend/results/playwright',
+    'AC1.4 mặc định: runs 5, cpuSlowdown 4, executablePath null, out perf/frontend/results/playwright');
   ok(parseArgs([...base, '--cpu-slowdown', '0']).cpuSlowdown === 0, 'AC1.4 --cpu-slowdown 0 tắt throttle');
 
   // AC1.5: median phần tử trên giữa, độ lệch (max − min) / median, null khi median bằng 0.
@@ -68,12 +68,23 @@ export default async function run({ ok, ctx }) {
   ok(mcText.includes('PerformanceObserver') && mcText.includes('xấp xỉ'),
     'AC2.1 measure-conditions.md: LCP/CLS bằng PerformanceObserver, TBT ghi xấp xỉ');
 
+  // AC1.5 (vận hành): median 0 cho độ lệch "không xác định", cả script summarize của Lighthouse lẫn quy tắc P3.
+  const lhText = perfRead('references/lighthouse-cli.md');
+  const lhSpread = lhText.slice(lhText.indexOf('const spread'), lhText.indexOf('```', lhText.indexOf('const spread')));
+  ok(lhSpread.includes('=== 0') && lhSpread.includes('null') && lhSpread.includes('không xác định'),
+    'AC1.5 lighthouse-cli.md: script summarize bắt median 0, trả null và in "không xác định"');
+  ok(mcText.includes('không xác định'), 'AC1.5 measure-conditions.md: P3 nêu độ lệch "không xác định" khi median 0');
+
   // Pin vận hành của frontend-init (AC4.1): bước .gitignore giữ đủ bốn dòng và quy tắc không ghi đè.
   const initText = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-init', 'SKILL.md'), 'utf8');
+  // Chỉ xét đoạn bước 2: các dòng này còn xuất hiện ở nơi khác trong file, pin toàn file sẽ xanh giả khi bước bị xoá.
+  const gitignoreStart = initText.indexOf('### 2.');
+  const gitignoreSection = initText.slice(gitignoreStart, initText.indexOf('### 3.', gitignoreStart));
+  ok(gitignoreStart >= 0 && gitignoreSection.includes('.gitignore'), 'AC4.1 frontend-init SKILL.md: có mục bước 2 về .gitignore');
   for (const line of ['.playwright-mcp/', 'perf/**/results/', 'dist/', 'node_modules/']) {
-    ok(initText.includes(line), `AC4.1 frontend-init SKILL.md: có dòng .gitignore ${line}`);
+    ok(gitignoreSection.includes(line), `AC4.1 frontend-init SKILL.md bước 2: có dòng .gitignore ${line}`);
   }
-  ok(initText.toLowerCase().includes('không ghi đè'), 'AC4.1 frontend-init SKILL.md: nêu "không ghi đè"');
+  ok(gitignoreSection.toLowerCase().includes('không ghi đè'), 'AC4.1 frontend-init SKILL.md bước 2: nêu "không ghi đè"');
   ok(initText.split('---')[1].includes('disable-model-invocation: true'),
     'AC4.1 frontend-init SKILL.md: frontmatter giữ disable-model-invocation: true');
 }
