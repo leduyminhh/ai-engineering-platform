@@ -1,7 +1,7 @@
 # Thiết kế: Gate của `workflow-bugfix` không bị bỏ khi bug "đã rõ" (N2)
 
 - Ngày: 2026-11-13
-- Trạng thái: approved — G1 duyệt 2026-11-13, chưa có plan
+- Trạng thái: approved — G1 và G2 duyệt 2026-11-13, đã thực thi, chờ G3
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
@@ -46,13 +46,13 @@ Hướng 1 được chọn vì lối nhanh (hướng 2) chỉ tiết kiệm ph�
 | Bước 5 `**Ràng buộc:**` | "Bug nhỏ, nguyên nhân thấy ngay từ `git show`/`git diff`, hoặc test đã đỏ sẵn đều không phải lý do bỏ hay gộp bước này: được trình ngắn (giả thuyết, chuỗi nhân quả, evidence) nhưng vẫn trình và hỏi." Cộng câu headless (xem dưới). | AC1.1, AC3.1 |
 | Bước 6 `**Ràng buộc:**` | "Bug phía FE giao `frontend-fixer`, phía BE giao `backend-fixer`, kể cả bản sửa một dòng. Không có công cụ giao agent: session chính đọc skill `frontend-fix`/`backend-fix` rồi tự sửa theo đó, ghi lý do vào Evidence." | AC2.1 |
 | Bước 9 `**Ràng buộc:**` | Câu headless, cùng nội dung như Bước 5. | AC3.1 |
-| Bảng `## Xử lý lỗi & rollback` | Một hàng: `Cấm: bỏ bước ⏸ hoặc Bước 8 vì bug "đã rõ"` → `Dừng, quay lại bước bị bỏ, không nhận kết quả; trình root cause và hỏi như thường`. | AC1.2 |
+| Bảng `## Xử lý lỗi & rollback` | Một hàng: `Cấm: bỏ bước ⏸ hoặc Bước 8 vì bug "đã rõ"` → `Dừng, quay lại bước bị bỏ, chạy bước đó như thường, không nhận kết quả`. | AC1.2 |
 
 Câu headless (đặt ở Bước 5 và Bước 9): "Không có công cụ hỏi có lựa chọn (`AskUserQuestion` không có, `ToolSearch` không nạp được, hoặc lời gọi không trả về câu trả lời của người dùng): in danh sách đánh số kèm lựa chọn khuyến nghị theo `ask-user.md` quy tắc 4, kết thúc lượt bằng `workflow_result` có `status: blocked` và câu hỏi ở `next_actions`; không sửa code hay commit tiếp; chỉ câu trả lời của người dùng ở lượt sau mở bước kế (thông báo hệ thống không tính)."
 
 Về contract: [Verified] `workflow_result` (`core/principles/workflow-output-contract.md` mục Result contract, và "Report cuối" của bugfix) không có trường `questions[]`; trường đó thuộc `agent_result` (dòng 44, 87 của contract). Quyết định của agent: đặt câu hỏi vào `next_actions` (mỗi câu một dòng), không thêm trường vào contract để khỏi đụng `core` và bump version ngoài phạm vi. Điều kiện "không có công cụ hỏi" gồm cả trường hợp công cụ có mặt mà không trả câu trả lời của người dùng, vì log trial chỉ cho thấy không có lượt gọi nào, không phân biệt được công cụ vắng hay không được dùng [Unverified].
 
-`plugins/frontend/skills/frontend-fix/SKILL.md`: chỉ sửa `description`, thêm trigger `"lỗi component hoặc hook React, test đỏ sẵn"` vào vế "Dùng khi" (hiện 449/500 ký tự). Cụm mang oracle ("test đỏ sẵn") để không mâu thuẫn vế "Không dùng khi chưa có oracle đỏ → workflow-bugfix". Không dùng cụm kiểu "đang ở trang 3 đổi bộ lọc thì …" như báo cáo gợi ý: đó là báo lỗi chưa có oracle, thuộc `workflow-bugfix`, đưa vào `frontend-fix` sẽ kéo prompt đi ngược vế "Không dùng khi" của chính nó.
+`plugins/frontend/skills/frontend-fix/SKILL.md`: chỉ sửa `description`, thêm trigger `"lỗi component hoặc hook React, test đỏ sẵn"` vào vế "Dùng khi" (hiện 449/500 ký tự; giới hạn có hiệu lực là mục tiêu 450 của `cli/lib/conventions.mjs` `DESCRIPTION_TARGET`, thêm thuần lên 489 nên phải rút gọn, xem Ruling ở Kết quả đo). Cụm mang oracle ("test đỏ sẵn") để không mâu thuẫn vế "Không dùng khi chưa có oracle đỏ → workflow-bugfix". Không dùng cụm kiểu "đang ở trang 3 đổi bộ lọc thì …" như báo cáo gợi ý: đó là báo lỗi chưa có oracle, thuộc `workflow-bugfix`, đưa vào `frontend-fix` sẽ kéo prompt đi ngược vế "Không dùng khi" của chính nó.
 
 Spec sống: `docs/specs/workflows/spec.md` chưa có R25; việc thêm R25 (và dòng lịch sử) là một task DOCS ở bước gộp của `plan-execution` trước khi kết thúc nhánh, chạy `check-request.mjs --base <nhánh gốc>` sau đó (W13). Không là AC.
 
@@ -62,7 +62,7 @@ Manifest: `workflows/.manifest.json` 3.16.2 → 3.16.3 và `plugins/frontend/.ma
 
 Chỉ làm khi người dùng chọn ở G1. Viết case (AC8.1) không tốn tiền model; chạy (AC8.2) cần duyệt trần chi phí riêng sau khi case xong, và builder không tự chạy.
 
-Case mới `evals/workflows/bugfix-clear-cause/` (`case.yaml`, `prompt.md`, `scaffold.sh`, `graders/*.md`), theo khuôn `evals/workflows/bugfix-routes/`: scaffold là service nhỏ có test đỏ và nguyên nhân một dòng; prompt nói nguyên nhân đã rõ và xin sửa nhanh; quyền `Read, Write, Edit, Glob, Grep, Skill` (không `Bash` vì Windows từ chối; không `Agent` [Unverified: chưa kiểm eval có cấp được `Agent`]). Grader `llm` kiểu `trace`: PASS chỉ khi lời cuối nêu root cause kèm `file:line` và xin xác nhận, và chưa có Edit/Write lên file production. Điều kiện "nêu root cause" là để một lần dừng sớm ở Bước 1 (không có `Bash` nên không chạy được build/test) không bị tính là PASS; prompt và scaffold nên đưa sẵn output test đỏ để agent không phải dừng ở Bước 1 [Inference: chưa thử, builder kiểm bằng một lượt chạy thử khi được duyệt chi phí]. Case này chỉ đo Bước 5, không đo nhánh hay `frontend-fixer` (cần `Bash` và `Agent`).
+Case mới `evals/workflows/bugfix-clear-cause/` (`case.yaml`, `prompt.md`, `scaffold.sh`, `graders/*.md`), theo khuôn `evals/workflows/bugfix-routes/`: scaffold là service nhỏ có test đỏ và nguyên nhân một dòng; prompt nói nguyên nhân đã rõ và xin sửa nhanh; quyền `Read, Write, Edit, Glob, Grep, Skill` (không `Bash` vì Windows từ chối; không cấp `Agent` trong `allowed_tools`; init của trace cho thấy session có `Task` nên quyền thật của nó chưa kiểm [Unverified]). Grader `llm` kiểu `trace`: PASS chỉ khi lời cuối nêu root cause kèm `file:line` và xin xác nhận, và chưa có Edit/Write lên file production. Điều kiện "nêu root cause" là để một lần dừng sớm ở Bước 1 (không có `Bash` nên không chạy được build/test) không bị tính là PASS; prompt và scaffold nên đưa sẵn output test đỏ để agent không phải dừng ở Bước 1 [Inference: chưa thử, builder kiểm bằng một lượt chạy thử khi được duyệt chi phí]. Case này chỉ đo Bước 5, không đo nhánh hay `frontend-fixer` (cần `Bash` và `Agent`).
 
 Để so trước/sau cần hai lần chạy (build trước và sau thay đổi), vì `eval-run` so nhánh có plugin với nhánh không plugin, không so hai bản chữ. [Unverified] Chi phí chưa có số đo cho case này; trial ghi lượt bugfix thật $0,29 cho một lượt, nên ước 2 nhánh × 3 lượt × 2 bản [Inference] vào cỡ vài USD; đề xuất trần `--max-cost-usd 5` cho mỗi lần chạy, người dùng chốt.
 
@@ -89,7 +89,7 @@ const m = measure({ docs: d2, data });
 console.log(m.positive.pct, m.negative.pct);
 ```
 
-Giới hạn: [Inference] thước là TF-IDF tất định trên câu mẫu do repo tự viết, không phải model thật; mức tăng 69 → 71 không chứng tỏ routing thật tốt hơn. Giữ cụm thứ tư vì tốt nhất trong bốn cụm thử và không làm tụt negative; số cuối đo lại ở bước plan trên `description` thật.
+Giới hạn: [Inference] thước là TF-IDF tất định trên câu mẫu do repo tự viết, không phải model thật; mức tăng 69 → 71 không chứng tỏ routing thật tốt hơn. Giữ cụm thứ tư vì tốt nhất trong bốn cụm thử và không làm tụt negative; số cuối đo lại ở bước plan trên `description` thật. Bản chốt (rút gọn còn 450 ký tự, Ruling của Task 3) đo được 70/94 với 5 miss liên quan `frontend-fix`: positive của chính nó còn 2 miss nhưng prompt của skill khác bị hút sang nó tăng từ 1 lên 3 (`backend-fix`, `frontend-testing`, `git-workflow`, theo review cuối); tổng vẫn qua khoá.
 
 ### Kết quả đo (eval AC8.2, lần 1, 2026-11-13)
 
@@ -116,6 +116,8 @@ Cùng lệnh, cùng build, chỉ đổi `prompt.md` (commit `f093fee8`; không n
 Trace (chuỗi công cụ): nhánh có plugin lượt 1 `Skill:workflows:workflow-bugfix` → `Read` ×3, `Grep`, `Read` → `Edit` `src/discount.js`; lượt 2 và 3 `Read` ×3 → `Edit`, không nạp skill. Ba lượt không plugin: `Read` ×3 → `Edit`. Cả sáu lượt lời cuối nói đã sửa và chưa chạy test (không có shell), không lượt nào hỏi xác nhận trước khi sửa. [Verified] trace của lượt 1 có plugin chứa chuỗi mới "không phải lý do bỏ" và `status: blocked` (workflow đã nạp bản bump), build của workflows cũng có chuỗi đó.
 
 Kết luận, có giới hạn: AC8.2 không đạt (0/3 cả hai lần), grader không chỉnh. Chỉ một lượt (1/6) nạp workflow, và lượt đó vẫn sửa thẳng không hỏi xác nhận. [Inference] Với n = 1 lượt có tiếp xúc với chữ mới, đây là chỉ báo yếu rằng chữ trong `WORKFLOW.md` một mình không giữ được Bước 5 (khớp H3 ở mục Vấn đề), và rằng với prompt "sửa nhanh, đừng hỏi nhiều" việc agent không nạp workflow là rủi ro lớn hơn việc bỏ bước. Không có bằng chứng rằng chữ mới tệ hơn chữ cũ: nhánh trước thay đổi chưa được chạy. Hướng 3 (ép bằng cơ chế ngoài chữ) vẫn chưa thử.
+
+Hai yếu tố gây nhiễu (review cuối): (1) lượt duy nhất nạp workflow cũng bỏ Bước 1 (không gọi `plan-execution`, không dừng vì thiếu `Bash`), nên chỗ hỏng không riêng ở chữ Bước 5; (2) prompt có "đừng hỏi nhiều", và theo `AGENTS.md` mục Priority yêu cầu của người dùng đứng trên chỉ dẫn skill, nên một lượt không hỏi xác nhận có thể là làm theo thứ tự ưu tiên chứ không phải bỏ qua chữ. Hai điểm không đổi kết quả hiện tại (cả sáu lượt đều `Edit` thẳng) nhưng làm yếu việc đọc kết quả của các lần chạy sau; Ruling của ledger gọi 0/3 là "kết luận" mạnh hơn đoạn này, đoạn này (chỉ báo yếu, n = 1) là bản đúng.
 
 ## Ảnh hưởng spec
 
