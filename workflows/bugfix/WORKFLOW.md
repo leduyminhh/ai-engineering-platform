@@ -64,7 +64,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 - **Thực hiện:** agent `backend-test-writer` ∥ agent `frontend-test-writer` (chỉ phía có lỗi theo Bước 2)
 - **Đầu vào:** mô tả "mong đợi vs thực tế" từ Bước 2
-- **Hành động:** viết failing test tái hiện đúng bug (đỏ đúng lý do bug, không đỏ vì lỗi viết test). Trước khi
+- **Hành động:** trước khi dispatch, session chính kiểm nhánh hiện tại: thuộc `main`, `master`, `dev` hoặc `develop` thì tạo nhánh `bugfix/<slug>` qua `core:git-workflow`, nhánh khác dùng tiếp; không tạo được nhánh (không có repo, git lỗi) thì dừng `blocked` kèm lý do, không sửa trên nhánh được bảo vệ; cây có thay đổi chưa commit không chặn (tạo nhánh mang theo thay đổi đó). Rồi viết failing test tái hiện đúng bug (đỏ đúng lý do bug, không đỏ vì lỗi viết test); đã có test đỏ sẵn gắn với bug (người dùng nêu, hoặc baseline Bước 1 có test đỏ trong vùng bug) thì session chính chạy lại test đó, đỏ đúng lý do bug thì ghi lệnh + output vào Evidence và không dispatch test-writer, đỏ vì lý do khác thì dispatch như thường. Trước khi
   chấp nhận tái hiện thủ công, phải thử viết script hoặc test tự động ít nhất một lần; tái hiện thủ công là
   phương án cuối, ghi lý do không viết được script/test cùng evidence quan sát được.
 - **Ràng buộc:** không sửa code production ở bước này; không viết test phụ thuộc thứ tự/thời gian thực/mạng
@@ -78,7 +78,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Khi fail:** không tái hiện được bug → quay lại Bước 2 làm rõ thêm bối cảnh, hoặc hỏi người dùng bước tái
   hiện chính xác hơn.
 - **Evidence:** lệnh chạy test + output đỏ đúng lý do bug, hoặc log/screenshot bước tái hiện thủ công; danh
-  sách file thay đổi hoặc mới trong bước so với trạng thái đầu bước.
+  sách file thay đổi hoặc mới trong bước so với trạng thái đầu bước; tên nhánh đang làm việc.
 
 ### Bước 4 — Thu evidence
 
