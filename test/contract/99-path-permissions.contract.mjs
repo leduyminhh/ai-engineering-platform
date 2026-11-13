@@ -335,7 +335,8 @@ export default async function run({ ok, ctx }) {
     // hook-ps-write-flags: cờ có giá trị đứng trước đường dẫn của Set-Content/Out-File/Add-Content không được làm mất đích thật.
     const psw = (ac, rows, opt = { tool: 'PowerShell' }) => expectAll(rows.map(([c, want]) => [c, want, `ps-write-flags ${ac}`]), opt);
     const flagged = ['Set-Content -Encoding utf8 X/x -Value y', 'Out-File -Encoding utf8 X/x', 'Add-Content -Value y X/x', 'Set-Content -ErrorAction Stop X/a x', 'Set-Content -ea Stop X/x y',
-      'Set-Content -Encoding:utf8 X/x y', 'Out-File -Append -Encoding utf8 X/x', 'Out-File -Width 80 X/x', 'Set-Content -Stream s X/x y', 'Set-Content -Include a X/x y', 'Set-Content -Force X/x y'];
+      'Set-Content -Encoding:utf8 X/x y', 'Out-File -Append -Encoding utf8 X/x', 'Out-File -Width 80 X/x', 'Set-Content -Stream s X/x y', 'Set-Content -Include a X/x y', 'Set-Content -Force X/x y',
+      'Set-Content -Value: y X/x', 'Set-Content -Encoding: utf8 X/x y', 'Set-Content -Force: $false X/x y'];
     psw('AC1.1', [[OUT, 'deny'], [D, 'deny'], [O, null], [T, null]].flatMap(([dir, want]) => flagged.map((c) => [c.replace('X/', `${dir}/`), want])));
     psw('AC1.2', [
       ...[`Set-Content ${O}/x ${OUT}/y`, `Out-File ${O}/x utf8`, `Set-Content -Path ${O}/x ${OUT}/y`, `Set-Content -FilePath:${O}/x ${OUT}/y`, `Set-Content -Value ${OUT}/y ${O}/x`,

@@ -381,8 +381,10 @@ function writeTargets(t, msys = true) {
       if (pv) { if (!pv[4]) i++; continue; }
       if (FIRST_ONLY.has(name) && /^-[A-Za-z]/.test(a)) {
         const f = a.slice(1).split(':', 1)[0].toLowerCase();
-        if (PS_WRITE_VALUE.has(f)) { if (!a.includes(':')) i++; continue; }
-        if (!PS_WRITE_SWITCH.has(f)) unknownFlag = true;
+        const takesValue = PS_WRITE_VALUE.has(f);
+        // `-Value: y` (dấu `:` cuối cờ) buộc đối số kế vào tham số, kể cả công tắc; `-Value:y` thì giá trị đã dính vào cờ.
+        if (takesValue || PS_WRITE_SWITCH.has(f)) { if (a.endsWith(':') || (takesValue && !a.includes(':'))) i++; continue; }
+        unknownFlag = true;
         continue;
       }
       // PowerShell chấp nhận viết tắt tham số (`-Dest`, `-Pa`) nên cờ lạ có thể đã gắn đối số vị trí vào -Path của nguồn.
@@ -412,7 +414,7 @@ function writeTargets(t, msys = true) {
     if (SKIP_FIRST.has(name)) pos = pos.slice(1);
     const all = pos;
     const copyLike = LAST_ONLY.has(name);
-    // Set-Content/Out-File/Add-Content: chỉ đối số vị trí đầu là Path; đã gọi tên -Path thì mọi đối số vị trí là Value/Encoding. Có cờ lạ thì không biết đối số nào là Path nên kiểm hết.
+    // Set-Content/Out-File/Add-Content: chỉ đối số vị trí đầu là Path (đã gọi tên -Path thì không có); cờ lạ thì không biết đối số nào là Path nên kiểm hết.
     // allPos giữ mọi đối số cho kiểm cấu hình hook.
     allPos = copyLike ? all.slice(-1) : all;
     pos = FIRST_ONLY.has(name) ? (unknownFlag ? all : namedPath ? [] : all.slice(0, 1)) : all;
