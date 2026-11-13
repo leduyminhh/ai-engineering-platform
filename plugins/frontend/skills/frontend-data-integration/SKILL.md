@@ -91,9 +91,9 @@ project, kết luận) vào ADR của công cụ; không có ADR cho công cụ 
 Chưa có codegen → đề xuất `openapi-typescript` (chỉ sinh type, giữ hook viết mỏng theo template; hành vi công cụ chưa
 kiểm bằng lệnh gắn `[Unverified]`) và HỎI. DỪNG chờ người dùng chọn; chưa được cài gì trước khi có câu trả lời.
 
-**Đỏ khi:** peer hoặc `engines` của công cụ xung đột với TypeScript/Node của project → dừng, trình phương án (ghim bằng
-`npx`, đổi công cụ hoặc phiên bản) cho người dùng chọn, chưa Accepted ADR trước khi họ chọn; thư viện data mới → cần ADR
-trước khi dùng.
+**Đỏ khi:** peer hoặc `engines` của công cụ xung đột với TypeScript/Node của project → dừng, không cài, trình phương án (ghim
+bằng `npx`, đổi công cụ hoặc phiên bản) cho người dùng chọn, chưa đặt ADR ở trạng thái Accepted trước khi họ chọn; thư
+viện data mới → cần ADR trước khi dùng.
 
 ### I3. Không viết tay
 

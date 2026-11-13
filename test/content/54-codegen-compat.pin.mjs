@@ -17,8 +17,8 @@ export default async function run({ ok, ctx }) {
   const proposeAt = i2.search(/Chưa\s+có\s+codegen/);
   ok(proposeAt >= 0 && i2.indexOf('npm view') >= 0 && i2.indexOf('npm view') < proposeAt,
     'AC1.1: bước đọc peerDependencies đứng trước câu "Chưa có codegen → đề xuất"');
-  ok(i2.includes('contract-and-codegen.md') && i2.includes('design.md'),
-    'AC1.1: I2 trỏ reference và nêu nơi ghi kết quả khi không có ADR (design.md)');
+  ok(i2.includes('contract-and-codegen.md') && i2.includes('design.md') && i2.includes('ADR'),
+    'AC1.1: I2 trỏ reference và nêu nơi ghi kết quả (ADR hoặc design.md khi không có ADR)');
 
   const redLines = i2.split('\n').filter((l) => l.startsWith('**Đỏ khi:**'));
   ok(redLines.length === 1 && redLines[0].includes('xung đột'),
@@ -32,6 +32,7 @@ export default async function run({ ok, ctx }) {
   ok(ref.includes('npx --yes -p typescript@') && ref.includes('x.y.z'),
     'AC2.2: reference nêu cách ghim npx với phiên bản đủ x.y.z');
   const scriptLine = ref.split('\n').find((l) => l.includes('"api:types"')) ?? '';
-  ok(scriptLine.includes('openapi-typescript@'), 'AC2.2: script api:types ghim phiên bản openapi-typescript');
+  ok(/openapi-typescript@(<x\.y\.z>|\d+\.\d+\.\d+)(\s|")/.test(scriptLine),
+    'AC2.2: script api:types ghim openapi-typescript@<x.y.z> (đủ ba số, không @latest/@^7)');
   ok(ref.includes('https://openapi-ts.dev'), 'AC2.2: reference giữ link nguồn https://openapi-ts.dev');
 }
