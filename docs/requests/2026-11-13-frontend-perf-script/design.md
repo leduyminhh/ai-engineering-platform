@@ -1,7 +1,7 @@
 # Thiết kế: Script đo hiệu năng frontend lưu trong `perf/` và `.gitignore` cho artefact đo
 
 - Ngày: 2026-11-13
-- Trạng thái: draft — chờ duyệt G1
+- Trạng thái: approved — người dùng duyệt G1 (requirement + design) 2026-11-13, chưa có plan
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
