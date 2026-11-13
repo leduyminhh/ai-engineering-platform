@@ -123,6 +123,12 @@ export default async function run({ ok, ctx }) {
     const single = inv.inventoryModules(mk({ 'settings.gradle': "rootProject.name = 'x'\n", 'src/main/java/A.java': 'a\n' }));
     ok(single.modules.length === 1 && single.modules[0].kind === 'gradle' && single.modules[0].sourceFiles === 1 && single.notes.length === 0,
       'AC2.2: settings.gradle không có include là một module gradle, không báo stack lạ');
+    const dyn = inv.inventoryModules(mk({
+      'settings.gradle.kts': 'include(*listOf("a", "b").toTypedArray())\n',
+      'a/src/A.kt': 'a\n', 'b/src/B.kt': 'b\n',
+    }));
+    ok(!dyn.modules.some((x) => x.path === '.') && dyn.notes.some((x) => x.includes('include động')),
+      'AC2.2: include Gradle động không biến gốc thành module và có ghi chú kiểm kê tay');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }

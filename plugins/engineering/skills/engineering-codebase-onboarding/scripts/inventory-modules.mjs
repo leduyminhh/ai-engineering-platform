@@ -67,6 +67,8 @@ export function inventoryModules(root) {
   const has = new Set(files);
   const notes = [];
   const found = []; // { path, kind, buildFile, id, deps (tên), aggregator }
+  // build.gradle đứng riêng chỉ nhận khi repo không có settings.gradle; có settings thì module do include khai báo.
+  const hasSettings = files.some((f) => /(^|\/)settings\.gradle(\.kts)?$/.test(f));
 
   for (const f of files) {
     const base = path.posix.basename(f);
@@ -77,17 +79,20 @@ export function inventoryModules(root) {
       const hasPnpm = has.has(dir === '.' ? 'pnpm-workspace.yaml' : `${dir}/pnpm-workspace.yaml`);
       found.push({ path: dir, kind: 'npm', buildFile: f, ...npmInfo(read(root, f), hasPnpm) });
     } else if (/^settings\.gradle(\.kts)?$/.test(base)) {
-      const names = [...read(root, f).matchAll(/include\s*\(?\s*((?:['"][^'"]+['"]\s*,?\s*)+)/g)]
+      const text = read(root, f);
+      const names = [...text.matchAll(/include\s*\(?\s*((?:['"][^'"]+['"]\s*,?\s*)+)/g)]
         .flatMap((m) => [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]));
+      const dynamicInclude = names.length === 0 && /\binclude\b/.test(text);
+      if (dynamicInclude) notes.push(`${f}: include động (không phải danh sách chuỗi), không đọc được module con; kiểm kê tay ở cổng 1.`);
       for (const n of names) {
         const rel = n.replace(/^:/, '').split(':').join('/');
         const p = dir === '.' ? rel : `${dir}/${rel}`;
         const bf = ['build.gradle', 'build.gradle.kts'].map((b) => `${p}/${b}`).find((b) => has.has(b)) || f;
         found.push({ path: p, kind: 'gradle', buildFile: bf, id: path.posix.basename(p), deps: [], aggregator: false });
       }
-      // settings không có include là project Gradle một module, không phải aggregator.
-      found.push({ path: dir, kind: 'gradle', buildFile: f, id: null, deps: [], aggregator: names.length > 0 });
-    } else if (/^build\.gradle(\.kts)?$/.test(base)) {
+      // settings không có include nào là project Gradle một module; include động vẫn là aggregator để không gộp file của module con vào gốc.
+      found.push({ path: dir, kind: 'gradle', buildFile: f, id: null, deps: [], aggregator: names.length > 0 || dynamicInclude });
+    } else if (/^build\.gradle(\.kts)?$/.test(base) && !hasSettings) {
       found.push({ path: dir, kind: 'gradle', buildFile: f, id: null, deps: [], aggregator: false });
     } else if (['pyproject.toml', 'setup.py', 'requirements.txt'].includes(base)) {
       found.push({ path: dir, kind: 'python', buildFile: f, id: path.posix.basename(dir === '.' ? path.basename(root) : dir), deps: [], aggregator: false });
