@@ -42,6 +42,9 @@ npx lighthouse http://localhost:4173/orders \
 ## Script Node lấy median từ JSON
 
 `perf/frontend/summarize.mjs` đọc các file `perf/frontend/results/run-*.json`. Tên audit `[Unverified]` theo phiên bản Lighthouse.
+Script này chỉ đọc JSON của Lighthouse (`r.audits`); JSON của script Playwright không có trường đó và làm script lỗi. Script
+Playwright tự in median và độ lệch, không cần summarize. Khi dùng cả hai công cụ, mỗi công cụ một thư mục con: Lighthouse
+ở `perf/frontend/results/lighthouse/` (đổi `--output-path`), Playwright ở `perf/frontend/results/playwright/`.
 
 ```js
 import fs from 'node:fs';
