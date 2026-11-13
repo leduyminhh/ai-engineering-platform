@@ -26,9 +26,9 @@ Không thấy route trong code đã đọc: ghi đúng một dòng "Không thấ
 ## Cấu hình
 Chỉ tên khoá, không giá trị.
 
-| Tên khoá | File | Dòng | Ghi chú |
-|---|---|---|---|
-| `<tên-khoá>` | `<file>` | `<n>` | <dùng ở đâu, nếu thấy> |
+| Tên khoá | Bằng chứng | Ghi chú |
+|---|---|---|
+| `<tên-khoá>` | `<file:line>` | <dùng ở đâu, nếu thấy> |
 
 Giá trị không ghi trong tài liệu này. Muốn biết giá trị, xem file cấu hình trong môi trường chạy.
 
@@ -109,6 +109,6 @@ Cổng 1 đã chọn một trong các lựa chọn. Không ghi đè file có s�
   ...nội dung do skill ghi...
   <!-- aip:onboarding end -->
   ```
-  Chỉ thay phần giữa hai marker, giữ nguyên hai dòng marker. Chưa có cặp marker: thêm khối vào cuối file, không sửa phần trên. Có begin mà thiếu end, hoặc có nhiều cặp: dừng, báo `blocked`, không ghi.
+  Chỉ thay phần giữa hai marker, giữ nguyên hai dòng marker. Chưa có cặp marker (không có begin lẫn end): thêm khối vào cuối file, không sửa phần trên. Chỉ có begin mà thiếu end, chỉ có end mà thiếu begin, hoặc có nhiều hơn một cặp: dừng, báo `blocked`, không ghi.
 - Bỏ: không tạo file này trong lần chạy. File có sẵn không bị sửa hay xoá.
 - `tech-stack.yml` chỉ có giữ hoặc bỏ. Không dùng marker vì nối khối vào YAML có sẵn gây trùng khoá cấp một.
