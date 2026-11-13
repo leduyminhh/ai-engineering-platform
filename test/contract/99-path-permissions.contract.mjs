@@ -296,7 +296,15 @@ export default async function run({ ok, ctx }) {
       ...[`rm ${T}/.?/d/f`, `rm ${T}/..*/d/f`, `rm ${T}/.[.]/d/f`, `rm ${T}/.*/d/f`, `rm ${T}/.*`, `cp x ${T}/.?/f`].map((c) => [c, 'ask', 'AC4.1']),
       ...[`rm ${T}/.[!.]*/f`, `rm ${T}/.git*/f`, `rm ${T}/*/d/f`, `rm ${T}/a?/f`, `rm ${T}/.?x/f`].map((c) => [c, null, 'AC4.1']),
       [`rm ${O}/*`, 'deny', 'AC4.1'],
+      // Lớp ký tự POSIX khớp `..` trên dash; biến trong đoạn glob hoặc sau nó có thể là `.`/`..`.
+      ...[`rm ${T}/.[[:punct:]]/d/f`, `rm ${T}/.[![:alpha:]]/d/f`, `rm ${T}/.[[=.=]]/d/f`, `X=.; rm ${T}/$X?/d/f`, `X=.; rm ${T}/$X*/d/f`, `rm ${T}/*/$X/f`].map((c) => [c, 'ask', 'AC4.1']),
+      // Thư mục trước đoạn glob đã thiếu quyền thì vẫn deny như trước, không hạ xuống ask.
+      ...[`rm ${O}/.*`, `rm ${OUT}/.*`, `rm ${O}/.?/d/f`].map((c) => [c, 'deny', 'AC4.1']),
     ]);
+    // Dãy `*` dài kết thúc bằng ký tự thường không được làm regex backtrack bậc hai.
+    const tGlob = performance.now();
+    bd(`rm ${T}/.${'*'.repeat(10000)}x/d/f`);
+    ok(performance.now() - tGlob < 1000, 'AC4.1: đoạn glob 10k dấu * chạy dưới 1s');
     // Token cờ gộp dài kết thúc bằng xuống dòng không được làm regex chạy bậc hai.
     const t0 = performance.now();
     bd(`cp "-${'t'.repeat(50000)}\n" x`);
