@@ -23,6 +23,10 @@ export default async function run({ ok, ctx }) {
     for (const needle of needles) ok(text.includes(needle), `${ac}: bugfix Bước ${n} ${name} có "${needle}"`);
   }
 
+  const fixDesc = ctx.plugins.find((p) => p.id === 'frontend')?.stages.find((s) => s.id === 'frontend-fix')?.description ?? '';
+  ok(fixDesc.length > 0 && fixDesc.length <= 500 && fixDesc.includes('Không dùng khi chưa có oracle đỏ → workflow-bugfix'),
+    `AC6.1: description của frontend-fix ≤ 500 ký tự (có ${fixDesc.length}) và giữ vế "Không dùng khi chưa có oracle đỏ → workflow-bugfix"`);
+
   const rows = (wf?.body ?? '').split('\n').filter((l) => l.startsWith('| Cấm: bỏ bước ⏸ hoặc Bước 8'));
   ok(rows.length === 1, `AC1.2: bảng lỗi có đúng một hàng "Cấm: bỏ bước ⏸ hoặc Bước 8" (có ${rows.length})`);
 }
