@@ -27,6 +27,13 @@ export default async function run({ ok, ctx }) {
   ok(fixDesc.length > 0 && fixDesc.length <= 500 && fixDesc.includes('Không dùng khi chưa có oracle đỏ → workflow-bugfix'),
     `AC6.1: description của frontend-fix ≤ 500 ký tự (có ${fixDesc.length}) và giữ vế "Không dùng khi chưa có oracle đỏ → workflow-bugfix"`);
 
+  const { fs, path, REPO_ROOT } = ctx;
+  const caseDir = path.join(REPO_ROOT, 'evals', 'workflows', 'bugfix-clear-cause');
+  const graderDir = path.join(caseDir, 'graders');
+  const graders = fs.existsSync(graderDir) ? fs.readdirSync(graderDir).map((f) => fs.readFileSync(path.join(graderDir, f), 'utf8')) : [];
+  ok(fs.existsSync(path.join(caseDir, 'prompt.md')) && graders.some((g) => /^type: llm$/m.test(g) && g.includes('root cause')),
+    'AC8.1: case evals/workflows/bugfix-clear-cause có prompt.md và grader llm nhắc root cause');
+
   const rows = (wf?.body ?? '').split('\n').filter((l) => l.startsWith('| Cấm: bỏ bước ⏸ hoặc Bước 8'));
   ok(rows.length === 1, `AC1.2: bảng lỗi có đúng một hàng "Cấm: bỏ bước ⏸ hoặc Bước 8" (có ${rows.length})`);
 }
