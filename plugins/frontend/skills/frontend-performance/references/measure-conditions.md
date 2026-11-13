@@ -20,10 +20,10 @@ Không để trống, không ghi "như cũ".
 | Route/luồng | URL path trên localhost (vd `/orders`) hoặc chuỗi thao tác; dữ liệu mock/seed dùng | Tài khoản test qua biến môi trường, chỉ nêu tên biến; cấm staging/production (P1) |
 | Build | commit SHA + `git diff --name-only` của working tree | Bước 6: diff code production chỉ gồm file của Bước 5; file ở hàng Config tool đo được phép |
 | Phục vụ bản build | lệnh nguyên văn + port + ai start (agent hay người dùng) | Bước 6 build + phục vụ lại bằng đúng lệnh này; xem `serve-production-build.md` |
-| Thiết bị/throttle | preset Lighthouse (mobile mặc định hoặc desktop) + CPU slowdown + network throttle | Ghi cờ nguyên văn; giữ nguyên cho cả baseline lẫn lần đo sau |
+| Thiết bị/throttle | preset Lighthouse (mobile mặc định hoặc desktop) + CPU slowdown + network throttle; script Playwright: CPU slowdown nguyên văn (`--cpu-slowdown`, script mặc định 4×) hoặc không throttle | Ghi cờ nguyên văn; giữ nguyên cho cả baseline lẫn lần đo sau |
 | Cache | lạnh (Chrome profile mới mỗi lần) hoặc ấm (có lần nạp trước) | Lighthouse CLI mặc định mỗi lần là profile sạch `[Unverified]` |
-| Số lần lặp | ≥ 3 | Mỗi lần chạy lại từ cùng trạng thái cache |
-| Công cụ + phiên bản | Lighthouse, Chrome, Node + phiên bản thật (lệnh in version) | Không ghi phiên bản đoán; lấy từ output lệnh |
+| Số lần lặp | ≥ 3 (script Playwright: một lần warm-up không tính vào median) | Mỗi lần chạy lại từ cùng trạng thái cache |
+| Công cụ + phiên bản | Lighthouse, Chrome, Node + phiên bản thật (lệnh in version). Nhánh Playwright: Playwright + Chromium lấy từ dòng `công cụ:` script in ra; cửa sổ đo `load` → `networkidle` → 1000 ms lặng; output thô vào `perf/<phía>/results/` | Không ghi phiên bản đoán; lấy từ output lệnh. Chromium cài sẵn lệch bản Playwright → `--executable-path` trỏ vào bản đó |
 | Ngưỡng độ lệch | 10% giữa các lần (mặc định) cho median LCP/TBT | Project ghi đè tại đây nếu máy nhiễu hơn/ít hơn |
 | Config tool đo | file config ngoài `perf/`/`bench/` người dùng đã duyệt được đổi (vd `package.json` script đo, `.gitignore`); không có → ghi "không có" | Gate diff Bước 3/4/6 so với danh sách này; file ngoài danh sách → revert, không nhận |
 
@@ -42,6 +42,8 @@ sửa sau khi chốt, từ chối so sánh. Cần đổi điều kiện thì qua
   timespan/user-flow có thể ghi INP lab, ngoài phạm vi recipe. Số báo cáo là TBT, không phải INP.
 - **Kích thước bundle:** tổng + chunk lớn nhất, đọc từ output build (`bundle-analysis.md`). Chỉ số xác định, so
   trực tiếp, không cần tính độ lệch.
+- **Nhánh Playwright (script mẫu):** LCP và CLS đo bằng `PerformanceObserver`; TBT là số xấp xỉ (tổng phần vượt 50 ms
+  của long task bắt đầu sau FCP), không phải số Lighthouse. Bước 6 chỉ so với baseline cùng công cụ và cùng cửa sổ đo.
 
 ## Độ lệch giữa các lần (P3)
 

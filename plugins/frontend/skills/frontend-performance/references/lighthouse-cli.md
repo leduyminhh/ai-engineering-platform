@@ -28,7 +28,7 @@ Lighthouse trong file này chưa được đối chiếu với tài liệu chín
 ```bash
 # [Unverified] cờ --output, --output-path, --only-categories, --preset, --chrome-flags; kiểm theo phiên bản thật
 npx lighthouse http://localhost:4173/orders \
-  --output=json --output-path=perf/frontend/run-1.json \
+  --output=json --output-path=perf/frontend/results/run-1.json \
   --only-categories=performance --chrome-flags="--headless"
 # Desktop: thêm --preset=desktop [Unverified]; bỏ cờ này thì dùng cấu hình mobile mặc định.
 # Lặp run-2, run-3 với cùng lệnh, chỉ đổi --output-path.
@@ -41,7 +41,7 @@ npx lighthouse http://localhost:4173/orders \
 
 ## Script Node lấy median từ JSON
 
-`perf/frontend/summarize.mjs` đọc các file `run-*.json`. Tên audit `[Unverified]` theo phiên bản Lighthouse.
+`perf/frontend/summarize.mjs` đọc các file `perf/frontend/results/run-*.json`. Tên audit `[Unverified]` theo phiên bản Lighthouse.
 
 ```js
 import fs from 'node:fs';
@@ -64,7 +64,7 @@ for (const k of ['lcp', 'tbt', 'cls']) {
 ```
 
 ```bash
-node perf/frontend/summarize.mjs perf/frontend/run-1.json perf/frontend/run-2.json perf/frontend/run-3.json
+node perf/frontend/summarize.mjs perf/frontend/results/run-1.json perf/frontend/results/run-2.json perf/frontend/results/run-3.json
 ```
 
 ## Đọc kết quả (P3)
@@ -72,7 +72,7 @@ node perf/frontend/summarize.mjs perf/frontend/run-1.json perf/frontend/run-2.js
 - Chạy **≥ 3 lần**, cùng lệnh, mỗi lần một file JSON. Độ lệch LCP/TBT > ngưỡng (mặc định 10%) → cảnh báo, không
   kết luận; tăng số lần lặp hoặc cô lập nhiễu (`measure-conditions.md`).
 - CLS gần 0 làm độ lệch tương đối phóng đại; báo dãy số thô và không kết luận chỉ từ CLS khi giá trị rất nhỏ.
-- Thư mục `perf/frontend/` chứa output đo; hỏi người dùng có commit hay thêm vào `.gitignore`.
+- Output thô ở `perf/frontend/results/` không commit; dòng `.gitignore` đề xuất là `perf/**/results/`, chờ người dùng duyệt (xem `SKILL.md`).
 - Ghi nguyên văn lệnh, phiên bản Lighthouse/Chrome (lấy từ output) và **residual risk** vào báo cáo.
 
 ## Cảnh báo an toàn

@@ -48,4 +48,23 @@ export default async function run({ ok, ctx }) {
   const s = summarize([{ lcp: 100, tbt: 0, cls: 0 }, { lcp: 120, tbt: 0, cls: 0 }, { lcp: 110, tbt: 0, cls: 0 }, { lcp: 130, tbt: 0, cls: 0 }]);
   ok(s.lcp.median === 120 && s.lcp.spread === 0.25 && s.lcp.raw.join() === '100,120,110,130', 'AC1.5 summarize giữ median, độ lệch và dãy thô');
   ok(s.cls.spread === null && s.tbt.spread === null, 'AC1.5 summarize: median 0 cho độ lệch null, không Infinity/NaN');
+
+  // Pin vận hành của tài liệu frontend-performance (AC1.1, AC1.2, AC2.1, AC3.1).
+  const { fs } = ctx;
+  const perfRoot = path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-performance');
+  const perfRead = (p) => fs.readFileSync(path.join(perfRoot, p), 'utf8');
+  const skillText = perfRead('SKILL.md');
+  const order = ['(a)', '(b)', '(c)', '(d)'].map((m) => skillText.indexOf(m));
+  ok(order.every((i) => i >= 0) && order.every((i, k) => k === 0 || i > order[k - 1]),
+    'AC1.1 SKILL.md: thứ tự chọn công cụ (a) → (b) → (c) → (d)');
+  ok(skillText.includes('(scripts/playwright-measure.mjs)') && skillText.includes('`package.json`'),
+    'AC1.1 SKILL.md: nhánh (c) trỏ script mẫu và điều kiện khai trong package.json');
+  ok(skillText.includes('Hỏi trước khi thêm tool/dependency'), 'AC1.2 SKILL.md: giữ quy tắc "Hỏi trước khi thêm tool/dependency"');
+  for (const f of ['SKILL.md', 'references/measure-conditions.md', 'references/lighthouse-cli.md']) {
+    const t = perfRead(f);
+    ok(t.includes('results/') && !t.includes('perf/frontend/run-'), `AC3.1 ${f}: output ở results/, không còn perf/frontend/run-`);
+  }
+  const mcText = perfRead('references/measure-conditions.md');
+  ok(mcText.includes('PerformanceObserver') && mcText.includes('xấp xỉ'),
+    'AC2.1 measure-conditions.md: LCP/CLS bằng PerformanceObserver, TBT ghi xấp xỉ');
 }
