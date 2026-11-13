@@ -20,7 +20,10 @@ export default async function run({ ok, ctx }) {
     'AC1.1: Bước 5 có lượt "Kiểm giao diện thật" chạy sau khi mọi task complete, trước Bước 6');
   // Phần từ tên lượt trở đi: tránh khớp nhầm chữ `not_run`, `bỏ qua` đã có sẵn ở e2e và task review.
   const ui = s5f.includes('Kiểm giao diện thật') ? s5f.slice(s5f.indexOf('Kiểm giao diện thật')) : '';
-  ok(/`frontend`[^.]*`fullstack`[^.]*AC[^.]*màn hình/.test(ui) && /bỏ qua[^.]*lý do|lý do[^.]*bỏ qua/.test(ui),
+  const uiAction = s5.includes('Kiểm giao diện thật')
+    ? flat(s5.slice(s5.indexOf('Kiểm giao diện thật')).split(/\n- \*\*/)[0])
+    : '';
+  ok(/`frontend`[^.]*`fullstack`[^.]*AC[^.]*màn hình/.test(uiAction) && /bỏ qua[^.]*lý do|lý do[^.]*bỏ qua/.test(uiAction),
     'AC1.1: lượt kiểm áp cho phạm vi frontend/fullstack có AC kiểm được trên màn hình, còn lại ghi bỏ qua kèm lý do');
   ok(field(s5, 'Thực hiện').includes('skill `frontend-manual-check`'),
     'AC1.1: trường Thực hiện của Bước 5 nêu skill `frontend-manual-check`');
@@ -34,9 +37,11 @@ export default async function run({ ok, ctx }) {
     'AC1.2: không có công cụ trình duyệt hoặc không dựng được môi trường thì `not_run` vào remaining_risks');
 
   // AC1.3: Bước 6 nhận ui-check.md, reviewer xếp severity, chạy lại bước FAIL một lần.
-  ok(field(s6, 'Đầu vào').includes('ui-check.md') && /FAIL[^.]*severity|severity[^.]*FAIL/.test(s6f),
+  // Đoạn từ lần nhắc ui-check.md đầu tiên: chữ severity, FAIL đã có sẵn ở phần review cuối nên không quét cả Bước 6.
+  const ui6 = s6f.includes('ui-check.md') ? s6f.slice(s6f.indexOf('ui-check.md')) : '';
+  ok(field(s6, 'Đầu vào').includes('ui-check.md') && /FAIL[^.]*severity|severity[^.]*FAIL/.test(ui6),
     'AC1.3: Bước 6 nhận ui-check.md và reviewer xếp severity cho FAIL');
-  ok(/chạy lại[^.]*FAIL[^.]*một lần|một lần[^.]*chạy lại[^.]*FAIL/.test(s6f),
+  ok(/chạy lại[^.]*FAIL[^.]*một lần|một lần[^.]*chạy lại[^.]*FAIL/.test(ui6),
     'AC1.3: Bước 6 chạy lại bước FAIL đúng một lần sau lượt sửa');
 
   // AC1.4 (phần đọc file): graph giữ 7 bước và task-loop có skill kèm when.
