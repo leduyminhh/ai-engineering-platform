@@ -6,7 +6,10 @@ export default async function run({ ok, ctx }) {
   // Import không được mở trình duyệt hay đòi Playwright: repo này không cài Playwright.
   const { assertLocalUrl, parseArgs, median, spread, summarize } = await import(pathToFileURL(script).href);
 
-  const throws = (fn) => { try { fn(); return false; } catch { return true; } };
+  ok([assertLocalUrl, parseArgs, median, spread, summarize].every((f) => typeof f === 'function'),
+    'import script không cần Playwright và không mở trình duyệt');
+
+  const throws = (fn) =>{ try { fn(); return false; } catch { return true; } };
 
   // AC1.3: P1 — chỉ host local, kể cả host lừa có tiền tố local.
   for (const [url, valid] of [

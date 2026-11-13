@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Script mẫu đo LCP, CLS và TBT xấp xỉ bằng Playwright trên bản build production phục vụ ở local.
-// Chép vào perf/<phía>/ của project (vd perf/frontend/measure.mjs) rồi chạy từ gốc project để import `playwright` resolve đúng.
+// Chép vào perf/<phía>/ của project (vd perf/frontend/measure.mjs): ESM resolve `playwright` theo vị trí file script, nên file phải nằm trong cây có node_modules.
 // Cách dùng: node perf/frontend/measure.mjs --url http://localhost:4173/ [--runs 5] [--out perf/frontend/results] [--cpu-slowdown 4] [--executable-path <chromium>]
 // Exit 0 đo xong, 2 sai đối số hoặc URL ngoài local, 3 không mở được trình duyệt (agent báo not_run).
 import fs from 'node:fs';
@@ -54,6 +54,7 @@ export function summarize(runs) {
   return out;
 }
 
+// Nạp trong hàm, không ở đầu file, để test import được các hàm thuần khi repo chưa cài Playwright; chỉ chạy trực tiếp mới cần trình duyệt.
 async function loadChromium() {
   for (const pkg of ['playwright', '@playwright/test']) {
     try {
@@ -62,7 +63,7 @@ async function loadChromium() {
       if (e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
     }
   }
-  throw new Error('không nạp được playwright hay @playwright/test; chạy script từ gốc project đã khai Playwright');
+  throw new Error('không nạp được playwright hay @playwright/test; chép script vào cây thư mục của project đã khai Playwright (có node_modules ở thư mục cha)');
 }
 
 // Context mới mỗi lần để cache lạnh; PerformanceObserver gắn trước khi trang chạy để không mất entry sớm.
@@ -83,6 +84,8 @@ async function measureOnce(browser, url, cpuSlowdown) {
       watch('longtask', (e) => m.long.push([e.startTime, e.duration]));
     });
     await page.goto(url, { waitUntil: 'load' });
+    // App local có thể redirect ra host ngoài (vd đăng nhập OAuth); P1 phải giữ cả sau điều hướng.
+    assertLocalUrl(page.url());
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
     const m = await page.evaluate(() => window.__perf);
@@ -111,6 +114,8 @@ async function main() {
     console.error(`not_run: không mở được Chromium (${e.message.split('\n')[0]}); cài hoặc trỏ --executable-path, script không tự tải`);
     process.exit(3);
   }
+  // Lấy phiên bản khi trình duyệt còn mở: sau close() Playwright không bảo đảm trả được.
+  const chromiumVersion = browser.version();
   const results = [];
   try {
     // Lần đầu sau khi mở trình duyệt bị lệch (paint trễ, mất CLS/TBT); đo một lần bỏ đi trước.
@@ -121,12 +126,12 @@ async function main() {
       results.push(r);
     }
     fs.mkdirSync(opts.out, { recursive: true });
-    const meta = { url: opts.url, package: pkg, chromium: browser.version(), cpuSlowdown: opts.cpuSlowdown, warmup: 1 };
+    const meta = { url: opts.url, package: pkg, chromium: chromiumVersion, cpuSlowdown: opts.cpuSlowdown, warmup: 1 };
     results.forEach((r, i) => fs.writeFileSync(path.join(opts.out, `run-${i + 1}.json`), JSON.stringify({ ...meta, ...r }, null, 2)));
   } finally {
     await browser.close();
   }
-  console.log(`công cụ: ${pkg}, Chromium ${browser.version()}, CPU slowdown ${opts.cpuSlowdown || 'không throttle'}, warm-up 1 (bỏ)`);
+  console.log(`công cụ: ${pkg}, Chromium ${chromiumVersion}, CPU slowdown ${opts.cpuSlowdown || 'không throttle'}, warm-up 1 (bỏ)`);
   const s = summarize(results);
   for (const k of ['lcp', 'tbt', 'cls']) {
     const sp = s[k].spread === null ? 'không xác định' : s[k].spread.toFixed(3);
