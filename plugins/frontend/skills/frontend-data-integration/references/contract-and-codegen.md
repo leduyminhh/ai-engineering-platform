@@ -35,12 +35,14 @@ Gắn `[Unverified]` cho mỗi hành vi công cụ chưa kiểm bằng lệnh.
    (và lockfile nếu có) vào đó; không chép `.npmrc`, `.yarnrc*`, `.env` hay file nào khác chứa token hoặc thông tin đăng
    nhập registry. Chạy `npm install --dry-run --ignore-scripts <gói>@<phiên bản>` ở thư mục tạm. Đọc kết quả:
    - `ERESOLVE` (exit code khác 0): peer xung đột với phiên bản trong project.
-   - Exit code khác 0 với mã lỗi khác (`E401`, `E404`): không chạy được, không phải kết luận về peer.
+   - Exit code khác 0 với mã lỗi khác (vd `E404`; `E401` chưa kiểm bằng lệnh, `[Unverified]`): không chạy được, không
+     phải kết luận về peer.
    - `package.json` có `workspaces` hoặc dependency trỏ vào đường dẫn cục bộ (`file:`, `link:`): bản sao không chứa các
      thư mục đó nên cây phụ thuộc khác project dù exit code là 0; coi như không chạy được.
-   - `EBADENGINE`: chỉ là cảnh báo, không đổi exit code; kết luận về `engines` lấy từ lệnh `npm view` ở bước 1.
+   - `EBADENGINE`: chỉ là cảnh báo, không đổi exit code; kết luận về `engines` lấy từ lệnh `npm view` ở bước 1,
+     còn stderr của dry-run chỉ để đối chiếu.
 
-   Không chạy được (hai ca trên, không mạng, registry lỗi): giữ `[Unverified]` kèm lý do và nêu ở G1 như rủi ro chặn
+   Không chạy được (exit code khác 0 với mã lỗi khác `ERESOLVE`, ca `workspaces`/`file:`/`link:`, không mạng, registry lỗi): giữ `[Unverified]` kèm lý do và nêu ở G1 như rủi ro chặn
    hướng; không chặn việc làm rõ hay viết tài liệu. Project dùng package manager khác npm: vẫn đọc khai báo bằng bước 1,
    còn phần chạy thử gắn `[Unverified]`.
 3. **Ghi kết quả** vào ADR của công cụ: lệnh đã chạy, `peerDependencies`/`engines` đã đọc, phiên bản TypeScript/Node của
