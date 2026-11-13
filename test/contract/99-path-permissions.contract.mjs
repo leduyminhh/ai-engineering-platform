@@ -342,11 +342,19 @@ export default async function run({ ok, ctx }) {
       ...[`Set-Content ${O}/x ${OUT}/y`, `Out-File ${O}/x utf8`, `Set-Content -Path ${O}/x ${OUT}/y`, `Set-Content -FilePath:${O}/x ${OUT}/y`, `Set-Content -Value ${OUT}/y ${O}/x`,
         `Set-Content -Path ${O}/x -Encoding utf8 -Value ${OUT}/y`].map((c) => [c, null]),
       ...[`Set-Content ${OUT}/x y`, `Set-Content -Path ${OUT}/x y`].map((c) => [c, 'deny']),
+      // `--`, nháy và cờ cụt không gọi tên Path: đích thật là đối số vị trí đầu.
+      ...[`Set-Content ${OUT}/x -- -Path`, `Set-Content ${OUT}/x '-Path'`, `Set-Content ${OUT}/x "-LiteralPath"`, `Out-File ${OUT}/x '-FilePath'`, `Set-Content ${OUT}/x '-Path:zzz'`,
+        `Set-Content -Value y -- -x/../../out/x`,
+        // Mảng Path có dấu cách: phần tử sau dấu phẩy là đích, không phải Value.
+        `Set-Content -Path ${O}/x, ${OUT}/y -Value z`, `Set-Content -Path "${O}/x", "${OUT}/y" z`, `Out-File -FilePath ${O}/x, ${OUT}/y -Encoding utf8`,
+        `Set-Content -LiteralPath ${O}/x, ${OUT}/y z`, `Add-Content -Path ${O}/x, ${OUT}/y -Value z`, `Set-Content -Path ${O}/x, ${D}/y z`,
+        // Value mảng nhiều token: đích thật đứng sau.
+        `Set-Content -Value a, b ${OUT}/x`, `Set-Content -Value a ,b ${OUT}/x`, `Set-Content -Encoding utf8 -Value a, b ${OUT}/x`, `Add-Content -Value a, b ${OUT}/x`,
+        `Set-Content -Value @('a', 'b') ${OUT}/x`].map((c) => [c, 'deny']),
+      [`Set-Content -Path ${O}/x -Value a, b`, null],
     ]);
     psw('AC1.3', [[`Set-Content -Enc utf8 ${OUT}/x -Val y`, 'deny'], [`Set-Content -Foo a ${OUT}/x y`, 'deny'], [`Set-Content -Enc utf8 ${O}/x y`, null]]);
-    psw('AC1.4', [
-      ...['Set-Content -Encoding utf8 .claude\\aip-gate.json x', 'Out-File -Encoding utf8 .claude\\settings.json', 'Set-Content -Value x .claude\\aip-gate.json'].map((c) => [c, 'ask']),
-      ['Set-Content -Value .claude\\aip-gate.json x', null],
-    ], psAsk);
+    // Các ca `ask` của R18 đã có ở 99-hook-popup; ở đây chỉ giữ ca nội dung (không phải đích) không bị hỏi nhầm.
+    psw('AC1.4', [['Set-Content -Value .claude\\aip-gate.json x', null]], psAsk);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }

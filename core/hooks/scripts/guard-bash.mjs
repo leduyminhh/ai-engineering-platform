@@ -369,14 +369,20 @@ function writeTargets(t, msys = true) {
     // Tham số PowerShell đã gọi tên (-Path/-LiteralPath/-Destination) chiếm slot của nó: đối số vị trí chỉ lấp slot còn trống.
     let namedPath = false;
     let namedDest = false;
-    let unknownFlag = false;
-    const named = (flag) => { if (/^-?destination$/i.test(flag)) namedDest = true; else namedPath = true; };
+    // Mảng nhiều token (`-Value a, b`, `-Path x, y`) không biết token nào là Path: coi như cờ lạ, kiểm mọi đối số vị trí.
+    let unknownFlag = FIRST_ONLY.has(name) && args.some((a) => /^,|,$/.test(a));
+    // Số đối số vị trí đứng trước cờ đường dẫn đầu tiên có giá trị: chỉ các đối số sau nó mới là Value.
+    let namedAt;
+    let afterDashes = false;
+    const named = (flag, at) => { if (/^-?destination$/i.test(flag)) namedDest = true; else { namedPath = true; namedAt ??= at; } };
     let pos = [];
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
-      if (PS_PATH_FLAGS.has(a.toLowerCase())) { named(a); if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
+      if (FIRST_ONLY.has(name) && (afterDashes || a === '--')) { if (afterDashes) pos.push(a); afterDashes = true; continue; }
+      // Cờ đường dẫn cụt (không có giá trị) của Set-Content/Out-File/Add-Content không gọi tên Path nên không chiếm slot.
+      if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (!FIRST_ONLY.has(name) || i + 1 < args.length) named(a, pos.length); if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
-      if (colon) { named(colon[1]); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
+      if (colon) { named(colon[1], pos.length); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
       const pv = !msys && (LAST_ONLY.has(name) || MOVE_CMDS.has(name)) ? PS_VALUE_FLAGS.exec(a) : null;
       if (pv) { if (!pv[4]) i++; continue; }
       if (FIRST_ONLY.has(name) && /^-[A-Za-z]/.test(a)) {
@@ -414,10 +420,10 @@ function writeTargets(t, msys = true) {
     if (SKIP_FIRST.has(name)) pos = pos.slice(1);
     const all = pos;
     const copyLike = LAST_ONLY.has(name);
-    // Set-Content/Out-File/Add-Content: chỉ đối số vị trí đầu là Path (đã gọi tên -Path thì không có); cờ lạ thì không biết đối số nào là Path nên kiểm hết.
-    // allPos giữ mọi đối số cho kiểm cấu hình hook.
+    // Set-Content/Out-File/Add-Content: chỉ đối số vị trí đầu là Path, và chỉ khi đứng trước cờ đường dẫn có giá trị (từ cờ đó trở đi là Value);
+    // cờ lạ hoặc mảng nhiều token thì không biết đối số nào là Path nên kiểm hết. allPos giữ mọi đối số cho kiểm cấu hình hook.
     allPos = copyLike ? all.slice(-1) : all;
-    pos = FIRST_ONLY.has(name) ? (unknownFlag ? all : namedPath ? [] : all.slice(0, 1)) : all;
+    pos = FIRST_ONLY.has(name) ? (unknownFlag ? all : all.slice(0, Math.min(1, namedAt ?? 1))) : all;
     // PowerShell lấp đối số vị trí theo thứ tự Path rồi Destination; đối số thừa (cờ có giá trị như -Filter làm lệch) lấy cả hai vai để không bỏ sót.
     const slots = !msys && (copyLike || (MOVE_CMDS.has(name) && !blurred))
       ? [...(namedPath ? [] : [copyLike ? ['read'] : ['delete']]), ...(namedDest ? [] : [['write']])] : null;
