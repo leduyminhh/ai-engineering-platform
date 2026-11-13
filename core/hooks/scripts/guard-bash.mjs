@@ -284,17 +284,23 @@ function expandShells(segs, depth = 0) {
 function globMatchesDotDot(seg) {
   // Dấu chấm đầu tên chỉ khớp với `.` viết tường minh ở đầu mẫu: `*`, `?`, `[…]` đứng đầu không bao giờ khớp `..`.
   if (seg[0] !== '.') return false;
+  // Dãy `*` liền nhau dịch thành `.*.*…` và backtrack bậc hai khi đuôi không khớp.
+  const s = seg.replace(/\*+/g, '*');
+  if (s.length > 1024) return true;
   let re = '';
-  for (let i = 0; i < seg.length; i++) {
-    const c = seg[i];
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
     if (c === '*') re += '.*';
     else if (c === '?') re += '.';
     else if (c === '[') {
-      const neg = seg[i + 1] === '!' || seg[i + 1] === '^';
+      const neg = s[i + 1] === '!' || s[i + 1] === '^';
       // Ký tự đầu tiên sau `[` (và sau `!`) là ký tự thường kể cả `]`.
-      const end = seg.indexOf(']', i + (neg ? 3 : 2));
+      const end = s.indexOf(']', i + (neg ? 3 : 2));
       if (end < 0) return true;
-      re += `[${neg ? '^' : ''}${seg.slice(i + (neg ? 2 : 1), end).replace(/[\\\]\[^]/g, '\\$&')}]`;
+      const body = s.slice(i + (neg ? 2 : 1), end);
+      // Lớp POSIX (`[:punct:]`, `[=.=]`) khớp `..` trên dash mà không dịch đơn giản được: coi là khớp.
+      if (/\[[:=.]/.test(body)) return true;
+      re += `[${neg ? '^' : ''}${body.replace(/[\\\]\[^]/g, '\\$&')}]`;
       i = end;
     } else re += c.replace(/[.+^${}()|\\\]]/g, '\\$&');
   }
@@ -312,10 +318,11 @@ function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
     const first = parts.findIndex((x) => x !== '');
     const g = parts.findIndex((x) => GLOB.test(x));
     if (g <= first) return 'unknown';
-    // `..` sau đoạn glob, hoặc chính đoạn glob khớp được `..`, có thể kéo đường dẫn ra khỏi thư mục đã phân loại, mà glob thì không resolve được.
-    if (parts.slice(g).some(globMatchesDotDot)) return 'unknown';
     if (isClaudeTmpRoot(parts.slice(0, g).join('/'), dir)) return 'blocked';
-    return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots, msys, need);
+    const c = classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots, msys, need);
+    // `..` sau đoạn glob, chính đoạn glob khớp được `..`, hay biến ($X) trong đó có thể kéo đường dẫn ra khỏi thư mục đã phân loại, mà glob thì không resolve được: hỏi.
+    // Thư mục trước đoạn glob đã thiếu quyền thì vẫn từ chối như trước, không hạ xuống hỏi.
+    return c !== 'outside' && parts.slice(g).some((x) => globMatchesDotDot(x) || hasUnresolvedRef(x)) ? 'unknown' : c;
   }
   return classifyPath(p, dir, roots, msys, need);
 }
