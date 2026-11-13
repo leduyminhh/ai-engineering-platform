@@ -18,11 +18,10 @@ export default async function run({ ok, ctx }) {
   // AC1.1: lượt chạy một lần sau mọi task, trước Bước 6, kèm điều kiện áp dụng.
   ok(s5f.includes('Kiểm giao diện thật') && /sau khi mọi task `complete`/.test(s5f) && /trước Bước 6/.test(s5f),
     'AC1.1: Bước 5 có lượt "Kiểm giao diện thật" chạy sau khi mọi task complete, trước Bước 6');
-  // Phần từ tên lượt trở đi: tránh khớp nhầm chữ `not_run`, `bỏ qua` đã có sẵn ở e2e và task review.
-  const ui = s5f.includes('Kiểm giao diện thật') ? s5f.slice(s5f.indexOf('Kiểm giao diện thật')) : '';
-  const uiAction = s5.includes('Kiểm giao diện thật')
-    ? flat(s5.slice(s5.indexOf('Kiểm giao diện thật')).split(/\n- \*\*/)[0])
-    : '';
+  // Chỉ xét bullet Hành động từ tên lượt trở đi (và Khi fail): chữ `not_run`, `bỏ qua` đã có sẵn ở e2e và task review.
+  const act5 = field(s5, 'Hành động');
+  const uiAction = act5.includes('Kiểm giao diện thật') ? act5.slice(act5.indexOf('Kiểm giao diện thật')) : '';
+  const ui = `${uiAction} ${field(s5, 'Khi fail')}`;
   ok(/`frontend`[^.]*`fullstack`[^.]*AC[^.]*màn hình/.test(uiAction) && /bỏ qua[^.]*lý do|lý do[^.]*bỏ qua/.test(uiAction),
     'AC1.1: lượt kiểm áp cho phạm vi frontend/fullstack có AC kiểm được trên màn hình, còn lại ghi bỏ qua kèm lý do');
   ok(field(s5, 'Thực hiện').includes('skill `frontend-manual-check`'),
@@ -37,8 +36,9 @@ export default async function run({ ok, ctx }) {
     'AC1.2: không có công cụ trình duyệt hoặc không dựng được môi trường thì `not_run` vào remaining_risks');
 
   // AC1.3: Bước 6 nhận ui-check.md, reviewer xếp severity, chạy lại bước FAIL một lần.
-  // Đoạn từ lần nhắc ui-check.md đầu tiên: chữ severity, FAIL đã có sẵn ở phần review cuối nên không quét cả Bước 6.
-  const ui6 = s6f.includes('ui-check.md') ? s6f.slice(s6f.indexOf('ui-check.md')) : '';
+  // Chỉ xét bullet Hành động của Bước 6 và chỉ khi nó nhắc ui-check.md: chữ severity, FAIL đã có sẵn ở các bullet khác.
+  const act6 = field(s6, 'Hành động');
+  const ui6 = act6.includes('ui-check.md') ? act6 : '';
   ok(field(s6, 'Đầu vào').includes('ui-check.md') && /FAIL[^.]*severity|severity[^.]*FAIL/.test(ui6),
     'AC1.3: Bước 6 nhận ui-check.md và reviewer xếp severity cho FAIL');
   ok(/chạy lại[^.]*FAIL[^.]*một lần|một lần[^.]*chạy lại[^.]*FAIL/.test(ui6),
