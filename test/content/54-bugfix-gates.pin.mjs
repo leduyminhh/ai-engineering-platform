@@ -34,6 +34,10 @@ export default async function run({ ok, ctx }) {
   ok(fs.existsSync(path.join(caseDir, 'prompt.md')) && graders.some((g) => /^type: llm$/m.test(g) && g.includes('root cause')),
     'AC8.1: case evals/workflows/bugfix-clear-cause có prompt.md và grader llm nhắc root cause');
 
+  const graph = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'bugfix', 'graph.json'), 'utf8'));
+  ok(graph.steps.length === 9 && graph.steps.every((s, i) => s.n === i + 1),
+    `AC7.1: graph.json của bugfix vẫn có đúng 9 bước đánh số 1–9 (có ${graph.steps.length})`);
+
   const rows = (wf?.body ?? '').split('\n').filter((l) => l.startsWith('| Cấm: bỏ bước ⏸ hoặc Bước 8'));
   ok(rows.length === 1, `AC1.2: bảng lỗi có đúng một hàng "Cấm: bỏ bước ⏸ hoặc Bước 8" (có ${rows.length})`);
 }
