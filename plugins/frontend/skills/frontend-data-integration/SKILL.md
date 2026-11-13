@@ -85,7 +85,7 @@ Trình bảng "đã có / chưa có" cho: codegen, thư viện data, `api-client
 định dùng (`npm view <gói>@<phiên bản> peerDependencies engines --json`), so với phiên bản TypeScript của project
 (`package.json` và lockfile) và Node (`node --version`), rồi chạy thử như mục 2a của
 [references/contract-and-codegen.md](references/contract-and-codegen.md). Ghi kết quả (lệnh, khai báo đã đọc, phiên bản
-project, kết luận) vào ADR của công cụ; không có ADR cho công cụ thì ghi vào `design.md`. Nếu workflow đã kiểm bước này
+project, kết luận) vào ADR của công cụ; không có ADR cho công cụ thì ghi vào `design.md` (hoặc `requirement.md` khi cỡ thay đổi nhỏ không có `design.md`). Nếu workflow đã kiểm bước này
 ở tài liệu trước G1, dùng lại kết quả đó.
 
 Chưa có codegen → đề xuất `openapi-typescript` (chỉ sinh type, giữ hook viết mỏng theo template; hành vi công cụ chưa

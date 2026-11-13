@@ -44,7 +44,7 @@ Xung đột thì **dừng và để người dùng chọn** (ở G1 nếu còn t
 
 | Phương án | Cách làm | Hệ quả |
 |---|---|---|
-| Ghim công cụ bằng `npx` | `npx --yes -p typescript@<x.y.z> -p <gói>@<x.y.z> <lệnh>` trong script `api:types`; không thêm dependency vào `package.json` | `tsc` của project vẫn kiểm file type sinh ra; phiên bản ghim phải đủ `x.y.z`, không dùng `latest`, `^` hay dải |
+| Ghim công cụ bằng `npx` | `npx --yes -p typescript@<x.y.z> -p <gói>@<x.y.z> <lệnh>` trong script `api:types`; không thêm dependency vào `package.json` | `tsc` của project vẫn kiểm file type sinh ra; phiên bản ghim phải đủ `x.y.z`, không dùng `latest`, `^` hay dải. Gói chạy bằng `npx` nằm ngoài `package.json` và lockfile nên `npm audit` và công cụ quét dependency không thấy nó: ghi điều này vào ADR |
 | Đổi công cụ hoặc phiên bản công cụ | Chọn bản có peer/`engines` khớp project, kiểm lại bằng bước 1–2 | Đổi ADR nếu đã có |
 | Hạ TypeScript hoặc Node của project | Ngoài phạm vi của skill này | Chỉ nêu như hệ quả, không tự làm |
 
@@ -59,9 +59,11 @@ mục 2a không báo xung đột. Ví dụ script (đường dẫn đích theo b
 }
 ```
 
-Dạng trên ghim đúng một phiên bản bằng `npx`, không thêm dependency vào `package.json`. Nếu mục 2a báo xung đột peer
-`typescript`, thêm `-p typescript@<x.y.z>` (`npx --yes -p typescript@<x.y.z> -p openapi-typescript@<x.y.z> openapi-typescript …`).
-Project đã cài `openapi-typescript` trong `package.json` thì dùng lại script sẵn có (mục 2).
+Dạng trên ghim đúng một phiên bản bằng `npx`, không thêm dependency vào `package.json`. Chỉ khi mục 2a báo xung đột peer
+`typescript` và người dùng đã chọn phương án ghim, mới thêm `-p typescript@<x.y.z>` (`npx --yes -p typescript@<x.y.z> -p openapi-typescript@<x.y.z> openapi-typescript …`);
+chưa được chọn thì không tự ghim. Gói chạy bằng `npx` nằm ngoài `package.json` và lockfile nên `npm audit` và công cụ quét
+dependency không thấy nó; ghi điều này vào ADR. Khi không có xung đột peer, ưu tiên cài vào `devDependencies` đúng `x.y.z`
+(thêm dependency vẫn phải hỏi người dùng trước). Project đã cài `openapi-typescript` trong `package.json` thì dùng lại script sẵn có (mục 2).
 
 Đối chiếu tài liệu chính thức (bản mới nhất, không phải phiên bản cài trong project): CLI nhận file schema cục bộ
 và ghi ra file qua `-o`, file sinh ra xuất `paths` và `components`, và tham chiếu schema bằng

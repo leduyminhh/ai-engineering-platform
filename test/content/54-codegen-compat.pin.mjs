@@ -17,8 +17,8 @@ export default async function run({ ok, ctx }) {
   const proposeAt = i2.search(/Chưa\s+có\s+codegen/);
   ok(proposeAt >= 0 && i2.indexOf('npm view') >= 0 && i2.indexOf('npm view') < proposeAt,
     'AC1.1: bước đọc peerDependencies đứng trước câu "Chưa có codegen → đề xuất"');
-  ok(i2.includes('contract-and-codegen.md') && i2.includes('design.md') && i2.includes('ADR'),
-    'AC1.1: I2 trỏ reference và nêu nơi ghi kết quả (ADR hoặc design.md khi không có ADR)');
+  ok(i2.includes('contract-and-codegen.md') && i2.includes('design.md') && i2.includes('requirement.md') && i2.includes('ADR'),
+    'AC1.1: I2 trỏ reference và nêu nơi ghi kết quả (ADR, hoặc design.md/requirement.md khi không có ADR)');
 
   const redLines = i2.split('\n').filter((l) => l.startsWith('**Đỏ khi:**'));
   ok(redLines.length === 1 && redLines[0].includes('xung đột'),
