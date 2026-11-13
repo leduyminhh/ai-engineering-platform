@@ -1,7 +1,7 @@
 # Thiết kế: Đối chiếu giao diện đã render với mockup trong đường feature của plugin frontend
 
 - Ngày: 2026-11-13
-- Trạng thái: approved — G1 duyệt 2026-11-13, người dùng đồng ý nguyên khuyến nghị Q1–Q4 và ba quyết định của builder check
+- Trạng thái: in-progress — nhánh claude/frontend-ui-verify-7f105e (G3 duyệt 2026-11-13, giữ nguyên; chưa merge, chưa push). G1 duyệt cùng ngày: người dùng đồng ý nguyên khuyến nghị Q1–Q4 và ba quyết định của builder check
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
