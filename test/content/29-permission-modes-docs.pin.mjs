@@ -1,4 +1,4 @@
-// Pin: tài liệu chế độ quyền ask/full (docs/requests/2026-10-22-permission-modes), AC3.1 và AC3.2.
+// Pin: tài liệu chế độ quyền ask/full (docs/requests/2026-10-22-permission-modes), AC3.1 và AC3.2; AC7.1 của 2026-11-12-scoped-path-permissions.
 export default async function run({ ok, ctx }) {
   const { fs, path, REPO_ROOT } = ctx;
   const raw = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8');
@@ -41,4 +41,15 @@ export default async function run({ ok, ctx }) {
   // Dòng lệnh `aip mode` đã rời CLAUDE.md (167a3520); README ở trên vẫn pin lệnh, CLAUDE.md chỉ còn các khoá cấu hình.
   ok(['mode', 'fullKeep', 'fullRoots'].every((w) => claude.includes('`' + w + '`')),
     'P4e AC3.2: CLAUDE.md nhắc khoá mode/fullKeep/fullRoots');
+
+  // AC7.1: chỉ ghim tên khoá fullPaths và ba giá trị allow, không ghim đoạn văn.
+  ok(['README.md', 'README_VI.md', 'CLAUDE.md'].every((f) => raw(f).includes('fullPaths')),
+    'P4e AC7.1: README, README_VI và CLAUDE.md nêu khoá fullPaths');
+  ok(claude.split('\n').some((l) => l.includes('fullPaths') && l.includes('fullRoots')),
+    'P4e AC7.1: CLAUDE.md nêu fullPaths cạnh fullRoots');
+  for (const f of ['README.md', 'README_VI.md']) {
+    const text = raw(f);
+    ok(['"read"', '"write"', '"delete"'].every((v) => text.includes(v)),
+      `P4e AC7.1: ${f} nêu ba giá trị allow read, write, delete`);
+  }
 }

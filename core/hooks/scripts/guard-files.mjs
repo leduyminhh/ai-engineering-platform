@@ -4,7 +4,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { envFilesAllowed, fullEffective, readGate, classifyPath, allowedRoots, normalizeMsysPath, fullReadRoots, defaultReadRoots, inReadRoot, showArg } from './gate-config.mjs';
+import { envFilesAllowed, fullEffective, readGate, classifyPath, grantsOf, normalizeMsysPath, showArg } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
@@ -86,15 +86,17 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   if (!write && tool !== 'Read' && tool !== 'Grep') return null;
   const gate = config === undefined ? reader(cwd) : { config, roots: repoRoot ? [path.resolve(repoRoot)] : (reader(cwd)?.roots ?? []) };
   if (!fullEffective(gate, input, { tracked })) return null;
-  const where = classifyPath(String(file), cwd, allowedRoots(gate, input));
-  if (where === 'inside') return null;
-  // Root chỉ-đọc không nằm trong allowedRoots nên lệnh ghi vẫn rơi xuống deny bên dưới; đường dẫn bí mật không được miễn.
-  if (!write && !secret && inReadRoot(String(file), cwd, [...fullReadRoots(gate.config), ...defaultReadRoots(input)])) return null;
-  // deny do agent đọc nên giữ gợi ý hành động (fullRoots); ask hiện cho người dùng nên chỉ nói điều họ quyết được.
-  if (write && where === 'outside') return { decision: 'deny', reason: 'Chế độ full chỉ cho phép thao tác trong root của project; đường dẫn nằm ngoài root. Cần mở rộng → thêm vào "fullRoots" trong .claude/aip-gate.json.' };
+  const grants = grantsOf(gate, input);
+  const where = classifyPath(String(file), cwd, grants, true, write ? 'write' : 'read');
+  // File bí mật chỉ được miễn hỏi khi đường dẫn có đủ ba quyền hiệu lực; thiếu thì hỏi người dùng.
+  if (where === 'inside' && !(secret && ['read', 'write', 'delete'].some((a) => classifyPath(String(file), cwd, grants, true, a) !== 'inside'))) return null;
+  // deny do agent đọc nên giữ gợi ý hành động (fullPaths/fullRoots); ask hiện cho người dùng nên chỉ nói điều họ quyết được.
+  if (write && where === 'outside') return { decision: 'deny', reason: 'Chế độ full chỉ cho phép ghi vào thư mục có quyền write; đường dẫn này chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.' };
   const reason = where === 'unknown'
     ? `Agent muốn ${write ? 'ghi' : 'đọc'} đường dẫn chỉ biết lúc chạy (\`${showArg(file)}\`), nên không chắc nó nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.`
-    : `Agent muốn đọc file ngoài thư mục project (\`${showArg(file)}\`). Cho phép nếu file đó an toàn để agent xem; nếu không, hãy từ chối.`;
+    : where === 'inside'
+      ? `Agent muốn ${write ? 'ghi' : 'đọc'} file bí mật (\`${showArg(file)}\`) trong thư mục chưa được cấp đủ quyền đọc, ghi và xoá. Cho phép nếu đúng ý bạn; nếu không, hãy từ chối.`
+      : `Agent muốn đọc file ngoài thư mục project (\`${showArg(file)}\`). Cho phép nếu file đó an toàn để agent xem; nếu không, hãy từ chối.`;
   return { decision: 'ask', reason };
 }
 

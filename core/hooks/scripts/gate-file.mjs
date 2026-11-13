@@ -15,10 +15,11 @@ export const GATE_KEYS = Object.freeze({
   exemptAgents: { type: 'array', trust: 'untracked' },
   // Mẫu như "." biến mọi lệnh thành lệnh test, tức tắt Stop gate mà không cần stopGate: false.
   testCommands: { type: 'array', trust: 'untracked' },
-  // Chép file đã commit sang worktree rồi chạy aip mode full sẽ mở push và cho ghi ngoài project, nên ba khoá full* cũng là khoá nới quyền.
+  // Chép file đã commit sang worktree rồi chạy aip mode full sẽ mở push và cho ghi ngoài project, nên bốn khoá full* cũng là khoá nới quyền.
   fullKeep: { type: 'array', trust: 'untracked' },
   fullRoots: { type: 'array', trust: 'untracked' },
   fullReadRoots: { type: 'array', trust: 'untracked' },
+  fullPaths: { type: 'array', trust: 'untracked' },
   mcpAllow: { type: 'array', trust: 'any' },
   mcpDeny: { type: 'array', trust: 'any' },
   bootstrapInject: { type: 'boolean', trust: 'any' },
