@@ -78,11 +78,22 @@ bước Review của `workflow-feature`); không có bằng chứng → HỎI ng
 
 ### I2. Công cụ ⏸
 
-Trình bảng "đã có / chưa có" cho: codegen, thư viện data, `api-client`, msw. Cái nào **đã có thì dùng lại**. Chưa
-có codegen → đề xuất `openapi-typescript` (chỉ sinh type, giữ hook viết mỏng theo template; hành vi công cụ gắn
-`[Unverified]`) và HỎI. DỪNG chờ người dùng chọn; chưa được cài gì trước khi có câu trả lời.
+Trình bảng "đã có / chưa có" cho: codegen, thư viện data, `api-client`, msw. Cái nào **đã có thì dùng lại**.
 
-**Đỏ khi:** thư viện data mới → cần ADR trước khi dùng.
+**Kiểm tương thích trước khi đề xuất.** Với mọi công cụ codegen ứng viên (`openapi-typescript`, `orval`,
+`openapi-generator`), kể cả công cụ người dùng đã nêu tên: đọc `peerDependencies` và `engines` của gói ở đúng phiên bản
+định dùng (`npm view <gói>@<phiên bản> peerDependencies engines --json`), so với phiên bản TypeScript của project
+(`package.json` và lockfile) và Node (`node --version`), rồi chạy thử như mục 2a của
+[references/contract-and-codegen.md](references/contract-and-codegen.md). Ghi kết quả (lệnh, khai báo đã đọc, phiên bản
+project, kết luận) vào ADR của công cụ; không có ADR cho công cụ thì ghi vào `design.md`. Nếu workflow đã kiểm bước này
+ở tài liệu trước G1, dùng lại kết quả đó.
+
+Chưa có codegen → đề xuất `openapi-typescript` (chỉ sinh type, giữ hook viết mỏng theo template; hành vi công cụ chưa
+kiểm bằng lệnh gắn `[Unverified]`) và HỎI. DỪNG chờ người dùng chọn; chưa được cài gì trước khi có câu trả lời.
+
+**Đỏ khi:** peer hoặc `engines` của công cụ xung đột với TypeScript/Node của project → dừng, trình phương án (ghim bằng
+`npx`, đổi công cụ hoặc phiên bản) cho người dùng chọn, chưa Accepted ADR trước khi họ chọn; thư viện data mới → cần ADR
+trước khi dùng.
 
 ### I3. Không viết tay
 

@@ -14,7 +14,8 @@ export default async function run({ ok, ctx }) {
   for (const tok of ['npm view', 'peerDependencies', 'engines']) {
     ok(i2.includes(tok), `AC1.1: I2 nêu \`${tok}\` trước khi đề xuất codegen`);
   }
-  ok(i2.indexOf('npm view') >= 0 && i2.indexOf('npm view') < i2.indexOf('Chưa có codegen'),
+  const proposeAt = i2.search(/Chưa\s+có\s+codegen/);
+  ok(proposeAt >= 0 && i2.indexOf('npm view') >= 0 && i2.indexOf('npm view') < proposeAt,
     'AC1.1: bước đọc peerDependencies đứng trước câu "Chưa có codegen → đề xuất"');
   ok(i2.includes('contract-and-codegen.md') && i2.includes('design.md'),
     'AC1.1: I2 trỏ reference và nêu nơi ghi kết quả khi không có ADR (design.md)');

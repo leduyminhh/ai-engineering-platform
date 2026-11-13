@@ -23,16 +23,45 @@ Thiếu endpoint hoặc schema → DỪNG (cổng I1), không tự thêm vào co
 | `openapi-generator` (có `openapitools.json` hoặc script tương ứng) | Dùng lại |
 | Không có gì | Đề xuất mục 3 và HỎI người dùng; không tự cài |
 
+## 2a. Kiểm tương thích công cụ (trước khi đề xuất hoặc chốt)
+
+Áp cho mọi công cụ codegen ứng viên (`openapi-typescript`, `orval`, `openapi-generator`), kể cả công cụ do người dùng
+nêu tên, và chạy **trước G1** khi công cụ được chốt ở tài liệu (`workflow-feature` Bước 3), không đợi tới task `FE-INT`.
+Gắn `[Unverified]` cho mỗi hành vi công cụ chưa kiểm bằng lệnh.
+
+1. **Đọc khai báo** (không ghi gì): `npm view <gói>@<phiên bản> peerDependencies engines --json`. So `peerDependencies`
+   (vd `typescript`) và `engines.node` với phiên bản TypeScript trong `package.json` và lockfile, và với `node --version`.
+2. **Chạy thử bộ giải của npm** (không ghi vào project): sao chép `package.json` (và lockfile nếu có) sang một thư mục
+   tạm rồi chạy `npm install --dry-run --ignore-scripts <gói>@<phiên bản>` ở đó. `ERESOLVE` (exit code khác 0) nghĩa là
+   peer xung đột với phiên bản trong project. Project dùng package manager khác npm: vẫn đọc khai báo bằng bước 1, còn
+   phần chạy thử gắn `[Unverified]`. Không chạy được lệnh (không mạng, registry lỗi): giữ `[Unverified]` kèm lý do và nêu
+   ở G1 như rủi ro chặn hướng; không chặn việc làm rõ hay viết tài liệu.
+3. **Ghi kết quả** vào ADR của công cụ: lệnh đã chạy, `peerDependencies`/`engines` đã đọc, phiên bản TypeScript/Node của
+   project, kết luận. Request không có ADR cho công cụ thì ghi vào `design.md` (hoặc `requirement.md` cỡ thay đổi nhỏ),
+   mục rủi ro/giả định.
+
+Xung đột thì **dừng và để người dùng chọn** (ở G1 nếu còn trước G1, không để lộ ở Task 1):
+
+| Phương án | Cách làm | Hệ quả |
+|---|---|---|
+| Ghim công cụ bằng `npx` | `npx --yes -p typescript@<x.y.z> -p <gói>@<x.y.z> <lệnh>` trong script `api:types`; không thêm dependency vào `package.json` | `tsc` của project vẫn kiểm file type sinh ra; phiên bản ghim phải đủ `x.y.z`, không dùng `latest`, `^` hay dải |
+| Đổi công cụ hoặc phiên bản công cụ | Chọn bản có peer/`engines` khớp project, kiểm lại bằng bước 1–2 | Đổi ADR nếu đã có |
+| Hạ TypeScript hoặc Node của project | Ngoài phạm vi của skill này | Chỉ nêu như hệ quả, không tự làm |
+
 ## 3. Đề xuất mặc định khi chưa có codegen
 
-`openapi-typescript` chỉ sinh **type**; hook và `api-client` vẫn viết mỏng theo template kiến trúc. Ví dụ script
-(đường dẫn đích theo bảng mục 4):
+`openapi-typescript` chỉ sinh **type**; hook và `api-client` vẫn viết mỏng theo template kiến trúc. Chỉ đề xuất sau khi
+mục 2a không báo xung đột. Ví dụ script (đường dẫn đích theo bảng mục 4; thay `<x.y.z>` bằng phiên bản đã kiểm ở mục 2a):
 
 ```json
 "scripts": {
-  "api:types": "openapi-typescript docs/contracts/openapi.json -o src/lib/api/generated/schema.d.ts"
+  "api:types": "npx --yes openapi-typescript@<x.y.z> docs/contracts/openapi.json -o src/lib/api/generated/schema.d.ts"
 }
 ```
+
+Dạng trên ghim đúng một phiên bản bằng `npx`, không thêm dependency vào `package.json`. Nếu mục 2a báo xung đột peer
+`typescript`, thêm `-p typescript@<x.y.z>` (`npx --yes -p typescript@<x.y.z> -p openapi-typescript@<x.y.z> openapi-typescript …`).
+Project đã cài `openapi-typescript` trong `package.json` thì dùng lại script sẵn có (mục 2).
 
 Đối chiếu tài liệu chính thức (bản mới nhất, không phải phiên bản cài trong project): CLI nhận file schema cục bộ
 và ghi ra file qua `-o`, file sinh ra xuất `paths` và `components`, và tham chiếu schema bằng
