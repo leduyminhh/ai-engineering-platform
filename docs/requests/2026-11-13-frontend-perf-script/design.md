@@ -1,7 +1,7 @@
 # Thiết kế: Script đo hiệu năng frontend lưu trong `perf/` và `.gitignore` cho artefact đo
 
 - Ngày: 2026-11-13
-- Trạng thái: approved — G1 và G2 đã duyệt, đang thực thi 2026-11-13
+- Trạng thái: in-progress — nhánh claude/frontend-perf-script-f30726 (G3 chọn giữ nguyên 2026-11-13)
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
@@ -167,6 +167,7 @@ skill-quality), không năng lực nào mô tả nội dung từng skill, và `d
   đo. Chấp nhận.
 - `frontend-init` có `disable-model-invocation: true` và chạy một lần ở project mới, nên bước `.gitignore` không cứu project
   đã có (như project trial); phần đó do AC3.2 của `frontend-performance` xử lý (báo + đề xuất dòng).
+- Còn mở sau review cuối (Ruling hoãn): câu P3 "median bằng 0" ở `measure-conditions.md` chưa có "không kết luận từ chỉ số này" nên mâu thuẫn một phần với dòng CLS gần 0 của `lighthouse-cli.md`; sửa một câu tài liệu, chưa làm vì không còn làn sửa thứ hai trong lúc thực thi. Các minor còn lại: header script và `SKILL.md` ghi exit 1 "redirect ra host ngoài trong lúc đo" rộng hơn code (chỉ kiểm một lần sau `goto`), bước `.gitignore` của `frontend-init` nhắc stack chốt ở bước 3 (đứng sau), pin `lighthouse-cli.md` giòn theo chuỗi, điều kiện chạy main nuốt lỗi `realpathSync` và thoát 0, câu "hay gặp ở CLS và TBT" chưa gắn nhãn [Inference].
 - Hoãn sang G3 (chưa làm, residual risk): chặn request tài nguyên con và redirect bằng JS sau điều hướng ban đầu, giới hạn `--out` trong project, cận trên `--runs`, từ chối URL có userinfo, kiểm `--executable-path`. [Inference] Độ lệch (max − min) / median có thể không giảm khi tăng số lần đo (khoảng rộng của mẫu tăng theo cỡ mẫu), nên "tăng số lần lặp" của P3 không bảo đảm đưa độ lệch xuống dưới ngưỡng.
 - Câu hỏi mở cho G1: (1) chấp nhận quyết định 1 (Playwright dependency có sẵn = tool có sẵn) hay vẫn muốn hỏi trước mỗi
   lần? (2) Chấp nhận hướng B (có script mẫu + test) hay chỉ sửa chữ (hướng A)? (3) Cỡ: giữ dự án nhỏ gọn hay hạ xuống
