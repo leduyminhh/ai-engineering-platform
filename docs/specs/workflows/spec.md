@@ -1,6 +1,6 @@
 # Spec: workflows
 
-Cập nhật: 2026-11-11
+Cập nhật: 2026-11-13
 
 ## Mục đích
 
@@ -38,6 +38,7 @@ Workflow và orchestrator điều phối các worker agent qua `graph.json`; nă
 - **workflows/R22** — `model-routing.md` nêu vai phiên gốc (điều phối, giữ context nhỏ) và phiên con (làm một gói việc); `git-workflow` đòi commit chỉ-xoá riêng khi xoá file đã theo dõi; part chạy song song dùng worktree `isolation: worktree`. Nguồn: [2026-11-11-skill-enrichment-from-usage](../../requests/2026-11-11-skill-enrichment-from-usage/design.md) (thêm)
 - **workflows/R23** — `plan-execution` hỏi cách thực thi trước mỗi lần thực thi plan, chia part hay không: thẻ Cách thực thi ở bước Chuẩn bị, trước `Task 1: start`, hai lựa chọn "Subagent + review từng task" (`subagent`) và "Inline" (`inline`), thứ tự theo `autonomy.planRunner` (đứng đầu kèm "(Recommended)", mặc định Subagent), hàng "Cách thực thi" của `ask-user.md`; nhóm Song song hỏi thêm `partRunner` (R14). Khoá `planRunner`/`partRunner` chỉ đặt lựa chọn đứng đầu, không khoá nào bỏ câu hỏi. Không hỏi khi: không có tool subagent, yêu cầu của người dùng đã nói rõ chạy inline hay không dùng subagent (cả hai ghi `inline`), ledger `root/` đã có dòng `Ruling: cách chạy` (làm tiếp cùng lần thực thi; grep cả ledger), hoặc là phiên part/subagent part. Lựa chọn ghi thành `Ruling: cách chạy <subagent|inline> — <người dùng chọn | không có tool subagent | người dùng nói rõ> — <chi phí nếu sai>` trước `Task 1: start`, rồi lưu bằng `autonomy.mjs --set planRunner=<giá trị>` (không dùng Write/Edit lên `.claude/aip-gate.json`, hook hỏi). Nguồn: [2026-11-11-ask-execution-mode](../../requests/2026-11-11-ask-execution-mode/design.md) (thêm); test `test/content/48-ask-execution-mode.pin.mjs`.
 - **workflows/R24** — Giả định của implementer và `Ruling:` có lệnh chạy lại: implementer trong vòng task trả `assumptions[]` (có thể rỗng); task review trả `assumption_review[]`; `Ruling:` dựa vào số đo hay test ghi `— chạy lại: `<lệnh>``; `ledger.mjs <plan.md> --rulings` liệt kê mọi `Ruling:` của request kèm cờ; re-review chỉ xét giả định mới (`wrong` mức blocker/major giữ task trong vòng sửa); giả định `wrong` mà hướng G1 dựa vào thuộc loại dừng 6; `chạy lại:` bắt buộc khi lý do dựa vào số đo hay test, và `--rulings` chỉ gắn cờ (exit 0), không chặn; review cuối chạy lại lệnh chỉ đọc và đưa Ruling không khớp bằng chứng vào G3. Nguồn: [2026-11-11-reasoning-review](../../requests/2026-11-11-reasoning-review/design.md) (thêm)
+- **workflows/R25** — `workflow-feature` (vẫn 7 bước) có lượt "Kiểm giao diện thật" ở cuối Bước 5, chạy một lần sau mọi task `complete` và trước Bước 6, khi phạm vi `frontend`/`fullstack` có AC kiểm được trên màn hình: subagent `general-purpose` nạp `frontend-manual-check` ở chế độ nhúng (runbook từ AC đã duyệt ở G1, không chờ duyệt thêm), chụp ảnh các trạng thái loading/rỗng/lỗi/thành công, đối chiếu mockup, ghi `document.activeElement` và thử Tab sau thao tác đổi nội dung tại chỗ, rồi ghi `docs/requests/<ngày>-<slug>/ui-check.md` (ảnh ở `.aip/runs/<request>/<part>/ui-check/` tính từ gốc repo chính); không có công cụ trình duyệt hoặc không dựng được môi trường thì `ui-check.md` ghi `Trạng thái: not_run — <lý do>` và `not_run` vào `remaining_risks`, không chặn Bước 6 và không hỏi người dùng; Bước 6 nhận `ui-check.md`, reviewer xếp severity cho FAIL, FAIL `blocker`/`major` trong phạm vi vào đúng một lần sửa, rồi chạy lại các bước FAIL đúng một lần. Nguồn: [2026-11-13-frontend-ui-verify](../../requests/2026-11-13-frontend-ui-verify/design.md) (thêm)
 
 ## Lịch sử
 
@@ -93,3 +94,4 @@ Workflow và orchestrator điều phối các worker agent qua `graph.json`; nă
 | 2026-11-11 | [2026-11-11-reasoning-review](../../requests/2026-11-11-reasoning-review/design.md) | workflows/R2 | đổi |
 | 2026-11-11 | [2026-11-11-reasoning-review](../../requests/2026-11-11-reasoning-review/design.md) | workflows/R7 | đổi |
 | 2026-11-11 | [2026-11-11-reasoning-review](../../requests/2026-11-11-reasoning-review/design.md) | workflows/R24 | thêm |
+| 2026-11-13 | [2026-11-13-frontend-ui-verify](../../requests/2026-11-13-frontend-ui-verify/design.md) | workflows/R25 | thêm |

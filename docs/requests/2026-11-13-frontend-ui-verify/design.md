@@ -64,6 +64,16 @@ Frontmatter: `requires` thêm `frontend/frontend-manual-check`; Điều kiện t
 
 Bump `workflows/.manifest.json` (3.16.2 → 3.17.0) và `plugins/frontend/.manifest.json` (1.16.3 → 1.17.0); chạy `node cli/lib/versions.mjs --lock`. Số chính xác sửa theo lúc làm nếu N2 đã bump trước. Pin mới `test/content/54-frontend-ui-verify.pin.mjs`. Cuối: một dòng `workflows/R25` vào spec sống ở bước gộp; `core` không đổi.
 
+### Cập nhật sau review cuối (2026-11-13)
+
+Các điểm dưới đây thay hoặc bổ sung câu chữ ở trên; nội dung đã vào `WORKFLOW.md` và `frontend-manual-check`:
+
+- `not_run`: lượt vẫn ghi `ui-check.md` với dòng `Trạng thái: not_run — <lý do>` (các bước `chưa kiểm`) và ghi `not_run` kèm `reason` vào `remaining_risks`; không chặn Bước 6, không hỏi.
+- Ảnh chụp tính từ gốc repo chính (`.aip/.gitignore` chỉ có ở đó); session chính truyền đường dẫn tuyệt đối cho subagent.
+- Chế độ nhúng chỉ chạy trên loopback hoặc host khai trong `project-knowledge/`, chỉ ghi `ui-check.md` và thư mục ảnh, không tự thêm cấu hình khi cổng bị chiếm; `ui-check.md` và ảnh không ghi giá trị cookie, token, `Authorization`.
+- Chặn hoặc giả request chỉ để dựng trạng thái loading hoặc lỗi mà AC nêu, không giả phản hồi thành công; bước đó ghi PASS/FAIL chỉ cho nhánh UI.
+- Request chia part: lượt kiểm chạy sau khi mọi part `merged <hash>` hoặc `bỏ`; FAIL còn lại sau lần chạy lại vào `remaining_risks` để trình G3.
+
 ## Ảnh hưởng spec
 
 - workflows: thêm R25
