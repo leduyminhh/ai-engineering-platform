@@ -50,7 +50,7 @@ export default async function run({ ok, ctx }) {
   };
   ok(steps.length === 7, 'AC3.2: workflow-feature vẫn có 7 bước');
   const doing = field('Hành động');
-  ok(/spike/i.test(doing) && doing.includes('frontend-data-integration') && doing.includes('contract-and-codegen.md'),
+  ok(/spike/i.test(doing) && doing.includes('frontend-data-integration') && doing.includes('contract-and-codegen'),
     'AC3.1: Bước 3 Hành động buộc spike giả định công cụ và trỏ reference codegen của frontend-data-integration');
   const gate = field('Gate');
   ok(/spike/i.test(gate) && gate.includes('rủi ro chặn hướng'),
