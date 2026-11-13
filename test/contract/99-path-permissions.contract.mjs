@@ -291,6 +291,12 @@ export default async function run({ ok, ctx }) {
 
     // Glob kèm `..` sau đoạn glob đầu có thể thoát ra ngoài thư mục đã phân loại.
     expectAll([[`rm ${T}/*/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/?/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/[a]/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`rm ${O}/*`, 'deny', 'AC4.5']]);
+    // AC4.1: đoạn glob khớp được `..` (bash < 5.2, dash) thoát khỏi thư mục đã phân loại nên phải hỏi; đoạn không khớp được `..` giữ nguyên.
+    expectAll([
+      ...[`rm ${T}/.?/d/f`, `rm ${T}/..*/d/f`, `rm ${T}/.[.]/d/f`, `rm ${T}/.*/d/f`, `rm ${T}/.*`, `cp x ${T}/.?/f`].map((c) => [c, 'ask', 'AC4.1']),
+      ...[`rm ${T}/.[!.]*/f`, `rm ${T}/.git*/f`, `rm ${T}/*/d/f`, `rm ${T}/a?/f`, `rm ${T}/.?x/f`].map((c) => [c, null, 'AC4.1']),
+      [`rm ${O}/*`, 'deny', 'AC4.1'],
+    ]);
     // Token cờ gộp dài kết thúc bằng xuống dòng không được làm regex chạy bậc hai.
     const t0 = performance.now();
     bd(`cp "-${'t'.repeat(50000)}\n" x`);
