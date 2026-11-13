@@ -65,7 +65,31 @@ THẬT của project (bước 0), không áp mặc định của tài liệu nà
 - Assert **luồng người dùng thấy**: ban đầu loading → `await screen.findByText(...)` khi dữ liệu về;
   case lỗi (`server.use` trả 500) → thông báo lỗi hiển thị; empty → thông báo rỗng.
 - Sau mutation (submit form): assert UI phản ánh kết quả (toast, điều hướng, danh sách cập nhật),
-  không kiểm cache React Query trực tiếp — kiểm qua thứ người dùng thấy.
+  không kiểm cache React Query trực tiếp — kiểm qua thứ người dùng thấy. Khi chuỗi có tải lại, điểm assert và ca đối chứng xem mục «AC hiển thị: assert ở cuối chuỗi sự kiện» bên dưới.
+
+### AC hiển thị: assert ở cuối chuỗi sự kiện
+
+Áp khi AC mô tả thứ người dùng thấy (thông báo, nhãn, dòng danh sách) và chuỗi sự kiện có tải lại; gate T7 ở `SKILL.md`.
+
+- **Điểm assert:** sau khi mọi request và lần tải lại của chuỗi đã xong. Chờ bằng `findBy*` trên một thứ hiển thị ở cuối chuỗi (ví dụ nhãn tổng sau khi tải lại), rồi mới assert thông báo.
+- **Không tính:** assert request log, state của hook, mock được gọi hay số lần gọi. Các thứ này vẫn xanh khi thông báo không hiện.
+- **Đặt ở đâu:** thêm assertion vào test đã có của AC, ở tầng thấp nhất render được cả nguồn của thông báo lẫn vùng chứa nó. AC chưa có test ở tầng đó (chỉ có test hook hoặc test trình bày) thì thêm một test cho AC ở tầng ấy; đó là hành vi chưa có test, không phải bản trùng.
+- **AC không có chuỗi sự kiện** (một thao tác ra kết quả ngay): assert ngay sau thao tác, không giả lập tải lại.
+
+Ví dụ: AC3.5 của trial `aip-frontend-trial` (commit `2587135`), thêm vào test tích hợp đã có:
+
+```tsx
+tickets = seed(25);
+patchStatus = 404;
+render(<TicketBoardPage />);
+await screen.findByText('1–10 / 25');
+await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Đổi trạng thái: Ticket 0' }), 'Xong');
+
+await screen.findByText('1–10 / 24');
+expect(screen.getByRole('alert')).toHaveTextContent('Ticket không còn tồn tại. Danh sách đã được tải lại.');
+```
+
+Ca đối chứng: test gốc AC3.5 trong `TicketBoardPage.test.tsx` xanh nhưng không assert thông báo; nó chỉ kiểm thứ tự `PATCH` → `GET` và nhãn `1–10 / 24`. Lý do không bắt được lỗi: hook đặt `errors[id]` rồi gọi `reload`; `TicketList` chỉ vẽ danh sách khi `state.kind === 'ready'`, nên lúc tải lại thông báo nằm trong vùng bị gỡ, và ticket đã xoá không còn dòng để mang lỗi. Test hook và test `TicketItem` cũng xanh vì mỗi tầng đúng khi đứng riêng; chỉ assertion ở tầng ghép mới thấy được lỗi.
 
 ## 5. Snapshot có kiểm soát
 
