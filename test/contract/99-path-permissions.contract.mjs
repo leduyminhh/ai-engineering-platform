@@ -277,6 +277,16 @@ export default async function run({ ok, ctx }) {
       [`Copy-Item ${D}/a ${D}/b`, 'deny', 'AC3.2'],
       ...[`Move-Item -Path ${T}/a ${O}/b`, `Move-Item -LiteralPath ${T}/a ${O}/b`, `Move-Item -Destination ${O}/b ${T}/a`, `Move-Item ${T}/a ${O}/b`].map((c) => [c, null, 'AC3.3']),
       ...[`Move-Item -Path ${O}/a ${O}/b`, `Move-Item -Path ${T}/a ${D}/b`, `Move-Item -Destination ${O}/b ${O}/a`, `Move-Item -Dest ${T}/b ${O}/a`].map((c) => [c, 'deny', 'AC3.3']),
+      // Mảng dấu phẩy của PowerShell: mỗi phần tử là một đích riêng, một phần tử ngoài root là đủ để chặn/hỏi.
+      ...[`Move-Item -Path ${T}/a,${OUT}/b ${O}/x`, `Move-Item -Path ${T}/a,${OUT}/b -Destination ${T}/x`, `Remove-Item ${T}/a,${OUT}/b`, `Remove-Item -Path ${T}/a,${OUT}/b`,
+        `Set-Content -Path ${O}/a,${OUT}/b -Value x`].map((c) => [c, 'deny', 'AC3.3']),
+      ...[`Copy-Item -Path ${T}/a,${OUT}/b ${O}/x`, `Copy-Item ${D}/a,${OUT}/b ${O}/x`].map((c) => [c, 'ask', 'AC3.2']),
+      ...[`Remove-Item ${T}/a,${T}/b`, `Move-Item -Path ${T}/a,${T}/b ${O}/x`].map((c) => [c, null, 'AC3.3']),
+      // Tham số có giá trị đứng trước đối số vị trí không được làm lệch slot Path/Destination.
+      ...[`Copy-Item -Filter *.txt ${D}/a ${O}/b`, `Copy-Item -Include *.txt ${D}/a ${O}/b`, `Copy-Item -Exclude x ${D}/a ${O}/b`, `Copy-Item -Credential c ${D}/a ${O}/b`,
+        `Copy-Item -Force -Filter *.txt -Recurse ${D}/a ${O}/b`, `Move-Item -Filter *.txt ${T}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
+      ...[`Copy-Item -Filter *.txt ${OUT}/a ${O}/b`, `Copy-Item -ToSession s ${OUT}/a ${O}/b`].map((c) => [c, 'ask', 'AC3.2']),
+      [`Copy-Item -Filter *.txt ${O}/a ${D}/b`, 'deny', 'AC3.2'],
     ], { tool: 'PowerShell' });
 
     // Glob kèm `..` sau đoạn glob đầu có thể thoát ra ngoài thư mục đã phân loại.
