@@ -162,18 +162,18 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
   API thật); phạm vi backend hoặc frontend chạy một task duy nhất, task id `1`; phạm vi fullstack chạy hai task, `1` là
   `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc; trước Task 1 hỏi thẻ Cách thực thi, trước mỗi nhóm Song song hỏi cách chạy part; khoá `planRunner`/`partRunner` của `autonomy.mjs` chỉ đặt lựa chọn đứng đầu, không bỏ câu hỏi).
-  **Kiểm giao diện thật** (một lần, sau khi mọi task `complete` và trước Bước 6): áp dụng khi phạm vi `frontend` hoặc `fullstack` và có ít nhất một AC kiểm được trên màn hình; không thoả thì ghi `bỏ qua kiểm giao diện: <lý do>` vào ledger và Evidence.
+  **Kiểm giao diện thật** (một lần, sau khi mọi task `complete` và trước Bước 6): áp dụng khi phạm vi `frontend` hoặc `fullstack` và có ít nhất một AC kiểm được trên màn hình; phạm vi có FE mà không có AC như vậy thì ghi `bỏ qua kiểm giao diện: <lý do>` vào ledger và Evidence; phạm vi chỉ backend không cần dòng nào. Request chia part: lượt kiểm chạy sau khi mọi part `merged <hash>` hoặc `bỏ`, `<part>` là `root`.
   Session chính giao một subagent (`general-purpose`, `model: sonnet`) nạp skill `frontend-manual-check` ở chế độ nhúng (không chờ duyệt runbook thêm, vì AC đã duyệt ở G1) kèm danh sách AC, đường dẫn mockup hoặc thiết kế (nếu có), lệnh dựng môi trường local/test theo README hoặc `project-knowledge/`, và đường dẫn ghi.
-  Subagent lập runbook từ các AC có UI, chạy walkthrough, chụp ảnh từng trạng thái loading, rỗng, lỗi, thành công, đối chiếu mockup, thử `Tab` sau mỗi lần tải lại hoặc đổi nội dung tại chỗ, rồi ghi `docs/requests/<ngày>-<slug>/ui-check.md` (runbook, kết quả, bảng `## Đối chiếu mockup`); ảnh lưu ở `.aip/runs/<request>/<part>/ui-check/` (ngoài git).
-  Không có công cụ trình duyệt hoặc không dựng được môi trường thì ghi `not_run` kèm `reason` vào `remaining_risks`, không chặn Bước 6 và không hỏi người dùng. Không có tool subagent thì session chính tự chạy theo skill.
-  Session chính commit `ui-check.md` qua `git-workflow`; subagent không commit và không sửa code.
+  Subagent lập runbook từ các AC có UI, chạy walkthrough, chụp ảnh từng trạng thái loading, rỗng, lỗi, thành công, đối chiếu mockup, thử `Tab` sau mỗi lần tải lại hoặc đổi nội dung tại chỗ, rồi ghi `docs/requests/<ngày>-<slug>/ui-check.md` (runbook, kết quả, bảng `## Đối chiếu mockup`); ảnh lưu ở `.aip/runs/<request>/<part>/ui-check/` (ngoài git) tính từ gốc repo chính: session chính truyền đường dẫn tuyệt đối cho subagent, vì trong worktree `.aip/` không bị git bỏ qua (chỉ gốc repo chính có `.aip/.gitignore`).
+  Không có công cụ trình duyệt hoặc không dựng được môi trường thì lượt vẫn ghi `ui-check.md` với dòng `Trạng thái: not_run — <lý do>` (các bước `chưa kiểm`) và ghi `not_run` kèm `reason` vào `remaining_risks`, không chặn Bước 6 và không hỏi người dùng. Không có tool subagent thì session chính tự chạy theo skill.
+  Session chính commit `ui-check.md` trên `feature/<slug>` qua `git-workflow`; subagent không commit và không sửa code.
 - **Ràng buộc:** chỉ sửa file trong `**Files:**` của task; không giả lập data ẩn; không sửa code production để "cho test
   xanh", không xoá hay nới test, không viết test phụ thuộc thứ tự/thời gian thực/mạng thật; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator chưa có codegen/thư viện data → dừng, đề
   xuất, chờ người dùng chọn; không viết tay type trùng contract; không gọi `fetch`/`axios` trong component; e2e chỉ chạy
   trên môi trường local/test — thiếu BE/DB test thì agent trả `not_run` + lý do, không tự dựng hạ tầng; không chạy full
-  suite ở từng task; agent không commit, không push, không gọi agent khác (ngoại lệ: subagent part của nhóm Song song chọn Subagent tự commit trên nhánh part theo `inline.md`); lượt kiểm giao diện thật chỉ chạy trên host local/test, không tự cài Playwright, không sửa code và theo luật an toàn L1–L6 của `frontend-manual-check`.
-- **Đầu ra:** code + test của từng task, mỗi task ≥ 1 commit trên nhánh `feature/`, ledger cập nhật; có part thì Bảng part cập nhật (mọi part `merged <hash>` hoặc `bỏ`).
+  suite ở từng task; agent không commit, không push, không gọi agent khác (ngoại lệ: subagent part của nhóm Song song chọn Subagent tự commit trên nhánh part theo `inline.md`); lượt kiểm giao diện thật chỉ chạy trên host local/test, không tự cài Playwright, không sửa code, chỉ ghi `ui-check.md` và thư mục ảnh (ngoại lệ duy nhất ngoài `**Files:**` của task) và theo luật an toàn L1–L6 của `frontend-manual-check`.
+- **Đầu ra:** code + test của từng task, mỗi task ≥ 1 commit trên nhánh `feature/`, ledger cập nhật; có part thì Bảng part cập nhật (mọi part `merged <hash>` hoặc `bỏ`); phạm vi `frontend`/`fullstack` có màn hình: `ui-check.md` (hoặc dòng bỏ qua kiểm giao diện).
 - **Gate:** mọi task có dòng `Task <n>: complete` kèm evidence test (lệnh + exit code); có part thì mọi part `merged <hash>` hoặc `bỏ` trong Bảng part; mỗi acceptance criterion ≥ 1 test
   (e2e `not_run` vì thiếu môi trường là hợp lệ, ghi vào `remaining_risks`); task TDD `có` có `tdd.red` và `tdd.green`; không
   còn finding `blocker` mở mà chưa có `Ruling:`; build/`tsc`/lint của phía có đụng xanh; task `FE-INT`: type khớp contract; mọi file đổi của task nằm trong
@@ -182,17 +182,17 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   file thay đổi hoặc mới trong lượt đó (`git diff --name-only` và `git ls-files --others --exclude-standard`) chỉ gồm
   file test (và fixture/mock của test; e2e: thư mục `e2e/`, `playwright.config.*`, dòng `.gitignore` cho thư mục
   auth/output của Playwright (vd `e2e/.auth/` và thư mục report/kết quả theo config); `package.json` + lockfile CHỈ khi
-  người dùng đã duyệt (E-r7: thêm `@playwright/test`; thêm script chạy e2e cũng cần duyệt như E-r7)); phạm vi `frontend`/`fullstack` có màn hình thì có `ui-check.md`, hoặc dòng bỏ qua kiểm giao diện kèm lý do, hoặc `not_run` kèm `reason` (không chặn Bước 6).
+  người dùng đã duyệt (E-r7: thêm `@playwright/test`; thêm script chạy e2e cũng cần duyệt như E-r7)); phạm vi `frontend`/`fullstack` có màn hình thì có `ui-check.md` (khi `not_run`: dòng `Trạng thái: not_run — <lý do>` và `not_run` kèm `reason` trong `remaining_risks`, không chặn Bước 6), hoặc dòng bỏ qua kiểm giao diện kèm lý do.
 - **Khi fail:** `agent_result` hỏng → giao lại cho chính agent đó, tối đa 2 lần rồi hỏi người dùng; build/test đỏ hoặc
   finding review → vòng sửa của task, tối đa 3 vòng rồi `Ruling:` (không xoá/nới test); agent trả `blocked` kèm
   `questions[]` → session chính thử trả lời từ spec/plan trước, chỉ hỏi người dùng khi thuộc loại dừng; contract lệch khi
   nối data → quay lại Bước 3; integrator trả `blocked` vì chưa có codegen/thư viện data → hỏi người dùng chọn, gọi lại;
-  plan hỏng đến mức mọi hướng đều là đoán → hỏi người dùng; không có công cụ trình duyệt hoặc không dựng được môi trường khi kiểm giao diện thật → `not_run` kèm `reason`, không dừng.
+  plan hỏng đến mức mọi hướng đều là đoán → hỏi người dùng; không có công cụ trình duyệt hoặc không dựng được môi trường khi kiểm giao diện thật → ghi `ui-check.md` với `Trạng thái: not_run — <lý do>` và `not_run` kèm `reason` vào `remaining_risks`, không dừng.
 - **Evidence:** ledger `.aip/runs/<request>/<part>/progress.md` (các dòng `Task <n>: complete` và `Ruling:`) + `git log` commit theo task; lệnh
   build (`mvn compile`/`npm run build`/`tsc --noEmit` …) + exit code 0; task `FE-INT`: bằng chứng type sinh từ contract;
   lệnh test + exit code + số liệu (`X tests, X passed`); task TDD `có`: `tdd.red`/`tdd.green`; e2e: lệnh Playwright + kết quả hoặc
   `not_run` + lý do; report của integrator (endpoint ↔ hook ↔ container) khi fullstack có contract; danh sách file thay
-  đổi hoặc mới của lượt test so với trạng thái đầu bước; kiểm giao diện thật: đường dẫn `ui-check.md` kèm tổng PASS/FAIL/SKIP, hoặc dòng bỏ qua kèm lý do, hoặc `not_run` + `reason`.
+  đổi hoặc mới của lượt test so với trạng thái đầu bước; kiểm giao diện thật: đường dẫn `ui-check.md` kèm tổng PASS/FAIL/SKIP (khi `not_run`: dòng `Trạng thái: not_run — <lý do>` kèm `reason` trong `remaining_risks`), hoặc dòng bỏ qua kèm lý do.
 
 ### Bước 6 — Review cuối
 
@@ -209,7 +209,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   lệch — drift contract↔code); auditor kiểm authorization của endpoint mới/đổi (kiểm quyền theo vai trò/chủ sở hữu tài
   nguyên, không lộ dữ liệu người khác) và input validation (ràng buộc schema contract được thực thi ở server). Sau đó
   đúng một lần sửa cho toàn bộ finding `blocker`/`major` trong phạm vi (một dispatch, `model: opus`) và một re-review có phạm vi; không
-  có làn sửa thứ hai. Có `ui-check.md`: reviewer frontend đọc từng FAIL và xếp severity theo thang của `frontend-code-review` (walkthrough chỉ gán PASS hoặc FAIL); FAIL `blocker`/`major` trong phạm vi vào đúng một lần sửa nêu trên; sau lượt sửa đó chạy lại các bước FAIL đó đúng một lần (tối đa một lần, cùng cách chạy như Bước 5) và ghi kết quả vào Evidence.
+  có làn sửa thứ hai. Có `ui-check.md`: reviewer frontend đọc từng FAIL và xếp severity theo thang của `frontend-code-review` (walkthrough chỉ gán PASS hoặc FAIL); FAIL `blocker`/`major` trong phạm vi vào đúng một lần sửa nêu trên; sau lượt sửa đó chạy lại các bước FAIL đó đúng một lần (tối đa một lần, cùng cách chạy như Bước 5) và ghi kết quả vào Evidence. FAIL còn lại sau lần chạy lại thì ghi vào `remaining_risks` để trình ở Bước 7 (G3); vòng quay lại Bước 5 vì finding khác không chạy lại lượt kiểm.
 - **Ràng buộc:** reviewer và auditor chỉ đọc, không tự sửa code; mọi finding phải có `file:line` + evidence quan sát
   được; không lặp lại vòng sửa — phần còn lại trình người dùng ở Bước 7.
 - **Đầu ra:** danh sách finding theo severity (contract đầu ra, `core:principles`), `ruling_review[]`, kết quả re-review.
@@ -277,7 +277,7 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Finding `blocker` trong phạm vi sau review cuối (Bước 6; ngoài AC đã có `Ruling:` thì trình ở Bước 7) | Một lần sửa + một re-review; vẫn còn → quay lại Bước 5, tối đa 2 lần rồi hỏi người dùng |
 | Full suite đỏ (Bước 7) | Dừng, không đưa G3 hay 3 lựa chọn (và không merge dù `mergeLocal: true`); sửa trong phạm vi plan rồi chạy lại, tối đa 2 lần, vẫn đỏ → báo `blocked` |
 | Merge local (theo khoá `mergeLocal` hoặc lựa chọn tay): cây bẩn, nhánh feature đã là tổ tiên của nhánh gốc, checkout nhánh gốc thất bại, git từ chối bắt đầu merge, conflict hoặc suite đỏ trên cây đã merge (Bước 7) | Lỗi chặn: cây bẩn thì không checkout; checkout nhánh gốc thất bại (vd worktree khác giữ nhánh gốc) thì không `git merge`, không `--abort`, không dọn, báo tên nhánh gốc và nơi giữ nó (`git worktree list`), người dùng merge ở worktree đó hoặc chọn nhánh gốc khác; tổ tiên thì không merge, không commit rỗng, người dùng quyết `merged` và xoá plan; git từ chối bắt đầu thì không `--abort` (không có merge để abort); conflict hoặc đỏ khi có `MERGE_HEAD` thì `git merge --abort` (nhánh gốc giữ nguyên); dừng, báo người dùng, không dọn |
-| Không có công cụ trình duyệt hoặc không dựng được môi trường khi kiểm giao diện thật (Bước 5) | Ghi `not_run` kèm `reason` vào `remaining_risks`, không dừng, không hỏi; tiếp Bước 6 |
+| Không có công cụ trình duyệt hoặc không dựng được môi trường khi kiểm giao diện thật (Bước 5) | Ghi `ui-check.md` với `Trạng thái: not_run — <lý do>` và `not_run` kèm `reason` vào `remaining_risks`, không dừng, không hỏi; tiếp Bước 6 |
 | Phạm vi có đổi schema DB (Bước 2) | Dừng, đề xuất chạy skill `data-db-migration` trước rồi quay lại feature |
 
 Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọc `references/error-matrix.md` (trường Khi fail của bước vẫn là nguồn chính).
@@ -303,7 +303,7 @@ Khi gặp tình huống lỗi theo bước mà bảng trên chưa nêu → đọ
   authorization/input validation — evidence: Bước 6
 - [ ] Docs và spec sống bị ảnh hưởng đã cập nhật hoặc ghi "không ảnh hưởng", `check-request.mjs` và full suite xanh;
   người dùng đã duyệt diff cả nhánh (G3) và chọn một trong 3 lựa chọn (hoặc `mergeLocal: true`) — evidence: Bước 7
-- [ ] Phạm vi `frontend`/`fullstack` có màn hình: đã kiểm giao diện thật (`ui-check.md`), hoặc ghi bỏ qua / `not_run` kèm lý do trong `remaining_risks` — evidence: Bước 5
+- [ ] Phạm vi `frontend`/`fullstack` có màn hình: có `ui-check.md` (khi `not_run`: `Trạng thái: not_run — <lý do>` và `not_run` kèm `reason` trong `remaining_risks`), hoặc dòng bỏ qua kiểm giao diện kèm lý do — evidence: Bước 5
 - [ ] Mọi gate có evidence `passed` (trừ e2e `not_run` có lý do trong `remaining_risks`)
 - [ ] 0 finding `blocker` trong phạm vi (ngoài AC đã có `Ruling:` thì trình ở Bước 7)
 

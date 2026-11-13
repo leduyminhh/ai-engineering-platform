@@ -110,7 +110,8 @@ hình) ghi là suspected/cần kiểm.
 - **Quản lý focus:** modal/dialog mở không chuyển focus vào, đóng không trả focus về; đổi route không thông
   báo/không đưa focus hợp lý; thay nội dung tại chỗ (tải lại danh sách, phân trang, xoá dòng) làm phần tử đang
   focus bị gỡ khỏi DOM nên focus rơi về `body`; vùng `role="alert"` bị gỡ cùng danh sách khiến thông báo lỗi
-  không bao giờ hiện. Severity gợi ý `major` khi nằm trên luồng chính. Soát từ diff tĩnh: đây là suspected,
+  có thể không hiện. Severity gợi ý `major` khi đã tái hiện (hoặc đọc mã đủ rõ) trên luồng chính; chưa tái hiện
+  được thì giữ suspected/minor theo quy tắc "Không thổi phồng" ở cuối file. Soát từ diff tĩnh: đây là suspected,
   cần kiểm bằng chạy thật.
 - **Tương phản & trạng thái:** chỉ dùng **màu** để truyền trạng thái (lỗi/thành công) không kèm text/icon;
   tương phản chữ/nền thấp (đối chiếu design-system — nếu không đo được thì suspected).

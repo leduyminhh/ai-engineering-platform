@@ -91,13 +91,13 @@ Walkthrough chạm vào một ứng dụng đang chạy nên giữ sáu luật s
 - Không đi theo OAuth hay chuyển hướng ra ngoài localhost.
 - Không tải file về máy.
 - Dữ liệu tạo mới có tiền tố riêng của lần kiểm.
-- Không sửa code hay cấu hình, không đọc file bí mật (`.env`, khoá, chứng chỉ); chặn/giả request ở tầng trình duyệt chỉ để dựng trạng thái loading hoặc lỗi, không giả phản hồi thành công.
+- Không sửa code hay cấu hình, không đọc file bí mật (`.env`, khoá, chứng chỉ); chặn/giả request chỉ để dựng trạng thái loading hoặc lỗi mà AC nêu, không giả phản hồi thành công, không gán PASS luồng dữ liệu thật cho bước đó.
 
 Ngoài ra:
 
 - Chỉ chạy trên host local/test; từ chối staging và production.
 - Không tự cài Playwright hay tải trình duyệt khi chưa hỏi người dùng.
-- Làm việc trên nhánh riêng, không trên nhánh được bảo vệ; commit runbook chỉ khi người dùng yêu cầu, merge và push chỉ sau
+- Làm việc trên nhánh riêng, không trên nhánh được bảo vệ; commit runbook chỉ khi người dùng yêu cầu (trừ chế độ nhúng: session chính commit `ui-check.md`), merge và push chỉ sau
   khi người dùng duyệt diff.
 - Báo cáo bằng số đo được (số bước PASS/FAIL/SKIP); không dùng "đảm bảo", "loại bỏ hoàn toàn", "kiểm hết".
   Luôn nêu phần chưa kiểm và rủi ro còn lại.
@@ -122,7 +122,10 @@ Khi `workflow-feature` gọi skill ở lượt "Kiểm giao diện thật" (Bư�
 
 - Runbook lập từ AC đã duyệt ở G1; không chờ duyệt thêm.
 - Thiếu công cụ trình duyệt, chưa tự cài Playwright, hoặc chưa rõ lệnh dựng môi trường local/test thì trả `not_run` kèm lý do, không hỏi.
-- `not_run` là trạng thái tổng của lượt, không phải kết quả từng bước. Khi đó `ui-check.md` ghi dòng `Trạng thái: not_run — <lý do>` và mọi bước ghi `chưa kiểm` kèm lý do, không để trống.
+- `not_run` là trạng thái tổng của lượt, không phải kết quả từng bước. Khi đó `ui-check.md` vẫn được ghi, có dòng `Trạng thái: not_run — <lý do>` và mọi bước ghi `chưa kiểm` kèm lý do, không để trống; đồng thời `not_run` kèm `reason` vào `remaining_risks` của report. `not_run` không chặn Bước 6.
+- Cổng bị chiếm, hoặc chỉ chạy được khi thêm file cấu hình mới thì `not_run` kèm lý do; không tự thêm cấu hình (L6).
+- URL chỉ là loopback (`localhost`, `127.0.0.1`, `[::1]`) hoặc host khai trong `project-knowledge/`; host khác thì `not_run`.
+- Chỉ ghi `docs/requests/<ngày>-<slug>/ui-check.md` và thư mục ảnh `<gốc repo chính>/.aip/runs/<request>/<part>/ui-check/`; ghi chỗ khác là vi phạm L6. File do công cụ trình duyệt sinh trong cwd (ví dụ `.playwright-mcp/`) thì xoá, không commit.
 - Skill không commit; session chính commit `ui-check.md`.
 
 Chạy độc lập (người dùng gọi trực tiếp) giữ nguyên luật: duyệt runbook trước khi chạy walkthrough, và hỏi trước khi cài Playwright hay trình duyệt.
