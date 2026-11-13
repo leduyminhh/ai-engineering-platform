@@ -57,7 +57,7 @@ Các file liên quan hiện tại: `workflows/feature/WORKFLOW.md` (Bước 5, B
 
 ### R6 — Kiểm chứng hành vi trên ca thật của trial
 
-- [ ] **AC6.1** — Given project trial `E:\Mine\AI\aip-frontend-trial` ở commit `62bfcb0` (cha của `e01a7e7`, trước khi sửa hai lỗi) và plugin `frontend` đã cập nhật When chạy bước kiểm giao diện thật Then `ui-check.md` ghi FAIL cho thông báo 404 của AC3.5 và ít nhất một FAIL focus sau khi chuyển trang. Đây là kiểm tay tốn model, nằm ngoài `npm test`; kết quả (hoặc `not_run` kèm lý do) ghi vào mục "Kết quả kiểm chứng" của `design.md` trước G3.
+- [ ] **AC6.1** — Given project trial `E:\Mine\AI\aip-frontend-trial` ở commit `62bfcb0` (cha của `e01a7e7`, trước khi sửa hai lỗi) và plugin `frontend` đã cập nhật When chạy bước kiểm giao diện thật Then `ui-check.md` ghi ít nhất một FAIL focus sau khi chuyển trang. Đây là kiểm tay tốn model, nằm ngoài `npm test`; kết quả (hoặc `not_run` kèm lý do) ghi vào mục "Kết quả kiểm chứng" của `design.md` trước G3. Đổi ngày 2026-11-13 theo quyết định của người dùng: bản gốc đòi thêm một FAIL cho thông báo 404 của AC3.5, nhưng lần chạy thật ghi thông báo đó hiện đúng, nên vế đó bỏ khỏi AC (xem "Kết quả kiểm chứng").
 
 ## Ngoài phạm vi
 
