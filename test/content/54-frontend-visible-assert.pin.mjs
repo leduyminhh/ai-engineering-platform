@@ -10,8 +10,9 @@ export default async function run({ ok, ctx }) {
   // Chưa có contract nào kiểm ba quy tắc nội dung này; không pin thì có thể bị xoá lặng lẽ khi sửa skill.
   ok(/\| T7 \|[^|]*text hoặc role[^|]*trạng thái cuối/.test(testing),
     'AC1.1 frontend-testing: gate T7 đòi assertion trên text hoặc role ở trạng thái cuối chuỗi sự kiện');
-  ok(dims.includes('**Thông báo do hành động gây ra nằm trong vùng bị gỡ khi loading:**'),
+  const between = (s, from, to) => (s.split(from)[1] ?? '').split(to)[0];
+  ok(between(dims, '## Trục 1', '## Trục 2').includes('**Thông báo do hành động gây ra nằm trong vùng bị gỡ khi loading:**'),
     'AC2.1 review-dimensions: Trục 1 có dấu hiệu thông báo nằm trong vùng bị gỡ khi loading');
-  ok(/AC mô tả thứ người dùng thấy[^.]*trạng thái cuối chuỗi sự kiện/.test(dims.split('## Trục 6')[1] ?? ''),
+  ok(/AC mô tả thứ người dùng thấy[^.]*trạng thái cuối chuỗi sự kiện/.test(between(dims, '## Trục 6', '## Cỡ thay đổi')),
     'AC2.2 review-dimensions: Trục 6 hỏi AC hiển thị có assertion ở trạng thái cuối chuỗi sự kiện');
 }

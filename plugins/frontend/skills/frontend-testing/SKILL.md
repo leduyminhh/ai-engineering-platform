@@ -83,7 +83,7 @@ thiếu skill thì vẫn phải chạy test và thấy đỏ đúng lý do trư�
 - **Custom hook:** test bằng `renderHook` + `act`; assert giá trị trả về và chuyển trạng thái theo
   hành động, không assert nội bộ. Hook bọc React Query → dựng `QueryClientProvider` + msw cho data.
 - **Tầng chạm data:** chặn mạng bằng **msw** (khai `server` với handler cho endpoint), test luồng
-  loading → success/error qua UI. KHÔNG mock `fetch` thủ công; KHÔNG copy cache React Query ra ngoài. Gate T7 chỉ áp khi có AC mô tả thứ người dùng thấy; assert request log, state hook hay mock được gọi không tính; AC không có chuỗi sự kiện thì assert ngay sau thao tác. Cách đặt assertion và ví dụ: `references/react-testing-patterns.md` §4, mục «AC hiển thị: assert ở cuối chuỗi sự kiện».
+  loading → success/error qua UI. KHÔNG mock `fetch` thủ công; KHÔNG copy cache React Query ra ngoài. Gate T7 chỉ áp khi có AC mô tả thứ người dùng thấy; assert request log, state hook hay mock được gọi không tính; AC chưa có test ở tầng ghép (render cả nguồn của thông báo lẫn vùng chứa nó) thì thêm một test cho AC ở tầng đó, chỉ ghi khoảng trống khi không thêm được; AC không có chuỗi sự kiện thì assert ngay sau thao tác. Cách đặt assertion và ví dụ: `references/react-testing-patterns.md` §4, mục «AC hiển thị: assert ở cuối chuỗi sự kiện».
 - **Snapshot có kiểm soát:** chỉ dùng cho khối UI nhỏ, shape ổn định; ưu tiên assert đúng phần tử/
   văn bản có ý nghĩa để test không vỡ vì thay đổi markup vô hại. Tránh snapshot cả cây lớn.
 

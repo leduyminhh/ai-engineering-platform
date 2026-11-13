@@ -69,14 +69,14 @@ THẬT của project (bước 0), không áp mặc định của tài liệu nà
 
 ### AC hiển thị: assert ở cuối chuỗi sự kiện
 
-Áp khi AC mô tả thứ người dùng thấy (thông báo, nhãn, dòng danh sách) và chuỗi sự kiện có tải lại; gate T7 ở `SKILL.md`.
+Áp cho mọi AC mô tả thứ người dùng thấy (thông báo, nhãn, dòng danh sách); gate T7 ở `SKILL.md`. Bullet «Điểm assert» dành cho chuỗi sự kiện có tải lại.
 
 - **Điểm assert:** sau khi mọi request và lần tải lại của chuỗi đã xong. Chờ bằng `findBy*` trên một thứ hiển thị ở cuối chuỗi (ví dụ nhãn phân trang sau khi tải lại), rồi mới assert thông báo.
 - **Không tính:** assert request log, state của hook, mock được gọi hay số lần gọi. Các thứ này vẫn xanh khi thông báo không hiện.
-- **Đặt ở đâu:** thêm assertion vào test đã có của AC, ở tầng thấp nhất render được cả nguồn của thông báo lẫn vùng chứa nó (tầng ghép = tầng render cả nguồn của thông báo lẫn vùng chứa nó); không thêm test thứ hai cho AC đã có test ở tầng đó. AC chưa có test ở tầng đó (chỉ có test hook hoặc test trình bày) thì thêm một test cho AC ở tầng ấy; đó là hành vi chưa có test, không phải bản trùng. Chỉ ghi AC vào khoảng trống của báo cáo khi không thêm được test ở tầng ghép.
+- **Đặt ở đâu:** thêm assertion vào test đã có của AC, ở tầng thấp nhất render được cả nguồn của thông báo lẫn vùng chứa nó (gọi tắt là tầng ghép); không thêm test thứ hai cho AC đã có test ở tầng đó. AC chưa có test ở tầng đó (chỉ có test hook hoặc test trình bày) thì thêm một test cho AC ở tầng ấy; đó là hành vi chưa có test, không phải bản trùng. Chỉ ghi AC vào khoảng trống của báo cáo khi không thêm được test ở tầng ghép.
 - **AC không có chuỗi sự kiện** (một thao tác ra kết quả ngay): assert ngay sau thao tác, không giả lập tải lại.
 
-Ví dụ: AC3.5 của trial `aip-frontend-trial` (commit `2587135`). Đoạn trích từ `TicketBoardPage.test.tsx` của trial: `tickets`, `patchStatus` và `seed` khai ở cấp module; handler msw PATCH trả 404 khi `patchStatus === 404`. Thêm vào test tích hợp đã có:
+Ví dụ: AC3.5 của trial `aip-frontend-trial` (commit `2587135`). Đoạn trích từ `TicketBoardPage.test.tsx` của trial: `tickets`, `patchStatus` và `seed` khai ở cấp module; handler msw PATCH trả 404 khi `patchStatus === 404` và xoá ticket khỏi `tickets`, nên lần GET kế trả 24 ticket. Thêm vào test tích hợp đã có:
 
 ```tsx
 tickets = seed(25);
@@ -89,7 +89,7 @@ await screen.findByText('1–10 / 24');
 expect(screen.getByRole('alert')).toHaveTextContent('Ticket không còn tồn tại. Danh sách đã được tải lại.');
 ```
 
-Ca đối chứng: test gốc AC3.5 trong `TicketBoardPage.test.tsx` kiểm thứ tự `PATCH` → `GET` và nhãn `1–10 / 24`, không assert thông báo. [Unverified] Theo báo cáo của agent trong trial, test này xanh; chưa chạy lại nguyên bản ở `2587135`. Lý do không bắt được lỗi (đã đọc mã ở `2587135`): hook đặt `errors[id]` rồi gọi `reload`; `TicketList` chỉ vẽ danh sách khi `state.kind === 'ready'`, nên lúc tải lại thông báo nằm trong vùng bị gỡ, và ticket đã xoá không còn dòng để mang lỗi. [Unverified] Test hook và test `TicketItem` có assertion khớp hành vi của tầng đó (đã đọc mã ở `2587135`, chưa chạy lại); chỉ assertion ở tầng ghép thấy được lỗi.
+Ca đối chứng: test gốc AC3.5 trong `TicketBoardPage.test.tsx` kiểm thứ tự `PATCH` → `GET` và nhãn `1–10 / 24`, không assert thông báo. [Unverified] Theo báo cáo của agent trong trial, test này xanh; chưa chạy lại nguyên bản ở `2587135`. Lý do không bắt được lỗi (đã đọc mã ở `2587135`): hook đặt `errors[id]` rồi gọi `reload`; `TicketList` chỉ vẽ danh sách khi `state.kind === 'ready'`, nên lúc tải lại thông báo nằm trong vùng bị gỡ, và ticket đã xoá không còn dòng để mang lỗi. [Unverified] Test hook và test `TicketItem` có assertion khớp hành vi của tầng đó (đã đọc mã ở `2587135`, chưa chạy lại). [Inference] Assertion ở tầng ghép là nơi thấy được lỗi này.
 
 ## 5. Snapshot có kiểm soát
 
