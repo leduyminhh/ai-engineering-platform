@@ -61,7 +61,7 @@ Sơ đồ và bảng trên cùng nội dung. Nét liền: có lời gọi. Nét 
 <một đoạn: project làm gì, ai dùng; lấy từ README có sẵn hoặc `[Unverified]`>
 
 ## Cách chạy
-<chỉ lệnh có trong README có sẵn hoặc trong mục scripts của package.json, kèm `file:line`>
+<chỉ lệnh có trong README có sẵn hoặc trong mục scripts của package.json, kèm `file:line`; áp luật lệnh ở mục E của subagent-prompts.md>
 
 ## Module
 | Module | Đường dẫn | Loại | Nhiệm vụ | README |
@@ -95,7 +95,7 @@ Cách điền:
 2. Thay `<...>` bằng nội dung có bằng chứng (`file:line`) hoặc `[Unverified] <mô tả>`. Không để `<...>` trong file đầu ra.
 3. `source-structure.md`: template giả định `src/` và các quy ước mẫu. Chỉ giữ quy ước đã thấy trong code, kèm `file:line`; bỏ dòng trỏ tới `docs/decisions/0001-*.md` nếu không có file đó.
 4. `architecture.md`, mục "Quyết định kiến trúc chính": trỏ tới `docs/decisions/` chỉ khi thư mục có thật.
-5. `tech-stack.yml`: version chỉ ghi khi có `file:line`. Không có thì viết `"[Unverified]"`. Đừng mở file cấu hình để lấy version.
+5. `tech-stack.yml`: version chỉ ghi khi có `file:line` trong nguồn được phép: `package.json` (dependencies, devDependencies), `requirements.txt`, lock file (`package-lock.json`, `yarn.lock`, `poetry.lock`). Maven và Gradle không có nguồn được phép (không mở `pom.xml`, `build.gradle`), nên ghi `"[Unverified]"`. Không mở file cấu hình để lấy version.
 6. Mermaid trong `architecture.md` luôn kèm bảng chữ cùng nội dung.
 
 ## Luật file có sẵn (README, project-knowledge)

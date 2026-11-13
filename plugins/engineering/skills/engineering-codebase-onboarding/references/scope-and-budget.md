@@ -48,8 +48,8 @@ Bắt buộc, làm trước trong ngân sách:
 3. Điểm vào: file tên chứa `Application`, `Main`, `main`, `index`, `app`, `server`, `Program`.
 4. Route: file khai báo route, controller hoặc router (liệt kê bằng Glob hoặc Grep, chỉ lấy tên file).
 5. Tên khoá cấu hình, bằng lệnh trong `secret-safety.md`. Không mở giá trị.
-6. Dockerfile của module (hoặc của gốc khi module là gốc), nếu có.
-7. File CI ở gốc, chỉ phần lệnh build và test.
+6. Dockerfile của module (hoặc của gốc khi module là gốc), nếu có; theo luật mục E của `subagent-prompts.md`.
+7. File CI ở gốc, chỉ phần lệnh build và test; theo luật mục E của `subagent-prompts.md`.
 
 Mở rộng trong ngân sách: các file còn lại theo thư mục cấp một, ưu tiên file có lời gọi tới module khác (tìm bằng Grep, chỉ lấy danh sách file).
 

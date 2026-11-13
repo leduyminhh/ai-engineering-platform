@@ -16,7 +16,7 @@ Các khối dùng chung (dán nguyên, không sửa chữ) nằm ở mục A, B,
   grep -nE '^[[:space:]]*[A-Za-z0-9_.-]{1,30}[[:space:]]*(:$|[:=][^=])' <file> | sed -E 's/^([0-9]+):[[:space:]]*([A-Za-z0-9_.-]+).*/\1 \2/' | grep -E '^[0-9]+ [A-Za-z0-9_.-]+$'
 - Một file mỗi lần, không truyền nhiều file: với nhiều file, `grep` in tiền tố tên file, `sed` không bỏ được và dòng gốc (có giá trị) có thể lọt. Bộ lọc `grep -E` cuối chỉ giữ dòng dạng `<số> <khoá>`.
 - Không dùng `grep -o` (hoặc `-oE`) cho việc này: `-o` in mọi ký tự nằm trong đoạn khớp, kể cả ký tự đầu của giá trị. Không đưa ký tự giá trị vào mẫu. Dòng gốc chỉ đi vào pipe; đầu ra chỉ có số dòng và tên khoá.
-- `[:=][^=]` và `:$` không lấy ký tự giá trị và loại `=` đệm base64 (`...=`, `...==`). Khoá quá 30 ký tự, khoá có dấu nháy kép (JSON), và dòng không khớp: ghi vào `not_read` với lý do "cấu hình".
+- Không in ký tự giá trị: lệnh không dùng `-o`, và `sed` bỏ mọi thứ sau khoá. `[^=]` sau dấu phân cách chỉ loại dòng có `=` đệm base64 (`...=`, `...==`), không lấy giá trị; ký tự nó khớp không được in. Khoá quá 30 ký tự, khoá có dấu nháy kép (JSON), và dòng không khớp: ghi vào `not_read` với lý do "cấu hình".
 - `sed` chỉ nhận đầu vào từ pipe của `grep` ở trên. Không đưa tên file cấu hình cho `sed`.
 - Gặp giá trị bí mật trong mã nguồn: ghi loại và `file:line`, không trích thêm dòng đó.
 ```
@@ -77,6 +77,16 @@ agent_result:
 ```
 ```
 
+## Mục E. Luật lệnh, Dockerfile và CI (dán nguyên)
+
+```text
+## Luật lệnh, Dockerfile và CI
+- Lệnh trong README (cách chạy, build, test): thay mọi phần gán biến môi trường đứng trước lệnh (`TÊN=<giá-trị> lệnh`) bằng `<TÊN>`; không chép giá trị.
+- Dockerfile: chỉ chép dòng `RUN` có lệnh build hoặc test, `CMD` và `ENTRYPOINT`. Không chép dòng `ENV`, `ARG`, hay cờ `--build-arg` và `-e` có giá trị.
+- File CI: chỉ chép dòng `run` có lệnh build hoặc test. Không chép khối `env`, `with`, hay mọi khối có giá trị.
+- Dockerfile và file CI có thể đọc bằng Read. Giá trị trong đó không được chép vào bất kỳ file hay trường nào; ghi `"Read đưa giá trị trong <tên file> vào log phiên"` vào `remaining_risks`.
+```
+
 ## 1. Prompt nhóm module
 
 ```text
@@ -91,9 +101,9 @@ Bạn đọc code của một nhóm module trong project <tên project> để vi
 - Khung README: dán nguyên mục "Khung README module" của references/readme-structure.md.
 
 ## Được đọc
-- Glob, Grep (chỉ liệt kê tên file hoặc đếm), Read với file mã nguồn có đuôi trong trường kiểm kê, và README có sẵn của module.
+- Glob, Grep (chỉ liệt kê tên file hoặc đếm), Read với file mã nguồn có đuôi trong trường kiểm kê, README có sẵn của module, và Dockerfile hoặc file CI của module (theo mục E).
 - `git ls-files`, `git log --oneline -n 20 -- <đường dẫn>`.
-- Lệnh lấy tên khoá theo mục A (chỉ dùng cho file cấu hình khi thật sự cần một khẳng định về khoá).
+- Lệnh lấy tên khoá theo mục A, bắt buộc cho mục 5 của mức đọc; không dùng cách nào khác để mở file cấu hình.
 
 ## Không được
 - Ghi, sửa hay xoá file ngoài mục "Được ghi"; sửa code; chạy test hay build; commit, push.
@@ -106,9 +116,7 @@ Bạn đọc code của một nhóm module trong project <tên project> để vi
 Không ghi file nào khác. Findings không ghi vào file; đưa vào `findings[]` của agent_result.
 
 ## Mức đọc
-- Bắt buộc, làm trước: README có sẵn của module (nếu có); liệt kê file nguồn bằng Glob; file điểm vào (tên chứa Application, Main, main, index, app, server, Program, hoặc khai báo route, controller, router); file có lời gọi tới module khác (tìm bằng Grep, chỉ lấy danh sách file).
-- Mở rộng trong ngân sách: các file còn lại theo thư mục cấp một, ưu tiên file có lời gọi liên module.
-- Ngân sách: tối đa 60 lần gọi công cụ, đếm từng lần. Khi còn 5 lần, ngừng đọc và viết phần đã có. Hết ngân sách: dừng và liệt kê file hoặc thư mục chưa đọc vào `not_read`.
+- Dán nguyên mục "Mức đọc" của references/scope-and-budget.md: bảy mục bắt buộc làm trước, mở rộng trong ngân sách, ngân sách 60 lần gọi. Luật lệnh, Dockerfile và CI: dán nguyên mục E ở trên.
 
 <dán nguyên mục A>
 
@@ -161,7 +169,7 @@ Bạn viết README.md ở gốc và bốn file project-knowledge của project 
 - Đường dẫn README từng module: <danh sách>
 - Ngôn ngữ: <tiếng Việt có dấu | khác>
 - Lựa chọn cổng 1 cho file có sẵn: README.md gốc: <giữ | khối marker | bỏ>; project-overview.md, architecture.md, source-structure.md: <giữ | khối marker | bỏ>; tech-stack.yml: <giữ | bỏ>
-- Khung và cách điền: dán nguyên mục "Khung README root" và "Bốn file project-knowledge" của references/readme-structure.md.
+- Khung và cách điền: dán nguyên mục "Khung README root" và "Bốn file project-knowledge" của references/readme-structure.md. Luật lệnh trong README: dán nguyên mục E.
 - Thư mục template: <thư mục skill artifact-templates>/references/project-knowledge/
 
 ## Được đọc
@@ -225,5 +233,5 @@ Mỗi kết luận "sai" hoặc "không xác minh được" là một mục `fin
 - `status: blocked` có `questions[]`: session chính không trả lời thay người dùng. Nếu docs và request đã có đáp án thì giao lại kèm đáp án; nếu không thì đưa vào mục "Chưa kiểm" của báo cáo cuối.
 - `status: blocked` do lệch cặp marker: báo người dùng, không ghi file đó.
 - `not_read` không rỗng hoặc `remaining_risks` không rỗng: không phải lỗi; đưa vào báo cáo cuối.
-- `validation` tự khai không đủ để tin. Sau khi mọi subagent xong, chạy `node <thư mục skill engineering-spec-backfill>/scripts/check-citations.mjs <file.md | thư mục đã ghi> --root <gốc project>` (kỳ vọng exit 0), rồi `scan-secrets.mjs` trên cùng các file (kỳ vọng exit 0). Khớp của scan-secrets thì sửa file, không nới script.
+- `validation` tự khai không đủ để tin. Sau khi mọi subagent xong, chạy bước 6(a) và 6(b) của SKILL.md trên các file đã ghi, có nhánh `not_run` khi thiếu check-citations; kỳ vọng exit 0 của scan-secrets. Khớp của scan-secrets thì sửa file, không nới script.
 - `findings` loại bảo mật (loại trùng tên của `scan-secrets.mjs`) ghi vào `.aip/runs/onboarding-<slug>/security-findings.md`, chỉ có loại, `file:line` và nhãn. Loại `trích-dẫn-sai` và `không-xác-minh` ghi vào báo cáo cuối, không vào file đó. Không chép giá trị vào file nào.

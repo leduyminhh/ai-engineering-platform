@@ -30,6 +30,13 @@ Chỉ dùng lệnh tên khoá ở trên. Không `Read`, `cat`, `head`, `tail`, `
 
 Gặp giá trị bí mật trong mã nguồn: ghi loại và `file:line`, không trích thêm dòng đó.
 
+## Lệnh chép ra README, Dockerfile và CI
+
+- Lệnh trong README (cách chạy, build, test): thay mọi phần gán biến môi trường đứng trước lệnh (`TÊN=<giá-trị> lệnh`) bằng `<TÊN>`; không chép giá trị.
+- Dockerfile: chỉ chép dòng `RUN` có lệnh build hoặc test, `CMD` và `ENTRYPOINT`. Không chép dòng `ENV`, `ARG`, hay cờ `--build-arg` và `-e` có giá trị.
+- File CI: chỉ chép dòng `run` có lệnh build hoặc test. Không chép khối `env`, `with`, hay mọi khối có giá trị.
+- Dockerfile và file CI có thể đọc bằng `Read`. Đọc như vậy đưa cả file vào log phiên; ghi tên file đó vào `remaining_risks`.
+
 ## Mẫu file findings
 
 Đường dẫn: `.aip/runs/onboarding-<slug>/security-findings.md`. Chỉ có loại, `file:line` và nhãn `proven` hoặc `suspected`. Không có giá trị, không có đoạn khớp.
@@ -54,7 +61,7 @@ Skill này không tự rotate secret, không sửa mã nguồn để xoá lỗ h
 
 ## `.aip/.gitignore`
 
-Nếu chưa có, tạo file này với nội dung một dòng `*`. Lý do: `.aip/runs/` chứa findings và phần nháp; `*` làm cả thư mục bị bỏ qua, kể cả file này, nên findings không vào commit nếu không ai chép thủ công. Nếu file đã có thì giữ nguyên.
+File nằm ở cấp `.aip/`, không nằm trong thư mục run. Nếu chưa có, tạo file này với nội dung một dòng `*`. Lý do: `.aip/runs/` chứa findings và phần nháp; `*` làm cả thư mục bị bỏ qua, kể cả file này, nên findings không vào commit nếu không ai chép thủ công. Nếu file đã có thì giữ nguyên.
 
 ## Rủi ro còn lại
 

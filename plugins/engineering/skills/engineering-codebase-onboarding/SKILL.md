@@ -19,16 +19,17 @@ Chạy ở session chính. Session chính giữ hai cổng duyệt, điều ph�
 - **Chỉ ghi các file sau:**
   - `README.md` của từng module trong bảng đã duyệt ở cổng 1, và `README.md` ở gốc.
   - `project-knowledge/project-overview.md`, `architecture.md`, `source-structure.md`, `tech-stack.yml`.
-  - Dưới `.aip/runs/onboarding-<slug>/`: `security-findings.md`, thư mục `parts/<module>/`, `.aip/.gitignore`.
+  - Dưới `.aip/runs/onboarding-<slug>/`: `baseline-status.txt`, `security-findings.md`, thư mục `parts/<module>/`.
+  - Ngoại lệ ở cấp `.aip/`: `.aip/.gitignore`, chỉ tạo khi chưa có, nội dung một dòng `*`.
 - **Không ghi** `docs/specs/`, `project-knowledge/domain-context.md`, `project-knowledge/code-convention.md`, mã nguồn, test, cấu hình, build file.
 - **README và `project-knowledge/` có sẵn không bị ghi đè.** Mỗi file có sẵn chỉ đổi theo lựa chọn ở cổng 1: giữ nguyên; thay khối giữa `<!-- aip:onboarding begin -->` và `<!-- aip:onboarding end -->`; hoặc bỏ. `tech-stack.yml` chỉ giữ hoặc bỏ.
-- **Không đọc nội dung `.env` và file cấu hình.** Tên khoá chỉ lấy bằng lệnh trong [references/secret-safety.md](references/secret-safety.md). Không in giá trị vào chat, file hoặc báo cáo.
+- **Không đọc nội dung `.env` và file cấu hình.** Tên khoá chỉ lấy bằng lệnh trong [references/secret-safety.md](references/secret-safety.md). Không in giá trị vào chat, file hoặc báo cáo. Dockerfile và file CI được đọc, nhưng giá trị trong chúng không được chép đi đâu (luật ở secret-safety.md).
 - **Hai cổng không bỏ qua.** Không tạo subagent trước khi người dùng duyệt bảng module. Không commit trước khi người dùng duyệt `git diff`.
 - **Không push, không merge, không tag.** Commit qua `core:git-workflow` trên nhánh không protected (không `main`, `master`, `dev`, `develop`). Nếu nhánh hiện tại là protected thì tạo nhánh `docs/onboarding-<slug>` trước. Findings không vào commit.
 - **Công cụ được dùng:**
   - Đọc: `Read`, `Grep`, `Glob`; subagent `general-purpose`.
   - Bash chỉ đọc: `git ls-files`, `git status`, `git log`, `git diff`, `ls`, `wc`. Mỗi lần gọi một lệnh.
-  - Bash ghi: `mkdir`, `printf … >` chỉ trong `.aip/runs/onboarding-<slug>/`.
+  - Bash ghi: `mkdir`, `printf … >` chỉ trong `.aip/runs/onboarding-<slug>/`, và một lần cho `.aip/.gitignore` khi chưa có.
   - `node` chỉ chạy `inventory-modules.mjs`, `scan-secrets.mjs` của skill này và `check-citations.mjs` của `engineering-spec-backfill`.
   - Không build, không test, không chạy code của project được quét, không gọi mạng.
 - Skill không tự chạy quality gate và không sửa lỗ hổng. Phát hiện bảo mật chỉ được ghi và định tuyến.
@@ -38,7 +39,7 @@ Chạy ở session chính. Session chính giữ hai cổng duyệt, điều ph�
 
 Sao checklist này vào phản hồi và đánh dấu từng bước khi làm:
 
-- [ ] 1. **Chốt phạm vi và nền.** Hỏi phạm vi (cả repo hoặc thư mục con) nếu người dùng chưa nói. Chạy `git status --porcelain` và giữ kết quả làm nền trong phiên; không ghi thành file. Chọn `<slug>` (kebab-case, gắn ngày hoặc tên phạm vi), tạo `.aip/runs/onboarding-<slug>/` và `.aip/.gitignore` nếu chưa có. Nạp [references/scope-and-budget.md](references/scope-and-budget.md).
+- [ ] 1. **Chốt phạm vi và nền.** Hỏi phạm vi (cả repo hoặc thư mục con) nếu người dùng chưa nói. Chọn `<slug>` (kebab-case, gắn ngày hoặc tên phạm vi), tạo `.aip/runs/onboarding-<slug>/` và `.aip/.gitignore` (nếu chưa có). Chạy `git status --porcelain` và ghi kết quả vào `.aip/runs/onboarding-<slug>/baseline-status.txt`; đây là nền cho bước 6(c). Nạp [references/scope-and-budget.md](references/scope-and-budget.md).
 - [ ] 2. **Kiểm kê.** Chạy `node <thư mục skill>/scripts/inventory-modules.mjs <gốc> --format json`. Dựng bảng cho cổng 1 từ trường kiểm kê. Có `notes` thì nêu nguyên văn trong bảng. `modules` rỗng thì kiểm kê tay các module (Go, .NET, Rust, ...) và ghi rõ là làm tay.
 - [ ] 3. **Cổng 1 ⏸.** Trình bảng: module, đường dẫn, loại build, số file nguồn và dòng, nhóm đề xuất (số nhóm, tổng file và dòng mỗi nhóm), README hiện có, `project-knowledge/` hiện có (giữ, khối marker hoặc bỏ), thư mục `unclaimed`, và `rootFiles`. Dừng và chờ người dùng duyệt, gộp, tách, bỏ module hoặc đổi lựa chọn cho file có sẵn. Trước câu duyệt: chưa tạo subagent, chưa ghi file đích.
 - [ ] 4. **Giao subagent.** Mỗi nhóm đã duyệt một subagent `general-purpose`, `model: "sonnet"`, dùng prompt mục 1 của [references/subagent-prompts.md](references/subagent-prompts.md). Tối đa 6 subagent chạy song song. Agent trả 404 với `sonnet` thì bỏ trống `model` và ghi vào báo cáo cuối rằng subagent kế thừa model của session. Kiểm `changes` của từng báo cáo: file ngoài danh sách được giao thì ghi nhận, báo người dùng và giao lại đúng subagent đó, tối đa 2 lần; không tự xoá. `read` có file cấu hình thì ghi vi phạm và giao lại nhóm đó nếu còn ngân sách. Module vượt trần: giao từng phần theo [references/scope-and-budget.md](references/scope-and-budget.md).
@@ -46,17 +47,17 @@ Sao checklist này vào phản hồi và đánh dấu từng bước khi làm:
 - [ ] 6. **Kiểm cơ học, rồi reviewer.** Chạy đủ ba mục, rồi reviewer mới.
   - (a) **Trích dẫn.** Trước khi chạy, kiểm `<thư mục skill engineering-spec-backfill>/scripts/check-citations.mjs` có tồn tại không. Thiếu thì dừng mục này, ghi `not_run` kèm lý do và nhắc người dùng cài `engineering-spec-backfill`; không ghi "trích dẫn sạch". Có thì chạy `node <script> <file.md | thư mục> --root <gốc>` trên mọi file Markdown đã ghi. Kỳ vọng exit 0 và `0 trích dẫn hỏng`. `not_run` không chặn cổng 2 nhưng phải nêu nổi bật.
   - (b) **Secret.** Ghi `security-findings.md` từ `findings` loại bảo mật theo mẫu trong [references/secret-safety.md](references/secret-safety.md). Rồi chạy `node <thư mục skill>/scripts/scan-secrets.mjs <các file .md đã ghi> <security-findings.md>`. Kỳ vọng exit 0. Có khớp thì sửa file (giao lại subagent của module), không nới script.
-  - (c) **Phạm vi.** `git status --porcelain` so với nền. Kỳ vọng chỉ còn đường dẫn trong danh sách đã duyệt cộng `project-knowledge/`. Đường dẫn khác: báo người dùng, không tự xử lý.
+  - (c) **Phạm vi.** `git status --porcelain` so với `baseline-status.txt`. Kỳ vọng chỉ còn đường dẫn trong danh sách đã duyệt cộng `project-knowledge/`. Đường dẫn khác: báo người dùng, không tự xử lý.
   - **Reviewer.** Một subagent `general-purpose`, `model: "sonnet"`, theo prompt 4: mở dòng của mọi mũi tên liên kết và tối đa 10 số liệu mỗi module. Kết luận đúng, sai hoặc không xác minh được. Sai thì giao lại đúng subagent của module, tối đa 2 vòng.
-  - **Vòng sửa.** Lỗi ở (a), (b), (c) hoặc từ reviewer được sửa tối đa 3 vòng. Vẫn lỗi thì dừng và báo người dùng. Không nới checker.
+  - **Vòng sửa.** Lỗi ở (a), (b), (c) hoặc từ reviewer được sửa tối đa 3 vòng. Sau mỗi vòng sửa, chạy lại (a), (b), (c) trên file đã sửa; vòng chỉ đạt khi lần chạy cuối của cả ba xanh. Vẫn lỗi thì dừng và báo người dùng. Không nới checker.
 - [ ] 7. **Cổng 2 ⏸.** Trình `git diff` và danh sách file mới (`git status --porcelain`). Nêu số trích dẫn hỏng hoặc `not_run`, và số `[Unverified]`. `security-findings.md` không nằm trong diff vì `.aip/` bị bỏ qua. Người dùng duyệt thì commit qua `core:git-workflow`, header `docs(onboarding): <tóm tắt>`, body tiếng Việt có dấu, không thêm dòng `Co-Authored-By`. Không push.
 - [ ] 8. **Báo cáo cuối.** Điền [references/final-report.md](references/final-report.md) và trả trong chat. Không ghi báo cáo thành file trong repo.
 
 ## Verification (trước khi báo hoàn thành)
 
-- Bước 6(a) exit 0 và `0 trích dẫn hỏng`, hoặc `not_run` có lý do trong báo cáo.
-- Bước 6(b) exit 0 trên mọi file đã ghi và trên `security-findings.md`.
-- Bước 6(c): `git status --porcelain` không có đường dẫn ngoài danh sách đã duyệt.
+- Ở lần chạy cuối (sau vòng sửa cuối, nếu có): bước 6(a) exit 0 và `0 trích dẫn hỏng`, hoặc `not_run` có lý do trong báo cáo.
+- Ở lần chạy cuối: bước 6(b) exit 0 trên mọi file đã ghi và trên `security-findings.md`.
+- Ở lần chạy cuối: bước 6(c) `git status --porcelain` không có đường dẫn ngoài danh sách đã duyệt.
 - Reviewer: số đúng, sai, không xác minh được đã ghi; các mục sai đã sửa hoặc còn lại được nêu.
 - Báo cáo có module đã đọc và chưa đọc, `not_read`, số `[Unverified]`, số lần gọi công cụ thực tế.
 - Báo rủi ro còn lại: log phiên, heuristic của `scan-secrets.mjs`, phần chưa kiểm kê.
