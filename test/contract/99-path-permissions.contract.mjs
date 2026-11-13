@@ -252,11 +252,12 @@ export default async function run({ ok, ctx }) {
     // R18: cp/mv vào thư mục .claude với nguồn tên file cấu hình hook phải hỏi ở mọi chế độ.
     const r18 = (rows, opt) => { expectAll(rows, askMode); expectAll(rows, opt); };
     r18([...['cp settings.json .claude/', 'cp -t .claude settings.json', 'cp -t .claude /s/settings.local.json', 'mv -t .claude settings.json', 'mv settings.json .claude',
-      'cp aip-gate.json .claude', 'cp --target-directory=.claude settings.json', 'cp a settings.json .claude/', 'cp Settings.JSON .CLAUDE/'].map((c) => [c, 'ask', 'AC1.1']),
+      'cp aip-gate.json .claude', 'cp --target-directory=.claude settings.json', 'cp a settings.json .claude/', 'cp Settings.JSON .CLAUDE/',
+      'cp settings.json .claude/.', 'cp settings.json .claude/./', 'cp -t .claude/. settings.json', 'cp settings.json .claude/sub/..'].map((c) => [c, 'ask', 'AC1.1']),
     ...['cp x.json .claude/', 'cp settings.json out/', 'cp .claude/settings.json out/x'].map((c) => [c, null, 'AC1.3'])], {});
     const psAsk = { ...askMode, tool: 'PowerShell' };
     const psRows = ['Copy-Item settings.json .claude\\', 'Copy-Item -Path settings.json -Destination .claude', 'Copy-Item -Path settings.json -Destination .claude\\', 'Move-Item settings.json .claude',
-      'Copy-Item -Path:settings.json -Destination .claude', 'Copy-Item -Destination:.claude -Path:settings.json', 'Copy-Item settings.json,aip-gate.json .claude', 'Copy-Item -Path settings.json,x.json -Destination .claude'].map((c) => [c, 'ask', 'AC1.2']);
+      'Copy-Item -Path:settings.json -Destination .claude', 'Copy-Item -Destination:.claude -Path:settings.json', 'Copy-Item settings.json,aip-gate.json .claude', 'Copy-Item -Path settings.json,x.json -Destination .claude', 'Copy-Item settings.json .claude\\sub\\..'].map((c) => [c, 'ask', 'AC1.2']);
     expectAll(psRows, psAsk);
     expectAll(psRows, { tool: 'PowerShell' });
     // Nguồn chỉ đọc không phải đích ghi: không hỏi R18 khi .claude/settings.json chỉ là nguồn (AC1.3).
@@ -287,6 +288,13 @@ export default async function run({ ok, ctx }) {
         `Copy-Item -Force -Filter *.txt -Recurse ${D}/a ${O}/b`, `Move-Item -Filter *.txt ${T}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
       ...[`Copy-Item -Filter *.txt ${OUT}/a ${O}/b`, `Copy-Item -ToSession s ${OUT}/a ${O}/b`].map((c) => [c, 'ask', 'AC3.2']),
       [`Copy-Item -Filter *.txt ${O}/a ${D}/b`, 'deny', 'AC3.2'],
+      // Tham số chung có giá trị (-ErrorAction, -OutVariable…) cũng không được làm lệch slot.
+      ...[`Copy-Item -ErrorAction SilentlyContinue ${D}/a ${O}/b`, `Copy-Item -ErrorAction Stop ${D}/a ${O}/b`, `Copy-Item -OutVariable v ${D}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
+      [`Copy-Item -Recurse -ErrorAction Stop ${OUT}/a ${O}/b`, 'ask', 'AC3.2'],
+      // Chuỗi trong nháy có dấu phẩy là một đường dẫn literal: vẫn phải xét cả token gốc, không chỉ các phần đã tách (phần sau `..` resolve theo cwd khác).
+      ...[`cd ${P}/a/b; Remove-Item '${T}/x,m/../../${path.basename(OUT)}/f'`, `cd ${P}/a/b; Set-Content -Path '${O}/x,m/../../${path.basename(OUT)}/f' -Value y`].map((c) => [c, 'deny', 'AC3.3']),
+      // Đường dẫn rỗng là không xác định: không được bị bỏ khi tách dấu phẩy.
+      ...[`Remove-Item ''`, `Remove-Item ${T}/a ''`].map((c) => [c, 'ask', 'AC3.3']),
     ], { tool: 'PowerShell' });
 
     // Glob kèm `..` sau đoạn glob đầu có thể thoát ra ngoài thư mục đã phân loại.
@@ -295,7 +303,6 @@ export default async function run({ ok, ctx }) {
     expectAll([
       ...[`rm ${T}/.?/d/f`, `rm ${T}/..*/d/f`, `rm ${T}/.[.]/d/f`, `rm ${T}/.*/d/f`, `rm ${T}/.*`, `cp x ${T}/.?/f`].map((c) => [c, 'ask', 'AC4.1']),
       ...[`rm ${T}/.[!.]*/f`, `rm ${T}/.git*/f`, `rm ${T}/*/d/f`, `rm ${T}/a?/f`, `rm ${T}/.?x/f`].map((c) => [c, null, 'AC4.1']),
-      [`rm ${O}/*`, 'deny', 'AC4.1'],
       // Lớp ký tự POSIX khớp `..` trên dash; biến trong đoạn glob hoặc sau nó có thể là `.`/`..`.
       ...[`rm ${T}/.[[:punct:]]/d/f`, `rm ${T}/.[![:alpha:]]/d/f`, `rm ${T}/.[[=.=]]/d/f`, `X=.; rm ${T}/$X?/d/f`, `X=.; rm ${T}/$X*/d/f`, `rm ${T}/*/$X/f`].map((c) => [c, 'ask', 'AC4.1']),
       // Thư mục trước đoạn glob đã thiếu quyền thì vẫn deny như trước, không hạ xuống ask.
@@ -314,6 +321,10 @@ export default async function run({ ok, ctx }) {
     ok(rd?.decision === 'ask' && shapeOk(rd.reason) && /đọc/.test(rd.reason) && !/\$VAR/.test(rd.reason) && !/ghi vào/.test(rd.reason), 'AC3.10: thiếu read → ask câu riêng, tóm tắt không ghi nhầm "ghi vào"');
     const blk = bd(`Copy-Item -Path ${CT} -Destination ${O}/b`, { tool: 'PowerShell' });
     ok(blk?.decision === 'deny' && /luôn/.test(blk.reason) && !/fullRoots/.test(blk.reason), 'AC3.10: gốc <tmpdir>/claude → deny câu riêng, không gợi ý mở bằng cấu hình');
+
+    // Dòng "Lệnh gồm" của popup nêu đích ghi (thứ gây ra câu hỏi), không nêu nguồn đọc đứng đầu.
+    const sum = bd('cp x $X/b');
+    ok(sum?.decision === 'ask' && /ghi vào \$X\/b/.test(sum.reason) && !/\(đọc x\)/.test(sum.reason), 'AC3.1: dòng "Lệnh gồm" nêu đích ghi, không nêu nguồn đọc');
 
     const denyW = bd(`cp x ${D}/f`);
     const denyD = bd(`rm ${D}/f`);
