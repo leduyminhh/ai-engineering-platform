@@ -280,6 +280,27 @@ function expandShells(segs, depth = 0) {
   return segs.flatMap((t) => [t, ...(depth < 6 ? expandShells(innerSegs(t), depth + 1) : [])]);
 }
 
+// Đoạn glob có khớp được `..` không (bash < 5.2 và dash mở rộng `.?`, `.*`, `.[.]` ra thư mục cha). Không dịch được thì coi là khớp: hỏi thừa còn hơn bỏ sót.
+function globMatchesDotDot(seg) {
+  // Dấu chấm đầu tên chỉ khớp với `.` viết tường minh ở đầu mẫu: `*`, `?`, `[…]` đứng đầu không bao giờ khớp `..`.
+  if (seg[0] !== '.') return false;
+  let re = '';
+  for (let i = 0; i < seg.length; i++) {
+    const c = seg[i];
+    if (c === '*') re += '.*';
+    else if (c === '?') re += '.';
+    else if (c === '[') {
+      const neg = seg[i + 1] === '!' || seg[i + 1] === '^';
+      // Ký tự đầu tiên sau `[` (và sau `!`) là ký tự thường kể cả `]`.
+      const end = seg.indexOf(']', i + (neg ? 3 : 2));
+      if (end < 0) return true;
+      re += `[${neg ? '^' : ''}${seg.slice(i + (neg ? 2 : 1), end).replace(/[\\\]\[^]/g, '\\$&')}]`;
+      i = end;
+    } else re += c.replace(/[.+^${}()|\\\]]/g, '\\$&');
+  }
+  try { return new RegExp(`^${re}$`).test('..'); } catch { return true; }
+}
+
 function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
@@ -291,8 +312,8 @@ function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
     const first = parts.findIndex((x) => x !== '');
     const g = parts.findIndex((x) => GLOB.test(x));
     if (g <= first) return 'unknown';
-    // `..` sau đoạn glob có thể kéo đường dẫn ra khỏi thư mục đã phân loại, mà glob thì không resolve được.
-    if (parts.slice(g + 1).includes('..')) return 'unknown';
+    // `..` sau đoạn glob, hoặc chính đoạn glob khớp được `..`, có thể kéo đường dẫn ra khỏi thư mục đã phân loại, mà glob thì không resolve được.
+    if (parts.slice(g).some(globMatchesDotDot)) return 'unknown';
     if (isClaudeTmpRoot(parts.slice(0, g).join('/'), dir)) return 'blocked';
     return classifyPath(`${parts.slice(0, g).join('/')}/`, dir, roots, msys, need);
   }
