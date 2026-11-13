@@ -331,12 +331,16 @@ function writeTargets(t, msys = true) {
     let toDir = false;
     // Cờ bó/viết tắt không phân biệt được nguồn với đích: mọi đối số vị trí của mv phải đủ cả delete lẫn write.
     let blurred = false;
+    // Tham số PowerShell đã gọi tên (-Path/-LiteralPath/-Destination) chiếm slot của nó: đối số vị trí chỉ lấp slot còn trống.
+    let namedPath = false;
+    let namedDest = false;
+    const named = (flag) => { if (/^-?destination$/i.test(flag)) namedDest = true; else namedPath = true; };
     let pos = [];
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
-      if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
+      if (PS_PATH_FLAGS.has(a.toLowerCase())) { named(a); if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
-      if (colon) { targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
+      if (colon) { named(colon[1]); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
       // PowerShell chấp nhận viết tắt tham số (`-Dest`, `-Pa`) nên cờ lạ có thể đã gắn đối số vị trí vào -Path của nguồn.
       if (!msys && MOVE_CMDS.has(name) && /^-[A-Za-z]/.test(a)) {
         blurred = true;
@@ -362,15 +366,27 @@ function writeTargets(t, msys = true) {
       pos.push(a);
     }
     if (SKIP_FIRST.has(name)) pos = pos.slice(1);
-    const sources = pos;
-    if (LAST_ONLY.has(name)) pos = pos.slice(-1);
+    const all = pos;
+    const copyLike = LAST_ONLY.has(name);
     // Set-Content/Out-File: cờ có giá trị (-Encoding utf8, -Value x) làm đối số đầu không còn là đích thật; allPos giữ mọi đối số cho kiểm cấu hình hook.
-    allPos = pos;
-    if (FIRST_ONLY.has(name)) pos = pos.slice(0, 1);
+    allPos = copyLike ? all.slice(-1) : all;
+    pos = FIRST_ONLY.has(name) ? all.slice(0, 1) : all;
+    // PowerShell lấp đối số vị trí theo thứ tự Path rồi Destination; đối số thừa (cờ có giá trị như -Filter làm lệch) lấy cả hai vai để không bỏ sót.
+    const slots = !msys && (copyLike || (MOVE_CMDS.has(name) && !blurred))
+      ? [...(namedPath ? [] : [copyLike ? ['read'] : ['delete']]), ...(namedDest ? [] : [['write']])] : null;
     if (gnu && toDir) {
-      // Có -t DIR: đối số vị trí là nguồn; cp không xét quyền nguồn nhưng vẫn đưa vào targets để kiểm file cấu hình hook.
-      if (name === 'mv') { targets.push(...pos); needs.push(...pos.map(() => ['delete'])); }
-      else { targets.push(...sources); needs.push(...sources.map(() => [])); }
+      // Có -t DIR: đối số vị trí là nguồn: mv bị xoá, cp được đọc.
+      targets.push(...all);
+      needs.push(...all.map(() => (name === 'mv' ? ['delete'] : ['read'])));
+    } else if (copyLike && msys) {
+      // Cờ gộp có `t` (-rt, -tDIR) không đặt toDir nên rơi vào đây: giữ cách thận trọng, đối số cuối vẫn là đích ghi, mọi đối số trước là nguồn đọc.
+      targets.push(...all);
+      needs.push(...all.map((_, i) => (i === all.length - 1 ? ['write'] : ['read'])));
+    } else if (slots) {
+      const extra = copyLike ? ['read', 'write'] : ['delete', 'write'];
+      const lone = !namedPath && !namedDest && all.length === 1;
+      targets.push(...all);
+      needs.push(...all.map((_, i) => (lone ? extra : (slots[i] ?? extra))));
     } else {
       targets.push(...pos);
       needs.push(...pos.map((_, i) => (blurred ? ['delete', 'write'] : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
@@ -535,7 +551,10 @@ function pipedIndirectConfigWrite(list) {
 }
 
 function writesGuardConfig(t, msys = true) {
-  const { targets, name, args, allPos } = writeTargets(t, msys);
+  const w = writeTargets(t, msys);
+  const { name, args, allPos } = w;
+  // Đích chỉ có vai read (nguồn của cp/Copy-Item) là file bị đọc, không phải file bị ghi.
+  const targets = w.targets.filter((_, i) => w.needs[i].some((n) => n !== 'read'));
   if (targets.some((p) => GUARD_CONFIG.test(p)) || (FIRST_ONLY.has(name) && allPos.some((p) => GUARD_CONFIG.test(p)))) return true;
   if (COPY_MOVE.has(name) && targets.some((p) => CLAUDE_DIR.test(p)) && args.some(hasConfigName)) return true;
   // Lệnh không thuộc WRITE_CMDS (khối script PowerShell, xargs, find, parallel…): không đọc được đích ghi thì hỏi khi cùng đoạn có đường dẫn cấu hình và tín hiệu ghi.
