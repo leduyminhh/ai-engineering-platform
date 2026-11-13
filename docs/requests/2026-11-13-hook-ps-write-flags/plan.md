@@ -2,8 +2,8 @@
 
 > **For agentic workers:** thực thi plan này bằng skill `plan-execution` (bản cài plugin: `core:plan-execution`), từng task theo vòng task. Step dùng checkbox (`- [ ]`) để theo dõi.
 
-**Goal:** `guard-bash` kiểm đúng đường dẫn đích của `Set-Content`/`Out-File`/`Add-Content` khi có cờ có giá trị đứng trước (`-Encoding utf8`, `-Value y`, `-ErrorAction Stop`…), để ghi ra ngoài root ở chế độ full bị `deny`; Value vị trí không còn bị coi là đích.
-**Architecture:** trong nhánh `WRITE_CMDS` của `writeTargets` (`guard-bash.mjs`), với tên thuộc `FIRST_ONLY` phân loại từng cờ qua hai danh sách đầy đủ tên (có giá trị / công tắc), bỏ giá trị cờ khỏi đối số vị trí; cờ lạ thì mọi đối số vị trí là ứng viên đích; đã gọi tên đường dẫn thì đối số vị trí là Value.
+**Goal:** `guard-bash` kiểm đúng đường dẫn đích của `Set-Content`/`Out-File`/`Add-Content` khi có cờ có giá trị đứng trước (`-Encoding utf8`, `-Value y`, `-ErrorAction Stop`…), để ghi ra ngoài root ở chế độ full bị `deny`; mọi token trừ tên cờ đã biết là ứng viên đích (vòng ba), chỉ giá trị của cờ có giá trị đứng trơn là nội dung.
+**Architecture:** trong nhánh `WRITE_CMDS` của `writeTargets` (`guard-bash.mjs`), với tên thuộc `FIRST_ONLY` phân loại từng cờ qua hai danh sách đầy đủ tên (có giá trị / công tắc), hàm `psWriteCandidates` trả mọi token là ứng viên đích trừ tên cờ đã biết; giá trị của cờ có giá trị đứng trơn là nội dung và bị bỏ; không còn coi đối số vị trí sau `-Path` là Value (vòng ba: Windows PowerShell 5.1 đảo vai đối số vị trí khi có tham số động).
 **Tech Stack:** Node ESM zero-dependency; test tự viết (`test/contract/*.contract.mjs`, export `default async run({ ok, ctx })`).
 **Spec:** design.md
 **Requirement:** không có
@@ -23,14 +23,14 @@ Không đổi: `classifyPath`/`grantsOf`/`gate-config.mjs`, `guard-files.mjs`, `
 - Zero-dependency; hook fail-open với lỗi nội bộ; không thêm lời gọi git ở đường nóng.
 - Danh sách cờ có giá trị (so khớp không phân biệt hoa thường, bỏ `-`, tách `:`): `Value`, `Encoding`, `Stream`, `Width`, `InputObject`, `Filter`, `Include`, `Exclude`, `Credential`, `ErrorAction`/`ea`, `WarningAction`/`wa`, `InformationAction`/`infa`, `ErrorVariable`/`ev`, `WarningVariable`/`wv`, `InformationVariable`/`iv`, `OutVariable`/`ov`, `OutBuffer`/`ob`, `PipelineVariable`/`pv`. Công tắc: `Force`, `NoNewline`, `Append`, `NoClobber`, `PassThru`, `AsByteStream`, `WhatIf`, `Confirm`/`cf`, `UseTransaction`, `Verbose`/`vb`, `Debug`/`db`. Cờ ngoài hai danh sách là cờ lạ (D2).
 - Không điều kiện hoá theo `msys` (D6); không đổi `PS_VALUE_FLAGS`, parse của `Copy-Item`/`Move-Item`/`rm`; vai của đích vẫn `['write']` (không thêm `delete`).
-- `allPos` (kiểm cấu hình hook R18) vẫn là mọi đối số vị trí còn lại; Value vị trí và Encoding vị trí không bị kiểm như đích (D4).
+- `allPos` (kiểm cấu hình hook R18) là mảng ứng viên của `psWriteCandidates`; đối số vị trí thứ hai không còn được miễn kiểm (D4 vòng ba), chỉ giá trị của cờ có giá trị đứng trơn bị bỏ.
 - Không thêm câu `ask`/`deny` mới (D7): kết quả qua câu có sẵn, `shapeOk` của `99-hook-popup.contract.mjs` vẫn đúng.
 - Test dùng seam `bd`/`expectAll` sẵn có của `99-path-permissions.contract.mjs` (`tool: 'PowerShell'`, full + bypass, `D`/`O`/`T`/`OUT` từ `mkdtemp` dưới `<tmpdir>/aip-…`); mỗi `ok()` ghi ID AC trong thông điệp; dọn bằng `fs.rmSync`, không `rm -rf`.
 - Tiếng Việt có dấu, UTF-8 không BOM, LF; comment theo AGENTS.md (chỉ khi gate đạt).
 - Mỗi task: test đỏ đúng lý do trước (commit riêng), sửa, test xanh; commit trên nhánh `feature/hook-ps-write-flags` qua `core:git-workflow`, không `Co-Authored-By`; không push. Test hẹp: `node test/validate.mjs --only path-permissions`, sau khi sửa hook thêm `--only hook`; `npm test` một lần ở Task 3.
 
 ## Review Focus
-- Task 1: `Set-Content -Path O/x OUT/y` thôi `deny` nhầm nhưng `Set-Content -Path OUT/x y` vẫn `deny` (AC1.2).
+- Task 1: `Set-Content -Path O/x OUT/y` là `deny` (đối số vị trí thứ hai không còn được miễn, AC1.2 sau vòng ba) và `Set-Content -Path OUT/x y` vẫn `deny`; `Set-Content -Value OUT/y O/x` vẫn `null` (giá trị cờ đứng trơn là nội dung).
 - Task 1: cờ có giá trị ở dạng dính `-Encoding:utf8` và alias `-ea` đều bỏ đúng một token (AC1.1).
 - Task 1: cờ lạ (`-Enc`, `-Foo`) không làm lọt đích ngoài root, và `Set-Content -Enc utf8 O/x y` vẫn `null` (AC1.3).
 - Task 1: kiểm cấu hình hook (R18) không đổi: `Set-Content -Encoding utf8 .claude\aip-gate.json x` và `Set-Content -Value x .claude\aip-gate.json` vẫn `ask`, `Set-Content -Value .claude\aip-gate.json x` `null` (AC1.4).
