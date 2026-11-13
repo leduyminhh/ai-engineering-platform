@@ -12,6 +12,11 @@ export default async function run({ ok, ctx }) {
     [6, 'Ràng buộc', ['`frontend-fixer`', '`backend-fixer`', '`frontend-fix`', '`backend-fix`', 'kể cả bản sửa một dòng'], 'AC2.1'],
     [5, 'Ràng buộc', ['status: blocked', 'next_actions'], 'AC3.1'],
     [9, 'Ràng buộc', ['status: blocked', 'next_actions'], 'AC3.1'],
+    [3, 'Hành động', ['`bugfix/<slug>`', '`main`', '`master`', '`dev`', '`develop`', '`core:git-workflow`'], 'AC4.1'],
+    [3, 'Evidence', ['tên nhánh'], 'AC4.1'],
+    [3, 'Hành động', ['blocked'], 'AC4.2'],
+    [3, 'Hành động', ['test đỏ sẵn', 'không dispatch'], 'AC5.1'],
+    [3, 'Gate', ['chỉ gồm file test'], 'AC4.1'],
   ];
   for (const [n, name, needles, ac] of GATES) {
     const text = field(n, name);
