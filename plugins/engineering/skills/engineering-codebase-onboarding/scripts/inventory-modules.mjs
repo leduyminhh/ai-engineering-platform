@@ -21,12 +21,18 @@ const dirOf = (rel) => (path.posix.dirname(rel) === '.' ? '.' : path.posix.dirna
 function listFiles(root) {
   let files;
   if (fs.existsSync(path.join(root, '.git'))) {
-    try { files = execFileSync('git', ['ls-files', '-co', '--exclude-standard'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 28 }).split('\n').filter(Boolean); } catch { files = null; }
+    // -z: không có thì git bọc nháy và escape octal tên file không ASCII, đếm sai file và thư mục tiếng Việt.
+    try {
+      files = execFileSync('git', ['ls-files', '-z', '-co', '--exclude-standard'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 28 })
+        .split('\0').filter((f) => f && fs.existsSync(path.join(root, f))); // -c liệt kê cả file đã xoá khỏi cây làm việc
+    } catch { files = null; }
   }
   if (!files) {
     files = [];
     const walk = (dir) => {
-      for (const e of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
+      let entries = [];
+      try { entries = fs.readdirSync(path.join(root, dir), { withFileTypes: true }); } catch { return; }
+      for (const e of entries) {
         const rel = dir ? `${dir}/${e.name}` : e.name;
         if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(rel); } else if (e.isFile()) files.push(rel);
       }
@@ -50,6 +56,7 @@ function mavenInfo(text) {
 function npmInfo(text, hasPnpm) {
   let pkg = {};
   try { pkg = JSON.parse(text); } catch { /* package.json hỏng: coi như không có tên */ }
+  if (!pkg || typeof pkg !== 'object') pkg = {};
   const deps = ['dependencies', 'devDependencies', 'peerDependencies'].flatMap((k) => Object.keys(pkg[k] || {}));
   return { id: pkg.name || null, deps, aggregator: hasPnpm || pkg.workspaces !== undefined };
 }
@@ -76,9 +83,12 @@ export function inventoryModules(root) {
         const rel = n.replace(/^:/, '').split(':').join('/');
         const p = dir === '.' ? rel : `${dir}/${rel}`;
         const bf = ['build.gradle', 'build.gradle.kts'].map((b) => `${p}/${b}`).find((b) => has.has(b)) || f;
-        found.push({ path: p, kind: 'gradle', buildFile: bf, id: path.posix.basename(p), deps: [], aggregator: false, gradleProject: p });
+        found.push({ path: p, kind: 'gradle', buildFile: bf, id: path.posix.basename(p), deps: [], aggregator: false });
       }
-      found.push({ path: dir, kind: 'gradle', buildFile: f, id: null, deps: [], aggregator: true });
+      // settings không có include là project Gradle một module, không phải aggregator.
+      found.push({ path: dir, kind: 'gradle', buildFile: f, id: null, deps: [], aggregator: names.length > 0 });
+    } else if (/^build\.gradle(\.kts)?$/.test(base)) {
+      found.push({ path: dir, kind: 'gradle', buildFile: f, id: null, deps: [], aggregator: false });
     } else if (['pyproject.toml', 'setup.py', 'requirements.txt'].includes(base)) {
       found.push({ path: dir, kind: 'python', buildFile: f, id: path.posix.basename(dir === '.' ? path.basename(root) : dir), deps: [], aggregator: false });
     }
@@ -100,7 +110,8 @@ export function inventoryModules(root) {
 
   if (mods.length === 0) notes.push('Không nhận ra build file nào (pom.xml, settings.gradle, package.json, pyproject.toml, setup.py, requirements.txt); kiểm kê tay ở cổng 1.');
 
-  const sorted = [...mods].sort((a, b) => b.path.length - a.path.length);
+  const depth = (m) => (m.path === '.' ? 0 : m.path.split('/').length);
+  const sorted = [...mods].sort((a, b) => depth(b) - depth(a));
   const owner = (f) => sorted.find((m) => m.path === '.' || f.startsWith(`${m.path}/`));
   const stats = new Map(mods.map((m) => [m.path, { sourceFiles: 0, testFiles: 0, lines: 0 }]));
   const unowned = [];
@@ -113,12 +124,12 @@ export function inventoryModules(root) {
     else {
       const text = read(root, f);
       s.sourceFiles++;
-      s.lines += text.split(/\r\n|\r|\n/).length - (/(\r\n|\r|\n)$/.test(text) ? 1 : 0);
+      s.lines += text === '' ? 0 : text.split(/\r\n|\r|\n/).length - (/(\r\n|\r|\n)$/.test(text) ? 1 : 0);
     }
   }
 
   const idOf = (m) => m.id || path.posix.basename(m.path === '.' ? path.basename(root) : m.path);
-  const gradleByPath = new Map(mods.filter((m) => m.gradleProject).map((m) => [m.path, idOf(m)]));
+  const gradleByPath = new Map(mods.filter((m) => m.kind === 'gradle').map((m) => [m.path, idOf(m)]));
   const siblingIds = new Set(mods.map(idOf));
   const modules = mods.map((m) => {
     let deps = m.deps;

@@ -109,6 +109,20 @@ export default async function run({ ok, ctx }) {
     const child = byId(n, 'child');
     ok(n.modules.length === 1 && child?.sourceFiles === 2 && child.testFiles === 1, 'AC2.5: file của module con chỉ tính cho module con, testFiles tách khỏi sourceFiles');
     ok(n.unclaimed.includes('parent') && n.rootFiles === 1, 'AC2.5: file của module tổng hợp vào unclaimed, file ở gốc vào rootFiles');
+
+    const viet = mk({
+      'mod/package.json': '{"name":"mod"}',
+      'mod/src/Đơn.js': 'a\n',
+      'mod/src/ok.js': 'b\n',
+      'tài-liệu/a.md': '# a\n',
+    });
+    spawnSync('git', ['init', '-q'], { cwd: viet });
+    const v = inv.inventoryModules(viet);
+    ok(byId(v, 'mod')?.sourceFiles === 2 && v.unclaimed.length === 1 && v.unclaimed[0] === 'tài-liệu',
+      'AC2.1: repo git có tên file và thư mục không ASCII vẫn đếm đủ, unclaimed không dính nháy escape');
+    const single = inv.inventoryModules(mk({ 'settings.gradle': "rootProject.name = 'x'\n", 'src/main/java/A.java': 'a\n' }));
+    ok(single.modules.length === 1 && single.modules[0].kind === 'gradle' && single.modules[0].sourceFiles === 1 && single.notes.length === 0,
+      'AC2.2: settings.gradle không có include là một module gradle, không báo stack lạ');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
