@@ -331,5 +331,21 @@ export default async function run({ ok, ctx }) {
     ok([denyW, denyD].every((d) => /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason)) && /write/.test(denyW.reason) && /delete/.test(denyD.reason), 'AC6.2: reason deny nêu fullPaths, fullRoots và quyền thiếu');
     const asks = ['rm $X/f', `cat ${D}/.env`].map((c) => bd(c));
     ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask của guard-bash theo khuôn');
+
+    // hook-ps-write-flags: cờ có giá trị đứng trước đường dẫn của Set-Content/Out-File/Add-Content không được làm mất đích thật.
+    const psw = (ac, rows, opt = { tool: 'PowerShell' }) => expectAll(rows.map(([c, want]) => [c, want, `ps-write-flags ${ac}`]), opt);
+    const flagged = ['Set-Content -Encoding utf8 X/x -Value y', 'Out-File -Encoding utf8 X/x', 'Add-Content -Value y X/x', 'Set-Content -ErrorAction Stop X/a x', 'Set-Content -ea Stop X/x y',
+      'Set-Content -Encoding:utf8 X/x y', 'Out-File -Append -Encoding utf8 X/x', 'Out-File -Width 80 X/x', 'Set-Content -Stream s X/x y', 'Set-Content -Include a X/x y', 'Set-Content -Force X/x y'];
+    psw('AC1.1', [[OUT, 'deny'], [D, 'deny'], [O, null], [T, null]].flatMap(([dir, want]) => flagged.map((c) => [c.replace('X/', `${dir}/`), want])));
+    psw('AC1.2', [
+      ...[`Set-Content ${O}/x ${OUT}/y`, `Out-File ${O}/x utf8`, `Set-Content -Path ${O}/x ${OUT}/y`, `Set-Content -FilePath:${O}/x ${OUT}/y`, `Set-Content -Value ${OUT}/y ${O}/x`,
+        `Set-Content -Path ${O}/x -Encoding utf8 -Value ${OUT}/y`].map((c) => [c, null]),
+      ...[`Set-Content ${OUT}/x y`, `Set-Content -Path ${OUT}/x y`].map((c) => [c, 'deny']),
+    ]);
+    psw('AC1.3', [[`Set-Content -Enc utf8 ${OUT}/x -Val y`, 'deny'], [`Set-Content -Foo a ${OUT}/x y`, 'deny'], [`Set-Content -Enc utf8 ${O}/x y`, null]]);
+    psw('AC1.4', [
+      ...['Set-Content -Encoding utf8 .claude\\aip-gate.json x', 'Out-File -Encoding utf8 .claude\\settings.json', 'Set-Content -Value x .claude\\aip-gate.json'].map((c) => [c, 'ask']),
+      ['Set-Content -Value .claude\\aip-gate.json x', null],
+    ], psAsk);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
