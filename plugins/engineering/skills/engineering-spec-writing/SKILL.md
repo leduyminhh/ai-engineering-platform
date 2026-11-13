@@ -122,7 +122,10 @@ Phân rã story/task chi tiết → `engineering-task-breakdown`; viết `plan.m
    checkpoint: một test hoặc script nhỏ, chạy được trong repo, tối đa khoảng 15 phút mỗi giả định, không đưa vào nhánh
    nếu không cần giữ. Kết quả ghi vào `design.md` (mục rủi ro/giả định) kèm lệnh chạy lại; giả định bị bác thì sửa hướng
    trước checkpoint. Không spike được (thiếu hạ tầng, tốn quá giới hạn) thì nêu ở checkpoint như rủi ro chặn hướng để
-   người dùng chọn, không để tới lúc task tích hợp mới phát hiện.
+   người dùng chọn, không để tới lúc task tích hợp mới phát hiện. Giả định về công cụ hoặc thư viện (gói npm, công cụ
+   sinh code, CLI) chỉ kiểm bằng lệnh đọc hoặc chạy thử trong thư mục tạm: không cài vào project, không `npx --yes` hay
+   chạy gói chưa được người dùng duyệt; cần vượt ranh giới đó mới kiểm được thì coi là không spike được và nêu ở
+   checkpoint như rủi ro chặn hướng.
 
 10. **Verify.**
     Chạy checklist [references/checklist.md](references/checklist.md): đủ mục; mỗi requirement truy vết được
