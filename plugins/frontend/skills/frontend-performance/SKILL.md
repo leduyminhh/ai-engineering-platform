@@ -49,10 +49,10 @@ dùng thật), và kích thước bundle là chỉ số **xác định** (không
 
    "Đã cài": (b) Lighthouse = khai trong `package.json` hoặc có trong `node_modules/.bin`; (c) Playwright = khai trong
    `package.json` và gói resolve được từ vị trí script. Bản global và gói `npx` tải tạm không tính.
-   Mã thoát của script: 0 đo xong; 2 sai đối số hoặc URL ngoài local; 3 không mở được Chromium → `not_run`; 1 lỗi đo
-   khác (không nạp được gói, không lấy được LCP) → báo lỗi, không ghi là `not_run` trừ khi là thiếu gói như mục (c).
+   Mã thoát của script: 0 đo xong; 2 sai đối số hoặc URL đầu vào ngoài local; 3 không mở được Chromium → `not_run`; 1 lỗi đo
+   khác (không nạp được gói, không lấy được LCP, redirect ra host ngoài trong lúc đo) → báo lỗi, không ghi là `not_run` trừ khi là thiếu gói như mục (c).
    Không đo bằng công cụ trình duyệt tương tác (`browser_run_code_unsafe` của Playwright MCP). Output thô vào
-   `perf/<phía>/results/` (Playwright: `results/playwright/`). Micro-benchmark logic thuần (nếu có) đặt ở `bench/`.
+   Lighthouse `perf/<phía>/results/lighthouse/`, Playwright `perf/<phía>/results/playwright/`. Micro-benchmark logic thuần (nếu có) đặt ở `bench/`.
 3. Chạy **≥ 3 lần** trên **bản build production** phục vụ ở local; **không đo trên dev server** (HMR, source map,
    React dev build làm số đo vô nghĩa). Ghi **median** LCP, TBT, CLS (kèm điểm Performance nếu cần) và kích thước
    bundle (tổng + chunk lớn nhất); báo độ lệch giữa các lần.

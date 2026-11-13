@@ -28,10 +28,10 @@ Lighthouse trong file này chưa được đối chiếu với tài liệu chín
 ```bash
 # [Unverified] cờ --output, --output-path, --only-categories, --preset, --chrome-flags; kiểm theo phiên bản thật
 npx lighthouse http://localhost:4173/orders \
-  --output=json --output-path=perf/frontend/results/run-1.json \
+  --output=json --output-path=perf/frontend/results/lighthouse/run-1.json \
   --only-categories=performance --chrome-flags="--headless"
 # Desktop: thêm --preset=desktop [Unverified]; bỏ cờ này thì dùng cấu hình mobile mặc định.
-# Lặp run-2, run-3 với cùng lệnh, chỉ đổi --output-path.
+# Lặp run-2, run-3 với cùng lệnh, chỉ đổi số trong --output-path (vẫn trong results/lighthouse/).
 ```
 
 - Cờ throttle (CPU slowdown, network) nếu đổi khỏi mặc định phải ghi nguyên văn vào hàng Thiết bị/throttle.
@@ -41,10 +41,10 @@ npx lighthouse http://localhost:4173/orders \
 
 ## Script Node lấy median từ JSON
 
-`perf/frontend/summarize.mjs` đọc các file `perf/frontend/results/run-*.json`. Tên audit `[Unverified]` theo phiên bản Lighthouse.
+`perf/frontend/summarize.mjs` đọc các file `perf/frontend/results/lighthouse/run-*.json`. Tên audit `[Unverified]` theo phiên bản Lighthouse.
 Script này chỉ đọc JSON của Lighthouse (`r.audits`); JSON của script Playwright không có trường đó và làm script lỗi. Script
-Playwright tự in median và độ lệch, không cần summarize. Khi dùng cả hai công cụ, mỗi công cụ một thư mục con: Lighthouse
-ở `perf/frontend/results/lighthouse/` (đổi `--output-path`), Playwright ở `perf/frontend/results/playwright/`.
+Playwright tự in median và độ lệch, không cần summarize. Khi dùng cả hai công cụ, mỗi công cụ một thư mục con vì JSON khác định dạng: Lighthouse
+ở `perf/frontend/results/lighthouse/`, Playwright ở `perf/frontend/results/playwright/`.
 
 ```js
 import fs from 'node:fs';
@@ -67,7 +67,7 @@ for (const k of ['lcp', 'tbt', 'cls']) {
 ```
 
 ```bash
-node perf/frontend/summarize.mjs perf/frontend/results/run-1.json perf/frontend/results/run-2.json perf/frontend/results/run-3.json
+node perf/frontend/summarize.mjs perf/frontend/results/lighthouse/run-1.json perf/frontend/results/lighthouse/run-2.json perf/frontend/results/lighthouse/run-3.json
 ```
 
 ## Đọc kết quả (P3)
