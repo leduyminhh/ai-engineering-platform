@@ -29,6 +29,7 @@ Nơi lỗi hay nấp trong React; đây là trục ưu tiên. Dấu hiệu:
   thiếu/thừa như effect.
 - **Loading / error / empty:** thiếu xử lý một trong ba trạng thái của dữ liệu async (chỉ vẽ khi có data →
   crash/nháy khi loading, nuốt lỗi khi fail, trống trơn khi rỗng); render khi `data` còn `undefined`.
+- **Thông báo do hành động gây ra nằm trong vùng bị gỡ khi loading:** thông báo lỗi hoặc notice sinh ra từ một mutation (đổi trạng thái, xoá, tạo) được render bên trong vùng mà cha vẽ khi dữ liệu ở trạng thái `ready`, trong khi chính hành động đó kích hoạt tải lại nên vùng bị gỡ lúc loading, người dùng không còn thấy thông báo. Cách kiểm: lần từ nơi đặt thông báo tới nhánh render của cha theo `state.kind`, `isLoading` hoặc `isFetching`, rồi hỏi nhánh đó còn mounted sau tải lại không; nếu không, thông báo phải nằm ngoài vùng bị gỡ, ví dụ ở cấp danh sách hoặc trang. Nhãn proven khi đã chỉ ra cả nơi đặt thông báo lẫn nhánh gỡ, nếu không thì suspected. Severity `major` khi AC yêu cầu thông báo đó.
 - **Logic sai:** điều kiện đảo, so sánh nhầm kiểu, sai định dạng số/tiền/ngày/timezone, `0`/chuỗi rỗng lọt
   vào `&&` render ra `0`, ép kiểu `any` che lỗi TypeScript.
 - **Form & controlled input:** controlled/uncontrolled lẫn lộn (value `undefined`→`defined`); không kiểm tra
@@ -135,6 +136,7 @@ hình) ghi là suspected/cần kiểm.
 - Thiếu test cho code **có rủi ro thật** = một finding (severity theo mức rủi ro), không phải đòi 100% phủ.
 - Test kèm PR có **giòn** không (phụ thuộc timer/thứ tự/DOM nội bộ; query theo `data-testid`/class thay vì
   role; assert chi tiết cài đặt)? Sâu về chiến lược test → route `frontend-testing`.
+- AC mô tả thứ người dùng thấy có assertion trên text hoặc role ở trạng thái cuối chuỗi sự kiện (kể cả sau tải lại) không? Assert request log hoặc state hook không tính. Severity: `major` khi AC là thông báo lỗi hoặc xác nhận cho người dùng, `minor` với AC hiển thị khác.
 
 ## Cỡ thay đổi
 
