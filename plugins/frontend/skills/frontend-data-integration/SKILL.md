@@ -81,7 +81,7 @@ bước Review của `workflow-feature`); không có bằng chứng → HỎI ng
 Trình bảng "đã có / chưa có" cho: codegen, thư viện data, `api-client`, msw. Cái nào **đã có thì dùng lại**.
 
 **Kiểm tương thích trước khi đề xuất.** Với mọi công cụ codegen ứng viên (`openapi-typescript`, `orval`,
-`openapi-generator`), kể cả công cụ người dùng đã nêu tên: đọc `peerDependencies` và `engines` của gói ở đúng phiên bản
+`@openapitools/openapi-generator-cli`), kể cả công cụ người dùng đã nêu tên: đọc `peerDependencies` và `engines` của gói ở đúng phiên bản
 định dùng (`npm view <gói>@<phiên bản> peerDependencies engines --json`), so với phiên bản TypeScript của project
 (`package.json` và lockfile) và Node (`node --version`), rồi chạy thử như mục 2a của
 [references/contract-and-codegen.md](references/contract-and-codegen.md). Ghi kết quả (lệnh, khai báo đã đọc, phiên bản
