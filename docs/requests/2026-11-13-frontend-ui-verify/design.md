@@ -107,4 +107,12 @@ Pin chỉ kiểm câu khoá của hành vi hứa (điều kiện áp dụng, đ�
 
 ## Kết quả kiểm chứng
 
-Điền khi thực hiện AC6.1 (trước G3). Hiện: chưa chạy.
+AC6.1 chạy ngày 2026-11-13 trên bản sao (`git clone` project trial, checkout `62bfcb0`, `npm install` 145 gói). Cổng 3001 đang do một tiến trình khác giữ nên lần kiểm dùng mock API riêng ở cổng 3002 (`PORT=3002 SEED=25`) và dev server Vite ở cổng 5174 với một file cấu hình phụ `vite.alt.config.mjs` trong bản sao (proxy `/api` sang 3002; không sửa mã nguồn của project). Người chạy: subagent `general-purpose` (sonnet) đọc `frontend-manual-check` bản đã sửa, chạy Playwright MCP (khoảng 16 lượt `run_code_unsafe`), 37 lượt gọi công cụ, 472 giây, 201.514 token của subagent; chi phí tiền [Unverified] vì không đọc được. Báo cáo: `scratchpad/ui-check-result/ui-check.md` (ngoài repo) và 31 ảnh ở `scratchpad/ui-check-shots/`; project trial gốc không bị đụng.
+
+Kết quả: 25 bước, PASS 7 · FAIL 15 · SKIP-SAFETY 1 · SKIP-PRECOND 1 · chưa kiểm 1.
+
+- **Lỗi focus: bắt được.** 15 FAIL cùng gốc: `document.activeElement` là `BODY` sau thao tác đổi trang (bước 3, 4), sau khi alert lỗi hiện và sau "Thử lại" (7, 8), sau khi tạo ticket thành công hoặc lỗi (11–16) và sau khi đổi trạng thái (17, 19–22). Nút lọc không bị FAIL vì không bị gỡ khỏi DOM. Nội dung AC ở các bước đó đều khớp.
+- **Lỗi thông báo 404: không tái hiện.** Bước 21 (AC3.5, PATCH giả 404): thông báo "Ticket không còn tồn tại. Danh sách đã được tải lại." hiện trong `role="alert"` sau khi danh sách tải lại (mốc: không alert → loading → alert). Bước 21 vẫn là FAIL, nhưng vì focus, không vì thiếu thông báo. Tức là lỗi `major` thứ nhất của báo cáo trial ("thông báo 404 không bao giờ hiện") không xảy ra trong lần chạy này. [Inference] hai khả năng: review cuối đã suy luận sai từ mã, hoặc lỗi chỉ xảy ra với một điều kiện thời gian mà mock API chạy cục bộ không tạo ra; chưa kiểm cách nào.
+- Khác: bước 9 (AC4.2, trạng thái rỗng) SKIP-PRECOND vì dựng `total = 0` cần giả phản hồi thành công (cấm theo L6) hoặc đổi ticket có sẵn; bước 23 (AC4.4) SKIP-SAFETY; bước 25 (AC5.1, AC5.2) chưa kiểm vì ngoài UI. [Unverified] có hai hiện tượng không tái hiện lần hai (bộ lọc nhảy sang "Xong" sau khi tạo ticket; ô "Mức ưu tiên" tự đổi sang "Thấp"), chưa rõ do ứng dụng hay công cụ.
+
+Kết luận AC6.1: đạt nửa sau (≥ 1 FAIL focus sau chuyển trang), không đạt nửa đầu (FAIL vì thông báo 404). Theo mục Rủi ro, "không bắt được cả hai thì thiết kế cần quay lại G1": cần người dùng quyết ở G3 hoặc trước đó.
