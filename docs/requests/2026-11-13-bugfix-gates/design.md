@@ -91,6 +91,19 @@ console.log(m.positive.pct, m.negative.pct);
 
 Giới hạn: [Inference] thước là TF-IDF tất định trên câu mẫu do repo tự viết, không phải model thật; mức tăng 69 → 71 không chứng tỏ routing thật tốt hơn. Giữ cụm thứ tư vì tốt nhất trong bốn cụm thử và không làm tụt negative; số cuối đo lại ở bước plan trên `description` thật.
 
+### Kết quả đo (eval AC8.2, lần 1, 2026-11-13)
+
+Lệnh: `node scripts/eval-run.mjs --plugin workflows --max-cost-usd 5 --runs 3 --scaffold --case bugfix-clear-cause` trên build đã bump (workflows 3.16.3). Chi phí thật 0,49 USD (9 lượt: 3 có plugin, 3 không plugin cho mỗi grader theo ablation mặc định). Kết quả thô ở `evals/workflows/results/latest-bugfix-clear-cause.json` và `results/traces/` (git bỏ qua, chạy lại bằng lệnh trên).
+
+| Nhánh | `root-cause-before-edit` | `scaffold-applied` | `skill-used` (chỉ báo, không tính điểm) |
+|---|---|---|---|
+| có plugin | 0/3 | 3/3 | 0/3 |
+| không plugin | 0/3 | 3/3 | — |
+
+Đọc trace (tóm tắt công cụ và lời cuối của lượt 1 mỗi nhánh): cả hai nhánh `Read` ba file rồi `Edit` thẳng `src/discount.js`, lời cuối nói đã sửa, chưa chạy test vì không có shell. Không lượt nào gọi `workflow-bugfix` (kể cả nhánh có plugin).
+
+Kết luận, có giới hạn: ngưỡng 2/3 của AC8.2 không đạt (0/3), grader không chỉnh. [Inference] Số đo này không đo chữ mới ở Bước 5: workflow chưa được nạp nên chữ không có cơ hội tác dụng; nó chỉ cho thấy với prompt "test đỏ, nguyên nhân rõ rồi, sửa nhanh, đừng hỏi nhiều" (không có chữ "bug" hay "lỗi") agent không chọn `workflow-bugfix`. n = 3 mỗi nhánh, một prompt.
+
 ## Ảnh hưởng spec
 
 - workflows: thêm R25
