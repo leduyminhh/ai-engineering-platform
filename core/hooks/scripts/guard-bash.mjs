@@ -184,6 +184,8 @@ const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh', 'tcsh', 'cmd', 'pwsh', 'powershell']);
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
+// Tham số của Copy-Item/Move-Item nhận một giá trị: bỏ giá trị đi, nếu không nó bị tính là đối số vị trí và làm lệch slot Path/Destination.
+const PS_VALUE_FLAGS = /^-(filter|include|exclude|credential|tosession|fromsession)(:.*)?$/i;
 const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul|\$null)$/i;
 const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
 const GLOB = /[*?[]/;
@@ -341,6 +343,8 @@ function writeTargets(t, msys = true) {
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { named(a); if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
       if (colon) { named(colon[1]); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
+      const pv = !msys && (LAST_ONLY.has(name) || MOVE_CMDS.has(name)) ? PS_VALUE_FLAGS.exec(a) : null;
+      if (pv) { if (!pv[2]) i++; continue; }
       // PowerShell chấp nhận viết tắt tham số (`-Dest`, `-Pa`) nên cờ lạ có thể đã gắn đối số vị trí vào -Path của nguồn.
       if (!msys && MOVE_CMDS.has(name) && /^-[A-Za-z]/.test(a)) {
         blurred = true;
@@ -391,6 +395,11 @@ function writeTargets(t, msys = true) {
       targets.push(...pos);
       needs.push(...pos.map((_, i) => (blurred ? ['delete', 'write'] : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
     }
+  }
+  // PowerShell nhận mảng `a,b` trong một token: tách thành từng đích để phần tử ngoài root không lọt. Chỉ PowerShell: ở Bash dấu phẩy là ký tự của tên file.
+  if (!msys) {
+    const split = targets.flatMap((p, i) => String(p).split(',').filter(Boolean).map((x) => [x, needs[i]]));
+    return { targets: split.map(([x]) => x), needs: split.map(([, n]) => n), name, args, allPos };
   }
   return { targets, needs, name, args, allPos };
 }
