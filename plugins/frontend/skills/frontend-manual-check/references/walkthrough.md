@@ -37,6 +37,28 @@ Ranh giới giữa các loại:
 - Một FAIL do môi trường (dịch vụ nền sập) khác với FAIL do ứng dụng: ghi rõ nghi ngờ nào, đánh nhãn `[Inference]`
   khi chưa chứng minh.
 
+## Trạng thái và ảnh chụp
+
+Mỗi màn hình mà AC hoặc mockup nêu được chụp ở bốn trạng thái: loading, rỗng, lỗi, thành công. Trạng thái nào không chụp được thì ghi rõ trong báo cáo, không để trống.
+
+- Tên ảnh: `<#bước>-<trạng-thái>.png`, ví dụ `3-rỗng.png` hoặc `5-lỗi.png`.
+- Ảnh lưu ở `.aip/runs/<request>/<part>/ui-check/`, ngoài git; không đưa ảnh vào commit.
+- Trạng thái không dựng được thì ghi SKIP-PRECOND kèm điều kiện thiếu, không gán PASS.
+- Cách gây trạng thái, theo thứ tự:
+  1. Dữ liệu seed nêu trong `## Điều kiện` của runbook (ví dụ tài khoản không có bản ghi nào để thấy trạng thái rỗng).
+  2. Dùng chặn hoặc giả request ở tầng trình duyệt: trả lỗi cho một request để thấy trạng thái lỗi, hoãn phản hồi để thấy loading. Tên công cụ thực hiện việc này `[Unverified]`, khác nhau giữa các bản cài.
+  3. Tạo trạng thái bằng cách không sửa mã nguồn hay cấu hình (L6). Hai cách trên đều không đủ thì SKIP-PRECOND.
+
+## Focus và thông báo
+
+Sau mỗi thao tác tải lại hoặc đổi nội dung tại chỗ (đổi trang, lọc, tạo, đổi trạng thái, xoá dòng):
+
+1. Ghi `document.activeElement` (thẻ, id hoặc nhãn). Cách đọc qua công cụ trình duyệt của phiên `[Unverified]`.
+2. Nhấn `Tab` một lần; ghi phần tử nhận focus tiếp theo.
+3. FAIL khi focus ở `body` mà trang không đổi route và không vừa đóng dialog.
+
+Khi AC mô tả một thông báo lỗi hay thành công: kiểm thông báo có trong DOM, dưới dạng chữ hoặc `role="alert"`, sau đủ chuỗi sự kiện, kể cả sau khi tải lại danh sách. Thông báo nằm trong vùng bị gỡ cùng danh sách là FAIL.
+
 ## Luật an toàn
 
 | # | Luật | Cách xử lý |

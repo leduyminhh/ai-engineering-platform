@@ -30,7 +30,7 @@ và không thay cho test e2e.
 ## Phạm vi
 
 - **Làm:** runbook theo [mẫu](references/runbook.template.md); walkthrough Playwright theo
-  [luật walkthrough](references/walkthrough.md); báo cáo kết quả đã chạy.
+  [luật walkthrough](references/walkthrough.md); báo cáo kết quả đã chạy, kèm ảnh chụp các trạng thái và đối chiếu mockup.
 - **Không làm:** viết file test tự động (→ `frontend-e2e-testing`, `frontend-testing`); sửa code hay cấu hình của project;
   kiểm trên staging hoặc production; đo hiệu năng (→ `frontend-performance`).
 
@@ -75,6 +75,10 @@ của runbook như một người dùng thật, đọc request mạng và consol
 FAIL, SKIP-SAFETY, SKIP-PRECOND. Định nghĩa từng kết quả, luật an toàn đầy đủ và mẫu báo cáo nằm ở
 [references/walkthrough.md](references/walkthrough.md). Đọc file đó trước khi mở trình duyệt.
 
+Hai mục của walkthrough áp dụng ngay trong lượt: `## Trạng thái và ảnh chụp` (bốn trạng thái, ảnh ngoài git) và
+`## Focus và thông báo` (focus sau thao tác tại chỗ, thông báo trong DOM). Kết quả đối chiếu mockup ghi ở
+`## Đối chiếu mockup` của runbook.
+
 Walkthrough cho kết quả **quan sát**, không phải bằng chứng đầy đủ: bước SKIP và phần ngoài UI vẫn cần người kiểm.
 
 ## Ranh giới an toàn
@@ -111,3 +115,13 @@ result:
     - { step: "", reason: "" }
   remaining_risks: []
 ```
+
+## Chế độ nhúng
+
+Khi `workflow-feature` gọi skill ở lượt "Kiểm giao diện thật" (Bước 5):
+
+- Runbook lập từ AC đã duyệt ở G1; không chờ duyệt thêm.
+- Thiếu công cụ trình duyệt, chưa tự cài Playwright, hoặc chưa rõ lệnh dựng môi trường local/test thì trả `not_run` kèm lý do, không hỏi.
+- Skill không commit; session chính commit `ui-check.md`.
+
+Chạy độc lập (người dùng gọi trực tiếp) giữ nguyên luật: duyệt runbook trước khi chạy walkthrough, và hỏi trước khi cài Playwright hay trình duyệt.
