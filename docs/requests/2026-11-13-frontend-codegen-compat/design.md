@@ -1,6 +1,6 @@
 # Thiết kế: kiểm tương thích công cụ sinh code trước cổng G1
 - Ngày: 2026-11-13
-- Trạng thái: draft — chờ duyệt G1
+- Trạng thái: approved — G1 được người dùng duyệt 2026-11-13 (cả D1–D5 do agent chọn)
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
