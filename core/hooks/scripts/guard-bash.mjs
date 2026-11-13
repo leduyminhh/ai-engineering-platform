@@ -471,6 +471,10 @@ function matchesAsk(orig) {
 // shortcut: heuristic đọc token, `node -e`/script con ghi file vẫn lọt; nâng lên khi cần chặn thật thì dùng quyền hệ thống file.
 const GUARD_CONFIG = /(?:\.claude[\\/]settings(?:\.[\w-]+)?|(?:^|[^\w.-])aip-gate)\.json(?![\w.-])/i;
 const IN_PLACE_FLAG = /^(?:-[a-z]*i|--in-place)/i;
+// cp/mv vào thư mục .claude: tên file cấu hình nằm ở nguồn, không ở đích, nên phải ghép theo token.
+const CLAUDE_DIR = /(?:^|[\\/])\.claude[\\/]*$/;
+const CONFIG_FILE_NAME = /^(?:settings(?:\.[\w-]+)?|aip-gate)\.json$/i;
+const COPY_MOVE = new Set(['cp', 'copy', 'copy-item', 'mv', 'move', 'move-item']);
 
 // Chỉ đích ghi mới tính: tên file cấu hình nằm trong message hay đối số đọc không làm lệnh bị hỏi.
 // xargs/find/parallel nhận lệnh ghi qua đối số hay đầu vào pipe nên không có đích ghi nhìn thấy được: coi là ghi khi đoạn có tên lệnh ghi hoặc -exec/-delete.
@@ -537,6 +541,7 @@ function pipedIndirectConfigWrite(list) {
 function writesGuardConfig(t, msys = true) {
   const { targets, name, args, allPos } = writeTargets(t, msys);
   if (targets.some((p) => GUARD_CONFIG.test(p)) || (FIRST_ONLY.has(name) && allPos.some((p) => GUARD_CONFIG.test(p)))) return true;
+  if (COPY_MOVE.has(name) && targets.some((p) => CLAUDE_DIR.test(p)) && args.some((a) => CONFIG_FILE_NAME.test(a.split(/[\\/]/).pop()))) return true;
   // Lệnh không thuộc WRITE_CMDS (khối script PowerShell, xargs, find, parallel…): không đọc được đích ghi thì hỏi khi cùng đoạn có đường dẫn cấu hình và tín hiệu ghi.
   if (name !== 'sed' && name !== 'perl' && !WRITE_CMDS.has(name)) {
     const all = [name, ...args];
