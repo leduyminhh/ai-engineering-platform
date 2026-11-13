@@ -124,7 +124,7 @@ Skill chưa được publish của một plugin (vd các skill `data-oltp-*` / `
 | `backend` | Project backend (REST API / service). | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Project frontend (web app / SPA). | `frontend-init`, `frontend-migrate-architecture` |
 | `data` | Project dữ liệu — CSDL OLTP (`data-oltp-*`) + kho/pipeline OLAP (`data-olap-*`). *(publish một phần: `data-db-migration`; skill OLTP/OLAP còn draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
-| `engineering` | Capability kỹ thuật xuyên suốt (quality gate, spec, phân rã task, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-spec-backfill`, `engineering-task-breakdown`, `engineering-adr` |
+| `engineering` | Capability kỹ thuật xuyên suốt (quality gate, spec, phân rã task, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-spec-backfill`, `engineering-task-breakdown`, `engineering-adr`, `engineering-codebase-onboarding` |
 | `ops` | Maintain server — deploy/release, xử lý sự cố, observability. | `ops-deploy-release`, `ops-incident-troubleshooting`, `ops-observability` |
 
 Mỗi skill `*-init` là **bộ scaffold TÀI LIỆU**: drop cây `templates/init` +
@@ -228,12 +228,11 @@ Các gap còn mở — chưa làm.
 | G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
 | G4 | `engineering-bugfix` (tái hiện → evidence → failing test → root cause → fix tối thiểu) | engineering | WF02 |
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | — |
-| G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
 | G11 | `engineering-docs-sync` | engineering | — |
 
 **Workflow tương lai:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),
-`workflow-onboarding` (G7), `workflow-tech-debt-review` (G8).
+`workflow-onboarding` (skill G7 `engineering-codebase-onboarding` đã có; workflow chưa làm), `workflow-tech-debt-review` (G8).
 
 **Provider / nền tảng (P1–P7):**
 
