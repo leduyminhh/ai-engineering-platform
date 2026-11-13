@@ -159,6 +159,10 @@ export default async function run({ ok, ctx }) {
     const hit = scan.scanText(`x\n${pw('hunter22xyz')}\n`);
     ok(hit.length === 1 && hit[0].line === 2 && hit[0].kind === 'secret-assignment', 'AC3.1: scanText trả line và kind');
     ok(scan.scanText(pw('`hunter22xyz`')).length === 1, 'AC3.1: giá trị bọc code inline vẫn bị báo');
+    // Giá trị bắt đầu bằng từ khoá placeholder hoặc chứa ngoặc vẫn là secret thật; số nhiều của tên khoá cũng vậy.
+    for (const line of ['secret: example-prod-key', 'token: yourcompany123', 'api_key: yourcompany-live-7f3a9b2c1d', pw('Yourpass99'), pw('abc(123)xyz'), 'passwords: hunter22xyz', 'access_token: abcdefgh1234']) {
+      ok(scan.scanText(line).length === 1, `AC3.1: không bỏ sót "${line.slice(0, 12)}…"`);
+    }
     const started = Date.now();
     scan.scanText(`http://u:${'b'.repeat(80000)}\n${'a://'.repeat(20000)}\n${'a'.repeat(80000)}`);
     ok(Date.now() - started < 3000, 'AC3.1: dòng rất dài không gây quét bậc hai');
@@ -166,7 +170,8 @@ export default async function run({ ok, ctx }) {
     const clean = mk({ 'clean.md': [
       '`DB_PASSWORD`', 'password: <your-password>', 'DB_PASSWORD=${DB_PASSWORD}', 'password: $DB_PASSWORD', 'token: ***', 'secret=', 'api_key: ""',
       'host 127.0.0.1, 0.0.0.0 và 192.0.2.10', 'phiên bản 1.2.3', '| DB_PASSWORD | mật khẩu của DB |',
-      'max_tokens: 4096', 'password: string', 'password = os.environ["DB_PASSWORD"]', 'mongodb://user:pass@host/db', ''].join('\n') });
+      'max_tokens: 4096', 'password: string', 'password = os.environ["DB_PASSWORD"]', 'mongodb://user:pass@host/db',
+      'api_key: YOUR_API_KEY', ['AKIA', 'IOSFODNN7EXAMPLE'].join(''), ''].join('\n') });
     const r2 = cli('scan-secrets.mjs', [path.join(clean, 'clean.md')]);
     ok(r2.status === 0 && !/:\d+ /.test(r2.stdout), 'AC3.2: placeholder, tên khoá, địa chỉ loopback và số phiên bản không bị báo');
 
@@ -181,6 +186,10 @@ export default async function run({ ok, ctx }) {
     let linked = false;
     try { fs.symlinkSync(path.join(dir, 'khong-co.md'), path.join(dir, 'broken.md')); linked = true; } catch { /* không tạo được symlink */ }
     ok(!linked || cli('scan-secrets.mjs', [dir]).status === 1, 'AC3.3: symlink .md hỏng trong thư mục bị bỏ qua, không chặn lần quét');
+    const linkDir = mk({});
+    let okLink = false;
+    try { fs.symlinkSync(path.join(dir, 'a.md'), path.join(linkDir, 'ok-link.md')); okLink = true; } catch { /* không tạo được symlink */ }
+    ok(!okLink || cli('scan-secrets.mjs', [linkDir]).status === 1, 'AC3.3: symlink .md trỏ tới file thường vẫn được quét');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
