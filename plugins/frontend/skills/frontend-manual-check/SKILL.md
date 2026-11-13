@@ -25,7 +25,7 @@ và không thay cho test e2e.
   thì dừng và đề nghị làm rõ yêu cầu trước (`engineering-spec-writing`).
 - Biết cách dựng môi trường chạy local/test (lệnh chạy FE, BE, DB test) từ `README` hoặc `project-knowledge/`.
   Chưa rõ thì hỏi người dùng, không đoán lệnh.
-- Con người giữ chốt: duyệt runbook trước khi chạy walkthrough, và là người kiểm tay cuối cùng.
+- Con người giữ chốt: duyệt runbook trước khi chạy walkthrough (chế độ nhúng: xem mục Chế độ nhúng ở cuối file), và là người kiểm tay cuối cùng.
 
 ## Phạm vi
 
@@ -62,7 +62,7 @@ và không thay cho test e2e.
 
 ### 4. Chạy và ghi kết quả
 
-- Người dùng duyệt bảng bước trước khi chạy. Chạy tay hoặc chạy walkthrough (mục 5), rồi điền `## Kết quả đã chạy`:
+- Người dùng duyệt bảng bước trước khi chạy (chế độ nhúng: xem mục Chế độ nhúng ở cuối file). Chạy tay hoặc chạy walkthrough (mục 5), rồi điền `## Kết quả đã chạy`:
   bước nào PASS, FAIL hay "chưa kiểm", ngày chạy, môi trường, commit đang kiểm.
 - Phần không chạy được **ghi rõ "chưa kiểm" kèm lý do, không để trống**. Ô trống không phân biệt được với "quên kiểm".
 - FAIL ghi đủ bốn thứ: bước tái hiện, kết quả thực, kết quả mong đợi, bằng chứng (request lỗi, ảnh chụp, thông báo console).
@@ -122,6 +122,7 @@ Khi `workflow-feature` gọi skill ở lượt "Kiểm giao diện thật" (Bư�
 
 - Runbook lập từ AC đã duyệt ở G1; không chờ duyệt thêm.
 - Thiếu công cụ trình duyệt, chưa tự cài Playwright, hoặc chưa rõ lệnh dựng môi trường local/test thì trả `not_run` kèm lý do, không hỏi.
+- `not_run` là trạng thái tổng của lượt, không phải kết quả từng bước. Khi đó `ui-check.md` ghi dòng `Trạng thái: not_run — <lý do>` và mọi bước ghi `chưa kiểm` kèm lý do, không để trống.
 - Skill không commit; session chính commit `ui-check.md`.
 
 Chạy độc lập (người dùng gọi trực tiếp) giữ nguyên luật: duyệt runbook trước khi chạy walkthrough, và hỏi trước khi cài Playwright hay trình duyệt.

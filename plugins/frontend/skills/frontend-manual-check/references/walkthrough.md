@@ -7,12 +7,12 @@ Khác với test e2e tự động (`frontend-e2e-testing`): không để lại f
 
 Kiểm đủ các điều sau trước khi mở trình duyệt. Thiếu một điều thì các bước liên quan là SKIP-PRECOND, không đoán.
 
-- Runbook đã được người dùng duyệt; mỗi bước có kết quả mong đợi cụ thể.
+- Runbook đã được người dùng duyệt (chế độ độc lập; khi chạy nhúng từ workflow-feature xem `## Chế độ nhúng` của SKILL.md); mỗi bước có kết quả mong đợi cụ thể.
 - Ứng dụng đang chạy ở host local hoặc test; URL lấy từ runbook. Host staging hoặc production thì dừng toàn bộ.
 - Có công cụ trình duyệt dùng được. Ví dụ với Playwright MCP: điều hướng, chụp snapshot, đọc console, đọc request mạng
   `[Unverified]` tên công cụ cụ thể khác nhau giữa bản cài; dùng danh sách công cụ thật của phiên.
 - Tài khoản test và dữ liệu seed trong `## Điều kiện` của runbook đã có.
-- Chưa có Playwright hoặc trình duyệt thì hỏi người dùng trước khi cài hay tải; không tự cài.
+- Chưa có Playwright hoặc trình duyệt thì hỏi người dùng trước khi cài hay tải; không tự cài (chế độ độc lập; khi chạy nhúng từ workflow-feature xem `## Chế độ nhúng` của SKILL.md).
 
 ## Vòng một bước
 
@@ -39,15 +39,14 @@ Ranh giới giữa các loại:
 
 ## Trạng thái và ảnh chụp
 
-Mỗi màn hình mà AC hoặc mockup nêu được chụp ở bốn trạng thái: loading, rỗng, lỗi, thành công. Trạng thái nào không chụp được thì ghi rõ trong báo cáo, không để trống.
+Mỗi màn hình mà AC hoặc mockup nêu được chụp ở các trạng thái AC hoặc mockup nêu, tối đa bốn: loading, rỗng, lỗi, thành công. Trạng thái nào không chụp được thì ghi rõ trong báo cáo, không để trống.
 
 - Tên ảnh: `<#bước>-<trạng-thái>.png`, ví dụ `3-rỗng.png` hoặc `5-lỗi.png`.
-- Ảnh lưu ở `.aip/runs/<request>/<part>/ui-check/`, ngoài git; không đưa ảnh vào commit.
+- Ảnh lưu ở `.aip/runs/<request>/<part>/ui-check/` tại gốc repo chính, nơi `.aip/.gitignore` đã bỏ qua; không đưa ảnh vào commit.
 - Trạng thái không dựng được thì ghi SKIP-PRECOND kèm điều kiện thiếu, không gán PASS.
-- Cách gây trạng thái, theo thứ tự:
+- Cách gây trạng thái, theo thứ tự (không sửa mã nguồn hay cấu hình, L6):
   1. Dữ liệu seed nêu trong `## Điều kiện` của runbook (ví dụ tài khoản không có bản ghi nào để thấy trạng thái rỗng).
-  2. Dùng chặn hoặc giả request ở tầng trình duyệt: trả lỗi cho một request để thấy trạng thái lỗi, hoãn phản hồi để thấy loading. Tên công cụ thực hiện việc này `[Unverified]`, khác nhau giữa các bản cài.
-  3. Tạo trạng thái bằng cách không sửa mã nguồn hay cấu hình (L6). Hai cách trên đều không đủ thì SKIP-PRECOND.
+  2. Dùng chặn hoặc giả request ở tầng trình duyệt: trả lỗi cho một request để thấy trạng thái lỗi, hoãn phản hồi để thấy loading. Tên công cụ thực hiện việc này `[Unverified]`, khác nhau giữa các bản cài. Đây là thao tác ở tầng trình duyệt trong chính phiên walkthrough, không đổi gì ở mã nguồn, cấu hình, mock server hay dữ liệu của ứng dụng, nên vẫn nằm trong L6. Hai cách trên đều không đủ thì SKIP-PRECOND.
 
 ## Focus và thông báo
 
@@ -55,7 +54,7 @@ Sau mỗi thao tác tải lại hoặc đổi nội dung tại chỗ (đổi tra
 
 1. Ghi `document.activeElement` (thẻ, id hoặc nhãn). Cách đọc qua công cụ trình duyệt của phiên `[Unverified]`.
 2. Nhấn `Tab` một lần; ghi phần tử nhận focus tiếp theo.
-3. FAIL khi focus ở `body` mà trang không đổi route và không vừa đóng dialog.
+3. FAIL khi, ở trạng thái ngay sau thao tác (trước khi nhấn `Tab`), focus ở `body` mà trang không đổi route và không vừa đóng dialog.
 
 Khi AC mô tả một thông báo lỗi hay thành công: kiểm thông báo có trong DOM, dưới dạng chữ hoặc `role="alert"`, sau đủ chuỗi sự kiện, kể cả sau khi tải lại danh sách. Thông báo nằm trong vùng bị gỡ cùng danh sách là FAIL.
 
