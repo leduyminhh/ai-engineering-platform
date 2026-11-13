@@ -369,22 +369,29 @@ function writeTargets(t, msys = true) {
     // Tham số PowerShell đã gọi tên (-Path/-LiteralPath/-Destination) chiếm slot của nó: đối số vị trí chỉ lấp slot còn trống.
     let namedPath = false;
     let namedDest = false;
-    // Mảng nhiều token (`-Value a, b`, `-Path x, y`) không biết token nào là Path: coi như cờ lạ, kiểm mọi đối số vị trí.
-    let unknownFlag = FIRST_ONLY.has(name) && args.some((a) => /^,|,$/.test(a));
+    // Mảng nhiều token (`-Value a, b`, `-Path x, y`) và token có backtick (hook không bóc được) không biết token nào là Path: coi như cờ lạ, kiểm mọi đối số vị trí.
+    let unknownFlag = FIRST_ONLY.has(name) && args.some((a) => /^,|,$|`/.test(a));
     // Số đối số vị trí đứng trước cờ đường dẫn đầu tiên có giá trị: chỉ các đối số sau nó mới là Value.
     let namedAt;
     let afterDashes = false;
-    const named = (flag, at) => { if (/^-?destination$/i.test(flag)) namedDest = true; else { namedPath = true; namedAt ??= at; } };
+    // Hai cờ đường dẫn (kể cả một cái nằm trong nháy mà parser đã bóc) thì không biết cờ nào là thật nên coi là cờ lạ.
+    const named = (flag, at) => { if (/^-?destination$/i.test(flag)) namedDest = true; else { if (namedPath && FIRST_ONLY.has(name)) unknownFlag = true; namedPath = true; namedAt ??= at; } };
     let pos = [];
     for (let i = 0; i < args.length; i++) {
       const a = args[i];
-      if (FIRST_ONLY.has(name) && (afterDashes || a === '--')) { if (afterDashes) pos.push(a); afterDashes = true; continue; }
+      // `--` có thể nằm trong nháy, hoặc PowerShell 5.1 coi một số công tắc là tham số động làm nó mất tác dụng: không dừng đọc cờ, chỉ kiểm thêm mọi đối số.
+      if (FIRST_ONLY.has(name) && a === '--') { unknownFlag = true; afterDashes = true; continue; }
       // Cờ đường dẫn cụt (không có giá trị) của Set-Content/Out-File/Add-Content không gọi tên Path nên không chiếm slot.
-      if (PS_PATH_FLAGS.has(a.toLowerCase())) { if (!FIRST_ONLY.has(name) || i + 1 < args.length) named(a, pos.length); if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
+      if (PS_PATH_FLAGS.has(a.toLowerCase())) {
+        if (!FIRST_ONLY.has(name) || i + 1 < args.length) named(a, pos.length);
+        if (i + 1 < args.length) { if (FIRST_ONLY.has(name) && args[i + 1].startsWith('-')) unknownFlag = true; targets.push(args[++i]); needs.push(flagNeeds(name, a)); }
+        continue;
+      }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
-      if (colon) { named(colon[1], pos.length); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
+      if (colon) { named(colon[1], pos.length); if (FIRST_ONLY.has(name) && colon[2].startsWith('-')) unknownFlag = true; targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
       const pv = !msys && (LAST_ONLY.has(name) || MOVE_CMDS.has(name)) ? PS_VALUE_FLAGS.exec(a) : null;
       if (pv) { if (!pv[4]) i++; continue; }
+      if (FIRST_ONLY.has(name) && afterDashes) { pos.push(a); continue; }
       if (FIRST_ONLY.has(name) && /^-[A-Za-z]/.test(a)) {
         const f = a.slice(1).split(':', 1)[0].toLowerCase();
         const takesValue = PS_WRITE_VALUE.has(f);
@@ -450,7 +457,7 @@ function writeTargets(t, msys = true) {
     // Giữ cả token gốc: chuỗi trong nháy có dấu phẩy là một đường dẫn literal, và từng phần tách riêng có thể resolve khác khi chứa `..`.
     const split = targets.flatMap((p, i) => {
       const pieces = String(p).split(',').filter(Boolean);
-      return (pieces.length > 1 ? [p, ...pieces] : [p]).map((x) => [x, needs[i]]);
+      return (pieces.length > 1 || pieces[0] !== p ? [p, ...pieces] : [p]).map((x) => [x, needs[i]]);
     });
     return { targets: split.map(([x]) => x), needs: split.map(([, n]) => n), name, args, allPos };
   }

@@ -172,6 +172,8 @@ export default async function run({ ok, ctx }) {
     ]);
 
     const OUT = u(path.join(tb, 'out'));
+    // Token mảng PowerShell chỉ có dấu phẩy ở đầu vẫn là một đích riêng (mọi lệnh PowerShell, không riêng Set-Content).
+    expectAll([[`Remove-Item ${T}/a ,${OUT}/b`, 'deny', 'AC3.3']], { tool: 'PowerShell' });
     expectAll([
       [`mv ${T}/a ${O}/b`, null, 'AC3.6'], [`mv ${T}/a`, null, 'AC3.6'],
       [`mv ${O}/a ${O}/b`, 'deny', 'AC3.6'], [`mv ${T}/a ${D}/b`, 'deny', 'AC3.6'], [`mv ${D}/a ${T}/b`, 'deny', 'AC3.6'], [`mv ${O}/a`, 'deny', 'AC3.6'],
@@ -351,6 +353,14 @@ export default async function run({ ok, ctx }) {
         // Value mảng nhiều token: đích thật đứng sau.
         `Set-Content -Value a, b ${OUT}/x`, `Set-Content -Value a ,b ${OUT}/x`, `Set-Content -Encoding utf8 -Value a, b ${OUT}/x`, `Add-Content -Value a, b ${OUT}/x`,
         `Set-Content -Value @('a', 'b') ${OUT}/x`].map((c) => [c, 'deny']),
+      // `--` có thể nằm trong nháy/backtick hoặc bị công tắc động của PowerShell 5.1 làm mất tác dụng; cờ đường dẫn thật vẫn phải được đọc sau nó.
+      ...[`Set-Content '--' -Path ${OUT}/x`, `Set-Content "--" -Path ${OUT}/x`, `Set-Content '--' -Path:${OUT}/x`, `Add-Content '--' -LiteralPath ${OUT}/x`, `Set-Content \`-- -Path ${OUT}/x`,
+        `Set-Content -Path -- ${OUT}/x v`, `Set-Content -LiteralPath -- ${OUT}/x v`, `Out-File -FilePath -- ${OUT}/x`,
+        `Set-Content -NoNewline -- -Path ${OUT}/x`, `Add-Content -NoNewline -- -Path ${OUT}/x`,
+        // Cờ đường dẫn trong nháy đứng trước cờ đường dẫn thật: hai cờ đường dẫn thì không biết cờ nào là thật.
+        `Set-Content '-Path' -Path ${OUT}/x`, `Set-Content "-LiteralPath" -LiteralPath ${OUT}/x`, `Add-Content '-Path' -Path ${D}/x`,
+        // Token mảng chỉ có dấu phẩy ở đầu cũng phải được tách.
+        `Set-Content -Path ${O}/x ,${OUT}/y -Value z`, `Set-Content ${O}/x ,${OUT}/y`].map((c) => [c, 'deny']),
       [`Set-Content -Path ${O}/x -Value a, b`, null],
     ]);
     psw('AC1.3', [[`Set-Content -Enc utf8 ${OUT}/x -Val y`, 'deny'], [`Set-Content -Foo a ${OUT}/x y`, 'deny'], [`Set-Content -Enc utf8 ${O}/x y`, null]]);
