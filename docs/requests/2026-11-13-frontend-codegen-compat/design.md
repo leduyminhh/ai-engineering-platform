@@ -1,6 +1,6 @@
 # Thiết kế: kiểm tương thích công cụ sinh code trước cổng G1
 - Ngày: 2026-11-13
-- Trạng thái: approved — G1 được người dùng duyệt 2026-11-13 (cả D1–D5 do agent chọn)
+- Trạng thái: in-progress — nhánh claude/frontend-codegen-compat-f9538e (G3 2026-11-13: giữ nguyên, chưa merge)
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
@@ -52,7 +52,7 @@ Ba thay đổi nội dung, không thêm bước, không đổi `graph.json`.
 
 **3. `workflows/feature/WORKFLOW.md` Bước 3 (chỉ bước này)** — hai phần của Bước 3 đổi:
 
-- Hành động, sau câu builder check: "Spike giả định (theo `engineering-spec-writing`): giả định về công cụ hoặc thư viện mà hướng đã chọn dựa vào và kiểm được bằng một lệnh (vd công cụ codegen có chạy với TypeScript/Node của project không: `references/contract-and-codegen.md` của `frontend-data-integration`) thì kiểm trước checkpoint, ghi lệnh và kết quả vào tài liệu; không kiểm được thì nêu ở G1 như rủi ro chặn hướng."
+- Hành động, sau câu builder check: "Spike giả định (theo `engineering-spec-writing`): giả định về công cụ hoặc thư viện mà hướng đã chọn dựa vào và kiểm được bằng một lệnh (vd công cụ codegen có chạy với TypeScript/Node của project không: mục "Kiểm tương thích công cụ" của reference `contract-and-codegen` trong `frontend-data-integration`, gọi bằng tên reference vì contract 50-workflows cấm `references/<x>.md` ngoài references của workflow) thì kiểm trước checkpoint, ghi lệnh và kết quả vào tài liệu; không kiểm được thì nêu ở G1 như rủi ro chặn hướng."
 - Gate: thêm "mọi giả định công cụ kiểm được bằng một lệnh đã có kết quả trong tài liệu, hoặc được nêu ở G1 là rủi ro chặn hướng". Evidence: thêm "lệnh spike + kết quả".
 
 **4. Pin và version.** `test/content/54-codegen-compat.pin.mjs` kiểm: SKILL.md I2 và reference có `npm view`, `peerDependencies`, `engines`, `--dry-run`, `npx --yes -p typescript@`; workflow Bước 3 có từ khoá spike trong Hành động và Gate; số bước vẫn 7. Bump `plugins/frontend/.manifest.json` (1.16.3 → 1.16.4) và `workflows/.manifest.json` (3.16.2 → 3.16.3), rồi `node cli/lib/versions.mjs --lock`.
@@ -105,3 +105,11 @@ Như `requirement.md`. Thêm: ở Bước 3 chỉ sửa Hành động, Gate, Evi
 - [Unverified] Mức phổ biến của xung đột kiểu này ở project khác (trial báo cáo cũng ghi chưa biết).
 - Xung đột merge đã biết: `workflows/feature/WORKFLOW.md` (N1 sửa Bước 5/6; request này chỉ Bước 3, hunk khác nhau), `plugins/frontend/.manifest.json`, `workflows/.manifest.json` và `plugins/_versions.lock.json` (N1, N2 cũng bump), và số `workflows/R25` trong spec sống (N1 hoặc N2 có thể cũng thêm R25). Giải quyết lúc merge.
 - Câu hỏi mở cho G1: D1–D5 đúng ý chưa; muốn bắt buộc cả với thư viện không phải codegen thì phải mở rộng reference (hiện chỉ codegen).
+
+## Quyết định khi thực thi và còn mở (G3, 2026-11-13)
+
+- **Đổi chữ AC3.1** (người dùng chọn): workflow gọi reference bằng tên `contract-and-codegen`, không đường dẫn `references/…`, vì `test/contract/50-workflows.contract.mjs` buộc mọi `references/<x>.md` nhắc trong workflow nằm trong references của chính workflow. `requirement.md` và Thiết kế 3 đã sửa cho khớp.
+- **Follow-up riêng về siết bảo mật** (người dùng chọn, chưa làm): (1) câu spike ở Bước 3 thiếu ranh giới chỉ đọc, không nói cấm `npx --yes` gói chưa duyệt; (2) mục 2a chưa dặn không sao chép `.npmrc` và coi exit khác `ERESOLVE` là không chạy được; (3) tên `openapi-generator` trong danh sách ứng viên là gói npm khác với `@openapitools/openapi-generator-cli`; (4) pin chưa ghim chuỗi liền `npm install --dry-run --ignore-scripts` và ranh giới "không ghi vào project"; (5) reference mục 3 có hai mặc định cho ca không xung đột (`npx` không thêm dependency, hoặc devDependencies đúng `x.y.z`) và câu "`npm audit` không thấy gói chạy bằng `npx`" là suy luận chưa kiểm bằng lệnh `[Inference]`.
+- **Số `workflows/R25` trùng** với nhánh `claude/frontend-bugfix-gates-b96292` (N2, commit 959100e1): nhánh merge sau phải đổi sang R26, sửa mục Ảnh hưởng spec và dòng Lịch sử; version `frontend` 1.16.5 và `workflows` 3.16.3 cũng phải bump tiếp rồi `node cli/lib/versions.mjs --lock`.
+- **Ruling khác:** chạy plan bằng subagent (người dùng chọn); làm trên nhánh `claude/frontend-codegen-compat-f9538e` thay vì `feature/<slug>`; W7 của AC4.2, AC5.1, AC5.2 giữ nguyên vì kiểm bằng lệnh (chạy lại: `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-11-13-frontend-codegen-compat/ --base master`).
+- **Chưa kiểm** `[Unverified]`: `npm install --dry-run` với pnpm/yarn; chỉ dẫn mới có làm agent kiểm trước G1 ở một lần trial khác hay không.
