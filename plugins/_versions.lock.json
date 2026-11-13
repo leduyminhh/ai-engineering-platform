@@ -16,15 +16,15 @@
     "hash": "6da47087dbf04f1fbc4290f9a93cf92dd05d21a3f43ba6ad89e09b608e70381b"
   },
   "frontend": {
-    "version": "1.16.3",
-    "hash": "8b542a88088c9c1355a443d7c0fb5af045fc095447e7bc8881f56a819ff31d5f"
+    "version": "1.17.0",
+    "hash": "875a5741b53bfa0e002f160e1b23ebc7f436d1e3ee3bf4a3178fa8c9d55c01c7"
   },
   "ops": {
     "version": "2.1.1",
     "hash": "ec138aebe264b0d023365a11e6ee94cb84b6ed43d3ceb4022ac6606a8d5e5fd9"
   },
   "workflows": {
-    "version": "3.16.2",
-    "hash": "85844699fe581da6e8f2c40e67f0da8cd6a5716621606f6af95e9b65e1dece5b"
+    "version": "3.17.0",
+    "hash": "59022122e9d56920c0a3d61ea656c9111736fd47c56603428395fb4c07443cf9"
   }
 }
