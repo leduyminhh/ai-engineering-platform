@@ -50,7 +50,12 @@ Chưa có quyết định nào được người dùng chốt; mọi lựa chọ
    từ chối"). Không thêm hàng mới vào bảng điều kiện (bảng cũ không bị coi là thiếu hàng); chỉ điền thêm vào hàng "Công
    cụ + phiên bản", "Thiết bị/throttle" và mục văn xuôi "Chỉ số báo cáo".
 6. **Script ép P1 và P3 trong code:** từ chối host ngoài `localhost`/`127.0.0.1`/`[::1]`, từ chối `--runs` < 3, mỗi lần
-   chạy dùng context trình duyệt mới (cache lạnh), throttle CPU tuỳ chọn qua CDP và ghi nguyên văn vào kết quả.
+   chạy dùng context trình duyệt mới (cache lạnh), throttle CPU qua CDP và ghi nguyên văn vào kết quả. Sửa sau spike
+   (Task 1, người dùng duyệt 2026-11-13): throttle CPU mặc định 4× (`--cpu-slowdown 0` tắt; không throttle thì LCP vài
+   chục ms nhiễu quá lớn, độ lệch 128% trên `dist` của trial); thêm **một lần warm-up không tính vào median** (lần
+   đầu của trình duyệt vừa mở bị lệch: LCP 0 hoặc 980 ms, CLS/TBT mất do shift và long task xảy ra trước paint đầu); thêm
+   `--executable-path` tuỳ chọn cho máy mà Chromium cài sẵn lệch bản Playwright (cả hai chỉ dùng bản đã có trên máy,
+   không tải gì). Không lấy được Chromium → thoát nêu lý do, agent báo `not_run`.
 7. **`frontend-init` thêm bước `.gitignore`:** đã có thì thêm vào cuối các dòng còn thiếu trong
    `.playwright-mcp/`, `perf/**/results/`, `dist/`; chưa có thì tạo với ba dòng đó cộng `node_modules/` (project React
    luôn cần; không thêm dòng env/secret vì thuộc project generator). Báo dòng đã thêm, không đụng dòng có sẵn. Dòng `dist/` kèm ghi chú:
@@ -137,7 +142,16 @@ skill-quality), không năng lực nào mô tả nội dung từng skill, và `d
 
 ## Rủi ro và câu hỏi mở
 
-- [Unverified] Script chưa chạy với Playwright thật: API `PerformanceObserver` với `buffered: true`, CDP throttle, cách
+- **Kết quả spike (Task 1, 2026-11-13):** nạp `playwright` và `@playwright/test` (1.65.0) đều được; `PerformanceObserver`
+  (`largest-contentful-paint`, `layout-shift`, `paint`, `longtask`, `buffered: true`) và CDP `Emulation.setCPUThrottlingRate`
+  chạy; fixture cho CLS 0,0903 và TBT xấp xỉ 70 ms đúng như dựng. **Tiêu chí ≤ 10% không đạt:** trên `dist` của trial
+  (chỉ đọc, server tạm, có warm-up) LCP không throttle 252/136/104/104/116 ms (độ lệch 128%), throttle 4×
+  224/240/240/248/252 ms (11,7%); lần đầu của trình duyệt mới lệch; Chromium cài sẵn là 1228 còn Playwright 1.65.0 đòi
+  1254 nên `launch()` lỗi nếu không có `executablePath`. Người dùng chọn giữ hướng B với sửa ở quyết định 6; độ lệch
+  > 10% vẫn xử lý bằng P3 (cảnh báo, tăng số lần, không kết luận). Lệnh chạy lại: chạy script Task 2 trên một bản build
+  (`node perf/frontend/measure.mjs --url <localhost> --runs 5`). Chưa kiểm trên trang có dữ liệu thật (`dist` của trial
+  không có API mock chạy).
+- [Unverified, đã kiểm một phần ở spike] Script chưa chạy với Playwright thật: API `PerformanceObserver` với `buffered: true`, CDP throttle, cách
   lấy LCP sau `load` chưa kiểm. Task đầu của plan là spike, chạy trong thư mục tạm ngoài repo (repo này zero-dependency,
   không thêm Playwright vào `package.json`). Nơi chạy: bản build của project trial `E:\Mine\AI\aip-frontend-trial`
   (đã có Playwright cho E2E; Chromium có sẵn hay không chưa kiểm) hoặc một trang tĩnh nhỏ; chỉ đọc project trial.
