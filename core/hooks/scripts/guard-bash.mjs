@@ -186,6 +186,11 @@ const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh'
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
 // Tham số của Copy-Item/Move-Item nhận một giá trị: bỏ giá trị đi, nếu không nó bị tính là đối số vị trí và làm lệch slot Path/Destination.
 const PS_VALUE_FLAGS = /^-(filter|include|exclude|credential|tosession|fromsession|(error|warning|information)(action|variable)|outvariable|outbuffer|pipelinevariable)(:.*)?$/i;
+// Set-Content/Out-File/Add-Content: giá trị của tham số có giá trị (`-Encoding utf8`, `-Value y`) không phải đường dẫn nhưng đứng như đối số vị trí.
+// Tên ngoài hai tập (viết tắt `-Enc`, tham số lạ) không biết có nhận giá trị hay không nên writeTargets kiểm mọi đối số vị trí.
+const PS_WRITE_VALUE = new Set(['value', 'encoding', 'stream', 'width', 'inputobject', 'filter', 'include', 'exclude', 'credential', 'erroraction', 'ea', 'warningaction', 'wa',
+  'informationaction', 'infa', 'errorvariable', 'ev', 'warningvariable', 'wv', 'informationvariable', 'iv', 'outvariable', 'ov', 'outbuffer', 'ob', 'pipelinevariable', 'pv']);
+const PS_WRITE_SWITCH = new Set(['force', 'nonewline', 'append', 'noclobber', 'passthru', 'asbytestream', 'whatif', 'confirm', 'cf', 'usetransaction', 'verbose', 'vb', 'debug', 'db']);
 const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul|\$null)$/i;
 const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
 const GLOB = /[*?[]/;
@@ -364,6 +369,7 @@ function writeTargets(t, msys = true) {
     // Tham số PowerShell đã gọi tên (-Path/-LiteralPath/-Destination) chiếm slot của nó: đối số vị trí chỉ lấp slot còn trống.
     let namedPath = false;
     let namedDest = false;
+    let unknownFlag = false;
     const named = (flag) => { if (/^-?destination$/i.test(flag)) namedDest = true; else namedPath = true; };
     let pos = [];
     for (let i = 0; i < args.length; i++) {
@@ -373,6 +379,12 @@ function writeTargets(t, msys = true) {
       if (colon) { named(colon[1]); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
       const pv = !msys && (LAST_ONLY.has(name) || MOVE_CMDS.has(name)) ? PS_VALUE_FLAGS.exec(a) : null;
       if (pv) { if (!pv[4]) i++; continue; }
+      if (FIRST_ONLY.has(name) && /^-[A-Za-z]/.test(a)) {
+        const f = a.slice(1).split(':', 1)[0].toLowerCase();
+        if (PS_WRITE_VALUE.has(f)) { if (!a.includes(':')) i++; continue; }
+        if (!PS_WRITE_SWITCH.has(f)) unknownFlag = true;
+        continue;
+      }
       // PowerShell chấp nhận viết tắt tham số (`-Dest`, `-Pa`) nên cờ lạ có thể đã gắn đối số vị trí vào -Path của nguồn.
       if (!msys && MOVE_CMDS.has(name) && /^-[A-Za-z]/.test(a)) {
         blurred = true;
@@ -400,9 +412,10 @@ function writeTargets(t, msys = true) {
     if (SKIP_FIRST.has(name)) pos = pos.slice(1);
     const all = pos;
     const copyLike = LAST_ONLY.has(name);
-    // Set-Content/Out-File: cờ có giá trị (-Encoding utf8, -Value x) làm đối số đầu không còn là đích thật; allPos giữ mọi đối số cho kiểm cấu hình hook.
+    // Set-Content/Out-File/Add-Content: chỉ đối số vị trí đầu là Path; đã gọi tên -Path thì mọi đối số vị trí là Value/Encoding. Có cờ lạ thì không biết đối số nào là Path nên kiểm hết.
+    // allPos giữ mọi đối số cho kiểm cấu hình hook.
     allPos = copyLike ? all.slice(-1) : all;
-    pos = FIRST_ONLY.has(name) ? all.slice(0, 1) : all;
+    pos = FIRST_ONLY.has(name) ? (unknownFlag ? all : namedPath ? [] : all.slice(0, 1)) : all;
     // PowerShell lấp đối số vị trí theo thứ tự Path rồi Destination; đối số thừa (cờ có giá trị như -Filter làm lệch) lấy cả hai vai để không bỏ sót.
     const slots = !msys && (copyLike || (MOVE_CMDS.has(name) && !blurred))
       ? [...(namedPath ? [] : [copyLike ? ['read'] : ['delete']]), ...(namedDest ? [] : [['write']])] : null;
