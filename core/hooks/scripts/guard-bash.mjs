@@ -185,7 +185,7 @@ const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh', 'tcsh', 'cmd', 'pwsh', 'powershell']);
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
 // Tham số của Copy-Item/Move-Item nhận một giá trị: bỏ giá trị đi, nếu không nó bị tính là đối số vị trí và làm lệch slot Path/Destination.
-const PS_VALUE_FLAGS = /^-(filter|include|exclude|credential|tosession|fromsession)(:.*)?$/i;
+const PS_VALUE_FLAGS = /^-(filter|include|exclude|credential|tosession|fromsession|(error|warning|information)(action|variable)|outvariable|outbuffer|pipelinevariable)(:.*)?$/i;
 const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul|\$null)$/i;
 const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
 const GLOB = /[*?[]/;
@@ -372,7 +372,7 @@ function writeTargets(t, msys = true) {
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
       if (colon) { named(colon[1]); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
       const pv = !msys && (LAST_ONLY.has(name) || MOVE_CMDS.has(name)) ? PS_VALUE_FLAGS.exec(a) : null;
-      if (pv) { if (!pv[2]) i++; continue; }
+      if (pv) { if (!pv[4]) i++; continue; }
       // PowerShell chấp nhận viết tắt tham số (`-Dest`, `-Pa`) nên cờ lạ có thể đã gắn đối số vị trí vào -Path của nguồn.
       if (!msys && MOVE_CMDS.has(name) && /^-[A-Za-z]/.test(a)) {
         blurred = true;
@@ -426,7 +426,11 @@ function writeTargets(t, msys = true) {
   }
   // PowerShell nhận mảng `a,b` trong một token: tách thành từng đích để phần tử ngoài root không lọt. Chỉ PowerShell: ở Bash dấu phẩy là ký tự của tên file.
   if (!msys) {
-    const split = targets.flatMap((p, i) => String(p).split(',').filter(Boolean).map((x) => [x, needs[i]]));
+    // Giữ cả token gốc: chuỗi trong nháy có dấu phẩy là một đường dẫn literal, và từng phần tách riêng có thể resolve khác khi chứa `..`.
+    const split = targets.flatMap((p, i) => {
+      const pieces = String(p).split(',').filter(Boolean);
+      return (pieces.length > 1 ? [p, ...pieces] : [p]).map((x) => [x, needs[i]]);
+    });
     return { targets: split.map(([x]) => x), needs: split.map(([, n]) => n), name, args, allPos };
   }
   return { targets, needs, name, args, allPos };
@@ -593,7 +597,8 @@ function writesGuardConfig(t, msys = true) {
   // Đích chỉ có vai read (nguồn của cp/Copy-Item) là file bị đọc, không phải file bị ghi.
   const targets = w.targets.filter((_, i) => w.needs[i].some((n) => n !== 'read'));
   if (targets.some((p) => GUARD_CONFIG.test(p)) || (FIRST_ONLY.has(name) && allPos.some((p) => GUARD_CONFIG.test(p)))) return true;
-  if (COPY_MOVE.has(name) && targets.some((p) => CLAUDE_DIR.test(p)) && args.some(hasConfigName)) return true;
+  // Chuẩn hoá trước khi so: `.claude/.` và `.claude/sub/..` cùng là thư mục .claude.
+  if (COPY_MOVE.has(name) && targets.some((p) => CLAUDE_DIR.test(path.posix.normalize(String(p).replace(/\\/g, '/')))) && args.some(hasConfigName)) return true;
   // Lệnh không thuộc WRITE_CMDS (khối script PowerShell, xargs, find, parallel…): không đọc được đích ghi thì hỏi khi cùng đoạn có đường dẫn cấu hình và tín hiệu ghi.
   if (name !== 'sed' && name !== 'perl' && !WRITE_CMDS.has(name)) {
     const all = [name, ...args];
@@ -634,7 +639,9 @@ function summarize(cmd) {
     if (steps.length >= MAX_STEPS) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
     const w = writeTargets(t);
-    const ti = w.targets.findIndex((x) => !NULL_DEVICE.test(x));
+    // Nêu đường dẫn gây ra câu hỏi: đường dẫn chưa biết (`$X`, `~`), rồi file cấu hình hook, rồi đích đầu tiên; nếu không, nguồn đọc đứng đầu của cp che mất đích ghi.
+    const live = w.targets.map((x, j) => j).filter((j) => !NULL_DEVICE.test(w.targets[j]));
+    const ti = live.find((j) => hasUnresolvedRef(w.targets[j])) ?? live.find((j) => GUARD_CONFIG.test(w.targets[j]) || CLAUDE_DIR.test(w.targets[j])) ?? live[0] ?? -1;
     const nd = w.needs[ti] ?? [];
     const verb = nd.includes('delete') ? (nd.includes('write') ? 'xoá hoặc ghi' : 'xoá') : nd.includes('read') ? 'đọc' : 'ghi vào';
     steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${ti >= 0 ? ` (${verb} ${showArg(w.targets[ti], 60)})` : ''}`);
