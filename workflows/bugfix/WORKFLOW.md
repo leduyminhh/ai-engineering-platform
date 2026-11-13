@@ -110,7 +110,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   nêu; trình bày cho người dùng để xác nhận trước khi fix. Pha 1–3 và cách truy ngược: skill `engineering-debugging` (khi skill đã cài); không làm pha 4 của skill ở bước này, việc sửa nằm ở Bước 6.
 - **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không kết luận root cause khi evidence chưa đủ khớp; không suy diễn nguyên nhân không có
   evidence hỗ trợ; không dừng ở chỗ lỗi nổ khi nguồn nằm ở nơi khác; thay đổi thử khi kiểm giả thuyết phải hoàn tác trước
-  khi trình người dùng.
+  khi trình người dùng. Bug nhỏ, nguyên nhân thấy ngay từ `git show`/`git diff`, hoặc test đã đỏ sẵn đều không phải lý do bỏ hay gộp bước này: được trình ngắn (một giả thuyết, chuỗi nhân quả, evidence) nhưng vẫn trình và hỏi. Không có công cụ hỏi có lựa chọn (`AskUserQuestion` không có, `ToolSearch` không nạp được, hoặc lời gọi không trả về câu trả lời của người dùng): in danh sách đánh số kèm lựa chọn khuyến nghị theo `ask-user.md` quy tắc 4, kết thúc lượt bằng `workflow_result` có `status: blocked` và câu hỏi ở `next_actions`; không sửa code; chỉ câu trả lời của người dùng ở lượt sau mở Bước 6 (thông báo hệ thống không tính).
 - **Đầu ra:** giải thích root cause, có trích dẫn evidence; **danh sách file/module được sửa** suy từ chuỗi nhân
   quả, gồm nguồn (không chỉ chỗ nổ lỗi) — đầu vào cho Bước 6; người dùng xác nhận cùng root cause.
 - **Gate:** giải thích nhân quả khớp evidence, lý do đỏ của test Bước 3 khớp root cause, người dùng đồng ý; có
@@ -134,7 +134,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   sách file là hợp của hai phía; mỗi agent chỉ đối chiếu phần thuộc phía mình.
 - **Ràng buộc:** cấm sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh; cấm chỉ sửa triệu chứng (che
   lỗi mà không sửa nguyên nhân); cấm xoá/nới điều kiện test cho qua; không sửa ngoài danh sách file — cần mở
-  rộng → agent trả `blocked`, session chính hỏi người dùng rồi gọi lại.
+  rộng → agent trả `blocked`, session chính hỏi người dùng rồi gọi lại. Bug phía FE giao `frontend-fixer`, phía BE giao `backend-fixer`, kể cả bản sửa một dòng; không có công cụ giao agent thì session chính đọc skill `frontend-fix`/`backend-fix` rồi tự sửa theo đó và ghi lý do vào Evidence.
 - **Đầu ra:** code fix + build/lint xanh + oracle đạt gate xanh: failing test của Bước 3 chuyển xanh, hoặc kết
   quả chạy lại bước tái hiện thủ công, hoặc (quay lại từ Bước 8) `file:line` finding đã sửa, chờ reviewer xác
   nhận.
@@ -155,7 +155,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Evidence:** report của agent (lệnh chạy lại đúng test của Bước 3, exit code đỏ → 0) + exit code do session
   chính tự chạy lại oracle + số lần sửa thất bại đã cộng dồn + danh sách file thay
   đổi hoặc mới trong bước so với trạng thái đầu bước + `git hash-object` trước/sau của file test đã bẩn; oracle
-  tái hiện thủ công: kết quả chạy lại bước tái hiện; quay lại từ Bước 8: `file:line` finding đã sửa.
+  tái hiện thủ công: kết quả chạy lại bước tái hiện; quay lại từ Bước 8: `file:line` finding đã sửa; sửa không qua fixer: lý do.
 
 ### Bước 7 — Regression
 
@@ -192,7 +192,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** tóm tắt bug + root cause + fix, đề xuất commit message Conventional Commits (header EN, body
   VI); trình diff cho người dùng duyệt.
 - **Ràng buộc:** câu hỏi duyệt ở bước này hỏi theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó; bản cài plugin: `core:plan-execution`): mở file hoặc diff cần duyệt ở pane rồi hỏi bằng lựa chọn bấm được (hướng khuyến nghị đứng đầu), không hỏi suông; không tự commit khi người dùng chưa duyệt diff; không push trừ khi được yêu cầu.
-  Đây là chốt riêng của workflow, áp cả trên feature branch.
+  Đây là chốt riêng của workflow, áp cả trên feature branch. Không có công cụ hỏi có lựa chọn (điều kiện như Bước 5): in danh sách đánh số kèm lựa chọn khuyến nghị, kết thúc lượt bằng `workflow_result` có `status: blocked` và câu hỏi ở `next_actions`; không commit; chỉ câu trả lời của người dùng ở lượt sau mới cho commit.
 - **Đầu ra:** commit đã tạo (sau khi người dùng duyệt).
 - **Gate:** người dùng duyệt diff.
 - **Khi fail:** người dùng yêu cầu sửa thêm → quay lại bước người dùng chỉ định, không commit tạm.
@@ -221,6 +221,7 @@ Supervisor (session chính) kiểm `agent_result` của worker và giới hạn 
 | Cấm: sửa khi chưa tái hiện được bug hoặc chưa có evidence mạnh | Từ chối sửa, quay lại Bước 3/4 thu thêm evidence |
 | Cấm: chỉ sửa triệu chứng (che lỗi, không sửa nguyên nhân) | Từ chối, quay lại Bước 5 xác định lại root cause |
 | Cấm: xoá/nới điều kiện test cho qua | Từ chối, quay lại Bước 6 sửa đúng code |
+| Cấm: bỏ bước ⏸ hoặc Bước 8 vì bug "đã rõ" | Dừng, quay lại bước bị bỏ, không nhận kết quả; trình root cause và hỏi như thường |
 | Lần sửa thứ 3 thất bại (Bước 6, tổng qua mọi cạnh 6→5, 7→6, 8→6) | Dừng `ask_user`, không thử lần 4; hỏi câu hỏi kiến trúc: mỗi lần sửa lộ coupling/shared state mới không, cần refactor lớn không |
 | Log tạm chưa gỡ (Bước 4) | Gỡ hết, kiểm lại gate diff sạch so với mốc đầu bước; không sang Bước 5 |
 | Test đỏ lệch root cause (Bước 5) | Quay lại Bước 3 sửa test cho đỏ đúng lý do root cause đã xác nhận |
