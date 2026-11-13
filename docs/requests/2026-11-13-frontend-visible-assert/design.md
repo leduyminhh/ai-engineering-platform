@@ -27,7 +27,7 @@ Người dùng giao qua yêu cầu mở request (không hỏi lại): phạm vi 
 - **D5 — Pin nội dung tối thiểu, một file.** `test/content/54-frontend-visible-assert.pin.mjs` kiểm ba chuỗi: gate T7, dấu hiệu Trục 1, câu hỏi Trục 6. AGENTS.md mục Testing nói không viết test ghim văn bản tài liệu; repo này lại dùng `test/content/*.pin.mjs` làm cách bảo vệ quy tắc nội dung khỏi bị xoá lặng lẽ khi chưa có contract. Giữ ba assert vì không có cách nào khác kiểm ba quy tắc này còn nguyên; bỏ pin nếu người dùng muốn theo đúng chữ AGENTS.md.
 - **D6 — Severity theo thang hiện có.** Thông báo AC bị gỡ lúc loading (proven) là lỗi correctness, dùng dòng `major` của bảng Severity ("thiếu xử lý error vùng quan trọng"); AC hiển thị thiếu assertion: `major` khi AC là thông báo lỗi hoặc xác nhận cho người dùng, `minor` với AC hiển thị khác. Không sửa bảng Severity. Căn cứ: AGENTS.md coi "coverage could be broader" là Minor, và finding ở đây nêu một defect cụ thể (AC thông báo không có assertion) nên nâng `major` được cho riêng ca thông báo.
 - **D8 — Làm rõ sau builder check (quyết định của agent).** (a) AC chưa có test ở tầng render cả nguồn lẫn vùng chứa thì thêm một test cho AC đó ở tầng ấy; điều cấm là bản trùng, không phải test cho hành vi chưa có test. (b) AC không có chuỗi sự kiện thì assert ngay sau thao tác. (c) Ca thông báo bị gỡ lúc loading là `major`, không `blocker`. (d) Mục con mới ở `react-testing-patterns.md` §4 đặt ngay sau dòng 67–68 và dòng đó trỏ tới nó; không viết lại hai dòng.
-- **D7 — Bump `frontend` từ 1.16.3 lên 1.16.4.** Xung đột `plugins/frontend/.manifest.json` và `plugins/_versions.lock.json` với N1, N2, N3 giải quyết lúc merge (tính lại số cao nhất và chạy `--lock`).
+- **D7 — Bump `frontend` từ 1.16.3 lên 1.16.4 (thực tế 1.16.5).** Sau review cuối nội dung build đổi lần nữa nên cổng version (`versions.mjs --lock`) buộc bump thêm một số; kết quả `frontend` là 1.16.5. Xung đột `plugins/frontend/.manifest.json` và `plugins/_versions.lock.json` với N1, N2, N3 giải quyết lúc merge (tính lại số cao nhất và chạy `--lock`).
 
 ## Đường đã cân nhắc
 
@@ -99,6 +99,14 @@ Không ảnh hưởng: nội dung hướng dẫn của hai skill frontend không
 - **Vùng gỡ nằm xa nơi đặt thông báo.** Dấu hiệu Trục 1 dựa vào đọc nhánh render của cha; lỗi ghép qua nhiều component có thể khó thấy trong diff tĩnh, ghi rõ "proven khi chỉ ra cả hai đầu, nếu không là suspected".
 - **Pin ghim văn bản** vs. AGENTS.md (D5): câu hỏi chọn ở G1.
 - **Xung đột merge** với N1–N3 ở `.manifest.json`, `_versions.lock.json` (D7) và với N1 ở `review-dimensions.md` (hunk Trục 4 khác hunk của request này).
+
+## Ghi chú thực thi
+
+Quyết định phát sinh lúc chạy plan (ledger nằm ngoài nhánh nên chép vào đây):
+- Task 1 là pin đỏ có chủ đích, bằng chứng `tests:` của dòng `complete` là `node --check test/content/54-frontend-visible-assert.pin.mjs` exit 0; pin xanh 3/3 từ Task 3.
+- Review cuối coi thiếu câu «không dùng `blocker`» ở bullet Trục 1 là major vì AC2.1 có câu đó; một lần sửa gộp mọi minor cùng vùng chữ (F1–F7), kèm giới hạn khớp theo Trục trong pin (kiểm đột biến: dời bullet sang trục khác thì pin đỏ).
+- Hàng T7 giữ nguyên chữ của AC1.1; ý «AC chưa có test ở tầng ghép thì thêm một test, chỉ ghi khoảng trống khi không thêm được» nằm ở bullet «Tầng chạm data» của SKILL.md và mục con §4 của `react-testing-patterns.md`.
+- Nhánh bắt đầu từ commit nền 36e5a52e (đã chứa `trial-design.md`, `trial-report.md` của phiên cha); hai file đó không phải của request này.
 
 ## Câu hỏi chốt ở G1
 
