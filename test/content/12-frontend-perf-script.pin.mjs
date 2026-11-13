@@ -67,4 +67,13 @@ export default async function run({ ok, ctx }) {
   const mcText = perfRead('references/measure-conditions.md');
   ok(mcText.includes('PerformanceObserver') && mcText.includes('xấp xỉ'),
     'AC2.1 measure-conditions.md: LCP/CLS bằng PerformanceObserver, TBT ghi xấp xỉ');
+
+  // Pin vận hành của frontend-init (AC4.1): bước .gitignore giữ đủ bốn dòng và quy tắc không ghi đè.
+  const initText = fs.readFileSync(path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-init', 'SKILL.md'), 'utf8');
+  for (const line of ['.playwright-mcp/', 'perf/**/results/', 'dist/', 'node_modules/']) {
+    ok(initText.includes(line), `AC4.1 frontend-init SKILL.md: có dòng .gitignore ${line}`);
+  }
+  ok(initText.toLowerCase().includes('không ghi đè'), 'AC4.1 frontend-init SKILL.md: nêu "không ghi đè"');
+  ok(initText.split('---')[1].includes('disable-model-invocation: true'),
+    'AC4.1 frontend-init SKILL.md: frontmatter giữ disable-model-invocation: true');
 }
