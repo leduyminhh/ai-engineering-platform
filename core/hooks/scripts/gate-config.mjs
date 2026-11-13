@@ -104,6 +104,14 @@ export function classifyPath(p, cwd, roots, msys = true, need = 'write') {
 // Thư mục tạm do chính Claude Code sinh ra (scratchpad, thư mục kết quả tool): không phải "ngoài project" với agent. [Unverified] Bố cục <tmpdir>/claude đo trên Windows, chưa kiểm POSIX.
 export const claudeTmpRoots = (tmp = os.tmpdir()) => [path.join(tmp, 'claude')];
 
+// Chỉ phần dưới <tmpdir>/claude là root: xoá hay di chuyển cả thư mục gốc của Claude vẫn bị chặn, ở cả guard-bash lẫn guard-files.
+export function isClaudeTmpRoot(p, dir) {
+  const a = path.resolve(dir, p).replace(/[\\/]+$/, '');
+  return claudeTmpRoots().some((r) => (process.platform === 'win32' ? a.toLowerCase() === r.toLowerCase() : a === r));
+}
+
+export const CLAUDE_TMP_BLOCKED_TEXT = 'Thư mục tạm gốc của Claude luôn bị chặn ở chế độ full, kể cả khi cấu hình cấp quyền; chỉ làm việc với thư mục con của nó.';
+
 // Mục sai cú pháp bị bỏ hoặc mất quyền (D4): sai chính tả chỉ làm ít quyền đi, không bao giờ nhiều hơn. `path` không có wildcard.
 export function fullPaths(config) {
   const v = config?.fullPaths;

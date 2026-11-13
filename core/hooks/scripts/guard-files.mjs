@@ -4,7 +4,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { envFilesAllowed, fullEffective, readGate, classifyPath, grantsOf, normalizeMsysPath, showArg } from './gate-config.mjs';
+import { envFilesAllowed, fullEffective, readGate, classifyPath, grantsOf, normalizeMsysPath, showArg, isClaudeTmpRoot, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
@@ -86,6 +86,8 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   if (!write && tool !== 'Read' && tool !== 'Grep') return null;
   const gate = config === undefined ? reader(cwd) : { config, roots: repoRoot ? [path.resolve(repoRoot)] : (reader(cwd)?.roots ?? []) };
   if (!fullEffective(gate, input, { tracked })) return null;
+  // Gốc <tmpdir>/claude thắng mọi grant (kể cả fullPaths): Grep/Read vào đó lộ nội dung của phiên khác, giống guard-bash.
+  if (isClaudeTmpRoot(normalizeMsysPath(String(file)), cwd)) return { decision: 'deny', reason: CLAUDE_TMP_BLOCKED_TEXT };
   const grants = grantsOf(gate, input);
   const where = classifyPath(String(file), cwd, grants, true, write ? 'write' : 'read');
   // File bí mật chỉ được miễn hỏi khi đường dẫn có đủ ba quyền hiệu lực; thiếu thì hỏi người dùng.
