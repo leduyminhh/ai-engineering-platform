@@ -259,6 +259,25 @@ export default async function run({ ok, ctx }) {
       'Copy-Item -Path:settings.json -Destination .claude', 'Copy-Item -Destination:.claude -Path:settings.json', 'Copy-Item settings.json,aip-gate.json .claude', 'Copy-Item -Path settings.json,x.json -Destination .claude'].map((c) => [c, 'ask', 'AC1.2']);
     expectAll(psRows, psAsk);
     expectAll(psRows, { tool: 'PowerShell' });
+    // Nguồn chỉ đọc không phải đích ghi: không hỏi R18 khi .claude/settings.json chỉ là nguồn (AC1.3).
+    const readOnlyCfg = [['Copy-Item -Path .claude/settings.json -Destination out\\x', null, 'AC1.3']];
+    expectAll(readOnlyCfg, psAsk);
+    expectAll(readOnlyCfg, { tool: 'PowerShell' });
+    r18([['cp -t backup .claude settings.json', null, 'AC1.3']], {});
+
+    // AC3.1–AC3.3: nguồn vị trí của cp/Copy-Item cần read, Move-Item -Path chỉ đòi write ở đích vị trí.
+    expectAll([
+      ...[`cp ${OUT}/a ${O}/b`, `cp ${OUT}/a ${OUT}/b2 ${O}/`, `cp -t ${O} ${OUT}/a`, `cp ${OUT}/* ${O}/`, 'cp $X/a ' + `${O}/b`].map((c) => [c, 'ask', 'AC3.1']),
+      ...[`cp ${T}/a ${O}/b`, `cp ${D}/a ${O}/b`, `cp -t ${O} ${D}/a`, `cp x ${O}/b`].map((c) => [c, null, 'AC3.1']),
+      [`cp ${OUT}/a ${D}/b`, 'deny', 'AC3.1'], [`cp -rt ${O} ${OUT}/a`, 'deny', 'AC3.1'],
+    ]);
+    expectAll([
+      ...[`Copy-Item ${OUT}/a ${O}/b`, `cp ${OUT}/a ${O}/b`, `copy ${OUT}/a ${O}/b`, `Copy-Item -Destination ${O}/b ${OUT}/a`, `Copy-Item -Path ${OUT}/a ${O}/b`].map((c) => [c, 'ask', 'AC3.2']),
+      ...[`Copy-Item ${D}/a ${O}/b`, `Copy-Item -Destination ${O}/b ${D}/a`, `Copy-Item -Path ${D}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
+      [`Copy-Item ${D}/a ${D}/b`, 'deny', 'AC3.2'],
+      ...[`Move-Item -Path ${T}/a ${O}/b`, `Move-Item -LiteralPath ${T}/a ${O}/b`, `Move-Item -Destination ${O}/b ${T}/a`, `Move-Item ${T}/a ${O}/b`].map((c) => [c, null, 'AC3.3']),
+      ...[`Move-Item -Path ${O}/a ${O}/b`, `Move-Item -Path ${T}/a ${D}/b`, `Move-Item -Destination ${O}/b ${O}/a`, `Move-Item -Dest ${T}/b ${O}/a`].map((c) => [c, 'deny', 'AC3.3']),
+    ], { tool: 'PowerShell' });
 
     // Glob kèm `..` sau đoạn glob đầu có thể thoát ra ngoài thư mục đã phân loại.
     expectAll([[`rm ${T}/*/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/?/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/[a]/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`rm ${O}/*`, 'deny', 'AC4.5']]);
