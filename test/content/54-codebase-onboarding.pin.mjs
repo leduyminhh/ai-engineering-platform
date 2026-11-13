@@ -155,11 +155,18 @@ export default async function run({ ok, ctx }) {
     ok(r1.status === 1 && lines.length === 6 && secretKinds.every((k, i) => lines[i].endsWith(`:${i + 1} ${k}`)),
       'AC3.1: mỗi loại trong sáu loại in một dòng file:line loại theo thứ tự, exit 1');
     ok(!/hunter22|ABCDEFGHIJKLMNOP|abcdefghijklmnop|20\.30\.40|PRIVATE KEY/.test(r1.stdout + r1.stderr), 'AC3.1: stdout và stderr không chứa giá trị nào của fixture');
-    ok(scan.scanText('x\npassword: hunter22xyz\n').length === 1 && scan.scanText('x\npassword: hunter22xyz\n')[0].line === 2, 'AC3.1: scanText trả line và kind');
+    const pw = (v) => ['pass', 'word: ', v].join('');
+    const hit = scan.scanText(`x\n${pw('hunter22xyz')}\n`);
+    ok(hit.length === 1 && hit[0].line === 2 && hit[0].kind === 'secret-assignment', 'AC3.1: scanText trả line và kind');
+    ok(scan.scanText(pw('`hunter22xyz`')).length === 1, 'AC3.1: giá trị bọc code inline vẫn bị báo');
+    const started = Date.now();
+    scan.scanText(`http://u:${'b'.repeat(80000)}\n${'a://'.repeat(20000)}\n${'a'.repeat(80000)}`);
+    ok(Date.now() - started < 3000, 'AC3.1: dòng rất dài không gây quét bậc hai');
 
     const clean = mk({ 'clean.md': [
       '`DB_PASSWORD`', 'password: <your-password>', 'DB_PASSWORD=${DB_PASSWORD}', 'password: $DB_PASSWORD', 'token: ***', 'secret=', 'api_key: ""',
-      'host 127.0.0.1, 0.0.0.0 và 192.0.2.10', 'phiên bản 1.2.3', '| DB_PASSWORD | mật khẩu của DB |', ''].join('\n') });
+      'host 127.0.0.1, 0.0.0.0 và 192.0.2.10', 'phiên bản 1.2.3', '| DB_PASSWORD | mật khẩu của DB |',
+      'max_tokens: 4096', 'password: string', 'password = os.environ["DB_PASSWORD"]', 'mongodb://user:pass@host/db', ''].join('\n') });
     const r2 = cli('scan-secrets.mjs', [path.join(clean, 'clean.md')]);
     ok(r2.status === 0 && !/:\d+ /.test(r2.stdout), 'AC3.2: placeholder, tên khoá, địa chỉ loopback và số phiên bản không bị báo');
 
@@ -168,8 +175,12 @@ export default async function run({ ok, ctx }) {
     ok(r3.status === 1 && r3.stdout.includes('a.md') && !r3.stdout.includes('b.txt'), 'AC3.3: thư mục chỉ quét .md');
     ok(cli('scan-secrets.mjs', [path.join(dir, 'b.txt')]).status === 1, 'AC3.3: file nêu rõ được quét bất kể đuôi');
     ok(cli('scan-secrets.mjs', []).status === 2, 'AC3.3: thiếu đối số → exit 2');
-    const missing = cli('scan-secrets.mjs', [path.join(dir, 'khong-co.md')]);
-    ok(missing.status === 2 && !/hunter22/.test(missing.stdout + missing.stderr), 'AC3.3: file không đọc được → exit 2');
+    const missing = cli('scan-secrets.mjs', [path.join(dir, 'a.md'), path.join(dir, 'khong-co.md')]);
+    ok(missing.status === 2 && !/hunter22/.test(missing.stdout + missing.stderr), 'AC3.3: có file không đọc được → exit 2, không in giá trị của file đọc được');
+    // Windows thường không cho tạo symlink khi thiếu quyền: ca này chỉ chạy được nơi tạo được.
+    let linked = false;
+    try { fs.symlinkSync(path.join(dir, 'khong-co.md'), path.join(dir, 'broken.md')); linked = true; } catch { /* không tạo được symlink */ }
+    ok(!linked || cli('scan-secrets.mjs', [dir]).status === 1, 'AC3.3: symlink .md hỏng trong thư mục bị bỏ qua, không chặn lần quét');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }

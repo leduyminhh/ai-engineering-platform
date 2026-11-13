@@ -2,24 +2,28 @@
 // Quét file Markdown tìm dấu hiệu secret. Zero-dependency.
 // Cách dùng: node scan-secrets.mjs <file | thư mục> [...]. In `file:line loại`, không bao giờ in đoạn khớp.
 // Exit 0 sạch, 1 có khớp, 2 sai đối số hoặc file không đọc được.
+// Đường dẫn file được in nguyên văn (tên file chứa giá trị sẽ lộ); số phiên bản bốn phần trong dải 10.x bị báo nhầm là IP.
 // Heuristic: sạch không chứng minh log phiên sạch hay không còn secret dạng tự do (mật khẩu không kèm tên khoá, chuỗi mã hoá lạ).
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const PLACEHOLDER = /^(<.*|\$.*|\{\{.*|\*+|x{3,}|changeme|change-me|null|none|true|false|\.{3}|…)$/i;
-const isPlaceholder = (v) => v.length < 4 || PLACEHOLDER.test(v);
+const PLACEHOLDER = /^(<.*|\$.*|\{\{.*|\*+|x{3,}|changeme|change-me|null|none|true|false|\.{3}|…|string|required|optional|password|pass|secret|your.*|example.*|\[.*)$/i;
+// Giá trị chứa ngoặc là biểu thức mã (os.environ["X"], getenv(...)), không phải giá trị cứng.
+const isPlaceholder = (v) => v.length < 4 || PLACEHOLDER.test(v) || /[([]/.test(v);
 
-const SECRET_KEY = /(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|credential)s?["']?\s*[:=]\s*["']?([^\s"'`,;|]*)/gi;
-const URL_CRED = /[a-z][a-z0-9+.-]*:\/\/[^\s/:@<>]+:([^\s/@<>]+)@/gi;
+// Số nhiều chỉ cho secret/credential: `max_tokens: 4096` không phải tên khoá bí mật.
+const SECRET_KEY = /(?:password|passwd|pwd|secrets?|token|api[_-]?key|access[_-]?key|private[_-]?key|credentials?)["']?\s*[:=]\s*["'`]?([^\s"'`,;|]*)/gi;
+// Scheme giới hạn 20 ký tự và chỉ chạy khi dòng có "://" và "@": không thì dòng base64 dài gây quét bậc hai.
+const URL_CRED = /[a-z][a-z0-9+.-]{0,19}:\/\/[^\s/:@<>]+:([^\s/@<>]+)@/gi;
 // Octet phải ≤ 255; dải 127.*, 0.0.0.0 và 192.0.2.* không nằm trong ba dải riêng nên không khớp.
 const PRIVATE_IP = /(?<![\d.])(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(?!\.?\d)/g;
 
 const RULES = [
-  ['private-key', (l) => /-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(l)],
+  ['private-key', (l) => /-----BEGIN [A-Z ]*PRIVATE KEY( BLOCK)?-----/.test(l)],
   ['cloud-key-id', (l) => /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b|\bgh[pousr]_[A-Za-z0-9]{36,}\b|\bAIza[0-9A-Za-z_-]{35}\b|\bxox[abprs]-[0-9A-Za-z-]{10,}/.test(l)],
   ['jwt', (l) => /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/.test(l)],
-  ['url-credentials', (l) => [...l.matchAll(URL_CRED)].some((m) => !isPlaceholder(m[1]))],
+  ['url-credentials', (l) => l.includes('://') && l.includes('@') && [...l.matchAll(URL_CRED)].some((m) => !isPlaceholder(m[1]))],
   ['secret-assignment', (l) => [...l.matchAll(SECRET_KEY)].some((m) => !isPlaceholder(m[1]))],
   ['private-ip', (l) => [...l.matchAll(PRIVATE_IP)].some((m) => m[1].split('.').every((o) => Number(o) <= 255))],
 ];
@@ -36,7 +40,8 @@ function filesOf(target) {
   if (fs.statSync(target).isFile()) return [target];
   return fs.readdirSync(target, { withFileTypes: true }).flatMap((e) => {
     const abs = path.join(target, e.name);
-    return e.isDirectory() ? filesOf(abs) : e.name.endsWith('.md') ? [abs] : [];
+    // Chỉ file thường: symlink hỏng hay symlink thư mục tên .md không được làm cả lần quét thoát 2.
+    return e.isDirectory() ? filesOf(abs) : e.isFile() && e.name.endsWith('.md') ? [abs] : [];
   });
 }
 
