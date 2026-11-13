@@ -68,7 +68,7 @@ export function inventoryModules(root) {
   const notes = [];
   const found = []; // { path, kind, buildFile, id, deps (tên), aggregator }
   // build.gradle đứng riêng chỉ nhận khi repo không có settings.gradle; có settings thì module do include khai báo.
-  const hasSettings = files.some((f) => /(^|\/)settings\.gradle(\.kts)?$/.test(f));
+  const hasSettings = files.some((f) => !isFixture(f) && /(^|\/)settings\.gradle(\.kts)?$/.test(f));
 
   for (const f of files) {
     const base = path.posix.basename(f);
@@ -79,11 +79,12 @@ export function inventoryModules(root) {
       const hasPnpm = has.has(dir === '.' ? 'pnpm-workspace.yaml' : `${dir}/pnpm-workspace.yaml`);
       found.push({ path: dir, kind: 'npm', buildFile: f, ...npmInfo(read(root, f), hasPnpm) });
     } else if (/^settings\.gradle(\.kts)?$/.test(base)) {
-      const text = read(root, f);
+      const text = read(root, f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
       const names = [...text.matchAll(/include\s*\(?\s*((?:['"][^'"]+['"]\s*,?\s*)+)/g)]
         .flatMap((m) => [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]));
-      const dynamicInclude = names.length === 0 && /\binclude\b/.test(text);
-      if (dynamicInclude) notes.push(`${f}: include động (không phải danh sách chuỗi), không đọc được module con; kiểm kê tay ở cổng 1.`);
+      // include không theo sau bởi chuỗi (vd `include(*listOf(...))`): một phần module con không đọc được từ settings.
+      const dynamicInclude = /(?<![\w'"\-.])include\b\s*\(?\s*(?!['"])\S/.test(text);
+      if (dynamicInclude) notes.push(`${f}: có include động (không phải danh sách chuỗi), một phần module con không đọc được; kiểm kê tay ở cổng 1.`);
       for (const n of names) {
         const rel = n.replace(/^:/, '').split(':').join('/');
         const p = dir === '.' ? rel : `${dir}/${rel}`;

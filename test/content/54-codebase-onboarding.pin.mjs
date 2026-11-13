@@ -129,6 +129,14 @@ export default async function run({ ok, ctx }) {
     }));
     ok(!dyn.modules.some((x) => x.path === '.') && dyn.notes.some((x) => x.includes('include động')),
       'AC2.2: include Gradle động không biến gốc thành module và có ghi chú kiểm kê tay');
+    const mixed = inv.inventoryModules(mk({
+      'settings.gradle.kts': 'include(":app")\ninclude(*listOf("x", "y").toTypedArray())\n', 'app/build.gradle.kts': '\n',
+    }));
+    ok(mixed.notes.some((x) => x.includes('include động')), 'AC2.2: settings vừa có include chuỗi vừa có include động vẫn ghi chú kiểm kê tay');
+    const commented = inv.inventoryModules(mk({ 'settings.gradle': "rootProject.name = 'x'\n// include other modules later\n", 'src/main/java/A.java': 'a\n' }));
+    ok(commented.modules.length === 1 && commented.modules[0].path === '.' && commented.notes.length === 0, 'AC2.2: chữ include trong comment không làm settings thành aggregator');
+    const fx = inv.inventoryModules(mk({ 'build.gradle': '\n', 'src/main/java/A.java': 'a\n', 'src/test/resources/fx/settings.gradle': 'include "z"\n' }));
+    ok(fx.modules.length === 1 && fx.modules[0].kind === 'gradle', 'AC2.2: settings.gradle trong fixture không làm mất build.gradle ở gốc');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
