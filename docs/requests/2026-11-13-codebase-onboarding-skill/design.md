@@ -1,0 +1,117 @@
+# Thiết kế: skill `engineering-codebase-onboarding` (G7) quét project có sẵn, viết README từng module và `project-knowledge/`
+- Ngày: 2026-11-13
+- Trạng thái: draft
+- Requirement: không có (AC nằm trong file này; brief đã duyệt ở `brief.md` cùng thư mục)
+## Vấn đề và lý do
+AIP chưa có skill nào đọc một project đã có code rồi viết tài liệu mô tả nó. `engineering-spec-backfill` ghi spec theo năng lực nghiệp vụ và chủ đích không đọc hết code; `engineering-repo-audit` xếp hạng rủi ro; các skill `*-init` điền `project-knowledge/` từ câu trả lời, không quét. Một phiên làm tay ở repo khác (monorepo 12 module Maven, micro-frontend React, tool Node/Python) đã chạy việc này với 6 subagent haiku và hỏng ở bốn chỗ: không có cổng duyệt danh sách module trước khi giao agent; `grep` của agent in dòng cấu hình có giá trị ra log phiên; không có checker máy cho trích dẫn; ba khẳng định trong brief hoá ra sai khi đối chiếu code (nguồn: `docs/specs/readme-scan-summary-and-aip-comparison.md` ở checkout chính, mục 4, 5 và 8; chưa có trong nhánh này).
+
+Goal: một skill `engineering-codebase-onboarding` trong plugin `engineering`, theo khuôn `engineering-spec-backfill`, ra README từng module và `project-knowledge/` (4 trên 6 file) cho dev mới vào team; phát hiện bảo mật ghi vào một file riêng không chứa giá trị; hai cổng duyệt; hai script có test.
+Non-goal và anti-goal: xem `brief.md` mục Goal/Non-goal/Anti-goal, giữ nguyên.
+## Quyết định đã chốt
+Chốt qua brief đã duyệt (2026-11-13): chọn hướng A (skill mới theo khuôn `spec-backfill`; loại B mở rộng `spec-backfill` vì ranh giới ghi và đầu ra khác nhau, loại C nối `spec-backfill` + `repo-audit` vì thiếu kiểm kê module, README và luật chặn in giá trị); tên giữ `engineering-codebase-onboarding`; subagent `general-purpose` model `sonnet`; mức đọc "có cấu trúc"; đầu ra gồm README module và `project-knowledge/`; file findings ở `.aip/runs/onboarding-<slug>/security-findings.md`, không commit; hai cổng duyệt; README có sẵn không ghi đè; hai script mới zero-dep; không thêm file agent; commit `docs(onboarding): …` trên nhánh không protected, không push.
+## Quyết định của agent
+Người dùng chưa trả lời sáu câu mở của brief; các lựa chọn dưới đây là của agent, duyệt design là duyệt cả mục này.
+
+| # | Câu mở | Quyết định | Lý do |
+|---|---|---|---|
+| 1 | `check-citations.mjs` đặt ở đâu | Giữ ở `engineering-spec-backfill/scripts/`; SKILL.md gọi bằng `<thư mục skill engineering-spec-backfill>/scripts/check-citations.mjs` (cùng kiểu `<thư mục skill artifact-templates>` đang dùng). Bước kiểm kiểm file tồn tại trước; thiếu thì dừng bước đó, ghi `not_run` vào báo cáo cuối và nói người dùng cài `engineering-spec-backfill`, không bỏ lặng lẽ. Một pin test khẳng định đường dẫn đó có thật. | Không sửa `spec-backfill`. `sharedAssets` copy cả thư mục theo `basename`, nên `scripts` sẽ đè lên `scripts/` của G7. Chép script vào G7 thì có hai bản cùng phải sửa. Chuyển sang `core` là ngoại lệ Non-goal, cần duyệt riêng: nếu muốn, đó là request sau. |
+| 2 | Findings ở `.aip/` hay `docs/` | `.aip/runs/onboarding-<slug>/security-findings.md`, kèm `.aip/.gitignore` chứa `*` nếu chưa có. Người dùng muốn commit thì tự chép sang `docs/`. | File liệt kê chỗ yếu của hệ thống không nên vào lịch sử git khi chưa ai chủ động chọn. |
+| 3 | Ngân sách đọc, chia module lớn | Nhóm ≤ 150 file nguồn và ≤ 15.000 dòng (số từ script kiểm kê); ≤ 60 lần gọi công cụ mỗi subagent; ≤ 6 subagent chạy song song. Module vượt trần chia theo thư mục con cấp một của source, không chồng nhau; mỗi nhóm con ghi file phần vào `.aip/runs/onboarding-<slug>/parts/<module>/`, rồi một subagent ghép thành `README.md` của module. Subagent hết ngân sách thì dừng và khai `not_read`. | Tham chiếu duy nhất là phiên trước (khoảng 60 lần gọi, 240 nghìn token mỗi agent, 6 agent song song). Mọi con số là [giả định], hiệu chỉnh ở lần chạy thật đầu tiên và ghi vào báo cáo cuối. |
+| 4 | `project-knowledge/` đã có | Không ghi đè. Cổng 1 có cột "project-knowledge hiện có" với ba lựa chọn: giữ nguyên; thêm hoặc thay khối giữa marker `<!-- aip:onboarding begin -->` … `<!-- aip:onboarding end -->`; bỏ file đó. `tech-stack.yml` chỉ có giữ nguyên hoặc bỏ (nối thêm khối vào YAML đã có sẽ trùng khoá cấp một). | Cùng luật với README có sẵn trong brief; người dùng thấy diff ở cổng 2. |
+| 5 | Eval thật | Không thêm trong request này. Nghiệm thu thật chạy tay trên project người dùng chỉ định sau. | Eval thật tốn tiền model và ngoài `npm test`; số đo eval trước đó chủ yếu là khác biệt định dạng. Người dùng muốn thì thêm case theo `evals/README.md` ở request sau. |
+| 6 | Routing có tụt không | Thêm `test/routing/engineering-codebase-onboarding.json` (≥ 3 positive, ≥ 2 negative), không sửa `description` của `spec-backfill` và `repo-audit`; nếu G7 cướp hạng 1 thì sửa `description` của G7. Spike đã chạy: xem Rủi ro. | `scripts/routing-score.mjs` khoá ở 69/94, gần như không còn biên. |
+
+Quyết định khác của agent:
+- Tổng hợp `project-knowledge/` và README root do một subagent `sonnet` làm từ README con và build file, không đọc lại toàn bộ code; mũi tên giữa module chỉ thành nét liền khi có `file:line` thấy lời gọi, còn lại là nét đứt "chỉ khai báo". Session chính không tự đọc code để giữ ngữ cảnh nhỏ.
+- Đọc cấu hình chỉ qua lệnh in tên khoá (`grep -oE '^[[:space:]]*[A-Za-z0-9_.-]+[[:space:]]*[:=]'` rồi bỏ dấu phân cách); cấm `Read`, `cat`, `Grep` chế độ nội dung trên file cấu hình (danh sách mẫu tên nằm ở `references/secret-safety.md`). Không có hook nào trong skill chặn việc này, nên là luật trong prompt, không phải cơ chế cứng.
+- Mỗi subagent ghi đúng danh sách đường dẫn được giao; `agent_result` có thêm `read[]` và `not_read[]` theo module. Phát hiện bảo mật trả trong `findings[]` (loại, `file:line`, `proven` hoặc `suspected`), session chính ghi file findings, subagent không ghi file đó.
+- Reviewer mới (`general-purpose`, `sonnet`) mở dòng được trích của mọi mũi tên liên kết và tối đa 10 số liệu cụ thể mỗi module, kết luận từng khẳng định đúng, sai hay không xác minh được. Sai thì giao lại đúng subagent của module, tối đa 2 vòng.
+- Nhánh hiện tại là protected thì tạo nhánh `docs/onboarding-<slug>` qua `core:git-workflow` trước khi commit; trước khi chạy ghi lại `git status --porcelain` làm nền để kiểm phạm vi ở cuối.
+- Thêm một dòng vào bảng "Yêu cầu chạy trực tiếp bằng skill" của `workflows/orchestrator/WORKFLOW.md` (hiện chưa có dòng nào cho quét brownfield), kèm bump `workflows/.manifest.json`. Không thêm vào `plugins/_cowork.json` vì skill giao subagent mà Cowork không có (như `spec-backfill`).
+- Từ builder check (một lượt, không còn câu hỏi của người dùng):
+  - Nội dung `workflows/R25` (dòng orchestrator mới) và dòng lịch sử ghi ở bước gộp spec của `finish.md`, như mọi request có `## Ảnh hưởng spec`; không là task riêng.
+  - Routing không đạt ngưỡng: sửa `description` của G7 hoặc viết lại prompt routing của G7 (không chọn prompt để ép số); không hạ `rank1.lock.json`, không sửa `description` của skill anh em. Vẫn không đạt sau hai vòng thì dừng và báo người dùng ở cổng G2 hoặc khi thực thi.
+  - `sourceFiles` và `lines` tính trên file có đuôi mã nguồn (`java kt groovy scala js jsx ts tsx mjs cjs py go cs rs rb php vue sql`), tách thêm `testFiles` cho file trong thư mục `test`, `tests`, `__tests__`, `src/test` hoặc tên `*.test.*`, `*.spec.*`, `test_*.py`; file cấu hình, tài nguyên và README không tính số dòng và không bị mở.
+  - Module lồng nhau: file thuộc module có đường dẫn sâu nhất chứa nó; module tổng hợp (Maven `packaging pom`, npm root) chỉ giữ file nằm ngoài các module con; file ngoài mọi module vào `unclaimed` theo thư mục cấp một, file ở gốc gom vào mục `rootFiles` đếm số. Hai nhóm subagent không bao giờ chung thư mục.
+  - `check-citations.mjs` thiếu: không chặn cổng 2; cổng 2 nêu nổi bật "trích dẫn chưa kiểm" và người dùng quyết có commit hay không.
+  - Tham số `model: "sonnet"` ghi trong prompt giao việc của SKILL.md như `spec-backfill`; Agent trả 404 thì bỏ trống `model` rồi ghi vào báo cáo cuối rằng subagent kế thừa model của session (tốn hơn).
+  - Sơ đồ Mermaid luôn kèm bảng chữ cùng nội dung (cột "Phụ thuộc", nhãn có lời gọi hay chỉ khai báo) để người đọc không render được vẫn dùng được.
+- Người đọc README là dev mới vào team; ngôn ngữ README theo ngôn ngữ của project đích, mặc định tiếng Việt có dấu [giả định].
+## Thiết kế
+Cấu trúc skill:
+
+    plugins/engineering/skills/engineering-codebase-onboarding/
+      SKILL.md                      # frontmatter order 15 (14 là mức lớn nhất hiện có), runsIn execute, invoke per-request; ## Quy trình, ## Ranh giới an toàn
+      references/scope-and-budget.md    # trường kiểm kê, nhóm, ngân sách, mức đọc bắt buộc và mở rộng
+      references/subagent-prompts.md    # prompt: nhóm module, ghép module lớn, tổng hợp, reviewer; mẫu agent_result
+      references/readme-structure.md    # khung README module, README root, 4 file project-knowledge, luật bằng chứng
+      references/secret-safety.md       # lệnh đọc tên khoá, danh sách file cấu hình, mẫu file findings, câu rủi ro còn lại
+      references/final-report.md        # mẫu báo cáo cuối
+      scripts/inventory-modules.mjs
+      scripts/scan-secrets.mjs
+
+Quy trình (SKILL.md, chạy ở session chính):
+1. Chốt phạm vi (cả repo hoặc thư mục con), ghi `git status --porcelain` nền, chọn `<slug>`, tạo `.aip/runs/onboarding-<slug>/`.
+2. `inventory-modules.mjs <gốc>` in JSON module (xem bên dưới); session chính dựng bảng cho cổng 1.
+3. **Cổng 1 ⏸.** Bảng: module, đường dẫn, loại build, số file và dòng, nhóm đề xuất, README hiện có, project-knowledge hiện có (giữ / khối marker / bỏ), thư mục chưa thuộc module nào. Chưa tạo subagent trước khi người dùng duyệt (gộp, tách, bỏ, đổi lựa chọn).
+4. Giao subagent theo nhóm đã duyệt; kiểm `changes` của từng báo cáo so với danh sách ghi được giao (file ngoài danh sách: ghi nhận, báo, giao lại tối đa 2 lần).
+5. Module vượt trần: ghép phần thành `README.md`. Rồi một subagent tổng hợp README root và 4 file `project-knowledge/`.
+6. Kiểm cơ học: (a) `check-citations.mjs` trên mọi file Markdown đã ghi, `--root <gốc project>`, kỳ vọng exit 0; (b) `scan-secrets.mjs` trên các file đó và file findings, kỳ vọng exit 0; (c) `git status --porcelain` so với nền, chỉ còn đường dẫn trong danh sách đã duyệt cộng `project-knowledge/` bốn file. Rồi reviewer mới. Sửa tối đa 3 vòng, vẫn lỗi thì dừng và báo; không nới checker.
+7. **Cổng 2 ⏸.** Trình `git diff` và danh sách file mới; file findings không nằm trong diff vì git bỏ qua. Duyệt xong commit qua `core:git-workflow`, header `docs(onboarding): …`, không push.
+8. Báo cáo cuối theo `references/final-report.md`.
+
+`inventory-modules.mjs <gốc> [--format json|table]`:
+- Nhận Maven (`pom.xml` có `<modules>`), Gradle (`settings.gradle(.kts)` có `include`), npm/yarn workspaces (`package.json` `workspaces` dạng mảng hoặc `{packages}`), pnpm (`pnpm-workspace.yaml`), Python (mỗi thư mục có `pyproject.toml`, `setup.py` hoặc `requirements.txt`). Không nhận ra build file nào: `modules: []` kèm `notes`, exit 0; người dùng kiểm kê tay ở cổng 1.
+- Mỗi module: `id`, `path`, `kind`, `buildFile`, `sourceFiles`, `testFiles`, `lines`, `hasReadme`, `declaredDeps` (chỉ các module anh em, lấy theo `artifactId` hoặc tên package; là khai báo, không phải lời gọi). Cộng `unclaimed` (thư mục cấp một không thuộc module nào, trừ thư mục sinh ra) và `projectKnowledge` (4 file đã có hay chưa).
+- Danh sách file lấy từ `git ls-files` khi là repo git, ngược lại duyệt cây bằng `fs`, bỏ `node_modules`, `target`, `build`, `dist`, `.git`; mỗi file đếm một lần (không dùng glob, vì phiên trước `Dockerfile` và `dockerfile` khớp cùng một file trên Windows).
+- Chỉ mở build file để lấy tên module và phụ thuộc; không mở `.env*`, `application*.yml` hay file cấu hình khác, và không in nội dung file.
+- Exit 0 xong, 2 sai đối số hoặc gốc không tồn tại.
+
+`scan-secrets.mjs <file | thư mục> …`:
+- Thư mục thì quét đệ quy file `.md`; file nêu rõ thì quét bất kể đuôi. Với mỗi khớp in `file:line loại` và không bao giờ in đoạn khớp; exit 1 khi có khớp, 0 sạch, 2 sai đối số.
+- Loại: khối khoá riêng (`-----BEGIN … PRIVATE KEY-----`), id khoá cloud, JWT, thông tin đăng nhập trong URL, gán `password|secret|token|api_key` bằng giá trị chữ, IPv4 riêng (10.x, 172.16–31.x, 192.168.x).
+- Bỏ qua: giá trị rỗng, `<…>`, `${…}`, `***`, `changeme`, tên khoá đứng một mình, `127.0.0.1`, `0.0.0.0`, dải tài liệu `192.0.2.x`, số phiên bản ba phần. Đây là heuristic: sạch không có nghĩa là log phiên sạch hay không còn secret dạng tự do.
+
+Test: `test/content/54-codebase-onboarding.pin.mjs`, fixture dựng lúc chạy trong thư mục tạm (như pin 39); chuỗi giống secret ghép từ mảnh để file test không chứa nguyên chuỗi. Pin kiểm thêm `check-citations.mjs` của `spec-backfill` còn ở đúng đường dẫn mà SKILL.md gọi.
+## Tiêu chí chấp nhận
+- [ ] **AC1.1** — Given thư mục `plugins/engineering/skills/engineering-codebase-onboarding/` When chạy `npm test` Then `SKILL.md` qua kiểm convention (frontmatter; `description` ≤ 500 ký tự theo mẫu có `Dùng khi` và `Không dùng khi … → <id>` trỏ `engineering-spec-backfill`, `engineering-repo-audit`, `engineering-quality-gate`; H2 `## Quy trình` và `## Ranh giới an toàn`) và `description` nói rõ đây là quét code để viết tài liệu, không phải cài AIP cho người mới clone.
+- [ ] **AC1.2** — Given `test/routing/engineering-codebase-onboarding.json` có ≥ 3 positive và ≥ 2 negative When chạy `node scripts/routing-score.mjs` Then exit 0, positive ≥ 69% và negative ≥ 94% theo `test/routing/rank1.lock.json`, và `git diff master -- plugins/engineering/skills/engineering-spec-backfill/SKILL.md plugins/engineering/skills/engineering-repo-audit/SKILL.md` rỗng.
+- [ ] **AC2.1** — Given fixture Maven có `pom.xml` cha khai hai `<module>` When chạy `inventory-modules.mjs` Then JSON có đúng hai module với `kind: maven`, `path`, `buildFile`, `sourceFiles` bằng số file nguồn trong fixture, `hasReadme` đúng, và `declaredDeps` của module phụ thuộc module kia chứa `artifactId` của nó và không chứa thư viện ngoài.
+- [ ] **AC2.2** — Given fixture Gradle (`include`), npm workspaces (dạng mảng và dạng `{packages}`), pnpm (`pnpm-workspace.yaml`) và Python (hai thư mục có `pyproject.toml`) When chạy script trên từng fixture Then mỗi fixture trả đúng số module và đúng `kind`.
+- [ ] **AC2.3** — Given fixture có `application.yml`, `.env` và `pom.xml` chứa chuỗi sentinel làm giá trị cấu hình When chạy script Then stdout và stderr không chứa sentinel.
+- [ ] **AC2.4** — Given fixture có thư mục `docs/` ngoài mọi module và `node_modules/` trong một module When chạy script Then `unclaimed` có `docs`, và file trong `node_modules/` không vào `sourceFiles`; gốc không tồn tại hoặc thiếu đối số → exit 2; stack không nhận ra → `modules: []`, `notes` không rỗng, exit 0.
+- [ ] **AC2.5** — Given fixture Maven có module tổng hợp (`packaging pom`) chứa một module con có file nguồn, và một file nguồn đặt ngoài mọi module When chạy script Then file của module con chỉ tính cho module con (module tổng hợp không đếm lại), file ngoài module tính vào `unclaimed` hoặc `rootFiles`, và `testFiles` tách khỏi `sourceFiles`.
+- [ ] **AC3.1** — Given một file Markdown fixture mỗi dòng chứa một loại trong sáu loại (khối khoá riêng, id khoá cloud, JWT, thông tin đăng nhập trong URL, gán secret bằng giá trị chữ, IPv4 riêng) When chạy `scan-secrets.mjs` Then in sáu dòng `file:line loại`, exit 1, và stdout không chứa giá trị nào của fixture.
+- [ ] **AC3.2** — Given file Markdown chỉ có tên khoá, `password: <…>`, `${DB_PASSWORD}`, `***`, giá trị rỗng, `127.0.0.1`, `0.0.0.0`, `192.0.2.10` và số phiên bản `1.2.3` When chạy `scan-secrets.mjs` Then exit 0 và không in dòng khớp.
+- [ ] **AC3.3** — Given đối số là thư mục có `.md` và `.txt` chứa secret, và thiếu đối số When chạy Then thư mục chỉ quét `.md` (file `.txt` không báo), thiếu đối số hoặc file không đọc được → exit 2.
+- [ ] **AC4.1** — Given `SKILL.md` When đọc phần quy trình Then có hai cổng ⏸ theo thứ tự: duyệt bảng module trước khi tạo subagent đầu tiên, duyệt `git diff` trước khi commit; commit qua `core:git-workflow` với header `docs(onboarding): …` trên nhánh không protected, không push; findings không vào commit.
+- [ ] **AC4.2** — Given `SKILL.md` và `references/` When đọc ranh giới ghi Then danh sách ghi được là: README module và README root trong bảng đã duyệt, bốn file `project-knowledge/` (`project-overview.md`, `architecture.md`, `source-structure.md`, `tech-stack.yml`), file findings và `.aip/.gitignore` dưới `.aip/runs/onboarding-<slug>/`; README hoặc `project-knowledge/` có sẵn chỉ đổi theo lựa chọn ở cổng 1 (giữ / khối marker / bỏ; `tech-stack.yml` chỉ giữ / bỏ); không ghi `docs/specs/`, `domain-context.md`, `code-convention.md`; phạm vi kiểm bằng `git status --porcelain` so với nền.
+- [ ] **AC4.3** — Given `references/subagent-prompts.md` When đọc prompt nhóm module Then có: model `sonnet` do skill tự giao; cấm `Read`, `cat` và `Grep` chế độ nội dung trên file cấu hình, chỉ dùng lệnh in tên khoá; mũi tên liên kết giữa module và số liệu cụ thể (port, version, tên biến) phải kèm `file:line`, còn lại ghi "suy từ tên" hoặc `[Unverified]`; mẫu `agent_result` có `read[]`, `not_read[]`, `findings[]` và `remaining_risks[]`.
+- [ ] **AC4.4** — Given bước kiểm cơ học When thiếu `engineering-spec-backfill/scripts/check-citations.mjs` Then skill dừng bước (a), ghi `not_run` kèm lý do vào báo cáo cuối và nhắc cài `engineering-spec-backfill`, không báo "trích dẫn sạch"; khi có script thì kỳ vọng `0 trích dẫn hỏng` trên mọi file Markdown đã ghi.
+- [ ] **AC4.5** — Given file findings mẫu trong `references/secret-safety.md` When đọc Then mỗi mục chỉ có loại, `file:line` và nhãn `proven` hoặc `suspected`, không có giá trị; có bảng định tuyến sang `engineering-quality-gate`; skill nêu rõ không tự chạy gate và không sửa lỗ hổng.
+- [ ] **AC5.1** — Given `references/final-report.md` When đọc mẫu Then báo cáo cuối có: mỗi module đã đọc và chưa đọc phần nào, số trích dẫn hỏng, số phát hiện và nơi để file, thư mục `unclaimed`, số khẳng định `[Unverified]`, hiệu chỉnh ngân sách thực tế, và một câu nêu rõ chưa kiểm được log phiên sau khi lệnh đã in giá trị cấu hình (rủi ro còn lại).
+- [ ] **AC6.1** — Given thay đổi nội dung chiếu Then `plugins/engineering/.manifest.json` lên 2.16.0 với `description` ghi 15 skill (`calc: 14 + 1 = 15`) và có `engineering-codebase-onboarding`; `workflows/.manifest.json` tăng version vì thêm dòng orchestrator; `npm run build` và `node cli/lib/versions.mjs --lock` đã chạy; `plugins/_cowork.json` không đổi; `npm test` exit 0.
+- [ ] **AC6.2** — Given `README.md`, `README_VI.md`, `CLAUDE.md` và `workflows/orchestrator/WORKFLOW.md` Then dòng G7 rời Roadmap "chưa làm" và skill có mặt ở danh sách skill của `engineering`; `CLAUDE.md` ghi số skill của `engineering` đúng 15; bảng "Yêu cầu chạy trực tiếp bằng skill" có một dòng định tuyến "quét project cũ viết README từng module" tới `engineering-codebase-onboarding`.
+## Ảnh hưởng spec
+- workflows: thêm R25
+## Ngoài phạm vi và anti-goal
+Giữ nguyên danh sách của `brief.md`; thêm: không đổi `description` hay nội dung của `engineering-spec-backfill` và `engineering-repo-audit`; không thêm `workflow-onboarding`; không thêm eval thật; không đưa skill vào `_cowork.json`; không đổi `check-citations.mjs`; không chạy bất kỳ build, test hay lệnh mạng nào của project được quét.
+## Ràng buộc
+Tiếng Việt có dấu, UTF-8 không BOM, LF; script Node thuần, không dependency; `description` ≤ 500 ký tự, không lặp nguyên văn trigger của skill khác; skill giao subagent `general-purpose` model `sonnet`, không thêm file agent; mọi bước chạy ở session chính; một lệnh Bash mỗi lần gọi (`AGENTS.md`). Bump version theo Version gate của `CLAUDE.md`.
+## Kiểm thử
+AC1.1, AC6.1: `npm test` (convention, validate, versions lock). AC1.2: `node scripts/routing-score.mjs` và `git diff`. AC2.1–AC2.5: pin 54, fixture dựng lúc chạy. AC3.1–AC3.3: pin 54, chuỗi secret ghép từ mảnh. AC4.1–AC4.5, AC5.1, AC6.2: đọc diff ở review (nội dung hướng dẫn, không pin câu chữ); riêng đường dẫn tới `check-citations.mjs` được pin 54 kiểm tồn tại (AC4.4). Nghiệm thu thật trên project người dùng chỉ định nằm ngoài `npm test`.
+## Để builder quyết
+Câu chữ SKILL.md và references; tên trường JSON phụ của `inventory-modules.mjs` ngoài các trường đã nêu; mẫu regex chi tiết của `scan-secrets.mjs` miễn đúng AC3.1–AC3.3; định dạng bảng cổng 1; cách đặt tên `<slug>`; số hàng và cột của mẫu báo cáo; cách ghép phần của module vượt trần.
+## Rủi ro và câu hỏi mở
+- Chưa kiểm được log phiên: không có cơ chế nào trong skill kiểm được log sau khi một lệnh đã in giá trị cấu hình. Luật cấm in nằm trong prompt, `scan-secrets` chỉ quét file Markdown sinh ra. Báo cáo cuối ghi rõ điều này.
+- `check-citations.mjs` chỉ kiểm file có thật và dòng nằm trong file, không kiểm câu có đúng với dòng được trích. Reviewer mẫu giảm rủi ro nhưng chưa có số đo sai lệch của cách đọc có cấu trúc [giả định: đủ để README đáng tin; phiên trước vẫn lọt ba khẳng định sai ở brief].
+- Cài lẻ từng skill có thể thiếu `engineering-spec-backfill`; xử lý bằng `not_run` ở AC4.4, không bằng sao chép.
+- Routing sát biên. Spike đã chạy trong phiên viết design, bằng `node scripts/routing-score.mjs` với `SKILL.md` tạm và file routing viết bởi cùng agent (không viết mù): positive 149/214 → 153/219 (69,86%), negative 151/160 → 155/164 (94,51%), một positive của G7 về hạng 1 `backend-init` (câu "dựng thư mục project-knowledge"), không skill nào khác mất hạng 1. Đã xoá file tạm; `description` cuối và dữ liệu routing cuối có thể đổi số đo, phải chạy lại. Biên nhỏ: một prompt sai thêm có thể kéo negative xuống dưới 94%.
+- `[giả định]` Mermaid render được nơi đọc README (như `backend-init` đang dùng); chưa kiểm vì không có renderer trong repo.
+- `[giả định]` Các con số ngân sách (150 file, 15.000 dòng, 60 lần gọi, 6 song song) chỉ có phiên trước làm tham chiếu; chưa có số đo token của `sonnet` ở skill này, và `sonnet` có thể tốn hơn lần chạy `haiku` 1,43 triệu token đã ghi [Inference: dựa trên giá mỗi token, chưa đo]. Cổng 1 nên nêu số nhóm sẽ giao.
+- `[giả định]` Kiểm kê ban đầu chỉ cho Maven, Gradle, npm/pnpm, Python; Go, .NET, Rust kiểm kê tay ở cổng 1. Người đọc là dev mới; cỡ project lớn nhất tham chiếu là 12 module Maven và 27 README.
+- Tên `onboarding` trùng chữ với mục Onboarding ở `templates/init/CLAUDE.md:50` (cài AIP cho người mới clone, nghĩa khác); AC1.1 buộc `description` nói rõ.
+- `scan-secrets.mjs` là heuristic: không bắt secret dạng tự do và có thể báo nhầm (chuỗi 4 phần giống IP). Sạch không là bằng chứng không còn secret.
+- Số `workflows/R25` lấy theo spec ở thời điểm viết (R24 là lớn nhất); kiểm lại ở bước gộp spec nếu phiên khác đã thêm R.
+- `[Unverified]` trạng thái skill draft `data-*` và tương tác với `npm run overlap` (chạy được, kết quả hiện tại không báo ⚠ ở đầu ra đã xem; chưa chạy lại sau khi thêm skill).
+- Chưa quyết: việc chuyển `check-citations.mjs` sang `core` để cài lẻ không thiếu script; cần người dùng duyệt riêng nếu muốn (ngoại lệ của Non-goal).
