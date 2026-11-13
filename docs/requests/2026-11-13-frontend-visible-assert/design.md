@@ -1,6 +1,6 @@
 # Thiết kế: AC hiển thị có assertion trên text/role; review bắt thông báo nằm trong vùng bị gỡ lúc loading
 - Ngày: 2026-11-13
-- Trạng thái: draft — chờ duyệt G1
+- Trạng thái: approved — người dùng duyệt G1 2026-11-13, giữ khuyến nghị D1–D6 (D7, D8 đi kèm)
 - Requirement: [requirement.md](requirement.md)
 - Nguồn: N4 trong [trial-report.md](../2026-11-13-frontend-trial/trial-report.md)
 
