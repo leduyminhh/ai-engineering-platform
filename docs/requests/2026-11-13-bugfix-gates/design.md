@@ -1,7 +1,7 @@
 # Thiết kế: Gate của `workflow-bugfix` không bị bỏ khi bug "đã rõ" (N2)
 
 - Ngày: 2026-11-13
-- Trạng thái: approved — G1 và G2 duyệt 2026-11-13, đã thực thi, chờ G3
+- Trạng thái: in-progress — nhánh claude/frontend-bugfix-gates-b96292
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
