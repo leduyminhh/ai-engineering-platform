@@ -47,7 +47,7 @@ Bắt buộc, làm trước trong ngân sách:
 2. Build file: lấy tên và phụ thuộc từ trường kiểm kê, không mở `pom.xml`, `build.gradle`, `settings.gradle`.
 3. Điểm vào: file tên chứa `Application`, `Main`, `main`, `index`, `app`, `server`, `Program`.
 4. Route: file khai báo route, controller hoặc router (liệt kê bằng Glob hoặc Grep, chỉ lấy tên file).
-5. Tên khoá cấu hình, bằng lệnh trong `secret-safety.md`. Không mở giá trị.
+5. Tên khoá cấu hình, bằng lệnh ở mục A của prompt giao subagent (`subagent-prompts.md`). Không mở giá trị.
 6. Dockerfile của module (hoặc của gốc khi module là gốc), nếu có; theo luật mục E của `subagent-prompts.md`.
 7. File CI ở gốc, chỉ phần lệnh build và test; theo luật mục E của `subagent-prompts.md`.
 

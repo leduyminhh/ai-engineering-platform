@@ -61,7 +61,7 @@ Sơ đồ và bảng trên cùng nội dung. Nét liền: có lời gọi. Nét 
 <một đoạn: project làm gì, ai dùng; lấy từ README có sẵn hoặc `[Unverified]`>
 
 ## Cách chạy
-<chỉ lệnh có trong README có sẵn hoặc trong mục scripts của package.json, kèm `file:line`; áp luật lệnh ở mục E của subagent-prompts.md>
+<chỉ lệnh có trong README có sẵn hoặc trong mục scripts của package.json, kèm `file:line`; áp luật chung ở mục E của subagent-prompts.md, mọi lệnh chép ra tài liệu>
 
 ## Module
 | Module | Đường dẫn | Loại | Nhiệm vụ | README |

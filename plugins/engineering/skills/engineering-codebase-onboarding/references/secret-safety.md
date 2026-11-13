@@ -13,7 +13,7 @@ grep -nE '^[[:space:]]*[A-Za-z0-9_.-]{1,30}[[:space:]]*(:$|[:=][^=])' <file> | s
 - Một file mỗi lần. Với nhiều file, `grep` in tiền tố tên file và dòng gốc có giá trị có thể lọt.
 - Không dùng `grep -o` hay `-oE` cho việc này: `-o` in phần khớp, nên có thể lộ ký tự đầu của giá trị.
 - Đầu ra mỗi dòng chỉ là `<số dòng> <tên khoá>`. Không đưa đầu ra của lệnh này vào báo cáo cùng giá trị nào.
-- Khoá quá 30 ký tự, khoá có nháy kép (JSON) hoặc dòng không khớp: ghi `not_read` với lý do `cấu hình`.
+- Lệnh bỏ dòng `KEY==x` (có `==` ngay sau khoá) và dòng `A=` (dấu phân cách rồi hết dòng); dòng `C=abc==` vẫn lấy khoá `C`. Khoá quá 30 ký tự, khoá có nháy kép (JSON) hoặc dòng không khớp: ghi `not_read` với lý do `cấu hình`.
 
 ## File cấu hình không được đọc nội dung
 
@@ -30,9 +30,12 @@ Chỉ dùng lệnh tên khoá ở trên. Không `Read`, `cat`, `head`, `tail`, `
 
 Gặp giá trị bí mật trong mã nguồn: ghi loại và `file:line`, không trích thêm dòng đó.
 
-## Lệnh chép ra README, Dockerfile và CI
+## Lệnh chép ra tài liệu, Dockerfile và CI
 
-- Lệnh trong README (cách chạy, build, test): thay mọi phần gán biến môi trường đứng trước lệnh (`TÊN=<giá-trị> lệnh`) bằng `<TÊN>`; không chép giá trị.
+- Áp cho mọi lệnh chép ra bất kỳ tài liệu nào (README module, README gốc, project-knowledge, findings, báo cáo), kể cả dòng `RUN` của Dockerfile, dòng `run` của CI, `CMD`, `ENTRYPOINT` và mục `scripts` của package.json:
+  - Bỏ tiền tố gán biến môi trường: `TÊN=giá-trị lệnh` thành `<tên-biến> lệnh`.
+  - Cờ có tên chứa `password`, `passwd`, `pwd`, `secret`, `token` hoặc `key`: thay giá trị bằng `<giá-trị>`, cả dạng `--tên giá-trị` và `--tên=giá-trị`.
+  - Cờ ngắn ghép dính giá trị (ví dụ `-p<giá-trị>`): không chép lệnh đó; ghi `[Unverified] lệnh có cờ mang giá trị`.
 - Dockerfile: chỉ chép dòng `RUN` có lệnh build hoặc test, `CMD` và `ENTRYPOINT`. Không chép dòng `ENV`, `ARG`, hay cờ `--build-arg` và `-e` có giá trị.
 - File CI: chỉ chép dòng `run` có lệnh build hoặc test. Không chép khối `env`, `with`, hay mọi khối có giá trị.
 - Dockerfile và file CI có thể đọc bằng `Read`. Đọc như vậy đưa cả file vào log phiên; ghi tên file đó vào `remaining_risks`.
@@ -61,7 +64,7 @@ Skill này không tự rotate secret, không sửa mã nguồn để xoá lỗ h
 
 ## `.aip/.gitignore`
 
-File nằm ở cấp `.aip/`, không nằm trong thư mục run. Nếu chưa có, tạo file này với nội dung một dòng `*`. Lý do: `.aip/runs/` chứa findings và phần nháp; `*` làm cả thư mục bị bỏ qua, kể cả file này, nên findings không vào commit nếu không ai chép thủ công. Nếu file đã có thì giữ nguyên.
+File nằm ở cấp `.aip/`, không nằm trong thư mục run. Nếu chưa có, tạo file này với nội dung một dòng `*`. Lý do: `.aip/runs/` chứa findings và phần nháp; `*` làm cả thư mục bị bỏ qua, kể cả file này. Việc đó là chủ đích: findings không vào commit nếu không ai chép thủ công. Nếu file đã có thì giữ nguyên.
 
 ## Rủi ro còn lại
 

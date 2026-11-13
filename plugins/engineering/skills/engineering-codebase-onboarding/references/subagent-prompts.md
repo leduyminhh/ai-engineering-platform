@@ -16,7 +16,7 @@ Các khối dùng chung (dán nguyên, không sửa chữ) nằm ở mục A, B,
   grep -nE '^[[:space:]]*[A-Za-z0-9_.-]{1,30}[[:space:]]*(:$|[:=][^=])' <file> | sed -E 's/^([0-9]+):[[:space:]]*([A-Za-z0-9_.-]+).*/\1 \2/' | grep -E '^[0-9]+ [A-Za-z0-9_.-]+$'
 - Một file mỗi lần, không truyền nhiều file: với nhiều file, `grep` in tiền tố tên file, `sed` không bỏ được và dòng gốc (có giá trị) có thể lọt. Bộ lọc `grep -E` cuối chỉ giữ dòng dạng `<số> <khoá>`.
 - Không dùng `grep -o` (hoặc `-oE`) cho việc này: `-o` in mọi ký tự nằm trong đoạn khớp, kể cả ký tự đầu của giá trị. Không đưa ký tự giá trị vào mẫu. Dòng gốc chỉ đi vào pipe; đầu ra chỉ có số dòng và tên khoá.
-- Không in ký tự giá trị: lệnh không dùng `-o`, và `sed` bỏ mọi thứ sau khoá. `[^=]` sau dấu phân cách chỉ loại dòng có `=` đệm base64 (`...=`, `...==`), không lấy giá trị; ký tự nó khớp không được in. Khoá quá 30 ký tự, khoá có dấu nháy kép (JSON), và dòng không khớp: ghi vào `not_read` với lý do "cấu hình".
+- Không in ký tự giá trị: lệnh không dùng `-o`, và `sed` bỏ mọi thứ sau khoá. `[:=][^=]` chỉ loại hai dạng: dòng có `==` ngay sau khoá (`KEY==x`) và dòng có dấu phân cách rồi hết dòng (`A=`). Dòng `C=abc==` vẫn lấy khoá `C`. Khoá quá 30 ký tự, khoá có dấu nháy kép (JSON), và dòng không khớp: ghi vào `not_read` với lý do "cấu hình".
 - `sed` chỉ nhận đầu vào từ pipe của `grep` ở trên. Không đưa tên file cấu hình cho `sed`.
 - Gặp giá trị bí mật trong mã nguồn: ghi loại và `file:line`, không trích thêm dòng đó.
 ```
@@ -81,7 +81,10 @@ agent_result:
 
 ```text
 ## Luật lệnh, Dockerfile và CI
-- Lệnh trong README (cách chạy, build, test): thay mọi phần gán biến môi trường đứng trước lệnh (`TÊN=<giá-trị> lệnh`) bằng `<TÊN>`; không chép giá trị.
+- Áp cho mọi lệnh chép ra bất kỳ tài liệu nào (README module, README gốc, project-knowledge, findings, báo cáo), kể cả dòng `RUN` của Dockerfile, dòng `run` của CI, `CMD`, `ENTRYPOINT` và mục `scripts` của package.json:
+  - Bỏ tiền tố gán biến môi trường: `TÊN=giá-trị lệnh` thành `<tên-biến> lệnh`.
+  - Cờ có tên chứa `password`, `passwd`, `pwd`, `secret`, `token` hoặc `key`: thay giá trị bằng `<giá-trị>`, cả dạng `--tên giá-trị` và `--tên=giá-trị`.
+  - Cờ ngắn ghép dính giá trị (ví dụ `-p<giá-trị>`): không chép lệnh đó; ghi `[Unverified] lệnh có cờ mang giá trị`.
 - Dockerfile: chỉ chép dòng `RUN` có lệnh build hoặc test, `CMD` và `ENTRYPOINT`. Không chép dòng `ENV`, `ARG`, hay cờ `--build-arg` và `-e` có giá trị.
 - File CI: chỉ chép dòng `run` có lệnh build hoặc test. Không chép khối `env`, `with`, hay mọi khối có giá trị.
 - Dockerfile và file CI có thể đọc bằng Read. Giá trị trong đó không được chép vào bất kỳ file hay trường nào; ghi `"Read đưa giá trị trong <tên file> vào log phiên"` vào `remaining_risks`.
@@ -169,7 +172,7 @@ Bạn viết README.md ở gốc và bốn file project-knowledge của project 
 - Đường dẫn README từng module: <danh sách>
 - Ngôn ngữ: <tiếng Việt có dấu | khác>
 - Lựa chọn cổng 1 cho file có sẵn: README.md gốc: <giữ | khối marker | bỏ>; project-overview.md, architecture.md, source-structure.md: <giữ | khối marker | bỏ>; tech-stack.yml: <giữ | bỏ>
-- Khung và cách điền: dán nguyên mục "Khung README root" và "Bốn file project-knowledge" của references/readme-structure.md. Luật lệnh trong README: dán nguyên mục E.
+- Khung và cách điền: dán nguyên mục "Khung README root" và "Bốn file project-knowledge" của references/readme-structure.md. Luật lệnh chép ra tài liệu: dán nguyên mục E.
 - Thư mục template: <thư mục skill artifact-templates>/references/project-knowledge/
 
 ## Được đọc
