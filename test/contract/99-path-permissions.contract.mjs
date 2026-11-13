@@ -116,6 +116,21 @@ export default async function run({ ok, ctx }) {
     const trackedGate = (cfg) => ({ reader: () => ({ config: cfg, file: path.join(P, '.claude', 'aip-gate.json'), roots: [P] }), tracked: () => true });
     ok(probes.every(([tool, f]) => JSON.stringify(files.decide({ tool_name: tool, tool_input: { file_path: f }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full', fullPaths: withPaths }) }))
       === JSON.stringify(files.decide({ tool_name: tool, tool_input: { file_path: f }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full' }) }))), 'AC6.1: guard-files aip-gate.json bị git theo dõi → y hệt khi không có fullPaths');
+
+    // AC2.1/AC2.2: chính <tmpdir>/claude bị chặn ở mọi công cụ file kể cả khi fullPaths cấp quyền; phần dưới nó vẫn là root.
+    const CTF = path.join(os.tmpdir(), 'claude');
+    const allTools = ['Read', 'Grep', ...WRITES];
+    const grantTmp = { mode: 'full', fullPaths: [{ path: CTF, allow: ['read', 'write', 'delete'] }] };
+    for (const tool of allTools) for (const f of [CTF, CTF + path.sep]) for (const cfg of [config, grantTmp]) {
+      const d = dec(tool, f, { cfg });
+      ok(d?.decision === 'deny' && /luôn/.test(d.reason) && !/fullRoots|fullPaths/.test(d.reason), `AC2.1: ${tool} vào gốc <tmpdir>/claude${f === CTF ? '' : '/'} → deny, không gợi ý khoá`);
+    }
+    ok(allTools.every((tool) => dec(tool, path.join(CTF, 'p', 'x')) === null), 'AC2.1: mọi công cụ vào dưới <tmpdir>/claude → cho qua');
+    const OTHER = path.join(os.tmpdir(), 'aip-pp-khac', 'x');
+    ok(dec('Write', OTHER)?.decision === 'deny' && dec('Read', OTHER)?.decision === 'ask', 'AC2.1: <tmpdir> ngoài thư mục claude → như cũ (Write deny, Read ask)');
+    ok(allTools.every((tool) => dec(tool, CTF, { cfg: { mode: 'ask' } }) === null && dec(tool, CTF, { extra: { permission_mode: 'default' } }) === null
+      && files.decide({ tool_name: tool, tool_input: { file_path: CTF }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full' }) }) === null),
+    'AC2.2: mode ask, phiên không bypass hoặc aip-gate.json bị git theo dõi → gốc <tmpdir>/claude không bị chặn bởi mục này');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 
   // guard-bash: quyền ghi/xoá theo thư mục (full + bypass).
