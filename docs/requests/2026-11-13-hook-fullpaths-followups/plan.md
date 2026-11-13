@@ -31,7 +31,7 @@ Caller/test bị kéo theo đã grep: `isClaudeTmpRoot` và `BLOCKED_TEXT` chỉ
 - Câu hỏi dùng câu có sẵn (`CONFIG_TEXT`, `FULL_PATH_TEXT`, `READ_OUTSIDE_TEXT`); không chứa từ trong `BANNED` của `test/contract/99-hook-popup.contract.mjs`; câu deny gốc tmp không nhắc `fullRoots`/`fullPaths`.
 - Thiếu `read` ở nguồn chỉ `ask`, không `deny`; `deny` ở đích khác vẫn thắng `ask`.
 - Glob khớp `..` (`.?`, `..*`, `.[.]`, `.*`) → `unknown` (ask); không khớp: `.[!.]*`, `.git*`, `a?`, `*`, `.?x`.
-- Version: `core/.manifest.json` 1.33.12 → 1.33.13.
+- Version: `core/.manifest.json` 1.33.12 → 1.33.14.
 - Commit: `core:git-workflow` (`git commit -F`, header tiếng Anh `type(scope): summary`, body tiếng Việt có dấu), KHÔNG `Co-Authored-By`; test đỏ commit riêng trước commit code; không push.
 - Một lệnh Bash mỗi lần gọi; không `git stash` trần; comment theo AGENTS.md (tiếng Việt, chỉ nói vì sao).
 
@@ -151,7 +151,7 @@ Caller/test bị kéo theo đã grep: `isClaudeTmpRoot` và `BLOCKED_TEXT` chỉ
 **Ước lượng:** 10 phút
 **Phủ AC:** AC6.2
 **Files:**
-- Modify: `core/.manifest.json` (version 1.33.12 → 1.33.13)
+- Modify: `core/.manifest.json` (version 1.33.12 → 1.33.14)
 - Modify: `plugins/_versions.lock.json` (sinh bằng script)
 - Test: `test/validate.mjs`
 
@@ -159,8 +159,8 @@ Caller/test bị kéo theo đã grep: `isClaudeTmpRoot` và `BLOCKED_TEXT` chỉ
 - Consumes: không có
 - Produces: không có
 
-- [ ] **Step 1:** sửa `version` trong `core/.manifest.json` thành `1.33.13`.
+- [ ] **Step 1:** sửa `version` trong `core/.manifest.json` thành `1.33.14`.
 - [ ] **Step 2:** chạy `npm run build`, mong đợi exit 0.
 - [ ] **Step 3:** chạy `node cli/lib/versions.mjs --lock`, mong đợi exit 0 và `plugins/_versions.lock.json` đổi dòng của `core`.
 - [ ] **Step 4:** chạy `node test/validate.mjs --only versions`, mong đợi exit 0.
-- [ ] **Step 5:** commit (`chore(core): bump to 1.33.13`).
+- [ ] **Step 5:** commit (`chore(core): bump to 1.33.14`).

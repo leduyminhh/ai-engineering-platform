@@ -34,7 +34,7 @@ Người dùng không trả lời thêm; mọi dòng dưới là **quyết đị
   - Thiếu `read` giữ đúng đường cũ: `confineSegment` đã biến `outside` + `read` thành `ask-read` (câu `READ_OUTSIDE_TEXT`), `deny` ở đích khác vẫn thắng. Đường dẫn không xác định (`$X`, `~`) ở nguồn → `ask` như mọi đích khác, nên `cp "$f" dest` ở full bắt đầu bị hỏi (xem Rủi ro).
 - **D5 — glob khớp `..` thì `unknown`.** Trong nhánh `GLOB` của `classifyTarget`, mọi đoạn từ đoạn glob đầu trở đi mà khi dịch glob → regex (`*` → `.*`, `?` → `.`, `[...]` → lớp ký tự với `!`/`^` phủ định, ký tự khác khớp nguyên văn) khớp được chuỗi `..` thì trả `unknown` (→ `ask`, trước khi tra quyền, như ca `..` đứng sau đoạn glob). Gồm `.?`, `..*`, `.[.]`, `.*`. Không khớp `..`: `.[!.]*`, `.git*`, `a?`, `*`, `.?x`. Đoạn có `[` không đóng được, lớp POSIX (`[:punct:]`, `[=.=]`) hoặc regex hỏng → coi là khớp (hỏi thừa còn hơn bỏ sót). Chỉ đoạn bắt đầu bằng `.` viết tường minh mới có thể khớp `..` (không dotglob: `*`, `?`, `[…]` đứng đầu không khớp tên bắt đầu bằng dấu chấm); dãy `*` được gộp và đoạn dài trên 1024 ký tự coi là khớp, để regex không backtrack bậc hai. Biến hoặc `~` ở một đoạn từ đoạn glob trở đi (`rm T/$X?/d/f` với `X=.`) cũng trả `unknown`. Nếu thư mục trước đoạn glob đã thiếu quyền thì vẫn `deny` như trước (không hạ xuống ask); nhánh glob còn kiểm gốc `<tmpdir>/claude` trước khi hỏi. Là heuristic theo token; không phụ thuộc phiên bản shell (hỏi cả trên bash ≥ 5.2 nơi `.*` không khớp `..`, vì không biết shell thật).
 - **D6 — không thêm câu hỏi mới, không đổi chữ ký.** `classifyPath`/`grantsOf`/`allowedRoots` giữ nguyên; mọi `ask` dùng câu có sẵn (`CONFIG_TEXT`, `FULL_PATH_TEXT`, `READ_OUTSIDE_TEXT`), không chứa từ trong `BANNED` của `99-hook-popup.contract.mjs`.
-- **D7 — version.** `core/.manifest.json` 1.33.12 → 1.33.13 (sửa hành vi hook, không thêm khoá), rồi `npm run build` và `node cli/lib/versions.mjs --lock`.
+- **D7 — version.** `core/.manifest.json` 1.33.12 → 1.33.14 (sửa hành vi hook, không thêm khoá), rồi `npm run build` và `node cli/lib/versions.mjs --lock`.
 
 ## Hướng đã cân nhắc
 
@@ -83,7 +83,7 @@ Test thêm vào `test/contract/99-path-permissions.contract.mjs` (cùng seam `co
 
 ## Ngoài phạm vi và anti-goal
 
-- Không thêm parser GNU/PowerShell đầy đủ: `--target`/`--target-dir` viết tắt, `-Dest` của `Copy-Item`, alias `ri`/`mi`/`cpi`, mảng có dấu phẩy, lệnh con trong nháy kép vẫn là giới hạn đã biết của R24.
+- Không thêm parser GNU/PowerShell đầy đủ: `--target`/`--target-dir` viết tắt, `-Dest` của `Copy-Item`, alias `ri`/`mi`/`cpi`, lệnh con trong nháy kép vẫn là giới hạn đã biết của R24.
 - Bash đọc file bằng `cat`, `head`… vẫn không bị nhốt `read`; chỉ nguồn của `cp`/`copy`/`Copy-Item` được kiểm (K1).
 - Không đổi `mv` Bash, `rm`, chuyển hướng, H1–H3, `mcpAllow`/`mcpDeny`, chế độ `ask`; không resolve symlink.
 - Anti-goal: không biến thiếu `read` ở nguồn thành `deny`; không để sửa R18 làm `ask` thêm với lệnh chỉ đọc file cấu hình.
