@@ -108,6 +108,22 @@ Test thêm vào `test/contract/99-path-permissions.contract.mjs` (cùng seam `co
 - Tên hàm/biến nội bộ (`globMatchesDotDot`, hằng câu dùng chung), cách tách `writeTargets` thành hàm con cho phần gán slot PowerShell.
 - Có gom các ca mới thành một bảng tham số hoá hay chia theo AC miễn không lặp ca.
 
+## Quyết định khi thực thi
+
+Chép từ `Ruling:` và vòng review của ledger (`.aip/` không vào nhánh); kiểm lại bằng `node test/validate.mjs --only path-permissions`.
+
+- Cách chạy: Subagent + review từng task (người dùng chọn). Task 6 cỡ nhỏ chỉ chịu review cuối.
+- `cp -rt O OUT/a` giữ `deny` (AC3.1 đã sửa): cờ gộp không phân biệt được với cờ PowerShell như `-Filter`, nên đối số cuối vẫn là đích ghi.
+- R18: `CLAUDE_DIR` không phân biệt hoa thường, đích được chuẩn hoá (`.claude/.`, `.claude/sub/..`); tên nguồn bỏ tiền tố `-Tham:` và tách dấu phẩy.
+- Tách mảng dấu phẩy ở PowerShell giữ cả token gốc bên cạnh các phần tách (chuỗi nháy có dấu phẩy là một đường dẫn literal; token rỗng vẫn là không xác định).
+- Tham số có giá trị của `Copy-Item`/`Move-Item` được bỏ giá trị: `-Filter`, `-Include`, `-Exclude`, `-Credential`, `-ToSession`, `-FromSession` và các tham số chung `-ErrorAction`… `-PipelineVariable`.
+- Glob: chỉ đoạn bắt đầu bằng `.` viết tường minh mới khớp `..`; lớp POSIX coi là khớp; dãy `*` gộp, đoạn dài trên 1024 ký tự coi là khớp; biến/`~` sau đoạn glob thì hỏi; thư mục trước đoạn glob đã thiếu quyền thì vẫn `deny`.
+- Dòng "Lệnh gồm" của popup nêu đường dẫn chưa biết, rồi file cấu hình hook, rồi đích đầu tiên (nguồn đọc đứng đầu của `cp` không còn che đích ghi).
+- Đoạn nối vi phạm R18 hạ `deny` của đoạn khác trong cùng lệnh thành `ask`: giữ, vì cơ chế ask cấu hình trước kiểm root đã có ở master; ghi vào R18.
+- Core nâng 1.33.12 → 1.33.14 (1.33.13 đã bị khoá trước khi sửa review cuối; cổng version từ chối lock khi nội dung đổi mà version giữ nguyên).
+- Rút gọn câu `reason` của popup ask (R21) làm request riêng sau request này: đổi R21 là đổi AC đã duyệt của `hook-popup`, và request này không thêm câu ask mới.
+- Hoãn cho người dùng quyết ở G3 (lỗ ngoài AC, có từ master, đã ghi ở R24 phần giới hạn): `Set-Content -Encoding utf8 OUT/x -Value y` (và `Out-File`, `Add-Content` có tham số có giá trị đứng trước), `Copy-Item -Dest` viết tắt, alias `cpi`/`mi`/`ri`, brace expansion `rm T/{..,x}/f`, `cp … -S .bak`.
+
 ## Rủi ro và câu hỏi mở
 
 - [Inference] K1 làm ca dùng thường xuyên bị hỏi thêm ở full: `cp "$f" dest` trong vòng lặp, `cp ~/x .`, `cp /ngoài/x .`. Hướng giảm nhẹ: thêm thư mục nguồn vào `fullPaths` với `read`.
