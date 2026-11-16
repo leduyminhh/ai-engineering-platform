@@ -150,3 +150,43 @@ Không đổi: `gate-config.mjs`, `guard-files.mjs`, `classifyPath`/`grantsOf`/`
 - [ ] **Step 1:** `core/.manifest.json` version 1.33.19 → 1.33.20.
 - [ ] **Step 2:** `npm run build`, rồi `node cli/lib/versions.mjs --lock` (mỗi lệnh một lần gọi Bash).
 - [ ] **Step 3:** `npm test` một lần: xanh. Commit `chore(core): bump to 1.33.20`.
+
+### Task 7: chặn chi phí brace theo cả lệnh (sửa sau review cuối)
+**Kind:** TOOLING
+**TDD:** có
+**Ước lượng:** 30'
+**Phủ AC:** AC3.4
+**Files:**
+- Modify: `core/hooks/scripts/guard-bash.mjs`
+- Modify: `test/contract/99-path-permissions.contract.mjs`
+- Modify: `docs/specs/hooks-gates/spec.md`
+- Modify: `README.md`
+- Modify: `README_VI.md`
+- Test: `test/contract/99-path-permissions.contract.mjs`
+
+**Interfaces:**
+- Consumes: `braceExpand(p, cap)`, nhánh brace trong `classifyTarget`, `confineSegment`, `decide`
+- Produces: ngân sách cộng dồn cho mọi đường dẫn có brace trong một lệnh (tên nội bộ do builder chọn); `braceExpand` giữ chữ ký
+
+- [ ] **Step 1:** thêm ca AC3.4 vào `99-path-permissions.contract.mjs`: 24 token, mỗi token ≤ 4096 ký tự có 64 dấu `{` (8 nhóm `{a,b}` + 56 `{` lẻ + filler) kèm `OUT/z` ở đối số khác, kỳ vọng `deny` hoặc `ask` và `decide` dưới 1000 ms (kiểu ca thời gian đã có); ca không đổi `rm T/{a,b}/f`, `cp x T/{a,b}` vẫn `null`. Chạy `node test/validate.mjs --only path-permissions`: đỏ ở ca mới (quá thời gian). Commit test đỏ riêng: `test(hooks): cover brace cost across many tokens in guard-bash`.
+- [ ] **Step 2:** sửa `guard-bash.mjs`: ngân sách cộng dồn theo cả lệnh (tổng độ dài hoặc số `{` của các đường dẫn có brace; hết ngân sách thì `unknown`), hạ trần độ dài mỗi token nếu cần, bỏ mở rộng brace lại ở từng nhánh trong `classifyTarget` (nhánh đã không còn nhóm có dấu phẩy); khôi phục dòng doc của `braceExpand` (cap → null; `{1..3}` và `{x}` giữ nguyên) cạnh dòng giải thích trần. Đo `decide` thật: lệnh < 200KB dưới 1 s; chạy `--only path-permissions`, `--only hook`, `--only audit`, `--only permission`: xanh.
+- [ ] **Step 3:** sửa tài liệu theo hai điểm lệch của re-review: "đường dẫn dài hơn 4096 ký tự thì ask" chỉ khi đường dẫn có `{`; hỏi thừa của `Copy-Item -Rec`/`-r`/`-ea 0` ở R18 chỉ khi file cấu hình là đối số vị trí (dạng `-Path … -Destination` không bị); ghi ngân sách theo lệnh vào R24 và hai README; đối chiếu từng khẳng định với code; `node test/validate.mjs --only content`: xanh.
+- [ ] **Step 4:** commit code `fix(hooks): budget brace expansion across the whole command` và docs `docs(hooks): note per-command brace budget and fix R18 wording`.
+
+### Task 8: bump version sau Task 7
+**Kind:** TOOLING
+**TDD:** không — chỉ bump version và chạy kiểm
+**Ước lượng:** 15'
+**Phủ AC:** AC5.1, AC6.2
+**Files:**
+- Modify: `core/.manifest.json`
+- Modify: `plugins/_versions.lock.json`
+- Test: `npm test`
+
+**Interfaces:**
+- Consumes: kết quả Task 7
+- Produces: không có
+
+- [ ] **Step 1:** `core/.manifest.json` version 1.33.21 → 1.33.22.
+- [ ] **Step 2:** `npm run build`, rồi `node cli/lib/versions.mjs --lock` (mỗi lệnh một lần gọi Bash).
+- [ ] **Step 3:** `npm test` một lần: xanh. Commit `chore(core): bump to 1.33.22`.
