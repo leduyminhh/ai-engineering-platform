@@ -391,7 +391,14 @@ export default async function run({ ok, ctx }) {
         `mv ${T}/x ${D}/b -S .bak`, `mv ${O}/x ${T}/b -S .bak`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC4.1']),
       ...[`cp ${T}/x ${O}/b -S .bak`, `cp ${D}/x ${O}/b --suffix .bak`, `mv ${T}/x ${O}/b -S .bak`].map((c) => [c, null, 'hook-copy-alias-brace AC4.1']),
       ...[`cp ${OUT}/x ${O}/b -S .bak`, `cp -t ${O} ${OUT}/x --suffix .bak`].map((c) => [c, 'ask', 'hook-copy-alias-brace AC4.1']),
+      // `--suffix` viết tắt (cp/mv chỉ có một tùy chọn dài bắt đầu bằng `--su`).
+      ...[`cp ${O}/x ${D}/b --su .bak`, `cp ${O}/x ${D}/b --suf .bak`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC4.1']),
+      [`cp ${T}/x ${O}/b --suf .bak`, null, 'hook-copy-alias-brace AC4.1'],
+      // Sau `--` mọi token là đối số vị trí: `-S` là tên file, không được nuốt token kế (đích thật).
+      ...[`cp -- ${T}/x -S ${D}/b`, `cp -- ${O}/x -S ${D}/b`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC4.1']),
+      [`cp -- ${T}/x ${O}/b`, null, 'hook-copy-alias-brace AC4.1'],
     ]);
+    r18(['cp -- settings.json -S .claude/', 'mv -- settings.json -S .claude'].map((c) => [c, 'ask', 'hook-copy-alias-brace AC4.1']), {});
 
     // hook-copy-alias-brace: alias PowerShell cpi/mi/ri phải bị xét như Copy-Item/Move-Item/Remove-Item.
     expectAll([
@@ -417,7 +424,7 @@ export default async function run({ ok, ctx }) {
       [`Copy-Item -Recurse ${D}/a ${D}/b`, 'deny', 'hook-copy-alias-brace AC1.2'],
     ], { tool: 'PowerShell' });
     const destCfg = [...['Copy-Item -Dest .claude\\settings.json x', 'Copy-Item -Dest .claude settings.json', 'Copy-Item -Dest:.claude\\aip-gate.json x', 'Copy-Item -De .claude\\settings.json x']
-      .map((c) => [c, 'ask', 'hook-copy-alias-brace AC1.3']), ['Copy-Item -Path .claude/settings.json -Destination out\\x', null, 'hook-copy-alias-brace AC1.3']];
+      .map((c) => [c, 'ask', 'hook-copy-alias-brace AC1.3'])];
     expectAll(destCfg, psAsk);
     expectAll(destCfg, { tool: 'PowerShell' });
     // Dòng "Lệnh gồm" của đích vừa đọc vừa ghi phải nói ghi, không nói đọc.
@@ -439,6 +446,10 @@ export default async function run({ ok, ctx }) {
     expectAll([
       [`rm ${T}/${'{,}'.repeat(6000)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'], [`rm ${T}/${'{,}'.repeat(6000)}/f ${OUT}/x`, 'deny', 'hook-copy-alias-brace AC3.2'],
       [`rm ${T}/${'{a,'.repeat(20000)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
+      // Đường dài: dưới 64 dấu `{` vẫn có thể tốn bậc hai nếu không chặn theo độ dài; đích ngoài root ở đối số khác vẫn phải bị deny.
+      [`rm ${T}/${'{'.repeat(55)}${'x'.repeat(100000)}${'{a,b}'.repeat(8)}/f ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.2'],
+      // Biên của ngưỡng 64 dấu `{`.
+      [`rm ${T}/${'{x}'.repeat(64)}/f`, null, 'hook-copy-alias-brace AC3.2'], [`rm ${T}/${'{x}'.repeat(65)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
     ]);
     ok(performance.now() - tBig < 1000, 'hook-copy-alias-brace AC3.2: đầu vào lớn xử lý nhanh');
     // PowerShell không mở rộng brace: kết quả giữ như trước request.
