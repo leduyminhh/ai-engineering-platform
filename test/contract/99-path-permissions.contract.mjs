@@ -539,5 +539,29 @@ export default async function run({ ok, ctx }) {
     ok(performance.now() - tShort < 1000, 'hook-copy-alias-brace AC3.4: nhiều token brace ngắn xử lý dưới 1 giây');
     // PowerShell không mở rộng brace: kết quả giữ như trước request.
     expectAll([[`Remove-Item ${T}/{..,x}/f`, null, 'hook-copy-alias-brace AC3.3'], [`Remove-Item ${O}/{a,b}`, 'deny', 'hook-copy-alias-brace AC3.3']], { tool: 'PowerShell' });
+
+    // Bộ giải đường dẫn: scanWords giữ nháy từng phần của mỗi từ.
+    const sw = (cmd, dialect = 'bash') => (typeof bash.scanWords === 'function' ? bash.scanWords(cmd, dialect) : null);
+    const shape = (r) => r?.segs.map((g) => ({ sep: g.sep, bg: g.background, cp: g.compound, w: g.words.map((x) => x.parts.map((q) => `${q.quote}:${q.text}`).join('+')) }));
+    const label = (cmd) => cmd.replace(/\n/g, '\\n');
+    const SW = [
+      ['a && b & c', [{ sep: 'start', bg: false, cp: false, w: ['none:a'] }, { sep: '&&', bg: true, cp: false, w: ['none:b'] }, { sep: '&', bg: false, cp: false, w: ['none:c'] }]],
+      ['rm "x"*', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'double:x+none:*'] }]],
+      ["echo $(cygpath -u 'a b')/x", [{ sep: 'start', bg: false, cp: false, w: ['none:echo', "none:$(cygpath -u 'a b')/x"] }]],
+      ['x # c; y', [{ sep: 'start', bg: false, cp: false, w: ['none:x'] }]],
+      ['S=\'a\'"b"c', [{ sep: 'start', bg: false, cp: false, w: ['none:S=+single:a+double:b+none:c'] }]],
+      ['(cd x); y', [{ sep: 'start', bg: false, cp: true, w: ['none:cd', 'none:x'] }, { sep: ';', bg: false, cp: false, w: ['none:y'] }]],
+      ['a\nb', [{ sep: 'start', bg: false, cp: false, w: ['none:a'] }, { sep: ';', bg: false, cp: false, w: ['none:b'] }]],
+    ];
+    for (const [cmd, want] of SW) ok(JSON.stringify(shape(sw(cmd))) === JSON.stringify(want), `AC4.2: scanWords \`${label(cmd)}\` giữ sep/background/compound/nháy từng phần`);
+    const ifSegs = sw('if a; then b; fi')?.segs ?? [];
+    ok(['a', 'b'].every((t) => ifSegs.some((g) => g.compound && g.words.some((x) => x.parts.map((q) => q.text).join('') === t))), 'AC4.2: scanWords `if a; then b; fi` đánh dấu compound cho đoạn bên trong');
+    ok(sw('echo "a')?.unclosed === true && sw('echo "a"')?.unclosed === false, 'AC4.2: scanWords báo unclosed khi nháy chưa đóng');
+    // Cùng token đã bỏ nháy với parse() trên lệnh không có $( )/&.
+    for (const cmd of ['git commit -m "a;b" x', 'rm "x y" \'z w\' ; ls | grep q', 'a || b\nc', 'echo \'it\'"s" ok']) {
+      const flat = sw(cmd)?.segs.map((g) => g.words.map((x) => x.parts.map((q) => q.text).join('')));
+      const ref = typeof bash.parse === 'function' ? bash.parse(cmd).segs.map((t) => [...t]) : null;
+      ok(flat && ref && JSON.stringify(flat) === JSON.stringify(ref), `AC4.2: scanWords cùng token với parse() trên \`${label(cmd)}\``);
+    }
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
