@@ -385,7 +385,8 @@ function writeTargets(t, msys = true) {
       const after = at + (tok[at + 1] === '>' || tok[at + 1] === '|' ? 2 : 1);
       const nx = head.indexOf('>', after);
       // `2>&1` bị parse() tách ở `&` thành `2>` + `1`: đích thiếu hoặc bắt đầu bằng `&` là dup fd, không phải file.
-      const target = tok.slice(after, nx < 0 ? undefined : nx) || (nx < 0 && i + 1 < t.length ? t[++i] : '');
+      // naiveSegments không bóc nháy trong token dính `>"…"`; để nguyên thì đường dẫn tuyệt đối thành tương đối theo cwd.
+      const target = (tok.slice(after, nx < 0 ? undefined : nx) || (nx < 0 && i + 1 < t.length ? t[++i] : '')).replace(/^(["'])([\s\S]*)\1$/, '$2');
       if (target && !target.startsWith('&')) { targets.push(target); needs.push(['write']); }
       at = nx;
     }
@@ -803,6 +804,9 @@ function stripSimpleHeredocs(rest) {
 const ASSIGN_LEAD = /[ \t\r\n]*([A-Za-z_]\w*)=/y;
 const ASSIGN_VALUE = /(?:\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+'([^']*)'\s*\)|\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+"([^"$`\\]*)"\s*\)|'([^']*)'|"([^"$`\\]*)"|([^\s'"$`;&|()<>*?[\]{}~\\]+))(?=[ \t]*(?:;|\r?\n|$))/y;
 const ASSIGN_TAIL = /[ \t]*(?:;|\r?\n)?/y;
+// `cd <đường dẫn thường>;` (hoặc xuống dòng) đứng đầu chuỗi: cd lỗi không chặn lệnh sau `;` nên khối gán vẫn chạy vô điều kiện.
+// Không nhận `&&`: cd lỗi thì phép gán bị bỏ qua, $S rỗng và `rm -rf $S/` thành `rm -rf /`. Cũng không nhận `||`, `|`, cd tới biến/`-`/glob.
+const CD_LEAD = /[ \t\r\n]*cd[ \t]+(?:'[^']*'|"[^"$`\\]*"|[^\s'"$`;&|()<>*?[\]{}~\\-][^\s'"$`;&|()<>*?[\]{}~\\]*)[ \t]*(?:;|\r?\n)/y;
 const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
 // Chỉ ký tự đường dẫn thường: nháy, ; # ( ) < > = bị loại vì giá trị được chèn lại vào lệnh rồi parse lại.
 const absoluteLiteral = (v) => typeof v === 'string' && /^[A-Za-z0-9_.\/:\\@%+,-]+$/.test(v) && (v.startsWith('/') || /^[A-Za-z]:[\\/]/.test(v));
@@ -810,6 +814,11 @@ function substituteVars(cmd, tool) {
   if (tool === 'PowerShell' || cmd.length > 20000) return cmd;
   const known = new Map();
   let pos = 0;
+  for (;;) {
+    CD_LEAD.lastIndex = pos;
+    if (!CD_LEAD.test(cmd)) break;
+    pos = CD_LEAD.lastIndex;
+  }
   for (;;) {
     ASSIGN_LEAD.lastIndex = pos;
     const lead = ASSIGN_LEAD.exec(cmd);

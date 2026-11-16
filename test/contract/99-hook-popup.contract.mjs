@@ -250,6 +250,16 @@ export default async function run({ ok, ctx }) {
       'PATH="$S/bin:$PATH" bash $R/src/secrets/vault-consul/scripts/smoke-test.sh; echo "exit=$?"'].join('\n');
     ok(bash(popupCmd, withScratch) === null, 'AC6.2: full — lệnh của ảnh popup (S=$(cygpath -u …), heredoc, chmod, PATH=$S/bin) → không hỏi');
     ok(bash(`S=${fwd(scratch)}; rm $S/x`, withScratch) === null, 'AC6.2: full — S=<literal trong scratchpad>; rm $S/x → không hỏi');
+    // Lệnh thật của một phiên: `cd <dir> && S="<scratchpad>"; … >"$S/out"`; phép gán đứng sau cd vẫn là đầu chuỗi lệnh.
+    const cdPrefixed = (head, tail = 'bash t.sh >"$S/out" 2>&1; echo "exit=$?"; tail -5 "$S/out"') => `${head}; ${tail}`;
+    // Nhánh tách thô giữ nguyên nháy của đích chuyển hướng: `>"<abs>"` sau cd ra ngoài root không được bị coi là đường dẫn tương đối.
+    ok(bash(`cd /e/x && echo hi >"${fwd(scratch)}/out"`, withScratch) === null, 'AC6.2: full — cd ra ngoài root, ghi >"<abs trong scratchpad>" → không hỏi, không deny');
+    ok(bash(`cd /e/x && echo hi >"/etc/out"`, withScratch)?.decision === 'deny', 'AC6.3: full — cd ra ngoài root, ghi >"/etc/out" vẫn deny');
+    const here = fwd(path.resolve('.'));
+    // `&&` không được tin: cd lỗi thì phép gán không chạy, $S rỗng và `rm -rf $S/` thành `rm -rf /`.
+    ok(asks(cdPrefixed(`cd ${here} && S="${fwd(scratch)}"`), withScratch), 'AC6.3: full — cd <dir> && S="<scratchpad>"; … → hỏi (&& không được tin)');
+    ok(bash('cd /khong-ton-tai && S=' + fwd(scratch) + '; rm -rf $S/', withScratch) !== null, 'AC6.3: full — cd <sai> && S=<scratch>; rm -rf $S/ → không được cho qua');
+    ok(bash(cdPrefixed(`cd ${here}; S="${fwd(scratch)}"`), withScratch) === null, 'AC6.2: full — cd <dir>; S="<scratchpad>"; … → không hỏi');
 
     const stay = [
       ['S=/etc; rm $S/x', 'deny', 'gán ra ngoài root → deny như viết thẳng đường dẫn'],
@@ -259,6 +269,10 @@ export default async function run({ ok, ctx }) {
       [`cat > f <<'EOF'\nS=${fwd(scratch)}\nEOF\nrm -rf $S/x`, 'ask', 'phép gán giả trong thân heredoc'],
       [`S="${fwd(scratch)}/a b"; rm $S`, 'ask', 'giá trị có khoảng trắng'],
       [`if false; then S=${fwd(scratch)}; fi; rm -rf $S/x`, 'ask', 'phép gán không ở đầu lệnh cấp cao nhất'],
+      [cdPrefixed('cd $D && S=' + fwd(scratch), 'rm $S/x'), 'ask', 'cd tới biến không giải được thì không tin gì phía sau'],
+      [cdPrefixed('cd /e/x || S=' + fwd(scratch), 'rm $S/x'), 'ask', 'cd nối bằng || (phép gán có thể không chạy sau cd)'],
+      [cdPrefixed('cd /e/x; S=/etc', 'rm $S/x'), 'deny', 'gán ra ngoài root sau cd nối bằng ; → deny'],
+      [cdPrefixed('cd /e/x && echo hi; S=' + fwd(scratch), 'rm $S/x'), 'ask', 'chỉ bỏ qua cd đứng đầu, không bỏ qua lệnh khác'],
     ];
     for (const [cmd, want, why] of stay) {
       ok(bash(cmd, withScratch)?.decision === want, `AC6.3: full — ${why}: ${cmd.replace(/\n/g, '⏎')}`);
