@@ -803,6 +803,8 @@ function stripSimpleHeredocs(rest) {
 const ASSIGN_LEAD = /[ \t\r\n]*([A-Za-z_]\w*)=/y;
 const ASSIGN_VALUE = /(?:\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+'([^']*)'\s*\)|\$\(\s*cygpath(?:\s+-[A-Za-z]+)*\s+"([^"$`\\]*)"\s*\)|'([^']*)'|"([^"$`\\]*)"|([^\s'"$`;&|()<>*?[\]{}~\\]+))(?=[ \t]*(?:;|\r?\n|$))/y;
 const ASSIGN_TAIL = /[ \t]*(?:;|\r?\n)?/y;
+// `cd <đường dẫn thường> &&` hoặc `;` đứng đầu chuỗi: cd không đổi biến nên khối gán sau nó vẫn chạy đúng một lần, vô điều kiện. `||`, `|`, cd tới biến/`-`/glob không nhận.
+const CD_LEAD = /[ \t\r\n]*cd[ \t]+(?:'[^']*'|"[^"$`\\]*"|[^\s'"$`;&|()<>*?[\]{}~\\-][^\s'"$`;&|()<>*?[\]{}~\\]*)[ \t]*(?:&&|;|\r?\n)/y;
 const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
 // Chỉ ký tự đường dẫn thường: nháy, ; # ( ) < > = bị loại vì giá trị được chèn lại vào lệnh rồi parse lại.
 const absoluteLiteral = (v) => typeof v === 'string' && /^[A-Za-z0-9_.\/:\\@%+,-]+$/.test(v) && (v.startsWith('/') || /^[A-Za-z]:[\\/]/.test(v));
@@ -810,6 +812,11 @@ function substituteVars(cmd, tool) {
   if (tool === 'PowerShell' || cmd.length > 20000) return cmd;
   const known = new Map();
   let pos = 0;
+  for (;;) {
+    CD_LEAD.lastIndex = pos;
+    if (!CD_LEAD.test(cmd)) break;
+    pos = CD_LEAD.lastIndex;
+  }
   for (;;) {
     ASSIGN_LEAD.lastIndex = pos;
     const lead = ASSIGN_LEAD.exec(cmd);
