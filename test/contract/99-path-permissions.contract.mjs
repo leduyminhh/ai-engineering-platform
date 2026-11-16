@@ -3,7 +3,7 @@ export default async function run({ ok, ctx }) {
   const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR } = ctx;
   const { runMode } = await import(pathToFileURL(path.join(CORE_DIR, '..', 'cli', 'lib', 'mode.mjs')).href);
 
-  const { fullPaths, classifyPath } = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'gate-config.mjs')).href);
+  const { fullPaths, classifyPath, denyOutsideText } = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'gate-config.mjs')).href);
   const A = path.resolve('/aip-pp-a');
   const B = path.resolve('/aip-pp-b');
   const cases = [
@@ -33,6 +33,36 @@ export default async function run({ ok, ctx }) {
   ok(cl(B + '/f', 'read') === 'inside' && cl(B + '/f') === 'outside' && cl(B + '/f', 'delete') === 'outside', 'AC2.1: root đối tượng tra theo need (mặc định write)');
   ok(cl(path.resolve('/aip-pp-c/f'), 'read') === 'outside' && cl(path.resolve('/aip-pp-c/f'), 'delete') === 'inside', 'AC2.1: thiếu read thì outside');
   ok(cl('$HOME/x', 'read') === 'unknown' && cl('~/x', 'delete') === 'unknown', 'AC2.1: $/~ → unknown');
+
+  // Câu deny dùng chung (kiểu list_roots): liệt kê root có đúng quyền đang thiếu để agent biết được làm ở đâu.
+  const deny = (...a) => (typeof denyOutsideText === 'function' ? denyOutsideText(...a) : '');
+  const G = (p, allow, glob = false) => ({ path: p, allow, ...(glob ? { glob: true } : {}) });
+  const ALL = ['read', 'write', 'delete'];
+  const gT = G('/aip-dt-t', ALL);
+  const gO = G('/aip-dt-o', ['read', 'write']);
+  const gD = G('/aip-dt-d', ['read']);
+  const rootLine = (s) => s.split('\n').find((l) => /^Được (ghi|xoá):/.test(l)) ?? '';
+  {
+    const w = deny('write', [gT, gO, gD], 'ghi vào thư mục');
+    ok(rootLine(w).startsWith('Được ghi:') && rootLine(w).includes(gT.path) && rootLine(w).includes(gO.path) && !rootLine(w).includes(gD.path), 'AC2.1: write chỉ liệt kê root có quyền write');
+    ok(/^Chế độ full chỉ cho phép ghi vào thư mục có quyền write;/.test(w) && /fullPaths/.test(w) && /fullRoots/.test(w) && w.includes('"write"'), 'AC2.1: câu deny vẫn nêu quyền thiếu, fullPaths và fullRoots');
+    const d = deny('delete', [gT, gO, gD], 'lệnh này ở thư mục');
+    ok(rootLine(d).startsWith('Được xoá:') && rootLine(d).includes(gT.path) && !rootLine(d).includes(gO.path) && !rootLine(d).includes(gD.path), 'AC2.1: delete chỉ liệt kê root có quyền delete');
+    ok(d.split('\n').length === 3 && d.split('\n').at(-1).includes('"delete"'), 'AC2.1: thứ tự câu quyền → dòng root → câu xin thêm quyền');
+    ok(deny('write', [], 'ghi vào thư mục') === 'Chế độ full chỉ cho phép ghi vào thư mục có quyền write; đường dẫn chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.',
+      'AC1.4: không root nào có quyền thì không có dòng root, câu giữ nguyên một dòng');
+    ok(rootLine(deny('write', [gD, G('/aip-dt-g', ALL, true)], 'x')) === '' && rootLine(deny('read', [gT], 'x')) === '', 'AC1.4: root chỉ-đọc, root glob và need read không sinh dòng root');
+    const many = Array.from({ length: 8 }, (_, i) => G(`/aip-dt-r${i}`, ALL));
+    const ml = rootLine(deny('write', many, 'x'));
+    ok(many.slice(0, 6).every((g) => ml.includes(g.path)) && !ml.includes(many[6].path) && ml.endsWith('… và 2 mục khác'), 'AC1.3: hơn 6 root chỉ liệt kê 6 mục, nêu "… và 2 mục khác"');
+    ok(rootLine(deny('write', many.slice(0, 6), 'x')).endsWith('`') && !/mục khác/.test(deny('write', many.slice(0, 6), 'x')), 'AC1.3: đúng 6 root không có "mục khác"');
+    const dirty = G('D:/a`b\ncưc\u202e' + 'z'.repeat(200), ALL);
+    const dt = deny('write', [dirty], 'x');
+    const dl = rootLine(dt);
+    ok(dt.split('\n').length === 3 && (dl.match(/`/g) ?? []).length === 2 && !dl.includes('\u202e') && dl.includes('z'.repeat(60)) && !dl.includes('z'.repeat(81)), 'AC1.3: đường dẫn root có xuống dòng, backtick, bidi, quá dài không chèn dòng giả và chỉ giữ 80 ký tự cuối');
+    const tmpRoot = path.join(os.tmpdir(), 'claude');
+    ok(rootLine(deny('write', [G(tmpRoot, ALL)], 'x')).includes(`${tmpRoot}/…`), 'AC2.1: root <tmpdir>/claude hiện dạng <tmpdir>/claude/… (chỉ phần dưới nó là root)');
+  }
 
   const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-pp-')));
   try {
