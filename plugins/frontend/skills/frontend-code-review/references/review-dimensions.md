@@ -109,7 +109,11 @@ hình) ghi là suspected/cần kiểm.
   `onClick` mà không hỗ trợ Enter/Space cho phần tử tuỳ biến; bẫy focus thiếu trong modal (Escape đóng,
   Tab quẩn trong modal).
 - **Quản lý focus:** modal/dialog mở không chuyển focus vào, đóng không trả focus về; đổi route không thông
-  báo/không đưa focus hợp lý.
+  báo/không đưa focus hợp lý; thay nội dung tại chỗ (tải lại danh sách, phân trang, xoá dòng) làm phần tử đang
+  focus bị gỡ khỏi DOM nên focus rơi về `body`; vùng `role="alert"` bị gỡ cùng danh sách khiến thông báo lỗi
+  có thể không hiện. Severity gợi ý `major` khi đã tái hiện (hoặc đọc mã đủ rõ) trên luồng chính; chưa tái hiện
+  được thì giữ suspected/minor theo quy tắc "Không thổi phồng" ở cuối file. Soát từ diff tĩnh: đây là suspected,
+  cần kiểm bằng chạy thật.
 - **Tương phản & trạng thái:** chỉ dùng **màu** để truyền trạng thái (lỗi/thành công) không kèm text/icon;
   tương phản chữ/nền thấp (đối chiếu design-system — nếu không đo được thì suspected).
 - **ARIA đúng:** `aria-*` sai thuộc tính/giá trị, hoặc lạm dụng `role` che mất semantic gốc.

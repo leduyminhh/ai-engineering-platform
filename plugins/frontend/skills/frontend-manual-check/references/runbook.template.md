@@ -29,6 +29,16 @@ Mỗi `AC<n>.<m>` của design xuất hiện ở ít nhất một hàng. Bước
 | 1 | `<mở màn hình ...>` | `<điều nhìn thấy được>` | `AC1.1` |
 | 2 | `<bấm nút ...>` | `<thông báo, trạng thái, URL mới>` | `AC1.1`, `AC1.2` |
 
+## Đối chiếu mockup
+
+Mỗi trạng thái đã chụp ở bước nào thì đối chiếu với mockup tương ứng. Không có mockup thì ghi "không có mockup" ở ô phần tử mockup.
+
+| Trạng thái | Ảnh | Phần tử mockup tham chiếu | Khớp/lệch |
+|---|---|---|---|
+| `<loading \| rỗng \| lỗi \| thành công>` | `.aip/runs/<request>/<part>/ui-check/<#bước>-<trạng-thái>.png` | `<khung hoặc vùng trong mockup>` | `<khớp \| lệch: mô tả>` |
+
+Suy đoán về vị trí, khoảng cách hay màu không đo được từ ảnh gắn `[ước lượng]`.
+
 ## Kết quả đã chạy
 
 Ngày chạy: `<yyyy-mm-dd>` · Người/agent chạy: `<tên>` · Cách chạy: `<tay | walkthrough Playwright>`
