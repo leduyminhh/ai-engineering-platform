@@ -138,7 +138,9 @@ export default async function run({ ok, ctx }) {
     // AC5.1: fullRoots: [T] đồng nghĩa mục đủ ba quyền; AC6.1: full không hiệu lực thì fullPaths không đổi kết quả.
     const probes = [['Read', T], ['Write', T], ['Write', D], ['Read', D], ['Read', O], ['Write', O], ['Read', X], ['Write', X], ['Read', path.join(T, '.env')], ['Write', path.join(T, '.env')]]
       .map(([tool, dir]) => [tool, path.join(dir, dir.endsWith('.env') ? '' : 'a.txt')]);
-    const same = (a, b, extra = {}, optB = {}) => probes.every(([tool, f]) => JSON.stringify(dec(tool, f, { cfg: a, extra })) === JSON.stringify(dec(tool, f, { cfg: b, extra, opts: optB })));
+    // Thứ tự root trong dòng "Được ghi:" phụ thuộc nguồn khai (fullRoots đứng trước fullPaths), nên bỏ dòng đó khi so hai cấu hình tương đương.
+    const noRoots = (d) => (d?.reason ? { ...d, reason: d.reason.replace(/\nĐược (ghi|xoá):[^\n]*/, '') } : d);
+    const same = (a, b, extra = {}, optB = {}) => probes.every(([tool, f]) => JSON.stringify(noRoots(dec(tool, f, { cfg: a, extra }))) === JSON.stringify(noRoots(dec(tool, f, { cfg: b, extra, opts: optB }))));
     ok(same({ mode: 'full', fullRoots: [T] }, { mode: 'full', fullPaths: [{ path: T, allow: ['read', 'write', 'delete'] }] }), 'AC5.1: guard-files fullRoots: [T] ≡ mục đủ ba quyền');
     const withPaths = config.fullPaths;
     ok(same({ mode: 'ask', fullPaths: withPaths }, { mode: 'ask' }), 'AC6.1: guard-files mode ask → y hệt khi không có fullPaths');
@@ -269,7 +271,8 @@ export default async function run({ ok, ctx }) {
     // AC5.1/AC5.2/AC6.1: fullRoots ≡ ba quyền; fullReadRoots chỉ đọc; full không hiệu lực thì fullPaths vô tác dụng.
     const cmds = [`rm ${T}/f`, `rm ${O}/f`, `rm ${D}/f`, `cp x ${T}/f`, `cp x ${O}/f`, `cp x ${D}/f`, `mv ${T}/a ${T}/b`, `mv ${T}/a ${O}/b`, `mv ${O}/a ${T}/b`, `mv ${D}/a ${T}/b`, `mv -t ${T} ${T}/a`, `cp -t ${T} x`,
       `rm ${OUT}/f`, `cat ${T}/.env`, 'rm $X/f'];
-    const same = (a, b, optA = {}, optB = {}) => cmds.every((c) => JSON.stringify(bd(c, { cfg: a, ...optA })) === JSON.stringify(bd(c, { cfg: b, ...optB })));
+    const noRoots = (d) => (d?.reason ? { ...d, reason: d.reason.replace(/\nĐược (ghi|xoá):[^\n]*/, '') } : d);
+    const same = (a, b, optA = {}, optB = {}) => cmds.every((c) => JSON.stringify(noRoots(bd(c, { cfg: a, ...optA }))) === JSON.stringify(noRoots(bd(c, { cfg: b, ...optB }))));
     ok(same({ mode: 'full', fullRoots: [T] }, { mode: 'full', fullPaths: [{ path: T, allow: all }] }), 'AC5.1: guard-bash fullRoots: [T] ≡ mục đủ ba quyền');
     expectAll([[`rm ${T}/f`, null, 'AC5.1'], [`mv ${T}/a ${T}/b`, null, 'AC5.1'], [`cp x ${T}/f`, null, 'AC5.1'], [`rm ${O}/f`, 'deny', 'AC5.1']], { cfg: { mode: 'full', fullRoots: [T] } });
     expectAll([[`rm ${D}/f`, 'deny', 'AC5.2'], [`cp x ${D}/f`, 'deny', 'AC5.2'], [`mv ${D}/a ${T}/b`, 'deny', 'AC5.2']], { cfg: { mode: 'full', fullReadRoots: [D] } });

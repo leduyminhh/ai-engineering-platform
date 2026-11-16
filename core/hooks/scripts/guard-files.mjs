@@ -4,7 +4,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { envFilesAllowed, fullEffective, readGate, classifyPath, grantsOf, normalizeMsysPath, showArg, isClaudeTmpRoot, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
+import { envFilesAllowed, fullEffective, readGate, classifyPath, grantsOf, normalizeMsysPath, showArg, isClaudeTmpRoot, denyOutsideText, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
@@ -93,7 +93,12 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   // File bí mật chỉ được miễn hỏi khi đường dẫn có đủ ba quyền hiệu lực; thiếu thì hỏi người dùng.
   if (where === 'inside' && !(secret && ['read', 'write', 'delete'].some((a) => classifyPath(String(file), cwd, grants, true, a) !== 'inside'))) return null;
   // deny do agent đọc nên giữ gợi ý hành động (fullPaths/fullRoots); ask hiện cho người dùng nên chỉ nói điều họ quyết được.
-  if (write && where === 'outside') return { decision: 'deny', reason: 'Chế độ full chỉ cho phép ghi vào thư mục có quyền write; đường dẫn này chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.' };
+  if (write && where === 'outside') {
+    // Dòng liệt kê root chỉ là gợi ý cho agent: lỗi khi dựng nó không được làm mất deny.
+    let reason;
+    try { reason = denyOutsideText('write', grants, 'ghi vào thư mục'); } catch { reason = denyOutsideText('write', [], 'ghi vào thư mục'); }
+    return { decision: 'deny', reason };
+  }
   const reason = where === 'unknown'
     ? `Agent muốn ${write ? 'ghi' : 'đọc'} đường dẫn chỉ biết lúc chạy (\`${showArg(file)}\`), nên không chắc nó nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.`
     : where === 'inside'
