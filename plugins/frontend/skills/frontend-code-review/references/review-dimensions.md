@@ -29,6 +29,7 @@ Nơi lỗi hay nấp trong React; đây là trục ưu tiên. Dấu hiệu:
   thiếu/thừa như effect.
 - **Loading / error / empty:** thiếu xử lý một trong ba trạng thái của dữ liệu async (chỉ vẽ khi có data →
   crash/nháy khi loading, nuốt lỗi khi fail, trống trơn khi rỗng); render khi `data` còn `undefined`.
+- **Thông báo do hành động gây ra nằm trong vùng bị gỡ khi loading:** thông báo lỗi hoặc thông báo trạng thái sinh ra từ một mutation (đổi trạng thái, xoá, tạo) được render bên trong vùng mà cha vẽ khi dữ liệu ở trạng thái `ready`, trong khi chính hành động đó kích hoạt tải lại nên vùng bị gỡ lúc loading, người dùng không còn thấy thông báo. Cách kiểm: lần từ nơi đặt thông báo tới nhánh render của cha theo `state.kind`, `isLoading` hoặc `isFetching`, rồi hỏi nhánh đó còn được render sau tải lại không; nếu không, thông báo phải nằm ngoài vùng bị gỡ, ví dụ ở cấp danh sách hoặc trang. Nhãn proven khi đã chỉ ra cả nơi đặt thông báo lẫn nhánh gỡ, nếu không thì suspected. Severity `major` khi AC yêu cầu thông báo đó (không dùng `blocker`: không crash, không mất dữ liệu).
 - **Logic sai:** điều kiện đảo, so sánh nhầm kiểu, sai định dạng số/tiền/ngày/timezone, `0`/chuỗi rỗng lọt
   vào `&&` render ra `0`, ép kiểu `any` che lỗi TypeScript.
 - **Form & controlled input:** controlled/uncontrolled lẫn lộn (value `undefined`→`defined`); không kiểm tra
@@ -108,7 +109,11 @@ hình) ghi là suspected/cần kiểm.
   `onClick` mà không hỗ trợ Enter/Space cho phần tử tuỳ biến; bẫy focus thiếu trong modal (Escape đóng,
   Tab quẩn trong modal).
 - **Quản lý focus:** modal/dialog mở không chuyển focus vào, đóng không trả focus về; đổi route không thông
-  báo/không đưa focus hợp lý.
+  báo/không đưa focus hợp lý; thay nội dung tại chỗ (tải lại danh sách, phân trang, xoá dòng) làm phần tử đang
+  focus bị gỡ khỏi DOM nên focus rơi về `body`; vùng `role="alert"` bị gỡ cùng danh sách khiến thông báo lỗi
+  có thể không hiện. Severity gợi ý `major` khi đã tái hiện (hoặc đọc mã đủ rõ) trên luồng chính; chưa tái hiện
+  được thì giữ suspected/minor theo quy tắc "Không thổi phồng" ở cuối file. Soát từ diff tĩnh: đây là suspected,
+  cần kiểm bằng chạy thật.
 - **Tương phản & trạng thái:** chỉ dùng **màu** để truyền trạng thái (lỗi/thành công) không kèm text/icon;
   tương phản chữ/nền thấp (đối chiếu design-system — nếu không đo được thì suspected).
 - **ARIA đúng:** `aria-*` sai thuộc tính/giá trị, hoặc lạm dụng `role` che mất semantic gốc.
@@ -135,6 +140,7 @@ hình) ghi là suspected/cần kiểm.
 - Thiếu test cho code **có rủi ro thật** = một finding (severity theo mức rủi ro), không phải đòi 100% phủ.
 - Test kèm PR có **giòn** không (phụ thuộc timer/thứ tự/DOM nội bộ; query theo `data-testid`/class thay vì
   role; assert chi tiết cài đặt)? Sâu về chiến lược test → route `frontend-testing`.
+- AC mô tả thứ người dùng thấy có assertion trên text hoặc role ở trạng thái cuối chuỗi sự kiện (kể cả sau tải lại) không? Assert request log, state hook hay mock được gọi không tính. Severity: `major` khi AC là thông báo lỗi hoặc xác nhận cho người dùng, `minor` với AC hiển thị khác.
 
 ## Cỡ thay đổi
 

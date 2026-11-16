@@ -20,11 +20,12 @@ trung thực** cho phần không tự verify được (độ khớp thị giác)
 - [ ] **Các state** dựng đủ theo thiết kế: hover/active/disabled/selected và (nếu có) loading/empty/error.
 - [ ] **Responsive** theo breakpoint project nếu thiết kế thể hiện nhiều cỡ.
 - [ ] **Tái dùng component-lib** đúng chỗ (không dựng lại thứ lib đã có).
+- [ ] **Đã chạy thật và đối chiếu mockup:** chỉ tích khi có `dẫn chứng` (đường dẫn ảnh chụp hoặc lệnh đã chạy). Không chạy được (không có công cụ trình duyệt, không dựng được môi trường) thì ghi `chưa kiểm` kèm lý do, không tích; lượt Kiểm giao diện thật của `workflow-feature` hoặc skill `frontend-manual-check` lo phần này.
 
 ## A11y cơ bản
 
 - [ ] Role/aria hợp lý; input có label liên kết; ảnh có alt.
-- [ ] Bấm được bằng bàn phím; focus nhìn thấy; không bẫy focus ngoài dialog.
+- [ ] Bấm được bằng bàn phím; focus nhìn thấy; không bẫy focus ngoài dialog; khi nội dung đổi tại chỗ (tải lại danh sách, phân trang, xoá dòng) focus không rơi về `body`.
 - [ ] Tương phản màu theo token đạt mức dùng được.
 
 ## Ranh giới tier (không vượt phạm vi)

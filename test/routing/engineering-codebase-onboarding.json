@@ -1,0 +1,15 @@
+{
+  "positive": [
+    "Mình mới vào team, repo này có hơn chục module Maven mà chẳng có README nào, viết README cho từng module giúp mình.",
+    "Quét cả monorepo này rồi mô tả từng module làm gì, gọi nhau thế nào, để người mới đọc là hiểu.",
+    "Dựng thư mục project-knowledge từ code có sẵn: tổng quan, kiến trúc, cấu trúc source, tech stack.",
+    "Project cũ không ai còn nhớ, đọc source theo từng module rồi viết tài liệu giới thiệu cho dev mới.",
+    "Liệt kê module từ pom.xml để mình duyệt danh sách trước, rồi mới viết README cho từng cái."
+  ],
+  "negative": [
+    "Dựng lại spec theo từng chức năng nghiệp vụ cho project cũ, mỗi quy tắc kèm file:line.",
+    "Soát cả repo và xếp hạng điểm nóng rủi ro theo mức hậu quả.",
+    "Chạy quét bảo mật OWASP và Black Duck trước khi release.",
+    "Viết release notes cho bản 2.5 từ lịch sử git."
+  ]
+}

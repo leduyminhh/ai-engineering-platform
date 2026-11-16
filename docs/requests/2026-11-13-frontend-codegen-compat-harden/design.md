@@ -1,6 +1,6 @@
 # Thiết kế: siết bảo mật và độ chính xác của chỉ dẫn kiểm tương thích công cụ codegen (N3b)
 - Ngày: 2026-11-13
-- Trạng thái: in-progress — nhánh claude/frontend-codegen-compat-harden-3570f2 (G3 2026-11-13: giữ nguyên, chưa merge; G1 duyệt cùng ngày, Q1: cả hai nơi); nhánh `claude/frontend-codegen-compat-harden-3570f2` cắt từ N3 (`cb9ecb86`, chưa merge)
+- Trạng thái: merged 296824fa
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
@@ -60,7 +60,7 @@ Package manager khác npm: giữ câu hiện có.
 
 ## Ảnh hưởng spec
 
-- workflows: đổi R25
+- workflows: đổi R26
 
 ## Ngoài phạm vi và anti-goal
 

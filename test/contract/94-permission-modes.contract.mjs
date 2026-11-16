@@ -178,8 +178,8 @@ export default async function run({ ok, ctx }) {
     const table = {
       deny: ['echo a>/tmp/x', 'echo a>>/tmp/x', 'cmd 2>/tmp/x', 'echo a>"/tmp/x y"', 'rm -rf ../x', 'rm /etc/x', 'mv a /tmp/b', 'echo x > /tmp/y', 'del C:\\Windows\\x', 'cd /tmp && rm x', 'rm a; rm /etc/b',
         'rm -rf $X; rm /etc/b', 'cp a /tmp/b', 'rm /etc/x "unclosed', 'rm a; rm /etc/b && echo "$(x'],
-      ask: ['rm -rf $X', 'rm -rf ~', 'rm -rf *', 'bash -c "rm /x"'],
-      pass: ['echo a>out.txt', "awk '$1>2' f", 'echo "a>/tmp/x"', 'git commit -m "a > b"', 'echo "x > y"', 'echo a >&2', 'rm -rf build', 'mv a b', 'echo x > out.txt', 'cp /etc/hosts here.txt', 'echo x > /dev/null', 'cmd 2>&1', 'echo x >>out.log',
+      ask: ['rm -rf $X', 'rm -rf ~', 'rm -rf *', 'bash -c "rm /x"', 'cp /etc/hosts here.txt'],
+      pass: ['echo a>out.txt', "awk '$1>2' f", 'echo "a>/tmp/x"', 'git commit -m "a > b"', 'echo "x > y"', 'echo a >&2', 'rm -rf build', 'mv a b', 'echo x > out.txt', 'echo x > /dev/null', 'cmd 2>&1', 'echo x >>out.log',
         'ls /tmp', 'echo x > "x y"', 'rm -rf src/*.js', 'rd /s /q build', 'touch a 2>/dev/null', `mv a ${scratch}/b`, 'cd sub && rm x'],
     };
     for (const [want, cmds] of Object.entries(table)) {
