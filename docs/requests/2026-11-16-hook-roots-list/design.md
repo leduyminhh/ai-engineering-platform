@@ -96,6 +96,19 @@ Test thêm vào `test/contract/99-path-permissions.contract.mjs` (cùng seam `co
 
 - Tên tham số của helper; cách gom các ca thành bảng; có tách hàm con `rootLine(grants, need)` hay không.
 
+## Quyết định khi thực thi
+
+Chép từ `Ruling:` và vòng review của ledger (`.aip/` không vào nhánh); kiểm lại bằng `node test/validate.mjs --only path-permissions`. Mục này thay D1–D6 ở chỗ nào lệch.
+
+- Cách chạy: Subagent + review từng task (người dùng chọn). Task 3 (DOCS) giao sonnet thay haiku vì dòng R21/R24 rất dài và phải khớp từng khẳng định với code. Task 4 cỡ nhỏ (chỉ bump), chịu review cuối.
+- Chạy ngay trên master trước khi hook-popup-short merge (người dùng chọn "chạy ngay, rebase sau"); sau khi hook-popup-short vào master (core 1.34.3), nhánh này merge master, giải conflict ở hai hook, R21, CHANGELOG, lock rồi bump core 1.34.4. Câu của hai hook giữ chữ ask ngắn của master và câu deny qua helper.
+- D3 đúng với code: `subject` là `lệnh này ở thư mục` (guard-bash) và `ghi vào thư mục` (guard-files); câu của guard-files bỏ chữ "này" ("đường dẫn chưa có"). Try/catch fail-open đặt ở hai nơi gọi (`denyText` và khối trong `confine`), rơi về `denyOutsideText(need, [], subject)`; không test nhánh catch vì `grantsOf` luôn trả grant hợp lệ.
+- Review cuối (opus + auditor): 0 blocker, 0 major. Một lượt sửa đã làm: dedupe root theo `norm(path)` trước khi cắt 6 mục (`denyOutsideText`), test đường dẫn root bẩn đặt ký tự bẩn ở đuôi, `noRoots` thành `normRoots` (sắp xếp mục thay vì xoá dòng), sửa câu sai về `DENY_COMMIT` ở R21, số ~600 → ~720 ký tự (đo xấu nhất ~718: 6 mục × 80 ký tự, `delete`, subject `lệnh này ở thư mục`). Chạy lại: `node test/validate.mjs --only path-permissions`.
+- Đã chấp nhận, trình ở G3 để người dùng quyết: `showArg(…, 80)` giữ 80 ký tự đuôi nên root dài hơn 80 ký tự (vd scratchpad ~130 ký tự) hiện cụt đầu, không dùng được như đường dẫn tuyệt đối; thứ tự grant theo `grantsOf` để 4 root mặc định (gốc project, gốc repo chính khi ở worktree, scratchpad, `<tmpdir>/claude`) chiếm gần hết 6 chỗ, root người dùng khai bị đẩy xuống "và N mục khác" khi có ≥ 5 root mặc định/`fullRoots`. Đó là D2 đã duyệt ở G1 nên không đổi; sửa là follow-up (vd giữ phần đầu của root, liệt kê root người dùng khai trước).
+- Giới hạn: không có test ép nhánh catch ném lỗi; `showArg` còn sót một số ký tự không hiển thị (Hangul filler, variation selector, private use) vì nguồn là đường dẫn root do người dùng khai, không phải agent; thứ tự/đường dẫn tmp hiện lẫn `\` và `/` trên Windows.
+- Baseline `npm test` lúc bắt đầu đỏ một ca ngoài phạm vi (`test/statusline.test.mjs` AC1.1, "⚠ 1 vướng" do ledger request khác); đã xanh ở lần chạy cuối (`npm test` exit 0 sau merge master).
+- Minor hoãn còn lại: câu README "deny texts keep hints such as fullRoots" hơi rộng (có từ trước); W7 của `check-request` cho AC3.1 và AC3.2 (docs, bump) vì không có test nhắc ID.
+
 ## Rủi ro và câu hỏi mở
 
 - [Inference] Liệt kê root giúp agent tự sửa đường dẫn nên giảm số lần thử lại ngoài root; chưa đo trên phiên thật.
