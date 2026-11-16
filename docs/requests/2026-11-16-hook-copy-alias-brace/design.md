@@ -1,6 +1,6 @@
 # Thiết kế: bốn lỗ ghi còn lại của guard-bash ở chế độ full
 - Ngày: 2026-11-16
-- Trạng thái: approved
+- Trạng thái: merged 33ae5160
 - Requirement: không có
 
 ## Vấn đề và lý do
