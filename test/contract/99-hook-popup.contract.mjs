@@ -256,7 +256,9 @@ export default async function run({ ok, ctx }) {
     ok(bash(`cd /e/x && echo hi >"${fwd(scratch)}/out"`, withScratch) === null, 'AC6.2: full — cd ra ngoài root, ghi >"<abs trong scratchpad>" → không hỏi, không deny');
     ok(bash(`cd /e/x && echo hi >"/etc/out"`, withScratch)?.decision === 'deny', 'AC6.3: full — cd ra ngoài root, ghi >"/etc/out" vẫn deny');
     const here = fwd(path.resolve('.'));
-    ok(bash(cdPrefixed(`cd ${here} && S="${fwd(scratch)}"`), withScratch) === null, 'AC6.2: full — cd <dir> && S="<scratchpad>"; … >"$S/out" → không hỏi');
+    // `&&` không được tin: cd lỗi thì phép gán không chạy, $S rỗng và `rm -rf $S/` thành `rm -rf /`.
+    ok(asks(cdPrefixed(`cd ${here} && S="${fwd(scratch)}"`), withScratch), 'AC6.3: full — cd <dir> && S="<scratchpad>"; … → hỏi (&& không được tin)');
+    ok(bash('cd /khong-ton-tai && S=' + fwd(scratch) + '; rm -rf $S/', withScratch) !== null, 'AC6.3: full — cd <sai> && S=<scratch>; rm -rf $S/ → không được cho qua');
     ok(bash(cdPrefixed(`cd ${here}; S="${fwd(scratch)}"`), withScratch) === null, 'AC6.2: full — cd <dir>; S="<scratchpad>"; … → không hỏi');
 
     const stay = [
@@ -269,7 +271,7 @@ export default async function run({ ok, ctx }) {
       [`if false; then S=${fwd(scratch)}; fi; rm -rf $S/x`, 'ask', 'phép gán không ở đầu lệnh cấp cao nhất'],
       [cdPrefixed('cd $D && S=' + fwd(scratch), 'rm $S/x'), 'ask', 'cd tới biến không giải được thì không tin gì phía sau'],
       [cdPrefixed('cd /e/x || S=' + fwd(scratch), 'rm $S/x'), 'ask', 'cd nối bằng || (phép gán có thể không chạy sau cd)'],
-      [cdPrefixed('cd /e/x && S=/etc', 'rm $S/x'), 'deny', 'gán ra ngoài root sau cd → deny'],
+      [cdPrefixed('cd /e/x; S=/etc', 'rm $S/x'), 'deny', 'gán ra ngoài root sau cd nối bằng ; → deny'],
       [cdPrefixed('cd /e/x && echo hi; S=' + fwd(scratch), 'rm $S/x'), 'ask', 'chỉ bỏ qua cd đứng đầu, không bỏ qua lệnh khác'],
     ];
     for (const [cmd, want, why] of stay) {
