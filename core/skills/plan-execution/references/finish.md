@@ -115,6 +115,7 @@ archive các phiên con đã mở cho request này (phiên part, phiên thực t
 - Danh sách phiên con lấy từ công cụ quản lý phiên của môi trường (liệt kê phiên liên kết với session gốc, archive); phiên
   idle là phiên môi trường báo không đang chạy và không chờ người dùng. Không có công cụ, hoặc không xác định được danh
   sách hay trạng thái: không archive gì, ghi một dòng trong báo cáo.
+- Phiên part đã archive sau merge (bước 10 của "Chế độ part" trong `task-loop.md`) thì bỏ qua; phiên part chưa archive được lúc đó thì archive ở đây.
 - Phiên còn chạy hoặc đang chờ người dùng: giữ và nêu tên từng phiên.
 - `cleanup: true`: archive luôn, không hỏi thêm. `cleanup` không phải `true` (thiếu hoặc `false`, mặc định của `autonomy.mjs`):
   hỏi một câu gộp xoá nhánh feature và đóng phiên con; đây là câu hỏi duy nhất, cả hai đường merge local (theo khoá và lựa chọn tay) dùng chung.

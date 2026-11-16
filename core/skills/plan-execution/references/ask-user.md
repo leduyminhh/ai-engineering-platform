@@ -39,7 +39,7 @@ câu trả lời rồi gõ lại.
 | G2 duyệt plan | `plan.md`, `design.md`, mọi file trong `**Files:**` của các task (gom theo task) | `plan.md` (pane file) + kết quả `check-request` + bảng task kèm `**Ước lượng:**` và tổng ước lượng tới G3 trong tin nhắn | Duyệt (chạy liền tới G3) / Sửa plan / Dừng |
 | G3 duyệt diff | file đổi trong `git diff --stat <nhánh gốc>...HEAD` (nhóm theo thư mục) kèm docs/ledger | diff cả nhánh (pane diff) | `mergeLocal: true`: Duyệt (merge local và commit docs) / Sửa thêm / Giữ nguyên; thiếu khoá: merge local / push + PR / giữ nguyên |
 | Push/PR sau merge local | không | không | Push + mở PR / Không push |
-| Cách chạy part | Bảng part | không | Phiên riêng cho từng part / Tuần tự trong session gốc |
+| Cách chạy part | Bảng part | không | Phiên riêng cho từng part (phiên gốc tự mở phiên) / Tuần tự trong session gốc; hỏi một lần, trước nhóm đầu, áp cho mọi nhóm của request; nhóm sau chỉ có thẻ một lần bấm khi app từ chối tự mở |
 | Loại dừng 1–6, vướng của part | file hoặc log liên quan | file hoặc log đó | các hướng xử lý, hướng khuyến nghị đứng đầu, kèm hệ quả |
 | Orchestrator: hai ứng viên, xác nhận Bước 3 | `brief.md` nếu có | `brief.md` nếu có | từng ứng viên / Chạy workflow đã chọn / Đổi route / Dừng |
 

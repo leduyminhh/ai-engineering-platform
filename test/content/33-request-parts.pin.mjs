@@ -516,5 +516,15 @@ export default async function run({ ok, ctx }) {
       'Chế độ part bước 6: khối bàn giao có id phiên gốc, phiên part bắt buộc SendMessage khi xong/vướng và chạy subagent ở foreground');
     ok(mode.includes('kết thúc lượt ngay') && mode.includes('đọc ledger part'),
       'Chế độ part bước 7: note chỉ báo "đang chờ" thì kết thúc lượt; part kết thúc mà chưa có báo thì đọc ledger part');
+
+    // Phiên gốc tự điều phối part khi partRunner: session
+    ok(!mode.includes('aip không tự mở phiên hay agent'), 'Chế độ part bước 3: không còn câu "aip không tự mở phiên hay agent"');
+    ok(mode.includes('start_session') && mode.includes('tự mở phiên part'),
+      'Chế độ part bước 3/6: người dùng chọn phiên riêng và có công cụ `start_session` thì phiên gốc tự mở phiên part ngay trong lượt đó, dùng khối bàn giao làm brief; chỉ in khối khi không có công cụ hoặc bị từ chối');
+    ok(mode.includes('mọi nhóm'), 'Chế độ part bước 3: câu trả lời cách chạy part áp cho mọi nhóm của request, không hỏi lại từng nhóm');
+    ok(mode.includes('Phiên gốc cũng chạy') && mode.includes('foreground'),
+      'Chế độ part: phiên gốc cũng chạy subagent của chính nó (implementer, reviewer, review cuối) ở foreground, không kết thúc lượt chỉ để chờ');
+    ok(mode.includes('đọc lại Bảng part') && mode.includes('nhóm kế'),
+      'Chế độ part bước 7: mỗi lần được đánh thức phiên gốc đọc lại Bảng part và ledger từ file rồi tự chọn bước kế (merge, xử lý vướng, mở nhóm kế, review cuối)');
   }
 }

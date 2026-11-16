@@ -159,7 +159,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   của `plan-execution` thì hỏi người dùng. Task xong ghi `Task <n>: complete` vào ledger. Cỡ "thay đổi nhỏ": brief là
   `requirement.md`, kind lấy theo phạm vi đã chốt ở Bước 2 (backend → `BE`; frontend → `FE-UI`, thêm `FE-INT` khi nối
   API thật); phạm vi backend hoặc frontend chạy một task duy nhất, task id `1`; phạm vi fullstack chạy hai task, `1` là
-  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc; cách chạy nhóm Song song theo khoá `partRunner` của `autonomy.mjs`, thiếu khoá thì hỏi người dùng một lần trước mỗi nhóm Song song).
+  `BE` rồi `2` là phía FE. Có `tasks.md` từ Bước 3 → đọc `references/task-breakdown.md`, mục Bước 5. Request chia part (`## Bảng part`) → chạy theo mục "Chế độ part" của `task-loop.md` trong skill `plan-execution` (plan gốc trước, part theo phụ thuộc; cách chạy nhóm Song song theo khoá `partRunner` của `autonomy.mjs`, thiếu khoá thì hỏi người dùng một lần, trước nhóm đầu, áp cho mọi nhóm Song song).
 - **Ràng buộc:** chỉ sửa file trong `**Files:**` của task; không giả lập data ẩn; không sửa code production để "cho test
   xanh", không xoá hay nới test, không viết test phụ thuộc thứ tự/thời gian thực/mạng thật; integrator không sửa
   `docs/contracts/` — lệch contract thì dừng, quay lại Bước 3; integrator chưa có codegen/thư viện data → dừng, đề
@@ -243,7 +243,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 
 ## Checkpoint
 
-Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); thiếu khoá `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3, còn `mergeLocal: true` thì câu hỏi push/PR đứng riêng một lần sau merge local. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom), câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá, Bước 5) và 6 loại dừng của `plan-execution`.
+Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 duyệt tài liệu (Bước 3), G2 duyệt plan (Bước 4), G3 duyệt diff cả nhánh (Bước 7); thiếu khoá `mergeLocal` thì push + PR là lựa chọn 2 của chính câu hỏi G3, còn `mergeLocal: true` thì câu hỏi push/PR đứng riêng một lần sau merge local. Ngoài ba cổng và câu push chỉ còn Bước 2 (khi còn câu làm rõ, một tin nhắn gom), câu hỏi cách chạy part (một lần, trước nhóm đầu, khi `partRunner` là `session` hoặc thiếu khoá, Bước 5) và 6 loại dừng của `plan-execution`.
 
 | Sau bước | Người duyệt xem gì | Chỉ đi tiếp khi |
 |---|---|---|
@@ -252,8 +252,8 @@ Một request chỉ dừng chờ người dùng ở ba cổng cố định: G1 d
 | 4 (G2) | `plan.md` gốc (nếu có) và `parts/*/plan.md` + output `check-request.mjs` (+ `check-partition.mjs` khi có part) + bảng task kèm `**Ước lượng:**` từng task và tổng ước lượng tới G3 (cỡ dự án; cỡ "thay đổi nhỏ" bỏ qua bước này) | Người dùng duyệt plan; `check-request.mjs` không còn cảnh báo ngoài W9 và W11 của `thêm`; `check-partition.mjs` không còn cảnh báo (hoặc nhóm bị báo chạy tuần tự) |
 | 7 (G3) | Diff cả nhánh (code + test + docs) + `rulings` + finding `major` còn lại trong `remaining_risks` + kết quả full suite | Người dùng duyệt diff cả nhánh, chấp nhận các `Ruling:`/`major` còn lại; có `mergeLocal: true` thì đó là đồng ý merge local, không thì chọn một trong 3 lựa chọn |
 
-Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution` và câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), còn câu hỏi chỉ ở G1, G2, G3, câu hỏi push, câu hỏi cách chạy part, loại dừng hoặc lỗi chặn (định nghĩa ở mục "Báo cáo" của `task-loop.md` trong skill `plan-execution`). Người dùng vẫn thấy tiến độ tổng thể theo mục "Báo tiến độ" của `task-loop.md`: danh sách task của công cụ đăng đủ mọi task trước Task 1, mỗi task xong có một dòng tiến độ (task n/N, đã chạy, còn lại theo ước lượng) không chờ trả lời. Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
-tag chỉ sau lựa chọn của người dùng ở Bước 7 (`mergeLocal: true` đã là chọn merge local; không khoá nào bật push); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời trước nhóm Song song, hoặc khoá `partRunner: subagent` (Bước 5), là merge local, không chờ Bước 7; agent không tự commit (ngoại lệ: subagent part theo `inline.md`).
+Giữa G2 và G3 (Bước 5–6) chạy liên tục, không hỏi người dùng ngoài 6 loại dừng của `plan-execution` và câu hỏi cách chạy part (khi `partRunner` là `session` hoặc thiếu khoá), còn câu hỏi chỉ ở G1, G2, G3, câu hỏi push, câu hỏi cách chạy part, thẻ mở nhóm sau, loại dừng hoặc lỗi chặn (định nghĩa ở mục "Báo cáo" của `task-loop.md` trong skill `plan-execution`). Người dùng vẫn thấy tiến độ tổng thể theo mục "Báo tiến độ" của `task-loop.md`: danh sách task của công cụ đăng đủ mọi task trước Task 1, mỗi task xong có một dòng tiến độ (task n/N, đã chạy, còn lại theo ước lượng) không chờ trả lời. Session chính commit theo task trên nhánh `feature/` qua `core:git-workflow` không dừng; merge, push,
+tag chỉ sau lựa chọn của người dùng ở Bước 7 (`mergeLocal: true` đã là chọn merge local; không khoá nào bật push); ngoại lệ: `merge --no-ff` nhánh part vào `feature/<slug>` đã được người dùng đồng ý bằng câu trả lời một lần trước nhóm Song song đầu tiên (áp cho mọi nhóm), hoặc khoá `partRunner: subagent` (Bước 5), là merge local, không chờ Bước 7; agent không tự commit (ngoại lệ: subagent part theo `inline.md`).
 
 ## Xử lý lỗi & rollback
 
