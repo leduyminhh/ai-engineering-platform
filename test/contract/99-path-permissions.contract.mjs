@@ -36,7 +36,7 @@ export default async function run({ ok, ctx }) {
 
   // Câu deny dùng chung (kiểu list_roots): liệt kê root có đúng quyền đang thiếu để agent biết được làm ở đâu.
   const deny = denyOutsideText;
-  const G =(p, allow, glob = false) => ({ path: p, allow, ...(glob ? { glob: true } : {}) });
+  const G = (p, allow, glob = false) => ({ path: p, allow, ...(glob ? { glob: true } : {}) });
   const ALL = ['read', 'write', 'delete'];
   const gT = G('/aip-dt-t', ALL);
   const gO = G('/aip-dt-o', ['read', 'write']);
@@ -64,7 +64,7 @@ export default async function run({ ok, ctx }) {
     const dl = rootLine(dt);
     ok(dt.split('\n').length === 3 && (dl.match(/`/g) ?? []).length === 2 && !dl.includes('\u202e') && dl.includes('z'.repeat(40)) && !dl.includes('a'.repeat(30)) && dl.slice(dl.indexOf('`') + 1, dl.lastIndexOf('`')).length <= 81,
       'AC1.3: đường dẫn root có xuống dòng, backtick, bidi, quá dài không chèn dòng giả và chỉ giữ 80 ký tự cuối');
-    ok(/z{10} c z{40}/.test(dl),'AC1.3: ký tự bẩn ở đuôi bị thay bằng khoảng trắng, không còn trong dòng root');
+    ok(/z{10} c z{40}/.test(dl), 'AC1.3: ký tự bẩn ở đuôi bị thay bằng khoảng trắng, không còn trong dòng root');
     const dup = [G('/aip-dt-t', ALL), G('/aip-dt-t/', ALL)];
     ok((rootLine(deny('write', dup, 'x')).match(/aip-dt-t/g) ?? []).length === 1, 'AC1.3: hai grant cùng đường dẫn (một có đuôi /) chỉ hiện một lần');
     const dup7 = [...many.slice(0, 6), G('/aip-dt-r0/', ALL)];
@@ -88,9 +88,11 @@ export default async function run({ ok, ctx }) {
   // guard-files: quyền theo thư mục (full hiệu lực). Khuôn ask sao chép từ 99-hook-popup.
   const files = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'guard-files.mjs')).href);
   const BANNED = ['nguyên tắc nền', 'hook an toàn', 'fullRoots', 'bypass', 'root'];
+  const ADVICE = /cho phép|từ chối|nên |hãy |khuyên|agent muốn/i;
   const shapeOk = (reason) => {
-    const main = String(reason).split('\n').filter((l) => !l.startsWith('Lệnh gồm')).join(' ');
-    return typeof reason === 'string' && !BANNED.some((w) => reason.toLowerCase().includes(w.toLowerCase())) && /cho phép|từ chối/i.test(main) && main.length <= 500;
+    const lines = String(reason).split('\n');
+    const main = lines.filter((l) => !l.startsWith('Lệnh gồm')).join(' ');
+    return typeof reason === 'string' && !BANNED.some((w) => reason.toLowerCase().includes(w.toLowerCase())) && !ADVICE.test(main) && main.length <= 500 && lines.length <= 2;
   };
   const tmp = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-pp-gf-')));
   try {

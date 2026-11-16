@@ -23,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Câu `deny` ngoài root của `guard-bash`/`guard-files` liệt kê root có quyền đang thiếu (`docs/requests/2026-11-16-hook-roots-list`; core 1.34.3): chế độ `full` thêm một dòng `Được ghi: …` hoặc `Được xoá: …` (tối đa 6 mục rồi `… và N mục khác`, bỏ root chỉ-đọc và glob) để agent biết làm ở đâu; câu do helper chung `denyOutsideText` ở `gate-config.mjs` dựng, nên hai hook dùng cùng một chữ (spec `hooks-gates/R21`, `R24`).
+- Popup hỏi của hook chỉ nêu việc đang làm và nhánh hoặc đường dẫn bị đụng (`docs/requests/2026-11-16-hook-popup-short`; core 1.34.3): reason `ask` của `guard-bash` và `guard-files` là một câu ngắn nêu việc kèm token khi có (câu full không bypass có thêm câu thứ hai `Đổi: aip mode ask`), bỏ câu khuyên, "vì sao hỏi" và "cho phép thì sao"; dòng `Lệnh gồm` tối đa 3 bước, đường dẫn trong bước giữ 40 ký tự cuối; `deny` và `DENY_COMMIT` không đổi; `summarize` nhận tham số `max` cho test (spec `hooks-gates/R21`).
+
+- Câu `deny` ngoài root của `guard-bash`/`guard-files` liệt kê root có quyền đang thiếu (`docs/requests/2026-11-16-hook-roots-list`; core 1.34.4): chế độ `full` thêm một dòng `Được ghi: …` hoặc `Được xoá: …` (tối đa 6 mục rồi `… và N mục khác`, bỏ root chỉ-đọc và glob) để agent biết làm ở đâu; câu do helper chung `denyOutsideText` ở `gate-config.mjs` dựng, nên hai hook dùng cùng một chữ (spec `hooks-gates/R21`, `R24`).
 
 - Bổ sung phần còn hở sau đợt học từ agent-skills (core 1.31.0): mục `## Dấu hiệu nới kiểm` của `review-package.mjs` còn bắt ngưỡng số bị nới trong cùng khối thay đổi (coverage/`fail_under`/`<minimum>`/`lines`… bị hạ, `--max-warnings`/`max-complexity`… bị nâng; khoá phải đi liền con số, bỏ qua file `.md`), task-review xét các dòng đó như test bị skip; `npm test` in `[warn]` (không fail) cho SKILL.md có thân quá 300 dòng, trần lỗi 500 giữ nguyên.
 
