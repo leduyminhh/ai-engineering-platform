@@ -1,7 +1,7 @@
 {
   "backend": {
-    "version": "1.15.3",
-    "hash": "209ed5c404813a51629aebe2739e7e5f14d66d464bb3259775cf2419b9721ace"
+    "version": "1.16.0",
+    "hash": "ab53c91a318beadac6ffb9a38ce8c5bbfaefa791fb8a0bc1950365c48c869689"
   },
   "core": {
     "version": "1.34.4",
