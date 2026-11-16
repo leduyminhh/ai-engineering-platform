@@ -17,14 +17,14 @@
 | `test/contract/99-path-permissions.contract.mjs` | bản sao `shapeOk` (Task 1); ca dòng `Lệnh gồm` nếu lệch số bước (Task 2) | Task 1–2 |
 | `docs/specs/hooks-gates/spec.md` | R21 theo khuôn mới; Phạm vi; Nguồn; dòng Lịch sử | Task 3 |
 | `README.md`, `README_VI.md`, `CHANGELOG.md` | mục Hooks, đoạn mô tả popup và dòng `Lệnh gồm` (dòng ~341 và ~345); mục CHANGELOG mới | Task 3 |
-| `core/.manifest.json`, `plugins/_versions.lock.json` | bump core 1.33.23 → 1.33.24, lock | Task 4 |
+| `core/.manifest.json`, `plugins/_versions.lock.json` | bump core (thực tế 1.34.1 → 1.34.2, rồi 1.34.3 sau lượt sửa review cuối), lock | Task 4 |
 
 Không đổi: `gate-config.mjs`, `guard-mcp.mjs`, `gate-stop.mjs`, `session-start.mjs`, `cli/lib/*`, logic quyết định `ask`/`deny` và mọi câu `deny`; `90-hooks`, `94-permission-modes`, `97-audit-mustfix` giữ nguyên làm bằng chứng tương thích (grep xem còn ca nào ghim chữ cũ thì sửa ở Task 1). Task 1–2 cùng sửa `guard-bash.mjs` và cùng file test nên chạy tuần tự.
 
 ## Global Constraints
 - Zero-dependency; hook fail-open với lỗi nội bộ (`summarize` lỗi chỉ mất dòng tóm tắt); không đổi khi nào hook hỏi hay chặn; không đổi câu `deny`, `DENY_COMMIT`, `CLAUDE_TMP_BLOCKED_TEXT`.
 - Khuôn reason `ask`: dòng 1 là một câu `<việc> <token>.`, không "Agent muốn", không lý do, không `cho phép`, `từ chối`, `nên `, `hãy `, `khuyên`; dòng 2 (chỉ `guard-bash`) là `Lệnh gồm: …`; tối đa 2 dòng, câu chính tối đa 500 ký tự, tổng dưới 1200 ký tự khi dữ liệu agent dài; dữ liệu agent đi qua `showArg` (giữ nguyên).
-- Chữ mới nguyên văn (token trong `` ` ``): ``Đẩy code lên nhánh bảo vệ `master`.``; `Force push: ghi đè nhánh trên remote.`; `Push vào nhánh chưa rõ (tên nhánh hoặc thư mục là biến).`; ``Ghi vào file cấu hình quyền (`.claude/aip-gate.json` hoặc `settings.json`).`` (guard-bash) và ``Ghi vào file cấu hình quyền `aip-gate.json`.`` (guard-files, tên file qua `showArg(path.basename)`); ``Ghi hoặc xoá ở đường dẫn chưa rõ (`$VAR`, `~`, `*`).``; `Đọc file ngoài các thư mục được cấp quyền đọc.`; ``Lệnh đẩy code, gọi mạng hoặc deploy; project bật chế độ full nhưng phiên này vẫn hỏi. Đổi: `aip mode ask`.``; ``Lệnh nhắc tới file bí mật `<tên>`.``; `Lệnh commit có dấu nháy chưa đóng, không đọc chắc được.`; guard-files: ``Ghi|Đọc đường dẫn chưa rõ `<đường dẫn>`.``, ``Ghi|Đọc file bí mật `<đường dẫn>` ở thư mục chưa đủ quyền đọc, ghi, xoá.``, ``Đọc file ngoài thư mục project `<đường dẫn>`.``
+- Chữ mới nguyên văn (token trong `` ` ``): ``Đẩy code lên nhánh bảo vệ `master`.``; `Force push hoặc xoá nhánh trên remote.`; `Push vào nhánh chưa rõ (tên nhánh hoặc thư mục là biến).`; ``Ghi vào file cấu hình quyền (`.claude/aip-gate.json` hoặc `settings.json`).`` (guard-bash) và ``Ghi vào file cấu hình quyền `aip-gate.json`.`` (guard-files, tên file qua `showArg(path.basename)`); ``Ghi hoặc xoá ở đường dẫn chưa rõ (`$VAR`, `~`, `*`).``; `Đọc file ngoài các thư mục được cấp quyền đọc.`; ``Lệnh đẩy code, gọi mạng hoặc deploy; project bật chế độ full nhưng phiên này vẫn hỏi. Đổi: `aip mode ask`.``; ``Lệnh nhắc tới file bí mật `<tên>`.``; `Lệnh commit có dấu nháy chưa đóng, không đọc chắc được.`; guard-files: ``Ghi|Đọc đường dẫn chưa rõ `<đường dẫn>`.``, ``Ghi|Đọc file bí mật `<đường dẫn>` ở thư mục chưa đủ quyền đọc, ghi, xoá.``, ``Đọc file ngoài thư mục project `<đường dẫn>`.``
 - `Lệnh gồm`: tối đa 3 bước rồi `, … và N bước khác`; đường dẫn trong mỗi bước `showArg(…, 40)`; `summarize(cmd, msys = true, max = MAX_STEPS)` và `export` chỉ để test.
 - Test: bảng ca sẵn có của `99-hook-popup.contract.mjs` (một hàng mỗi nhánh); không ghim cả câu, chỉ khuôn (từ cấm, không chữ khuyên, ≤ 500 ký tự, ≤ 2 dòng) và token khớp; mỗi `ok()` ghi ID AC trong thông điệp; dọn tạm bằng `fs.rmSync`, không `rm -rf`.
 - Tiếng Việt có dấu, UTF-8 không BOM, LF; comment theo AGENTS.md (chỉ khi gate đạt); comment cũ nói về khuôn "cho phép thì sao, nên chọn gì" phải sửa theo khuôn mới.
@@ -111,6 +111,6 @@ Không đổi: `gate-config.mjs`, `guard-mcp.mjs`, `gate-stop.mjs`, `session-sta
 - Consumes: nội dung hook đã đổi ở Task 1–2
 - Produces: không có
 
-- [ ] **Step 1:** `core/.manifest.json` 1.33.23 → 1.33.24; `npm run build`; `node cli/lib/versions.mjs --lock`.
+- [ ] **Step 1:** `core/.manifest.json` 1.34.1 → 1.34.2 (master đã lên 1.34.1; ban đầu ghi 1.33.23 → 1.33.24); `npm run build`; `node cli/lib/versions.mjs --lock`.
 - [ ] **Step 2:** `npm test` một lần (không chạy lại sau từng vòng sửa). Xanh mới sang review cuối.
-- [ ] **Step 3:** commit `chore(core): bump to 1.33.24`.
+- [ ] **Step 3:** commit `chore(core): bump to 1.34.2`.

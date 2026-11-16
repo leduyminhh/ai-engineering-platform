@@ -714,24 +714,25 @@ function writesGuardConfig(t, msys = true) {
   return (name === 'sed' || name === 'perl') && args.some((a) => IN_PLACE_FLAG.test(a)) && args.some((a) => GUARD_CONFIG.test(a));
 }
 
-// Câu hỏi hiện trong popup cho người dùng: nói việc lệnh làm, vì sao hỏi, cho phép thì sao và nên chọn gì, không dùng thuật ngữ nội bộ.
+// Câu hỏi hiện trong popup cho người dùng: chỉ nói lệnh đang làm gì và đụng nhánh/đường dẫn nào; không lý do, không lời khuyên, không thuật ngữ nội bộ.
 const PUSH_TEXT = {
-  force: 'Lệnh push này có thể ghi đè hoặc xoá nhánh trên remote; commit bị mất không lấy lại được. Hãy từ chối, trừ khi chính bạn yêu cầu.',
-  unknown: 'Không đoán được lệnh sẽ push vào nhánh nào (tên nhánh hoặc thư mục là biến). Xem lệnh bên dưới; chỉ cho phép khi chắc đó không phải nhánh bảo vệ.',
+  force: 'Force push hoặc xoá nhánh trên remote.',
+  unknown: 'Push vào nhánh chưa rõ (tên nhánh hoặc thư mục là biến).',
 };
 const pushText = (r) => (r.kind === 'protected'
-  ? `Đẩy code lên nhánh bảo vệ \`${r.branch}\` trên remote. Sau khi đẩy, người khác thấy ngay và khó rút lại. Chỉ cho phép nếu bạn đã duyệt diff; nếu không, hãy từ chối để agent đẩy lên nhánh feature.`
+  ? `Đẩy code lên nhánh bảo vệ \`${r.branch}\`.`
   : PUSH_TEXT[r.kind]);
-const CONFIG_TEXT = 'Lệnh sửa file cấu hình quyền (.claude/aip-gate.json hoặc settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.';
-const FULL_PATH_TEXT = 'Lệnh ghi hoặc xoá ở đường dẫn chỉ biết lúc chạy (`$VAR`, `~`, `*`), không chắc nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.';
-const READ_OUTSIDE_TEXT = 'Lệnh đọc file ngoài các thư mục đã cấp quyền đọc cho agent. Cho phép thì nội dung file có thể vào hội thoại hoặc được chép sang nơi khác. Chỉ cho phép khi chắc file đó an toàn để agent xem; không chắc thì từ chối.';
-const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy. Project bật chế độ full nhưng phiên này không chạy ở chế độ bỏ qua hỏi quyền nên vẫn hỏi bạn như bình thường. Cho phép hoặc từ chối từng lần; muốn đổi thì chạy `aip mode ask`.';
-const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent hoặc bị gửi ra ngoài. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
+const CONFIG_TEXT = 'Ghi vào file cấu hình quyền (`.claude/aip-gate.json` hoặc `settings.json`).';
+const FULL_PATH_TEXT = 'Ghi hoặc xoá ở đường dẫn chưa rõ (`$VAR`, `~`, `*`).';
+const READ_OUTSIDE_TEXT = 'Đọc file ngoài các thư mục được cấp quyền đọc.';
+const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy; project bật chế độ full nhưng phiên này vẫn hỏi. Đổi: `aip mode ask`.';
+const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`.`;
 
 // Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
-const MAX_STEPS = 6;
+const MAX_STEPS = 3;
 // Chỉ dùng thông tin có sẵn từ parse (tên lệnh, lệnh con git, đích chuyển hướng); không đoán số file vì git commit -m không nêu file nào.
-function summarize(cmd, msys = true) {
+// `max` chỉ để test đọc đủ bước; popup luôn dùng MAX_STEPS.
+export function summarize(cmd, msys = true, max = MAX_STEPS) {
   const p = parse(stripSimpleHeredocs(cmd) ?? cmd);
   const steps = [];
   let total = 0;
@@ -741,7 +742,7 @@ function summarize(cmd, msys = true) {
     if (/\$\(|`|<\(/.test(t.join(' '))) nested = true;
     if (k >= tk.length || String(tk[k]).startsWith('#')) continue;
     total++;
-    if (steps.length >= MAX_STEPS) continue;
+    if (steps.length >= max) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
     const w = writeTargets(t, msys);
     // Nêu đường dẫn gây ra câu hỏi: đường dẫn chưa biết (`$X`, `~`), rồi file cấu hình hook, rồi đích đầu tiên; nếu không, nguồn đọc đứng đầu của cp che mất đích ghi.
@@ -750,10 +751,10 @@ function summarize(cmd, msys = true) {
     const nd = w.needs[ti] ?? [];
     // Đích vừa đọc vừa ghi (cờ lạ của Copy-Item) nói là ghi: câu hỏi quyền xoay quanh việc ghi.
     const verb = nd.includes('delete') ? (nd.includes('write') ? 'xoá hoặc ghi' : 'xoá') : nd.includes('write') || !nd.includes('read') ? 'ghi vào' : 'đọc';
-    steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${ti >= 0 ? ` (${verb} ${showArg(w.targets[ti], 60)})` : ''}`);
+    steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${ti >= 0 ? ` (${verb} ${showArg(w.targets[ti], 40)})` : ''}`);
   }
   if (!total) return '';
-  const more = total > MAX_STEPS ? `, … và ${total - MAX_STEPS} bước khác` : '';
+  const more = total > max ? `, … và ${total - max} bước khác` : '';
   const open = (p.unclosed ? ' (nháy chưa đóng: danh sách có thể thiếu bước)' : '') + (nested ? ' (có lệnh lồng trong nháy: xem khối lệnh bên dưới)' : '');
   return `Lệnh gồm: ${steps.join(', ')}${more}.${open}`;
 }
@@ -761,7 +762,7 @@ function summarize(cmd, msys = true) {
 const NON_ASCII = /[^\x00-\x7F]/;
 const DENY_COMMIT = { decision: 'deny', reason: 'Commit message có ký tự non-ASCII qua -m dễ hỏng encoding. Ghi message ra file UTF-8, kiểm bằng check-commit-message.mjs rồi chạy `git commit -F <file>` (skill git-workflow).' };
 
-const UNPARSABLE_TEXT = 'Không đọc chắc được lệnh commit (dấu nháy chưa đóng). Nên từ chối để agent viết lại bằng `git commit -F`, hoặc cho phép nếu bạn đã tự kiểm tra lệnh.';
+const UNPARSABLE_TEXT = 'Lệnh commit có dấu nháy chưa đóng, không đọc chắc được.';
 
 // Kiểm tuyến tính theo dòng/đoạn (không regex lồng) để input dài không gây backtracking bậc hai.
 function hasCommitWithMessageFlag(cmd) {
