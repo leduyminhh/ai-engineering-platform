@@ -3,7 +3,7 @@ export default async function run({ ok, ctx }) {
   const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR } = ctx;
   const { runMode } = await import(pathToFileURL(path.join(CORE_DIR, '..', 'cli', 'lib', 'mode.mjs')).href);
 
-  const { fullPaths, classifyPath, denyOutsideText } = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'gate-config.mjs')).href);
+  const { fullPaths, classifyPath, denyOutsideText, CLAUDE_TMP_BLOCKED_TEXT } = await import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'gate-config.mjs')).href);
   const A = path.resolve('/aip-pp-a');
   const B = path.resolve('/aip-pp-b');
   const cases = [
@@ -161,6 +161,15 @@ export default async function run({ ok, ctx }) {
     ok(allTools.every((tool) => dec(tool, CTF, { cfg: { mode: 'ask' } }) === null && dec(tool, CTF, { extra: { permission_mode: 'default' } }) === null
       && files.decide({ tool_name: tool, tool_input: { file_path: CTF }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full' }) }) === null),
     'AC2.2: mode ask, phiên không bypass hoặc aip-gate.json bị git theo dõi → gốc <tmpdir>/claude không bị chặn bởi mục này');
+    // Deny ghi ngoài root liệt kê root có quyền write (kiểu list_roots); D chỉ read nên không có mặt.
+    for (const tool of WRITES) {
+      const d = dec(tool, path.join(X, 'a.txt'));
+      const l = rootLine(d?.reason ?? '');
+      ok(d?.decision === 'deny' && l.startsWith('Được ghi:') && [P, O, T, W].every((p) => l.includes(p)) && !l.includes(D) && /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason) && /"write"/.test(d.reason),
+        `AC1.2: ${tool} vào ngoài root → deny, dòng "Được ghi:" liệt kê root có quyền write, vẫn nêu fullPaths và fullRoots`);
+    }
+    ok(WRITES.every((tool) => dec(tool, CTF)?.reason === CLAUDE_TMP_BLOCKED_TEXT) && dec('Read', OTHER)?.decision === 'ask' && !/Được (ghi|xoá):/.test(dec('Read', OTHER).reason),
+      'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, ask đọc ngoài root không có dòng root');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 
   // guard-bash: quyền ghi/xoá theo thư mục (full + bypass).
@@ -363,6 +372,25 @@ export default async function run({ ok, ctx }) {
     ok([denyW, denyD].every((d) => /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason)) && /write/.test(denyW.reason) && /delete/.test(denyD.reason), 'AC6.2: reason deny nêu fullPaths, fullRoots và quyền thiếu');
     const asks = ['rm $X/f', `cat ${D}/.env`].map((c) => bd(c));
     ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask của guard-bash theo khuôn');
+
+    // Deny ghi/xoá ngoài root liệt kê root có đúng quyền đang thiếu (kiểu list_roots); đường dẫn Windows đổi về / để so khớp.
+    const OUTP = u(path.join(tb, 'out'));
+    const roots = (cmd) => { const d = bd(cmd); return { d, l: rootLine(d?.reason ?? '').replace(/\\/g, '/') }; };
+    for (const c of [`cp x ${OUTP}/b`, `echo x > ${OUTP}/f`, `touch ${OUTP}/f`]) {
+      const { d, l } = roots(c);
+      ok(d?.decision === 'deny' && l.startsWith('Được ghi:') && [P, O, T].every((p) => l.includes(p)) && !l.includes(D) && /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason) && /"write"/.test(d.reason),
+        `AC1.1: \`${c.replaceAll(u(tb), '~')}\` → deny, dòng "Được ghi:" liệt kê P, O, T (không D), vẫn nêu fullPaths, fullRoots và quyền thiếu`);
+    }
+    {
+      const { d, l } = roots(`rm ${OUTP}/f`);
+      ok(d?.decision === 'deny' && l.startsWith('Được xoá:') && [P, T].every((p) => l.includes(p)) && !l.includes(O) && !l.includes(D) && /"delete"/.test(d.reason),
+        'AC1.1: rm ngoài root → deny, dòng "Được xoá:" chỉ liệt kê root có quyền delete (P, T)');
+    }
+    const dc =bd('git commit -m "tiếng Việt"', { cfg: { mode: 'ask' } });
+    ok(bd(`rm ${CT}`)?.reason === CLAUDE_TMP_BLOCKED_TEXT && dc?.decision === 'deny' && !/Được (ghi|xoá):/.test(dc.reason) && !/Được (ghi|xoá):/.test(bd('rm $X/f')?.reason ?? ''),
+      'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, DENY_COMMIT và ask không có dòng root');
+    ok(['guard-bash.mjs', 'guard-files.mjs'].every((f) => !fs.readFileSync(path.join(CORE_DIR, 'hooks', 'scripts', f), 'utf8').includes('Chế độ full chỉ cho phép')),
+      'AC2.1: câu deny ngoài root chỉ còn dựng ở gate-config (guard-bash và guard-files gọi denyOutsideText)');
 
     // hook-ps-write-flags: cờ có giá trị đứng trước đường dẫn của Set-Content/Out-File/Add-Content không được làm mất đích thật.
     const psw = (ac, rows, opt = { tool: 'PowerShell' }) => expectAll(rows.map(([c, want]) => [c, want, `ps-write-flags ${ac}`]), opt);
