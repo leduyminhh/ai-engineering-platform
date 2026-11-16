@@ -129,7 +129,7 @@ published (e.g. the `data-oltp-*` / `data-olap-*` skills) stay drafts, installab
 | `backend` | Backend (REST API / service) project. | `backend-init`, `backend-migrate-architecture`, `backend-migrate-vault-consul` |
 | `frontend` | Frontend (web app / SPA) project. | `frontend-init`, `frontend-migrate-architecture` |
 | `data` | Data project — OLTP DB (`data-oltp-*`) + OLAP warehouse/pipeline (`data-olap-*`). *(partly published: `data-db-migration`; OLTP/OLAP skills still draft)* | `data-db-migration`, `data-oltp-init`, `data-olap-init` |
-| `engineering` | Cross-cutting engineering capabilities (quality gate, spec, task breakdown, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-spec-backfill`, `engineering-task-breakdown`, `engineering-adr` |
+| `engineering` | Cross-cutting engineering capabilities (quality gate, spec, task breakdown, diagram, ADR, release notes, convention). | `engineering-quality-gate`, `engineering-spec-writing`, `engineering-spec-backfill`, `engineering-task-breakdown`, `engineering-adr`, `engineering-codebase-onboarding` |
 | `ops` | Server maintenance — deploy/release, incident triage, observability. | `ops-deploy-release`, `ops-incident-troubleshooting`, `ops-observability` |
 
 Each `*-init` skill is a **docs-only scaffolder**: it drops the `templates/init`
@@ -234,12 +234,11 @@ Open gaps — not yet built.
 | G3 | `engineering-dependency-upgrade` | engineering | `workflow-dependency-upgrade` |
 | G4 | `engineering-bugfix` (reproduce → evidence → failing test → root cause → minimal fix) | engineering | WF02 |
 | G6 | `ops-ci-pipeline` (GitHub Actions / GitLab CI / Jenkins) | ops | — |
-| G7 | `engineering-codebase-onboarding` (brownfield → `project-knowledge/`) | engineering | `workflow-onboarding` |
 | G8 | `engineering-tech-debt-audit` | engineering | `workflow-tech-debt-review` |
 | G11 | `engineering-docs-sync` | engineering | — |
 
 **Future workflows:** `workflow-new-project`, `workflow-dependency-upgrade` (G3),
-`workflow-onboarding` (G7), `workflow-tech-debt-review` (G8).
+`workflow-onboarding` (skill G7 `engineering-codebase-onboarding` already built; workflow not yet), `workflow-tech-debt-review` (G8).
 
 **Provider / platform (P1–P7):**
 
