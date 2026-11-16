@@ -61,8 +61,9 @@ const SH_KW = new Set([...SH_OPEN, ...SH_CLOSE, 'then', 'else', 'elif', 'do', 'f
 function skipSubst(cmd, i) {
   if (cmd[i] === '`') { const e = cmd.indexOf('`', i + 1); return e < 0 ? cmd.length : e + 1; }
   let depth = 0;
-  for (let k = i + 1; k < cmd.length; k++) {
+  for (let k = i; k < cmd.length; k++) {
     const c = cmd[k];
+    if (c === '\\') { k++; continue; }
     if (c === "'" || c === '"') { const e = cmd.indexOf(c, k + 1); if (e < 0) return cmd.length; k = e; continue; }
     if (c === '(') depth++;
     else if (c === ')' && --depth === 0) return k + 1;
@@ -118,28 +119,31 @@ export function scanWords(cmd, dialect = 'bash') {
       }
       const quote = q === "'" ? 'single' : 'double';
       if (q === '"' && ((ps && c === '`') || (!ps && c === '\\' && '"\\$`'.includes(cmd[i + 1] ?? '')))) { if (i + 1 < cmd.length) { add(cmd[i + 1], quote); i++; } continue; }
+      if (q === '"' && ((c === '$' && cmd[i + 1] === '(') || (c === '`' && !ps))) { const e = skipSubst(cmd, i + (c === '$' ? 1 : 0)); add(cmd.slice(i, e), quote); i = e - 1; continue; }
       add(c, quote);
       continue;
     }
     if (c === '"' || c === "'") { q = c; parts ??= []; parts.push({ text: '', quote: c === "'" ? 'single' : 'double' }); continue; }
     if ((ps && c === '`') || (!ps && c === '\\')) {
       if (cmd[i + 1] === '\n') { i++; continue; }
-      if (i + 1 < cmd.length) { add(cmd[i + 1], 'none'); i++; }
+      if (i + 1 < cmd.length) { (parts ??= []).push({ text: cmd[i + 1], quote: 'single' }); i++; }
       continue;
     }
     if ((c === '$' && cmd[i + 1] === '(') || (c === '`' && !ps)) { const e = skipSubst(cmd, i + (c === '$' ? 1 : 0)); add(cmd.slice(i, e), 'none'); i = e - 1; continue; }
     if (c === '#' && !parts) { while (i + 1 < cmd.length && cmd[i + 1] !== '\n') i++; continue; }
-    if (c === '\n') { endSeg(); setSep(';'); continue; }
+    if (c === '\n') { endSeg(); if (pending !== '&&') setSep(';'); continue; }
     if (/\s/.test(c)) { endWord(); continue; }
     if (c === '(') { endSeg(); paren++; continue; }
     if (c === ')') { endSeg(); paren = Math.max(0, paren - 1); continue; }
     if (c === ';') { endSeg(); setSep(';'); continue; }
     if (c === '|') { endSeg(); if (cmd[i + 1] === '|') { i++; setSep('||'); } else setSep('|'); continue; }
     if (c === '&') {
+      if (!ps && (cmd[i - 1] === '>' || cmd[i - 1] === '<' || cmd[i + 1] === '>')) { add(c, 'none'); continue; }
       if (cmd[i + 1] === '&') { endSeg(); i++; setSep('&&'); continue; }
       if (ps) { add(c, 'none'); continue; }
       endSeg();
-      if (segs.length) segs[segs.length - 1].background = true;
+      // `&` đưa cả danh sách and-or phía trước vào nền, không chỉ đoạn cuối.
+      for (let j = segs.length - 1; j >= 0; j--) { segs[j].background = true; if (['start', ';', '&'].includes(segs[j].sep)) break; }
       setSep('&');
       continue;
     }

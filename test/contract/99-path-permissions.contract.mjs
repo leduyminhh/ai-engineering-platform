@@ -545,7 +545,19 @@ export default async function run({ ok, ctx }) {
     const shape = (r) => r?.segs.map((g) => ({ sep: g.sep, bg: g.background, cp: g.compound, w: g.words.map((x) => x.parts.map((q) => `${q.quote}:${q.text}`).join('+')) }));
     const label = (cmd) => cmd.replace(/\n/g, '\\n');
     const SW = [
-      ['a && b & c', [{ sep: 'start', bg: false, cp: false, w: ['none:a'] }, { sep: '&&', bg: true, cp: false, w: ['none:b'] }, { sep: '&', bg: false, cp: false, w: ['none:c'] }]],
+      ['a && b & c', [{ sep: 'start', bg: true, cp: false, w: ['none:a'] }, { sep: '&&', bg: true, cp: false, w: ['none:b'] }, { sep: '&', bg: false, cp: false, w: ['none:c'] }]],
+      ['cd x && rm f &; y', [{ sep: 'start', bg: true, cp: false, w: ['none:cd', 'none:x'] }, { sep: '&&', bg: true, cp: false, w: ['none:rm', 'none:f'] }, { sep: ';', bg: false, cp: false, w: ['none:y'] }]],
+      ['echo $(a) ; b', [{ sep: 'start', bg: false, cp: false, w: ['none:echo', 'none:$(a)'] }, { sep: ';', bg: false, cp: false, w: ['none:b'] }]],
+      ['echo $(a) && b', [{ sep: 'start', bg: false, cp: false, w: ['none:echo', 'none:$(a)'] }, { sep: '&&', bg: false, cp: false, w: ['none:b'] }]],
+      ['echo $((1+2)); x', [{ sep: 'start', bg: false, cp: false, w: ['none:echo', 'none:$((1+2))'] }, { sep: ';', bg: false, cp: false, w: ['none:x'] }]],
+      ['x=$(a b)c d', [{ sep: 'start', bg: false, cp: false, w: ['none:x=$(a b)c', 'none:d'] }]],
+      ['rm &>/dev/null x', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'none:&>/dev/null', 'none:x'] }]],
+      ['rm >&2 x', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'none:>&2', 'none:x'] }]],
+      ['foo 2>&1 | tee o', [{ sep: 'start', bg: false, cp: false, w: ['none:foo', 'none:2>&1'] }, { sep: '|', bg: false, cp: false, w: ['none:tee', 'none:o'] }]],
+      ['a &&\nb', [{ sep: 'start', bg: false, cp: false, w: ['none:a'] }, { sep: '&&', bg: false, cp: false, w: ['none:b'] }]],
+      ['echo "$(printf \'"\')" ; rm x', [{ sep: 'start', bg: false, cp: false, w: ['none:echo', 'double:$(printf \'"\')'] }, { sep: ';', bg: false, cp: false, w: ['none:rm', 'none:x'] }]],
+      ['S="$(cygpath -u \'C:\\a b\')/e2e"', [{ sep: 'start', bg: false, cp: false, w: ['none:S=+double:$(cygpath -u \'C:\\a b\')/e2e'] }]],
+      ['rm \\*x', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'single:*+none:x'] }]],
       ['rm "x"*', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'double:x+none:*'] }]],
       ["echo $(cygpath -u 'a b')/x", [{ sep: 'start', bg: false, cp: false, w: ['none:echo', "none:$(cygpath -u 'a b')/x"] }]],
       ['x # c; y', [{ sep: 'start', bg: false, cp: false, w: ['none:x'] }]],
@@ -556,6 +568,7 @@ export default async function run({ ok, ctx }) {
     for (const [cmd, want] of SW) ok(JSON.stringify(shape(sw(cmd))) === JSON.stringify(want), `AC4.2: scanWords \`${label(cmd)}\` giữ sep/background/compound/nháy từng phần`);
     const ifSegs = sw('if a; then b; fi')?.segs ?? [];
     ok(['a', 'b'].every((t) => ifSegs.some((g) => g.compound && g.words.some((x) => x.parts.map((q) => q.text).join('') === t))), 'AC4.2: scanWords `if a; then b; fi` đánh dấu compound cho đoạn bên trong');
+    ok(sw('S="$(cygpath -u \'C:\\a b\')/e2e"')?.unclosed === false && sw('echo "$(printf \'"\')" ; rm x')?.unclosed === false, 'AC4.2: scanWords không báo unclosed khi nháy kép chứa $( ) có nháy bên trong');
     ok(sw('echo "a')?.unclosed === true && sw('echo "a"')?.unclosed === false, 'AC4.2: scanWords báo unclosed khi nháy chưa đóng');
     // Cùng token đã bỏ nháy với parse() trên lệnh không có $( )/&.
     for (const cmd of ['git commit -m "a;b" x', 'rm "x y" \'z w\' ; ls | grep q', 'a || b\nc', 'echo \'it\'"s" ok']) {
