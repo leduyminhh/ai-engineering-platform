@@ -168,10 +168,10 @@ function withDirs(segs, cwd, msys = true) {
 }
 
 // H6 là heuristic đọc token, không phải sandbox: biến, subshell, script con vẫn có thể ghi ra ngoài root mà không bị thấy.
-const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'mv', 'move', 'move-item', 'cp', 'copy', 'copy-item', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content']);
-const LAST_ONLY = new Set(['cp', 'copy', 'copy-item']);
-const DELETE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item']);
-const MOVE_CMDS = new Set(['mv', 'move', 'move-item']);
+const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri', 'mv', 'move', 'move-item', 'mi', 'cp', 'copy', 'copy-item', 'cpi', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content']);
+const LAST_ONLY = new Set(['cp', 'copy', 'copy-item', 'cpi']);
+const DELETE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri']);
+const MOVE_CMDS = new Set(['mv', 'move', 'move-item', 'mi']);
 // Một đối số mv: không biết là nguồn hay đích nên cần cả hai quyền.
 const needsOf = (name) => (DELETE_CMDS.has(name) ? ['delete'] : MOVE_CMDS.has(name) ? ['delete', 'write'] : ['write']);
 // Vai của cờ đường dẫn PowerShell theo (lệnh, cờ): đích → write, nguồn của Move/Remove-Item → delete, nguồn của Copy-Item → read.
@@ -184,6 +184,10 @@ const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh', 'tcsh', 'cmd', 'pwsh', 'powershell']);
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
+// Switch của Copy-Item/Move-Item (không nhận giá trị): đã biết nên không làm đối số vị trí bị lẫn vai. Viết tắt (`-Rec`) vẫn là cờ lạ → thận trọng.
+const PS_COPY_SWITCH = /^-(recurse|force|container|passthru|whatif|confirm|usetransaction|verbose|debug)(:.*)?$/i;
+// Cờ lạ không cho biết đối số nào là nguồn, đích: mọi đối số vị trí cần cả hai vai.
+const blurredNeeds = (name) => (LAST_ONLY.has(name) ? ['read', 'write'] : ['delete', 'write']);
 // Tham số của Copy-Item/Move-Item nhận một giá trị: bỏ giá trị đi, nếu không nó bị tính là đối số vị trí và làm lệch slot Path/Destination.
 const PS_VALUE_FLAGS = /^-(filter|include|exclude|credential|tosession|fromsession|(error|warning|information)(action|variable)|outvariable|outbuffer|pipelinevariable)(:.*)?$/i;
 // Set-Content/Out-File/Add-Content: giá trị của tham số có giá trị đứng trơn (`-Encoding utf8`, `-Value y`) là nội dung, không phải đường dẫn.
@@ -313,7 +317,59 @@ function globMatchesDotDot(seg) {
   try { return new RegExp(`^${re}$`).test('..'); } catch { return true; }
 }
 
+// Trả mọi nhánh của nhóm `{a,b}` có dấu phẩy (lồng được), hoặc null khi quá `cap`; `{1..3}` và `{x}` giữ nguyên. Không bóc nháy: hook không biết nháy bash có chặn mở rộng hay không, nên `"T/{..,x}/f"` cũng bị mở.
+// Quá 64 dấu `{` hoặc 4096 ký tự thì bỏ cuộc (null): 9 nhóm đã vượt trần, còn đệ quy theo số nhóm làm tràn stack. Quét một lượt bằng ngăn xếp nên chi phí không nhân với số `{` không đóng.
+function braceExpand(p, cap) {
+  if (p.length > 4096 || p.split('{').length > 65) return null;
+  const open = [];
+  let best = null;
+  for (let j = 0; j < p.length; j++) {
+    if (p[j] === '{') open.push({ at: j, commas: [] });
+    else if (p[j] === ',' && open.length) open[open.length - 1].commas.push(j);
+    else if (p[j] === '}' && open.length) {
+      const g = open.pop();
+      if (g.commas.length && (!best || g.at < best.at)) best = { ...g, end: j };
+    }
+  }
+  if (!best) return [p];
+  const cuts = [best.at, ...best.commas, best.end];
+  const out = [];
+  for (let k = 0; k + 1 < cuts.length; k++) {
+    const sub = braceExpand(p.slice(0, best.at) + p.slice(cuts[k] + 1, cuts[k + 1]) + p.slice(best.end + 1), cap);
+    if (!sub || out.push(...sub) > cap) return null;
+  }
+  return out;
+}
+
+// Ngân sách brace của MỘT lệnh (decide đặt lại), tính bằng số nhánh × (độ dài + 256) mỗi lần phân loại: hết thì `unknown`. Phân loại một nhánh tốn ~5 µs dù ngắn hay dài, nên hằng 256 chặn tổng số nhánh (~56 nghìn nhánh ≈ 0,3 s với token ngắn).
+const BRACE_BUDGET = 1 << 24;
+let braceLeft = BRACE_BUDGET;
+const braceCache = new Map();
+
+// Một đường dẫn được phân loại 3–6 lần (read/write/delete, H6, bí mật): nhớ kết quả mở rộng theo chuỗi, nhưng mỗi lần phân loại vẫn trừ ngân sách.
+function expandBraces(p) {
+  if (braceLeft < 0) return null;
+  let r = braceCache.get(p);
+  if (r === undefined) {
+    // Lỗi bất ngờ không được ném ra: main nuốt lỗi và fail-open sẽ cho cả lệnh qua.
+    try { r = braceExpand(p, 256); } catch { r = null; }
+    braceCache.set(p, r);
+  }
+  braceLeft -= (r ? r.length : 256) * (p.length + 256);
+  return braceLeft < 0 ? null : r;
+}
+
 function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
+  const p = np(raw, msys);
+  if (!msys || !p.includes('{')) return classifyPlain(p, dir, unres, roots, msys, need);
+  const branches = expandBraces(p);
+  if (!branches) return 'unknown';
+  // Nhánh do braceExpand sinh không còn nhóm có dấu phẩy: phân loại thẳng, không mở rộng lại.
+  const all = branches.map((b) => classifyPlain(b, dir, unres, roots, msys, need));
+  return ['blocked', 'outside', 'unknown'].find((k) => all.includes(k)) ?? all[0];
+}
+
+function classifyPlain(raw, dir, unres, roots, msys = true, need = 'write') {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
   if (!hasUnresolvedRef(p) && !GLOB.test(p) && isClaudeTmpRoot(p, dir)) return 'blocked';
@@ -400,26 +456,31 @@ function writeTargets(t, msys = true) {
     // Chỉ Bash: PowerShell nhận tiền tố tham số nên `-t` ở đó là `-ToSession` của Copy-Item, không phải GNU `-t DIR`.
     const gnu = msys && (name === 'mv' || name === 'cp');
     let toDir = false;
-    // Cờ bó/viết tắt không phân biệt được nguồn với đích: mọi đối số vị trí của mv phải đủ cả delete lẫn write.
+    // Cờ bó/viết tắt không phân biệt được nguồn với đích: mọi đối số vị trí phải đủ quyền của cả hai vai (mv/Move-Item: delete và write; cp/Copy-Item: read và write).
     let blurred = false;
     // Tham số PowerShell đã gọi tên (-Path/-LiteralPath/-Destination) chiếm slot của nó: đối số vị trí chỉ lấp slot còn trống.
     let namedPath = false;
     let namedDest = false;
     const named = (flag) => { if (/^-?destination$/i.test(flag)) namedDest = true; else namedPath = true; };
     let pos = [];
+    let eoo = false;
     // Set-Content/Out-File/Add-Content có hàm riêng (psWriteCandidates), vòng này không chạy cho chúng.
     for (let i = 0; i < (FIRST_ONLY.has(name) ? 0 : args.length); i++) {
       const a = args[i];
+      // Sau `--` của cp/mv Bash mọi token là tên file: `-S`/`-t` ở đó không được nuốt token kế (đích thật).
+      if (gnu && eoo) { pos.push(a); continue; }
+      if (gnu && a === '--') { eoo = true; continue; }
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { named(a); if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
       if (colon) { named(colon[1]); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
       const pv = !msys && (LAST_ONLY.has(name) || MOVE_CMDS.has(name)) ? PS_VALUE_FLAGS.exec(a) : null;
       if (pv) { if (!pv[4]) i++; continue; }
       // PowerShell chấp nhận viết tắt tham số (`-Dest`, `-Pa`) nên cờ lạ có thể đã gắn đối số vị trí vào -Path của nguồn.
-      if (!msys && MOVE_CMDS.has(name) && /^-[A-Za-z]/.test(a)) {
+      if (!msys && (MOVE_CMDS.has(name) || LAST_ONLY.has(name)) && /^-[A-Za-z]/.test(a)) {
+        if (PS_COPY_SWITCH.test(a)) continue;
         blurred = true;
         const val = /^-[A-Za-z]+:(.+)$/.exec(a);
-        if (val) { targets.push(val[1]); needs.push(['delete', 'write']); }
+        if (val) { targets.push(val[1]); needs.push(blurredNeeds(name)); }
         continue;
       }
       // Chỉ `-t DIR` (tách rời) và `--target-directory[=]DIR` đổi vai đối số vị trí; `-tDIR`, cờ gộp (`-rt`) hay cờ PowerShell (`-toSession`, `-Filter`)
@@ -433,6 +494,8 @@ function writeTargets(t, msys = true) {
         if (d) { targets.push(d); needs.push(['write']); }
         continue;
       }
+      // Giá trị của `-S`/`--suffix` là hậu tố, không phải đường dẫn: giữ lại thì nó chiếm vai đích của cp/mv.
+      if (gnu && (/^--su(f(f(i(x)?)?)?)?$/.test(a) || /^-[A-Za-z]*S$/.test(a))) { i++; continue; }
       // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
       if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
       if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
@@ -446,7 +509,7 @@ function writeTargets(t, msys = true) {
     allPos = copyLike ? all.slice(-1) : all;
     if (FIRST_ONLY.has(name)) allPos = pos = psWriteCandidates(args);
     // PowerShell lấp đối số vị trí theo thứ tự Path rồi Destination; đối số thừa (cờ có giá trị như -Filter làm lệch) lấy cả hai vai để không bỏ sót.
-    const slots = !msys && (copyLike || (MOVE_CMDS.has(name) && !blurred))
+    const slots = !msys && !blurred && (copyLike || MOVE_CMDS.has(name))
       ? [...(namedPath ? [] : [copyLike ? ['read'] : ['delete']]), ...(namedDest ? [] : [['write']])] : null;
     if (gnu && toDir) {
       // Có -t DIR: đối số vị trí là nguồn: mv bị xoá, cp được đọc.
@@ -463,7 +526,7 @@ function writeTargets(t, msys = true) {
       needs.push(...all.map((_, i) => (lone ? extra : (slots[i] ?? extra))));
     } else {
       targets.push(...pos);
-      needs.push(...pos.map((_, i) => (blurred ? ['delete', 'write'] : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
+      needs.push(...pos.map((_, i) => (blurred ? blurredNeeds(name) : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
     }
   }
   // PowerShell nhận mảng `a,b` trong một token: tách thành từng đích để phần tử ngoài root không lọt. Chỉ PowerShell: ở Bash dấu phẩy là ký tự của tên file.
@@ -567,7 +630,7 @@ const IN_PLACE_FLAG = /^(?:-[a-z]*i|--in-place)/i;
 // cp/mv vào thư mục .claude: tên file cấu hình nằm ở nguồn, không ở đích, nên phải ghép theo token.
 const CLAUDE_DIR = /(?:^|[\\/])\.claude[\\/]*$/i;
 const CONFIG_FILE_NAME = /^(?:settings(?:\.[\w-]+)?|aip-gate)\.json$/i;
-const COPY_MOVE = new Set(['cp', 'copy', 'copy-item', 'mv', 'move', 'move-item']);
+const COPY_MOVE = new Set(['cp', 'copy', 'copy-item', 'cpi', 'mv', 'move', 'move-item', 'mi']);
 // PowerShell gắn giá trị vào tham số (`-Path:x`) và nhận danh sách phân cách bằng dấu phẩy (`a,b`): tách trước khi lấy tên file.
 const hasConfigName = (a) => a.replace(/^-\w+:/, '').split(',').some((x) => CONFIG_FILE_NAME.test(x.split(/[\\/]/).pop()));
 
@@ -668,7 +731,7 @@ const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(nam
 // Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
 const MAX_STEPS = 6;
 // Chỉ dùng thông tin có sẵn từ parse (tên lệnh, lệnh con git, đích chuyển hướng); không đoán số file vì git commit -m không nêu file nào.
-function summarize(cmd) {
+function summarize(cmd, msys = true) {
   const p = parse(stripSimpleHeredocs(cmd) ?? cmd);
   const steps = [];
   let total = 0;
@@ -680,12 +743,13 @@ function summarize(cmd) {
     total++;
     if (steps.length >= MAX_STEPS) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
-    const w = writeTargets(t);
+    const w = writeTargets(t, msys);
     // Nêu đường dẫn gây ra câu hỏi: đường dẫn chưa biết (`$X`, `~`), rồi file cấu hình hook, rồi đích đầu tiên; nếu không, nguồn đọc đứng đầu của cp che mất đích ghi.
     const live = w.targets.map((x, j) => j).filter((j) => !NULL_DEVICE.test(w.targets[j]));
     const ti = live.find((j) => hasUnresolvedRef(w.targets[j])) ?? live.find((j) => GUARD_CONFIG.test(w.targets[j]) || CLAUDE_DIR.test(w.targets[j])) ?? live[0] ?? -1;
     const nd = w.needs[ti] ?? [];
-    const verb = nd.includes('delete') ? (nd.includes('write') ? 'xoá hoặc ghi' : 'xoá') : nd.includes('read') ? 'đọc' : 'ghi vào';
+    // Đích vừa đọc vừa ghi (cờ lạ của Copy-Item) nói là ghi: câu hỏi quyền xoay quanh việc ghi.
+    const verb = nd.includes('delete') ? (nd.includes('write') ? 'xoá hoặc ghi' : 'xoá') : nd.includes('write') || !nd.includes('read') ? 'ghi vào' : 'đọc';
     steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${ti >= 0 ? ` (${verb} ${showArg(w.targets[ti], 60)})` : ''}`);
   }
   if (!total) return '';
@@ -864,6 +928,8 @@ function secretScanText(cmd) {
 export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked, reader = readGate } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
+  braceLeft = BRACE_BUDGET;
+  braceCache.clear();
   // Shell POSIX nối dòng bằng \<xuống dòng>; không nối thì \ thành refspec và che nhánh phía sau. PowerShell đã nối bằng backtick ở psNormalize.
   const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw.replace(/\\\r?\n/g, ' ').replace(/>\|/g, '>');
   const cwd = input?.cwd || '.';
@@ -882,7 +948,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   let fe;
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
-  const ask = (text) => { let line = ''; try { line = summarize(cmd); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
+  const ask = (text) => { let line = ''; try { line = summarize(cmd, msys); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
   const parsedCmd = parse(cmd);
   const { unclosed } = parsedCmd;
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
