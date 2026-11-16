@@ -341,7 +341,7 @@ function braceExpand(p, cap) {
   return out;
 }
 
-// Ngân sách brace của MỘT lệnh (decide đặt lại), tính bằng số nhánh × độ dài mỗi lần phân loại: hết thì `unknown`. Chặn chi phí cộng dồn của nhiều token mà từng token vẫn dưới trần.
+// Ngân sách brace của MỘT lệnh (decide đặt lại), tính bằng số nhánh × (độ dài + 256) mỗi lần phân loại: hết thì `unknown`. Phân loại một nhánh tốn ~5 µs dù ngắn hay dài, nên hằng 256 chặn tổng số nhánh (~56 nghìn nhánh ≈ 0,3 s với token ngắn).
 const BRACE_BUDGET = 1 << 24;
 let braceLeft = BRACE_BUDGET;
 const braceCache = new Map();
@@ -355,7 +355,7 @@ function expandBraces(p) {
     try { r = braceExpand(p, 256); } catch { r = null; }
     braceCache.set(p, r);
   }
-  braceLeft -= (r ? r.length : 256) * p.length;
+  braceLeft -= (r ? r.length : 256) * (p.length + 256);
   return braceLeft < 0 ? null : r;
 }
 
