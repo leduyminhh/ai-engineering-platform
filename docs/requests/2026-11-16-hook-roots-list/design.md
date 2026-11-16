@@ -1,6 +1,6 @@
 # Thiết kế: câu deny ngoài root liệt kê các root agent được làm việc
 - Ngày: 2026-11-16
-- Trạng thái: in-progress — nhánh feature/hook-roots-list
+- Trạng thái: merged dc0cb8c8
 - Requirement: không có
 
 ## Vấn đề và lý do
