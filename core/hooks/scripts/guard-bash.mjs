@@ -71,6 +71,54 @@ function skipSubst(cmd, i, ps) {
   return { end: cmd.length, closed: false };
 }
 
+const RW_VAR = /\$(?:([A-Za-z_]\w*)|\{([A-Za-z_]\w*)\})/y;
+const RW_CYGPATH = /\$\(cygpath(?: -[umwal])? (?:'([^'$`\\]*)'|"([^"$`\\]*)")\)/y;
+const RW_ABS = /^(?:[\\/]|[A-Za-z]:[\\/])/;
+
+// Giải một từ của scanWords (D5–D8) thành { text, glob } hoặc null khi chưa rõ. glob theo D6: chỉ phần không nháy hoặc giá trị biến mở rộng không nháy.
+// state: { env: Map<tên, giá trị|null>, dir, unres, msys }.
+export function resolveWord(word, state, dialect = 'bash') {
+  let text = '';
+  let glob = false;
+  for (const [pi, { text: s, quote }] of word.parts.entries()) {
+    if (quote === 'single') { text += s; continue; }
+    const bare = quote === 'none';
+    if (pi === 0 && bare && s.startsWith('~')) return null;
+    const put = (v, expanded) => {
+      if (expanded && bare && /\s/.test(v)) return false;
+      if (bare && GLOB.test(v)) glob = true;
+      text += v;
+      return true;
+    };
+    for (let i = 0; i < s.length;) {
+      if (s[i] !== '$' && s[i] !== '`') {
+        let j = i;
+        while (j < s.length && s[j] !== '$' && s[j] !== '`') j++;
+        put(s.slice(i, j), false);
+        i = j;
+        continue;
+      }
+      if (s[i] === '`' || dialect !== 'bash') return null;
+      RW_VAR.lastIndex = i;
+      const m = RW_VAR.exec(s);
+      if (m) {
+        const name = m[1] ?? m[2];
+        const v = name === 'HOME' ? null : name === 'PWD' ? (state.unres ? null : state.dir) : state.env.get(name);
+        if (typeof v !== 'string' || !RW_ABS.test(v) || !put(v, true)) return null;
+        i += m[0].length;
+        continue;
+      }
+      RW_CYGPATH.lastIndex = i;
+      const cy = RW_CYGPATH.exec(s);
+      if (!cy) return null;
+      const lit = cy[1] ?? cy[2];
+      if (!put(state.msys ? normalizeMsysPath(lit) : lit, true)) return null;
+      i += cy[0].length;
+    }
+  }
+  return { text, glob };
+}
+
 // Tách lệnh thành đoạn → từ → phần, mỗi phần giữ loại nháy; $( … ) và backtick là chữ thô của từ hiện tại.
 export function scanWords(cmd, dialect = 'bash') {
   const ps = dialect === 'powershell';
@@ -154,15 +202,42 @@ export function scanWords(cmd, dialect = 'bash') {
   return { segs, unclosed: q !== null || substOpen };
 }
 
+// Một từ là chuỗi liên tiếp phần nháy đơn/kép/không nháy, không có khoảng trắng ngoài nháy; nháy không đóng là ký tự thường.
+function naiveWords(x) {
+  const out = [];
+  let i = 0;
+  while (i < x.length) {
+    while (i < x.length && /\s/.test(x[i])) i++;
+    if (i >= x.length) break;
+    const start = i;
+    const parts = [];
+    let cur = '';
+    const flush = () => { if (cur) parts.push({ text: cur, quote: 'none' }); cur = ''; };
+    while (i < x.length && !/\s/.test(x[i])) {
+      const c = x[i];
+      const end = c === '"' || c === "'" ? x.indexOf(c, i + 1) : -1;
+      if (end < 0) { cur += c; i++; continue; }
+      flush();
+      parts.push({ text: x.slice(i + 1, end), quote: c === '"' ? 'double' : 'single' });
+      i = end + 1;
+    }
+    flush();
+    out.push({ parts, raw: x.slice(start, i) });
+  }
+  return out;
+}
+
 // Cách tách thô (không hiểu nháy) của bản cũ: chạy song song với parse() vì nháy lẻ (heredoc, #, \') làm parse() nuốt các lệnh phía sau.
 function naiveSegments(cmd) {
   const out = [];
   let op = '';
   cmd.split(/(&&|\|\||;|\n|\|)/).forEach((x, k) => {
     if (k % 2) { if (op !== '||' && op !== '|') op = x; return; }
-    const words = x.match(/"[^"]*"|'[^']*'|\S+/g) || [];
-    const t = words.map((w) => w.replace(/^(["'])(.*)\1$/s, '$2'));
-    t.qpos = words.map((w) => { const p = w.search(/["']/); return p < 0 ? Infinity : p; });
+    const words = naiveWords(x);
+    const t = words.map((w) => w.parts.map((q) => q.text).join(''));
+    t.qpos = words.map((w) => { const p = w.raw.search(/["']/); return p < 0 ? Infinity : p; });
+    // Cờ glob theo từ (D6); từ có biến/backtick để undefined, classifyPlain rơi về GLOB.test như cũ.
+    t.globs = words.map((w) => (/[$`]/.test(w.raw) ? undefined : w.parts.some((q) => q.quote === 'none' && GLOB.test(q.text))));
     if (t.length) { t.op = op; op = ''; out.push(t); }
   });
   return out;
@@ -460,23 +535,25 @@ function expandBraces(p) {
   return braceLeft < 0 ? null : r;
 }
 
-function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
+function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write', glob) {
   const p = np(raw, msys);
-  if (!msys || !p.includes('{')) return classifyPlain(p, dir, unres, roots, msys, need);
+  if (!msys || !p.includes('{')) return classifyPlain(p, dir, unres, roots, msys, need, glob);
   const branches = expandBraces(p);
   if (!branches) return 'unknown';
   // Nhánh do braceExpand sinh không còn nhóm có dấu phẩy: phân loại thẳng, không mở rộng lại.
-  const all = branches.map((b) => classifyPlain(b, dir, unres, roots, msys, need));
+  const all = branches.map((b) => classifyPlain(b, dir, unres, roots, msys, need, glob));
   return ['blocked', 'outside', 'unknown'].find((k) => all.includes(k)) ?? all[0];
 }
 
-function classifyPlain(raw, dir, unres, roots, msys = true, need = 'write') {
+// glob (boolean) chỉ được bớt glob của chuỗi có ký tự đặc biệt nằm trong nháy; không có cờ thì giữ GLOB.test.
+function classifyPlain(raw, dir, unres, roots, msys = true, need = 'write', glob) {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
-  if (!hasUnresolvedRef(p) && !GLOB.test(p) && isClaudeTmpRoot(p, dir)) return 'blocked';
+  const isGlob = glob === undefined ? GLOB.test(p) : glob && GLOB.test(p);
+  if (!hasUnresolvedRef(p) && !isGlob && isClaudeTmpRoot(p, dir)) return 'blocked';
   const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
   if (!absolute && (unres || hasUnresolvedRef(p))) return 'unknown';
-  if (GLOB.test(p)) {
+  if (isGlob) {
     const parts = p.split(/[\\/]/);
     const first = parts.findIndex((x) => x !== '');
     const g = parts.findIndex((x) => GLOB.test(x));
@@ -657,13 +734,16 @@ function stringWrites(str) {
 // Trả { deny: <quyền thiếu> } | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
 function confineSegment(t, dir, unres, roots, msys = true) {
   const { targets, needs, name, args } = writeTargets(t, msys);
+  // Cùng chuỗi xuất hiện hai lần với cờ khác nhau thì lấy glob (thận trọng).
+  const globOf = new Map();
+  t.forEach((x, i) => { if (t.globs?.[i] !== undefined) globOf.set(x, globOf.get(x) || t.globs[i]); });
   const inner = name === 'eval' || SHELLS.has(name) ? shellString(name, args) : null;
   const ask = Boolean(inner) && stringWrites(inner);
   let unknown = false;
   let readAsk = false;
   for (const [i, p] of targets.entries()) {
     for (const need of needs[i]) {
-      const c = classifyTarget(p, dir, unres, roots, msys, need);
+      const c = classifyTarget(p, dir, unres, roots, msys, need, globOf.get(p));
       // Thiếu read chỉ hỏi (như Read ở guard-files); gốc <tmpdir>/claude ('blocked') luôn deny dù cấu hình cấp gì.
       if (c === 'outside' && need === 'read') readAsk = true;
       else if (c === 'outside' || c === 'blocked') return { deny: need, blocked: c === 'blocked' };
