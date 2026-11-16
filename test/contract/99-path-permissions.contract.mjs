@@ -434,6 +434,13 @@ export default async function run({ ok, ctx }) {
       // Trên 256 nhánh thì không liệt kê hết mà hỏi; glob trong nhánh được xét như glob ngoài brace.
       [`rm ${T}/${BR9}/f`, 'ask', 'hook-copy-alias-brace AC3.2'], [`rm ${T}/{.?,x}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
     ]);
+    // Đối số có hàng nghìn `{`: không được đệ quy tràn stack (hook fail-open sẽ cho qua cả đường dẫn ngoài root ở đối số khác) hay quét bậc hai.
+    const tBig = performance.now();
+    expectAll([
+      [`rm ${T}/${'{,}'.repeat(6000)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'], [`rm ${T}/${'{,}'.repeat(6000)}/f ${OUT}/x`, 'deny', 'hook-copy-alias-brace AC3.2'],
+      [`rm ${T}/${'{a,'.repeat(20000)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
+    ]);
+    ok(performance.now() - tBig < 1000, 'hook-copy-alias-brace AC3.2: đầu vào lớn xử lý nhanh');
     // PowerShell không mở rộng brace: kết quả giữ như trước request.
     expectAll([[`Remove-Item ${T}/{..,x}/f`, null, 'hook-copy-alias-brace AC3.3'], [`Remove-Item ${O}/{a,b}`, 'deny', 'hook-copy-alias-brace AC3.3']], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
