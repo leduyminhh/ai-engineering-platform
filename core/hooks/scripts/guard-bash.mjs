@@ -317,9 +317,40 @@ function globMatchesDotDot(seg) {
   try { return new RegExp(`^${re}$`).test('..'); } catch { return true; }
 }
 
+// Mở rộng brace `{a,b}` như bash (nhóm có dấu phẩy ở cấp ngoài cùng, lồng được); dải `{1..3}` và `{x}` giữ nguyên. Quá `cap` nhánh thì trả null.
+// Không bóc nháy: hook không biết nháy bash có chặn mở rộng hay không, nên `"T/{..,x}/f"` cũng bị mở: hỏi/deny thừa còn hơn bỏ sót.
+function braceExpand(p, cap) {
+  for (let i = p.indexOf('{'); i >= 0; i = p.indexOf('{', i + 1)) {
+    let depth = 0;
+    let from = i + 1;
+    const parts = [];
+    for (let j = i; j < p.length; j++) {
+      if (p[j] === '{') depth++;
+      else if (p[j] === ',' && depth === 1) { parts.push(p.slice(from, j)); from = j + 1; }
+      else if (p[j] === '}' && --depth === 0) {
+        if (!parts.length) break;
+        parts.push(p.slice(from, j));
+        const out = [];
+        for (const part of parts) {
+          const sub = braceExpand(p.slice(0, i) + part + p.slice(j + 1), cap);
+          if (!sub || out.push(...sub) > cap) return null;
+        }
+        return out;
+      }
+    }
+  }
+  return [p];
+}
+
 function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
+  const branches = msys && p.includes('{') ? braceExpand(p, 256) : [p];
+  if (!branches) return 'unknown';
+  if (branches.length > 1) {
+    const all = branches.map((b) => classifyTarget(b, dir, unres, roots, msys, need));
+    return ['blocked', 'outside', 'unknown'].find((k) => all.includes(k)) ?? all[0];
+  }
   if (!hasUnresolvedRef(p) && !GLOB.test(p) && isClaudeTmpRoot(p, dir)) return 'blocked';
   const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
   if (!absolute && (unres || hasUnresolvedRef(p))) return 'unknown';
@@ -403,7 +434,7 @@ function writeTargets(t, msys = true) {
     // Chỉ Bash: PowerShell nhận tiền tố tham số nên `-t` ở đó là `-ToSession` của Copy-Item, không phải GNU `-t DIR`.
     const gnu = msys && (name === 'mv' || name === 'cp');
     let toDir = false;
-    // Cờ bó/viết tắt không phân biệt được nguồn với đích: mọi đối số vị trí của mv phải đủ cả delete lẫn write.
+    // Cờ bó/viết tắt không phân biệt được nguồn với đích: mọi đối số vị trí phải đủ quyền của cả hai vai (mv/Move-Item: delete và write; cp/Copy-Item: read và write).
     let blurred = false;
     // Tham số PowerShell đã gọi tên (-Path/-LiteralPath/-Destination) chiếm slot của nó: đối số vị trí chỉ lấp slot còn trống.
     let namedPath = false;
