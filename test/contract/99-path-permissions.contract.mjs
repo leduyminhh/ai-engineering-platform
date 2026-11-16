@@ -569,6 +569,9 @@ export default async function run({ ok, ctx }) {
     const ifSegs = sw('if a; then b; fi')?.segs ?? [];
     ok(['a', 'b'].every((t) => ifSegs.some((g) => g.compound && g.words.some((x) => x.parts.map((q) => q.text).join('') === t))), 'AC4.2: scanWords `if a; then b; fi` đánh dấu compound cho đoạn bên trong');
     ok(sw('S="$(cygpath -u \'C:\\a b\')/e2e"')?.unclosed === false && sw('echo "$(printf \'"\')" ; rm x')?.unclosed === false, 'AC4.2: scanWords không báo unclosed khi nháy kép chứa $( ) có nháy bên trong');
+    ok(sw('echo $(Split-Path C:\\a\\) ; Remove-Item x', 'powershell')?.segs.length === 2, 'AC4.2: scanWords powershell không coi `\\` là escape trong $( ), lệnh sau `;` vẫn tách');
+    ok(sw('echo $(cygpath -u \'C:\\a\\\') ; rm x')?.segs.length === 2, 'AC4.2: scanWords bash `$(… \'C:\\a\\\')` trong nháy đơn vẫn tách đoạn sau `;`');
+    ok(sw('echo $(a ; rm x')?.unclosed === true && sw('echo `a ; rm x')?.unclosed === true, 'AC4.2: scanWords báo unclosed khi $( hoặc backtick không đóng');
     ok(sw('echo "a')?.unclosed === true && sw('echo "a"')?.unclosed === false, 'AC4.2: scanWords báo unclosed khi nháy chưa đóng');
     // Cùng token đã bỏ nháy với parse() trên lệnh không có $( )/&.
     for (const cmd of ['git commit -m "a;b" x', 'rm "x y" \'z w\' ; ls | grep q', 'a || b\nc', 'echo \'it\'"s" ok']) {

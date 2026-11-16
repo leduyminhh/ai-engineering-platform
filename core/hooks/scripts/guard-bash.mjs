@@ -58,17 +58,17 @@ const SH_CLOSE = new Set(['fi', 'done', 'esac', '}']);
 const SH_KW = new Set([...SH_OPEN, ...SH_CLOSE, 'then', 'else', 'elif', 'do', 'function']);
 
 // Với `$(`/backtick: trả chỉ số ngay sau phần đóng; chưa đóng thì tới hết chuỗi.
-function skipSubst(cmd, i) {
-  if (cmd[i] === '`') { const e = cmd.indexOf('`', i + 1); return e < 0 ? cmd.length : e + 1; }
+function skipSubst(cmd, i, ps) {
+  if (cmd[i] === '`') { const e = cmd.indexOf('`', i + 1); return e < 0 ? { end: cmd.length, closed: false } : { end: e + 1, closed: true }; }
   let depth = 0;
   for (let k = i; k < cmd.length; k++) {
     const c = cmd[k];
-    if (c === '\\') { k++; continue; }
-    if (c === "'" || c === '"') { const e = cmd.indexOf(c, k + 1); if (e < 0) return cmd.length; k = e; continue; }
+    if (c === (ps ? '`' : '\\')) { k++; continue; }
+    if (c === "'" || c === '"') { const e = cmd.indexOf(c, k + 1); if (e < 0) return { end: cmd.length, closed: false }; k = e; continue; }
     if (c === '(') depth++;
-    else if (c === ')' && --depth === 0) return k + 1;
+    else if (c === ')' && --depth === 0) return { end: k + 1, closed: true };
   }
-  return cmd.length;
+  return { end: cmd.length, closed: false };
 }
 
 // Tách lệnh thành đoạn → từ → phần, mỗi phần giữ loại nháy; $( … ) và backtick là chữ thô của từ hiện tại.
@@ -82,7 +82,8 @@ export function scanWords(cmd, dialect = 'bash') {
   let kwMark = false;
   let paren = 0;
   let q = null;
-  const add = (text, quote) => {
+  let substOpen = false;
+  const add =(text, quote) => {
     parts ??= [];
     const last = parts[parts.length - 1];
     if (last && last.quote === quote && quote === 'none') last.text += text;
@@ -119,7 +120,7 @@ export function scanWords(cmd, dialect = 'bash') {
       }
       const quote = q === "'" ? 'single' : 'double';
       if (q === '"' && ((ps && c === '`') || (!ps && c === '\\' && '"\\$`'.includes(cmd[i + 1] ?? '')))) { if (i + 1 < cmd.length) { add(cmd[i + 1], quote); i++; } continue; }
-      if (q === '"' && ((c === '$' && cmd[i + 1] === '(') || (c === '`' && !ps))) { const e = skipSubst(cmd, i + (c === '$' ? 1 : 0)); add(cmd.slice(i, e), quote); i = e - 1; continue; }
+      if (q === '"' && ((c === '$' && cmd[i + 1] === '(') || (c === '`' && !ps))) { const { end: e, closed } = skipSubst(cmd, i + (c === '$' ? 1 : 0), ps); if (!closed) substOpen = true; add(cmd.slice(i, e), quote); i = e - 1; continue; }
       add(c, quote);
       continue;
     }
@@ -129,7 +130,7 @@ export function scanWords(cmd, dialect = 'bash') {
       if (i + 1 < cmd.length) { (parts ??= []).push({ text: cmd[i + 1], quote: 'single' }); i++; }
       continue;
     }
-    if ((c === '$' && cmd[i + 1] === '(') || (c === '`' && !ps)) { const e = skipSubst(cmd, i + (c === '$' ? 1 : 0)); add(cmd.slice(i, e), 'none'); i = e - 1; continue; }
+    if ((c === '$' && cmd[i + 1] === '(') || (c === '`' && !ps)) { const { end: e, closed } = skipSubst(cmd, i + (c === '$' ? 1 : 0), ps); if (!closed) substOpen = true; add(cmd.slice(i, e), 'none'); i = e - 1; continue; }
     if (c === '#' && !parts) { while (i + 1 < cmd.length && cmd[i + 1] !== '\n') i++; continue; }
     if (c === '\n') { endSeg(); if (pending !== '&&') setSep(';'); continue; }
     if (/\s/.test(c)) { endWord(); continue; }
@@ -150,7 +151,7 @@ export function scanWords(cmd, dialect = 'bash') {
     add(c, 'none');
   }
   endSeg();
-  return { segs, unclosed: q !== null };
+  return { segs, unclosed: q !== null || substOpen };
 }
 
 // Cách tách thô (không hiểu nháy) của bản cũ: chạy song song với parse() vì nháy lẻ (heredoc, #, \') làm parse() nuốt các lệnh phía sau.
