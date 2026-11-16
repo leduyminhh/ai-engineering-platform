@@ -29,7 +29,7 @@ Quyết định khác của agent:
 - Nhánh hiện tại là protected thì tạo nhánh `docs/onboarding-<slug>` qua `core:git-workflow` trước khi commit; trước khi chạy ghi lại `git status --porcelain` làm nền để kiểm phạm vi ở cuối.
 - Thêm một dòng vào bảng "Yêu cầu chạy trực tiếp bằng skill" của `workflows/orchestrator/WORKFLOW.md` (hiện chưa có dòng nào cho quét brownfield), kèm bump `workflows/.manifest.json`. Không thêm vào `plugins/_cowork.json` vì skill giao subagent mà Cowork không có (như `spec-backfill`).
 - Từ builder check (một lượt, không còn câu hỏi của người dùng):
-  - Nội dung `workflows/R25` (dòng orchestrator mới) và dòng lịch sử ghi ở bước gộp spec của `finish.md`, như mọi request có `## Ảnh hưởng spec`; không là task riêng.
+  - Nội dung `workflows/R28` (dòng orchestrator mới) và dòng lịch sử ghi ở bước gộp spec của `finish.md`, như mọi request có `## Ảnh hưởng spec`; không là task riêng.
   - Routing không đạt ngưỡng: sửa `description` của G7 hoặc viết lại prompt routing của G7 (không chọn prompt để ép số); không hạ `rank1.lock.json`, không sửa `description` của skill anh em. Vẫn không đạt sau hai vòng thì dừng và báo người dùng ở cổng G2 hoặc khi thực thi.
   - `sourceFiles` và `lines` tính trên file có đuôi mã nguồn (`java kt groovy scala js jsx ts tsx mjs cjs py go cs rs rb php vue sql`), tách thêm `testFiles` cho file trong thư mục `test`, `tests`, `__tests__`, `src/test` hoặc tên `*.test.*`, `*.spec.*`, `test_*.py`; file cấu hình, tài nguyên và README không tính số dòng và không bị mở.
   - Module lồng nhau: file thuộc module có đường dẫn sâu nhất chứa nó; module tổng hợp (Maven `packaging pom`, npm root) chỉ giữ file nằm ngoài các module con; file ngoài mọi module vào `unclaimed` theo thư mục cấp một, file ở gốc gom vào mục `rootFiles` đếm số. Hai nhóm subagent không bao giờ chung thư mục.
@@ -93,7 +93,7 @@ Test: `test/content/54-codebase-onboarding.pin.mjs`, fixture dựng lúc chạy 
 - [ ] **AC6.1** — Given thay đổi nội dung chiếu Then `plugins/engineering/.manifest.json` lên 2.16.0 với `description` ghi 15 skill (`calc: 14 + 1 = 15`) và có `engineering-codebase-onboarding`; `workflows/.manifest.json` tăng version vì thêm dòng orchestrator; `npm run build` và `node cli/lib/versions.mjs --lock` đã chạy; `plugins/_cowork.json` không đổi; `npm test` exit 0.
 - [ ] **AC6.2** — Given `README.md`, `README_VI.md`, `CLAUDE.md` và `workflows/orchestrator/WORKFLOW.md` Then dòng G7 rời Roadmap "chưa làm" và skill có mặt ở danh sách skill của `engineering`; `CLAUDE.md` ghi số skill của `engineering` đúng 15; bảng "Yêu cầu chạy trực tiếp bằng skill" có một dòng định tuyến "quét project cũ viết README từng module" tới `engineering-codebase-onboarding`.
 ## Ảnh hưởng spec
-- workflows: thêm R25
+- workflows: thêm R28
 ## Ngoài phạm vi và anti-goal
 Giữ nguyên danh sách của `brief.md`; thêm: không đổi `description` hay nội dung của `engineering-spec-backfill` và `engineering-repo-audit`; không thêm `workflow-onboarding`; không thêm eval thật; không đưa skill vào `_cowork.json`; không đổi `check-citations.mjs`; không chạy bất kỳ build, test hay lệnh mạng nào của project được quét.
 ## Ràng buộc
@@ -112,7 +112,7 @@ Câu chữ SKILL.md và references; tên trường JSON phụ của `inventory-m
 - `[giả định]` Kiểm kê ban đầu chỉ cho Maven, Gradle, npm/pnpm, Python; Go, .NET, Rust kiểm kê tay ở cổng 1. Người đọc là dev mới; cỡ project lớn nhất tham chiếu là 12 module Maven và 27 README.
 - Tên `onboarding` trùng chữ với mục Onboarding ở `templates/init/CLAUDE.md:50` (cài AIP cho người mới clone, nghĩa khác); AC1.1 buộc `description` nói rõ.
 - `scan-secrets.mjs` là heuristic: không bắt secret dạng tự do và có thể báo nhầm (chuỗi 4 phần giống IP). Sạch không là bằng chứng không còn secret.
-- Số `workflows/R25` lấy theo spec ở thời điểm viết (R24 là lớn nhất); kiểm lại ở bước gộp spec nếu phiên khác đã thêm R.
+- Số `workflows/R28` (ban đầu R25; master có thêm R25–R27 từ request khác nên đổi khi merge); kiểm lại ở bước gộp spec nếu phiên khác đã thêm R.
 - `[Unverified]` trạng thái skill draft `data-*` và tương tác với `npm run overlap` (chạy được, kết quả hiện tại không báo ⚠ ở đầu ra đã xem; chưa chạy lại sau khi thêm skill).
 - Chưa quyết: việc chuyển `check-citations.mjs` sang `core` để cài lẻ không thiếu script; cần người dùng duyệt riêng nếu muốn (ngoại lệ của Non-goal).
 ## Ghi chú thực thi

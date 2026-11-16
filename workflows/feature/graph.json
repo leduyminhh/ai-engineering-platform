@@ -89,7 +89,10 @@
           { "id": "backend-reviewer", "when": "task review phần backend" },
           { "id": "frontend-reviewer", "when": "task review phần frontend" }
         ],
-        "skills": ["plan-execution"]
+        "skills": [
+          "plan-execution",
+          { "id": "frontend-manual-check", "when": "phạm vi có FE có màn hình, sau khi mọi task complete" }
+        ]
       },
       "next": "final-review",
       "on_fail": [

@@ -14,7 +14,7 @@ skills: "frontend-performance"
 
 ## Phạm vi
 - Được: ĐỌC không giới hạn (code, config, `project-knowledge/`); tạo/sửa file trong `perf/`, `bench/` và config tool đo đã
-  liệt kê ở hàng Config tool đo; build và phục vụ bản production ở local; chạy Lighthouse, bundle analyzer, profiler, trace.
+  liệt kê ở hàng Config tool đo; build và phục vụ bản production ở local; chạy Lighthouse, script đo Playwright (chép từ skill vào `perf/`), bundle analyzer, profiler, trace.
 - Không được: sửa `src/` hay file test; đo trên dev server; trỏ vào URL staging/production/site công khai hoặc gửi URL/trace
   cho dịch vụ bên ngoài; dùng hay in credential thật; thêm tool/dependency khi chưa hỏi; commit; gọi agent khác.
 - Bắt buộc: cần quyết định của người dùng (thêm tool/dependency, mục bảng điều kiện chưa biết, sửa config ngoài
