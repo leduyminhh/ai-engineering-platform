@@ -1,6 +1,6 @@
 # Thiết kế: câu deny ngoài root liệt kê các root agent được làm việc
 - Ngày: 2026-11-16
-- Trạng thái: approved — G1 duyệt 2026-11-16 (implement sau khi hook-popup-short merge)
+- Trạng thái: in-progress — nhánh feature/hook-roots-list
 - Requirement: không có
 
 ## Vấn đề và lý do
