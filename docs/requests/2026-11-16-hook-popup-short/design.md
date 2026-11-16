@@ -1,6 +1,6 @@
 # Thiết kế: popup hook ask chỉ nói đang làm gì, đụng đường dẫn nào
 - Ngày: 2026-11-16
-- Trạng thái: in-progress — nhánh feature/hook-popup-short-2
+- Trạng thái: merged ab28f99f
 - Requirement: không có
 
 ## Vấn đề và lý do
