@@ -423,5 +423,18 @@ export default async function run({ ok, ctx }) {
     // Dòng "Lệnh gồm" của đích vừa đọc vừa ghi phải nói ghi, không nói đọc.
     const destAsk = bd('Copy-Item -Dest .claude\\settings.json x', psAsk);
     ok(destAsk?.decision === 'ask' && /Lệnh gồm: [^\n]*ghi vào/.test(destAsk.reason) && !/Lệnh gồm: [^\n]*đọc/.test(destAsk.reason) && shapeOk(destAsk.reason), 'hook-copy-alias-brace AC1.4: dòng Lệnh gồm nói ghi vào');
+
+    // hook-copy-alias-brace: Bash mở rộng brace `{a,b}` trước khi chạy lệnh, nên `{..,x}` thành `..`; mỗi nhánh được phân loại riêng và nhánh xấu nhất thắng.
+    const BR9 = '{a,b}'.repeat(9);
+    expectAll([
+      ...[`rm ${T}/{..,x}/f`, `rm ${T}/.{.,x}/d/f`, `rm ${T}/{a,..}`, `rm {${T},${OUT}}/f`, `rm ${O}/{a,b}`, `cp x ${T}/{..,y}/f`, `rm ${T}/{a,{..,b}}/f`]
+        .map((c) => [c, 'deny', 'hook-copy-alias-brace AC3.1']),
+      ...[`rm ${T}/{a,b}/f`, `rm ${T}/{a,b}`, `rm ${T}/{1..3}/f`, `rm ${T}/{x}/f`, `rm ${T}/{.git,.x}/f`].map((c) => [c, null, 'hook-copy-alias-brace AC3.1']),
+      [`rm ${T}/{a,$X}/f`, 'ask', 'hook-copy-alias-brace AC3.1'],
+      // Trên 256 nhánh thì không liệt kê hết mà hỏi; glob trong nhánh được xét như glob ngoài brace.
+      [`rm ${T}/${BR9}/f`, 'ask', 'hook-copy-alias-brace AC3.2'], [`rm ${T}/{.?,x}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
+    ]);
+    // PowerShell không mở rộng brace: kết quả giữ như trước request.
+    expectAll([[`Remove-Item ${T}/{..,x}/f`, null, 'hook-copy-alias-brace AC3.3'], [`Remove-Item ${O}/{a,b}`, 'deny', 'hook-copy-alias-brace AC3.3']], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
