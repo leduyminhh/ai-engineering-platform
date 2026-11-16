@@ -172,6 +172,8 @@ export default async function run({ ok, ctx }) {
     ]);
 
     const OUT = u(path.join(tb, 'out'));
+    // Token mảng PowerShell chỉ có dấu phẩy ở đầu vẫn là một đích riêng (mọi lệnh PowerShell, không riêng Set-Content).
+    expectAll([[`Remove-Item ${T}/a ,${OUT}/b`, 'deny', 'AC3.3']], { tool: 'PowerShell' });
     expectAll([
       [`mv ${T}/a ${O}/b`, null, 'AC3.6'], [`mv ${T}/a`, null, 'AC3.6'],
       [`mv ${O}/a ${O}/b`, 'deny', 'AC3.6'], [`mv ${T}/a ${D}/b`, 'deny', 'AC3.6'], [`mv ${D}/a ${T}/b`, 'deny', 'AC3.6'], [`mv ${O}/a`, 'deny', 'AC3.6'],
@@ -331,5 +333,56 @@ export default async function run({ ok, ctx }) {
     ok([denyW, denyD].every((d) => /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason)) && /write/.test(denyW.reason) && /delete/.test(denyD.reason), 'AC6.2: reason deny nêu fullPaths, fullRoots và quyền thiếu');
     const asks = ['rm $X/f', `cat ${D}/.env`].map((c) => bd(c));
     ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask của guard-bash theo khuôn');
+
+    // hook-ps-write-flags: cờ có giá trị đứng trước đường dẫn của Set-Content/Out-File/Add-Content không được làm mất đích thật.
+    const psw = (ac, rows, opt = { tool: 'PowerShell' }) => expectAll(rows.map(([c, want]) => [c, want, `ps-write-flags ${ac}`]), opt);
+    const flagged = ['Set-Content -Encoding utf8 X/x -Value y', 'Out-File -Encoding utf8 X/x', 'Add-Content -Value y X/x', 'Set-Content -ErrorAction Stop X/a x', 'Set-Content -ea Stop X/x y',
+      'Set-Content -Encoding:utf8 X/x y', 'Out-File -Append -Encoding utf8 X/x', 'Out-File -Width 80 X/x', 'Set-Content -Stream s X/x y', 'Set-Content -Include a X/x y', 'Set-Content -Force X/x y',
+      'Set-Content -Value: y X/x', 'Set-Content -Encoding: utf8 X/x y', 'Set-Content -Force: $false X/x y'];
+    psw('AC1.1', [[OUT, 'deny'], [D, 'deny'], [O, null], [T, null]].flatMap(([dir, want]) => flagged.map((c) => [c.replace('X/', `${dir}/`), want])));
+    // Mọi token trừ tên cờ đã biết là ứng viên đích (PowerShell 5.1 đảo vai đối số vị trí khi có tham số động); chỉ giá trị của cờ có giá trị đứng trơn là nội dung.
+    psw('AC1.2', [
+      ...[`Set-Content ${O}/x ${OUT}/y`, `Set-Content -Path ${O}/x ${OUT}/y`, `Set-Content -FilePath:${O}/x ${OUT}/y`,
+        `Set-Content ${OUT}/x y`, `Set-Content -Path ${OUT}/x y`,
+        // `--`, nháy và cờ đường dẫn cụt: không dựa vào việc đoán nháy.
+        `Set-Content ${OUT}/x -- -Path`, `Set-Content ${OUT}/x '-Path'`, `Set-Content ${OUT}/x "-LiteralPath"`, `Out-File ${OUT}/x '-FilePath'`, `Set-Content ${OUT}/x '-Path:zzz'`,
+        `Set-Content -Value y -- -x/../../out/x`,
+        // Mảng Path có dấu cách hoặc dấu phẩy đứng đầu: phần tử sau dấu phẩy là đích.
+        `Set-Content -Path ${O}/x, ${OUT}/y -Value z`, `Set-Content -Path "${O}/x", "${OUT}/y" z`, `Out-File -FilePath ${O}/x, ${OUT}/y -Encoding utf8`,
+        `Set-Content -LiteralPath ${O}/x, ${OUT}/y z`, `Add-Content -Path ${O}/x, ${OUT}/y -Value z`, `Set-Content -Path ${O}/x, ${D}/y z`,
+        `Set-Content -Path ${O}/x ,${OUT}/y -Value z`, `Set-Content ${O}/x ,${OUT}/y`,
+        // Value mảng nhiều token: đích thật đứng sau.
+        `Set-Content -Value a, b ${OUT}/x`, `Set-Content -Value a ,b ${OUT}/x`, `Set-Content -Encoding utf8 -Value a, b ${OUT}/x`, `Add-Content -Value a, b ${OUT}/x`,
+        `Set-Content -Value @('a', 'b') ${OUT}/x`,
+        // `--` trong nháy/backtick hoặc bị công tắc động của 5.1 làm mất tác dụng; cờ đường dẫn thật vẫn được đọc sau nó.
+        `Set-Content '--' -Path ${OUT}/x`, `Set-Content '--' -Path:${OUT}/x`, `Add-Content '--' -LiteralPath ${OUT}/x`, `Set-Content \`-- -Path ${OUT}/x`,
+        `Set-Content -Path -- ${OUT}/x v`, `Set-Content -LiteralPath -- ${OUT}/x v`, `Out-File -FilePath -- ${OUT}/x`,
+        `Set-Content -NoNewline -- -Path ${OUT}/x`, `Add-Content -NoNewline -- -Path ${OUT}/x`, `Add-Content -Value -- -Value:${D}/x`, `Set-Content -Value -- -Value:${O}/x,${OUT}/y`,
+        // Cờ đường dẫn trong nháy đứng trước cờ đường dẫn thật (dạng tách rời hoặc dính).
+        `Set-Content '-Path' -Path ${OUT}/x`, `Set-Content "-LiteralPath" -LiteralPath ${OUT}/x`, `Add-Content '-Path' -Path ${D}/x`,
+        `Set-Content '-Path' -Path:${OUT}/x`, `Set-Content '-Path' -LiteralPath:${OUT}/x`, `Add-Content '-LiteralPath' -Path:${D}/x`,
+        // Cờ có giá trị trong nháy hoặc sau dấu phẩy không được nuốt token kế bắt đầu bằng `-`.
+        `Set-Content '-Value' -Path:${OUT}/x`, `Set-Content '-ea' -Path:${D}/x`, `Set-Content '-Encoding' -LiteralPath:${OUT}/x`,
+        `Set-Content -Value:a, -Value: ${D}/x`, `Set-Content -Value: ${OUT}/y, -Value:${O}/x,${OUT}/y`, `Set-Content -Value: ${OUT}/x '-Value' ,${OUT}/y`,
+        // PowerShell 5.1 đảo vai đối số vị trí khi có tham số động.
+        `Set-Content -NoNewline ${O}/x ${OUT}/y`, `Set-Content ${O}/x ${OUT}/y -Encoding:utf8`, `Add-Content -Encoding:utf8 ${O}/x ${D}/y`, `Set-Content -Stream:s ${O}/x ${OUT}/y`,
+        // Cờ đường dẫn viết tắt/alias dạng dính.
+        `Set-Content -PSPath:${OUT}/x v`, `Set-Content -Lit:${OUT}/x v`, `Set-Content -LiteralPa:${OUT}/x v`, `Add-Content -PSPath:${D}/x v`,
+        `Out-File -Fi:${OUT}/x`, `Out-File -File:${OUT}/x`, `Out-File -FilePa:${OUT}/x`,
+        // Đường dẫn trong nháy bắt đầu bằng `-` (cwd là project, nằm cạnh out và d).
+        `Set-Content '-x/../../out/y' v`, `Out-File '-a/../../out/y'`, `Set-Content '-x/../../${path.basename(D)}/y' v`,
+        // Cờ có giá trị bỏ trống rồi tới token bắt đầu bằng `-`: PowerShell 5.1 lấy token đó làm giá trị, cờ ấy không được nuốt đường dẫn thật.
+        `Set-Content -Value: -Encoding ${OUT}/x`, `Set-Content -Value: -Value ${D}/x`, `Set-Content -Val: -ea: ${OUT}/x`, `Add-Content -Val: -Stream: ${O}/x,${OUT}/y`,
+        `Set-Content -ov -Encoding ${OUT}/x y`, `Out-File -OutVariable -Value ${OUT}/x`, `Out-File -ov -Stream ${OUT}/x`, `Out-File -ov -Filter ${OUT}/x`,
+        `Set-Content -ov -Width ${OUT}/x y`, `Set-Content -ov -InputObject ${OUT}/x y`, `Add-Content -ev -Width ${OUT}/x y`].map((c) => [c, 'deny']),
+      // Nội dung (giá trị của cờ có giá trị đứng trơn) và đối số trong root không bị hỏi thừa.
+      ...[`Out-File ${O}/x utf8`, `Set-Content -Value ${OUT}/y ${O}/x`, `Set-Content -Path ${O}/x -Encoding utf8 -Value ${OUT}/y`, `Set-Content -Path ${O}/x -Value a, b`,
+        `Set-Content -Path ${O}/x -Value $text`, `Set-Content ${O}/x -Value 'a b'`, `Set-Content -Path ${O}/x -Force`,
+        `Set-Content ${O}/x y`, `Set-Content ${O}/x -Value -5`, `Set-Content ${O}/x -Value -Encoding`].map((c) => [c, null]),
+    ]);
+    psw('AC1.3', [[`Set-Content -Enc utf8 ${OUT}/x -Val y`, 'deny'], [`Set-Content -Foo a ${OUT}/x y`, 'deny'], [`Set-Content -Enc utf8 ${O}/x y`, null]]);
+    // Các ca `ask` của R18 đã có ở 99-hook-popup; ở đây chỉ giữ ca nội dung (không phải đích) không bị hỏi nhầm.
+    psw('AC1.4', [['Set-Content -Value .claude\\aip-gate.json x', null], ['Set-Content -Value: -Encoding .claude\\aip-gate.json', 'ask'], ['Add-Content -ea: -Value .claude\\aip-gate.json', 'ask'],
+      ['Set-Content -Value: -Value .claude\\settings.json', 'ask']], psAsk);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }

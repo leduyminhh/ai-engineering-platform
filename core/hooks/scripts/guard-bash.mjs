@@ -186,6 +186,12 @@ const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh'
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
 // Tham số của Copy-Item/Move-Item nhận một giá trị: bỏ giá trị đi, nếu không nó bị tính là đối số vị trí và làm lệch slot Path/Destination.
 const PS_VALUE_FLAGS = /^-(filter|include|exclude|credential|tosession|fromsession|(error|warning|information)(action|variable)|outvariable|outbuffer|pipelinevariable)(:.*)?$/i;
+// Set-Content/Out-File/Add-Content: giá trị của tham số có giá trị đứng trơn (`-Encoding utf8`, `-Value y`) là nội dung, không phải đường dẫn.
+// Tên ngoài hai tập (viết tắt `-Enc`, tham số lạ) không biết có nhận giá trị hay không nên psWriteCandidates coi mọi token của nó là ứng viên.
+const PS_WRITE_VALUE = new Set(['value', 'encoding', 'stream', 'width', 'inputobject', 'filter', 'include', 'exclude', 'credential', 'erroraction', 'ea', 'warningaction', 'wa',
+  'informationaction', 'infa', 'errorvariable', 'ev', 'warningvariable', 'wv', 'informationvariable', 'iv', 'outvariable', 'ov', 'outbuffer', 'ob', 'pipelinevariable', 'pv']);
+const PS_WRITE_SWITCH = new Set(['force', 'nonewline', 'append', 'noclobber', 'passthru', 'asbytestream', 'whatif', 'confirm', 'cf', 'usetransaction', 'verbose', 'vb', 'debug', 'db']);
+const PS_WRITE_PATH_FLAG = new Set(['path', 'literalpath', 'filepath', 'pspath']);
 const NULL_DEVICE = /^(\/dev\/(null|stdout|stderr)|nul|\$null)$/i;
 const WRITE_IN_STRING = new RegExp(`(^|[\\s;&|(])(${[...WRITE_CMDS].join('|')})(\\s|$)|>(?!&)`, 'i');
 const GLOB = /[*?[]/;
@@ -327,6 +333,40 @@ function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
   return classifyPath(p, dir, roots, msys, need);
 }
 
+// Ứng viên đích ghi của Set-Content/Out-File/Add-Content. Windows PowerShell 5.1 đảo vai đối số vị trí khi có tham số động (`-NoNewline`, `-Encoding:x`)
+// và hook không thấy nháy, nên mọi token là ứng viên trừ tên cờ đã biết; chỉ giá trị của cờ có giá trị đứng trơn (`-Value x`) là nội dung và bị bỏ.
+function psWriteCandidates(args) {
+  const out = [];
+  const flagOf = (a) => /^-([A-Za-z][A-Za-z0-9]*)(:([\s\S]*))?$/.exec(a);
+  // Dấu phẩy, backtick hoặc `--` làm ranh giới token mơ hồ (sau `--` PowerShell có thể đọc `-X:giá-trị` thành đường dẫn): kiểm hết, không nuốt giá trị của cờ nào.
+  // Cờ có giá trị (đã biết, hoặc bất kỳ cờ dạng `-X:` vì có thể là viết tắt như `-Val:`) bỏ trống mà token kế bắt đầu bằng `-`:
+  // PowerShell 5.1 lấy chính token đó làm giá trị, hook không phân biệt được với một cờ thật.
+  const strict = args.some((a, i) => {
+    const m = flagOf(a);
+    return /^,|,$|`|^--$/.test(a) || (m && !m[3] && (m[2] !== undefined || PS_WRITE_VALUE.has(m[1].toLowerCase())) && args[i + 1]?.startsWith('-'));
+  });
+  // Token kế của cờ đường dẫn là ứng viên kể cả khi bắt đầu bằng `-`, trừ dạng dính `-X:val` (có thể là cờ thật đứng sau một cờ giả trong nháy).
+  const takeNext = (i) => (i + 1 < args.length && !/^-[A-Za-z][A-Za-z0-9]*:/.test(args[i + 1]) ? (out.push(args[i + 1]), i + 1) : i);
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--') continue;
+    const m = flagOf(a);
+    if (!m) { out.push(a); continue; }
+    const f = m[1].toLowerCase();
+    const known = PS_WRITE_VALUE.has(f) || PS_WRITE_SWITCH.has(f);
+    const swallow = () => { if (i + 1 < args.length && !args[i + 1].startsWith('-')) i++; };
+    if (m[2] !== undefined) {
+      if (m[3]) { if (!known || strict) out.push(m[3]); } else if (!strict) { if (known) swallow(); else i = takeNext(i); }
+    } else if (strict) {
+      if (!known && !PS_WRITE_PATH_FLAG.has(f)) out.push(a);
+    } else if (PS_WRITE_SWITCH.has(f)) continue;
+    else if (PS_WRITE_VALUE.has(f)) swallow();
+    else if (PS_WRITE_PATH_FLAG.has(f)) i = takeNext(i);
+    else out.push(a);
+  }
+  return out;
+}
+
 // Đích ghi của một đoạn lệnh (chuyển hướng, đối số của WRITE_CMDS, cờ đường dẫn PowerShell) kèm tên lệnh và đối số sau khi bỏ tiền tố bọc.
 function writeTargets(t, msys = true) {
   const rest = [];
@@ -366,7 +406,8 @@ function writeTargets(t, msys = true) {
     let namedDest = false;
     const named = (flag) => { if (/^-?destination$/i.test(flag)) namedDest = true; else namedPath = true; };
     let pos = [];
-    for (let i = 0; i < args.length; i++) {
+    // Set-Content/Out-File/Add-Content có hàm riêng (psWriteCandidates), vòng này không chạy cho chúng.
+    for (let i = 0; i < (FIRST_ONLY.has(name) ? 0 : args.length); i++) {
       const a = args[i];
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { named(a); if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
@@ -400,9 +441,9 @@ function writeTargets(t, msys = true) {
     if (SKIP_FIRST.has(name)) pos = pos.slice(1);
     const all = pos;
     const copyLike = LAST_ONLY.has(name);
-    // Set-Content/Out-File: cờ có giá trị (-Encoding utf8, -Value x) làm đối số đầu không còn là đích thật; allPos giữ mọi đối số cho kiểm cấu hình hook.
+    // Set-Content/Out-File/Add-Content: mọi ứng viên là đích ghi (không biết token nào PowerShell gắn vào Path). allPos giữ mọi đối số cho kiểm cấu hình hook.
     allPos = copyLike ? all.slice(-1) : all;
-    pos = FIRST_ONLY.has(name) ? all.slice(0, 1) : all;
+    if (FIRST_ONLY.has(name)) allPos = pos = psWriteCandidates(args);
     // PowerShell lấp đối số vị trí theo thứ tự Path rồi Destination; đối số thừa (cờ có giá trị như -Filter làm lệch) lấy cả hai vai để không bỏ sót.
     const slots = !msys && (copyLike || (MOVE_CMDS.has(name) && !blurred))
       ? [...(namedPath ? [] : [copyLike ? ['read'] : ['delete']]), ...(namedDest ? [] : [['write']])] : null;
@@ -429,7 +470,7 @@ function writeTargets(t, msys = true) {
     // Giữ cả token gốc: chuỗi trong nháy có dấu phẩy là một đường dẫn literal, và từng phần tách riêng có thể resolve khác khi chứa `..`.
     const split = targets.flatMap((p, i) => {
       const pieces = String(p).split(',').filter(Boolean);
-      return (pieces.length > 1 ? [p, ...pieces] : [p]).map((x) => [x, needs[i]]);
+      return (pieces.length > 1 || pieces[0] !== p ? [p, ...pieces] : [p]).map((x) => [x, needs[i]]);
     });
     return { targets: split.map(([x]) => x), needs: split.map(([, n]) => n), name, args, allPos };
   }
