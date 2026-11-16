@@ -40,7 +40,7 @@ câu trả lời rồi gõ lại.
 | G3 duyệt diff | file đổi trong `git diff --stat <nhánh gốc>...HEAD` (nhóm theo thư mục) kèm docs/ledger | diff cả nhánh (pane diff) | `mergeLocal: true`: Duyệt (merge local và commit docs) / Sửa thêm / Giữ nguyên; thiếu khoá: merge local / push + PR / giữ nguyên |
 | Push/PR sau merge local | không | không | Push + mở PR / Không push |
 | Cách thực thi | `plan.md` (không cần liệt kê file) | không | Subagent + review từng task / Inline; `planRunner` quyết thứ tự, lựa chọn đứng đầu kèm "(Recommended)"; hỏi mỗi lần thực thi, trừ khi không có tool subagent, người dùng đã nói rõ hoặc ledger đã có `Ruling: cách chạy` |
-| Cách chạy part | Bảng part, nhánh `worktree-<slug>-p<nn>` và đường dẫn worktree của nhóm | không | Subagent / Phiên riêng / Tuần tự trong session gốc; `partRunner` quyết thứ tự, lựa chọn đứng đầu kèm "(Recommended)" |
+| Cách chạy part | Bảng part, nhánh `worktree-<slug>-p<nn>` và đường dẫn worktree của nhóm | không | Subagent / Phiên riêng / Tuần tự trong session gốc; Phiên riêng thì phiên gốc tự mở phiên part, app từ chối thì một thẻ một lần bấm; `partRunner` quyết thứ tự, lựa chọn đứng đầu kèm "(Recommended)" |
 | Loại dừng 1–6, vướng của part | file hoặc log liên quan | file hoặc log đó | các hướng xử lý, hướng khuyến nghị đứng đầu, kèm hệ quả |
 | Orchestrator: hai ứng viên, xác nhận Bước 3 | `brief.md` nếu có | `brief.md` nếu có | từng ứng viên / Chạy workflow đã chọn / Đổi route / Dừng |
 
