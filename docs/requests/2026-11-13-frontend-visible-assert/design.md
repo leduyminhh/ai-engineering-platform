@@ -1,6 +1,6 @@
 # Thiết kế: AC hiển thị có assertion trên text/role; review bắt thông báo nằm trong vùng bị gỡ lúc loading
 - Ngày: 2026-11-13
-- Trạng thái: in-progress — nhánh claude/frontend-visible-assert-82be7f (G1 duyệt 2026-11-13 giữ khuyến nghị D1–D6; G3 chọn giữ nguyên, chưa merge)
+- Trạng thái: merged 96636a84 (local; chưa push)
 - Requirement: [requirement.md](requirement.md)
 - Nguồn: N4 trong [trial-report.md](../2026-11-13-frontend-trial/trial-report.md)
 

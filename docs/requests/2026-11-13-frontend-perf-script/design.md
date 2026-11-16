@@ -1,7 +1,7 @@
 # Thiết kế: Script đo hiệu năng frontend lưu trong `perf/` và `.gitignore` cho artefact đo
 
 - Ngày: 2026-11-13
-- Trạng thái: in-progress — nhánh claude/frontend-perf-script-f30726 (G3 chọn giữ nguyên 2026-11-13)
+- Trạng thái: merged 96636a84 (local; chưa push)
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do

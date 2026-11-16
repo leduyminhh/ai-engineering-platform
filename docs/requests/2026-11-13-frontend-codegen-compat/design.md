@@ -1,6 +1,6 @@
 # Thiết kế: kiểm tương thích công cụ sinh code trước cổng G1
 - Ngày: 2026-11-13
-- Trạng thái: in-progress — nhánh claude/frontend-codegen-compat-f9538e (G3 2026-11-13: giữ nguyên, chưa merge)
+- Trạng thái: merged 96636a84 (local; chưa push)
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
