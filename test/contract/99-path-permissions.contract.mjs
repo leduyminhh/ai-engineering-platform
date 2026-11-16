@@ -35,13 +35,15 @@ export default async function run({ ok, ctx }) {
   ok(cl('$HOME/x', 'read') === 'unknown' && cl('~/x', 'delete') === 'unknown', 'AC2.1: $/~ → unknown');
 
   // Câu deny dùng chung (kiểu list_roots): liệt kê root có đúng quyền đang thiếu để agent biết được làm ở đâu.
-  const deny = (...a) => (typeof denyOutsideText === 'function' ? denyOutsideText(...a) : '');
-  const G = (p, allow, glob = false) => ({ path: p, allow, ...(glob ? { glob: true } : {}) });
+  const deny = denyOutsideText;
+  const G =(p, allow, glob = false) => ({ path: p, allow, ...(glob ? { glob: true } : {}) });
   const ALL = ['read', 'write', 'delete'];
   const gT = G('/aip-dt-t', ALL);
   const gO = G('/aip-dt-o', ['read', 'write']);
   const gD = G('/aip-dt-d', ['read']);
   const rootLine = (s) => s.split('\n').find((l) => /^Được (ghi|xoá):/.test(l)) ?? '';
+  // Thứ tự root trong dòng "Được ghi:" phụ thuộc nguồn khai (fullRoots đứng trước fullPaths): sắp xếp để so tập root mà không so thứ tự.
+  const normRoots = (d) => (d?.reason ? { ...d, reason: d.reason.replace(/^(Được (?:ghi|xoá): )(.*)$/m, (_, p, rest) => p + (rest.match(/`[^`]*`/g) ?? []).sort().join(', ') + (/, … .*$/.exec(rest)?.[0] ?? '')) } : d);
   {
     const w = deny('write', [gT, gO, gD], 'ghi vào thư mục');
     ok(rootLine(w).startsWith('Được ghi:') && rootLine(w).includes(gT.path) && rootLine(w).includes(gO.path) && !rootLine(w).includes(gD.path), 'AC2.1: write chỉ liệt kê root có quyền write');
@@ -56,10 +58,17 @@ export default async function run({ ok, ctx }) {
     const ml = rootLine(deny('write', many, 'x'));
     ok(many.slice(0, 6).every((g) => ml.includes(g.path)) && !ml.includes(many[6].path) && ml.endsWith('… và 2 mục khác'), 'AC1.3: hơn 6 root chỉ liệt kê 6 mục, nêu "… và 2 mục khác"');
     ok(rootLine(deny('write', many.slice(0, 6), 'x')).endsWith('`') && !/mục khác/.test(deny('write', many.slice(0, 6), 'x')), 'AC1.3: đúng 6 root không có "mục khác"');
-    const dirty = G('D:/a`b\ncưc\u202e' + 'z'.repeat(200), ALL);
+    // Ký tự bẩn đặt ở đuôi: showArg giữ 80 ký tự cuối nên ký tự bẩn đầu chuỗi sẽ bị cắt mất và test không kiểm gì.
+    const dirty = G('D:/' + 'a'.repeat(120) + 'z'.repeat(10) + '`\nc\u202e' + 'z'.repeat(40), ALL);
     const dt = deny('write', [dirty], 'x');
     const dl = rootLine(dt);
-    ok(dt.split('\n').length === 3 && (dl.match(/`/g) ?? []).length === 2 && !dl.includes('\u202e') && dl.includes('z'.repeat(60)) && !dl.includes('z'.repeat(81)), 'AC1.3: đường dẫn root có xuống dòng, backtick, bidi, quá dài không chèn dòng giả và chỉ giữ 80 ký tự cuối');
+    ok(dt.split('\n').length === 3 && (dl.match(/`/g) ?? []).length === 2 && !dl.includes('\u202e') && dl.includes('z'.repeat(40)) && !dl.includes('a'.repeat(30)) && dl.slice(dl.indexOf('`') + 1, dl.lastIndexOf('`')).length <= 81,
+      'AC1.3: đường dẫn root có xuống dòng, backtick, bidi, quá dài không chèn dòng giả và chỉ giữ 80 ký tự cuối');
+    ok(/z{10} c z{40}/.test(dl),'AC1.3: ký tự bẩn ở đuôi bị thay bằng khoảng trắng, không còn trong dòng root');
+    const dup = [G('/aip-dt-t', ALL), G('/aip-dt-t/', ALL)];
+    ok((rootLine(deny('write', dup, 'x')).match(/aip-dt-t/g) ?? []).length === 1, 'AC1.3: hai grant cùng đường dẫn (một có đuôi /) chỉ hiện một lần');
+    const dup7 = [...many.slice(0, 6), G('/aip-dt-r0/', ALL)];
+    ok(!/mục khác/.test(deny('write', dup7, 'x')) && (rootLine(deny('write', dup7, 'x')).match(/`/g) ?? []).length === 12, 'AC1.3: 7 mục có 2 mục trùng nhau → 6 mục, không có "mục khác"');
     const tmpRoot = path.join(os.tmpdir(), 'claude');
     ok(rootLine(deny('write', [G(tmpRoot, ALL)], 'x')).includes(`${tmpRoot}/…`), 'AC2.1: root <tmpdir>/claude hiện dạng <tmpdir>/claude/… (chỉ phần dưới nó là root)');
   }
@@ -138,9 +147,7 @@ export default async function run({ ok, ctx }) {
     // AC5.1: fullRoots: [T] đồng nghĩa mục đủ ba quyền; AC6.1: full không hiệu lực thì fullPaths không đổi kết quả.
     const probes = [['Read', T], ['Write', T], ['Write', D], ['Read', D], ['Read', O], ['Write', O], ['Read', X], ['Write', X], ['Read', path.join(T, '.env')], ['Write', path.join(T, '.env')]]
       .map(([tool, dir]) => [tool, path.join(dir, dir.endsWith('.env') ? '' : 'a.txt')]);
-    // Thứ tự root trong dòng "Được ghi:" phụ thuộc nguồn khai (fullRoots đứng trước fullPaths), nên bỏ dòng đó khi so hai cấu hình tương đương.
-    const noRoots = (d) => (d?.reason ? { ...d, reason: d.reason.replace(/\nĐược (ghi|xoá):[^\n]*/, '') } : d);
-    const same = (a, b, extra = {}, optB = {}) => probes.every(([tool, f]) => JSON.stringify(noRoots(dec(tool, f, { cfg: a, extra }))) === JSON.stringify(noRoots(dec(tool, f, { cfg: b, extra, opts: optB }))));
+    const same = (a, b, extra = {}, optB = {}) => probes.every(([tool, f]) => JSON.stringify(normRoots(dec(tool, f, { cfg: a, extra }))) === JSON.stringify(normRoots(dec(tool, f, { cfg: b, extra, opts: optB }))));
     ok(same({ mode: 'full', fullRoots: [T] }, { mode: 'full', fullPaths: [{ path: T, allow: ['read', 'write', 'delete'] }] }), 'AC5.1: guard-files fullRoots: [T] ≡ mục đủ ba quyền');
     const withPaths = config.fullPaths;
     ok(same({ mode: 'ask', fullPaths: withPaths }, { mode: 'ask' }), 'AC6.1: guard-files mode ask → y hệt khi không có fullPaths');
@@ -271,8 +278,7 @@ export default async function run({ ok, ctx }) {
     // AC5.1/AC5.2/AC6.1: fullRoots ≡ ba quyền; fullReadRoots chỉ đọc; full không hiệu lực thì fullPaths vô tác dụng.
     const cmds = [`rm ${T}/f`, `rm ${O}/f`, `rm ${D}/f`, `cp x ${T}/f`, `cp x ${O}/f`, `cp x ${D}/f`, `mv ${T}/a ${T}/b`, `mv ${T}/a ${O}/b`, `mv ${O}/a ${T}/b`, `mv ${D}/a ${T}/b`, `mv -t ${T} ${T}/a`, `cp -t ${T} x`,
       `rm ${OUT}/f`, `cat ${T}/.env`, 'rm $X/f'];
-    const noRoots = (d) => (d?.reason ? { ...d, reason: d.reason.replace(/\nĐược (ghi|xoá):[^\n]*/, '') } : d);
-    const same = (a, b, optA = {}, optB = {}) => cmds.every((c) => JSON.stringify(noRoots(bd(c, { cfg: a, ...optA }))) === JSON.stringify(noRoots(bd(c, { cfg: b, ...optB }))));
+    const same = (a, b, optA = {}, optB = {}) => cmds.every((c) => JSON.stringify(normRoots(bd(c, { cfg: a, ...optA }))) === JSON.stringify(normRoots(bd(c, { cfg: b, ...optB }))));
     ok(same({ mode: 'full', fullRoots: [T] }, { mode: 'full', fullPaths: [{ path: T, allow: all }] }), 'AC5.1: guard-bash fullRoots: [T] ≡ mục đủ ba quyền');
     expectAll([[`rm ${T}/f`, null, 'AC5.1'], [`mv ${T}/a ${T}/b`, null, 'AC5.1'], [`cp x ${T}/f`, null, 'AC5.1'], [`rm ${O}/f`, 'deny', 'AC5.1']], { cfg: { mode: 'full', fullRoots: [T] } });
     expectAll([[`rm ${D}/f`, 'deny', 'AC5.2'], [`cp x ${D}/f`, 'deny', 'AC5.2'], [`mv ${D}/a ${T}/b`, 'deny', 'AC5.2']], { cfg: { mode: 'full', fullReadRoots: [D] } });
@@ -377,19 +383,18 @@ export default async function run({ ok, ctx }) {
     ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask của guard-bash theo khuôn');
 
     // Deny ghi/xoá ngoài root liệt kê root có đúng quyền đang thiếu (kiểu list_roots); đường dẫn Windows đổi về / để so khớp.
-    const OUTP = u(path.join(tb, 'out'));
     const roots = (cmd) => { const d = bd(cmd); return { d, l: rootLine(d?.reason ?? '').replace(/\\/g, '/') }; };
-    for (const c of [`cp x ${OUTP}/b`, `echo x > ${OUTP}/f`, `touch ${OUTP}/f`]) {
+    for (const c of [`cp x ${OUT}/b`, `echo x > ${OUT}/f`, `touch ${OUT}/f`]) {
       const { d, l } = roots(c);
       ok(d?.decision === 'deny' && l.startsWith('Được ghi:') && [P, O, T].every((p) => l.includes(p)) && !l.includes(D) && /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason) && /"write"/.test(d.reason),
         `AC1.1: \`${c.replaceAll(u(tb), '~')}\` → deny, dòng "Được ghi:" liệt kê P, O, T (không D), vẫn nêu fullPaths, fullRoots và quyền thiếu`);
     }
     {
-      const { d, l } = roots(`rm ${OUTP}/f`);
+      const { d, l } = roots(`rm ${OUT}/f`);
       ok(d?.decision === 'deny' && l.startsWith('Được xoá:') && [P, T].every((p) => l.includes(p)) && !l.includes(O) && !l.includes(D) && /"delete"/.test(d.reason),
         'AC1.1: rm ngoài root → deny, dòng "Được xoá:" chỉ liệt kê root có quyền delete (P, T)');
     }
-    const dc =bd('git commit -m "tiếng Việt"', { cfg: { mode: 'ask' } });
+    const dc = bd('git commit -m "tiếng Việt"', { cfg: { mode: 'ask' } });
     ok(bd(`rm ${CT}`)?.reason === CLAUDE_TMP_BLOCKED_TEXT && dc?.decision === 'deny' && !/Được (ghi|xoá):/.test(dc.reason) && !/Được (ghi|xoá):/.test(bd('rm $X/f')?.reason ?? ''),
       'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, DENY_COMMIT và ask không có dòng root');
     ok(['guard-bash.mjs', 'guard-files.mjs'].every((f) => !fs.readFileSync(path.join(CORE_DIR, 'hooks', 'scripts', f), 'utf8').includes('Chế độ full chỉ cho phép')),

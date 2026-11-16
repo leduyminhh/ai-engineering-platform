@@ -730,7 +730,7 @@ const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy. Pro
 function denyText(need, grants, subject) {
   try { return denyOutsideText(need, grants, subject); } catch { return denyOutsideText(need, [], subject); }
 }
-const secretText = (name) =>`Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent hoặc bị gửi ra ngoài. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
+const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`. Cho phép thì nội dung file có thể lọt vào hội thoại với agent hoặc bị gửi ra ngoài. Hãy từ chối nếu không cần; bạn có thể tự mở file.`;
 
 // Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
 const MAX_STEPS = 6;

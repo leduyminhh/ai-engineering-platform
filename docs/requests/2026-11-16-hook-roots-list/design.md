@@ -28,11 +28,11 @@ Người dùng đã trả lời ba câu làm rõ (gom một tin nhắn) ngày 20
 
 Mọi dòng dưới là **quyết định của agent**, nêu nổi bật để người duyệt sửa.
 
-- **D1 — chỉ liệt kê root có đúng quyền đang thiếu.** `deny` luôn là `write` hoặc `delete` (thiếu `read` là `ask`). Dòng thêm: ``Được ghi: `A`, `B`, … và N mục khác.`` (hoặc `Được xoá:`), lấy từ `grantsOf` lọc `allow.includes(need)`. Root chỉ-đọc (`fullReadRoots`, `defaultReadRoots`, dạng glob `*`) và các `fullPaths` chỉ read tự không có mặt. Không có root nào có quyền đó thì không thêm dòng.
+- **D1 — chỉ liệt kê root có đúng quyền đang thiếu.** `deny` luôn là `write` hoặc `delete` (thiếu `read` là `ask`). Dòng thêm: ``Được ghi: `A`, `B`, … và N mục khác`` (hoặc `Được xoá:`), lấy từ `grantsOf` lọc `allow.includes(need)`. Root chỉ-đọc (`fullReadRoots`, `defaultReadRoots`, dạng glob `*`) và các `fullPaths` chỉ read tự không có mặt. Không có root nào có quyền đó thì không thêm dòng.
 - **D2 — hiện tối đa 6 root, mỗi đường dẫn qua `showArg(…, 80)`.** Thứ tự giữ như `grantsOf` (gốc project, scratchpad, `fullRoots`, `<tmpdir>/claude`, `fullPaths`). Root `<tmpdir>/claude` hiện đúng `<tmpdir>/claude/…` (chỉ phần dưới nó là root, R23).
-- **D3 — helper `denyOutsideText(need, grants, subject)` ở `gate-config.mjs`.** Trả câu hoàn chỉnh: `Chế độ full chỉ cho phép <subject> ở thư mục có quyền <need>; đường dẫn chưa có.` + dòng root + câu xin thêm `Cần mở rộng → thêm vào "fullPaths" (allow có "<need>") hoặc "fullRoots" trong .claude/aip-gate.json.` `subject` là "lệnh này" (guard-bash) hoặc "ghi vào" (guard-files). Hai câu hiện tại giữ đúng nghĩa; chỉ thêm dòng root.
+- **D3 — helper `denyOutsideText(need, grants, subject)` ở `gate-config.mjs`.** Trả câu hoàn chỉnh: `Chế độ full chỉ cho phép <subject> có quyền <need>; đường dẫn chưa có.` + dòng root + câu xin thêm `Cần mở rộng → thêm vào "fullPaths" (allow có "<need>") hoặc "fullRoots" trong .claude/aip-gate.json.` `subject` là "lệnh này ở thư mục" (guard-bash) hoặc "ghi vào thư mục" (guard-files). Hai câu hiện tại giữ đúng nghĩa; chỉ thêm dòng root.
 - **D4 — không đổi.** `CLAUDE_TMP_BLOCKED_TEXT`, `DENY_COMMIT`, câu `ask` (R21 khuôn mới), `classifyPath`, `grantsOf`, `allowedRoots`, `guard-mcp`, `gate-stop`, `session-start`. Không thêm công cụ `list_roots` cho agent: hook chỉ chạy khi agent gọi tool, không có kênh trả danh sách chủ động.
-- **D5 — chi phí và quyền riêng tư.** Đường dẫn root đi vào ngữ cảnh của mô hình. Chúng do chính người dùng khai (`fullRoots`, `fullPaths`) hoặc là gốc project và scratchpad mà agent đã biết; không có dữ liệu agent đi qua. Tối đa 6 mục × 80 ký tự giữ câu `deny` dưới ~600 ký tự.
+- **D5 — chi phí và quyền riêng tư.** Đường dẫn root đi vào ngữ cảnh của mô hình. Chúng do chính người dùng khai (`fullRoots`, `fullPaths`) hoặc là gốc project và scratchpad mà agent đã biết; không có dữ liệu agent đi qua. Tối đa 6 mục × 80 ký tự giữ câu `deny` dưới ~720 ký tự.
 - **D6 — version.** `core/.manifest.json` tăng một bậc patch từ giá trị lúc implement (1.34.1 ở thời điểm viết); `npm run build`, `node cli/lib/versions.mjs --lock`.
 
 ## Hướng đã cân nhắc
@@ -77,7 +77,7 @@ Test thêm vào `test/contract/99-path-permissions.contract.mjs` (cùng seam `co
 - Không đổi khi nào hook hỏi hay chặn; không thêm quyền, không đổi cách tính root hay `fullPaths`.
 - Không đổi câu `ask` (user-facing, ngắn) và không thêm công cụ MCP `list_roots` cho agent.
 - Không liệt kê root chỉ-đọc ở câu `deny` ghi hoặc xoá.
-- Anti-goal: không làm `deny` dài hơn ~600 ký tự; không để đường dẫn trong cấu hình làm giả dòng hay chèn backtick (qua `showArg`).
+- Anti-goal: không làm `deny` dài hơn ~720 ký tự; không để đường dẫn trong cấu hình làm giả dòng hay chèn backtick (qua `showArg`).
 
 ## Ràng buộc
 

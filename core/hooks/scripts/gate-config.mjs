@@ -151,7 +151,8 @@ export function denyOutsideText(need, grants, subject) {
   const head = `Chế độ full chỉ cho phép ${subject} có quyền ${need}; đường dẫn chưa có.`;
   const tail = `Cần mở rộng → thêm vào "fullPaths" (allow có "${need}") hoặc "fullRoots" trong .claude/aip-gate.json.`;
   const verb = ROOT_VERB[need];
-  const roots = verb ? (grants ?? []).filter((g) => !g.glob && g.allow?.includes(need)) : [];
+  const seen = new Set();
+  const roots = verb ? (grants ?? []).filter((g) => !g.glob && g.allow?.includes(need) && !seen.has(norm(g.path)) && seen.add(norm(g.path))) : [];
   if (!roots.length) return `${head} ${tail}`;
   // Chỉ phần dưới <tmpdir>/claude là root (R23), nên hiện kèm /… để agent không thử ghi vào chính thư mục đó.
   const tmp = claudeTmpRoots().map(norm);
