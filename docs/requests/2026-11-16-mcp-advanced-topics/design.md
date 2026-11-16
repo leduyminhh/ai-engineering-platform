@@ -19,7 +19,7 @@ Một file mới `plugins/backend/skills/backend-llm-integration/references/mcp-
    chuyển sang phía client; server vẫn phải xử lý trường hợp client từ chối hoặc không khai báo sampling (rơi vào
    `degraded` theo mục 3 của skill). Nhắc người duyệt trong vòng là yêu cầu của spec.
 3. **Bảo mật tối thiểu cho server HTTP.** Kiểm `Origin` (403 khi sai), bind `127.0.0.1` khi chạy cục bộ; một dòng nói spec
-   yêu cầu xác thực kết nối, không hướng dẫn cách làm. Roots chỉ cho biết thư mục liên quan, không chặn truy cập, nên
+   khuyến nghị (SHOULD) xác thực kết nối, không hướng dẫn cách làm. Roots chỉ cho biết thư mục liên quan, không chặn truy cập, nên
    server tự kiểm đường dẫn trong tool.
 4. **Nhận biết thời kỳ.** Bản mới mang phiên bản giao thức trong từng request, có `server/discover`; bản cũ mở bằng
    `initialize` và có `Mcp-Session-Id`. Server hỗ trợ cả hai thì thử bản mới trước. Cờ `stateless_http` và `json_response`
@@ -36,8 +36,8 @@ Gốc: `https://modelcontextprotocol.io/specification/2026-07-28/` cộng đư�
 | `basic/versioning` | phiên bản trong từng request, `server/discover`, nhận biết thời kỳ bản cũ/mới |
 | `client/sampling` | deprecated, người duyệt trong vòng |
 | `client/roots` | chỉ là thông tin, không phải kiểm soát truy cập |
-Python SDK: `https://py.sdk.modelcontextprotocol.io/whats-new/` xác nhận v2.3.0 nói bản 2026-07-28, một `Server` phục vụ hai thời kỳ,
-`stateless_http`/`json_response` chuyển sang `run()`. Chưa đọc: trang chạy server và dependencies của SDK.
+Python SDK: `https://py.sdk.modelcontextprotocol.io/whats-new/` xác nhận v2 nói bản 2026-07-28, một `Server` phục vụ hai thời kỳ,
+`stateless_http`/`json_response` chuyển sang `run()`. Số phiên bản v2.3.0 theo `https://pypi.org/pypi/mcp/json` (trang SDK chỉ nói "v2"). Chưa đọc: trang chạy server và dependencies của SDK.
 Thứ tự làm: chờ G1 duyệt tài liệu và G2 duyệt plan rồi mới viết reference.
 ## Ảnh hưởng spec
 Không ảnh hưởng: chỉ thêm nội dung tham chiếu cho skill, không đổi hành vi hook, CLI hay khoá routing; `skill-quality/R5` giữ nguyên vì `description` không đổi.
