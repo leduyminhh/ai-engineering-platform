@@ -403,5 +403,25 @@ export default async function run({ ok, ctx }) {
       ['cpi .claude\\settings.json out\\x', null, 'hook-copy-alias-brace AC2.2']];
     expectAll(aliasCfg, psAsk);
     expectAll(aliasCfg, { tool: 'PowerShell' });
+
+    // hook-copy-alias-brace: cờ lạ của Copy-Item (viết tắt `-Dest`) không rõ có nhận giá trị hay không, nên mọi đối số vị trí cần cả read lẫn write; switch đã biết thì không.
+    expectAll([
+      ...[`Copy-Item -Dest ${D}/b x`, `Copy-Item -De ${D}/b x`, `Copy-Item -D ${D}/b x`, `Copy-Item -Dest:${D}/b x`, `Copy-Item -Recurse -Dest ${D}/b x`, `cp -Dest ${D}/b x`,
+        `Copy-Item -Dest ${O}/b ${D}/a`, `Copy-Item -Dest ${O}/b ${OUT}/a`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC1.1']),
+      ...[`Copy-Item -Dest ${O}/b ${T}/a`, `Copy-Item -Dest ${T}/b ${O}/a`].map((c) => [c, null, 'hook-copy-alias-brace AC1.1']),
+    ], { tool: 'PowerShell' });
+    expectAll([
+      ...[`Copy-Item -Recurse ${D}/a ${O}/b`, `Copy-Item -Force ${D}/a ${O}/b`, `Copy-Item -Container ${D}/a ${O}/b`, `Copy-Item -PassThru ${D}/a ${O}/b`, `Copy-Item -WhatIf ${D}/a ${O}/b`,
+        `Copy-Item -Confirm:$false ${D}/a ${O}/b`, `Copy-Item -recurse -Path ${D}/a -Destination ${O}/b`, `Move-Item -Force ${T}/a ${O}/b`].map((c) => [c, null, 'hook-copy-alias-brace AC1.2']),
+      [`Copy-Item -Recurse ${OUT}/a ${O}/b`, 'ask', 'hook-copy-alias-brace AC1.2'],
+      [`Copy-Item -Recurse ${D}/a ${D}/b`, 'deny', 'hook-copy-alias-brace AC1.2'],
+    ], { tool: 'PowerShell' });
+    const destCfg = [...['Copy-Item -Dest .claude\\settings.json x', 'Copy-Item -Dest .claude settings.json', 'Copy-Item -Dest:.claude\\aip-gate.json x', 'Copy-Item -De .claude\\settings.json x']
+      .map((c) => [c, 'ask', 'hook-copy-alias-brace AC1.3']), ['Copy-Item -Path .claude/settings.json -Destination out\\x', null, 'hook-copy-alias-brace AC1.3']];
+    expectAll(destCfg, psAsk);
+    expectAll(destCfg, { tool: 'PowerShell' });
+    // Dòng "Lệnh gồm" của đích vừa đọc vừa ghi phải nói ghi, không nói đọc.
+    const destAsk = bd('Copy-Item -Dest .claude\\settings.json x', psAsk);
+    ok(destAsk?.decision === 'ask' && /Lệnh gồm: [^\n]*ghi vào/.test(destAsk.reason) && !/Lệnh gồm: [^\n]*đọc/.test(destAsk.reason) && shapeOk(destAsk.reason), 'hook-copy-alias-brace AC1.4: dòng Lệnh gồm nói ghi vào');
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
