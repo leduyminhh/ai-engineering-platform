@@ -184,6 +184,10 @@ const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh', 'tcsh', 'cmd', 'pwsh', 'powershell']);
 const PS_PATH_FLAGS = new Set(['-path', '-literalpath', '-filepath', '-destination']);
+// Switch của Copy-Item/Move-Item (không nhận giá trị): đã biết nên không làm đối số vị trí bị lẫn vai. Viết tắt (`-Rec`) vẫn là cờ lạ → thận trọng.
+const PS_COPY_SWITCH = /^-(recurse|force|container|passthru|whatif|confirm|usetransaction|verbose|debug)(:.*)?$/i;
+// Cờ lạ không cho biết đối số nào là nguồn, đích: mọi đối số vị trí cần cả hai vai.
+const blurredNeeds = (name) => (LAST_ONLY.has(name) ? ['read', 'write'] : ['delete', 'write']);
 // Tham số của Copy-Item/Move-Item nhận một giá trị: bỏ giá trị đi, nếu không nó bị tính là đối số vị trí và làm lệch slot Path/Destination.
 const PS_VALUE_FLAGS = /^-(filter|include|exclude|credential|tosession|fromsession|(error|warning|information)(action|variable)|outvariable|outbuffer|pipelinevariable)(:.*)?$/i;
 // Set-Content/Out-File/Add-Content: giá trị của tham số có giá trị đứng trơn (`-Encoding utf8`, `-Value y`) là nội dung, không phải đường dẫn.
@@ -415,10 +419,11 @@ function writeTargets(t, msys = true) {
       const pv = !msys && (LAST_ONLY.has(name) || MOVE_CMDS.has(name)) ? PS_VALUE_FLAGS.exec(a) : null;
       if (pv) { if (!pv[4]) i++; continue; }
       // PowerShell chấp nhận viết tắt tham số (`-Dest`, `-Pa`) nên cờ lạ có thể đã gắn đối số vị trí vào -Path của nguồn.
-      if (!msys && MOVE_CMDS.has(name) && /^-[A-Za-z]/.test(a)) {
+      if (!msys && (MOVE_CMDS.has(name) || LAST_ONLY.has(name)) && /^-[A-Za-z]/.test(a)) {
+        if (PS_COPY_SWITCH.test(a)) continue;
         blurred = true;
         const val = /^-[A-Za-z]+:(.+)$/.exec(a);
-        if (val) { targets.push(val[1]); needs.push(['delete', 'write']); }
+        if (val) { targets.push(val[1]); needs.push(blurredNeeds(name)); }
         continue;
       }
       // Chỉ `-t DIR` (tách rời) và `--target-directory[=]DIR` đổi vai đối số vị trí; `-tDIR`, cờ gộp (`-rt`) hay cờ PowerShell (`-toSession`, `-Filter`)
@@ -447,7 +452,7 @@ function writeTargets(t, msys = true) {
     allPos = copyLike ? all.slice(-1) : all;
     if (FIRST_ONLY.has(name)) allPos = pos = psWriteCandidates(args);
     // PowerShell lấp đối số vị trí theo thứ tự Path rồi Destination; đối số thừa (cờ có giá trị như -Filter làm lệch) lấy cả hai vai để không bỏ sót.
-    const slots = !msys && (copyLike || (MOVE_CMDS.has(name) && !blurred))
+    const slots = !msys && !blurred && (copyLike || MOVE_CMDS.has(name))
       ? [...(namedPath ? [] : [copyLike ? ['read'] : ['delete']]), ...(namedDest ? [] : [['write']])] : null;
     if (gnu && toDir) {
       // Có -t DIR: đối số vị trí là nguồn: mv bị xoá, cp được đọc.
@@ -464,7 +469,7 @@ function writeTargets(t, msys = true) {
       needs.push(...all.map((_, i) => (lone ? extra : (slots[i] ?? extra))));
     } else {
       targets.push(...pos);
-      needs.push(...pos.map((_, i) => (blurred ? ['delete', 'write'] : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
+      needs.push(...pos.map((_, i) => (blurred ? blurredNeeds(name) : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
     }
   }
   // PowerShell nhận mảng `a,b` trong một token: tách thành từng đích để phần tử ngoài root không lọt. Chỉ PowerShell: ở Bash dấu phẩy là ký tự của tên file.
@@ -669,7 +674,7 @@ const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(nam
 // Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
 const MAX_STEPS = 6;
 // Chỉ dùng thông tin có sẵn từ parse (tên lệnh, lệnh con git, đích chuyển hướng); không đoán số file vì git commit -m không nêu file nào.
-function summarize(cmd) {
+function summarize(cmd, msys = true) {
   const p = parse(stripSimpleHeredocs(cmd) ?? cmd);
   const steps = [];
   let total = 0;
@@ -681,12 +686,13 @@ function summarize(cmd) {
     total++;
     if (steps.length >= MAX_STEPS) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
-    const w = writeTargets(t);
+    const w = writeTargets(t, msys);
     // Nêu đường dẫn gây ra câu hỏi: đường dẫn chưa biết (`$X`, `~`), rồi file cấu hình hook, rồi đích đầu tiên; nếu không, nguồn đọc đứng đầu của cp che mất đích ghi.
     const live = w.targets.map((x, j) => j).filter((j) => !NULL_DEVICE.test(w.targets[j]));
     const ti = live.find((j) => hasUnresolvedRef(w.targets[j])) ?? live.find((j) => GUARD_CONFIG.test(w.targets[j]) || CLAUDE_DIR.test(w.targets[j])) ?? live[0] ?? -1;
     const nd = w.needs[ti] ?? [];
-    const verb = nd.includes('delete') ? (nd.includes('write') ? 'xoá hoặc ghi' : 'xoá') : nd.includes('read') ? 'đọc' : 'ghi vào';
+    // Đích vừa đọc vừa ghi (cờ lạ của Copy-Item) nói là ghi: câu hỏi quyền xoay quanh việc ghi.
+    const verb = nd.includes('delete') ? (nd.includes('write') ? 'xoá hoặc ghi' : 'xoá') : nd.includes('write') || !nd.includes('read') ? 'ghi vào' : 'đọc';
     steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${ti >= 0 ? ` (${verb} ${showArg(w.targets[ti], 60)})` : ''}`);
   }
   if (!total) return '';
@@ -875,7 +881,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   let fe;
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
-  const ask = (text) => { let line = ''; try { line = summarize(cmd); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
+  const ask = (text) => { let line = ''; try { line = summarize(cmd, msys); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
   const parsedCmd = parse(cmd);
   const { unclosed } = parsedCmd;
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
