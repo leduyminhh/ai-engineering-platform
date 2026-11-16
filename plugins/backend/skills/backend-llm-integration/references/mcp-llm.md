@@ -33,11 +33,14 @@ của người viết, vì client mới là bên gọi nhà cung cấp; spec kh�
 | 7 | Khoá nhà cung cấp | Client, server không giữ khoá |
 | 3, 5, 6 | Fail-soft, redact và hash, prompt dự phòng | Vẫn ở server |
 
-- Client có thể từ chối, hoặc không khai báo `sampling`. Hai trường hợp:
+- Client có thể từ chối, hoặc không khai báo `sampling`. Hai trường hợp theo phiên bản client:
   - Client bản cũ trả lỗi cho request của server: server trả kết quả `degraded` và ghi log lý do theo mục 3, không giả vờ
     đã có câu trả lời của model [Unverified: chưa đọc trang sampling của spec 2025-11-25].
   - Client bản 2026-07-28: spec nói khi lỗi hoặc người dùng từ chối, client không cần gửi lại request. Server không chờ phản hồi
-    nên không nhận tín hiệu từ chối. Server tự đặt timeout, hết hạn thì coi như không có câu trả lời và rơi vào `degraded`.
+    nên không nhận tín hiệu từ chối. Server tự đặt timeout, hết hạn thì coi như không có câu trả lời và rơi vào `degraded`
+    [Inference: khuyến nghị của người viết; spec không quy định timeout].
+  - Client không khai báo `sampling`: không gửi yêu cầu sampling cho client đó [Inference: spec chỉ nói rõ điều này cho
+    `sampling.tools`; client hỗ trợ sampling phải khai báo `sampling`]. Coi như lời gọi không có câu trả lời và rơi vào `degraded`.
 - Spec khuyến nghị (SHOULD) luôn có người duyệt trong vòng và có quyền từ chối. Server không giả định yêu cầu nào cũng được duyệt.
 - Output nhận về từ client vẫn qua bộ che (mục 5) trước khi log.
 
@@ -53,7 +56,7 @@ của người viết, vì client mới là bên gọi nhà cung cấp; spec kh�
 
 | | Bản mới (2026-07-28 trở đi) | Bản cũ (2025-11-25 trở về trước) |
 |---|---|---|
-| Mở đầu | Không bắt tay; phiên bản giao thức nằm trong từng request | Mở bằng `initialize` |
+| Mở đầu | Không bắt tay | Mở bằng `initialize` |
 | Dấu hiệu trên request | Mọi request mang `_meta` `io.modelcontextprotocol/protocolVersion` (HTTP: header `MCP-Protocol-Version` khớp giá trị đó) | Phiên bản chốt một lần ở `initialize` |
 | Phiên | Không có `Mcp-Session-Id` | Có thể có `Mcp-Session-Id` (server có thể cấp) |
 | Server hỏi client | Trả kết quả `input_required`, client gọi lại request kèm câu trả lời | Server tự gửi request riêng |
@@ -79,3 +82,4 @@ của người viết, vì client mới là bên gọi nhà cung cấp; spec kh�
 | roots | `https://modelcontextprotocol.io/specification/2026-07-28/client/roots` | chỉ là thông tin |
 | Python SDK (what's-new) | `https://py.sdk.modelcontextprotocol.io/whats-new/` | "v2", hai thời kỳ, cờ chuyển sang `run()` |
 | PyPI gói `mcp` | `https://pypi.org/pypi/mcp/json` | số phiên bản v2.3.0 |
+| Python SDK (trang chủ) | `https://py.sdk.modelcontextprotocol.io/` | số phiên bản hiện ở khối GitHub khi trang render bằng JS [Unverified: HTML thô không có chuỗi 2.3.0] |
