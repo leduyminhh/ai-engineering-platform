@@ -384,5 +384,13 @@ export default async function run({ ok, ctx }) {
     // Các ca `ask` của R18 đã có ở 99-hook-popup; ở đây chỉ giữ ca nội dung (không phải đích) không bị hỏi nhầm.
     psw('AC1.4', [['Set-Content -Value .claude\\aip-gate.json x', null], ['Set-Content -Value: -Encoding .claude\\aip-gate.json', 'ask'], ['Add-Content -ea: -Value .claude\\aip-gate.json', 'ask'],
       ['Set-Content -Value: -Value .claude\\settings.json', 'ask']], psAsk);
+
+    // hook-copy-alias-brace: giá trị của -S/--suffix (cp/mv Bash) là hậu tố, không phải đối số vị trí; nếu không thì nó chiếm vai đích và che đích thật.
+    expectAll([
+      ...[`cp ${O}/x ${D}/b -S .bak`, `cp ${O}/x ${D}/b --suffix .bak`, `cp -S .bak ${O}/x ${D}/b`, `cp -bS .bak ${O}/x ${D}/b`, `cp ${O}/x ${D}/b --suffix=.bak`,
+        `mv ${T}/x ${D}/b -S .bak`, `mv ${O}/x ${T}/b -S .bak`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC4.1']),
+      ...[`cp ${T}/x ${O}/b -S .bak`, `cp ${D}/x ${O}/b --suffix .bak`, `mv ${T}/x ${O}/b -S .bak`].map((c) => [c, null, 'hook-copy-alias-brace AC4.1']),
+      ...[`cp ${OUT}/x ${O}/b -S .bak`, `cp -t ${O} ${OUT}/x --suffix .bak`].map((c) => [c, 'ask', 'hook-copy-alias-brace AC4.1']),
+    ]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
