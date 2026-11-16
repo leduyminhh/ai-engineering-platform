@@ -11,6 +11,8 @@ LLM sẵn có rẻ hơn một skill mới và không đụng routing.
 - Người dùng chọn: thu hẹp vào `backend-llm-integration`, không tạo `backend-mcp-server`.
 - Người dùng chọn: cỡ dự án (design + plan), đọc spec web ở Bước 3 (đã đọc, xem brief mục "Cập nhật"), không tách task.
 - Quyết định của agent: đặt file ở `references/mcp-llm.md`; không đổi `description`; bump `backend` minor lên 1.16.0.
+- Ruling lúc thực thi (ledger không vào nhánh): sau G1/G2 chữ AC1.3(c) đổi "spec yêu cầu xác thực" thành "khuyến nghị (SHOULD)" và AC1.5 đổi ngưỡng routing 69 thành 70, vì spec 2026-07-28 chỉ nói SHOULD và `test/routing/rank1.lock.json` hiện là 70/94 (chạy lại: `node scripts/routing-score.mjs`). Đây là sửa dữ kiện, không đổi ý định; nêu ở G3 để người duyệt bác được.
+- Version khoá lại một lần ở 1.16.0 sau lần sửa cuối của review cuối (khoá về trạng thái `master` rồi `--lock`), vì 1.16.0 chưa phát hành.
 ## Thiết kế
 Một file mới `plugins/backend/skills/backend-llm-integration/references/mcp-llm.md`, khoảng 60 dòng, bốn phần:
 1. **Gọi thẳng nhà cung cấp (mặc định cho server mới).** Server giữ khoá và chịu chi phí, nên bảy mục của
@@ -22,7 +24,7 @@ Một file mới `plugins/backend/skills/backend-llm-integration/references/mcp-
    khuyến nghị (SHOULD) xác thực kết nối, không hướng dẫn cách làm. Roots chỉ cho biết thư mục liên quan, không chặn truy cập, nên
    server tự kiểm đường dẫn trong tool.
 4. **Nhận biết thời kỳ.** Bản mới mang phiên bản giao thức trong từng request, có `server/discover`; bản cũ mở bằng
-   `initialize` và có `Mcp-Session-Id`. Server hỗ trợ cả hai thì thử bản mới trước. Cờ `stateless_http` và `json_response`
+   `initialize` và có `Mcp-Session-Id`. Server hỗ trợ cả hai chọn hành vi theo cách request mở đầu (có `_meta` bản mới thì phục vụ bản mới, `initialize` thì bản cũ); việc thử bản mới trước là của client. Cờ `stateless_http` và `json_response`
    chỉ liên quan khi phục vụ bản cũ [Unverified: chưa đọc trang Running your server của SDK].
 Cuối file: URL các trang đã đọc, ngày đọc, nhãn phiên bản. `SKILL.md` thêm đúng một dòng ở mục Tiền đề trỏ tới file.
 Cập nhật `plugins/backend/.manifest.json` (version), chạy `node cli/lib/versions.mjs --lock`, kiểm routing.

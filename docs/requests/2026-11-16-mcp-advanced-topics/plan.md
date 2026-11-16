@@ -31,7 +31,7 @@
 - Đoạn chép nguyên văn từ trang spec hoặc bài khoá: reviewer so từng câu với URL ở mục "Nguồn đã đọc" của design (Task 1, step 4).
 - `description` bị đổi nhầm khi sửa `SKILL.md`: `git diff` của frontmatter rỗng và `node test/validate.mjs --only enrich-backend` xanh (Task 1, step 5).
 - Ánh xạ bảy mục checklist lệch số hoặc tên: step 4 của Task 1 đối chiếu từng tên mục với `llm-call-checklist.md`.
-- Điểm routing tụt dưới khoá 69/94 dù `description` không đổi: `node scripts/routing-score.mjs` (Task 2, step 3).
+- Điểm routing tụt dưới khoá 70/94 dù `description` không đổi: `node scripts/routing-score.mjs` (Task 2, step 3).
 - Bump version quên chạy `--lock`: `npm test` đỏ ở ca khớp lock (Task 2, step 4).
 
 ### Task 1: Reference mcp-llm.md và dòng liên kết
@@ -72,5 +72,5 @@
 
 - [ ] **Step 1:** Sửa `version` trong `plugins/backend/.manifest.json` từ `1.15.3` thành `1.16.0`.
 - [ ] **Step 2:** Chạy `npm run build`, rồi `node cli/lib/versions.mjs --lock`; kết quả mong đợi thoát 0 và `plugins/_versions.lock.json` có `backend` ở `1.16.0`.
-- [ ] **Step 3:** Chạy `node scripts/routing-score.mjs`; kết quả mong đợi positive không dưới 69, negative không dưới 94. Dưới ngưỡng thì dừng và báo, không hạ khoá `rank1.lock.json`.
+- [ ] **Step 3:** Chạy `node scripts/routing-score.mjs`; kết quả mong đợi positive không dưới 70, negative không dưới 94. Dưới ngưỡng thì dừng và báo, không hạ khoá `rank1.lock.json`.
 - [ ] **Step 4:** Thêm một dòng vào mục Added của `[Unreleased]` trong `CHANGELOG.md` (request `2026-11-16-mcp-advanced-topics`; backend 1.16.0), rồi chạy `npm test`, kết quả mong đợi thoát 0. Commit qua `core:git-workflow`.
