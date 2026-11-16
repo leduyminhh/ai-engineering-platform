@@ -247,6 +247,7 @@ export default async function run({ ok, ctx }) {
     ok(!okLink || cli('scan-secrets.mjs', [linkDir]).status === 1, 'AC3.3: symlink .md trỏ tới file thường vẫn được quét');
 
     // AC4.4: SKILL.md gọi check-citations.mjs của skill anh em; đổi chỗ script mà không đổi SKILL.md thì bước kiểm trích dẫn thành not_run lặng lẽ.
+    // AC1.1 do contract conventions chung kiểm (frontmatter, description, H2); AC6.1 do contract versions lock và npm test kiểm.
     // AC4.1, AC4.2, AC4.3, AC4.5, AC5.1, AC6.2 là nội dung hướng dẫn: kiểm ở review, không có test tự động (không pin câu chữ).
     const citations = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-spec-backfill', 'scripts', 'check-citations.mjs');
     ok(fs.existsSync(citations), 'AC4.4: check-citations.mjs của engineering-spec-backfill còn ở đường dẫn SKILL.md gọi');
