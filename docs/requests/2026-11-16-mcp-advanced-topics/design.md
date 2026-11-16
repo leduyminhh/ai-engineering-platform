@@ -1,6 +1,6 @@
 # Thiết kế: Reference MCP trong backend-llm-integration
 - Ngày: 2026-11-16
-- Trạng thái: in-progress — nhánh claude/mcp-advanced-topics-8335c2
+- Trạng thái: merged f85cec68
 - Requirement: [requirement.md](requirement.md)
 ## Vấn đề và lý do
 Backend xây server MCP có hai chỗ dễ sai mà skill hiện có không nói: ai gọi LLM (server tự gọi hay nhờ client qua sampling)
