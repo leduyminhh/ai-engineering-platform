@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Reference MCP cho `backend-llm-integration` (`docs/requests/2026-11-16-mcp-advanced-topics`; backend 1.16.0): `references/mcp-llm.md` nói cách xử lý lời gọi LLM khi backend là server MCP theo spec 2026-07-28 (gọi thẳng nhà cung cấp thay cho sampling đã deprecated, sampling chỉ còn cho đối tác bản cũ, bảo mật tối thiểu cho server HTTP, nhận biết đối tác bản cũ hay mới); `description` của skill không đổi.
+
 - Script đo hiệu năng frontend lưu trong `perf/` (`docs/requests/2026-11-13-frontend-perf-script`; frontend 1.17.1): `frontend-performance` chọn công cụ đo theo thứ tự (script đo có sẵn, Lighthouse đã cài, script mẫu Playwright `scripts/playwright-measure.mjs`, đề xuất Lighthouse và hỏi) thay vì đo bằng công cụ trình duyệt tương tác; script kiểm URL đầu vào và URL sau điều hướng ban đầu là host local và từ chối --runs < 3 (request tài nguyên con không bị chặn, residual risk), có một lần warm-up bỏ đi và throttle CPU mặc định 4×; output thô vào `perf/<phía>/results/` không commit; `frontend-init` thêm bước `.gitignore` (`.playwright-mcp/`, `perf/**/results/`, `dist/`, `node_modules/` khi tạo mới).
 
 - Kiểm giao diện thật trong `workflow-feature` (`docs/requests/2026-11-13-frontend-ui-verify`; workflows 3.17.1, frontend 1.17.1): Bước 5 thêm lượt "Kiểm giao diện thật" chạy một lần sau mọi task, gọi `frontend-manual-check` ở chế độ nhúng (ảnh chụp trạng thái loading/rỗng/lỗi/thành công, đối chiếu mockup, focus sau thao tác đổi nội dung tại chỗ, thông báo lỗi sau khi tải lại), ghi `ui-check.md` cho Bước 6; `fidelity-checklist.md` đòi dẫn chứng cho mục "đã chạy thật", `review-dimensions.md` phủ focus rơi về `body` và vùng `role="alert"` bị gỡ cùng danh sách.
