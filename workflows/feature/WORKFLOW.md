@@ -101,7 +101,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   thì không hỏi, nêu nổi bật các quyết định của agent ở checkpoint. Spike giả định (theo `engineering-spec-writing`): giả
   định về công cụ hoặc thư viện mà hướng đã chọn dựa vào và kiểm được bằng một lệnh (vd công cụ codegen có chạy với
   TypeScript/Node của project không: mục "Kiểm tương thích công cụ" của reference `contract-and-codegen` trong
-  `frontend-data-integration`) thì kiểm trước checkpoint, chỉ đọc hoặc chạy thử trong thư mục tạm: không cài vào
+  `frontend-data-integration`) thì kiểm trước checkpoint, chỉ đọc hoặc chạy thử trong thư mục tạm ngoài project: không cài vào
   project, không `npx --yes` hay chạy gói chưa được người dùng duyệt; ghi lệnh và kết quả vào tài liệu; không kiểm được thì giữ
   `[Unverified]` kèm lý do và nêu ở G1 như rủi ro chặn hướng, không chặn việc làm rõ hay viết tài liệu.
 - **Ràng buộc:** trình tài liệu để duyệt theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó) (mở file ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng, không hỏi suông); agent chỉ ghi trong `docs/`; không code implementation; không đổi kiểu kiến trúc đã chốt; cỡ

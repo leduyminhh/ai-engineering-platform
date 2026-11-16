@@ -54,7 +54,7 @@ nối); không dùng "đảm bảo / an toàn tuyệt đối"; luôn nêu rủi 
 - Đối chiếu blueprint kiến trúc ship kèm ở `architecture/react-<feature-based|fsd|micro-frontend>.template.md` để
   biết tầng/slice và import boundary. Bảng đặt file: [references/data-layer-by-architecture.md](references/data-layer-by-architecture.md).
 - Dò **stack thật** từ `package.json` và config: thư viện data (TanStack Query / SWR / RTK Query), codegen
-  (openapi-typescript / orval / openapi-generator), `api-client` sẵn có (`lib/api-client.ts` hoặc `shared/api`),
+  (openapi-typescript / orval / openapi-generator, gói npm `@openapitools/openapi-generator-cli`), `api-client` sẵn có (`lib/api-client.ts` hoặc `shared/api`),
   msw. Ghi lại phiên bản TanStack Query thật (chữ ký `useQuery` khác nhau giữa v4 và v5).
 - Đọc các component được giao và liệt kê chỗ `TODO` / props còn thiếu dữ liệu do `frontend-implement` để lại.
 - **Nhận task `FE-INT` từ `tasks.md`** (do `engineering-task-breakdown` sinh, dạng "task `UC01-FE-02` trong

@@ -20,7 +20,7 @@ Thiếu endpoint hoặc schema → DỪNG (cổng I1), không tự thêm vào co
 |---|---|
 | `openapi-typescript` trong `package.json` | Dùng lại script hiện có (tìm trong `scripts`) |
 | `orval` (có `orval.config.*`) | Dùng lại; client và hook do orval sinh là nguồn, không viết hook thứ hai song song |
-| `openapi-generator` (có `openapitools.json` hoặc script tương ứng) | Dùng lại |
+| `openapi-generator` (gói npm `@openapitools/openapi-generator-cli`; có `openapitools.json` hoặc script tương ứng) | Dùng lại |
 | Không có gì | Đề xuất mục 3 và HỎI người dùng; không tự cài |
 
 ## 2a. Kiểm tương thích công cụ (trước khi đề xuất hoặc chốt)
@@ -39,12 +39,15 @@ Gắn `[Unverified]` cho mỗi hành vi công cụ chưa kiểm bằng lệnh.
      phải kết luận về peer.
    - `package.json` có `workspaces` hoặc dependency trỏ vào đường dẫn cục bộ (`file:`, `link:`): bản sao không chứa các
      thư mục đó nên cây phụ thuộc khác project dù exit code là 0; coi như không chạy được.
-   - `EBADENGINE`: chỉ là cảnh báo, không đổi exit code; kết luận về `engines` lấy từ lệnh `npm view` ở bước 1,
-     còn stderr của dry-run chỉ để đối chiếu.
+   - Project dùng registry riêng hoặc dependency theo scope private (cần `.npmrc` mà ta không chép): dry-run có thể
+     hỏi nhầm registry công khai và báo không xung đột sai; coi như không chạy được. [Inference] chưa thử bằng lệnh.
+   - `EBADENGINE`: chỉ là cảnh báo, không đổi exit code; đọc thêm stderr của dry-run để thấy cảnh báo này, nhưng kết
+     luận về `engines` lấy từ lệnh `npm view` ở bước 1.
 
-   Không chạy được (exit code khác 0 với mã lỗi khác `ERESOLVE`, ca `workspaces`/`file:`/`link:`, không mạng, registry lỗi): giữ `[Unverified]` kèm lý do và nêu ở G1 như rủi ro chặn
-   hướng; không chặn việc làm rõ hay viết tài liệu. Project dùng package manager khác npm: vẫn đọc khai báo bằng bước 1,
-   còn phần chạy thử gắn `[Unverified]`.
+   Không chạy được (exit code khác 0 với mã lỗi khác `ERESOLVE`, ca `workspaces`/`file:`/`link:`, registry riêng,
+   không mạng, registry lỗi): giữ `[Unverified]` kèm lý do và nêu ở G1 như rủi ro chặn hướng; không chặn việc làm rõ
+   hay viết tài liệu. Project dùng package manager khác npm: vẫn đọc khai báo bằng bước 1, còn phần chạy thử gắn
+   `[Unverified]`. Chạy xong thì xoá thư mục tạm: lockfile đã chép có thể chứa URL registry nội bộ.
 3. **Ghi kết quả** vào ADR của công cụ: lệnh đã chạy, `peerDependencies`/`engines` đã đọc, phiên bản TypeScript/Node của
    project, kết luận. Request không có ADR cho công cụ thì ghi vào `design.md` (hoặc `requirement.md` cỡ thay đổi nhỏ),
    mục rủi ro/giả định.
@@ -59,11 +62,12 @@ Xung đột thì **dừng và để người dùng chọn** (ở G1 nếu còn t
 
 ## 3. Đề xuất mặc định khi chưa có codegen
 
-`openapi-typescript` chỉ sinh **type**; hook và `api-client` vẫn viết mỏng theo template kiến trúc. Chỉ đề xuất sau khi
-mục 2a không báo xung đột. Thay `<x.y.z>` bằng phiên bản đã kiểm ở mục 2a, đường dẫn đích theo bảng mục 4.
+`openapi-typescript` chỉ sinh **type**; hook và `api-client` vẫn viết mỏng theo template kiến trúc. Chỉ đề xuất mặc định
+sau khi mục 2a không báo xung đột; ca có xung đột xem khối `npx` bên dưới. Thay `<x.y.z>` bằng phiên bản đã kiểm ở mục
+2a, đường dẫn đích theo bảng mục 4.
 
 **Mặc định (mục 2a không báo xung đột peer):** cài vào `devDependencies` đúng một phiên bản, sau khi người dùng đồng ý
-thêm dependency (không tự cài):
+thêm dependency (không tự cài; lệnh cài chạy cả script cài đặt của gói và dependency của nó, sự đồng ý bao gồm điều đó):
 
 ```
 npm install --save-dev --save-exact openapi-typescript@<x.y.z>
