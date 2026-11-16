@@ -638,5 +638,38 @@ export default async function run({ ok, ctx }) {
     for (const [cmd, env, want, ac, unres = false] of RW) {
       ok(JSON.stringify(rw(cmd, { env, unres })) === JSON.stringify(want), `${ac}: resolveWord \`${cmd.replaceAll(T, '<T>').replaceAll(P, '<P>')}\` → ${want ? JSON.stringify(want.glob) + ' glob' : 'chưa rõ'}`);
     }
+
+    // Phép gán biến/cd trong cùng lệnh đi qua một luật tin cậy (walkSegments). T nằm dưới root, OUT ngoài mọi root.
+    fs.mkdirSync(T, { recursive: true });
+    const real = "S=\"$(cygpath -u '" + T + "')/e2e\" && M=\"$PWD/src/data/database-backup\" && rm -rf \"$S/run/backup\"/* && : >\"$S/stub.log\" && echo \"CRON_USER=$(id -un)\" >>\"$S/run/.env\" && export APP_ROOT=\"$S/run/app\" PATH=\"$S/shim:$M/scripts:$PATH\" && bash \"$APP_ROOT/scripts/db-job.sh\" create 2>&1 | tail -2; cat \"$S/cron.d\" | tail -1";
+    expectAll([[real, null, 'AC1.1']], { extra: { cwd: T } });
+    expectAll([
+      [`S="$(cygpath -u '${T}')/e2e"; rm -rf "$S/x"`, null, 'AC1.2'],
+      [`S=$(cygpath -u '${T}')/e2e && rm "$S/x"`, null, 'AC1.2'],
+      [`S="${T}/e2e"; rm -rf "$S/run/backup/"*`, null, 'AC1.2'],
+      [`rm -rf "${T}/backup/"*`, null, 'AC1.2'],
+      [`echo hi\nS=${T}\nrm -rf "$S/etc"`, null, 'AC1.2'],
+      [`cd ${T} && echo hi; S=${T}; rm $S/x`, null, 'AC1.2'],
+      [`echo hi && export A=${T}/a && rm "$A/x"`, null, 'AC1.2'],
+      [`export APP="${T}/app" && rm "$APP/x"`, null, 'AC1.4'],
+      [`cd ${T}; M="$PWD"; rm "$M/y"`, null, 'AC1.4'],
+      [`cd ${OUT}; M="$PWD"; rm "$M/y"`, 'deny', 'AC1.4'],
+      [`export APP=${OUT}/app && rm -rf "$APP/x"`, 'deny', 'AC1.4'],
+      ...[
+        `rm $S/x; S=${T}`, `S=$X; rm "$S/x"`, `S=${T}; S=$X; rm "$S/x"`, `S="${T}/a b"; rm $S/x`, `A=1 && S=${T}; rm $S/x`,
+        `S=${T} rm -rf "$S/etc"`, `S=${T} | cat; rm -rf "$S/etc"`, `S=${T} & rm -rf "$S/etc"`, `if false; then S=${T}; fi; rm -rf "$S/x"`,
+        `(S=${T}); rm -rf "$S/x"`, `f() { S=${T}; }; rm -rf "$S/x"`, `S=${T}; S+=/../v; rm -rf $S`, `S=${T}; S[0]=/etc; rm -rf $S/x`,
+        `S=${T}; unset S; rm -rf $S/etc`, `S=${T}; read X; rm -rf "$S/x"`, `S=${T}; eval S=/etc; rm -rf $S/x`, `S=${T}; cat <<<x; rm -rf $S/y`,
+      ].map((c) => [c, 'ask', 'AC1.5']),
+      [`S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
+      [`cd ${T}; S=/etc; rm $S/x`, 'deny', 'AC1.6'],
+      [`S='${T}'/../../..; rm -rf $S/victim`, 'deny', 'AC1.6'],
+      [`S="${T}"/../../..; rm -rf $S/victim`, 'deny', 'AC1.6'],
+      [`S=$(cygpath -u '${T}')/../../..; rm -rf $S/victim`, 'deny', 'AC1.6'],
+      ...(path.sep === '\\' ? [[`S='${T.replaceAll('/', '\\')}\\..\\..\\..'; rm -rf $S/victim`, 'deny', 'AC1.6']] : []),
+    ]);
+    const noH6 = [`S=${OUT}; rm $S/x`, `S=${T}; rm $S/x`].map((c) => [c, null, 'AC1.8']);
+    expectAll(noH6, { cfg: { mode: 'ask' } });
+    expectAll(noH6, { extra: { permission_mode: 'default' } });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }

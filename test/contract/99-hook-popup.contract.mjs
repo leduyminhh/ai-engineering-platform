@@ -281,7 +281,6 @@ export default async function run({ ok, ctx }) {
       [cdPrefixed('cd $D && S=' + fwd(scratch), 'rm $S/x'), 'ask', 'cd tới biến không giải được thì không tin gì phía sau'],
       [cdPrefixed('cd /e/x || S=' + fwd(scratch), 'rm $S/x'), 'ask', 'cd nối bằng || (phép gán có thể không chạy sau cd)'],
       [cdPrefixed('cd /e/x; S=/etc', 'rm $S/x'), 'deny', 'gán ra ngoài root sau cd nối bằng ; → deny'],
-      [cdPrefixed('cd /e/x && echo hi; S=' + fwd(scratch), 'rm $S/x'), 'ask', 'chỉ bỏ qua cd đứng đầu, không bỏ qua lệnh khác'],
     ];
     for (const [cmd, want, why] of stay) {
       ok(bash(cmd, withScratch)?.decision === want, `AC6.3: full — ${why}: ${cmd.replace(/\n/g, '⏎')}`);
@@ -290,9 +289,6 @@ export default async function run({ ok, ctx }) {
     // Vòng sửa 1: chỉ khối gán ở đầu chuỗi, kết thúc đúng token, không bị gán lại/đổi; không áp cho PowerShell; heredoc chỉ cho cat/tee có nháy
     const T = fwd(scratch);
     const mustStop = [
-      ["S='" + T + "'/../../..; rm -rf $S/victim", 'phần chữ dính sau giá trị có nháy'],
-      ['S="' + T + '"/../../..; rm -rf $S/victim', 'phần chữ dính sau giá trị nháy kép'],
-      ["S=$(cygpath -u '" + T + "')/../../..; rm -rf $S/victim", 'phần chữ dính sau $(cygpath …)'],
       ['S="' + T + '"$X; rm -rf $S/victim', 'giá trị ghép với biến khác'],
       ['S=' + T + ' rm -rf $S/etc', 'gán chỉ cho một lệnh (env-prefix)'],
       ['S=' + T + ' | cat; rm -rf $S/etc', 'gán ở vế pipe'],
@@ -307,12 +303,20 @@ export default async function run({ ok, ctx }) {
       ['S=' + T + "; cat <<'EOF'\nx\nEOF\nS=/etc\nrm -rf $S/x", 'gán lại sau heredoc'],
       ['S=' + T + "; bash <<'EOF'\nrm -rf $S/etc\nEOF", 'heredoc cho shell con'],
       ['S=' + T + '; cat <<EOF\n$(rm -rf $S/etc)\nEOF', 'heredoc không nháy có $( )'],
-      ['echo hi\nS=' + T + '\nrm -rf $S/etc', 'gán không ở đầu chuỗi'],
       ['if false; then\nS=' + T + '\nfi\nrm -rf $S/x', 'gán trong if xuống dòng'],
       ['(S=' + T + '); rm -rf $S/x', 'gán trong subshell'],
       ['f() { S=' + T + '; }; rm -rf $S/x', 'gán trong hàm chưa gọi'],
       ['S=' + T + "; cat <<<x; rm -rf $S/../../x", 'here-string'],
     ];
+    // AC1.7: ba hàng này đổi ask → deny (chuẩn hoá `..` trước khi kiểm root); hai hàng D2 cũ (gán sau `echo hi`) nay null, nằm ở AC1.2 của 99-path-permissions.
+    const denyRows = [
+      ["S='" + T + "'/../../..; rm -rf $S/victim", 'phần chữ dính sau giá trị có nháy'],
+      ['S="' + T + '"/../../..; rm -rf $S/victim', 'phần chữ dính sau giá trị nháy kép'],
+      ["S=$(cygpath -u '" + T + "')/../../..; rm -rf $S/victim", 'phần chữ dính sau $(cygpath …)'],
+    ];
+    for (const [cmd, why] of denyRows) {
+      ok(bash(cmd, withScratch)?.decision === 'deny', `AC1.7: full — ${why} thoát khỏi root nên deny: ${cmd}`);
+    }
     for (const [cmd, why] of mustStop) {
       ok(bash(cmd.replaceAll('\\n', '\n'), withScratch) !== null, `AC6.3: full — không tin phép gán (${why}) nên vẫn bị hỏi hoặc chặn: ${cmd.replace(/\\n/g, '⏎')}`);
     }
