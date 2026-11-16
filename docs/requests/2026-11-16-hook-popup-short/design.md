@@ -1,6 +1,6 @@
 # Thiết kế: popup hook ask chỉ nói đang làm gì, đụng đường dẫn nào
 - Ngày: 2026-11-16
-- Trạng thái: approved — G1 duyệt 2026-11-16 (bỏ vạch 200 ký tự)
+- Trạng thái: in-progress — nhánh feature/hook-popup-short-2
 - Requirement: không có
 
 ## Vấn đề và lý do
