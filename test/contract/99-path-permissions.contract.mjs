@@ -452,6 +452,16 @@ export default async function run({ ok, ctx }) {
       [`rm ${T}/${'{x}'.repeat(64)}/f`, null, 'hook-copy-alias-brace AC3.2'], [`rm ${T}/${'{x}'.repeat(65)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
     ]);
     ok(performance.now() - tBig < 1000, 'hook-copy-alias-brace AC3.2: đầu vào lớn xử lý nhanh');
+    // Chi phí brace tính theo cả lệnh: mỗi token dưới trần 4096 ký tự nhưng 24 token (~96KB) cộng lại không được vượt 1 giây; hết ngân sách thì ask, đích ngoài root vẫn deny.
+    const heavy = `${T}/${'{'.repeat(56)}${'{a,b}'.repeat(8)}${'x'.repeat(3800)}`;
+    const many = Array(24).fill(heavy).join(' ');
+    const tCmd = performance.now();
+    expectAll([
+      [`rm ${many} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${many}`, 'ask', 'hook-copy-alias-brace AC3.4'],
+      // Lệnh đời thường và 5 đường dẫn 8 nhóm ngắn nằm trong ngân sách: không đổi.
+      [`cp ${T}/x ${T}/{a,b}`, null, 'hook-copy-alias-brace AC3.4'], [`rm ${Array(5).fill(`${T}/${'{a,b}'.repeat(8)}/f`).join(' ')}`, null, 'hook-copy-alias-brace AC3.4'],
+    ]);
+    ok(performance.now() - tCmd < 1000, 'hook-copy-alias-brace AC3.4: lệnh nhiều token brace xử lý dưới 1 giây');
     // PowerShell không mở rộng brace: kết quả giữ như trước request.
     expectAll([[`Remove-Item ${T}/{..,x}/f`, null, 'hook-copy-alias-brace AC3.3'], [`Remove-Item ${O}/{a,b}`, 'deny', 'hook-copy-alias-brace AC3.3']], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
