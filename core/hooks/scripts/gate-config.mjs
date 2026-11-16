@@ -142,6 +142,25 @@ export function allowedRoots(gate, input) {
   return grantsOf(gate, input).filter((g) => PERMS.every((a) => g.allow.includes(a))).map((g) => g.path);
 }
 
+const ROOT_VERB = { write: 'ghi', delete: 'xoá' };
+const MAX_ROOT_LIST = 6;
+
+// Câu deny của full khi đường dẫn nằm ngoài root: nêu quyền thiếu, liệt kê root có quyền đó (agent biết được làm ở đâu, như list_roots) rồi cách xin thêm.
+// Chỉ write/delete có dòng root: thiếu read là ask cho người dùng, không phải deny cho agent; root glob chỉ-đọc không bao giờ có quyền ghi.
+export function denyOutsideText(need, grants, subject) {
+  const head = `Chế độ full chỉ cho phép ${subject} có quyền ${need}; đường dẫn chưa có.`;
+  const tail = `Cần mở rộng → thêm vào "fullPaths" (allow có "${need}") hoặc "fullRoots" trong .claude/aip-gate.json.`;
+  const verb = ROOT_VERB[need];
+  const seen = new Set();
+  const roots = verb ? (grants ?? []).filter((g) => !g.glob && g.allow?.includes(need) && !seen.has(norm(g.path)) && seen.add(norm(g.path))) : [];
+  if (!roots.length) return `${head} ${tail}`;
+  // Chỉ phần dưới <tmpdir>/claude là root (R23), nên hiện kèm /… để agent không thử ghi vào chính thư mục đó.
+  const tmp = claudeTmpRoots().map(norm);
+  const shown = roots.slice(0, MAX_ROOT_LIST).map((g) => `\`${showArg(g.path, 80)}${tmp.includes(norm(g.path)) ? '/…' : ''}\``);
+  const more = roots.length > MAX_ROOT_LIST ? `, … và ${roots.length - MAX_ROOT_LIST} mục khác` : '';
+  return `${head}\nĐược ${verb}: ${shown.join(', ')}${more}\n${tail}`;
+}
+
 export function fullReadRoots(config) {
   const v = config?.fullReadRoots;
   if (!Array.isArray(v)) return [];

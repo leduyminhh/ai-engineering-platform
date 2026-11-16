@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, grantsOf, normalizeMsysPath, hasUnresolvedRef, showArg, isClaudeTmpRoot, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
+import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, grantsOf, normalizeMsysPath, hasUnresolvedRef, showArg, isClaudeTmpRoot, denyOutsideText, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 // Biên gồm cả > : ` @ { , (vd x>.env, HEAD:.env, @.env, {a,.env}) vì tên file dính các ký tự này vẫn được lệnh đọc/ghi.
@@ -726,6 +726,10 @@ const CONFIG_TEXT = 'Ghi vào file cấu hình quyền (`.claude/aip-gate.json` 
 const FULL_PATH_TEXT = 'Ghi hoặc xoá ở đường dẫn chưa rõ (`$VAR`, `~`, `*`).';
 const READ_OUTSIDE_TEXT = 'Đọc file ngoài các thư mục được cấp quyền đọc.';
 const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy; project bật chế độ full nhưng phiên này vẫn hỏi. Đổi: `aip mode ask`.';
+// Dòng liệt kê root chỉ là gợi ý cho agent: lỗi khi dựng nó không được làm mất deny, nên rơi về câu không có dòng root.
+function denyText(need, grants, subject) {
+  try { return denyOutsideText(need, grants, subject); } catch { return denyOutsideText(need, [], subject); }
+}
 const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`.`;
 
 // Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
@@ -978,7 +982,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const [fullOuter, fullNaive] = resolved === cmd ? [outer, naiveOuter] : [parse(resolved).segs, naiveSegments(resolved)];
     for (const { t, dir, unres } of [...trackDirs(fullOuter, cwd, msys), ...trackDirs(fullNaive, cwd, msys)]) {
       const r = confineSegment(t, dir, unres, roots, msys);
-      if (r?.deny) return { decision: 'deny', reason: r.blocked ? CLAUDE_TMP_BLOCKED_TEXT : `Chế độ full chỉ cho phép lệnh này ở thư mục có quyền ${r.deny}; đường dẫn chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "${r.deny}") hoặc "fullRoots" trong .claude/aip-gate.json.` };
+      if (r?.deny) return { decision: 'deny', reason: r.blocked ? CLAUDE_TMP_BLOCKED_TEXT : denyText(r.deny, roots, 'lệnh này ở thư mục') };
       if (r === 'ask') unknownPath = true;
       if (r === 'ask-read') readOutside = true;
     }
