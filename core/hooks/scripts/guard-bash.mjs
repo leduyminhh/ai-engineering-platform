@@ -15,7 +15,7 @@ const GIT_OPTS_WITH_VALUE = new Set(['-C', '-c', '--git-dir', '--work-tree', '--
 const PUSH_OPTS_WITH_VALUE = new Set(['-o', '--push-option', '--repo', '--receive-pack', '--exec']);
 
 // Tách lệnh thành các đoạn token, tôn trọng nháy: toán tử/xuống dòng nằm trong nháy (vd heredoc trong -m "$(…)") không cắt đoạn.
-function parse(cmd) {
+export function parse(cmd) {
   const segs = [];
   let toks = [];
   let cur = '';
@@ -48,6 +48,102 @@ function parse(cmd) {
     }
     cur += c;
     has = true;
+  }
+  endSeg();
+  return { segs, unclosed: q !== null };
+}
+
+const SH_OPEN = new Set(['if', 'for', 'while', 'until', 'case', '{']);
+const SH_CLOSE = new Set(['fi', 'done', 'esac', '}']);
+const SH_KW = new Set([...SH_OPEN, ...SH_CLOSE, 'then', 'else', 'elif', 'do', 'function']);
+
+// Với `$(`/backtick: trả chỉ số ngay sau phần đóng; chưa đóng thì tới hết chuỗi.
+function skipSubst(cmd, i) {
+  if (cmd[i] === '`') { const e = cmd.indexOf('`', i + 1); return e < 0 ? cmd.length : e + 1; }
+  let depth = 0;
+  for (let k = i + 1; k < cmd.length; k++) {
+    const c = cmd[k];
+    if (c === "'" || c === '"') { const e = cmd.indexOf(c, k + 1); if (e < 0) return cmd.length; k = e; continue; }
+    if (c === '(') depth++;
+    else if (c === ')' && --depth === 0) return k + 1;
+  }
+  return cmd.length;
+}
+
+// Tách lệnh thành đoạn → từ → phần, mỗi phần giữ loại nháy; $( … ) và backtick là chữ thô của từ hiện tại.
+export function scanWords(cmd, dialect = 'bash') {
+  const ps = dialect === 'powershell';
+  const segs = [];
+  let words = [];
+  let parts = null;
+  let pending = null;
+  let kwDepth = 0;
+  let kwMark = false;
+  let paren = 0;
+  let q = null;
+  const add = (text, quote) => {
+    parts ??= [];
+    const last = parts[parts.length - 1];
+    if (last && last.quote === quote && quote === 'none') last.text += text;
+    else if (last && last.quote === quote && q) last.text += text;
+    else parts.push({ text, quote });
+  };
+  const endWord = () => {
+    if (!parts) return;
+    if (!ps && !words.length && parts.length === 1 && parts[0].quote === 'none') {
+      const t = parts[0].text;
+      if (SH_KW.has(t)) { kwMark = true; if (SH_OPEN.has(t)) kwDepth++; else if (SH_CLOSE.has(t)) kwDepth = Math.max(0, kwDepth - 1); }
+    }
+    words.push({ parts });
+    parts = null;
+  };
+  const endSeg = () => {
+    endWord();
+    if (words.length) {
+      const sep = pending ?? (segs.length ? ';' : 'start');
+      segs.push({ words, sep, pipeIn: sep === '|', pipeOut: false, background: false, compound: paren > 0 || kwDepth > 0 || kwMark });
+      if (sep === '|' && segs.length > 1) segs[segs.length - 2].pipeOut = true;
+      pending = null;
+    }
+    words = [];
+    kwMark = false;
+  };
+  const setSep = (o) => { if (pending !== '||' && pending !== '|') pending = o; };
+  for (let i = 0; i < cmd.length; i++) {
+    const c = cmd[i];
+    if (q) {
+      if (c === q) {
+        if (ps && cmd[i + 1] === q) { add(q, q === "'" ? 'single' : 'double'); i++; } else q = null;
+        continue;
+      }
+      const quote = q === "'" ? 'single' : 'double';
+      if (q === '"' && ((ps && c === '`') || (!ps && c === '\\' && '"\\$`'.includes(cmd[i + 1] ?? '')))) { if (i + 1 < cmd.length) { add(cmd[i + 1], quote); i++; } continue; }
+      add(c, quote);
+      continue;
+    }
+    if (c === '"' || c === "'") { q = c; parts ??= []; parts.push({ text: '', quote: c === "'" ? 'single' : 'double' }); continue; }
+    if ((ps && c === '`') || (!ps && c === '\\')) {
+      if (cmd[i + 1] === '\n') { i++; continue; }
+      if (i + 1 < cmd.length) { add(cmd[i + 1], 'none'); i++; }
+      continue;
+    }
+    if ((c === '$' && cmd[i + 1] === '(') || (c === '`' && !ps)) { const e = skipSubst(cmd, i + (c === '$' ? 1 : 0)); add(cmd.slice(i, e), 'none'); i = e - 1; continue; }
+    if (c === '#' && !parts) { while (i + 1 < cmd.length && cmd[i + 1] !== '\n') i++; continue; }
+    if (c === '\n') { endSeg(); setSep(';'); continue; }
+    if (/\s/.test(c)) { endWord(); continue; }
+    if (c === '(') { endSeg(); paren++; continue; }
+    if (c === ')') { endSeg(); paren = Math.max(0, paren - 1); continue; }
+    if (c === ';') { endSeg(); setSep(';'); continue; }
+    if (c === '|') { endSeg(); if (cmd[i + 1] === '|') { i++; setSep('||'); } else setSep('|'); continue; }
+    if (c === '&') {
+      if (cmd[i + 1] === '&') { endSeg(); i++; setSep('&&'); continue; }
+      if (ps) { add(c, 'none'); continue; }
+      endSeg();
+      if (segs.length) segs[segs.length - 1].background = true;
+      setSep('&');
+      continue;
+    }
+    add(c, 'none');
   }
   endSeg();
   return { segs, unclosed: q !== null };
