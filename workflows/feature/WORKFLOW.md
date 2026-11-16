@@ -97,14 +97,18 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   đó mặc định không viết file contract: endpoint, status code và schema nằm trong AC của `requirement.md`. Sau cùng session
   chính chạy builder check (subagent mới đọc tài liệu như người sẽ làm; không có tool subagent thì tự đọc như
   builder): câu của người dùng gom một tin nhắn, câu nhỏ ghi "quyết định của agent"; người dùng đã bỏ qua phần hỏi
-  thì không hỏi, nêu nổi bật các quyết định của agent ở checkpoint.
+  thì không hỏi, nêu nổi bật các quyết định của agent ở checkpoint. Spike giả định (theo `engineering-spec-writing`): giả
+  định về công cụ hoặc thư viện mà hướng đã chọn dựa vào và kiểm được bằng một lệnh (vd công cụ codegen có chạy với
+  TypeScript/Node của project không: mục "Kiểm tương thích công cụ" của reference `contract-and-codegen` trong
+  `frontend-data-integration`) thì kiểm trước checkpoint, ghi lệnh và kết quả vào tài liệu; không kiểm được thì giữ
+  `[Unverified]` kèm lý do và nêu ở G1 như rủi ro chặn hướng, không chặn việc làm rõ hay viết tài liệu.
 - **Ràng buộc:** trình tài liệu để duyệt theo tài liệu `ask-user.md` của skill `plan-execution` (mục Tham chiếu của skill đó) (mở file ở pane rồi hỏi bằng lựa chọn Duyệt / Sửa / Dừng, không hỏi suông); agent chỉ ghi trong `docs/`; không code implementation; không đổi kiểu kiến trúc đã chốt; cỡ
   "thay đổi nhỏ" chỉ có `requirement.md`, không có `design.md`; không bịa yêu cầu, phần suy đoán đánh dấu `[giả
   định]`.
 - **Đầu ra:** `docs/requests/<ngày>-<slug>/requirement.md` (+ `design.md` nếu cỡ dự án; + `tasks.md` nếu người
   dùng chọn tách task); contract OpenAPI cập nhật (hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ");
   ADR đề xuất nếu ảnh hưởng kiến trúc.
-- **Gate:** acceptance criteria đo được (AC nêu kết quả số có `calc:`; `check-request.mjs` không còn W22); builder check xong và câu của người dùng đã được trả lời; contract OpenAPI
+- **Gate:** acceptance criteria đo được (AC nêu kết quả số có `calc:`; `check-request.mjs` không còn W22); builder check xong và câu của người dùng đã được trả lời; mọi giả định công cụ kiểm được bằng một lệnh đã có kết quả spike trong tài liệu, hoặc được nêu ở G1 như rủi ro chặn hướng; contract OpenAPI
   hợp lệ hoặc ghi rõ "không có API" / "không có contract: cỡ thay đổi nhỏ"; có ảnh hưởng kiến trúc thì ADR đã viết; có `tasks.md` thì `check-tasks.mjs`
   báo 0 lỗi (không có Node → đạt `breakdown-checklist.md` kiểm thủ công) và Checkpoint 1 của
   `engineering-task-breakdown` đã duyệt; người dùng đã duyệt tài liệu cùng hướng, cỡ việc, phạm vi và bảng ứng viên e2e đã trình ở Bước 2 (G1, tính là duyệt E2).
@@ -112,7 +116,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   hỏi người dùng (gom một tin nhắn); contract xung đột với hệ thống hiện có → dừng, hỏi lại người dùng cách xử lý
   breaking change; tài liệu cho thấy hướng hoặc cỡ việc đã chốt sai → quay lại Bước 2.
 - **Evidence:** đường dẫn `requirement.md` (+ `design.md`) + trích đoạn acceptance criteria; kết quả builder check
-  (số câu theo nhóm đã trả lời/nhỏ/của người dùng); đường dẫn contract (hoặc dòng "không có API") + đường dẫn ADR nếu
+  (số câu theo nhóm đã trả lời/nhỏ/của người dùng); lệnh spike + kết quả cho từng giả định công cụ (hoặc `not_run` kèm lý do); đường dẫn contract (hoặc dòng "không có API") + đường dẫn ADR nếu
   có; có `tasks.md` thì đường dẫn + output `check-tasks.mjs` (dòng tổng + exit code) hoặc kết quả checklist thủ công.
 
 ### Bước 4 — Plan ⏸
