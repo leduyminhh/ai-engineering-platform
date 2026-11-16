@@ -583,6 +583,11 @@ export default async function run({ ok, ctx }) {
     // AC1.3: glob chỉ tính ở phần không nháy; "T/x*" là tên thường trong T, "T/x"* vẫn là glob.
     expectAll([[`rm "${T}/x*"`, null, 'AC1.3'], [`rm "${T}/x"*`, null, 'AC1.3'], [`rm "${OUT}/x"*`, 'deny', 'AC1.3'], [`rm -rf "${T}/backup/"*`, null, 'AC1.3']]);
 
+    // D11: naiveSegments tách từ theo phần nháy.
+    expectAll([[`rm a"b c"`, null, 'AC4.1'], [`echo x > "${OUT}/x y"`, 'deny', 'AC4.1'], [`rm \\' ${OUT}/x \\'`, 'deny', 'AC4.1'],
+      [`cat <<'EOF' > ${OUT}/x\nhello\nEOF`, 'deny', 'AC4.1']]);
+    ok(kind(`echo it's; rm ${OUT}/x`) !== null, 'AC4.1: nháy lẻ kèm `;` vẫn không cho qua lệnh xoá ngoài root');
+
     // resolveWord: giải một từ theo nháy từng phần (D5–D8), glob theo D6.
     const rw = (cmd, { env = {}, unres = false, idx = 1, dialect = 'bash' } = {}) => {
       if (typeof bash.resolveWord !== 'function') return 'thiếu resolveWord';
@@ -620,6 +625,13 @@ export default async function run({ ok, ctx }) {
       [`rm \${X:-y}/x`, { X: T }, null, 'AC4.1'],
       [`rm $V/x`, { V }, null, 'AC4.1'],
       [`rm "$V/x"`, { V }, { text: `${V}/x`, glob: false }, 'AC4.1'],
+      [`rm "\\$S/x"`, { S: T }, { text: '$S/x', glob: false }, 'AC4.1'],
+      [`rm "\\\\$S/x"`, { S: T }, { text: `\\${T}/x`, glob: false }, 'AC4.1'],
+      [`echo $(cygpath -u 'C:\\a\\b')/x`, {}, { text: 'C:\\a\\b/x', glob: false }, 'AC4.1'],
+      [`echo $(cygpath -ua '${T}')/x`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`echo $(cygpath -u -a  '${T}')/x`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`echo $(cygpath -ux '${T}')/x`, {}, null, 'AC4.1'],
+      [`echo $(cygpath -u "C:\\a")/x`, {}, null, 'AC4.1'],
       [`rm $G`, { G: `${T}/x*` }, { text: `${T}/x*`, glob: true }, 'AC1.3'],
       [`rm "$G"`, { G: `${T}/x*` }, { text: `${T}/x*`, glob: false }, 'AC1.3'],
     ];

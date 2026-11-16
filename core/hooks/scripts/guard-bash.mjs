@@ -72,7 +72,7 @@ function skipSubst(cmd, i, ps) {
 }
 
 const RW_VAR = /\$(?:([A-Za-z_]\w*)|\{([A-Za-z_]\w*)\})/y;
-const RW_CYGPATH = /\$\(cygpath(?: -[umwal])? (?:'([^'$`\\]*)'|"([^"$`\\]*)")\)/y;
+const RW_CYGPATH = /\$\(\s*cygpath((?:\s+-[umwal]+)*)\s+(?:'([^']*)'|"([^"$`\\]*)")\s*\)/y;
 const RW_ABS = /^(?:[\\/]|[A-Za-z]:[\\/])/;
 
 // Giải một từ của scanWords (D5–D8) thành { text, glob } hoặc null khi chưa rõ. glob theo D6: chỉ phần không nháy hoặc giá trị biến mở rộng không nháy.
@@ -111,7 +111,7 @@ export function resolveWord(word, state, dialect = 'bash') {
       RW_CYGPATH.lastIndex = i;
       const cy = RW_CYGPATH.exec(s);
       if (!cy) return null;
-      const lit = cy[1] ?? cy[2];
+      const lit = cy[2] ?? cy[3];
       if (!put(state.msys ? normalizeMsysPath(lit) : lit, true)) return null;
       i += cy[0].length;
     }
@@ -167,7 +167,7 @@ export function scanWords(cmd, dialect = 'bash') {
         continue;
       }
       const quote = q === "'" ? 'single' : 'double';
-      if (q === '"' && ((ps && c === '`') || (!ps && c === '\\' && '"\\$`'.includes(cmd[i + 1] ?? '')))) { if (i + 1 < cmd.length) { add(cmd[i + 1], quote); i++; } continue; }
+      if (q === '"' && ((ps && c === '`') || (!ps && c === '\\' && '"\\$`'.includes(cmd[i + 1] ?? '')))) { if (i + 1 < cmd.length) { (parts ??= []).push({ text: cmd[i + 1], quote: 'single' }); i++; } continue; }
       if (q === '"' && ((c === '$' && cmd[i + 1] === '(') || (c === '`' && !ps))) { const { end: e, closed } = skipSubst(cmd, i + (c === '$' ? 1 : 0), ps); if (!closed) substOpen = true; add(cmd.slice(i, e), quote); i = e - 1; continue; }
       add(c, quote);
       continue;
