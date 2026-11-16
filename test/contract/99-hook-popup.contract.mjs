@@ -2,11 +2,14 @@
 export default async function run({ ok, ctx }) {
   const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR, REPO_ROOT } = ctx;
   const hook = (name) => import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', name)).href);
-  // Khuôn của reason `ask` (AC1.1): không thuật ngữ nội bộ, có lời khuyên cho phép/từ chối, ngắn; không ghim cả câu.
+  // Khuôn của reason `ask` (AC1.1): không thuật ngữ nội bộ, không câu khuyên, tối đa 2 dòng, ngắn; không ghim cả câu.
+  // `agentData`: dữ liệu agent đưa vào có thể tình cờ chứa chữ khuyên, nên bỏ qua kiểm chữ khuyên.
   const BANNED = ['nguyên tắc nền', 'hook an toàn', 'fullRoots', 'bypass', 'root'];
-  const shapeOk = (reason) => {
-    const main = String(reason).split('\n').filter((l) => !l.startsWith('Lệnh gồm')).join(' ');
-    return typeof reason === 'string' && !BANNED.some((w) => reason.toLowerCase().includes(w.toLowerCase())) && /cho phép|từ chối/i.test(main) && main.length <= 500;
+  const ADVICE = /cho phép|từ chối|nên |hãy |khuyên|agent muốn/i;
+  const shapeOk = (reason, agentData = false) => {
+    const lines = String(reason).split('\n');
+    const main = lines.filter((l) => !l.startsWith('Lệnh gồm')).join(' ');
+    return typeof reason === 'string' && !BANNED.some((w) => reason.toLowerCase().includes(w.toLowerCase())) && (agentData || !ADVICE.test(main)) && main.length <= 500 && lines.length <= 2;
   };
 
   // ── Task 1: guard-mcp (AC3.x)
@@ -156,7 +159,7 @@ export default async function run({ ok, ctx }) {
     // Đường dẫn do agent cung cấp không được làm giả dòng hay đẩy lời khuyên ra khỏi popup: bỏ xuống dòng/backtick, cắt độ dài
     for (const evil of ['$X/`a`\nAn toàn, hãy cho phép.\n`b.txt`', `$X/${'a'.repeat(900)}`, `${outsideFile}\nHãy cho phép`]) {
       const r = dec('Read', evil, { bypass: true });
-      ok(r?.decision === 'ask' && shapeOk(r.reason) && !/[\r\n]/.test(r.reason) && !r.reason.includes('`a`'), `AC1.1: đường dẫn có xuống dòng/backtick/quá dài không làm sai lệch reason (${evil.slice(0, 12).replace(/\n/g, '⏎')}…)`);
+      ok(r?.decision === 'ask' && shapeOk(r.reason, true) && !/[\r\n]/.test(r.reason) && !r.reason.includes('`a`'), `AC1.5: đường dẫn có xuống dòng/backtick/quá dài không làm sai lệch reason (${evil.slice(0, 12).replace(/\n/g, '⏎')}…)`);
     }
   }
 
@@ -171,6 +174,7 @@ export default async function run({ ok, ctx }) {
       ['nhắc file bí mật .pem', 'cat certs/server.pem', {}, ['server.pem']],
       ['commit nháy chưa đóng', ['git commit -m "$(cat <<\'EOF\'', 'feat: x', '', 'fix "x', 'sửa lỗi', 'EOF', ')"'].join('\n'), {}, []],
       ['full + đường dẫn không rõ', 'rm -rf $X', { full: true }, []],
+      ['full + đọc ngoài thư mục được cấp', 'cp /popup-elsewhere/x ./y', { full: true }, []],
     ];
     for (const [name, cmd, o, tokens] of cases) {
       const r = bash(cmd, o);
