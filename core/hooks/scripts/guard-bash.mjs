@@ -319,7 +319,9 @@ function globMatchesDotDot(seg) {
 
 // Mở rộng brace `{a,b}` như bash (nhóm có dấu phẩy ở cấp ngoài cùng, lồng được); dải `{1..3}` và `{x}` giữ nguyên. Quá `cap` nhánh thì trả null.
 // Không bóc nháy: hook không biết nháy bash có chặn mở rộng hay không, nên `"T/{..,x}/f"` cũng bị mở: hỏi/deny thừa còn hơn bỏ sót.
+// Quá 64 dấu `{` thì bỏ cuộc: mỗi nhóm có dấu phẩy ≥ 2 nhánh nên 8 nhóm đã vượt trần, còn đệ quy sâu theo số nhóm làm tràn stack và vòng quét thành bậc hai.
 function braceExpand(p, cap) {
+  if (p.split('{').length > 65) return null;
   for (let i = p.indexOf('{'); i >= 0; i = p.indexOf('{', i + 1)) {
     let depth = 0;
     let from = i + 1;
@@ -345,7 +347,9 @@ function braceExpand(p, cap) {
 function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
   const p = np(raw, msys);
   if (NULL_DEVICE.test(p)) return null;
-  const branches = msys && p.includes('{') ? braceExpand(p, 256) : [p];
+  let branches = [p];
+  // Lỗi bất ngờ khi mở rộng không được ném ra: main nuốt lỗi và fail-open sẽ cho cả lệnh qua.
+  try { if (msys && p.includes('{')) branches = braceExpand(p, 256); } catch { branches = null; }
   if (!branches) return 'unknown';
   if (branches.length > 1) {
     const all = branches.map((b) => classifyTarget(b, dir, unres, roots, msys, need));
