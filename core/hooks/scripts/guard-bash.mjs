@@ -168,10 +168,10 @@ function withDirs(segs, cwd, msys = true) {
 }
 
 // H6 là heuristic đọc token, không phải sandbox: biến, subshell, script con vẫn có thể ghi ra ngoài root mà không bị thấy.
-const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'mv', 'move', 'move-item', 'cp', 'copy', 'copy-item', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content']);
-const LAST_ONLY = new Set(['cp', 'copy', 'copy-item']);
-const DELETE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item']);
-const MOVE_CMDS = new Set(['mv', 'move', 'move-item']);
+const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri', 'mv', 'move', 'move-item', 'mi', 'cp', 'copy', 'copy-item', 'cpi', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content']);
+const LAST_ONLY = new Set(['cp', 'copy', 'copy-item', 'cpi']);
+const DELETE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri']);
+const MOVE_CMDS = new Set(['mv', 'move', 'move-item', 'mi']);
 // Một đối số mv: không biết là nguồn hay đích nên cần cả hai quyền.
 const needsOf = (name) => (DELETE_CMDS.has(name) ? ['delete'] : MOVE_CMDS.has(name) ? ['delete', 'write'] : ['write']);
 // Vai của cờ đường dẫn PowerShell theo (lệnh, cờ): đích → write, nguồn của Move/Remove-Item → delete, nguồn của Copy-Item → read.
@@ -568,7 +568,7 @@ const IN_PLACE_FLAG = /^(?:-[a-z]*i|--in-place)/i;
 // cp/mv vào thư mục .claude: tên file cấu hình nằm ở nguồn, không ở đích, nên phải ghép theo token.
 const CLAUDE_DIR = /(?:^|[\\/])\.claude[\\/]*$/i;
 const CONFIG_FILE_NAME = /^(?:settings(?:\.[\w-]+)?|aip-gate)\.json$/i;
-const COPY_MOVE = new Set(['cp', 'copy', 'copy-item', 'mv', 'move', 'move-item']);
+const COPY_MOVE = new Set(['cp', 'copy', 'copy-item', 'cpi', 'mv', 'move', 'move-item', 'mi']);
 // PowerShell gắn giá trị vào tham số (`-Path:x`) và nhận danh sách phân cách bằng dấu phẩy (`a,b`): tách trước khi lấy tên file.
 const hasConfigName = (a) => a.replace(/^-\w+:/, '').split(',').some((x) => CONFIG_FILE_NAME.test(x.split(/[\\/]/).pop()));
 
