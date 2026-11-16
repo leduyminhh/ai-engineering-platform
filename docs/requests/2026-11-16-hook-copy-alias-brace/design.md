@@ -99,6 +99,19 @@ Test thêm vào `test/contract/99-path-permissions.contract.mjs` (cùng seam `co
 
 - Tên hàm/biến nội bộ (`braceExpand`, `PS_COPY_SWITCH`); cách gom các ca mới thành bảng tham số hoá miễn không lặp ca.
 
+## Quyết định khi thực thi
+
+Chép từ `Ruling:` và vòng review của ledger (`.aip/` không vào nhánh); kiểm lại bằng `node test/validate.mjs --only path-permissions`. Mục này thay D5, D6 và D3 ở chỗ nào lệch.
+
+- Cách chạy: Subagent + review từng task (người dùng chọn). Task 5 (DOCS) giao sonnet thay haiku vì dòng R24 rất dài và phải khớp từng khẳng định với code. Task 6 và Task 8 (chỉ bump version) cỡ nhỏ, chịu review cuối.
+- D3 mở rộng: `summarize(cmd, msys)` nhận thêm `msys` từ `decide` để đọc lệnh PowerShell theo cách PowerShell; cần cho AC1.4 (nếu không, `Copy-Item -Dest .claude\settings.json x` vẫn được nói là "đọc"). So 30 lệnh PowerShell khác, dòng "Lệnh gồm" giữ nguyên.
+- D6 mở rộng sau review cuối: sau `--` của cp/mv Bash mọi token là đối số vị trí (cp thật coi `-S` là tên file, nên `cp -- settings.json -S .claude/` không được nuốt token kế); nhận `--su`, `--suf`, `--suff`, `--suffi` như `--suffix`.
+- D5 mở rộng sau review cuối (người dùng chọn sửa trong nhánh, thêm AC3.4 và Task 7–8): `braceExpand` bỏ cuộc khi đường dẫn dài hơn 4096 ký tự hoặc có hơn 64 dấu `{`, quét một lượt bằng ngăn xếp; kết quả mở rộng được cache theo chuỗi; ngân sách cộng dồn theo cả lệnh (`1 << 24`, mỗi nhánh trừ `độ dài + 256`, cỡ 50 nghìn nhánh với token ngắn, cỡ 3 900 với token 4096 ký tự), hết thì đường dẫn đó là `unknown` (ask, có thể thay cho deny nhưng không bao giờ thành `null`). Lệnh đo dưới 200KB xong khoảng 0,35 s trong tiến trình thử (lệnh 4 dòng của test AC3.4: 324–343 ms; đo qua hook thật dưới 0,71 s). Chạy lại: `node test/validate.mjs --only path-permissions`.
+- Đã chấp nhận ở review: hết ngân sách có thể đổi `deny` thành `ask` (không có ca nào thành `null`); `Copy-Item -Dest O/b D/a` và viết tắt switch (`-Rec`, `-r`) và tham số chung viết tắt (`-ea`) bị `deny`/`ask` thừa (K1).
+- Core: 1.33.19 → 1.33.20 (Task 6) → 1.33.21 (sửa review cuối) → 1.33.22 (Task 8); mỗi lần đổi nội dung hook đều bump vì cổng version từ chối lock khi nội dung đổi mà version giữ nguyên.
+- Giới hạn có từ master, ngoài 4 lỗ, chỉ ghi vào R18/R24 (không sửa code): brace trong tên file của R18 qua chuyển hướng và `rm` (`echo x > .claude/{settings,x}.json`); alias PowerShell `rni`, `ren`, `New-Item`, `Rename-Item`, `Clear-Content`, `sc`, `ac`, `ni` ghi vào thư mục chỉ read ở full không bị bắt; `bash -c '…'`/`pwsh -Command` chứa lệnh ghi chỉ bị hỏi, không deny.
+- Minor hoãn (không sửa): cờ bó `-St` đọc là `-t`; token `ri`/`mi`/`cpi` làm đối số của lệnh khác kèm đường dẫn cấu hình bị hỏi thừa; `{x}` lặp hơn 64 lần trong một đường dẫn bị hỏi thừa; assert thời gian `< 1000 ms` ở khối AC3.x có lề mỏng khi máy tải; README nói cỡ 50 nghìn nhánh theo từng lần phân loại (mỗi đường dẫn bị phân loại 3–6 lần).
+
 ## Rủi ro và câu hỏi mở
 
 - [Inference] K1 làm `Copy-Item -Dest O/b D/a` (nguồn chỉ read, dùng cờ viết tắt) bị `deny` oan; hiếm vì người dùng thường viết `-Destination` đủ. Giảm nhẹ: dùng tên tham số đầy đủ.
