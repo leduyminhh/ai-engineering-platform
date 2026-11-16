@@ -34,12 +34,26 @@ dùng thật), và kích thước bundle là chỉ số **xác định** (không
 1. Chốt **bảng điều kiện đo** theo mẫu [references/measure-conditions.md](references/measure-conditions.md):
    route/luồng, build (commit SHA + `git diff --name-only`), cách phục vụ **bản build production** ở local (lệnh,
    port — [references/serve-production-build.md](references/serve-production-build.md)), preset thiết bị + throttle
-   của Lighthouse, trạng thái cache (lạnh/ấm), số lần lặp, công cụ + phiên bản (lấy từ output lệnh), ngưỡng độ
+   của Lighthouse (nhánh Playwright ghi theo hàng tương ứng của bảng điều kiện), trạng thái cache (lạnh/ấm), số lần lặp, công cụ + phiên bản (lấy từ output lệnh), ngưỡng độ
    lệch (mặc định 10%), Config tool đo.
-2. Viết hoặc tái dùng script đo ở `perf/` (Lighthouse CLI qua lệnh hoặc script Node —
-   [references/lighthouse-cli.md](references/lighthouse-cli.md)) và cách lấy kích thước bundle từ output build.
-   Ưu tiên công cụ project đã có; thiếu → đề xuất mặc định (Lighthouse CLI, cần Chrome cài trên máy) và **hỏi
-   trước** khi thêm tool/dependency. Micro-benchmark logic thuần (nếu có) đặt ở `bench/`.
+2. Viết hoặc tái dùng script đo ở `perf/` và cách lấy kích thước bundle từ output build. Chọn công cụ theo thứ tự:
+   - (a) script hoặc config đo project đã có, kể cả script Playwright riêng;
+   - (b) Lighthouse đã cài ([references/lighthouse-cli.md](references/lighthouse-cli.md)), cần Chrome cài trên máy;
+   - (c) script mẫu Playwright khi `playwright` hoặc `@playwright/test` đã khai trong `package.json`: chép
+     [scripts/playwright-measure.mjs](scripts/playwright-measure.mjs) vào `perf/<phía>/` (vd `perf/frontend/measure.mjs`),
+     rồi chạy `node perf/<phía>/measure.mjs --url <localhost> --runs 5 --out perf/<phía>/results/playwright`. Script nạp
+     `playwright` theo vị trí file, nên chép vào cây thư mục có `node_modules` ở thư mục cha hoặc tổ tiên. Gói khai trong
+     `package.json` nhưng chưa có trong `node_modules` → script thoát mã 1 (không nạp được gói) → `not_run` + lý do,
+     không tự cài. Chromium chưa cài → mã 3, `not_run` + lý do, không tự chạy `playwright install`. App có polling hoặc
+     websocket liên tục có thể không đạt `networkidle` → script hết thời gian chờ và thoát mã 1, báo lỗi, không ghi `not_run`;
+   - (d) không có cái nào ở trên → đề xuất Lighthouse CLI và **hỏi trước** khi thêm tool/dependency.
+
+   "Đã cài": (b) Lighthouse = khai trong `package.json` hoặc có trong `node_modules/.bin`; (c) Playwright = khai trong
+   `package.json` và gói resolve được từ vị trí script. Bản global và gói `npx` tải tạm không tính.
+   Mã thoát của script: 0 đo xong; 2 sai đối số hoặc URL đầu vào ngoài local; 3 không mở được Chromium → `not_run`; 1 lỗi đo
+   khác (không nạp được gói, không lấy được LCP, redirect ra host ngoài trong lúc đo) → báo lỗi, không ghi là `not_run` trừ khi là thiếu gói như mục (c).
+   Không đo bằng công cụ trình duyệt tương tác (`browser_run_code_unsafe` của Playwright MCP). Ghi output thô vào
+   Lighthouse `perf/<phía>/results/lighthouse/`, Playwright `perf/<phía>/results/playwright/`. Micro-benchmark logic thuần (nếu có) đặt ở `bench/`.
 3. Chạy **≥ 3 lần** trên **bản build production** phục vụ ở local; **không đo trên dev server** (HMR, source map,
    React dev build làm số đo vô nghĩa). Ghi **median** LCP, TBT, CLS (kèm điểm Performance nếu cần) và kích thước
    bundle (tổng + chunk lớn nhất); báo độ lệch giữa các lần.
@@ -77,6 +91,9 @@ file/component đề xuất sửa** (đầu vào của `frontend-fix`). Lệnh/c
   bottleneck → chỉ đề xuất danh sách file cho `frontend-fix`.
 - **Hỏi trước khi thêm tool/dependency** (Lighthouse CLI, bundle analyzer, plugin profiler). Chạy như subagent:
   trả `blocked` + câu hỏi, không tự thêm.
+- **Artefact công cụ chưa ignore** (vd `.playwright-mcp/`, `perf/**/results/`, thư mục output build còn untracked sau lần
+  đo): report nêu từng đường dẫn và dòng `.gitignore` đề xuất, chờ người dùng duyệt (Config tool đo); không tự sửa
+  `.gitignore`, không xoá file của người dùng.
 - **Không push thẳng main.** Script đo là artifact; con người **duyệt diff** trước merge/push
   (protected branch: mỗi commit).
 - **Ngôn ngữ (bắt buộc):** báo cáo, commit message viết **tiếng Việt CÓ DẤU** (UTF-8).
