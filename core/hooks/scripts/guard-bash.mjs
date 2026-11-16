@@ -432,6 +432,8 @@ function writeTargets(t, msys = true) {
         if (d) { targets.push(d); needs.push(['write']); }
         continue;
       }
+      // Giá trị của `-S`/`--suffix` là hậu tố, không phải đường dẫn: giữ lại thì nó chiếm vai đích của cp/mv.
+      if (gnu && (a === '--suffix' || /^-[A-Za-z]*S$/.test(a))) { i++; continue; }
       // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
       if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
       if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
