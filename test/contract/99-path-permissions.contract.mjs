@@ -579,5 +579,52 @@ export default async function run({ ok, ctx }) {
       const ref = typeof bash.parse === 'function' ? bash.parse(cmd).segs.map((t) => [...t]) : null;
       ok(flat && ref && JSON.stringify(flat) === JSON.stringify(ref), `AC4.2: scanWords cùng token với parse() trên \`${label(cmd)}\``);
     }
+
+    // AC1.3: glob chỉ tính ở phần không nháy; "T/x*" là tên thường trong T, "T/x"* vẫn là glob.
+    expectAll([[`rm "${T}/x*"`, null, 'AC1.3'], [`rm "${T}/x"*`, null, 'AC1.3'], [`rm "${OUT}/x"*`, 'deny', 'AC1.3'], [`rm -rf "${T}/backup/"*`, null, 'AC1.3']]);
+
+    // resolveWord: giải một từ theo nháy từng phần (D5–D8), glob theo D6.
+    const rw = (cmd, { env = {}, unres = false, idx = 1, dialect = 'bash' } = {}) => {
+      if (typeof bash.resolveWord !== 'function') return 'thiếu resolveWord';
+      const word = bash.scanWords(cmd, dialect).segs[0].words[idx];
+      return bash.resolveWord(word, { env: new Map(Object.entries(env)), dir: P, unres, msys: true }, dialect);
+    };
+    const V = `${T}/a b`;
+    const RW = [
+      [`rm '${T}/x'`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm "${T}/x"`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm ${T}/x`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm "${T}/"x'/y'`, {}, { text: `${T}/x/y`, glob: false }, 'AC4.1'],
+      [`rm "${T}/x*"`, {}, { text: `${T}/x*`, glob: false }, 'AC1.3'],
+      [`rm '${T}/x*'`, {}, { text: `${T}/x*`, glob: false }, 'AC1.3'],
+      [`rm "${T}/[a]"`, {}, { text: `${T}/[a]`, glob: false }, 'AC1.3'],
+      [`rm ${T}/x*`, {}, { text: `${T}/x*`, glob: true }, 'AC1.3'],
+      [`rm ${T}/x?`, {}, { text: `${T}/x?`, glob: true }, 'AC1.3'],
+      [`rm "${T}/x"*`, {}, { text: `${T}/x*`, glob: true }, 'AC1.3'],
+      [`rm "${T}/backup/"*`, {}, { text: `${T}/backup/*`, glob: true }, 'AC1.3'],
+      [`rm $S/x`, { S: T }, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm \${S}/x`, { S: T }, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm "$S/x"`, { S: T }, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm $S/x`, { S: null }, null, 'AC4.1'],
+      [`rm $S/x`, {}, null, 'AC4.1'],
+      [`rm $PWD/x`, {}, { text: `${P}/x`, glob: false }, 'AC4.1'],
+      [`rm \${PWD}/x`, {}, { text: `${P}/x`, glob: false }, 'AC4.1'],
+      [`rm $PWD/x`, {}, null, 'AC4.1', true],
+      [`echo $(cygpath -u '${T}')/e2e`, {}, { text: `${T}/e2e`, glob: false }, 'AC4.1'],
+      [`echo "$(cygpath -u '${T}')/e2e"`, {}, { text: `${T}/e2e`, glob: false }, 'AC4.1'],
+      [`echo $(cygpath -p '${T}')/e2e`, {}, null, 'AC4.1'],
+      [`echo $(date)/e2e`, {}, null, 'AC4.1'],
+      [`rm ~/x`, {}, null, 'AC4.1'],
+      [`rm $HOME/x`, { HOME: T }, null, 'AC4.1'],
+      [`rm $?/x`, {}, null, 'AC4.1'],
+      [`rm \${X:-y}/x`, { X: T }, null, 'AC4.1'],
+      [`rm $V/x`, { V }, null, 'AC4.1'],
+      [`rm "$V/x"`, { V }, { text: `${V}/x`, glob: false }, 'AC4.1'],
+      [`rm $G`, { G: `${T}/x*` }, { text: `${T}/x*`, glob: true }, 'AC1.3'],
+      [`rm "$G"`, { G: `${T}/x*` }, { text: `${T}/x*`, glob: false }, 'AC1.3'],
+    ];
+    for (const [cmd, env, want, ac, unres = false] of RW) {
+      ok(JSON.stringify(rw(cmd, { env, unres })) === JSON.stringify(want), `${ac}: resolveWord \`${cmd.replaceAll(T, '<T>').replaceAll(P, '<P>')}\` → ${want ? JSON.stringify(want.glob) + ' glob' : 'chưa rõ'}`);
+    }
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
