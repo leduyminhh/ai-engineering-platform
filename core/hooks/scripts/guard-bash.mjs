@@ -317,43 +317,61 @@ function globMatchesDotDot(seg) {
   try { return new RegExp(`^${re}$`).test('..'); } catch { return true; }
 }
 
-// Không bóc nháy: hook không biết nháy bash có chặn mở rộng hay không, nên `"T/{..,x}/f"` cũng bị mở: hỏi/deny thừa còn hơn bỏ sót.
-// Quá 64 dấu `{` hoặc 4096 ký tự thì bỏ cuộc (null): 9 nhóm đã vượt trần, còn đệ quy theo số nhóm làm tràn stack và vòng quét thành bậc hai.
+// Trả mọi nhánh của nhóm `{a,b}` có dấu phẩy (lồng được), hoặc null khi quá `cap`; `{1..3}` và `{x}` giữ nguyên. Không bóc nháy: hook không biết nháy bash có chặn mở rộng hay không, nên `"T/{..,x}/f"` cũng bị mở.
+// Quá 64 dấu `{` hoặc 4096 ký tự thì bỏ cuộc (null): 9 nhóm đã vượt trần, còn đệ quy theo số nhóm làm tràn stack. Quét một lượt bằng ngăn xếp nên chi phí không nhân với số `{` không đóng.
 function braceExpand(p, cap) {
   if (p.length > 4096 || p.split('{').length > 65) return null;
-  for (let i = p.indexOf('{'); i >= 0; i = p.indexOf('{', i + 1)) {
-    let depth = 0;
-    let from = i + 1;
-    const parts = [];
-    for (let j = i; j < p.length; j++) {
-      if (p[j] === '{') depth++;
-      else if (p[j] === ',' && depth === 1) { parts.push(p.slice(from, j)); from = j + 1; }
-      else if (p[j] === '}' && --depth === 0) {
-        if (!parts.length) break;
-        parts.push(p.slice(from, j));
-        const out = [];
-        for (const part of parts) {
-          const sub = braceExpand(p.slice(0, i) + part + p.slice(j + 1), cap);
-          if (!sub || out.push(...sub) > cap) return null;
-        }
-        return out;
-      }
+  const open = [];
+  let best = null;
+  for (let j = 0; j < p.length; j++) {
+    if (p[j] === '{') open.push({ at: j, commas: [] });
+    else if (p[j] === ',' && open.length) open[open.length - 1].commas.push(j);
+    else if (p[j] === '}' && open.length) {
+      const g = open.pop();
+      if (g.commas.length && (!best || g.at < best.at)) best = { ...g, end: j };
     }
   }
-  return [p];
+  if (!best) return [p];
+  const cuts = [best.at, ...best.commas, best.end];
+  const out = [];
+  for (let k = 0; k + 1 < cuts.length; k++) {
+    const sub = braceExpand(p.slice(0, best.at) + p.slice(cuts[k] + 1, cuts[k + 1]) + p.slice(best.end + 1), cap);
+    if (!sub || out.push(...sub) > cap) return null;
+  }
+  return out;
+}
+
+// Ngân sách brace của MỘT lệnh (decide đặt lại), tính bằng số nhánh × độ dài mỗi lần phân loại: hết thì `unknown`. Chặn chi phí cộng dồn của nhiều token mà từng token vẫn dưới trần.
+const BRACE_BUDGET = 1 << 24;
+let braceLeft = BRACE_BUDGET;
+const braceCache = new Map();
+
+// Một đường dẫn được phân loại 3–6 lần (read/write/delete, H6, bí mật): nhớ kết quả mở rộng theo chuỗi, nhưng mỗi lần phân loại vẫn trừ ngân sách.
+function expandBraces(p) {
+  if (braceLeft < 0) return null;
+  let r = braceCache.get(p);
+  if (r === undefined) {
+    // Lỗi bất ngờ không được ném ra: main nuốt lỗi và fail-open sẽ cho cả lệnh qua.
+    try { r = braceExpand(p, 256); } catch { r = null; }
+    braceCache.set(p, r);
+  }
+  braceLeft -= (r ? r.length : 256) * p.length;
+  return braceLeft < 0 ? null : r;
 }
 
 function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write') {
   const p = np(raw, msys);
-  if (NULL_DEVICE.test(p)) return null;
-  let branches = [p];
-  // Lỗi bất ngờ khi mở rộng không được ném ra: main nuốt lỗi và fail-open sẽ cho cả lệnh qua.
-  try { if (msys && p.includes('{')) branches = braceExpand(p, 256); } catch { branches = null; }
+  if (!msys || !p.includes('{')) return classifyPlain(p, dir, unres, roots, msys, need);
+  const branches = expandBraces(p);
   if (!branches) return 'unknown';
-  if (branches.length > 1) {
-    const all = branches.map((b) => classifyTarget(b, dir, unres, roots, msys, need));
-    return ['blocked', 'outside', 'unknown'].find((k) => all.includes(k)) ?? all[0];
-  }
+  // Nhánh do braceExpand sinh không còn nhóm có dấu phẩy: phân loại thẳng, không mở rộng lại.
+  const all = branches.map((b) => classifyPlain(b, dir, unres, roots, msys, need));
+  return ['blocked', 'outside', 'unknown'].find((k) => all.includes(k)) ?? all[0];
+}
+
+function classifyPlain(raw, dir, unres, roots, msys = true, need = 'write') {
+  const p = np(raw, msys);
+  if (NULL_DEVICE.test(p)) return null;
   if (!hasUnresolvedRef(p) && !GLOB.test(p) && isClaudeTmpRoot(p, dir)) return 'blocked';
   const absolute = path.isAbsolute(p) || /^[A-Za-z]:[\\/]/.test(p) || p.startsWith('\\\\');
   if (!absolute && (unres || hasUnresolvedRef(p))) return 'unknown';
@@ -901,6 +919,8 @@ function secretScanText(cmd) {
 export function decide(input, { currentBranch = defaultBranch, allowEnv = envFilesAllowed, config, repoRoot, tracked, reader = readGate } = {}) {
   const raw = String(input?.tool_input?.command ?? '');
   if (!raw) return null;
+  braceLeft = BRACE_BUDGET;
+  braceCache.clear();
   // Shell POSIX nối dòng bằng \<xuống dòng>; không nối thì \ thành refspec và che nhánh phía sau. PowerShell đã nối bằng backtick ở psNormalize.
   const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw.replace(/\\\r?\n/g, ' ').replace(/>\|/g, '>');
   const cwd = input?.cwd || '.';
