@@ -317,11 +317,10 @@ function globMatchesDotDot(seg) {
   try { return new RegExp(`^${re}$`).test('..'); } catch { return true; }
 }
 
-// Mở rộng brace `{a,b}` như bash (nhóm có dấu phẩy ở cấp ngoài cùng, lồng được); dải `{1..3}` và `{x}` giữ nguyên. Quá `cap` nhánh thì trả null.
 // Không bóc nháy: hook không biết nháy bash có chặn mở rộng hay không, nên `"T/{..,x}/f"` cũng bị mở: hỏi/deny thừa còn hơn bỏ sót.
-// Quá 64 dấu `{` thì bỏ cuộc: mỗi nhóm có dấu phẩy ≥ 2 nhánh nên 8 nhóm đã vượt trần, còn đệ quy sâu theo số nhóm làm tràn stack và vòng quét thành bậc hai.
+// Quá 64 dấu `{` hoặc 4096 ký tự thì bỏ cuộc (null): 9 nhóm đã vượt trần, còn đệ quy theo số nhóm làm tràn stack và vòng quét thành bậc hai.
 function braceExpand(p, cap) {
-  if (p.split('{').length > 65) return null;
+  if (p.length > 4096 || p.split('{').length > 65) return null;
   for (let i = p.indexOf('{'); i >= 0; i = p.indexOf('{', i + 1)) {
     let depth = 0;
     let from = i + 1;
@@ -445,9 +444,13 @@ function writeTargets(t, msys = true) {
     let namedDest = false;
     const named = (flag) => { if (/^-?destination$/i.test(flag)) namedDest = true; else namedPath = true; };
     let pos = [];
+    let eoo = false;
     // Set-Content/Out-File/Add-Content có hàm riêng (psWriteCandidates), vòng này không chạy cho chúng.
     for (let i = 0; i < (FIRST_ONLY.has(name) ? 0 : args.length); i++) {
       const a = args[i];
+      // Sau `--` của cp/mv Bash mọi token là tên file: `-S`/`-t` ở đó không được nuốt token kế (đích thật).
+      if (gnu && eoo) { pos.push(a); continue; }
+      if (gnu && a === '--') { eoo = true; continue; }
       if (PS_PATH_FLAGS.has(a.toLowerCase())) { named(a); if (i + 1 < args.length) { targets.push(args[++i]); needs.push(flagNeeds(name, a)); } continue; }
       const colon = /^-(path|literalpath|filepath|destination):(.+)$/i.exec(a);
       if (colon) { named(colon[1]); targets.push(colon[2]); needs.push(flagNeeds(name, colon[1])); continue; }
@@ -473,7 +476,7 @@ function writeTargets(t, msys = true) {
         continue;
       }
       // Giá trị của `-S`/`--suffix` là hậu tố, không phải đường dẫn: giữ lại thì nó chiếm vai đích của cp/mv.
-      if (gnu && (a === '--suffix' || /^-[A-Za-z]*S$/.test(a))) { i++; continue; }
+      if (gnu && (/^--su(f(f(i(x)?)?)?)?$/.test(a) || /^-[A-Za-z]*S$/.test(a))) { i++; continue; }
       // chmod/chown: `-x`/`-w` là mode, chỉ `-R`/`--long`… mới là cờ.
       if (a.startsWith('-') && !(SKIP_FIRST.has(name) && /^-[A-Za-z]/.test(a) && !/^-[RfvchHLP]+$/.test(a))) continue;
       if (CMD_SWITCH.has(name) && /^\/[A-Za-z]$/.test(a)) continue;
