@@ -26,7 +26,7 @@ Mọi dòng dưới là **quyết định của agent**, nêu nổi bật để 
 
 - **D1 — khuôn mới của reason `ask`.** Một câu một dòng: `<việc> <token>.`, không chủ ngữ "Agent muốn", không lý do. Dòng thứ hai (chỉ `guard-bash`) là `Lệnh gồm: …`. Tổng cộng tối đa 2 dòng. Chữ mới (token đặt trong dấu `` ` ``):
   - push nhánh bảo vệ: ``Đẩy code lên nhánh bảo vệ `master`.``
-  - push force: `Force push: ghi đè nhánh trên remote.`
+  - push force: `Force push hoặc xoá nhánh trên remote.` (đổi khi thực thi: `pushReason` gom cả `--delete`, `--mirror` vào loại này)
   - push không rõ nhánh: `Push vào nhánh chưa rõ (tên nhánh hoặc thư mục là biến).`
   - cấu hình quyền (`guard-bash`): ``Ghi vào file cấu hình quyền (`.claude/aip-gate.json` hoặc `settings.json`).``
   - cấu hình quyền (`guard-files`): ``Ghi vào file cấu hình quyền `aip-gate.json`.``
@@ -39,7 +39,7 @@ Mọi dòng dưới là **quyết định của agent**, nêu nổi bật để 
 - **D2 — khuôn test mới.** `shapeOk` đổi: bỏ yêu cầu có chữ "cho phép|từ chối"; thêm kiểm câu chính (bỏ dòng `Lệnh gồm`) **không** chứa `cho phép|từ chối|nên |hãy |khuyên`; trần 500 ký tự giữ nguyên (người dùng duyệt G1 chọn bỏ vạch 200 mà agent đề xuất). Độ ngắn do chữ mới ở D1 và `Lệnh gồm` ≤ 3 bước đảm bảo, test không ghim độ dài ngắn hơn 500. `BANNED` giữ. Bản sao `shapeOk` ở `99-path-permissions.contract.mjs` đổi theo; hai bản chép từ một hằng nếu `test/lib` có chỗ dùng chung, nếu không thì sửa cả hai.
 - **D3 — `summarize` nhận số bước tối đa.** `MAX_STEPS` 6 → 3; hàm `summarize(cmd, msys, max = MAX_STEPS)` và `export` để test "không giấu lệnh" (dòng `Lệnh gồm` đủ bước) gọi `max` lớn thay vì dựa vào dòng bị cắt. Hệ quả có chủ đích: lệnh nối nhiều bước có thể không liệt kê bước gây ra câu hỏi (vd `push` là bước thứ 4); câu chính vẫn nêu nó (``nhánh bảo vệ `master```) và popup vẫn hiện khối lệnh thô bên dưới.
 - **D4 — không đổi nhánh khác.** `guard-mcp`, `gate-stop`, `session-start`, `deny`, `DENY_COMMIT`, `CLAUDE_TMP_BLOCKED_TEXT`, `UNPARSABLE`-liên quan logic quyết định: không đổi, chỉ đổi chữ.
-- **D5 — version.** `core/.manifest.json` 1.33.23 → 1.33.24 (đổi nội dung hook), `npm run build`, `node cli/lib/versions.mjs --lock`.
+- **D5 — version.** Tăng `core/.manifest.json` (đổi nội dung hook), `npm run build`, `node cli/lib/versions.mjs --lock`. Lúc viết design core ở 1.33.23; master lên 1.34.1 trước khi nhánh merge nên thực tế bump 1.34.1 → 1.34.2, rồi 1.34.3 sau lượt sửa review cuối.
 
 ## Hướng đã cân nhắc
 
@@ -61,7 +61,7 @@ Test: sửa `test/contract/99-hook-popup.contract.mjs` (khuôn, ca bước tóm 
 - [ ] **AC1.4** — Given `deny` của full (ghi ngoài root, thiếu `fullPaths`, `DENY_COMMIT`, `CLAUDE_TMP_BLOCKED_TEXT`) When hook quyết định Then chữ `deny` không đổi, vẫn nhắc `fullRoots` (và `fullPaths`) như R21/R24.
 - [ ] **AC1.5** — Given dữ liệu agent cung cấp (đường dẫn có xuống dòng, backtick, bidi, 900 ký tự; lệnh con git 100k ký tự) When hook hỏi Then reason không chèn dòng giả, không backtick của agent, không quá 1200 ký tự (không đổi so với AC1.1 cũ).
 - [ ] **AC2.1** — Given tài liệu When đọc Then `docs/specs/hooks-gates/spec.md` R21 mô tả khuôn mới (một câu việc + token, không khuyên, `Lệnh gồm` tối đa 3 bước, 40 ký tự đường dẫn, deny giữ nguyên) kèm dòng Lịch sử; `README.md` và `README_VI.md` (mục Hooks, đoạn nói popup) khớp; các pin `test/content` liên quan xanh.
-- [ ] **AC2.2** — Given các sửa trên When `npm run build`, `node cli/lib/versions.mjs --lock`, `npm test` Then xanh; `core/.manifest.json` tăng từ 1.33.23.
+- [ ] **AC2.2** — Given các sửa trên When `npm run build`, `node cli/lib/versions.mjs --lock`, `npm test` Then xanh; `core/.manifest.json` tăng so với master lúc merge (xem D5).
 
 ## Thiết kế
 
@@ -99,6 +99,19 @@ Test: sửa `test/contract/99-hook-popup.contract.mjs` (khuôn, ca bước tóm 
 ## Để builder quyết
 
 - Tên biến/hàm nội bộ; cách gom các câu mới thành bảng; có tách hằng chung cho hai bản `shapeOk` hay chép.
+
+## Quyết định khi thực thi
+
+Chép từ `Ruling:` và vòng review của ledger (`.aip/` không vào nhánh); kiểm lại bằng `node test/validate.mjs --only hook-popup`. Mục này thay D1/D5 ở chỗ nào lệch.
+
+- Cách chạy: Subagent + review từng task (người dùng chọn). Task 3 (DOCS) giao sonnet thay haiku vì dòng R21 và đoạn README rất dài, phải khớp từng khẳng định với code. Task 4 cỡ nhỏ, chịu review cuối.
+- Nhánh: nhánh gốc `feature/hook-popup-short` đang bị worktree khác giữ khi chuyển phiên, nên làm tiếp ở `feature/hook-popup-short-2` (cắt từ cùng commit, đã merge `master`).
+- Version: master lên core 1.34.1 trước khi merge nên bump 1.34.2 (Task 4), rồi 1.34.3 sau lượt sửa review cuối; `CHANGELOG.md` thêm vào Files của Task 4 để số version đúng.
+- Review Task 3 vòng 1 (0/2/2): R21/README nói mọi câu ask nêu token (sai ở 5 loại câu), "một câu" (câu full không bypass có hai câu), thiếu nhãn [Unverified] cho "popup hiện khối lệnh thô", gộp BANNED/ADVICE sai phạm vi; đã sửa ở vòng 1 và re-review sạch.
+- Review cuối (opus + auditor): 0 blocker, 0 major; chạy `decide` thật 37 ca và 360 ca so sánh master: quyết định ask/deny/null và mọi câu `deny` không đổi. Lượt sửa duy nhất: câu force push thành "Force push hoặc xoá nhánh trên remote." (vì `pushReason` gom cả `--delete`/`--mirror`), comment `showArg`, thông điệp test, tài liệu R21/README (dữ liệu agent qua `showArg` có thể chứa chữ bất kỳ, thêm loại câu không có token, "câu thứ hai", giới hạn cắt 40 ký tự); re-review ADDRESSED.
+- Baseline `npm test` đỏ một ca ngoài phạm vi (`test/statusline.test.mjs` AC1.1, ledger request khác có dòng Blocked); cuối cùng `npm test` xanh (8194 pass).
+- Ca đo thời gian `hook-copy-alias-brace AC3.4` (dưới 1 giây) đỏ 4 lần liên tiếp ở `npm test`, xanh ở lần 5 và mọi lần chạy riêng, không sửa: `decide` đo cùng ~120–330 ms trên nhánh và master, commit trước bump và master xanh ở `validate --build`; nên nới ngưỡng ở request riêng.
+- Minor hoãn (không sửa): dòng `Lệnh gồm` 3 bước có thể không chứa bước gây hỏi và cắt mất phần đầu `$X`/`~` của đường dẫn chưa rõ dài hơn 40 ký tự (D3, chấp nhận); `guard-mcp` vẫn có câu khuyên dài (ngoài R21); thân heredoc trong `$( )` của lệnh commit nháy chưa đóng bị liệt kê thành bước thừa (có từ master); `git push --all` bị gom vào loại force; R21/README gom loại câu không token chưa phân biệt `guard-files` (có token); `ADVICE` chép ở hai file test.
 
 ## Rủi ro và câu hỏi mở
 
