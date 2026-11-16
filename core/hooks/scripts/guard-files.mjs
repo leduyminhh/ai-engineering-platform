@@ -74,7 +74,7 @@ function globNamesSecret(glob, probes = SECRET_PROBES) {
 
 // Cấu hình của chính các hook: agent bị tiêm lệnh không được tự đặt mode:full, fullKeep:[] hay allowEnvFiles:true nên luôn hỏi, kể cả khi full hiệu lực.
 const GUARD_CONFIG = /(^|\/)\.claude\/(aip-gate\.json|settings(\.[\w-]+)?\.json)$/i;
-const guardConfigAsk = (file) => ({ decision: 'ask', reason: `Agent muốn ghi vào file cấu hình quyền \`${showArg(path.basename(file))}\` (cùng nhóm với .claude/settings.json), nơi quyết định agent được làm gì mà không hỏi bạn. Chỉ cho phép khi chính bạn yêu cầu đổi cấu hình; nếu không, hãy từ chối.` });
+const guardConfigAsk = (file) => ({ decision: 'ask', reason: `Ghi vào file cấu hình quyền \`${showArg(path.basename(file))}\`.` });
 
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
@@ -92,13 +92,13 @@ function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGat
   const where = classifyPath(String(file), cwd, grants, true, write ? 'write' : 'read');
   // File bí mật chỉ được miễn hỏi khi đường dẫn có đủ ba quyền hiệu lực; thiếu thì hỏi người dùng.
   if (where === 'inside' && !(secret && ['read', 'write', 'delete'].some((a) => classifyPath(String(file), cwd, grants, true, a) !== 'inside'))) return null;
-  // deny do agent đọc nên giữ gợi ý hành động (fullPaths/fullRoots); ask hiện cho người dùng nên chỉ nói điều họ quyết được.
+  // deny do agent đọc nên giữ gợi ý hành động (fullPaths/fullRoots); ask hiện cho người dùng nên chỉ nêu việc và đường dẫn.
   if (write && where === 'outside') return { decision: 'deny', reason: 'Chế độ full chỉ cho phép ghi vào thư mục có quyền write; đường dẫn này chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.' };
   const reason = where === 'unknown'
-    ? `Agent muốn ${write ? 'ghi' : 'đọc'} đường dẫn chỉ biết lúc chạy (\`${showArg(file)}\`), nên không chắc nó nằm trong thư mục project. Xem kỹ đường dẫn trước khi cho phép; không chắc thì từ chối.`
+    ? `${write ? 'Ghi' : 'Đọc'} đường dẫn chưa rõ \`${showArg(file)}\`.`
     : where === 'inside'
-      ? `Agent muốn ${write ? 'ghi' : 'đọc'} file bí mật (\`${showArg(file)}\`) trong thư mục chưa được cấp đủ quyền đọc, ghi và xoá. Cho phép nếu đúng ý bạn; nếu không, hãy từ chối.`
-      : `Agent muốn đọc file ngoài thư mục project (\`${showArg(file)}\`). Cho phép nếu file đó an toàn để agent xem; nếu không, hãy từ chối.`;
+      ? `${write ? 'Ghi' : 'Đọc'} file bí mật \`${showArg(file)}\` ở thư mục chưa đủ quyền đọc, ghi, xoá.`
+      : `Đọc file ngoài thư mục project \`${showArg(file)}\`.`;
   return { decision: 'ask', reason };
 }
 
