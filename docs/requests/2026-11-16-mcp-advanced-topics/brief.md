@@ -124,10 +124,33 @@ Ba hướng tổng thể:
 - [giả định] Tên `backend-mcp-server` và việc đặt ở `backend`.
 - [Inference] Rủi ro routing khi thêm skill chưa đo; cần chạy `node scripts/routing-score.mjs` ở giai đoạn plan.
 
+## Cập nhật sau khi đọc spec hiện hành (2026-11-16, người dùng đã chọn hướng thu hẹp)
+Đã đọc, chỉ đọc, ghi URL:
+- https://modelcontextprotocol.io/specification/2026-07-28/changelog
+- https://modelcontextprotocol.io/specification/2026-07-28/deprecated
+- https://modelcontextprotocol.io/specification/2026-07-28/basic/transports (và `/streamable-http`)
+- https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning
+- https://modelcontextprotocol.io/specification/2026-07-28/client/sampling, `/client/roots`, `/basic/patterns/progress`
+- https://py.sdk.modelcontextprotocol.io/whats-new/ (Python SDK v2.3.0, trang cho biết v2 nói bản 2026-07-28)
+
+Phát hiện [Verified từ các trang trên]: bản 2026-07-28 bỏ phiên cấp giao thức, `Mcp-Session-Id`, bắt tay `initialize`, endpoint
+GET và mọi request do server khởi xướng (thay bằng kết quả `input_required` rồi client gọi lại). Sampling, Roots, Logging
+bị đánh dấu deprecated, hướng thay là gọi thẳng API nhà cung cấp LLM; Roots chỉ là thông tin tham khảo, không phải kiểm soát
+truy cập. Progress giữ nguyên, đi trên luồng phản hồi của chính request. SDK Python v2 nói bản mới và một `Server` phục vụ
+cả hai thời kỳ; `stateless_http`, `json_response` chuyển sang tham số của `run()`.
+
+Hệ quả cho brief: bảng cờ stateless (chủ đề chính ban đầu) chỉ còn đúng cho server tương thích bản 2025-11-25 trở về trước;
+không còn cơ sở để viết skill mới quanh nó. **Hướng mới (người dùng chọn):** bỏ skill `backend-mcp-server`; thêm một
+reference ngắn vào `backend-llm-integration`: server MCP cần LLM thì gọi trực tiếp (bảy mục của checklist áp dụng trọn),
+sampling chỉ còn là tuỳ chọn tương thích bản cũ, nhận biết thời kỳ của đối tác, và vài dòng về Origin, localhost và
+roots-không-phải-kiểm-soát. Các hướng 2 và 3, hai việc hoãn (hook `.mcp.json`, eval `guard-mcp`) và mục "Không nên làm"
+giữ nguyên; bảng chủ đề cập nhật: StreamableHTTP+cờ stateless → chỉ nhắc trong phần tương thích; sampling → khuyến nghị
+gọi trực tiếp; roots → một dòng cảnh báo; log/progress → progress vẫn dùng được, logging deprecated.
+
 ## Định tuyến
 loại-việc: feature
 phạm-vi: code-be
-đầu-ra-mong-đợi: một recipe docs-only backend-mcp-server (draft) kèm dòng chéo ở backend-llm-integration, và danh sách hai request hoãn (hook .mcp.json, eval guard-mcp)
+đầu-ra-mong-đợi: một reference ngắn về MCP trong skill backend-llm-integration (không có skill mới), cùng danh sách hai request hoãn (hook .mcp.json, eval guard-mcp)
 rủi-ro: thêm skill mới có thể kéo điểm routing xuống dưới ngưỡng khoá và phải bump version backend, lock lại
 ứng-viên-route: [workflow-feature]
 route-đã-duyệt: workflow-feature
