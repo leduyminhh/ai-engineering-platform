@@ -1,5 +1,5 @@
-// Pin nội dung: kiểm tương thích công cụ codegen trước G1 (request 2026-11-13-frontend-codegen-compat).
-// Ghim chuỗi lệnh và vị trí, không ghim văn xuôi.
+// Pin nội dung: kiểm tương thích công cụ codegen trước G1 (requests 2026-11-13-frontend-codegen-compat và -harden).
+// Ghim chuỗi lệnh, vị trí, tên gói và các cụm ranh giới an toàn (hợp đồng vận hành), không ghim văn xuôi khác.
 export default async function run({ ok, ctx }) {
   const { fs, path, PLUGINS_DIR, parseSteps, workflows } = ctx;
   const diDir = path.join(PLUGINS_DIR, 'frontend', 'skills', 'frontend-data-integration');
@@ -36,11 +36,13 @@ export default async function run({ ok, ctx }) {
     'AC2.2: script api:types dạng npx ghim openapi-typescript@<x.y.z> (đủ ba số, không @latest/@^7)');
   ok(ref.includes('https://openapi-ts.dev'), 'AC2.2: reference giữ link nguồn https://openapi-ts.dev');
 
-  // N3b: ranh giới an toàn của mục 2a, tên gói và mặc định mục 3.
   const norm = (s) => s.replace(/\s+/g, ' ');
-  const sec2a = norm(ref.slice(ref.indexOf('## 2a.'), ref.indexOf('## 3.')));
-  const sec3 = norm(ref.slice(ref.indexOf('## 3.'), ref.indexOf('## 4.')));
-  ok(sec2a.length > 0 && sec3.length > 0, 'N3b AC5.1: tách được mục 2a và mục 3 của reference');
+  const at2a = ref.indexOf('## 2a.');
+  const at3 = ref.indexOf('## 3.');
+  const at4 = ref.indexOf('## 4.');
+  const sec2a = at2a >= 0 && at3 > at2a ? norm(ref.slice(at2a, at3)) : '';
+  const sec3 = at3 >= 0 && at4 > at3 ? norm(ref.slice(at3, at4)) : '';
+  ok(sec2a.length > 0 && sec3.length > 0, 'N3b AC5.1: tách được mục 2a và mục 3 của reference (đủ ba mục 2a, 3, 4 theo thứ tự)');
   ok(sec2a.includes('npm install --dry-run --ignore-scripts') && sec2a.includes('không ghi vào project'),
     'N3b AC5.1: mục 2a ghim chuỗi liền npm install --dry-run --ignore-scripts và ranh giới "không ghi vào project"');
   ok(sec2a.includes('.npmrc'), 'N3b AC2.1: mục 2a dặn không chép .npmrc sang thư mục tạm');
@@ -57,7 +59,8 @@ export default async function run({ ok, ctx }) {
     'N3b AC4.1: hai ví dụ api:types, mặc định không dùng npx, dạng npx cho ca xung đột');
   const flat = norm(ref);
   const auditAt = flat.indexOf('npm audit');
-  ok(auditAt >= 0 && flat.indexOf('npm audit', auditAt + 1) < 0 && flat.lastIndexOf('[Inference]', auditAt) >= auditAt - 80,
+  const inferenceAt = flat.lastIndexOf('[Inference]', auditAt);
+  ok(auditAt >= 0 && flat.indexOf('npm audit', auditAt + 1) < 0 && inferenceAt >= 0 && inferenceAt >= auditAt - 80,
     'N3b AC4.2: câu về npm audit xuất hiện một lần và mở bằng [Inference]');
 
   // workflow-feature Bước 3: lấy riêng từng trường để chữ ở Thực hiện/Khi fail không khớp nhầm.
@@ -82,13 +85,12 @@ export default async function run({ ok, ctx }) {
   ok(/spike/i.test(field('Evidence')), 'AC3.1: Bước 3 Evidence ghi lệnh và kết quả spike');
   ok(doing.includes('[Unverified]') && doing.includes('G1'),
     'AC4.1: Bước 3 Hành động nêu giữ [Unverified] và đưa lên G1 khi không kiểm được');
-  const boundary = ['thư mục tạm', 'không cài vào project', '`npx --yes`'];
+  const boundary = ['thư mục tạm ngoài project', 'không cài vào project', '`npx --yes`'];
   ok(boundary.every((t) => doing.includes(t)),
     'N3b AC1.1: Bước 3 Hành động nêu ranh giới chỉ đọc của spike (thư mục tạm, không cài vào project, không `npx --yes`)');
   ok(!field('Thực hiện').includes('thư mục tạm') && !field('Khi fail').includes('thư mục tạm'),
     'N3b AC1.1: ranh giới chỉ đọc không nằm ở Thực hiện hay Khi fail');
 
-  // engineering-spec-writing: đoạn Spike giả định ở bước 9 có cùng ranh giới cho giả định công cụ/thư viện.
   const sws = fs.readFileSync(path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-spec-writing', 'SKILL.md'), 'utf8');
   const spikeAt = sws.indexOf('**Spike giả định');
   const spikeEnd = sws.indexOf('10. **Verify.**');
