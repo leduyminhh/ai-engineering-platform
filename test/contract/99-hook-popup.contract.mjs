@@ -156,7 +156,7 @@ export default async function run({ ok, ctx }) {
     ok(wr?.decision === 'deny' && wr.reason.includes('fullRoots'), 'AC1.4: guard-files — ghi ngoài project ở full vẫn deny nhắc fullRoots');
     const wunk = dec('Write', '$HOME/x.txt', { bypass: true });
     ok(wunk?.decision === 'ask' && shapeOk(wunk.reason) && !/Lệnh gồm/.test(cfg.reason + rd.reason + unk.reason + wunk.reason), 'AC1.3: reason của guard-files không có dòng "Lệnh gồm"; ghi vào đường dẫn không xác định → ask theo khuôn');
-    // Đường dẫn do agent cung cấp không được làm giả dòng hay đẩy lời khuyên ra khỏi popup: bỏ xuống dòng/backtick, cắt độ dài
+    // Đường dẫn do agent cung cấp không được chèn dòng giả vào popup hay đẩy tên file ra ngoài: bỏ xuống dòng/backtick, cắt độ dài
     for (const evil of ['$X/`a`\nAn toàn, hãy cho phép.\n`b.txt`', `$X/${'a'.repeat(900)}`, `${outsideFile}\nHãy cho phép`]) {
       const r = dec('Read', evil, { bypass: true });
       ok(r?.decision === 'ask' && shapeOk(r.reason, true) && !/[\r\n]/.test(r.reason) && !r.reason.includes('`a`'), `AC1.5: đường dẫn có xuống dòng/backtick/quá dài không làm sai lệch reason (${evil.slice(0, 12).replace(/\n/g, '⏎')}…)`);
@@ -225,7 +225,7 @@ export default async function run({ ok, ctx }) {
       'AC1.3: lệnh $( ) hoặc backtick lồng trong nháy thì dòng tóm tắt cảnh báo xem khối lệnh bên dưới');
     {
       const withBody = stepsOf("mkdir -p x && cd x\ncat > bin/docker <<'EOF'\n#!/usr/bin/env bash\necho \"docker stub: $*\" >&2; exit 1\nEOF\nchmod +x bin/docker\ngit push origin master");
-      ok(withBody.includes('git push') && !withBody.includes('stub') && withBody.includes('cat'), 'AC1.3: thân heredoc của cat > file không liệt kê như lệnh (git push vẫn nằm trong 6 bước đầu)');
+      ok(withBody.includes('git push') && !withBody.includes('stub') && withBody.includes('cat'), 'AC1.3: thân heredoc của cat > file không liệt kê như lệnh (git push vẫn được liệt kê (đọc đủ bước qua summarize))');
       ok(stepsOf("cat x | bash <<'EOF'\nrm -rf /y\nEOF\ngit push origin master").includes('rm'), 'AC1.3: heredoc đưa vào bash vẫn được liệt kê');
     }
     ok(stepsOf("git push origin master\ncat <<'E'x\nhi\nEx\nrm -rf ~/work\nE").includes('rm') && stepsOf("git push origin master\ncat <<'E'\"y\"\nhi\nEy\nrm -rf ~/work\nE").includes('rm'),

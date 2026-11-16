@@ -716,7 +716,7 @@ function writesGuardConfig(t, msys = true) {
 
 // Câu hỏi hiện trong popup cho người dùng: chỉ nói lệnh đang làm gì và đụng nhánh/đường dẫn nào; không lý do, không lời khuyên, không thuật ngữ nội bộ.
 const PUSH_TEXT = {
-  force: 'Force push: ghi đè nhánh trên remote.',
+  force: 'Force push hoặc xoá nhánh trên remote.',
   unknown: 'Push vào nhánh chưa rõ (tên nhánh hoặc thư mục là biến).',
 };
 const pushText = (r) => (r.kind === 'protected'
