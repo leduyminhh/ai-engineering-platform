@@ -729,9 +729,10 @@ const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy; pro
 const secretText = (name) => `Lệnh nhắc tới file bí mật \`${showArg(name)}\`.`;
 
 // Dòng tóm tắt đọc từ chính parse của hook (nháy, bung bash -c/eval), không cắt heredoc bằng regex: liệt kê thừa còn hơn giấu lệnh, và chạy tuyến tính.
-const MAX_STEPS = 6;
+const MAX_STEPS = 3;
 // Chỉ dùng thông tin có sẵn từ parse (tên lệnh, lệnh con git, đích chuyển hướng); không đoán số file vì git commit -m không nêu file nào.
-function summarize(cmd, msys = true) {
+// `max` chỉ để test đọc đủ bước; popup luôn dùng MAX_STEPS.
+export function summarize(cmd, msys = true, max = MAX_STEPS) {
   const p = parse(stripSimpleHeredocs(cmd) ?? cmd);
   const steps = [];
   let total = 0;
@@ -741,7 +742,7 @@ function summarize(cmd, msys = true) {
     if (/\$\(|`|<\(/.test(t.join(' '))) nested = true;
     if (k >= tk.length || String(tk[k]).startsWith('#')) continue;
     total++;
-    if (steps.length >= MAX_STEPS) continue;
+    if (steps.length >= max) continue;
     const g = cmdName(tk[k]) === 'git' ? gitCmd(tk.slice(k)) : null;
     const w = writeTargets(t, msys);
     // Nêu đường dẫn gây ra câu hỏi: đường dẫn chưa biết (`$X`, `~`), rồi file cấu hình hook, rồi đích đầu tiên; nếu không, nguồn đọc đứng đầu của cp che mất đích ghi.
@@ -750,10 +751,10 @@ function summarize(cmd, msys = true) {
     const nd = w.needs[ti] ?? [];
     // Đích vừa đọc vừa ghi (cờ lạ của Copy-Item) nói là ghi: câu hỏi quyền xoay quanh việc ghi.
     const verb = nd.includes('delete') ? (nd.includes('write') ? 'xoá hoặc ghi' : 'xoá') : nd.includes('write') || !nd.includes('read') ? 'ghi vào' : 'đọc';
-    steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${ti >= 0 ? ` (${verb} ${showArg(w.targets[ti], 60)})` : ''}`);
+    steps.push(`${g ? `git ${showArg(g.sub, 40)}` : showArg(cmdName(tk[k]), 40)}${ti >= 0 ? ` (${verb} ${showArg(w.targets[ti], 40)})` : ''}`);
   }
   if (!total) return '';
-  const more = total > MAX_STEPS ? `, … và ${total - MAX_STEPS} bước khác` : '';
+  const more = total > max ? `, … và ${total - max} bước khác` : '';
   const open = (p.unclosed ? ' (nháy chưa đóng: danh sách có thể thiếu bước)' : '') + (nested ? ' (có lệnh lồng trong nháy: xem khối lệnh bên dưới)' : '');
   return `Lệnh gồm: ${steps.join(', ')}${more}.${open}`;
 }
