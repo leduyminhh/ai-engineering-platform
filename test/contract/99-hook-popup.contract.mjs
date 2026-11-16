@@ -252,6 +252,9 @@ export default async function run({ ok, ctx }) {
     ok(bash(`S=${fwd(scratch)}; rm $S/x`, withScratch) === null, 'AC6.2: full — S=<literal trong scratchpad>; rm $S/x → không hỏi');
     // Lệnh thật của một phiên: `cd <dir> && S="<scratchpad>"; … >"$S/out"`; phép gán đứng sau cd vẫn là đầu chuỗi lệnh.
     const cdPrefixed = (head, tail = 'bash t.sh >"$S/out" 2>&1; echo "exit=$?"; tail -5 "$S/out"') => `${head}; ${tail}`;
+    // Nhánh tách thô giữ nguyên nháy của đích chuyển hướng: `>"<abs>"` sau cd ra ngoài root không được bị coi là đường dẫn tương đối.
+    ok(bash(`cd /e/x && echo hi >"${fwd(scratch)}/out"`, withScratch) === null, 'AC6.2: full — cd ra ngoài root, ghi >"<abs trong scratchpad>" → không hỏi, không deny');
+    ok(bash(`cd /e/x && echo hi >"/etc/out"`, withScratch)?.decision === 'deny', 'AC6.3: full — cd ra ngoài root, ghi >"/etc/out" vẫn deny');
     const here = fwd(path.resolve('.'));
     ok(bash(cdPrefixed(`cd ${here} && S="${fwd(scratch)}"`), withScratch) === null, 'AC6.2: full — cd <dir> && S="<scratchpad>"; … >"$S/out" → không hỏi');
     ok(bash(cdPrefixed(`cd ${here}; S="${fwd(scratch)}"`), withScratch) === null, 'AC6.2: full — cd <dir>; S="<scratchpad>"; … → không hỏi');

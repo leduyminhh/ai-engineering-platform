@@ -385,7 +385,8 @@ function writeTargets(t, msys = true) {
       const after = at + (tok[at + 1] === '>' || tok[at + 1] === '|' ? 2 : 1);
       const nx = head.indexOf('>', after);
       // `2>&1` bị parse() tách ở `&` thành `2>` + `1`: đích thiếu hoặc bắt đầu bằng `&` là dup fd, không phải file.
-      const target = tok.slice(after, nx < 0 ? undefined : nx) || (nx < 0 && i + 1 < t.length ? t[++i] : '');
+      // naiveSegments không bóc nháy trong token dính `>"…"`; để nguyên thì đường dẫn tuyệt đối thành tương đối theo cwd.
+      const target = (tok.slice(after, nx < 0 ? undefined : nx) || (nx < 0 && i + 1 < t.length ? t[++i] : '')).replace(/^(["'])([\s\S]*)\1$/, '$2');
       if (target && !target.startsWith('&')) { targets.push(target); needs.push(['write']); }
       at = nx;
     }
