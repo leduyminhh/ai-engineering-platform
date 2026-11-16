@@ -18,22 +18,26 @@ Server cần LLM thì tự gọi nhà cung cấp. Server giữ khoá và chịu 
 | 7 | Khoá nhà cung cấp | Trọn, khoá không vào log, lỗi hay prompt |
 
 Lý do: spec đã đánh dấu Sampling là deprecated và chỉ tới việc gọi thẳng API nhà cung cấp. Sampling, Roots và Logging
-chỉ đủ điều kiện bị gỡ từ bản spec đầu tiên phát hành sau 2027-07-28.
+chỉ đủ điều kiện bị gỡ từ bản spec đầu tiên phát hành vào hoặc sau 2027-07-28.
 
 ## 2. Sampling cho đối tác bản cũ (tuỳ chọn)
 
-Chỉ làm khi cần chạy với client bản cũ vẫn dựa vào sampling. Client giữ khoá và chịu chi phí, nên ba mục chuyển sang phía client:
+Chỉ làm khi cần chạy với client bản cũ vẫn dựa vào sampling. Client giữ khoá và chịu chi phí, nên phần lớn lời gọi nhà cung cấp chuyển sang phía client. [Inference: cách chia dưới đây là suy luận
+của người viết, vì client mới là bên gọi nhà cung cấp; spec không chia theo mục checklist.]
 
 | Mục | Tên trong checklist | Phía nào lo |
 |---|---|---|
 | 1 | Ngân sách theo ngày | Client |
-| 4 | Ghi usage | Client (server chỉ ghi phần mình quan sát được) |
+| 2 | Backoff | Client, phần retry lời gọi tới nhà cung cấp |
+| 4 | Ghi usage | Client lo phần chính; server chỉ ghi phần mình quan sát được |
 | 7 | Khoá nhà cung cấp | Client, server không giữ khoá |
 | 3, 5, 6 | Fail-soft, redact và hash, prompt dự phòng | Vẫn ở server |
 
-- Mục 2 (Backoff): phần retry lời gọi tới nhà cung cấp do client lo [Inference: client mới là bên gọi].
-- Client có thể từ chối, hoặc không khai báo `sampling`. Server xử lý như lời gọi lỗi: trả kết quả `degraded` và ghi log
-  lý do theo mục 3, không giả vờ đã có câu trả lời của model.
+- Client có thể từ chối, hoặc không khai báo `sampling`. Hai trường hợp:
+  - Client bản cũ trả lỗi cho request của server: server trả kết quả `degraded` và ghi log lý do theo mục 3, không giả vờ
+    đã có câu trả lời của model [Unverified: chưa đọc trang sampling của spec 2025-11-25].
+  - Client bản 2026-07-28: spec nói khi lỗi hoặc người dùng từ chối, client không cần gửi lại request. Server không chờ phản hồi
+    nên không nhận tín hiệu từ chối. Server tự đặt timeout, hết hạn thì coi như không có câu trả lời và rơi vào `degraded`.
 - Spec khuyến nghị (SHOULD) luôn có người duyệt trong vòng và có quyền từ chối. Server không giả định yêu cầu nào cũng được duyệt.
 - Output nhận về từ client vẫn qua bộ che (mục 5) trước khi log.
 
@@ -50,13 +54,14 @@ Chỉ làm khi cần chạy với client bản cũ vẫn dựa vào sampling. Cl
 | | Bản mới (2026-07-28 trở đi) | Bản cũ (2025-11-25 trở về trước) |
 |---|---|---|
 | Mở đầu | Không bắt tay; phiên bản giao thức nằm trong từng request | Mở bằng `initialize` |
-| Phiên | Không có `Mcp-Session-Id` | Có `Mcp-Session-Id` |
+| Dấu hiệu trên request | Mọi request mang `_meta` `io.modelcontextprotocol/protocolVersion` (HTTP: header `MCP-Protocol-Version` khớp giá trị đó) | Phiên bản chốt một lần ở `initialize` |
+| Phiên | Không có `Mcp-Session-Id` | Có thể có `Mcp-Session-Id` (server có thể cấp) |
 | Server hỏi client | Trả kết quả `input_required`, client gọi lại request kèm câu trả lời | Server tự gửi request riêng |
-| Dò phiên bản | Server phải có `server/discover` | Không có |
 
+- Server bản mới phải hỗ trợ `server/discover` để khai báo phiên bản, capability và danh tính; đó là nghĩa vụ của server, không phải dấu hiệu phân biệt đối tác.
 - Tiến độ (`progress`) vẫn đi trên luồng phản hồi của chính request đó ở bản mới.
 - Server hỗ trợ cả hai thì phục vụ bản mới trước; request mở bằng `initialize` rơi vào nhánh bản cũ.
-- Python SDK v2.3.0 (số phiên bản hiện ở đầu trang chủ `py.sdk.modelcontextprotocol.io` lúc đọc; trang what's-new chỉ nói "v2"): một `Server` phục vụ cả hai
+- Python SDK v2.3.0 (theo PyPI lúc đọc; trang chủ SDK render số này ở khối GitHub; trang what's-new chỉ nói "v2"): một `Server` phục vụ cả hai
   thời kỳ. Cờ `stateless_http` và `json_response` chuyển sang `run()`; hành vi chi tiết của hai cờ
   chỉ liên quan khi phục vụ bản cũ [Unverified: chưa đọc trang Running your server của SDK].
 
@@ -72,4 +77,5 @@ Chỉ làm khi cần chạy với client bản cũ vẫn dựa vào sampling. Cl
 | versioning | `https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning` | `server/discover`, nhận biết thời kỳ |
 | sampling | `https://modelcontextprotocol.io/specification/2026-07-28/client/sampling` | deprecated, người duyệt trong vòng |
 | roots | `https://modelcontextprotocol.io/specification/2026-07-28/client/roots` | chỉ là thông tin |
-| Python SDK | `https://py.sdk.modelcontextprotocol.io/whats-new/` | v2.3.0, hai thời kỳ, cờ chuyển sang `run()` |
+| Python SDK (what's-new) | `https://py.sdk.modelcontextprotocol.io/whats-new/` | "v2", hai thời kỳ, cờ chuyển sang `run()` |
+| PyPI gói `mcp` | `https://pypi.org/pypi/mcp/json` | số phiên bản v2.3.0 |
