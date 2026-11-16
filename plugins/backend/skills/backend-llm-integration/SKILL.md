@@ -23,6 +23,7 @@ lớp riêng của lời gọi LLM. Chi tiết từng mục và cách kiểm: [r
 - Biết **nơi lưu ngân sách và usage** (bảng hoặc kho có sẵn). Chưa có thì nêu giả định và đề xuất, không tự dựng hạ tầng ngoài slice.
 - Mọi khẳng định về hành vi của nhà cung cấp cụ thể (mã lỗi, header giới hạn tốc độ, cách tính token) chưa đọc tài liệu đúng
   phiên bản thì gắn nhãn `[Unverified]`, theo mục "Kiểm nguồn" của skill `principles` (bản cài plugin: `core:principles`).
+- Khi backend là server MCP: đọc [references/mcp-llm.md](references/mcp-llm.md) trước khi chọn ai gọi LLM (server hay client qua sampling).
 
 ## Quy trình
 
