@@ -392,5 +392,16 @@ export default async function run({ ok, ctx }) {
       ...[`cp ${T}/x ${O}/b -S .bak`, `cp ${D}/x ${O}/b --suffix .bak`, `mv ${T}/x ${O}/b -S .bak`].map((c) => [c, null, 'hook-copy-alias-brace AC4.1']),
       ...[`cp ${OUT}/x ${O}/b -S .bak`, `cp -t ${O} ${OUT}/x --suffix .bak`].map((c) => [c, 'ask', 'hook-copy-alias-brace AC4.1']),
     ]);
+
+    // hook-copy-alias-brace: alias PowerShell cpi/mi/ri phải bị xét như Copy-Item/Move-Item/Remove-Item.
+    expectAll([
+      ...[`cpi ${T}/a ${D}/b`, `mi ${T}/a ${OUT}/b`, `ri ${OUT}/a`, `mi ${O}/a ${T}/b`, `ri ${O}/a`, `cpi ${D}/a ${D}/b`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC2.1']),
+      ...[`cpi ${D}/a ${O}/b`, `mi ${T}/a ${O}/b`, `ri ${T}/a`, `cpi ${T}/a ${T}/b`].map((c) => [c, null, 'hook-copy-alias-brace AC2.1']),
+      [`cpi ${OUT}/a ${O}/b`, 'ask', 'hook-copy-alias-brace AC2.1'],
+    ], { tool: 'PowerShell' });
+    const aliasCfg = [...['cpi settings.json .claude', 'mi settings.json .claude\\', 'cpi -Path settings.json -Destination .claude', 'ri .claude\\settings.json'].map((c) => [c, 'ask', 'hook-copy-alias-brace AC2.2']),
+      ['cpi .claude\\settings.json out\\x', null, 'hook-copy-alias-brace AC2.2']];
+    expectAll(aliasCfg, psAsk);
+    expectAll(aliasCfg, { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
