@@ -33,14 +33,14 @@ của người viết, vì client mới là bên gọi nhà cung cấp; spec kh�
 | 7 | Khoá nhà cung cấp | Client, server không giữ khoá |
 | 3, 5, 6 | Fail-soft, redact và hash, prompt dự phòng | Vẫn ở server |
 
-- Client có thể từ chối, hoặc không khai báo `sampling`. Hai trường hợp theo phiên bản client:
+- Client có thể từ chối, hoặc không khai báo `sampling`. Các trường hợp (hai gạch đầu theo phiên bản client, gạch cuối theo khai báo capability):
   - Client bản cũ trả lỗi cho request của server: server trả kết quả `degraded` và ghi log lý do theo mục 3, không giả vờ
     đã có câu trả lời của model [Unverified: chưa đọc trang sampling của spec 2025-11-25].
   - Client bản 2026-07-28: spec nói khi lỗi hoặc người dùng từ chối, client không cần gửi lại request. Server không chờ phản hồi
     nên không nhận tín hiệu từ chối. Server tự đặt timeout, hết hạn thì coi như không có câu trả lời và rơi vào `degraded`
     [Inference: khuyến nghị của người viết; spec không quy định timeout].
-  - Client không khai báo `sampling`: không gửi yêu cầu sampling cho client đó [Inference: spec chỉ nói rõ điều này cho
-    `sampling.tools`; client hỗ trợ sampling phải khai báo `sampling`]. Coi như lời gọi không có câu trả lời và rơi vào `degraded`.
+  - Client không khai báo `sampling`: không gửi yêu cầu sampling cho client đó; coi như lời gọi không có câu trả lời và rơi vào `degraded`
+    [Inference: spec chỉ nói rõ điều này cho `sampling.tools`; client hỗ trợ sampling phải khai báo `sampling`].
 - Spec khuyến nghị (SHOULD) luôn có người duyệt trong vòng và có quyền từ chối. Server không giả định yêu cầu nào cũng được duyệt.
 - Output nhận về từ client vẫn qua bộ che (mục 5) trước khi log.
 
@@ -64,7 +64,7 @@ của người viết, vì client mới là bên gọi nhà cung cấp; spec kh�
 - Server bản mới phải hỗ trợ `server/discover` để khai báo phiên bản, capability và danh tính; đó là nghĩa vụ của server, không phải dấu hiệu phân biệt đối tác.
 - Tiến độ (`progress`) vẫn đi trên luồng phản hồi của chính request đó ở bản mới.
 - Server hỗ trợ cả hai thì phục vụ bản mới trước; request mở bằng `initialize` rơi vào nhánh bản cũ.
-- Python SDK v2.3.0 (theo PyPI lúc đọc; trang chủ SDK render số này ở khối GitHub; trang what's-new chỉ nói "v2"): một `Server` phục vụ cả hai
+- Python SDK v2.3.0 (theo PyPI lúc đọc; [Unverified: trang chủ SDK render số này ở khối GitHub]; trang what's-new chỉ nói "v2"): một `Server` phục vụ cả hai
   thời kỳ. Cờ `stateless_http` và `json_response` chuyển sang `run()`; hành vi chi tiết của hai cờ
   chỉ liên quan khi phục vụ bản cũ [Unverified: chưa đọc trang Running your server của SDK].
 
