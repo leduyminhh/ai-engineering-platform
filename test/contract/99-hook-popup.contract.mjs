@@ -310,9 +310,10 @@ export default async function run({ ok, ctx }) {
     ];
     // AC1.7: ba hàng này đổi ask → deny (chuẩn hoá `..` trước khi kiểm root); hai hàng D2 cũ (gán sau `echo hi`) nay null, nằm ở AC1.2 của 99-path-permissions.
     const denyRows = [
-      ["S='" + T + "'/../../..; rm -rf $S/victim", 'phần chữ dính sau giá trị có nháy'],
-      ['S="' + T + '"/../../..; rm -rf $S/victim', 'phần chữ dính sau giá trị nháy kép'],
-      ["S=$(cygpath -u '" + T + "')/../../..; rm -rf $S/victim", 'phần chữ dính sau $(cygpath …)'],
+      // scratch nằm 4 cấp dưới <tmpdir>: ba `..` chỉ tới <tmpdir>/claude (vẫn là root), nên cần bốn `..` để thoát hẳn.
+      ["S='" + T + "'/../../../..; rm -rf $S/victim", 'phần chữ dính sau giá trị có nháy'],
+      ['S="' + T + '"/../../../..; rm -rf $S/victim', 'phần chữ dính sau giá trị nháy kép'],
+      ["S=$(cygpath -u '" + T + "')/../../../..; rm -rf $S/victim", 'phần chữ dính sau $(cygpath …)'],
     ];
     for (const [cmd, why] of denyRows) {
       ok(bash(cmd, withScratch)?.decision === 'deny', `AC1.7: full — ${why} thoát khỏi root nên deny: ${cmd}`);
@@ -426,7 +427,7 @@ export default async function run({ ok, ctx }) {
       const big = 'V=/a;' + 'V['.repeat(80000) + '; rm /etc/x';
       const t0 = Date.now();
       const r = bash(big, full);
-      ok(r !== null && Date.now() - t0 < 3000, `AC6.3: lệnh ${big.length} ký tự nhiều V[ không làm substituteVars quá giờ (${Date.now() - t0} ms)`);
+      ok(r !== null && Date.now() - t0 < 3000, `AC6.3: lệnh ${big.length} ký tự nhiều V[ không làm bộ giải biến quá giờ (${Date.now() - t0} ms)`);
     }
     for (const c of ['F=.claude/aip-gate.json; echo ' + q1 + '{"mode":"full"}' + q1 + ' > $F', 'F=.claude/settings.json; cp x $F', 'F=.claude/settings.json; echo x | tee $F',
       'F=.claude/settings.json; sed -i s/a/b/ $F', 'F=aip-gate.json; cd .claude && echo x > $F', "awk 'BEGIN{print \"x\" > \".claude/settings.json\"}'",
