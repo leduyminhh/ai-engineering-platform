@@ -799,6 +799,28 @@ function psNormalize(cmd) {
   return cmd.replace(/`\r?\n/g, ' ').replace(/`([\s\S])/g, (_, c) => (c === '"' || c === "'" ? '\\' + c : c));
 }
 
+// Bỏ chú thích PowerShell (`#` đầu từ tới hết dòng, `<# … #>`) ngoài nháy để `{`, `=` trong chú thích không bị tính; chuỗi nháy giữ nguyên.
+function psStripComments(s) {
+  let out = '';
+  let q = null;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) {
+      out += c;
+      if (c === '`' && q === '"') { out += s[i + 1] ?? ''; i++; continue; }
+      if (c === q) { if (s[i + 1] === q) { out += q; i++; } else q = null; }
+      continue;
+    }
+    if (c === '`') { out += c + (s[i + 1] ?? ''); i++; continue; }
+    if (c === "'" || c === '"') { q = c; out += c; continue; }
+    const atStart = i === 0 || /[\s;|&(){}]/.test(s[i - 1]);
+    if (c === '<' && s[i + 1] === '#' && atStart) { const e = s.indexOf('#>', i + 2); out += ' '; i = e < 0 ? s.length : e + 1; continue; }
+    if (c === '#' && atStart) { while (i < s.length && s[i] !== '\n') i++; i--; continue; }
+    out += c;
+  }
+  return out;
+}
+
 function defaultBranch(cwd) {
   try {
     return execFileSync('git', ['-C', cwd || '.', 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -1214,7 +1236,8 @@ function leadInfoPs(seg) {
 }
 
 // Danh sách trắng PowerShell: ngoài phép gán đơn `$name = từ` đứng đầu đoạn, mọi `{`/`}` hay `=` ngoài nháy, `$( )` có `=`/đổi thư mục là dấu hiệu đổi biến → tắt giải biến cả lệnh.
-const PS_SCOPE_CHANGE = /[={}]|(?:^|[\s;|({])(?:cd|chdir|sl|set-location|push-location|pushd|popd|pop-location)(?=[\s;|)]|$)/i;
+const PS_CD = /(?:^|[\s;|({])(?:cd|chdir|sl|set-location|push-location|pushd|popd|pop-location)(?=[\s;|)]|$)/i;
+const PS_SCOPE_CHANGE = new RegExp('[={}]|' + PS_CD.source, 'i');
 function psUnsafe(scan) {
   const partsUnsafe = (w) => w.parts.some(({ text, quote }) => quote === 'none' && /[={}]/.test(text.replace(/\$\{[A-Za-z_]\w*\}/g, '')))
     || innerTexts(w, true).some((x) => PS_SCOPE_CHANGE.test(x));
@@ -1310,7 +1333,9 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     }
     // Vượt trần sâu hoặc ngân sách lệnh con, hoặc `case` (dấu `)` của nhánh đóng $( ) sớm): không quét hết được thì chưa rõ.
     for (const w of seg.words) {
-      for (const inner of innerTexts(w, dialect !== 'bash')) {
+      for (const inner of innerTexts(w, ps)) {
+        // `$( )` của PowerShell cùng scope: cd bên trong đổi thư mục của đoạn này và các đoạn sau.
+        if (ps && PS_CD.test(inner)) { unres = true; entry.unres = true; }
         if (/\bcase\b/.test(inner)) opaque = true;
         if (depth >= MAX_INNER_DEPTH || ctx.inner <= 0) { opaque = true; continue; }
         ctx.inner--;
@@ -1418,8 +1443,9 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const isPs = input?.tool_name === 'PowerShell';
     const dialect = isPs ? 'powershell' : 'bash';
     try {
-      const { scan, text, noVars } = prepareWalk(isPs ? raw : cmd, isPs);
-      const naive = isPs || text === cmd ? naiveOuter : naiveSegments(text);
+      const psRaw = isPs ? psStripComments(raw) : raw;
+      const { scan, text, noVars } = prepareWalk(isPs ? psRaw : cmd, isPs);
+      const naive = isPs ? naiveSegments(psNormalize(psRaw)) : text === cmd ? naiveOuter : naiveSegments(text);
       walkedAll = [...walkSegments(scan, { cwd, msys, dialect, noVars }), ...walkSegments(naiveScan(naive), { cwd, msys, dialect, noVars })];
     } catch {
       walkedAll = legacy();

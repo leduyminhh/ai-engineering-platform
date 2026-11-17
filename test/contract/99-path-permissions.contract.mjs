@@ -775,5 +775,15 @@ export default async function run({ ok, ctx }) {
     ok(inBlock !== null, 'AC2.1: dùng $S trong khối { } đã đổi $S ra ngoài root → không null');
     // So sánh `-eq` là từ, không phải `=`; phép gán đơn đứng đầu đoạn vẫn giải.
     expectAll([[`$S='${T}'; if ($S -eq 1) { }; ${USE}`, 'ask', 'AC2.1'], [`$S = '${T}'; $M = $PWD; Remove-Item "$S\\x" -Force`, null, 'AC2.1']], PS);
+
+    // $( ) cùng scope ở PowerShell: lệnh đổi vị trí bên trong làm thư mục của các đoạn sau chưa rõ (không được null); chú thích # và <# #> không phải mã.
+    const psCd = ['$(cd \'OUT\')', '$(Push-Location \'OUT\')', '$(chdir \'OUT\')', '$(pushd \'OUT\')', '$(Set-Location -Path \'OUT\')', '"$(cd \'OUT\')"', '$(Set-Location\n\'OUT\')']
+      .map((x) => x.replaceAll('OUT', OUT));
+    expectAll(psCd.map((x) => [`Write-Host ${x}; Remove-Item x`, 'ask', 'AC2.1']), PS);
+    expectAll([
+      [`$S = '${T}' # comment {\nRemove-Item "$S\\x"`, null, 'AC2.1'],
+      [`$S = '${T}' <# {= #> ; Remove-Item "$S\\x"`, null, 'AC2.1'],
+      [`$S = '${T}'; <# \n$S='x' #>\nRemove-Item "$S\\x"`, null, 'AC2.1'],
+    ], PS);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
