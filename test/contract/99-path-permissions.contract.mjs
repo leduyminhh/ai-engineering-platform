@@ -931,7 +931,7 @@ export default async function run({ ok, ctx }) {
       [`gci '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem | Remove-Item`, null, 'AC3.1'],
       [`Get-Content a | Out-File '${T}/f'`, null, 'AC3.1'], [`Get-Content a | Out-File '${OUT}/f'`, 'deny', 'AC3.1'],
       // Move-Item/Copy-Item chỉ có -Destination: nguồn vẫn đến từ ống, và Move xoá nguồn.
-      [`Get-ChildItem '${OUT}' | Move-Item -Destination '${T}'`, 'deny', 'AC3.1'], [`$p | Move-Item -Destination '${T}'`, 'ask', 'AC3.1'],
+      [`Get-ChildItem '${OUT}' | Move-Item -Destination '${T}'`, 'deny', 'AC3.1'], [`$p | Move-Item -Destination '${T}'`, 'ask', 'AC3.1'], [`Get-ChildItem '${OUT}' | Move-Item -Des '${T}'`, 'deny', 'AC3.1'],
       [`Get-ChildItem '${OUT}' | Copy-Item -Destination '${T}'`, 'ask', 'AC3.1'], [`Get-ChildItem '${T}' | Move-Item -Destination '${O}'`, null, 'AC3.1'],
       [`Get-ChildItem '${T}' | Copy-Item -Destination '${O}'`, null, 'AC3.1'],
     ], { tool: 'PowerShell' });

@@ -805,7 +805,7 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   let readAsk = false;
   // Lệnh ghi PowerShell có ống vào mà không có đối số đường dẫn: đường dẫn đến từ đoạn trước.
   // Move/Copy-Item chỉ có -Destination: đích đã có, nguồn vẫn đến từ ống (Move xoá nguồn, Copy đọc nguồn).
-  const toDest = (MOVE_CMDS.has(name) || LAST_ONLY.has(name)) && targets.length === 1 && args.some((a) => /^-dest/i.test(a));
+  const toDest = (MOVE_CMDS.has(name) || LAST_ONLY.has(name)) && targets.length === 1 && args.some((a) => /^-des/i.test(a));
   if (!msys && t.pipeFrom && WRITE_CMDS.has(name) && (targets.length === 0 || toDest)) {
     const fed = pipedPaths(t.pipeFrom);
     const need = toDest ? (MOVE_CMDS.has(name) ? ['delete'] : ['read']) : needsOf(name);
