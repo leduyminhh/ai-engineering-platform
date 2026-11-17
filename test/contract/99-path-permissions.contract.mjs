@@ -859,7 +859,7 @@ export default async function run({ ok, ctx }) {
 
     // Hồi quy sau review cuối: cd ở ngữ cảnh không chắc (nền, ||, && ở đầu danh sách trước, ống dẫn) không được tin cho đoạn sau.
     expectAll([
-      // `false && cd core; rm ../x` chưa đóng: cùng hình với lệnh popup `mkdir -p $S/bin && cd $S` (99-hook-popup AC6.2) nên chờ quyết định của người dùng.
+      // `false && cd core; rm ../x` vẫn được tin có chủ ý: cùng hình với lệnh popup `mkdir -p $S/bin && cd $S` (99-hook-popup AC6.2), người dùng chọn không hỏi thêm.
       ...[`cd core & rm ../x`, `true || cd core; rm ../x`, `echo hi | cd core; rm ../x`, `cd core & rm $PWD/../x`].map((c) => [c, 'ask', 'AC1.5']),
       ...[`cd core; rm ../x`, `cd core && rm ../x`, `true && cd core && rm ../x`].map((c) => [c, null, 'AC1.5']),
     ]);

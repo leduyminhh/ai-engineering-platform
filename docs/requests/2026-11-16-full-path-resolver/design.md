@@ -157,6 +157,16 @@ Các hàng còn lại của ba bảng tuân theo cùng luật (đều dùng gán
 5. Cờ glob theo đích (D6) và PowerShell (D13).
 6. Spec, README, version, build, lock, `npm test`.
 
+## Quyết định thêm trong lúc thực thi (chép từ ledger)
+
+- **Hàng AC1.7 của `99-hook-popup`** đổi `/../../..` thành `/../../../..`: ở seam đó ba `..` từ scratchpad chỉ tới `<tmpdir>/claude`, mà phần dưới thư mục này là root hợp lệ (R23), nên `null` là đúng; bốn `..` giữ ý định "thoát root → deny". Chạy lại: `node test/validate.mjs --only hook`.
+- **H6 bỏ cách nhìn `parse()`**, dùng hợp `scanWords` ∪ `naiveSegments`. Để bù, đoạn có tên lệnh là thế lệnh hay biến không giải được, lệnh con vượt trần sâu 3 hoặc ngân sách 200, `$( )` chứa `case` đều thành chưa rõ (hỏi).
+- **D3 mở rộng:** `NAME=…` ở bất kỳ vị trí nào (đối số, `function`, sau `builtin`/`command export`, `export` có nháy) làm tên đó chưa rõ; gán tuần tự trong một đoạn dùng giá trị mới. **D4 mở rộng:** `trap`, `.` đứng riêng ở mọi vị trí lệnh, `$((`, `$[`, `${a[…]}`; gán `PWD`/`OLDPWD` làm `$PWD` chưa rõ.
+- **PowerShell (K4) chuyển sang danh sách cho phép** (Task 8, người dùng chọn sau khi Task 5 hết ba vòng sửa): chỉ giải biến khi mọi tên lệnh thuộc `PS_VAR_SAFE_CMDS` (hoặc `cd`/`Set-Location` với đối số literal), không có `{ }`, `(`, `=` khác phép gán đơn, `$( )` có gán hoặc đổi vị trí, `variable:`/`PSVariable`/`Get-Variable`, đối số có biến chưa gán literal/`@splat`/`+`, biểu thức nhiều từ, tên lệnh có tiền tố đường dẫn. `{`/`}` và `&` cắt đoạn để lệnh trong khối và sau `&` được kiểm (vá cả lỗ `{Remove-Item …}` có từ trước, người dùng chọn). Bỏ `psStripComments` vì nó che lệnh ghi.
+- **D9 chặt hơn sau review cuối:** `cd` ở pipe, nền, khối hoặc sau `||` làm thư mục chưa rõ; `X && cd D; …` vẫn được tin (người dùng chọn, để lệnh kiểu popup AC6.2 không bị hỏi).
+- **Giữ D1 cho `S=<T> || true; …`:** phép gán đứng đầu danh sách luôn chạy.
+- **Hoãn sang request sau** (người dùng chọn; có từ trước request này): PowerShell — đường dẫn đưa qua ống không được kiểm, `Function:`/`Alias:` định nghĩa lại lệnh, alias `md`/`ni`, `cd` trong khối, `cd HKCU:`/`Env:`, đối số trong ngoặc, splat `@p`; Bash — `cd` sau từ khoá/lệnh bọc (`if …; then cd`, `time cd`), tên lệnh là biến sau `sudo`/`env`/`nohup`, `exec {S}>`, `wait -p S`, `coproc S`; chung — lệnh hơn 100 nghìn đối số làm `push(...)` tràn stack rồi hook cho qua, chuỗi `cd` rất dài làm hook chậm bậc hai.
+
 ## Ảnh hưởng spec
 - hooks-gates: đổi R7, đổi R23, đổi R24
 
