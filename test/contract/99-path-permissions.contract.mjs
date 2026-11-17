@@ -895,6 +895,13 @@ export default async function run({ ok, ctx }) {
       ok(r === 'ask' && ms < 1000, `AC1.3: ${name} → ask dưới 1 s (${r}, ${ms} ms)`);
     }
     ok(holeKind(Array(50).fill('cd a; rm x').join('; ')) === null, 'AC1.3: 50 × cd a; rm x (dưới trần) giữ kết quả cũ');
+
+    // `cd` sau từ khoá hoặc lệnh bọc: tên lệnh nằm sau `then`/`time`/`builtin`/`command`, không ở đầu đoạn. Ở `if`/`time` cd không chắc chạy → thư mục chưa rõ (ask); `builtin`/`command` thì cd chắc chạy → deny ở thư mục ngoài root.
+    holeRows([
+      [`if true; then cd ${OUT}; fi; rm x`, 'ask', 'AC2.1'], [`time cd ${OUT}; rm x`, 'ask', 'AC2.1'],
+      [`builtin cd ${OUT}; rm x`, 'deny', 'AC2.1'], [`command cd ${OUT}; rm x`, 'deny', 'AC2.1'],
+      [`builtin cd ${T}; rm x`, null, 'AC2.1'], [`command cd ${T}; rm x`, null, 'AC2.1'],
+    ]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
