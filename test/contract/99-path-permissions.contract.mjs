@@ -927,6 +927,10 @@ export default async function run({ ok, ctx }) {
       [`Remove-Item ('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item -Path ('${OUT}/x')`, 'ask', 'AC3.5'],
       [`$p = @{Path='${OUT}/x'}; Remove-Item @p`, 'ask', 'AC3.5'],
       [`Remove-Item '${T}/x'`, null, 'AC3.5'],
+      // `(` giữa token mở một biểu thức mới (`T/a('OUT/x')` là hai đối số); `@(…)` là mảng. Dấu ngoặc trong nháy là chữ thường nên không hỏi.
+      [`Remove-Item ${T}/a('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item @('${OUT}/x')`, 'ask', 'AC3.5'],
+      [`Remove-Item '(1) x.txt'`, null, 'AC3.5'], [`Remove-Item '@backup'`, null, 'AC3.5'],
+      [`Remove-Item '${T}/(x)'`, null, 'AC3.5'], [`Remove-Item "${T}/file (1).txt"`, null, 'AC3.5'],
     ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
