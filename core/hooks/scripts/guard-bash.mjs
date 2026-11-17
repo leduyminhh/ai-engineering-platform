@@ -147,6 +147,7 @@ export function scanWords(cmd, dialect = 'bash') {
   let paren = 0;
   let q = null;
   let substOpen = false;
+  let braceVar = 0;
   const add =(text, quote) => {
     parts ??= [];
     const last = parts[parts.length - 1];
@@ -167,6 +168,7 @@ export function scanWords(cmd, dialect = 'bash') {
     }
     words.push({ parts });
     parts = null;
+    braceVar = 0;
   };
   const endSeg = () => {
     endWord();
@@ -216,6 +218,15 @@ export function scanWords(cmd, dialect = 'bash') {
       // `&` đưa cả danh sách and-or phía trước vào nền, không chỉ đoạn cuối.
       for (let j = segs.length - 1; j >= 0; j--) { segs[j].background = true; if (['start', ';', '&'].includes(segs[j].sep)) break; }
       setSep('&');
+      continue;
+    }
+    // PowerShell: `{` đầu từ và `}` không đóng `{` của chính từ đó (`${tên}`, `@{…}`, `a{b}`) là mở/đóng khối và bắt đầu đoạn mới,
+    // để lệnh trong khối đứng đầu đoạn như `if (…) { rm … }` (sau `& {`, `ForEach-Object {` nó từng bị coi là đối số).
+    if (ps && (c === '{' || c === '}')) {
+      if (c === '{' ? parts !== null : braceVar > 0) { braceVar += c === '{' ? 1 : -1; add(c, 'none'); continue; }
+      endSeg();
+      add(c, 'none');
+      endWord();
       continue;
     }
     add(c, 'none');
@@ -799,28 +810,6 @@ function psNormalize(cmd) {
   return cmd.replace(/`\r?\n/g, ' ').replace(/`([\s\S])/g, (_, c) => (c === '"' || c === "'" ? '\\' + c : c));
 }
 
-// Bỏ chú thích PowerShell (`#` đầu từ tới hết dòng, `<# … #>`) ngoài nháy để `{`, `=` trong chú thích không bị tính; chuỗi nháy giữ nguyên.
-function psStripComments(s) {
-  let out = '';
-  let q = null;
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (q) {
-      out += c;
-      if (c === '`' && q === '"') { out += s[i + 1] ?? ''; i++; continue; }
-      if (c === q) { if (s[i + 1] === q) { out += q; i++; } else q = null; }
-      continue;
-    }
-    if (c === '`') { out += c + (s[i + 1] ?? ''); i++; continue; }
-    if (c === "'" || c === '"') { q = c; out += c; continue; }
-    const atStart = i === 0 || /[\s;|&(){}]/.test(s[i - 1]);
-    if (c === '<' && s[i + 1] === '#' && atStart) { const e = s.indexOf('#>', i + 2); out += ' '; i = e < 0 ? s.length : e + 1; continue; }
-    if (c === '#' && atStart) { while (i < s.length && s[i] !== '\n') i++; i--; continue; }
-    out += c;
-  }
-  return out;
-}
-
 function defaultBranch(cwd) {
   try {
     return execFileSync('git', ['-C', cwd || '.', 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -1235,15 +1224,38 @@ function leadInfoPs(seg) {
   return { lead: 0, assigns, extra, hasCmd, cmdAt, used };
 }
 
-// Danh sách trắng PowerShell: ngoài phép gán đơn `$name = từ` đứng đầu đoạn, mọi `{`/`}` hay `=` ngoài nháy, `$( )` có `=`/đổi thư mục là dấu hiệu đổi biến → tắt giải biến cả lệnh.
+// Danh sách trắng PowerShell: ngoài phép gán đơn `$name = từ` đứng đầu đoạn, mọi `{`/`}`, `(` hay `=` ngoài nháy, `$( )` có các dấu đó/đổi thư mục là dấu hiệu đổi biến → tắt giải biến cả lệnh.
 const PS_CD = /(?:^|[\s;|({])(?:cd|chdir|sl|set-location|push-location|pushd|popd|pop-location)(?=[\s;|)]|$)/i;
 const PS_SCOPE_CHANGE = new RegExp('[={}]|' + PS_CD.source, 'i');
-function psUnsafe(scan) {
+// Cmdlet nhận đường dẫn ổ `variable:` (đổi biến); đường dẫn ghép (`$n` = 'vari'+'able:S', splat `@p`) không bị PS_MUTATORS thấy.
+const PS_ITEM_CMDS = new Set(['set-item', 'new-item', 'clear-item', 'rename-item', 'copy-item', 'move-item', 'remove-item', 'get-item', 'si', 'ni', 'cli', 'rni', 'cpi', 'mi', 'ri',
+  'set-content', 'add-content', 'clear-content', 'sc', 'ac', 'clc']);
+function psUnsafe(scan, depth = 0, absNames = null) {
+  if (depth > MAX_INNER_DEPTH) return true;
+  const infos = scan.segs.map(leadInfoPs);
+  if (!absNames) {
+    // Tên chỉ được gán literal đường dẫn tuyệt đối (hoặc $PWD) thì giá trị không thể là ổ `variable:`, nên dùng làm đối số *-Item vẫn an toàn.
+    // $PWD chỉ là ổ variable: khi cd tới đó, mà cd literal bị PS_MUTATORS bắt, cd không literal thì thư mục đã chưa rõ.
+    const abs = new Map([['pwd', true]]);
+    for (const inf of infos) {
+      for (const a of inf.assigns) {
+        let r = null;
+        try { r = a.valueWord && resolveWord(a.valueWord, { env: new Map(), dir: '/', unres: false, msys: false }, 'powershell'); } catch { /* chưa rõ */ }
+        abs.set(a.name, abs.get(a.name) !== false && !!r && RW_ABS.test(r.text));
+      }
+      inf.extra.forEach((n) => abs.set(n, false));
+    }
+    absNames = new Set([...abs].filter(([, v]) => v).map(([n]) => n));
+  }
+  const unsafeRef = (text) => /\$/.test(text.replace(/\$(?:([A-Za-z_]\w*)|\{([A-Za-z_]\w*)\})(?!:)/g, (m, a, b) => (absNames.has((a ?? b).toLowerCase()) ? '' : m)));
+  const itemArgUnsafe = (w) => (w.parts[0]?.quote === 'none' && w.parts[0].text.startsWith('@')) || w.parts.some(({ text, quote }) => quote !== 'single' && unsafeRef(text));
   const partsUnsafe = (w) => w.parts.some(({ text, quote }) => quote === 'none' && /[={}]/.test(text.replace(/\$\{[A-Za-z_]\w*\}/g, '')))
-    || innerTexts(w, true).some((x) => PS_SCOPE_CHANGE.test(x));
-  return scan.segs.some((seg) => {
-    const { used, assigns } = leadInfoPs(seg);
-    return seg.words.some((w, k) => !used.has(k) && partsUnsafe(w)) || (assigns[0]?.valueWord ? partsUnsafe(assigns[0].valueWord) : false);
+    || innerTexts(w, true).some((x) => PS_SCOPE_CHANGE.test(x) || psUnsafe(scanWords(x, 'powershell'), depth + 1, absNames));
+  return scan.segs.some((seg, i) => {
+    const { used, assigns, cmdAt } = infos[i];
+    const name = seg.words[cmdAt] ? wordText(seg.words[cmdAt]).toLowerCase().replace(/^.*\\/, '') : '';
+    return seg.compound || seg.words.some((w, k) => !used.has(k) && partsUnsafe(w)) || (assigns[0]?.valueWord ? partsUnsafe(assigns[0].valueWord) : false)
+      || (PS_ITEM_CMDS.has(name) && seg.words.some((w, k) => k > cmdAt && itemArgUnsafe(w)));
   });
 }
 
@@ -1442,10 +1454,10 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     // PowerShell quét chuỗi gốc: scanWords tự hiểu backtick, còn psNormalize đã đổi backtick-nháy thành dấu gạch ngược trước nháy nên sẽ bị đọc sai.
     const isPs = input?.tool_name === 'PowerShell';
     const dialect = isPs ? 'powershell' : 'bash';
+    // Không bỏ chú thích PowerShell: bỏ sai (`${#x}`, here-string có nháy lẻ, `<#` không đóng) che lệnh ghi; `{`/`=` trong chú thích chỉ làm hỏi thừa.
     try {
-      const psRaw = isPs ? psStripComments(raw) : raw;
-      const { scan, text, noVars } = prepareWalk(isPs ? psRaw : cmd, isPs);
-      const naive = isPs ? naiveSegments(psNormalize(psRaw)) : text === cmd ? naiveOuter : naiveSegments(text);
+      const { scan, text, noVars } = prepareWalk(isPs ? raw : cmd, isPs);
+      const naive = isPs || text === cmd ? naiveOuter : naiveSegments(text);
       walkedAll = [...walkSegments(scan, { cwd, msys, dialect, noVars }), ...walkSegments(naiveScan(naive), { cwd, msys, dialect, noVars })];
     } catch {
       walkedAll = legacy();

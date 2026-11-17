@@ -780,10 +780,29 @@ export default async function run({ ok, ctx }) {
     const psCd = ['$(cd \'OUT\')', '$(Push-Location \'OUT\')', '$(chdir \'OUT\')', '$(pushd \'OUT\')', '$(Set-Location -Path \'OUT\')', '"$(cd \'OUT\')"', '$(Set-Location\n\'OUT\')']
       .map((x) => x.replaceAll('OUT', OUT));
     expectAll(psCd.map((x) => [`Write-Host ${x}; Remove-Item x`, 'ask', 'AC2.1']), PS);
+    // Không bỏ chú thích trước khi quét (bỏ sai thì che lệnh ghi): `{`/`=` trong chú thích làm hỏi thừa, có chủ ý.
+    const commentAc = 'AC2.1 (hỏi thừa có chủ ý: { hoặc = trong chú thích tắt giải biến, Ruling vòng 3)';
     expectAll([
-      [`$S = '${T}' # comment {\nRemove-Item "$S\\x"`, null, 'AC2.1'],
-      [`$S = '${T}' <# {= #> ; Remove-Item "$S\\x"`, null, 'AC2.1'],
-      [`$S = '${T}'; <# \n$S='x' #>\nRemove-Item "$S\\x"`, null, 'AC2.1'],
+      [`$S = '${T}' # comment {\nRemove-Item "$S\\x"`, 'ask', commentAc],
+      [`$S = '${T}' <# {= #> ; Remove-Item "$S\\x"`, 'ask', commentAc],
+      [`$S = '${T}'; <# \n$S='x' #>\nRemove-Item "$S\\x"`, 'ask', commentAc],
+      [`Write-Host \${#x}; Remove-Item '${OUT}\\x'`, 'deny', 'AC2.1'],
+      [`@'\nit's <#\n'@\nRemove-Item '${OUT}\\x'\n#>`, 'deny', 'AC2.1'],
+      [`<# x\nRemove-Item '${OUT}\\x'`, 'deny', 'AC2.1'],
     ], PS);
+    // Khối `{ }` viết liền vẫn là khối: lệnh bên trong được kiểm như khi có khoảng trắng.
+    expectAll([
+      [`if ($true) {Remove-Item '${OUT}\\x'}`, 'deny'],
+      [`& {Remove-Item '${OUT}\\x'}`, 'deny'],
+      [`1 | ForEach-Object {Remove-Item '${OUT}\\x'}`, 'deny'],
+      [`$S='${OUT}'; if ($true) {Remove-Item "$S\\x"}`, 'ask'],
+    ].map(([c, want]) => [c, want, 'AC2.1']), PS);
+    // Đổi biến qua ổ variable: ghép chuỗi (biểu thức `( )`, đối số *-Item không phải literal, splat) → không giải biến.
+    expectAll([
+      `$S='${T}'; Set-Item -Path ('vari'+'able:S') -Value '${OUT}'; ${USE}`,
+      `$S='${T}'; $n='vari'+'able:S'; Set-Item $n '${OUT}'; ${USE}`,
+      `$S='${T}'; $n='S'; New-Item ("var"+"iable:$n") -Value '${OUT}' -Force; ${USE}`,
+      `$S='${T}'; $p='vari'+'able:S', '${OUT}'; Set-Item @p; ${USE}`,
+    ].map((c) => [c, 'ask', 'AC2.1']), PS);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
