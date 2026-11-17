@@ -936,6 +936,14 @@ export default async function run({ ok, ctx }) {
       [`Get-ChildItem '${T}' | Copy-Item -Destination '${O}'`, null, 'AC3.1'],
     ], { tool: 'PowerShell' });
 
+    // PowerShell: `cd` trong khối `{ }` không chắc chạy, và `cd HKCU:`/`Env:` vào ổ provider (không phải thư mục đĩa) bị `path.resolve` nối vào project.
+    holeRows([
+      [`& { cd '${OUT}' }; Remove-Item x`, 'ask', 'AC3.4'], [`if ($true) { cd '${OUT}' }; Remove-Item x`, 'ask', 'AC3.4'],
+      [`cd HKCU:; Remove-Item Software/x`, 'ask', 'AC3.4'], [`cd Env:; Remove-Item x`, 'ask', 'AC3.4'], [`cd HKLM:/Software; Remove-Item x`, 'ask', 'AC3.4'],
+      [`Set-Location HKCU:/Software; Remove-Item x`, 'ask', 'AC3.4'], [`pushd Cert:; Remove-Item x`, 'ask', 'AC3.4'], [`cd variable:; Remove-Item x`, 'ask', 'AC3.4'],
+      [`cd '${T}'; Remove-Item x`, null, 'AC3.4'], [`cd C:/Windows; Remove-Item x`, 'deny', 'AC3.4'],
+    ], { tool: 'PowerShell' });
+
     // PowerShell: Set-Alias/function:/Alias: đặt lại tên lệnh nên `gd` có thể là Remove-Item mà hook không biết.
     holeRows([
       [`Set-Alias gd Remove-Item; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`sal gd ri; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`New-Alias gd rm; gd '${OUT}/x'`, 'ask', 'AC3.2'],
