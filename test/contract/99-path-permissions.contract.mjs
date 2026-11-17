@@ -887,6 +887,14 @@ export default async function run({ ok, ctx }) {
     ok(crash?.decision === 'ask' && crash.reason.startsWith('Ghi hoặc xoá ở đường dẫn chưa rõ'), 'AC1.2: full + bypass, decide gặp lỗi nội bộ → ask với câu FULL_PATH_TEXT');
     ok(holeKind('git push', { ...boom, cfg: { mode: 'ask' } }) === 'throw Error', 'AC1.2: mode ask, lỗi nội bộ vẫn ném');
     ok(holeKind('git push', { ...boom, extra: { permission_mode: 'default' } }) === 'throw Error', 'AC1.2: full không bypass, lỗi nội bộ vẫn ném');
+
+    // Chuỗi `cd` rất dài làm bộ duyệt chậm bậc hai (đo: 8000 × `cd a; rm x` ≈ 2–16 s): quá trần số đoạn thì hỏi, và hỏi nhanh.
+    const timed = (cmd) => { const t0 = Date.now(); const r = holeKind(cmd); return { r, ms: Date.now() - t0 }; };
+    for (const [name, cmd] of [['8000 × cd a; rm x', Array(8000).fill('cd a; rm x').join('; ')], ['8000 × cd a', Array(8000).fill('cd a').join('; ')]]) {
+      const { r, ms } = timed(cmd);
+      ok(r === 'ask' && ms < 1000, `AC1.3: ${name} → ask dưới 1 s (${r}, ${ms} ms)`);
+    }
+    ok(holeKind(Array(50).fill('cd a; rm x').join('; ')) === null, 'AC1.3: 50 × cd a; rm x (dưới trần) giữ kết quả cũ');
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
