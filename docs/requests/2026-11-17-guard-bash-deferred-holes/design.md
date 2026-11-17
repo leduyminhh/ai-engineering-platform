@@ -7,7 +7,7 @@
 
 Request `2026-11-16-full-path-resolver` (merged f0ba893b) hoãn một danh sách lỗ của `core/hooks/scripts/guard-bash.mjs` ở chế độ `full` + bypass (mục "Hoãn sang request sau" của design đó). Hướng an toàn của hook: không hiểu thì hỏi, không bao giờ im lặng cho qua lệnh ghi hay xoá ngoài root. Mỗi lỗ dưới đây vi phạm hướng đó: hook trả `null` (cho qua) trong khi lệnh có thể ghi hoặc xoá ngoài root.
 
-Người dùng đã chọn (2026-11-17): một request, đủ ba nhóm; thứ tự chung → Bash → PowerShell; viết design và plan ngay, **thực thi sau khi nhánh `claude/beautiful-nobel-cdade6` (sửa hỏi oan `node -e '<JS>'`) merge** vì cùng sửa `guard-bash.mjs`, `core/.manifest.json` và test hook.
+Người dùng đã chọn (2026-11-17): một request, đủ ba nhóm; thứ tự chung → Bash → PowerShell; viết design và plan ngay; ban đầu dự định thực thi sau khi nhánh `claude/beautiful-nobel-cdade6` (sửa hỏi oan `node -e '<JS>'`) merge, nhưng người dùng chọn chạy ngay (K3) dù nhánh đó cùng sửa `guard-bash.mjs`, `core/.manifest.json` và test hook.
 
 Số đo của phiên này, chạy `decide` thật (`mode: full`, bypass, `repoRoot` tạm) bằng script trong scratchpad, trên bản `guard-bash.mjs` của master f0ba893b/4740c181 [đo một lần, máy phát triển, Node 24]:
 
@@ -110,6 +110,16 @@ Không có `requirement.md`, nên AC nằm ở đây. Test nằm trong `test/con
 
 Mỗi lỗ là một task theo TDD: test đỏ tái hiện, sửa tối thiểu, xanh.
 
+## Quyết định thêm trong lúc thực thi (chép từ ledger)
+
+- **A3 đặt ở `decide`, không ở `walkSegments`:** cpuprofile cho thấy khoảng 90% thời gian ở `path.resolve`/`normalizeString` trong `trackDirs` (H1), nên trần `MAX_WALK_SEGS = 1000` (max của `parse` và `naiveSegments`) nằm ngay đầu `decide`, chỉ ở full; trên trần mọi quyết định (kể cả `deny` H6 và câu push H1) thành `ask(FULL_PATH_TEXT)`. Việc `dir` dài dần là nguyên nhân bậc hai là [Inference]. Đo: ngay dưới trần ≈ 70 ms, 2000 đoạn ≈ 200 ms, 8000 đoạn ≈ 2 s. Chạy lại: `node test/validate.mjs --only path-permissions`.
+- **Không có mảng `unknown[]` song song** (Interfaces của plan): C5 dùng cờ `t.exprs` (phần không nháy có `(` hoặc bắt đầu `@tên`) do `walkSegments` ghi, `confineSegment` đọc; C1 đẩy đích từ `pipedPaths` thẳng vào `targets`; nguồn có dấu phẩy hoặc biểu thức/splat thì ask.
+- **C3:** `sc`/`ac`/`ni`/`new-item` đi qua `psWriteCandidates` (giá trị `-Value` không phải đường dẫn); `md`/`ni`/`sc`/`ac` cũng nằm trong `WRITE_CMDS` dùng chung nên áp cả cho Bash (`sc.exe`, `ni` của antfu, `ac` là chương trình thật nên đối số ngoài root bị deny ở full). Ngoài full, `sc`/`ac`/`ni`/`New-Item` ghi `.claude/aip-gate.json` hoặc `settings.json` nay bị hỏi (CONFIG_TEXT), trước đây null: thay đổi có chủ ý theo hướng an toàn hơn, lệch AC4.1 "chế độ ask không đổi kết quả nào".
+- **B2** bỏ qua `command -v/-V` (chỉ tra cứu tên). **B3** nhận `wait -p VAR` trong cửa sổ 3 từ sau `wait`. **C2** chạy trên chuỗi bỏ backtick và nhận `sal`/`nal` sát nháy, `Import-Alias`, `filter`; nhánh `function|filter` dùng `[ 	]*` (hết backtrack bậc hai). **C4(i)** có thật: đoạn trong `{ }` mở bằng từ `{` nên `cd` không được nhận ra. **M4:** `path.resolve(cwd, ...gc.dirs)` chia lô 1000 để không tràn stack ngoài full.
+- **Test hook không đọc gate thật (AC1.4):** các lời gọi `decide` thiếu seam nay truyền `reader: () => null, allowEnv: () => false`; assert quét nguồn chỉ nhận `cwd: '.'` literal và kiểm theo file (minor đã hoãn). `--only hook` không gồm `99-path-permissions`: chạy thêm `--only path-permissions`.
+- **Hai test thời gian `hook-copy-alias-brace AC3.4`** đỏ cả ở clone sạch của master khi chạy cả lượt (đo riêng 0,3–0,5 s, trong cả lượt 1,0 và 1,8 s); nới tạm lên 4 s rồi đổi thành đo trong tiến trình con với ngưỡng 1 s (review cuối: 4 s che hồi quy 2,6 s). Chạy lại: `node test/validate.mjs`.
+- **Hoãn (ngoài AC, cần người dùng quyết ở G3):** dạng chậm theo byte (990 × `cd` 600 ký tự ≈ 14 s, vượt `timeout: 10` của hook; hành vi harness khi quá thời hạn [Unverified]); `iex`/`pwsh -c` chứa ``n`; `command -- cd X`/`command -p cd X`/`builtin -- cd X`/`time -p cd X` và `.{ cd X }` chưa nhận là cd; `trackDirs` (H1) vẫn dùng `t[0]`; `cd Microsoft.PowerShell.CoreRegistry::…`; `Remove-Item HKCU:/…`; `Rename-Item`, `Clear-Content`, `*-ItemProperty`, `Tee-Object`; tiền tố bọc `setsid`/`flock`/`xargs`; hỏi thừa với chữ `function:`/`alias:`/`sal ` trong chuỗi, `Set-Content f (Get-Date)`, heredoc trên 1000 dòng.
+
 ## Ảnh hưởng spec
 - hooks-gates: đổi R23, đổi R24
 
@@ -157,6 +167,6 @@ Mỗi lỗ là một task theo TDD: test đỏ tái hiện, sửa tối thiểu,
 - **A2 lệch ràng buộc fail-open (đã duyệt).** Hook ở full + bypass sẽ hỏi thay vì cho qua khi `decide` lỗi. Cái giá: một lỗi nội bộ tương lai gây hỏi liên tục ở full thay vì im lặng; đánh đổi cho hướng "không hiểu thì hỏi".
 - **A3 trần số đoạn:** lệnh hợp lệ rất dài (> trần đoạn) sẽ bị hỏi ở full. [Inference] hiếm; số trần chốt bằng đo, không bằng ước lượng.
 - **C4(i)** chưa tái hiện được từ đọc code; nếu test đỏ cho thấy hook đã hỏi đúng thì bỏ nhánh (i), giữ (ii) (ổ provider).
-- Phối hợp: nhánh `claude/beautiful-nobel-cdade6` sửa `guard-bash.mjs` (32 dòng), manifest, lock và hai file test cùng file test của request này. Plan bước 1 rebase và lấy version kế tiếp; nếu nhánh đó chưa merge khi cần thực thi thì dừng và hỏi.
+- Phối hợp: nhánh `claude/beautiful-nobel-cdade6` sửa `guard-bash.mjs` (32 dòng), manifest, lock và hai file test cùng file test của request này. Đã chọn chạy ngay (K3) nên không rebase; xung đột xử lý khi merge (ngoài manifest và lock, `git merge-tree` báo `guard-bash.mjs` và hai file test tự merge được, nhưng cần chạy lại `--only hook`, `--only path-permissions` và `npm test` trên clone sạch sau khi merge).
 - [Unverified] Số đo của phần Vấn đề từ một lần chạy; ngưỡng timeout hook của Claude Code chưa kiểm.
 - [Unverified] Hành vi `exec {S}>`, `wait -p`, `coproc` trên các phiên bản bash khác bash 5.2 chưa kiểm; hook chỉ cần hiểu "tên biến bị gán theo cách không đọc được" nên không phụ thuộc phiên bản.
