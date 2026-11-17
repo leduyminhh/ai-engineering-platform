@@ -776,6 +776,21 @@ function stringWrites(str) {
   });
 }
 
+// Nguồn đường dẫn mà hook hiểu được khi chảy qua ống: đối số đường dẫn tường minh (hoặc thư mục hiện tại) của các lệnh liệt kê. Nguồn khác (`$p`, Where-Object…) hay đoạn tự có ống vào: không đoán được (null).
+const PS_PATH_SOURCES = new Set(['get-childitem', 'gci', 'ls', 'dir', 'get-item', 'gi']);
+function pipedPaths(prev) {
+  if (prev.pipeFrom || !PS_PATH_SOURCES.has(cmdName(prev[0]))) return null;
+  const out = [];
+  const a = prev.slice(1);
+  for (let i = 0; i < a.length; i++) {
+    const m = /^-([A-Za-z]+)(?::([\s\S]*))?$/.exec(a[i]);
+    if (!m) { out.push(a[i]); continue; }
+    const f = m[1].toLowerCase();
+    if (f === 'path' || f === 'literalpath') { const v = m[2] ?? a[++i]; if (v !== undefined) out.push(v); }
+    else if (/^(filter|include|exclude|depth|attributes|stream)$/.test(f) && m[2] === undefined) i++;
+  }
+  return out.length ? out : ['.'];
+}
 // PowerShell: `(` ngoài nháy mở một biểu thức (kể cả giữa token: `T/a('x')` là hai đối số), `@tên` là splat, `@(` là mảng; chữ thô của chúng trông như tên tương đối.
 const PS_EXPR_WORD = /\(|^@\w/;
 // Trả { deny: <quyền thiếu> } | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
@@ -788,6 +803,11 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   const ask = Boolean(inner) && stringWrites(inner);
   let unknown = !msys && WRITE_CMDS.has(name) && t.some((x, i) => i > 0 && (t.exprs ? t.exprs[i] : PS_EXPR_WORD.test(String(x).slice(0, t.qpos?.[i] ?? Infinity))));
   let readAsk = false;
+  // Lệnh ghi PowerShell có ống vào mà không có đối số đường dẫn: đường dẫn đến từ đoạn trước.
+  if (!msys && t.pipeFrom && WRITE_CMDS.has(name) && targets.length === 0) {
+    const fed = pipedPaths(t.pipeFrom);
+    if (fed) for (const p of fed) { targets.push(p); needs.push(needsOf(name)); } else unknown = true;
+  }
   for (const [i, p] of targets.entries()) {
     for (const need of needs[i]) {
       const c = classifyTarget(p, dir, unres, roots, msys, need, globOf.get(p));
@@ -1336,6 +1356,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
   const trusted = (k, j) => structOk[k.seg] && ((head[k.seg] && listId[j] > listId[k.seg]) || (listId[j] === listId[k.seg] && allAnd[j]));
   const safe = (w, state) => { try { return resolveWord(w, state, dialect); } catch { return null; } };
   let cdSeen = false;
+  let prevT = null;
   segs.forEach((seg, i) => {
     const env = new Map();
     if (vars) {
@@ -1368,6 +1389,8 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     const lookup = t[infos[i].lead] === 'command' && /^-[vV]$/.test(t[infos[i].lead + 1] ?? '');
     if (!ps && !lookup) { const [tk, k] = unwrap(t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
     t.op = seg.sep === 'start' ? '' : seg.sep;
+    t.pipeFrom = seg.pipeIn ? prevT : null;
+    prevT = t;
     const name = String(t[infos[i].cmdAt] ?? '').toLowerCase();
     if (cdSeen && (seg.sep === '||' || seg.sep === '|')) unres = true;
     if (CD_CMDS.has(name) || POP_CMDS.has(name)) {
