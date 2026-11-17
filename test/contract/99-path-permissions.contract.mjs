@@ -804,5 +804,23 @@ export default async function run({ ok, ctx }) {
       `$S='${T}'; $n='S'; New-Item ("var"+"iable:$n") -Value '${OUT}' -Force; ${USE}`,
       `$S='${T}'; $p='vari'+'able:S', '${OUT}'; Set-Item @p; ${USE}`,
     ].map((c) => [c, 'ask', 'AC2.1']), PS);
+    // Danh sách cho phép theo tên lệnh: có lệnh ngoài tập (đổi biến qua *-ItemProperty, Invoke-Item, pipe, đổi vị trí, PSDrive, lệnh lạ) thì không giải biến nào.
+    const N = `$n='vari'+'able:S'`;
+    expectAll([
+      `$S='${T}'; ${N}; Set-ItemProperty $n -Name Value -Value '${OUT}'; ${USE}`,
+      `$S='${T}'; ${N}; Clear-ItemProperty $n -Name Value; ${USE}`,
+      `$S='${T}'; ${N}; Rename-ItemProperty $n -Name Value -NewName X; ${USE}`,
+      `$S='${T}'; ${N}; Invoke-Item $n; ${USE}`,
+      `$S='${T}'; ${N}; $n | Set-Item -Value '${OUT}'; ${USE}`,
+      ...['Set-Location', 'Push-Location', 'cd', 'sl'].map((c) => `$S='${T}'; $n='vari'+'able:'; ${c} $n; Set-Item S '${OUT}'; ${USE}`),
+      `$S='${T}'; New-PSDrive -Name Z -PSProvider Variable -Root '\\'; Set-Item Z:S '${OUT}'; ${USE}`,
+      `$S = '${T}'; Get-Date; ${USE}`,
+    ].map((c) => [c, 'ask', 'AC2.1']), PS);
+    // Lệnh trong tập vẫn giải biến đã gán đơn.
+    expectAll([
+      `$S = '${T}'; Set-Content "$S\\f" -Value x`,
+      `$S = '${T}'; Copy-Item x "$S\\y"`,
+      `$S = '${T}'; New-Item -ItemType Directory "$S\\d"`,
+    ].map((c) => [c, null, 'AC2.1']), PS);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
