@@ -1227,13 +1227,11 @@ function leadInfoPs(seg) {
 // Danh sách trắng PowerShell: ngoài phép gán đơn `$name = từ` đứng đầu đoạn, mọi `{`/`}`, `(` hay `=` ngoài nháy, `$( )` có các dấu đó/đổi thư mục là dấu hiệu đổi biến → tắt giải biến cả lệnh.
 const PS_CD = /(?:^|[\s;|({])(?:cd|chdir|sl|set-location|push-location|pushd|popd|pop-location)(?=[\s;|)]|$)/i;
 const PS_SCOPE_CHANGE = new RegExp('[={}]|' + PS_CD.source, 'i');
-// Cmdlet nhận đường dẫn ổ `variable:` (đổi biến); đường dẫn ghép (`$n` = 'vari'+'able:S', splat `@p`) không bị PS_MUTATORS thấy.
-const PS_ITEM_CMDS = new Set(['set-item', 'new-item', 'clear-item', 'rename-item', 'copy-item', 'move-item', 'remove-item', 'get-item', 'si', 'ni', 'cli', 'rni', 'cpi', 'mi', 'ri',
-  'set-content', 'add-content', 'clear-content', 'sc', 'ac', 'clc']);
 // Danh sách cho phép theo tên lệnh (Task 8): lệnh ngoài tập có thể đổi biến theo cách không liệt kê hết (*-ItemProperty, Invoke-Item, New-PSDrive, pipe…).
+// Tên có tiền tố đường dẫn (`.\Remove-Item`, `module\Remove-Item`) là lệnh khác nên không khớp tập.
 const PS_VAR_SAFE_CMDS = new Set(['remove-item', 'ri', 'rm', 'del', 'new-item', 'ni', 'mkdir', 'md', 'copy-item', 'cpi', 'cp', 'copy', 'move-item', 'mi', 'mv', 'move',
   'set-content', 'add-content', 'out-file', 'get-content', 'gc', 'cat', 'write-host', 'write-output', 'echo', 'get-childitem', 'gci', 'ls', 'dir', 'test-path',
-  'get-item', 'gi', 'resolve-path', 'join-path']);
+  'get-item', 'gi', 'resolve-path', 'join-path', 'out-null']);
 // Đổi vị trí chỉ được tin khi đối số là literal: `cd $n` với $n = 'vari'+'able:' đưa $PWD và đường dẫn tương đối vào ổ variable:.
 const PS_CD_CMDS = new Set(['cd', 'chdir', 'set-location', 'sl', 'push-location', 'pushd', 'popd', 'pop-location']);
 function psUnsafe(scan, depth = 0, absNames = null) {
@@ -1254,7 +1252,9 @@ function psUnsafe(scan, depth = 0, absNames = null) {
     absNames = new Set([...abs].filter(([, v]) => v).map(([n]) => n));
   }
   const unsafeRef = (text) => /\$/.test(text.replace(/\$(?:([A-Za-z_]\w*)|\{([A-Za-z_]\w*)\})(?!:)/g, (m, a, b) => (absNames.has((a ?? b).toLowerCase()) ? '' : m)));
-  const itemArgUnsafe = (w) => (w.parts[0]?.quote === 'none' && w.parts[0].text.startsWith('@')) || w.parts.some(({ text, quote }) => quote !== 'single' && unsafeRef(text));
+  // Đối số ghép (`$n` = 'vari'+'able:S', `'vari'+'able:S'`, splat `@p`) có thể là đường dẫn ổ variable:, kể cả khi chỉ chảy qua ống dẫn (`gi $n | rm`).
+  const argUnsafe = (w) => (w.parts[0]?.quote === 'none' && w.parts[0].text.startsWith('@'))
+    || w.parts.some(({ text, quote }) => (quote !== 'single' && unsafeRef(text)) || (quote === 'none' && text.includes('+')));
   const partsUnsafe = (w) => w.parts.some(({ text, quote }) => quote === 'none' && /[={}]/.test(text.replace(/\$\{[A-Za-z_]\w*\}/g, '')))
     || innerTexts(w, true).some((x) => PS_SCOPE_CHANGE.test(x) || psUnsafe(scanWords(x, 'powershell'), depth + 1, absNames));
   return scan.segs.some((seg, i) => {
@@ -1269,11 +1269,12 @@ function psUnsafe(scan, depth = 0, absNames = null) {
     const isCmd = !!lead && lead.quote === 'none' && !/^[$\d]/.test(lead.text);
     const vi = vw ? ws.indexOf(vw) : -1;
     const argsFrom = !assigns.length ? 1 : vi >= 0 ? vi + 1 : Math.max(...used) + 1;
-    const name = isCmd ? wordText(cmdWord).toLowerCase().replace(/^.*\\/, '') : '';
+    const name = isCmd ? wordText(cmdWord).toLowerCase() : '';
     const args = ws.slice(argsFrom);
     const cmdUnsafe = isCmd && !(PS_VAR_SAFE_CMDS.has(name) || (PS_CD_CMDS.has(name) && args.every((w) => !/[$(+`]/.test(wordText(w)))));
-    return seg.compound || cmdUnsafe || ws.some((w, k) => !used.has(k) && partsUnsafe(w)) || (vw ? partsUnsafe(vw) : false)
-      || (PS_ITEM_CMDS.has(name) && args.some(itemArgUnsafe));
+    // Đoạn biểu thức (`$n | rm`) cũng là đối số: giá trị của nó chảy vào lệnh sau ống dẫn.
+    const operands = isCmd ? args : ws.filter((w, k) => !used.has(k) && w !== vw);
+    return seg.compound || cmdUnsafe || ws.some((w, k) => !used.has(k) && partsUnsafe(w)) || (vw ? partsUnsafe(vw) : false) || operands.some(argUnsafe);
   });
 }
 

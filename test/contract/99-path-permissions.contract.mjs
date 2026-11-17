@@ -816,12 +816,23 @@ export default async function run({ ok, ctx }) {
       ...['Set-Location', 'Push-Location', 'cd', 'sl'].map((c) => `$S='${T}'; $n='vari'+'able:'; ${c} $n; Set-Item S '${OUT}'; ${USE}`),
       `$S='${T}'; New-PSDrive -Name Z -PSProvider Variable -Root '\\'; Set-Item Z:S '${OUT}'; ${USE}`,
       `$S = '${T}'; Get-Date; ${USE}`,
+      // Lệnh trong tập làm nguồn ống dẫn với đối số ghép chuỗi: đối tượng ổ variable: chảy sang lệnh sau.
+      `$S='${T}'; ${N}; Get-ChildItem $n | Remove-Item; ${USE}`,
+      `$S='${T}'; ${N}; ls $n | rm; ${USE}`,
+      `$S='${T}'; ${N}; gi $n | rm; ${USE}`,
+      `$S='${T}'; ${N}; Resolve-Path $n | Remove-Item; ${USE}`,
+      `$S='${T}'; ${N}; gi $n | Set-Content -Value '${OUT}'; ${USE}`,
+      `$S='${T}'; ${N}; Write-Output $n | Get-Item | Set-Content -Value '${OUT}'; ${USE}`,
+      `$S='${T}'; ${N}; $n | rm; ${USE}`,
+      // Tên lệnh có tiền tố đường dẫn là lệnh khác, không phải cmdlet trong tập.
+      ...['.\\Remove-Item', 'C:\\x\\Remove-Item', 'Microsoft.PowerShell.Management\\Remove-Item', './Remove-Item'].map((c) => `$S='${T}'; ${c} "$S\\x"`),
     ].map((c) => [c, 'ask', 'AC2.1']), PS);
     // Lệnh trong tập vẫn giải biến đã gán đơn.
     expectAll([
       `$S = '${T}'; Set-Content "$S\\f" -Value x`,
       `$S = '${T}'; Copy-Item x "$S\\y"`,
       `$S = '${T}'; New-Item -ItemType Directory "$S\\d"`,
+      `$S = '${T}'; ${USE} | Out-Null`,
     ].map((c) => [c, null, 'AC2.1']), PS);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
