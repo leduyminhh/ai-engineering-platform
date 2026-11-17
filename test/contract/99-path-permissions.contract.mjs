@@ -671,5 +671,37 @@ export default async function run({ ok, ctx }) {
     const noH6 = [`S=${OUT}; rm $S/x`, `S=${T}; rm $S/x`].map((c) => [c, null, 'AC1.8']);
     expectAll(noH6, { cfg: { mode: 'ask' } });
     expectAll(noH6, { extra: { permission_mode: 'default' } });
+
+    // Vòng sửa 1 của walkSegments: đường không hiểu được thì chưa rõ (ask), không im lặng cho qua. Hàng ask ghi AC1.5, deny ghi AC1.6, không biến ghi AC4.1.
+    const nested = `echo \`echo \\\`rm -rf ${OUT}/x\\\`\``;
+    expectAll([
+      // F1: tên lệnh là thế lệnh/backtick (kể cả rỗng).
+      ...[`$(:) rm -rf ${OUT}/x`, `\`:\` rm -rf ${OUT}/x`, `true && $(:) rm -rf ${OUT}/x`, `FOO=1 $(:) rm -rf ${OUT}/x`, `S=${T}; $(:) rm $S/x`, `$(which rm) ${OUT}/x`].map((c) => [c, 'ask', 'AC1.5']),
+      // F2: backtick lồng, vượt trần sâu, vượt ngân sách lệnh con.
+      [nested, 'deny', 'AC1.6'],
+      [`echo $(echo $(echo $(echo $(rm -rf ${OUT}/x))))`, 'ask', 'AC1.5'],
+      [`echo ${'$(:) '.repeat(250)}$(rm -rf ${OUT}/x)`, 'ask', 'AC1.5'],
+      // F3: `)` của nhánh case đóng $( ) sớm.
+      [`echo $(case x in x) rm -rf ${OUT}/x;; esac)`, 'ask', 'AC1.5'],
+      // F4a: gán tuần tự trong một đoạn (kể cả export) thấy giá trị mới.
+      [`A=${T}; A=${OUT} B=$A/x; rm $B`, 'deny', 'AC1.6'],
+      [`export A=${OUT} B=$A/x; rm $B`, 'deny', 'AC1.6'],
+      // F4b: từ khoá function là cấu trúc phức.
+      [`S=${T}; function f { S=${OUT}; }; f; rm $S/x`, 'ask', 'AC1.5'],
+      // F4c: phép gán đứng sau chuyển hướng vẫn là phép gán.
+      [`S=${T}; > /dev/null S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
+      [`S=${T}; 2>/dev/null S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
+      // F4d: đối số export có nháy hoặc export qua builtin/command.
+      ...[`export "S=${OUT}"`, `export 'S'=${OUT}`, `builtin export S=${OUT}`, `command export S=${OUT}`].map((c) => [`S=${T}; ${c}; rm $S/x`, 'ask', 'AC1.5']),
+      // F5: trap đổi biến; gán PWD làm $PWD không khớp thư mục đang theo dõi.
+      [`S=${T}; trap 'S=/etc' DEBUG; rm $S/x`, 'ask', 'AC1.5'],
+      [`cd ${T}; PWD=${OUT}; rm $PWD/x`, 'ask', 'AC1.5'],
+      // F6: `.` là source ở mọi vị trí lệnh.
+      ...['{ . ./v.sh; }', 'if true; then . ./v.sh; fi', '! . ./v.sh', 'time . ./v.sh', 'builtin . ./v.sh', 'command . ./v.sh'].map((c) => [`S=${T}; ${c}; rm $S/x`, 'ask', 'AC1.5']),
+      // `.` làm đối số (không phải lệnh) không tắt giải biến.
+      [`S=${T}; cp x .; rm $S/x`, null, 'AC4.1'],
+      // F9: hai hàng D2 cũ của 99-hook-popup.
+      [`cd /e/x && echo hi; S=${T}; rm $S/x`, null, 'AC1.2'],
+    ]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }

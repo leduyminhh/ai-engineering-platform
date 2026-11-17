@@ -59,7 +59,14 @@ const SH_KW = new Set([...SH_OPEN, ...SH_CLOSE, 'then', 'else', 'elif', 'do', 'f
 
 // Với `$(`/backtick: trả chỉ số ngay sau phần đóng; chưa đóng thì tới hết chuỗi.
 function skipSubst(cmd, i, ps) {
-  if (cmd[i] === '`') { const e = cmd.indexOf('`', i + 1); return e < 0 ? { end: cmd.length, closed: false } : { end: e + 1, closed: true }; }
+  if (cmd[i] === '`') {
+    // \` bên trong backtick là backtick lồng, không phải dấu đóng.
+    for (let k = i + 1; k < cmd.length; k++) {
+      if (cmd[k] === '\\') { k++; continue; }
+      if (cmd[k] === '`') return { end: k + 1, closed: true };
+    }
+    return { end: cmd.length, closed: false };
+  }
   let depth = 0;
   for (let k = i; k < cmd.length; k++) {
     const c = cmd[k];
@@ -239,8 +246,8 @@ function naiveSegments(cmd) {
     const words = naiveWords(x);
     const t = words.map((w) => w.parts.map((q) => q.text).join(''));
     t.qpos = words.map((w) => { const p = w.raw.search(/["']/); return p < 0 ? Infinity : p; });
-    // Cờ glob theo từ (D6); từ có biến/backtick để undefined, classifyPlain rơi về GLOB.test như cũ.
     t.src = x;
+    // Cờ glob theo từ (D6); từ có biến/backtick để undefined, classifyPlain rơi về GLOB.test như cũ.
     t.globs = words.map((w) => (/[$`]/.test(w.raw) ? undefined : w.parts.some((q) => q.quote === 'none' && GLOB.test(q.text))));
     if (t.length) { t.op = op; op = ''; out.push(t); }
   });
@@ -1057,7 +1064,7 @@ function stripSimpleHeredocs(rest, mask = (l) => l) {
 
 // Giải biến cho H6 và kiểm bí mật ở full (D1–D4, D9, D12): một vòng duyệt các đoạn của scanWords theo thứ tự, theo dõi cd và phép gán.
 // D4: các lệnh/cấu trúc làm shell đổi biến theo cách không đọc được tắt giải biến cả lệnh.
-const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
+const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|trap|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
 const ASSIGN_WORD = /^([A-Za-z_]\w*)(\+?=|\[)/;
 const LEAD_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '{', '!', 'time']);
 const MAX_VAR_NAMES = 20;
@@ -1086,10 +1093,10 @@ function innerTexts(w) {
     if (quote === 'single' || !(text.includes('$(') || text.includes('`'))) continue;
     for (let i = 0; i < text.length; i++) {
       if (text[i] === '`') {
-        const e = text.indexOf('`', i + 1);
-        out.push(text.slice(i + 1, e < 0 ? text.length : e));
-        if (e < 0) break;
-        i = e;
+        const { end, closed } = skipSubst(text, i, false);
+        // Trong backtick, \` \$ \\ là ký tự thoát của lớp ngoài: bỏ thoát để quét lại như lệnh thật.
+        out.push(text.slice(i + 1, closed ? end - 1 : end).replace(/\\([`$\\])/g, '$1'));
+        i = end - 1;
       } else if (text[i] === '$' && text[i + 1] === '(') {
         const { end, closed } = skipSubst(text, i + 1, false);
         out.push(text.slice(i + 2, closed ? end - 1 : end));
@@ -1100,22 +1107,43 @@ function innerTexts(w) {
   return out;
 }
 
-// Phép gán `NAME=…` đứng đầu đoạn (sau từ khoá mở như `then`), `export NAME=…`, và các dạng đổi tên biến không đọc được (`+=`, `[i]=`, `for`, `in`, `printf -v`).
+// Từ chuyển hướng ở vị trí i: số từ nó chiếm (2 khi toán tử đứng riêng và đích là từ kế, 1 khi dính liền), 0 nếu không phải chuyển hướng.
+function redirSkip(ws, i) {
+  const w = ws[i];
+  if (!w || w.parts[0].quote !== 'none') return 0;
+  const m = /^\d*(?:>>?|<<?|>&|<&|>\||&>>?)/.exec(w.parts[0].text);
+  if (!m) return 0;
+  return wordText(w).length === m[0].length ? 2 : 1;
+}
+
+// Phép gán `NAME=…` đứng đầu đoạn (sau từ khoá mở như `then` và chuyển hướng), `export NAME=…`, các dạng đổi tên biến không đọc được (`+=`, `[i]=`, `for`, `in`, `printf -v`),
+// và mọi từ khác có dạng `NAME=…` ở đâu cũng được (nháy, `builtin export`, trong `{ }`): phần đó không được tin nên tên của nó là chưa rõ.
 function leadInfo(seg) {
   const ws = seg.words;
   let i = 0;
   while (i < ws.length && ws[i].parts.length === 1 && ws[i].parts[0].quote === 'none' && LEAD_KW.has(ws[i].parts[0].text)) i++;
   const lead = i;
   const assigns = [];
+  const used = new Set();
   const assignOf = (w, k, exp) => {
     const m = w.parts[0].quote === 'none' ? ASSIGN_WORD.exec(w.parts[0].text) : null;
     return m ? { name: m[1], plain: m[2] === '=', len: m[0].length, wi: k, exp } : null;
   };
-  while (i < ws.length) { const a = assignOf(ws[i], i, false); if (!a) break; assigns.push(a); i++; }
+  while (i < ws.length) {
+    const r = redirSkip(ws, i);
+    if (r) { i += r; continue; }
+    const a = assignOf(ws[i], i, false);
+    if (!a) break;
+    assigns.push(a);
+    used.add(i);
+    i++;
+  }
   const rest = ws.slice(i);
   if (rest.length && wordText(rest[0]) === 'export') {
-    for (let j = 1; j < rest.length; j++) { const a = assignOf(rest[j], i + j, true); if (a) assigns.push(a); }
+    for (let j = 1; j < rest.length; j++) { const a = assignOf(rest[j], i + j, true); if (a) { assigns.push(a); used.add(i + j); } }
   }
+  let cmdAt = i;
+  while (ws[cmdAt] && (wordText(ws[cmdAt]) === 'builtin' || wordText(ws[cmdAt]) === 'command')) cmdAt++;
   const extra = [];
   const txt = (k) => (ws[k] ? wordText(ws[k]) : '');
   for (let k = 0; k < ws.length; k++) {
@@ -1123,8 +1151,10 @@ function leadInfo(seg) {
     if ((x === 'for' || x === 'select') && ws[k + 1]) extra.push(txt(k + 1));
     if (/^[A-Za-z_]\w*$/.test(x) && txt(k + 1) === 'in') extra.push(x);
     if (x === 'printf' && txt(k + 1) === '-v' && ws[k + 2]) extra.push(txt(k + 2).replace(/\[.*$/, ''));
+    const loose = used.has(k) ? null : /^([A-Za-z_]\w*)(?:\+?=|\[)/.exec(x);
+    if (loose) extra.push(loose[1]);
   }
-  return { lead, assigns, extra, hasCmd: rest.length > 0 };
+  return { lead, assigns, extra, hasCmd: rest.length > 0, cmdAt };
 }
 
 // scan: { segs, unclosed } của scanWords (hoặc naiveScan); trả [{ t, dir, unres }] cùng hình với trackDirs. Từ chưa rõ giữ chữ thô có `$` để hasUnresolvedRef bắt.
@@ -1157,6 +1187,8 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     }
   });
   const vars = !noVars && dialect === 'bash' && !scan.unclosed && names.size <= MAX_VAR_NAMES;
+  // Gán PWD/OLDPWD làm $PWD không còn khớp thư mục đang theo dõi.
+  const pwdOff = bad.has('PWD') || bad.has('OLDPWD') || names.has('PWD') || names.has('OLDPWD');
   const latest = new Map();
   const trusted = (k, j) => structOk[k.seg] && ((head[k.seg] && listId[j] > listId[k.seg]) || (listId[j] === listId[k.seg] && allAnd[j]));
   const safe = (w, state) => { try { return resolveWord(w, state, dialect); } catch { return null; } };
@@ -1167,12 +1199,15 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       for (const [n, v] of base) if (!latest.has(n) && !bad.has(n)) env.set(n, v);
       for (const [n, k] of latest) env.set(n, !bad.has(n) && trusted(k, i) ? k.value : null);
     }
-    const state = { env, dir, unres: unres || !vars, msys };
+    const state = { env, dir, unres: unres || !vars || pwdOff, msys };
     const t = [];
     t.globs = [];
     t.qpos = [];
-    for (const w of seg.words) {
+    let opaque = false;
+    for (const [wi, w] of seg.words.entries()) {
       const r = safe(w, state);
+      // Tên lệnh là thế lệnh không giải được (`$(:) rm …`, `$(which rm) x`): không biết lệnh nào chạy nên cả đoạn là chưa rõ.
+      if (wi === infos[i].cmdAt && !r && w.parts.some((p) => p.quote !== 'single' && (p.text.includes('$(') || p.text.includes('`')))) opaque = true;
       const raw = wordText(w);
       t.push(r ? r.text : raw);
       t.globs.push(r ? r.glob : (/[$`]/.test(raw) ? undefined : w.parts.some((p) => p.quote === 'none' && GLOB.test(p.text))));
@@ -1193,23 +1228,29 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       cdSeen = true;
       unres = true;
     }
-    out.push({ t, dir, unres });
+    const entry = { t, dir, unres };
+    out.push(entry);
+    // Gán trái sang phải: phép sau thấy giá trị mới của phép trước trong cùng đoạn.
+    const seen = new Map(env);
     for (const a of infos[i].assigns) {
       if (!a.plain) continue;
       const w = seg.words[a.wi];
-      const r = vars ? safe({ parts: [{ text: w.parts[0].text.slice(a.len), quote: 'none' }, ...w.parts.slice(1)] }, state) : null;
+      const r = vars ? safe({ parts: [{ text: w.parts[0].text.slice(a.len), quote: 'none' }, ...w.parts.slice(1)] }, { ...state, env: seen }) : null;
       const v = r && RW_ABS.test(r.text) ? (GLOB.test(r.text) ? r.text : collapseAbs(r.text)) : null;
       latest.set(a.name, { value: v, seg: i });
+      if (!bad.has(a.name)) seen.set(a.name, v);
     }
-    if (depth < MAX_INNER_DEPTH) {
-      for (const w of seg.words) {
-        for (const inner of innerTexts(w)) {
-          if (ctx.inner-- <= 0) break;
-          const sub = scanWords(inner, dialect);
-          out.push(...walkSegments(sub, { cwd, msys, dialect, noVars: noVars || !vars }, ctx, { env, dir, unres: unres || !vars, depth: depth + 1 }));
-        }
+    // Vượt trần sâu hoặc ngân sách lệnh con, hoặc `case` (dấu `)` của nhánh đóng $( ) sớm): không quét hết được thì chưa rõ.
+    for (const w of seg.words) {
+      for (const inner of innerTexts(w)) {
+        if (/\bcase\b/.test(inner)) opaque = true;
+        if (depth >= MAX_INNER_DEPTH || ctx.inner <= 0) { opaque = true; continue; }
+        ctx.inner--;
+        const sub = scanWords(inner, dialect);
+        out.push(...walkSegments(sub, { cwd, msys, dialect, noVars: noVars || !vars }, ctx, { env, dir, unres: unres || !vars, depth: depth + 1 }));
       }
     }
+    if (opaque) entry.opaque = true;
   });
   return out;
 }
@@ -1236,7 +1277,9 @@ function prepareWalk(cmd) {
     else text = s;
   }
   const scan = scanWords(text);
-  return { scan, text, noVars: noVars || scan.unclosed };
+  // `.` làm lệnh (source) ở mọi vị trí lệnh, kể cả sau `{`, `then`, `!`, `time`, `builtin`, `command`.
+  const dot = scan.segs.some((s) => { const w = s.words[leadInfo(s).cmdAt]; return w && w.parts.length === 1 && w.parts[0].quote === 'none' && w.parts[0].text === '.'; });
+  return { scan, text, noVars: noVars || dot || scan.unclosed };
 }
 
 // Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
@@ -1316,7 +1359,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const roots = rootsOf();
     let unknownPath = false;
     let readOutside = false;
-    for (const { t, dir, unres } of walked()) {
+    for (const { t, dir, unres, opaque } of walked()) {
+      if (opaque) unknownPath = true;
       const r = confineSegment(t, dir, unres, roots, msys);
       if (r?.deny) return { decision: 'deny', reason: r.blocked ? CLAUDE_TMP_BLOCKED_TEXT : denyText(r.deny, roots, 'lệnh này ở thư mục') };
       if (r === 'ask') unknownPath = true;
