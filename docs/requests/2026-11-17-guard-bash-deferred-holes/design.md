@@ -1,6 +1,6 @@
 # Thiết kế: vá các lỗ guard-bash ở chế độ full đã hoãn
 - Ngày: 2026-11-17
-- Trạng thái: draft — Q1 và A2 đã chốt (người dùng, 2026-11-17: chọn phương án đề xuất của cả hai); chờ duyệt design và plan (G1/G2)
+- Trạng thái: approved — design và plan duyệt 2026-11-17; chờ nhánh `claude/beautiful-nobel-cdade6` merge master rồi mới thực thi
 - Requirement: không có
 
 ## Vấn đề và lý do
