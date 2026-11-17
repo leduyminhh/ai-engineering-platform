@@ -907,6 +907,7 @@ export default async function run({ ok, ctx }) {
     holeRows([
       [`R=rm; sudo $R ${OUT}/x`, 'ask', 'AC2.2'], [`R=rm; env $R ${OUT}/x`, 'ask', 'AC2.2'], [`R=rm; nohup $R ${OUT}/x`, 'ask', 'AC2.2'],
       [`sudo rm ${T}/x`, null, 'AC2.2'],
+      [`command -v $x`, null, 'AC2.2'], [`if command -v $x >/dev/null 2>&1; then :; fi`, null, 'AC2.2'],
     ]);
     // Ba chỗ shell gán biến theo cách không đọc được: tên đó chưa rõ ở toàn lệnh, nhưng phép gán thường vẫn được giải.
     holeRows([

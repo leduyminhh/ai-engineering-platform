@@ -1359,7 +1359,9 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       else { const pre = { parts: w.parts.slice(0, k) }; t.qpos.push((safe(pre, state)?.text ?? wordText(pre)).length); }
     }
     // Tên lệnh thật nằm sau tiền tố bọc (`sudo $R x`, `env $R x`): kiểm trên tên đã qua unwrap, vì kiểm ở cmdAt chỉ thấy `sudo`.
-    if (!ps) { const [tk, k] = unwrap(t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
+    // `command -v $x` chỉ tra cứu tên, không chạy `$x`.
+    const lookup = t[infos[i].lead] === 'command' && /^-[vV]$/.test(t[infos[i].lead + 1] ?? '');
+    if (!ps && !lookup) { const [tk, k] = unwrap(t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
     t.op = seg.sep === 'start' ? '' : seg.sep;
     const name = String(t[infos[i].cmdAt] ?? '').toLowerCase();
     if (cdSeen && (seg.sep === '||' || seg.sep === '|')) unres = true;
