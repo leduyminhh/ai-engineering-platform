@@ -539,5 +539,339 @@ export default async function run({ ok, ctx }) {
     ok(performance.now() - tShort < 1000, 'hook-copy-alias-brace AC3.4: nhiều token brace ngắn xử lý dưới 1 giây');
     // PowerShell không mở rộng brace: kết quả giữ như trước request.
     expectAll([[`Remove-Item ${T}/{..,x}/f`, null, 'hook-copy-alias-brace AC3.3'], [`Remove-Item ${O}/{a,b}`, 'deny', 'hook-copy-alias-brace AC3.3']], { tool: 'PowerShell' });
+
+    // Bộ giải đường dẫn: scanWords giữ nháy từng phần của mỗi từ.
+    const sw = (cmd, dialect = 'bash') => (typeof bash.scanWords === 'function' ? bash.scanWords(cmd, dialect) : null);
+    const shape = (r) => r?.segs.map((g) => ({ sep: g.sep, bg: g.background, cp: g.compound, w: g.words.map((x) => x.parts.map((q) => `${q.quote}:${q.text}`).join('+')) }));
+    const label = (cmd) => cmd.replace(/\n/g, '\\n');
+    const SW = [
+      ['a && b & c', [{ sep: 'start', bg: true, cp: false, w: ['none:a'] }, { sep: '&&', bg: true, cp: false, w: ['none:b'] }, { sep: '&', bg: false, cp: false, w: ['none:c'] }]],
+      ['cd x && rm f &; y', [{ sep: 'start', bg: true, cp: false, w: ['none:cd', 'none:x'] }, { sep: '&&', bg: true, cp: false, w: ['none:rm', 'none:f'] }, { sep: ';', bg: false, cp: false, w: ['none:y'] }]],
+      ['echo $(a) ; b', [{ sep: 'start', bg: false, cp: false, w: ['none:echo', 'none:$(a)'] }, { sep: ';', bg: false, cp: false, w: ['none:b'] }]],
+      ['echo $(a) && b', [{ sep: 'start', bg: false, cp: false, w: ['none:echo', 'none:$(a)'] }, { sep: '&&', bg: false, cp: false, w: ['none:b'] }]],
+      ['echo $((1+2)); x', [{ sep: 'start', bg: false, cp: false, w: ['none:echo', 'none:$((1+2))'] }, { sep: ';', bg: false, cp: false, w: ['none:x'] }]],
+      ['x=$(a b)c d', [{ sep: 'start', bg: false, cp: false, w: ['none:x=$(a b)c', 'none:d'] }]],
+      ['rm &>/dev/null x', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'none:&>/dev/null', 'none:x'] }]],
+      ['rm >&2 x', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'none:>&2', 'none:x'] }]],
+      ['foo 2>&1 | tee o', [{ sep: 'start', bg: false, cp: false, w: ['none:foo', 'none:2>&1'] }, { sep: '|', bg: false, cp: false, w: ['none:tee', 'none:o'] }]],
+      ['a &&\nb', [{ sep: 'start', bg: false, cp: false, w: ['none:a'] }, { sep: '&&', bg: false, cp: false, w: ['none:b'] }]],
+      ['echo "$(printf \'"\')" ; rm x', [{ sep: 'start', bg: false, cp: false, w: ['none:echo', 'double:$(printf \'"\')'] }, { sep: ';', bg: false, cp: false, w: ['none:rm', 'none:x'] }]],
+      ['S="$(cygpath -u \'C:\\a b\')/e2e"', [{ sep: 'start', bg: false, cp: false, w: ['none:S=+double:$(cygpath -u \'C:\\a b\')/e2e'] }]],
+      ['rm \\*x', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'single:*+none:x'] }]],
+      ['rm "x"*', [{ sep: 'start', bg: false, cp: false, w: ['none:rm', 'double:x+none:*'] }]],
+      ["echo $(cygpath -u 'a b')/x", [{ sep: 'start', bg: false, cp: false, w: ['none:echo', "none:$(cygpath -u 'a b')/x"] }]],
+      ['x # c; y', [{ sep: 'start', bg: false, cp: false, w: ['none:x'] }]],
+      ['S=\'a\'"b"c', [{ sep: 'start', bg: false, cp: false, w: ['none:S=+single:a+double:b+none:c'] }]],
+      ['(cd x); y', [{ sep: 'start', bg: false, cp: true, w: ['none:cd', 'none:x'] }, { sep: ';', bg: false, cp: false, w: ['none:y'] }]],
+      ['a\nb', [{ sep: 'start', bg: false, cp: false, w: ['none:a'] }, { sep: ';', bg: false, cp: false, w: ['none:b'] }]],
+    ];
+    for (const [cmd, want] of SW) ok(JSON.stringify(shape(sw(cmd))) === JSON.stringify(want), `AC4.2: scanWords \`${label(cmd)}\` giữ sep/background/compound/nháy từng phần`);
+    const ifSegs = sw('if a; then b; fi')?.segs ?? [];
+    ok(['a', 'b'].every((t) => ifSegs.some((g) => g.compound && g.words.some((x) => x.parts.map((q) => q.text).join('') === t))), 'AC4.2: scanWords `if a; then b; fi` đánh dấu compound cho đoạn bên trong');
+    ok(sw('S="$(cygpath -u \'C:\\a b\')/e2e"')?.unclosed === false && sw('echo "$(printf \'"\')" ; rm x')?.unclosed === false, 'AC4.2: scanWords không báo unclosed khi nháy kép chứa $( ) có nháy bên trong');
+    ok(sw('echo $(Split-Path C:\\a\\) ; Remove-Item x', 'powershell')?.segs.length === 2, 'AC4.2: scanWords powershell không coi `\\` là escape trong $( ), lệnh sau `;` vẫn tách');
+    ok(sw('echo $(cygpath -u \'C:\\a\\\') ; rm x')?.segs.length === 2, 'AC4.2: scanWords bash `$(… \'C:\\a\\\')` trong nháy đơn vẫn tách đoạn sau `;`');
+    ok(sw('echo $(a ; rm x')?.unclosed === true && sw('echo `a ; rm x')?.unclosed === true, 'AC4.2: scanWords báo unclosed khi $( hoặc backtick không đóng');
+    ok(sw('echo "a')?.unclosed === true && sw('echo "a"')?.unclosed === false, 'AC4.2: scanWords báo unclosed khi nháy chưa đóng');
+    // Cùng token đã bỏ nháy với parse() trên lệnh không có $( )/&.
+    for (const cmd of ['git commit -m "a;b" x', 'rm "x y" \'z w\' ; ls | grep q', 'a || b\nc', 'echo \'it\'"s" ok']) {
+      const flat = sw(cmd)?.segs.map((g) => g.words.map((x) => x.parts.map((q) => q.text).join('')));
+      const ref = typeof bash.parse === 'function' ? bash.parse(cmd).segs.map((t) => [...t]) : null;
+      ok(flat && ref && JSON.stringify(flat) === JSON.stringify(ref), `AC4.2: scanWords cùng token với parse() trên \`${label(cmd)}\``);
+    }
+
+    // AC1.3: glob chỉ tính ở phần không nháy; "T/x*" là tên thường trong T, "T/x"* vẫn là glob.
+    expectAll([[`rm "${T}/x*"`, null, 'AC1.3'], [`rm "${T}/x"*`, null, 'AC1.3'], [`rm "${OUT}/x"*`, 'deny', 'AC1.3'], [`rm -rf "${T}/backup/"*`, null, 'AC1.3']]);
+
+    // D11: naiveSegments tách từ theo phần nháy.
+    expectAll([[`rm a"b c"`, null, 'AC4.1'], [`echo x > "${OUT}/x y"`, 'deny', 'AC4.1'], [`rm \\' ${OUT}/x \\'`, 'deny', 'AC4.1'],
+      [`cat <<'EOF' > ${OUT}/x\nhello\nEOF`, 'deny', 'AC4.1']]);
+    ok(kind(`echo it's; rm ${OUT}/x`) !== null, 'AC4.1: nháy lẻ kèm `;` vẫn không cho qua lệnh xoá ngoài root');
+
+    // resolveWord: giải một từ theo nháy từng phần (D5–D8), glob theo D6.
+    const rw = (cmd, { env = {}, unres = false, idx = 1, dialect = 'bash' } = {}) => {
+      if (typeof bash.resolveWord !== 'function') return 'thiếu resolveWord';
+      const word = bash.scanWords(cmd, dialect).segs[0].words[idx];
+      return bash.resolveWord(word, { env: new Map(Object.entries(env)), dir: P, unres, msys: true }, dialect);
+    };
+    const V = `${T}/a b`;
+    const RW = [
+      [`rm '${T}/x'`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm "${T}/x"`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm ${T}/x`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm "${T}/"x'/y'`, {}, { text: `${T}/x/y`, glob: false }, 'AC4.1'],
+      [`rm "${T}/x*"`, {}, { text: `${T}/x*`, glob: false }, 'AC1.3'],
+      [`rm '${T}/x*'`, {}, { text: `${T}/x*`, glob: false }, 'AC1.3'],
+      [`rm "${T}/[a]"`, {}, { text: `${T}/[a]`, glob: false }, 'AC1.3'],
+      [`rm ${T}/x*`, {}, { text: `${T}/x*`, glob: true }, 'AC1.3'],
+      [`rm ${T}/x?`, {}, { text: `${T}/x?`, glob: true }, 'AC1.3'],
+      [`rm "${T}/x"*`, {}, { text: `${T}/x*`, glob: true }, 'AC1.3'],
+      [`rm "${T}/backup/"*`, {}, { text: `${T}/backup/*`, glob: true }, 'AC1.3'],
+      [`rm $S/x`, { S: T }, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm \${S}/x`, { S: T }, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm "$S/x"`, { S: T }, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`rm $S/x`, { S: null }, null, 'AC4.1'],
+      [`rm $S/x`, {}, null, 'AC4.1'],
+      [`rm $PWD/x`, {}, { text: `${P}/x`, glob: false }, 'AC4.1'],
+      [`rm \${PWD}/x`, {}, { text: `${P}/x`, glob: false }, 'AC4.1'],
+      [`rm $PWD/x`, {}, null, 'AC4.1', true],
+      [`echo $(cygpath -u '${T}')/e2e`, {}, { text: `${T}/e2e`, glob: false }, 'AC4.1'],
+      [`echo "$(cygpath -u '${T}')/e2e"`, {}, { text: `${T}/e2e`, glob: false }, 'AC4.1'],
+      [`echo $(cygpath -p '${T}')/e2e`, {}, null, 'AC4.1'],
+      [`echo $(date)/e2e`, {}, null, 'AC4.1'],
+      [`rm ~/x`, {}, null, 'AC4.1'],
+      [`rm $HOME/x`, { HOME: T }, null, 'AC4.1'],
+      [`rm $?/x`, {}, null, 'AC4.1'],
+      [`rm \${X:-y}/x`, { X: T }, null, 'AC4.1'],
+      [`rm $V/x`, { V }, null, 'AC4.1'],
+      [`rm "$V/x"`, { V }, { text: `${V}/x`, glob: false }, 'AC4.1'],
+      [`rm "\\$S/x"`, { S: T }, { text: '$S/x', glob: false }, 'AC4.1'],
+      [`rm "\\\\$S/x"`, { S: T }, { text: `\\${T}/x`, glob: false }, 'AC4.1'],
+      [`echo $(cygpath -u 'C:\\a\\b')/x`, {}, { text: 'C:\\a\\b/x', glob: false }, 'AC4.1'],
+      [`echo $(cygpath -ua '${T}')/x`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`echo $(cygpath -u -a  '${T}')/x`, {}, { text: `${T}/x`, glob: false }, 'AC4.1'],
+      [`echo $(cygpath -ux '${T}')/x`, {}, null, 'AC4.1'],
+      [`echo $(cygpath -u "C:\\a")/x`, {}, null, 'AC4.1'],
+      [`rm $G`, { G: `${T}/x*` }, { text: `${T}/x*`, glob: true }, 'AC1.3'],
+      [`rm "$G"`, { G: `${T}/x*` }, { text: `${T}/x*`, glob: false }, 'AC1.3'],
+    ];
+    for (const [cmd, env, want, ac, unres = false] of RW) {
+      ok(JSON.stringify(rw(cmd, { env, unres })) === JSON.stringify(want), `${ac}: resolveWord \`${cmd.replaceAll(T, '<T>').replaceAll(P, '<P>')}\` → ${want ? JSON.stringify(want.glob) + ' glob' : 'chưa rõ'}`);
+    }
+
+    // Phép gán biến/cd trong cùng lệnh đi qua một luật tin cậy (walkSegments). T nằm dưới root, OUT ngoài mọi root.
+    fs.mkdirSync(T, { recursive: true });
+    const real = "S=\"$(cygpath -u '" + T + "')/e2e\" && M=\"$PWD/src/data/database-backup\" && rm -rf \"$S/run/backup\"/* && : >\"$S/stub.log\" && echo \"CRON_USER=$(id -un)\" >>\"$S/run/.env\" && export APP_ROOT=\"$S/run/app\" PATH=\"$S/shim:$M/scripts:$PATH\" && bash \"$APP_ROOT/scripts/db-job.sh\" create 2>&1 | tail -2; cat \"$S/cron.d\" | tail -1";
+    expectAll([[real, null, 'AC1.1']], { extra: { cwd: T } });
+    expectAll([
+      [`S="$(cygpath -u '${T}')/e2e"; rm -rf "$S/x"`, null, 'AC1.2'],
+      [`S=$(cygpath -u '${T}')/e2e && rm "$S/x"`, null, 'AC1.2'],
+      [`S="${T}/e2e"; rm -rf "$S/run/backup/"*`, null, 'AC1.2'],
+      [`rm -rf "${T}/backup/"*`, null, 'AC1.2'],
+      [`echo hi\nS=${T}\nrm -rf "$S/etc"`, null, 'AC1.2'],
+      [`cd ${T} && echo hi; S=${T}; rm $S/x`, null, 'AC1.2'],
+      [`echo hi && export A=${T}/a && rm "$A/x"`, null, 'AC1.2'],
+      [`export APP="${T}/app" && rm "$APP/x"`, null, 'AC1.4'],
+      [`cd ${T}; M="$PWD"; rm "$M/y"`, null, 'AC1.4'],
+      [`cd ${OUT}; M="$PWD"; rm "$M/y"`, 'deny', 'AC1.4'],
+      [`export APP=${OUT}/app && rm -rf "$APP/x"`, 'deny', 'AC1.4'],
+      ...[
+        `rm $S/x; S=${T}`, `S=$X; rm "$S/x"`, `S=${T}; S=$X; rm "$S/x"`, `S="${T}/a b"; rm $S/x`, `A=1 && S=${T}; rm $S/x`,
+        `S=${T} rm -rf "$S/etc"`, `S=${T} | cat; rm -rf "$S/etc"`, `S=${T} & rm -rf "$S/etc"`, `if false; then S=${T}; fi; rm -rf "$S/x"`,
+        `(S=${T}); rm -rf "$S/x"`, `f() { S=${T}; }; rm -rf "$S/x"`, `S=${T}; S+=/../v; rm -rf $S`, `S=${T}; S[0]=/etc; rm -rf $S/x`,
+        `S=${T}; unset S; rm -rf $S/etc`, `S=${T}; read X; rm -rf "$S/x"`, `S=${T}; eval S=/etc; rm -rf $S/x`, `S=${T}; cat <<<x; rm -rf $S/y`,
+      ].map((c) => [c, 'ask', 'AC1.5']),
+      [`S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
+      [`cd ${T}; S=/etc; rm $S/x`, 'deny', 'AC1.6'],
+      [`S='${T}'/../../..; rm -rf $S/victim`, 'deny', 'AC1.6'],
+      [`S="${T}"/../../..; rm -rf $S/victim`, 'deny', 'AC1.6'],
+      [`S=$(cygpath -u '${T}')/../../..; rm -rf $S/victim`, 'deny', 'AC1.6'],
+      ...(path.sep === '\\' ? [[`S='${T.replaceAll('/', '\\')}\\..\\..\\..'; rm -rf $S/victim`, 'deny', 'AC1.6']] : []),
+    ]);
+    const noH6 = [`S=${OUT}; rm $S/x`, `S=${T}; rm $S/x`].map((c) => [c, null, 'AC1.8']);
+    expectAll(noH6, { cfg: { mode: 'ask' } });
+    expectAll(noH6, { extra: { permission_mode: 'default' } });
+
+    // Vòng sửa 1 của walkSegments: đường không hiểu được thì chưa rõ (ask), không im lặng cho qua. Hàng ask ghi AC1.5, deny ghi AC1.6, không biến ghi AC4.1.
+    const nested = `echo \`echo \\\`rm -rf ${OUT}/x\\\`\``;
+    expectAll([
+      // F1: tên lệnh là thế lệnh/backtick (kể cả rỗng).
+      ...[`$(:) rm -rf ${OUT}/x`, `\`:\` rm -rf ${OUT}/x`, `true && $(:) rm -rf ${OUT}/x`, `FOO=1 $(:) rm -rf ${OUT}/x`, `S=${T}; $(:) rm $S/x`, `$(which rm) ${OUT}/x`].map((c) => [c, 'ask', 'AC1.5']),
+      // F2: backtick lồng, vượt trần sâu, vượt ngân sách lệnh con.
+      [nested, 'deny', 'AC1.6'],
+      [`echo $(echo $(echo $(echo $(rm -rf ${OUT}/x))))`, 'ask', 'AC1.5'],
+      [`echo ${'$(:) '.repeat(250)}$(rm -rf ${OUT}/x)`, 'ask', 'AC1.5'],
+      // F3: `)` của nhánh case đóng $( ) sớm.
+      [`echo $(case x in x) rm -rf ${OUT}/x;; esac)`, 'ask', 'AC1.5'],
+      // F4a: gán tuần tự trong một đoạn (kể cả export) thấy giá trị mới.
+      [`A=${T}; A=${OUT} B=$A/x; rm $B`, 'deny', 'AC1.6'],
+      [`export A=${OUT} B=$A/x; rm $B`, 'deny', 'AC1.6'],
+      // F4b: từ khoá function là cấu trúc phức.
+      [`S=${T}; function f { S=${OUT}; }; f; rm $S/x`, 'ask', 'AC1.5'],
+      // F4c: phép gán đứng sau chuyển hướng vẫn là phép gán.
+      [`S=${T}; > /dev/null S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
+      [`S=${T}; 2>/dev/null S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
+      // F4d: đối số export có nháy hoặc export qua builtin/command.
+      ...[`export "S=${OUT}"`, `export 'S'=${OUT}`, `builtin export S=${OUT}`, `command export S=${OUT}`].map((c) => [`S=${T}; ${c}; rm $S/x`, 'ask', 'AC1.5']),
+      // F5: trap đổi biến; gán PWD làm $PWD không khớp thư mục đang theo dõi.
+      [`S=${T}; trap 'S=/etc' DEBUG; rm $S/x`, 'ask', 'AC1.5'],
+      [`cd ${T}; PWD=${OUT}; rm $PWD/x`, 'ask', 'AC1.5'],
+      // F6: `.` là source ở mọi vị trí lệnh.
+      ...['{ . ./v.sh; }', 'if true; then . ./v.sh; fi', '! . ./v.sh', 'time . ./v.sh', 'builtin . ./v.sh', 'command . ./v.sh'].map((c) => [`S=${T}; ${c}; rm $S/x`, 'ask', 'AC1.5']),
+      // `.` làm đối số (không phải lệnh) không tắt giải biến.
+      [`S=${T}; cp x .; rm $S/x`, null, 'AC4.1'],
+      // F9: hai hàng D2 cũ của 99-hook-popup.
+      [`cd /e/x && echo hi; S=${T}; rm $S/x`, null, 'AC1.2'],
+    ]);
+
+    // Trần cỡ của bộ giải (D4, D15): dưới trần thì giải đúng luật và nhanh; vượt trần thì không giải biến nào (ask).
+    const nameList = (n) => Array.from({ length: n }, (_, i) => `V${i}=${T}/d${i}`).join('; ');
+    const useAll = (n) => Array.from({ length: n * 20 }, (_, i) => `rm "$V${i % n}/f${i}"`).join('; ');
+    const at20 = `${nameList(20)}; ${useAll(20)}`;
+    const t31 = performance.now();
+    const k31 = [kind(at20), kind(`${at20}; V19=${OUT}; rm "$V19/x"`)];
+    ok(at20.length < 20000 && k31[0] === null && k31[1] === 'deny', 'AC3.1: 20 tên gán hợp lệ và 400 đường dẫn dùng biến → giải đúng (null; gán lại ra ngoài root → deny)');
+    ok(performance.now() - t31 < 1000, 'AC3.1: lệnh 20 tên gán, 400 đường dẫn dùng biến chạy dưới 1s');
+    const big = `echo ${'a'.repeat(20000)}; S=${T}; rm -rf $S/x`;
+    ok(big.length > 20000 && kind(big) === 'ask', 'AC3.2: lệnh dài hơn 20000 ký tự có S=<T>; rm -rf $S/x → ask (không giải biến)');
+    ok(kind(`${nameList(21)}; rm -rf $V20/x`) === 'ask' && kind(`${nameList(20)}; rm -rf $V19/x`) === null, 'AC3.2: 21 tên gán → ask, 20 tên gán vẫn giải (null)');
+
+    // PowerShell: biến gán trong cùng lệnh (D13). Dấu \ của "$S\x" là phân cách thư mục của Windows.
+    const ps = (assign, use = 'Remove-Item "$S\\x"') => `${assign}; ${use}`;
+    const PS = { tool: 'PowerShell' };
+    const psRowsAc21 = [
+      [ps(`$S = '${T}'`), null], [ps(`$s = '${T}'`), null], [ps(`$S = "${T}"`), null], [ps(`$S='${T}'`), null],
+      [ps(`$S = '${OUT}'`), 'deny'], [ps(`$S = '${T}/../../..'`), 'deny'],
+      [ps('$S = $env:TEMP'), 'ask'], [ps(`if ($true) { $S = '${T}' }`), 'ask'],
+    ];
+    expectAll(psRowsAc21.map(([c, want]) => [c, want, 'AC2.1']), PS);
+    // Set-Variable đổi biến theo cách không đọc được: không được cho qua im lặng.
+    const sv = kind(ps(`$S = "${T}"; Set-Variable S '${OUT}'`), PS);
+    ok(sv === 'ask' || sv === 'deny', 'AC2.1: $S = "<T>"; Set-Variable S \'<OUT>\'; Remove-Item "$S\\x" → ask hoặc deny (không null)');
+    // AC2.2: ngoài full + bypass không có H6, nên kết quả giữ như trước thiết kế (đo trên code trước khi sửa).
+    const psAll = [...psRowsAc21.map(([c]) => c), ps(`$S = "${T}"; Set-Variable S '${OUT}'`)];
+    expectAll(psAll.map((c) => [c, null, 'AC2.2']), { ...PS, cfg: { mode: 'ask' } });
+    expectAll(psAll.map((c) => [c, null, 'AC2.2']), { ...PS, extra: { permission_mode: 'default' } });
+
+    // D13: quét chuỗi gốc (backtick-nháy), biến không nháy, phép gán không đọc được, khối lệnh, `||`, kết quả lệnh.
+    expectAll([
+      [ps(`$S = '${T}'`, 'Remove-Item "$S\\x\`"y"'), null],
+      [ps(`$S = '${T}'`, 'Remove-Item $S'), null],
+      [ps(`cd '${T}'; $M = $PWD`, 'Remove-Item "$M\\x"'), null],
+      [ps(`$S = '${T}'`, 'Remove-Item $S\\x'), 'ask'],
+      [ps(`$S = '${T}'`, 'Remove-Item "$S:x"'), 'ask'],
+      [ps(`$S = '${T}'; $S += '/..'`), 'ask'],
+      [`$S = '${T}' || Remove-Item "$S\\x"`, 'ask'],
+      [ps(`$S = '${T}'; foreach ($S in '${OUT}') { Remove-Item "$S\\x" }`, '$null'), 'ask'],
+      [ps(`$S = Get-Item x`), 'ask'],
+      [ps(`$S = '${T}'; Start-Job { $S = '${OUT}' }`), 'ask'],
+    ].map(([c, want]) => [c, want, 'AC2.1']), PS);
+
+    // Danh sách trắng PowerShell: lệnh có dấu hiệu đổi biến ngoài phép gán đơn `$name = từ` đứng đầu đoạn thì không giải biến nào (ask), không vá từng dạng.
+    const USE = 'Remove-Item "$S\\x"';
+    const psAskRows = [
+      `$S='${T}'; if ($true) {$S='${OUT}'}; ${USE}`,
+      `$S='${T}'; [string]$S='${OUT}'; ${USE}`,
+      `$S='${T}'; \${S}='${OUT}'; ${USE}`,
+      `$S='${T}'; $script:S='${OUT}'; ${USE}`,
+      `$S='${T}'; $global:S='${OUT}'; ${USE}`,
+      `$S='${T}'; ($S)='${OUT}'; ${USE}`,
+      `$S='${T}'; ($X, $S) = 1,'${OUT}'; ${USE}`,
+      `$S='${T}'; $S, $X = '${OUT}',1; ${USE}`,
+      `$S='${T}'; $sb={$S='${OUT}'}; & $sb; ${USE}`,
+      `$S='${T}'; 1 | % {$S='${OUT}'}; ${USE}`,
+      `$S='${T}'; Write-Host $($S='${OUT}'); ${USE}`,
+      `$S='${T}'; Write-Host "$($S='${OUT}')"; ${USE}`,
+      `$S='${T}'; Write-Host $(Set-Location '${OUT}'); Remove-Item "$PWD\\x"`,
+      `$S='${T}'; Set-Item variable:S '${OUT}'; ${USE}`,
+      `$S='${T}'; (Get-Variable S).Value = '${OUT}'; ${USE}`,
+      `$S='${T}'; gv S; ${USE}`,
+      `$S='${T}'; $ExecutionContext.SessionState.PSVariable.Set('S','${OUT}'); ${USE}`,
+      `$S='${T}'; $S -eq 1 -and ($S='${OUT}'); ${USE}`,
+    ];
+    expectAll(psAskRows.map((c) => [c, 'ask', 'AC2.1']), PS);
+    // Dùng $S trong khối `{ }` sau khi đã đổi trong khối: không được null, kể cả khi dùng ở ngoài.
+    const inBlock = kind(`$S='${T}'; Remove-Item "$S\\x"; if ($true) {$S='${OUT}'; Remove-Item "$S\\y"}`, PS);
+    ok(inBlock !== null, 'AC2.1: dùng $S trong khối { } đã đổi $S ra ngoài root → không null');
+    // So sánh `-eq` là từ, không phải `=`; phép gán đơn đứng đầu đoạn vẫn giải.
+    expectAll([[`$S='${T}'; if ($S -eq 1) { }; ${USE}`, 'ask', 'AC2.1'], [`$S = '${T}'; $M = $PWD; Remove-Item "$S\\x" -Force`, null, 'AC2.1']], PS);
+
+    // $( ) cùng scope ở PowerShell: lệnh đổi vị trí bên trong làm thư mục của các đoạn sau chưa rõ (không được null); chú thích # và <# #> không phải mã.
+    const psCd = ['$(cd \'OUT\')', '$(Push-Location \'OUT\')', '$(chdir \'OUT\')', '$(pushd \'OUT\')', '$(Set-Location -Path \'OUT\')', '"$(cd \'OUT\')"', '$(Set-Location\n\'OUT\')']
+      .map((x) => x.replaceAll('OUT', OUT));
+    expectAll(psCd.map((x) => [`Write-Host ${x}; Remove-Item x`, 'ask', 'AC2.1']), PS);
+    // Không bỏ chú thích trước khi quét (bỏ sai thì che lệnh ghi): `{`/`=` trong chú thích làm hỏi thừa, có chủ ý.
+    const commentAc = 'AC2.1 (hỏi thừa có chủ ý: { hoặc = trong chú thích tắt giải biến, Ruling vòng 3)';
+    expectAll([
+      [`$S = '${T}' # comment {\nRemove-Item "$S\\x"`, 'ask', commentAc],
+      [`$S = '${T}' <# {= #> ; Remove-Item "$S\\x"`, 'ask', commentAc],
+      [`$S = '${T}'; <# \n$S='x' #>\nRemove-Item "$S\\x"`, 'ask', commentAc],
+      [`Write-Host \${#x}; Remove-Item '${OUT}\\x'`, 'deny', 'AC2.1'],
+      [`@'\nit's <#\n'@\nRemove-Item '${OUT}\\x'\n#>`, 'deny', 'AC2.1'],
+      [`<# x\nRemove-Item '${OUT}\\x'`, 'deny', 'AC2.1'],
+    ], PS);
+    // Khối `{ }` viết liền vẫn là khối: lệnh bên trong được kiểm như khi có khoảng trắng.
+    expectAll([
+      [`if ($true) {Remove-Item '${OUT}\\x'}`, 'deny'],
+      [`& {Remove-Item '${OUT}\\x'}`, 'deny'],
+      [`1 | ForEach-Object {Remove-Item '${OUT}\\x'}`, 'deny'],
+      [`$S='${OUT}'; if ($true) {Remove-Item "$S\\x"}`, 'ask'],
+    ].map(([c, want]) => [c, want, 'AC2.1']), PS);
+    // Đổi biến qua ổ variable: ghép chuỗi (biểu thức `( )`, đối số *-Item không phải literal, splat) → không giải biến.
+    expectAll([
+      `$S='${T}'; Set-Item -Path ('vari'+'able:S') -Value '${OUT}'; ${USE}`,
+      `$S='${T}'; $n='vari'+'able:S'; Set-Item $n '${OUT}'; ${USE}`,
+      `$S='${T}'; $n='S'; New-Item ("var"+"iable:$n") -Value '${OUT}' -Force; ${USE}`,
+      `$S='${T}'; $p='vari'+'able:S', '${OUT}'; Set-Item @p; ${USE}`,
+    ].map((c) => [c, 'ask', 'AC2.1']), PS);
+    // Danh sách cho phép theo tên lệnh: có lệnh ngoài tập (đổi biến qua *-ItemProperty, Invoke-Item, pipe, đổi vị trí, PSDrive, lệnh lạ) thì không giải biến nào.
+    const N = `$n='vari'+'able:S'`;
+    expectAll([
+      `$S='${T}'; ${N}; Set-ItemProperty $n -Name Value -Value '${OUT}'; ${USE}`,
+      `$S='${T}'; ${N}; Clear-ItemProperty $n -Name Value; ${USE}`,
+      `$S='${T}'; ${N}; Rename-ItemProperty $n -Name Value -NewName X; ${USE}`,
+      `$S='${T}'; ${N}; Invoke-Item $n; ${USE}`,
+      `$S='${T}'; ${N}; $x = Invoke-Item $n; ${USE}`,
+      `$S='${T}'; ${N}; $n | Set-Item -Value '${OUT}'; ${USE}`,
+      ...['Set-Location', 'Push-Location', 'cd', 'sl'].map((c) => `$S='${T}'; $n='vari'+'able:'; ${c} $n; Set-Item S '${OUT}'; ${USE}`),
+      `$S='${T}'; New-PSDrive -Name Z -PSProvider Variable -Root '\\'; Set-Item Z:S '${OUT}'; ${USE}`,
+      `$S = '${T}'; Get-Date; ${USE}`,
+      // Lệnh trong tập làm nguồn ống dẫn với đối số ghép chuỗi: đối tượng ổ variable: chảy sang lệnh sau.
+      `$S='${T}'; ${N}; Get-ChildItem $n | Remove-Item; ${USE}`,
+      `$S='${T}'; ${N}; ls $n | rm; ${USE}`,
+      `$S='${T}'; ${N}; gi $n | rm; ${USE}`,
+      `$S='${T}'; ${N}; Resolve-Path $n | Remove-Item; ${USE}`,
+      `$S='${T}'; ${N}; gi $n | Set-Content -Value '${OUT}'; ${USE}`,
+      `$S='${T}'; ${N}; Write-Output $n | Get-Item | Set-Content -Value '${OUT}'; ${USE}`,
+      `$S='${T}'; ${N}; $n | rm; ${USE}`,
+      // Đoạn biểu thức nhiều từ (toán tử -join, -f…) ghép được đường dẫn variable: mà không cần `$`/`+`/`@`.
+      `$S='${T}'; 'vari', 'able:S' -join '' | Get-Item | Remove-Item; ${USE}`,
+      `$S='${T}'; "vari{0}" -f 'able:S' | gi | rm; ${USE}`,
+      // Tên lệnh có tiền tố đường dẫn là lệnh khác, không phải cmdlet trong tập.
+      ...['.\\Remove-Item', 'C:\\x\\Remove-Item', 'Microsoft.PowerShell.Management\\Remove-Item', './Remove-Item'].map((c) => `$S='${T}'; ${c} "$S\\x"`),
+    ].map((c) => [c, 'ask', 'AC2.1']), PS);
+    // Lệnh trong tập vẫn giải biến đã gán đơn.
+    expectAll([
+      `$S = '${T}'; Set-Content "$S\\f" -Value x`,
+      `$S = '${T}'; Copy-Item x "$S\\y"`,
+      `$S = '${T}'; New-Item -ItemType Directory "$S\\d"`,
+      `$S = '${T}'; ${USE} | Out-Null`,
+      // Here-string `@'…'@` là dữ liệu, không phải splat `@tên`.
+      `$S = '${T}'; Write-Host @'\nabc\n'@; ${USE}`,
+      `$S = '${T}'; Set-Content "$S\\f" @'\nabc\n'@`,
+      `$S = '${T}'; @'\nabc\n'@ | Set-Content "$S\\f"`,
+    ].map((c) => [c, null, 'AC2.1']), PS);
+
+    // Hồi quy sau review cuối: `&` của PowerShell (toán tử gọi hoặc dấu tách) không được làm mất lệnh đứng sau nó.
+    expectAll([
+      `& Remove-Item ${OUT}/f`, `& rm -Recurse ${OUT}`, `& 'Remove-Item' ${OUT}/f`, `&{ Remove-Item ${OUT}/f }`, `&rm '${OUT}/f'`, `&Remove-Item ${OUT}/f`,
+      `& Out-File -FilePath ${OUT}/f`, `& Move-Item ${T}/a ${OUT}/b`, `Get-ChildItem x & Remove-Item ${OUT}/f`,
+    ].map((c) => [c, 'deny', 'AC4.1']), PS);
+    // Sau `&` biến không còn được giải (đoạn phức): hỏi, không im lặng cho qua.
+    expectAll([[`$S='${OUT}'; & Remove-Item "$S\\x"`, 'ask', 'AC4.1'], [`& cmd /c del ${OUT}\\f`, 'ask', 'AC4.1'], [`& Remove-Item ${T}/f`, null, 'AC4.1'], [`Remove-Item ${T}/f 2>&1`, null, 'AC4.1'],
+      [`$R='rm'; & $R ${OUT}/x`, 'ask', 'AC1.5']], PS);
+
+    // Hồi quy sau review cuối: phép gán số học đổi biến của shell hiện tại mà bộ giải không thấy.
+    expectAll([
+      `S=${CT}/a/b/c; : $((S=0)); rm -rf $S/../../../x/y`, `S=${T}; echo $((S=0)) >/dev/null; rm -rf $S/x`, `S=${T}; : $[S=0]; rm -rf $S/x`,
+      `S=${T}; : \${a[S=0]}; rm -rf $S/x`, `S=${T}; : "$((S=0))"; rm -rf $S/x`, `S=${T}; : $((S=0)); rm -rf $S/x`,
+    ].map((c) => [c, 'ask', 'AC1.5']));
+
+    // Hồi quy sau review cuối: cd ở ngữ cảnh không chắc (nền, ||, && ở đầu danh sách trước, ống dẫn) không được tin cho đoạn sau.
+    expectAll([
+      // `false && cd core; rm ../x` vẫn được tin có chủ ý: cùng hình với lệnh popup `mkdir -p $S/bin && cd $S` (99-hook-popup AC6.2), người dùng chọn không hỏi thêm.
+      ...[`cd core & rm ../x`, `true || cd core; rm ../x`, `echo hi | cd core; rm ../x`, `cd core & rm $PWD/../x`].map((c) => [c, 'ask', 'AC1.5']),
+      ...[`cd core; rm ../x`, `cd core && rm ../x`, `true && cd core && rm ../x`].map((c) => [c, null, 'AC1.5']),
+    ]);
+    expectAll([[`cd ${T}; rm x`, null, 'AC1.5'], [`cd ${T} && rm x`, null, 'AC1.5']]);
+
+    // Hồi quy sau review cuối: tên lệnh lấy từ biến không giải được là chưa rõ lệnh nào chạy.
+    expectAll([`R=rm; $R -rf ${OUT}/x`, `R=rm; "$R" -rf ${OUT}/x`, `R=rm; \${R} -rf ${OUT}/x`].map((c) => [c, 'ask', 'AC1.5']));
+
+    // Hồi quy sau review cuối: `$env:TEMP` không được đọc thành `$en` đã gán.
+    expectAll([[`$en='${T}'; Remove-Item "$env:TEMP\\x"`, 'ask', 'AC2.1']], PS);
+
+    // Kiểm bí mật dùng chung kết quả bộ giải: biến trỏ ra ngoài root thì hỏi, trong root thì cho qua.
+    expectAll([[`S=${OUT}; cat $S/.env`, 'ask', 'AC1.6'], [`S=${T}; cat $S/.env`, null, 'AC1.6']]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
