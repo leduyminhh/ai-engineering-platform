@@ -732,5 +732,19 @@ export default async function run({ ok, ctx }) {
     const psAll = [...psRowsAc21.map(([c]) => c), ps(`$S = "${T}"; Set-Variable S '${OUT}'`)];
     expectAll(psAll.map((c) => [c, null, 'AC2.2']), { ...PS, cfg: { mode: 'ask' } });
     expectAll(psAll.map((c) => [c, null, 'AC2.2']), { ...PS, extra: { permission_mode: 'default' } });
+
+    // D13: quét chuỗi gốc (backtick-nháy), biến không nháy, phép gán không đọc được, khối lệnh, `||`, kết quả lệnh.
+    expectAll([
+      [ps(`$S = '${T}'`, 'Remove-Item "$S\\x\`"y"'), null],
+      [ps(`$S = '${T}'`, 'Remove-Item $S'), null],
+      [ps(`cd '${T}'; $M = $PWD`, 'Remove-Item "$M\\x"'), null],
+      [ps(`$S = '${T}'`, 'Remove-Item $S\\x'), 'ask'],
+      [ps(`$S = '${T}'`, 'Remove-Item "$S:x"'), 'ask'],
+      [ps(`$S = '${T}'; $S += '/..'`), 'ask'],
+      [`$S = '${T}' || Remove-Item "$S\\x"`, 'ask'],
+      [ps(`$S = '${T}'; foreach ($S in '${OUT}') { Remove-Item "$S\\x" }`, '$null'), 'ask'],
+      [ps(`$S = Get-Item x`), 'ask'],
+      [ps(`$S = '${T}'; Start-Job { $S = '${OUT}' }`), 'ask'],
+    ].map(([c, want]) => [c, want, 'AC2.1']), PS);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }

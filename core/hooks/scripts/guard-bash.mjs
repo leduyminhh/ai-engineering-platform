@@ -105,9 +105,18 @@ export function resolveWord(word, state, dialect = 'bash') {
         i = j;
         continue;
       }
-      if (s[i] === '`' || dialect !== 'bash') return null;
+      if (s[i] === '`') return null;
       RW_VAR.lastIndex = i;
       const m = RW_VAR.exec(s);
+      if (dialect !== 'bash') {
+        // PowerShell (D13): `$NAME`/`${NAME}`/`$PWD` không phân biệt hoa thường; `$NAME:x` là biến có phạm vi, `$(`, `$env:`, `${…}` lạ là chưa rõ; ngoài nháy chỉ nhận khi cả từ là biến đó.
+        if (!m || s[i + m[0].length] === ':' || (bare && !(word.parts.length === 1 && s === m[0]))) return null;
+        const key = (m[1] ?? m[2]).toLowerCase();
+        const v = key === 'pwd' ? (state.unres ? null : state.dir) : state.env.get(key);
+        if (typeof v !== 'string' || !RW_ABS.test(v) || !put(v, true)) return null;
+        i += m[0].length;
+        continue;
+      }
       if (m) {
         const name = m[1] ?? m[2];
         const v = name === 'HOME' ? null : name === 'PWD' ? (state.unres ? null : state.dir) : state.env.get(name);
@@ -150,6 +159,11 @@ export function scanWords(cmd, dialect = 'bash') {
     if (!ps && !words.length && parts.length === 1 && parts[0].quote === 'none') {
       const t = parts[0].text;
       if (SH_KW.has(t)) { kwMark = true; if (SH_OPEN.has(t)) kwDepth++; else if (SH_CLOSE.has(t)) kwDepth = Math.max(0, kwDepth - 1); }
+    }
+    // PowerShell không có từ khoá shell: chỉ `{`/`}` đánh dấu cấu trúc phức (khối lệnh, hashtable).
+    if (ps && parts.length === 1 && parts[0].quote === 'none' && (parts[0].text === '{' || parts[0].text === '}')) {
+      kwMark = true;
+      if (parts[0].text === '{') kwDepth++; else kwDepth = Math.max(0, kwDepth - 1);
     }
     words.push({ parts });
     parts = null;
@@ -1065,6 +1079,8 @@ function stripSimpleHeredocs(rest, mask = (l) => l) {
 // Giải biến cho H6 và kiểm bí mật ở full (D1–D4, D9, D12): một vòng duyệt các đoạn của scanWords theo thứ tự, theo dõi cd và phép gán.
 // D4: các lệnh/cấu trúc làm shell đổi biến theo cách không đọc được tắt giải biến cả lệnh.
 const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|trap|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
+// Cmdlet/tham số đổi biến theo cách không đọc được: tắt giải biến cả lệnh (D4, D13).
+const PS_MUTATORS = /\b(?:set|new|remove|clear)-variable\b|\b(?:invoke-expression|iex)\b|(?:^|[\s;|({])(?:sv|nv|clv|rv|set)\s|\s-(?:outvariable|ov|errorvariable|ev|warningvariable|wv|informationvariable|iv|pipelinevariable|pv)\b/i;
 const ASSIGN_WORD = /^([A-Za-z_]\w*)(\+?=|\[)/;
 const LEAD_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '{', '!', 'time']);
 const MAX_VAR_NAMES = 20;
@@ -1087,7 +1103,7 @@ function collapseAbs(p) {
 }
 
 // Chuỗi lệnh con trong `$( … )` và backtick của một từ (không tính phần nháy đơn/ký tự thoát).
-function innerTexts(w) {
+function innerTexts(w, ps = false) {
   const out = [];
   for (const { text, quote } of w.parts) {
     if (quote === 'single' || !(text.includes('$(') || text.includes('`'))) continue;
@@ -1098,7 +1114,7 @@ function innerTexts(w) {
         out.push(text.slice(i + 1, closed ? end - 1 : end).replace(/\\([`$\\])/g, '$1'));
         i = end - 1;
       } else if (text[i] === '$' && text[i + 1] === '(') {
-        const { end, closed } = skipSubst(text, i + 1, false);
+        const { end, closed } = skipSubst(text, i + 1, ps);
         out.push(text.slice(i + 2, closed ? end - 1 : end));
         i = end - 1;
       }
@@ -1127,7 +1143,7 @@ function leadInfo(seg) {
   const used = new Set();
   const assignOf = (w, k, exp) => {
     const m = w.parts[0].quote === 'none' ? ASSIGN_WORD.exec(w.parts[0].text) : null;
-    return m ? { name: m[1], plain: m[2] === '=', len: m[0].length, wi: k, exp } : null;
+    return m ? { name: m[1], plain: m[2] === '=', valueWord: { parts: [{ text: w.parts[0].text.slice(m[0].length), quote: 'none' }, ...w.parts.slice(1)] }, exp } : null;
   };
   while (i < ws.length) {
     const r = redirSkip(ws, i);
@@ -1157,6 +1173,46 @@ function leadInfo(seg) {
   return { lead, assigns, extra, hasCmd: rest.length > 0, cmdAt };
 }
 
+// PowerShell (D13): `$NAME = <từ>` hoặc `$NAME=<từ>` (tên viết thường); đoạn có thêm từ sau giá trị (`$S = Get-Item x`) thì giá trị là kết quả lệnh nên không tin.
+// `+=`, `++`, `[ref]$S`, `$S in`, `foreach ($S in …)` đổi biến theo cách không đọc được → tên chưa rõ.
+const PS_OP_ATTACHED = /^\$([A-Za-z_]\w*)(?:[-+*\/%?]?\??=|\+\+|--)/;
+const PS_OP_NEXT = /^(?:[-+*\/%]|\?\?)?=|^(?:\+\+|--)$/;
+function leadInfoPs(seg) {
+  const ws = seg.words;
+  const assigns = [];
+  const extra = [];
+  const used = new Set();
+  let hasCmd = false;
+  let cmdAt = 0;
+  const m0 = ws[0]?.parts[0].quote === 'none' ? /^\$([A-Za-z_]\w*)(=?)([\s\S]*)$/.exec(ws[0].parts[0].text) : null;
+  const value = (headText, headParts, nextAt) => {
+    const vp = [{ text: headText, quote: 'none' }, ...headParts];
+    return vp.length === 1 && headText === '' ? { word: ws[nextAt] ?? null, rest: nextAt + 1 } : { word: { parts: vp }, rest: nextAt };
+  };
+  let hit = null;
+  if (m0 && m0[2] === '=') hit = { ...value(m0[3], ws[0].parts.slice(1), 1), used: [0] };
+  else if (m0 && m0[3] === '' && ws[0].parts.length === 1 && ws[1]?.parts[0].quote === 'none' && ws[1].parts[0].text.startsWith('=') && !ws[1].parts[0].text.startsWith('==')) {
+    hit = { ...value(ws[1].parts[0].text.slice(1), ws[1].parts.slice(1), 2), used: [0, 1] };
+  }
+  if (hit) {
+    assigns.push({ name: m0[1].toLowerCase(), plain: true, valueWord: hit.word, exp: false });
+    hit.used.forEach((k) => used.add(k));
+    hasCmd = ws.length > hit.rest;
+    cmdAt = ws.length;
+  } else if (ws[0] && ['&', '.'].includes(wordText(ws[0]))) cmdAt = 1;
+  const txt = (k) => (ws[k] ? wordText(ws[k]) : '');
+  for (let k = 0; k < ws.length; k++) {
+    if (used.has(k)) continue;
+    const x = txt(k);
+    const a = PS_OP_ATTACHED.exec(x);
+    if (a) extra.push(a[1].toLowerCase());
+    const v = /^\$([A-Za-z_]\w*)$/.exec(x);
+    if (v && ws[k + 1] && (PS_OP_NEXT.test(txt(k + 1)) || txt(k + 1) === 'in')) extra.push(v[1].toLowerCase());
+    for (const r of x.matchAll(/\[ref\]\s*\$([A-Za-z_]\w*)/gi)) extra.push(r[1].toLowerCase());
+  }
+  return { lead: 0, assigns, extra, hasCmd, cmdAt };
+}
+
 // scan: { segs, unclosed } của scanWords (hoặc naiveScan); trả [{ t, dir, unres }] cùng hình với trackDirs. Từ chưa rõ giữ chữ thô có `$` để hasUnresolvedRef bắt.
 export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars = false } = {}, ctx = { inner: MAX_INNER_WALK }, init = null) {
   const { segs } = scan;
@@ -1165,7 +1221,8 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
   let unres = init?.unres ?? false;
   const base = init?.env ?? new Map();
   const depth = init?.depth ?? 0;
-  const infos = segs.map(leadInfo);
+  const ps = dialect !== 'bash';
+  const infos = segs.map(ps ? leadInfoPs : leadInfo);
   const listId = [];
   const allAnd = [];
   segs.forEach((s, i) => {
@@ -1186,9 +1243,10 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       if (!a.plain || !structOk[i] || (inf.hasCmd && !a.exp)) bad.add(a.name);
     }
   });
-  const vars = !noVars && dialect === 'bash' && !scan.unclosed && names.size <= MAX_VAR_NAMES;
+  const vars = !noVars && !scan.unclosed && names.size <= MAX_VAR_NAMES;
   // Gán PWD/OLDPWD làm $PWD không còn khớp thư mục đang theo dõi.
-  const pwdOff = bad.has('PWD') || bad.has('OLDPWD') || names.has('PWD') || names.has('OLDPWD');
+  const pwdNames = ps ? ['pwd', 'oldpwd'] : ['PWD', 'OLDPWD'];
+  const pwdOff = pwdNames.some((n) => bad.has(n) || names.has(n));
   const latest = new Map();
   const trusted = (k, j) => structOk[k.seg] && ((head[k.seg] && listId[j] > listId[k.seg]) || (listId[j] === listId[k.seg] && allAnd[j]));
   const safe = (w, state) => { try { return resolveWord(w, state, dialect); } catch { return null; } };
@@ -1234,15 +1292,14 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     const seen = new Map(env);
     for (const a of infos[i].assigns) {
       if (!a.plain) continue;
-      const w = seg.words[a.wi];
-      const r = vars ? safe({ parts: [{ text: w.parts[0].text.slice(a.len), quote: 'none' }, ...w.parts.slice(1)] }, { ...state, env: seen }) : null;
+      const r = vars && a.valueWord ? safe(a.valueWord, { ...state, env: seen }) : null;
       const v = r && RW_ABS.test(r.text) ? (GLOB.test(r.text) ? r.text : collapseAbs(r.text)) : null;
       latest.set(a.name, { value: v, seg: i });
       if (!bad.has(a.name)) seen.set(a.name, v);
     }
     // Vượt trần sâu hoặc ngân sách lệnh con, hoặc `case` (dấu `)` của nhánh đóng $( ) sớm): không quét hết được thì chưa rõ.
     for (const w of seg.words) {
-      for (const inner of innerTexts(w)) {
+      for (const inner of innerTexts(w, dialect !== 'bash')) {
         if (/\bcase\b/.test(inner)) opaque = true;
         if (depth >= MAX_INNER_DEPTH || ctx.inner <= 0) { opaque = true; continue; }
         ctx.inner--;
@@ -1268,17 +1325,18 @@ function naiveScan(naive) {
 }
 
 // Chuẩn bị đầu vào cho walkSegments: heredoc đơn giản bị bỏ thân (là dữ liệu, không phải lệnh); D4 tắt giải biến cả lệnh.
-function prepareWalk(cmd) {
-  let noVars = cmd.length > MAX_VAR_CMD || VAR_MUTATORS.test(cmd) || cmd.includes('<<<');
+function prepareWalk(cmd, ps = false) {
+  let noVars = cmd.length > MAX_VAR_CMD || (ps ? PS_MUTATORS : VAR_MUTATORS).test(cmd) || (!ps && cmd.includes('<<<'));
   let text = cmd;
-  if (!noVars && cmd.includes('<<')) {
+  if (!ps && !noVars && cmd.includes('<<')) {
     const s = stripSimpleHeredocs(cmd, (l) => l.replace(CYGPATH_MASK, 'C'));
     if (s === null) noVars = true;
     else text = s;
   }
-  const scan = scanWords(text);
+  const scan = scanWords(text, ps ? 'powershell' : 'bash');
+  const info = ps ? leadInfoPs : leadInfo;
   // `.` làm lệnh (source) ở mọi vị trí lệnh, kể cả sau `{`, `then`, `!`, `time`, `builtin`, `command`.
-  const dot = scan.segs.some((s) => { const w = s.words[leadInfo(s).cmdAt]; return w && w.parts.length === 1 && w.parts[0].quote === 'none' && w.parts[0].text === '.'; });
+  const dot = scan.segs.some((s) => { const w = s.words[info(s).cmdAt]; return w && w.parts.length === 1 && w.parts[0].quote === 'none' && w.parts[0].text === '.'; });
   return { scan, text, noVars: noVars || dot || scan.unclosed };
 }
 
@@ -1345,11 +1403,13 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const walked = () => {
     if (walkedAll) return walkedAll;
     const legacy = () => [...trackDirs(outer, cwd, msys), ...trackDirs(naiveOuter, cwd, msys)];
-    if (input?.tool_name === 'PowerShell') return (walkedAll = legacy());
+    // PowerShell quét chuỗi gốc: scanWords tự hiểu backtick, còn psNormalize đã đổi backtick-nháy thành dấu gạch ngược trước nháy nên sẽ bị đọc sai.
+    const isPs = input?.tool_name === 'PowerShell';
+    const dialect = isPs ? 'powershell' : 'bash';
     try {
-      const { scan, text, noVars } = prepareWalk(cmd);
-      const naive = text === cmd ? naiveOuter : naiveSegments(text);
-      walkedAll = [...walkSegments(scan, { cwd, msys, noVars }), ...walkSegments(naiveScan(naive), { cwd, msys, noVars })];
+      const { scan, text, noVars } = prepareWalk(isPs ? raw : cmd, isPs);
+      const naive = isPs || text === cmd ? naiveOuter : naiveSegments(text);
+      walkedAll = [...walkSegments(scan, { cwd, msys, dialect, noVars }), ...walkSegments(naiveScan(naive), { cwd, msys, dialect, noVars })];
     } catch {
       walkedAll = legacy();
     }
