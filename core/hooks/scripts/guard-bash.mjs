@@ -1253,7 +1253,8 @@ function psUnsafe(scan, depth = 0, absNames = null) {
   }
   const unsafeRef = (text) => /\$/.test(text.replace(/\$(?:([A-Za-z_]\w*)|\{([A-Za-z_]\w*)\})(?!:)/g, (m, a, b) => (absNames.has((a ?? b).toLowerCase()) ? '' : m)));
   // Đối số ghép (`$n` = 'vari'+'able:S', `'vari'+'able:S'`, splat `@p`) có thể là đường dẫn ổ variable:, kể cả khi chỉ chảy qua ống dẫn (`gi $n | rm`).
-  const argUnsafe = (w) => (w.parts[0]?.quote === 'none' && w.parts[0].text.startsWith('@'))
+  // `@'`/`@"` mở here-string (dữ liệu, phần nháy kép vẫn theo luật biến); chỉ `@tên` là splat.
+  const argUnsafe = (w) => (w.parts[0]?.quote === 'none' && /^@\w/.test(w.parts[0].text))
     || w.parts.some(({ text, quote }) => (quote !== 'single' && unsafeRef(text)) || (quote === 'none' && text.includes('+')));
   const partsUnsafe = (w) => w.parts.some(({ text, quote }) => quote === 'none' && /[={}]/.test(text.replace(/\$\{[A-Za-z_]\w*\}/g, '')))
     || innerTexts(w, true).some((x) => PS_SCOPE_CHANGE.test(x) || psUnsafe(scanWords(x, 'powershell'), depth + 1, absNames));
@@ -1266,15 +1267,17 @@ function psUnsafe(scan, depth = 0, absNames = null) {
     const vw = assigns[0]?.valueWord;
     const cmdWord = assigns.length ? vw : ws[0];
     const lead = cmdWord?.parts.find((p) => p.text !== '');
-    const isCmd = !!lead && lead.quote === 'none' && !/^[$\d]/.test(lead.text);
+    const isCmd = !!lead && lead.quote === 'none' && !/^[$\d@]/.test(lead.text);
     const vi = vw ? ws.indexOf(vw) : -1;
     const argsFrom = !assigns.length ? 1 : vi >= 0 ? vi + 1 : Math.max(...used) + 1;
     const name = isCmd ? wordText(cmdWord).toLowerCase() : '';
     const args = ws.slice(argsFrom);
     const cmdUnsafe = isCmd && !(PS_VAR_SAFE_CMDS.has(name) || (PS_CD_CMDS.has(name) && args.every((w) => !/[$(+`]/.test(wordText(w)))));
     // Đoạn biểu thức (`$n | rm`) cũng là đối số: giá trị của nó chảy vào lệnh sau ống dẫn.
+    // Danh sách trắng: chỉ một từ; thêm từ là toán tử (`-join`, `-f`, `,`…) ghép được đường dẫn variable: không cần `$`/`+`/`@`.
     const operands = isCmd ? args : ws.filter((w, k) => !used.has(k) && w !== vw);
-    return seg.compound || cmdUnsafe || ws.some((w, k) => !used.has(k) && partsUnsafe(w)) || (vw ? partsUnsafe(vw) : false) || operands.some(argUnsafe);
+    const exprUnsafe = !isCmd && !assigns.length && operands.length > 1;
+    return seg.compound || cmdUnsafe || exprUnsafe || ws.some((w, k) => !used.has(k) && partsUnsafe(w)) || (vw ? partsUnsafe(vw) : false) || operands.some(argUnsafe);
   });
 }
 

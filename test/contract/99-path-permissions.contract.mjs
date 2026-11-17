@@ -824,6 +824,9 @@ export default async function run({ ok, ctx }) {
       `$S='${T}'; ${N}; gi $n | Set-Content -Value '${OUT}'; ${USE}`,
       `$S='${T}'; ${N}; Write-Output $n | Get-Item | Set-Content -Value '${OUT}'; ${USE}`,
       `$S='${T}'; ${N}; $n | rm; ${USE}`,
+      // Đoạn biểu thức nhiều từ (toán tử -join, -f…) ghép được đường dẫn variable: mà không cần `$`/`+`/`@`.
+      `$S='${T}'; 'vari', 'able:S' -join '' | Get-Item | Remove-Item; ${USE}`,
+      `$S='${T}'; "vari{0}" -f 'able:S' | gi | rm; ${USE}`,
       // Tên lệnh có tiền tố đường dẫn là lệnh khác, không phải cmdlet trong tập.
       ...['.\\Remove-Item', 'C:\\x\\Remove-Item', 'Microsoft.PowerShell.Management\\Remove-Item', './Remove-Item'].map((c) => `$S='${T}'; ${c} "$S\\x"`),
     ].map((c) => [c, 'ask', 'AC2.1']), PS);
@@ -833,6 +836,10 @@ export default async function run({ ok, ctx }) {
       `$S = '${T}'; Copy-Item x "$S\\y"`,
       `$S = '${T}'; New-Item -ItemType Directory "$S\\d"`,
       `$S = '${T}'; ${USE} | Out-Null`,
+      // Here-string `@'…'@` là dữ liệu, không phải splat `@tên`.
+      `$S = '${T}'; Write-Host @'\nabc\n'@; ${USE}`,
+      `$S = '${T}'; Set-Content "$S\\f" @'\nabc\n'@`,
+      `$S = '${T}'; @'\nabc\n'@ | Set-Content "$S\\f"`,
     ].map((c) => [c, null, 'AC2.1']), PS);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
