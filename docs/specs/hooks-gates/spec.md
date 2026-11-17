@@ -20,6 +20,7 @@ Các hook cổng an toàn của core chặn hoặc hỏi trước khi agent làm
 - Gồm: cờ lạ và alias `cpi`/`mi`/`ri` của Copy-Item/Move-Item, brace expansion ở Bash, giá trị `-S`/`--suffix` của `cp`/`mv`, động từ "ghi vào" của dòng "Lệnh gồm" (R18, R24) — do request `2026-11-16-hook-copy-alias-brace` thêm.
 - Gồm: khuôn câu hỏi `ask` rút gọn (một câu ngắn nêu việc kèm token khi có, không câu khuyên) và dòng "Lệnh gồm" tối đa 3 bước, đường dẫn 40 ký tự (R21) — do request `2026-11-16-hook-popup-short` thêm.
 - Gồm: dòng liệt kê root có quyền đang thiếu trong câu `deny` ngoài root của `guard-bash`/`guard-files` (R21, R24) — do request `2026-11-16-hook-roots-list` thêm.
+- Gồm: bộ giải đường dẫn dùng chung của `guard-bash` cho Bash và PowerShell (phép gán ở mọi đoạn theo luật tin cậy, `export`, `$(cygpath …)` ghép, `$PWD`, glob trong nháy, danh sách lệnh PowerShell được giải biến) (R7, R23, R24) — do request `2026-11-16-full-path-resolver` thêm.
 - Không gồm: các hook còn lại (`guard-bash`, `guard-files`, `gate-stop`, và phần handoff/cảnh báo resume của `session-start`) chưa có yêu cầu trong spec này vì chưa có request nào chạm tới; spec sống tạo dần.
 
 ## Yêu cầu
