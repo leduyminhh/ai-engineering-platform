@@ -1354,13 +1354,13 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       else { const pre = { parts: w.parts.slice(0, k) }; t.qpos.push((safe(pre, state)?.text ?? wordText(pre)).length); }
     }
     t.op = seg.sep === 'start' ? '' : seg.sep;
-    const name = String(t[0]).toLowerCase();
+    const name = String(t[infos[i].cmdAt] ?? '').toLowerCase();
     if (cdSeen && (seg.sep === '||' || seg.sep === '|')) unres = true;
     if (CD_CMDS.has(name) || POP_CMDS.has(name)) {
       cdSeen = true;
       // Cùng luật tin cậy với phép gán: cd ở ống dẫn, nền, khối hoặc sau `||` có thể không chạy hoặc chạy ở tiến trình con.
       const sure = structOk[i] && allAnd[i];
-      const arg = POP_CMDS.has(name) ? undefined : t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
+      const arg = POP_CMDS.has(name) ? undefined : t.slice(infos[i].cmdAt + 1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
       if (arg === undefined || hasUnresolvedRef(arg) || arg === '-') unres = true;
       else { const a = np(arg, msys); dir = path.resolve(dir, a); if (sure && path.isAbsolute(a)) unres = false; }
       if (!sure) unres = true;
