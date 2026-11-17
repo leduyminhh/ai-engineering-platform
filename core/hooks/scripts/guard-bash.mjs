@@ -1396,14 +1396,18 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     t.op = seg.sep === 'start' ? '' : seg.sep;
     t.pipeFrom = seg.pipeIn ? prevT : null;
     prevT = t;
-    const name = String(t[infos[i].cmdAt] ?? '').toLowerCase();
+    // PowerShell: đoạn trong khối mở bằng từ `{` (scanWords không tách nó ra khỏi lệnh).
+    let ci = infos[i].cmdAt;
+    if (ps) while (t[ci] === '{') ci++;
+    const name = String(t[ci] ?? '').toLowerCase();
     if (cdSeen && (seg.sep === '||' || seg.sep === '|')) unres = true;
     if (CD_CMDS.has(name) || POP_CMDS.has(name)) {
       cdSeen = true;
       // Cùng luật tin cậy với phép gán: cd ở ống dẫn, nền, khối hoặc sau `||` có thể không chạy hoặc chạy ở tiến trình con.
       const sure = structOk[i] && allAnd[i];
-      const arg = POP_CMDS.has(name) ? undefined : t.slice(infos[i].cmdAt + 1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
-      if (arg === undefined || hasUnresolvedRef(arg) || arg === '-') unres = true;
+      const arg = POP_CMDS.has(name) ? undefined : t.slice(ci + 1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
+      // `Env:`, `HKCU:`, `Cert:`… là ổ provider, không phải thư mục đĩa (ổ đĩa chỉ một chữ cái).
+      if (arg === undefined || hasUnresolvedRef(arg) || arg === '-' || (ps && /^[A-Za-z][\w]+:/.test(arg))) unres = true;
       else { const a = np(arg, msys); dir = path.resolve(dir, a); if (sure && path.isAbsolute(a)) unres = false; }
       if (!sure) unres = true;
     }
