@@ -746,5 +746,34 @@ export default async function run({ ok, ctx }) {
       [ps(`$S = Get-Item x`), 'ask'],
       [ps(`$S = '${T}'; Start-Job { $S = '${OUT}' }`), 'ask'],
     ].map(([c, want]) => [c, want, 'AC2.1']), PS);
+
+    // Danh sách trắng PowerShell: lệnh có dấu hiệu đổi biến ngoài phép gán đơn `$name = từ` đứng đầu đoạn thì không giải biến nào (ask), không vá từng dạng.
+    const USE = 'Remove-Item "$S\\x"';
+    const psAskRows = [
+      `$S='${T}'; if ($true) {$S='${OUT}'}; ${USE}`,
+      `$S='${T}'; [string]$S='${OUT}'; ${USE}`,
+      `$S='${T}'; \${S}='${OUT}'; ${USE}`,
+      `$S='${T}'; $script:S='${OUT}'; ${USE}`,
+      `$S='${T}'; $global:S='${OUT}'; ${USE}`,
+      `$S='${T}'; ($S)='${OUT}'; ${USE}`,
+      `$S='${T}'; ($X, $S) = 1,'${OUT}'; ${USE}`,
+      `$S='${T}'; $S, $X = '${OUT}',1; ${USE}`,
+      `$S='${T}'; $sb={$S='${OUT}'}; & $sb; ${USE}`,
+      `$S='${T}'; 1 | % {$S='${OUT}'}; ${USE}`,
+      `$S='${T}'; Write-Host $($S='${OUT}'); ${USE}`,
+      `$S='${T}'; Write-Host "$($S='${OUT}')"; ${USE}`,
+      `$S='${T}'; Write-Host $(Set-Location '${OUT}'); Remove-Item "$PWD\\x"`,
+      `$S='${T}'; Set-Item variable:S '${OUT}'; ${USE}`,
+      `$S='${T}'; (Get-Variable S).Value = '${OUT}'; ${USE}`,
+      `$S='${T}'; gv S; ${USE}`,
+      `$S='${T}'; $ExecutionContext.SessionState.PSVariable.Set('S','${OUT}'); ${USE}`,
+      `$S='${T}'; $S -eq 1 -and ($S='${OUT}'); ${USE}`,
+    ];
+    expectAll(psAskRows.map((c) => [c, 'ask', 'AC2.1']), PS);
+    // Dùng $S trong khối `{ }` sau khi đã đổi trong khối: không được null, kể cả khi dùng ở ngoài.
+    const inBlock = kind(`$S='${T}'; Remove-Item "$S\\x"; if ($true) {$S='${OUT}'; Remove-Item "$S\\y"}`, PS);
+    ok(inBlock !== null, 'AC2.1: dùng $S trong khối { } đã đổi $S ra ngoài root → không null');
+    // So sánh `-eq` là từ, không phải `=`; phép gán đơn đứng đầu đoạn vẫn giải.
+    expectAll([[`$S='${T}'; if ($S -eq 1) { }; ${USE}`, 'ask', 'AC2.1'], [`$S = '${T}'; $M = $PWD; Remove-Item "$S\\x" -Force`, null, 'AC2.1']], PS);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }

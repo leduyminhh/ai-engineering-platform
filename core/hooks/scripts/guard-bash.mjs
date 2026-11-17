@@ -1080,7 +1080,7 @@ function stripSimpleHeredocs(rest, mask = (l) => l) {
 // D4: các lệnh/cấu trúc làm shell đổi biến theo cách không đọc được tắt giải biến cả lệnh.
 const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|trap|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]/;
 // Cmdlet/tham số đổi biến theo cách không đọc được: tắt giải biến cả lệnh (D4, D13).
-const PS_MUTATORS = /\b(?:set|new|remove|clear)-variable\b|\b(?:invoke-expression|iex)\b|(?:^|[\s;|({])(?:sv|nv|clv|rv|set)\s|\s-(?:outvariable|ov|errorvariable|ev|warningvariable|wv|informationvariable|iv|pipelinevariable|pv)\b/i;
+const PS_MUTATORS = /\b(?:set|new|remove|clear)-variable\b|\b(?:invoke-expression|iex|get-variable|psvariable)\b|variable:|(?:^|[\s;|({])(?:sv|nv|clv|rv|gv|set)\s|\s-(?:outvariable|ov|errorvariable|ev|warningvariable|wv|informationvariable|iv|pipelinevariable|pv)\b/i;
 const ASSIGN_WORD = /^([A-Za-z_]\w*)(\+?=|\[)/;
 const LEAD_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '{', '!', 'time']);
 const MAX_VAR_NAMES = 20;
@@ -1210,7 +1210,18 @@ function leadInfoPs(seg) {
     if (v && ws[k + 1] && (PS_OP_NEXT.test(txt(k + 1)) || txt(k + 1) === 'in')) extra.push(v[1].toLowerCase());
     for (const r of x.matchAll(/\[ref\]\s*\$([A-Za-z_]\w*)/gi)) extra.push(r[1].toLowerCase());
   }
-  return { lead: 0, assigns, extra, hasCmd, cmdAt };
+  return { lead: 0, assigns, extra, hasCmd, cmdAt, used };
+}
+
+// Danh sách trắng PowerShell: ngoài phép gán đơn `$name = từ` đứng đầu đoạn, mọi `{`/`}` hay `=` ngoài nháy, `$( )` có `=`/đổi thư mục là dấu hiệu đổi biến → tắt giải biến cả lệnh.
+const PS_SCOPE_CHANGE = /[={}]|(?:^|[\s;|({])(?:cd|chdir|sl|set-location|push-location|pushd|popd|pop-location)(?=[\s;|)]|$)/i;
+function psUnsafe(scan) {
+  const partsUnsafe = (w) => w.parts.some(({ text, quote }) => quote === 'none' && /[={}]/.test(text.replace(/\$\{[A-Za-z_]\w*\}/g, '')))
+    || innerTexts(w, true).some((x) => PS_SCOPE_CHANGE.test(x));
+  return scan.segs.some((seg) => {
+    const { used, assigns } = leadInfoPs(seg);
+    return seg.words.some((w, k) => !used.has(k) && partsUnsafe(w)) || (assigns[0]?.valueWord ? partsUnsafe(assigns[0].valueWord) : false);
+  });
 }
 
 // scan: { segs, unclosed } của scanWords (hoặc naiveScan); trả [{ t, dir, unres }] cùng hình với trackDirs. Từ chưa rõ giữ chữ thô có `$` để hasUnresolvedRef bắt.
@@ -1337,7 +1348,7 @@ function prepareWalk(cmd, ps = false) {
   const info = ps ? leadInfoPs : leadInfo;
   // `.` làm lệnh (source) ở mọi vị trí lệnh, kể cả sau `{`, `then`, `!`, `time`, `builtin`, `command`.
   const dot = scan.segs.some((s) => { const w = s.words[info(s).cmdAt]; return w && w.parts.length === 1 && w.parts[0].quote === 'none' && w.parts[0].text === '.'; });
-  return { scan, text, noVars: noVars || dot || scan.unclosed };
+  return { scan, text, noVars: noVars || dot || scan.unclosed || (ps && psUnsafe(scan)) };
 }
 
 // Chuyển hướng tới fd khác hay null device không ghi file; bỏ trước khi tách vì parse() coi `&` trong `2>&1` là toán tử.
