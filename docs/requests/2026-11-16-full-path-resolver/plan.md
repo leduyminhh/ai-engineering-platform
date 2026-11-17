@@ -136,6 +136,26 @@ Không đổi: `parse()`, `summarize`, `trackDirs` (H1 dùng), `gate-config.mjs`
 - [ ] **Step 2:** H6 với `tool_name: 'PowerShell'` dùng `scanWords(cmd, 'powershell')` và `walkSegments` dialect `powershell`: phép gán `$NAME = <từ>` (có hoặc không khoảng trắng quanh `=`), tên khoá viết thường, luật D13; `{`/`}` đánh dấu `compound`; mutator PowerShell theo D4. Chạy `--only path-permissions` và `--only hook`: xanh.
 - [ ] **Step 3:** commit `feat(hooks): resolve PowerShell variables in guard-bash full mode`.
 
+### Task 8: danh sách lệnh PowerShell được giải biến (chạy trước Task 6)
+**Kind:** TOOLING
+**TDD:** có
+**Ước lượng:** 30'
+**Phủ AC:** AC2.1
+**Files:**
+- Modify: `core/hooks/scripts/guard-bash.mjs`
+- Modify: `test/contract/99-path-permissions.contract.mjs`
+- Test: `test/contract/99-path-permissions.contract.mjs`
+
+**Interfaces:**
+- Consumes: `psUnsafe(scan)`, `prepareWalk(cmd, ps)`, `walkSegments(scan, { cwd, msys, dialect, noVars })`
+- Produces: không có
+
+Thêm sau review cuối của Task 5 (người dùng chọn ở breaker): Task 5 dùng danh sách chặn cho các cách đổi biến PowerShell nên còn lọt `Set-ItemProperty $n …`, `Clear-ItemProperty $n`, `Rename-ItemProperty $n …`, `Invoke-Item $n`, `$n | Set-Item -Value '<OUT>'`, `$n='vari'+'able:'; Set-Location $n; Set-Item S '<OUT>'` (cả `Push-Location`/`cd`/`sl`), `New-PSDrive … -PSProvider Variable …; Set-Item Z:S '<OUT>'`, rồi `Remove-Item "$S\x"` → null. Đổi sang danh sách cho phép ở mức tên lệnh: PowerShell chỉ giải biến khi MỌI tên lệnh của câu (vị trí lệnh của từng đoạn, kể cả trong `$( )`) thuộc tập `PS_VAR_SAFE_CMDS` = `Remove-Item`, `ri`, `rm`, `del`, `New-Item`, `ni`, `mkdir`, `md`, `Copy-Item`, `cpi`, `cp`, `copy`, `Move-Item`, `mi`, `mv`, `move`, `Set-Content`, `Add-Content`, `Out-File`, `Get-Content`, `gc`, `cat`, `Write-Host`, `Write-Output`, `echo`, `Get-ChildItem`, `gci`, `ls`, `dir`, `Test-Path`, `Get-Item`, `gi`, `Resolve-Path`, `Join-Path` (không phân biệt hoa thường) hoặc là phép gán đơn đã nhận; có tên lệnh khác (gồm `Set-Location`/`cd`/`sl`, `*-ItemProperty`, `Invoke-Item`, `New-PSDrive`, cmdlet lạ, `&`/`.` gọi lệnh) thì tắt giải biến cả lệnh (D4). Các điều kiện tắt của Task 5 giữ nguyên. Trên đoạn có pipe, mọi lệnh trong pipe cũng phải thuộc tập.
+
+- [ ] **Step 1:** thêm bảng AC2.1 (PowerShell, full + bypass): bảy ca lọt ở trên → ask; giữ null cho các ca null đã có của AC2.1 (`$S = '<T>'; Remove-Item "$S\x"`, `$s`, `"<T>"`, `$S='<T>'`, backtick, `$M = $PWD`, `Set-Content "$S\f"`, `Copy-Item x "$S\y"`, `New-Item -ItemType Directory "$S\d"`); thêm `$S = '<T>'; Get-Date; Remove-Item "$S\x"` → ask (lệnh ngoài tập). Chạy `node test/validate.mjs --only path-permissions`: đỏ ở các ca lọt. Commit test đỏ: `test(hooks): cover PowerShell command allowlist for variable resolution`.
+- [ ] **Step 2:** thêm `PS_VAR_SAFE_CMDS` và kiểm tên lệnh trong `psUnsafe` (hoặc `prepareWalk`) cho dialect PowerShell; Bash không đổi. Chạy `--only path-permissions` và `--only hook`: xanh.
+- [ ] **Step 3:** commit `fix(hooks): resolve PowerShell variables only under known commands`.
+
 ### Task 6: spec R7, R23, R24 và README
 **Kind:** DOCS
 **Ước lượng:** 20'
