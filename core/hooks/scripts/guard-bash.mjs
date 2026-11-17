@@ -1188,6 +1188,11 @@ function leadInfo(seg) {
     if ((x === 'for' || x === 'select') && ws[k + 1]) extra.push(txt(k + 1));
     if (/^[A-Za-z_]\w*$/.test(x) && txt(k + 1) === 'in') extra.push(x);
     if (x === 'printf' && txt(k + 1) === '-v' && ws[k + 2]) extra.push(txt(k + 2).replace(/\[.*$/, ''));
+    // `exec {S}>f` (fd đặt tên), `wait -p S` (PID), `coproc S { … }`: shell tự gán S theo cách không đọc được.
+    const fd = /^\{([A-Za-z_]\w*)\}[<>]/.exec(x);
+    if (fd) extra.push(fd[1]);
+    if (x === 'wait') { const p = ws.findIndex((w, j) => j > k && wordText(w) === '-p'); if (p > 0 && ws[p + 1]) extra.push(txt(p + 1)); }
+    if (x === 'coproc' && /^[A-Za-z_]\w*$/.test(txt(k + 1)) && /^[{(]/.test(txt(k + 2))) extra.push(txt(k + 1));
     const loose = used.has(k) ? null : /^([A-Za-z_]\w*)(?:\+?=|\[)/.exec(x);
     if (loose) extra.push(loose[1]);
   }
@@ -1353,6 +1358,8 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       else if (k === 0) t.qpos.push(0);
       else { const pre = { parts: w.parts.slice(0, k) }; t.qpos.push((safe(pre, state)?.text ?? wordText(pre)).length); }
     }
+    // Tên lệnh thật nằm sau tiền tố bọc (`sudo $R x`, `env $R x`): kiểm trên tên đã qua unwrap, vì kiểm ở cmdAt chỉ thấy `sudo`.
+    if (!ps) { const [tk, k] = unwrap(t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
     t.op = seg.sep === 'start' ? '' : seg.sep;
     const name = String(t[infos[i].cmdAt] ?? '').toLowerCase();
     if (cdSeen && (seg.sep === '||' || seg.sep === '|')) unres = true;
