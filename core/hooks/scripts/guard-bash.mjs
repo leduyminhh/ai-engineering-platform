@@ -1126,7 +1126,8 @@ function stripSimpleHeredocs(rest, mask = (l) => l) {
 const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|trap|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]|\$\(\(|\$\[|\$\{[A-Za-z_]\w*\[/;
 // Cmdlet/tham số đổi biến theo cách không đọc được: tắt giải biến cả lệnh vì không liệt kê hết được các cách đổi.
 const PS_MUTATORS = /\b(?:set|new|remove|clear)-variable\b|\b(?:invoke-expression|iex|get-variable|psvariable)\b|variable:|(?:^|[\s;|({])(?:sv|nv|clv|rv|gv|set)\s|\s-(?:outvariable|ov|errorvariable|ev|warningvariable|wv|informationvariable|iv|pipelinevariable|pv)\b/i;
-const ASSIGN_WORD = /^([A-Za-z_]\w*)(\+?=|\[)/;
+const PS_REDEFINE = /\b(?:set|new)-alias\b|(?:^|[\s;|({&])(?:sal|nal)\s|\b(?:alias|function):|(?:^|[;|({&\n])\s*function\s+[\w-]+/i;
+const ASSIGN_WORD =/^([A-Za-z_]\w*)(\+?=|\[)/;
 const LEAD_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '{', '!', 'time']);
 const MAX_VAR_NAMES = 20;
 const MAX_VAR_CMD = 20000;
@@ -1536,6 +1537,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
       const { scan, text, noVars } = prepareWalk(isPs ? raw : cmd, isPs);
       const naive = isPs || text === cmd ? naiveOuter : naiveSegments(text);
       walkedAll = [...walkSegments(scan, { cwd, msys, dialect, noVars }), ...walkSegments(naiveScan(naive), { cwd, msys, dialect, noVars })];
+      // Đặt lại tên lệnh: bất kỳ tên nào sau đó có thể là lệnh ghi mà hook không biết.
+      if (isPs && PS_REDEFINE.test(raw)) walkedAll.push({ t: [], dir: cwd, unres: true, opaque: true });
     } catch {
       walkedAll = legacy();
     }
