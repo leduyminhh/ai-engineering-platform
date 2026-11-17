@@ -902,6 +902,17 @@ export default async function run({ ok, ctx }) {
       [`builtin cd ${OUT}; rm x`, 'deny', 'AC2.1'], [`command cd ${OUT}; rm x`, 'deny', 'AC2.1'],
       [`builtin cd ${T}; rm x`, null, 'AC2.1'], [`command cd ${T}; rm x`, null, 'AC2.1'],
     ]);
+
+    // Tên lệnh là biến đứng sau tiền tố bọc: lệnh thật chạy là `$R`, hook không biết nó có ghi hay xoá.
+    holeRows([
+      [`R=rm; sudo $R ${OUT}/x`, 'ask', 'AC2.2'], [`R=rm; env $R ${OUT}/x`, 'ask', 'AC2.2'], [`R=rm; nohup $R ${OUT}/x`, 'ask', 'AC2.2'],
+      [`sudo rm ${T}/x`, null, 'AC2.2'],
+    ]);
+    // Ba chỗ shell gán biến theo cách không đọc được: tên đó chưa rõ ở toàn lệnh, nhưng phép gán thường vẫn được giải.
+    holeRows([
+      [`S=${T}; exec {S}>/dev/null; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; wait -p S; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; coproc S { :; }; rm -rf $S/x`, 'ask', 'AC2.3'],
+      [`S=${T}; rm -rf $S/x`, null, 'AC2.3'],
+    ]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
