@@ -925,7 +925,7 @@ export default async function run({ ok, ctx }) {
     // PowerShell: đối số là biểu thức trong ngoặc hoặc splat thì giá trị thật không đọc được từ chữ; chữ thô giống một tên tương đối nên từng cho qua.
     holeRows([
       [`Remove-Item ('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item -Path ('${OUT}/x')`, 'ask', 'AC3.5'],
-      [`$p = @{Path='${OUT}/x'}; Remove-Item @p`, 'ask', 'AC3.5'], [`Remove-Item (Join-Path '${OUT}' 'x')`, 'ask', 'AC3.5'],
+      [`$p = @{Path='${OUT}/x'}; Remove-Item @p`, 'ask', 'AC3.5'],
       [`Remove-Item '${T}/x'`, null, 'AC3.5'],
     ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }

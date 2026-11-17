@@ -777,6 +777,7 @@ function stringWrites(str) {
 }
 
 // Trả { deny: <quyền thiếu> } | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
+const PS_EXPR_TARGET = /^(?:\(|@\w)|\$\(/;
 function confineSegment(t, dir, unres, roots, msys = true) {
   const { targets, needs, name, args } = writeTargets(t, msys);
   // Cùng chuỗi xuất hiện hai lần với cờ khác nhau thì lấy glob (thận trọng).
@@ -787,6 +788,8 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   let unknown = false;
   let readAsk = false;
   for (const [i, p] of targets.entries()) {
+    // PowerShell: `(…)`, `$(…)` và splat `@p` là biểu thức, chữ thô của chúng trông như tên tương đối nên không được phân loại như đường dẫn.
+    if (!msys && PS_EXPR_TARGET.test(p)) { unknown = true; continue; }
     for (const need of needs[i]) {
       const c = classifyTarget(p, dir, unres, roots, msys, need, globOf.get(p));
       // Thiếu read chỉ hỏi (như Read ở guard-files); gốc <tmpdir>/claude ('blocked') luôn deny dù cấu hình cấp gì.
