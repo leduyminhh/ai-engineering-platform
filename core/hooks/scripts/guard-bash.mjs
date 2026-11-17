@@ -1107,6 +1107,7 @@ const MAX_VAR_NAMES = 20;
 const MAX_VAR_CMD = 20000;
 const MAX_INNER_DEPTH = 3;
 const MAX_INNER_WALK = 200;
+const MAX_WALK_SEGS = 1000;
 const CYGPATH_MASK = /\$\(\s*cygpath\b[^()\n]*\)/g;
 const wordText = (w) => w.parts.map((p) => p.text).join('');
 
@@ -1465,6 +1466,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
   const outer = parsedCmd.segs;
   const naiveOuter = naiveSegments(cmd);
+  // Trước mọi bước theo dõi thư mục: chuỗi `cd` dài làm đường dẫn `dir` phình dần, mỗi đoạn tốn thêm nên tổng bậc hai (8000 × `cd a` mất vài giây) [Inference, chưa profile].
+  if (Math.max(outer.length, naiveOuter.length) > MAX_WALK_SEGS && full()) return ask(FULL_PATH_TEXT);
   const segs = expandShells(outer);
   const naiveAll = expandShells(naiveOuter);
   const parsed = withDirs(segs, cwd, msys);
