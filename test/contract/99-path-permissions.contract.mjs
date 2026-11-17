@@ -715,5 +715,22 @@ export default async function run({ ok, ctx }) {
     const big = `echo ${'a'.repeat(20000)}; S=${T}; rm -rf $S/x`;
     ok(big.length > 20000 && kind(big) === 'ask', 'AC3.2: lệnh dài hơn 20000 ký tự có S=<T>; rm -rf $S/x → ask (không giải biến)');
     ok(kind(`${nameList(21)}; rm -rf $V20/x`) === 'ask' && kind(`${nameList(20)}; rm -rf $V19/x`) === null, 'AC3.2: 21 tên gán → ask, 20 tên gán vẫn giải (null)');
+
+    // PowerShell: biến gán trong cùng lệnh (D13). Dấu \ của "$S\x" là phân cách thư mục của Windows.
+    const ps = (assign, use = 'Remove-Item "$S\\x"') => `${assign}; ${use}`;
+    const PS = { tool: 'PowerShell' };
+    const psRowsAc21 = [
+      [ps(`$S = '${T}'`), null], [ps(`$s = '${T}'`), null], [ps(`$S = "${T}"`), null], [ps(`$S='${T}'`), null],
+      [ps(`$S = '${OUT}'`), 'deny'], [ps(`$S = '${T}/../../..'`), 'deny'],
+      [ps('$S = $env:TEMP'), 'ask'], [ps(`if ($true) { $S = '${T}' }`), 'ask'],
+    ];
+    expectAll(psRowsAc21.map(([c, want]) => [c, want, 'AC2.1']), PS);
+    // Set-Variable đổi biến theo cách không đọc được: không được cho qua im lặng.
+    const sv = kind(ps(`$S = "${T}"; Set-Variable S '${OUT}'`), PS);
+    ok(sv === 'ask' || sv === 'deny', 'AC2.1: $S = "<T>"; Set-Variable S \'<OUT>\'; Remove-Item "$S\\x" → ask hoặc deny (không null)');
+    // AC2.2: ngoài full + bypass không có H6, nên kết quả giữ như trước thiết kế (đo trên code trước khi sửa).
+    const psAll = [...psRowsAc21.map(([c]) => c), ps(`$S = "${T}"; Set-Variable S '${OUT}'`)];
+    expectAll(psAll.map((c) => [c, null, 'AC2.2']), { ...PS, cfg: { mode: 'ask' } });
+    expectAll(psAll.map((c) => [c, null, 'AC2.2']), { ...PS, extra: { permission_mode: 'default' } });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
