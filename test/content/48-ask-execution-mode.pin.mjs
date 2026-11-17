@@ -204,7 +204,7 @@ export default async function run({ ok, ctx }) {
   // AC3.5: lệnh --set không bị guard-bash hỏi (lệnh không nêu tên aip-gate.json), còn ghi file bằng lệnh nêu tên vẫn hỏi
   {
     const { decide } = await import(pathToFileURL(path.join(REPO_ROOT, 'core', 'hooks', 'scripts', 'guard-bash.mjs')).href);
-    const on = { currentBranch: () => 'feature/x' };
+    const on = { currentBranch: () => 'feature/x', reader: () => null, allowEnv: () => false };
     const bash = (command) => ({ tool_name: 'Bash', cwd: '.', tool_input: { command } });
     const hint = 'node core/skills/plan-execution/scripts/autonomy.mjs --set planRunner=inline';
     ok(decide(bash(hint), on) === null, 'AC3.5: guard-bash không hỏi lệnh autonomy.mjs --set');

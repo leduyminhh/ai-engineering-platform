@@ -8,7 +8,7 @@ export default async function run({ ok, ctx }) {
   // ── guard-bash: #1 (shell bọc), #10 (nối dòng + refspec biến), #2 (ghi file cấu hình của guard)
   {
     const gb = await hook('guard-bash.mjs');
-    const run1 = (cmd, branch = 'feature/x', tool = 'Bash') => gb.decide({ tool_name: tool, cwd: '.', tool_input: { command: cmd } }, { currentBranch: () => branch });
+    const run1 = (cmd, branch = 'feature/x', tool = 'Bash') => gb.decide({ tool_name: tool, cwd: '.', tool_input: { command: cmd } }, { currentBranch: () => branch, reader: () => null, allowEnv: () => false });
     const ask = (c, ...rest) => run1(c, ...rest)?.decision === 'ask';
 
     for (const c of ['bash -c "git push origin master"', "sh -c 'git push origin main'", 'bash -lc "git push origin develop"', 'zsh -c "git push origin main"',

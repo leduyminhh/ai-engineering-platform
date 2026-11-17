@@ -874,4 +874,27 @@ export default async function run({ ok, ctx }) {
     // Kiểm bí mật dùng chung kết quả bộ giải: biến trỏ ra ngoài root thì hỏi, trong root thì cho qua.
     expectAll([[`S=${OUT}; cat $S/.env`, 'ask', 'AC1.6'], [`S=${T}; cat $S/.env`, null, 'AC1.6']]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
+
+  // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
+  {
+    const root = path.join(CORE_DIR, '..');
+    const dirs = ['contract', 'content'].map((d) => path.join(root, 'test', d));
+    const files = dirs.flatMap((d) => fs.readdirSync(d).filter((f) => /\.(contract|pin)\.mjs$/.test(f)).map((f) => path.join(d, f)));
+    const SEAM = /\b(config|reader|locate|loadConfig)\b/;
+    const bare = [];
+    for (const f of files) {
+      const src = fs.readFileSync(f, 'utf8');
+      if (!/guard-(bash|files)\.mjs/.test(src)) continue;
+      for (const m of src.matchAll(/\bdecide\(/g)) {
+        let i = m.index + m[0].length;
+        for (let depth = 1; i < src.length && depth; i++) depth += src[i] === '(' ? 1 : src[i] === ')' ? -1 : 0;
+        const call = src.slice(m.index, i);
+        if (/cwd: '\.'/.test(call) && !SEAM.test(call)) bare.push(`${path.basename(f)}:${src.slice(0, m.index).split('\n').length}`);
+      }
+      // Helper dựng input tách khỏi lời gọi (vd `bash = (command) => ({ …, cwd })` với cwd là dấu chấm): file phải truyền seam cho decide ở chỗ khác.
+      const helperOnly = src.split('\n').some((l) => /cwd: '\.'/.test(l) && !/decide\(/.test(l));
+      if (helperOnly && !/reader: \(\) => null/.test(src)) bare.push(`${path.basename(f)}: helper cwd '.' không có reader`);
+    }
+    ok(bare.length === 0, `AC1.4: test hook không đọc aip-gate.json thật (${bare.join(', ') || 'đủ seam'})`);
+  }
 }
