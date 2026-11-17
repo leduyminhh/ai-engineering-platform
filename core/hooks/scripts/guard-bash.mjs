@@ -383,7 +383,7 @@ function withDirs(segs, cwd, msys = true) {
 }
 
 // H6 là heuristic đọc token, không phải sandbox: biến, subshell, script con vẫn có thể ghi ra ngoài root mà không bị thấy.
-const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri', 'mv', 'move', 'move-item', 'mi', 'cp', 'copy', 'copy-item', 'cpi', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content']);
+const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri', 'mv', 'move', 'move-item', 'mi', 'cp', 'copy', 'copy-item', 'cpi', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content', 'md', 'ni', 'new-item', 'sc', 'ac']);
 const LAST_ONLY = new Set(['cp', 'copy', 'copy-item', 'cpi']);
 const DELETE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri']);
 const MOVE_CMDS = new Set(['mv', 'move', 'move-item', 'mi']);
@@ -394,7 +394,7 @@ const flagNeeds = (name, flag) => {
   const f = flag.toLowerCase().replace(/^-/, '');
   return f === 'destination' || f === 'filepath' ? ['write'] : DELETE_CMDS.has(name) || MOVE_CMDS.has(name) ? ['delete'] : LAST_ONLY.has(name) ? ['read'] : ['write'];
 };
-const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content']);
+const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content', 'sc', 'ac', 'ni', 'new-item']);
 const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh', 'tcsh', 'cmd', 'pwsh', 'powershell']);
