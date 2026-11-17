@@ -1,6 +1,6 @@
 # Thiết kế: vá các lỗ guard-bash ở chế độ full đã hoãn
 - Ngày: 2026-11-17
-- Trạng thái: draft — chờ duyệt phạm vi (G1)
+- Trạng thái: draft — Q1 và A2 đã chốt (người dùng, 2026-11-17: chọn phương án đề xuất của cả hai); chờ duyệt design và plan (G1/G2)
 - Requirement: không có
 
 ## Vấn đề và lý do
@@ -153,8 +153,8 @@ Mỗi lỗ là một task theo TDD: test đỏ tái hiện, sửa tối thiểu,
 
 ## Rủi ro và câu hỏi mở
 
-- **Q1 (cần người duyệt) — phạm vi cmdlet ghi PowerShell ở C3.** Danh sách người dùng giao chỉ nêu `md`/`ni`. Cùng lớp lỗi còn `sc`, `ac` (alias của Set-Content/Add-Content, đã có tên đầy đủ trong `WRITE_CMDS`), `Rename-Item`/`ren`/`rni`, `Clear-Content`/`clc`, `Set-ItemProperty`/`sp`, `New-ItemProperty`/`Remove-ItemProperty` (registry). Đề xuất: thêm `md`, `ni`, `new-item`, `sc`, `ac` (cùng cmdlet đã có tên đầy đủ hoặc cặp trực tiếp); phần còn lại ghi thành request sau. Chọn khác thì sửa C3 và AC3.3 trước khi lập plan.
-- **A2 lệch ràng buộc fail-open (cần người duyệt).** Hook ở full + bypass sẽ hỏi thay vì cho qua khi `decide` lỗi. Cái giá: một lỗi nội bộ tương lai gây hỏi liên tục ở full thay vì im lặng; đánh đổi cho hướng "không hiểu thì hỏi".
+- **Q1 (đã chốt: thêm `md`, `ni`, `new-item`, `sc`, `ac`) — phạm vi cmdlet ghi PowerShell ở C3.** Danh sách người dùng giao chỉ nêu `md`/`ni`. Cùng lớp lỗi còn `sc`, `ac` (alias của Set-Content/Add-Content, đã có tên đầy đủ trong `WRITE_CMDS`), `Rename-Item`/`ren`/`rni`, `Clear-Content`/`clc`, `Set-ItemProperty`/`sp`, `New-ItemProperty`/`Remove-ItemProperty` (registry). Đề xuất: thêm `md`, `ni`, `new-item`, `sc`, `ac` (cùng cmdlet đã có tên đầy đủ hoặc cặp trực tiếp); phần còn lại ghi thành request sau. Chọn khác thì sửa C3 và AC3.3 trước khi lập plan.
+- **A2 lệch ràng buộc fail-open (đã duyệt).** Hook ở full + bypass sẽ hỏi thay vì cho qua khi `decide` lỗi. Cái giá: một lỗi nội bộ tương lai gây hỏi liên tục ở full thay vì im lặng; đánh đổi cho hướng "không hiểu thì hỏi".
 - **A3 trần số đoạn:** lệnh hợp lệ rất dài (> trần đoạn) sẽ bị hỏi ở full. [Inference] hiếm; số trần chốt bằng đo, không bằng ước lượng.
 - **C4(i)** chưa tái hiện được từ đọc code; nếu test đỏ cho thấy hook đã hỏi đúng thì bỏ nhánh (i), giữ (ii) (ổ provider).
 - Phối hợp: nhánh `claude/beautiful-nobel-cdade6` sửa `guard-bash.mjs` (32 dòng), manifest, lock và hai file test cùng file test của request này. Plan bước 1 rebase và lấy version kế tiếp; nếu nhánh đó chưa merge khi cần thực thi thì dừng và hỏi.
