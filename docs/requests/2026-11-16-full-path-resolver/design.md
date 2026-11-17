@@ -1,6 +1,6 @@
 # Thiết kế: bộ giải đường dẫn dùng chung cho guard-bash ở full
 - Ngày: 2026-11-16
-- Trạng thái: draft
+- Trạng thái: merged f0ba893b
 - Requirement: không có
 
 ## Vấn đề và lý do
