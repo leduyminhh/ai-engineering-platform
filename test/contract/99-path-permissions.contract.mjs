@@ -873,6 +873,20 @@ export default async function run({ ok, ctx }) {
 
     // Kiểm bí mật dùng chung kết quả bộ giải: biến trỏ ra ngoài root thì hỏi, trong root thì cho qua.
     expectAll([[`S=${OUT}; cat $S/.env`, 'ask', 'AC1.6'], [`S=${T}; cat $S/.env`, null, 'AC1.6']]);
+
+    // Lỗ guard-bash đã hoãn ở request full-path-resolver (request guard-bash-deferred-holes). Lỗi ném ra được gom thành 'throw' để một hàng đỏ không dừng cả bảng.
+    const holeKind = (cmd, opt) => { try { return kind(cmd, opt); } catch (e) { return 'throw ' + e.constructor.name; } };
+    const holeRows = (rows, opt) => { for (const [cmd, want, ac] of rows) ok(holeKind(cmd, opt) === want, `${ac}: \`${cmd.length > 90 ? cmd.slice(0, 60) + '…(' + cmd.length + ' ký tự)' : cmd.replaceAll(tb.replace(/\\/g, '/'), '~')}\` → ${want}`); };
+    const manyArgs = Array(130000).fill('a').join(' ');
+    // 130000 đối số làm `push(...)` tràn stack: decide từng ném RangeError và hook cho qua.
+    holeRows([[`rm ${OUT}/x ${manyArgs}`, 'deny', 'AC1.1'], [`rm ${T}/x ${manyArgs}`, null, 'AC1.1']]);
+    // Lỗi nội bộ: ở full + bypass thành ask (câu FULL_PATH_TEXT), ngoài full vẫn ném như trước.
+    const boom = { opts: { currentBranch: () => { throw new Error('boom'); } } };
+    let crash = null;
+    try { crash = bd('git push', boom); } catch { /* chưa vá: lỗi ném ra, assert dưới đỏ */ }
+    ok(crash?.decision === 'ask' && crash.reason.startsWith('Ghi hoặc xoá ở đường dẫn chưa rõ'), 'AC1.2: full + bypass, decide gặp lỗi nội bộ → ask với câu FULL_PATH_TEXT');
+    ok(holeKind('git push', { ...boom, cfg: { mode: 'ask' } }) === 'throw Error', 'AC1.2: mode ask, lỗi nội bộ vẫn ném');
+    ok(holeKind('git push', { ...boom, extra: { permission_mode: 'default' } }) === 'throw Error', 'AC1.2: full không bypass, lỗi nội bộ vẫn ném');
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
