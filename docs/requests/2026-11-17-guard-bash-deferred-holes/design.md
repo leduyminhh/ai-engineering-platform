@@ -35,7 +35,7 @@ Các lỗ còn lại là suy luận từ code và ghi chú của request trướ
 
 - **A1 — Hết `push(...mảng)` trên dữ liệu người dùng.** `writeTargets` (`targets.push(...all)`, `needs.push(...)`, `targets.push(...pos)`), `braceExpand` và `out.push(...walkSegments(…))` trong `walkSegments` dùng vòng `for` hoặc `concat`. Nguyên nhân là giới hạn số đối số của lời gọi hàm (V8), nên mọi `push(...x)` mà `x` phụ thuộc độ dài lệnh đều phải đổi; builder `grep` hết trường hợp.
 - **A2 — Ở full, lỗi nội bộ của `decide` thành `ask`, không còn cho qua.** `decide` bọc thân bằng `try/catch`; khi bắt lỗi mà `full()` đúng thì trả `ask` với câu `FULL_PATH_TEXT` hiện có (không đổi chữ, R21); `full()` không đúng hoặc chính nó ném lỗi thì ném lại như cũ (`main` vẫn fail-open ở ngoài full). Lý do: A1 chỉ vá một nguyên nhân đã biết; A2 chặn cả lớp "lỗi bất ngờ ⇒ cho qua". **Lệch ràng buộc cũ** "fail-open khi lỗi nội bộ" của request trước, chỉ trong full + bypass.
-- **A3 — Trần số đoạn lệnh cho bộ duyệt.** Lệnh có nhiều hơn `MAX_WALK_SEGS` đoạn (đề xuất 1000; builder chọn số cuối từ phép đo, đã đo 2000 × `cd a; rm x` ≈ 1,5 s) thì `walkSegments` đánh dấu `opaque` cho toàn lệnh ⇒ `ask`, như trần 20000 ký tự và 20 tên biến của D4. Chọn trần thay vì tối ưu `path.resolve` vì [Inference] chi phí bậc hai đến từ đường dẫn `dir` dài dần qua `path.resolve`/`classifyPath` trên từng đoạn, và một lệnh thật không có hàng nghìn đoạn. Nguyên nhân chưa profile; task đầu của nhóm đo lại rồi mới chốt trần.
+- **A3 — Trần số đoạn lệnh cho bộ duyệt.** Lệnh có nhiều hơn `MAX_WALK_SEGS` đoạn (chốt 1000; đã đo 2000 × `cd a; rm x` ≈ 1,5 s) thì `decide` trả `ask(FULL_PATH_TEXT)` ngay đầu hàm khi `full` hiệu lực, trước mọi bước theo dõi thư mục, nên trên trần mọi quyết định (kể cả `deny` của H6 và câu push của H1) thành câu `FULL_PATH_TEXT`; đo bằng cpuprofile cho thấy chi phí bậc hai nằm ở `trackDirs` của H1 (`path.resolve` trên `dir` dài dần), không ở `walkSegments`, nên trần đặt ở `decide`. Chọn trần thay vì tối ưu `path.resolve` vì một lệnh thật không có hàng nghìn đoạn.
 - **A4 — Test hook không đọc `.claude/aip-gate.json` thật.** Mọi chỗ test hook gọi `decide`/`main` mà không truyền `config` (hay `reader`) phải truyền; không thêm biến môi trường mới. Task đầu của nhóm liệt kê các chỗ đó (`grep` trong `test/contract/9*`), sửa, và thêm một assert chống tái phát (xem AC1.4).
 
 **Nhóm B — Bash**
@@ -92,7 +92,7 @@ Không có `requirement.md`, nên AC nằm ở đây. Test nằm trong `test/con
 
 - **`core/hooks/scripts/guard-bash.mjs`**:
   - Hết `push(...)` trên dữ liệu người dùng (A1): `writeTargets`, `braceExpand`, `walkSegments`.
-  - `decide`: `try/catch` có điều kiện full (A2). Trần `MAX_WALK_SEGS` trong `walkSegments` (A3).
+  - `decide`: `try/catch` có điều kiện full (A2). Trần `MAX_WALK_SEGS` ở đầu `decide`, trước `withDirs` (A3).
   - `walkSegments`: nhận `cd` qua `infos[i].cmdAt` (B1); `opaque` theo `unwrap` (B2); PowerShell: `cd` trong khối/sau `&`/`&&`/`||` và ổ provider thành chưa rõ (C4).
   - `leadInfo`: thêm `exec {S}>`, `wait -p S`, `coproc S` vào `extra` (B3).
   - PowerShell: tập dấu hiệu định nghĩa lại lệnh cạnh `PS_MUTATORS` (C2); `WRITE_CMDS` thêm `md`, `ni`, `new-item` (C3); phân loại đích khi có ống vào, ngoặc, splat (C1, C5) trong `writeTargets`/`confineSegment`, kèm cờ `unknown` cho đích loại này.

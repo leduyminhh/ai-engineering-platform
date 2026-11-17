@@ -82,16 +82,16 @@
 **Ước lượng:** 25 phút
 **Phủ AC:** AC1.3
 **Files:**
-- Modify: `core/hooks/scripts/guard-bash.mjs` (`walkSegments`, hằng `MAX_WALK_SEGS`)
+- Modify: `core/hooks/scripts/guard-bash.mjs` (`decide`, hằng `MAX_WALK_SEGS`)
 - Test: `test/contract/99-path-permissions.contract.mjs`
 
 **Interfaces:**
 - Consumes: khối bảng "lỗ hoãn" của Task 2; mảng `entry.opaque` mà `decide` đã đọc ở H6.
-- Produces: hằng `MAX_WALK_SEGS`; lệnh vượt trần thì `walkSegments` trả đoạn `opaque` ⇒ `ask`.
+- Produces: hằng `MAX_WALK_SEGS`; ở `full`, lệnh vượt trần thì `decide` trả `ask(FULL_PATH_TEXT)` ngay đầu hàm.
 
 - [ ] **Step 1:** đo lại bằng script tạm trong scratchpad: 500/1000/2000/4000 × `cd a; rm x` và × `cd a`, ghi thời gian vào ledger; chọn `MAX_WALK_SEGS` sao cho ca ngay dưới trần xong dưới 0,5 s (đề xuất 1000).
 - [ ] **Step 2:** thêm hàng AC1.3 đỏ: 8000 × `cd a; rm x` và 8000 × `cd a` → `ask` và dưới 1 s (assert thời gian); 50 × `cd a; rm x` trong root → `null` như cũ.
-- [ ] **Step 3:** thêm `MAX_WALK_SEGS` và kiểm số đoạn ở đầu `walkSegments` (không đọc lại từng đoạn khi vượt trần: trả một đoạn `opaque`); comment lý do (đường dẫn `dir` dài dần làm mỗi đoạn tốn bậc hai [Inference, chưa profile]). Chạy `--only path-permissions`, xanh.
+- [ ] **Step 3:** thêm `MAX_WALK_SEGS` và kiểm số đoạn ở đầu `decide`, trước `withDirs` (vượt trần ở `full` thì `ask(FULL_PATH_TEXT)`; cpuprofile cho thấy chi phí bậc hai nằm ở `trackDirs` của H1 nên trần ở `walkSegments` không đủ); comment lý do. Chạy `--only path-permissions`, xanh.
 - [ ] **Step 4:** chạy `node test/validate.mjs --only hook`, xanh; commit `fix(hooks): cap walked segments so long cd chains ask instead of stalling`.
 
 ### Task 4: `cd` sau từ khoá và lệnh bọc (B1)
