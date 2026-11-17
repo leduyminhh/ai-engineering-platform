@@ -841,5 +841,37 @@ export default async function run({ ok, ctx }) {
       `$S = '${T}'; Set-Content "$S\\f" @'\nabc\n'@`,
       `$S = '${T}'; @'\nabc\n'@ | Set-Content "$S\\f"`,
     ].map((c) => [c, null, 'AC2.1']), PS);
+
+    // Hồi quy sau review cuối: `&` của PowerShell (toán tử gọi hoặc dấu tách) không được làm mất lệnh đứng sau nó.
+    expectAll([
+      `& Remove-Item ${OUT}/f`, `& rm -Recurse ${OUT}`, `& 'Remove-Item' ${OUT}/f`, `&{ Remove-Item ${OUT}/f }`, `&rm '${OUT}/f'`, `&Remove-Item ${OUT}/f`,
+      `& Out-File -FilePath ${OUT}/f`, `& Move-Item ${T}/a ${OUT}/b`, `Get-ChildItem x & Remove-Item ${OUT}/f`,
+    ].map((c) => [c, 'deny', 'AC4.1']), PS);
+    // Sau `&` biến không còn được giải (đoạn phức): hỏi, không im lặng cho qua.
+    expectAll([[`$S='${OUT}'; & Remove-Item "$S\\x"`, 'ask', 'AC4.1'], [`& cmd /c del ${OUT}\\f`, 'ask', 'AC4.1'], [`& Remove-Item ${T}/f`, null, 'AC4.1'], [`Remove-Item ${T}/f 2>&1`, null, 'AC4.1'],
+      [`$R='rm'; & $R ${OUT}/x`, 'ask', 'AC1.5']], PS);
+
+    // Hồi quy sau review cuối: phép gán số học đổi biến của shell hiện tại mà bộ giải không thấy.
+    expectAll([
+      `S=${CT}/a/b/c; : $((S=0)); rm -rf $S/../../../x/y`, `S=${T}; echo $((S=0)) >/dev/null; rm -rf $S/x`, `S=${T}; : $[S=0]; rm -rf $S/x`,
+      `S=${T}; : \${a[S=0]}; rm -rf $S/x`, `S=${T}; : "$((S=0))"; rm -rf $S/x`, `S=${T}; : $((S=0)); rm -rf $S/x`,
+    ].map((c) => [c, 'ask', 'AC1.5']));
+
+    // Hồi quy sau review cuối: cd ở ngữ cảnh không chắc (nền, ||, && ở đầu danh sách trước, ống dẫn) không được tin cho đoạn sau.
+    expectAll([
+      // `false && cd core; rm ../x` chưa đóng: cùng hình với lệnh popup `mkdir -p $S/bin && cd $S` (99-hook-popup AC6.2) nên chờ quyết định của người dùng.
+      ...[`cd core & rm ../x`, `true || cd core; rm ../x`, `echo hi | cd core; rm ../x`, `cd core & rm $PWD/../x`].map((c) => [c, 'ask', 'AC1.5']),
+      ...[`cd core; rm ../x`, `cd core && rm ../x`, `true && cd core && rm ../x`].map((c) => [c, null, 'AC1.5']),
+    ]);
+    expectAll([[`cd ${T}; rm x`, null, 'AC1.5'], [`cd ${T} && rm x`, null, 'AC1.5']]);
+
+    // Hồi quy sau review cuối: tên lệnh lấy từ biến không giải được là chưa rõ lệnh nào chạy.
+    expectAll([`R=rm; $R -rf ${OUT}/x`, `R=rm; "$R" -rf ${OUT}/x`, `R=rm; \${R} -rf ${OUT}/x`].map((c) => [c, 'ask', 'AC1.5']));
+
+    // Hồi quy sau review cuối: `$env:TEMP` không được đọc thành `$en` đã gán.
+    expectAll([[`$en='${T}'; Remove-Item "$env:TEMP\\x"`, 'ask', 'AC2.1']], PS);
+
+    // Kiểm bí mật dùng chung kết quả bộ giải: biến trỏ ra ngoài root thì hỏi, trong root thì cho qua.
+    expectAll([[`S=${OUT}; cat $S/.env`, 'ask', 'AC1.6'], [`S=${T}; cat $S/.env`, null, 'AC1.6']]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }

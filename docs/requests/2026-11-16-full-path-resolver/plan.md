@@ -37,7 +37,7 @@ Không đổi: `parse()`, `summarize`, `trackDirs` (H1 dùng), `gate-config.mjs`
 
 ## Review Focus
 - Task 3: hai hàng D2 (`echo hi⏎S=<T>⏎rm …`, `cd /e/x && echo hi; S=<T>; rm $S/x`) là ca duy nhất trong ba bảng Task 7 đổi sang `null`; mọi hàng khác của `stay`/`mustStop`/`heredocMustStop` vẫn không-`null` (AC1.7).
-- Task 3: phép gán bị bỏ qua mà lệnh sau vẫn chạy (`false && S=<T>; rm -rf $S/`, `S=<T> || true; …`) không được tin, nên không ra `null` (AC1.5).
+- Task 3: phép gán bị bỏ qua mà lệnh sau vẫn chạy (`false && S=<T>; rm -rf $S/`) không được tin, nên không ra `null` (AC1.5); `S=<T> || true; …` thì được tin theo D1 vì phép gán đứng đầu danh sách luôn chạy (sửa sau review cuối).
 - Task 2: `"T/x*"` (nháy) thành literal trong `T` nhưng `$S/*` với `S` chứa `*` hay khoảng trắng ngoài nháy vẫn chưa rõ (AC1.3, AC1.5).
 - Task 3: kiểm bí mật ngoài root (`variableLists`) dùng cùng kết quả với H6: `S=<OUT>; cat $S/.env` vẫn hỏi ở full khi `allowEnvFiles` tắt (AC1.6, AC4.1).
 - Task 5: PowerShell `$S` gán trong `{ }`/`if` hoặc qua `Set-Variable` không được tin (AC2.1).
