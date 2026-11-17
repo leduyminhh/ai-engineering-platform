@@ -532,6 +532,12 @@ function globMatchesDotDot(seg) {
   try { return new RegExp(`^${re}$`).test('..'); } catch { return true; }
 }
 
+// `dst.push(...src)` tràn stack khoảng 100 nghìn phần tử (giới hạn số đối số của V8): lệnh dài làm decide ném lỗi và hook cho qua.
+function pushAll(dst, src) {
+  for (const x of src) dst.push(x);
+  return dst.length;
+}
+
 // Trả mọi nhánh của nhóm `{a,b}` có dấu phẩy (lồng được), hoặc null khi quá `cap`; `{1..3}` và `{x}` giữ nguyên. Không bóc nháy: hook không biết nháy bash có chặn mở rộng hay không, nên `"T/{..,x}/f"` cũng bị mở.
 // Quá 64 dấu `{` hoặc 4096 ký tự thì bỏ cuộc (null): 9 nhóm đã vượt trần, còn đệ quy theo số nhóm làm tràn stack. Quét một lượt bằng ngăn xếp nên chi phí không nhân với số `{` không đóng.
 function braceExpand(p, cap) {
@@ -551,7 +557,7 @@ function braceExpand(p, cap) {
   const out = [];
   for (let k = 0; k + 1 < cuts.length; k++) {
     const sub = braceExpand(p.slice(0, best.at) + p.slice(cuts[k] + 1, cuts[k + 1]) + p.slice(best.end + 1), cap);
-    if (!sub || out.push(...sub) > cap) return null;
+    if (!sub || pushAll(out, sub) > cap) return null;
   }
   return out;
 }
@@ -730,20 +736,20 @@ function writeTargets(t, msys = true) {
       ? [...(namedPath ? [] : [copyLike ? ['read'] : ['delete']]), ...(namedDest ? [] : [['write']])] : null;
     if (gnu && toDir) {
       // Có -t DIR: đối số vị trí là nguồn: mv bị xoá, cp được đọc.
-      targets.push(...all);
-      needs.push(...all.map(() => (name === 'mv' ? ['delete'] : ['read'])));
+      pushAll(targets, all);
+      pushAll(needs, all.map(() => (name === 'mv' ? ['delete'] : ['read'])));
     } else if (copyLike && msys) {
       // Cờ gộp có `t` (-rt, -tDIR) không đặt toDir nên rơi vào đây: giữ cách thận trọng, đối số cuối vẫn là đích ghi, mọi đối số trước là nguồn đọc.
-      targets.push(...all);
-      needs.push(...all.map((_, i) => (i === all.length - 1 ? ['write'] : ['read'])));
+      pushAll(targets, all);
+      pushAll(needs, all.map((_, i) => (i === all.length - 1 ? ['write'] : ['read'])));
     } else if (slots) {
       const extra = copyLike ? ['read', 'write'] : ['delete', 'write'];
       const lone = !namedPath && !namedDest && all.length === 1;
-      targets.push(...all);
-      needs.push(...all.map((_, i) => (lone ? extra : (slots[i] ?? extra))));
+      pushAll(targets, all);
+      pushAll(needs, all.map((_, i) => (lone ? extra : (slots[i] ?? extra))));
     } else {
-      targets.push(...pos);
-      needs.push(...pos.map((_, i) => (blurred ? blurredNeeds(name) : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
+      pushAll(targets, pos);
+      pushAll(needs, pos.map((_, i) => (blurred ? blurredNeeds(name) : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
     }
   }
   // PowerShell nhận mảng `a,b` trong một token: tách thành từng đích để phần tử ngoài root không lọt. Chỉ PowerShell: ở Bash dấu phẩy là ký tự của tên file.
@@ -1378,7 +1384,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
         if (depth >= MAX_INNER_DEPTH || ctx.inner <= 0) { opaque = true; continue; }
         ctx.inner--;
         const sub = scanWords(inner, dialect);
-        out.push(...walkSegments(sub, { cwd, msys, dialect, noVars: noVars || !vars }, ctx, { env, dir, unres: unres || !vars, depth: depth + 1 }));
+        pushAll(out, walkSegments(sub, { cwd, msys, dialect, noVars: noVars || !vars }, ctx, { env, dir, unres: unres || !vars, depth: depth + 1 }));
       }
     }
     if (opaque) entry.opaque = true;
@@ -1452,6 +1458,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
   const ask = (text) => { let line = ''; try { line = summarize(cmd, msys); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
+  // Lỗi bất ngờ ở full + bypass thành hỏi: ném lại sẽ để main() cho lệnh chưa được kiểm đi qua.
+  try {
   const parsedCmd = parse(cmd);
   const { unclosed } = parsedCmd;
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
@@ -1523,6 +1531,12 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     if (hits(secretRe) && secretOutsideRoots(walked(), rootsOf(), secretRe, msys)) return secretAsk(secretRe);
   }
   return null;
+  } catch (e) {
+    let inFull = false;
+    try { inFull = full(); } catch { /* không đọc được cấu hình: coi như không full */ }
+    if (inFull) return ask(FULL_PATH_TEXT);
+    throw e;
+  }
 }
 
 function main() {
