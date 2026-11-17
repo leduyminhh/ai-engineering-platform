@@ -936,6 +936,15 @@ export default async function run({ ok, ctx }) {
       [`Get-ChildItem '${T}' | Copy-Item -Destination '${O}'`, null, 'AC3.1'],
     ], { tool: 'PowerShell' });
 
+    // PowerShell: Set-Alias/function:/Alias: đặt lại tên lệnh nên `gd` có thể là Remove-Item mà hook không biết.
+    holeRows([
+      [`Set-Alias gd Remove-Item; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`sal gd ri; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`New-Alias gd rm; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`nal gd rm; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`Set-Item Alias:gd Remove-Item; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`\${function:gd} = { Remove-Item $args }; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`Set-Item function:gd { Remove-Item $args }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`function gd { Remove-Item $args[0] }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`Get-Alias gd`, null, 'AC3.2'], [`Write-Host 'my function foo'`, null, 'AC3.2'], [`Remove-Item '${T}/x'`, null, 'AC3.2'],
+    ], { tool: 'PowerShell' });
+
     // PowerShell: đối số là biểu thức trong ngoặc hoặc splat thì giá trị thật không đọc được từ chữ; chữ thô giống một tên tương đối nên từng cho qua.
     holeRows([
       [`Remove-Item ('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item -Path ('${OUT}/x')`, 'ask', 'AC3.5'],
