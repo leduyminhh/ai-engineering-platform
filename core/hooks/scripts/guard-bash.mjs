@@ -804,9 +804,12 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   let unknown = !msys && WRITE_CMDS.has(name) && t.some((x, i) => i > 0 && (t.exprs ? t.exprs[i] : PS_EXPR_WORD.test(String(x).slice(0, t.qpos?.[i] ?? Infinity))));
   let readAsk = false;
   // Lệnh ghi PowerShell có ống vào mà không có đối số đường dẫn: đường dẫn đến từ đoạn trước.
-  if (!msys && t.pipeFrom && WRITE_CMDS.has(name) && targets.length === 0) {
+  // Move/Copy-Item chỉ có -Destination: đích đã có, nguồn vẫn đến từ ống (Move xoá nguồn, Copy đọc nguồn).
+  const toDest = (MOVE_CMDS.has(name) || LAST_ONLY.has(name)) && targets.length === 1 && args.some((a) => /^-dest/i.test(a));
+  if (!msys && t.pipeFrom && WRITE_CMDS.has(name) && (targets.length === 0 || toDest)) {
     const fed = pipedPaths(t.pipeFrom);
-    if (fed) for (const p of fed) { targets.push(p); needs.push(needsOf(name)); } else unknown = true;
+    const need = toDest ? (MOVE_CMDS.has(name) ? ['delete'] : ['read']) : needsOf(name);
+    if (fed) for (const p of fed) { targets.push(p); needs.push(need); } else unknown = true;
   }
   for (const [i, p] of targets.entries()) {
     for (const need of needs[i]) {
