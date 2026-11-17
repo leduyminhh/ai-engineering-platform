@@ -811,6 +811,7 @@ export default async function run({ ok, ctx }) {
       `$S='${T}'; ${N}; Clear-ItemProperty $n -Name Value; ${USE}`,
       `$S='${T}'; ${N}; Rename-ItemProperty $n -Name Value -NewName X; ${USE}`,
       `$S='${T}'; ${N}; Invoke-Item $n; ${USE}`,
+      `$S='${T}'; ${N}; $x = Invoke-Item $n; ${USE}`,
       `$S='${T}'; ${N}; $n | Set-Item -Value '${OUT}'; ${USE}`,
       ...['Set-Location', 'Push-Location', 'cd', 'sl'].map((c) => `$S='${T}'; $n='vari'+'able:'; ${c} $n; Set-Item S '${OUT}'; ${USE}`),
       `$S='${T}'; New-PSDrive -Name Z -PSProvider Variable -Root '\\'; Set-Item Z:S '${OUT}'; ${USE}`,

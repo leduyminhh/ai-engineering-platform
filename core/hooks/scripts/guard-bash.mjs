@@ -1230,6 +1230,12 @@ const PS_SCOPE_CHANGE = new RegExp('[={}]|' + PS_CD.source, 'i');
 // Cmdlet nhận đường dẫn ổ `variable:` (đổi biến); đường dẫn ghép (`$n` = 'vari'+'able:S', splat `@p`) không bị PS_MUTATORS thấy.
 const PS_ITEM_CMDS = new Set(['set-item', 'new-item', 'clear-item', 'rename-item', 'copy-item', 'move-item', 'remove-item', 'get-item', 'si', 'ni', 'cli', 'rni', 'cpi', 'mi', 'ri',
   'set-content', 'add-content', 'clear-content', 'sc', 'ac', 'clc']);
+// Danh sách cho phép theo tên lệnh (Task 8): lệnh ngoài tập có thể đổi biến theo cách không liệt kê hết (*-ItemProperty, Invoke-Item, New-PSDrive, pipe…).
+const PS_VAR_SAFE_CMDS = new Set(['remove-item', 'ri', 'rm', 'del', 'new-item', 'ni', 'mkdir', 'md', 'copy-item', 'cpi', 'cp', 'copy', 'move-item', 'mi', 'mv', 'move',
+  'set-content', 'add-content', 'out-file', 'get-content', 'gc', 'cat', 'write-host', 'write-output', 'echo', 'get-childitem', 'gci', 'ls', 'dir', 'test-path',
+  'get-item', 'gi', 'resolve-path', 'join-path']);
+// Đổi vị trí chỉ được tin khi đối số là literal: `cd $n` với $n = 'vari'+'able:' đưa $PWD và đường dẫn tương đối vào ổ variable:.
+const PS_CD_CMDS = new Set(['cd', 'chdir', 'set-location', 'sl', 'push-location', 'pushd', 'popd', 'pop-location']);
 function psUnsafe(scan, depth = 0, absNames = null) {
   if (depth > MAX_INNER_DEPTH) return true;
   const infos = scan.segs.map(leadInfoPs);
@@ -1252,10 +1258,22 @@ function psUnsafe(scan, depth = 0, absNames = null) {
   const partsUnsafe = (w) => w.parts.some(({ text, quote }) => quote === 'none' && /[={}]/.test(text.replace(/\$\{[A-Za-z_]\w*\}/g, '')))
     || innerTexts(w, true).some((x) => PS_SCOPE_CHANGE.test(x) || psUnsafe(scanWords(x, 'powershell'), depth + 1, absNames));
   return scan.segs.some((seg, i) => {
-    const { used, assigns, cmdAt } = infos[i];
-    const name = seg.words[cmdAt] ? wordText(seg.words[cmdAt]).toLowerCase().replace(/^.*\\/, '') : '';
-    return seg.compound || seg.words.some((w, k) => !used.has(k) && partsUnsafe(w)) || (assigns[0]?.valueWord ? partsUnsafe(assigns[0].valueWord) : false)
-      || (PS_ITEM_CMDS.has(name) && seg.words.some((w, k) => k > cmdAt && itemArgUnsafe(w)));
+    const { used, assigns } = infos[i];
+    const ws = seg.words;
+    const head = wordText(ws[0]);
+    if (head === '&' || head === '.') return true;
+    // Vế phải phép gán cũng là pipeline: `$x = Invoke-Item $n` chạy Invoke-Item. Từ mở đầu bằng `$`, số hay chuỗi nháy là biểu thức, không phải lệnh.
+    const vw = assigns[0]?.valueWord;
+    const cmdWord = assigns.length ? vw : ws[0];
+    const lead = cmdWord?.parts.find((p) => p.text !== '');
+    const isCmd = !!lead && lead.quote === 'none' && !/^[$\d]/.test(lead.text);
+    const vi = vw ? ws.indexOf(vw) : -1;
+    const argsFrom = !assigns.length ? 1 : vi >= 0 ? vi + 1 : Math.max(...used) + 1;
+    const name = isCmd ? wordText(cmdWord).toLowerCase().replace(/^.*\\/, '') : '';
+    const args = ws.slice(argsFrom);
+    const cmdUnsafe = isCmd && !(PS_VAR_SAFE_CMDS.has(name) || (PS_CD_CMDS.has(name) && args.every((w) => !/[$(+`]/.test(wordText(w)))));
+    return seg.compound || cmdUnsafe || ws.some((w, k) => !used.has(k) && partsUnsafe(w)) || (vw ? partsUnsafe(vw) : false)
+      || (PS_ITEM_CMDS.has(name) && args.some(itemArgUnsafe));
   });
 }
 
