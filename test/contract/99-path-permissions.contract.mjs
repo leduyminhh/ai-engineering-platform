@@ -523,21 +523,31 @@ export default async function run({ ok, ctx }) {
     // Chi phí brace tính theo cả lệnh: mỗi token dưới trần 4096 ký tự nhưng 24 token (~96KB) cộng lại không được vượt 1 giây; hết ngân sách thì ask, đích ngoài root vẫn deny.
     const heavy = `${T}/${'{'.repeat(56)}${'{a,b}'.repeat(8)}${'x'.repeat(3800)}`;
     const many = Array(24).fill(heavy).join(' ');
-    const tCmd = performance.now();
     expectAll([
       [`rm ${many} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${many}`, 'ask', 'hook-copy-alias-brace AC3.4'],
       // Lệnh đời thường và 5 đường dẫn 8 nhóm ngắn nằm trong ngân sách: không đổi.
       [`cp ${T}/x ${T}/{a,b}`, null, 'hook-copy-alias-brace AC3.4'], [`rm ${Array(5).fill(`${T}/${'{a,b}'.repeat(8)}/f`).join(' ')}`, null, 'hook-copy-alias-brace AC3.4'],
     ]);
-    // Đo riêng ≈ 0,3 s, trong cả lượt validate (tiến trình đã chạy hàng nghìn test) ≈ 1,0 s: ngưỡng 4 s vẫn bắt lỗi bậc hai (vài chục giây).
-    ok(performance.now() - tCmd < 4000, 'hook-copy-alias-brace AC3.4: lệnh nhiều token brace xử lý dưới 4 giây');
     // Token ngắn thì độ dài không chặn được: mỗi nhánh phải tốn một khoản cố định, nếu không hàng trăm token 256 nhánh vẫn mất vài giây.
     const shortAll = (n, tok) => Array(n).fill(tok).join(' ');
-    const tShort = performance.now();
     expectAll([
       [`rm ${shortAll(800, '{a,b}'.repeat(8))} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${shortAll(1600, '{,}'.repeat(8))}`, 'ask', 'hook-copy-alias-brace AC3.4'],
     ]);
-    ok(performance.now() - tShort < 4000, 'hook-copy-alias-brace AC3.4: nhiều token brace ngắn xử lý dưới 4 giây');
+    // Thời gian đo trong tiến trình con mới: trong cả lượt validate (đã chạy hàng nghìn test) cùng lệnh chậm gấp 3–4 lần, ngưỡng nới sẽ không còn bắt hồi quy.
+    const childScript = `
+      const [guardUrl, P, T, OUT, cfgJson] = process.argv.slice(1);
+      const bash = await import(guardUrl);
+      const config = JSON.parse(cfgJson);
+      const run = (cmds) => { const t0 = performance.now(); for (const c of cmds) bash.decide({ tool_name: 'Bash', tool_input: { command: c }, cwd: P, permission_mode: 'bypassPermissions' }, { repoRoot: P, config, allowEnv: () => false, currentBranch: () => 'feature/x', reader: () => null }); return performance.now() - t0; };
+      const heavy = T + '/' + '{'.repeat(56) + '{a,b}'.repeat(8) + 'x'.repeat(3800);
+      const many = Array(24).fill(heavy).join(' ');
+      const shortAll = (n, tok) => Array(n).fill(tok).join(' ');
+      const tCmd = run([\`rm \${many} \${OUT}/z\`, \`rm \${many}\`, \`cp \${T}/x \${T}/{a,b}\`, \`rm \${Array(5).fill(T + '/' + '{a,b}'.repeat(8) + '/f').join(' ')}\`]);
+      const tShort = run([\`rm \${shortAll(800, '{a,b}'.repeat(8))} \${OUT}/z\`, \`rm \${shortAll(1600, '{,}'.repeat(8))}\`]);
+      console.log(JSON.stringify({ tCmd, tShort }));`;
+    const { tCmd, tShort } = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', childScript, pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'guard-bash.mjs')).href, P, T, OUT, JSON.stringify(config)], { encoding: 'utf8' }));
+    ok(tCmd < 1000, `hook-copy-alias-brace AC3.4: lệnh nhiều token brace xử lý dưới 1 giây (${Math.round(tCmd)} ms)`);
+    ok(tShort < 1000, `hook-copy-alias-brace AC3.4: nhiều token brace ngắn xử lý dưới 1 giây (${Math.round(tShort)} ms)`);
     // PowerShell không mở rộng brace: kết quả giữ như trước request.
     expectAll([[`Remove-Item ${T}/{..,x}/f`, null, 'hook-copy-alias-brace AC3.3'], [`Remove-Item ${O}/{a,b}`, 'deny', 'hook-copy-alias-brace AC3.3']], { tool: 'PowerShell' });
 
@@ -969,6 +979,32 @@ export default async function run({ ok, ctx }) {
       [`Remove-Item '(1) x.txt'`, null, 'AC3.5'], [`Remove-Item '@backup'`, null, 'AC3.5'],
       [`Remove-Item '${T}/(x)'`, null, 'AC3.5'], [`Remove-Item "${T}/file (1).txt"`, null, 'AC3.5'],
     ], { tool: 'PowerShell' });
+
+    // Hồi quy sau review cuối: nhánh `function`/`filter` của PS_REDEFINE không được backtrack bậc hai trên chuỗi xuống dòng.
+    const tNl = performance.now();
+    const nl = holeKind('\n'.repeat(100000) + `Remove-Item '${T}/x'`, { tool: 'PowerShell' });
+    const nlMs = performance.now() - tNl;
+    ok(nl === null && nlMs < 2000, `AC3.2: 100000 ký tự xuống dòng rồi Remove-Item trong root → null dưới 2 s (${nl}, ${Math.round(nlMs)} ms)`);
+    holeRows([[`function gd { }`, 'ask', 'AC3.2'], [`\nfunction gd { }`, 'ask', 'AC3.2'], [`Write-Host a\n  function gd { }`, 'ask', 'AC3.2']], { tool: 'PowerShell' });
+
+    // Hồi quy sau review cuối: `wait` lặp lại không làm leadInfo quét tới hết đoạn cho mỗi từ.
+    const tW = performance.now();
+    const wk = holeKind('echo ' + 'wait '.repeat(10000) + `; rm ${OUT}/x`);
+    const wMs = performance.now() - tW;
+    ok(wk === 'deny' && wMs < 1500, `AC2.3: 10000 từ wait rồi rm ngoài root → deny dưới 1,5 s (${wk}, ${Math.round(wMs)} ms)`);
+    holeRows([[`S=${T}; wait -n -p S; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; wait -f -n -p S; rm -rf $S/x`, 'ask', 'AC2.3']]);
+
+    // Hồi quy sau review cuối: nguồn qua ống có danh sách đường dẫn (dấu phẩy) hoặc biểu thức/splat thì không đoán được → ask.
+    holeRows([
+      [`Get-ChildItem '${T}/a','${OUT}/b' | Remove-Item`, 'ask', 'AC3.1'], [`Get-ChildItem -Path ${T}/a,${OUT}/b | Remove-Item`, 'ask', 'AC3.1'],
+      [`gci -LiteralPath ${T}/a,${OUT}/b | ri`, 'ask', 'AC3.1'], [`Get-Item ${T}/a,${OUT}/b | Remove-Item`, 'ask', 'AC3.1'],
+      [`$p=@{Path='${OUT}'}; Get-ChildItem @p | Remove-Item`, 'ask', 'AC3.1'],
+      [`Get-ChildItem '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem '${OUT}' | Remove-Item`, 'deny', 'AC3.1'],
+    ], { tool: 'PowerShell' });
+
+    // Hồi quy sau review cuối: số `-C` phụ thuộc độ dài lệnh không được đi qua spread (tràn stack → RangeError → push nhánh main lọt).
+    const gc = holeKind('git ' + '-C a '.repeat(130000) + 'push origin main', { cfg: { mode: 'ask' } });
+    ok(gc === 'ask', `AC1.1: 130000 × git -C a push origin main vẫn bị hỏi, decide không ném lỗi (${gc})`);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.

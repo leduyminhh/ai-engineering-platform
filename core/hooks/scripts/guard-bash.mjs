@@ -339,7 +339,9 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true
   if (specs.some(hasUnresolvedRef)) return { kind: 'unknown' };
   // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
   const unresolvable = cdUnresolved || gc.dirs.some(hasUnresolvedRef);
-  const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs.map((d) => np(d, msys))) : cwd;
+  // Chia lô: spread cả danh sách làm tràn stack, còn resolve từng phần tử thì bậc hai theo độ dài đường dẫn đang phình.
+  let dir = cwd;
+  for (let i = 0; i < gc.dirs.length; i += 1000) dir = path.resolve(dir, ...gc.dirs.slice(i, i + 1000).map((d) => np(d, msys)));
   const refs = specs.map((r) => r.split(':').pop().replace(/^refs\/heads\//, ''));
   const wantsHead = (refs.length ? refs : ['HEAD']).some((r) => r === 'HEAD' || r === '@');
   if (unresolvable && wantsHead) return { kind: 'unknown' };
@@ -789,6 +791,8 @@ function pipedPaths(prev) {
     if (f === 'path' || f === 'literalpath') { const v = m[2] ?? a[++i]; if (v !== undefined) out.push(v); }
     else if (/^(filter|include|exclude|depth|attributes|stream)$/.test(f) && m[2] === undefined) i++;
   }
+  // Dấu phẩy là danh sách đường dẫn, `(`/splat là biểu thức: chữ thô không cho biết đường dẫn thật (null → hỏi).
+  if (prev.exprs?.some(Boolean) || out.some((p) => p.includes(','))) return null;
   return out.length ? out : ['.'];
 }
 // PowerShell: `(` ngoài nháy mở một biểu thức (kể cả giữa token: `T/a('x')` là hai đối số), `@tên` là splat, `@(` là mảng; chữ thô của chúng trông như tên tương đối.
@@ -1127,7 +1131,7 @@ const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source
 // Cmdlet/tham số đổi biến theo cách không đọc được: tắt giải biến cả lệnh vì không liệt kê hết được các cách đổi.
 const PS_MUTATORS = /\b(?:set|new|remove|clear)-variable\b|\b(?:invoke-expression|iex|get-variable|psvariable)\b|variable:|(?:^|[\s;|({])(?:sv|nv|clv|rv|gv|set)\s|\s-(?:outvariable|ov|errorvariable|ev|warningvariable|wv|informationvariable|iv|pipelinevariable|pv)\b/i;
 // Chạy trên chuỗi đã bỏ backtick (`Set-Al`ias`); nháy đứng trước hoặc sau `sal`/`nal` vì tên lệnh có thể nằm trong chuỗi `-c`, `iex` hay `& 'sal'`.
-const PS_REDEFINE = /\b(?:set|new|import)-alias\b|(?:^|[\s;|({&"'])(?:sal|nal)["']?\s|\b(?:alias|function):|(?:^|[;|({&\n])\s*(?:function|filter)\s+[\w-]+/i;
+const PS_REDEFINE = /\b(?:set|new|import)-alias\b|(?:^|[\s;|({&"'])(?:sal|nal)["']?\s|\b(?:alias|function):|(?:^|[;|({&\n])[ \t]*(?:function|filter)\s+[\w-]+/i;
 const ASSIGN_WORD = /^([A-Za-z_]\w*)(\+?=|\[)/;
 const LEAD_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '{', '!', 'time']);
 const MAX_VAR_NAMES = 20;
@@ -1218,7 +1222,8 @@ function leadInfo(seg) {
     // `exec {S}>f` (fd đặt tên), `wait -p S` (PID), `coproc S { … }`: shell tự gán S theo cách không đọc được.
     const fd = /^\{([A-Za-z_]\w*)\}[<>]/.exec(x);
     if (fd) extra.push(fd[1]);
-    if (x === 'wait') { const p = ws.findIndex((w, j) => j > k && wordText(w) === '-p'); if (p > 0 && ws[p + 1]) extra.push(txt(p + 1)); }
+    // Cờ của wait (`-f -n -p VAR`) nằm ngay sau từ wait: chỉ nhìn cửa sổ ngắn để lệnh lặp `wait` không quét tới hết đoạn mỗi lần.
+    if (x === 'wait') { const p = ws.slice(k + 1, k + 4).findIndex((w) => wordText(w) === '-p'); if (p >= 0 && ws[k + p + 2]) extra.push(txt(k + p + 2)); }
     if (x === 'coproc' && /^[A-Za-z_]\w*$/.test(txt(k + 1)) && /^[{(]/.test(txt(k + 2))) extra.push(txt(k + 1));
     const loose = used.has(k) ? null : /^([A-Za-z_]\w*)(?:\+?=|\[)/.exec(x);
     if (loose) extra.push(loose[1]);
@@ -1512,7 +1517,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
   const outer = parsedCmd.segs;
   const naiveOuter = naiveSegments(cmd);
-  // Trước mọi bước theo dõi thư mục: chuỗi `cd` dài làm đường dẫn `dir` phình dần, mỗi đoạn tốn thêm nên tổng bậc hai (8000 × `cd a` mất vài giây) [Inference, chưa profile].
+  // Trước mọi bước theo dõi thư mục: chuỗi `cd` dài làm đường dẫn `dir` phình dần, mỗi đoạn tốn thêm nên tổng bậc hai (8000 × `cd a` mất vài giây); cpuprofile cho thấy ~90% thời gian ở path.resolve trong trackDirs, còn nguyên nhân bậc hai là [Inference].
   if (Math.max(outer.length, naiveOuter.length) > MAX_WALK_SEGS && full()) return ask(FULL_PATH_TEXT);
   const segs = expandShells(outer);
   const naiveAll = expandShells(naiveOuter);

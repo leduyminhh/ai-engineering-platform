@@ -1,6 +1,6 @@
 # Thiết kế: vá các lỗ guard-bash ở chế độ full đã hoãn
 - Ngày: 2026-11-17
-- Trạng thái: approved — design và plan duyệt 2026-11-17; chờ nhánh `claude/beautiful-nobel-cdade6` merge master rồi mới thực thi
+- Trạng thái: approved — design và plan duyệt 2026-11-17; người dùng chọn chạy ngay (2026-11-17) mà không chờ nhánh `claude/beautiful-nobel-cdade6` (nhánh đó chưa merge)
 - Requirement: không có
 
 ## Vấn đề và lý do
@@ -27,7 +27,7 @@ Các lỗ còn lại là suy luận từ code và ghi chú của request trướ
 
 - **K1 — Một request, ba nhóm, thứ tự A (chung) → B (Bash) → C (PowerShell).** Người dùng chọn. Chạy tuần tự, không part song song (cùng sửa một file).
 - **K2 — Dùng lại bộ giải của request trước** (`scanWords`, `resolveWord`, `walkSegments`, `leadInfo`/`leadInfoPs`, `psUnsafe`, `PS_VAR_SAFE_CMDS`). Không thêm cơ chế song song.
-- **K3 — Thực thi sau merge của nhánh `node -e`.** Design và plan viết ngay; plan bắt đầu bằng bước rebase lên master đã chứa nhánh đó, rồi lấy số version kế tiếp.
+- **K3 — Chạy ngay, không chờ nhánh `node -e`.** Người dùng chọn chạy ngay (2026-11-17); nhánh `claude/beautiful-nobel-cdade6` chưa merge. Khi nhánh nào merge sau, xung đột dự kiến ở `core/.manifest.json`, `plugins/_versions.lock.json` và test hook, người merge sau xử lý và lấy số version kế tiếp.
 
 ### Quyết định của agent (cần duyệt ở G1)
 
@@ -102,7 +102,7 @@ Không có `requirement.md`, nên AC nằm ở đây. Test nằm trong `test/con
 
 ### Thứ tự thực thi (gợi ý cho plan)
 
-1. Rebase lên master sau merge của nhánh `node -e`; ghi version hiện tại.
+1. Ghi version hiện tại của master; nhánh `node -e` chưa merge nên không rebase (K3), xung đột xử lý khi merge.
 2. Nhóm A: A4 trước (để mọi bước sau chạy `--only hook` ở repo bật full), rồi A1 + A2, rồi A3 (đo trước khi chốt trần).
 3. Nhóm B: B1, B2, B3.
 4. Nhóm C: C3 (nhỏ), C5, C1, C2, C4.
