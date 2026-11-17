@@ -914,6 +914,13 @@ export default async function run({ ok, ctx }) {
       [`S=${T}; exec {S}>/dev/null; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; wait -p S; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; coproc S { :; }; rm -rf $S/x`, 'ask', 'AC2.3'],
       [`S=${T}; rm -rf $S/x`, null, 'AC2.3'],
     ]);
+
+    // PowerShell: New-Item và alias ghi chưa nằm trong tập lệnh ghi nên đích ngoài root không bị kiểm.
+    holeRows([
+      [`md '${OUT}/d'`, 'deny', 'AC3.3'], [`ni '${OUT}/f'`, 'deny', 'AC3.3'], [`New-Item '${OUT}/f'`, 'deny', 'AC3.3'],
+      [`New-Item -Path '${OUT}/f' -ItemType File`, 'deny', 'AC3.3'], [`sc '${OUT}/f' x`, 'deny', 'AC3.3'], [`ac '${OUT}/f' x`, 'deny', 'AC3.3'],
+      [`md '${T}/d'`, null, 'AC3.3'], [`ni '${T}/f'`, null, 'AC3.3'], [`New-Item -Path '${T}/f' -ItemType File`, null, 'AC3.3'], [`sc '${T}/f' x`, null, 'AC3.3'],
+    ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
