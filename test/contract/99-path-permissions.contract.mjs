@@ -942,6 +942,11 @@ export default async function run({ ok, ctx }) {
       [`nal gd rm; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`Set-Item Alias:gd Remove-Item; gd '${OUT}/x'`, 'ask', 'AC3.2'],
       [`\${function:gd} = { Remove-Item $args }; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`Set-Item function:gd { Remove-Item $args }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
       [`function gd { Remove-Item $args[0] }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      // Dấu hiệu nằm sau nháy hoặc bị escape bằng backtick, và các dạng định nghĩa còn lại.
+      [`pwsh -c "sal gd ri; gd '${OUT}/x'"`, 'ask', 'AC3.2'], [`& 'sal' gd ri; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`iex "sal gd ri"; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      ["Set-Al`ias gd ri; gd '" + OUT + "/x'", 'ask', 'AC3.2'], ["s`al gd ri; gd '" + OUT + "/x'", 'ask', 'AC3.2'],
+      [`Import-Alias a.csv; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`filter gd { & ('Remove-'+'Item') $_ }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`function f { Remove-Item '${OUT}/x' }; f`, 'deny', 'AC3.2'],
       [`Get-Alias gd`, null, 'AC3.2'], [`Write-Host 'my function foo'`, null, 'AC3.2'], [`Remove-Item '${T}/x'`, null, 'AC3.2'],
     ], { tool: 'PowerShell' });
 
