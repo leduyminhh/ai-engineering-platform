@@ -420,7 +420,8 @@ export default async function run({ ok, ctx }) {
     const q1 = "'";
     const q2 = '"';
     for (const c of ['S=' + q1 + T + 'a' + q2 + 'b' + q1 + '; true $S; (rm -rf /etc/y); echo ' + q2 + 'z' + q2, 'S=' + q2 + T + 'a' + q1 + 'b' + q2 + '; true $S; (rm -rf /etc/y); echo ' + q1 + 'z' + q1,
-      'S=' + q1 + T + 'a;b' + q1 + '; rm -rf $S/x', 'S=' + q1 + T + 'a#b' + q1 + '; rm -rf /etc/y']) {
+      // Giá trị ngoài root: T + 'a;b' nằm dưới <tmpdir>/claude (root hợp lệ), nên trước đây chỉ bị hỏi nhờ `;` trong nháy bị tách nhầm.
+      'S=' + q1 + '/etc/y;b' + q1 + '; rm -rf $S/x', 'S=' + q1 + T + 'a#b' + q1 + '; rm -rf /etc/y']) {
       ok(bash(c, full) !== null, `AC6.3: giá trị gán chứa nháy, ; hoặc # không được chèn vào lệnh nên vẫn bị chặn: ${c}`);
     }
     {

@@ -599,6 +599,15 @@ export default async function run({ ok, ctx }) {
       [`cat <<'EOF' > ${OUT}/x\nhello\nEOF`, 'deny', 'AC4.1']]);
     ok(kind(`echo it's; rm ${OUT}/x`) !== null, 'AC4.1: nháy lẻ kèm `;` vẫn không cho qua lệnh xoá ngoài root');
 
+    // H6-hỏi-oan: ruột chuỗi nháy là dữ liệu; `;`, xuống dòng và `=>` trong `node -e '…'` không phải lệnh hay chuyển hướng.
+    const JS = `const a=[...r.matchAll(/^- \\[ \\]/gm)].map(m=>m[1]);\nconst d=[...c].filter(([k,v])=>v>1);\nconsole.log(a||"none")`;
+    expectAll([
+      [`cd ${P}/docs && node -e '${JS}' | grep x`, null, 'H6-hỏi-oan'], [`node -e 'x=m=>m[1];'`, null, 'H6-hỏi-oan'],
+      // Đối chứng: lệnh thật sau chuỗi nháy vẫn bị kiểm.
+      [`node -e '${JS}' && echo x > ${OUT}/f`, 'deny', 'H6-hỏi-oan'], [`node -e '${JS}'; echo x > $X/f`, 'ask', 'H6-hỏi-oan'],
+      [`echo '${JS}' ; rm ${OUT}/x`, 'deny', 'H6-hỏi-oan'],
+    ]);
+
     // resolveWord: giải một từ theo nháy từng phần (D5–D8), glob theo D6.
     const rw = (cmd, { env = {}, unres = false, idx = 1, dialect = 'bash' } = {}) => {
       if (typeof bash.resolveWord !== 'function') return 'thiếu resolveWord';

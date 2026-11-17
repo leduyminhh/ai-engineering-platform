@@ -269,11 +269,37 @@ function naiveWords(x, subst = false) {
   return out;
 }
 
+// Đánh dấu ký tự nằm trong ruột chuỗi nháy đã đóng (dữ liệu thuần với shell). Trả null khi nháy có thể bị đọc khác đi
+// (`\`, `#`, heredoc, `$'`, `@'`, backtick, nháy không đóng, nháy kép có `$`/`\`): người gọi giữ cách tách thô, không che lệnh nào.
+function quotedData(cmd) {
+  const mask = new Uint8Array(cmd.length);
+  for (let i = 0; i < cmd.length; i++) {
+    const c = cmd[i];
+    if (c === '\\' || c === '`' || c === '#' || (c === '<' && cmd[i + 1] === '<') || ((c === '$' || c === '@') && cmd[i + 1] === "'")) return null;
+    if (c !== "'" && c !== '"') continue;
+    const end = cmd.indexOf(c, i + 1);
+    if (end < 0 || (c === '"' && /[\\`$]/.test(cmd.slice(i + 1, end)))) return null;
+    mask.fill(1, i + 1, end);
+    i = end;
+  }
+  return mask;
+}
+
 // Cách tách thô (không hiểu nháy) của bản cũ: chạy song song với parse() vì nháy lẻ (heredoc, #, \') làm parse() nuốt các lệnh phía sau.
-function naiveSegments(cmd) {
+// quoteAware chỉ cho H6: không tách `;`/`|`/xuống dòng trong chuỗi nháy, nếu không `=>` của `node -e '…'` thành chuyển hướng ghi.
+function naiveSegments(cmd, quoteAware = false) {
   const out = [];
   let op = '';
-  cmd.split(/(&&|\|\||;|\n|\|)/).forEach((x, k) => {
+  const data = quoteAware ? quotedData(cmd) : null;
+  const parts = [];
+  let from = 0;
+  for (const m of cmd.matchAll(/&&|\|\||;|\n|\|/g)) {
+    if (data?.[m.index]) continue;
+    parts.push(cmd.slice(from, m.index), m[0]);
+    from = m.index + m[0].length;
+  }
+  parts.push(cmd.slice(from));
+  parts.forEach((x, k) => {
     if (k % 2) { if (op !== '||' && op !== '|') op = x; return; }
     const words = naiveWords(x);
     const t = words.map((w) => w.parts.map((q) => q.text).join(''));
@@ -1757,7 +1783,9 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     // Không bỏ chú thích PowerShell: bỏ sai (`${#x}`, here-string có nháy lẻ, `<#` không đóng) che lệnh ghi; `{`/`=` trong chú thích chỉ làm hỏi thừa.
     try {
       const { scan, text, noVars } = prepareWalk(isPs ? raw : cmd, isPs);
-      const naive = isPs || text === cmd ? naiveOuter : naiveSegments(text);
+      const src = isPs || text === cmd ? cmd : text;
+      // Không có nháy thì quoteAware cho đúng kết quả cũ: dùng lại, khỏi tách thô lần nữa trên lệnh lớn.
+      const naive = !/["']/.test(src) ? (src === cmd ? naiveOuter : naiveSegments(src)) : naiveSegments(src, true);
       const first = walkSegments(scan, { cwd, msys, dialect, noVars });
       // Lần quét thô cắt theo `;` và `|` kể cả trong nháy nên không thấy cấu trúc `foreach (…) { … }`: dùng biến vòng mà lần quét scanWords (giữ phạm vi) đã nhận; hai kết quả được hợp nên không nới hơn.
       walkedAll = [...first, ...walkSegments(naiveScan(naive), { cwd, msys, dialect, noVars }, undefined, isPs ? { loopAny: first.loopAny } : null)];
