@@ -786,7 +786,7 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   t.forEach((x, i) => { if (t.globs?.[i] !== undefined) globOf.set(x, globOf.get(x) || t.globs[i]); });
   const inner = name === 'eval' || SHELLS.has(name) ? shellString(name, args) : null;
   const ask = Boolean(inner) && stringWrites(inner);
-  let unknown = !msys && WRITE_CMDS.has(name) && t.some((x, i) => i > 0 && PS_EXPR_WORD.test(String(x).slice(0, t.qpos?.[i] ?? Infinity)));
+  let unknown = !msys && WRITE_CMDS.has(name) && t.some((x, i) => i > 0 && (t.exprs ? t.exprs[i] : PS_EXPR_WORD.test(String(x).slice(0, t.qpos?.[i] ?? Infinity))));
   let readAsk = false;
   for (const [i, p] of targets.entries()) {
     for (const need of needs[i]) {
@@ -1346,6 +1346,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     const t = [];
     t.globs = [];
     t.qpos = [];
+    t.exprs = [];
     let opaque = false;
     for (const [wi, w] of seg.words.entries()) {
       const r = safe(w, state);
@@ -1359,6 +1360,8 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       if (k < 0) t.qpos.push(Infinity);
       else if (k === 0) t.qpos.push(0);
       else { const pre = { parts: w.parts.slice(0, k) }; t.qpos.push((safe(pre, state)?.text ?? wordText(pre)).length); }
+      // `(` ở phần không nháy của bất kỳ đoạn nào (qpos chỉ nhớ nháy đầu nên `T/"a"(x)` lọt).
+      t.exprs.push(w.parts.some((p, j) => p.quote === 'none' && (p.text.includes('(') || (j === 0 && /^@\w/.test(p.text)))));
     }
     // Tên lệnh thật nằm sau tiền tố bọc (`sudo $R x`, `env $R x`): kiểm trên tên đã qua unwrap, vì kiểm ở cmdAt chỉ thấy `sudo`.
     // `command -v $x` chỉ tra cứu tên, không chạy `$x`.
