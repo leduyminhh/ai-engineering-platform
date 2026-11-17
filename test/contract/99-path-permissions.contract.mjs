@@ -703,5 +703,17 @@ export default async function run({ ok, ctx }) {
       // F9: hai hàng D2 cũ của 99-hook-popup.
       [`cd /e/x && echo hi; S=${T}; rm $S/x`, null, 'AC1.2'],
     ]);
+
+    // Trần cỡ của bộ giải (D4, D15): dưới trần thì giải đúng luật và nhanh; vượt trần thì không giải biến nào (ask).
+    const nameList = (n) => Array.from({ length: n }, (_, i) => `V${i}=${T}/d${i}`).join('; ');
+    const useAll = (n) => Array.from({ length: n * 20 }, (_, i) => `rm "$V${i % n}/f${i}"`).join('; ');
+    const at20 = `${nameList(20)}; ${useAll(20)}`;
+    const t31 = performance.now();
+    const k31 = [kind(at20), kind(`${at20}; V19=${OUT}; rm "$V19/x"`)];
+    ok(at20.length < 20000 && k31[0] === null && k31[1] === 'deny', 'AC3.1: 20 tên gán hợp lệ và 400 đường dẫn dùng biến → giải đúng (null; gán lại ra ngoài root → deny)');
+    ok(performance.now() - t31 < 1000, 'AC3.1: lệnh 20 tên gán, 400 đường dẫn dùng biến chạy dưới 1s');
+    const big = `echo ${'a'.repeat(20000)}; S=${T}; rm -rf $S/x`;
+    ok(big.length > 20000 && kind(big) === 'ask', 'AC3.2: lệnh dài hơn 20000 ký tự có S=<T>; rm -rf $S/x → ask (không giải biến)');
+    ok(kind(`${nameList(21)}; rm -rf $V20/x`) === 'ask' && kind(`${nameList(20)}; rm -rf $V19/x`) === null, 'AC3.2: 21 tên gán → ask, 20 tên gán vẫn giải (null)');
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 }
