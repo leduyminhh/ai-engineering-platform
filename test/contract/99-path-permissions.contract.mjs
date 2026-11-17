@@ -922,6 +922,16 @@ export default async function run({ ok, ctx }) {
       [`md '${T}/d'`, null, 'AC3.3'], [`ni '${T}/f'`, null, 'AC3.3'], [`New-Item -Path '${T}/f' -ItemType File`, null, 'AC3.3'], [`sc '${T}/f' x`, null, 'AC3.3'],
     ], { tool: 'PowerShell' });
 
+    // PowerShell: đường dẫn đưa qua ống không nằm trong đối số của lệnh ghi. Nguồn Get-ChildItem/Get-Item có đường dẫn tường minh thì đường dẫn đó chịu quyền của lệnh ghi; nguồn khác không đoán được.
+    holeRows([
+      [`$p = '${OUT}'; $p | Remove-Item`, 'ask', 'AC3.1'], [`Get-ChildItem '${OUT}' | Remove-Item`, 'deny', 'AC3.1'],
+      [`Get-ChildItem $x | Remove-Item`, 'ask', 'AC3.1'], [`Get-Content a | Set-Content`, 'ask', 'AC3.1'],
+      [`Get-ChildItem -Path '${OUT}' -Filter *.log -Recurse | Remove-Item -Force`, 'deny', 'AC3.1'],
+      [`Get-ChildItem '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem -Path '${T}' -Filter *.log -Recurse | Remove-Item -Force`, null, 'AC3.1'],
+      [`gci '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem | Remove-Item`, null, 'AC3.1'],
+      [`Get-Content a | Out-File '${T}/f'`, null, 'AC3.1'], [`Get-Content a | Out-File '${OUT}/f'`, 'deny', 'AC3.1'],
+    ], { tool: 'PowerShell' });
+
     // PowerShell: đối số là biểu thức trong ngoặc hoặc splat thì giá trị thật không đọc được từ chữ; chữ thô giống một tên tương đối nên từng cho qua.
     holeRows([
       [`Remove-Item ('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item -Path ('${OUT}/x')`, 'ask', 'AC3.5'],
