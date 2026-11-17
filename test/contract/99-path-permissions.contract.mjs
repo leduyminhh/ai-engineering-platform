@@ -921,6 +921,13 @@ export default async function run({ ok, ctx }) {
       [`New-Item -Path '${OUT}/f' -ItemType File`, 'deny', 'AC3.3'], [`sc '${OUT}/f' x`, 'deny', 'AC3.3'], [`ac '${OUT}/f' x`, 'deny', 'AC3.3'],
       [`md '${T}/d'`, null, 'AC3.3'], [`ni '${T}/f'`, null, 'AC3.3'], [`New-Item -Path '${T}/f' -ItemType File`, null, 'AC3.3'], [`sc '${T}/f' x`, null, 'AC3.3'],
     ], { tool: 'PowerShell' });
+
+    // PowerShell: đối số là biểu thức trong ngoặc hoặc splat thì giá trị thật không đọc được từ chữ; chữ thô giống một tên tương đối nên từng cho qua.
+    holeRows([
+      [`Remove-Item ('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item -Path ('${OUT}/x')`, 'ask', 'AC3.5'],
+      [`$p = @{Path='${OUT}/x'}; Remove-Item @p`, 'ask', 'AC3.5'], [`Remove-Item (Join-Path '${OUT}' 'x')`, 'ask', 'AC3.5'],
+      [`Remove-Item '${T}/x'`, null, 'AC3.5'],
+    ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
