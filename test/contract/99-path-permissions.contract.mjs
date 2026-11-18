@@ -1043,6 +1043,14 @@ export default async function run({ ok, ctx }) {
       // `builtin` nay thuộc unwrap nên H6 cũng thấy lệnh ghi sau nó.
       holeRows([[`builtin rm ${OUT}/x`, 'deny', 'cd-wrapper AC1.3'], [`builtin rm ${T}/x`, null, 'cd-wrapper AC1.3']]);
     }
+    // `wait` cờ gộp (`-fp S`) và tên dính liền (`-pS`) vẫn ghi PID vào S; cờ không có `p` thì không. `timeout` nhận thời lượng là biến nhưng chỉ một từ.
+    holeRows([
+      [`S=${T}; wait -fp S; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'], [`S=${T}; wait -pS; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'],
+      [`S=${T}; wait -n -fp S; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'], [`S=${T}; wait -fpS; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'],
+      [`S=${T}; wait -fn; rm -rf $S/x`, null, 'cd-wrapper AC1.4'], [`S=${T}; wait; rm -rf $S/x`, null, 'cd-wrapper AC1.4'],
+      [`timeout $T ls`, null, 'cd-wrapper AC1.5'], [`timeout \${T}s ls ${T}/x`, null, 'cd-wrapper AC1.5'],
+      [`R=rm; timeout 5 $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'], [`R=rm; timeout $T $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'],
+    ]);
     // PowerShell: `.{ … }` (dot-source một khối) chạy ngay trong scope hiện tại nên cd đổi thư mục thật; từ `.{`/`&{` đầu đoạn không phải tên lệnh.
     holeRows([
       [`.{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'],
