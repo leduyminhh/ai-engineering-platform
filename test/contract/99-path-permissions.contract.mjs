@@ -1014,6 +1014,11 @@ export default async function run({ ok, ctx }) {
       [`command -pv $x`, 'ask', 'cd-wrapper AC1.1'], [`command -v cd; rm x`, null, 'cd-wrapper AC1.1'], [`command -v $x`, null, 'cd-wrapper AC1.1'], [`command -pv cd; rm x`, null, 'cd-wrapper AC1.1'],
       [`builtin cd ${T}; rm x`, null, 'cd-wrapper AC1.1'], [`command -p cd ${T}; rm x`, null, 'cd-wrapper AC1.1'],
     ]);
+    // PowerShell: `.{ … }` (dot-source một khối) chạy ngay trong scope hiện tại nên cd đổi thư mục thật; từ `.{`/`&{` đầu đoạn không phải tên lệnh.
+    holeRows([
+      [`.{ cd '${OUT}' }; Remove-Item x`, 'ask', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'ask', 'cd-wrapper AC1.2'],
+      [`cd '${T}'; Remove-Item x`, null, 'cd-wrapper AC1.2'],
+    ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
