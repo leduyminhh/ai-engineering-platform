@@ -67,7 +67,7 @@
 - Consumes: biến `ci` và `name` của `walkSegments` (request trước), `structOk`/`compound`.
 - Produces: không có
 
-- [ ] **Step 1:** thêm hàng AC1.2 (PowerShell): `.{ cd '<OUT>' }; Remove-Item x`, `&{ cd '<OUT>' }; Remove-Item x` → `ask`; đối chứng `cd '<T>'; Remove-Item x` → `null`. Chạy, thấy đỏ (đặc biệt `.{`); commit test đỏ.
+- [ ] **Step 1:** thêm hàng AC1.2 (PowerShell): `.{ cd '<OUT>' }; Remove-Item x`, `&{ cd '<OUT>' }; Remove-Item x` → `deny`; thêm `.{ Remove-Item <OUT>/x }` → `deny`; đối chứng `cd '<T>'; Remove-Item x` → `null`. Chạy, thấy đỏ (đặc biệt `.{`); commit test đỏ.
 - [ ] **Step 2:** mở rộng vòng bỏ từ đầu đoạn thành `/^[.&]?\{$/`; chạy `--only path-permissions` và `--only hook`, xanh; commit `fix(hooks): treat .{ and &{ blocks like { when finding the PowerShell command name`.
 
 ### Task 3: `trackDirs` (H1) nhận cd qua unwrap (D2)

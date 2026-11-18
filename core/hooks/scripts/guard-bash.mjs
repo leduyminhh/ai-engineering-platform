@@ -431,7 +431,7 @@ function unwrap(tokens) {
   while (k < t.length) {
     const n = cmdName(t[k]);
     // Từ khoá cấu trúc đứng ở vị trí lệnh (khối { }, if/then, for/do, !): lệnh thật là token kế, nếu không WRITE_CMDS không khớp.
-    if (SHELL_KEYWORDS.has(t[k])) { k++; continue; }
+    if (SHELL_KEYWORDS.has(t[k]) || /^[.&]\{$/.test(t[k])) { k++; continue; }
     if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec', 'busybox'].includes(n)) {
       k++;
       if (n === 'command') while (t[k]?.startsWith('-')) k++;
