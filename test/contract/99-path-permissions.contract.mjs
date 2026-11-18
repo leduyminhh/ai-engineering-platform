@@ -1026,6 +1026,23 @@ export default async function run({ ok, ctx }) {
         ], o);
       }
     }
+    // Ngược lại (cwd ở main, `other` ở feature): chỉ `cd` chạy trong shell hiện tại mới đổi thư mục tra nhánh; `sudo cd`, `env cd`, `command -v cd`… không đổi nên push vẫn từ main → ask (không được thành null).
+    {
+      const mainDir = path.resolve(P);
+      const mainOpts = { currentBranch: (d) => (d === mainDir ? 'main' : 'feature/x') };
+      for (const [label, o] of [['full', { opts: mainOpts }], ['ask', { cfg: { mode: 'ask' }, opts: mainOpts }]]) {
+        holeRows([
+          [`cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`builtin cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          [`command -p cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          [`sudo cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`env cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`nohup cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`timeout 5 cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`exec cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`env -S "cd other"; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`command -v cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`command -pv cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+        ], o);
+      }
+      // `builtin` nay thuộc unwrap nên H6 cũng thấy lệnh ghi sau nó.
+      holeRows([[`builtin rm ${OUT}/x`, 'deny', 'cd-wrapper AC1.3'], [`builtin rm ${T}/x`, null, 'cd-wrapper AC1.3']]);
+    }
     // PowerShell: `.{ … }` (dot-source một khối) chạy ngay trong scope hiện tại nên cd đổi thư mục thật; từ `.{`/`&{` đầu đoạn không phải tên lệnh.
     holeRows([
       [`.{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'],
