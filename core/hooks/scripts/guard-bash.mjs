@@ -353,6 +353,7 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true
 // Git Bash đổi /e/x thành E:/x; PowerShell giải /e/x theo ổ hiện tại (E:\e\x) nên không được đổi.
 const np = (p, msys) => (msys ? normalizeMsysPath(p) : p);
 
+const COND_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', 'time', '.{', '&{']);
 const NON_SHELL_WRAP = new Set(['sudo', 'doas', 'env', 'nohup', 'timeout', 'nice', 'exec', 'ionice', 'stdbuf', 'busybox']);
 const CD_CMDS = new Set(['cd', 'chdir', 'pushd', 'push-location', 'set-location', 'sl']);
 const POP_CMDS = new Set(['popd', 'pop-location']);
@@ -380,6 +381,8 @@ function trackDirs(segs, cwd, msys = true) {
       cdSeen = true;
       unres = true;
     }
+    // cd sau từ khoá điều kiện, `time` hay `.{` có thể không chạy (cùng luật `structOk` của walkSegments): thư mục chưa rõ.
+    if (CD_CMDS.has(name) && prefix.some((x) => COND_KW.has(x))) unres = true;
     return { t, u, gc: gitCmd(u), dir, unres };
   });
 }
