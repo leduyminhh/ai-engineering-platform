@@ -1010,7 +1010,8 @@ export default async function run({ ok, ctx }) {
     holeRows([
       [`command -- cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'], [`command -p cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'], [`builtin -- cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'],
       [`time -p cd ${OUT}; rm x`, 'ask', 'cd-wrapper AC1.1'],
-      [`command -v cd; rm x`, null, 'cd-wrapper AC1.1'], [`command -v $x`, null, 'cd-wrapper AC1.1'], [`command -pv cd; rm x`, null, 'cd-wrapper AC1.1'],
+      // `command -pv $x` vốn ask (không phải ngoại lệ lookup của request trước): không đổi.
+      [`command -pv $x`, 'ask', 'cd-wrapper AC1.1'], [`command -v cd; rm x`, null, 'cd-wrapper AC1.1'], [`command -v $x`, null, 'cd-wrapper AC1.1'], [`command -pv cd; rm x`, null, 'cd-wrapper AC1.1'],
       [`builtin cd ${T}; rm x`, null, 'cd-wrapper AC1.1'], [`command -p cd ${T}; rm x`, null, 'cd-wrapper AC1.1'],
     ]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
