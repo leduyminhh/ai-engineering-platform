@@ -1029,7 +1029,7 @@ export default async function run({ ok, ctx }) {
     // Ngược lại (cwd ở main, `other` ở feature): chỉ `cd` chạy trong shell hiện tại mới đổi thư mục tra nhánh; `sudo cd`, `env cd`, `command -v cd`… không đổi nên push vẫn từ main → ask (không được thành null).
     {
       const mainDir = path.resolve(P);
-      const mainOpts = { currentBranch: (d) => (d === mainDir ? 'main' : 'feature/x') };
+      const mainOpts = { currentBranch: (d) => (path.resolve(d) === mainDir ? 'main' : 'feature/x') };
       for (const [label, o] of [['full', { opts: mainOpts }], ['ask', { cfg: { mode: 'ask' }, opts: mainOpts }]]) {
         holeRows([
           [`cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`builtin cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],

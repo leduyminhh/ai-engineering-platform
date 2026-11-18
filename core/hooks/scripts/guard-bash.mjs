@@ -353,6 +353,7 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true
 // Git Bash đổi /e/x thành E:/x; PowerShell giải /e/x theo ổ hiện tại (E:\e\x) nên không được đổi.
 const np = (p, msys) => (msys ? normalizeMsysPath(p) : p);
 
+const NON_SHELL_WRAP = new Set(['sudo', 'doas', 'env', 'nohup', 'timeout', 'nice', 'exec', 'ionice', 'stdbuf', 'busybox']);
 const CD_CMDS = new Set(['cd', 'chdir', 'pushd', 'push-location', 'set-location', 'sl']);
 const POP_CMDS = new Set(['popd', 'pop-location']);
 
@@ -364,7 +365,10 @@ function trackDirs(segs, cwd, msys = true) {
   return segs.map((t) => {
     // u: lệnh đã bỏ tiền tố bọc (env -S, sudo, nice…) để H1 thấy `git push` thật; `cd` cũng lấy từ đây (`builtin cd`, `command -- cd`, `then cd`).
     const [u, k] = unwrap(t);
-    const name = String(u[k] ?? '').toLowerCase();
+    // Chỉ `cd` chạy trong shell hiện tại mới đổi thư mục: `sudo cd`, `env cd`, `nohup cd`… chạy ở tiến trình khác (hoặc lỗi), `command -v cd` chỉ tra cứu.
+    const prefix = u.slice(0, k);
+    const inShell = !prefix.some((x) => NON_SHELL_WRAP.has(cmdName(x))) && !(prefix.includes('command') && prefix.some((x) => /^-[A-Za-z]*[vV]/.test(x)));
+    const name = inShell ? String(u[k] ?? '').toLowerCase() : '';
     // Sau `||` / `|` lệnh cd phía trước có thể chưa chạy (hoặc chạy ở tiến trình con) → không tin thư mục đang theo dõi.
     if (cdSeen && (t.op === '||' || t.op === '|')) unres = true;
     if (CD_CMDS.has(name)) {
