@@ -1,6 +1,6 @@
 # Thiết kế: guard-bash giải biến vòng `for NAME in <literal>` ở full
 - Ngày: 2026-11-18
-- Trạng thái: approved — design và plan duyệt 2026-11-18 (người dùng chọn làm cả PowerShell cùng request)
+- Trạng thái: merged 1ba564f0
 - Requirement: không có
 
 ## Vấn đề và lý do
