@@ -1034,6 +1034,9 @@ export default async function run({ ok, ctx }) {
         holeRows([
           [`cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`builtin cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
           [`command -p cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          // cd sau từ khoá điều kiện/`time`/`.{` không chắc chạy: thư mục chưa rõ nên push không refspec rõ vẫn hỏi (cwd ở main, `other` ở feature).
+          [`if false; then cd other; fi; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`time -p cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`while true; do cd other; done; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`.{ cd other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
           [`sudo cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`env cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
           [`nohup cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`timeout 5 cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
           [`exec cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`env -S "cd other"; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
