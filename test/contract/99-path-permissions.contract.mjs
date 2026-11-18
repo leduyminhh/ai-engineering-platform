@@ -1016,7 +1016,7 @@ export default async function run({ ok, ctx }) {
     ]);
     // PowerShell: `.{ … }` (dot-source một khối) chạy ngay trong scope hiện tại nên cd đổi thư mục thật; từ `.{`/`&{` đầu đoạn không phải tên lệnh.
     holeRows([
-      [`.{ cd '${OUT}' }; Remove-Item x`, 'ask', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'ask', 'cd-wrapper AC1.2'],
+      [`.{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'],
       [`cd '${T}'; Remove-Item x`, null, 'cd-wrapper AC1.2'],
     ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }

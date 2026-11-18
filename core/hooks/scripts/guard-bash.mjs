@@ -1418,7 +1418,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     prevT = t;
     // PowerShell: đoạn trong khối mở bằng từ `{` (scanWords không tách nó ra khỏi lệnh).
     let ci = infos[i].cmdAt;
-    if (ps) while (t[ci] === '{') ci++;
+    if (ps) while (/^[.&]?\{$/.test(t[ci] ?? '')) ci++;
     const name = String(t[ci] ?? '').toLowerCase();
     if (cdSeen && (seg.sep === '||' || seg.sep === '|')) unres = true;
     if (CD_CMDS.has(name) || POP_CMDS.has(name)) {
