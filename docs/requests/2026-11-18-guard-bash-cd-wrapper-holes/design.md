@@ -1,6 +1,6 @@
 # Thiết kế: guard-bash nhận cd và lệnh sau các lệnh bọc còn sót
 - Ngày: 2026-11-18
-- Trạng thái: in-progress — nhánh claude/laughing-tu-69e18d (chưa merge; master do worktree chính giữ)
+- Trạng thái: merged 9e5360c6
 - Requirement: không có
 
 ## Vấn đề và lý do
