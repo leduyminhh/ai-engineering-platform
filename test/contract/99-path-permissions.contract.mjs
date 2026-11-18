@@ -1018,6 +1018,8 @@ export default async function run({ ok, ctx }) {
     holeRows([
       [`.{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'],
       [`cd '${T}'; Remove-Item x`, null, 'cd-wrapper AC1.2'],
+      // Lệnh ghi đứng ngay sau `.{`: unwrap cũng phải bỏ từ `.{`/`&{` như `{`.
+      [`.{ Remove-Item ${OUT}/x }`, 'deny', 'cd-wrapper AC1.2'], [`.{ rm ${OUT}/x }`, 'deny', 'cd-wrapper AC1.2'], [`.{ Remove-Item ${T}/x }`, null, 'cd-wrapper AC1.2'],
     ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
