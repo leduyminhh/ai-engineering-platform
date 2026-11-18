@@ -1005,6 +1005,14 @@ export default async function run({ ok, ctx }) {
     // Hồi quy sau review cuối: số `-C` phụ thuộc độ dài lệnh không được đi qua spread (tràn stack → RangeError → push nhánh main lọt).
     const gc = holeKind('git ' + '-C a '.repeat(130000) + 'push origin main', { cfg: { mode: 'ask' } });
     ok(gc === 'ask', `AC1.1: 130000 × git -C a push origin main vẫn bị hỏi, decide không ném lỗi (${gc})`);
+
+    // Request guard-bash-cd-wrapper-holes: cd sau cờ của command/builtin/time. `builtin`/`command` chạy chắc → deny ở thư mục ngoài root; `time` là từ khoá không được tin → ask; `command -v` chỉ tra cứu.
+    holeRows([
+      [`command -- cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'], [`command -p cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'], [`builtin -- cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'],
+      [`time -p cd ${OUT}; rm x`, 'ask', 'cd-wrapper AC1.1'],
+      [`command -v cd; rm x`, null, 'cd-wrapper AC1.1'], [`command -v $x`, null, 'cd-wrapper AC1.1'], [`command -pv cd; rm x`, null, 'cd-wrapper AC1.1'],
+      [`builtin cd ${T}; rm x`, null, 'cd-wrapper AC1.1'], [`command -p cd ${T}; rm x`, null, 'cd-wrapper AC1.1'],
+    ]);
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
