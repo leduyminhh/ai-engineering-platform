@@ -362,20 +362,20 @@ function trackDirs(segs, cwd, msys = true) {
   let unres = false;
   let cdSeen = false;
   return segs.map((t) => {
-    const name = String(t[0]).toLowerCase();
+    // u: lệnh đã bỏ tiền tố bọc (env -S, sudo, nice…) để H1 thấy `git push` thật; `cd` cũng lấy từ đây (`builtin cd`, `command -- cd`, `then cd`).
+    const [u, k] = unwrap(t);
+    const name = String(u[k] ?? '').toLowerCase();
     // Sau `||` / `|` lệnh cd phía trước có thể chưa chạy (hoặc chạy ở tiến trình con) → không tin thư mục đang theo dõi.
     if (cdSeen && (t.op === '||' || t.op === '|')) unres = true;
     if (CD_CMDS.has(name)) {
       cdSeen = true;
-      const arg = t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
+      const arg = u.slice(k + 1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
       if (arg === undefined || hasUnresolvedRef(arg) || arg === '-') unres = true;
       else { const a = np(arg, msys); dir = path.resolve(dir, a); if (path.isAbsolute(a)) unres = false; }
     } else if (POP_CMDS.has(name)) {
       cdSeen = true;
       unres = true;
     }
-    // u: lệnh đã bỏ tiền tố bọc (env -S, sudo, nice…) để H1 thấy `git push` thật.
-    const u = unwrap(t)[0];
     return { t, u, gc: gitCmd(u), dir, unres };
   });
 }
@@ -432,9 +432,9 @@ function unwrap(tokens) {
     const n = cmdName(t[k]);
     // Từ khoá cấu trúc đứng ở vị trí lệnh (khối { }, if/then, for/do, !): lệnh thật là token kế, nếu không WRITE_CMDS không khớp.
     if (SHELL_KEYWORDS.has(t[k]) || /^[.&]\{$/.test(t[k])) { k++; continue; }
-    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec', 'busybox'].includes(n)) {
+    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'builtin', 'exec', 'busybox'].includes(n)) {
       k++;
-      if (n === 'command') while (t[k]?.startsWith('-')) k++;
+      if (n === 'command' || n === 'builtin') while (t[k]?.startsWith('-')) k++;
       continue;
     }
     // Các tiền tố bọc ít gặp: bỏ cờ của chúng để lệnh thật (cp, tee, rm…) lộ ra cho H6 và kiểm cấu hình hook.
