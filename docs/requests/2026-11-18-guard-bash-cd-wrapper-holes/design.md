@@ -27,7 +27,7 @@ Các lỗ (đã chạy `decide` thật ở review cuối của request trước;
 ### Quyết định của agent (cần duyệt ở G1)
 
 - **D1 — `cmdAt` bỏ cờ của `command`/`builtin`/`time`.** Sau `builtin`, `command` hoặc `time` bỏ các từ bắt đầu bằng `-` (gồm `--`, `-p`). Riêng `command -v`/`-V` (và `command -pv`…) là tra cứu tên, không chạy lệnh: `cmdAt` giữ ở từ `command`, nên `command -v cd; rm x` không làm thư mục đổi (và `command -v $x` giữ nguyên ngoại lệ `lookup` của request trước). `time` vẫn là từ khoá mở đầu không được tin: `time -p cd OUT; rm x` thành `ask` (thư mục chưa rõ), như `time cd OUT` hiện tại. `builtin`/`command` thì `cd` chắc chạy: `deny` ở thư mục ngoài root.
-- **D2 — `trackDirs` (H1) nhận `cd` qua `unwrap`.** Tên lệnh lấy từ `unwrap(t)` thay `t[0]`; `builtin` thêm vào danh sách tiền tố của `unwrap`. Luật cd cũ của H1 (hiệu lực cho đoạn sau, trừ sau `||`/`|`) giữ nguyên; chỉ vị trí nhận ra đổi. Chỉ `cd` chạy trong shell hiện tại mới đổi thư mục tra nhánh: tiền tố trong `NON_SHELL_WRAP` (`sudo`, `doas`, `env`, `nohup`, `timeout`, `nice`, `exec`, `ionice`, `stdbuf`, `busybox`) và `command -v`/`-V` không đổi (push vẫn tra thư mục hiện tại). Vì `unwrap` nhận `builtin`, H6 cũng thấy lệnh ghi sau `builtin` (`builtin rm <ngoài root>`: `deny`). Request trước nêu `trackDirs` "không đổi" như ràng buộc của riêng nó; request này được phép vì ghi rõ ở đây.
+- **D2 — `trackDirs` (H1) nhận `cd` qua `unwrap`.** Tên lệnh lấy từ `unwrap(t)` thay `t[0]`; `builtin` thêm vào danh sách tiền tố của `unwrap`. Luật cd cũ của H1 (hiệu lực cho đoạn sau, trừ sau `||`/`|`) giữ nguyên; chỉ vị trí nhận ra đổi. Chỉ `cd` chạy trong shell hiện tại mới đổi thư mục tra nhánh: tiền tố trong `NON_SHELL_WRAP` (`sudo`, `doas`, `env`, `nohup`, `timeout`, `nice`, `exec`, `ionice`, `stdbuf`, `busybox`) và `command -v`/`-V` không đổi (push vẫn tra thư mục hiện tại). `cd` sau từ khoá trong `COND_KW` (`if`, `then`, `else`, `elif`, `do`, `while`, `until`, `time`, `.{`, `&{`) có thể không chạy nên đặt thư mục chưa rõ (cùng luật `structOk`); sau `builtin`, `command`, `{`, `!` thì `cd` chắc chạy. Vì `unwrap` nhận `builtin`, H6 cũng thấy lệnh ghi sau `builtin` (`builtin rm <ngoài root>`: `deny`). Request trước nêu `trackDirs` "không đổi" như ràng buộc của riêng nó; request này được phép vì ghi rõ ở đây.
 - **D3 — PowerShell `.{` và `&{`:** `walkSegments` (và `unwrap`) bỏ các từ `{`, `.{`, `&{` đầu đoạn khi tìm tên lệnh (mở rộng vòng `while (t[ci] === '{')` của request trước); nên lệnh ghi sau `.{` cũng được kiểm, và `.{ rm X }` ở Bash cũng bị bỏ `.{` (hỏi oan nhỏ). `.{` và `&{` chạy khối ngay trong scope hiện tại nên `cd` chắc chạy (`deny` ở thư mục ngoài root); `{ … }` đứng riêng hoặc sau `&` có dấu cách vẫn không chắc chạy (`structOk`/`compound`) nên thư mục thành chưa rõ (`ask`).
 - **D4 — `wait`:** trong cửa sổ 4 từ sau `wait`, nhận `-p` đứng riêng, cờ gộp kết thúc bằng `p` (`-fp`, `-nfp`) và `-p` dính tên (`-pS`, `-fpS`); tên biến là từ kế (khi riêng, phải cũng nằm trong cửa sổ) hoặc phần dính liền. Chỉ cờ có `p` đầu tiên được nhận. Cờ không có `p` (`-n`, `-f`, `-fn`) không làm gì.
 - **D5 — `timeout`:** thời lượng được nhận cả khi là biến (`$T`, `${T}`, có thể kèm hậu tố `s|m|h|d`). `timeout 5 $R x` và `timeout $T $R x` vẫn làm `$R` là tên lệnh không đọc được (`ask`): chỉ một từ được nuốt làm thời lượng.
@@ -70,6 +70,7 @@ Test ở `test/contract/99-path-permissions.contract.mjs` (khối mới "cd và 
 
 ## Ảnh hưởng spec
 - hooks-gates: đổi R23
+- hooks-gates: đổi R24
 
 ## Ngoài phạm vi và anti-goal
 
@@ -88,7 +89,7 @@ Test ở `test/contract/99-path-permissions.contract.mjs` (khối mới "cd và 
 ## Không đổi (bugfix)
 
 - Mọi ca không có dấu hiệu của các lỗ trên giữ kết quả, gồm các bảng của `99-hook-popup` và khối cd/H1 của `90-hooks`.
-- Chế độ `ask` giữ kết quả, trừ ca H1 đã nêu ở AC1.3 (`cd` sau `builtin`/`command`/`then` nay đổi nhánh tra push).
+- Chế độ `ask` giữ kết quả, trừ ca H1 đã nêu ở AC1.3 (`cd` sau `builtin`/`command` nay đổi nhánh tra push; `cd` sau `then` và các từ khoá điều kiện làm thư mục chưa rõ).
 - `command -v`/`-V` giữ nguyên ngoại lệ tra cứu.
 
 ## Kiểm thử
