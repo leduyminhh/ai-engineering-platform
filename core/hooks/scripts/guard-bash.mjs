@@ -1411,7 +1411,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     }
     // Tên lệnh thật nằm sau tiền tố bọc (`sudo $R x`, `env $R x`): kiểm trên tên đã qua unwrap, vì kiểm ở cmdAt chỉ thấy `sudo`.
     // `command -v $x` chỉ tra cứu tên, không chạy `$x`.
-    const lookup = t[infos[i].lead] === 'command' && /^-[A-Za-z]*[vV]/.test(t[infos[i].lead + 1] ?? '');
+    const lookup = t[infos[i].lead] === 'command' && /^-[vV]$/.test(t[infos[i].lead + 1] ?? '');
     if (!ps && !lookup) { const [tk, k] = unwrap(t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
     t.op = seg.sep === 'start' ? '' : seg.sep;
     t.pipeFrom = seg.pipeIn ? prevT : null;
