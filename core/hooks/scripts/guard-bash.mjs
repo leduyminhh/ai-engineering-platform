@@ -457,7 +457,8 @@ function unwrap(tokens) {
     if (n === 'timeout') {
       k++;
       while (k < t.length && t[k].startsWith('-')) k += /^(-s|-k|--signal|--kill-after)$/.test(t[k]) ? 2 : 1;
-      if (k < t.length && /^\d+(\.\d+)?[smhd]?$/.test(t[k])) k++;
+      // Thời lượng là biến (`$T`, `${T}s`) cũng là một từ: `timeout $T $R x` vẫn để `$R` là tên lệnh.
+      if (k < t.length && /^(?:\d+(?:\.\d+)?|\$\{?\w+\}?)[smhd]?$/.test(t[k])) k++;
       continue;
     }
     if (n === 'nice') {
@@ -1242,7 +1243,17 @@ function leadInfo(seg) {
     const fd = /^\{([A-Za-z_]\w*)\}[<>]/.exec(x);
     if (fd) extra.push(fd[1]);
     // Cờ của wait (`-f -n -p VAR`) nằm ngay sau từ wait: chỉ nhìn cửa sổ ngắn để lệnh lặp `wait` không quét tới hết đoạn mỗi lần.
-    if (x === 'wait') { const p = ws.slice(k + 1, k + 4).findIndex((w) => wordText(w) === '-p'); if (p >= 0 && ws[k + p + 2]) extra.push(txt(k + p + 2)); }
+    if (x === 'wait') {
+      // `-p VAR`, cờ gộp kết thúc bằng p (`-fp VAR`) và tên dính liền (`-pVAR`, `-fpVAR`): tên biến là phần dính hoặc từ kế.
+      const win = ws.slice(k + 1, k + 5);
+      for (const [j, w] of win.entries()) {
+        const m = /^-[A-Za-z]*?p(.*)$/.exec(wordText(w));
+        if (!m) continue;
+        const v = m[1] || (win[j + 1] ? wordText(win[j + 1]) : '');
+        if (v) extra.push(v);
+        break;
+      }
+    }
     if (x === 'coproc' && /^[A-Za-z_]\w*$/.test(txt(k + 1)) && /^[{(]/.test(txt(k + 2))) extra.push(txt(k + 1));
     const loose = used.has(k) ? null : /^([A-Za-z_]\w*)(?:\+?=|\[)/.exec(x);
     if (loose) extra.push(loose[1]);
