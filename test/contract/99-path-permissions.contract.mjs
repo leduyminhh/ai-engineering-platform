@@ -1051,7 +1051,9 @@ export default async function run({ ok, ctx }) {
       [`S=${T}; wait -fp S; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'], [`S=${T}; wait -pS; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'],
       [`S=${T}; wait -n -fp S; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'], [`S=${T}; wait -fpS; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'],
       [`S=${T}; wait -fn; rm -rf $S/x`, null, 'cd-wrapper AC1.4'], [`S=${T}; wait; rm -rf $S/x`, null, 'cd-wrapper AC1.4'],
-      [`timeout $T ls`, null, 'cd-wrapper AC1.5'], [`timeout \${T}s ls ${T}/x`, null, 'cd-wrapper AC1.5'],
+      // Thời lượng là biến không trích dẫn có thể chứa khoảng trắng (bash tách từ: `T='5 rm'` → `timeout 5 rm -rf …`), nên `$T` không được coi là thời lượng → vẫn ask như trước request.
+      [`timeout $T ls`, 'ask', 'cd-wrapper AC1.5'], [`timeout \${T}s ls ${T}/x`, 'ask', 'cd-wrapper AC1.5'], [`T='5 rm'; timeout $T -rf ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'],
+      [`timeout 5 ls ${T}/x`, null, 'cd-wrapper AC1.5'],
       [`R=rm; timeout 5 $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'], [`R=rm; timeout $T $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'],
     ]);
     // Hồi quy sau review cuối: từ `-ppp…p` kèm nháy chứa xuống dòng không được làm regex của nhánh `wait` backtrack bậc hai (50000 ký tự `p` từng mất ~1,8 s).
