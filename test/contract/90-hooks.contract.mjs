@@ -24,7 +24,7 @@ export default async function run({ ok, ctx }) {
     const { pathToFileURL, execFileSync, CORE_DIR } = ctx;
     const script = path.join(CORE_DIR, 'hooks', 'scripts', 'guard-bash.mjs');
     const { decide } = await import(pathToFileURL(script).href);
-    const on = (branch) => ({ currentBranch: () => branch });
+    const on = (branch) => ({ currentBranch: () => branch, reader: () => null, allowEnv: () => false });
     const bash = (command) => ({ tool_name: 'Bash', cwd: '.', tool_input: { command } });
     const d = (cmd, br = 'feature/x') => decide(bash(cmd), on(br));
     ok(d('git push origin main')?.decision === 'ask', 'H1: push main → ask');
@@ -54,7 +54,7 @@ export default async function run({ ok, ctx }) {
       && d('git push origin @', 'main')?.decision === 'ask' && d('git push -o ci.skip origin', 'feature/x') === null,
       'H1: -o/--push-option bỏ qua giá trị; @ = HEAD');
     const repoDir = path.resolve('.', 'repo');
-    const inRepo = { currentBranch: (dir) => (dir === repoDir ? 'main' : 'feature/x') };
+    const inRepo = { currentBranch: (dir) => (dir === repoDir ? 'main' : 'feature/x'), reader: () => null, allowEnv: () => false };
     ok(decide(bash('git -C repo push origin HEAD'), inRepo)?.decision === 'ask' && decide(bash('git push origin HEAD'), inRepo) === null,
       'H1: -C <dir> → tra nhánh của repo đích (so với cwd)');
     ok(['cat .env;echo', 'cat <.env', 'source .env&&npm start', 'echo $(cat .env)', 'type certs\\server.pem', 'cat ..\\.env']
@@ -155,7 +155,7 @@ export default async function run({ ok, ctx }) {
     ok(denied.every((f) => read(`/repo/${f}`)?.decision === 'deny'), `H3: ${denied.length} dạng file bí mật mở rộng (.key/.ppk/.p8/*.env/.envrc/id_*/credentials.yml/hoa thường) → deny`);
     const allowed = ['.env.example', 'config/.env.sample', 'id_rsa.pub', 'src/credentials.ts', 'process.env.js', 'src/env.ts', 'keys.md'];
     ok(allowed.every((f) => read(`/repo/${f}`) === null), 'H3: .env.example/.sample, id_rsa.pub, credentials.ts, process.env.js → cho qua');
-    const b = (command) => bash.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x' });
+    const b = (command) => bash.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x', reader: () => null, allowEnv: () => false });
     ok(['cat .ENV', 'cat prod.env', 'cat config/app.env', 'cat .envrc', 'cat certs/server.key', 'cat id_rsa.bak', 'cat credentials.yml']
       .every((c) => b(c)?.decision === 'ask'), 'H3 Bash: .ENV/prod.env/.envrc/.key/id_rsa.bak/credentials.yml → ask');
     ok(['cat id_rsa.pub', 'cat .env.example', 'cat src/credentials.ts', 'ls'].every((c) => b(c) === null), 'H3 Bash: id_rsa.pub/.env.example/credentials.ts → cho qua');
@@ -233,13 +233,13 @@ export default async function run({ ok, ctx }) {
     const hooks = JSON.parse(fs.readFileSync(path.join(CORE_DIR, 'hooks', 'hooks.json'), 'utf8'));
     const bashGroup = hooks.hooks.PreToolUse.find((g) => g.hooks[0].args[0].endsWith('guard-bash.mjs'));
     ok(bashGroup && bashGroup.matcher.split('|').includes('Bash') && bashGroup.matcher.split('|').includes('PowerShell'), 'F1: matcher guard-bash phủ cả Bash và PowerShell');
-    const ps = (command, br = 'feature/x') => bash.decide({ tool_name: 'PowerShell', cwd: '.', tool_input: { command } }, { currentBranch: () => br });
+    const ps = (command, br = 'feature/x') => bash.decide({ tool_name: 'PowerShell', cwd: '.', tool_input: { command } }, { currentBranch: () => br, reader: () => null, allowEnv: () => false });
     ok(ps('git push origin main')?.decision === 'ask' && ps('git commit -m "sửa"')?.decision === 'deny' && ps('git commit -F msg.txt') === null,
       'F1: decide() với tool_name PowerShell: push main → ask, commit -m có dấu → deny, -F → cho qua');
     // F2: cd/pushd/Set-Location đổi thư mục làm việc trước khi push
     const root = path.resolve('.');
     const repoDir = path.resolve(root, 'repo');
-    const inRepo = { currentBranch: (d) => (d === repoDir ? 'main' : 'feature/x') };
+    const inRepo = { currentBranch: (d) => (d === repoDir ? 'main' : 'feature/x'), reader: () => null, allowEnv: () => false };
     const cd = (command) => bash.decide({ tool_name: 'Bash', cwd: root, tool_input: { command } }, inRepo);
     ok(cd('cd repo && git push')?.decision === 'ask' && cd('cd repo; git push origin HEAD')?.decision === 'ask'
       && cd('pushd repo && git push origin @')?.decision === 'ask' && cd('Set-Location repo; git push')?.decision === 'ask'
@@ -254,7 +254,7 @@ export default async function run({ ok, ctx }) {
     // PowerShell: backtick là escape/nối dòng, được chuẩn hoá trước khi tách đoạn (xem khối N2 bên dưới)
     ok(ps('Set-Location repo; git push origin HEAD', 'feature/x') === null, 'F1: PowerShell Set-Location theo nhánh thật của thư mục');
     // Vòng sửa residual N3: alias Push-Location, `--`, và trạng thái cd không được mang qua `||` / `|`
-    const featOnRepo = { currentBranch: (d) => (d === repoDir ? 'feature/x' : 'main') };
+    const featOnRepo = { currentBranch: (d) => (d === repoDir ? 'feature/x' : 'main'), reader: () => null, allowEnv: () => false };
     const cdMain = (command) => bash.decide({ tool_name: 'Bash', cwd: root, tool_input: { command } }, featOnRepo);
     ok(cd('Push-Location repo; git push')?.decision === 'ask' && cd('push-location repo && git push origin HEAD')?.decision === 'ask'
       && cd('Push-Location -Path repo; git push')?.decision === 'ask' && cd('pushd -- repo && git push')?.decision === 'ask'
@@ -269,7 +269,7 @@ export default async function run({ ok, ctx }) {
     ok(cd('popd && git push')?.decision === 'ask' && cd('Pop-Location; git push origin HEAD')?.decision === 'ask'
       && cd('popd && git push origin feature/x') === null, 'N3: popd/Pop-Location không biết thư mục đích → như cd không resolve được');
     // Vòng sửa residual N2: tool PowerShell chuẩn hoá nối dòng bằng backtick và escape backtick trước khi tách lệnh
-    const psMain = (command) => bash.decide({ tool_name: 'PowerShell', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x' });
+    const psMain = (command) => bash.decide({ tool_name: 'PowerShell', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x', reader: () => null, allowEnv: () => false });
     ok(psMain('git push origin `\nmain')?.decision === 'ask' && psMain('git push origin `\r\n  main')?.decision === 'ask'
       && psMain('git push origin ma`in')?.decision === 'ask' && psMain('git `push origin main')?.decision === 'ask'
       && psMain('git push origin feature/x') === null && psMain('git push `\n  -u origin feature/x') === null,
@@ -791,7 +791,7 @@ export default async function run({ ok, ctx }) {
     const files = await import(pathToFileURL(path.join(dir, 'guard-files.mjs')).href);
     const on = () => true;
     const off = () => false;
-    const sh = (command, allowEnv) => bash.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x', allowEnv });
+    const sh = (command, allowEnv) => bash.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command } }, { currentBranch: () => 'feature/x', reader: () => null, allowEnv });
     ok(sh('cat .env', on) === null && sh('source ./.env.local', on) === null && sh('cat .env', off)?.decision === 'ask',
       'E1: guard-bash — cờ bật thì .env cho qua, cờ tắt vẫn ask');
     ok(['cat certs/server.pem', 'cat id_rsa', 'cat credentials.json', 'cat .env && cat ~/.ssh/id_rsa'].every((c) => sh(c, on)?.decision === 'ask')

@@ -523,20 +523,31 @@ export default async function run({ ok, ctx }) {
     // Chi phí brace tính theo cả lệnh: mỗi token dưới trần 4096 ký tự nhưng 24 token (~96KB) cộng lại không được vượt 1 giây; hết ngân sách thì ask, đích ngoài root vẫn deny.
     const heavy = `${T}/${'{'.repeat(56)}${'{a,b}'.repeat(8)}${'x'.repeat(3800)}`;
     const many = Array(24).fill(heavy).join(' ');
-    const tCmd = performance.now();
     expectAll([
       [`rm ${many} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${many}`, 'ask', 'hook-copy-alias-brace AC3.4'],
       // Lệnh đời thường và 5 đường dẫn 8 nhóm ngắn nằm trong ngân sách: không đổi.
       [`cp ${T}/x ${T}/{a,b}`, null, 'hook-copy-alias-brace AC3.4'], [`rm ${Array(5).fill(`${T}/${'{a,b}'.repeat(8)}/f`).join(' ')}`, null, 'hook-copy-alias-brace AC3.4'],
     ]);
-    ok(performance.now() - tCmd < 1000, 'hook-copy-alias-brace AC3.4: lệnh nhiều token brace xử lý dưới 1 giây');
     // Token ngắn thì độ dài không chặn được: mỗi nhánh phải tốn một khoản cố định, nếu không hàng trăm token 256 nhánh vẫn mất vài giây.
     const shortAll = (n, tok) => Array(n).fill(tok).join(' ');
-    const tShort = performance.now();
     expectAll([
       [`rm ${shortAll(800, '{a,b}'.repeat(8))} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${shortAll(1600, '{,}'.repeat(8))}`, 'ask', 'hook-copy-alias-brace AC3.4'],
     ]);
-    ok(performance.now() - tShort < 1000, 'hook-copy-alias-brace AC3.4: nhiều token brace ngắn xử lý dưới 1 giây');
+    // Thời gian đo trong tiến trình con mới: trong cả lượt validate (đã chạy hàng nghìn test) cùng lệnh chậm gấp 3–4 lần, ngưỡng nới sẽ không còn bắt hồi quy.
+    const childScript = `
+      const [guardUrl, P, T, OUT, cfgJson] = process.argv.slice(1);
+      const bash = await import(guardUrl);
+      const config = JSON.parse(cfgJson);
+      const run = (cmds) => { const t0 = performance.now(); for (const c of cmds) bash.decide({ tool_name: 'Bash', tool_input: { command: c }, cwd: P, permission_mode: 'bypassPermissions' }, { repoRoot: P, config, allowEnv: () => false, currentBranch: () => 'feature/x', reader: () => null }); return performance.now() - t0; };
+      const heavy = T + '/' + '{'.repeat(56) + '{a,b}'.repeat(8) + 'x'.repeat(3800);
+      const many = Array(24).fill(heavy).join(' ');
+      const shortAll = (n, tok) => Array(n).fill(tok).join(' ');
+      const tCmd = run([\`rm \${many} \${OUT}/z\`, \`rm \${many}\`, \`cp \${T}/x \${T}/{a,b}\`, \`rm \${Array(5).fill(T + '/' + '{a,b}'.repeat(8) + '/f').join(' ')}\`]);
+      const tShort = run([\`rm \${shortAll(800, '{a,b}'.repeat(8))} \${OUT}/z\`, \`rm \${shortAll(1600, '{,}'.repeat(8))}\`]);
+      console.log(JSON.stringify({ tCmd, tShort }));`;
+    const { tCmd, tShort } = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', childScript, pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', 'guard-bash.mjs')).href, P, T, OUT, JSON.stringify(config)], { encoding: 'utf8' }));
+    ok(tCmd < 1000, `hook-copy-alias-brace AC3.4: lệnh nhiều token brace xử lý dưới 1 giây (${Math.round(tCmd)} ms)`);
+    ok(tShort < 1000, `hook-copy-alias-brace AC3.4: nhiều token brace ngắn xử lý dưới 1 giây (${Math.round(tShort)} ms)`);
     // PowerShell không mở rộng brace: kết quả giữ như trước request.
     expectAll([[`Remove-Item ${T}/{..,x}/f`, null, 'hook-copy-alias-brace AC3.3'], [`Remove-Item ${O}/{a,b}`, 'deny', 'hook-copy-alias-brace AC3.3']], { tool: 'PowerShell' });
 
@@ -873,5 +884,234 @@ export default async function run({ ok, ctx }) {
 
     // Kiểm bí mật dùng chung kết quả bộ giải: biến trỏ ra ngoài root thì hỏi, trong root thì cho qua.
     expectAll([[`S=${OUT}; cat $S/.env`, 'ask', 'AC1.6'], [`S=${T}; cat $S/.env`, null, 'AC1.6']]);
+
+    // Lỗ guard-bash đã hoãn ở request full-path-resolver (request guard-bash-deferred-holes). Lỗi ném ra được gom thành 'throw' để một hàng đỏ không dừng cả bảng.
+    const holeKind = (cmd, opt) => { try { return kind(cmd, opt); } catch (e) { return 'throw ' + e.constructor.name; } };
+    const holeRows = (rows, opt) => { for (const [cmd, want, ac] of rows) ok(holeKind(cmd, opt) === want, `${ac}: \`${cmd.length > 90 ? cmd.slice(0, 60) + '…(' + cmd.length + ' ký tự)' : cmd.replaceAll(tb.replace(/\\/g, '/'), '~')}\` → ${want}`); };
+    const manyArgs = Array(130000).fill('a').join(' ');
+    // 130000 đối số làm `push(...)` tràn stack: decide từng ném RangeError và hook cho qua.
+    holeRows([[`rm ${OUT}/x ${manyArgs}`, 'deny', 'AC1.1'], [`rm ${T}/x ${manyArgs}`, null, 'AC1.1']]);
+    // Lỗi nội bộ: ở full + bypass thành ask (câu FULL_PATH_TEXT), ngoài full vẫn ném như trước.
+    const boom = { opts: { currentBranch: () => { throw new Error('boom'); } } };
+    let crash = null;
+    try { crash = bd('git push', boom); } catch { /* chưa vá: lỗi ném ra, assert dưới đỏ */ }
+    ok(crash?.decision === 'ask' && crash.reason.startsWith('Ghi hoặc xoá ở đường dẫn chưa rõ'), 'AC1.2: full + bypass, decide gặp lỗi nội bộ → ask với câu FULL_PATH_TEXT');
+    ok(holeKind('git push', { ...boom, cfg: { mode: 'ask' } }) === 'throw Error', 'AC1.2: mode ask, lỗi nội bộ vẫn ném');
+    ok(holeKind('git push', { ...boom, extra: { permission_mode: 'default' } }) === 'throw Error', 'AC1.2: full không bypass, lỗi nội bộ vẫn ném');
+
+    // Chuỗi `cd` rất dài làm bộ duyệt chậm bậc hai (đo: 8000 × `cd a; rm x` ≈ 2–16 s): quá trần số đoạn thì hỏi, và hỏi nhanh.
+    const timed = (cmd) => { const t0 = Date.now(); const r = holeKind(cmd); return { r, ms: Date.now() - t0 }; };
+    for (const [name, cmd] of [['8000 × cd a; rm x', Array(8000).fill('cd a; rm x').join('; ')], ['8000 × cd a', Array(8000).fill('cd a').join('; ')]]) {
+      const { r, ms } = timed(cmd);
+      ok(r === 'ask' && ms < 1000, `AC1.3: ${name} → ask dưới 1 s (${r}, ${ms} ms)`);
+    }
+    ok(holeKind(Array(50).fill('cd a; rm x').join('; ')) === null, 'AC1.3: 50 × cd a; rm x (dưới trần) giữ kết quả cũ');
+
+    // `cd` sau từ khoá hoặc lệnh bọc: tên lệnh nằm sau `then`/`time`/`builtin`/`command`, không ở đầu đoạn. Ở `if`/`then` cd không chắc chạy, còn `time` bị coi như từ khoá mở đầu đoạn (không tin) → thư mục chưa rõ (ask); `builtin`/`command` thì cd chắc chạy → deny ở thư mục ngoài root.
+    holeRows([
+      [`if true; then cd ${OUT}; fi; rm x`, 'ask', 'AC2.1'], [`time cd ${OUT}; rm x`, 'ask', 'AC2.1'],
+      [`builtin cd ${OUT}; rm x`, 'deny', 'AC2.1'], [`command cd ${OUT}; rm x`, 'deny', 'AC2.1'],
+      [`builtin cd ${T}; rm x`, null, 'AC2.1'], [`command cd ${T}; rm x`, null, 'AC2.1'],
+    ]);
+
+    // Tên lệnh là biến đứng sau tiền tố bọc: lệnh thật chạy là `$R`, hook không biết nó có ghi hay xoá.
+    holeRows([
+      [`R=rm; sudo $R ${OUT}/x`, 'ask', 'AC2.2'], [`R=rm; env $R ${OUT}/x`, 'ask', 'AC2.2'], [`R=rm; nohup $R ${OUT}/x`, 'ask', 'AC2.2'],
+      [`sudo rm ${T}/x`, null, 'AC2.2'],
+      [`command -v $x`, null, 'AC2.2'], [`if command -v $x >/dev/null 2>&1; then :; fi`, null, 'AC2.2'],
+    ]);
+    // Ba chỗ shell gán biến theo cách không đọc được: tên đó chưa rõ ở toàn lệnh, nhưng phép gán thường vẫn được giải.
+    holeRows([
+      [`S=${T}; exec {S}>/dev/null; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; wait -p S; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; coproc S { :; }; rm -rf $S/x`, 'ask', 'AC2.3'],
+      [`S=${T}; rm -rf $S/x`, null, 'AC2.3'],
+    ]);
+
+    // PowerShell: New-Item và alias ghi chưa nằm trong tập lệnh ghi nên đích ngoài root không bị kiểm.
+    holeRows([
+      [`md '${OUT}/d'`, 'deny', 'AC3.3'], [`ni '${OUT}/f'`, 'deny', 'AC3.3'], [`New-Item '${OUT}/f'`, 'deny', 'AC3.3'],
+      [`New-Item -Path '${OUT}/f' -ItemType File`, 'deny', 'AC3.3'], [`sc '${OUT}/f' x`, 'deny', 'AC3.3'], [`ac '${OUT}/f' x`, 'deny', 'AC3.3'],
+      [`md '${T}/d'`, null, 'AC3.3'], [`ni '${T}/f'`, null, 'AC3.3'], [`New-Item -Path '${T}/f' -ItemType File`, null, 'AC3.3'], [`sc '${T}/f' x`, null, 'AC3.3'],
+    ], { tool: 'PowerShell' });
+
+    // PowerShell: đường dẫn đưa qua ống không nằm trong đối số của lệnh ghi. Nguồn Get-ChildItem/Get-Item có đường dẫn tường minh thì đường dẫn đó chịu quyền của lệnh ghi; nguồn khác không đoán được.
+    holeRows([
+      [`$p = '${OUT}'; $p | Remove-Item`, 'ask', 'AC3.1'], [`Get-ChildItem '${OUT}' | Remove-Item`, 'deny', 'AC3.1'],
+      [`Get-ChildItem $x | Remove-Item`, 'ask', 'AC3.1'], [`Get-Content a | Set-Content`, 'ask', 'AC3.1'],
+      [`Get-ChildItem -Path '${OUT}' -Filter *.log -Recurse | Remove-Item -Force`, 'deny', 'AC3.1'],
+      [`Get-ChildItem '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem -Path '${T}' -Filter *.log -Recurse | Remove-Item -Force`, null, 'AC3.1'],
+      [`gci '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem | Remove-Item`, null, 'AC3.1'],
+      [`Get-Content a | Out-File '${T}/f'`, null, 'AC3.1'], [`Get-Content a | Out-File '${OUT}/f'`, 'deny', 'AC3.1'],
+      // Move-Item/Copy-Item chỉ có -Destination: nguồn vẫn đến từ ống, và Move xoá nguồn.
+      [`Get-ChildItem '${OUT}' | Move-Item -Destination '${T}'`, 'deny', 'AC3.1'], [`$p | Move-Item -Destination '${T}'`, 'ask', 'AC3.1'], [`Get-ChildItem '${OUT}' | Move-Item -Des '${T}'`, 'deny', 'AC3.1'],
+      [`Get-ChildItem '${OUT}' | Copy-Item -Destination '${T}'`, 'ask', 'AC3.1'], [`Get-ChildItem '${T}' | Move-Item -Destination '${O}'`, null, 'AC3.1'],
+      [`Get-ChildItem '${T}' | Copy-Item -Destination '${O}'`, null, 'AC3.1'],
+    ], { tool: 'PowerShell' });
+
+    // PowerShell: `cd` trong khối `{ }` không chắc chạy, và `cd HKCU:`/`Env:` vào ổ provider (không phải thư mục đĩa) bị `path.resolve` nối vào project.
+    holeRows([
+      [`& { cd '${OUT}' }; Remove-Item x`, 'ask', 'AC3.4'], [`if ($true) { cd '${OUT}' }; Remove-Item x`, 'ask', 'AC3.4'],
+      [`cd HKCU:; Remove-Item Software/x`, 'ask', 'AC3.4'], [`cd Env:; Remove-Item x`, 'ask', 'AC3.4'], [`cd HKLM:/Software; Remove-Item x`, 'ask', 'AC3.4'],
+      [`Set-Location HKCU:/Software; Remove-Item x`, 'ask', 'AC3.4'], [`pushd Cert:; Remove-Item x`, 'ask', 'AC3.4'], [`cd variable:; Remove-Item x`, 'ask', 'AC3.4'],
+      [`cd '${T}'; Remove-Item x`, null, 'AC3.4'], [`cd C:/Windows; Remove-Item x`, 'deny', 'AC3.4'],
+    ], { tool: 'PowerShell' });
+
+    // PowerShell: Set-Alias/function:/Alias: đặt lại tên lệnh nên `gd` có thể là Remove-Item mà hook không biết.
+    holeRows([
+      [`Set-Alias gd Remove-Item; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`sal gd ri; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`New-Alias gd rm; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`nal gd rm; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`Set-Item Alias:gd Remove-Item; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`\${function:gd} = { Remove-Item $args }; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`Set-Item function:gd { Remove-Item $args }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`function gd { Remove-Item $args[0] }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      // Dấu hiệu nằm sau nháy hoặc bị escape bằng backtick, và các dạng định nghĩa còn lại.
+      [`pwsh -c "sal gd ri; gd '${OUT}/x'"`, 'ask', 'AC3.2'], [`& 'sal' gd ri; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`iex "sal gd ri"; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      ["Set-Al`ias gd ri; gd '" + OUT + "/x'", 'ask', 'AC3.2'], ["s`al gd ri; gd '" + OUT + "/x'", 'ask', 'AC3.2'],
+      [`Import-Alias a.csv; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`filter gd { & ('Remove-'+'Item') $_ }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`function f { Remove-Item '${OUT}/x' }; f`, 'deny', 'AC3.2'],
+      [`Get-Alias gd`, null, 'AC3.2'], [`Write-Host 'my function foo'`, null, 'AC3.2'], [`Remove-Item '${T}/x'`, null, 'AC3.2'],
+    ], { tool: 'PowerShell' });
+
+    // PowerShell: đối số là biểu thức trong ngoặc hoặc splat thì giá trị thật không đọc được từ chữ; chữ thô giống một tên tương đối nên từng cho qua.
+    holeRows([
+      [`Remove-Item ('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item -Path ('${OUT}/x')`, 'ask', 'AC3.5'],
+      [`$p = @{Path='${OUT}/x'}; Remove-Item @p`, 'ask', 'AC3.5'],
+      [`Remove-Item '${T}/x'`, null, 'AC3.5'],
+      // `(` giữa token mở một biểu thức mới (`T/a('OUT/x')` là hai đối số); `@(…)` là mảng. Dấu ngoặc trong nháy là chữ thường nên không hỏi.
+      [`Remove-Item ${T}/a('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item @('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item ${T}/"a"("${OUT}/x")`, 'ask', 'AC3.5'], [`Remove-Item ${T}/'a'(x)`, 'ask', 'AC3.5'],
+      [`Remove-Item '(1) x.txt'`, null, 'AC3.5'], [`Remove-Item '@backup'`, null, 'AC3.5'],
+      [`Remove-Item '${T}/(x)'`, null, 'AC3.5'], [`Remove-Item "${T}/file (1).txt"`, null, 'AC3.5'],
+    ], { tool: 'PowerShell' });
+
+    // Hồi quy sau review cuối: nhánh `function`/`filter` của PS_REDEFINE không được backtrack bậc hai trên chuỗi xuống dòng.
+    const tNl = performance.now();
+    const nl = holeKind('\n'.repeat(100000) + `Remove-Item '${T}/x'`, { tool: 'PowerShell' });
+    const nlMs = performance.now() - tNl;
+    ok(nl === null && nlMs < 2000, `AC3.2: 100000 ký tự xuống dòng rồi Remove-Item trong root → null dưới 2 s (${nl}, ${Math.round(nlMs)} ms)`);
+    holeRows([[`function gd { }`, 'ask', 'AC3.2'], [`\nfunction gd { }`, 'ask', 'AC3.2'], [`Write-Host a\n  function gd { }`, 'ask', 'AC3.2']], { tool: 'PowerShell' });
+
+    // Hồi quy sau review cuối: `wait` lặp lại không làm leadInfo quét tới hết đoạn cho mỗi từ.
+    const tW = performance.now();
+    const wk = holeKind('echo ' + 'wait '.repeat(10000) + `; rm ${OUT}/x`);
+    const wMs = performance.now() - tW;
+    ok(wk === 'deny' && wMs < 1500, `AC2.3: 10000 từ wait rồi rm ngoài root → deny dưới 1,5 s (${wk}, ${Math.round(wMs)} ms)`);
+    holeRows([[`S=${T}; wait -n -p S; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; wait -f -n -p S; rm -rf $S/x`, 'ask', 'AC2.3']]);
+
+    // Hồi quy sau review cuối: nguồn qua ống có danh sách đường dẫn (dấu phẩy) hoặc biểu thức/splat thì không đoán được → ask.
+    holeRows([
+      [`Get-ChildItem '${T}/a','${OUT}/b' | Remove-Item`, 'ask', 'AC3.1'], [`Get-ChildItem -Path ${T}/a,${OUT}/b | Remove-Item`, 'ask', 'AC3.1'],
+      [`gci -LiteralPath ${T}/a,${OUT}/b | ri`, 'ask', 'AC3.1'], [`Get-Item ${T}/a,${OUT}/b | Remove-Item`, 'ask', 'AC3.1'],
+      [`$p=@{Path='${OUT}'}; Get-ChildItem @p | Remove-Item`, 'ask', 'AC3.1'],
+      [`Get-ChildItem '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem '${OUT}' | Remove-Item`, 'deny', 'AC3.1'],
+    ], { tool: 'PowerShell' });
+
+    // Hồi quy sau review cuối: số `-C` phụ thuộc độ dài lệnh không được đi qua spread (tràn stack → RangeError → push nhánh main lọt).
+    const gc = holeKind('git ' + '-C a '.repeat(130000) + 'push origin main', { cfg: { mode: 'ask' } });
+    ok(gc === 'ask', `AC1.1: 130000 × git -C a push origin main vẫn bị hỏi, decide không ném lỗi (${gc})`);
+
+    // Request guard-bash-cd-wrapper-holes: cd sau cờ của command/builtin/time. `builtin`/`command` chạy chắc → deny ở thư mục ngoài root; `time` là từ khoá không được tin → ask; `command -v` chỉ tra cứu.
+    holeRows([
+      [`command -- cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'], [`command -p cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'], [`builtin -- cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'],
+      [`time -p cd ${OUT}; rm x`, 'ask', 'cd-wrapper AC1.1'],
+      // `command -pv $x` vốn ask (không phải ngoại lệ lookup của request trước): không đổi.
+      [`command -pv $x`, 'ask', 'cd-wrapper AC1.1'], [`command -v cd; rm x`, null, 'cd-wrapper AC1.1'], [`command -v $x`, null, 'cd-wrapper AC1.1'], [`command -pv cd; rm x`, null, 'cd-wrapper AC1.1'],
+      [`builtin cd ${T}; rm x`, null, 'cd-wrapper AC1.1'], [`command -p cd ${T}; rm x`, null, 'cd-wrapper AC1.1'],
+    ]);
+    // H1 (push nhánh bảo vệ): `trackDirs` nhận `cd` qua `unwrap` nên cd sau `builtin`/`command`/`then` đổi thư mục tra nhánh. `<P>/repo` đang ở main, mọi thư mục khác ở feature.
+    {
+      const repoDir = path.resolve(P, 'repo');
+      const branchOpts = { currentBranch: (d) => (d === repoDir ? 'main' : 'feature/x') };
+      for (const [label, o] of [['full', { opts: branchOpts }], ['ask', { cfg: { mode: 'ask' }, opts: branchOpts }]]) {
+        holeRows([
+          [`builtin cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`command cd repo; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`command -- cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`if true; then cd repo; fi; git push`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`builtin cd other && git push`, null, `cd-wrapper AC1.3 (${label})`],
+        ], o);
+      }
+    }
+    // Ngược lại (cwd ở main, `other` ở feature): chỉ `cd` chạy trong shell hiện tại mới đổi thư mục tra nhánh; `sudo cd`, `env cd`, `command -v cd`… không đổi nên push vẫn từ main → ask (không được thành null).
+    {
+      const mainDir = path.resolve(P);
+      const mainOpts = { currentBranch: (d) => (path.resolve(d) === mainDir ? 'main' : 'feature/x') };
+      for (const [label, o] of [['full', { opts: mainOpts }], ['ask', { cfg: { mode: 'ask' }, opts: mainOpts }]]) {
+        holeRows([
+          [`cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`builtin cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          [`command -p cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          // cd sau từ khoá điều kiện/`time`/`.{` không chắc chạy: thư mục chưa rõ nên push không refspec rõ vẫn hỏi (cwd ở main, `other` ở feature).
+          [`if false; then cd other; fi; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`time -p cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`while true; do cd other; done; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`.{ cd other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`sudo cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`env cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`nohup cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`timeout 5 cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`exec cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`env -S "cd other"; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`command -v cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`command -pv cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+        ], o);
+      }
+      // `builtin` nay thuộc unwrap nên H6 cũng thấy lệnh ghi sau nó.
+      holeRows([[`builtin rm ${OUT}/x`, 'deny', 'cd-wrapper AC1.3'], [`builtin rm ${T}/x`, null, 'cd-wrapper AC1.3']]);
+    }
+    // `wait` cờ gộp (`-fp S`) và tên dính liền (`-pS`) vẫn ghi PID vào S; cờ không có `p` thì không. `timeout` nhận thời lượng là biến nhưng chỉ một từ.
+    holeRows([
+      [`S=${T}; wait -fp S; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'], [`S=${T}; wait -pS; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'],
+      [`S=${T}; wait -n -fp S; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'], [`S=${T}; wait -fpS; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'],
+      [`S=${T}; wait -fn; rm -rf $S/x`, null, 'cd-wrapper AC1.4'], [`S=${T}; wait; rm -rf $S/x`, null, 'cd-wrapper AC1.4'],
+      // Thời lượng là biến không trích dẫn có thể chứa khoảng trắng (bash tách từ: `T='5 rm'` → `timeout 5 rm -rf …`), nên `$T` không được coi là thời lượng → vẫn ask như trước request.
+      [`timeout $T ls`, 'ask', 'cd-wrapper AC1.5'], [`timeout \${T}s ls ${T}/x`, 'ask', 'cd-wrapper AC1.5'], [`T='5 rm'; timeout $T -rf ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'],
+      [`timeout 5 ls ${T}/x`, null, 'cd-wrapper AC1.5'],
+      [`R=rm; timeout 5 $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'], [`R=rm; timeout $T $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'],
+    ]);
+    // Hồi quy sau review cuối: từ `-ppp…p` kèm nháy chứa xuống dòng không được làm regex của nhánh `wait` backtrack bậc hai (50000 ký tự `p` từng mất ~1,8 s).
+    {
+      const tP = performance.now();
+      const pw = holeKind(`S=${T}; wait -` + 'p'.repeat(50000) + `'\n'; rm -rf $S/x`);
+      const pwMs = performance.now() - tP;
+      ok(pw !== null && !String(pw).startsWith('throw') && pwMs < 1500, `cd-wrapper AC1.4: wait -ppp…p (50000) kèm nháy xuống dòng, rm qua $S → hỏi/chặn dưới 1,5 s (${pw}, ${Math.round(pwMs)} ms)`);
+    }
+    // H1: cwd ở main, `other` ở feature. Khối `{ }` trần của PowerShell là scriptblock không chạy; cd trong `$( )`/subshell không đổi thư mục shell cha; cd sau `||`/ống hoặc chạy nền (`&`) không chắc đổi thư mục → push vẫn từ main (ask). Đối chứng: cd thật chạy (`{ cd; }` của bash, `!`, `VAR=x cd`, `&&`) vẫn đổi sang feature (null).
+    {
+      const mainDir = path.resolve(P);
+      const mainOpts = { currentBranch: (d) => (path.resolve(d) === mainDir ? 'main' : 'feature/x') };
+      for (const [label, o] of [['full', { opts: mainOpts }], ['ask', { cfg: { mode: 'ask' }, opts: mainOpts }]]) {
+        holeRows([
+          [`{ cd other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`], [`{ cd other; }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`],
+          [`{ Set-Location other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`], [`{ cd other } && git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`],
+        ], { ...o, tool: 'PowerShell' });
+        holeRows([
+          [`x=$(builtin cd other); git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`x=$(builtin cd other) git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          ['x=`builtin cd other`; git push origin HEAD', 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`true || builtin cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`echo x | builtin cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`builtin cd other & git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`{ cd other; }; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`! cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          [`VAR=x cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`builtin cd other && git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          [`cd other 2>&1 && git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+        ], o);
+      }
+    }
+    // PowerShell: `.{ … }` (dot-source một khối) chạy ngay trong scope hiện tại nên cd đổi thư mục thật; từ `.{`/`&{` đầu đoạn không phải tên lệnh.
+    holeRows([
+      [`.{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'],
+      [`cd '${T}'; Remove-Item x`, null, 'cd-wrapper AC1.2'],
+      // Lệnh ghi đứng ngay sau `.{`: unwrap cũng phải bỏ từ `.{`/`&{` như `{`.
+      [`.{ Remove-Item ${OUT}/x }`, 'deny', 'cd-wrapper AC1.2'], [`.{ rm ${OUT}/x }`, 'deny', 'cd-wrapper AC1.2'], [`.{ Remove-Item ${T}/x }`, null, 'cd-wrapper AC1.2'],
+    ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
+
+  // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
+  {
+    const root = path.join(CORE_DIR, '..');
+    const dirs = ['contract', 'content'].map((d) => path.join(root, 'test', d));
+    const files = dirs.flatMap((d) => fs.readdirSync(d).filter((f) => /\.(contract|pin)\.mjs$/.test(f)).map((f) => path.join(d, f)));
+    const SEAM = /\b(config|reader|locate|loadConfig)\b/;
+    const bare = [];
+    for (const f of files) {
+      const src = fs.readFileSync(f, 'utf8');
+      if (!/guard-(bash|files)\.mjs/.test(src)) continue;
+      for (const m of src.matchAll(/\bdecide\(/g)) {
+        let i = m.index + m[0].length;
+        for (let depth = 1; i < src.length && depth; i++) depth += src[i] === '(' ? 1 : src[i] === ')' ? -1 : 0;
+        const call = src.slice(m.index, i);
+        if (/cwd: '\.'/.test(call) && !SEAM.test(call)) bare.push(`${path.basename(f)}:${src.slice(0, m.index).split('\n').length}`);
+      }
+      // Helper dựng input tách khỏi lời gọi (vd `bash = (command) => ({ …, cwd })` với cwd là dấu chấm): file phải truyền seam cho decide ở chỗ khác.
+      const helperOnly = src.split('\n').some((l) => /cwd: '\.'/.test(l) && !/decide\(/.test(l));
+      if (helperOnly && !/reader: \(\) => null/.test(src)) bare.push(`${path.basename(f)}: helper cwd '.' không có reader`);
+    }
+    ok(bare.length === 0, `AC1.4: test hook không đọc aip-gate.json thật (${bare.join(', ') || 'đủ seam'})`);
+  }
 }

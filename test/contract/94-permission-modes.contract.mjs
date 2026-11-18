@@ -112,7 +112,7 @@ export default async function run({ ok, ctx }) {
 
   const bash = await load('guard-bash.mjs');
   const bdec = (command, config, pm) => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: '.', ...(pm ? { permission_mode: pm } : {}) },
-    { currentBranch: () => 'main', allowEnv: () => false, config });
+    { currentBranch: () => 'main', reader: () => null, allowEnv: () => false, config });
   const fullCfg = { mode: 'full' };
   for (const c of ['rm -rf x', 'cat .env', 'curl http://x', 'git commit -m "có dấu"']) {
     ok(bdec(c, fullCfg, 'bypassPermissions') === null, `P4e AC1.2: guard-bash full cho qua: ${c}`);

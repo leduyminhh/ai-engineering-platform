@@ -43,6 +43,7 @@ export function parse(cmd) {
       // `||` / `|` giữ tới đoạn kế: lệnh sau đó có thể chạy khi `cd` phía trước chưa xảy ra.
       if (c === '|' && cmd[i + 1] === '|') op = '||';
       else if (c === '|' && op !== '||') op = '|';
+      else if (c === '&' && cmd[i + 1] === '&' && op !== '||' && op !== '|') { op = '&&'; i++; }
       else if (c !== '|' && op !== '||' && op !== '|') op = c;
       continue;
     }
@@ -339,7 +340,9 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true
   if (specs.some(hasUnresolvedRef)) return { kind: 'unknown' };
   // -C chứa biến/~/backtick không resolve được → không biết nhánh hiện tại, hỏi thay vì tra một đường dẫn literal.
   const unresolvable = cdUnresolved || gc.dirs.some(hasUnresolvedRef);
-  const dir = gc.dirs.length ? path.resolve(cwd, ...gc.dirs.map((d) => np(d, msys))) : cwd;
+  // Chia lô: spread cả danh sách làm tràn stack, còn resolve từng phần tử thì bậc hai theo độ dài đường dẫn đang phình.
+  let dir = cwd;
+  for (let i = 0; i < gc.dirs.length; i += 1000) dir = path.resolve(dir, ...gc.dirs.slice(i, i + 1000).map((d) => np(d, msys)));
   const refs = specs.map((r) => r.split(':').pop().replace(/^refs\/heads\//, ''));
   const wantsHead = (refs.length ? refs : ['HEAD']).some((r) => r === 'HEAD' || r === '@');
   if (unresolvable && wantsHead) return { kind: 'unknown' };
@@ -351,6 +354,8 @@ function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true
 // Git Bash đổi /e/x thành E:/x; PowerShell giải /e/x theo ổ hiện tại (E:\e\x) nên không được đổi.
 const np = (p, msys) => (msys ? normalizeMsysPath(p) : p);
 
+const COND_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', 'time', '.{', '&{']);
+const NON_SHELL_WRAP = new Set(['sudo', 'doas', 'env', 'nohup', 'timeout', 'nice', 'exec', 'ionice', 'stdbuf', 'busybox']);
 const CD_CMDS = new Set(['cd', 'chdir', 'pushd', 'push-location', 'set-location', 'sl']);
 const POP_CMDS = new Set(['popd', 'pop-location']);
 
@@ -359,21 +364,31 @@ function trackDirs(segs, cwd, msys = true) {
   let dir = cwd;
   let unres = false;
   let cdSeen = false;
-  return segs.map((t) => {
-    const name = String(t[0]).toLowerCase();
+  return segs.map((t, i) => {
+    // u: lệnh đã bỏ tiền tố bọc (env -S, sudo, nice…) để H1 thấy `git push` thật; `cd` cũng lấy từ đây (`builtin cd`, `command -- cd`, `then cd`).
+    const [u, k] = unwrap(t);
+    // Chỉ `cd` chạy trong shell hiện tại mới đổi thư mục: `sudo cd`, `env cd`, `nohup cd`… chạy ở tiến trình khác (hoặc lỗi), `command -v cd` chỉ tra cứu.
+    const prefix = u.slice(0, k);
+    const inShell = !prefix.some((x) => NON_SHELL_WRAP.has(cmdName(x))) && !(prefix.some((x) => cmdName(x) === 'command') && prefix.some((x) => /^-[A-Za-z]*[vV]/.test(x)));
+    const name = inShell ? String(u[k] ?? '').toLowerCase() : '';
     // Sau `||` / `|` lệnh cd phía trước có thể chưa chạy (hoặc chạy ở tiến trình con) → không tin thư mục đang theo dõi.
     if (cdSeen && (t.op === '||' || t.op === '|')) unres = true;
     if (CD_CMDS.has(name)) {
       cdSeen = true;
-      const arg = t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
+      const arg = u.slice(k + 1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
       if (arg === undefined || hasUnresolvedRef(arg) || arg === '-') unres = true;
       else { const a = np(arg, msys); dir = path.resolve(dir, a); if (path.isAbsolute(a)) unres = false; }
     } else if (POP_CMDS.has(name)) {
       cdSeen = true;
       unres = true;
     }
-    // u: lệnh đã bỏ tiền tố bọc (env -S, sudo, nice…) để H1 thấy `git push` thật.
-    const u = unwrap(t)[0];
+    // cd có thể không chạy hoặc không đổi thư mục shell cha nên thư mục chưa rõ: sau COND_KW (H1 coi `.{`/`&{` là chưa rõ, walkSegments coi chắc chạy), trong `{` của PowerShell (scriptblock),
+    // trong `$( )`/backtick/`( )` của bash (shell con), sau `||`/`|`, hoặc chạy nền. `2>&1` để lại đoạn `1` có op `&` nên không tính là nền.
+    if (CD_CMDS.has(name)) {
+      const sub = msys && (t.op === '(' || t.op === '`' || prefix.some((x) => /\$\(|`|^\(/.test(x)));
+      const bg = segs[i + 1]?.op === '&' && !/[<>]$/.test(String(u.at(-1)));
+      if (prefix.some((x) => COND_KW.has(x) || (!msys && x === '{')) || sub || t.op === '||' || t.op === '|' || bg) unres = true;
+    }
     return { t, u, gc: gitCmd(u), dir, unres };
   });
 }
@@ -383,7 +398,7 @@ function withDirs(segs, cwd, msys = true) {
 }
 
 // H6 là heuristic đọc token, không phải sandbox: biến, subshell, script con vẫn có thể ghi ra ngoài root mà không bị thấy.
-const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri', 'mv', 'move', 'move-item', 'mi', 'cp', 'copy', 'copy-item', 'cpi', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content']);
+const WRITE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri', 'mv', 'move', 'move-item', 'mi', 'cp', 'copy', 'copy-item', 'cpi', 'touch', 'mkdir', 'chmod', 'chown', 'tee', 'truncate', 'set-content', 'out-file', 'add-content', 'md', 'ni', 'new-item', 'sc', 'ac']);
 const LAST_ONLY = new Set(['cp', 'copy', 'copy-item', 'cpi']);
 const DELETE_CMDS = new Set(['rm', 'rmdir', 'del', 'erase', 'rd', 'remove-item', 'ri']);
 const MOVE_CMDS = new Set(['mv', 'move', 'move-item', 'mi']);
@@ -394,7 +409,7 @@ const flagNeeds = (name, flag) => {
   const f = flag.toLowerCase().replace(/^-/, '');
   return f === 'destination' || f === 'filepath' ? ['write'] : DELETE_CMDS.has(name) || MOVE_CMDS.has(name) ? ['delete'] : LAST_ONLY.has(name) ? ['read'] : ['write'];
 };
-const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content']);
+const FIRST_ONLY = new Set(['set-content', 'out-file', 'add-content', 'sc', 'ac', 'ni', 'new-item']);
 const SKIP_FIRST = new Set(['chmod', 'chown']);
 const CMD_SWITCH = new Set(['del', 'erase', 'rd', 'copy', 'move']);
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'csh', 'tcsh', 'cmd', 'pwsh', 'powershell']);
@@ -429,10 +444,10 @@ function unwrap(tokens) {
   while (k < t.length) {
     const n = cmdName(t[k]);
     // Từ khoá cấu trúc đứng ở vị trí lệnh (khối { }, if/then, for/do, !): lệnh thật là token kế, nếu không WRITE_CMDS không khớp.
-    if (SHELL_KEYWORDS.has(t[k])) { k++; continue; }
-    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'exec', 'busybox'].includes(n)) {
+    if (SHELL_KEYWORDS.has(t[k]) || /^[.&]\{$/.test(t[k])) { k++; continue; }
+    if (/^\w+=/.test(t[k]) || ['nohup', 'command', 'builtin', 'exec', 'busybox'].includes(n)) {
       k++;
-      if (n === 'command') while (t[k]?.startsWith('-')) k++;
+      if (n === 'command' || n === 'builtin') while (t[k]?.startsWith('-')) k++;
       continue;
     }
     // Các tiền tố bọc ít gặp: bỏ cờ của chúng để lệnh thật (cp, tee, rm…) lộ ra cho H6 và kiểm cấu hình hook.
@@ -451,6 +466,7 @@ function unwrap(tokens) {
     if (n === 'timeout') {
       k++;
       while (k < t.length && t[k].startsWith('-')) k += /^(-s|-k|--signal|--kill-after)$/.test(t[k]) ? 2 : 1;
+      // Chỉ thời lượng literal: biến không trích dẫn có thể chứa khoảng trắng và bị bash tách từ (`T='5 rm'; timeout $T -rf x`).
       if (k < t.length && /^\d+(\.\d+)?[smhd]?$/.test(t[k])) k++;
       continue;
     }
@@ -532,6 +548,12 @@ function globMatchesDotDot(seg) {
   try { return new RegExp(`^${re}$`).test('..'); } catch { return true; }
 }
 
+// `dst.push(...src)` tràn stack khoảng 100 nghìn phần tử (giới hạn số đối số của V8): lệnh dài làm decide ném lỗi và hook cho qua.
+function pushAll(dst, src) {
+  for (const x of src) dst.push(x);
+  return dst.length;
+}
+
 // Trả mọi nhánh của nhóm `{a,b}` có dấu phẩy (lồng được), hoặc null khi quá `cap`; `{1..3}` và `{x}` giữ nguyên. Không bóc nháy: hook không biết nháy bash có chặn mở rộng hay không, nên `"T/{..,x}/f"` cũng bị mở.
 // Quá 64 dấu `{` hoặc 4096 ký tự thì bỏ cuộc (null): 9 nhóm đã vượt trần, còn đệ quy theo số nhóm làm tràn stack. Quét một lượt bằng ngăn xếp nên chi phí không nhân với số `{` không đóng.
 function braceExpand(p, cap) {
@@ -551,7 +573,7 @@ function braceExpand(p, cap) {
   const out = [];
   for (let k = 0; k + 1 < cuts.length; k++) {
     const sub = braceExpand(p.slice(0, best.at) + p.slice(cuts[k] + 1, cuts[k + 1]) + p.slice(best.end + 1), cap);
-    if (!sub || out.push(...sub) > cap) return null;
+    if (!sub || pushAll(out, sub) > cap) return null;
   }
   return out;
 }
@@ -730,20 +752,20 @@ function writeTargets(t, msys = true) {
       ? [...(namedPath ? [] : [copyLike ? ['read'] : ['delete']]), ...(namedDest ? [] : [['write']])] : null;
     if (gnu && toDir) {
       // Có -t DIR: đối số vị trí là nguồn: mv bị xoá, cp được đọc.
-      targets.push(...all);
-      needs.push(...all.map(() => (name === 'mv' ? ['delete'] : ['read'])));
+      pushAll(targets, all);
+      pushAll(needs, all.map(() => (name === 'mv' ? ['delete'] : ['read'])));
     } else if (copyLike && msys) {
       // Cờ gộp có `t` (-rt, -tDIR) không đặt toDir nên rơi vào đây: giữ cách thận trọng, đối số cuối vẫn là đích ghi, mọi đối số trước là nguồn đọc.
-      targets.push(...all);
-      needs.push(...all.map((_, i) => (i === all.length - 1 ? ['write'] : ['read'])));
+      pushAll(targets, all);
+      pushAll(needs, all.map((_, i) => (i === all.length - 1 ? ['write'] : ['read'])));
     } else if (slots) {
       const extra = copyLike ? ['read', 'write'] : ['delete', 'write'];
       const lone = !namedPath && !namedDest && all.length === 1;
-      targets.push(...all);
-      needs.push(...all.map((_, i) => (lone ? extra : (slots[i] ?? extra))));
+      pushAll(targets, all);
+      pushAll(needs, all.map((_, i) => (lone ? extra : (slots[i] ?? extra))));
     } else {
-      targets.push(...pos);
-      needs.push(...pos.map((_, i) => (blurred ? blurredNeeds(name) : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
+      pushAll(targets, pos);
+      pushAll(needs, pos.map((_, i) => (blurred ? blurredNeeds(name) : MOVE_CMDS.has(name) && pos.length > 1 ? [i === pos.length - 1 ? 'write' : 'delete'] : nd)));
     }
   }
   // PowerShell nhận mảng `a,b` trong một token: tách thành từng đích để phần tử ngoài root không lọt. Chỉ PowerShell: ở Bash dấu phẩy là ký tự của tên file.
@@ -770,6 +792,25 @@ function stringWrites(str) {
   });
 }
 
+// Nguồn đường dẫn mà hook hiểu được khi chảy qua ống: đối số đường dẫn tường minh (hoặc thư mục hiện tại) của các lệnh liệt kê. Nguồn khác (`$p`, Where-Object…) hay đoạn tự có ống vào: không đoán được (null).
+const PS_PATH_SOURCES = new Set(['get-childitem', 'gci', 'ls', 'dir', 'get-item', 'gi']);
+function pipedPaths(prev) {
+  if (prev.pipeFrom || !PS_PATH_SOURCES.has(cmdName(prev[0]))) return null;
+  const out = [];
+  const a = prev.slice(1);
+  for (let i = 0; i < a.length; i++) {
+    const m = /^-([A-Za-z]+)(?::([\s\S]*))?$/.exec(a[i]);
+    if (!m) { out.push(a[i]); continue; }
+    const f = m[1].toLowerCase();
+    if (f === 'path' || f === 'literalpath') { const v = m[2] ?? a[++i]; if (v !== undefined) out.push(v); }
+    else if (/^(filter|include|exclude|depth|attributes|stream)$/.test(f) && m[2] === undefined) i++;
+  }
+  // Dấu phẩy là danh sách đường dẫn, `(`/splat là biểu thức: chữ thô không cho biết đường dẫn thật (null → hỏi).
+  if (prev.exprs?.some(Boolean) || out.some((p) => p.includes(','))) return null;
+  return out.length ? out : ['.'];
+}
+// PowerShell: `(` ngoài nháy mở một biểu thức (kể cả giữa token: `T/a('x')` là hai đối số), `@tên` là splat, `@(` là mảng; chữ thô của chúng trông như tên tương đối.
+const PS_EXPR_WORD = /\(|^@\w/;
 // Trả { deny: <quyền thiếu> } | 'ask' | null cho một đoạn lệnh; nơi gọi cho deny của bất kỳ đoạn nào thắng ask của đoạn khác.
 function confineSegment(t, dir, unres, roots, msys = true) {
   const { targets, needs, name, args } = writeTargets(t, msys);
@@ -778,8 +819,16 @@ function confineSegment(t, dir, unres, roots, msys = true) {
   t.forEach((x, i) => { if (t.globs?.[i] !== undefined) globOf.set(x, globOf.get(x) || t.globs[i]); });
   const inner = name === 'eval' || SHELLS.has(name) ? shellString(name, args) : null;
   const ask = Boolean(inner) && stringWrites(inner);
-  let unknown = false;
+  let unknown = !msys && WRITE_CMDS.has(name) && t.some((x, i) => i > 0 && (t.exprs ? t.exprs[i] : PS_EXPR_WORD.test(String(x).slice(0, t.qpos?.[i] ?? Infinity))));
   let readAsk = false;
+  // Lệnh ghi PowerShell có ống vào mà không có đối số đường dẫn: đường dẫn đến từ đoạn trước.
+  // Move/Copy-Item chỉ có -Destination: đích đã có, nguồn vẫn đến từ ống (Move xoá nguồn, Copy đọc nguồn).
+  const toDest = (MOVE_CMDS.has(name) || LAST_ONLY.has(name)) && targets.length === 1 && args.some((a) => /^-des/i.test(a));
+  if (!msys && t.pipeFrom && WRITE_CMDS.has(name) && (targets.length === 0 || toDest)) {
+    const fed = pipedPaths(t.pipeFrom);
+    const need = toDest ? (MOVE_CMDS.has(name) ? ['delete'] : ['read']) : needsOf(name);
+    if (fed) for (const p of fed) { targets.push(p); needs.push(need); } else unknown = true;
+  }
   for (const [i, p] of targets.entries()) {
     for (const need of needs[i]) {
       const c = classifyTarget(p, dir, unres, roots, msys, need, globOf.get(p));
@@ -1095,12 +1144,15 @@ function stripSimpleHeredocs(rest, mask = (l) => l) {
 const VAR_MUTATORS = /\b(?:unset|read|declare|typeset|local|readonly|eval|source|trap|mapfile|readarray|getopts)\b|printf\s+-v|\bIFS\b|(?:^|[;&|\n(])[ \t]*\.[ \t]|\$\(\(|\$\[|\$\{[A-Za-z_]\w*\[/;
 // Cmdlet/tham số đổi biến theo cách không đọc được: tắt giải biến cả lệnh vì không liệt kê hết được các cách đổi.
 const PS_MUTATORS = /\b(?:set|new|remove|clear)-variable\b|\b(?:invoke-expression|iex|get-variable|psvariable)\b|variable:|(?:^|[\s;|({])(?:sv|nv|clv|rv|gv|set)\s|\s-(?:outvariable|ov|errorvariable|ev|warningvariable|wv|informationvariable|iv|pipelinevariable|pv)\b/i;
+// Chạy trên chuỗi đã bỏ backtick (`Set-Al`ias`); nháy đứng trước hoặc sau `sal`/`nal` vì tên lệnh có thể nằm trong chuỗi `-c`, `iex` hay `& 'sal'`.
+const PS_REDEFINE = /\b(?:set|new|import)-alias\b|(?:^|[\s;|({&"'])(?:sal|nal)["']?\s|\b(?:alias|function):|(?:^|[;|({&\n])[ \t]*(?:function|filter)\s+[\w-]+/i;
 const ASSIGN_WORD = /^([A-Za-z_]\w*)(\+?=|\[)/;
 const LEAD_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '{', '!', 'time']);
 const MAX_VAR_NAMES = 20;
 const MAX_VAR_CMD = 20000;
 const MAX_INNER_DEPTH = 3;
 const MAX_INNER_WALK = 200;
+const MAX_WALK_SEGS = 1000;
 const CYGPATH_MASK = /\$\(\s*cygpath\b[^()\n]*\)/g;
 const wordText = (w) => w.parts.map((p) => p.text).join('');
 
@@ -1151,7 +1203,12 @@ function redirSkip(ws, i) {
 function leadInfo(seg) {
   const ws = seg.words;
   let i = 0;
-  while (i < ws.length && ws[i].parts.length === 1 && ws[i].parts[0].quote === 'none' && LEAD_KW.has(ws[i].parts[0].text)) i++;
+  while (i < ws.length && ws[i].parts.length === 1 && ws[i].parts[0].quote === 'none' && LEAD_KW.has(ws[i].parts[0].text)) {
+    const isTime = ws[i].parts[0].text === 'time';
+    i++;
+    // Cờ của `time` (`-p`) không phải tên lệnh.
+    if (isTime) while (i < ws.length && wordText(ws[i]).startsWith('-')) i++;
+  }
   const lead = i;
   const assigns = [];
   const used = new Set();
@@ -1173,7 +1230,17 @@ function leadInfo(seg) {
     for (let j = 1; j < rest.length; j++) { const a = assignOf(rest[j], i + j, true); if (a) { assigns.push(a); used.add(i + j); } }
   }
   let cmdAt = i;
-  while (ws[cmdAt] && (wordText(ws[cmdAt]) === 'builtin' || wordText(ws[cmdAt]) === 'command')) cmdAt++;
+  // `builtin`/`command` kèm cờ (`--`, `-p`) vẫn chạy lệnh kế; `command -v/-V` chỉ tra cứu nên tên lệnh giữ ở chính từ `command`.
+  while (ws[cmdAt] && (wordText(ws[cmdAt]) === 'builtin' || wordText(ws[cmdAt]) === 'command')) {
+    const wrapAt = cmdAt;
+    let lookup = false;
+    cmdAt++;
+    while (ws[cmdAt] && wordText(ws[cmdAt]).startsWith('-')) {
+      if (/^-[A-Za-z]*[vV]/.test(wordText(ws[cmdAt]))) lookup = true;
+      cmdAt++;
+    }
+    if (lookup && wordText(ws[wrapAt]) === 'command') { cmdAt = wrapAt; break; }
+  }
   const extra = [];
   const txt = (k) => (ws[k] ? wordText(ws[k]) : '');
   for (let k = 0; k < ws.length; k++) {
@@ -1181,6 +1248,23 @@ function leadInfo(seg) {
     if ((x === 'for' || x === 'select') && ws[k + 1]) extra.push(txt(k + 1));
     if (/^[A-Za-z_]\w*$/.test(x) && txt(k + 1) === 'in') extra.push(x);
     if (x === 'printf' && txt(k + 1) === '-v' && ws[k + 2]) extra.push(txt(k + 2).replace(/\[.*$/, ''));
+    // `exec {S}>f` (fd đặt tên), `wait -p S` (PID), `coproc S { … }`: shell tự gán S theo cách không đọc được.
+    const fd = /^\{([A-Za-z_]\w*)\}[<>]/.exec(x);
+    if (fd) extra.push(fd[1]);
+    // Cờ của wait (`-f -n -p VAR`) nằm ngay sau từ wait: chỉ nhìn cửa sổ ngắn để lệnh lặp `wait` không quét tới hết đoạn mỗi lần.
+    if (x === 'wait') {
+      // `-p VAR`, cờ gộp kết thúc bằng p (`-fp VAR`) và tên dính liền (`-pVAR`, `-fpVAR`): tên biến là phần dính hoặc từ kế.
+      const win = ws.slice(k + 1, k + 5);
+      for (const [j, w] of win.entries()) {
+        const text = wordText(w);
+        const m = /^-[A-Za-z]*?p/.exec(text);
+        if (!m) continue;
+        const v = text.slice(m[0].length) || (win[j + 1] ? wordText(win[j + 1]) : '');
+        if (v) extra.push(v);
+        break;
+      }
+    }
+    if (x === 'coproc' && /^[A-Za-z_]\w*$/.test(txt(k + 1)) && /^[{(]/.test(txt(k + 2))) extra.push(txt(k + 1));
     const loose = used.has(k) ? null : /^([A-Za-z_]\w*)(?:\+?=|\[)/.exec(x);
     if (loose) extra.push(loose[1]);
   }
@@ -1322,6 +1406,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
   const trusted = (k, j) => structOk[k.seg] && ((head[k.seg] && listId[j] > listId[k.seg]) || (listId[j] === listId[k.seg] && allAnd[j]));
   const safe = (w, state) => { try { return resolveWord(w, state, dialect); } catch { return null; } };
   let cdSeen = false;
+  let prevT = null;
   segs.forEach((seg, i) => {
     const env = new Map();
     if (vars) {
@@ -1332,6 +1417,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     const t = [];
     t.globs = [];
     t.qpos = [];
+    t.exprs = [];
     let opaque = false;
     for (const [wi, w] of seg.words.entries()) {
       const r = safe(w, state);
@@ -1345,16 +1431,28 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       if (k < 0) t.qpos.push(Infinity);
       else if (k === 0) t.qpos.push(0);
       else { const pre = { parts: w.parts.slice(0, k) }; t.qpos.push((safe(pre, state)?.text ?? wordText(pre)).length); }
+      // `(` ở phần không nháy của bất kỳ đoạn nào (qpos chỉ nhớ nháy đầu nên `T/"a"(x)` lọt).
+      t.exprs.push(w.parts.some((p, j) => p.quote === 'none' && (p.text.includes('(') || (j === 0 && /^@\w/.test(p.text)))));
     }
+    // Tên lệnh thật nằm sau tiền tố bọc (`sudo $R x`, `env $R x`): kiểm trên tên đã qua unwrap, vì kiểm ở cmdAt chỉ thấy `sudo`.
+    // `command -v $x` chỉ tra cứu tên, không chạy `$x`.
+    const lookup = t[infos[i].lead] === 'command' && /^-[vV]$/.test(t[infos[i].lead + 1] ?? '');
+    if (!ps && !lookup) { const [tk, k] = unwrap(t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
     t.op = seg.sep === 'start' ? '' : seg.sep;
-    const name = String(t[0]).toLowerCase();
+    t.pipeFrom = seg.pipeIn ? prevT : null;
+    prevT = t;
+    // PowerShell: đoạn trong khối mở bằng từ `{` (scanWords không tách nó ra khỏi lệnh).
+    let ci = infos[i].cmdAt;
+    if (ps) while (/^[.&]?\{$/.test(t[ci] ?? '')) ci++;
+    const name = String(t[ci] ?? '').toLowerCase();
     if (cdSeen && (seg.sep === '||' || seg.sep === '|')) unres = true;
     if (CD_CMDS.has(name) || POP_CMDS.has(name)) {
       cdSeen = true;
       // Cùng luật tin cậy với phép gán: cd ở ống dẫn, nền, khối hoặc sau `||` có thể không chạy hoặc chạy ở tiến trình con.
       const sure = structOk[i] && allAnd[i];
-      const arg = POP_CMDS.has(name) ? undefined : t.slice(1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
-      if (arg === undefined || hasUnresolvedRef(arg) || arg === '-') unres = true;
+      const arg = POP_CMDS.has(name) ? undefined : t.slice(ci + 1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
+      // `Env:`, `HKCU:`, `Cert:`… là ổ provider, không phải thư mục đĩa (ổ đĩa chỉ một chữ cái).
+      if (arg === undefined || hasUnresolvedRef(arg) || arg === '-' || (ps && /^[A-Za-z][\w]+:/.test(arg))) unres = true;
       else { const a = np(arg, msys); dir = path.resolve(dir, a); if (sure && path.isAbsolute(a)) unres = false; }
       if (!sure) unres = true;
     }
@@ -1378,7 +1476,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
         if (depth >= MAX_INNER_DEPTH || ctx.inner <= 0) { opaque = true; continue; }
         ctx.inner--;
         const sub = scanWords(inner, dialect);
-        out.push(...walkSegments(sub, { cwd, msys, dialect, noVars: noVars || !vars }, ctx, { env, dir, unres: unres || !vars, depth: depth + 1 }));
+        pushAll(out, walkSegments(sub, { cwd, msys, dialect, noVars: noVars || !vars }, ctx, { env, dir, unres: unres || !vars, depth: depth + 1 }));
       }
     }
     if (opaque) entry.opaque = true;
@@ -1452,11 +1550,15 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
   const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
   const ask = (text) => { let line = ''; try { line = summarize(cmd, msys); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
+  // Lỗi bất ngờ ở full + bypass thành hỏi: ném lại sẽ để main() cho lệnh chưa được kiểm đi qua.
+  try {
   const parsedCmd = parse(cmd);
   const { unclosed } = parsedCmd;
   // Chuỗi con của shell -c/eval chỉ vào kiểm push và tiền tố ask; H6 giữ cách nhìn riêng của confineSegment (ask với bash -c).
   const outer = parsedCmd.segs;
   const naiveOuter = naiveSegments(cmd);
+  // Trước mọi bước theo dõi thư mục: chuỗi `cd` dài làm đường dẫn `dir` phình dần, mỗi đoạn tốn thêm nên tổng bậc hai (8000 × `cd a` mất vài giây); cpuprofile cho thấy ~90% thời gian ở path.resolve trong trackDirs, còn nguyên nhân bậc hai là [Inference].
+  if (Math.max(outer.length, naiveOuter.length) > MAX_WALK_SEGS && full()) return ask(FULL_PATH_TEXT);
   const segs = expandShells(outer);
   const naiveAll = expandShells(naiveOuter);
   const parsed = withDirs(segs, cwd, msys);
@@ -1488,6 +1590,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     } catch {
       walkedAll = legacy();
     }
+    // Đặt lại tên lệnh: bất kỳ tên nào sau đó có thể là lệnh ghi mà hook không biết (cả khi rơi về cách nhìn legacy).
+    if (isPs && PS_REDEFINE.test(raw.replaceAll('`', ''))) walkedAll.push({ t: [], dir: cwd, unres: true, opaque: true });
     return walkedAll;
   };
   if (full()) {
@@ -1523,6 +1627,12 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     if (hits(secretRe) && secretOutsideRoots(walked(), rootsOf(), secretRe, msys)) return secretAsk(secretRe);
   }
   return null;
+  } catch (e) {
+    let inFull = false;
+    try { inFull = full(); } catch { /* không đọc được cấu hình: coi như không full */ }
+    if (inFull) return ask(FULL_PATH_TEXT);
+    throw e;
+  }
 }
 
 function main() {

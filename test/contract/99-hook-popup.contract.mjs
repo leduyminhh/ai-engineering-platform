@@ -84,7 +84,7 @@ export default async function run({ ok, ctx }) {
   const gb = await hook('guard-bash.mjs');
   const bash = (command, { tool = 'Bash', branch = 'feature/x', full = false, extra = {} } = {}) => gb.decide(
     { tool_name: tool, cwd: '.', tool_input: { command }, ...(full ? { permission_mode: 'bypassPermissions' } : {}), ...extra },
-    { currentBranch: () => branch, ...(full ? { config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false } : {}) });
+    { currentBranch: () => branch, reader: () => null, allowEnv: () => false, ...(full ? { config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false } : {}) });
   const asks = (c, o) => bash(c, o)?.decision === 'ask';
 
   // ── Task 2: cấu hình hook chỉ hỏi theo đích ghi; chuỗi bash -c ở full theo parse (AC2.1, AC2.3)
@@ -217,7 +217,7 @@ export default async function run({ ok, ctx }) {
       ok(big?.reason.length < 1200, 'AC1.1: lệnh con git dài 100k ký tự bị cắt trong popup');
     }
     {
-      const both = gb.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command: 'cat .env server.pem' } }, { allowEnv: () => true, currentBranch: () => 'feature/x' });
+      const both = gb.decide({ tool_name: 'Bash', cwd: '.', tool_input: { command: 'cat .env server.pem' } }, { reader: () => null, allowEnv: () => true, currentBranch: () => 'feature/x' });
       ok(both?.decision === 'ask' && both.reason.includes('server.pem') && !both.reason.includes('.env'), 'AC1.2: allowEnvFiles bật thì popup nêu file khoá (server.pem), không nêu .env đã được phép');
     }
     // Vòng sửa 2: lệnh lồng trong nháy phải được báo; thân heredoc đơn giản không làm nhiễu dòng tóm tắt, heredoc chạy như script thì vẫn liệt kê
@@ -445,7 +445,7 @@ export default async function run({ ok, ctx }) {
     const BT = String.fromCharCode(96);
     for (const pad of [BT.repeat(130000), '$()'.repeat(130000)]) {
       let r;
-      try { r = gb.decide({ tool_name: 'Bash', tool_input: { command: 'cat .env; echo "' + pad + '"' } }, { currentBranch: 'feature/x' }); } catch (e) { r = 'throw ' + e.message; }
+      try { r = gb.decide({ tool_name: 'Bash', tool_input: { command: 'cat .env; echo "' + pad + '"' } }, { currentBranch: 'feature/x', reader: () => null, allowEnv: () => false }); } catch (e) { r = 'throw ' + e.message; }
       ok(r?.decision === 'ask', 'AC1.3: đệm nhiều $( ) hoặc backtick không làm decide ném lỗi và vẫn quét bí mật (' + (typeof r === 'string' ? r : r?.decision) + ')');
     }
     for (const c of ['echo "$( (cp x .claude/aip-gate.json) )"', 'echo "$(true && (cp x .claude/aip-gate.json))"', 'echo "$(cp x .claude/aip-gate.json; (true))"',
