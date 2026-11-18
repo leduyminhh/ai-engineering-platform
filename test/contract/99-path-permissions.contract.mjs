@@ -1014,6 +1014,18 @@ export default async function run({ ok, ctx }) {
       [`command -pv $x`, 'ask', 'cd-wrapper AC1.1'], [`command -v cd; rm x`, null, 'cd-wrapper AC1.1'], [`command -v $x`, null, 'cd-wrapper AC1.1'], [`command -pv cd; rm x`, null, 'cd-wrapper AC1.1'],
       [`builtin cd ${T}; rm x`, null, 'cd-wrapper AC1.1'], [`command -p cd ${T}; rm x`, null, 'cd-wrapper AC1.1'],
     ]);
+    // H1 (push nhánh bảo vệ): `trackDirs` nhận `cd` qua `unwrap` nên cd sau `builtin`/`command`/`then` đổi thư mục tra nhánh. `<P>/repo` đang ở main, mọi thư mục khác ở feature.
+    {
+      const repoDir = path.resolve(P, 'repo');
+      const branchOpts = { currentBranch: (d) => (d === repoDir ? 'main' : 'feature/x') };
+      for (const [label, o] of [['full', { opts: branchOpts }], ['ask', { cfg: { mode: 'ask' }, opts: branchOpts }]]) {
+        holeRows([
+          [`builtin cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`command cd repo; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`command -- cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`if true; then cd repo; fi; git push`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`builtin cd other && git push`, null, `cd-wrapper AC1.3 (${label})`],
+        ], o);
+      }
+    }
     // PowerShell: `.{ … }` (dot-source một khối) chạy ngay trong scope hiện tại nên cd đổi thư mục thật; từ `.{`/`&{` đầu đoạn không phải tên lệnh.
     holeRows([
       [`.{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'],
