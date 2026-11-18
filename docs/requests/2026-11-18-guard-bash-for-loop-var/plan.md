@@ -39,7 +39,7 @@
 **Kind:** TOOLING
 **TDD:** có
 **Ước lượng:** 70 phút
-**Phủ AC:** AC1.1, AC1.2, AC1.3, AC1.4, AC1.5
+**Phủ AC:** AC1.1, AC1.2, AC1.3, AC1.4, AC1.5, AC1.7
 **Files:**
 - Modify: `core/hooks/scripts/guard-bash.mjs` (`leadInfo`, `walkSegments`, `resolveWord`)
 - Test: `test/contract/99-path-permissions.contract.mjs`

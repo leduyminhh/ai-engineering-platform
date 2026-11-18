@@ -1334,7 +1334,6 @@ function leadInfoPs(seg) {
 const LOOP_MAX_VALUES = 256;
 // Tên shell tự dùng: đổi nghĩa của `$PWD`, `cd`, tra lệnh.
 const LOOP_SKIP_NAMES = /^(?:HOME|PWD|OLDPWD|PATH|CDPATH)$/i;
-const PS_LOOP_BARE = /^[\w.\\/-]+$/;
 
 function loopGroup(vals) {
   return vals.length === 1 ? vals[0] : LOOP_OPEN + vals.join(LOOP_SEP) + LOOP_CLOSE;
@@ -1345,8 +1344,8 @@ function loopValues(elems, ps) {
   if (!elems?.length || elems.length > LOOP_MAX_VALUES) return null;
   const vals = new Set();
   for (const w of elems) {
-    // PowerShell: phần tử không nháy chỉ là từ trơn; `1..3`, `'a'+'b'` là biểu thức cho ra giá trị khác chữ.
-    if (ps && w.parts.some((p) => p.quote === 'none' && (!PS_LOOP_BARE.test(p.text) || p.text.includes('..')))) return null;
+    // PowerShell: từ không nháy trong danh sách `foreach` là lệnh hoặc biểu thức (`pwd`, `.\s.ps1`, `1kb`, `1..3`, `'a'+'b'`), không phải chuỗi: chỉ nhận phần tử có nháy.
+    if (ps && w.parts.some((p) => p.quote === 'none')) return null;
     let r = null;
     try { r = resolveWord(w, { env: new Map(), dir: '/', unres: false, msys: !ps }, ps ? 'powershell' : 'bash'); } catch { /* chưa rõ */ }
     // Khoảng trắng và dấu phẩy phá nhóm; glob kể cả trong nháy bị classifyPlain đọc là glob; `-…` đổi nghĩa lệnh khi `$c` đứng đầu đối số (`cp $c <ngoài> a` với -t); `:` ở PowerShell là ổ provider.

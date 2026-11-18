@@ -1155,6 +1155,10 @@ export default async function run({ ok, ctx }) {
       [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${T}/$x/$y" }; Remove-Item "${T}/$y" }`, 'ask', `${L} AC1.6`],
       [`foreach ($x in 'a') { foreach ($x in 'b') { Remove-Item "${T}/$x" } }`, 'ask', `${L} AC1.6`],
       [`if ($true) { foreach ($y in 'b') { Remove-Item "${T}/$y" } }`, 'ask', `${L} AC1.6`],
+      // Từ không nháy trong danh sách là lệnh được chạy (pwd cho thư mục hiện tại), không phải chuỗi 'pwd'.
+      [`foreach ($x in pwd) { Remove-Item "$x\\.." -Recurse }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a',pwd) { Remove-Item "$x/../x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in a,b) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
       [`foreach ($x in @('a','b')) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
       [`foreach ($x in 1..3) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
       [`foreach ($x in $list) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
