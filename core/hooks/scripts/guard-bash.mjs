@@ -43,6 +43,7 @@ export function parse(cmd) {
       // `||` / `|` giữ tới đoạn kế: lệnh sau đó có thể chạy khi `cd` phía trước chưa xảy ra.
       if (c === '|' && cmd[i + 1] === '|') op = '||';
       else if (c === '|' && op !== '||') op = '|';
+      else if (c === '&' && cmd[i + 1] === '&' && op !== '||' && op !== '|') { op = '&&'; i++; }
       else if (c !== '|' && op !== '||' && op !== '|') op = c;
       continue;
     }
@@ -363,7 +364,7 @@ function trackDirs(segs, cwd, msys = true) {
   let dir = cwd;
   let unres = false;
   let cdSeen = false;
-  return segs.map((t) => {
+  return segs.map((t, i) => {
     // u: lệnh đã bỏ tiền tố bọc (env -S, sudo, nice…) để H1 thấy `git push` thật; `cd` cũng lấy từ đây (`builtin cd`, `command -- cd`, `then cd`).
     const [u, k] = unwrap(t);
     // Chỉ `cd` chạy trong shell hiện tại mới đổi thư mục: `sudo cd`, `env cd`, `nohup cd`… chạy ở tiến trình khác (hoặc lỗi), `command -v cd` chỉ tra cứu.
@@ -381,8 +382,13 @@ function trackDirs(segs, cwd, msys = true) {
       cdSeen = true;
       unres = true;
     }
-    // cd sau từ khoá điều kiện, `time` hay `.{` có thể không chạy (cùng luật `structOk` của walkSegments): thư mục chưa rõ.
-    if (CD_CMDS.has(name) && prefix.some((x) => COND_KW.has(x))) unres = true;
+    // cd có thể không chạy hoặc không đổi thư mục shell cha nên thư mục chưa rõ: sau COND_KW (H1 coi `.{`/`&{` là chưa rõ, walkSegments coi chắc chạy), trong `{` của PowerShell (scriptblock),
+    // trong `$( )`/backtick/`( )` của bash (shell con), sau `||`/`|`, hoặc chạy nền. `2>&1` để lại đoạn `1` có op `&` nên không tính là nền.
+    if (CD_CMDS.has(name)) {
+      const sub = msys && (t.op === '(' || t.op === '`' || prefix.some((x) => /\$\(|`|^\(/.test(x)));
+      const bg = segs[i + 1]?.op === '&' && !/[<>]$/.test(String(u.at(-1)));
+      if (prefix.some((x) => COND_KW.has(x) || (!msys && x === '{')) || sub || t.op === '||' || t.op === '|' || bg) unres = true;
+    }
     return { t, u, gc: gitCmd(u), dir, unres };
   });
 }
@@ -1250,9 +1256,10 @@ function leadInfo(seg) {
       // `-p VAR`, cờ gộp kết thúc bằng p (`-fp VAR`) và tên dính liền (`-pVAR`, `-fpVAR`): tên biến là phần dính hoặc từ kế.
       const win = ws.slice(k + 1, k + 5);
       for (const [j, w] of win.entries()) {
-        const m = /^-[A-Za-z]*?p(.*)$/.exec(wordText(w));
+        const text = wordText(w);
+        const m = /^-[A-Za-z]*?p/.exec(text);
         if (!m) continue;
-        const v = m[1] || (win[j + 1] ? wordText(win[j + 1]) : '');
+        const v = text.slice(m[0].length) || (win[j + 1] ? wordText(win[j + 1]) : '');
         if (v) extra.push(v);
         break;
       }

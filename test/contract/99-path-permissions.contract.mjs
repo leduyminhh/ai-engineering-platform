@@ -1054,6 +1054,33 @@ export default async function run({ ok, ctx }) {
       [`timeout $T ls`, null, 'cd-wrapper AC1.5'], [`timeout \${T}s ls ${T}/x`, null, 'cd-wrapper AC1.5'],
       [`R=rm; timeout 5 $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'], [`R=rm; timeout $T $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'],
     ]);
+    // Hồi quy sau review cuối: từ `-ppp…p` kèm nháy chứa xuống dòng không được làm regex của nhánh `wait` backtrack bậc hai (50000 ký tự `p` từng mất ~1,8 s).
+    {
+      const tP = performance.now();
+      const pw = holeKind(`S=${T}; wait -` + 'p'.repeat(50000) + `'\n'; rm -rf $S/x`);
+      const pwMs = performance.now() - tP;
+      ok(pw !== null && !String(pw).startsWith('throw') && pwMs < 1500, `cd-wrapper AC1.4: wait -ppp…p (50000) kèm nháy xuống dòng, rm qua $S → hỏi/chặn dưới 1,5 s (${pw}, ${Math.round(pwMs)} ms)`);
+    }
+    // H1: cwd ở main, `other` ở feature. Khối `{ }` trần của PowerShell là scriptblock không chạy; cd trong `$( )`/subshell không đổi thư mục shell cha; cd sau `||`/ống hoặc chạy nền (`&`) không chắc đổi thư mục → push vẫn từ main (ask). Đối chứng: cd thật chạy (`{ cd; }` của bash, `!`, `VAR=x cd`, `&&`) vẫn đổi sang feature (null).
+    {
+      const mainDir = path.resolve(P);
+      const mainOpts = { currentBranch: (d) => (path.resolve(d) === mainDir ? 'main' : 'feature/x') };
+      for (const [label, o] of [['full', { opts: mainOpts }], ['ask', { cfg: { mode: 'ask' }, opts: mainOpts }]]) {
+        holeRows([
+          [`{ cd other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`], [`{ cd other; }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`],
+          [`{ Set-Location other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`], [`{ cd other } && git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`],
+        ], { ...o, tool: 'PowerShell' });
+        holeRows([
+          [`x=$(builtin cd other); git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`x=$(builtin cd other) git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          ['x=`builtin cd other`; git push origin HEAD', 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`true || builtin cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`echo x | builtin cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`builtin cd other & git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`{ cd other; }; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`! cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          [`VAR=x cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`builtin cd other && git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+          [`cd other 2>&1 && git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
+        ], o);
+      }
+    }
     // PowerShell: `.{ … }` (dot-source một khối) chạy ngay trong scope hiện tại nên cd đổi thư mục thật; từ `.{`/`&{` đầu đoạn không phải tên lệnh.
     holeRows([
       [`.{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'], [`&{ cd '${OUT}' }; Remove-Item x`, 'deny', 'cd-wrapper AC1.2'],
