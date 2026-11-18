@@ -1,6 +1,6 @@
 # Thiết kế: vá các lỗ guard-bash ở chế độ full đã hoãn
 - Ngày: 2026-11-17
-- Trạng thái: approved — design và plan duyệt 2026-11-17; người dùng chọn chạy ngay (2026-11-17) mà không chờ nhánh `claude/beautiful-nobel-cdade6` (nhánh đó chưa merge)
+- Trạng thái: in-progress — nhánh claude/laughing-tu-69e18d (chưa merge; master do worktree chính giữ)
 - Requirement: không có
 
 ## Vấn đề và lý do
