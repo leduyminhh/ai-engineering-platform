@@ -367,7 +367,7 @@ function trackDirs(segs, cwd, msys = true) {
     const [u, k] = unwrap(t);
     // Chỉ `cd` chạy trong shell hiện tại mới đổi thư mục: `sudo cd`, `env cd`, `nohup cd`… chạy ở tiến trình khác (hoặc lỗi), `command -v cd` chỉ tra cứu.
     const prefix = u.slice(0, k);
-    const inShell = !prefix.some((x) => NON_SHELL_WRAP.has(cmdName(x))) && !(prefix.includes('command') && prefix.some((x) => /^-[A-Za-z]*[vV]/.test(x)));
+    const inShell = !prefix.some((x) => NON_SHELL_WRAP.has(cmdName(x))) && !(prefix.some((x) => cmdName(x) === 'command') && prefix.some((x) => /^-[A-Za-z]*[vV]/.test(x)));
     const name = inShell ? String(u[k] ?? '').toLowerCase() : '';
     // Sau `||` / `|` lệnh cd phía trước có thể chưa chạy (hoặc chạy ở tiến trình con) → không tin thư mục đang theo dõi.
     if (cdSeen && (t.op === '||' || t.op === '|')) unres = true;
