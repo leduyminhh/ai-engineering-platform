@@ -466,8 +466,8 @@ function unwrap(tokens) {
     if (n === 'timeout') {
       k++;
       while (k < t.length && t[k].startsWith('-')) k += /^(-s|-k|--signal|--kill-after)$/.test(t[k]) ? 2 : 1;
-      // Thời lượng là biến (`$T`, `${T}s`) cũng là một từ: `timeout $T $R x` vẫn để `$R` là tên lệnh.
-      if (k < t.length && /^(?:\d+(?:\.\d+)?|\$\{?\w+\}?)[smhd]?$/.test(t[k])) k++;
+      // Chỉ thời lượng literal: biến không trích dẫn có thể chứa khoảng trắng và bị bash tách từ (`T='5 rm'; timeout $T -rf x`).
+      if (k < t.length && /^\d+(\.\d+)?[smhd]?$/.test(t[k])) k++;
       continue;
     }
     if (n === 'nice') {

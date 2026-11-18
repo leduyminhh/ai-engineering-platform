@@ -1,6 +1,6 @@
 # Thiết kế: guard-bash nhận cd và lệnh sau các lệnh bọc còn sót
 - Ngày: 2026-11-18
-- Trạng thái: approved — design và plan duyệt 2026-11-18; làm tiếp trên nhánh claude/laughing-tu-69e18d
+- Trạng thái: in-progress — nhánh claude/laughing-tu-69e18d (chưa merge; master do worktree chính giữ)
 - Requirement: không có
 
 ## Vấn đề và lý do
@@ -16,7 +16,6 @@ Các lỗ (đã chạy `decide` thật ở review cuối của request trước;
 | `.{ cd 'OUT' }; Remove-Item x` | `null` | PowerShell: từ `.{` (dot-source một khối) không được bỏ như `{` |
 | `builtin cd <repo main> && git push`, `command cd …`, `if …; then cd <repo>; fi; git push` | `null` (tra nhánh của cwd) | `trackDirs` (H1) vẫn nhận `cd` qua `t[0]` |
 | `S=<T>; wait -fp S; rm -rf $S/x`, `wait -pS` | `null` | `wait` chỉ nhận `-p` đứng riêng; cờ gộp và tên dính liền làm `S` vẫn được tin |
-| `timeout $T ls` | `ask` oan | `unwrap` chỉ nhận thời lượng literal, `$T` bị coi là tên lệnh |
 
 ## Quyết định đã chốt
 
@@ -30,7 +29,7 @@ Các lỗ (đã chạy `decide` thật ở review cuối của request trước;
 - **D2 — `trackDirs` (H1) nhận `cd` qua `unwrap`.** Tên lệnh lấy từ `unwrap(t)` thay `t[0]`; `builtin` thêm vào danh sách tiền tố của `unwrap`. Luật cd cũ của H1 (hiệu lực cho đoạn sau, trừ sau `||`/`|`) giữ nguyên; chỉ vị trí nhận ra đổi. Chỉ `cd` chạy trong shell hiện tại mới đổi thư mục tra nhánh: tiền tố trong `NON_SHELL_WRAP` (`sudo`, `doas`, `env`, `nohup`, `timeout`, `nice`, `exec`, `ionice`, `stdbuf`, `busybox`) và `command -v`/`-V` không đổi (push vẫn tra thư mục hiện tại). `cd` sau từ khoá trong `COND_KW` (`if`, `then`, `else`, `elif`, `do`, `while`, `until`, `time`, `.{`, `&{`) có thể không chạy nên đặt thư mục chưa rõ (cùng luật `structOk`); sau `builtin`, `command`, `{` của bash, `!` thì `cd` chắc chạy. Hai ngoại lệ mới của H1 (review cuối), đều đặt thư mục chưa rõ để push vẫn hỏi như trước request: (1) PowerShell `{` trần là scriptblock không chạy, và ở bash `cd` trong `$( )`, backtick hoặc `( )` chạy ở shell con nên không đổi thư mục shell cha; (2) `cd` có op `||` hoặc `|` (có thể không chạy, hoặc chạy ở tiến trình con) và `cd` chạy nền (đoạn kế có op `&`; `parse()` nay tách `&&` khỏi `&`, `2>&1` không tính là nền) thì chưa rõ; luật `&&` giữ nguyên (`X && cd D` vẫn tin). Vì `unwrap` nhận `builtin`, H6 cũng thấy lệnh ghi sau `builtin` (`builtin rm <ngoài root>`: `deny`). Request trước nêu `trackDirs` "không đổi" như ràng buộc của riêng nó; request này được phép vì ghi rõ ở đây.
 - **D3 — PowerShell `.{` và `&{`:** `walkSegments` (và `unwrap`) bỏ các từ `{`, `.{`, `&{` đầu đoạn khi tìm tên lệnh (mở rộng vòng `while (t[ci] === '{')` của request trước); nên lệnh ghi sau `.{` cũng được kiểm, và `.{ rm X }` ở Bash cũng bị bỏ `.{` (hỏi oan nhỏ). `.{` và `&{` chạy khối ngay trong scope hiện tại nên `cd` chắc chạy (`deny` ở thư mục ngoài root); `{ … }` đứng riêng hoặc sau `&` có dấu cách vẫn không chắc chạy (`structOk`/`compound`) nên thư mục thành chưa rõ (`ask`).
 - **D4 — `wait`:** trong cửa sổ 4 từ sau `wait`, nhận `-p` đứng riêng, cờ gộp kết thúc bằng `p` (`-fp`, `-nfp`) và `-p` dính tên (`-pS`, `-fpS`); tên biến là từ kế (khi riêng, phải cũng nằm trong cửa sổ) hoặc phần dính liền. Chỉ cờ có `p` đầu tiên được nhận. Cờ không có `p` (`-n`, `-f`, `-fn`) không làm gì.
-- **D5 — `timeout`:** thời lượng được nhận cả khi là biến (`$T`, `${T}`, có thể kèm hậu tố `s|m|h|d`). `timeout 5 $R x` và `timeout $T $R x` vẫn làm `$R` là tên lệnh không đọc được (`ask`): chỉ một từ được nuốt làm thời lượng.
+- **D5 — bị hoàn nguyên sau review cuối (người dùng quyết 2026-11-18):** thời lượng `timeout` là biến không được nuốt vì bash tách từ giá trị biến không trích dẫn (`T='5 rm'; timeout $T -rf <OUT>/x` chạy `rm`). `unwrap` giữ như trước request: chỉ nhận thời lượng literal, nên `timeout $T ls` vẫn là `ask`.
 
 ## Hướng đã cân nhắc
 
@@ -46,9 +45,9 @@ Test ở `test/contract/99-path-permissions.contract.mjs` (khối mới "cd và 
 - [ ] **AC1.2** — Given full + bypass, PowerShell When `.{ cd '<OUT>' }; Remove-Item x`, `&{ cd '<OUT>' }; Remove-Item x` Then `deny` (khối chạy ngay trong scope hiện tại nên `cd` chắc chạy); `cd '<T>'; Remove-Item x` Then `null`.
 - [ ] **AC1.3** — Given `currentBranch(dir)` trả `main` chỉ cho thư mục `<P>/repo`, full + bypass (push giữ theo `fullKeep`) và `mode: ask` When `builtin cd repo && git push`, `command cd repo; git push origin HEAD`, `command -- cd repo && git push`, `if true; then cd repo; fi; git push` Then `ask`; `cd repo && git push` Then `ask` (đối chứng cũ); `builtin cd other && git push` Then `null`.
 - [ ] **AC1.4** — Given full + bypass When `S=<T>; wait -fp S; rm -rf $S/x`, `S=<T>; wait -pS; rm -rf $S/x`, `S=<T>; wait -n -fp S; rm -rf $S/x` Then `ask`; `S=<T>; wait -fn; rm -rf $S/x`, `S=<T>; wait; rm -rf $S/x` Then `null`.
-- [ ] **AC1.5** — Given full + bypass When `timeout $T ls`, `timeout ${T}s ls <T>/x` Then `null`; `R=rm; timeout 5 $R <OUT>/x`, `R=rm; timeout $T $R <OUT>/x` Then `ask`.
+- [ ] **AC1.5** — Given full + bypass When `timeout $T ls`, `timeout ${T}s ls <T>/x`, `T='5 rm'; timeout $T -rf <OUT>/x`, `R=rm; timeout 5 $R <OUT>/x`, `R=rm; timeout $T $R <OUT>/x` Then `ask`; `timeout 5 ls <T>/x` Then `null`.
 - [ ] **AC2.1** — Given thay đổi trên When chạy `--only hook`, `--only path-permissions`, `--only spec` Then xanh; mọi ca không thuộc AC1.x giữ kết quả (không ask/deny cũ nào thành `null`, trừ ca H1 đã nêu ở AC1.3 đổi từ `null` sang `ask`).
-- [ ] **AC2.2** — Given tài liệu When đọc `docs/specs/hooks-gates/spec.md` Then R23 nêu D1–D5 và bỏ các mục đã vá khỏi "giới hạn đã biết"; README.md và README_VI.md khớp.
+- [ ] **AC2.2** — Given tài liệu When đọc `docs/specs/hooks-gates/spec.md` Then R23 nêu D1–D4 và bỏ các mục đã vá khỏi "giới hạn đã biết"; README.md và README_VI.md khớp.
 - [ ] **AC2.3** — Given các sửa trên When `npm run build`, `node cli/lib/versions.mjs --lock`, `npm test` trên bản `git clone` sạch Then build và lock khớp (bump patch kế tiếp), `npm test` exit 0.
 
 ## Thiết kế
@@ -57,7 +56,7 @@ Test ở `test/contract/99-path-permissions.contract.mjs` (khối mới "cd và 
 
 - **`core/hooks/scripts/guard-bash.mjs`**:
   - `leadInfo`: vòng `cmdAt` bỏ cờ sau `builtin`/`command`/`time` (D1), trừ `-v`/`-V`; nhánh `wait` nhận cờ gộp và tên dính liền (D4).
-  - `unwrap`: thêm `builtin` (D2); thời lượng `timeout` nhận biến (D5).
+  - `unwrap`: thêm `builtin` (D2).
   - `trackDirs`: tên lệnh và đối số `cd` lấy sau `unwrap` (D2).
   - `walkSegments`: từ `.{`/`&{` đầu đoạn PowerShell bỏ như `{` (D3).
 - **Test:** `test/contract/99-path-permissions.contract.mjs` (khối mới); ca H1 dựng theo khối F2 của `90-hooks.contract.mjs`.
@@ -66,7 +65,7 @@ Test ở `test/contract/99-path-permissions.contract.mjs` (khối mới "cd và 
 
 ### Thứ tự thực thi (gợi ý cho plan)
 
-1. D1 (`cmdAt`) → 2. D3 (`.{`) → 3. D2 (`trackDirs`) → 4. D4 + D5 → 5. spec/README → 6. version, build, lock, `npm test` trên clone sạch.
+1. D1 (`cmdAt`) → 2. D3 (`.{`) → 3. D2 (`trackDirs`) → 4. D4 → 5. spec/README → 6. version, build, lock, `npm test` trên clone sạch.
 
 ## Ảnh hưởng spec
 - hooks-gates: đổi R23
