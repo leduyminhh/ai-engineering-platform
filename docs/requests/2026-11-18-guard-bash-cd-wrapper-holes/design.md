@@ -1,6 +1,6 @@
 # Thiết kế: guard-bash nhận cd và lệnh sau các lệnh bọc còn sót
 - Ngày: 2026-11-18
-- Trạng thái: draft — chờ duyệt design và plan (G1/G2)
+- Trạng thái: approved — design và plan duyệt 2026-11-18; làm tiếp trên nhánh claude/laughing-tu-69e18d
 - Requirement: không có
 
 ## Vấn đề và lý do
