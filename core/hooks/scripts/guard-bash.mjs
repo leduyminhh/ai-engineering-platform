@@ -113,15 +113,17 @@ export function resolveWord(word, state, dialect = 'bash') {
         // PowerShell: `$NAME`/`${NAME}`/`$PWD` không phân biệt hoa thường; `$NAME:x` là biến có phạm vi, `$(`, `$env:`, `${…}` lạ là chưa rõ; ngoài nháy chỉ nhận khi cả từ là biến đó.
         if (!m || s[i + m[0].length] === ':' || (bare && !(word.parts.length === 1 && s === m[0]))) return null;
         const key = (m[1] ?? m[2]).toLowerCase();
-        const v = key === 'pwd' ? (state.unres ? null : state.dir) : state.env.get(key);
-        if (typeof v !== 'string' || !RW_ABS.test(v) || !put(v, true)) return null;
+        const lv = state.loop?.get(key);
+        const v = lv ?? (key === 'pwd' ? (state.unres ? null : state.dir) : state.env.get(key));
+        if (typeof v !== 'string' || (lv === undefined && !RW_ABS.test(v)) || !put(v, true)) return null;
         i += m[0].length;
         continue;
       }
       if (m) {
         const name = m[1] ?? m[2];
-        const v = name === 'HOME' ? null : name === 'PWD' ? (state.unres ? null : state.dir) : state.env.get(name);
-        if (typeof v !== 'string' || !RW_ABS.test(v) || !put(v, true)) return null;
+        const lv = state.loop?.get(name);
+        const v = lv ?? (name === 'HOME' ? null : name === 'PWD' ? (state.unres ? null : state.dir) : state.env.get(name));
+        if (typeof v !== 'string' || (lv === undefined && !RW_ABS.test(v)) || !put(v, true)) return null;
         i += m[0].length;
         continue;
       }
@@ -176,7 +178,8 @@ export function scanWords(cmd, dialect = 'bash') {
     endWord();
     if (words.length) {
       const sep = pending ?? (segs.length ? ';' : 'start');
-      segs.push({ words, sep, pipeIn: sep === '|', pipeOut: false, background: false, compound: paren > 0 || kwDepth > 0 || kwMark, call: callNext });
+      // kd/pn/km: độ sâu `{`, độ sâu `(` và cờ khối của riêng đoạn, để psUnsafe phân biệt đoạn phức chỉ vì vòng `foreach` với đoạn phức vì lý do khác.
+      segs.push({ words, sep, pipeIn: sep === '|', pipeOut: false, background: false, compound: paren > 0 || kwDepth > 0 || kwMark, call: callNext, kd: kwDepth, pn: paren, km: kwMark });
       callNext = false;
       if (sep === '|' && segs.length > 1) segs[segs.length - 2].pipeOut = true;
       pending = null;
@@ -596,10 +599,18 @@ function expandBraces(p) {
   return braceLeft < 0 ? null : r;
 }
 
+// Nhóm giá trị của biến vòng `for`/`foreach`: ký tự riêng (vùng private-use) thay cho `{a,b}` thật, vì brace chỉ được mở khi `msys` còn PowerShell không có brace expansion.
+const LOOP_OPEN = '\uE000';
+const LOOP_SEP = '\uE001';
+const LOOP_CLOSE = '\uE002';
+const LOOP_MARKS = /[\uE000-\uE002]/;
+const loopBraces = (p) => p.replaceAll(LOOP_OPEN, '{').replaceAll(LOOP_SEP, ',').replaceAll(LOOP_CLOSE, '}');
+
 function classifyTarget(raw, dir, unres, roots, msys = true, need = 'write', glob) {
   const p = np(raw, msys);
-  if (!msys || !p.includes('{')) return classifyPlain(p, dir, unres, roots, msys, need, glob);
-  const branches = expandBraces(p);
+  const grouped = p.includes(LOOP_OPEN);
+  if (!grouped && (!msys || !p.includes('{'))) return classifyPlain(p, dir, unres, roots, msys, need, glob);
+  const branches = expandBraces(grouped ? loopBraces(p) : p);
   if (!branches) return 'unknown';
   // Nhánh do braceExpand sinh không còn nhóm có dấu phẩy: phân loại thẳng, không mở rộng lại.
   const all = branches.map((b) => classifyPlain(b, dir, unres, roots, msys, need, glob));
@@ -847,7 +858,8 @@ function secretOutsideRoots(walked, roots, re, msys = true) {
   let found = false;
   for (const { t, dir, unres } of walked) {
     for (const tok of t.flatMap((x) => x.split(/\s+/))) {
-      if (!re.test(tok)) continue;
+      // Nhóm giá trị của biến vòng được đọc như brace để tên bí mật đứng sau ký tự mở nhóm vẫn khớp.
+      if (!re.test(loopBraces(tok))) continue;
       found = true;
       const p = tok.slice(Math.max(tok.lastIndexOf('='), tok.lastIndexOf('@'), tok.lastIndexOf('<'), tok.lastIndexOf('(')) + 1);
       // File bí mật chỉ được miễn hỏi khi đường dẫn có đủ ba quyền hiệu lực.
@@ -1148,6 +1160,8 @@ const PS_MUTATORS = /\b(?:set|new|remove|clear)-variable\b|\b(?:invoke-expressio
 const PS_REDEFINE = /\b(?:set|new|import)-alias\b|(?:^|[\s;|({&"'])(?:sal|nal)["']?\s|\b(?:alias|function):|(?:^|[;|({&\n])[ \t]*(?:function|filter)\s+[\w-]+/i;
 const ASSIGN_WORD = /^([A-Za-z_]\w*)(\+?=|\[)/;
 const LEAD_KW = new Set(['if', 'then', 'else', 'elif', 'do', 'while', 'until', '{', '!', 'time']);
+// Từ chỉ có một phần không nháy (từ khoá, tên); null cho mọi dạng khác.
+const bareText = (w) => (w && w.parts.length === 1 && w.parts[0].quote === 'none' ? w.parts[0].text : null);
 const MAX_VAR_NAMES = 20;
 const MAX_VAR_CMD = 20000;
 const MAX_INNER_DEPTH = 3;
@@ -1243,7 +1257,11 @@ function leadInfo(seg) {
   }
   const extra = [];
   const txt = (k) => (ws[k] ? wordText(ws[k]) : '');
+  // Đầu vòng `for NAME in W…` đúng dạng: hai tên của đầu vòng không vào `extra`, `walkSegments` quyết định có nhận vòng hay không (findLoops) và đưa tên vào `bad` khi không nhận.
+  const loop = bareText(ws[lead]) === 'for' && /^[A-Za-z_]\w*$/.test(bareText(ws[lead + 1]) ?? '') && bareText(ws[lead + 2]) === 'in' && ws.length > lead + 3
+    ? { name: bareText(ws[lead + 1]), words: ws.slice(lead + 3) } : null;
   for (let k = 0; k < ws.length; k++) {
+    if (loop && k >= lead && k <= lead + 2) continue;
     const x = txt(k);
     if ((x === 'for' || x === 'select') && ws[k + 1]) extra.push(txt(k + 1));
     if (/^[A-Za-z_]\w*$/.test(x) && txt(k + 1) === 'in') extra.push(x);
@@ -1268,7 +1286,7 @@ function leadInfo(seg) {
     const loose = used.has(k) ? null : /^([A-Za-z_]\w*)(?:\+?=|\[)/.exec(x);
     if (loose) extra.push(loose[1]);
   }
-  return { lead, assigns, extra, hasCmd: rest.length > 0, cmdAt };
+  return { lead, assigns, extra, hasCmd: rest.length > 0, cmdAt, loop };
 }
 
 // PowerShell: `$NAME = <từ>` hoặc `$NAME=<từ>` (tên viết thường); đoạn có thêm từ sau giá trị (`$S = Get-Item x`) thì giá trị là kết quả lệnh nên không tin.
@@ -1311,6 +1329,128 @@ function leadInfoPs(seg) {
   return { lead: 0, assigns, extra, hasCmd, cmdAt, used };
 }
 
+// Biến vòng `for NAME in W…; do … done` (Bash) và `foreach ($x in 'a','b') { … }` (PowerShell): danh sách literal được giải bằng từng giá trị (nhóm đánh dấu, mở như brace)
+// và chỉ trong thân vòng; mọi dạng khác giữ nguyên, tên vẫn chưa rõ.
+const LOOP_MAX_VALUES = 256;
+// Tên shell tự dùng: đổi nghĩa của `$PWD`, `cd`, tra lệnh.
+const LOOP_SKIP_NAMES = /^(?:HOME|PWD|OLDPWD|PATH|CDPATH)$/i;
+
+function loopGroup(vals) {
+  return vals.length === 1 ? vals[0] : LOOP_OPEN + vals.join(LOOP_SEP) + LOOP_CLOSE;
+}
+
+// Giá trị của từng phần tử, hoặc null khi có phần tử không phải literal an toàn (thì không nhận vòng).
+function loopValues(elems, ps) {
+  if (!elems?.length || elems.length > LOOP_MAX_VALUES) return null;
+  const vals = new Set();
+  for (const w of elems) {
+    // PowerShell: từ không nháy trong danh sách `foreach` là lệnh hoặc biểu thức (`pwd`, `.\s.ps1`, `1kb`, `1..3`, `'a'+'b'`), không phải chuỗi: chỉ nhận phần tử có nháy.
+    if (ps && w.parts.some((p) => p.quote === 'none')) return null;
+    let r = null;
+    try { r = resolveWord(w, { env: new Map(), dir: '/', unres: false, msys: !ps }, ps ? 'powershell' : 'bash'); } catch { /* chưa rõ */ }
+    // Khoảng trắng và dấu phẩy phá nhóm; glob kể cả trong nháy bị classifyPlain đọc là glob; `-…` đổi nghĩa lệnh khi `$c` đứng đầu đối số (`cp $c <ngoài> a` với -t); `:` ở PowerShell là ổ provider.
+    if (!r || r.glob || /[\s,{}*?[\]]|^-/.test(r.text) || LOOP_MARKS.test(r.text) || (ps && r.text.includes(':'))) return null;
+    vals.add(r.text);
+  }
+  return [...vals];
+}
+
+// Các từ sau `in` của PowerShell thành phần tử, ngăn bằng đúng một dấu phẩy; khoảng trắng chỉ được đứng cạnh dấu phẩy (`'a' 'b'` là lỗi cú pháp, không phải hai phần tử).
+function psListElements(words) {
+  const items = [];
+  words.forEach((w, wi) => {
+    if (wi) items.push({ gap: true });
+    for (const p of w.parts) {
+      if (p.quote !== 'none') { items.push({ p }); continue; }
+      p.text.split(/(,)/).forEach((s) => { if (s === ',') items.push({ comma: true }); else if (s) items.push({ p: { text: s, quote: 'none' } }); });
+    }
+  });
+  const els = [];
+  let cur = [];
+  let gap = false;
+  for (const it of items) {
+    if (it.gap) { gap = cur.length > 0; continue; }
+    if (it.comma) { if (!cur.length) return null; els.push({ parts: cur }); cur = []; gap = false; continue; }
+    if (gap) return null;
+    cur.push(it.p);
+  }
+  if (!cur.length) return null;
+  els.push({ parts: cur });
+  return els;
+}
+
+// Các vòng đúng dạng của lệnh: [{ name, hdr, from, to, vals, ok }]; `ok` khi cấu trúc đóng đúng cấp và danh sách literal hợp lệ. Thân vòng là các đoạn from..to.
+// Bash: đoạn `for NAME in …`, đoạn `do` kế (sau `;`), tới trước `done` đúng cấp (`for`/`while`/`until`/`select` lồng được đếm); `case` làm `)` cắt đoạn và heredoc biến dòng thân thành đoạn nên đếm không còn tin được.
+// PowerShell: đoạn `foreach`, đoạn `$x in …` (trong `(`), đoạn mở bằng `{`, tới trước `}` đúng cấp; đoạn header PowerShell được bỏ `$x` khỏi `extra` khi nhận.
+function findLoops(segs, infos, ps) {
+  const out = [];
+  const shaky = !ps && segs.some((s) => s.words.some((w) => bareText(w) === 'case' || w.parts.some((p) => p.quote === 'none' && p.text.includes('<<'))));
+  segs.forEach((seg, h) => {
+    if (!ps) {
+      const L = infos[h].loop;
+      if (!L) return;
+      const c = { name: L.name, hdr: h, from: h + 1, to: -1, vals: null, ok: false };
+      out.push(c);
+      if (shaky || segs[h + 1]?.sep !== ';' || bareText(segs[h + 1].words[0]) !== 'do') return;
+      let depth = 0;
+      for (let j = h + 1; j < segs.length; j++) {
+        const w = segs[j].words;
+        if (bareText(w[0]) === 'done') { if (!depth) { c.to = j - 1; break; } depth--; continue; }
+        if (w.slice(0, infos[j].lead).some((x) => ['while', 'until'].includes(bareText(x))) || ['for', 'select'].includes(bareText(w[infos[j].lead]))) depth++;
+      }
+      c.vals = c.to >= c.from ? loopValues(L.words, false) : null;
+      c.ok = !!c.vals;
+      return;
+    }
+    // `foreach` ngay sau `{` của khối bao ngoài (vòng lồng) nằm cùng đoạn với `{` đó.
+    const k0 = bareText(seg.words[0]) === '{' ? 1 : 0;
+    if (seg.words.length !== k0 + 1 || bareText(seg.words[k0])?.toLowerCase() !== 'foreach') return;
+    const h1 = segs[h + 1];
+    const h2 = segs[h + 2];
+    const m = /^\$([A-Za-z_]\w*)$/.exec(bareText(h1?.words[0]) ?? '');
+    if (!m || bareText(h1.words[1])?.toLowerCase() !== 'in' || h1.words.length < 3 || h1.pn !== 1 || h1.sep !== ';' || bareText(h2?.words[0]) !== '{' || h2.pn !== 0) return;
+    const c = { name: m[1].toLowerCase(), hdr: h + 1, from: h + 2, to: -1, vals: null, ok: false, h0: h, close: -1 };
+    out.push(c);
+    let depth = 0;
+    for (let j = h + 2; j < segs.length; j++) {
+      const f = bareText(segs[j].words[0]);
+      if (f === '{') depth++;
+      else if (f === '}' && --depth === 0) { c.close = j; break; }
+    }
+    if (c.close < 0) return;
+    c.to = c.close - 1;
+    const els = psListElements(h1.words.slice(2));
+    c.vals = els && loopValues(els, true);
+    c.ok = !!c.vals && segs[c.close].words.length === 1;
+    if (c.ok) infos[c.hdr].extra = infos[c.hdr].extra.filter((n) => n !== c.name);
+  });
+  return out;
+}
+
+// Bản "ảo" của lệnh PowerShell cho psUnsafe: bỏ đoạn cấu trúc của các vòng `foreach` nhận được (`foreach`, `$x in …`, `}`) và từ `{` mở khối; đoạn thân chỉ phức vì chính các vòng đó (không `(`, không khối khác) coi như đơn.
+// Thân vẫn phải qua danh sách lệnh được giải biến của psUnsafe.
+function psLoopView(scan) {
+  const infos = scan.segs.map(leadInfoPs);
+  const loops = findLoops(scan.segs, infos, true).filter((c) => c.ok);
+  if (!loops.length) return null;
+  const drop = new Set();
+  const nest = scan.segs.map(() => 0);
+  for (const c of loops) {
+    drop.add(c.h0).add(c.hdr).add(c.close);
+    for (let j = c.from; j <= c.to; j++) nest[j]++;
+  }
+  const segs = [];
+  scan.segs.forEach((s, j) => {
+    if (drop.has(j)) return;
+    if (!nest[j]) { segs.push(s); return; }
+    const opener = loops.some((c) => c.from === j);
+    const words = opener ? s.words.slice(1) : s.words;
+    if (!words.length) return;
+    segs.push({ ...s, words, compound: !(s.pn === 0 && s.kd === nest[j] && (!s.km || opener)) });
+  });
+  return { scan: { ...scan, segs }, names: loops.map((c) => c.name) };
+}
+
 // Danh sách trắng PowerShell: ngoài phép gán đơn `$name = từ` đứng đầu đoạn, mọi `{`/`}`, `(` hay `=` ngoài nháy, `$( )` có các dấu đó/đổi thư mục là dấu hiệu đổi biến → tắt giải biến cả lệnh.
 const PS_CD = /(?:^|[\s;|({])(?:cd|chdir|sl|set-location|push-location|pushd|popd|pop-location)(?=[\s;|)]|$)/i;
 const PS_SCOPE_CHANGE = new RegExp('[={}]|' + PS_CD.source, 'i');
@@ -1323,6 +1463,11 @@ const PS_VAR_SAFE_CMDS = new Set(['remove-item', 'ri', 'rm', 'del', 'new-item', 
 const PS_CD_CMDS = new Set(['cd', 'chdir', 'set-location', 'sl', 'push-location', 'pushd', 'popd', 'pop-location']);
 function psUnsafe(scan, depth = 0, absNames = null) {
   if (depth > MAX_INNER_DEPTH) return true;
+  let loopNames = [];
+  if (depth === 0) {
+    const view = psLoopView(scan);
+    if (view) ({ scan, names: loopNames } = view);
+  }
   const infos = scan.segs.map(leadInfoPs);
   if (!absNames) {
     // Tên chỉ được gán literal đường dẫn tuyệt đối (hoặc $PWD) thì giá trị không thể là ổ `variable:`, nên dùng làm đối số *-Item vẫn an toàn.
@@ -1336,6 +1481,8 @@ function psUnsafe(scan, depth = 0, absNames = null) {
       }
       inf.extra.forEach((n) => abs.set(n, false));
     }
+    // Biến vòng chỉ nhận giá trị literal không có `:` (loopValues), nên không thể là ổ `variable:`.
+    for (const n of loopNames) abs.set(n, abs.get(n) !== false);
     absNames = new Set([...abs].filter(([, v]) => v).map(([n]) => n));
   }
   const unsafeRef = (text) => /\$/.test(text.replace(/\$(?:([A-Za-z_]\w*)(?![\w:])|\{([A-Za-z_]\w*)\}(?!:))/g, (m, a, b) => (absNames.has((a ?? b).toLowerCase()) ? '' : m)));
@@ -1378,6 +1525,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
   const depth = init?.depth ?? 0;
   const ps = dialect !== 'bash';
   const infos = segs.map(ps ? leadInfoPs : leadInfo);
+  const cands = findLoops(segs, infos, ps);
   const listId = [];
   const allAnd = [];
   segs.forEach((s, i) => {
@@ -1398,7 +1546,23 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       if (!a.plain || !structOk[i] || (inf.hasCmd && !a.exp)) bad.add(a.name);
     }
   });
-  const vars = !noVars && !scan.unclosed && names.size <= MAX_VAR_NAMES;
+  const loopNames = new Set(cands.map((c) => c.name));
+  const vars = !noVars && !scan.unclosed && new Set([...names, ...loopNames]).size <= MAX_VAR_NAMES;
+  // Biến vòng: chỉ tin khi vòng đúng dạng, tên chỉ có đúng một vòng và không bị gán hay đổi ở nơi nào khác; còn lại là tên không tin được như trước.
+  const loopAt = segs.map(() => null);
+  const loopAny = new Map();
+  const loopCount = new Map();
+  for (const c of cands) loopCount.set(c.name, (loopCount.get(c.name) ?? 0) + 1);
+  for (const c of cands) {
+    if (c.ok && vars && loopCount.get(c.name) === 1 && !names.has(c.name) && !bad.has(c.name) && !LOOP_SKIP_NAMES.test(c.name)) {
+      const g = loopGroup(c.vals);
+      for (let j = c.from; j <= c.to; j++) (loopAt[j] ??= new Map()).set(c.name, g);
+      loopAny.set(c.name, g);
+    } else bad.add(c.name);
+  }
+  // Biến vòng thừa kế (lệnh con `$( )`, lần quét thô PowerShell): bỏ tên mà phạm vi này gán hay đặt lại, vì giá trị thừa kế không còn đúng.
+  const inherit = new Map();
+  for (const src of [init?.loopAny, init?.loop]) for (const [n, g] of src ?? []) if (!names.has(n) && !bad.has(n) && !loopNames.has(n)) inherit.set(n, g);
   // Gán PWD/OLDPWD làm $PWD không còn khớp thư mục đang theo dõi.
   const pwdNames = ps ? ['pwd', 'oldpwd'] : ['PWD', 'OLDPWD'];
   const pwdOff = pwdNames.some((n) => bad.has(n) || names.has(n));
@@ -1413,7 +1577,11 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       for (const [n, v] of base) if (!latest.has(n) && !bad.has(n)) env.set(n, v);
       for (const [n, k] of latest) env.set(n, !bad.has(n) && trusted(k, i) ? k.value : null);
     }
-    const state = { env, dir, unres: unres || !vars || pwdOff, msys };
+    const loopNow = !vars ? null : loopAt[i] ? new Map([...inherit, ...loopAt[i]]) : inherit.size ? inherit : null;
+    const state = { env, loop: loopNow, dir, unres: unres || !vars || pwdOff, msys };
+    // Giá trị của biến vòng không bao giờ được làm tên lệnh (nhóm `rm`/`ls` không khớp `rm`): kiểm tên lệnh chạy trên cách giải không có biến vòng.
+    const noLoop = loopNow ? { ...state, loop: null } : null;
+    const tNo = noLoop ? [] : null;
     const t = [];
     t.globs = [];
     t.qpos = [];
@@ -1421,9 +1589,11 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     let opaque = false;
     for (const [wi, w] of seg.words.entries()) {
       const r = safe(w, state);
+      const r0 = noLoop ? safe(w, noLoop) : r;
+      tNo?.push(r0 ? r0.text : wordText(w));
       // Tên lệnh là thế lệnh hoặc biến không giải được (`$(:) rm …`, `R=rm; $R x`): không biết lệnh nào chạy nên cả đoạn là chưa rõ.
       // PowerShell chỉ tính biến sau toán tử gọi `&`, vì `$x` đầu đoạn khác là biểu thức.
-      if (wi === infos[i].cmdAt && !r && w.parts.some((p) => p.quote !== 'single' && ((!ps || seg.call) ? /[$`]/ : /\$\(|`/).test(p.text))) opaque = true;
+      if (wi === infos[i].cmdAt && !r0 && w.parts.some((p) => p.quote !== 'single' && ((!ps || seg.call) ? /[$`]/ : /\$\(|`/).test(p.text))) opaque = true;
       const raw = wordText(w);
       t.push(r ? r.text : raw);
       t.globs.push(r ? r.glob : (/[$`]/.test(raw) ? undefined : w.parts.some((p) => p.quote === 'none' && GLOB.test(p.text))));
@@ -1437,7 +1607,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     // Tên lệnh thật nằm sau tiền tố bọc (`sudo $R x`, `env $R x`): kiểm trên tên đã qua unwrap, vì kiểm ở cmdAt chỉ thấy `sudo`.
     // `command -v $x` chỉ tra cứu tên, không chạy `$x`.
     const lookup = t[infos[i].lead] === 'command' && /^-[vV]$/.test(t[infos[i].lead + 1] ?? '');
-    if (!ps && !lookup) { const [tk, k] = unwrap(t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
+    if (!ps && !lookup) { const [tk, k] = unwrap(tNo ?? t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
     t.op = seg.sep === 'start' ? '' : seg.sep;
     t.pipeFrom = seg.pipeIn ? prevT : null;
     prevT = t;
@@ -1452,7 +1622,8 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
       const sure = structOk[i] && allAnd[i];
       const arg = POP_CMDS.has(name) ? undefined : t.slice(ci + 1).find((x) => !(/^-[A-Za-z]/.test(x) || x === '--' || x === '/d' || x === '/D'));
       // `Env:`, `HKCU:`, `Cert:`… là ổ provider, không phải thư mục đĩa (ổ đĩa chỉ một chữ cái).
-      if (arg === undefined || hasUnresolvedRef(arg) || arg === '-' || (ps && /^[A-Za-z][\w]+:/.test(arg))) unres = true;
+      // Nhóm giá trị của biến vòng (nhiều thư mục) không phải một thư mục: coi như chưa rõ.
+      if (arg === undefined || hasUnresolvedRef(arg) || LOOP_MARKS.test(arg) || arg === '-' || (ps && /^[A-Za-z][\w]+:/.test(arg))) unres = true;
       else { const a = np(arg, msys); dir = path.resolve(dir, a); if (sure && path.isAbsolute(a)) unres = false; }
       if (!sure) unres = true;
     }
@@ -1476,11 +1647,12 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
         if (depth >= MAX_INNER_DEPTH || ctx.inner <= 0) { opaque = true; continue; }
         ctx.inner--;
         const sub = scanWords(inner, dialect);
-        pushAll(out, walkSegments(sub, { cwd, msys, dialect, noVars: noVars || !vars }, ctx, { env, dir, unres: unres || !vars, depth: depth + 1 }));
+        pushAll(out, walkSegments(sub, { cwd, msys, dialect, noVars: noVars || !vars }, ctx, { env, dir, unres: unres || !vars, depth: depth + 1, loop: loopNow }));
       }
     }
     if (opaque) entry.opaque = true;
   });
+  out.loopAny = loopAny;
   return out;
 }
 
@@ -1586,7 +1758,9 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     try {
       const { scan, text, noVars } = prepareWalk(isPs ? raw : cmd, isPs);
       const naive = isPs || text === cmd ? naiveOuter : naiveSegments(text);
-      walkedAll = [...walkSegments(scan, { cwd, msys, dialect, noVars }), ...walkSegments(naiveScan(naive), { cwd, msys, dialect, noVars })];
+      const first = walkSegments(scan, { cwd, msys, dialect, noVars });
+      // Lần quét thô cắt theo `;` và `|` kể cả trong nháy nên không thấy cấu trúc `foreach (…) { … }`: dùng biến vòng mà lần quét scanWords (giữ phạm vi) đã nhận; hai kết quả được hợp nên không nới hơn.
+      walkedAll = [...first, ...walkSegments(naiveScan(naive), { cwd, msys, dialect, noVars }, undefined, isPs ? { loopAny: first.loopAny } : null)];
     } catch {
       walkedAll = legacy();
     }

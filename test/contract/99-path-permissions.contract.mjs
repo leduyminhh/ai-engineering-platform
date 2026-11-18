@@ -1090,6 +1090,88 @@ export default async function run({ ok, ctx }) {
       // Lệnh ghi đứng ngay sau `.{`: unwrap cũng phải bỏ từ `.{`/`&{` như `{`.
       [`.{ Remove-Item ${OUT}/x }`, 'deny', 'cd-wrapper AC1.2'], [`.{ rm ${OUT}/x }`, 'deny', 'cd-wrapper AC1.2'], [`.{ Remove-Item ${T}/x }`, null, 'cd-wrapper AC1.2'],
     ], { tool: 'PowerShell' });
+
+    // for-loop-var: `for NAME in <literal>; do … done` giải $NAME bằng từng giá trị như brace; mỗi giá trị phân loại riêng, giá trị xấu nhất thắng.
+    const L = 'for-loop-var';
+    const vals = (n) => Array.from({ length: n }, (_, i) => `v${i}`).join(' ');
+    expectAll([
+      [`for c in a b; do rm ${T}/$c.out; done`, null, `${L} AC1.1`],
+      [`SP=${T} && for c in 1 2 3; do bash "$SP/runcase.sh" $c > "$SP/$c.out" 2>&1; done`, null, `${L} AC1.1`],
+      [`for c in a b; do rm "$c"; done`, null, `${L} AC1.1`],
+      [`for c in a b\ndo\n  cp x ${T}/$c\n  echo y > ${T}/$c.log\ndone`, null, `${L} AC1.1`],
+      [`for c in a b; do echo $(rm ${T}/$c); done`, null, `${L} AC1.1`],
+      [`for a in 1 2; do for b in x y; do rm ${T}/$a/$b; done; done`, null, `${L} AC1.1`],
+      [`for c in ${vals(256)}; do rm ${T}/$c; done`, null, `${L} AC1.1`],
+      [`for c in a b; do rm ${OUT}/$c.out; done`, 'deny', `${L} AC1.1`],
+      [`for c in a b; do rm ${D}/$c.out; done`, 'deny', `${L} AC1.1`],
+      [`SP=${OUT} && for c in 1 2 3; do bash "$SP/runcase.sh" $c > "$SP/$c.out" 2>&1; done`, 'deny', `${L} AC1.1`],
+      [`for a in 1 2; do for b in x y; do rm ${OUT}/$a/$b; done; done`, 'deny', `${L} AC1.1`],
+      [`for c in .. a; do rm ${T}/$c/x; done`, 'deny', `${L} AC1.2`],
+      [`for c in a ..; do rm ${T}/$c/x; done`, 'deny', `${L} AC1.2`],
+      [`for c in $X; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in *.log; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in $(ls); do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in {a,b}; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in a,b; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in "a b"; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in -t; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in ${vals(257)}; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`for c in a; do case $x in a) :;; esac; rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
+      [`rm ${T}/$c; for c in a; do :; done`, 'ask', `${L} AC1.4`],
+      [`for c in a; do :; done; rm ${T}/$c`, 'ask', `${L} AC1.4`],
+      [`for c in a; do :; done > ${T}/$c.out`, 'ask', `${L} AC1.4`],
+      [`for c in a; do c=/etc; rm ${T}/$c; done`, 'ask', `${L} AC1.4`],
+      [`for c in a; do rm ${T}/$c; done; for c in b; do rm ${T}/$c; done`, 'ask', `${L} AC1.4`],
+      [`for c in a; do read c; rm ${T}/$c; done`, 'ask', `${L} AC1.4`],
+      // Lệnh con gán lại tên của vòng: giá trị thừa kế phải bị bỏ, nếu không `$c` vẫn là `a` và `rm /etc/x` lọt.
+      [`for c in a; do x=$(c=/etc; rm $c/x); done`, 'deny', `${L} AC1.4`],
+      [`for c in rm ls; do $c ${OUT}/x; done`, 'ask', `${L} AC1.5`],
+      [`for c in rm ls; do $c ${T}/x; done`, 'ask', `${L} AC1.5`],
+      [`for c in rm ls; do sudo $c ${OUT}/x; done`, 'ask', `${L} AC1.5`],
+      [`for c in rm ls; do env $c ${OUT}/x; done`, 'ask', `${L} AC1.5`],
+      [`for c in rm ls; do timeout 5 $c ${OUT}/x; done`, 'ask', `${L} AC1.5`],
+      // Một giá trị `rm` thật sự là lệnh rm: ghi ngoài root bị chặn, trong root vẫn hỏi vì tên lệnh là biến.
+      [`for c in rm; do $c ${OUT}/x; done`, 'deny', `${L} AC1.5`],
+      [`for c in rm; do $c ${T}/x; done`, 'ask', `${L} AC1.5`],
+      // Tên file bí mật nằm trong danh sách: nhóm giá trị phải được đọc như brace khi dò bí mật ngoài root.
+      [`for c in .env a; do cat ${OUT}/$c; done`, 'ask', `${L} AC1.7`],
+      [`for c in .env a; do cat ${T}/$c; done`, null, `${L} AC1.7`],
+    ]);
+    expectAll([
+      [`$SP = '${T}'; foreach ($x in 'a','b') { Remove-Item "$SP\\$x.out" }`, null, `${L} AC1.6`],
+      [`foreach ($x in 'a', 'b') { Remove-Item "${T}/$x.out" }`, null, `${L} AC1.6`],
+      [`foreach ($x in 'a','b') {\n  Remove-Item "${T}/$x.a"\n  Remove-Item "${T}/$x.b"\n}`, null, `${L} AC1.6`],
+      [`foreach ($x in 'a','b') { Remove-Item "${T}/$x.a"; Remove-Item "${T}/$x.b" }`, null, `${L} AC1.6`],
+      [`FOREACH ($X in 'a','b') { Remove-Item "${T}/$x.out" }`, null, `${L} AC1.6`],
+      [`foreach ($x in 'a','b') { Remove-Item "${OUT}/$x.out" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a','b') { Remove-Item "${D}/$x.out" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a','..') { Remove-Item "${T}/$x/f" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a','b') { Remove-Item "${T}/$x.a"; Remove-Item "${OUT}/$x.b" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${T}/$x/$y" } }`, null, `${L} AC1.6`],
+      [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${OUT}/$x/$y" } }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${T}/$x/$y" }; Remove-Item "${OUT}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${T}/$x/$y" }; Remove-Item "${T}/$y" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a') { foreach ($x in 'b') { Remove-Item "${T}/$x" } }`, 'ask', `${L} AC1.6`],
+      [`if ($true) { foreach ($y in 'b') { Remove-Item "${T}/$y" } }`, 'ask', `${L} AC1.6`],
+      // Từ không nháy trong danh sách là lệnh được chạy (pwd cho thư mục hiện tại), không phải chuỗi 'pwd'.
+      [`foreach ($x in pwd) { Remove-Item "$x\\.." -Recurse }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a',pwd) { Remove-Item "$x/../x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in a,b) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in @('a','b')) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 1..3) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in $list) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in (Get-ChildItem)) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a' 'b') { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a','variable:S') { Remove-Item $x }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a') { Write-Host hi }; Remove-Item "${T}/$x"`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a') { $x = '/etc'; Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a','b') { Get-Date; Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a') { iex 'x'; Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
+      [`'a','b' | ForEach-Object { Remove-Item "${T}/$_" }`, 'ask', `${L} AC1.6`],
+      [`$SP = '${T}'; if ($true) { Remove-Item "$SP\\a" }`, 'ask', `${L} AC1.6`],
+    ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 
   // Test hook không đọc aip-gate.json thật của repo đang chạy test: cwd '.' trỏ vào chính repo này nên mọi lời gọi decide với cwd đó phải có seam.
