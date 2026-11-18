@@ -1189,7 +1189,12 @@ function redirSkip(ws, i) {
 function leadInfo(seg) {
   const ws = seg.words;
   let i = 0;
-  while (i < ws.length && ws[i].parts.length === 1 && ws[i].parts[0].quote === 'none' && LEAD_KW.has(ws[i].parts[0].text)) i++;
+  while (i < ws.length && ws[i].parts.length === 1 && ws[i].parts[0].quote === 'none' && LEAD_KW.has(ws[i].parts[0].text)) {
+    const isTime = ws[i].parts[0].text === 'time';
+    i++;
+    // Cờ của `time` (`-p`) không phải tên lệnh.
+    if (isTime) while (i < ws.length && wordText(ws[i]).startsWith('-')) i++;
+  }
   const lead = i;
   const assigns = [];
   const used = new Set();
@@ -1211,7 +1216,17 @@ function leadInfo(seg) {
     for (let j = 1; j < rest.length; j++) { const a = assignOf(rest[j], i + j, true); if (a) { assigns.push(a); used.add(i + j); } }
   }
   let cmdAt = i;
-  while (ws[cmdAt] && (wordText(ws[cmdAt]) === 'builtin' || wordText(ws[cmdAt]) === 'command')) cmdAt++;
+  // `builtin`/`command` kèm cờ (`--`, `-p`) vẫn chạy lệnh kế; `command -v/-V` chỉ tra cứu nên tên lệnh giữ ở chính từ `command`.
+  while (ws[cmdAt] && (wordText(ws[cmdAt]) === 'builtin' || wordText(ws[cmdAt]) === 'command')) {
+    const wrapAt = cmdAt;
+    let lookup = false;
+    cmdAt++;
+    while (ws[cmdAt] && wordText(ws[cmdAt]).startsWith('-')) {
+      if (/^-[A-Za-z]*[vV]/.test(wordText(ws[cmdAt]))) lookup = true;
+      cmdAt++;
+    }
+    if (lookup && wordText(ws[wrapAt]) === 'command') { cmdAt = wrapAt; break; }
+  }
   const extra = [];
   const txt = (k) => (ws[k] ? wordText(ws[k]) : '');
   for (let k = 0; k < ws.length; k++) {
@@ -1396,7 +1411,7 @@ export function walkSegments(scan, { cwd, msys = true, dialect = 'bash', noVars 
     }
     // Tên lệnh thật nằm sau tiền tố bọc (`sudo $R x`, `env $R x`): kiểm trên tên đã qua unwrap, vì kiểm ở cmdAt chỉ thấy `sudo`.
     // `command -v $x` chỉ tra cứu tên, không chạy `$x`.
-    const lookup = t[infos[i].lead] === 'command' && /^-[vV]$/.test(t[infos[i].lead + 1] ?? '');
+    const lookup = t[infos[i].lead] === 'command' && /^-[A-Za-z]*[vV]/.test(t[infos[i].lead + 1] ?? '');
     if (!ps && !lookup) { const [tk, k] = unwrap(t); if (k < tk.length && /[$`]/.test(tk[k])) opaque = true; }
     t.op = seg.sep === 'start' ? '' : seg.sep;
     t.pipeFrom = seg.pipeIn ? prevT : null;
