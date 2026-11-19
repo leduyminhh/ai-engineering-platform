@@ -561,6 +561,22 @@ export default async function run({ ok, ctx }) {
       return true;
     };
     ok(tablesAligned(reportMd), 'AC2.3: mọi bảng trong report-template có header, phân cách và dòng dữ liệu cùng số ô');
+
+    // ---- AC3.1, AC3.2: đối chiếu digest trong ops-deploy-release ----
+    const opsDir = path.join(PLUGINS_DIR, 'ops', 'skills', 'ops-deploy-release');
+    const opsRefDir = path.join(opsDir, 'references');
+    const opsSkillMd = fs.readFileSync(path.join(opsDir, 'SKILL.md'), 'utf8');
+    const opsRefText = fs.readdirSync(opsRefDir).filter((n) => n.endsWith('.md'))
+      .map((n) => fs.readFileSync(path.join(opsRefDir, n), 'utf8')).join('\n');
+    const digestCheck = fs.readFileSync(path.join(opsRefDir, 'digest-check.md'), 'utf8');
+    const opsAll = `${opsSkillMd}\n${opsRefText}`;
+    ok(opsAll.includes('docker inspect') && opsAll.includes('docker image inspect') && opsAll.includes('docker compose images'),
+      'AC3.1: SKILL.md và references nêu docker inspect, docker image inspect và docker compose images');
+    ok(opsSkillMd.includes('(references/digest-check.md)') && /chỉ đọc/i.test(digestCheck) && /xác nhận/.test(digestCheck) && /dán/.test(digestCheck),
+      'AC3.1: SKILL.md có link digest-check.md; digest-check.md ghi lệnh chỉ đọc, chạy sau khi người dùng xác nhận hoặc dán output');
+    const digestStatuses = ['đạt', 'không đạt', 'chưa đo'];
+    ok(digestStatuses.every((s) => digestCheck.includes(`\`${s}\``)) && digestCheck.includes('NO-GO'),
+      'AC3.2: digest-check.md có ba trạng thái đạt / không đạt / chưa đo và NO-GO');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }

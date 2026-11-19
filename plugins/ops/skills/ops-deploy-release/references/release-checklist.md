@@ -43,6 +43,11 @@ backup, link thông báo…). Chưa kiểm → ghi **chưa đạt** (fail-loud),
       lại `--repeat-each=3`; vẫn flaky = `failed`. Đỏ vì hành vi sai hoặc `failed` → KHÔNG deploy, đề xuất
       `workflow-bugfix`.
 
+### 8. Digest image khớp đã quét (MỤC CHẶN)
+- [ ] Digest image đang chạy của **mọi service** trong scope khớp digest đã quét. Trạng thái: `đạt` / `không đạt` / `chưa đo`.
+      Cách đọc và quy tắc so khớp: [digest-check.md](digest-check.md). Lệnh chỉ đọc, chạy sau khi người dùng xác nhận máy và phạm vi, hoặc khi người dùng dán output.
+- [ ] `không đạt` hoặc `chưa đo` → đề xuất **NO-GO** ở bước 1 của SKILL.md (`chưa đo` coi là chưa đạt); ghi rõ service và image lệch hoặc lý do chưa đo.
+
 ## Hậu deploy (sau khi triển khai)
 
 - [ ] **Health-check** qua: health endpoint OK, error rate / latency / saturation trong ngưỡng (nêu số).
