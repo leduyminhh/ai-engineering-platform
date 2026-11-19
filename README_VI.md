@@ -418,6 +418,8 @@ claude -p "Review the diff and report findings" \
 
 `.claude/aip-gate.json` thường bị gitignore nên worktree không có file này: hook đọc gốc worktree trước rồi tới gốc repo chính, và `guard-files` neo `writeScope` theo gốc worktree. Đừng sao chép file này bằng `.worktreeinclude`.
 
+**Tra cứu cấu hình.** Mọi khoá của `.claude/aip-gate.json`, mức tin cậy, mặc định và JSON mẫu copy được cho `ask`, `full` tối thiểu và `full` chạy không người canh: [docs/aip-gate_VI.md](docs/aip-gate_VI.md).
+
 **Chế độ quyền (`aip mode`).** Mỗi project có một trong hai chế độ, đặt trong project: không có chế độ global và không thừa kế từ thư mục cha (ở worktree, hook đọc gốc worktree trước rồi mới rơi về gốc repo chính).
 - `ask` (mặc định; thiếu khóa `mode` nghĩa là `ask`): mọi cổng ở trên chạy đúng như mô tả, và `.claude/settings.json` giữ các quy tắc `deny`/`ask` của aip.
 - `full` (`aip mode full`, chỉ phạm vi project; `-g` bị từ chối): cho project bạn tin để chạy không người canh. `aip mode ask` bỏ khóa `mode` và `aip mode status` in chế độ hiện tại cùng việc `settings.json` còn quy tắc aip hay không. `aip mode full` ghi `"mode": "full"` vào `<git-root>/.claude/aip-gate.json` (giữ khóa khác, bỏ BOM). Nó chỉ thay `.claude/settings.json` bằng `{"permissions":{"deny":[],"ask":[]}}` khi file đó trùng byte với bản aip sinh; nếu khác thì để nguyên và liệt kê quy tắc aip bạn cần tự gỡ, vì quy tắc `deny`/`ask` vẫn chặn trong bypass [Unverified: tóm tắt thứ cấp của trang chính thức, chưa đọc lại].
