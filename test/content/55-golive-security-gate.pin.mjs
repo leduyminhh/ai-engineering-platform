@@ -349,6 +349,87 @@ export default async function run({ ok, ctx }) {
       { zap: zapDoc({ alert: 'A', riskcode: 1, cweid: [78] }) },
       { coverity: JSON.stringify({ issues: [{ mainEventFilePathname: 'a', mainEventLineNumber: 1, checkerProperties: { impact: 'High', cweCategory: 'abc' } }] }) },
     ].every(throwsInput), 'AC1.13: SARIF runs/results/tags, ZAP cweid, Coverity cweCategory sai cấu trúc → InputError, không bỏ qua im lặng');
+
+    // ---- Task 4: trạng thái chỉ tiêu, nguồn bắt buộc, --na, overall ----
+    // Fixture hợp lệ nhưng rỗng của từng nguồn: phải tính là "đã có nguồn", không phải chưa đo.
+    const EMPTY = {
+      gitleaksTree: '[]',
+      gitleaksHistory: '[]',
+      trivy: '{"Results":[]}',
+      coverity: coverity([]),
+      zap: JSON.stringify({ site: [] }),
+      nessus: nessus([]),
+      blackduck: blackduck([]),
+      sonar: sonar([]),
+      kev: kevFile([], '2026-11-18T00:00:00Z'),
+    };
+    const statusOf = (r) => Object.fromEntries(Object.entries(r.thresholds).map(([k, t]) => [k, t.status]));
+    const without = (...drop) => Object.fromEntries(Object.entries(EMPTY).filter(([k]) => !drop.includes(k)));
+
+    // AC1.5: đủ nguồn bắt buộc, không finding → đạt
+    const rAll = gate(EMPTY, { now: NOW });
+    ok(Object.values(statusOf(rAll)).every((s) => s === 'đạt') && rAll.overall === 'đạt', 'AC1.5: đủ mọi nguồn bắt buộc với report rỗng hợp lệ → bốn chỉ tiêu đạt, overall đạt');
+    ok(Object.values(rAll.thresholds).every((t) => t.missing.length === 0), 'AC1.5: không chỉ tiêu nào còn missing');
+    const rOne = gate({ ...EMPTY, trivy: trivy({ vulns: [['CVE-2026-0001', 'CRITICAL']] }), coverity: undefined }, { now: NOW });
+    ok(rOne.thresholds.critHigh.status === 'không đạt' && rOne.thresholds.critHigh.missing.join() === 'coverity', 'AC1.5: thêm một Critical và thiếu Coverity → không đạt (một finding đã đủ kết luận), vẫn liệt kê nguồn thiếu');
+
+    // AC1.4: thiếu Coverity → critHigh và rce chưa đo, secret và kev vẫn đạt; qua CLI exit 0
+    const rNoCov = gate(without('coverity'), { now: NOW });
+    ok(rNoCov.thresholds.critHigh.status === 'chưa đo' && rNoCov.thresholds.rce.status === 'chưa đo' && rNoCov.thresholds.critHigh.missing.join() === 'coverity', 'AC1.4: thiếu Coverity → critHigh và rce chưa đo, missing nêu coverity');
+    ok(rNoCov.thresholds.secret.status === 'đạt' && rNoCov.thresholds.kev.status === 'đạt' && rNoCov.overall === 'chưa đo', 'AC1.4: secret và kev (không cần Coverity) vẫn đạt; overall chưa đo');
+    const f4 = write({
+      tree: EMPTY.gitleaksTree, hist: EMPTY.gitleaksHistory, trivy: EMPTY.trivy, zap: EMPTY.zap, nessus: EMPTY.nessus,
+      bd: EMPTY.blackduck, sonar: EMPTY.sonar, kev: EMPTY.kev,
+    });
+    const rCli4 = cli(['--gitleaks-tree', f4.tree, '--gitleaks-history', f4.hist, '--trivy', f4.trivy, '--zap', f4.zap, '--nessus', f4.nessus, '--blackduck', f4.bd, '--sonar', f4.sonar, '--kev', f4.kev]);
+    let out4 = {};
+    try { out4 = JSON.parse(rCli4.stdout); } catch { /* đỏ bên dưới */ }
+    ok(rCli4.status === 0 && out4.thresholds?.critHigh?.status === 'chưa đo', 'AC1.4: thiếu --coverity qua CLI → exit 0 và critHigh chưa đo (không đạt)');
+
+    // AC1.6: --na
+    const NA_NESSUS = 'không có VM trong đợt này';
+    const rNa = gate({ kev: EMPTY.kev, trivy: EMPTY.trivy, blackduck: EMPTY.blackduck, na: { nessus: NA_NESSUS } }, { now: NOW });
+    ok(rNa.thresholds.kev.status === 'đạt' && rNa.thresholds.kev.missing.length === 0 && rNa.thresholds.kev.na?.nessus === NA_NESSUS, 'AC1.6: --na nessus thay cho Nessus ở KEV, status theo nguồn còn lại, bằng chứng được chép lại');
+    ok(rNa.thresholds.critHigh.missing.includes('nessus') === false && rNa.thresholds.critHigh.missing.includes('coverity'), 'AC1.6: --na nessus áp cho mọi chỉ tiêu có Nessus nhưng không che nguồn khác');
+    const allNaKev = { kev: 'a', trivy: 'b', nessus: 'c', blackduck: 'd' };
+    const rNaAll = gate({ na: allNaKev }, { now: NOW });
+    ok(rNaAll.thresholds.kev.status === 'không áp dụng' && rNaAll.overall !== 'đạt', 'AC1.6: mọi nguồn bắt buộc của một chỉ tiêu đều --na → không áp dụng, không tính là đạt');
+    ok(statusOf(gate({ ...EMPTY, na: { nessus: NA_NESSUS } }, { now: NOW })).kev === 'đạt', 'AC1.6: --na và nguồn khác đã cung cấp → vẫn đạt');
+    ok(throwsInput({ trivy: EMPTY.trivy, nessus: EMPTY.nessus, na: { nessus: 'x' } }) && throwsInput({ trivy: EMPTY.trivy, na: { khongco: 'x' } }), 'AC1.6: --na trùng với nguồn đã cung cấp hoặc tên nguồn lạ → InputError');
+    ok([['--na', 'nessus'], ['--na', 'nessus='], ['--na', '=bang-chung'], ['--na']].every((a) => cli([...a, '--trivy', f4.trivy]).status === 2), 'AC1.6: --na thiếu bằng chứng, thiếu tên hoặc thiếu giá trị → exit 2');
+    const rNaCli = cli(['--trivy', f4.trivy, '--na', `nessus=${NA_NESSUS}`, '--na', 'blackduck=không dùng Black Duck']);
+    let outNa = {};
+    try { outNa = JSON.parse(rNaCli.stdout); } catch { /* đỏ bên dưới */ }
+    ok(rNaCli.status === 0 && outNa.thresholds?.kev?.na?.blackduck === 'không dùng Black Duck', 'AC1.6: --na lặp được qua CLI');
+
+    // AC1.15: bảng overall
+    const overallRows = [
+      [['không đạt', 'đạt', 'đạt', 'đạt'], 'không đạt'],
+      [['đạt', 'đạt', 'đạt', 'đạt'], 'đạt'],
+      [['đạt', 'đạt', 'đạt', 'không áp dụng'], 'chưa đo'],
+      [['đạt', 'chưa đo', 'đạt', 'đạt'], 'chưa đo'],
+      [['chưa đo', 'không đạt', 'không áp dụng', 'đạt'], 'không đạt'],
+      [['không áp dụng', 'không áp dụng', 'không áp dụng', 'không áp dụng'], 'chưa đo'],
+    ];
+    ok(typeof mod.overallOf === 'function' && overallRows.every(([statuses, want]) => mod.overallOf(statuses) === want), 'AC1.15: overallOf đúng từng dòng của bảng bốn trạng thái');
+
+    // Mọi cờ nguồn đều có reader: mỗi nguồn với một Critical phải ra một finding được đếm, không bị bỏ qua im lặng
+    const oneCritical = {
+      trivy: trivy({ vulns: [['CVE-2026-0900', 'CRITICAL']] }),
+      coverity: coverity([['a.java', 1, 'High', 89]]),
+      zap: zap([['Z', 3]]),
+      nessus: nessus([['1', 'CVE-2026-0901', 'Critical', 'H', '1', 'x']]),
+      blackduck: blackduck([['CVE-2026-0902', ['critical'], 'P@1']]),
+      sonar: sonar([['VULNERABILITY', 'BLOCKER', 'a.java', 1]]),
+      sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, score: '9.5' }])],
+    };
+    ok(Object.entries(oneCritical).every(([k, v]) => cnt({ [k]: v }) === 1), 'mọi cờ nguồn của critHigh đều có reader (không bỏ qua im lặng)');
+    ok(cnt({ gitleaksTree: gitleaks([['r', 'f.js', 1]]) }, 'secret') === 1 && cnt({ gitleaksHistory: gitleaks([['r', 'f.js', 1]]) }, 'secret') === 1, 'mọi cờ nguồn của secret đều có reader');
+
+    // Hoãn từ review Task 3: so khớp KEV không phân biệt hoa/thường ở mọi nguồn; tag số thuần của Sonar không phải CWE; CWE Coverity có khoảng trắng
+    ok(cnt({ trivy: trivy({ vulns: [['cve-2026-0100', 'HIGH']] }), kev: kevFile(['CVE-2026-0100'], '2026-11-18T00:00:00Z') }, 'kev') === 1, 'AC1.9: CVE chữ thường của Trivy vẫn khớp KEV');
+    ok(gate({ sonar: sonar([['VULNERABILITY', 'MAJOR', 'a.java', 1, { tags: ['2024', 'a1'] }]]) }, { now: NOW }).findings[0]?.key === 'a.java:1', 'AC1.10: tag số thuần của Sonar không tạo CWE');
+    ok(gate({ coverity: coverity([['a.java', 1, 'High', ' 89']]) }, { now: NOW }).findings[0]?.key === 'a.java:1+CWE-89', 'AC1.11: cweCategory có khoảng trắng vẫn ra CWE');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
