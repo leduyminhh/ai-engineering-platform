@@ -18,7 +18,7 @@ import path from 'node:path';
 import { install, uninstall, update, check, knownPluginIds } from './lib/install.mjs';
 import { pack } from './lib/pack.mjs';
 import { init } from './lib/init.mjs';
-import { runMode, modeRoot } from './lib/mode.mjs';
+import { runMode, modeRoot, MODE_ARGS, MODE_DEFS } from './lib/mode.mjs';
 import { runAutonomy } from './lib/autonomy.mjs';
 import { PROVIDERS, scopeRoot } from './lib/paths.mjs';
 import { runWizard } from './lib/wizard.mjs';
@@ -243,9 +243,12 @@ LỆNH
                             --json, --html (ghi .aip/runs/<request>/status.html), --watch (ghi lại mỗi 10 giây), --part <nn>;
                             --requests [--json]: liệt kê request trong docs/requests/ chưa merged/abandoned, đánh dấu
                             "nghi đã merge" khi nhánh feature/<slug> đã nằm trong HEAD
-  mode <full|ask|status>    chế độ quyền của project (chỉ project, không nhận -g): full = ghi mode=full vào
-                            .claude/aip-gate.json (hook bỏ xác nhận khi phiên chạy bypassPermissions); ask = bỏ khóa mode
-                            và sinh lại .claude/settings.json chuẩn nếu là bản full do aip sinh; status = xem hiện trạng
+  mode <guarded|confined|open|status>  chế độ quyền của project (chỉ project, không nhận -g; tên cũ ask = guarded, full = confined vẫn nhận):
+                            guarded: ${MODE_DEFS.guarded}
+                            confined: ${MODE_DEFS.confined}
+                            open: ${MODE_DEFS.open}
+                            confined/open chỉ có hiệu lực khi phiên chạy bypassPermissions và file aip-gate.json không bị git theo dõi;
+                            guarded = bỏ khóa mode và sinh lại .claude/settings.json chuẩn nếu là bản do aip sinh cho confined/open; status = xem hiện trạng
   autonomy <high|safe|status> mức hỏi của luồng plan-execution (chỉ project, không nhận -g): high = ghi autonomy
                             {mergeLocal: true, cleanup: true, partRunner: "subagent"} vào .claude/aip-gate.json; safe = bỏ khóa
                             (hỏi như mặc định, giữ gợi ý planRunner đã lưu); status = in giá trị hiệu lực. partRunner/planRunner chỉ là gợi ý lựa chọn đứng đầu
@@ -326,9 +329,9 @@ async function main() {
     }
     case 'mode': {
       const sub = args._[1];
-      if (args.scope === 'global') { console.error('aip mode chỉ áp dụng cho phạm vi project (thư mục hiện tại), không nhận -g.'); process.exitCode = 2; return; }
-      if (!['full', 'ask', 'status'].includes(sub) || args._.length > 2) {
-        console.error('Cách dùng: aip mode full|ask|status' + (sub ? ' (giá trị không hợp lệ: "' + args._.slice(1).join(' ') + '")' : ''));
+      if (args.scope === 'global') { console.error('aip mode chỉ áp dụng cho phạm vi project (thư mục hiện tại), không nhận -g. Cách dùng: aip mode guarded|confined|open|status'); process.exitCode = 2; return; }
+      if (![...MODE_ARGS, 'status'].includes(sub) || args._.length > 2) {
+        console.error('Cách dùng: aip mode guarded|confined|open|status' + (sub ? ' (giá trị không hợp lệ: "' + args._.slice(1).join(' ') + '")' : ''));
         process.exitCode = 2; return;
       }
       process.exitCode = runMode(sub, { root: modeRoot(process.cwd()) });

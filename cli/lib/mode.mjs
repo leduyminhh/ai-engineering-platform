@@ -1,12 +1,26 @@
-// aip mode full|ask|status — bật/tắt chế độ quyền `full` của project qua aip-gate.json + settings.json.
+// aip mode guarded|confined|open|status — đổi chế độ quyền của project qua aip-gate.json + settings.json (tên cũ ask, full vẫn nhận làm bí danh).
 // Hàm thuần dựng nội dung mới; runMode là lớp I/O mỏng. Zero-dependency.
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { buildClaudePermissions, loadPolicy } from './permissions.mjs';
 import { locateGate, gateTracked, lsFiles, trustedValue, lintGate, GATE_KEYS } from '../../core/hooks/scripts/gate-file.mjs';
+import { modeName } from '../../core/hooks/scripts/gate-config.mjs';
 
 const EMPTY_PERMISSIONS = JSON.stringify({ permissions: { deny: [], ask: [] } }, null, 2) + '\n';
+
+// Ba câu định nghĩa dùng chung cho help, status, spec, docs và README (pin test so với hằng này).
+export const MODE_DEFS = {
+  guarded: 'Việc rủi ro thì hỏi người dùng.',
+  confined: 'Không bao giờ hỏi: việc trong rào thì cho qua, ngoài rào thì từ chối.',
+  open: 'Không hỏi, không rào: chỉ còn chặn ghi file cấu hình quyền và theo `writeScope`, `mcpDeny`.',
+};
+
+// Tên cũ vẫn nhận (bí danh); `bypass` chưa từng phát hành nên không phải bí danh.
+export const MODE_ARGS = ['guarded', 'confined', 'open', 'ask', 'full'];
+const LEGACY = { ask: 'guarded', full: 'confined' };
+// Khoá rào của confined; ở open không có tác dụng.
+const FENCE_KEYS = ['fullKeep', 'fullRoots', 'fullReadRoots', 'fullPaths'];
 
 const stripBom = (s) => s.replace(/^﻿/, '');
 
@@ -33,8 +47,19 @@ function leftoverIn(settingsText) {
   return [...new Set(rules.filter((r) => aip.has(r)))];
 }
 
-export function applyFull(gate, settingsText, { allowEnvFiles }) {
-  const next = { ...(gate || {}), mode: 'full' };
+// Chuyển giữa ba mode chỉ đổi khoá `mode` (guarded bỏ khoá), giữ khoá khác. confined/open xử lý settings.json như `full` cũ: thay bản aip sinh bằng bản rỗng.
+export function applyMode(mode, gate, settingsText, { allowEnvFiles }) {
+  const name = modeName(mode);
+  if (name === 'guarded') {
+    const next = { ...(gate || {}) };
+    delete next.mode;
+    if (settingsText == null) return { gate: next, settingsText: null, settingsAction: 'absent' };
+    if (stripBom(settingsText) === EMPTY_PERMISSIONS) {
+      return { gate: next, settingsText: generated(allowEnvFiles), settingsAction: 'regenerated' };
+    }
+    return { gate: next, settingsText, settingsAction: 'kept' };
+  }
+  const next = { ...(gate || {}), mode: name };
   if (settingsText == null) return { gate: next, settingsText: null, settingsAction: 'absent', leftoverRules: [] };
   if (stripBom(settingsText) === EMPTY_PERMISSIONS) return { gate: next, settingsText, settingsAction: 'already-full', leftoverRules: [] };
   if (stripBom(settingsText) === generated(allowEnvFiles)) {
@@ -43,24 +68,20 @@ export function applyFull(gate, settingsText, { allowEnvFiles }) {
   return { gate: next, settingsText, settingsAction: 'kept-custom', leftoverRules: leftoverIn(settingsText) };
 }
 
-export function applyAsk(gate, settingsText, { allowEnvFiles }) {
-  const next = { ...(gate || {}) };
-  delete next.mode;
-  if (settingsText == null) return { gate: next, settingsText: null, settingsAction: 'absent' };
-  if (stripBom(settingsText) === EMPTY_PERMISSIONS) {
-    return { gate: next, settingsText: generated(allowEnvFiles), settingsAction: 'regenerated' };
-  }
-  return { gate: next, settingsText, settingsAction: 'kept' };
-}
-
+// `legacy` = tên cũ trong file (ask/full), `unrecognized` = giá trị khác ba tên và hai bí danh (chạy như guarded).
 export function statusOf(gate, settingsText) {
-  const mode = gate?.mode === 'full' ? 'full' : 'ask';
-  if (settingsText == null) return { mode, settings: 'absent', leftoverRules: [] };
+  const raw = gate?.mode;
+  const mode = modeName(raw);
+  const extra = {
+    ...(typeof raw === 'string' && Object.hasOwn(LEGACY, raw) ? { legacy: raw } : {}),
+    ...(raw !== undefined && !MODE_ARGS.includes(raw) ? { unrecognized: true } : {}),
+  };
+  if (settingsText == null) return { mode, settings: 'absent', leftoverRules: [], ...extra };
   const text = stripBom(settingsText);
-  if (text === EMPTY_PERMISSIONS) return { mode, settings: 'aip-full', leftoverRules: [] };
-  if (text === generated(gate?.allowEnvFiles === true)) return { mode, settings: 'aip-ask', leftoverRules: [] };
+  if (text === EMPTY_PERMISSIONS) return { mode, settings: 'aip-full', leftoverRules: [], ...extra };
+  if (text === generated(gate?.allowEnvFiles === true)) return { mode, settings: 'aip-ask', leftoverRules: [], ...extra };
   const leftoverRules = leftoverIn(text);
-  return { mode, settings: leftoverRules.length ? 'custom-with-aip-rules' : 'custom', leftoverRules };
+  return { mode, settings: leftoverRules.length ? 'custom-with-aip-rules' : 'custom', leftoverRules, ...extra };
 }
 
 function gitRoot(cwd) {
@@ -128,18 +149,18 @@ export function gitStateOf(file, { run = (dir, spec) => lsFiles(dir, spec) } = {
   return ig === 0 ? 'ignored' : ig === 1 ? 'open' : 'unknown';
 }
 
-const GIT_LABEL = {
-  tracked: 'aip-gate.json được theo dõi bởi git ⇒ full bị bỏ qua',
+const gitLabel = (mode) => ({
+  tracked: `aip-gate.json được theo dõi bởi git ⇒ ${mode} bị bỏ qua`,
   ignored: 'aip-gate.json không theo dõi, đã gitignore',
   open: 'aip-gate.json không theo dõi, chưa gitignore',
-  unknown: 'không xác định (không có git, ngoài repo, hoặc đường dẫn là symlink chưa commit) ⇒ full bị bỏ qua',
-};
+  unknown: `không xác định (không có git, ngoài repo, hoặc đường dẫn là symlink chưa commit) ⇒ ${mode} bị bỏ qua`,
+});
 
 const dump = (obj) => JSON.stringify(obj, null, 2) + '\n';
 
 const SETTINGS_LABEL = {
-  'aip-ask': 'bản aip sinh (chế độ ask)',
-  'aip-full': 'bản aip sinh (chế độ full, không còn quy tắc)',
+  'aip-ask': 'bản aip sinh (chế độ guarded)',
+  'aip-full': 'bản aip sinh (không còn quy tắc, dùng cho confined/open)',
   'custom-with-aip-rules': 'đã sửa tay, còn quy tắc của aip',
   custom: 'đã sửa tay, không có quy tắc của aip',
   absent: 'không có file',
@@ -165,49 +186,61 @@ function runModeUnsafe(sub, { root, out, err, run }) {
     const modeIgnored = info.ignored.includes('mode');
     const s = statusOf({ ...info.config, mode: modeIgnored ? undefined : info.config?.mode, allowEnvFiles }, settingsText);
     out(`Chế độ: ${s.mode}${info.config?.mode === undefined ? ' (mặc định, aip-gate.json không có khóa mode)' : modeIgnored ? ' (khoá mode bị bỏ qua, xem dòng "Khoá bị bỏ qua")' : ''}`);
+    out(`Ý nghĩa: ${MODE_DEFS[s.mode]}`);
     out(`Nguồn: ${!found.file ? 'không có' : found.source === 'main' ? `${found.file} (repo chính; worktree này chưa có aip-gate.json)` : found.file}`);
     out(`settings.json: ${SETTINGS_LABEL[s.settings]}`);
     for (const r of s.leftoverRules) out(`  - ${r}`);
-    out(`git: ${GIT_LABEL[gitStateOf(found.file ?? gateFile, run && { run })]}`);
+    out(`git: ${gitLabel(s.mode)[gitStateOf(found.file ?? gateFile, run && { run })]}`);
     for (const l of gateLines(info)) out(l);
+    if (s.legacy) out(`Gợi ý: file dùng tên cũ "${s.legacy}"; chạy aip mode ${LEGACY[s.legacy]} để ghi tên mới.`);
+    if (s.unrecognized) out(`Giá trị mode ${JSON.stringify(info.config?.mode)} không nhận ra nên chạy như guarded; dùng guarded, confined hoặc open.`);
+    if (s.mode === 'open' && FENCE_KEYS.some((k) => info.config && k in info.config)) out(`Ở open, ${FENCE_KEYS.join(', ')} không có tác dụng (file không bị xoá khoá).`);
     return 0;
   }
 
-  if (sub === 'full') {
-    const r = applyFull(gate, settingsText, { allowEnvFiles });
-    assertNotLinked([gateFile, ...(r.settingsAction === 'replaced' ? [settingsFile] : [])]);
-    writeText(gateFile, dump(r.gate));
-    if (r.settingsAction === 'replaced') writeText(settingsFile, r.settingsText);
-    out(`✓ mode=full tại ${root}`);
-    const gs = gitStateOf(gateFile, run && { run });
-    if (gs === 'tracked') {
-      out('  ⚠ aip-gate.json đang được git theo dõi nên full bị bỏ qua (repo clone không tự cấp được full). Gỡ theo dõi: mở file, xem lại từng khoá rồi mới git rm --cached .claude/aip-gate.json');
-    } else if (gs === 'open') {
-      out('  ⚠ aip-gate.json chưa được gitignore; nếu bị commit, full sẽ bị bỏ qua. Thêm dòng này vào .gitignore: .claude/aip-gate.json (aip không tự sửa .gitignore).');
-    }
-    if (r.settingsAction === 'replaced') out('  settings.json: đã thay bằng quy tắc rỗng (bản do aip sinh).');
-    if (r.settingsAction === 'already-full') out('  settings.json: đã ở dạng full (quy tắc rỗng), giữ nguyên.');
-    if (found.source === 'main') out(`  ghi ${gateFile}: cấu hình lấy từ repo chính, file của worktree này che file của repo chính từ giờ.`);
-    if (r.settingsAction === 'kept-custom') {
-      out('  ⚠ settings.json đã sửa tay nên giữ nguyên; deny/ask vẫn chặn kể cả khi bypass.');
-      if (r.leftoverRules.length) {
-        out('    Quy tắc của aip còn trong đó, tự gỡ nếu muốn full thật sự:');
-        for (const x of r.leftoverRules) out(`      - ${x}`);
-      }
-    }
-    out('  ⚠ full chỉ có hiệu lực khi phiên chạy bằng --permission-mode bypassPermissions (hoặc đặt trong settings người dùng); project không tự bật được bypass.');
-    out('  ⚠ Lệnh xóa ở đường dẫn quan trọng vẫn có thể hỏi theo tài liệu Claude Code [Unverified].');
-    out('  ⚠ Windows native không có sandbox: "trong project" chỉ theo cấu hình hook, không phải nhốt bằng hệ điều hành; muốn nhốt hãy dùng WSL2, VM hoặc container.');
+  const target = modeName(sub);
+  const r = applyMode(target, gate, settingsText, { allowEnvFiles });
+  if (target === 'guarded') {
+    assertNotLinked([...(info.config ? [gateFile] : []), ...(r.settingsAction === 'regenerated' ? [settingsFile] : [])]);
+    if (info.config) writeText(gateFile, dump(r.gate));
+    if (r.settingsAction === 'regenerated') writeText(settingsFile, r.settingsText);
+    out(`✓ mode=guarded tại ${root}`);
+    if (found.source === 'main') out(`  ghi ${gateFile} (không có khóa mode): file này che file aip-gate.json của repo chính cho worktree này.`);
+    if (r.settingsAction === 'regenerated') out('  settings.json: đã sinh lại policy chuẩn.');
+    if (r.settingsAction === 'kept') out('  settings.json: giữ nguyên (không phải bản do aip sinh cho confined/open).');
     return 0;
   }
 
-  const r = applyAsk(gate, settingsText, { allowEnvFiles });
-  assertNotLinked([...(info.config ? [gateFile] : []), ...(r.settingsAction === 'regenerated' ? [settingsFile] : [])]);
-  if (info.config) writeText(gateFile, dump(r.gate));
-  if (r.settingsAction === 'regenerated') writeText(settingsFile, r.settingsText);
-  out(`✓ mode=ask tại ${root}`);
-  if (found.source === 'main') out(`  ghi ${gateFile} (không có khóa mode): file này che file aip-gate.json của repo chính cho worktree này.`);
-  if (r.settingsAction === 'regenerated') out('  settings.json: đã sinh lại policy chuẩn.');
-  if (r.settingsAction === 'kept') out('  settings.json: giữ nguyên (không phải bản full do aip sinh).');
+  assertNotLinked([gateFile, ...(r.settingsAction === 'replaced' ? [settingsFile] : [])]);
+  writeText(gateFile, dump(r.gate));
+  if (r.settingsAction === 'replaced') writeText(settingsFile, r.settingsText);
+  out(`✓ mode=${target} tại ${root}`);
+  const gs = gitStateOf(gateFile, run && { run });
+  if (gs === 'tracked') {
+    out(`  ⚠ aip-gate.json đang được git theo dõi nên ${target} bị bỏ qua (repo clone không tự cấp được ${target}). Gỡ theo dõi: mở file, xem lại từng khoá rồi mới git rm --cached .claude/aip-gate.json`);
+  } else if (gs === 'open') {
+    out(`  ⚠ aip-gate.json chưa được gitignore; nếu bị commit, ${target} sẽ bị bỏ qua. Thêm dòng này vào .gitignore: .claude/aip-gate.json (aip không tự sửa .gitignore).`);
+  }
+  if (r.settingsAction === 'replaced') out('  settings.json: đã thay bằng quy tắc rỗng (bản do aip sinh).');
+  if (r.settingsAction === 'already-full') out('  settings.json: đã ở dạng không còn quy tắc, giữ nguyên.');
+  if (found.source === 'main') out(`  ghi ${gateFile}: cấu hình lấy từ repo chính, file của worktree này che file của repo chính từ giờ.`);
+  if (r.settingsAction === 'kept-custom') {
+    out('  ⚠ settings.json đã sửa tay nên giữ nguyên; deny/ask vẫn chặn kể cả khi bypass.');
+    if (r.leftoverRules.length) {
+      out(`    Quy tắc của aip còn trong đó, tự gỡ nếu muốn ${target} thật sự:`);
+      for (const x of r.leftoverRules) out(`      - ${x}`);
+    }
+  }
+  if (target === 'open') {
+    out('  ⚠ open: đọc/ghi mọi nơi, đọc file bí mật, push nhánh bảo vệ không còn hỏi hay bị chặn; chỉ còn chặn ghi file cấu hình quyền (kể cả `aip mode` do agent chạy), `writeScope` (chỉ công cụ file) và `mcpDeny`.');
+    out('  ⚠ Agent trong phiên bypass vẫn có thể tự đổi mode bằng script do chính nó viết; hook không phải ranh giới chống agent bị chiếm quyền.');
+    out('  ⚠ Đổi mode: người dùng tự chạy `aip mode`; quay lại hỏi bằng `aip mode guarded`.');
+  } else {
+    out('  ⚠ confined: việc ngoài rào bị từ chối chứ không hỏi; chỉ cho qua việc trong rào (root, fullRoots, fullReadRoots, fullPaths, fullKeep).');
+    out('  ⚠ Agent trong phiên bypass vẫn có thể tự đổi mode bằng script do chính nó viết; hook không phải ranh giới chống agent bị chiếm quyền.');
+  }
+  out(`  ⚠ ${target} chỉ có hiệu lực khi phiên chạy bằng --permission-mode bypassPermissions (hoặc đặt trong settings người dùng); project không tự bật được bypass.`);
+  out('  ⚠ Lệnh xóa ở đường dẫn quan trọng vẫn có thể hỏi theo tài liệu Claude Code [Unverified].');
+  out('  ⚠ Windows native không có sandbox: "trong project" chỉ theo cấu hình hook, không phải nhốt bằng hệ điều hành; muốn nhốt hãy dùng WSL2, VM hoặc container.');
   return 0;
 }
