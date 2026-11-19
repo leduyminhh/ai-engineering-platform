@@ -1,6 +1,6 @@
 # Thiết kế: chuẩn hoá ba chế độ quyền `guarded`/`confined`/`open`
 - Ngày: 2026-11-19
-- Trạng thái: approved
+- Trạng thái: in-progress — nhánh feature/permission-modes-standard
 - Requirement: không có
 
 ## Vấn đề và lý do
@@ -265,3 +265,14 @@ Seam sẵn có: `bash.decide(input, { repoRoot, config, allowEnv, currentBranch 
 - **[Unverified]** Claude Code còn tự hỏi ở lớp của nó với một số lệnh xoá ở đường dẫn quan trọng dù hook trả `null` (README đã ghi cho `full`); `open` và `confined` không xử lý được phần đó, nên "không bao giờ hỏi" chỉ đúng với hook của aip.
 - **[Unverified]** `session-start` không biết phiên có bypass hay không (hook hiện không đọc `permission_mode`; chưa kiểm stdin của SessionStart có trường đó), nên dòng K17 nói mode trong file và điều kiện áp, không khẳng định mode đang hiệu lực thật.
 - Câu hỏi mở: không có câu chặn hướng. G1 đã duyệt ngày 2026-11-19 (K1–K17, D1–D23); D13 (tên khoá), D22 (ADR) và D23 (chữ dòng báo mode) vẫn là chỗ người dùng có thể đổi khi xem diff.
+
+## Ghi chú thực thi (2026-11-19)
+
+Các quyết định lúc thực thi đổi hoặc bổ sung design; kết quả đo tái lập bằng `node test/validate.mjs --only permission-modes-standard` (404 hàng) trên clone sạch, `npm test` clone sạch exit 0 (validate 9344 pass, số nền 8798).
+
+- **AC3.1 hàng (5):** đầu vào thực đo là `cp <OUT>/x <P>/y` (nguồn đọc ngoài root bị `deny`), không phải `cat <OUT>/x` (đọc file không bí mật ngoài root vốn không bị confined, `null` cả trước khi đổi). Chữ AC ở trên giữ nguyên chờ người dùng sửa.
+- **D11 và AC5.6:** ngoài core 1.35.0, bump thêm `backend` 1.16.1 và `frontend` 1.17.4 vì `backend-init`, `frontend-init` nhúng bản sao `core/agents/AGENTS.template.md`. Sau hai lượt sửa review, hash build của core, backend, frontend đổi lại ở cùng version; ba version chưa phát hành (nhánh chưa push) nên làm mới entry trong `plugins/_versions.lock.json` (`node cli/lib/versions.mjs` báo khớp) thay vì bump thêm.
+- **K12 (nhận diện `aip mode`):** sau review, `isModeChange` là một vòng tuyến tính: sau binary rồi token `mode`, token nào thuộc `guarded|confined|open|ask|full` thì tính là đổi mode (kể cả cờ có giá trị đứng giữa hoặc sau `mode`); báo thừa với `aip install --skill mode open` chấp nhận được. Số đo chi phí và hàng test nằm ở `99-permission-modes-standard.contract.mjs` (ngưỡng 1000 ms).
+- **K13/K14 (bổ sung):** (1) `scope-lock.json` chỉ bị chặn ở `open` bằng công cụ file (`guard-files`); Bash ghi được. (2) Thư mục đích không có file cấu hình kế thừa mode của cwd; file hỏng hoặc `gitUnknown` vẫn là `guarded`. (3) Grep có glob bí mật ở `confined` đòi đủ ba quyền của thư mục như `confine`. (4) `guard-files` chỉ `statSync` đường dẫn Grep khi phiên bypass và không phải UNC.
+- **F3 (người dùng chọn hướng (a)):** ở `confined`, file đích trong repo lồng có `aip-gate.json` không khoá `mode` (mức chặt hơn `guarded`, K14) vẫn `ask` khi ghi file cấu hình; giữ K14, ghi ngoại lệ này vào câu định nghĩa `confined` và docs ở follow-up nhỏ (chưa làm).
+- **Rủi ro còn lại:** đường dẫn UNC vẫn bị chạm qua `modeAt`/`allowEnv` ở phiên bypass (có từ trước, cần request riêng); tên rút gọn NTFS 8.3 và ghi `hooks/hooks.json`/script guard ở `open` đã ghi vào R25; hàng test UNC chỉ đúng trên Windows, chưa chạy trên Linux.
