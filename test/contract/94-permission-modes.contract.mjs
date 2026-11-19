@@ -3,22 +3,34 @@ export default async function run({ ok, ctx }) {
   const { fs, path, os, execFileSync, pathToFileURL, CORE_DIR } = ctx;
   const scripts = path.join(CORE_DIR, 'hooks', 'scripts');
   const load = (n) => import(pathToFileURL(path.join(scripts, n)).href);
-  const { effectiveMode, fullKeep, fullRoots, readGate, normalizeMsysPath, classifyPath } = await load('gate-config.mjs');
+  const { effectiveMode, modeName, fullEffective, openEffective, fullKeep, fullRoots, readGate, normalizeMsysPath, classifyPath } = await load('gate-config.mjs');
   const mcp = await load('guard-mcp.mjs');
   const files = await load('guard-files.mjs');
 
-  const modes = [undefined, 'ask', 'full', 'FULL', 1, null, ['full']];
+  const modes = [undefined, 'ask', 'guarded', 'full', 'confined', 'open', 'bypass', 'OPEN', 'Confined', ' open', 'open\n', 'constructor', '__proto__', 1, null, ['open']];
   const perms = [undefined, 'default', 'acceptEdits', 'auto', 'dontAsk', 'bypassPermissions', 5];
+  const wantOf = (m, p) => (p !== 'bypassPermissions' ? 'guarded' : m === 'open' ? 'open' : m === 'full' || m === 'confined' ? 'confined' : 'guarded');
   for (const m of modes) {
     for (const p of perms) {
-      const want = m === 'full' && p === 'bypassPermissions' ? 'full' : 'ask';
+      const want = wantOf(m, p);
       ok(effectiveMode({ mode: m }, { permission_mode: p }) === want,
-        `P4e AC1.1: effectiveMode(mode=${JSON.stringify(m)}, permission_mode=${JSON.stringify(p)}) = ${want}`);
+        `AC1.1: effectiveMode(mode=${JSON.stringify(m)}, permission_mode=${JSON.stringify(p)}) = ${want}`);
     }
+    const name = modeName(m);
+    const wantName = m === 'open' ? 'open' : m === 'full' || m === 'confined' ? 'confined' : 'guarded';
+    ok(name === wantName, `AC1.1: modeName(${JSON.stringify(m)}) === '${wantName}'`);
+    const bp = { permission_mode: 'bypassPermissions' };
+    const gate = { config: { mode: m } };
+    ok(fullEffective(gate, bp) === (wantName === 'confined') && openEffective(gate, bp) === (wantName === 'open'),
+      `AC1.1: fullEffective/openEffective(mode=${JSON.stringify(m)}) chỉ đúng ở mode của mình (confined/open)`);
+    const tracked = { config: { mode: m }, file: '/x/.claude/aip-gate.json' };
+    ok(!fullEffective(tracked, bp, { tracked: () => true }) && !openEffective(tracked, bp, { tracked: () => true }),
+      `AC1.1: file bị git theo dõi → không hiệu lực (mode=${JSON.stringify(m)})`);
   }
+  ok(modeName(undefined) === 'guarded', 'AC1.1: modeName() không đối số = guarded');
   const bypass = { permission_mode: 'bypassPermissions' };
-  ok(effectiveMode(null, bypass) === 'ask' && effectiveMode('full', bypass) === 'ask' && effectiveMode({ mode: 'full' }, null) === 'ask',
-    'P4e AC1.1: config null/chuỗi hoặc input null → ask');
+  ok(effectiveMode(null, bypass) === 'guarded' && effectiveMode('full', bypass) === 'guarded' && effectiveMode({ mode: 'full' }, null) === 'guarded',
+    'AC1.1: config null/chuỗi hoặc input null → guarded');
 
   const keepCases = [
     [{}, ['push']], [null, ['push']], [{ fullKeep: [] }, []], [{ fullKeep: ['push', 'x', 3] }, ['push']], [{ fullKeep: 'push' }, ['push']],
