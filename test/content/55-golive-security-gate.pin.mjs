@@ -491,6 +491,21 @@ export default async function run({ ok, ctx }) {
     // suppress của tool không tự loại khỏi số đếm: chỉ --fp có reason mới loại
     const rSup = gate({ ...mixed, fp: list([['sonar', 'D.java:4', 'Sonar đánh dấu sai, đã kiểm tay']]) }, { now: NOW });
     ok(rSup.thresholds.critHigh.count === 1 && rSup.falsePositives.length === 1, 'AC1.8: suppress chỉ đếm lại khi có --fp kèm reason loại đi');
+
+    // ---- Task 6: reference cho bốn nguồn (AC2.2) ----
+    const refFlags = {
+      'gitleaks.md': ['--gitleaks-tree', '--gitleaks-history'],
+      'trivy-image.md': ['--trivy'],
+      'coverity.md': ['--coverity'],
+      'zap-nessus.md': ['--zap', '--nessus'],
+    };
+    for (const [name, flags] of Object.entries(refFlags)) {
+      const file = path.join(skillDir, 'references', name);
+      const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+      ok(text !== '', `AC2.2: references/${name} tồn tại`);
+      ok(text.includes('[Unverified]'), `AC2.2: references/${name} đánh dấu [Unverified] cho tên trường chưa kiểm`);
+      ok(flags.every((f) => text.includes(f)), `AC2.2: references/${name} nhắc cờ script ${flags.join(', ')}`);
+    }
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
