@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { envFilesAllowed, readGate, fullEffective, fullKeep, classifyPath, grantsOf, normalizeMsysPath, hasUnresolvedRef, showArg, isClaudeTmpRoot, denyOutsideText, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
+import { envFilesAllowed, readGate, fullEffective, openEffective, modeName, fullKeep, classifyPath, grantsOf, normalizeMsysPath, hasUnresolvedRef, showArg, isClaudeTmpRoot, denyOutsideText, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
 
 const PROTECTED = new Set(['main', 'master', 'dev', 'develop']);
 // Biên gồm cả > : ` @ { , (vd x>.env, HEAD:.env, @.env, {a,.env}) vì tên file dính các ký tự này vẫn được lệnh đọc/ghi.
@@ -1003,6 +1003,25 @@ function pipedIndirectConfigWrite(list) {
   return list.some((t) => indirectWrite(t)) && list.some((t) => t.some(isConfigPath));
 }
 
+// `aip mode <đổi mode>` do agent chạy là ghi aip-gate.json (K12); `status`, `--help` hay thiếu đối số cho qua.
+// shortcut: chỉ nhận lệnh gọi trực tiếp (aip, ai-engineering-platform, cli/index.mjs, kể cả sau npx); script con do agent viết vẫn lọt, nâng lên khi cần chặn thật thì dùng quyền hệ thống file.
+const MODE_NAMES = new Set(['guarded', 'confined', 'open', 'ask', 'full']);
+const AIP_BIN = /^(?:.*[\\/])?(?:aip|ai-engineering-platform)(?:\.(?:cmd|ps1|exe))?$/i;
+const AIP_CLI = /(?:^|[\\/])cli[\\/]index\.mjs$/i;
+function isAipModeChange(t) {
+  for (let i = 0; i + 2 < t.length; i++) {
+    if (!AIP_BIN.test(t[i]) && !AIP_CLI.test(t[i])) continue;
+    if (t[i + 1] === 'mode' && MODE_NAMES.has(String(t[i + 2]).replace(/^['"]|['"]$/g, '').toLowerCase())) return true;
+  }
+  return false;
+}
+
+// Bộ nhận diện ghi file cấu hình quyền dùng chung cho guarded/confined (ask hoặc deny) và open (deny).
+function guardConfigHit(segs, naiveAll, cmd, msys) {
+  const all = [...segs, ...naiveAll];
+  return all.some((t) => writesGuardConfig(t, msys)) || pipedIndirectConfigWrite(all) || opaqueConfigWrite(all, cmd) || substitutedConfigWrite(all, cmd) || all.some(isAipModeChange);
+}
+
 function writesGuardConfig(t, msys = true) {
   const w = writeTargets(t, msys);
   const { name, args, allPos } = w;
@@ -1032,7 +1051,25 @@ const pushText = (r) => (r.kind === 'protected'
 const CONFIG_TEXT = 'Ghi vào file cấu hình quyền (`.claude/aip-gate.json` hoặc `settings.json`).';
 const FULL_PATH_TEXT = 'Ghi hoặc xoá ở đường dẫn chưa rõ (`$VAR`, `~`, `*`).';
 const READ_OUTSIDE_TEXT = 'Đọc file ngoài các thư mục được cấp quyền đọc.';
-const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy; project bật chế độ full nhưng phiên này vẫn hỏi. Đổi: `aip mode ask`.';
+const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy; project bật chế độ confined hoặc open nhưng phiên này vẫn hỏi. Đổi: `aip mode guarded`.';
+// Câu deny cho agent (D15): nêu việc bị chặn và cách mở; không gợi ý `aip mode open` vì chính lệnh đó cũng bị chặn khi agent chạy.
+const CONFIG_DENY_TEXT = 'Ghi vào file cấu hình quyền (`.claude/aip-gate.json`, `settings.json`) hoặc đổi mode bằng `aip mode` bị chặn với agent. Mở: người dùng tự chạy `aip mode` hoặc tự sửa file.';
+
+// open không hỏi, không rào: chỉ còn chặn ghi file cấu hình quyền và aip mode (K1, K12, K13). Kiểm rẻ chuỗi trước để lệnh thường không tốn parse.
+const OPEN_CHEAP = /aip-gate|settings(?:\.[\w-]+)?\.json|\bmode\b/i;
+const AIP_MODE_TEXT = /\b(?:aip|ai-engineering-platform|index\.mjs)\b[^\n;&|]*\bmode\b/i;
+function decideOpen(cmd, msys) {
+  if (!OPEN_CHEAP.test(cmd)) return null;
+  const deny = { decision: 'deny', reason: CONFIG_DENY_TEXT };
+  try {
+    const segs = expandShells(parse(cmd).segs);
+    const naiveAll = expandShells(naiveSegments(cmd));
+    return guardConfigHit(segs, naiveAll, cmd, msys) ? deny : null;
+  } catch {
+    // Lỗi parse không được thành popup (open không hỏi) cũng không được mở cổng ghi cấu hình.
+    return GUARD_CONFIG.test(cmd) || AIP_MODE_TEXT.test(cmd) ? deny : null;
+  }
+}
 // Dòng liệt kê root chỉ là gợi ý cho agent: lỗi khi dựng nó không được làm mất deny, nên rơi về câu không có dòng root.
 function denyText(need, grants, subject) {
   try { return denyOutsideText(need, grants, subject); } catch { return denyOutsideText(need, [], subject); }
@@ -1744,9 +1781,20 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const base = repoRoot ? [path.resolve(repoRoot)] : (readOnce()?.roots ?? []);
     return grantsOf({ roots: base.length ? base : [path.resolve(cwd)], config: gate() }, input);
   };
-  let fe;
-  // Phiên không bypass không bao giờ full: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
-  const full = () => (fe === undefined ? (fe = bypass && fullEffective(config !== undefined ? { config } : readOnce(), input, { tracked })) : fe);
+  let me;
+  // Phiên không bypass luôn là guarded: thoát trước khi đọc cấu hình để không tốn lời gọi git nào.
+  // Lỗi đọc cấu hình ⇒ guarded: không bao giờ tự mở cổng và không ném ra ngoài decide.
+  const effMode = () => {
+    if (me !== undefined) return me;
+    if (!bypass) return (me = 'guarded');
+    try {
+      const g = config !== undefined ? { config } : readOnce();
+      me = openEffective(g, input, { tracked }) ? 'open' : fullEffective(g, input, { tracked }) ? 'confined' : 'guarded';
+    } catch { me = 'guarded'; }
+    return me;
+  };
+  const full = () => effMode() === 'confined';
+  if (effMode() === 'open') return decideOpen(cmd, msys);
   const ask = (text) => { let line = ''; try { line = summarize(cmd, msys); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
   // Lỗi bất ngờ ở full + bypass thành hỏi: ném lại sẽ để main() cho lệnh chưa được kiểm đi qua.
   try {
@@ -1769,7 +1817,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
     if (why && !(full() && !fullKeep(gate()).includes('push'))) return ask(pushText(why));
   }
-  if ([...segs, ...naiveAll].some((t) => writesGuardConfig(t, msys)) || pipedIndirectConfigWrite([...segs, ...naiveAll]) || opaqueConfigWrite([...segs, ...naiveAll], cmd) || substitutedConfigWrite([...segs, ...naiveAll], cmd)) {
+  if (guardConfigHit(segs, naiveAll, cmd, msys)) {
     return ask(CONFIG_TEXT);
   }
   // Một lần mỗi decide, dùng chung cho H6 và kiểm bí mật để hai nơi không lệch kết quả. Hợp của cách nhìn scanWords và cách nhìn thô; lỗi nội bộ rơi về chữ chưa giải (hỏi).
@@ -1812,7 +1860,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   }
   // Phiên không bypass trong project full: settings.json không còn quy tắc ask nào chắc chắn áp dụng nên hook hỏi thay.
   // Chỉ đọc cấu hình sau khi một đoạn khớp tiền tố, để lệnh thường không tốn lời gọi git.
-  if (!bypass && [...segs, ...naiveAll].some(matchesAsk) && gate()?.mode === 'full') {
+  if (!bypass && [...segs, ...naiveAll].some(matchesAsk) && ['confined', 'open'].includes(modeName(gate()?.mode))) {
     return ask(FULL_NO_BYPASS_TEXT);
   }
   let scanned;

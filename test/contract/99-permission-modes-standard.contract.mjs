@@ -22,10 +22,10 @@ export default async function run({ ok, ctx }) {
 
     // AC2.1: open bỏ H1, H2, H3, nhốt root, <tmp>/claude; đối chứng confined (fullKeep rỗng) vẫn chặn ở các hàng ghi/đọc ngoài rào.
     const free = ['git push origin master', 'git push --force origin feature/x', 'git commit -m "tiếng Việt có dấu"', 'cat .env', `cat ${P}/id_rsa`,
-      `rm -rf ${OUT}/x`, `echo x > ${OUT}/y`, `rm ${tmpClaude}`, 'cat $UNKNOWN/x', 'aip mode status'];
+      `rm -rf ${OUT}/x`, `echo x > ${OUT}/y`, `rm ${tmpClaude}`, 'cat $UNKNOWN/x', 'rm $UNKNOWN/x', 'aip mode status'];
     rows(free.map((c) => [c, null, 'AC2.1']), { cfg: OPEN });
     rows([[`Set-Content -Path ${OUT}/y -Value x`, null, 'AC2.1']], { cfg: OPEN, tool: 'PowerShell' });
-    rows([[`rm -rf ${OUT}/x`, 'deny', 'AC2.1'], [`echo x > ${OUT}/y`, 'deny', 'AC2.1'], [`rm ${tmpClaude}`, 'deny', 'AC2.1'], ['cat $UNKNOWN/x', 'ask', 'AC2.1']], { cfg: CONFINED_FREE });
+    rows([[`rm -rf ${OUT}/x`, 'deny', 'AC2.1'], [`echo x > ${OUT}/y`, 'deny', 'AC2.1'], [`rm ${tmpClaude}`, 'deny', 'AC2.1'], ['rm $UNKNOWN/x', 'ask', 'AC2.1']], { cfg: CONFINED_FREE });
     ok(kind(`Set-Content -Path ${OUT}/y -Value x`, { cfg: CONFINED_FREE, tool: 'PowerShell' }) === 'deny', 'AC2.1: đối chứng confined — PowerShell ghi ngoài root bị chặn');
 
     // AC2.2: lỗi đọc cú pháp không thành popup ở open khi lệnh không nhắc file cấu hình hay aip mode.
