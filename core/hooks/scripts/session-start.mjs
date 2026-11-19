@@ -225,8 +225,10 @@ function resumeLine(input, handoff, cwd) {
 
 // Hook không biết phiên có bypassPermissions hay không (SessionStart chưa được kiểm có permission_mode), nên chỉ báo mode trong file và điều kiện áp.
 // Chỉ báo khi file không bị git theo dõi: file đã commit không có hiệu lực nên báo sẽ gây hiểu nhầm. Lỗi ⇒ không có dòng.
-function modeLine(cwd, d) {
+function modeLine(cwd, d, cfg0) {
   try {
+    // cfg0 đã đọc cùng nguồn với loadGate: project guarded (đa số) thoát ngay, không tốn thêm lời gọi git.
+    if (modeName(cfg0?.mode) === 'guarded') return null;
     const g = d.loadGate(cwd);
     const cfg = g?.config;
     if (!cfg || typeof cfg !== 'object') return null;
@@ -255,7 +257,7 @@ export function decide(input, deps = {}) {
     }
     const parts = [];
     // Dòng báo mode đứng đầu, không phụ thuộc bootstrapInject; cùng bootstrap trừ khỏi ngân sách chung để tổng không vượt MAX_TOTAL.
-    const modeNote = modeLine(cwd, d);
+    const modeNote = modeLine(cwd, d, cfg);
     if (modeNote) parts.push(modeNote);
     const boot = cfg?.bootstrapInject !== false;
     if (boot) parts.push(BOOTSTRAP);

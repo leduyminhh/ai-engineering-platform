@@ -301,8 +301,8 @@ export default async function run({ ok, ctx }) {
       }
     }
     for (const source of ['resume', 'fork']) {
-      const r = startAs(source, gateOf('open'), { loadConfig: () => null });
-      ok(!(r?.additionalContext ?? '').includes('mode hiệu lực'), `AC6.1: ${source} không báo mode`);
+      const r = ss.decide({ cwd: tb, source, prompt_cache_likely_expired: true }, { loadGate: () => gateOf('open'), gateTracked: () => false, loadConfig: () => gateOf('open').config });
+      ok(r?.additionalContext?.includes('Phiên nguội') && !r.additionalContext.includes('mode hiệu lực'), `AC6.1: ${source} có cảnh báo nguội nhưng không báo mode`);
     }
     ok(!MODE_RE.test(head(startAs('startup', gateOf('open'), { gateTracked: () => true }))), 'AC6.1: file bị git theo dõi → không báo mode');
     ok(!MODE_RE.test(head(startAs('startup', gateOf('open'), { gateTracked: () => null }))), 'AC6.1: không xác định được git theo dõi → không báo mode (hướng an toàn)');
@@ -315,7 +315,7 @@ export default async function run({ ok, ctx }) {
     const crowded = startAs('startup', gateOf('confined', { handoffPath: 'handoff.md' }));
     ok(MODE_RE.test(head(crowded)) && crowded.additionalContext.length <= 9000 && crowded.additionalContext.includes('Handoff của phiên trước'), `AC6.2: handoff dài + dòng báo mode vẫn tổng ≤ 9000 (${crowded?.additionalContext?.length})`);
     const broken = startAs('startup', gateOf('open'), { loadGate: () => { throw new Error('boom'); } });
-    ok(!MODE_RE.test(head(broken)), 'AC6.2: loadGate ném lỗi → không có dòng báo mode, hook không ném');
+    ok(!MODE_RE.test(head(broken)) && broken.additionalContext.includes('using-aip'), 'AC6.2: loadGate ném lỗi → không có dòng báo mode, hook không ném, vẫn trả bootstrap');
   } finally {
     fs.rmSync(tb, { recursive: true, force: true });
   }
