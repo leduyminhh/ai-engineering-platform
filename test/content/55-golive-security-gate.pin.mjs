@@ -184,7 +184,25 @@ export default async function run({ ok, ctx }) {
       { sarif: [sarif([{ rule: 'ry', uri: 'a.js', line: 1 }])] },
       { coverity: coverity([['a.java', 1, 'Catastrophic']]) },
     ].every(throwsInput), 'AC1.3: severity lạ hoặc không xác định được (Trivy, ZAP, SARIF, Coverity) → InputError');
-    const fz = write({ weirdZap: zap([['ZX', 9]]) });
+    // JSON hợp lệ nhưng sai cấu trúc: phải là InputError (exit 2), không được là TypeError.
+    const sarifDoc = (run) => JSON.stringify({ version: '2.1.0', runs: [run] });
+    const zapDoc = (alert) => JSON.stringify({ site: [{ '@name': 'http://app', alerts: [alert] }] });
+    ok([
+      { sarif: [sarifDoc({ results: {} })] },
+      { sarif: [sarifDoc({ results: [null] })] },
+      { sarif: [sarifDoc({ tool: { driver: { rules: {} } }, results: [] })] },
+      { sarif: [sarifDoc({ tool: { driver: { rules: [null] } }, results: [] })] },
+      { sarif: [sarifDoc({ tool: { driver: { rules: [{ id: 'r', properties: { tags: 5 } }] } }, results: [{ ruleId: 'r', level: 'error', locations: [{ physicalLocation: { artifactLocation: { uri: 'a' }, region: { startLine: 1 } } }] }] })] },
+      { zap: zapDoc({ alert: 'A', riskcode: 1, instances: 'x' }) },
+      { zap: zapDoc({ alert: 'A', riskcode: 1, instances: {} }) },
+      { zap: zapDoc(null) },
+      { coverity: JSON.stringify({ issues: [null] }) },
+      { coverity: JSON.stringify({ issues: [{ mainEventFilePathname: 'a', mainEventLineNumber: 1, checkerProperties: { impact: 'High', cweCategory: {} } }] }) },
+      { trivy: JSON.stringify({ ArtifactName: 'a', Results: [{ Target: 't', Vulnerabilities: [{ VulnerabilityID: 'CVE-1', Severity: 'HIGH', CweIDs: 'CWE-78' }] }] }) },
+      { zap: zapDoc({ alert: 'A', riskcode: [3] }) },
+    ].every(throwsInput), 'AC1.13: JSON sai cấu trúc ở SARIF, ZAP, Coverity, Trivy (kể cả trường CWE sai kiểu) → InputError, không TypeError');
+    const fz = write({ weirdZap: zap([['ZX', 9]]), badShape: sarifDoc({ results: {} }) });
+    ok(cli(['--sarif', fz.badShape]).status === 2, 'AC1.13: sai cấu trúc qua CLI → exit 2, không phải exit 1 kèm stack');
     ok(cli(['--zap', fz.weirdZap]).status === 2, 'AC1.3: severity lạ của ZAP qua CLI → exit 2');
 
     // AC1.10: RCE theo CWE hoặc nhãn, bất kể severity
@@ -199,6 +217,11 @@ export default async function run({ ok, ctx }) {
     ok([77, 78, 94, 95, 502, 917, 1336].every((c) => rceOf({ sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, level: 'note', cwe: c }])] }) === 1), 'AC1.10: mỗi CWE trong {77,78,94,95,502,917,1336} đều là RCE, kể cả severity thấp');
     ok([79, 89, 200].every((c) => rceOf({ sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, score: '9.8', cwe: c }])] }) === 0), 'AC1.10: CWE ngoài danh sách không phải RCE kể cả Critical');
     ok(rceOf({ zap: zap([['REMOTE code EXECUTION via upload', 1]]) }) === 1, 'AC1.10: nhãn RCE không phân biệt hoa thường');
+    ok(rceOf({ zap: zap([['Injection', 1, 78]]) }) === 1, 'AC1.10: ZAP cweid thuộc danh sách là RCE');
+    ok(rceOf({
+      coverity: coverity([['a.java', 5, 'Low', 89, 'plain']]),
+      sarif: [sarif([{ rule: 'r', uri: 'a.java', line: 5, level: 'note', cwe: 89, text: 'Remote Code Execution' }])],
+    }) === 1, 'AC1.10: RCE do nhãn ở nguồn thứ hai vẫn giữ sau khi gộp finding');
     const trivyRce = JSON.stringify({ ArtifactName: 'app:1', Results: [{ Target: 't', Vulnerabilities: [
       { VulnerabilityID: 'CVE-2026-70', PkgName: 'p', InstalledVersion: '1', Severity: 'LOW', CweIDs: ['CWE-94'] },
       { VulnerabilityID: 'CVE-2026-71', PkgName: 'q', InstalledVersion: '1', Severity: 'LOW', Title: 'libx: Remote Code Execution in parser' },

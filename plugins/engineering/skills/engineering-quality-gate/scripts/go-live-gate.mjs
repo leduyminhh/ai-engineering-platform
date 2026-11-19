@@ -52,6 +52,7 @@ function requireField(key, obj, field, type) {
 }
 
 function normalizeSeverity(key, field, raw, table) {
+  if (typeof raw !== 'string' && typeof raw !== 'number') throw fail(key, `giá trị ${field} không hợp lệ`);
   const k = String(raw).trim().toUpperCase();
   if (!Object.hasOwn(table, k)) throw fail(key, `giá trị ${field} không hợp lệ`);
   return table[k];
@@ -114,7 +115,8 @@ function readTrivy(key, text, map) {
     for (const v of res.Vulnerabilities || []) {
       const id = requireField(key, v, 'VulnerabilityID', 'string');
       const severity = normalizeSeverity(key, 'Severity', requireField(key, v, 'Severity'), TRIVY_SEVERITY);
-      const cwe = (Array.isArray(v.CweIDs) ? v.CweIDs : []).flatMap(cweNumbers);
+      if (v.CweIDs != null && (!Array.isArray(v.CweIDs) || v.CweIDs.some((c) => typeof c !== 'string'))) throw fail(key, 'CweIDs phải là mảng chuỗi');
+      const cwe = (v.CweIDs || []).flatMap(cweNumbers);
       const title = typeof v.Title === 'string' ? v.Title : '';
       addFinding(map, { source: 'trivy', kind: 'vuln', severity, key: `${id}@${asset}`, location: `${v.PkgName ?? '?'}@${v.InstalledVersion ?? '?'}`, cve: [id], cwe, title, rce: isRce(cwe, title), scope: 'image' });
     }
@@ -170,7 +172,9 @@ function readCoverity(key, text, map) {
     const line = requireField(key, issue, 'mainEventLineNumber', 'number');
     const props = requireField(key, issue, 'checkerProperties', 'object');
     const severity = normalizeSeverity(key, 'impact', requireField(key, props, 'impact'), COVERITY_IMPACT);
-    const cwe = props.cweCategory === undefined ? [] : cweNumbers(`cwe-${props.cweCategory}`);
+    const rawCwe = props.cweCategory;
+    if (rawCwe != null && typeof rawCwe !== 'string' && typeof rawCwe !== 'number') throw fail(key, 'cweCategory phải là chuỗi hoặc số');
+    const cwe = rawCwe == null ? [] : cweNumbers(`cwe-${rawCwe}`);
     const title = [props.categoryDescription, issue.checkerName].filter((t) => typeof t === 'string').join(' ');
     addFinding(map, codeFinding('coverity', file, line, severity, cwe, title));
   }
@@ -205,7 +209,14 @@ export function gate(inputs, { now = new Date() } = {}) {
   for (const k of SOURCE_KEYS) {
     const text = inputs[k];
     if (text === undefined) continue;
-    for (const t of Array.isArray(text) ? text : [text]) READERS[k]?.(k, t, map);
+    for (const t of Array.isArray(text) ? text : [text]) {
+      try {
+        READERS[k]?.(k, t, map);
+      } catch (e) {
+        // JSON hợp lệ nhưng sai cấu trúc làm reader ném TypeError: đổi thành lỗi đầu vào (exit 2), không chép message gốc.
+        throw e instanceof InputError ? e : fail(k, 'cấu trúc report không đúng');
+      }
+    }
   }
   const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => ({ id: `F${String(i + 1).padStart(3, '0')}`, ...f, rce: f.kind !== 'secret' && !!f.rce }));
   const count = {
