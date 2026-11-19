@@ -207,7 +207,9 @@ Giới hạn riêng của `confined` và `open`:
 - Việc nhận diện `aip mode` và ghi file cấu hình trong `guard-bash` là heuristic. Script do agent viết (`node x.mjs`)
   hoặc cách né bằng escape của shell vẫn lọt, nên agent trong phiên bypass vẫn có thể tự đổi mode. Hook không phải ranh
   giới chống agent bị chiếm quyền. Bộ nhận diện cũng không thấy các lệnh ghi file cấu hình sau, không lệnh nào là script do
-  agent viết: `cp -r <nguồn>/.claude .`, `mv <nguồn>/.claude .claude`, `rsync … .claude/aip-gate.json`, `install … .claude/aip-gate.json`, `dd of=.claude/aip-gate.json`, `git restore --source=<rev> -- .claude/aip-gate.json`, `tar -C .claude …` và `ln -s … .claude/aip-gate.json`. Mở rộng `writeTargets` sẽ đổi hành vi của `guarded` nên làm ở request riêng.
+  agent viết: `cp -r <nguồn>/.claude .`, `mv <nguồn>/.claude .claude`, `rsync … .claude/aip-gate.json`, `install … .claude/aip-gate.json`, `dd of=.claude/aip-gate.json`, `git restore --source=<rev> -- .claude/aip-gate.json`, `tar -C .claude …` và `ln -s … .claude/aip-gate.json`. Mở rộng `writeTargets` sẽ đổi hành vi của `guarded` nên làm ở request riêng. Tên rút gọn NTFS 8.3 (`.claude\AIP-GA~1.JSO`, `SETTIN~1.JSO`) lọt kiểm file cấu hình ở cả ba mode. Ở
+  `open`, `hooks/hooks.json` và script guard trong cây plugin (`hooks/scripts/guard-*.mjs`) ghi được bằng công cụ file (chỉ
+  `scope-lock.json` bị chặn).
 - `writeScope` chỉ chặn công cụ file, không chặn Bash của subagent. Ở `open`, `guard-bash` không biết
   `hooks/scope-lock.json`, nên lệnh Bash ghi vào file này cho qua và có thể tắt `writeScope` ở phiên sau. Junction hoặc symlink tới thư mục `.claude` lọt vì
   đường dẫn không đi qua realpath.

@@ -219,7 +219,9 @@ Limits specific to `confined` and `open`:
   (`node x.mjs`), or a trick with shell escapes, still gets through, so an agent in a bypass session can still change the
   mode. The hooks are not a boundary against a hijacked agent. The recognizer also does not see these writes to the config
   files, none of them a script the agent wrote: `cp -r <source>/.claude .`, `mv <source>/.claude .claude`, `rsync … .claude/aip-gate.json`, `install … .claude/aip-gate.json`, `dd of=.claude/aip-gate.json`, `git restore --source=<rev> -- .claude/aip-gate.json`, `tar -C .claude …` and `ln -s … .claude/aip-gate.json`. Extending `writeTargets` would change `guarded` behavior, so it
-  belongs in a separate request.
+  belongs in a separate request. NTFS 8.3 short names (`.claude\AIP-GA~1.JSO`, `SETTIN~1.JSO`) get past the config-file check in
+  all three modes. In `open`, `hooks/hooks.json` and the guard scripts in the plugin tree (`hooks/scripts/guard-*.mjs`) can
+  be written with the file tools (only `scope-lock.json` is blocked).
 - `writeScope` blocks only the file tools, not Bash in a subagent. In `open`, `guard-bash` does not know
   `hooks/scope-lock.json`, so a plain Bash write to it passes and can disable `writeScope` for a later session. A junction or symlink to the `.claude` directory gets
   through because paths are not resolved with realpath.
