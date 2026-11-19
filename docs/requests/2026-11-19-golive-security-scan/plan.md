@@ -279,3 +279,42 @@
 - [ ] **Step 2:** `node core/skills/artifact-templates/scripts/check-request.mjs docs/requests/2026-11-19-golive-security-scan/`; mong đợi không có W10–W14, W22; ghi mọi WARN còn lại (W11 `security-gate` dự kiến) vào ledger (AC5.6).
 - [ ] **Step 3:** AC6.1: hỏi người dùng report thật đã che của từng tool và file KEV; có thì chạy script, đối chiếu tay với người duyệt, lệch thì sửa parser + thêm fixture đã che (quay lại task parser tương ứng); chưa có trước khi kết thúc nhánh thì ghi residual risk vào ledger, không chặn.
 - [ ] **Step 4: Commit** `chore(release): bump engineering, ops and workflows for go-live gate`.
+
+### Task 13: Hành vi script sau review cuối (KEV, --na, Sonar, Trivy warning)
+**Kind:** TOOLING
+**TDD:** có
+**Ước lượng:** 30'
+**Phủ AC:** AC1.6, AC1.18, AC1.20, AC1.21
+**Files:**
+- Modify: `plugins/engineering/skills/engineering-quality-gate/scripts/go-live-gate.mjs`
+- Test: `test/content/55-golive-security-gate.pin.mjs`
+
+**Interfaces:**
+- Consumes: `gate(inputs, { now })`, `InputError`, `statusOf`
+- Produces: không có
+
+- [ ] **Step 1:** Test đỏ: AC1.18 (KEV cũ, thiếu ngày, `vulnerabilities` rỗng → KEV `chưa đo` và một warning; KEV cũ có finding khớp → `không đạt`; KEV mới có ngày → `đạt`), AC1.6 (`--na kev=…` → exit 2; mỗi `--na` hợp lệ → đúng một warning; ví dụ `không áp dụng` dùng critHigh thay KEV), AC1.20 (Sonar `type` chữ thường, `softwareQuality` chữ thường, `type` lạ → exit 2, `paging.total` > số issues → exit 2), AC1.21 (`--trivy` luôn có warning không xác minh scanners). Chạy `node test/validate.mjs --only golive`; mong đợi đỏ; sửa các test cũ mâu thuẫn quyết định mới (`--na kev`, warning KEV không đổi status).
+- [ ] **Step 2:** Viết hành vi trong script (chỉ KEV rỗng/cũ/thiếu ngày làm nguồn `kev` chưa đo; bỏ `kev` khỏi tên hợp lệ của `--na`; warning mỗi `--na`; chuẩn hoá `type`/`softwareQuality`; kiểm phân trang; warning Trivy). Chạy lại; mong đợi xanh.
+- [ ] **Step 3: Commit** `feat(engineering): tighten kev, na, sonar and trivy handling in go-live gate`.
+
+### Task 14: Tài liệu theo quyết định review cuối
+**Kind:** DOCS
+**Ước lượng:** 25'
+**Phủ AC:** AC2.7, AC3.3, AC1.6, AC1.18
+**Files:**
+- Modify: `plugins/engineering/skills/engineering-quality-gate/SKILL.md`
+- Modify: `plugins/engineering/skills/engineering-quality-gate/references/report-template.md`
+- Modify: `plugins/engineering/skills/engineering-quality-gate/references/trivy-image.md`
+- Modify: `plugins/engineering/skills/engineering-quality-gate/references/sonarqube.md`
+- Modify: `plugins/ops/skills/ops-deploy-release/references/digest-check.md`
+- Modify: `plugins/ops/skills/ops-deploy-release/references/release-checklist.md`
+- Test: `test/content/55-golive-security-gate.pin.mjs`
+
+**Interfaces:**
+- Consumes: hành vi script của Task 13 (`--na kev` bị từ chối, KEV rỗng/cũ/thiếu ngày → `chưa đo`, warning mỗi `--na`, Sonar chuẩn hoá và phân trang, warning Trivy)
+- Produces: không có
+
+- [ ] **Step 1:** Cập nhật tài liệu theo AC1.6, AC1.18, AC1.20, AC1.21, AC2.7, AC3.3 mới: bỏ `kev` khỏi danh sách nguồn hợp lệ của `--na`; file KEV rỗng/cũ/thiếu ngày → `chưa đo`; đợt nhiều image chạy từng image và lấy mức xấu nhất; `digest-check.md` lấy định danh đã quét từ report (`Metadata.ImageID` [Unverified]), không từ máy build, không có thì `chưa đo` + NO-GO; bỏ các câu residual risk đã được xử lý (KEV rỗng/cũ, Sonar phân trang và `type` chữ thường, Trivy scanners).
+- [ ] **Step 2:** Sửa pin nào kiểm câu đã đổi; chạy `node test/validate.mjs --only golive`; mong đợi xanh.
+- [ ] **Step 3:** Đối chiếu khẳng định với code và ghi bảng `khẳng định → file:line → khớp|lệch`.
+- [ ] **Step 4: Commit** `docs(engineering): align quality gate and digest docs with final review decisions`.
