@@ -187,6 +187,7 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
   không làm hỏng hành vi hiện có, không che triệu chứng). Reviewer gọi ngoài vòng task nên review như thông
   thường, trả finding theo contract đầu ra (`core:principles`). Có report pentest thì đối chiếu từng finding pentest Critical/High/Medium
   đã được người dùng xác nhận (theo `engineering-quality-gate`, references/pentest.md) với kết quả re-scan; retest pentest
+  do đơn vị ATTT hoặc người dùng thực hiện, agent chỉ ghi lại kết quả họ đưa, re-scan của auditor không thay cho retest, và
   đạt 100% là chỉ tiêu theo dõi, không phải gate của bước này.
 - **Ràng buộc:** không tự đóng finding khi chưa scan lại xác nhận; finding chấp nhận rủi ro ở Bước 5 giữ
   nguyên trạng thái, không tính là blocker còn lại; reviewer chỉ đọc, không tự sửa code.

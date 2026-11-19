@@ -121,7 +121,9 @@ Giá trị khác bảng → exit 2. Script không phân biệt hoa thường và
 ### Phần không đếm được
 
 - [Unverified] Security Hotspot thường không nằm trong issues JSON, nên script không đếm. Ghi vào report như residual risk.
-- Finding Sonar không có `type` = `VULNERABILITY` không vào chỉ tiêu, dù có mức Blocker.
+- Finding Sonar không có `type` = `VULNERABILITY` không vào chỉ tiêu, dù có mức Blocker. Issue có `type` viết thường (`vulnerability`) cũng không vào chỉ tiêu.
+- Residual risk: script không đọc phân trang (`paging`, `total` nếu có). Người xuất phải lấy đủ mọi trang vào file; thiếu trang thì finding ở trang đó không được đếm và script không báo.
+- [Unverified] `type` và `softwareQuality` được so chính xác chữ hoa như API Sonar trả về (`VULNERABILITY`, `SECURITY`). Giá trị khác bị bỏ qua và script không báo.
 
 ### Ví dụ đầu vào
 

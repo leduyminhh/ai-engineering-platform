@@ -34,8 +34,9 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
 - **Đọc SIT/UAT chỉ khi được xác nhận.** Lệnh đọc digest (`docker inspect`, `docker image inspect`,
   `docker compose images`) chạy trên SIT/UAT chỉ sau khi người dùng xác nhận máy và phạm vi, hoặc khi người dùng
   dán output. Chỉ dùng cú pháp nêu trong [references/digest-check.md](references/digest-check.md).
-- **KHÔNG lệnh ghi lên SIT/UAT** (`docker pull`, `docker run`, `docker exec`, `docker compose up`/`pull`,
-  `docker restart`, `docker rm`). Không đọc giá trị biến môi trường chứa secret; chỉ nêu tên biến.
+- **Allowlist lệnh Docker trên SIT/UAT:** chỉ ba lệnh đọc nêu trong [references/digest-check.md](references/digest-check.md).
+  Mọi lệnh Docker khác bị cấm, kể cả `docker pull`, `run`, `exec`, `cp`, `stop`, `kill`, `restart`, `rm`, `rmi`,
+  `docker compose up`/`pull`/`down`/`stop`/`restart`. Không đọc giá trị biến môi trường chứa secret; chỉ nêu tên biến.
   [Inference] `docker inspect` không kèm `--format` có thể in cả biến môi trường của container.
 - Ngôn ngữ **đo được** (ngưỡng health/metric, tiêu chí tiến/lùi kiểm được); LUÔN nêu **residual risk**.
   KHÔNG tuyên bố "đảm bảo / loại bỏ / chặn triệt để" — kế hoạch phản ánh dữ liệu tại thời điểm làm, môi

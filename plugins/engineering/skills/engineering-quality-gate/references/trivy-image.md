@@ -63,6 +63,7 @@ Giá trị khác (vd `SEVERE`) thì exit 2. Script không phân biệt hoa thư�
 
 - Không đọc và không chép `Match`, `Code` của secret. Báo cáo chỉ nêu `RuleID`, layer hoặc target, `StartLine`.
 - Báo cáo không chứa nội dung report gốc.
+- [Unverified] Trivy có che giá trị secret trong report mặc định hay không. Không đưa file report Trivy thô cho agent đọc khi chưa kiểm file đã che `Match` và `Code`.
 
 ## File ignore cần liệt kê
 
@@ -80,7 +81,7 @@ Finding bị ignore không có trong report nên script không đếm. Ghi dòng
 [{ "source": "trivy", "key": "CVE-XXXX-NNNN@image:sha256:<digest>", "reason": "<lý do>" }]
 ```
 
-Khoá secret có dạng `RuleID@<layer>:<StartLine>`. Khoá không khớp finding nào thì script ghi một dòng vào `warnings`, số đếm không đổi.
+Khoá secret có dạng `RuleID@<layer hoặc Target>:<StartLine>`. Khoá không khớp finding nào thì script ghi một dòng vào `warnings`, số đếm không đổi.
 
 ## Ranh giới
 

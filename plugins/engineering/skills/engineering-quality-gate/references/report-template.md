@@ -161,6 +161,12 @@ và không có cổng tự động.
 - Nếu bỏ qua kiểm tra nào (không chạy được test/rescan, thiếu token nên bỏ enrichment scanner) → **nói rõ** ở
   "Bước verify đã chạy" (fail-loud), KHÔNG coi phần bỏ qua là đã "sạch".
 - Không có finding đếm được và còn nguồn bắt buộc chưa có report hoặc `--na`: ghi `chưa đo`, không ghi `đạt`. Số đếm lấy từ `count` của script.
+- `--na` chỉ truyền sau khi người dùng xác nhận bề mặt không tồn tại. Report liệt kê mọi `--na` kèm bằng chứng ở ĐẦU mục Ngưỡng go-live.
+- File KEV phải là bản mới tải và có `dateReleased`. Warning về tuổi file KEV không đổi status của script: report ghi lại warning đó và coi KEV là chưa đáng tin khi file rỗng, cũ hoặc thiếu ngày.
+- Residual risk cố định, ghi vào mục Residual risk:
+  - [Unverified] Trivy có chạy `--scanners secret` hay không: script không xác minh được từ report.
+  - Id Black Duck dạng BDSA không tự khớp KEV: script chỉ lấy CVE khi id bắt đầu bằng `CVE-`.
+  - `--fp` khai cho một nguồn của finding đã gộp nhiều nguồn loại cả finding khỏi số đếm.
 - `không áp dụng` chỉ ghi khi có bằng chứng bề mặt không tồn tại (`--na`); không dùng để né nguồn chưa đo.
 - Không ghi giá trị secret, payload, request, response hay Plugin Output vào report. Report ZAP và Nessus chứa
   URL và tên host nội bộ: ghi ngoài repo và không commit.

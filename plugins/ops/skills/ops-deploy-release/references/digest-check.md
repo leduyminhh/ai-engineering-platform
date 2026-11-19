@@ -14,7 +14,8 @@ docker image inspect --format '{{json .RepoDigests}}' <image>
 
 Output là mảng JSON, ví dụ `["<tên-repo>@sha256:<digest-đã-quét>"]`.
 
-- [Unverified] Report Trivy không có `Metadata.RepoDigests` (rỗng hoặc thiếu): lấy image ID từ máy build bằng lệnh ở mục Quy tắc so khớp. Không lấy được (máy build không còn image) thì ghi `chưa đo`.
+- [Unverified] Report Trivy không có `Metadata.RepoDigests` (trường thiếu được coi như mảng rỗng `[]`): lấy image ID từ máy build bằng lệnh ở mục Quy tắc so khớp. Không lấy được (máy build không còn image) thì ghi `chưa đo`.
+- [Inference] Image ID lấy từ máy build bằng `docker image inspect` là image ID mà tag đang trỏ tới tại thời điểm đối chiếu, có thể không phải image đã quét nếu tag được build lại sau lúc quét. Người dùng xác nhận máy build và thời điểm lấy; ghi điều này vào mục report "Định danh đã quét" như residual risk.
 
 ## Digest đang chạy trên SIT/UAT
 
@@ -59,7 +60,7 @@ docker compose images
 - Trạng thái chung của mục digest trong checklist: `không đạt` khi có ít nhất một image lệch, kể cả khi image khác `chưa đo`; không có image lệch nhưng có image `chưa đo` thì `chưa đo`; chỉ `đạt` khi mọi image của mọi service đều khớp. Cả `không đạt` lẫn `chưa đo` đều đề xuất NO-GO.
 - Cả hai phía đều có digest: so digest với digest.
 - Lệnh `docker image inspect --format '{{json .RepoDigests}}'` lỗi, không chạy được hoặc thiếu quyền ở một phía: định danh phía đó không lấy được, image ghi `chưa đo`; không chuyển sang so theo image ID dù lệnh lấy image ID vẫn chạy được.
-- Một phía không có RepoDigest, nghĩa là lệnh trên chạy được và trả mảng rỗng `[]` (ví dụ image build local chưa push registry): so theo image ID. [Unverified] Docker có thể trả `null` thay cho `[]`; coi `null` như mảng rỗng. [Unverified] Lấy image ID phía build bằng `docker image inspect --format '{{.Id}}' <image>` trên máy build; phía đang chạy lấy bằng `docker inspect --format '{{.Image}}' <container>` (bước 1 ở trên). So image ID với image ID và ghi rõ "so theo image ID" trong báo cáo.
+- Một phía không có RepoDigest, nghĩa là lệnh trên chạy được và trả mảng rỗng `[]` (ví dụ image build local chưa push registry), hoặc trường `Metadata.RepoDigests` của report Trivy thiếu: so theo image ID. [Unverified] Docker có thể trả `null` thay cho `[]`; coi `null` như mảng rỗng. [Unverified] Lấy image ID phía build bằng `docker image inspect --format '{{.Id}}' <image>` trên máy build; phía đang chạy lấy bằng `docker inspect --format '{{.Image}}' <container>` (bước 1 ở trên). So image ID với image ID và ghi rõ "so theo image ID" trong báo cáo.
 - Nếu một phía không lấy được định danh cần để so, image đó ghi `chưa đo`, kể cả khi phía kia lấy được.
 - [Inference] `RepoDigests` (digest manifest của registry) và image ID (định danh image cục bộ) là hai loại định danh khác nhau. Chỉ so cùng loại, không so chéo.
 

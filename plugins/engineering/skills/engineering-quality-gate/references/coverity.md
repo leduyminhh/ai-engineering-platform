@@ -35,6 +35,7 @@ Report phải có `issues` là mảng. Không có thì exit 2.
 | `issues[].stateOnServer.triage.classification` | không | `False Positive` hoặc `Intentional` gắn nhãn `suppress` | [Unverified] |
 
 - Script chỉ đọc các trường trong bảng. Đoạn mã và mô tả sự kiện không được chép vào báo cáo.
+- Coverity và SARIF không lọc theo loại security: mọi defect Coverity có `impact` High và mọi kết quả SARIF có mức chuẩn hoá Critical hoặc High (gồm `level` error khi không có `security-severity`) vào Critical/High, khác Sonar chỉ đếm `VULNERABILITY`. Defect chất lượng cũng được đếm; defect không phải bảo mật chỉ được loại bằng `--fp` kèm `reason`. [Unverified] JSON Coverity có trường phân loại security hay không; script không đọc trường nào như vậy.
 
 ## Ánh xạ severity
 

@@ -71,7 +71,7 @@ Script đọc CSV. `.nessus` (XML) đọc tay theo mục dưới.
 | `Name` | không | nhãn để xét RCE | [Unverified] |
 
 - Script chỉ nhận CVE đúng dạng `CVE-năm-số`. Giá trị khác dạng bị bỏ qua và dòng đó coi như không có CVE. Đây là giới hạn đã biết; ghi vào báo cáo nếu gặp.
-- Nessus CSV không có CWE. RCE của Nessus chỉ xét qua nhãn "remote code execution" trong `Name`.
+- Nessus CSV không có CWE. RCE của Nessus chỉ xét qua nhãn "remote code execution" trong `Name`: cột `Name` chứa đúng cụm đó (không phân biệt hoa thường) thì tính RCE. Tên khác như "Arbitrary Code Execution" hoặc "Command Injection" không được tính RCE. Residual risk: người dùng rà tay các plugin loại này; kết quả rà tay chỉ ghi vào report như ghi chú [giả định].
 - Không đọc cột Plugin Output: có thể chứa banner hoặc giá trị nhạy cảm.
 
 ### Ánh xạ severity
@@ -129,3 +129,4 @@ Với Nessus không CVE, khoá là `<Plugin ID>@<host>`.
 - Không ghi lên SIT/UAT. Không cài tool vào project.
 - Không chép nội dung request, response hay Plugin Output vào báo cáo.
 - Report ZAP và Nessus chứa URL, tên host nội bộ. Ghi ra thư mục ngoài repo và không commit file report.
+- Residual risk: script dùng nguyên văn `instances[].uri` của ZAP làm khoá và vị trí, và in ra stdout. Query string có thể chứa token hoặc session. Người xuất report cắt query và fragment khỏi URL trước khi đưa file cho agent, hoặc coi file output của script là nhạy cảm.
