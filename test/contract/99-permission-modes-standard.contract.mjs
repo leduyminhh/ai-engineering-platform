@@ -282,6 +282,11 @@ export default async function run({ ok, ctx }) {
     ok(everywhere({ mode: 'open' }, BYPASS) !== guardedAll(BYPASS) && everywhere({ mode: 'open' }, BYPASS) !== everywhere({ mode: 'confined' }, BYPASS), 'AC2.7: open khác guarded và confined khi đủ điều kiện (bảng không rỗng nghĩa)');
     ok(everywhereTracked({ mode: 'open' }) === everywhereTracked({ mode: 'guarded' }), 'AC2.7: open nhưng file bị git theo dõi ≡ guarded ở ba hook');
     ok(everywhereTracked({ mode: 'confined' }) === everywhereTracked({ mode: 'guarded' }), 'AC3.5: confined nhưng file bị git theo dõi ≡ guarded ở ba hook');
+    // Phiên không bypass không đọc cấu hình khi deny start_session thiếu model (ràng buộc đường nóng).
+    let reads = 0;
+    const counting = () => { reads++; return { gate: { config: OPEN }, invalid: null }; };
+    ok(mkind(SS, { pm: 'default', locate: counting }) === 'deny' && reads === 0, 'AC2.9: start_session thiếu model ở phiên không bypass → deny, không đọc cấu hình');
+    ok(mkind(SS, { pm: BYPASS, locate: counting }) === null && reads === 1, 'AC2.5: phiên bypass + open đọc cấu hình đúng một lần → null');
   } finally {
     fs.rmSync(tb, { recursive: true, force: true });
   }

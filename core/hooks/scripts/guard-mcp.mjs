@@ -62,7 +62,8 @@ function decideInner(input, { config, tracked, locate = gateForGuard } = {}, ctx
     return mode;
   };
   // Đọc cấu hình trước nhánh start_session chỉ khi nhánh đó sắp deny (D5); open bỏ deny này nhưng vẫn chạy mcpDeny.
-  if (startSessionWithoutModel(input) && modeNow() !== 'open') return DENY_START_SESSION;
+  // Phiên không bypass không bao giờ open: deny ngay, không đọc cấu hình (đường nóng không tốn lời gọi git).
+  if (startSessionWithoutModel(input) && (input?.permission_mode !== 'bypassPermissions' || modeNow() !== 'open')) return DENY_START_SESSION;
   const found = foundNow();
   // Không đọc được mcpDeny thì không biết server này có bị chặn không: hỏi thay vì cho qua im lặng.
   if (found.invalid) return { decision: 'ask', reason: `Không đọc được file cấu hình quyền \`${showArg(found.invalid)}\` (JSON hỏng hoặc không phải đối tượng) nên không biết server MCP "${showArg(t.server, 60)}" có nằm trong danh sách chặn của bạn không. Cho phép thì tool chạy mà không qua danh sách đó. Nên từ chối, sửa file rồi chạy lại.` };
