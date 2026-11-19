@@ -309,9 +309,10 @@ export default async function run({ ok, ctx }) {
     const wOld = warnsOf(kevFile(['CVE-2026-0100'], '2026-11-01T00:00:00Z'));
     const wFresh = warnsOf(kevFile(['CVE-2026-0100'], '2026-11-15T00:00:00Z'));
     const wNone = warnsOf(kevFile(['CVE-2026-0100']));
-    ok(wOld.warnings.length === 1 && /KEV/.test(wOld.warnings[0]), 'AC1.18: dateReleased cũ hơn 7 ngày → đúng một warning về tuổi file KEV');
-    ok(wNone.warnings.length === 1 && /KEV/.test(wNone.warnings[0]), 'AC1.18: file KEV không có ngày → đúng một warning');
-    ok(wFresh.warnings.length === 0 && wOld.thresholds.kev.status === wFresh.thresholds.kev.status && wNone.thresholds.kev.status === wFresh.thresholds.kev.status, 'AC1.18: file KEV mới không có warning; warning không đổi status');
+    const kevW = (r) => r.warnings.filter((w) => /KEV/.test(w));
+    ok(kevW(wOld).length === 1, 'AC1.18: dateReleased cũ hơn 7 ngày → đúng một warning về tuổi file KEV');
+    ok(kevW(wNone).length === 1, 'AC1.18: file KEV không có ngày → đúng một warning');
+    ok(kevW(wFresh).length === 0, 'AC1.18: file KEV mới không có warning về KEV');
 
     // AC1.16: BlackDuck CycloneDX
     const r16 = gate({ blackduck: blackduck([['CVE-2026-0200', ['critical'], 'P@1.0'], ['CVE-2026-0201', ['low'], 'Q@2.0']]) }, { now: NOW });
@@ -393,9 +394,9 @@ export default async function run({ ok, ctx }) {
     const rNa = gate({ kev: EMPTY.kev, trivy: EMPTY.trivy, blackduck: EMPTY.blackduck, na: { nessus: NA_NESSUS } }, { now: NOW });
     ok(rNa.thresholds.kev.status === 'đạt' && rNa.thresholds.kev.missing.length === 0 && rNa.thresholds.kev.na?.nessus === NA_NESSUS, 'AC1.6: --na nessus thay cho Nessus ở KEV, status theo nguồn còn lại, bằng chứng được chép lại');
     ok(rNa.thresholds.critHigh.missing.includes('nessus') === false && rNa.thresholds.critHigh.missing.includes('coverity'), 'AC1.6: --na nessus áp cho mọi chỉ tiêu có Nessus nhưng không che nguồn khác');
-    const allNaKev = { kev: 'a', trivy: 'b', nessus: 'c', blackduck: 'd' };
-    const rNaAll = gate({ na: allNaKev }, { now: NOW });
-    ok(rNaAll.thresholds.kev.status === 'không áp dụng' && rNaAll.overall === 'chưa đo', 'AC1.6: mọi nguồn bắt buộc của một chỉ tiêu đều --na → không áp dụng, không tính là đạt');
+    const allNaScan = { coverity: 'a', trivy: 'b', zap: 'c', nessus: 'd', blackduck: 'e', sonar: 'f' };
+    const rNaAll = gate({ na: allNaScan }, { now: NOW });
+    ok(rNaAll.thresholds.critHigh.status === 'không áp dụng' && rNaAll.thresholds.rce.status === 'không áp dụng' && rNaAll.overall === 'chưa đo', 'AC1.6: mọi nguồn bắt buộc của một chỉ tiêu đều --na → không áp dụng, không tính là đạt');
     ok(statusOf(gate({ ...without('nessus'), na: { nessus: NA_NESSUS } }, { now: NOW })).kev === 'đạt', 'AC1.6: --na và nguồn khác đã cung cấp → vẫn đạt');
     ok(throwsInput({ trivy: EMPTY.trivy, nessus: EMPTY.nessus, na: { nessus: 'x' } }) && throwsInput({ trivy: EMPTY.trivy, na: { khongco: 'x' } }), 'AC1.6: --na trùng với nguồn đã cung cấp hoặc tên nguồn lạ → InputError');
     ok([['--na', 'nessus'], ['--na', 'nessus='], ['--na', '=bang-chung'], ['--na'], ['--na', 'nessus= '], ['--na', 'nessus=a', '--na', 'nessus=b'], ['--na', '__proto__=x']].every((a) => cli([...a, '--trivy', f4.trivy]).status === 2), 'AC1.6: --na thiếu bằng chứng (kể cả toàn khoảng trắng), thiếu tên, thiếu giá trị, lặp cùng nguồn hoặc tên lạ → exit 2');
@@ -454,7 +455,7 @@ export default async function run({ ok, ctx }) {
       'không phải json',
     ].every(badFp), 'AC1.7: FP thiếu reason (rỗng, toàn khoảng trắng, thiếu), thiếu source/key, không phải mảng, JSON hỏng → InputError');
     const rFpMiss = gate({ trivy: trivyAB, fp: list([['trivy', 'CVE-9999-0001@khong-co', 'x']]) }, { now: NOW });
-    ok(rFpMiss.thresholds.critHigh.count === 2 && rFpMiss.warnings.length === 1 && !rFpMiss.falsePositives?.length, 'AC1.7: FP không khớp finding nào → đúng một warning và số đếm không đổi');
+    ok(rFpMiss.thresholds.critHigh.count === 2 && rFpMiss.warnings.filter((w) => /--fp/.test(w)).length === 1 && !rFpMiss.falsePositives?.length, 'AC1.7: FP không khớp finding nào → đúng một warning và số đếm không đổi');
     ok(gate({ trivy: trivyAB, fp: list([['nessus', `CVE-2026-0801@${IMG}`, 'x']]) }, { now: NOW }).thresholds.critHigh.count === 2, 'AC1.7: đúng khoá nhưng sai source không khớp');
     // finding gộp Coverity + SARIF: FP theo một trong hai source đều khớp
     const merged7 = (src) => gate({
@@ -592,6 +593,40 @@ export default async function run({ ok, ctx }) {
     ok((wfMd.match(/retest pentest/g) || []).length === 1, 'AC4.1: "retest pentest" xuất hiện đúng một lần trong WORKFLOW.md');
     ok(wfField(wfSteps[8], 'Gate') === 'finding đã sửa không còn; 0 finding `blocker` (từ auditor và từ reviewer) hoặc blocker được chấp nhận rõ ràng.',
       'AC4.1: gate Bước 9 không đổi');
+
+
+    // ---- Task 13: KEV cũ/rỗng, --na, Sonar, Trivy warning (quyết định người dùng ở bước duyệt cuối nhánh) ----
+    const kevRun = (kev) => gate({ ...EMPTY, kev }, { now: NOW });
+    const kStale = kevRun(kevFile(['CVE-2026-0100'], '2026-11-01T00:00:00Z'));
+    const kNoDate = kevRun(kevFile(['CVE-2026-0100']));
+    const kEmpty = kevRun(kevFile([], '2026-11-18T00:00:00Z'));
+    const kFresh = kevRun(kevFile(['CVE-2026-0100'], '2026-11-18T00:00:00Z'));
+    ok([kStale, kNoDate, kEmpty].every((r) => r.thresholds.kev.status === 'chưa đo' && r.overall === 'chưa đo' && r.warnings.some((w) => /KEV/.test(w))),
+      'AC1.18: file KEV cũ, thiếu ngày hoặc rỗng → KEV chưa đo, overall không đạt, có warning');
+    ok(kFresh.thresholds.kev.status === 'đạt' && kFresh.overall === 'đạt', 'AC1.18: file KEV mới, có ngày, không finding khớp → đạt');
+    const kStaleHit = gate({ ...EMPTY, trivy: trivy({ vulns: [['CVE-2026-0100', 'LOW']] }), kev: kevFile(['CVE-2026-0100'], '2026-11-01T00:00:00Z') }, { now: NOW });
+    ok(kStaleHit.thresholds.kev.status === 'không đạt' && kStaleHit.thresholds.kev.count === 1, 'AC1.18: file KEV cũ nhưng có finding khớp → vẫn không đạt');
+    ok(kevRun(kevFile(['CVE-2026-0100'], '2026-11-25T00:00:00Z')).thresholds.kev.status === 'đạt', 'AC1.18: dateReleased ở tương lai không bị coi là cũ');
+
+    // AC1.6: --na kev bị cấm; mỗi --na có đúng một warning
+    ok(throwsInput({ ...without('kev'), na: { kev: 'khong dung KEV' } }), 'AC1.6: --na kev → InputError (file KEV là danh mục để so, không phải bề mặt hệ thống)');
+    ok(cli(['--trivy', f4.trivy, '--na', 'kev=khong dung KEV']).status === 2, 'AC1.6: --na kev qua CLI → exit 2');
+    const rNaWarn = gate({ ...without('nessus', 'blackduck'), na: { nessus: NA_NESSUS, blackduck: 'không dùng Black Duck' } }, { now: NOW });
+    ok(rNaWarn.warnings.filter((w) => /--na/.test(w)).length === 2 && rNaWarn.warnings.some((w) => /nessus/.test(w)) && rNaWarn.warnings.some((w) => /blackduck/.test(w)),
+      'AC1.6: mỗi --na hợp lệ sinh đúng một warning N/A tự khai nêu tên nguồn');
+    ok(!JSON.stringify(rNaWarn.warnings).includes(NA_NESSUS), 'AC1.6: warning chỉ nêu tên nguồn, không chép bằng chứng');
+
+    // AC1.20: Sonar chuẩn hoá type/softwareQuality, type lạ, phân trang
+    const sonarRaw = (issues, extra = {}) => JSON.stringify({ issues, ...extra });
+    const sonarIssue = (type, quality = 'SECURITY') => ({ key: 'k', rule: 'r:1', type, severity: 'MINOR', component: 'proj:a.java', line: 1, impacts: [{ softwareQuality: quality, severity: 'HIGH' }] });
+    ok(gate({ sonar: sonarRaw([sonarIssue('vulnerability', 'security')]) }, { now: NOW }).findings[0]?.severity === 'High', 'AC1.20: type và softwareQuality viết thường được chuẩn hoá');
+    ok(gate({ sonar: sonarRaw([sonarIssue('code_smell')]) }, { now: NOW }).findings.length === 0 && gate({ sonar: sonarRaw([sonarIssue('SECURITY_HOTSPOT')]) }, { now: NOW }).findings.length === 0, 'AC1.20: CODE_SMELL và SECURITY_HOTSPOT hợp lệ nhưng không vào chỉ tiêu');
+    ok(throwsInput({ sonar: sonarRaw([sonarIssue('VULNERABLE')]) }), 'AC1.20: type ngoài danh sách → InputError');
+    ok(throwsInput({ sonar: sonarRaw([sonarIssue('BUG'), sonarIssue('BUG')], { paging: { pageIndex: 1, pageSize: 2, total: 5 } }) }) && throwsInput({ sonar: sonarRaw([], { total: 3 }) }), 'AC1.20: paging.total hoặc total lớn hơn số issues → InputError (report chưa đủ trang)');
+    ok(gate({ sonar: sonarRaw([sonarIssue('BUG')], { paging: { total: 1 } }) }, { now: NOW }).findings.length === 0, 'AC1.20: total bằng số issues → hợp lệ');
+
+    // AC1.21: Trivy luôn kèm warning về --scanners
+    ok(gate({ trivy: EMPTY.trivy }, { now: NOW }).warnings.some((w) => /Trivy/.test(w) && /scanners/.test(w)) && !gate({ coverity: coverity([]) }, { now: NOW }).warnings.some((w) => /Trivy/.test(w)), 'AC1.21: có --trivy thì luôn có warning không xác minh được --scanners secret; không có --trivy thì không');
 
     // AC5.2: corpus routing của hai skill có ít nhất 4 + 2 positive (số đo xếp hạng do scripts/routing-score.mjs kiểm trong npm test)
     for (const id of ['engineering-quality-gate', 'ops-deploy-release']) {
