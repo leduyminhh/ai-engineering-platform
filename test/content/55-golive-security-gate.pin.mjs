@@ -3,7 +3,7 @@
 import { spawnSync } from 'node:child_process';
 
 export default async function run({ ok, ctx }) {
-  const { fs, path, os, pathToFileURL, PLUGINS_DIR } = ctx;
+  const { fs, path, os, pathToFileURL, PLUGINS_DIR, REPO_ROOT } = ctx;
   const skillDir = path.join(PLUGINS_DIR, 'engineering', 'skills', 'engineering-quality-gate');
   const scriptPath = path.join(skillDir, 'scripts', 'go-live-gate.mjs');
   const roots = [];
@@ -577,6 +577,20 @@ export default async function run({ ok, ctx }) {
     const digestStatuses = ['đạt', 'không đạt', 'chưa đo'];
     ok(digestStatuses.every((s) => digestCheck.includes(`\`${s}\``)) && digestCheck.includes('NO-GO'),
       'AC3.2: digest-check.md có ba trạng thái đạt / không đạt / chưa đo và NO-GO');
+
+    // ---- AC4.1: workflow-security-review nhận report pentest (gate Bước 9 giữ nguyên) ----
+    const wfMd = fs.readFileSync(path.join(REPO_ROOT, 'workflows', 'security-review', 'WORKFLOW.md'), 'utf8').replace(/\r\n/g, '\n');
+    const flatWf = (t) => t.replace(/\s+/g, ' ').trim();
+    const wfOptIn = flatWf((wfMd.split('- **Đầu vào tuỳ chọn:**')[1] || '').split(/\n- \*\*|\n## /)[0]);
+    ok(['pentest', 'Coverity', 'ZAP', 'Nessus'].every((s) => wfOptIn.includes(s)), 'AC4.1: Đầu vào tuỳ chọn nêu pentest, Coverity, ZAP, Nessus');
+    const wfSteps = wfMd.split(/^### Bước /m).slice(1);
+    ok(wfSteps.length === 10, 'AC4.1: WORKFLOW.md vẫn 10 mục ### Bước');
+    const wfField = (body, name) => flatWf((body.split(`- **${name}:**`)[1] || '').split(/\n- \*\*/)[0]);
+    const wfAct9 = wfField(wfSteps[8], 'Hành động');
+    ok(wfAct9.includes('retest pentest') && wfAct9.includes('Critical/High/Medium') && wfAct9.includes('engineering-quality-gate') && wfAct9.includes('100%'),
+      'AC4.1: Bước 9 có dòng đối chiếu retest pentest (Critical/High/Medium), tham chiếu engineering-quality-gate');
+    ok(wfField(wfSteps[8], 'Gate') === 'finding đã sửa không còn; 0 finding `blocker` (từ auditor và từ reviewer) hoặc blocker được chấp nhận rõ ràng.',
+      'AC4.1: gate Bước 9 không đổi');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
