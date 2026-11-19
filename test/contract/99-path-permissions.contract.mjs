@@ -47,11 +47,11 @@ export default async function run({ ok, ctx }) {
   {
     const w = deny('write', [gT, gO, gD], 'ghi vào thư mục');
     ok(rootLine(w).startsWith('Được ghi:') && rootLine(w).includes(gT.path) && rootLine(w).includes(gO.path) && !rootLine(w).includes(gD.path), 'AC2.1: write chỉ liệt kê root có quyền write');
-    ok(/^Chế độ full chỉ cho phép ghi vào thư mục có quyền write;/.test(w) && /fullPaths/.test(w) && /fullRoots/.test(w) && w.includes('"write"'), 'AC2.1: câu deny vẫn nêu quyền thiếu, fullPaths và fullRoots');
+    ok(/^Chế độ confined chỉ cho phép ghi vào thư mục có quyền write;/.test(w) && /fullPaths/.test(w) && /fullRoots/.test(w) && w.includes('"write"'), 'AC2.1: câu deny vẫn nêu quyền thiếu, fullPaths và fullRoots');
     const d = deny('delete', [gT, gO, gD], 'lệnh này ở thư mục');
     ok(rootLine(d).startsWith('Được xoá:') && rootLine(d).includes(gT.path) && !rootLine(d).includes(gO.path) && !rootLine(d).includes(gD.path), 'AC2.1: delete chỉ liệt kê root có quyền delete');
     ok(d.split('\n').length === 3 && d.split('\n').at(-1).includes('"delete"'), 'AC2.1: thứ tự câu quyền → dòng root → câu xin thêm quyền');
-    ok(deny('write', [], 'ghi vào thư mục') === 'Chế độ full chỉ cho phép ghi vào thư mục có quyền write; đường dẫn chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.',
+    ok(deny('write', [], 'ghi vào thư mục') === 'Chế độ confined chỉ cho phép ghi vào thư mục có quyền write; đường dẫn chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.',
       'AC1.4: không root nào có quyền thì không có dòng root, câu giữ nguyên một dòng');
     ok(rootLine(deny('write', [gD, G('/aip-dt-g', ALL, true)], 'x')) === '' && rootLine(deny('read', [gT], 'x')) === '', 'AC1.4: root chỉ-đọc, root glob và need read không sinh dòng root');
     const many = Array.from({ length: 8 }, (_, i) => G(`/aip-dt-r${i}`, ALL));
@@ -406,7 +406,7 @@ export default async function run({ ok, ctx }) {
     const dc = bd('git commit -m "tiếng Việt"', { cfg: { mode: 'ask' } });
     ok(bd(`rm ${CT}`)?.reason === CLAUDE_TMP_BLOCKED_TEXT && dc?.decision === 'deny' && !/Được (ghi|xoá):/.test(dc.reason) && !/Được (ghi|xoá):/.test(bd('rm $X/f')?.reason ?? ''),
       'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, DENY_COMMIT và ask không có dòng root');
-    ok(['guard-bash.mjs', 'guard-files.mjs'].every((f) => !fs.readFileSync(path.join(CORE_DIR, 'hooks', 'scripts', f), 'utf8').includes('Chế độ full chỉ cho phép')),
+    ok(['guard-bash.mjs', 'guard-files.mjs'].every((f) => !fs.readFileSync(path.join(CORE_DIR, 'hooks', 'scripts', f), 'utf8').includes('Chế độ confined chỉ cho phép')),
       'AC2.1: câu deny ngoài root chỉ còn dựng ở gate-config (guard-bash và guard-files gọi denyOutsideText)');
 
     // hook-ps-write-flags: cờ có giá trị đứng trước đường dẫn của Set-Content/Out-File/Add-Content không được làm mất đích thật.

@@ -68,10 +68,11 @@ export default async function run({ ok, ctx }) {
 
     // Nháy tách tên file hoặc tên lệnh vẫn là ghi cấu hình; cờ chèn giữa aip và mode vẫn là đổi mode. Đối chứng guarded: ask.
     const evasions = ['echo x > .claude/aip-"gate".json', "echo x > .claude/aip-g''ate.json", 'echo x > .claude/sett"ings".json', 'tee .claude/sett"ings".json', 'aip mo"de" open',
-      'aip -y mode open', 'aip --provider claude mode open', 'aip mode -y open', 'ai-engineering-platform --no-color mode guarded'];
+      'aip -y mode open', 'aip --provider claude mode open', 'aip mode -y open', 'ai-engineering-platform --no-color mode guarded',
+      'aip --skill a --skill b --skill c --skill d mode open', 'aip --plugin a --plugin b --plugin c --plugin d mode open'];
     rows(evasions.map((c) => [c, 'deny', 'AC2.11']), { cfg: OPEN });
     rows(evasions.map((c) => [c, 'ask', 'AC2.11']), { cfg: GUARDED });
-    rows([['aip -y mode status', null, 'AC2.11'], ['aip mode --help', null, 'AC2.11']], { cfg: OPEN });
+    rows([['aip -y mode status', null, 'AC2.11'], ['aip mode --help', null, 'AC2.11'], ['aip --skill a mode', null, 'AC2.11'], ['aip status mode', null, 'AC2.11']], { cfg: OPEN });
 
     // AC2.9: đọc cấu hình ném lỗi thì không tự mở cổng: kết quả bằng guarded, không ném ra ngoài decide.
     const reader = { reader: () => { throw new Error('boom'); } };
@@ -164,13 +165,15 @@ export default async function run({ ok, ctx }) {
     // AC3.3/AC3.4: confined không còn ask ở guard-files.
     const readD = u(path.join(tb, 'readonly'));
     const confinedCfg = { mode: 'confined', fullPaths: [{ path: readD, allow: ['read'] }] };
-    const confinedRows = [['Read ngoài root', R(`${OUT}/x`)], ['Read $HOME', R('$HOME/x')], ['Grep ngoài root', G(OUT, undefined)], ['Read .env ở thư mục chỉ-đọc', R(`${readD}/.env`)],
+    const confinedRows = [['Read ngoài root', R(`${OUT}/x`)], ['Read $HOME', R('$HOME/x')], ['Grep ngoài root', G(OUT, undefined)], ['Read .env ở thư mục chỉ-đọc', R(`${readD}/.env`)], ['Grep glob *.pem ở thư mục chỉ-đọc', G(readD, '*.pem')],
       ['Write aip-gate.json', W(`${P}/.claude/aip-gate.json`)], ['Edit settings.json', W(`${P}/.claude/settings.json`, 'Edit')]];
     for (const [n, i] of confinedRows) {
       const d = fsafe(i, { cfg: confinedCfg });
       ok(d?.decision === 'deny' && d.reason.includes('Mở:'), `AC3.3: confined ${n} → deny nêu "Mở:" (${d?.decision})`);
     }
-    frows([['Write aip-gate.json', W(`${P}/.claude/aip-gate.json`), 'ask', 'AC3.3'], ['Edit settings.json', W(`${P}/.claude/settings.json`, 'Edit'), 'ask', 'AC3.3']], { cfg: GUARDED });
+    frows([['Grep glob *.pem ở thư mục chỉ-đọc', G(readD, '*.pem'), 'deny', 'AC3.3'], ['Write aip-gate.json', W(`${P}/.claude/aip-gate.json`), 'ask', 'AC3.3'], ['Edit settings.json', W(`${P}/.claude/settings.json`, 'Edit'), 'ask', 'AC3.3']], { cfg: GUARDED });
+    frows([['Grep glob *.pem trong root đủ quyền', G(P, '*.pem'), null, 'AC3.3']], { cfg: confinedCfg });
+    frows([['Grep glob *.pem ở thư mục chỉ-đọc', G(readD, '*.pem'), null, 'AC3.3']], { cfg: { mode: 'open' } });
     for (const [n, i] of [...openFree, ...cfgTargets, ...confinedRows]) ok(fk(i, { cfg: confinedCfg }) !== 'ask', `AC3.4: confined không bao giờ ask: ${n}`);
 
     // AC2.12 (K14): mức chặt hơn giữa cấu hình theo cwd và theo thư mục file đích; repo lồng P/tmp có thể là open.
