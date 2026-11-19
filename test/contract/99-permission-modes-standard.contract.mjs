@@ -212,7 +212,8 @@ export default async function run({ ok, ctx }) {
     // Đường UNC không bị statSync (mở SMB trong hook trước hộp xác nhận); Grep thư mục cục bộ ở phiên bypass vẫn hỏi isDirectory (đối chứng), phiên không bypass thì không.
     const statCalls = (extra, p) => { const seen = []; fsafe(G(p, undefined), { cfg: OPEN, extra, opts: { isDirectory: (x) => { seen.push(x); return true; } } }); return seen.length; };
     ok(statCalls({ permission_mode: 'default' }, '//attacker/share/x') === 0, 'AC2.12: phiên không bypass + Grep path UNC → không statSync');
-    ok(statCalls({}, '//attacker/share/x') === 0, 'AC2.12: phiên bypass + Grep path UNC → không statSync');
+    // Chỉ Windows: trên POSIX path.resolve('//h/s') thành '/h/s' (đường dẫn thường), nên không phải UNC.
+    ok(process.platform !== 'win32' || statCalls({}, '//attacker/share/x') === 0, 'AC2.12: phiên bypass + Grep path UNC → không statSync (Windows)');
     ok(statCalls({ permission_mode: 'default' }, OUT) === 0 && statCalls({}, OUT) === 1, 'AC2.12: Grep path cục bộ: bypass hỏi isDirectory một lần, không bypass thì không');
 
     // Gate hỏng hoặc không xác định được repo không phải "không có cấu hình": vẫn guarded, không kế thừa open của cwd.
