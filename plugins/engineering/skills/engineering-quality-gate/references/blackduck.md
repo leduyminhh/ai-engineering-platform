@@ -137,3 +137,5 @@ Script không phân biệt hoa thường. Giá trị khác bảng → exit 2.
 
 `--na blackduck=<bằng chứng>` chỉ khi bằng chứng cho thấy phạm vi không có BOM hoặc không có dependency quản lý
 bằng manifest. Bằng chứng ghi cụ thể (manifest đã kiểm, lệnh đã chạy).
+
+Không dùng `--na blackduck=...` khi đã có `--blackduck`: script trả exit 2 (`--na` cho nguồn đã có cờ riêng).

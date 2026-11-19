@@ -80,14 +80,16 @@ Sonar là nguồn bắt buộc của Critical/High và RCE (`SCAN_SOURCES` trong
 | Trường | Bắt buộc | Script dùng để |
 |---|---|---|
 | `issues[].type` | có, chuỗi | Chỉ `VULNERABILITY` vào Critical/High và RCE; `BUG`, `CODE_SMELL` và mọi giá trị khác bị bỏ qua |
-| `issues[].severity` | có, trừ khi có `impacts[]` SECURITY | Mức theo bảng dưới |
+| `issues[].severity` | có, với issue `VULNERABILITY` (trừ khi có `impacts[]` SECURITY) | Mức theo bảng dưới |
 | `issues[].impacts[]` | không | Chỉ mục có `softwareQuality` = `SECURITY` được xét |
-| `issues[].component` | có, chuỗi | Đường dẫn file là phần sau dấu `:` đầu tiên ([Unverified] dạng `<project-key>:<đường-dẫn>`) |
+| `issues[].component` | có, chuỗi, với issue `VULNERABILITY` | [Unverified] Đường dẫn file là phần sau dấu `:` đầu tiên, dạng `<project-key>:<đường-dẫn>` |
 | `issues[].line` | không | Thiếu thì khoá dùng dòng 0 |
 | `issues[].cwe` | không | Số (`78`) hoặc chuỗi (`CWE-78`) |
 | `issues[].tags` | không | Tag dạng `cwe-<n>` được tính là CWE; số thuần như năm thì không |
 | `issues[].resolution`, `issues[].issueStatus` | không | Gắn nhãn `suppress` (xem dưới) |
 | `issues[].message`, `issues[].rule` | không | Chỉ để xét nhãn "remote code execution" |
+
+Issue có `type` khác `VULNERABILITY` bị bỏ qua trước khi kiểm `severity`, `component`, `line`, `cwe`, `tags`; các trường đó không bị đòi với issue này.
 
 ### Mức độ
 
@@ -144,3 +146,5 @@ Giá trị khác bảng → exit 2. Script không phân biệt hoa thường và
 
 `--na sonar=<bằng chứng>` chỉ khi bằng chứng cho thấy phạm vi không có project Sonar. Bằng chứng ghi cụ thể
 (tên project đã kiểm hoặc lý do), không ghi chung chung.
+
+Không dùng `--na sonar=...` khi đã có `--sonar`: script trả exit 2 (`--na` cho nguồn đã có cờ riêng).
