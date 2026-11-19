@@ -96,6 +96,9 @@ export default async function run({ ok, ctx }) {
     ];
     ok(runs12.every((r) => !r.stdout.includes(SENT) && !r.stderr.includes(SENT)), 'AC1.12: sentinel không xuất hiện ở stdout/stderr (hợp lệ, JSON hỏng cả hai kiểu, thiếu trường, severity lạ)');
     ok(runs12.slice(1).every((r) => r.status === 2), 'AC1.12: bốn ca lỗi đều exit 2');
+    // JSON.parse của Node chỉ chép khoảng 10 ký tự đầu của input vào message, nên kiểm theo tiền tố thay vì cả sentinel.
+    const prefix = SENT.slice(0, 8);
+    ok(runs12.every((r) => !r.stderr.includes(prefix) && !r.stdout.includes(prefix)), 'AC1.12: tiền tố sentinel (đoạn JSON.parse có thể chép vào message) cũng không xuất hiện');
     let weirdErr = null;
     try { gate({ trivy: fs.readFileSync(f12.weird, 'utf8') }, { now: NOW }); } catch (e) { weirdErr = e; }
     ok(weirdErr instanceof InputError && !String(weirdErr.message).includes(SENT), 'AC1.12: InputError của severity lạ không chứa giá trị trong report');
