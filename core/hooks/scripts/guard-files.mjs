@@ -4,7 +4,7 @@ import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { envFilesAllowed, fullEffective, readGate, classifyPath, grantsOf, normalizeMsysPath, showArg, isClaudeTmpRoot, denyOutsideText, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
+import { envFilesAllowed, fullEffective, openEffective, readGate, classifyPath, grantsOf, normalizeMsysPath, showArg, isClaudeTmpRoot, denyOutsideText, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const SECRET = /(^|\/)(\.env(rc)?(\.(?!(example|sample|template)$)[\w.-]+)?|[^/]+\.env|[^/]+\.(pem|jks|keystore|p12|pfx|key|ppk|p8)|id_(rsa|dsa|ecdsa|ed25519)(_sk)?(\.(?!pub$)[\w.-]+)?|credentials(\.(json|ya?ml))?)$/i;
@@ -72,62 +72,115 @@ function globNamesSecret(glob, probes = SECRET_PROBES) {
     .some((g) => SECRET_WORDS.test(g.replace(/[*?]/g, '')) && probes.some((p) => globToRegExp(g, { ignoreCase: true }).test(p)));
 }
 
-// Cấu hình của chính các hook: agent bị tiêm lệnh không được tự đặt mode:full, fullKeep:[] hay allowEnvFiles:true nên luôn hỏi, kể cả khi full hiệu lực.
+// Cấu hình của chính các hook: agent bị tiêm lệnh không được tự đặt mode, fullKeep:[] hay allowEnvFiles:true nên luôn bị chặn hoặc hỏi, kể cả khi confined/open hiệu lực.
 const GUARD_CONFIG = /(^|\/)\.claude\/(aip-gate\.json|settings(\.[\w-]+)?\.json)$/i;
+// open thêm file phạm vi ghi của plugin: writeScope đọc từ đó nên để agent ghi được thì cổng chỉ còn danh nghĩa (K13).
+const SCOPE_LOCK = /(^|\/)hooks\/scope-lock\.json$/i;
 const guardConfigAsk = (file) => ({ decision: 'ask', reason: `Ghi vào file cấu hình quyền \`${showArg(path.basename(file))}\`.` });
+// Câu deny cho agent (D15): nêu việc bị chặn và cách mở.
+const guardConfigDeny = (file) => ({ decision: 'deny', reason: `Ghi vào file cấu hình quyền \`${showArg(path.basename(file))}\` bị chặn với agent. Mở: người dùng tự sửa file hoặc tự chạy \`aip mode\`.` });
+const DENY_INTERNAL = { decision: 'deny', reason: 'Lỗi nội bộ khi kiểm file nên bị từ chối. Mở: thử lại với đường dẫn khác hoặc người dùng chạy `aip mode open`.' };
 
 const SECRET_DENY = { decision: 'deny', reason: 'File bí mật (.env/khoá/credentials) — nguyên tắc nền không đọc/sửa; nhờ người dùng thao tác trực tiếp nếu thật sự cần.' };
 
-// H6: chỉ khi full hiệu lực. Kiểm permission_mode trước để phiên thường không tốn lệnh git đọc cấu hình.
-function confine(input, file, cwd, { repoRoot, config, tracked, reader = readGate, secret = false }) {
-  if (input?.permission_mode !== 'bypassPermissions') return null;
+// H6: chỉ gọi khi confined hiệu lực (hoặc cwd confined). Không bao giờ hỏi: ngoài rào là deny kèm cách mở (D15).
+function confine(input, file, cwd, { gate, secret = false }) {
   const tool = input.tool_name;
   const write = WRITE_TOOLS.has(tool);
   if (!write && tool !== 'Read' && tool !== 'Grep') return null;
-  const gate = config === undefined ? reader(cwd) : { config, roots: repoRoot ? [path.resolve(repoRoot)] : (reader(cwd)?.roots ?? []) };
-  if (!fullEffective(gate, input, { tracked })) return null;
   // Gốc <tmpdir>/claude thắng mọi grant (kể cả fullPaths): Grep/Read vào đó lộ nội dung của phiên khác, giống guard-bash.
   if (isClaudeTmpRoot(normalizeMsysPath(String(file)), cwd)) return { decision: 'deny', reason: CLAUDE_TMP_BLOCKED_TEXT };
   const grants = grantsOf(gate, input);
   const where = classifyPath(String(file), cwd, grants, true, write ? 'write' : 'read');
-  // File bí mật chỉ được miễn hỏi khi đường dẫn có đủ ba quyền hiệu lực; thiếu thì hỏi người dùng.
+  // File bí mật chỉ được miễn khi đường dẫn có đủ ba quyền hiệu lực; thiếu thì từ chối.
   if (where === 'inside' && !(secret && ['read', 'write', 'delete'].some((a) => classifyPath(String(file), cwd, grants, true, a) !== 'inside'))) return null;
-  // deny do agent đọc nên giữ gợi ý hành động (fullPaths/fullRoots); ask hiện cho người dùng nên chỉ nêu việc và đường dẫn.
   if (write && where === 'outside') {
     // Dòng liệt kê root chỉ là gợi ý cho agent: lỗi khi dựng nó không được làm mất deny.
     let reason;
     try { reason = denyOutsideText('write', grants, 'ghi vào thư mục'); } catch { reason = denyOutsideText('write', [], 'ghi vào thư mục'); }
     return { decision: 'deny', reason };
   }
+  const shown = showArg(file);
   const reason = where === 'unknown'
-    ? `${write ? 'Ghi' : 'Đọc'} đường dẫn chưa rõ \`${showArg(file)}\`.`
+    ? `${write ? 'Ghi' : 'Đọc'} đường dẫn chưa rõ \`${shown}\`. Mở: dùng đường dẫn tuyệt đối trong root, hoặc người dùng chạy \`aip mode open\`.`
     : where === 'inside'
-      ? `${write ? 'Ghi' : 'Đọc'} file bí mật \`${showArg(file)}\` ở thư mục chưa đủ quyền đọc, ghi, xoá.`
-      : `Đọc file ngoài thư mục project \`${showArg(file)}\`.`;
-  return { decision: 'ask', reason };
+      ? `${write ? 'Ghi' : 'Đọc'} file bí mật \`${shown}\` ở thư mục chưa đủ quyền đọc, ghi, xoá. Mở: cấp đủ quyền qua "fullRoots" hoặc "fullPaths" trong .claude/aip-gate.json, hoặc người dùng chạy \`aip mode open\`.`
+      : `Đọc file ngoài thư mục project \`${shown}\`. Mở: thêm vào "fullReadRoots" hoặc "fullPaths" (allow "read") trong .claude/aip-gate.json, hoặc người dùng chạy \`aip mode open\`.`;
+  return { decision: 'deny', reason };
 }
 
-export function decide(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked, reader = readGate } = {}) {
+// guarded > confined > open về độ chặt (K14): open chỉ áp khi mọi nơi đều open, confined khi không nơi nào guarded.
+const RANK = { guarded: 2, confined: 1, open: 0 };
+const stricter = (a, b) => (RANK[a] >= RANK[b] ? a : b);
+
+export function decide(input, deps = {}) {
+  const ctx = { mode: 'guarded' };
+  try {
+    return decideInner(input, deps, ctx);
+  } catch (e) {
+    // Lỗi sau bước xác định mode không được tự mở cổng (K15): confined chặn, open chỉ chặn đích là file cấu hình, guarded fail-open như main().
+    if (ctx.mode === 'confined') return DENY_INTERNAL;
+    if (ctx.mode === 'open') return configTarget(input, deps) ? guardConfigDeny(configTarget(input, deps)) : null;
+    throw e;
+  }
+}
+
+// Đích ghi là file cấu hình quyền (hoặc scope-lock.json khi open): trả đường dẫn chuẩn hoá, ngược lại null; không bao giờ ném.
+function configTarget(input, deps) {
+  try {
+    if (!WRITE_TOOLS.has(input?.tool_name)) return null;
+    const ti = input.tool_input;
+    const file = ti?.file_path || ti?.notebook_path;
+    if (!file) return null;
+    const abs = path.resolve(path.resolve(input?.cwd || '.'), normalizeMsysPath(String(file))).replace(/\\/g, '/');
+    const clean = stripAliases(abs);
+    return GUARD_CONFIG.test(clean) || SCOPE_LOCK.test(clean) ? abs : null;
+  } catch { return null; }
+}
+
+function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked, reader = readGate } = {}, ctx) {
   const ti = input?.tool_input;
   const file = ti?.file_path || ti?.notebook_path || (input?.tool_name === 'Grep' ? ti?.path : undefined);
   const cwd = path.resolve(input?.cwd || '.');
-  // Cấu hình theo repo chứa file đích (như allowEnv), không theo cwd.
-  // Kiểm permission_mode trước để phiên thường không tốn lệnh git khi đọc cấu hình.
-  // Bypass kiểm trước readGate: phiên thường không tốn lệnh git nào.
-  const isFull = (dir) => input?.permission_mode === 'bypassPermissions' && fullEffective(config === undefined ? reader(dir) : { config }, input, { tracked });
-  if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob)
-    && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(path.resolve(cwd, String(ti.path || '.'))))
-    && !isFull(path.resolve(cwd, String(ti.path || '.')))) return SECRET_DENY;
+  // Bypass kiểm trước readGate: phiên thường không tốn lệnh git nào. Cấu hình đọc theo cả cwd lẫn thư mục file đích, lấy mức chặt hơn (K14);
+  // lỗi khi xác định mode ⇒ guarded, không bao giờ tự mở cổng.
+  const bypass = input?.permission_mode === 'bypassPermissions';
+  const gates = new Map();
+  const gateAt = (dir) => { if (!gates.has(dir)) gates.set(dir, reader(dir)); return gates.get(dir); };
+  const modeAt = (dir) => {
+    if (!bypass) return 'guarded';
+    try {
+      const g = config === undefined ? gateAt(dir) : { config };
+      return openEffective(g, input, { tracked }) ? 'open' : fullEffective(g, input, { tracked }) ? 'confined' : 'guarded';
+    } catch { return 'guarded'; }
+  };
+  const cwdMode = modeAt(cwd);
+  ctx.mode = cwdMode;
+  const eff = (dir) => stricter(cwdMode, modeAt(dir));
+  if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob)) {
+    const dir = path.resolve(cwd, String(ti.path || '.'));
+    if ((globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(dir)) && eff(dir) === 'guarded') return SECRET_DENY;
+  }
   if (!file) return null;
   const target = path.resolve(cwd, normalizeMsysPath(String(file)));
   // Chuẩn hoá về "/" để cùng một regex/glob chạy đúng trên Windows (dấu "\" và ký tự ổ đĩa).
   const abs = target.replace(/\\/g, '/');
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
-  if (isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target))) && !isFull(path.dirname(target))) return SECRET_DENY;
-  const confined = confine(input, file, cwd, { repoRoot, config, tracked, reader, secret: isSecretPath(abs, target) });
-  if (confined) return confined;
-  if (!WRITE_TOOLS.has(input.tool_name)) return null;
-  if (GUARD_CONFIG.test(stripAliases(abs))) return guardConfigAsk(abs);
+  const mode = eff(path.dirname(target));
+  ctx.mode = mode;
+  if (isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target))) && mode === 'guarded') return SECRET_DENY;
+  const write = WRITE_TOOLS.has(input.tool_name);
+  if (mode === 'open') {
+    const cfgFile = configTarget(input, { });
+    if (cfgFile) return guardConfigDeny(cfgFile);
+  } else if (mode === 'confined' || cwdMode === 'confined') {
+    // Rào root neo theo cwd kể cả khi file đích thuộc repo lồng guarded (K14).
+    const gate = config === undefined ? gateAt(cwd) : { config, roots: repoRoot ? [path.resolve(repoRoot)] : (gateAt(cwd)?.roots ?? []) };
+    const confined = confine(input, file, cwd, { gate, secret: isSecretPath(abs, target) });
+    if (confined) return confined;
+  }
+  if (!write) return null;
+  if (mode !== 'open' && GUARD_CONFIG.test(stripAliases(abs))) return mode === 'confined' ? guardConfigDeny(abs) : guardConfigAsk(abs);
   const agent = String(input.agent_type || '').split(':').pop();
   const table = scopes || loadScopes();
   const scope = agent && Object.hasOwn(table, agent) ? table[agent] : null;
