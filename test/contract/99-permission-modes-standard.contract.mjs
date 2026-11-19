@@ -287,6 +287,35 @@ export default async function run({ ok, ctx }) {
     const counting = () => { reads++; return { gate: { config: OPEN }, invalid: null }; };
     ok(mkind(SS, { pm: 'default', locate: counting }) === 'deny' && reads === 0, 'AC2.9: start_session thiếu model ở phiên không bypass → deny, không đọc cấu hình');
     ok(mkind(SS, { pm: BYPASS, locate: counting }) === null && reads === 1, 'AC2.5: phiên bypass + open đọc cấu hình đúng một lần → null');
+    // ── session-start báo mode (Task 6) ──
+    const ss = await load('session-start.mjs');
+    const gateOf = (mode, extra = {}) => ({ config: mode === undefined ? { ...extra } : { mode, ...extra }, file: `${P}/.claude/aip-gate.json` });
+    const startAs = (source, g, over = {}) => ss.decide({ cwd: tb, source }, { loadGate: () => g, gateTracked: () => false, loadConfig: () => g?.config ?? null, ...over });
+    const head = (r) => (r?.additionalContext ?? '').split('\n')[0];
+    const MODE_RE = /^aip: mode hiệu lực = (\w+)/;
+    for (const source of ['startup', 'clear', 'compact']) {
+      for (const [mode, want] of [['confined', 'confined'], ['full', 'confined'], ['open', 'open'], ['guarded', null], ['ask', null], [undefined, null], ['bypass', null], ['constructor', null]]) {
+        const line = head(startAs(source, gateOf(mode)));
+        const got = MODE_RE.exec(line)?.[1] ?? null;
+        ok(got === want && (!want || line.includes('.claude/aip-gate.json')), `AC6.1: ${source} mode=${JSON.stringify(mode)} → ${want ? `dòng "mode hiệu lực = ${want}" kèm nguồn` : 'không có dòng báo mode'}`);
+      }
+    }
+    for (const source of ['resume', 'fork']) {
+      const r = startAs(source, gateOf('open'), { loadConfig: () => null });
+      ok(!(r?.additionalContext ?? '').includes('mode hiệu lực'), `AC6.1: ${source} không báo mode`);
+    }
+    ok(!MODE_RE.test(head(startAs('startup', gateOf('open'), { gateTracked: () => true }))), 'AC6.1: file bị git theo dõi → không báo mode');
+    ok(!MODE_RE.test(head(startAs('startup', gateOf('open'), { gateTracked: () => null }))), 'AC6.1: không xác định được git theo dõi → không báo mode (hướng an toàn)');
+
+    // AC6.2: dòng báo mode không phụ thuộc bootstrapInject, nằm trong ngân sách MAX_TOTAL, lỗi đọc cấu hình thì hook không chặn.
+    const noBoot = startAs('startup', gateOf('open', { bootstrapInject: false }));
+    ok(MODE_RE.test(head(noBoot)) && !noBoot.additionalContext.includes('using-aip'), 'AC6.2: bootstrapInject false vẫn có dòng báo mode, không có bootstrap');
+    const handoffFile = `${tb}/handoff.md`;
+    fs.writeFileSync(handoffFile, `# Handoff\n${'x'.repeat(30000)}\n`);
+    const crowded = startAs('startup', gateOf('confined', { handoffPath: 'handoff.md' }));
+    ok(MODE_RE.test(head(crowded)) && crowded.additionalContext.length <= 9000 && crowded.additionalContext.includes('Handoff của phiên trước'), `AC6.2: handoff dài + dòng báo mode vẫn tổng ≤ 9000 (${crowded?.additionalContext?.length})`);
+    const broken = startAs('startup', gateOf('open'), { loadGate: () => { throw new Error('boom'); } });
+    ok(!MODE_RE.test(head(broken)), 'AC6.2: loadGate ném lỗi → không có dòng báo mode, hook không ném');
   } finally {
     fs.rmSync(tb, { recursive: true, force: true });
   }
