@@ -1008,15 +1008,15 @@ function pipedIndirectConfigWrite(list) {
 const MODE_NAMES = new Set(['guarded', 'confined', 'open', 'ask', 'full']);
 const AIP_BIN = /^(?:.*[\\/])?(?:aip|ai-engineering-platform)(?:\.(?:cmd|ps1|exe))?$/i;
 const AIP_CLI = /(?:^|[\\/])cli[\\/]index\.mjs$/i;
-// Cờ chèn giữa (`aip -y mode open`, `aip mode -y open`) vẫn chạy được ở CLI nên không được làm lọt: tìm "mode" trong vài token sau binary, tên mode là token không phải cờ đầu tiên sau nó.
-const MODE_LOOKAHEAD = 8;
+// Cờ chèn giữa (`aip -y mode open`, `aip --skill a --skill b mode open`, `aip mode -y open`) vẫn chạy được ở CLI nên không được làm lọt: xét mọi token "mode" sau binary trong cùng đoạn lệnh, tên mode là token không phải cờ đầu tiên sau nó.
 function isModeChange(t) {
   for (let i = 0; i < t.length; i++) {
     if (!AIP_BIN.test(t[i]) && !AIP_CLI.test(t[i])) continue;
-    const j = t.findIndex((x, k) => k > i && k <= i + MODE_LOOKAHEAD && x === 'mode');
-    if (j < 0) continue;
-    const name = t.slice(j + 1).find((x) => !x.startsWith('-'));
-    if (name !== undefined && MODE_NAMES.has(name.replace(/^['"]|['"]$/g, '').toLowerCase())) return true;
+    for (let j = i + 1; j < t.length; j++) {
+      if (t[j] !== 'mode') continue;
+      const name = t.slice(j + 1).find((x) => !x.startsWith('-'));
+      if (name !== undefined && MODE_NAMES.has(name.replace(/^['"]|['"]$/g, '').toLowerCase())) return true;
+    }
   }
   return false;
 }

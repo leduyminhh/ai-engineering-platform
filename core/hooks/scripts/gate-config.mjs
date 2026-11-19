@@ -125,7 +125,7 @@ export function isClaudeTmpRoot(p, dir) {
   return claudeTmpRoots().some((r) => (process.platform === 'win32' ? a.toLowerCase() === r.toLowerCase() : a === r));
 }
 
-export const CLAUDE_TMP_BLOCKED_TEXT = 'Thư mục tạm gốc của Claude luôn bị chặn ở chế độ full, kể cả khi cấu hình cấp quyền; chỉ làm việc với thư mục con của nó.';
+export const CLAUDE_TMP_BLOCKED_TEXT = 'Thư mục tạm gốc của Claude luôn bị chặn ở chế độ confined, kể cả khi cấu hình cấp quyền; chỉ làm việc với thư mục con của nó.';
 
 // Mục sai cú pháp bị bỏ hoặc mất quyền (D4): sai chính tả chỉ làm ít quyền đi, không bao giờ nhiều hơn. `path` không có wildcard.
 export function fullPaths(config) {
@@ -163,7 +163,7 @@ const MAX_ROOT_LIST = 6;
 // Câu deny của full khi đường dẫn nằm ngoài root: nêu quyền thiếu, liệt kê root có quyền đó (agent biết được làm ở đâu, như list_roots) rồi cách xin thêm.
 // Chỉ write/delete có dòng root: thiếu read là ask cho người dùng, không phải deny cho agent; root glob chỉ-đọc không bao giờ có quyền ghi.
 export function denyOutsideText(need, grants, subject) {
-  const head = `Chế độ full chỉ cho phép ${subject} có quyền ${need}; đường dẫn chưa có.`;
+  const head = `Chế độ confined chỉ cho phép ${subject} có quyền ${need}; đường dẫn chưa có.`;
   const tail = `Cần mở rộng → thêm vào "fullPaths" (allow có "${need}") hoặc "fullRoots" trong .claude/aip-gate.json.`;
   const verb = ROOT_VERB[need];
   const seen = new Set();

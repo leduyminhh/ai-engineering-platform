@@ -166,12 +166,19 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
       return openEffective(g, input, { tracked }) ? 'open' : fullEffective(g, input, { tracked }) ? 'confined' : 'guarded';
     } catch { return 'guarded'; }
   };
+  const confineGate = () => config === undefined ? gateAt(cwd) : { config, roots: repoRoot ? [path.resolve(repoRoot)] : (gateAt(cwd)?.roots ?? []) };
   const cwdMode = modeAt(cwd) ?? 'guarded';
   ctx.mode = cwdMode;
   const eff = (dir) => stricter(cwdMode, modeAt(dir) ?? cwdMode);
   if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob)) {
     const dir = path.resolve(cwd, String(ti.path || '.'));
-    if (eff(dir) === 'guarded' && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(dir))) return SECRET_DENY;
+    const m = eff(dir);
+    if (m === 'guarded' && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(dir))) return SECRET_DENY;
+    // confined: glob bí mật chỉ được miễn ở thư mục có đủ ba quyền, như file bí mật cụ thể.
+    if (m === 'confined') {
+      const hit = confine(input, dir, cwd, { gate: confineGate(), secret: true });
+      if (hit) return hit;
+    }
   }
   if (!file) return null;
   const target = path.resolve(cwd, normalizeMsysPath(String(file)));
@@ -188,8 +195,7 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
     if (cfgFile) return guardConfigDeny(cfgFile);
   } else if (mode === 'confined' || cwdMode === 'confined') {
     // Rào root neo theo cwd kể cả khi file đích thuộc repo lồng guarded (K14).
-    const gate = config === undefined ? gateAt(cwd) : { config, roots: repoRoot ? [path.resolve(repoRoot)] : (gateAt(cwd)?.roots ?? []) };
-    const confined = confine(input, file, cwd, { gate, secret: isSecretPath(abs, target) });
+    const confined = confine(input, file, cwd, { gate: confineGate(), secret: isSecretPath(abs, target) });
     if (confined) return confined;
   }
   if (!write) return null;
