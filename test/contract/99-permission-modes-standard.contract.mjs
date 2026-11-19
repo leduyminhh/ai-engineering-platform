@@ -225,6 +225,63 @@ export default async function run({ ok, ctx }) {
     ok(eb?.decision === 'deny' && eb.reason.includes('Mở:'), `AC3.6: confined, lỗi nội bộ → deny nêu "Mở:" (${eb?.decision})`);
     ok(fsafe(W(`${P}/src/a.js`, 'Edit'), { cfg: GUARDED, ...sb })?.decision?.startsWith('throw'), 'AC3.6: đối chứng guarded, cùng seam ném → ném như hôm nay (main() fail-open)');
     ok(fk(W(`${P}/.claude/aip-gate.json`, 'Edit'), { cfg: OPEN, ...sb }) === 'deny' && fk(W(`${P}/src/a.js`, 'Edit'), { cfg: OPEN, ...sb }) === null, 'K15: open, lỗi sau bước kiểm: chỉ deny khi đích là file cấu hình, còn lại null');
+    // ── guard-mcp (Task 5) ──
+    const mcp = await load('guard-mcp.mjs');
+    const SS = 'mcp__ccd_session__start_session';
+    const mk = (tool, opt = {}) => { const { cfg, tracked, locate } = opt; const pm = 'pm' in opt ? opt.pm : BYPASS; try { return mcp.decide({ tool_name: tool, cwd: '.', permission_mode: pm }, { config: cfg, tracked, locate }); } catch (e) { return { decision: `throw ${e.message}` }; } };
+    const mkind = (tool, opt) => mk(tool, opt)?.decision ?? null;
+
+    // AC2.5/AC2.6: open bỏ deny start_session thiếu model và mcpAllow; mcpDeny vẫn giữ. Đối chứng guarded.
+    ok(mkind(SS, { cfg: OPEN }) === null && mkind('mcp__b__t', { cfg: { mode: 'open', mcpAllow: ['a'] } }) === null, 'AC2.5: open → start_session thiếu model và mcpAllow chặn server ngoài danh sách đều null');
+    ok(mkind(SS, { cfg: GUARDED }) === 'deny' && mkind('mcp__b__t', { cfg: { mode: 'guarded', mcpAllow: ['a'] } }) === 'deny', 'AC2.5: đối chứng guarded → deny cả hai');
+    ok(mkind('mcp__b__t', { cfg: { mode: 'open', mcpDeny: ['b'] } }) === 'deny' && mkind('mcp__b__t', { cfg: { mode: 'open', mcpDeny: ['b'], mcpAllow: ['b'] } }) === 'deny'
+      && mkind('mcp__c__t', { cfg: { mode: 'open', mcpDeny: ['b'] } }) === null, 'AC2.6: open giữ mcpDeny (kể cả khi mcpAllow có server đó); server khác → null');
+
+    // AC2.10: file cấu hình hỏng → ask ở mọi mode, vì không có config dùng được (open/confined không hiệu lực).
+    for (const pm of [BYPASS, 'default']) ok(mkind('mcp__b__t', { pm, locate: () => ({ gate: null, invalid: '/x/.claude/aip-gate.json' }) }) === 'ask', `AC2.10: gate hỏng → ask (${pm})`);
+
+    // AC2.9 (guard-mcp): đọc cấu hình ném lỗi thì không tự mở cổng: start_session thiếu model vẫn deny.
+    ok(mkind(SS, { locate: () => { throw new Error('boom'); } }) === 'deny', 'AC2.9: locate ném ⇒ như guarded: start_session thiếu model → deny');
+
+    // AC3.6 (guard-mcp): lỗi sau bước xác định mode: confined ⇒ deny, open ⇒ null, guarded ném như hôm nay.
+    const boomCfg = (mode) => ({ mode, get mcpDeny() { throw new Error('boom'); } });
+    const cb = mk('mcp__b__t', { cfg: boomCfg('confined') });
+    ok(cb?.decision === 'deny' && cb.reason.includes('aip mode open'), `AC3.6: confined, lỗi nội bộ → deny nêu aip mode open (${cb?.decision})`);
+    ok(mkind('mcp__b__t', { cfg: boomCfg('open') }) === null, 'AC3.6/K15: open, lỗi nội bộ → null (không bao giờ hỏi)');
+    ok(mkind('mcp__b__t', { cfg: boomCfg('guarded') }).startsWith('throw'), 'AC3.6: đối chứng guarded, cùng seam ném → ném như hôm nay (main() fail-open)');
+
+    // ── bảng chéo ba hook: bí danh (AC1.2) và thiếu một điều kiện (AC2.7) ──
+    const repBash = ['git push origin master', 'git commit -m "dấu"', 'cat .env', `rm -rf ${OUT}/x`];
+    const repFiles = [R(`${P}/.env`), W(`${P}/.claude/aip-gate.json`), R(`${OUT}/x`)];
+    const mcpAllow = ['a'];
+    const everywhere = (base, pm) => JSON.stringify([
+      ...repBash.map((c) => safe(c, { cfg: base, extra: { permission_mode: pm } })),
+      ...repFiles.map((i) => fsafe(i, { cfg: base, extra: { permission_mode: pm } })),
+      mk('mcp__b__t', { cfg: { ...base, mcpAllow }, pm }), mk(SS, { cfg: base, pm }),
+    ]);
+    const everywhereTracked = (base) => {
+      const found = { gate: { config: { ...base, mcpAllow }, file: `${P}/.claude/aip-gate.json` }, invalid: null };
+      return JSON.stringify([
+        ...repBash.map((c) => safe(c, { cfg: undefined, opts: trackedGate(base) })),
+        ...repFiles.map((i) => fsafe(i, { cfg: undefined, opts: trackedGate(base) })),
+        mk('mcp__b__t', { locate: () => found, tracked: () => true }),
+        mk(SS, { locate: () => ({ ...found, gate: { ...found.gate, config: base } }), tracked: () => true }),
+      ]);
+    };
+    const guardedAll = (pm) => everywhere(GUARDED, pm);
+    for (const pm of [BYPASS, 'default']) {
+      for (const base of [{}, { mode: 'ask' }, { mode: 'bypass' }]) ok(everywhere(base, pm) === guardedAll(pm), `AC1.2: ${JSON.stringify(base)} ≡ guarded ở ba hook (${pm})`);
+      ok(everywhere({ mode: 'full' }, pm) === everywhere({ mode: 'confined' }, pm), `AC1.2: full ≡ confined ở ba hook (${pm})`);
+    }
+    ok(everywhere({ mode: 'confined' }, BYPASS) !== guardedAll(BYPASS), 'AC1.2: confined khác guarded ở phiên bypass (bảng không rỗng nghĩa)');
+    for (const pm of [undefined, 'default', 'acceptEdits', 'auto', 'dontAsk']) {
+      ok(everywhere({ mode: 'open' }, pm) === guardedAll(pm), `AC2.7: open nhưng phiên không bypass (${pm ?? 'thiếu'}) ≡ guarded ở ba hook`);
+      ok(everywhere({ mode: 'confined' }, pm) === guardedAll(pm), `AC3.5: confined nhưng phiên không bypass (${pm ?? 'thiếu'}) ≡ guarded ở ba hook`);
+    }
+    for (const v of ['ask', 'guarded', 'Open', 'OPEN', 'bypass', 1, null, ['open'], ' open']) ok(everywhere({ mode: v }, BYPASS) === guardedAll(BYPASS), `AC2.7: mode ${JSON.stringify(v)} ≡ guarded ở ba hook`);
+    ok(everywhere({ mode: 'open' }, BYPASS) !== guardedAll(BYPASS) && everywhere({ mode: 'open' }, BYPASS) !== everywhere({ mode: 'confined' }, BYPASS), 'AC2.7: open khác guarded và confined khi đủ điều kiện (bảng không rỗng nghĩa)');
+    ok(everywhereTracked({ mode: 'open' }) === everywhereTracked({ mode: 'guarded' }), 'AC2.7: open nhưng file bị git theo dõi ≡ guarded ở ba hook');
+    ok(everywhereTracked({ mode: 'confined' }) === everywhereTracked({ mode: 'guarded' }), 'AC3.5: confined nhưng file bị git theo dõi ≡ guarded ở ba hook');
   } finally {
     fs.rmSync(tb, { recursive: true, force: true });
   }
