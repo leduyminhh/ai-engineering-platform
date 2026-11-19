@@ -519,6 +519,35 @@ export default async function run({ ok, ctx }) {
     const asvsRef = readRef('asvs-l2.md');
     ok(pentestRef !== '' && pentestRef.includes('[Unverified]') && pentestRef.includes('Bước 7') && pentestRef.includes('Bước 9') && pentestRef.includes('100%'), 'AC2.2: pentest.md tồn tại, có [Unverified], Bước 7–9 và mục tiêu retest 100%');
     ok(asvsRef !== '' && asvsRef.includes('[Unverified]') && asvsRef.includes('chưa đo') && asvsRef.includes('file:line'), 'AC2.2: asvs-l2.md tồn tại, có [Unverified], trạng thái chưa đo và evidence file:line');
+
+    // ---- SKILL.md và report-template.md (AC2.1, AC2.3) ----
+    const skillMd = fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8');
+    const refNames = fs.readdirSync(path.join(skillDir, 'references')).filter((n) => n.endsWith('.md')).sort();
+    const mapAt = skillMd.indexOf('## Bản đồ tài liệu');
+    const mapText = mapAt === -1 ? '' : skillMd.slice(mapAt);
+    ok(mapAt !== -1 && refNames.every((n) => mapText.includes(`](references/${n})`)), 'AC2.1: mọi file trong references/ có liên kết trong mục Bản đồ tài liệu của SKILL.md');
+    const relTargets = (text, baseDir) => [...text.matchAll(/\]\(([^)\s#]+)(?:#[^)\s]*)?\)/g)]
+      .map((m) => m[1])
+      .filter((l) => !/^(https?:|mailto:)/.test(l))
+      .map((l) => path.join(baseDir, l));
+    const linkSources = [
+      [path.join(skillDir, 'SKILL.md'), skillDir],
+      ...refNames.map((n) => [path.join(skillDir, 'references', n), path.join(skillDir, 'references')]),
+    ];
+    const brokenLinks = linkSources.flatMap(([file, base]) => relTargets(fs.readFileSync(file, 'utf8'), base)
+      .filter((t) => !fs.existsSync(t))
+      .map((t) => path.relative(skillDir, t)));
+    ok(brokenLinks.length === 0, `AC2.1: mọi liên kết tương đối trong SKILL.md và references/ trỏ tới file có thật${brokenLinks.length ? ` — lỗi: ${brokenLinks.join(', ')}` : ''}`);
+
+    const reportMd = readRef('report-template.md');
+    const thresholdKeys = ['secret', 'critHigh', 'rce', 'kev'];
+    const thresholdNames = ['Critical/High', 'RCE', 'KEV'];
+    ok(reportMd.includes('## Ngưỡng go-live') && thresholdKeys.every((k) => reportMd.includes(`\`${k}\``)) && thresholdNames.every((n) => reportMd.includes(n)),
+      'AC2.3: report-template có mục Ngưỡng go-live với bốn khoá chỉ tiêu và tên chỉ tiêu');
+    const statuses = ['đạt', 'không đạt', 'chưa đo', 'không áp dụng'];
+    ok(statuses.every((s) => reportMd.includes(`\`${s}\``)) && reportMd.includes('`overall`'), 'AC2.3: report-template có bốn trạng thái và trạng thái tổng thể (overall)');
+    ok(reportMd.includes('## ASVS L2') && reportMd.includes('## Pentest và retest') && reportMd.includes('suppress ngoài report'),
+      'AC2.3: report-template có mục ASVS L2, mục pentest và retest, dòng suppress ngoài report');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }

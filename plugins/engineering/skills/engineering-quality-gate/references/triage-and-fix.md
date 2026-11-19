@@ -41,6 +41,39 @@ chạy một vòng chung để triage và xử lý nhất quán. Con người gi
 Nguyên tắc bao trùm: một fix chỉ "an toàn để tự áp" khi **không đổi hành vi quan sát được** hoặc **có test
 bảo chứng**. Còn nghi ngờ → hạ xuống **Propose/Defer** thay vì tự áp.
 
+## Nhãn go-live: FP, chấp nhận rủi ro, suppress
+
+Áp dụng cho các chỉ tiêu ngưỡng go-live (xem [report-template.md](report-template.md), mục Ngưỡng go-live).
+Script `go-live-gate.mjs` gắn nhãn; người dùng quyết FP và chấp nhận rủi ro qua file JSON.
+
+| Nhãn | Ai gán | Còn trong số đếm | Đầu vào | Quy tắc |
+|------|--------|------------------|---------|---------|
+| `FP đã loại` | người dùng, qua `--fp` | Không | JSON mảng `{source, key, reason}` | Chỉ loại khi đã validate và có `reason` |
+| `chấp nhận rủi ro` | người dùng, qua `--accepted` | Có | JSON mảng cùng dạng | `reason` bắt buộc; không làm chỉ tiêu thành `đạt` |
+| `suppress` | dữ liệu có sẵn trong report | Có | không cần file | Tool đánh dấu không tự thành FP; chỉ `--fp` mới loại |
+
+```json
+[{ "source": "<nguồn có trong sources của finding>", "key": "<khoá script in ra>", "reason": "<lý do đã validate>" }]
+```
+
+- **FP chỉ loại khỏi số đếm khi đã được validate và có lý do.** Thiếu `reason` thì script exit 2 và không có kết luận.
+  Finding bị loại vẫn hiện trong `findings` với nhãn `FP đã loại`, và trong `falsePositives` kèm `reason`.
+- **Khoá phải khớp.** `source` phải là một trong `sources` của finding; `key` đúng khoá script in ra. Khoá không khớp
+  thì script ghi một dòng vào `warnings`, số đếm không đổi. Sửa khoá rồi chạy lại.
+- **Chấp nhận rủi ro và suppress vẫn đếm, có nhãn riêng.** Hai nhãn này không làm chỉ tiêu thành `đạt`: trạng thái
+  vẫn `không đạt` khi số đếm lớn hơn 0.
+- **Không dùng `--fp` để đưa chỉ tiêu về `đạt` khi chưa validate.** Nhãn `suppress` của tool không phải lý do để loại.
+
+## Finding từ pentest
+
+- Finding pentest không đi qua script, nên không dùng `--fp` hay `--accepted`.
+- Trước mọi thay đổi code, người dùng xác nhận từng finding: giữ, bỏ kèm lý do, hoặc hoãn. Bảng xác nhận nằm trong
+  [pentest.md](pentest.md).
+- Finding được giữ: viết test tái hiện, sửa, rồi retest theo Bước 7–9 của `workflow-security-review`. Bảng tự sửa ở
+  trên không áp dụng cho finding pentest, kể cả mức thấp.
+- Finding bị bỏ phải có lý do ghi trong bảng xác nhận.
+- Retest chỉ để theo dõi; không thay thế gate Bước 9 của `workflow-security-review`.
+
 ## Fix-từ-report (áp fix từ một report cũ)
 
 Khi người dùng chỉ tới một report bảo mật/chất lượng đã có và yêu cầu áp fix:
