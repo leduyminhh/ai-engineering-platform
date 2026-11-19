@@ -422,6 +422,8 @@ claude -p "Review the diff and report findings" \
 
 `.claude/aip-gate.json` is usually gitignored, so a worktree does not have it: the hooks read the worktree root first, then the main repository root, and `guard-files` anchors `writeScope` at the worktree root. Do not copy it with `.worktreeinclude`.
 
+**Configuration reference.** Every key of `.claude/aip-gate.json`, its trust level and default, plus copy-ready JSON templates for `ask`, minimal `full` and unattended `full`: [docs/aip-gate.md](docs/aip-gate.md).
+
 **Permission modes (`aip mode`).** Each project has one of two modes, set in the project: there is no global mode and nothing is inherited from a parent directory (in a worktree the hooks read the worktree root first, then fall back to the main repository root).
 - `ask` (default; a missing `mode` key means `ask`): every guard above behaves as documented, and `.claude/settings.json` keeps the aip `deny`/`ask` rules.
 - `full` (`aip mode full`, project scope only; `-g` is rejected): for a project you trust to run unattended. `aip mode ask` removes the `mode` key and `aip mode status` prints the current mode and whether `settings.json` still holds aip rules. `aip mode full` writes `"mode": "full"` to `<git-root>/.claude/aip-gate.json` (other keys kept, BOM removed). It rewrites `.claude/settings.json` to `{"permissions":{"deny":[],"ask":[]}}` only when that file is byte-equal to the one aip generates; otherwise it leaves it alone and lists the aip rules to remove yourself, because `deny`/`ask` rules still block under bypass [Unverified: secondary summary of the official page, not re-read].

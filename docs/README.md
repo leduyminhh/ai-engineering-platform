@@ -11,6 +11,7 @@ or PR. Do not use it as a dumping ground for generated reports.
 | --- | --- | --- |
 | `specs/<capability>/spec.md` | Living spec: current behavior of one capability, with `R<n>` IDs. | Long-term |
 | `decisions/` | ADRs: why a design was chosen. | Long-term |
+| `aip-gate.md` | Reference for every `.claude/aip-gate.json` key and a JSON template per permission mode. | Long-term |
 | `requests/<yyyy-mm-dd>-<slug>/` | `design.md` (+ `plan.md` while the work is in progress) of one change. The `Trạng thái` line in `design.md` records its state. | Short-term |
 
 ## Request lifecycle

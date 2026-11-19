@@ -11,6 +11,7 @@ dùng làm nơi đổ report sinh tự động.
 | --- | --- | --- |
 | `specs/<năng-lực>/spec.md` | Spec sống: hành vi hiện tại của một năng lực, có ID `R<n>`. | Dài hạn |
 | `decisions/` | ADR: vì sao chọn thiết kế đó. | Dài hạn |
+| `aip-gate_VI.md` | Tra cứu mọi khoá của `.claude/aip-gate.json` và JSON mẫu cho từng chế độ quyền. | Dài hạn |
 | `requests/<yyyy-mm-dd>-<slug>/` | `design.md` (và `plan.md` khi đang làm) của một thay đổi. Dòng `Trạng thái` trong `design.md` ghi tình trạng. | Ngắn hạn |
 
 ## Vòng đời request
