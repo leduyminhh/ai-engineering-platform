@@ -289,7 +289,7 @@ export default async function run({ ok, ctx }) {
   ok(JSON.stringify(nonBash) === JSON.stringify(['WebFetch']), 'P4e AC1.9: quy tắc không phải Bash của ba nhóm chỉ có WebFetch (loại có chủ đích)');
 
   // I4: file cấu hình được git theo dõi thì `full` bị bỏ qua (repo không đáng tin tự cấp full).
-  const { gateTracked, fullEffective } = await load('gate-config.mjs');
+  const { gateTracked } = await load('gate-config.mjs');
   const tmpT = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-p4e2-')));
   try {
     const sl = (x) => x.replaceAll('\\', '/');
