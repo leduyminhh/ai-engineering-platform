@@ -69,10 +69,19 @@ export default async function run({ ok, ctx }) {
     // Nháy tách tên file hoặc tên lệnh vẫn là ghi cấu hình; cờ chèn giữa aip và mode vẫn là đổi mode. Đối chứng guarded: ask.
     const evasions = ['echo x > .claude/aip-"gate".json', "echo x > .claude/aip-g''ate.json", 'echo x > .claude/sett"ings".json', 'tee .claude/sett"ings".json', 'aip mo"de" open',
       'aip -y mode open', 'aip --provider claude mode open', 'aip mode -y open', 'ai-engineering-platform --no-color mode guarded',
-      'aip --skill a --skill b --skill c --skill d mode open', 'aip --plugin a --plugin b --plugin c --plugin d mode open'];
+      'aip --skill a --skill b --skill c --skill d mode open', 'aip --plugin a --plugin b --plugin c --plugin d mode open',
+      'aip mode --provider claude open', 'aip mode --soft 5 open', 'aip mode --skill a --part p1 confined', 'aip --skill a mode --target x full'];
     rows(evasions.map((c) => [c, 'deny', 'AC2.11']), { cfg: OPEN });
     rows(evasions.map((c) => [c, 'ask', 'AC2.11']), { cfg: GUARDED });
-    rows([['aip -y mode status', null, 'AC2.11'], ['aip mode --help', null, 'AC2.11'], ['aip --skill a mode', null, 'AC2.11'], ['aip status mode', null, 'AC2.11']], { cfg: OPEN });
+    rows([['aip -y mode status', null, 'AC2.11'], ['aip mode --help', null, 'AC2.11'], ['aip --skill a mode', null, 'AC2.11'], ['aip status mode', null, 'AC2.11'],
+      ['aip mode --provider claude status', null, 'AC2.11'], ['aip mode -y', null, 'AC2.11']], { cfg: OPEN });
+    // Chi phí tuyến tính theo số token (hook timeout 10 s): lệnh lặp `mode` không được làm decide() chậm hơn 1 s.
+    for (const c of ['aip ' + 'mode aip '.repeat(6000) + 'open', 'aip ' + 'mode '.repeat(30000) + 'open']) {
+      const t0 = Date.now();
+      const k = kind(c, { cfg: OPEN });
+      const ms = Date.now() - t0;
+      ok((k === 'deny' || k === 'ask') && ms < 1000, `AC2.11: lệnh lặp mode ${c.length} ký tự xong < 1000 ms (${ms} ms, ${k})`);
+    }
 
     // AC2.9: đọc cấu hình ném lỗi thì không tự mở cổng: kết quả bằng guarded, không ném ra ngoài decide.
     const reader = { reader: () => { throw new Error('boom'); } };
@@ -200,6 +209,12 @@ export default async function run({ ok, ctx }) {
     frows([['Read .env ngoài repo', R(`${OUT}/.env`), 'deny', 'AC2.12'], ['Write ~/.claude/settings.json', W(`${HOME}/.claude/settings.json`), 'ask', 'AC2.12']], { opts: noGate('guarded') });
     frows([['Read .env ngoài repo', R(`${OUT}/.env`), 'deny', 'AC2.12']], { opts: noGate('confined') });
 
+    // Đường UNC không bị statSync (mở SMB trong hook trước hộp xác nhận); Grep thư mục cục bộ ở phiên bypass vẫn hỏi isDirectory (đối chứng), phiên không bypass thì không.
+    const statCalls = (extra, p) => { const seen = []; fsafe(G(p, undefined), { cfg: OPEN, extra, opts: { isDirectory: (x) => { seen.push(x); return true; } } }); return seen.length; };
+    ok(statCalls({ permission_mode: 'default' }, '//attacker/share/x') === 0, 'AC2.12: phiên không bypass + Grep path UNC → không statSync');
+    ok(statCalls({}, '//attacker/share/x') === 0, 'AC2.12: phiên bypass + Grep path UNC → không statSync');
+    ok(statCalls({ permission_mode: 'default' }, OUT) === 0 && statCalls({}, OUT) === 1, 'AC2.12: Grep path cục bộ: bypass hỏi isDirectory một lần, không bypass thì không');
+
     // Gate hỏng hoặc không xác định được repo không phải "không có cấu hình": vẫn guarded, không kế thừa open của cwd.
     frows([['Read .env ở đích có gate hỏng', R(`${OUT}/.env`), 'deny', 'AC2.12'], ['Write ~/.claude/settings.json ở đích có gate hỏng', W(`${HOME}/.claude/settings.json`), 'ask', 'AC2.12']], { opts: { ...noGate('open'), inspect: () => 'invalid' } });
     // Cùng ca với bộ dò thật (locateGate): repo git có .claude/aip-gate.json hỏng.
@@ -309,6 +324,9 @@ export default async function run({ ok, ctx }) {
     }
     ok(!MODE_RE.test(head(startAs('startup', gateOf('open'), { gateTracked: () => true }))), 'AC6.1: file bị git theo dõi → không báo mode');
     ok(!MODE_RE.test(head(startAs('startup', gateOf('open'), { gateTracked: () => null }))), 'AC6.1: không xác định được git theo dõi → không báo mode (hướng an toàn)');
+
+    const injected = startAs('startup', { ...gateOf('open'), file: `${P}/.claude/aip-gate.json\nINJECTED: x` });
+    ok(!(injected?.additionalContext ?? '').split('\n').some((l) => l.startsWith('INJECTED')) && MODE_RE.test(head(injected)), 'AC6.1: đường dẫn nguồn có xuống dòng không chèn thêm dòng vào context');
 
     // AC6.2: dòng báo mode không phụ thuộc bootstrapInject, nằm trong ngân sách MAX_TOTAL, lỗi đọc cấu hình thì hook không chặn.
     const noBoot = startAs('startup', gateOf('open', { bootstrapInject: false }));
