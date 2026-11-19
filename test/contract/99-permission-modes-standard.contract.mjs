@@ -197,6 +197,19 @@ export default async function run({ ok, ctx }) {
     frows([['Read .env ngoài repo', R(`${OUT}/.env`), 'deny', 'AC2.12'], ['Write ~/.claude/settings.json', W(`${HOME}/.claude/settings.json`), 'ask', 'AC2.12']], { opts: noGate('guarded') });
     frows([['Read .env ngoài repo', R(`${OUT}/.env`), 'deny', 'AC2.12']], { opts: noGate('confined') });
 
+    // Gate hỏng hoặc không xác định được repo không phải "không có cấu hình": vẫn guarded, không kế thừa open của cwd.
+    frows([['Read .env ở đích có gate hỏng', R(`${OUT}/.env`), 'deny', 'AC2.12'], ['Write ~/.claude/settings.json ở đích có gate hỏng', W(`${HOME}/.claude/settings.json`), 'ask', 'AC2.12']], { opts: { ...noGate('open'), inspect: () => 'invalid' } });
+    // Cùng ca với bộ dò thật (locateGate): repo git có .claude/aip-gate.json hỏng.
+    const badRepo = u(path.join(tb, 'bad'));
+    fs.mkdirSync(`${badRepo}/.claude`, { recursive: true });
+    ctx.execFileSync('git', ['init', '-q', badRepo]);
+    fs.writeFileSync(`${badRepo}/.claude/aip-gate.json`, '{ not json');
+    frows([['Read .env ở repo có gate hỏng (bộ dò thật)', R(`${badRepo}/.env`), 'deny', 'AC2.12']], { opts: { config: undefined, reader: (dir) => (u(dir) === P ? { config: { mode: 'open' }, roots: [P] } : null) } });
+    // Grep trỏ vào thư mục có cấu hình riêng: mode của chính thư mục đó (không phải thư mục cha) cùng cwd quyết định.
+    const grepDir = { config: undefined, reader: (dir) => (u(dir) === u(OUT) ? { config: { mode: 'confined' }, roots: [P] } : u(dir) === P ? { config: { mode: 'open' }, roots: [P] } : null) };
+    fs.mkdirSync(OUT, { recursive: true });
+    frows([['Grep thư mục ngoài root có cấu hình confined, cwd open', G(OUT, undefined), 'deny', 'AC2.12']], { opts: grepDir });
+
     // K14 cho Grep (không có file): thư mục của path quyết định cùng cwd; K15: cwd confined + đích guarded, lỗi sau xác định mode thì mode cuối là guarded.
     frows([['Grep .env* ở repo lồng confined, cwd guarded', G(D, '.env*'), 'deny', 'AC2.12']], { opts: byDir('guarded', 'confined') });
     frows([['Grep .env* ở repo lồng open, cwd guarded', G(D, '.env*'), 'deny', 'AC2.12']], { opts: byDir('guarded', 'open') });

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // PreToolUse(Read|Grep|Edit|Write|MultiEdit|NotebookEdit): chặn file bí mật; agent có writeScope chỉ ghi trong phạm vi khai báo.
-import { readFileSync, existsSync, realpathSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { locateGate } from './gate-file.mjs';
 import { envFilesAllowed, fullEffective, openEffective, readGate, classifyPath, grantsOf, normalizeMsysPath, showArg, isClaudeTmpRoot, denyOutsideText, CLAUDE_TMP_BLOCKED_TEXT } from './gate-config.mjs';
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
@@ -138,7 +139,15 @@ function configTarget(input, deps) {
   } catch { return null; }
 }
 
-function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked, reader = readGate } = {}, ctx) {
+// Thư mục không có gate dùng được: 'none' (không có file cấu hình, trung tính) hay 'invalid' (file hỏng, không xác định được repo; hướng an toàn là guarded).
+// readGate gộp cả hai thành null nên phải hỏi locateGate để phân biệt.
+function inspectGate(dir) {
+  const g = locateGate(dir);
+  return g.gitUnknown || g.source === 'worktree-invalid' || g.mainInvalid ? 'invalid' : 'none';
+}
+const isDir = (p) => { try { return statSync(p).isDirectory(); } catch { return false; } };
+
+function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked, reader = readGate, inspect = inspectGate } = {}, ctx) {
   const ti = input?.tool_input;
   const file = ti?.file_path || ti?.notebook_path || (input?.tool_name === 'Grep' ? ti?.path : undefined);
   const cwd = path.resolve(input?.cwd || '.');
@@ -153,7 +162,7 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
     if (!bypass) return 'guarded';
     try {
       const g = config === undefined ? gateAt(dir) : { config };
-      if (!g?.config) return null;
+      if (!g?.config) return config === undefined && inspect(dir) === 'invalid' ? 'guarded' : null;
       return openEffective(g, input, { tracked }) ? 'open' : fullEffective(g, input, { tracked }) ? 'confined' : 'guarded';
     } catch { return 'guarded'; }
   };
@@ -169,7 +178,8 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
   // Chuẩn hoá về "/" để cùng một regex/glob chạy đúng trên Windows (dấu "\" và ký tự ổ đĩa).
   const abs = target.replace(/\\/g, '/');
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
-  const mode = eff(path.dirname(target));
+  // Grep trỏ vào một thư mục: thư mục đó là nơi tìm, không phải thư mục cha của nó.
+  const mode = eff(input.tool_name === 'Grep' && isDir(target) ? target : path.dirname(target));
   ctx.mode = mode;
   if (mode === 'guarded' && isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target)))) return SECRET_DENY;
   const write = WRITE_TOOLS.has(input.tool_name);
