@@ -184,7 +184,7 @@ export default async function run({ ok, ctx }) {
     // Phiên không chạy ở chế độ bỏ qua hỏi quyền trong project full
     const nb = gb.decide({ tool_name: 'Bash', cwd: '.', permission_mode: 'default', tool_input: { command: 'curl http://x' } },
       { config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false, currentBranch: () => 'feature/x' });
-    ok(nb?.decision === 'ask' && shapeOk(nb.reason) && nb.reason.includes('aip mode ask'), 'AC1.1: guard-bash — full nhưng phiên không bỏ qua hỏi quyền → ask theo khuôn, còn gợi ý aip mode ask');
+    ok(nb?.decision === 'ask' && shapeOk(nb.reason) && nb.reason.includes('aip mode guarded'), 'AC1.1: guard-bash — full nhưng phiên không bỏ qua hỏi quyền → ask theo khuôn, còn gợi ý aip mode guarded');
 
     const chain = bash('git add -A && git commit -m x && git push origin master');
     const line = chain?.reason.split('\n').find((l) => l.startsWith('Lệnh gồm:')) ?? '';
