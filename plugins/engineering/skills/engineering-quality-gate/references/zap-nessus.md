@@ -18,7 +18,7 @@ Report phải có `site` là mảng. Mỗi `site` có `alerts` là mảng.
 | `site[].alerts[].riskcode` | có | mức độ, xem bảng dưới | [Unverified] |
 | `site[].alerts[].cweid` | không | CWE nếu là số dương; `-1`, `0` hoặc rỗng thì không có CWE; khác dạng số thì exit 2 | [Unverified] |
 | `site[].alerts[].instances[].uri` | không | URL trong khoá | [Unverified] |
-| `site[]["@name"]` | không | URL dự phòng khi alert không có `instances[].uri` | [Unverified] |
+| `site[]["@name"]` | có khi alert không có `instances[].uri`; thiếu thì exit 2 | URL dự phòng | [Unverified] |
 
 - Script không đọc `evidence`, `attack`, request hay response.
 
