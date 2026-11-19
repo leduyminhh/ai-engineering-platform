@@ -50,7 +50,7 @@ Coverity không có mức Critical hay Info trong bảng. Giá trị khác thì 
 
 - `file:line` khi không có CWE; `file:line+CWE-n` khi có một CWE; `file:line+CWE-a+CWE-b` khi có nhiều CWE, các CWE sắp xếp tăng dần.
 - Coverity và SARIF gộp thành một finding chỉ khi cùng `file:line` và cùng CWE. Một bên có CWE, bên kia không có thì hai finding (script đối chiếu đúng như vậy).
-- Đường dẫn dùng nguyên văn: `mainEventFilePathname` của Coverity và `artifactLocation.uri` của SARIF. Hai nguồn phải xuất cùng gốc (tương đối từ gốc repo) [Unverified: cách Coverity và SARIF xuất đường dẫn]. Khác gốc thì không gộp và đếm đôi. Ghi thành residual risk khi gặp.
+- Đường dẫn dùng nguyên văn: `mainEventFilePathname` của Coverity và `artifactLocation.uri` của SARIF. [Unverified: cách Coverity và SARIF xuất đường dẫn] Hai nguồn phải xuất cùng gốc (tương đối từ gốc repo). Khác gốc thì không gộp và đếm đôi. Ghi thành residual risk khi gặp.
 
 ## Report SARIF (`--sarif <file>`)
 
