@@ -1008,10 +1008,15 @@ function pipedIndirectConfigWrite(list) {
 const MODE_NAMES = new Set(['guarded', 'confined', 'open', 'ask', 'full']);
 const AIP_BIN = /^(?:.*[\\/])?(?:aip|ai-engineering-platform)(?:\.(?:cmd|ps1|exe))?$/i;
 const AIP_CLI = /(?:^|[\\/])cli[\\/]index\.mjs$/i;
-function isAipModeChange(t) {
-  for (let i = 0; i + 2 < t.length; i++) {
+// Cờ chèn giữa (`aip -y mode open`, `aip mode -y open`) vẫn chạy được ở CLI nên không được làm lọt: tìm "mode" trong vài token sau binary, tên mode là token không phải cờ đầu tiên sau nó.
+const MODE_LOOKAHEAD = 8;
+function isModeChange(t) {
+  for (let i = 0; i < t.length; i++) {
     if (!AIP_BIN.test(t[i]) && !AIP_CLI.test(t[i])) continue;
-    if (t[i + 1] === 'mode' && MODE_NAMES.has(String(t[i + 2]).replace(/^['"]|['"]$/g, '').toLowerCase())) return true;
+    const j = t.findIndex((x, k) => k > i && k <= i + MODE_LOOKAHEAD && x === 'mode');
+    if (j < 0) continue;
+    const name = t.slice(j + 1).find((x) => !x.startsWith('-'));
+    if (name !== undefined && MODE_NAMES.has(name.replace(/^['"]|['"]$/g, '').toLowerCase())) return true;
   }
   return false;
 }
@@ -1019,7 +1024,7 @@ function isAipModeChange(t) {
 // Bộ nhận diện ghi file cấu hình quyền dùng chung cho guarded/confined (ask hoặc deny) và open (deny).
 function guardConfigHit(segs, naiveAll, cmd, msys) {
   const all = [...segs, ...naiveAll];
-  return all.some((t) => writesGuardConfig(t, msys)) || pipedIndirectConfigWrite(all) || opaqueConfigWrite(all, cmd) || substitutedConfigWrite(all, cmd) || all.some(isAipModeChange);
+  return all.some((t) => writesGuardConfig(t, msys)) || pipedIndirectConfigWrite(all) || opaqueConfigWrite(all, cmd) || substitutedConfigWrite(all, cmd) || all.some(isModeChange);
 }
 
 function writesGuardConfig(t, msys = true) {
@@ -1059,7 +1064,8 @@ const CONFIG_DENY_TEXT = 'Ghi vào file cấu hình quyền (`.claude/aip-gate.j
 const OPEN_CHEAP = /aip-gate|settings(?:\.[\w-]+)?\.json|\bmode\b/i;
 const AIP_MODE_TEXT = /\b(?:aip|ai-engineering-platform|index\.mjs)\b[^\n;&|]*\bmode\b/i;
 function decideOpen(cmd, msys) {
-  if (!OPEN_CHEAP.test(cmd)) return null;
+  // Bỏ nháy trước khi kiểm: shell ghép `aip-"gate".json` thành tên thật nên kiểm trên chuỗi thô sẽ để lọt.
+  if (!OPEN_CHEAP.test(cmd.replace(/["']/g, ''))) return null;
   const deny = { decision: 'deny', reason: CONFIG_DENY_TEXT };
   try {
     const segs = expandShells(parse(cmd).segs);

@@ -65,6 +65,19 @@ export default async function run({ ok, ctx }) {
     rows(cfgWrites.map((c) => [c, 'deny', 'AC2.11']), { cfg: OPEN });
     rows([['aip mode status', null, 'AC2.11'], ['echo mode', null, 'AC2.11'], ['cat .claude/aip-gate.json', null, 'AC2.11']], { cfg: OPEN });
 
+    // Nháy tách tên file hoặc tên lệnh vẫn là ghi cấu hình; cờ chèn giữa aip và mode vẫn là đổi mode. Đối chứng guarded: ask.
+    const evasions = ['echo x > .claude/aip-"gate".json', "echo x > .claude/aip-g''ate.json", 'echo x > .claude/sett"ings".json', 'tee .claude/sett"ings".json', 'aip mo"de" open',
+      'aip -y mode open', 'aip --provider claude mode open', 'aip mode -y open', 'ai-engineering-platform --no-color mode guarded'];
+    rows(evasions.map((c) => [c, 'deny', 'AC2.11']), { cfg: OPEN });
+    rows(evasions.map((c) => [c, 'ask', 'AC2.11']), { cfg: GUARDED });
+    rows([['aip -y mode status', null, 'AC2.11'], ['aip mode --help', null, 'AC2.11']], { cfg: OPEN });
+
+    // AC2.9: đọc cấu hình ném lỗi thì không tự mở cổng: kết quả bằng guarded, không ném ra ngoài decide.
+    const reader = { reader: () => { throw new Error('boom'); } };
+    rows([['git push origin master', 'ask', 'AC2.9'], ['echo x > .claude/aip-gate.json', 'ask', 'AC2.9'], ['aip mode open', 'ask', 'AC2.9'], ['ls', null, 'AC2.9']], { cfg: undefined, opts: reader });
+    const trackedThrows = { reader: () => ({ config: OPEN, file: P + '/.claude/aip-gate.json', roots: [P] }), tracked: () => { throw new Error('boom'); } };
+    rows([['git push origin master', 'ask', 'AC2.9']], { cfg: undefined, opts: trackedThrows });
+
     // K12: ở guarded/ask, đổi mode do agent chạy là ghi cấu hình → ask với CONFIG_TEXT; status cho qua.
     for (const mode of ['guarded', 'ask']) {
       for (const pm of [BYPASS, 'default']) {
