@@ -46,11 +46,12 @@ export default async function run({ ok, ctx }) {
 
   // Coverity/ZAP/SARIF: tên trường theo tài liệu tool, [Unverified] với report thật (AC6.1).
   const coverity = (issues) => JSON.stringify({
-    issues: issues.map(([file, line, impact, cwe, name = 'CHECKER']) => ({
+    issues: issues.map(([file, line, impact, cwe, name = 'CHECKER', triage]) => ({
       checkerName: name,
       mainEventFilePathname: file,
       mainEventLineNumber: line,
       checkerProperties: { impact, cweCategory: cwe === undefined ? undefined : String(cwe), categoryDescription: name },
+      stateOnServer: triage === undefined ? undefined : { triage: { classification: triage } },
     })),
   });
   const zap = (alerts) => JSON.stringify({
@@ -65,6 +66,7 @@ export default async function run({ ok, ctx }) {
         level: r.level,
         message: { text: r.text || 'm' },
         properties: r.score === undefined ? undefined : { 'security-severity': r.score },
+        suppressions: r.suppressions,
         locations: [{ physicalLocation: { artifactLocation: { uri: r.uri }, region: { startLine: r.line } } }],
       })),
     }],
@@ -430,6 +432,65 @@ export default async function run({ ok, ctx }) {
     ok(cnt({ trivy: trivy({ vulns: [['cve-2026-0100', 'HIGH']] }), kev: kevFile(['CVE-2026-0100'], '2026-11-18T00:00:00Z') }, 'kev') === 1, 'AC1.9: CVE chữ thường của Trivy vẫn khớp KEV');
     ok(gate({ sonar: sonar([['VULNERABILITY', 'MAJOR', 'a.java', 1, { tags: ['2024', 'a1'] }]]) }, { now: NOW }).findings[0]?.key === 'a.java:1', 'AC1.10: tag số thuần của Sonar không tạo CWE');
     ok(gate({ coverity: coverity([['a.java', 1, 'High', ' 89']]) }, { now: NOW }).findings[0]?.key === 'a.java:1+CWE-89', 'AC1.11: cweCategory có khoảng trắng vẫn ra CWE');
+
+    // ---- Task 5: false positive, chấp nhận rủi ro, suppress ----
+    const list = (entries) => JSON.stringify(entries.map(([source, key, reason]) => ({ source, key, reason })));
+    const IMG = 'image:sha256:aaa';
+    const trivyAB = trivy({ vulns: [['CVE-2026-0801', 'CRITICAL'], ['CVE-2026-0802', 'CRITICAL']] });
+
+    // AC1.7
+    const rFp = gate({ trivy: trivyAB, fp: list([['trivy', `CVE-2026-0801@${IMG}`, 'chỉ gọi trong test, không tới được']]) }, { now: NOW });
+    ok(rFp.thresholds.critHigh.count === 1 && rFp.thresholds.critHigh.labels['FP đã loại'] === 1, 'AC1.7: 2 Critical, FP khớp A → critHigh = 1, nhãn FP đã loại = 1');
+    ok(rFp.falsePositives?.length === 1 && rFp.falsePositives[0].reason === 'chỉ gọi trong test, không tới được' && rFp.falsePositives[0].key === `CVE-2026-0801@${IMG}`, 'AC1.7: output liệt kê FP đã loại kèm reason');
+    ok(rFp.findings.find((f) => f.key.startsWith('CVE-2026-0801@'))?.labels.includes('FP đã loại'), 'AC1.7: finding bị loại vẫn có trong findings với nhãn FP đã loại');
+    const badFp = (entries) => throwsInput({ trivy: trivyAB, fp: entries });
+    ok([
+      list([['trivy', `CVE-2026-0801@${IMG}`, '']]),
+      list([['trivy', `CVE-2026-0801@${IMG}`, '   ']]),
+      JSON.stringify([{ source: 'trivy', key: `CVE-2026-0801@${IMG}` }]),
+      JSON.stringify([{ source: 'trivy', reason: 'x' }]),
+      JSON.stringify([{ key: 'k', reason: 'x' }]),
+      JSON.stringify({ source: 'trivy', key: 'k', reason: 'x' }),
+      'không phải json',
+    ].every(badFp), 'AC1.7: FP thiếu reason (rỗng, toàn khoảng trắng, thiếu), thiếu source/key, không phải mảng, JSON hỏng → InputError');
+    const rFpMiss = gate({ trivy: trivyAB, fp: list([['trivy', 'CVE-9999-0001@khong-co', 'x']]) }, { now: NOW });
+    ok(rFpMiss.thresholds.critHigh.count === 2 && rFpMiss.warnings.length === 1 && !rFpMiss.falsePositives?.length, 'AC1.7: FP không khớp finding nào → đúng một warning và số đếm không đổi');
+    ok(gate({ trivy: trivyAB, fp: list([['nessus', `CVE-2026-0801@${IMG}`, 'x']]) }, { now: NOW }).thresholds.critHigh.count === 2, 'AC1.7: đúng khoá nhưng sai source không khớp');
+    // finding gộp Coverity + SARIF: FP theo một trong hai source đều khớp
+    const merged7 = (src) => gate({
+      coverity: coverity([['src/A.java', 10, 'High', 89]]),
+      sarif: [sarif([{ rule: 'sql', uri: 'src/A.java', line: 10, score: '7.5', cwe: 89 }])],
+      fp: list([[src, 'src/A.java:10+CWE-89', 'đã validate: input luôn qua tham số hoá']]),
+    }, { now: NOW });
+    ok(['coverity', 'sarif'].every((src) => merged7(src).thresholds.critHigh.count === 0 && merged7(src).falsePositives.length === 1), 'AC1.7: FP trên finding gộp Coverity + SARIF khớp theo source nào cũng được');
+    const rFpRce = gate({ trivy: trivyRce, kev: kevFile(['CVE-2026-70'], '2026-11-18T00:00:00Z'), fp: list([['trivy', `CVE-2026-70@${IMG}`, 'x']]) }, { now: NOW });
+    ok(rFpRce.thresholds.rce.count === 1 && rFpRce.thresholds.kev.count === 0, 'AC1.7: FP loại finding khỏi mọi chỉ tiêu (RCE, KEV), không chỉ critHigh');
+    const f5 = write({ trivy: trivyAB, fp: list([['trivy', `CVE-2026-0801@${IMG}`, 'ok']]), fpBad: list([['trivy', `CVE-2026-0801@${IMG}`, '']]) });
+    let outFp = {};
+    try { outFp = JSON.parse(cli(['--trivy', f5.trivy, '--fp', f5.fp]).stdout); } catch { /* đỏ bên dưới */ }
+    ok(outFp.thresholds?.critHigh?.count === 1 && cli(['--trivy', f5.trivy, '--fp', f5.fpBad]).status === 2, 'AC1.7: --fp qua CLI loại finding, thiếu reason → exit 2');
+
+    // AC1.8
+    const mixed = {
+      coverity: coverity([['src/C.java', 3, 'High', 89]]),
+      sonar: sonar([['VULNERABILITY', 'CRITICAL', 'D.java', 4, { resolution: 'WONTFIX' }]]),
+    };
+    const rAcc = gate({ ...mixed, accepted: list([['coverity', 'src/C.java:3+CWE-89', 'chấp nhận tới đợt 2, có WAF chặn']]) }, { now: NOW });
+    ok(rAcc.thresholds.critHigh.count === 2 && rAcc.thresholds.critHigh.status === 'không đạt', 'AC1.8: finding chấp nhận rủi ro và suppress vẫn đếm, status không đạt');
+    ok(rAcc.thresholds.critHigh.labels['chấp nhận rủi ro'] === 1 && rAcc.thresholds.critHigh.labels.suppress === 1 && rAcc.thresholds.critHigh.labels['FP đã loại'] === 0, 'AC1.8: nhãn tách riêng: chấp nhận rủi ro = 1, suppress = 1');
+    ok(rAcc.findings.find((f) => f.key === 'src/C.java:3+CWE-89')?.labels.join() === 'chấp nhận rủi ro' && rAcc.findings.find((f) => f.key === 'D.java:4')?.labels.join() === 'suppress', 'AC1.8: mỗi finding mang đúng nhãn của nó');
+    ok(throwsInput({ ...mixed, accepted: list([['coverity', 'src/C.java:3+CWE-89', '']]) }) && throwsInput({ ...mixed, accepted: JSON.stringify([{ source: 'coverity', key: 'k' }]) }), 'AC1.8: accepted thiếu reason → InputError');
+    const labelOf = (inputs, keyPrefix) => gate(inputs, { now: NOW }).findings.find((f) => f.key.startsWith(keyPrefix))?.labels.join();
+    ok(labelOf({ sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, level: 'error', suppressions: [{ kind: 'inSource' }] }])] }, 'a.js:1') === 'suppress'
+      && labelOf({ sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, level: 'error', suppressions: [] }])] }, 'a.js:1') === '', 'AC1.8: SARIF suppressions[] có phần tử → suppress, mảng rỗng → không nhãn');
+    ok(labelOf({ coverity: coverity([['a.java', 1, 'High', 89, 'X', 'False Positive']]) }, 'a.java:1') === 'suppress'
+      && labelOf({ coverity: coverity([['a.java', 1, 'High', 89, 'X', 'Intentional']]) }, 'a.java:1') === 'suppress'
+      && labelOf({ coverity: coverity([['a.java', 1, 'High', 89, 'X', 'Bug']]) }, 'a.java:1') === '', 'AC1.8: Coverity triage False Positive/Intentional → suppress, Bug → không nhãn');
+    const sonarLabel = (extra) => labelOf({ sonar: sonar([['VULNERABILITY', 'MAJOR', 'a.java', 1, extra]]) }, 'a.java:1');
+    ok(sonarLabel({ resolution: 'FALSE-POSITIVE' }) === 'suppress' && sonarLabel({ issueStatus: 'ACCEPTED' }) === 'suppress' && sonarLabel({ resolution: 'FIXED' }) === '', 'AC1.8: Sonar resolution FALSE-POSITIVE/WONTFIX hoặc issueStatus ACCEPTED → suppress, FIXED → không nhãn');
+    // suppress của tool không tự loại khỏi số đếm: chỉ --fp có reason mới loại
+    const rSup = gate({ ...mixed, fp: list([['sonar', 'D.java:4', 'Sonar đánh dấu sai, đã kiểm tay']]) }, { now: NOW });
+    ok(rSup.thresholds.critHigh.count === 1 && rSup.falsePositives.length === 1, 'AC1.8: suppress chỉ đếm lại khi có --fp kèm reason loại đi');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
