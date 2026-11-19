@@ -14,8 +14,8 @@ triệt để" — findings phản ánh **thời điểm quét** với dữ li�
 - Chế độ: <chạy scanner | đọc report | fix-từ-report> — Sonar: <...> · SCA: <Black Duck | Trivy | đọc BOM>
 - Quality gate (Sonar): <OK | ERROR> — điều kiện không đạt: <coverage/duplication/new issues nếu có>
 - Tổng findings: <n> (chất lượng <a> · dependency <b> · bảo mật review <c>) — Đã sửa <x> · Hoãn <y>
-- Build gate bảo mật: <PASS | FAIL | ERROR> — điều kiện: CRITICAL>0 hoặc HIGH>0 (hoặc theo --fail-on).
-  Đây là gate build cũ; ngưỡng go-live ở mục bên dưới chỉ báo, không chặn.
+- Build gate bảo mật: <PASS | FAIL | ERROR> — điều kiện: CRITICAL>0 hoặc HIGH>0.
+  [Unverified] Đây là gate build cũ; repo chưa có mã thực thi cho nó (cờ `--fail-on` không có trong `go-live-gate.mjs`). Ngưỡng go-live ở mục bên dưới chỉ báo, không chặn.
 - Ngưỡng go-live (`overall`): <không đạt | đạt | chưa đo> — chi tiết ở mục Ngưỡng go-live
 
 ## Ngưỡng go-live
@@ -97,7 +97,7 @@ Script không thấy finding đã bị file ignore ẩn khỏi report. Liệt k�
 - [Inference] Số mục là số dòng hoặc statement trong file, không nhất thiết bằng số finding bị ẩn.
 
 ## Findings theo mức độ
-| Nguồn | Loại Severity | Vị trí | OWASP | ASVS | CWE | Trạng thái |
+| Nguồn | Loại | Severity | Vị trí | OWASP | ASVS | CWE | Trạng thái |
 |-------|------|----------|--------|-------|------|-----|-----------|
 | Sonar | Bug/Vuln/Smell/Hotspot | Blocker/…/Info | file:line (rule) | — | — | — | Đã sửa / Hoãn |
 | SCA (Black Duck/Trivy) | CVE-XXXX-NNNN | Critical/…/Low (CVSS x.x) | component@version → fixed x.y.z | A06 | dependency | CWE-1104 | Đã sửa (bump) / Hoãn |
@@ -160,7 +160,7 @@ và không có cổng tự động.
   bảo mật cần ngữ cảnh), và phạm vi/độ tin cậy của lần quét/review.
 - Nếu bỏ qua kiểm tra nào (không chạy được test/rescan, thiếu token nên bỏ enrichment scanner) → **nói rõ** ở
   "Bước verify đã chạy" (fail-loud), KHÔNG coi phần bỏ qua là đã "sạch".
-- Nguồn bắt buộc chưa có report: ghi `chưa đo` ở chỉ tiêu liên quan, KHÔNG ghi số 0 và KHÔNG ghi `đạt`.
+- Không có finding đếm được và còn nguồn bắt buộc chưa có report hoặc `--na`: ghi `chưa đo`, không ghi `đạt`. Số đếm lấy từ `count` của script.
 - `không áp dụng` chỉ ghi khi có bằng chứng bề mặt không tồn tại (`--na`); không dùng để né nguồn chưa đo.
 - Không ghi giá trị secret, payload, request, response hay Plugin Output vào report. Report ZAP và Nessus chứa
   URL và tên host nội bộ: ghi ngoài repo và không commit.

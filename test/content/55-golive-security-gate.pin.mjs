@@ -548,6 +548,19 @@ export default async function run({ ok, ctx }) {
     ok(statuses.every((s) => reportMd.includes(`\`${s}\``)) && reportMd.includes('`overall`'), 'AC2.3: report-template có bốn trạng thái và trạng thái tổng thể (overall)');
     ok(reportMd.includes('## ASVS L2') && reportMd.includes('## Pentest và retest') && reportMd.includes('suppress ngoài report'),
       'AC2.3: report-template có mục ASVS L2, mục pentest và retest, dòng suppress ngoài report');
+    // Mỗi bảng: dòng header, dòng phân cách và mọi dòng dữ liệu liền kề cùng số ô (dấu | ngoài cùng không tính).
+    const cellCount = (line) => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').length;
+    const tablesAligned = (text) => {
+      const lines = text.split('\n');
+      for (let i = 1; i < lines.length; i++) {
+        if (!/^\|(\s*:?-+:?\s*\|)+\s*$/.test(lines[i].trim())) continue;
+        const n = cellCount(lines[i]);
+        if (cellCount(lines[i - 1]) !== n) return false;
+        for (let j = i + 1; j < lines.length && lines[j].trim().startsWith('|'); j++) if (cellCount(lines[j]) !== n) return false;
+      }
+      return true;
+    };
+    ok(tablesAligned(reportMd), 'AC2.3: mọi bảng trong report-template có header, phân cách và dòng dữ liệu cùng số ô');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }

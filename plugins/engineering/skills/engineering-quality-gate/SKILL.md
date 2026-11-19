@@ -80,7 +80,8 @@ Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải ch�
        cho các nguồn khác nhau; các cờ còn lại chỉ dùng một lần.
      - Exit 0 nghĩa là đọc được input, KHÔNG nghĩa là đạt. Exit 2 là lỗi đầu vào: không có kết luận; báo tên cờ và
        tên file rồi dừng. Kết luận nằm ở `overall` và `status` trong stdout JSON.
-     - `--na <nguồn>=<bằng chứng>` chỉ khi bề mặt đó không tồn tại; bằng chứng không được để trống.
+     - `--na <nguồn>=<bằng chứng>` chỉ khi bề mặt đó không tồn tại; bằng chứng không được để trống. Tên nguồn hợp lệ:
+       `gitleaks-tree`, `gitleaks-history`, `trivy`, `coverity`, `zap`, `nessus`, `blackduck`, `sonar`, `kev`. `sarif` không dùng được với `--na` (exit 2); nguồn đã có cờ riêng cũng không khai `--na` được (exit 2).
      - `--fp` và `--accepted` là JSON mảng `{source, key, reason}`; quy tắc nhãn ở [references/triage-and-fix.md](references/triage-and-fix.md).
 
      | Nguồn | Cách lấy | Cờ script | Tài liệu |
