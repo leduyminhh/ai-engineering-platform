@@ -95,13 +95,13 @@ export default async function run({ ok, ctx }) {
     const slash = (x) => x.replaceAll('\\', '/');
     const real = (input) => files.decide({ permission_mode: 'bypassPermissions', ...input }, { scopes: {} });
 
-    ok(real({ tool_name: 'Read', tool_input: { file_path: slash(path.join(fullRepo, '.env')) }, cwd: plainRepo }) === null,
-      'P4e AC1.3: cwd ở repo không full nhưng file đích thuộc repo full → cho qua');
+    ok(real({ tool_name: 'Read', tool_input: { file_path: slash(path.join(fullRepo, '.env')) }, cwd: plainRepo })?.decision === 'deny',
+      'P4e AC1.3: cwd ở repo không full nhưng file đích thuộc repo full → deny (K14: mức chặt hơn)');
     ok(real({ tool_name: 'Read', tool_input: { file_path: slash(path.join(plainRepo, '.env')) }, cwd: fullRepo })?.decision === 'deny',
       'P4e AC1.3: cwd ở repo full nhưng file đích thuộc repo không cấu hình → vẫn deny');
-    ok(real({ tool_name: 'Write', tool_input: { file_path: slash(path.join(fullRepo, 'moi', 'k.pem')) }, cwd: plainRepo }) === null,
+    ok(real({ tool_name: 'Write', tool_input: { file_path: slash(path.join(fullRepo, 'moi', 'k.pem')) }, cwd: fullRepo }) === null,
       'P4e AC1.3: file đích chưa tồn tại trong repo full vẫn đọc đúng cấu hình');
-    ok(real({ tool_name: 'Grep', tool_input: { glob: '.env*', path: slash(fullRepo) }, cwd: plainRepo }) === null,
+    ok(real({ tool_name: 'Grep', tool_input: { glob: '.env*', path: slash(fullRepo) }, cwd: fullRepo }) === null,
       'P4e AC1.3: Grep glob bí mật trong repo full hiệu lực → cho qua');
     ok(real({ tool_name: 'Grep', tool_input: { glob: '.env*', path: slash(plainRepo) }, cwd: fullRepo })?.decision === 'deny',
       'P4e AC1.3: Grep glob bí mật trong repo không full → deny');
@@ -164,11 +164,11 @@ export default async function run({ ok, ctx }) {
     ok(h6('Write', 'rel.txt', { cwd: elsewhere })?.decision === 'deny', 'P4e AC1.6: cwd ngoài root + đường dẫn tương đối → deny');
     for (const tool of ['Read', 'Grep']) {
       ok(h6(tool, `${proj}/a.txt`) === null && h6(tool, `${extra}/a.txt`) === null, `P4e AC1.6: ${tool} trong root → cho qua`);
-      ok(h6(tool, '/etc/x')?.decision === 'ask' && h6(tool, `${proj}/../c.txt`)?.decision === 'ask', `P4e AC1.6: ${tool} ngoài root → ask`);
+      ok(h6(tool, '/etc/x')?.decision === 'deny' && h6(tool, `${proj}/../c.txt`)?.decision === 'deny', `P4e AC1.6: ${tool} ngoài root → deny`);
     }
     ok(files.decide({ tool_name: 'Grep', tool_input: { glob: '*.js' }, cwd: proj, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: proj, config: cfg6 }) === null,
       'P4e AC1.6: Grep thiếu path → bỏ qua H6');
-    ok(h6('Write', '$HOME/x')?.decision === 'ask' && h6('Read', '~/x')?.decision === 'ask', 'P4e AC1.6: đường dẫn có $ hoặc ~ → ask');
+    ok(h6('Write', '$HOME/x')?.decision === 'deny' && h6('Read', '~/x')?.decision === 'deny', 'P4e AC1.6: đường dẫn có $ hoặc ~ → deny');
     ok(h6('Write', '/etc/x', { pm: 'default' }) === null && h6('Write', '/etc/x', { config: { mode: 'ask' } }) === null
       && h6('Write', '/etc/x', { config: {} }) === null, 'P4e AC1.6: full không hiệu lực → không có H6');
     ok(h6('Bash', '/etc/x') === null, 'P4e AC1.6: công cụ ngoài Read/Grep/ghi → không có H6');
@@ -611,16 +611,16 @@ export default async function run({ ok, ctx }) {
       'P4e2 AC3.1: fullReadRoots chỉ giữ đường dẫn tuyệt đối, mặc định []');
     for (const tool of ['Read', 'Grep']) {
       ok(fdec(tool, `${ro}/a.txt`) === null, `P4e2 AC3.1: ${tool} dưới fullReadRoots → không quyết định`);
-      ok(fdec(tool, `${ro}/../other/a.txt`)?.decision === 'ask', `P4e2 AC3.1: ${tool} thoát khỏi root chỉ-đọc bằng ".." → ask`);
+      ok(fdec(tool, `${ro}/../other/a.txt`)?.decision === 'deny', `P4e2 AC3.1: ${tool} thoát khỏi root chỉ-đọc bằng ".." → deny`);
     }
     for (const tool of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
       ok(fdec(tool, `${ro}/a.txt`)?.decision === 'deny', `P4e2 AC3.1: ${tool} dưới fullReadRoots → deny`);
     }
-    ok(fdec('Read', `${ro}/a.txt`, { pm: 'default' }) === null && fdec('Read', '/etc/x', { config: { mode: 'full' } })?.decision === 'ask',
-      'P4e2 AC3.1: ngoài mọi root vẫn ask');
-    // Root chỉ-đọc không miễn đường dẫn bí mật: đọc .env/khoá ngoài project vẫn hỏi như luật secret của full (guard-bash cũng hỏi), ghi vẫn deny.
-    ok(fdec('Read', `${ro}/.env`)?.decision === 'ask' && fdec('Grep', `${ro}/x.pem`)?.decision === 'ask' && fdec('Write', `${ro}/.env`)?.decision === 'deny',
-      'P4e2 AC3.1: .env/khoá dưới root chỉ-đọc không được miễn ask');
+    ok(fdec('Read', `${ro}/a.txt`, { pm: 'default' }) === null && fdec('Read', '/etc/x', { config: { mode: 'full' } })?.decision === 'deny',
+      'P4e2 AC3.1: ngoài mọi root → deny');
+    // Root chỉ-đọc không miễn đường dẫn bí mật: đọc .env/khoá ngoài project vẫn bị chặn như luật secret của confined, ghi cũng deny.
+    ok(fdec('Read', `${ro}/.env`)?.decision === 'deny' && fdec('Grep', `${ro}/x.pem`)?.decision === 'deny' && fdec('Write', `${ro}/.env`)?.decision === 'deny',
+      'P4e2 AC3.1: .env/khoá dưới root chỉ-đọc không được miễn chặn');
     const bdec = (command, config = full) => bashMod.decide(
       { tool_name: 'Bash', tool_input: { command }, cwd: proj, permission_mode: 'bypassPermissions' },
       { currentBranch: () => 'feature/x', allowEnv: () => false, config, repoRoot: proj });
@@ -645,11 +645,11 @@ export default async function run({ ok, ctx }) {
       { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } });
     ok(real(`${realCfg}/plugins/cache/m/p/1.0.0/skills/s/SKILL.md`) === null, 'P4e2 AC3.2: Read cây plugins mặc định → không quyết định');
     ok(real(`${realCfg}/projects/E--any-proj/${sid}/tool-results/t.txt`) === null, 'P4e2 AC3.2: Read tool-results của phiên này → không quyết định');
-    ok(real(`${realCfg}/projects/E--any-proj/other-sess/tool-results/t.txt`)?.decision === 'ask'
-      && real(`${realCfg}/projects/a/b/${sid}/tool-results/t.txt`)?.decision === 'ask'
-      && real(`${realCfg}/settings.json`)?.decision === 'ask'
-      && real(`${realCfg}/plugins-evil/x`)?.decision === 'ask'
-      && real(`${realCfg}/plugins/../settings.json`)?.decision === 'ask', 'P4e2 AC3.2: phiên khác, thêm đoạn, file khác, root cùng tiền tố hay ".." dưới config dir → ask');
+    ok(real(`${realCfg}/projects/E--any-proj/other-sess/tool-results/t.txt`)?.decision === 'deny'
+      && real(`${realCfg}/projects/a/b/${sid}/tool-results/t.txt`)?.decision === 'deny'
+      && real(`${realCfg}/settings.json`)?.decision === 'deny'
+      && real(`${realCfg}/plugins-evil/x`)?.decision === 'deny'
+      && real(`${realCfg}/plugins/../settings.json`)?.decision === 'deny', 'P4e2 AC3.2: phiên khác, thêm đoạn, file khác, root cùng tiền tố hay ".." dưới config dir → deny');
     ok(files.decide({ tool_name: 'Write', tool_input: { file_path: `${realCfg}/plugins/x` }, cwd: proj, permission_mode: 'bypassPermissions', session_id: sid },
       { scopes: {}, repoRoot: proj, allowEnv: () => false, config: { mode: 'full' } })?.decision === 'deny', 'P4e2 AC3.2: ghi vào cây plugins → deny');
     // scratchpad_dir từ stdin vẫn là root ghi được, không bị root chỉ-đọc ảnh hưởng.

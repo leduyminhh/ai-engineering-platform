@@ -115,13 +115,16 @@ export default async function run({ ok, ctx }) {
       ok(dec(tool, path.join(O, 'a.txt')) === null && dec(tool, path.join(T, 'a.txt')) === null, `AC3.1: ${tool} vào O,T → cho qua`);
     }
     const rw = dec('Read', path.join(W, 'a.txt'));
-    ok(rw?.decision === 'ask' && dec('Write', path.join(W, 'a.txt')) === null, 'AC3.2: mục chỉ ["write"] → Read ask, Write cho qua');
-    ok(dec('Read', path.join(D, '.env'))?.decision === 'ask' && dec('Read', path.join(O, '.env'))?.decision === 'ask' && dec('Read', path.join(T, '.env')) === null, 'AC6.3: Read .env chỉ miễn khi đủ ba quyền');
-    ok(dec('Write', path.join(O, '.env'))?.decision === 'ask' && dec('Write', path.join(T, '.env')) === null
-      && dec('Write', path.join(D, '.env'))?.decision === 'deny' && dec('Write', path.join(P, '.env')) === null, 'AC6.4: Write .env: O ask, T qua, D deny, project qua');
-    const asks = [rw, dec('Read', path.join(D, '.env')), dec('Write', path.join(O, '.env')), dec('Read', path.join(X, 'a.txt'))];
-    ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask theo khuôn (cả ask .env và đọc ngoài mọi mục)');
-    ok(asks[3].reason.includes(path.join(X, 'a.txt')), 'AC3.11: Read ngoài mọi mục → ask nêu đường dẫn');
+    ok(rw?.decision === 'deny' && dec('Write', path.join(W, 'a.txt')) === null, 'AC3.2: mục chỉ ["write"] → Read deny, Write cho qua');
+    ok(dec('Read', path.join(D, '.env'))?.decision === 'deny' && dec('Read', path.join(O, '.env'))?.decision === 'deny' && dec('Read', path.join(T, '.env')) === null, 'AC6.3: Read .env chỉ miễn khi đủ ba quyền');
+    ok(dec('Write', path.join(O, '.env'))?.decision === 'deny' && dec('Write', path.join(T, '.env')) === null
+      && dec('Write', path.join(D, '.env'))?.decision === 'deny' && dec('Write', path.join(P, '.env')) === null, 'AC6.4: Write .env: O deny, T qua, D deny, project qua');
+    const denies = [rw, dec('Read', path.join(D, '.env')), dec('Write', path.join(O, '.env')), dec('Read', path.join(X, 'a.txt'))];
+    ok(denies.every((a) => a?.decision === 'deny' && a.reason.includes('Mở:')), 'AC6.2: reason deny ở confined có "Mở:" (cả .env thiếu quyền và đọc ngoài mọi mục)');
+    // Ca ask còn lại ở guarded (mode ask + bypass): ghi file cấu hình quyền vẫn theo khuôn ask.
+    const askCfg = dec('Write', path.join(P, '.claude', 'aip-gate.json'), { cfg: { mode: 'ask' } });
+    ok(askCfg?.decision === 'ask' && shapeOk(askCfg.reason), 'AC6.2: reason ask của guard-files ở guarded theo khuôn');
+    ok(denies[3].reason.includes(path.join(X, 'a.txt')), 'AC3.11: Read ngoài mọi mục → deny nêu đường dẫn');
 
     const kindF = (tool, file, opt) => dec(tool, file, opt)?.decision ?? null;
     const S = path.join(tmp, 's');
@@ -141,9 +144,9 @@ export default async function run({ ok, ctx }) {
     const star = { mode: 'full', fullReadRoots: [G], fullPaths: [ro(path.join(tmp, 'q', '*'))] };
     for (const [tool, file, want] of [
       ['Read', path.join(tmp, 'g', 'a', 'data', 'f'), null], ['Grep', path.join(tmp, 'g', 'a', 'data', 'f'), null],
-      ['Read', path.join(tmp, 'g', 'a', 'b', 'data', 'f'), 'ask'], ['Read', path.join(tmp, 'g', 'data', 'f'), 'ask'],
+      ['Read', path.join(tmp, 'g', 'a', 'b', 'data', 'f'), 'deny'], ['Read', path.join(tmp, 'g', 'data', 'f'), 'deny'],
       ['Write', path.join(tmp, 'g', 'a', 'data', 'f'), 'deny'],
-      ['Read', path.join(tmp, 'q', 'a', 'f'), 'ask'], ['Read', path.join(tmp, 'q', '*', 'f'), null],
+      ['Read', path.join(tmp, 'q', 'a', 'f'), 'deny'], ['Read', path.join(tmp, 'q', '*', 'f'), null],
     ]) ok(kindF(tool, file, { cfg: star }) === want, `AC5.2: ${tool} ${path.relative(tmp, file)} với * → ${want}`);
 
     // AC5.1: fullRoots: [T] đồng nghĩa mục đủ ba quyền; AC6.1: full không hiệu lực thì fullPaths không đổi kết quả.
@@ -168,7 +171,7 @@ export default async function run({ ok, ctx }) {
     }
     ok(allTools.every((tool) => dec(tool, path.join(CTF, 'p', 'x')) === null), 'AC2.1: mọi công cụ vào dưới <tmpdir>/claude → cho qua');
     const OTHER = path.join(os.tmpdir(), 'aip-pp-khac', 'x');
-    ok(dec('Write', OTHER)?.decision === 'deny' && dec('Read', OTHER)?.decision === 'ask', 'AC2.1: <tmpdir> ngoài thư mục claude → như cũ (Write deny, Read ask)');
+    ok(dec('Write', OTHER)?.decision === 'deny' && dec('Read', OTHER)?.decision === 'deny', 'AC2.1: <tmpdir> ngoài thư mục claude → như cũ (Write deny, Read deny ở confined)');
     ok(allTools.every((tool) => dec(tool, CTF, { cfg: { mode: 'ask' } }) === null && dec(tool, CTF, { extra: { permission_mode: 'default' } }) === null
       && files.decide({ tool_name: tool, tool_input: { file_path: CTF }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full' }) }) === null),
     'AC2.2: mode ask, phiên không bypass hoặc aip-gate.json bị git theo dõi → gốc <tmpdir>/claude không bị chặn bởi mục này');
@@ -179,8 +182,8 @@ export default async function run({ ok, ctx }) {
       ok(d?.decision === 'deny' && l.startsWith('Được ghi:') && [P, O, T, W].every((p) => l.includes(p)) && !l.includes(D) && /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason) && /"write"/.test(d.reason),
         `AC1.2: ${tool} vào ngoài root → deny, dòng "Được ghi:" liệt kê root có quyền write, vẫn nêu fullPaths và fullRoots`);
     }
-    ok(WRITES.every((tool) => dec(tool, CTF)?.reason === CLAUDE_TMP_BLOCKED_TEXT) && dec('Read', OTHER)?.decision === 'ask' && !/Được (ghi|xoá):/.test(dec('Read', OTHER).reason),
-      'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, ask đọc ngoài root không có dòng root');
+    ok(WRITES.every((tool) => dec(tool, CTF)?.reason === CLAUDE_TMP_BLOCKED_TEXT) && dec('Read', OTHER)?.decision === 'deny' && !/Được (ghi|xoá):/.test(dec('Read', OTHER).reason),
+      'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, deny đọc ngoài root không có dòng root');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 
   // guard-bash: quyền ghi/xoá theo thư mục (full + bypass).

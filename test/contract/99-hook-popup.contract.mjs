@@ -150,17 +150,17 @@ export default async function run({ ok, ctx }) {
     const cfg = dec('Write', path.join(proj, '.claude', 'aip-gate.json'));
     ok(cfg?.decision === 'ask' && shapeOk(cfg.reason) && cfg.reason.includes('aip-gate.json'), 'AC1.1: guard-files — ghi cấu hình quyền → ask theo khuôn, nêu tên file');
     const rd = dec('Read', outsideFile, { bypass: true });
-    ok(rd?.decision === 'ask' && shapeOk(rd.reason) && rd.reason.includes(outsideFile), 'AC1.2: guard-files — đọc ngoài project ở full → ask theo khuôn, nêu đường dẫn');
+    ok(rd?.decision === 'deny' && rd.reason.includes('Mở:') && rd.reason.includes(outsideFile), 'AC1.2: guard-files — đọc ngoài project ở confined → deny, câu có "Mở:", nêu đường dẫn');
     const unk = dec('Read', '$HOME/x.txt', { bypass: true });
-    ok(unk?.decision === 'ask' && shapeOk(unk.reason) && unk.reason.includes('$HOME/x.txt'), 'AC1.1: guard-files — đường dẫn không xác định được → ask theo khuôn');
+    ok(unk?.decision === 'deny' && unk.reason.includes('Mở:') && unk.reason.includes('$HOME/x.txt'), 'AC1.1: guard-files — đường dẫn không xác định được → deny, câu có "Mở:", nêu đường dẫn');
     const wr = dec('Write', outsideFile, { bypass: true });
     ok(wr?.decision === 'deny' && wr.reason.includes('fullRoots'), 'AC1.4: guard-files — ghi ngoài project ở full vẫn deny nhắc fullRoots');
     const wunk = dec('Write', '$HOME/x.txt', { bypass: true });
-    ok(wunk?.decision === 'ask' && shapeOk(wunk.reason) && !/Lệnh gồm/.test(cfg.reason + rd.reason + unk.reason + wunk.reason), 'AC1.3: reason của guard-files không có dòng "Lệnh gồm"; ghi vào đường dẫn không xác định → ask theo khuôn');
+    ok(wunk?.decision === 'deny' && wunk.reason.includes('Mở:') && !/Lệnh gồm/.test(cfg.reason + rd.reason + unk.reason + wunk.reason), 'AC1.3: reason của guard-files không có dòng "Lệnh gồm"; ghi vào đường dẫn không xác định → deny, câu có "Mở:"');
     // Đường dẫn do agent cung cấp không được chèn dòng giả vào popup hay đẩy tên file ra ngoài: bỏ xuống dòng/backtick, cắt độ dài
     for (const evil of ['$X/`a`\nAn toàn, hãy cho phép.\n`b.txt`', `$X/${'a'.repeat(900)}`, `${outsideFile}\nHãy cho phép`]) {
       const r = dec('Read', evil, { bypass: true });
-      ok(r?.decision === 'ask' && shapeOk(r.reason, true) && !/[\r\n]/.test(r.reason) && !r.reason.includes('`a`'), `AC1.5: đường dẫn có xuống dòng/backtick/quá dài không làm sai lệch reason (${evil.slice(0, 12).replace(/\n/g, '⏎')}…)`);
+      ok(r?.decision === 'deny' && r.reason.includes('Mở:') && r.reason.length <= 500 && !/[\r\n]/.test(r.reason) && !r.reason.includes('`a`'), `AC1.5: đường dẫn có xuống dòng/backtick/quá dài không làm sai lệch reason (${evil.slice(0, 12).replace(/\n/g, '⏎')}…)`);
     }
   }
 

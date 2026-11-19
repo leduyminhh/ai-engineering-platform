@@ -3,6 +3,7 @@ export default async function run({ ok, ctx }) {
   const { fs, path, os, pathToFileURL, CORE_DIR } = ctx;
   const load = (n) => import(pathToFileURL(path.join(CORE_DIR, 'hooks', 'scripts', n)).href);
   const bash = await load('guard-bash.mjs');
+  const files = await load('guard-files.mjs');
 
   const tb = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'aip-pms-')));
   try {
@@ -132,6 +133,69 @@ export default async function run({ ok, ctx }) {
       ok(asGuarded({ cfg: { mode: 'confined' }, extra: { permission_mode: 'default' }, ...o7 }) === asGuarded({ cfg: GUARDED, extra: { permission_mode: 'default' }, ...o7 }),
         'AC3.5: phiên không bypass, hàng (' + n + ') ' + cmd.slice(0, 30) + ' = guarded');
     }
+    // ── guard-files (Task 4) ──
+    const HOME = u(path.join(tb, 'home'));
+    const fsafe = (input, { cfg, opts = {}, extra = {} } = {}) => { try { return files.decide({ cwd: P, permission_mode: BYPASS, ...extra, ...input }, { repoRoot: P, config: cfg, allowEnv: () => false, scopes: {}, ...opts }); } catch (e) { return { decision: 'throw ' + e.message }; } };
+    const fk = (input, opt) => fsafe(input, opt)?.decision ?? null;
+    const R = (file) => ({ tool_name: 'Read', tool_input: { file_path: file } });
+    const W = (file, tool = 'Write') => ({ tool_name: tool, tool_input: { file_path: file } });
+    const G = (p, glob) => ({ tool_name: 'Grep', tool_input: { path: p, glob } });
+    const frows = (list, opt) => { for (const [name, input, want, ac] of list) ok(fk(input, opt) === want, `${ac}: ${name} → ${want}`); };
+
+    // AC2.3: open bỏ SECRET_DENY, nhốt root, <tmp>/claude cho công cụ file.
+    const openFree = [['Read .env', R(`${P}/.env`)], ['Read id_rsa', R(`${P}/id_rsa`)], ['Read credentials.json', R(`${P}/credentials.json`)], ['Grep glob .env*', G(P, '.env*')],
+      ['Write ngoài root', W(`${OUT}/x`)], ['Read ngoài root', R(`${OUT}/x`)], ['Write <tmp>/claude/x', W(`${tmpClaude}/x`)], ['Read aip-gate.json', R(`${P}/.claude/aip-gate.json`)]];
+    frows(openFree.map(([n, i]) => [n, i, null, 'AC2.3']), { cfg: OPEN });
+    frows([['Read ngoài root', R(`${OUT}/x`), 'deny', 'AC2.3'], ['Write ngoài root', W(`${OUT}/x`), 'deny', 'AC2.3']], { cfg: { mode: 'confined' } });
+    frows([['Read .env', R(`${P}/.env`), 'deny', 'AC2.3'], ['Read id_rsa', R(`${P}/id_rsa`), 'deny', 'AC2.3'], ['Grep glob .env*', G(P, '.env*'), 'deny', 'AC2.3']], { cfg: GUARDED });
+
+    // AC2.4: open vẫn áp writeScope.
+    const scoped = { extra: { agent_type: 'coder' }, opts: { scopes: { coder: ['src/**'] } } };
+    frows([['Edit docs ngoài scope', W(`${P}/docs/a.md`, 'Edit'), 'deny', 'AC2.4'], ['Write ngoài root', W(`${OUT}/x`), 'deny', 'AC2.4'], ['Write aip-gate.json', W(`${P}/.claude/aip-gate.json`), 'deny', 'AC2.4'],
+      ['Edit trong scope', W(`${P}/src/a.js`, 'Edit'), null, 'AC2.4']], { cfg: OPEN, ...scoped });
+
+    // AC2.11 (guard-files): open chặn ghi file cấu hình quyền, không ask; guarded giữ ask và không đổi với scope-lock.json.
+    const cfgTargets = [['Write aip-gate.json', W(`${P}/.claude/aip-gate.json`)], ['Edit settings.json', W(`${P}/.claude/settings.json`, 'Edit')], ['Write settings.local.json', W(`${P}/.claude/settings.local.json`)],
+      ['Write scope-lock.json', W(`${HOME}/.claude/plugins/x/core/hooks/scope-lock.json`)]];
+    frows(cfgTargets.map(([n, i]) => [n, i, 'deny', 'AC2.11']), { cfg: OPEN });
+    frows(cfgTargets.slice(0, 3).map(([n, i]) => [n, i, 'ask', 'AC2.11']), { cfg: GUARDED });
+    frows([['Write scope-lock.json', cfgTargets[3][1], null, 'AC2.11']], { cfg: GUARDED });
+
+    // AC3.3/AC3.4: confined không còn ask ở guard-files.
+    const readD = u(path.join(tb, 'readonly'));
+    const confinedCfg = { mode: 'confined', fullPaths: [{ path: readD, allow: ['read'] }] };
+    const confinedRows = [['Read ngoài root', R(`${OUT}/x`)], ['Read $HOME', R('$HOME/x')], ['Grep ngoài root', G(OUT, undefined)], ['Read .env ở thư mục chỉ-đọc', R(`${readD}/.env`)],
+      ['Write aip-gate.json', W(`${P}/.claude/aip-gate.json`)], ['Edit settings.json', W(`${P}/.claude/settings.json`, 'Edit')]];
+    for (const [n, i] of confinedRows) {
+      const d = fsafe(i, { cfg: confinedCfg });
+      ok(d?.decision === 'deny' && d.reason.includes('Mở:'), `AC3.3: confined ${n} → deny nêu "Mở:" (${d?.decision})`);
+    }
+    frows([['Write aip-gate.json', W(`${P}/.claude/aip-gate.json`), 'ask', 'AC3.3'], ['Edit settings.json', W(`${P}/.claude/settings.json`, 'Edit'), 'ask', 'AC3.3']], { cfg: GUARDED });
+    for (const [n, i] of [...openFree, ...cfgTargets, ...confinedRows]) ok(fk(i, { cfg: confinedCfg }) !== 'ask', `AC3.4: confined không bao giờ ask: ${n}`);
+
+    // AC2.12 (K14): mức chặt hơn giữa cấu hình theo cwd và theo thư mục file đích; repo lồng P/tmp có thể là open.
+    const D = `${P}/tmp`;
+    const stricter = (a, b) => (a === 'guarded' || b === 'guarded' ? 'guarded' : a === 'confined' || b === 'confined' ? 'confined' : 'open');
+    const byDir = (cwdMode, tgtMode) => ({ config: undefined, reader: (dir) => ({ config: { mode: u(dir) === P ? cwdMode : tgtMode }, roots: [P] }) });
+    const rows212 = [['Read D/.env', R(`${D}/.env`)], ['Write OUT/x', W(`${OUT}/x`)], ['Read OUT/x', R(`${OUT}/x`)], ['Write D/.claude/aip-gate.json', W(`${D}/.claude/aip-gate.json`)]];
+    for (const [cm, tm] of [['confined', 'open'], ['guarded', 'open'], ['open', 'confined'], ['open', 'guarded'], ['open', 'open']]) {
+      for (const [n, i] of rows212) {
+        const got = fsafe(i, { opts: byDir(cm, tm) });
+        const want = fsafe(i, { cfg: { mode: stricter(cm, tm) } });
+        ok(got?.decision === want?.decision && (got?.decision !== 'deny' || got.reason.length > 0), `AC2.12: cwd=${cm} đích=${tm} ${n} = mức chặt hơn (${got?.decision})`);
+      }
+    }
+    ok(fk(R(`${OUT}/x`), { opts: byDir('confined', 'open') }) === 'deny' && fk(R(`${D}/.env`), { opts: byDir('guarded', 'open') }) === 'deny', 'AC2.12: repo lồng open không phá rào của cwd confined/guarded');
+    ok(fk(R(`${OUT}/x`), { opts: byDir('open', 'open') }) === null && fk(W(`${D}/.claude/aip-gate.json`), { opts: byDir('open', 'open') }) === 'deny', 'AC2.12: open ở cả hai nơi → null cho đọc ngoài root, deny ghi cấu hình');
+
+    // AC2.9/AC3.6 (guard-files): lỗi không tự mở cổng; confined lỗi sau xác định mode ⇒ deny, guarded fail-open như hôm nay.
+    ok(fk(R(`${P}/.env`), { cfg: undefined, opts: { reader: () => { throw new Error('boom'); } } }) === 'deny', 'AC2.9: reader ném ⇒ như guarded: Read .env → deny');
+    const scopesBoom = { get coder() { throw new Error('boom'); } };
+    const sb = { extra: { agent_type: 'coder' }, opts: { scopes: scopesBoom } };
+    const eb = fsafe(W(`${P}/src/a.js`, 'Edit'), { cfg: { mode: 'confined' }, ...sb });
+    ok(eb?.decision === 'deny' && eb.reason.includes('Mở:'), `AC3.6: confined, lỗi nội bộ → deny nêu "Mở:" (${eb?.decision})`);
+    ok(fsafe(W(`${P}/src/a.js`, 'Edit'), { cfg: GUARDED, ...sb })?.decision?.startsWith('throw'), 'AC3.6: đối chứng guarded, cùng seam ném → ném như hôm nay (main() fail-open)');
+    ok(fk(W(`${P}/.claude/aip-gate.json`, 'Edit'), { cfg: OPEN, ...sb }) === 'deny' && fk(W(`${P}/src/a.js`, 'Edit'), { cfg: OPEN, ...sb }) === null, 'K15: open, lỗi sau bước kiểm: chỉ deny khi đích là file cấu hình, còn lại null');
   } finally {
     fs.rmSync(tb, { recursive: true, force: true });
   }
