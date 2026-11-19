@@ -242,6 +242,7 @@ function readZap(key, text, map) {
   }
 }
 
+// Chỉ hỗ trợ dấu phân cách phẩy và nháy kép kiểu RFC 4180; Nessus xuất bằng dấu phân cách khác thì thiếu cột và exit 2.
 function parseCsv(key, text) {
   const src = stripBom(text);
   const rows = [];
@@ -401,7 +402,8 @@ export function gate(inputs, { now = new Date() } = {}) {
 export function parseArgs(argv) {
   const files = {};
   const sarif = [];
-  const na = {};
+  // Object.create(null): tên nguồn do người dùng gõ (vd __proto__) phải thành khoá thật để gate báo tên lạ.
+  const na = Object.create(null);
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const value = argv[i + 1];
@@ -412,7 +414,10 @@ export function parseArgs(argv) {
     if (flag === '--na') {
       const eq = value.indexOf('=');
       if (eq <= 0 || eq === value.length - 1) throw new InputError('--na: cần dạng <nguồn>=<bằng chứng>');
-      na[value.slice(0, eq)] = value.slice(eq + 1);
+      const name = value.slice(0, eq).trim();
+      if (value.slice(eq + 1).trim() === '') throw new InputError('--na: bằng chứng không được để trống');
+      if (name in na) throw new InputError('--na: mỗi nguồn chỉ được khai một lần');
+      na[name] = value.slice(eq + 1).trim();
     } else if (Object.hasOwn(REPEATABLE, flag)) {
       sarif.push(value);
     } else {
