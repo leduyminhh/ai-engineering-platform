@@ -20,7 +20,6 @@ Report phải có `site` là mảng. Mỗi `site` có `alerts` là mảng.
 | `site[].alerts[].instances[].uri` | không | URL trong khoá | [Unverified] |
 | `site[]["@name"]` | không | URL dự phòng khi alert không có `instances[].uri` | [Unverified] |
 
-- Thiết kế ghi URL ở `alerts[].url`; script không đọc trường đó. Tài liệu này theo script: URL lấy từ `instances[].uri`.
 - Script không đọc `evidence`, `attack`, request hay response.
 
 ### Ánh xạ severity
@@ -100,7 +99,9 @@ Giá trị khác thì exit 2. Script không phân biệt hoa thường và bỏ 
 
 ### .nessus (XML)
 
-Agent đọc tay theo cấu trúc `ReportHost` và `ReportItem` (tên host, `pluginID`, `severity`, `cve`) [Unverified]. Nếu chỉ có `.nessus`, yêu cầu người dùng xuất CSV. Không có CSV thì nguồn Nessus `chưa đo` trong ngưỡng; số đếm tay ghi vào báo cáo, không thay cờ script và không thay `--na` [giả định].
+Agent đọc tay theo cấu trúc `ReportHost` và `ReportItem` (tên host, `pluginID`, `severity`, `cve`) [Unverified]. Nếu chỉ có `.nessus`, yêu cầu người dùng xuất CSV.
+
+Đếm tay `.nessus` không đưa vào chỉ tiêu. Nguồn nessus vẫn `chưa đo` cho tới khi có CSV hoặc `--na` có bằng chứng; kết quả đọc tay chỉ ghi vào báo cáo như ghi chú [giả định].
 
 ## Điền --na và --fp
 
@@ -108,8 +109,15 @@ Agent đọc tay theo cấu trúc `ReportHost` và `ReportItem` (tên host, `plu
 - `--na nessus=<bằng chứng>`: đợt không có máy chủ (VM) trong phạm vi. Bằng chứng ghi rõ điều đó.
 - `--fp` và `--accepted` là JSON mảng; `reason` bắt buộc:
 
+ZAP:
+
 ```json
 [{ "source": "zap", "key": "<tên alert>@<URL>", "reason": "<lý do>" }]
+```
+
+Nessus:
+
+```json
 [{ "source": "nessus", "key": "<CVE>@<host>", "reason": "<lý do>" }]
 ```
 
@@ -120,3 +128,4 @@ Với Nessus không CVE, khoá là `<Plugin ID>@<host>`.
 - Không chạy ZAP active scan. Không quét Nessus. Không gọi API ZAP hay Nessus.
 - Không ghi lên SIT/UAT. Không cài tool vào project.
 - Không chép nội dung request, response hay Plugin Output vào báo cáo.
+- Report ZAP và Nessus chứa URL, tên host nội bộ. Ghi ra thư mục ngoài repo và không commit file report.

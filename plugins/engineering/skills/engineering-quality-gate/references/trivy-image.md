@@ -7,11 +7,11 @@ Trivy image là nguồn bắt buộc của chỉ tiêu secret, Critical/High, RC
 [Unverified] Cú pháp theo phiên bản Trivy. Kiểm bằng `trivy version` và `trivy image --help`.
 
 ```bash
-trivy image --scanners vuln,secret --format json --output trivy-image.json <image>
+trivy image --scanners vuln,secret --format json --output <thư-mục-ngoài-repo>/trivy-image.json <image>
 ```
 
 - Luôn có `vuln,secret`. Quét thiếu `secret` thì chỉ tiêu secret có thể đạt sai.
-- Tham chiếu theo digest (`<repo>@sha256:...`) khi có. `Metadata.RepoDigests` chỉ có giá trị khi image đã có digest trên registry [Unverified]; bước digest của `ops-deploy-release` đọc trường này.
+- Tham chiếu theo digest (`<repo>@sha256:...`) khi có. `Metadata.RepoDigests` chỉ có giá trị khi image đã có digest trên registry [Unverified]; trường này dùng để đối chiếu digest ở bước release, sẽ được thêm trong Task 9 của request này.
 - Quét trên máy có quyền pull image. Không chạy trên VM SIT/UAT.
 - Trivy chưa cài: nêu rõ các chỉ tiêu liên quan `chưa đo`, đề nghị người dùng cài hoặc đưa report sẵn có. Không cài vào project.
 
@@ -85,3 +85,4 @@ Khoá secret có dạng `RuleID@<layer>:<StartLine>`. Khoá không khớp findin
 ## Ranh giới
 
 - Chỉ quét và đọc kết quả. Không đẩy image, không ghi lên registry, không ghi lên SIT/UAT, không cài tool vào project.
+- Report Trivy ghi ra thư mục ngoài repo và không commit: có tên gói và đường dẫn layer nội bộ.

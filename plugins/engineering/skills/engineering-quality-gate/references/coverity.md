@@ -49,6 +49,34 @@ Coverity không có mức Critical hay Info trong bảng. Giá trị khác thì 
 
 - `file:line` khi không có CWE; `file:line+CWE-n` khi có CWE.
 - Coverity và SARIF gộp thành một finding chỉ khi cùng `file:line` và cùng CWE. Một bên có CWE, bên kia không có thì hai finding (script đối chiếu đúng như vậy).
+- Đường dẫn dùng nguyên văn: `mainEventFilePathname` của Coverity và `artifactLocation.uri` của SARIF. Hai nguồn phải xuất cùng gốc (tương đối từ gốc repo). Khác gốc thì không gộp và đếm đôi. Ghi thành residual risk khi gặp.
+
+## Report SARIF (`--sarif <file>`)
+
+- Nguồn cộng thêm cho Critical/High và RCE, không bắt buộc. Cờ lặp được: mỗi file một cờ `--sarif`. Tên nguồn trong `sources` là `sarif`. `--na sarif` không hợp lệ (exit 2).
+- Trường đọc [Unverified] theo chuẩn SARIF: `runs[].results[].ruleId`, `level`, `message.text`, `locations[0].physicalLocation.artifactLocation.uri` (bắt buộc, chuỗi), `region.startLine` (bắt buộc, số), `properties.security-severity`, `suppressions[]`. Rule lấy từ `runs[].tool.driver.rules[]` theo `id`: `shortDescription.text`, `name`, `properties.tags`, `defaultConfiguration.level`.
+- Mức độ: `security-severity` có thì dùng, không có thì dùng `level`.
+
+| `security-severity` | Mức chuẩn hoá |
+|---|---|
+| ≥ 9 | Critical |
+| ≥ 7 | High |
+| ≥ 4 | Medium |
+| > 0 | Low |
+| 0 | Info |
+
+| `level` (khi không có `security-severity`) | Mức chuẩn hoá |
+|---|---|
+| error | High |
+| warning | Medium |
+| note | Low |
+| none | Info |
+
+- Thiếu cả hai thì exit 2. `security-severity` không phải số hoặc ngoài 0–10 thì exit 2. Không phân biệt hoa thường với `level`.
+- CWE lấy từ `tags` của rule và của result, khớp dạng `cwe-N` (vd `external/cwe/cwe-78`) [Unverified: tag của tool]. Tag khác không thành CWE.
+- RCE: CWE thuộc danh sách, hoặc nhãn ghép từ `shortDescription.text`, `name` của rule và `message.text` chứa "remote code execution".
+- `suppressions[]` có phần tử thì gắn nhãn `suppress`. Mảng rỗng thì không có nhãn.
+- Khoá: `file:line` (+CWE) như Coverity, gộp với Coverity theo quy tắc trên.
 
 ## Mask
 
@@ -74,3 +102,4 @@ Finding gộp với SARIF có thể khớp theo `source` là `coverity` hoặc `
 ## Ranh giới
 
 - Không chạy Coverity, không gọi server Coverity, không ghi lên SIT/UAT, không cài tool vào project.
+- Report Coverity và SARIF ghi ra thư mục ngoài repo và không commit.

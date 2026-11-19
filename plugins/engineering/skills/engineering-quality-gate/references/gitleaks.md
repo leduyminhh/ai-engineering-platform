@@ -7,12 +7,13 @@ Gitleaks là nguồn bắt buộc của chỉ tiêu **secret** (0 secret), qua h
 [Unverified] Cú pháp theo phiên bản Gitleaks. Trước khi chạy, kiểm bằng `gitleaks version` và `gitleaks dir --help`, `gitleaks git --help`.
 
 ```bash
-gitleaks dir --redact --report-format json --report-path gitleaks-tree.json <đường-dẫn-repo>
-gitleaks git --redact --report-format json --report-path gitleaks-history.json <đường-dẫn-repo>
+gitleaks dir --redact --report-format json --report-path <thư-mục-ngoài-repo>/gitleaks-tree.json <đường-dẫn-repo>
+gitleaks git --redact --report-format json --report-path <thư-mục-ngoài-repo>/gitleaks-history.json <đường-dẫn-repo>
 ```
 
-- `--redact` là bắt buộc, kể cả khi chỉ chạy thử. Report không có cờ này chứa giá trị secret.
-- Ghi ra file bằng `--report-path`, không để in ra log CI.
+- `--redact` là bắt buộc theo quy tắc của skill, kể cả khi chỉ chạy thử. [Unverified] Cờ này che giá trị secret trong report.
+- Ghi ra file bằng `--report-path`, không để in ra log CI. Thư mục ghi nằm ngoài repo.
+- Trước khi chạy `gitleaks git`, kiểm lịch sử đủ đầy: `git rev-parse --is-shallow-repository` phải ra `false` [Unverified: hành vi theo phiên bản Git]. Ra `true` thì lịch sử bị cắt, chỉ tiêu secret có thể đạt sai: yêu cầu người dùng clone đầy đủ; nếu không được thì ghi residual risk vào báo cáo.
 - Phiên bản cũ thay cả hai lệnh bằng `gitleaks detect` [Unverified].
 - Chạy trên máy có repo. Không chạy trên VM SIT/UAT.
 - Repo không có lịch sử git: không chạy `gitleaks git`; khai `--na gitleaks-history=<bằng chứng>`, ví dụ "thư mục không phải git repo, đã kiểm bằng `git rev-parse`".
@@ -45,6 +46,7 @@ Report phải là một mảng JSON ở cấp gốc. Không phải mảng thì e
 
 - `--redact` khi chạy. Script không đọc trường chứa giá trị.
 - Báo cáo chỉ nêu `RuleID` và `File:StartLine`. Không chép nội dung report gốc vào chat, báo cáo hay ledger.
+- File report có tên luật và đường dẫn nội bộ: không commit vào repo.
 - Report chưa che không đưa cho agent. Chạy lại với `--redact` rồi đưa bản mới.
 
 ## File ignore cần liệt kê
