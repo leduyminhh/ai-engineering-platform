@@ -589,6 +589,7 @@ export default async function run({ ok, ctx }) {
     const wfAct9 = wfField(wfSteps[8], 'Hành động');
     ok(wfAct9.includes('retest pentest') && wfAct9.includes('Critical/High/Medium') && wfAct9.includes('engineering-quality-gate') && wfAct9.includes('100%'),
       'AC4.1: Bước 9 có dòng đối chiếu retest pentest (Critical/High/Medium), tham chiếu engineering-quality-gate');
+    ok((wfMd.match(/retest pentest/g) || []).length === 1, 'AC4.1: "retest pentest" xuất hiện đúng một lần trong WORKFLOW.md');
     ok(wfField(wfSteps[8], 'Gate') === 'finding đã sửa không còn; 0 finding `blocker` (từ auditor và từ reviewer) hoặc blocker được chấp nhận rõ ràng.',
       'AC4.1: gate Bước 9 không đổi');
   } finally {

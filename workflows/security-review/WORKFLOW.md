@@ -23,7 +23,7 @@ invoke: per-request
   dùng chấp nhận rõ ràng), sẵn sàng để commit.
 - **Đầu vào bắt buộc:** phạm vi cần review (module/service/toàn bộ project).
 - **Đầu vào tuỳ chọn:** báo cáo CVE/dependency đã biết, log sự cố bảo mật trước đó, yêu cầu compliance cụ thể,
-  report pentest (PDF hoặc md), report Coverity, ZAP, Nessus đã xuất sẵn.
+  report pentest, report Coverity, ZAP, Nessus đã xuất sẵn.
 
 ## Điều kiện tiên quyết
 
@@ -185,9 +185,9 @@ Mỗi bước có đủ 8 trường. Bước kết thúc bằng checkpoint ngư�
 - **Hành động:** auditor scan lại đúng vùng đã sửa để xác nhận finding đã chọn không còn và không phát sinh
   finding mới trong vùng vừa sửa; song song, reviewer review correctness/kiến trúc của bản sửa (logic đúng,
   không làm hỏng hành vi hiện có, không che triệu chứng). Reviewer gọi ngoài vòng task nên review như thông
-  thường, trả finding theo contract đầu ra (`core:principles`). Finding pentest người dùng đã xác nhận trước khi sửa
-  (Critical/High/Medium) phải có trong danh sách đối chiếu retest pentest của bước này (theo `engineering-quality-gate`,
-  references/pentest.md); retest đạt 100% là chỉ tiêu theo dõi, không phải gate của bước này.
+  thường, trả finding theo contract đầu ra (`core:principles`). Có report pentest thì đối chiếu từng finding pentest Critical/High/Medium
+  đã được người dùng xác nhận (theo `engineering-quality-gate`, references/pentest.md) với kết quả re-scan; retest pentest
+  đạt 100% là chỉ tiêu theo dõi, không phải gate của bước này.
 - **Ràng buộc:** không tự đóng finding khi chưa scan lại xác nhận; finding chấp nhận rủi ro ở Bước 5 giữ
   nguyên trạng thái, không tính là blocker còn lại; reviewer chỉ đọc, không tự sửa code.
 - **Đầu ra:** báo cáo finding đã sửa không còn xuất hiện; danh sách finding còn lại (nếu có) + trạng thái; danh
