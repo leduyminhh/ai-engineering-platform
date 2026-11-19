@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { applyFull, applyAsk, statusOf, runMode } from "../cli/lib/mode.mjs";
+import { applyMode, statusOf, runMode } from "../cli/lib/mode.mjs";
 import { runAutonomy } from "../cli/lib/autonomy.mjs";
 import { buildClaudePermissions, loadPolicy } from "../cli/lib/permissions.mjs";
 
@@ -31,40 +31,40 @@ const setPath = (r) => path.join(r, ".claude", "settings.json");
 const put = (p, c) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, c); };
 
 test("P4e AC2.2: settings do aip sinh thành rỗng; bản sửa tay giữ nguyên và liệt kê quy tắc aip còn lại", () => {
-  const a = applyFull(null, gen(), { allowEnvFiles: false });
+  const a = applyMode("confined", null, gen(), { allowEnvFiles: false });
   assert.equal(a.settingsText, EMPTY);
   assert.equal(a.settingsAction, "replaced");
-  assert.equal(a.gate.mode, "full");
+  assert.equal(a.gate.mode, "confined");
 
   const edited = JSON.stringify({ permissions: { deny: ["Read(./.env)", "Bash(rm -rf /tmp/x *)"], ask: ["WebFetch"] } }, null, 2) + "\n";
-  const b = applyFull({}, edited, { allowEnvFiles: false });
+  const b = applyMode("confined", {}, edited, { allowEnvFiles: false });
   assert.equal(b.settingsText, edited);
   assert.equal(b.settingsAction, "kept-custom");
   assert.ok(b.leftoverRules.includes("WebFetch"));
   assert.ok(!b.leftoverRules.includes("Bash(rm -rf /tmp/x *)"));
 
-  assert.equal(applyFull({}, null, { allowEnvFiles: false }).settingsAction, "absent");
+  assert.equal(applyMode("confined", {}, null, { allowEnvFiles: false }).settingsAction, "absent");
 });
 
 test("P4e AC2.3: ask sau full sinh lại policy chuẩn, tôn trọng allowEnvFiles, giữ khóa khác", () => {
   for (const allowEnvFiles of [false, true]) {
-    const f = applyFull({ mcpAllow: ["x"], allowEnvFiles }, gen(allowEnvFiles), { allowEnvFiles });
-    const k = applyAsk(f.gate, f.settingsText, { allowEnvFiles });
+    const f = applyMode("confined", { mcpAllow: ["x"], allowEnvFiles }, gen(allowEnvFiles), { allowEnvFiles });
+    const k = applyMode("guarded", f.gate, f.settingsText, { allowEnvFiles });
     assert.equal(k.settingsText, gen(allowEnvFiles));
     assert.equal(k.settingsAction, "regenerated");
     assert.deepEqual(k.gate, { mcpAllow: ["x"], allowEnvFiles });
   }
   assert.ok(gen(true).length < gen(false).length, "allowEnvFiles bỏ nhóm env khỏi policy");
-  assert.equal(applyAsk({ mode: "full" }, "{ custom }", { allowEnvFiles: false }).settingsAction, "kept");
-  assert.equal(applyAsk(null, null, { allowEnvFiles: false }).settingsAction, "absent");
+  assert.equal(applyMode("guarded", { mode: "full" }, "{ custom }", { allowEnvFiles: false }).settingsAction, "kept");
+  assert.equal(applyMode("guarded", null, null, { allowEnvFiles: false }).settingsAction, "absent");
 });
 
 test("P4e AC2.3: statusOf báo mode và tình trạng settings", () => {
-  assert.deepEqual(statusOf(null, null), { mode: "ask", settings: "absent", leftoverRules: [] });
+  assert.deepEqual(statusOf(null, null), { mode: "guarded", settings: "absent", leftoverRules: [] });
   assert.equal(statusOf({ mode: "full" }, EMPTY).settings, "aip-full");
-  assert.equal(statusOf({ mode: "full" }, EMPTY).mode, "full");
+  assert.equal(statusOf({ mode: "full" }, EMPTY).mode, "confined");
   assert.equal(statusOf({}, gen()).settings, "aip-ask");
-  assert.equal(statusOf({ mode: "bogus" }, "{}").mode, "ask");
+  assert.equal(statusOf({ mode: "bogus" }, "{}").mode, "guarded");
   const s = statusOf({}, JSON.stringify({ permissions: { ask: ["WebFetch"] } }));
   assert.equal(s.settings, "custom-with-aip-rules");
   assert.deepEqual(s.leftoverRules, ["WebFetch"]);
@@ -79,7 +79,7 @@ test("P4e AC2.1: runMode full giữ khóa khác, bỏ BOM, idempotent, ghi khôn
   assert.equal(runMode("full", { root, out: (l) => lines.push(l) }), 0);
   const first = fs.readFileSync(gatePath(root));
   assert.notEqual(first[0], 0xef);
-  assert.deepEqual(JSON.parse(first.toString("utf8")), { mcpAllow: ["a"], mode: "full" });
+  assert.deepEqual(JSON.parse(first.toString("utf8")), { mcpAllow: ["a"], mode: "confined" });
   assert.ok(first.toString("utf8").endsWith("}\n") && !first.toString("utf8").includes("\r"));
   assert.equal(fs.readFileSync(setPath(root), "utf8"), EMPTY);
   assert.ok(lines.join("\n").includes("bypassPermissions"));
@@ -90,15 +90,15 @@ test("P4e AC2.1: runMode full giữ khóa khác, bỏ BOM, idempotent, ghi khôn
 test("P4e AC2.1: runMode full tạo .claude/ khi thiếu; ask bỏ khóa mode; status in mode", () => {
   const root = tmp();
   runMode("full", { root, out: () => {} });
-  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(root), "utf8")), { mode: "full" });
+  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(root), "utf8")), { mode: "confined" });
   const lines = [];
   runMode("status", { root, out: (l) => lines.push(l) });
-  assert.ok(lines.join("\n").includes("full"));
+  assert.ok(lines.join("\n").includes("confined"));
   runMode("ask", { root, out: () => {} });
   assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(root), "utf8")), {});
   const l2 = [];
   runMode("status", { root, out: (l) => l2.push(l) });
-  assert.ok(l2.join("\n").includes("ask"));
+  assert.ok(l2.join("\n").includes("guarded"));
 });
 
 test("P4e AC2.1: CLI từ chối -g và giá trị lạ", () => {
@@ -111,11 +111,11 @@ test("P4e AC2.1: CLI từ chối -g và giá trị lạ", () => {
   assert.equal(run().status, 2);
   assert.equal(fs.existsSync(gatePath(root)), false);
   assert.equal(run("full").status, 0);
-  assert.equal(JSON.parse(fs.readFileSync(gatePath(root), "utf8")).mode, "full");
+  assert.equal(JSON.parse(fs.readFileSync(gatePath(root), "utf8")).mode, "confined");
 });
 
 test("P4e AC2.4: full lần hai với settings dạng rỗng là already-full, không báo sửa tay", () => {
-  const r = applyFull({ mode: "full" }, EMPTY, { allowEnvFiles: false });
+  const r = applyMode("confined", { mode: "full" }, EMPTY, { allowEnvFiles: false });
   assert.equal(r.settingsAction, "already-full");
   assert.equal(r.settingsText, EMPTY);
   const root = tmp();
@@ -141,17 +141,17 @@ test("P4e AC2.5: trong worktree, aip mode theo đúng thứ tự đọc của ho
   put(gatePath(main), JSON.stringify({ mode: "full", mcpDeny: ["evil"] }));
   const run = (sub) => { const l = []; runMode(sub, { root: wt, out: (x) => l.push(x) }); return l.join("\n"); };
 
-  assert.match(run("status"), /Chế độ: full/);
+  assert.match(run("status"), /Chế độ: confined/);
   assert.match(run("status"), /repo chính/);
 
   run("ask");
   assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mcpDeny: ["evil"] });
-  assert.match(run("status"), /Chế độ: ask/);
+  assert.match(run("status"), /Chế độ: guarded/);
   assert.equal(JSON.parse(fs.readFileSync(gatePath(main), "utf8")).mode, "full", "file repo chính không bị sửa");
 
   fs.rmSync(gatePath(wt));
   const msg = run("full");
-  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mode: "full", mcpDeny: ["evil"] });
+  assert.deepEqual(JSON.parse(fs.readFileSync(gatePath(wt), "utf8")), { mode: "confined", mcpDeny: ["evil"] });
   assert.match(msg, /che file/);
 });
 
@@ -169,7 +169,7 @@ test("P4e2 AC1.7: aip mode cảnh báo theo trạng thái git của aip-gate.jso
   const t = run("full", tracked);
   assert.match(t, /bỏ qua/);
   assert.match(t, /git rm --cached \.claude\/aip-gate\.json/);
-  assert.equal(JSON.parse(fs.readFileSync(gatePath(tracked), "utf8")).mode, "full");
+  assert.equal(JSON.parse(fs.readFileSync(gatePath(tracked), "utf8")).mode, "confined");
   assert.match(run("status", tracked), /git: .*được theo dõi.*bỏ qua/);
 
   const open = tmp();
@@ -192,7 +192,7 @@ test("P4e2 AC1.7: aip mode cảnh báo theo trạng thái git của aip-gate.jso
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), "aip-mode-nogit-"));
   dirs.push(outside);
   assert.match(run("status", outside), /git: .*không xác định/);
-  assert.match(run("full", outside), /✓ mode=full/);
+  assert.match(run("full", outside), /✓ mode=confined/);
 });
 
 test("P4e2 AC2.3: file worktree hỏng che repo chính; aip mode báo lỗi ra stderr, exit 1, không ghi file", () => {
@@ -469,7 +469,7 @@ test("gate-config-flow AC4.5: không chép khoá nới quyền của file repo c
   const t = mainWithWt("trk");
   commitGate(t.main, { ...loose, mode: "full", mcpDeny: ["evil"], foo: 1 });
   assert.equal(cmd(runMode, "full", t.wt).code, 0);
-  assert.deepEqual(read(t.wt), { mode: "full", mcpDeny: ["evil"], foo: 1 });
+  assert.deepEqual(read(t.wt), { mode: "confined", mcpDeny: ["evil"], foo: 1 });
   fs.rmSync(gatePath(t.wt));
   assert.equal(cmd(runAutonomy, "high", t.wt).code, 0);
   assert.deepEqual(read(t.wt), { mcpDeny: ["evil"], foo: 1, autonomy: HIGH });
@@ -506,7 +506,7 @@ test("gate-config-flow AC4.2: status chỉ hiện mode đáng tin; gợi ý gỡ
   const root = tmp();
   commitGate(root, { mode: "full", autonomy: { mergeLocal: true } });
   const t = cmd(runMode, "status", root).out;
-  assert.match(t, /Chế độ: ask/, t);
+  assert.match(t, /Chế độ: guarded/, t);
   assert.doesNotMatch(t, /Chế độ: full/);
   assert.match(t, /mode.*bỏ qua|bỏ qua.*mode/i);
   assert.match(cmd(runMode, "full", root).out, /xem lại/);
@@ -541,5 +541,131 @@ test("gate-followups AC1.1: aip mode/autonomy từ chối ghi khi .claude hoặc
       assert.deepEqual(snapshot(l.ext), before, `${kind} ${sub}: file đích không đổi`);
     }
     assert.equal(cmd(runMode, "status", l.root).code, 0, `${kind}: status vẫn đọc được`);
+  }
+});
+
+// ── Chuẩn hoá ba mode guarded/confined/open (request 2026-11-19-permission-modes-standard) ──
+const DEFS = {
+  guarded: "Việc rủi ro thì hỏi người dùng.",
+  confined: "Không bao giờ hỏi: việc trong rào thì cho qua, ngoài rào thì từ chối.",
+  open: "Không hỏi, không rào: chỉ còn chặn ghi file cấu hình quyền và theo `writeScope`, `mcpDeny`.",
+};
+const BOM = "﻿";
+const gateOnDisk = (r) => JSON.parse(fs.readFileSync(gatePath(r), "utf8"));
+const seed = (r, gate, settings = gen()) => { put(gatePath(r), BOM + JSON.stringify(gate)); put(setPath(r), settings); };
+
+test("AC4.1: aip mode confined|open ghi tên mới, giữ khoá khác, bỏ BOM, settings rỗng, idempotent; guarded bỏ khoá mode", () => {
+  for (const name of ["confined", "open"]) {
+    const root = tmp();
+    seed(root, { mcpAllow: ["a"], fullRoots: [path.resolve("/x")] });
+    const a = cmd(runMode, name, root);
+    assert.equal(a.code, 0, a.err);
+    assert.deepEqual(gateOnDisk(root), { mcpAllow: ["a"], fullRoots: [path.resolve("/x")], mode: name });
+    assert.ok(!fs.readFileSync(gatePath(root), "utf8").startsWith(BOM), "không BOM");
+    assert.equal(fs.readFileSync(setPath(root), "utf8"), EMPTY);
+    assert.match(a.out, new RegExp(`✓ mode=${name}`));
+    const files1 = [fs.readFileSync(gatePath(root), "utf8"), fs.readFileSync(setPath(root), "utf8")];
+    cmd(runMode, name, root);
+    assert.deepEqual([fs.readFileSync(gatePath(root), "utf8"), fs.readFileSync(setPath(root), "utf8")], files1, `${name} lần hai không đổi file`);
+    const g = cmd(runMode, "guarded", root);
+    assert.equal(g.code, 0, g.err);
+    assert.deepEqual(gateOnDisk(root), { mcpAllow: ["a"], fullRoots: [path.resolve("/x")] });
+    assert.equal(fs.readFileSync(setPath(root), "utf8"), gen(), "settings rỗng do aip sinh được sinh lại bản chuẩn");
+  }
+});
+
+test("AC4.2: ask ≡ guarded, full ≡ confined (file, settings, stdout); không bao giờ ghi giá trị ask/full", () => {
+  for (const [old, name] of [["ask", "guarded"], ["full", "confined"]]) {
+    const a = tmp(); const b = tmp();
+    seed(a, { mode: "confined", foo: 1 }, EMPTY); seed(b, { mode: "confined", foo: 1 }, EMPTY);
+    const ra = cmd(runMode, old, a); const rb = cmd(runMode, name, b);
+    assert.equal(ra.out.split(a).join("<R>"), rb.out.split(b).join("<R>"), `${old} ≡ ${name}: stdout`);
+    assert.equal(fs.readFileSync(gatePath(a), "utf8"), fs.readFileSync(gatePath(b), "utf8"));
+    assert.equal(fs.readFileSync(setPath(a), "utf8"), fs.readFileSync(setPath(b), "utf8"));
+    assert.ok(!/"mode":\s*"(ask|full)"/.test(fs.readFileSync(gatePath(a), "utf8")));
+  }
+});
+
+test("AC4.3: settings.json đã sửa tay giữ nguyên ở open và confined, liệt kê quy tắc aip còn lại", () => {
+  const edited = JSON.stringify({ permissions: { deny: ["Read(./.env)"], ask: ["WebFetch"] } }, null, 2) + "\n";
+  for (const name of ["open", "confined"]) {
+    const root = tmp();
+    seed(root, {}, edited);
+    const r = cmd(runMode, name, root);
+    assert.equal(fs.readFileSync(setPath(root), "utf8"), edited);
+    assert.match(r.out, /đã sửa tay nên giữ nguyên/);
+    assert.match(r.out, /WebFetch/);
+  }
+});
+
+test("AC4.4: cảnh báo của open và confined nêu đúng giới hạn", () => {
+  const o = cmd(runMode, "open", tmp()).out;
+  for (const re of [/đọc\/ghi mọi nơi/, /file bí mật/, /push nhánh bảo vệ/, /ghi file cấu hình quyền/, /agent chạy/, /writeScope/, /mcpDeny/, /tự đổi mode bằng script/, /bypassPermissions/, /aip mode guarded/, /chưa được gitignore/]) assert.match(o, re, String(re));
+  const c = cmd(runMode, "confined", tmp()).out;
+  assert.match(c, /từ chối chứ không hỏi/);
+  assert.match(c, /tự đổi mode bằng script/);
+  assert.match(c, /bypassPermissions/);
+});
+
+test("AC4.5: status in tên mới, câu định nghĩa, gợi ý tên cũ và giá trị lạ", () => {
+  const rows = [["full", "confined", "aip mode confined"], ["ask", "guarded", "aip mode guarded"], ["confined", "confined", null], ["guarded", "guarded", null], ["open", "open", null], [undefined, "guarded", null], ["bypass", "guarded", "không nhận ra"]];
+  for (const [raw, want, hint] of rows) {
+    const root = tmp();
+    put(gatePath(root), JSON.stringify(raw === undefined ? { foo: 1 } : { mode: raw }));
+    const r = cmd(runMode, "status", root);
+    const lines = r.out.split("\n");
+    assert.equal(lines[0].startsWith(`Chế độ: ${want}`), true, `${raw}: ${lines[0]}`);
+    assert.ok(lines.includes(`Ý nghĩa: ${DEFS[want]}`), `${raw}: dòng Ý nghĩa`);
+    if (raw === undefined) assert.match(lines[0], /mặc định/);
+    const hintLine = lines.find((l) => l.startsWith("Gợi ý:"));
+    if (hint === "aip mode confined" || hint === "aip mode guarded") assert.ok(hintLine?.includes(hint) && hintLine.includes(`"${raw}"`), `${raw}: gợi ý tên cũ`);
+    else assert.equal(hintLine, undefined, `${raw}: không gợi ý`);
+    if (hint === "không nhận ra") assert.ok(lines.some((l) => l.includes("không nhận ra") && l.includes("như guarded")));
+    else assert.ok(!lines.some((l) => l.includes("không nhận ra")), `${raw}: không có dòng lạ`);
+  }
+  const root = tmp();
+  put(gatePath(root), JSON.stringify({ mode: "full" }));
+  execFileSync("git", ["add", "-f", ".claude/aip-gate.json"], { cwd: root });
+  const t = cmd(runMode, "status", root).out;
+  assert.match(t, /Khoá bị bỏ qua.*mode/);
+  assert.ok(!t.split("\n").some((l) => l.startsWith("Gợi ý:")), "file bị theo dõi: không gợi ý tên cũ");
+});
+
+test("AC4.6: open với khoá full* in dòng không có tác dụng; không có khoá hoặc ở confined thì không", () => {
+  const has = (o) => o.split("\n").some((l) => l.includes("không có tác dụng"));
+  const withKeys = tmp();
+  put(gatePath(withKeys), JSON.stringify({ mode: "open", fullRoots: [path.resolve("/x")] }));
+  assert.ok(has(cmd(runMode, "status", withKeys).out));
+  const without = tmp();
+  put(gatePath(without), JSON.stringify({ mode: "open" }));
+  assert.ok(!has(cmd(runMode, "status", without).out));
+  const confined = tmp();
+  put(gatePath(confined), JSON.stringify({ mode: "confined", fullRoots: [path.resolve("/x")] }));
+  assert.ok(!has(cmd(runMode, "status", confined).out));
+});
+
+test("AC4.7: chuyển giữa ba mode (kể cả qua bí danh) chỉ đổi khoá mode, giữ fullRoots", () => {
+  const names = ["guarded", "confined", "open"];
+  const alias = { guarded: "ask", confined: "full" };
+  for (const from of names) for (const to of names) {
+    if (from === to) continue;
+    for (const via of [to, alias[to]].filter(Boolean)) {
+      const root = tmp();
+      seed(root, { fullRoots: [path.resolve("/x")], ...(from === "guarded" ? {} : { mode: from }) }, EMPTY);
+      cmd(runMode, via, root);
+      const want = { fullRoots: [path.resolve("/x")], ...(to === "guarded" ? {} : { mode: to }) };
+      assert.deepEqual(gateOnDisk(root), want, `${from} → ${via}`);
+    }
+  }
+});
+
+test("AC4.8: node cli/index.mjs mode chỉ nhận năm tên; giá trị lạ, thừa đối số và -g exit 2 kèm cách dùng", () => {
+  const root = tmp();
+  const run = (...args) => spawnSync("node", [CLI, "mode", ...args], { cwd: root, encoding: "utf8" });
+  for (const name of ["guarded", "confined", "open", "ask", "full"]) assert.equal(run(name).status, 0, name);
+  for (const bad of [["foo"], ["bypass"], ["open", "extra"], ["open", "-g"]]) {
+    const r = run(...bad);
+    assert.equal(r.status, 2, bad.join(" "));
+    assert.match(r.stderr, /guarded\|confined\|open\|status/, bad.join(" "));
   }
 });
