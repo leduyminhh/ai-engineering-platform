@@ -1808,7 +1808,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (effMode() === 'open') return decideOpen(cmd, msys);
   const deny = (text) => ({ decision: 'deny', reason: text });
   const ask = (text) => { let line = ''; try { line = summarize(cmd, msys); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
-  // Lỗi bất ngờ ở full + bypass thành hỏi: ném lại sẽ để main() cho lệnh chưa được kiểm đi qua.
+  // Lỗi bất ngờ ở confined + bypass thành chặn: ném lại sẽ để main() cho lệnh chưa được kiểm đi qua.
   try {
   const parsedCmd = parse(cmd);
   const { unclosed } = parsedCmd;
@@ -1832,7 +1832,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (guardConfigHit(segs, naiveAll, cmd, msys)) {
     return full() ? deny(CONFIG_DENY_TEXT) : ask(CONFIG_TEXT);
   }
-  // Một lần mỗi decide, dùng chung cho H6 và kiểm bí mật để hai nơi không lệch kết quả. Hợp của cách nhìn scanWords và cách nhìn thô; lỗi nội bộ rơi về chữ chưa giải (hỏi).
+  // Một lần mỗi decide, dùng chung cho H6 và kiểm bí mật để hai nơi không lệch kết quả. Hợp của cách nhìn scanWords và cách nhìn thô; lỗi nội bộ rơi về chữ chưa giải (hỏi ở guarded, chặn ở confined).
   let walkedAll;
   const walked = () => {
     if (walkedAll) return walkedAll;
@@ -1882,7 +1882,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const secretName = (re) => { for (const text of scans()) { const m = re.exec(text); if (m) return m[2]; } return ''; };
   const secretAsk = (re) => ask(secretText(secretName(re)));
   if (hits(SECRET) && !full() && (hits(KEY_SECRET) || !allowEnv(cwd))) return secretAsk(hits(KEY_SECRET) ? KEY_SECRET : SECRET);
-  // Ở full, bí mật chỉ mở trong root của project: đường dẫn bí mật nằm ngoài root hoặc không xác định được vẫn hỏi (khớp guard-files).
+  // Ở full, bí mật chỉ mở trong root của project: đường dẫn bí mật nằm ngoài root hoặc không xác định được vẫn bị chặn (khớp guard-files).
   if (hits(SECRET) && full()) {
     // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
     const secretRe = hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET;

@@ -93,7 +93,7 @@ export default async function run({ ok, ctx }) {
     const chain = Array(1100).fill('cd a').join('; ');
     const table = [
       // [nhãn, lệnh, kỳ vọng ở guarded, từ khoá vận hành bắt buộc trong reason, từ khoá cấm]
-      ['1', chain, undefined, ['aip mode open'], []],
+      ['1', chain, null, ['aip mode open'], []],
       ['2', 'git push origin master', 'ask', ['fullKeep', 'aip mode open'], []],
       ['2', 'git push --force origin feature/x', 'ask', ['fullKeep', 'aip mode open'], []],
       ['3', 'echo x > ' + P + '/.claude/aip-gate.json', 'ask', ['aip mode'], ['aip mode open']],
@@ -115,11 +115,16 @@ export default async function run({ ok, ctx }) {
       }
       ok(kind('aip mode status', { cfg: { mode } }) === null, 'AC3.1: ' + mode + ' aip mode status → null');
     }
-    ok(kind('git push origin master', { cfg: { mode: 'confined', fullKeep: [] } }) === null, 'AC3.1: fullKeep rỗng mở cổng push ở confined');
+    for (const c of ['git push origin master', 'git push --force origin feature/x']) ok(kind(c, { cfg: { mode: 'confined', fullKeep: [] } }) === null, 'AC3.1: fullKeep rỗng mở cổng push ở confined: ' + c);
+    // AC3.6 (guard-bash): lỗi nội bộ sau khi xác định confined ⇒ deny cho lệnh bất kỳ; guarded không bị ảnh hưởng.
+    const throwing = (mode) => ({ mode, get fullRoots() { throw new Error('boom'); } });
+    const e = safe('echo x', { cfg: throwing('confined') });
+    ok(e?.decision === 'deny' && e.reason.includes('aip mode open'), 'AC3.6: confined, lỗi nội bộ với lệnh bất kỳ → deny nêu aip mode open (' + e?.decision + ')');
+    ok(kind('echo x', { cfg: throwing('guarded') }) === null, 'AC3.6: đối chứng guarded, cùng seam ném → null');
 
     // AC3.5: thiếu một điều kiện (file bị theo dõi, phiên không bypass) → bằng guarded, không có deny của nhánh confined.
     const trackedGate = (cfg) => ({ config: undefined, reader: () => ({ config: cfg, file: P + '/.claude/aip-gate.json', roots: [P] }), tracked: () => true });
-    for (const [n, cmd] of table.filter(([k]) => k !== '1')) {
+    for (const [n, cmd] of table) {
       const asGuarded = (opt) => JSON.stringify(safe(cmd, opt));
       const o7 = n === '7' ? { opts: boom } : {};
       ok(asGuarded({ cfg: undefined, opts: { ...o7.opts, ...trackedGate({ mode: 'confined' }) } }) === asGuarded({ cfg: undefined, opts: { ...o7.opts, ...trackedGate({ mode: 'guarded' }) } }),
