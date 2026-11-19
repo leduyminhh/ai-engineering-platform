@@ -4,7 +4,7 @@ import { readFileSync, existsSync, statSync, readdirSync, realpathSync } from 'n
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readGateConfig, resolveGate, gateTracked } from './gate-config.mjs';
+import { readGateConfig, resolveGate, gateTracked, modeName } from './gate-config.mjs';
 
 // Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Bootstrap, ledger và handoff chia chung ngân sách này.
 const MAX_TOTAL = 9000;
@@ -223,9 +223,23 @@ function resumeLine(input, handoff, cwd) {
   return `${cost} Cân nhắc mở phiên mới${rel ? ` từ ${rel}` : ''}.`;
 }
 
+// Hook không biết phiên có bypassPermissions hay không (SessionStart chưa được kiểm có permission_mode), nên chỉ báo mode trong file và điều kiện áp.
+// Chỉ báo khi file không bị git theo dõi: file đã commit không có hiệu lực nên báo sẽ gây hiểu nhầm. Lỗi ⇒ không có dòng.
+function modeLine(cwd, d) {
+  try {
+    const g = d.loadGate(cwd);
+    const cfg = g?.config;
+    if (!cfg || typeof cfg !== 'object') return null;
+    const mode = modeName(cfg.mode);
+    if (mode === 'guarded') return null;
+    if (g.file && d.gateTracked(g.file) !== false) return null;
+    return `aip: mode hiệu lực = ${mode} (nguồn ${g.file ? show(cwd, g.file) : 'cấu hình'}); chỉ áp khi phiên chạy bypassPermissions.`;
+  } catch { return null; }
+}
+
 export function decide(input, deps = {}) {
   try {
-    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, listTracked: listTrackedHandoffs, loadConfig: readGateConfig, gitRoots: (dir) => { const g = resolveGate(dir); return g && { top: g.top, main: g.main }; }, ...deps };
+    const d = { readFile: (p) => readFileSync(p, 'utf8'), existsSync, statSync, readdirSync, realpath: realpathSync.native, now: Date.now, listTracked: listTrackedHandoffs, loadConfig: readGateConfig, loadGate: resolveGate, gateTracked, gitRoots: (dir) => { const g = resolveGate(dir); return g && { top: g.top, main: g.main }; }, ...deps };
     d.tracked ??= (p, root) => handoffTracked(d, p, root);
     const cwd = path.resolve(input?.cwd || '.');
     const cfg = d.loadConfig(cwd);
@@ -240,13 +254,15 @@ export function decide(input, deps = {}) {
       try { ledger = ledgerSection(cwd, cfg, d); } catch { /* ledger hỏng không được chặn handoff */ }
     }
     const parts = [];
-    // Bootstrap đứng đầu và trừ khỏi ngân sách chung để tổng không vượt MAX_TOTAL.
+    // Dòng báo mode đứng đầu, không phụ thuộc bootstrapInject; cùng bootstrap trừ khỏi ngân sách chung để tổng không vượt MAX_TOTAL.
+    const modeNote = modeLine(cwd, d);
+    if (modeNote) parts.push(modeNote);
     const boot = cfg?.bootstrapInject !== false;
     if (boot) parts.push(BOOTSTRAP);
     if (cfg?.handoffInject !== false) {
       try {
         const h = usableHandoff(cwd, cfg, d);
-        const room = MAX_TOTAL - (ledger ? ledger.length + 2 : 0) - (boot ? BOOTSTRAP.length + 2 : 0);
+        const room = MAX_TOTAL - (ledger ? ledger.length + 2 : 0) - (boot ? BOOTSTRAP.length + 2 : 0) - (modeNote ? modeNote.length + 2 : 0);
         if (h) parts.push(`Handoff của phiên trước (${show(cwd, h.file)}):\n${DATA_NOTE}\n${h.text}`.slice(0, room));
       } catch { /* handoff hỏng không được chặn ledger */ }
     }
