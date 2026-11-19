@@ -11,7 +11,7 @@ trivy image --scanners vuln,secret --format json --output <thư-mục-ngoài-rep
 ```
 
 - Luôn có `vuln,secret`. Quét thiếu `secret` thì chỉ tiêu secret có thể đạt sai.
-- Tham chiếu theo digest (`<repo>@sha256:...`) khi có. `Metadata.RepoDigests` chỉ có giá trị khi image đã có digest trên registry [Unverified]. Script chỉ dùng `Metadata.RepoDigests[0]` làm khoá tài sản của finding. Đối chiếu digest đã quét với image đang chạy trên SIT/UAT là bước của skill `ops-deploy-release` (file `references/digest-check.md`), không phải của script.
+- Tham chiếu theo digest (`<repo>@sha256:...`) khi có. `Metadata.RepoDigests` chỉ có giá trị khi image đã có digest trên registry [Unverified]. Script dùng `Metadata.RepoDigests[0]` làm khoá tài sản của finding; không có thì dùng `ArtifactName`. Đối chiếu digest đã quét với image đang chạy trên SIT/UAT là bước của skill `ops-deploy-release` (file `references/digest-check.md`), không phải của script.
 - Quét trên máy có quyền pull image. Không chạy trên VM SIT/UAT.
 - Trivy chưa cài: nêu rõ các chỉ tiêu liên quan `chưa đo`, đề nghị người dùng cài hoặc đưa report sẵn có. Không cài vào project.
 

@@ -14,6 +14,8 @@ docker image inspect --format '{{json .RepoDigests}}' <image>
 
 Output là mảng JSON, ví dụ `["<tên-repo>@sha256:<digest-đã-quét>"]`.
 
+- [Unverified] Report Trivy không có `Metadata.RepoDigests` (rỗng hoặc thiếu): lấy image ID từ máy build bằng lệnh ở mục Quy tắc so khớp. Không lấy được (máy build không còn image) thì ghi `chưa đo`.
+
 ## Digest đang chạy trên SIT/UAT
 
 Chỉ đọc. Chạy các lệnh dưới đây chỉ sau khi người dùng xác nhận máy SIT/UAT và phạm vi (môi trường, service),
@@ -27,7 +29,7 @@ hoặc khi người dùng dán output vào chat.
 docker inspect --format '{{.Image}}' <container>
 ```
 
-Output dạng `sha256:<image-id>`. Đây là image ID cục bộ của Docker, không phải digest registry.
+[Unverified] Output dạng `sha256:<image-id>`. [Inference] Đây là image ID cục bộ của Docker, không phải digest registry.
 
 2. Digest của image đang chạy:
 
@@ -51,12 +53,12 @@ docker compose images
 |---|---|---|
 | `đạt` | Mọi image của mọi service trong scope khớp digest đã quét | Ghi `đạt`. Mục này không tạo lý do NO-GO. |
 | `không đạt` | Ít nhất một image lệch digest đã quét | Ghi service và image lệch. Đề xuất NO-GO. |
-| `chưa đo` | Không lấy được digest: lệnh lỗi, thiếu quyền, chưa có xác nhận máy hoặc phạm vi, chưa có output người dùng dán | Coi là chưa đạt. Đề xuất NO-GO. |
+| `chưa đo` | Không lấy được digest (hoặc image ID khi so theo image ID): lệnh lỗi, thiếu quyền, chưa có xác nhận máy hoặc phạm vi, chưa có output người dùng dán | Coi là chưa đạt. Đề xuất NO-GO. |
 
 - Mỗi service có thể có nhiều image: so từng image. Service không có image nào trong output thì ghi `chưa đo` cho service đó.
 - Cả hai phía đều có digest: so digest với digest.
-- Image không có RepoDigest ở một phía (ví dụ image build local chưa push registry): so image ID với image ID. [Unverified] Lấy image ID phía build bằng `docker image inspect --format '{{.Id}}' <image>` trên máy build. Ghi rõ "so theo image ID" trong báo cáo.
-- Một phía chỉ có digest, phía kia chỉ có image ID: không so được. Ghi `chưa đo` cho image đó.
+- Một phía không có RepoDigest (ví dụ image build local chưa push registry): so theo image ID. [Unverified] Lấy image ID phía build bằng `docker image inspect --format '{{.Id}}' <image>` trên máy build; phía đang chạy lấy bằng `docker inspect --format '{{.Image}}' <container>` (bước 1 ở trên). So image ID với image ID và ghi rõ "so theo image ID" trong báo cáo.
+- Chỉ ghi `chưa đo` cho image khi không lấy được image ID ở phía nào.
 - [Inference] `RepoDigests` (digest manifest của registry) và image ID (định danh image cục bộ) là hai loại định danh khác nhau. Chỉ so cùng loại, không so chéo.
 
 ## Báo cáo
@@ -70,4 +72,5 @@ docker compose images
 - Chỉ đọc. Không `docker pull`, `docker run`, `docker exec`, `docker compose up`, `docker compose pull`,
   `docker restart`, `docker rm` hoặc bất kỳ lệnh ghi nào lên SIT/UAT.
 - Không đọc giá trị biến môi trường chứa secret; báo cáo chỉ nêu tên biến.
+- Không cài tool lên SIT/UAT hoặc vào project. Thiếu tool (Docker, Trivy) thì ghi `chưa đo` và đề nghị người dùng cài hoặc dán output.
 - Thiếu máy, quyền hoặc output: nêu rõ và đề nghị người dùng cung cấp (fail-loud), không suy ra digest.

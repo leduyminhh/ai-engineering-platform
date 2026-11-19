@@ -57,7 +57,7 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
    phần rủi ro. Mỗi mục là tiêu chí **đo được** (đạt / chưa đạt), không đánh dấu "xong" khi chưa kiểm.
    Đối chiếu **digest image** đang chạy trên SIT/UAT với image đã quét theo
    [references/digest-check.md](references/digest-check.md). Đây là mục chặn: digest `không đạt` hoặc `chưa đo`
-   thì đề xuất NO-GO, như mọi mục chặn chưa đạt.
+   thì đề xuất NO-GO, như mục chặn chưa đạt ở bước 1.
    Kết thúc bằng **đề xuất GO/NO-GO** cho người duyệt: bảng mục đạt/chưa đạt + **rollback plan** (lệnh hoặc thao tác,
    điểm khôi phục, ngưỡng kích hoạt, người thực thi). Thiếu rollback plan hoặc còn mục chặn chưa đạt → đề xuất NO-GO.
    Người duyệt quyết định GO; agent không tự chuyển sang bước 3.
