@@ -36,9 +36,11 @@ const TRIVY_SEVERITY = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', L
 // Thông báo lỗi chỉ nêu tên cờ và tên trường: report có thể chứa secret nên không chép giá trị hay message gốc của JSON.parse.
 const fail = (key, detail) => new InputError(`${FLAG_OF[key]}: ${detail}`, key);
 
+const stripBom = (t) => (String(t).charCodeAt(0) === 0xfeff ? String(t).slice(1) : String(t));
+
 function parseJson(key, text) {
   try {
-    return JSON.parse(String(text).replace(/^\uFEFF/, ''));
+    return JSON.parse(stripBom(text));
   } catch {
     throw fail(key, 'JSON không hợp lệ');
   }
@@ -64,6 +66,12 @@ const RCE_LABEL = /remote code execution/i;
 const ZAP_SEVERITY = { 3: 'High', 2: 'Medium', 1: 'Low', 0: 'Info' };
 const SARIF_LEVEL = { ERROR: 'High', WARNING: 'Medium', NOTE: 'Low', NONE: 'Info' };
 const COVERITY_IMPACT = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
+const NESSUS_RISK = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', NONE: 'Info' };
+const BLACKDUCK_SEVERITY = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', NONE: 'Info', UNKNOWN: 'Info', INFO: 'Info' };
+const SONAR_SEVERITY = { BLOCKER: 'Critical', CRITICAL: 'High', MAJOR: 'Medium', MINOR: 'Low', INFO: 'Info' };
+// impacts.severity của Sonar MQR có thêm BLOCKER/INFO ngoài HIGH/MEDIUM/LOW; thiếu ánh xạ thì report hợp lệ bị exit 2.
+const SONAR_IMPACT = { BLOCKER: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', INFO: 'Info' };
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const cweNumbers = (text) => [...String(text).matchAll(/cwe[-_/ ]?0*(\d+)/gi)].map((m) => Number(m[1]));
 const isRce = (cwe, title) => cwe.some((c) => RCE_CWES.has(c)) || RCE_LABEL.test(title);
@@ -74,6 +82,7 @@ function codeFinding(source, file, line, severity, cwe, title) {
 }
 
 const RANK = Object.fromEntries(SEVERITIES.map((s, i) => [s, SEVERITIES.length - i]));
+const maxSeverity = (list) => list.reduce((a, b) => (RANK[b] > RANK[a] ? b : a));
 
 function addFinding(map, f) {
   const cur = map.get(f.key);
@@ -149,6 +158,8 @@ function readSarif(key, text, map) {
   const doc = parseJson(key, text);
   if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.runs)) throw fail(key, 'thiếu mảng runs');
   for (const run of doc.runs) {
+    if (run === null || typeof run !== 'object' || Array.isArray(run)) throw fail(key, 'phần tử runs phải là object');
+    if (run.results != null && !Array.isArray(run.results)) throw fail(key, 'results phải là mảng');
     const rules = new Map((run?.tool?.driver?.rules || []).map((r) => [r.id, r]));
     for (const res of run?.results || []) {
       const rule = rules.get(res?.ruleId) || {};
@@ -156,7 +167,9 @@ function readSarif(key, text, map) {
       const phys = res.locations?.[0]?.physicalLocation;
       const file = requireField(key, phys?.artifactLocation, 'uri', 'string');
       const line = requireField(key, phys?.region, 'startLine', 'number');
-      const tags = [...(rule.properties?.tags || []), ...(res.properties?.tags || [])].filter((t) => typeof t === 'string');
+      const tagLists = [rule.properties?.tags, res.properties?.tags].filter((t) => t != null);
+      if (tagLists.some((t) => !Array.isArray(t) || t.some((x) => typeof x !== 'string'))) throw fail(key, 'tags phải là mảng chuỗi');
+      const tags = tagLists.flat();
       const cwe = [...new Set(tags.flatMap(cweNumbers))];
       const title = [rule.shortDescription?.text, rule.name, res.message?.text].filter((t) => typeof t === 'string').join(' ');
       addFinding(map, codeFinding('sarif', file, line, severity, cwe, title));
@@ -174,7 +187,8 @@ function readCoverity(key, text, map) {
     const severity = normalizeSeverity(key, 'impact', requireField(key, props, 'impact'), COVERITY_IMPACT);
     const rawCwe = props.cweCategory;
     if (rawCwe != null && typeof rawCwe !== 'string' && typeof rawCwe !== 'number') throw fail(key, 'cweCategory phải là chuỗi hoặc số');
-    const cwe = rawCwe == null ? [] : cweNumbers(`cwe-${rawCwe}`);
+    if (rawCwe != null && !/^(cwe-)?\d+$/i.test(String(rawCwe).trim())) throw fail(key, 'cweCategory phải là số CWE');
+    const cwe = rawCwe == null ? [] : cweNumbers(`cwe-${String(rawCwe).replace(/^cwe-/i, '')}`);
     const title = [props.categoryDescription, issue.checkerName].filter((t) => typeof t === 'string').join(' ');
     addFinding(map, codeFinding('coverity', file, line, severity, cwe, title));
   }
@@ -190,8 +204,9 @@ function readZap(key, text, map) {
       const name = a?.alert ?? a?.name;
       if (typeof name !== 'string') throw fail(key, 'thiếu hoặc sai kiểu trường alert');
       const severity = normalizeSeverity(key, 'riskcode', requireField(key, a, 'riskcode'), ZAP_SEVERITY);
-      const cweNum = Number(a.cweid);
-      const cwe = Number.isInteger(cweNum) && cweNum > 0 ? [cweNum] : [];
+      const cweText = typeof a.cweid === 'string' || typeof a.cweid === 'number' ? String(a.cweid).trim() : a.cweid == null ? '' : null;
+      if (cweText === null || (cweText !== '' && !/^-?\d+$/.test(cweText))) throw fail(key, 'cweid không hợp lệ');
+      const cwe = Number(cweText || 0) > 0 ? [Number(cweText)] : [];
       const uris = (a.instances || []).map((i) => i?.uri).filter((u) => typeof u === 'string');
       for (const uri of uris.length ? uris : [requireField(key, site, '@name', 'string')]) {
         addFinding(map, { source: 'zap', kind: 'web', severity, key: `${name}@${uri}`, location: uri, cwe, title: name, rce: isRce(cwe, name), scope: 'web' });
@@ -200,30 +215,144 @@ function readZap(key, text, map) {
   }
 }
 
-const READERS = { gitleaksTree: readGitleaks, gitleaksHistory: readGitleaks, trivy: readTrivy, sarif: readSarif, coverity: readCoverity, zap: readZap };
+// CSV tối thiểu: nháy kép, phẩy và xuống dòng trong ô nháy kép, nháy kép đôi.
+function parseCsv(key, text) {
+  const src = stripBom(text);
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (quoted) {
+      if (c !== '"') cell += c;
+      else if (src[i + 1] === '"') { cell += '"'; i++; } else quoted = false;
+    } else if (c === '"' && cell === '') {
+      quoted = true;
+    } else if (c === ',') {
+      row.push(cell); cell = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && src[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else {
+      cell += c;
+    }
+  }
+  if (quoted) throw fail(key, 'CSV có nháy kép không đóng');
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c.trim() !== ''));
+}
+
+function readNessus(key, text, map) {
+  const rows = parseCsv(key, text);
+  if (!rows.length) throw fail(key, 'CSV rỗng, không có dòng tiêu đề');
+  const header = rows[0].map((h) => h.trim());
+  for (const col of ['Plugin ID', 'CVE', 'Risk', 'Host']) if (!header.includes(col)) throw fail(key, `thiếu cột ${col}`);
+  for (const r of rows.slice(1)) {
+    const get = (col) => (r[header.indexOf(col)] ?? '').trim();
+    const host = get('Host');
+    if (!host) throw fail(key, 'cột Host rỗng');
+    const severity = normalizeSeverity(key, 'Risk', get('Risk'), NESSUS_RISK);
+    const title = get('Name');
+    const port = get('Port');
+    const location = port ? `${host}:${port}` : host;
+    const cves = [...new Set((get('CVE').match(/CVE-\d{4}-\d+/gi) || []).map((c) => c.toUpperCase()))];
+    const base = { source: 'nessus', kind: 'vuln', severity, location, cwe: [], title, rce: isRce([], title), scope: 'host' };
+    if (cves.length) {
+      for (const cve of cves) addFinding(map, { ...base, key: `${cve}@${host}`, cve: [cve] });
+    } else {
+      const plugin = get('Plugin ID');
+      if (!plugin) throw fail(key, 'cột Plugin ID rỗng ở dòng không có CVE');
+      addFinding(map, { ...base, key: `${plugin}@${host}`, cve: [] });
+    }
+  }
+}
+
+function readBlackduck(key, text, map) {
+  const doc = parseJson(key, text);
+  if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.vulnerabilities)) throw fail(key, 'thiếu mảng vulnerabilities (CycloneDX)');
+  for (const v of doc.vulnerabilities) {
+    const id = requireField(key, v, 'id', 'string');
+    const ratings = requireField(key, v, 'ratings', 'object');
+    const affects = requireField(key, v, 'affects', 'object');
+    if (!Array.isArray(ratings) || !ratings.length) throw fail(key, 'ratings phải là mảng không rỗng');
+    if (!Array.isArray(affects) || !affects.length) throw fail(key, 'affects phải là mảng không rỗng');
+    const severity = maxSeverity(ratings.map((r) => normalizeSeverity(key, 'severity', requireField(key, r, 'severity'), BLACKDUCK_SEVERITY)));
+    if (v.cwes != null && (!Array.isArray(v.cwes) || v.cwes.some((c) => !Number.isInteger(c)))) throw fail(key, 'cwes phải là mảng số nguyên');
+    const cwe = v.cwes || [];
+    const title = typeof v.description === 'string' ? v.description : '';
+    for (const a of affects) {
+      const ref = requireField(key, a, 'ref', 'string');
+      addFinding(map, { source: 'blackduck', kind: 'vuln', severity, key: `${id}@${ref}`, location: ref, cve: /^CVE-/i.test(id) ? [id.toUpperCase()] : [], cwe, title, rce: isRce(cwe, title), scope: 'component' });
+    }
+  }
+}
+
+function readSonar(key, text, map) {
+  const doc = parseJson(key, text);
+  if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.issues)) throw fail(key, 'thiếu mảng issues');
+  for (const issue of doc.issues) {
+    // Chỉ VULNERABILITY là chỉ tiêu bảo mật; BUG và CODE_SMELL không vào findings.
+    if (requireField(key, issue, 'type', 'string') !== 'VULNERABILITY') continue;
+    const levels = [];
+    if (issue.severity != null) levels.push(normalizeSeverity(key, 'severity', issue.severity, SONAR_SEVERITY));
+    if (issue.impacts != null) {
+      if (!Array.isArray(issue.impacts)) throw fail(key, 'impacts phải là mảng');
+      for (const imp of issue.impacts) {
+        if (imp?.softwareQuality === 'SECURITY') levels.push(normalizeSeverity(key, 'impacts.severity', requireField(key, imp, 'severity'), SONAR_IMPACT));
+      }
+    }
+    if (!levels.length) throw fail(key, 'thiếu severity hoặc impacts SECURITY');
+    const component = requireField(key, issue, 'component', 'string');
+    const file = component.includes(':') ? component.slice(component.indexOf(':') + 1) : component;
+    const line = issue.line == null ? 0 : requireField(key, issue, 'line', 'number');
+    const lists = [issue.cwe, issue.tags].filter((l) => l != null);
+    if (lists.some((l) => !Array.isArray(l) || l.some((x) => typeof x !== 'string' && typeof x !== 'number'))) throw fail(key, 'cwe và tags phải là mảng chuỗi hoặc số');
+    const cwe = [...new Set(lists.flat().flatMap((x) => cweNumbers(/^\s*\d+\s*$/.test(String(x)) ? `cwe-${x}` : String(x))))];
+    const title = [issue.message, issue.rule].filter((t) => typeof t === 'string').join(' ');
+    addFinding(map, codeFinding('sonar', file, line, maxSeverity(levels), cwe, title));
+  }
+}
+
+function readKev(key, text, now, warnings) {
+  const doc = parseJson(key, text);
+  if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.vulnerabilities)) throw fail(key, 'thiếu mảng vulnerabilities');
+  const cves = new Set(doc.vulnerabilities.map((v) => requireField(key, v, 'cveID', 'string').trim().toUpperCase()));
+  const released = doc.dateReleased;
+  const t = typeof released === 'string' ? Date.parse(released) : NaN;
+  if (released == null || released === '') warnings.push('KEV: file không có dateReleased, không kiểm được độ mới');
+  else if (Number.isNaN(t)) warnings.push('KEV: dateReleased không đọc được, không kiểm được độ mới');
+  else if (now - t > 7 * DAY_MS) warnings.push(`KEV: file phát hành ${Math.floor((now - t) / DAY_MS)} ngày trước, cũ hơn 7 ngày; tải bản mới trước khi kết luận`);
+  return cves;
+}
+
+const READERS = { gitleaksTree: readGitleaks, gitleaksHistory: readGitleaks, trivy: readTrivy, sarif: readSarif, coverity: readCoverity, zap: readZap, nessus: readNessus, blackduck: readBlackduck, sonar: readSonar };
 const labelsZero = () => ({ 'chấp nhận rủi ro': 0, suppress: 0, 'FP đã loại': 0 });
 
+// JSON hợp lệ nhưng sai cấu trúc làm reader ném TypeError: đổi thành lỗi đầu vào (exit 2), không chép message gốc.
+function guard(key, fn) {
+  try {
+    return fn();
+  } catch (e) {
+    throw e instanceof InputError ? e : fail(key, 'cấu trúc report không đúng');
+  }
+}
+
 export function gate(inputs, { now = new Date() } = {}) {
-  void now;
   const map = new Map();
+  const warnings = [];
+  const kevCves = inputs.kev === undefined ? new Set() : guard('kev', () => readKev('kev', inputs.kev, now, warnings));
   for (const k of SOURCE_KEYS) {
     const text = inputs[k];
     if (text === undefined) continue;
-    for (const t of Array.isArray(text) ? text : [text]) {
-      try {
-        READERS[k]?.(k, t, map);
-      } catch (e) {
-        // JSON hợp lệ nhưng sai cấu trúc làm reader ném TypeError: đổi thành lỗi đầu vào (exit 2), không chép message gốc.
-        throw e instanceof InputError ? e : fail(k, 'cấu trúc report không đúng');
-      }
-    }
+    for (const t of Array.isArray(text) ? text : [text]) guard(k, () => READERS[k]?.(k, t, map));
   }
-  const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => ({ id: `F${String(i + 1).padStart(3, '0')}`, ...f, rce: f.kind !== 'secret' && !!f.rce }));
+  const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => ({ id: `F${String(i + 1).padStart(3, '0')}`, ...f, rce: f.kind !== 'secret' && !!f.rce, kev: f.kind !== 'secret' && (f.cve || []).some((c) => kevCves.has(c)) }));
   const count = {
     secret: findings.filter((f) => f.kind === 'secret').length,
     critHigh: findings.filter((f) => f.kind !== 'secret' && (f.severity === 'Critical' || f.severity === 'High')).length,
     rce: findings.filter((f) => f.rce).length,
-    kev: 0,
+    kev: findings.filter((f) => f.kev).length,
   };
   const thresholds = Object.fromEntries(Object.entries(count).map(([k, n]) => [k, {
     status: n > 0 ? 'không đạt' : 'chưa đo',
@@ -232,7 +361,7 @@ export function gate(inputs, { now = new Date() } = {}) {
     labels: labelsZero(),
   }]));
   const overall = Object.values(thresholds).some((t) => t.status === 'không đạt') ? 'không đạt' : 'chưa đo';
-  return { thresholds, overall, findings, warnings: [] };
+  return { thresholds, overall, findings, warnings };
 }
 
 export function parseArgs(argv) {
