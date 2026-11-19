@@ -70,6 +70,18 @@ export default async function run({ ok, ctx }) {
     }],
   });
 
+  // Nessus CSV, BlackDuck CycloneDX, Sonar issues, CISA KEV: tên cột/trường [Unverified] với report thật (AC6.1).
+  const csvCell = (v) => (/[",\r\n]/.test(String(v)) ? `"${String(v).replaceAll('"', '""')}"` : String(v));
+  const nessus = (rows, header = ['Plugin ID', 'CVE', 'Risk', 'Host', 'Port', 'Name']) => `${[header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n`;
+  const blackduck = (vulns) => JSON.stringify({
+    bomFormat: 'CycloneDX',
+    vulnerabilities: vulns.map(([id, severities, ref, cwes]) => ({ id, cwes, ratings: severities.map((severity) => ({ severity })), affects: [{ ref }] })),
+  });
+  const sonar = (issues) => JSON.stringify({
+    issues: issues.map(([type, severity, file, line, extra = {}]) => ({ key: `k-${file}-${line}`, rule: 'r:1', type, severity, component: `proj:${file}`, line, message: 'm', ...extra })),
+  });
+  const kevFile = (cves, dateReleased) => JSON.stringify({ catalogVersion: '1', ...(dateReleased ? { dateReleased } : {}), vulnerabilities: cves.map((cveID) => ({ cveID })) });
+
   try {
     let mod;
     try {
@@ -238,6 +250,105 @@ export default async function run({ ok, ctx }) {
     const merged = rm.findings.find((f) => f.key === 'src/Dao.java:42+CWE-89');
     ok(rm.findings.length === 2 && merged?.sources.length === 2 && merged.sources.includes('coverity') && merged.sources.includes('sarif'), 'AC1.11: Coverity + SARIF cùng file:line và CWE-89 gộp thành một finding có hai nguồn');
     ok(rm.findings.some((f) => f.key === 'SQL Injection@http://app/x' && f.sources.join() === 'zap'), 'AC1.11: ZAP giữ khoá alert@URL, không gộp với finding có file:line');
+
+    // ---- Task 3: Nessus CSV, BlackDuck, Sonar, KEV; cộng với kiểm cấu trúc còn bỏ sót ở Task 2 ----
+    const cnt = (inputs, k = 'critHigh') => gate(inputs, { now: NOW }).thresholds[k].count;
+
+    // AC1.3: Nessus Risk
+    const rn = gate({ nessus: nessus([
+      ['1', 'CVE-2026-0001', 'Critical', 'H', '80', 'a'], ['2', 'CVE-2026-0002', 'High', 'H', '80', 'b'], ['3', 'CVE-2026-0003', 'Medium', 'H', '80', 'c'],
+      ['4', 'CVE-2026-0004', 'Low', 'H', '80', 'd'], ['5', 'CVE-2026-0005', 'None', 'H', '80', 'e'],
+      ['6', 'CVE-2026-0006', ' critical ', 'H', '80', 'f'],
+    ]) }, { now: NOW });
+    ok([1, 2, 3, 4, 5, 6].map((n) => sevOf(rn, `CVE-2026-000${n}@`)).join() === 'Critical,High,Medium,Low,Info,Critical', 'AC1.3: Nessus Risk Critical/High/Medium/Low/None → Critical/High/Medium/Low/Info, biến thể hoa/thường và khoảng trắng');
+    ok([
+      { nessus: nessus([['1', 'CVE-2026-0001', 'Severe', 'H', '80', 'a']]) },
+      { nessus: nessus([['1', 'CVE-2026-0001', 'High']], ['Plugin ID', 'CVE', 'Host']) },
+      { nessus: nessus([['1', 'CVE-2026-0001', 'High', '', '80', 'a']]) },
+    ].every(throwsInput), 'AC1.3: Nessus Risk lạ, thiếu cột bắt buộc hoặc Host rỗng → InputError');
+    ok(cnt({ nessus: nessus([]) }) === 0, 'AC1.5: Nessus CSV chỉ có header là nguồn hợp lệ, không finding');
+
+    // AC1.19: ô CVE nhiều giá trị trong nháy kép, dòng không CVE, tên plugin có phẩy và nháy
+    const r19 = gate({ nessus: nessus([
+      ['10', 'CVE-2026-0301, CVE-2026-0302', 'High', 'H', '443', 'Apache, "Struts" RCE'],
+      ['12345', '', 'High', 'H', '22', 'SSH\nweak'],
+    ]) }, { now: NOW });
+    ok(r19.findings.length === 3 && ['CVE-2026-0301@H', 'CVE-2026-0302@H', '12345@H'].every((k) => r19.findings.some((f) => f.key === k)), 'AC1.19: ô CVE hai giá trị → hai finding CVE@H; dòng không CVE → plugin@H; phẩy/nháy/xuống dòng trong ô nháy kép không làm lệch cột');
+    ok(r19.thresholds.critHigh.count === 3 && r19.thresholds.kev.count === 0, 'AC1.19: dòng không CVE vẫn vào critHigh theo Risk nhưng không vào KEV');
+
+    // AC1.14: cùng CVE trên 3 host + 1 image → 4 finding (đếm theo tài sản)
+    ok(cnt({
+      nessus: nessus([['9', 'CVE-2026-0400', 'Critical', 'H1', '1', 'x'], ['9', 'CVE-2026-0400', 'Critical', 'H2', '1', 'x'], ['9', 'CVE-2026-0400', 'Critical', 'H3', '1', 'x']]),
+      trivy: trivy({ vulns: [['CVE-2026-0400', 'CRITICAL']] }),
+    }) === 4, 'AC1.14: CVE-Y trên ba host và một image → critHigh = 4');
+    ok(cnt({ nessus: nessus([['9', 'CVE-2026-0400', 'Critical', 'H1', '1', 'x'], ['9', 'CVE-2026-0400', 'Critical', 'H1', '2', 'x']]) }) === 1, 'AC1.14: cùng CVE cùng host khác port là một finding');
+
+    // AC1.11 đủ ca: Trivy CVE-X@image + Nessus CVE-X@host riêng; Coverity + SARIF gộp; ZAP riêng
+    const r11 = gate({
+      trivy: trivy({ vulns: [['CVE-2026-0500', 'HIGH']] }),
+      nessus: nessus([['9', 'CVE-2026-0500', 'High', 'H', '1', 'x']]),
+      coverity: coverity([['src/Dao.java', 42, 'High', 89]]),
+      sarif: [sarif([{ rule: 'sql', uri: 'src/Dao.java', line: 42, score: '7.5', cwe: 89 }])],
+      zap: zap([['SQL Injection', 3, 89]]),
+    }, { now: NOW });
+    ok(r11.findings.length === 4 && r11.findings.filter((f) => f.cve?.includes('CVE-2026-0500')).length === 2, 'AC1.11: năm dòng nguồn → 4 finding (Trivy và Nessus riêng, Coverity + SARIF gộp, ZAP riêng)');
+
+    // AC1.9: KEV khớp theo CVE; thiếu file → chưa đo; không gọi mạng
+    const r9 = gate({ trivy: trivy({ vulns: [['CVE-2026-0100', 'HIGH'], ['CVE-2026-0101', 'HIGH']] }), kev: kevFile(['CVE-2026-0100'], '2026-11-18T00:00:00Z') }, { now: NOW });
+    ok(r9.thresholds.kev.count === 1 && r9.findings.filter((f) => f.kev).map((f) => f.cve[0]).join() === 'CVE-2026-0100', 'AC1.9: KEV có CVE-A, Trivy có CVE-A và CVE-B → KEV = 1');
+    ok(gate({ trivy: trivy({ vulns: [['CVE-2026-0100', 'HIGH']] }) }, { now: NOW }).thresholds.kev.status === 'chưa đo', 'AC1.9: không có file KEV → status chưa đo');
+    ok(cnt({ nessus: nessus([['9', 'CVE-2026-0100', 'Low', 'H1', '1', 'x'], ['9', 'CVE-2026-0100', 'Low', 'H2', '1', 'x']]), kev: kevFile(['cve-2026-0100'], '2026-11-18T00:00:00Z') }, 'kev') === 2, 'AC1.9: KEV đếm theo tài sản và không phân biệt hoa/thường của CVE');
+    ok(throwsInput({ kev: JSON.stringify({ catalogVersion: '1' }) }) && throwsInput({ kev: JSON.stringify({ vulnerabilities: [{ id: 'x' }] }) }), 'AC1.9: file KEV thiếu vulnerabilities hoặc cveID → InputError');
+    const gateSrc = fs.readFileSync(scriptPath, 'utf8');
+    ok(!/node:(http|https|net|dns|dgram|tls)|\bfetch\b|XMLHttpRequest/.test(gateSrc), 'AC1.9: source script không import mô-đun mạng và không dùng fetch');
+
+    // AC1.18: tuổi file KEV
+    const warnsOf = (kev) => gate({ trivy: trivy(), kev }, { now: NOW });
+    const wOld = warnsOf(kevFile(['CVE-2026-0100'], '2026-11-01T00:00:00Z'));
+    const wFresh = warnsOf(kevFile(['CVE-2026-0100'], '2026-11-15T00:00:00Z'));
+    const wNone = warnsOf(kevFile(['CVE-2026-0100']));
+    ok(wOld.warnings.length === 1 && /KEV/.test(wOld.warnings[0]), 'AC1.18: dateReleased cũ hơn 7 ngày → đúng một warning về tuổi file KEV');
+    ok(wNone.warnings.length === 1 && /KEV/.test(wNone.warnings[0]), 'AC1.18: file KEV không có ngày → đúng một warning');
+    ok(wFresh.warnings.length === 0 && wOld.thresholds.kev.status === wFresh.thresholds.kev.status && wNone.thresholds.kev.status === wFresh.thresholds.kev.status, 'AC1.18: file KEV mới không có warning; warning không đổi status');
+
+    // AC1.16: BlackDuck CycloneDX
+    const r16 = gate({ blackduck: blackduck([['CVE-2026-0200', ['critical'], 'P@1.0'], ['CVE-2026-0201', ['low'], 'Q@2.0']]) }, { now: NOW });
+    ok(r16.thresholds.critHigh.count === 1 && r16.findings.some((f) => f.key === 'CVE-2026-0200@P@1.0' && f.sources.join() === 'blackduck'), 'AC1.16: critical trên P@1.0 + low trên Q@2.0 → critHigh = 1, khoá CVE@component@version');
+    ok(sevOf(gate({ blackduck: blackduck([['CVE-2026-0202', ['low', 'High', 'medium'], 'R@1']]) }, { now: NOW }), 'CVE-2026-0202@') === 'High', 'AC1.16: nhiều ratings lấy mức cao nhất');
+    ok(cnt({ blackduck: blackduck([['CVE-2026-0203', ['low'], 'R@1', [94]]]) }, 'rce') === 1, 'AC1.16: BlackDuck có CWE trong danh sách → RCE');
+    ok([
+      { blackduck: JSON.stringify({ bomFormat: 'CycloneDX', components: [] }) },
+      { blackduck: blackduck([['CVE-2026-0204', ['catastrophic'], 'R@1']]) },
+      { blackduck: JSON.stringify({ vulnerabilities: [{ id: 'CVE-2026-0205', ratings: [{ severity: 'high' }] }] }) },
+    ].every(throwsInput), 'AC1.16: thiếu vulnerabilities, rating lạ hoặc thiếu affects → InputError');
+    ok(cnt({ blackduck: blackduck([]) }) === 0, 'AC1.5: BlackDuck vulnerabilities rỗng là nguồn hợp lệ');
+
+    // AC1.17: Sonar chỉ VULNERABILITY vào critHigh/RCE
+    const r17 = gate({ sonar: sonar([['VULNERABILITY', 'BLOCKER', 'a.java', 1], ['BUG', 'CRITICAL', 'b.java', 2], ['CODE_SMELL', 'MAJOR', 'c.java', 3]]) }, { now: NOW });
+    ok(r17.thresholds.critHigh.count === 1 && r17.findings.length === 1 && r17.findings[0].key === 'a.java:1', 'AC1.17: VULNERABILITY BLOCKER đếm, BUG và CODE_SMELL không vào findings');
+    ok(cnt({ sonar: sonar([['VULNERABILITY', 'MINOR', 'a.java', 1, { cwe: ['CWE-78'] }], ['BUG', 'CRITICAL', 'b.java', 2, { cwe: ['CWE-78'] }]]) }, 'rce') === 1, 'AC1.17: RCE chỉ đếm issue VULNERABILITY có CWE trong danh sách');
+    const sevSonar = (extra, severity = 'INFO') => sevOf(gate({ sonar: sonar([['VULNERABILITY', severity, 'a.java', 1, extra]]) }, { now: NOW }), 'a.java:1');
+    ok(sevSonar({ impacts: [{ softwareQuality: 'SECURITY', severity: 'HIGH' }] }, 'MINOR') === 'High', 'AC1.17: impacts SECURITY cao hơn severity thì lấy impacts');
+    ok(sevSonar({ impacts: [{ softwareQuality: 'MAINTAINABILITY', severity: 'HIGH' }] }) === 'Info', 'AC1.17: impacts không phải SECURITY bị bỏ qua');
+    ok(sevSonar({}, 'BLOCKER') === 'Critical' && sevSonar({}, 'CRITICAL') === 'High' && sevSonar({}, 'MAJOR') === 'Medium' && sevSonar({}, 'MINOR') === 'Low', 'AC1.17: severity Sonar BLOCKER/CRITICAL/MAJOR/MINOR → Critical/High/Medium/Low');
+    ok([
+      { sonar: sonar([['VULNERABILITY', 'SEVERE', 'a.java', 1]]) },
+      { sonar: JSON.stringify({ rules: [] }) },
+      { sonar: JSON.stringify({ issues: [{ type: 'VULNERABILITY', severity: 'MAJOR' }] }) },
+    ].every(throwsInput), 'AC1.17: severity lạ, thiếu issues hoặc thiếu component → InputError');
+    ok(cnt({ sonar: sonar([]) }) === 0, 'AC1.5: Sonar issues rỗng là nguồn hợp lệ');
+
+    // Kiểm cấu trúc còn bỏ sót ở Task 2: report hỏng một phần không được đếm thiếu im lặng
+    const goodSarifRun = JSON.parse(sarif([{ rule: 'r', uri: 'a.js', line: 1, level: 'error' }])).runs[0];
+    ok([
+      { sarif: [JSON.stringify({ runs: [5] })] },
+      { sarif: [JSON.stringify({ runs: [goodSarifRun, null] })] },
+      { sarif: [sarifDoc({ results: '' })] },
+      { sarif: [sarifDoc({ tool: { driver: { rules: [{ id: 'r', properties: { tags: 'external/cwe/cwe-78' } }] } }, results: [{ ruleId: 'r', level: 'error', locations: goodSarifRun.results[0].locations }] })] },
+      { zap: zapDoc({ alert: 'A', riskcode: 1, cweid: 'abc' }) },
+      { zap: zapDoc({ alert: 'A', riskcode: 1, cweid: [78] }) },
+      { coverity: JSON.stringify({ issues: [{ mainEventFilePathname: 'a', mainEventLineNumber: 1, checkerProperties: { impact: 'High', cweCategory: 'abc' } }] }) },
+    ].every(throwsInput), 'AC1.13: SARIF runs/results/tags, ZAP cweid, Coverity cweCategory sai cấu trúc → InputError, không bỏ qua im lặng');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
