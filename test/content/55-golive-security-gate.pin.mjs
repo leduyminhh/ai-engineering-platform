@@ -82,6 +82,8 @@ export default async function run({ ok, ctx }) {
       tree: gitleaks([['aws-key', 'src/a.js', 3]]),
       okTrivy: trivy({ secrets: [['private-key', 12]] }),
       broken: `{"Results":[{"Secrets":[{"Match":"${SENT}"`,
+      // Token sai đầu tiên mang sentinel: message gốc của JSON.parse sẽ chép đoạn này nếu script in nó ra.
+      brokenHead: `${SENT}{"a":1}`,
       missing: JSON.stringify([{ File: 'x.js', StartLine: 1, Secret: SENT }]),
       weird: JSON.stringify({ ArtifactName: 'app:1', Results: [{ Target: 't', Vulnerabilities: [{ VulnerabilityID: 'CVE-2026-9', PkgName: 'p', InstalledVersion: '1', Severity: 'SEVERE', Title: SENT }] }] }),
     });
@@ -90,9 +92,10 @@ export default async function run({ ok, ctx }) {
       cli(['--trivy', f12.broken]),
       cli(['--gitleaks-tree', f12.missing]),
       cli(['--trivy', f12.weird]),
+      cli(['--trivy', f12.brokenHead]),
     ];
-    ok(runs12.every((r) => !r.stdout.includes(SENT) && !r.stderr.includes(SENT)), 'AC1.12: sentinel không xuất hiện ở stdout/stderr (hợp lệ, JSON hỏng, thiếu trường, severity lạ)');
-    ok(runs12.slice(1).every((r) => r.status === 2), 'AC1.12: ba ca lỗi đều exit 2');
+    ok(runs12.every((r) => !r.stdout.includes(SENT) && !r.stderr.includes(SENT)), 'AC1.12: sentinel không xuất hiện ở stdout/stderr (hợp lệ, JSON hỏng cả hai kiểu, thiếu trường, severity lạ)');
+    ok(runs12.slice(1).every((r) => r.status === 2), 'AC1.12: bốn ca lỗi đều exit 2');
     let weirdErr = null;
     try { gate({ trivy: fs.readFileSync(f12.weird, 'utf8') }, { now: NOW }); } catch (e) { weirdErr = e; }
     ok(weirdErr instanceof InputError && !String(weirdErr.message).includes(SENT), 'AC1.12: InputError của severity lạ không chứa giá trị trong report');
@@ -102,6 +105,7 @@ export default async function run({ ok, ctx }) {
       good: trivy({ vulns: [['CVE-2026-0001', 'CRITICAL']] }),
       notJson: 'không phải json',
       noField: JSON.stringify({ Foo: 1 }),
+      wrongType: JSON.stringify({ ArtifactName: 'app:1', Results: [{ Target: 't', Vulnerabilities: 5 }] }),
     });
     const bad = [
       ['không có đối số', []],
@@ -110,6 +114,7 @@ export default async function run({ ok, ctx }) {
       ['file không tồn tại', ['--trivy', path.join(path.dirname(f13.good), 'khong-ton-tai.json')]],
       ['JSON hỏng', ['--trivy', f13.notJson]],
       ['thiếu trường bắt buộc', ['--trivy', f13.noField]],
+      ['trường sai kiểu (Vulnerabilities không phải mảng)', ['--trivy', f13.wrongType]],
       ['severity lạ', ['--trivy', f12.weird]],
     ];
     for (const [name, args] of bad) {

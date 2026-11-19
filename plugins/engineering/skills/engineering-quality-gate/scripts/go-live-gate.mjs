@@ -38,7 +38,7 @@ const fail = (key, detail) => new InputError(`${FLAG_OF[key]}: ${detail}`, key);
 
 function parseJson(key, text) {
   try {
-    return JSON.parse(String(text).replace(/^﻿/, ''));
+    return JSON.parse(String(text).replace(/^\uFEFF/, ''));
   } catch {
     throw fail(key, 'JSON không hợp lệ');
   }
@@ -92,6 +92,9 @@ function readTrivy(key, text, map) {
   const asset = `image:${digest || doc.ArtifactName || 'unknown'}`;
   for (const res of doc.Results || []) {
     if (res === null || typeof res !== 'object') throw fail(key, 'phần tử Results phải là object');
+    for (const field of ['Vulnerabilities', 'Secrets']) {
+      if (res[field] != null && !Array.isArray(res[field])) throw fail(key, `${field} phải là mảng`);
+    }
     for (const v of res.Vulnerabilities || []) {
       const id = requireField(key, v, 'VulnerabilityID', 'string');
       const severity = normalizeSeverity(key, 'Severity', requireField(key, v, 'Severity'), TRIVY_SEVERITY);
@@ -142,7 +145,7 @@ export function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const value = argv[i + 1];
-    const known = flag in FLAGS || flag in REPEATABLE || flag === '--na';
+    const known = Object.hasOwn(FLAGS, flag) || Object.hasOwn(REPEATABLE, flag) || flag === '--na';
     if (!known) throw new InputError(`cờ không hợp lệ: ${flag}`);
     if (value === undefined || value.startsWith('--')) throw new InputError(`${flag}: thiếu giá trị`);
     i++;
@@ -150,7 +153,7 @@ export function parseArgs(argv) {
       const eq = value.indexOf('=');
       if (eq <= 0 || eq === value.length - 1) throw new InputError('--na: cần dạng <nguồn>=<bằng chứng>');
       na[value.slice(0, eq)] = value.slice(eq + 1);
-    } else if (flag in REPEATABLE) {
+    } else if (Object.hasOwn(REPEATABLE, flag)) {
       sarif.push(value);
     } else {
       if (FLAGS[flag] in files) throw new InputError(`${flag}: chỉ được dùng một lần`);
