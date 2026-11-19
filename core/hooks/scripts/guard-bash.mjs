@@ -1054,8 +1054,13 @@ const pushText = (r) => (r.kind === 'protected'
   ? `Đẩy code lên nhánh bảo vệ \`${r.branch}\`.`
   : PUSH_TEXT[r.kind]);
 const CONFIG_TEXT = 'Ghi vào file cấu hình quyền (`.claude/aip-gate.json` hoặc `settings.json`).';
-const FULL_PATH_TEXT = 'Ghi hoặc xoá ở đường dẫn chưa rõ (`$VAR`, `~`, `*`).';
-const READ_OUTSIDE_TEXT = 'Đọc file ngoài các thư mục được cấp quyền đọc.';
+// Câu deny của confined (D15): việc bị chặn + "Mở:" cách mở. Tách khỏi câu ask của guarded để popup giữ ngắn (R21).
+const DENY_WALK_TEXT = 'Lệnh có quá nhiều đoạn nên không kiểm được đường dẫn ghi hoặc xoá. Mở: tách thành lệnh ngắn hơn hoặc người dùng chạy `aip mode open`.';
+const DENY_PUSH_OPEN = ' Mở: bỏ "push" khỏi "fullKeep" trong .claude/aip-gate.json, tự đẩy code, hoặc người dùng chạy `aip mode open`.';
+const DENY_PATH_TEXT = 'Ghi hoặc xoá ở đường dẫn chưa rõ (`$VAR`, `~`, `*`). Mở: dùng đường dẫn tuyệt đối trong root, hoặc người dùng chạy `aip mode open`.';
+const DENY_READ_TEXT = 'Đọc file ngoài các thư mục được cấp quyền đọc. Mở: thêm thư mục vào "fullReadRoots" hoặc "fullPaths" (allow "read") trong .claude/aip-gate.json, hoặc người dùng chạy `aip mode open`.';
+const denySecretText = (name) => 'Lệnh nhắc tới file bí mật `' + showArg(name) + '` ngoài rào. Mở: cấp đủ quyền qua "fullRoots" hoặc "fullPaths" trong .claude/aip-gate.json, hoặc người dùng chạy `aip mode open`.';
+const DENY_INTERNAL_TEXT = 'Lỗi nội bộ khi kiểm lệnh nên bị từ chối. Mở: tách lệnh hoặc người dùng chạy `aip mode open`.';
 const FULL_NO_BYPASS_TEXT = 'Lệnh đẩy code, gọi mạng hoặc deploy; project bật chế độ confined hoặc open nhưng phiên này vẫn hỏi. Đổi: `aip mode guarded`.';
 // Câu deny cho agent (D15): nêu việc bị chặn và cách mở; không gợi ý `aip mode open` vì chính lệnh đó cũng bị chặn khi agent chạy.
 const CONFIG_DENY_TEXT = 'Ghi vào file cấu hình quyền (`.claude/aip-gate.json`, `settings.json`) hoặc đổi mode bằng `aip mode` bị chặn với agent. Mở: người dùng tự chạy `aip mode` hoặc tự sửa file.';
@@ -1801,6 +1806,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   };
   const full = () => effMode() === 'confined';
   if (effMode() === 'open') return decideOpen(cmd, msys);
+  const deny = (text) => ({ decision: 'deny', reason: text });
   const ask = (text) => { let line = ''; try { line = summarize(cmd, msys); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };
   // Lỗi bất ngờ ở full + bypass thành hỏi: ném lại sẽ để main() cho lệnh chưa được kiểm đi qua.
   try {
@@ -1810,7 +1816,7 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const outer = parsedCmd.segs;
   const naiveOuter = naiveSegments(cmd);
   // Trước mọi bước theo dõi thư mục: chuỗi `cd` dài làm đường dẫn `dir` phình dần, mỗi đoạn tốn thêm nên tổng bậc hai (8000 × `cd a` mất vài giây); cpuprofile cho thấy ~90% thời gian ở path.resolve trong trackDirs, còn nguyên nhân bậc hai là [Inference].
-  if (Math.max(outer.length, naiveOuter.length) > MAX_WALK_SEGS && full()) return ask(FULL_PATH_TEXT);
+  if (Math.max(outer.length, naiveOuter.length) > MAX_WALK_SEGS && full()) return deny(DENY_WALK_TEXT);
   const segs = expandShells(outer);
   const naiveAll = expandShells(naiveOuter);
   const parsed = withDirs(segs, cwd, msys);
@@ -1821,10 +1827,10 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const naive = withDirs(naiveAll, cwd, msys);
   for (const { u, gc, dir, unres } of [...parsed, ...naive]) {
     const why = gc.sub === 'push' ? pushReason(u, gc, dir, currentBranch, unres, msys) : null;
-    if (why && !(full() && !fullKeep(gate()).includes('push'))) return ask(pushText(why));
+    if (why && !(full() && !fullKeep(gate()).includes('push'))) return full() ? deny(pushText(why) + DENY_PUSH_OPEN) : ask(pushText(why));
   }
   if (guardConfigHit(segs, naiveAll, cmd, msys)) {
-    return ask(CONFIG_TEXT);
+    return full() ? deny(CONFIG_DENY_TEXT) : ask(CONFIG_TEXT);
   }
   // Một lần mỗi decide, dùng chung cho H6 và kiểm bí mật để hai nơi không lệch kết quả. Hợp của cách nhìn scanWords và cách nhìn thô; lỗi nội bộ rơi về chữ chưa giải (hỏi).
   let walkedAll;
@@ -1861,8 +1867,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
       if (r === 'ask') unknownPath = true;
       if (r === 'ask-read') readOutside = true;
     }
-    if (unknownPath) return ask(FULL_PATH_TEXT);
-    if (readOutside) return ask(READ_OUTSIDE_TEXT);
+    if (unknownPath) return deny(DENY_PATH_TEXT);
+    if (readOutside) return deny(DENY_READ_TEXT);
   }
   // Phiên không bypass trong project full: settings.json không còn quy tắc ask nào chắc chắn áp dụng nên hook hỏi thay.
   // Chỉ đọc cấu hình sau khi một đoạn khớp tiền tố, để lệnh thường không tốn lời gọi git.
@@ -1880,13 +1886,13 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   if (hits(SECRET) && full()) {
     // Cùng mẫu với H3: allowEnvFiles bật thì .env không phải bí mật ở đây nên không được xét tới root.
     const secretRe = hits(KEY_SECRET) || !allowEnv(cwd) ? SECRET : KEY_SECRET;
-    if (hits(secretRe) && secretOutsideRoots(walked(), rootsOf(), secretRe, msys)) return secretAsk(secretRe);
+    if (hits(secretRe) && secretOutsideRoots(walked(), rootsOf(), secretRe, msys)) return deny(denySecretText(secretName(secretRe)));
   }
   return null;
   } catch (e) {
     let inFull = false;
     try { inFull = full(); } catch { /* không đọc được cấu hình: coi như không full */ }
-    if (inFull) return ask(FULL_PATH_TEXT);
+    if (inFull) return deny(DENY_INTERNAL_TEXT);
     throw e;
   }
 }
