@@ -506,6 +506,19 @@ export default async function run({ ok, ctx }) {
       ok(text.includes('[Unverified]'), `AC2.2: references/${name} đánh dấu [Unverified] cho tên trường chưa kiểm`);
       ok(flags.every((f) => text.includes(f)), `AC2.2: references/${name} nhắc cờ script ${flags.join(', ')}`);
     }
+    // Mục đọc cho ngưỡng của sonarqube.md và blackduck.md; pentest.md và asvs-l2.md là tài liệu mới.
+    const readRef = (name) => {
+      const file = path.join(skillDir, 'references', name);
+      return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    };
+    const sonarRef = readRef('sonarqube.md');
+    const bdRef = readRef('blackduck.md');
+    ok(sonarRef.includes('## Đọc cho ngưỡng go-live') && sonarRef.includes('--sonar') && sonarRef.includes('VULNERABILITY') && sonarRef.includes('[Unverified]'), 'AC2.2: sonarqube.md có mục đọc cho ngưỡng, nhắc --sonar, VULNERABILITY, [Unverified]');
+    ok(bdRef.includes('## Đọc cho ngưỡng go-live') && bdRef.includes('--blackduck') && bdRef.includes('vulnerabilities') && bdRef.includes('[Unverified]'), 'AC2.2: blackduck.md có mục đọc cho ngưỡng, nhắc --blackduck, vulnerabilities, [Unverified]');
+    const pentestRef = readRef('pentest.md');
+    const asvsRef = readRef('asvs-l2.md');
+    ok(pentestRef !== '' && pentestRef.includes('[Unverified]') && pentestRef.includes('Bước 7') && pentestRef.includes('Bước 9') && pentestRef.includes('100%'), 'AC2.2: pentest.md tồn tại, có [Unverified], Bước 7–9 và mục tiêu retest 100%');
+    ok(asvsRef !== '' && asvsRef.includes('[Unverified]') && asvsRef.includes('chưa đo') && asvsRef.includes('file:line'), 'AC2.2: asvs-l2.md tồn tại, có [Unverified], trạng thái chưa đo và evidence file:line');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
