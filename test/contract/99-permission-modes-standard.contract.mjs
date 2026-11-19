@@ -25,7 +25,7 @@ export default async function run({ ok, ctx }) {
       `rm -rf ${OUT}/x`, `echo x > ${OUT}/y`, `rm ${tmpClaude}`, 'cat $UNKNOWN/x', 'rm $UNKNOWN/x', 'aip mode status'];
     rows(free.map((c) => [c, null, 'AC2.1']), { cfg: OPEN });
     rows([[`Set-Content -Path ${OUT}/y -Value x`, null, 'AC2.1']], { cfg: OPEN, tool: 'PowerShell' });
-    rows([[`rm -rf ${OUT}/x`, 'deny', 'AC2.1'], [`echo x > ${OUT}/y`, 'deny', 'AC2.1'], [`rm ${tmpClaude}`, 'deny', 'AC2.1'], ['rm $UNKNOWN/x', 'ask', 'AC2.1']], { cfg: CONFINED_FREE });
+    rows([[`rm -rf ${OUT}/x`, 'deny', 'AC2.1'], [`echo x > ${OUT}/y`, 'deny', 'AC2.1'], [`rm ${tmpClaude}`, 'deny', 'AC2.1'], ['rm $UNKNOWN/x', 'deny', 'AC2.1']], { cfg: CONFINED_FREE });
     ok(kind(`Set-Content -Path ${OUT}/y -Value x`, { cfg: CONFINED_FREE, tool: 'PowerShell' }) === 'deny', 'AC2.1: đối chứng confined — PowerShell ghi ngoài root bị chặn');
 
     // AC2.2: lỗi đọc cú pháp không thành popup ở open khi lệnh không nhắc file cấu hình hay aip mode.
@@ -87,6 +87,45 @@ export default async function run({ ok, ctx }) {
         }
         ok(kind('aip mode status', { cfg: { mode }, extra: { permission_mode: pm } }) === null, `K12 (AC1.2): ${mode}/${pm}: aip mode status → null`);
       }
+    }
+
+    // AC3.1/AC3.2/AC3.5: confined (và bí danh full) không bao giờ hỏi; câu deny nêu việc bị chặn và cách mở.
+    const chain = Array(1100).fill('cd a').join('; ');
+    const table = [
+      // [nhãn, lệnh, kỳ vọng ở guarded, từ khoá vận hành bắt buộc trong reason, từ khoá cấm]
+      ['1', chain, undefined, ['aip mode open'], []],
+      ['2', 'git push origin master', 'ask', ['fullKeep', 'aip mode open'], []],
+      ['2', 'git push --force origin feature/x', 'ask', ['fullKeep', 'aip mode open'], []],
+      ['3', 'echo x > ' + P + '/.claude/aip-gate.json', 'ask', ['aip mode'], ['aip mode open']],
+      ['4', 'rm $UNKNOWN/x', null, ['aip mode open'], []],
+      ['5', 'cp ' + OUT + '/x ' + P + '/y', null, ['fullPaths', 'aip mode open'], []],
+      ['6', 'cat ' + OUT + '/id_rsa', 'ask', ['fullPaths', 'aip mode open'], []],
+      ['7', 'git push', undefined, ['aip mode open'], []],
+      ['8', 'aip mode open', 'ask', ['aip mode'], ['aip mode open']],
+      ['8', 'node cli/index.mjs mode guarded', 'ask', ['aip mode'], ['aip mode open']],
+    ];
+    for (const mode of ['confined', 'full']) {
+      for (const [n, cmd, wantGuarded, words, banned] of table) {
+        const opts = n === '7' ? { opts: boom } : {};
+        const d = safe(cmd, { cfg: { mode }, ...opts });
+        const short = cmd.length > 60 ? cmd.slice(0, 20) + '…' : cmd.replaceAll(u(tb), '~');
+        ok(d?.decision === 'deny', 'AC3.1: ' + mode + ' hàng (' + n + ') ' + short + ' → deny (' + d?.decision + ')');
+        ok(words.every((w) => d?.reason?.includes(w)) && banned.every((w) => !d?.reason?.includes(w)), 'AC3.2: ' + mode + ' hàng (' + n + ') reason nêu ' + words.join(' + ') + (banned.length ? ' và không gợi ý ' + banned.join(',') : ''));
+        if (wantGuarded !== undefined) ok(kind(cmd, { cfg: GUARDED }) === wantGuarded, 'AC3.1: đối chứng guarded hàng (' + n + ') ' + short + ' → ' + wantGuarded);
+      }
+      ok(kind('aip mode status', { cfg: { mode } }) === null, 'AC3.1: ' + mode + ' aip mode status → null');
+    }
+    ok(kind('git push origin master', { cfg: { mode: 'confined', fullKeep: [] } }) === null, 'AC3.1: fullKeep rỗng mở cổng push ở confined');
+
+    // AC3.5: thiếu một điều kiện (file bị theo dõi, phiên không bypass) → bằng guarded, không có deny của nhánh confined.
+    const trackedGate = (cfg) => ({ config: undefined, reader: () => ({ config: cfg, file: P + '/.claude/aip-gate.json', roots: [P] }), tracked: () => true });
+    for (const [n, cmd] of table.filter(([k]) => k !== '1')) {
+      const asGuarded = (opt) => JSON.stringify(safe(cmd, opt));
+      const o7 = n === '7' ? { opts: boom } : {};
+      ok(asGuarded({ cfg: undefined, opts: { ...o7.opts, ...trackedGate({ mode: 'confined' }) } }) === asGuarded({ cfg: undefined, opts: { ...o7.opts, ...trackedGate({ mode: 'guarded' }) } }),
+        'AC3.5: file bị git theo dõi, hàng (' + n + ') ' + cmd.slice(0, 30) + ' = guarded');
+      ok(asGuarded({ cfg: { mode: 'confined' }, extra: { permission_mode: 'default' }, ...o7 }) === asGuarded({ cfg: GUARDED, extra: { permission_mode: 'default' }, ...o7 }),
+        'AC3.5: phiên không bypass, hàng (' + n + ') ' + cmd.slice(0, 30) + ' = guarded');
     }
   } finally {
     fs.rmSync(tb, { recursive: true, force: true });
