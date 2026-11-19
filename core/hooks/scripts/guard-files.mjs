@@ -147,19 +147,22 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
   const bypass = input?.permission_mode === 'bypassPermissions';
   const gates = new Map();
   const gateAt = (dir) => { if (!gates.has(dir)) gates.set(dir, reader(dir)); return gates.get(dir); };
+  // null = thư mục không có cấu hình để nói gì (ví dụ thư mục plugin, `~/.claude`): kế thừa mode của cwd, không tự thành guarded,
+  // nếu không thì open sẽ hỏi/chặn nhầm đúng những file cấu hình mà K13 nhắm tới.
   const modeAt = (dir) => {
     if (!bypass) return 'guarded';
     try {
       const g = config === undefined ? gateAt(dir) : { config };
+      if (!g?.config) return null;
       return openEffective(g, input, { tracked }) ? 'open' : fullEffective(g, input, { tracked }) ? 'confined' : 'guarded';
     } catch { return 'guarded'; }
   };
-  const cwdMode = modeAt(cwd);
+  const cwdMode = modeAt(cwd) ?? 'guarded';
   ctx.mode = cwdMode;
-  const eff = (dir) => stricter(cwdMode, modeAt(dir));
+  const eff = (dir) => stricter(cwdMode, modeAt(dir) ?? cwdMode);
   if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob)) {
     const dir = path.resolve(cwd, String(ti.path || '.'));
-    if ((globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(dir)) && eff(dir) === 'guarded') return SECRET_DENY;
+    if (eff(dir) === 'guarded' && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(dir))) return SECRET_DENY;
   }
   if (!file) return null;
   const target = path.resolve(cwd, normalizeMsysPath(String(file)));
@@ -168,7 +171,7 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
   const mode = eff(path.dirname(target));
   ctx.mode = mode;
-  if (isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target))) && mode === 'guarded') return SECRET_DENY;
+  if (mode === 'guarded' && isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target)))) return SECRET_DENY;
   const write = WRITE_TOOLS.has(input.tool_name);
   if (mode === 'open') {
     const cfgFile = configTarget(input, { });

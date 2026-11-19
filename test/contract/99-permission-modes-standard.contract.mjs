@@ -188,6 +188,22 @@ export default async function run({ ok, ctx }) {
     ok(fk(R(`${OUT}/x`), { opts: byDir('confined', 'open') }) === 'deny' && fk(R(`${D}/.env`), { opts: byDir('guarded', 'open') }) === 'deny', 'AC2.12: repo lồng open không phá rào của cwd confined/guarded');
     ok(fk(R(`${OUT}/x`), { opts: byDir('open', 'open') }) === null && fk(W(`${D}/.claude/aip-gate.json`), { opts: byDir('open', 'open') }) === 'deny', 'AC2.12: open ở cả hai nơi → null cho đọc ngoài root, deny ghi cấu hình');
 
+    // Thư mục đích không có cấu hình (thư mục plugin, ~/.claude, ngoài repo) kế thừa mode của cwd; không tự thành guarded (K13 ở thư mục plugin).
+    const noGate = (cwdMode) => ({ config: undefined, reader: (dir) => (u(dir) === P ? { config: { mode: cwdMode }, roots: [P] } : null) });
+    const scopeLock = `${HOME}/.claude/plugins/x/core/hooks/scope-lock.json`;
+    frows([['Write scope-lock.json ở thư mục plugin', W(scopeLock), 'deny', 'AC2.11'], ['Write ~/.claude/settings.json', W(`${HOME}/.claude/settings.json`), 'deny', 'AC2.11'],
+      ['Write ~/.claude/aip-gate.json', W(`${HOME}/.claude/aip-gate.json`), 'deny', 'AC2.11'], ['Read ~/.aws/credentials', R(`${HOME}/.aws/credentials`), null, 'AC2.3'],
+      ['Read .env ngoài repo', R(`${OUT}/.env`), null, 'AC2.3']], { opts: noGate('open') });
+    frows([['Read .env ngoài repo', R(`${OUT}/.env`), 'deny', 'AC2.12'], ['Write ~/.claude/settings.json', W(`${HOME}/.claude/settings.json`), 'ask', 'AC2.12']], { opts: noGate('guarded') });
+    frows([['Read .env ngoài repo', R(`${OUT}/.env`), 'deny', 'AC2.12']], { opts: noGate('confined') });
+
+    // K14 cho Grep (không có file): thư mục của path quyết định cùng cwd; K15: cwd confined + đích guarded, lỗi sau xác định mode thì mode cuối là guarded.
+    frows([['Grep .env* ở repo lồng confined, cwd guarded', G(D, '.env*'), 'deny', 'AC2.12']], { opts: byDir('guarded', 'confined') });
+    frows([['Grep .env* ở repo lồng open, cwd guarded', G(D, '.env*'), 'deny', 'AC2.12']], { opts: byDir('guarded', 'open') });
+    frows([['Grep .env* ở repo lồng open, cwd confined', G(D, '.env*'), null, 'AC2.12']], { opts: byDir('confined', 'open') });
+    ok(fsafe(W(`${D}/src/a.js`, 'Edit'), { extra: { agent_type: 'coder' }, opts: { ...byDir('confined', 'guarded'), scopes: { get coder() { throw new Error('boom'); } } } })?.decision?.startsWith('throw'),
+      'K15: cwd confined + đích guarded, lỗi sau bước xác định mode → mode cuối là guarded (ném như hôm nay)');
+
     // AC2.9/AC3.6 (guard-files): lỗi không tự mở cổng; confined lỗi sau xác định mode ⇒ deny, guarded fail-open như hôm nay.
     ok(fk(R(`${P}/.env`), { cfg: undefined, opts: { reader: () => { throw new Error('boom'); } } }) === 'deny', 'AC2.9: reader ném ⇒ như guarded: Read .env → deny');
     const scopesBoom = { get coder() { throw new Error('boom'); } };
