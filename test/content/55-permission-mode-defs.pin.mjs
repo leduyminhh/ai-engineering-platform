@@ -62,4 +62,11 @@ export default async function run({ ok, ctx }) {
     const sec = slice(raw(file), lead, /\n\*\*|\n## /);
     for (const m of modes) ok(sec.includes(defs[m]), `AC5.4: ${file} mục chế độ quyền chứa nguyên văn câu định nghĩa ${m}`);
   }
+
+  // Help của CLI lấy ba câu từ cùng hằng với `aip mode status`.
+  const { spawnSync } = await import('node:child_process');
+  const help = spawnSync(process.execPath, [path.join(REPO_ROOT, 'cli', 'index.mjs'), '--help'], { cwd: REPO_ROOT, encoding: 'utf8' });
+  const helpText = flat(help.stdout ?? '');
+  ok(help.status === 0 && helpText.includes('mode <guarded|confined|open|status>'), 'AC5.4: aip --help có dòng mode <guarded|confined|open|status>');
+  for (const m of modes) ok(helpText.includes(MODE_DEFS[m]), `AC5.4: aip --help chứa nguyên văn câu định nghĩa ${m}`);
 }

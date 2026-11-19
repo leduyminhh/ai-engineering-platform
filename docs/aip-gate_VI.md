@@ -101,11 +101,13 @@ Khi hiệu lực:
 - Giữ: `writeScope` của agent, `mcpDeny`, Stop gate, nạp đầu phiên.
 - Nhốt root (heuristic, không phải sandbox): root gồm gốc project (và gốc repo chính khi ở worktree), `scratchpad_dir`
   của phiên, `<tmpdir>/claude`, `fullRoots`. Chính thư mục `<tmpdir>/claude` luôn bị chặn.
-- Từ chối (`deny`), mỗi câu kết thúc bằng `Mở:` nêu cách mở:
+- Từ chối (`deny`), mỗi câu nêu cách mở (câu `Mở:`; ghi ngoài root thì kết thúc bằng `Cần mở rộng → …`, còn chính thư mục `<tmpdir>/claude` không có cách mở):
   - push nhánh bảo vệ, force push hoặc push vào nhánh chưa rõ khi `fullKeep` có `"push"` (bỏ nó khỏi `fullKeep`, tự đẩy
     code, hoặc dùng `open`);
-  - ghi ngoài root; đọc ngoài các thư mục được cấp quyền đọc (`fullReadRoots`, `fullPaths`); đường dẫn không giải được
-    (`$VAR`, `~`, glob lạ); lệnh nhắc file bí mật ngoài root; lệnh có hơn 1000 đoạn; lỗi nội bộ của hook;
+  - ghi ngoài root (câu lý do liệt kê các root có quyền còn thiếu và trỏ tới `fullPaths` hoặc `fullRoots`);
+  - đọc ngoài các thư mục được cấp quyền đọc (`fullReadRoots`, `fullPaths`): chỉ áp cho công cụ Read/Grep và nguồn của
+    `cp`/`Copy-Item`, không áp cho các lệnh Bash đọc khác như `cat` (xem Giới hạn); đường dẫn không giải được (`$VAR`,
+    `~`, glob lạ); lệnh nhắc file bí mật ngoài root; lệnh có hơn 1000 đoạn; lỗi nội bộ của hook;
   - ghi `.claude/aip-gate.json` hoặc `.claude/settings*.json`, và `aip mode <tên>` do agent chạy (tự sửa file hoặc tự
     chạy `aip mode`).
 - Không đổi: tool MCP khi `aip-gate.json` hỏng vẫn hỏi (hook không biết mode), và `start_session` thiếu `model` vẫn
@@ -174,9 +176,10 @@ Khi hiệu lực:
   (`aip mode status` nói rõ khi file có các khoá đó).
 - Giữ: `mcpDeny`; `writeScope` của agent (chỉ chặn công cụ file Edit/Write/MultiEdit/NotebookEdit, không chặn Bash); Stop
   gate; nạp đầu phiên.
-- Từ chối (không bao giờ hỏi): ghi `.claude/aip-gate.json`, `.claude/settings*.json` và `hooks/scope-lock.json` của
-  plugin, và `aip mode <tên>` do agent chạy, vì `mcpDeny` và `writeScope` đọc từ chính các file này. `aip mode status`
-  và đọc các file đó vẫn qua.
+- Từ chối (không bao giờ hỏi): ghi `.claude/aip-gate.json` và `.claude/settings*.json` (công cụ file và Bash), ghi
+  `hooks/scope-lock.json` của plugin chỉ với công cụ file, và `aip mode <tên>` do agent chạy, vì `mcpDeny` và
+  `writeScope` đọc từ chính các file này. Bash ghi `scope-lock.json` thì cho qua (`echo x > …/hooks/scope-lock.json`),
+  nên `writeScope` có thể bị tắt cho phiên sau bằng một lệnh Bash đơn giản. `aip mode status` và đọc các file đó vẫn qua.
 - Không đổi: tool MCP khi `aip-gate.json` hỏng vẫn hỏi.
 
 Bật: `aip mode open`; lệnh in cảnh báo, xử lý `settings.json` như `confined`, và quay lại bằng `aip mode guarded`.
@@ -200,7 +203,8 @@ Giới hạn riêng của `confined` và `open`:
 - Việc nhận diện `aip mode` và ghi file cấu hình trong `guard-bash` là heuristic. Script do agent viết (`node x.mjs`)
   hoặc cách né bằng escape của shell vẫn lọt, nên agent trong phiên bypass vẫn có thể tự đổi mode. Hook không phải ranh
   giới chống agent bị chiếm quyền.
-- `writeScope` chỉ chặn công cụ file, không chặn Bash của subagent. Junction hoặc symlink tới thư mục `.claude` lọt vì
+- `writeScope` chỉ chặn công cụ file, không chặn Bash của subagent. Ở `open`, `guard-bash` không biết
+  `hooks/scope-lock.json`, nên lệnh Bash ghi vào file này cho qua và có thể tắt `writeScope` ở phiên sau. Junction hoặc symlink tới thư mục `.claude` lọt vì
   đường dẫn không đi qua realpath.
 - Ở `open`, lỗi nội bộ cho lệnh qua, kể cả `mcpDeny` của `guard-mcp` khi lỗi xảy ra sau bước kiểm mode.
 - Hai finding của security review độc lập được cố ý bỏ lại: agent tự đặt `bypassPermissions` cho phiên của nó hoặc phiên

@@ -104,12 +104,15 @@ While in effect:
 - Root confinement (a heuristic, not a sandbox): the roots are the project root (plus the main repo root in a worktree),
   the session `scratchpad_dir`, `<tmpdir>/claude` and `fullRoots`. The `<tmpdir>/claude` directory itself is always
   blocked.
-- Denied, each with a reason that ends in `Mở:` and says how to open it:
+- Denied, each with a reason that says how to open it (a `Mở:` sentence; a write outside the roots ends in `Cần mở rộng → …` instead, and the `<tmpdir>/claude` directory itself has no way to open):
   - a push to a protected branch, a force push, or a push to an unknown branch while `fullKeep` has `"push"` (remove it
     from `fullKeep`, push yourself, or use `open`);
-  - writes outside the roots; reads outside the read grants (`fullReadRoots`, `fullPaths`); paths that cannot be resolved
-    (`$VAR`, `~`, odd globs); a command that mentions a secret file outside the roots; a command with more than 1000
-    segments; a hook internal error;
+  - writes outside the roots (the reason lists the roots that have the missing permission and points to `fullPaths` or
+    `fullRoots`);
+  - reads outside the read grants (`fullReadRoots`, `fullPaths`): this covers the file tools Read/Grep and the source of
+    `cp`/`Copy-Item`, not other Bash reads such as `cat` (see Limits); paths that cannot be resolved (`$VAR`, `~`, odd
+    globs); a command that mentions a secret file outside the roots; a command with more than 1000 segments; a hook
+    internal error;
   - writes to `.claude/aip-gate.json` or `.claude/settings*.json`, and `aip mode <name>` run by an agent (change the file
     yourself or run `aip mode` yourself).
 - Not changed: an MCP call when `aip-gate.json` is broken still asks (the hook does not know the mode), and
@@ -181,9 +184,11 @@ While in effect:
   `fullReadRoots` and `fullPaths` have no effect (`aip mode status` says so when they are present).
 - Kept: `mcpDeny`; the agent's `writeScope` (it only blocks the file tools Edit/Write/MultiEdit/NotebookEdit, not Bash);
   the Stop gate; session-start loading.
-- Denied (never asked): writes to `.claude/aip-gate.json`, `.claude/settings*.json` and a plugin's
-  `hooks/scope-lock.json`, and `aip mode <name>` run by an agent, because `mcpDeny` and `writeScope` are read from those
-  files. `aip mode status` and reading those files pass.
+- Denied (never asked): writes to `.claude/aip-gate.json` and `.claude/settings*.json` (file tools and Bash), writes to a
+  plugin's `hooks/scope-lock.json` with the file tools only, and `aip mode <name>` run by an agent, because `mcpDeny` and
+  `writeScope` are read from those files. A Bash write to `scope-lock.json` passes (`echo x > …/hooks/scope-lock.json`),
+  so `writeScope` can be switched off for a later session with a plain Bash command. `aip mode status` and reading those
+  files pass.
 - Not changed: an MCP call when `aip-gate.json` is broken still asks.
 
 Turn it on with `aip mode open`; it prints the warning, handles `settings.json` like `confined` does, and you go back with
@@ -209,7 +214,8 @@ Limits specific to `confined` and `open`:
 - Spotting `aip mode` and writes to the config files in `guard-bash` is heuristic. A script an agent writes
   (`node x.mjs`), or a trick with shell escapes, still gets through, so an agent in a bypass session can still change the
   mode. The hooks are not a boundary against a hijacked agent.
-- `writeScope` blocks only the file tools, not Bash in a subagent. A junction or symlink to the `.claude` directory gets
+- `writeScope` blocks only the file tools, not Bash in a subagent. In `open`, `guard-bash` does not know
+  `hooks/scope-lock.json`, so a plain Bash write to it passes and can disable `writeScope` for a later session. A junction or symlink to the `.claude` directory gets
   through because paths are not resolved with realpath.
 - In `open`, an internal error lets the call through, `mcpDeny` of `guard-mcp` included when the error comes after the mode
   check.
