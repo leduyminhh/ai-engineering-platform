@@ -190,7 +190,7 @@ function runModeUnsafe(sub, { root, out, err, run }) {
     out(`Nguồn: ${!found.file ? 'không có' : found.source === 'main' ? `${found.file} (repo chính; worktree này chưa có aip-gate.json)` : found.file}`);
     out(`settings.json: ${SETTINGS_LABEL[s.settings]}`);
     for (const r of s.leftoverRules) out(`  - ${r}`);
-    out(`git: ${gitLabel(s.mode)[gitStateOf(found.file ?? gateFile, run && { run })]}`);
+    out(`git: ${gitLabel('khoá mode')[gitStateOf(found.file ?? gateFile, run && { run })]}`);
     for (const l of gateLines(info)) out(l);
     if (s.legacy) out(`Gợi ý: file dùng tên cũ "${s.legacy}"; chạy aip mode ${LEGACY[s.legacy]} để ghi tên mới.`);
     if (s.unrecognized) out(`Giá trị mode ${JSON.stringify(info.config?.mode)} không nhận ra nên chạy như guarded; dùng guarded, confined hoặc open.`);
@@ -236,7 +236,7 @@ function runModeUnsafe(sub, { root, out, err, run }) {
     out('  ⚠ Agent trong phiên bypass vẫn có thể tự đổi mode bằng script do chính nó viết; hook không phải ranh giới chống agent bị chiếm quyền.');
     out('  ⚠ Đổi mode: người dùng tự chạy `aip mode`; quay lại hỏi bằng `aip mode guarded`.');
   } else {
-    out('  ⚠ confined: việc ngoài rào bị từ chối chứ không hỏi; chỉ cho qua việc trong rào (root, fullRoots, fullReadRoots, fullPaths, fullKeep).');
+    out('  ⚠ confined: việc ngoài rào bị từ chối chứ không hỏi; chỉ cho qua việc trong rào (root, fullRoots, fullReadRoots, fullPaths); push nhánh bảo vệ bị từ chối theo fullKeep.');
     out('  ⚠ Agent trong phiên bypass vẫn có thể tự đổi mode bằng script do chính nó viết; hook không phải ranh giới chống agent bị chiếm quyền.');
   }
   out(`  ⚠ ${target} chỉ có hiệu lực khi phiên chạy bằng --permission-mode bypassPermissions (hoặc đặt trong settings người dùng); project không tự bật được bypass.`);

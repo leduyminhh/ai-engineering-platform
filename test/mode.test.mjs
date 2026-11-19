@@ -507,7 +507,7 @@ test("gate-config-flow AC4.2: status chỉ hiện mode đáng tin; gợi ý gỡ
   commitGate(root, { mode: "full", autonomy: { mergeLocal: true } });
   const t = cmd(runMode, "status", root).out;
   assert.match(t, /Chế độ: guarded/, t);
-  assert.doesNotMatch(t, /Chế độ: full/);
+  assert.doesNotMatch(t, /Chế độ: confined/);
   assert.match(t, /mode.*bỏ qua|bỏ qua.*mode/i);
   assert.match(cmd(runMode, "full", root).out, /xem lại/);
   assert.match(cmd(runAutonomy, "status", root).out, /xem lại/);
@@ -628,6 +628,7 @@ test("AC4.5: status in tên mới, câu định nghĩa, gợi ý tên cũ và gi
   execFileSync("git", ["add", "-f", ".claude/aip-gate.json"], { cwd: root });
   const t = cmd(runMode, "status", root).out;
   assert.match(t, /Khoá bị bỏ qua.*mode/);
+  assert.match(t, /git: .*theo dõi.*khoá mode bị bỏ qua/, "nhãn git nói khoá mode bị bỏ qua, không nói mode hiệu lực");
   assert.ok(!t.split("\n").some((l) => l.startsWith("Gợi ý:")), "file bị theo dõi: không gợi ý tên cũ");
 });
 

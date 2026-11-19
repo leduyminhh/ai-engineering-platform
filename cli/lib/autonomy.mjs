@@ -61,7 +61,7 @@ function runUnsafe(sub, { root, out, err, run }) {
   fs.writeFileSync(file, dump(next), 'utf8');
   out(`✓ autonomy=${sub} tại ${root}${sub === 'high' ? `: ${JSON.stringify(next.autonomy)}` : ''}`);
   if (g.source === 'main') out(`  ghi ${file}: cấu hình lấy từ repo chính, file của worktree này che file của repo chính từ giờ.`);
-  if (droppedMode) out('  không chép khoá mode của repo chính; cần full trong worktree này thì chạy aip mode confined.');
+  if (droppedMode) out('  không chép khoá mode của repo chính; cần confined trong worktree này thì chạy aip mode confined.');
   if (sub === 'high') {
     // Như `full`, khoá trong file đã commit bị bỏ qua nên high ở file đã theo dõi là vô hiệu.
     const gs = gitState(file);
