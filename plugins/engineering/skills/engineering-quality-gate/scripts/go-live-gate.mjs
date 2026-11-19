@@ -68,6 +68,7 @@ const SARIF_LEVEL = { ERROR: 'High', WARNING: 'Medium', NOTE: 'Low', NONE: 'Info
 const COVERITY_IMPACT = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
 const NESSUS_RISK = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', NONE: 'Info' };
 const BLACKDUCK_SEVERITY = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', NONE: 'Info', UNKNOWN: 'Info', INFO: 'Info' };
+const SONAR_TYPES = ['BUG', 'CODE_SMELL', 'VULNERABILITY', 'SECURITY_HOTSPOT'];
 const SONAR_SEVERITY = { BLOCKER: 'Critical', CRITICAL: 'High', MAJOR: 'Medium', MINOR: 'Low', INFO: 'Info' };
 // [Unverified] impacts.severity của Sonar MQR có thêm BLOCKER/INFO ngoài HIGH/MEDIUM/LOW; thiếu ánh xạ thì report hợp lệ bị exit 2.
 const SONAR_IMPACT = { BLOCKER: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', INFO: 'Info' };
@@ -83,7 +84,7 @@ const REQUIRED = {
   rce: SCAN_SOURCES,
   kev: ['kev', 'trivy', 'nessus', 'blackduck'],
 };
-const NA_SOURCES = [...new Set(Object.values(REQUIRED).flat())];
+const NA_SOURCES = [...new Set(Object.values(REQUIRED).flat())].filter((n) => n !== 'kev');
 const KEY_OF_SOURCE = Object.fromEntries(SOURCE_KEYS.map((k) => [sourceName(k), k]));
 
 // Một finding đã đủ để kết luận không đạt; thiếu nguồn chỉ làm "chưa đo" khi chưa có finding.
@@ -328,15 +329,20 @@ function readBlackduck(key, text, map) {
 function readSonar(key, text, map) {
   const doc = parseJson(key, text);
   if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.issues)) throw fail(key, 'thiếu mảng issues');
+  // Export chỉ lấy trang đầu sẽ đếm thiếu: total lớn hơn số issues thì báo lỗi thay vì kết luận.
+  const total = doc.paging?.total ?? doc.total;
+  if (total != null && (!Number.isInteger(total) || total > doc.issues.length)) throw fail(key, 'report chưa đủ trang: total lớn hơn số issues');
   for (const issue of doc.issues) {
-    // Chỉ VULNERABILITY là chỉ tiêu bảo mật; BUG và CODE_SMELL không vào findings.
-    if (requireField(key, issue, 'type', 'string') !== 'VULNERABILITY') continue;
+    const type = requireField(key, issue, 'type', 'string').trim().toUpperCase();
+    if (!SONAR_TYPES.includes(type)) throw fail(key, 'giá trị type không hợp lệ');
+    // Chỉ VULNERABILITY là chỉ tiêu bảo mật; BUG, CODE_SMELL và SECURITY_HOTSPOT không vào findings.
+    if (type !== 'VULNERABILITY') continue;
     const levels = [];
     if (issue.severity != null) levels.push(normalizeSeverity(key, 'severity', issue.severity, SONAR_SEVERITY));
     if (issue.impacts != null) {
       if (!Array.isArray(issue.impacts)) throw fail(key, 'impacts phải là mảng');
       for (const imp of issue.impacts) {
-        if (imp?.softwareQuality === 'SECURITY') levels.push(normalizeSeverity(key, 'impacts.severity', requireField(key, imp, 'severity'), SONAR_IMPACT));
+        if (String(imp?.softwareQuality ?? '').trim().toUpperCase() === 'SECURITY') levels.push(normalizeSeverity(key, 'impacts.severity', requireField(key, imp, 'severity'), SONAR_IMPACT));
       }
     }
     if (!levels.length) throw fail(key, 'thiếu severity hoặc impacts SECURITY');
@@ -377,10 +383,12 @@ function readKev(key, text, now, warnings) {
   const cves = new Set(doc.vulnerabilities.map((v) => requireField(key, v, 'cveID', 'string').trim().toUpperCase()));
   const released = doc.dateReleased;
   const t = typeof released === 'string' ? Date.parse(released) : NaN;
-  if (released == null || released === '') warnings.push('KEV: file không có dateReleased, không kiểm được độ mới');
-  else if (Number.isNaN(t)) warnings.push('KEV: dateReleased không đọc được, không kiểm được độ mới');
-  else if (now - t > 7 * DAY_MS) warnings.push(`KEV: file phát hành ${Math.floor((now - t) / DAY_MS)} ngày trước, cũ hơn 7 ngày; tải bản mới trước khi kết luận`);
-  return cves;
+  let stale = false;
+  if (!cves.size) { warnings.push('KEV: file không có mục nào, không dùng được để kết luận'); stale = true; }
+  if (released == null || released === '') { warnings.push('KEV: file không có dateReleased, không kiểm được độ mới'); stale = true; }
+  else if (Number.isNaN(t)) { warnings.push('KEV: dateReleased không đọc được, không kiểm được độ mới'); stale = true; }
+  else if (now - t > 7 * DAY_MS) { warnings.push(`KEV: file phát hành ${Math.floor((now - t) / DAY_MS)} ngày trước, cũ hơn 7 ngày; tải bản mới trước khi kết luận`); stale = true; }
+  return { cves, stale };
 }
 
 const READERS = { gitleaksTree: readGitleaks, gitleaksHistory: readGitleaks, trivy: readTrivy, sarif: readSarif, coverity: readCoverity, zap: readZap, nessus: readNessus, blackduck: readBlackduck, sonar: readSonar };
@@ -399,11 +407,17 @@ export function gate(inputs, { now = new Date() } = {}) {
   const warnings = [];
   const na = inputs.na || {};
   for (const name of Object.keys(na)) {
+    if (name === 'kev') throw new InputError('--na: kev không dùng được vì file KEV là danh mục để so, không phải bề mặt hệ thống');
     if (!NA_SOURCES.includes(name)) throw new InputError(`--na: nguồn không hợp lệ (dùng: ${NA_SOURCES.join(', ')})`);
     if (inputs[KEY_OF_SOURCE[name]] !== undefined) throw new InputError(`--na ${name}: nguồn đã được cung cấp bằng cờ riêng`);
   }
+  for (const name of Object.keys(na)) warnings.push(`--na ${name}: N/A tự khai, cần người dùng xác nhận bề mặt không tồn tại`);
+  if (inputs.trivy !== undefined) warnings.push('Trivy: không xác minh được report đã quét với --scanners secret; chỉ tiêu secret giả định report có quét secret');
   const provided = new Set(SOURCE_KEYS.filter((k) => inputs[k] !== undefined).map(sourceName));
-  const kevCves = inputs.kev === undefined ? new Set() : guard('kev', () => readKev('kev', inputs.kev, now, warnings));
+  const kevInfo = inputs.kev === undefined ? { cves: new Set(), stale: false } : guard('kev', () => readKev('kev', inputs.kev, now, warnings));
+  const kevCves = kevInfo.cves;
+  // File KEV rỗng, cũ hoặc thiếu ngày không đủ tin để kết luận 0 KEV: coi như nguồn kev chưa có (finding khớp vẫn không đạt).
+  if (kevInfo.stale) provided.delete('kev');
   for (const k of SOURCE_KEYS) {
     const text = inputs[k];
     if (text === undefined) continue;

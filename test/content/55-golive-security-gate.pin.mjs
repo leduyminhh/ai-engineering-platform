@@ -364,7 +364,8 @@ export default async function run({ ok, ctx }) {
       nessus: nessus([]),
       blackduck: blackduck([]),
       sonar: sonar([]),
-      kev: kevFile([], '2026-11-18T00:00:00Z'),
+      // KEV rỗng không đủ tin để kết luận (AC1.18): fixture hợp lệ phải có ít nhất một mục không trùng finding nào.
+      kev: kevFile(['CVE-2099-0001'], '2026-11-18T00:00:00Z'),
     };
     const statusOf = (r) => Object.fromEntries(Object.entries(r.thresholds).map(([k, t]) => [k, t.status]));
     const without = (...drop) => Object.fromEntries(Object.entries(EMPTY).filter(([k]) => !drop.includes(k)));
