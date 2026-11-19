@@ -32,6 +32,12 @@ Lấy trạng thái và số đếm từ stdout của script, không đếm tay 
 
 Trạng thái tổng thể (`overall`): <không đạt | đạt | chưa đo>.
 
+Đợt nhiều image (bỏ phần này khi đợt chỉ có một image): mỗi image một lần chạy script với report Trivy của image đó. Bảng trên là trạng thái chung, lấy mức xấu nhất theo từng chỉ tiêu; bảng dưới là trạng thái từng image.
+
+| Image | Report Trivy | `secret` | `critHigh` | `rce` | `kev` |
+|---|---|---|---|---|---|
+| <image> | <có / thiếu> | <trạng thái> | <trạng thái> | <trạng thái> | <trạng thái> |
+
 Bốn trạng thái của một chỉ tiêu (theo hàm `statusOf` trong `go-live-gate.mjs`):
 
 | Trạng thái | Điều kiện |
@@ -162,9 +168,16 @@ và không có cổng tự động.
   "Bước verify đã chạy" (fail-loud), KHÔNG coi phần bỏ qua là đã "sạch".
 - Không có finding đếm được và còn nguồn bắt buộc chưa có report hoặc `--na`: ghi `chưa đo`, không ghi `đạt`. Số đếm lấy từ `count` của script.
 - `--na` chỉ truyền sau khi người dùng xác nhận bề mặt không tồn tại. Report liệt kê mọi `--na` kèm bằng chứng ở ĐẦU mục Ngưỡng go-live.
-- File KEV phải là bản mới tải và có `dateReleased`. Warning về tuổi file KEV không đổi status của script: report ghi lại warning đó và coi KEV là chưa đáng tin khi file rỗng, cũ hoặc thiếu ngày.
+  - Nguồn hợp lệ: `gitleaks-tree`, `gitleaks-history`, `trivy`, `coverity`, `zap`, `nessus`, `blackduck`, `sonar`. `--na kev` bị từ chối (exit 2) vì file KEV là danh mục để so, không phải bề mặt hệ thống.
+  - Mỗi `--na` hợp lệ làm `warnings` có đúng một dòng "N/A tự khai, cần người dùng xác nhận bề mặt không tồn tại". Dòng này chỉ nêu tên nguồn; bằng chứng lấy từ `thresholds.<khoá>.na`.
+- File KEV phải là bản mới tải và có `dateReleased`. File có `vulnerabilities` rỗng, `dateReleased` thiếu hoặc không đọc được, hoặc cũ hơn 7 ngày so với ngày chạy: script ghi warning và coi nguồn `kev` như chưa có, nên KEV là `chưa đo` khi không có finding KEV đếm được. Finding khớp KEV vẫn `không đạt`. `dateReleased` ở tương lai không bị coi là cũ. Report chép warning KEV vào mục Cảnh báo.
+- Có `--trivy` thì `warnings` luôn có một dòng: script không xác minh được report đã quét với `--scanners secret`. Report chép dòng đó vào mục Cảnh báo và ghi lệnh quét thực tế người dùng xác nhận.
+- Đợt nhiều image: `--trivy` chỉ nhận một file mỗi lần chạy, nên chạy script cho từng image.
+  - Mỗi image có một dòng trong bảng theo image; image thiếu report Trivy ghi `chưa đo` ở cả bốn chỉ tiêu (cả bốn cần nguồn `trivy`).
+  - Trạng thái chung của mỗi chỉ tiêu lấy mức xấu nhất theo thứ tự `không đạt` > `chưa đo` > `không áp dụng` > `đạt`. Trạng thái tổng thể (`overall`) tính từ bốn trạng thái chung đó.
+  - `count` giữ theo từng lần chạy, không cộng giữa các image; finding của nguồn không phải Trivy lặp lại ở mọi lần chạy nếu cùng truyền cờ.
+  - Mục digest của `ops-deploy-release` đối chiếu từng image với report Trivy của chính image đó.
 - Residual risk cố định, ghi vào mục Residual risk:
-  - [Unverified] Trivy có chạy `--scanners secret` hay không: script không xác minh được từ report.
   - Id Black Duck dạng BDSA không tự khớp KEV: script chỉ lấy CVE khi id bắt đầu bằng `CVE-`.
   - `--fp` khai cho một nguồn của finding đã gộp nhiều nguồn loại cả finding khỏi số đếm.
 - `không áp dụng` chỉ ghi khi có bằng chứng bề mặt không tồn tại (`--na`); không dùng để né nguồn chưa đo.

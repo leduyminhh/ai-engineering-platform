@@ -10,8 +10,9 @@ Trivy image là nguồn bắt buộc của chỉ tiêu secret, Critical/High, RC
 trivy image --scanners vuln,secret --format json --output <thư-mục-ngoài-repo>/trivy-image.json <image>
 ```
 
-- Luôn có `vuln,secret`. Quét thiếu `secret` thì chỉ tiêu secret có thể đạt sai.
+- Luôn có `vuln,secret`. Quét thiếu `secret` thì chỉ tiêu secret có thể đạt sai. Có `--trivy` thì `warnings` luôn có một dòng nói script không xác minh được report đã quét với `--scanners secret`; kiểm lệnh quét thực tế với người dùng trước khi tin số secret của Trivy.
 - Tham chiếu theo digest (`<repo>@sha256:...`) khi có. `Metadata.RepoDigests` chỉ có giá trị khi image đã có digest trên registry [Unverified]. Script dùng `Metadata.RepoDigests[0]` làm khoá tài sản của finding; không có thì dùng `ArtifactName`. Đối chiếu digest đã quét với image đang chạy trên SIT/UAT là bước của skill `ops-deploy-release` (file `references/digest-check.md`), không phải của script.
+- Khi report không có `Metadata.RepoDigests` (thiếu hoặc rỗng), bước đối chiếu của `ops-deploy-release` lấy `Metadata.ImageID` từ chính report này để so theo image ID [Unverified]. Script không đọc `Metadata.ImageID`.
 - Quét trên máy có quyền pull image. Không chạy trên VM SIT/UAT.
 - Trivy chưa cài: nêu rõ các chỉ tiêu liên quan `chưa đo`, đề nghị người dùng cài hoặc đưa report sẵn có. Không cài vào project.
 
@@ -19,7 +20,14 @@ trivy image --scanners vuln,secret --format json --output <thư-mục-ngoài-rep
 
 | Cờ | Tên nguồn trong `missing` và `--na` | Ghi chú |
 |---|---|---|
-| `--trivy <file>` | `trivy` | Một lần mỗi lần chạy script. Đợt có nhiều image chưa được hỗ trợ: lặp cờ thì exit 2. |
+| `--trivy <file>` | `trivy` | Một lần mỗi lần chạy script; lặp cờ thì exit 2. Đợt có nhiều image: xem mục Đợt nhiều image. |
+
+## Đợt nhiều image
+
+- Mỗi image một report Trivy, mỗi report một lần chạy script (`--trivy <report-của-image>`).
+- Trạng thái chung của mỗi chỉ tiêu lấy mức xấu nhất theo thứ tự `không đạt` > `chưa đo` > `không áp dụng` > `đạt`. Image thiếu report là `chưa đo`.
+- `count` giữ theo từng lần chạy, không cộng giữa các image. Khoá finding theo digest hoặc `ArtifactName` của từng image, nên cùng CVE trên hai image là hai finding ở hai lần chạy khác nhau.
+- Mẫu bảng theo image và quy tắc lập report: [report-template.md](report-template.md).
 
 ## Trường đọc
 
@@ -74,7 +82,7 @@ Finding bị ignore không có trong report nên script không đếm. Ghi dòng
 
 ## Điền --na và --fp
 
-- `--na trivy=<bằng chứng>` chỉ khi đợt không có image nào để quét, ví dụ repo chỉ là thư viện. Bằng chứng ghi rõ điều đó.
+- `--na trivy=<bằng chứng>` chỉ khi đợt không có image nào để quét, ví dụ repo chỉ là thư viện, và người dùng đã xác nhận. Bằng chứng ghi rõ điều đó. Script ghi đúng một warning "N/A tự khai, cần người dùng xác nhận bề mặt không tồn tại" cho nguồn `trivy`. Image có trong đợt nhưng thiếu report là `chưa đo`, không khai `--na`.
 - `--fp` và `--accepted` là JSON mảng; `reason` bắt buộc:
 
 ```json

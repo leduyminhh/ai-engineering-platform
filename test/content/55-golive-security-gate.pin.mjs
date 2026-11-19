@@ -629,6 +629,15 @@ export default async function run({ ok, ctx }) {
     // AC1.21: Trivy luôn kèm warning về --scanners
     ok(gate({ trivy: EMPTY.trivy }, { now: NOW }).warnings.some((w) => /Trivy/.test(w) && /scanners/.test(w)) && !gate({ coverity: coverity([]) }, { now: NOW }).warnings.some((w) => /Trivy/.test(w)), 'AC1.21: có --trivy thì luôn có warning không xác minh được --scanners secret; không có --trivy thì không');
 
+    // Danh sách nguồn --na trong SKILL.md phải đúng tập script chấp nhận (kev và sarif bị từ chối)
+    const naDoc = [...((skillMd.match(/Tên nguồn hợp lệ:\s*((?:`[^`]+`(?:, )?)+)/) || [])[1] || '').matchAll(/`([^`]+)`/g)].map((m) => m[1]).sort().join();
+    const naAccepted = ['gitleaks-tree', 'gitleaks-history', 'trivy', 'coverity', 'zap', 'nessus', 'blackduck', 'sonar', 'kev', 'sarif']
+      .filter((n) => !throwsInput({ na: { [n]: 'x' } })).sort().join();
+    ok(naDoc !== '' && naDoc === naAccepted, 'AC1.6: danh sách nguồn --na trong SKILL.md khớp tập nguồn script chấp nhận (không có kev, sarif)');
+
+    // AC3.3: định danh đã quét lấy từ report, không có lệnh lấy image ID ở máy build
+    ok(digestCheck.includes('Metadata.ImageID') && !digestCheck.includes('{{.Id}}'), 'AC3.3: digest-check.md dùng Metadata.ImageID của report và không còn lệnh lấy image ID ở máy build');
+
     // AC5.2: corpus routing của hai skill có ít nhất 4 + 2 positive (số đo xếp hạng do scripts/routing-score.mjs kiểm trong npm test)
     for (const id of ['engineering-quality-gate', 'ops-deploy-release']) {
       const corpus = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'test', 'routing', `${id}.json`), 'utf8'));

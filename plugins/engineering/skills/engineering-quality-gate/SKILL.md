@@ -80,9 +80,14 @@ Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải ch�
        cho các nguồn khác nhau; các cờ còn lại chỉ dùng một lần.
      - Exit 0 nghĩa là đọc được input, KHÔNG nghĩa là đạt. Exit 2 là lỗi đầu vào: không có kết luận; báo tên cờ và
        tên file rồi dừng. Kết luận nằm ở `overall` và `status` trong stdout JSON.
-     - `--na <nguồn>=<bằng chứng>` chỉ khi bề mặt đó không tồn tại; bằng chứng không được để trống. Tên nguồn hợp lệ:
-       `gitleaks-tree`, `gitleaks-history`, `trivy`, `coverity`, `zap`, `nessus`, `blackduck`, `sonar`, `kev`. `sarif` không dùng được với `--na` (exit 2); nguồn đã có cờ riêng cũng không khai `--na` được (exit 2).
+     - `--na <nguồn>=<bằng chứng>` chỉ khi bề mặt đó không tồn tại và người dùng đã xác nhận; bằng chứng không được để trống.
+       Tên nguồn hợp lệ: `gitleaks-tree`, `gitleaks-history`, `trivy`, `coverity`, `zap`, `nessus`, `blackduck`, `sonar`.
+       `kev` và `sarif` không dùng được với `--na` (exit 2): file KEV là danh mục để so, không phải bề mặt hệ thống. Nguồn đã có cờ riêng cũng không khai `--na` được (exit 2).
+       Mỗi `--na` hợp lệ làm `warnings` có đúng một dòng "N/A tự khai, cần người dùng xác nhận bề mặt không tồn tại"; dòng này chỉ nêu tên nguồn, bằng chứng nằm ở `thresholds.<khoá>.na`.
      - `--fp` và `--accepted` là JSON mảng `{source, key, reason}`; quy tắc nhãn ở [references/triage-and-fix.md](references/triage-and-fix.md).
+     - File `--kev` có `vulnerabilities` rỗng, `dateReleased` thiếu hoặc không đọc được, hoặc cũ hơn 7 ngày so với ngày chạy: script ghi warning và coi nguồn `kev` như chưa có. Chỉ tiêu KEV là `chưa đo` khi không có finding KEV đếm được; finding khớp KEV vẫn `không đạt`. `dateReleased` ở tương lai không bị coi là cũ.
+     - Có `--trivy` thì `warnings` luôn có một dòng: script không xác minh được report đã quét với `--scanners secret`. Giữ dòng đó trong report và kiểm lệnh quét thực tế với người dùng.
+     - Đợt có nhiều image: `--trivy` chỉ nhận một file mỗi lần chạy (lặp cờ thì exit 2). Chạy script cho từng image với report Trivy của image đó; trạng thái chung của mỗi chỉ tiêu lấy mức xấu nhất theo thứ tự `không đạt` > `chưa đo` > `không áp dụng` > `đạt`; image thiếu report Trivy là `chưa đo`. Số đếm giữ theo từng lần chạy, không cộng giữa các image. Cách lập report: [references/report-template.md](references/report-template.md); đối chiếu digest từng image: skill `ops-deploy-release`.
 
      | Nguồn | Cách lấy | Cờ script | Tài liệu |
      |---|---|---|---|
@@ -95,7 +100,7 @@ Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải ch�
      | Nessus | đọc CSV đã xuất; `.nessus` đọc tay | `--nessus` | [zap-nessus.md](references/zap-nessus.md) |
      | BlackDuck | đọc CycloneDX JSON đã xuất | `--blackduck` | [blackduck.md](references/blackduck.md) (mục Đọc cho ngưỡng go-live) |
      | SonarQube | đọc issues JSON đã xuất | `--sonar` | [sonarqube.md](references/sonarqube.md) (mục Đọc cho ngưỡng go-live) |
-     | CISA KEV | file JSON người dùng tải về | `--kev` | [Unverified] đọc `vulnerabilities[].cveID` và `dateReleased`; chưa có reference riêng |
+     | CISA KEV | file JSON người dùng tải về | `--kev` | [Unverified] tên trường `vulnerabilities[].cveID` và `dateReleased` theo file CISA, chưa kiểm với file thật; file rỗng, thiếu ngày hoặc cũ hơn 7 ngày thì KEV `chưa đo` (xem [report-template.md](references/report-template.md)) |
      | Pentest | PDF hoặc md do đơn vị ATTT cung cấp; không qua script | — | [pentest.md](references/pentest.md) |
      | ASVS L2 | checklist csv hoặc md của tổ chức; không qua script | — | [asvs-l2.md](references/asvs-l2.md) |
 
@@ -167,7 +172,7 @@ Nạp đúng file khi cần, đừng nạp tất cả:
   fix/propose/defer → áp fix → verify → cập nhật report) + bảng quyết định "tự sửa vs người quyết" (cả chất
   lượng lẫn bảo mật) + luồng **fix-từ-report** (safe-fix policy, scope rule) + nhắc ranh giới an toàn.
 - [references/gitleaks.md](references/gitleaks.md): chạy Gitleaks tại chỗ (working tree và lịch sử git, `--redact`), cờ `--gitleaks-tree` / `--gitleaks-history`, trường đọc, `.gitleaksignore`.
-- [references/trivy-image.md](references/trivy-image.md): chạy Trivy image (`vuln,secret`), cờ `--trivy`, `Metadata.RepoDigests`, `.trivyignore` và VEX.
+- [references/trivy-image.md](references/trivy-image.md): chạy Trivy image (`vuln,secret`), cờ `--trivy`, đợt nhiều image, `Metadata.RepoDigests`, `.trivyignore` và VEX.
 - [references/coverity.md](references/coverity.md): đọc JSON Coverity đã xuất (`--coverity`) và SARIF (`--sarif`), ánh xạ mức độ, gộp theo `file:line`.
 - [references/zap-nessus.md](references/zap-nessus.md): đọc ZAP JSON (`--zap`) và Nessus CSV (`--nessus`); ZAP XML và `.nessus` đọc tay; không ZAP active scan, không quét Nessus.
 - [references/pentest.md](references/pentest.md): nhập report pentest, bảng finding để người dùng xác nhận, theo dõi retest.

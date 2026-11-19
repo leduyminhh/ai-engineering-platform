@@ -69,7 +69,7 @@ Sau khi có findings Sonar, gộp cùng Black Duck ([blackduck.md](blackduck.md)
 ## Đọc cho ngưỡng go-live
 
 Cờ `--sonar <issues.json>` đọc issues JSON đã xuất, mỗi lần chạy một file. Script chỉ đọc file: không gọi server
-SonarQube, không đọc `SONAR_HOST_URL` hay `SONAR_TOKEN`. Thiếu mảng `issues` → exit 2.
+SonarQube, không đọc `SONAR_HOST_URL` hay `SONAR_TOKEN`. Thiếu mảng `issues` → exit 2. `paging.total` (hoặc `total`) lớn hơn số phần tử `issues` → exit 2, vì report chưa đủ trang.
 
 Sonar là nguồn bắt buộc của Critical/High và RCE (`SCAN_SOURCES` trong `scripts/go-live-gate.mjs`).
 
@@ -79,9 +79,9 @@ Sonar là nguồn bắt buộc của Critical/High và RCE (`SCAN_SOURCES` trong
 
 | Trường | Bắt buộc | Script dùng để |
 |---|---|---|
-| `issues[].type` | có, chuỗi | Chỉ `VULNERABILITY` vào Critical/High và RCE; `BUG`, `CODE_SMELL` và mọi giá trị khác bị bỏ qua |
+| `issues[].type` | có, chuỗi | Chuẩn hoá không phân biệt hoa thường; chỉ `VULNERABILITY` vào Critical/High và RCE; `BUG`, `CODE_SMELL`, `SECURITY_HOTSPOT` hợp lệ nhưng không vào chỉ tiêu; giá trị khác → exit 2 |
 | `issues[].severity` | có, với issue `VULNERABILITY` (trừ khi có `impacts[]` SECURITY) | Mức theo bảng dưới |
-| `issues[].impacts[]` | không | Chỉ mục có `softwareQuality` = `SECURITY` được xét |
+| `issues[].impacts[]` | không | Chỉ mục có `softwareQuality` = `SECURITY` (không phân biệt hoa thường) được xét |
 | `issues[].component` | có, chuỗi, với issue `VULNERABILITY` | [Unverified] Đường dẫn file là phần sau dấu `:` đầu tiên, dạng `<project-key>:<đường-dẫn>` |
 | `issues[].line` | không | Thiếu thì khoá dùng dòng 0 |
 | `issues[].cwe` | không | Số (`78`) hoặc chuỗi (`CWE-78`) |
@@ -89,7 +89,7 @@ Sonar là nguồn bắt buộc của Critical/High và RCE (`SCAN_SOURCES` trong
 | `issues[].resolution`, `issues[].issueStatus` | không | Gắn nhãn `suppress` (xem dưới) |
 | `issues[].message`, `issues[].rule` | không | Chỉ để xét nhãn "remote code execution" |
 
-Issue có `type` khác `VULNERABILITY` bị bỏ qua trước khi kiểm `severity`, `component`, `line`, `cwe`, `tags`; các trường đó không bị đòi với issue này.
+Issue có `type` hợp lệ khác `VULNERABILITY` bị bỏ qua trước khi kiểm `severity`, `component`, `line`, `cwe`, `tags`; các trường đó không bị đòi với issue này.
 
 ### Mức độ
 
@@ -121,9 +121,9 @@ Giá trị khác bảng → exit 2. Script không phân biệt hoa thường và
 ### Phần không đếm được
 
 - [Unverified] Security Hotspot thường không nằm trong issues JSON, nên script không đếm. Ghi vào report như residual risk.
-- Finding Sonar không có `type` = `VULNERABILITY` không vào chỉ tiêu, dù có mức Blocker. Issue có `type` viết thường (`vulnerability`) cũng không vào chỉ tiêu.
-- Residual risk: script không đọc phân trang (`paging`, `total` nếu có). Người xuất phải lấy đủ mọi trang vào file; thiếu trang thì finding ở trang đó không được đếm và script không báo.
-- [Unverified] `type` và `softwareQuality` được so chính xác chữ hoa như API Sonar trả về (`VULNERABILITY`, `SECURITY`). Giá trị khác bị bỏ qua và script không báo.
+- Finding Sonar có `type` khác `VULNERABILITY` không vào chỉ tiêu, dù có mức Blocker.
+- `type` và `impacts[].softwareQuality` được chuẩn hoá không phân biệt hoa thường và bỏ khoảng trắng đầu cuối: `vulnerability` đếm như `VULNERABILITY`, `security` như `SECURITY`. `type` ngoài {BUG, CODE_SMELL, VULNERABILITY, SECURITY_HOTSPOT} → exit 2.
+- [Unverified] Tên trường `paging.total` theo API issues của Sonar. Script đọc `paging.total`, không có thì đọc `total`; giá trị lớn hơn số phần tử `issues` hoặc không phải số nguyên → exit 2 (report chưa đủ trang). Người xuất lấy đủ mọi trang vào một file rồi chạy lại.
 
 ### Ví dụ đầu vào
 
@@ -146,7 +146,7 @@ Giá trị khác bảng → exit 2. Script không phân biệt hoa thường và
 
 ### --na
 
-`--na sonar=<bằng chứng>` chỉ khi bằng chứng cho thấy phạm vi không có project Sonar. Bằng chứng ghi cụ thể
-(tên project đã kiểm hoặc lý do), không ghi chung chung.
+`--na sonar=<bằng chứng>` chỉ khi bằng chứng cho thấy phạm vi không có project Sonar và người dùng đã xác nhận. Bằng chứng ghi cụ thể
+(tên project đã kiểm hoặc lý do), không ghi chung chung. Script ghi đúng một warning "N/A tự khai, cần người dùng xác nhận bề mặt không tồn tại" cho nguồn `sonar`.
 
 Không dùng `--na sonar=...` khi đã có `--sonar`: script trả exit 2 (`--na` cho nguồn đã có cờ riêng).
