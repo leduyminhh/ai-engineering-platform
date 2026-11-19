@@ -53,19 +53,21 @@ docker compose images
 |---|---|---|
 | `đạt` | Mọi image của mọi service trong scope khớp, so theo digest hoặc theo image ID (ghi rõ "so theo image ID" khi dùng image ID) | Ghi `đạt`. Mục này không tạo lý do NO-GO. |
 | `không đạt` | Ít nhất một image lệch, so theo digest hoặc theo image ID | Ghi service và image lệch. Đề xuất NO-GO. |
-| `chưa đo` | Ở bất kỳ phía nào không lấy được định danh cần để so (digest, hoặc image ID khi so theo image ID): lệnh lỗi, thiếu quyền, chưa có xác nhận máy hoặc phạm vi, chưa có output người dùng dán | Coi là chưa đạt. Đề xuất NO-GO. |
+| `chưa đo` | Ở bất kỳ phía nào không lấy được định danh cần để so (digest, hoặc image ID khi so theo image ID): lệnh lỗi hoặc không chạy được, thiếu quyền, chưa có xác nhận máy hoặc phạm vi, chưa có output người dùng dán | Coi là chưa đạt. Đề xuất NO-GO. |
 
 - Mỗi service có thể có nhiều image: so từng image. Service không có image nào trong output thì ghi `chưa đo` cho service đó.
+- Trạng thái chung của mục digest trong checklist: `không đạt` khi có ít nhất một image lệch, kể cả khi image khác `chưa đo`; không có image lệch nhưng có image `chưa đo` thì `chưa đo`; chỉ `đạt` khi mọi image của mọi service đều khớp. Cả `không đạt` lẫn `chưa đo` đều đề xuất NO-GO.
 - Cả hai phía đều có digest: so digest với digest.
-- Một phía không có RepoDigest (ví dụ image build local chưa push registry): so theo image ID. [Unverified] Lấy image ID phía build bằng `docker image inspect --format '{{.Id}}' <image>` trên máy build; phía đang chạy lấy bằng `docker inspect --format '{{.Image}}' <container>` (bước 1 ở trên). So image ID với image ID và ghi rõ "so theo image ID" trong báo cáo.
+- Lệnh `docker image inspect --format '{{json .RepoDigests}}'` lỗi, không chạy được hoặc thiếu quyền ở một phía: định danh phía đó không lấy được, image ghi `chưa đo`; không chuyển sang so theo image ID dù lệnh lấy image ID vẫn chạy được.
+- Một phía không có RepoDigest, nghĩa là lệnh trên chạy được và trả mảng rỗng `[]` (ví dụ image build local chưa push registry): so theo image ID. [Unverified] Docker có thể trả `null` thay cho `[]`; coi `null` như mảng rỗng. [Unverified] Lấy image ID phía build bằng `docker image inspect --format '{{.Id}}' <image>` trên máy build; phía đang chạy lấy bằng `docker inspect --format '{{.Image}}' <container>` (bước 1 ở trên). So image ID với image ID và ghi rõ "so theo image ID" trong báo cáo.
 - Nếu một phía không lấy được định danh cần để so, image đó ghi `chưa đo`, kể cả khi phía kia lấy được.
 - [Inference] `RepoDigests` (digest manifest của registry) và image ID (định danh image cục bộ) là hai loại định danh khác nhau. Chỉ so cùng loại, không so chéo.
 
 ## Báo cáo
 
-| Service | Image | Digest đã quét | Digest đang chạy | Cách so | Trạng thái |
+| Service | Image | Định danh đã quét | Định danh đang chạy | Cách so | Trạng thái |
 |---|---|---|---|---|---|
-| `<service>` | `<tên-image>` | `sha256:<digest-đã-quét>` | `sha256:<digest-đang-chạy>` | digest / so theo image ID | `đạt` / `không đạt` / `chưa đo` |
+| `<service>` | `<tên-image>` | `sha256:<digest-hoặc-image-id-đã-quét>` | `sha256:<digest-hoặc-image-id-đang-chạy>` | digest / so theo image ID | `đạt` / `không đạt` / `chưa đo` |
 
 ## Ranh giới
 
