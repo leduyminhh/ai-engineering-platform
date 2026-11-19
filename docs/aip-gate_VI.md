@@ -66,6 +66,10 @@ hỏi với `git push`, `curl`, `wget`, `kubectl apply`, `terraform apply`, `hel
 `aip: mode hiệu lực = <mode> (nguồn <file>)` để bạn thấy file đang xin chế độ nào; hook không biết phiên có bypass hay
 không.
 
+Với công cụ file (Read, Grep, Edit, Write, MultiEdit, NotebookEdit), mode dùng để quyết là mức chặt hơn giữa mode theo
+cấu hình của cwd và mode theo cấu hình ở thư mục chứa file đích (`guarded` > `confined` > `open`). Thư mục đích không có
+cấu hình thì kế thừa mode của cwd; repo lồng có cấu hình riêng không phải `open` thì siết lại.
+
 ## Chế độ `guarded` (mặc định)
 
 Việc rủi ro thì hỏi người dùng.
@@ -202,7 +206,8 @@ Giới hạn riêng của `confined` và `open`:
 
 - Việc nhận diện `aip mode` và ghi file cấu hình trong `guard-bash` là heuristic. Script do agent viết (`node x.mjs`)
   hoặc cách né bằng escape của shell vẫn lọt, nên agent trong phiên bypass vẫn có thể tự đổi mode. Hook không phải ranh
-  giới chống agent bị chiếm quyền.
+  giới chống agent bị chiếm quyền. Bộ nhận diện cũng không thấy các lệnh ghi file cấu hình sau, không lệnh nào là script do
+  agent viết: `cp -r <nguồn>/.claude .`, `mv <nguồn>/.claude .claude`, `rsync … .claude/aip-gate.json`, `install … .claude/aip-gate.json`, `dd of=.claude/aip-gate.json`, `git restore --source=<rev> -- .claude/aip-gate.json`, `tar -C .claude …` và `ln -s … .claude/aip-gate.json`. Mở rộng `writeTargets` sẽ đổi hành vi của `guarded` nên làm ở request riêng.
 - `writeScope` chỉ chặn công cụ file, không chặn Bash của subagent. Ở `open`, `guard-bash` không biết
   `hooks/scope-lock.json`, nên lệnh Bash ghi vào file này cho qua và có thể tắt `writeScope` ở phiên sau. Junction hoặc symlink tới thư mục `.claude` lọt vì
   đường dẫn không đi qua realpath.

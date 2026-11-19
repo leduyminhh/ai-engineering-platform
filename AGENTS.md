@@ -123,7 +123,7 @@ invariants (idempotency, outbox, retention), schema/contract tests, and regressi
   apply when `.claude/aip-gate.json` has that `mode`, the session runs in `bypassPermissions` and git does not
   track the file. `confined` never asks: project roots and secret files inside them pass, the rest is denied
   (heuristic, not a sandbox), as is a protected-branch push while `fullKeep` has `push`. `open` never asks and
-  has no fence: secret files anywhere pass; only permission config files, `writeScope`, `mcpDeny` still block.
+  has no fence: secret files pass unless the target directory's own config is `guarded`; permission config files, `writeScope`, `mcpDeny` still block.
 - **Stop for human diff review before integrating.** On a feature branch, commit each task without
   pausing (each task ends with at least one commit; fix rounds may add more); the human reviews the whole branch diff before merge or push. On a
   protected branch, stop before every commit, except that with `autonomy.mergeLocal` in effect (see **Workflow defaults**) approving the whole-branch diff covers the local merge commit.

@@ -68,6 +68,10 @@ If any one is missing, the hooks behave as `guarded`. In a `confined` or `open` 
 `aip: mode hiệu lực = <mode> (nguồn <file>)`, so you can see which mode the file asks for; it cannot tell whether the
 session is in bypass.
 
+For the file tools (Read, Grep, Edit, Write, MultiEdit, NotebookEdit) the mode that decides is the stricter of the mode of the
+cwd's config and the mode of the config in the directory of the target file (`guarded` > `confined` > `open`). A target
+directory without a config inherits the cwd's mode; a nested repo with its own config that is not `open` tightens it.
+
 ## `guarded` mode (default)
 
 Risky actions ask the user.
@@ -213,7 +217,9 @@ Limits specific to `confined` and `open`:
 
 - Spotting `aip mode` and writes to the config files in `guard-bash` is heuristic. A script an agent writes
   (`node x.mjs`), or a trick with shell escapes, still gets through, so an agent in a bypass session can still change the
-  mode. The hooks are not a boundary against a hijacked agent.
+  mode. The hooks are not a boundary against a hijacked agent. The recognizer also does not see these writes to the config
+  files, none of them a script the agent wrote: `cp -r <source>/.claude .`, `mv <source>/.claude .claude`, `rsync … .claude/aip-gate.json`, `install … .claude/aip-gate.json`, `dd of=.claude/aip-gate.json`, `git restore --source=<rev> -- .claude/aip-gate.json`, `tar -C .claude …` and `ln -s … .claude/aip-gate.json`. Extending `writeTargets` would change `guarded` behavior, so it
+  belongs in a separate request.
 - `writeScope` blocks only the file tools, not Bash in a subagent. In `open`, `guard-bash` does not know
   `hooks/scope-lock.json`, so a plain Bash write to it passes and can disable `writeScope` for a later session. A junction or symlink to the `.claude` directory gets
   through because paths are not resolved with realpath.
