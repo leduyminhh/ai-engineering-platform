@@ -463,7 +463,7 @@ export default async function run({ ok, ctx }) {
       fp: list([[src, 'src/A.java:10+CWE-89', 'đã validate: input luôn qua tham số hoá']]),
     }, { now: NOW });
     ok(['coverity', 'sarif'].every((src) => merged7(src).thresholds.critHigh.count === 0 && merged7(src).falsePositives.length === 1), 'AC1.7: FP trên finding gộp Coverity + SARIF khớp theo source nào cũng được');
-    const rFpRce = gate({ trivy: trivyRce, kev: kevFile(['CVE-2026-70'], '2026-11-18T00:00:00Z'), fp: list([['trivy', `CVE-2026-70@${IMG}`, 'x']]) }, { now: NOW });
+    const rFpRce = gate({ trivy: trivyRce, kev: kevFile(['CVE-2026-70'], '2026-11-18T00:00:00Z'), fp: list([['trivy', 'CVE-2026-70@image:app:1', 'x']]) }, { now: NOW });
     ok(rFpRce.thresholds.rce.count === 1 && rFpRce.thresholds.kev.count === 0, 'AC1.7: FP loại finding khỏi mọi chỉ tiêu (RCE, KEV), không chỉ critHigh');
     const f5 = write({ trivy: trivyAB, fp: list([['trivy', `CVE-2026-0801@${IMG}`, 'ok']]), fpBad: list([['trivy', `CVE-2026-0801@${IMG}`, '']]) });
     let outFp = {};

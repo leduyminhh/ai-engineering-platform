@@ -72,6 +72,9 @@ const SONAR_SEVERITY = { BLOCKER: 'Critical', CRITICAL: 'High', MAJOR: 'Medium',
 // [Unverified] impacts.severity của Sonar MQR có thêm BLOCKER/INFO ngoài HIGH/MEDIUM/LOW; thiếu ánh xạ thì report hợp lệ bị exit 2.
 const SONAR_IMPACT = { BLOCKER: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', INFO: 'Info' };
 const DAY_MS = 24 * 60 * 60 * 1000;
+const LABEL_SUPPRESS = 'suppress';
+const LABEL_ACCEPTED = 'chấp nhận rủi ro';
+const LABEL_FP = 'FP đã loại';
 
 const SCAN_SOURCES = ['coverity', 'trivy', 'zap', 'nessus', 'blackduck', 'sonar'];
 const REQUIRED = {
@@ -114,12 +117,13 @@ const maxSeverity = (list) => list.reduce((a, b) => (RANK[b] > RANK[a] ? b : a))
 function addFinding(map, f) {
   const cur = map.get(f.key);
   if (!cur) {
-    map.set(f.key, { ...f, sources: [f.source], source: undefined, cve: f.cve || [], cwe: f.cwe || [], labels: [] });
+    map.set(f.key, { ...f, sources: [f.source], source: undefined, cve: f.cve || [], cwe: f.cwe || [], labels: [...(f.labels || [])] });
     return;
   }
   if (!cur.sources.includes(f.source)) cur.sources.push(f.source);
   if (RANK[f.severity] > RANK[cur.severity]) cur.severity = f.severity;
   cur.rce = cur.rce || f.rce;
+  for (const l of f.labels || []) if (!cur.labels.includes(l)) cur.labels.push(l);
   for (const c of f.cve || []) if (!cur.cve.includes(c)) cur.cve.push(c);
   for (const c of f.cwe || []) if (!cur.cwe.includes(c)) cur.cwe.push(c);
 }
@@ -199,7 +203,10 @@ function readSarif(key, text, map) {
       const tags = tagLists.flat();
       const cwe = [...new Set(tags.flatMap(cweNumbers))];
       const title = [rule.shortDescription?.text, rule.name, res.message?.text].filter((t) => typeof t === 'string').join(' ');
-      addFinding(map, codeFinding('sarif', file, line, severity, cwe, title));
+      if (res.suppressions != null && !Array.isArray(res.suppressions)) throw fail(key, 'suppressions phải là mảng');
+      const f = codeFinding('sarif', file, line, severity, cwe, title);
+      if (res.suppressions?.length) f.labels = [LABEL_SUPPRESS];
+      addFinding(map, f);
     }
   }
 }
@@ -217,7 +224,10 @@ function readCoverity(key, text, map) {
     if (rawCwe != null && !/^(cwe-)?\d+$/i.test(String(rawCwe).trim())) throw fail(key, 'cweCategory phải là số CWE');
     const cwe = rawCwe == null ? [] : cweNumbers(`cwe-${String(rawCwe).trim().replace(/^cwe-/i, '')}`);
     const title = [props.categoryDescription, issue.checkerName].filter((t) => typeof t === 'string').join(' ');
-    addFinding(map, codeFinding('coverity', file, line, severity, cwe, title));
+    const f = codeFinding('coverity', file, line, severity, cwe, title);
+    // [Unverified] trường triage của Coverity Connect trong JSON xuất.
+    if (/^(false positive|intentional)$/i.test(String(issue.stateOnServer?.triage?.classification ?? '').trim())) f.labels = [LABEL_SUPPRESS];
+    addFinding(map, f);
   }
 }
 
@@ -341,8 +351,24 @@ function readSonar(key, text, map) {
       ...(issue.tags || []).flatMap((x) => cweNumbers(String(x))),
     ])];
     const title = [issue.message, issue.rule].filter((t) => typeof t === 'string').join(' ');
-    addFinding(map, codeFinding('sonar', file, line, maxSeverity(levels), cwe, title));
+    for (const field of ['resolution', 'issueStatus']) {
+      if (issue[field] != null && typeof issue[field] !== 'string') throw fail(key, `${field} phải là chuỗi`);
+    }
+    const f = codeFinding('sonar', file, line, maxSeverity(levels), cwe, title);
+    if (/^(false-positive|wontfix)$/i.test(issue.resolution ?? '') || /^(false_positive|accepted)$/i.test(issue.issueStatus ?? '')) f.labels = [LABEL_SUPPRESS];
+    addFinding(map, f);
   }
+}
+
+// Chỉ --fp có reason mới loại khỏi số đếm; --accepted chỉ gắn nhãn. reason bắt buộc ở cả hai để không loại hay chấp nhận âm thầm.
+function readList(key, text) {
+  const list = parseJson(key, text);
+  if (!Array.isArray(list)) throw fail(key, 'phải là mảng {source, key, reason}');
+  return list.map((e) => {
+    const reason = requireField(key, e, 'reason', 'string').trim();
+    if (!reason) throw fail(key, 'reason không được để trống');
+    return { source: requireField(key, e, 'source', 'string').trim(), key: requireField(key, e, 'key', 'string').trim(), reason };
+  });
 }
 
 function readKev(key, text, now, warnings) {
@@ -358,7 +384,6 @@ function readKev(key, text, now, warnings) {
 }
 
 const READERS = { gitleaksTree: readGitleaks, gitleaksHistory: readGitleaks, trivy: readTrivy, sarif: readSarif, coverity: readCoverity, zap: readZap, nessus: readNessus, blackduck: readBlackduck, sonar: readSonar };
-const labelsZero = () => ({ 'chấp nhận rủi ro': 0, suppress: 0, 'FP đã loại': 0 });
 
 // JSON hợp lệ nhưng sai cấu trúc làm reader ném TypeError: đổi thành lỗi đầu vào (exit 2), không chép message gốc.
 function guard(key, fn) {
@@ -384,19 +409,40 @@ export function gate(inputs, { now = new Date() } = {}) {
     if (text === undefined) continue;
     for (const t of Array.isArray(text) ? text : [text]) guard(k, () => READERS[k]?.(k, t, map));
   }
-  const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => ({ id: `F${String(i + 1).padStart(3, '0')}`, ...f, rce: f.kind !== 'secret' && !!f.rce, kev: f.kind !== 'secret' && (f.cve || []).some((c) => kevCves.has(c.toUpperCase())) }));
-  const count = {
-    secret: findings.filter((f) => f.kind === 'secret').length,
-    critHigh: findings.filter((f) => f.kind !== 'secret' && (f.severity === 'Critical' || f.severity === 'High')).length,
-    rce: findings.filter((f) => f.rce).length,
-    kev: findings.filter((f) => f.kev).length,
+  const lists = { fp: [], accepted: [] };
+  for (const k of Object.keys(lists)) if (inputs[k] !== undefined) lists[k] = guard(k, () => readList(k, inputs[k]));
+  const falsePositives = [];
+  const matched = new Set();
+  const hit = (list, f) => list.find((e) => e.key === f.key && f.sources.includes(e.source));
+  const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => {
+    const id = `F${String(i + 1).padStart(3, '0')}`;
+    const fpHit = hit(lists.fp, f);
+    const accHit = hit(lists.accepted, f);
+    const labels = [...f.labels, ...(accHit ? [LABEL_ACCEPTED] : []), ...(fpHit ? [LABEL_FP] : [])];
+    for (const e of [fpHit, accHit]) if (e) matched.add(e);
+    if (fpHit) falsePositives.push({ id, key: f.key, source: fpHit.source, reason: fpHit.reason });
+    const reason = (fpHit || accHit)?.reason;
+    return { id, ...f, labels, ...(reason ? { reason } : {}), rce: f.kind !== 'secret' && !!f.rce, kev: f.kind !== 'secret' && (f.cve || []).some((c) => kevCves.has(c.toUpperCase())) };
+  });
+  for (const [k, flag] of [['fp', '--fp'], ['accepted', '--accepted']]) {
+    for (const e of lists[k]) if (!matched.has(e)) warnings.push(`${flag}: khoá không khớp finding nào (source=${e.source}, key=${e.key})`);
+  }
+  const member = {
+    secret: (f) => f.kind === 'secret',
+    critHigh: (f) => f.kind !== 'secret' && (f.severity === 'Critical' || f.severity === 'High'),
+    rce: (f) => f.rce,
+    kev: (f) => f.kev,
   };
-  const thresholds = Object.fromEntries(Object.entries(count).map(([k, n]) => {
-    const { status, missing, na: naUsed } = statusOf(n, REQUIRED[k], provided, na);
-    return [k, { status, count: n, missing, na: naUsed, labels: labelsZero() }];
+  const thresholds = Object.fromEntries(Object.keys(member).map((k) => {
+    const members = findings.filter(member[k]);
+    const counted = members.filter((f) => !f.labels.includes(LABEL_FP));
+    const has = (label) => counted.filter((f) => f.labels.includes(label)).length;
+    const { status, missing, na: naUsed } = statusOf(counted.length, REQUIRED[k], provided, na);
+    const labels = { [LABEL_ACCEPTED]: has(LABEL_ACCEPTED), [LABEL_SUPPRESS]: has(LABEL_SUPPRESS), [LABEL_FP]: members.length - counted.length };
+    return [k, { status, count: counted.length, missing, na: naUsed, labels }];
   }));
   const overall = overallOf(Object.values(thresholds).map((t) => t.status));
-  return { thresholds, overall, findings, warnings };
+  return { thresholds, overall, findings, falsePositives, warnings };
 }
 
 export function parseArgs(argv) {
