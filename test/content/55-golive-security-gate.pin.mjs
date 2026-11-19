@@ -592,6 +592,12 @@ export default async function run({ ok, ctx }) {
     ok((wfMd.match(/retest pentest/g) || []).length === 1, 'AC4.1: "retest pentest" xuất hiện đúng một lần trong WORKFLOW.md');
     ok(wfField(wfSteps[8], 'Gate') === 'finding đã sửa không còn; 0 finding `blocker` (từ auditor và từ reviewer) hoặc blocker được chấp nhận rõ ràng.',
       'AC4.1: gate Bước 9 không đổi');
+
+    // AC5.2: corpus routing của hai skill có ít nhất 4 + 2 positive (số đo xếp hạng do scripts/routing-score.mjs kiểm trong npm test)
+    for (const id of ['engineering-quality-gate', 'ops-deploy-release']) {
+      const corpus = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'test', 'routing', `${id}.json`), 'utf8'));
+      ok(corpus.positive.length >= 6, `AC5.2: ${id} có ít nhất 6 positive trong corpus routing`);
+    }
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }

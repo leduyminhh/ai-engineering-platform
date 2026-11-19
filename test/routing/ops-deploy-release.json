@@ -3,7 +3,9 @@
     "Mình sắp release version mới lên prod, lập checklist tiền deploy và rollback plan giúp mình.",
     "Nên chọn blue-green hay canary cho service này khi deploy?",
     "Chuẩn bị lệnh deploy lên staging kèm các điểm health-check sau mỗi bước.",
-    "Deploy xong rồi, kiểm tra error rate, latency, smoke test và nêu tiêu chí rollback."
+    "Deploy xong rồi, kiểm tra error rate, latency, smoke test và nêu tiêu chí rollback.",
+    "Trước khi go-live, kiểm digest image đang chạy trên SIT có trùng image đã quét Trivy không.",
+    "Đối chiếu digest Docker trên máy UAT với image đã scan, lệch thì đề xuất NO-GO."
   ],
   "negative": [
     "Production đang sập, 500 liên tục, điều tra giúp mình ngay.",
