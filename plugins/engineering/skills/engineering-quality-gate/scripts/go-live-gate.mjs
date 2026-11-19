@@ -52,9 +52,24 @@ function requireField(key, obj, field, type) {
 }
 
 function normalizeSeverity(key, field, raw, table) {
-  const s = table[String(raw).trim().toUpperCase()];
-  if (!s) throw fail(key, `giá trị ${field} không hợp lệ`);
-  return s;
+  const k = String(raw).trim().toUpperCase();
+  if (!Object.hasOwn(table, k)) throw fail(key, `giá trị ${field} không hợp lệ`);
+  return table[k];
+}
+
+// CWE chọn theo owasp-asvs-cwe-mapping.md: injection thực thi lệnh/mã (77, 78, 94, 95), deserialize (502), expression language (917), template injection (1336).
+const RCE_CWES = new Set([77, 78, 94, 95, 502, 917, 1336]);
+const RCE_LABEL = /remote code execution/i;
+const ZAP_SEVERITY = { 3: 'High', 2: 'Medium', 1: 'Low', 0: 'Info' };
+const SARIF_LEVEL = { ERROR: 'High', WARNING: 'Medium', NOTE: 'Low', NONE: 'Info' };
+const COVERITY_IMPACT = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
+
+const cweNumbers = (text) => [...String(text).matchAll(/cwe[-_/ ]?0*(\d+)/gi)].map((m) => Number(m[1]));
+const isRce = (cwe, title) => cwe.some((c) => RCE_CWES.has(c)) || RCE_LABEL.test(title);
+const cweSuffix = (cwe) => (cwe.length ? `+${[...cwe].sort((a, b) => a - b).map((c) => `CWE-${c}`).join('+')}` : '');
+
+function codeFinding(source, file, line, severity, cwe, title) {
+  return { source, kind: 'code', severity, key: `${file}:${line}${cweSuffix(cwe)}`, location: `${file}:${line}`, cwe, title, rce: isRce(cwe, title), scope: 'code' };
 }
 
 const RANK = Object.fromEntries(SEVERITIES.map((s, i) => [s, SEVERITIES.length - i]));
@@ -67,6 +82,7 @@ function addFinding(map, f) {
   }
   if (!cur.sources.includes(f.source)) cur.sources.push(f.source);
   if (RANK[f.severity] > RANK[cur.severity]) cur.severity = f.severity;
+  cur.rce = cur.rce || f.rce;
   for (const c of f.cve || []) if (!cur.cve.includes(c)) cur.cve.push(c);
   for (const c of f.cwe || []) if (!cur.cwe.includes(c)) cur.cwe.push(c);
 }
@@ -98,7 +114,9 @@ function readTrivy(key, text, map) {
     for (const v of res.Vulnerabilities || []) {
       const id = requireField(key, v, 'VulnerabilityID', 'string');
       const severity = normalizeSeverity(key, 'Severity', requireField(key, v, 'Severity'), TRIVY_SEVERITY);
-      addFinding(map, { source: 'trivy', kind: 'vuln', severity, key: `${id}@${asset}`, location: `${v.PkgName ?? '?'}@${v.InstalledVersion ?? '?'}`, cve: [id], scope: 'image' });
+      const cwe = (Array.isArray(v.CweIDs) ? v.CweIDs : []).flatMap(cweNumbers);
+      const title = typeof v.Title === 'string' ? v.Title : '';
+      addFinding(map, { source: 'trivy', kind: 'vuln', severity, key: `${id}@${asset}`, location: `${v.PkgName ?? '?'}@${v.InstalledVersion ?? '?'}`, cve: [id], cwe, title, rce: isRce(cwe, title), scope: 'image' });
     }
     for (const s of res.Secrets || []) {
       const rule = requireField(key, s, 'RuleID', 'string');
@@ -110,7 +128,75 @@ function readTrivy(key, text, map) {
   }
 }
 
-const READERS = { gitleaksTree: readGitleaks, gitleaksHistory: readGitleaks, trivy: readTrivy };
+function sarifSeverity(key, res, rule) {
+  const score = res.properties?.['security-severity'] ?? rule.properties?.['security-severity'];
+  if (score !== undefined && score !== null) {
+    const n = typeof score === 'number' || (typeof score === 'string' && score.trim() !== '') ? Number(score) : NaN;
+    if (!Number.isFinite(n) || n < 0 || n > 10) throw fail(key, 'giá trị security-severity không hợp lệ');
+    if (n >= 9) return 'Critical';
+    if (n >= 7) return 'High';
+    if (n >= 4) return 'Medium';
+    return n > 0 ? 'Low' : 'Info';
+  }
+  const level = res.level ?? rule.defaultConfiguration?.level;
+  if (level === undefined || level === null) throw fail(key, 'thiếu security-severity và level');
+  return normalizeSeverity(key, 'level', level, SARIF_LEVEL);
+}
+
+function readSarif(key, text, map) {
+  const doc = parseJson(key, text);
+  if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.runs)) throw fail(key, 'thiếu mảng runs');
+  for (const run of doc.runs) {
+    const rules = new Map((run?.tool?.driver?.rules || []).map((r) => [r.id, r]));
+    for (const res of run?.results || []) {
+      const rule = rules.get(res?.ruleId) || {};
+      const severity = sarifSeverity(key, res, rule);
+      const phys = res.locations?.[0]?.physicalLocation;
+      const file = requireField(key, phys?.artifactLocation, 'uri', 'string');
+      const line = requireField(key, phys?.region, 'startLine', 'number');
+      const tags = [...(rule.properties?.tags || []), ...(res.properties?.tags || [])].filter((t) => typeof t === 'string');
+      const cwe = [...new Set(tags.flatMap(cweNumbers))];
+      const title = [rule.shortDescription?.text, rule.name, res.message?.text].filter((t) => typeof t === 'string').join(' ');
+      addFinding(map, codeFinding('sarif', file, line, severity, cwe, title));
+    }
+  }
+}
+
+function readCoverity(key, text, map) {
+  const doc = parseJson(key, text);
+  if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.issues)) throw fail(key, 'thiếu mảng issues');
+  for (const issue of doc.issues) {
+    const file = requireField(key, issue, 'mainEventFilePathname', 'string');
+    const line = requireField(key, issue, 'mainEventLineNumber', 'number');
+    const props = requireField(key, issue, 'checkerProperties', 'object');
+    const severity = normalizeSeverity(key, 'impact', requireField(key, props, 'impact'), COVERITY_IMPACT);
+    const cwe = props.cweCategory === undefined ? [] : cweNumbers(`cwe-${props.cweCategory}`);
+    const title = [props.categoryDescription, issue.checkerName].filter((t) => typeof t === 'string').join(' ');
+    addFinding(map, codeFinding('coverity', file, line, severity, cwe, title));
+  }
+}
+
+function readZap(key, text, map) {
+  const doc = parseJson(key, text);
+  if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.site)) throw fail(key, 'thiếu mảng site');
+  for (const site of doc.site) {
+    const alerts = requireField(key, site, 'alerts', 'object');
+    if (!Array.isArray(alerts)) throw fail(key, 'alerts phải là mảng');
+    for (const a of alerts) {
+      const name = a?.alert ?? a?.name;
+      if (typeof name !== 'string') throw fail(key, 'thiếu hoặc sai kiểu trường alert');
+      const severity = normalizeSeverity(key, 'riskcode', requireField(key, a, 'riskcode'), ZAP_SEVERITY);
+      const cweNum = Number(a.cweid);
+      const cwe = Number.isInteger(cweNum) && cweNum > 0 ? [cweNum] : [];
+      const uris = (a.instances || []).map((i) => i?.uri).filter((u) => typeof u === 'string');
+      for (const uri of uris.length ? uris : [requireField(key, site, '@name', 'string')]) {
+        addFinding(map, { source: 'zap', kind: 'web', severity, key: `${name}@${uri}`, location: uri, cwe, title: name, rce: isRce(cwe, name), scope: 'web' });
+      }
+    }
+  }
+}
+
+const READERS = { gitleaksTree: readGitleaks, gitleaksHistory: readGitleaks, trivy: readTrivy, sarif: readSarif, coverity: readCoverity, zap: readZap };
 const labelsZero = () => ({ 'chấp nhận rủi ro': 0, suppress: 0, 'FP đã loại': 0 });
 
 export function gate(inputs, { now = new Date() } = {}) {
@@ -121,11 +207,11 @@ export function gate(inputs, { now = new Date() } = {}) {
     if (text === undefined) continue;
     for (const t of Array.isArray(text) ? text : [text]) READERS[k]?.(k, t, map);
   }
-  const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map((f, i) => ({ id: `F${String(i + 1).padStart(3, '0')}`, ...f }));
+  const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => ({ id: `F${String(i + 1).padStart(3, '0')}`, ...f, rce: f.kind !== 'secret' && !!f.rce }));
   const count = {
     secret: findings.filter((f) => f.kind === 'secret').length,
     critHigh: findings.filter((f) => f.kind !== 'secret' && (f.severity === 'Critical' || f.severity === 'High')).length,
-    rce: 0,
+    rce: findings.filter((f) => f.rce).length,
     kev: 0,
   };
   const thresholds = Object.fromEntries(Object.entries(count).map(([k, n]) => [k, {

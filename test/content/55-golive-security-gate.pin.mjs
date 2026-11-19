@@ -199,6 +199,12 @@ export default async function run({ ok, ctx }) {
     ok([77, 78, 94, 95, 502, 917, 1336].every((c) => rceOf({ sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, level: 'note', cwe: c }])] }) === 1), 'AC1.10: mỗi CWE trong {77,78,94,95,502,917,1336} đều là RCE, kể cả severity thấp');
     ok([79, 89, 200].every((c) => rceOf({ sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, score: '9.8', cwe: c }])] }) === 0), 'AC1.10: CWE ngoài danh sách không phải RCE kể cả Critical');
     ok(rceOf({ zap: zap([['REMOTE code EXECUTION via upload', 1]]) }) === 1, 'AC1.10: nhãn RCE không phân biệt hoa thường');
+    const trivyRce = JSON.stringify({ ArtifactName: 'app:1', Results: [{ Target: 't', Vulnerabilities: [
+      { VulnerabilityID: 'CVE-2026-70', PkgName: 'p', InstalledVersion: '1', Severity: 'LOW', CweIDs: ['CWE-94'] },
+      { VulnerabilityID: 'CVE-2026-71', PkgName: 'q', InstalledVersion: '1', Severity: 'LOW', Title: 'libx: Remote Code Execution in parser' },
+      { VulnerabilityID: 'CVE-2026-72', PkgName: 'r', InstalledVersion: '1', Severity: 'CRITICAL', CweIDs: ['CWE-79'] },
+    ] }] });
+    ok(rceOf({ trivy: trivyRce }) === 2, 'AC1.10: Trivy CweIDs thuộc danh sách hoặc Title có nhãn RCE đều tính RCE (Trivy là nguồn bắt buộc của RCE)');
 
     // AC1.11 (phần mã nguồn): Coverity + SARIF cùng file:line + CWE-89 gộp một, ZAP không gộp
     const rm = gate({
