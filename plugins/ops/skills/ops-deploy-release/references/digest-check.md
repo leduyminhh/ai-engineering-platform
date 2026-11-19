@@ -51,14 +51,14 @@ docker compose images
 
 | Trạng thái | Điều kiện | Hành động |
 |---|---|---|
-| `đạt` | Mọi image của mọi service trong scope khớp digest đã quét | Ghi `đạt`. Mục này không tạo lý do NO-GO. |
-| `không đạt` | Ít nhất một image lệch digest đã quét | Ghi service và image lệch. Đề xuất NO-GO. |
-| `chưa đo` | Không lấy được digest (hoặc image ID khi so theo image ID): lệnh lỗi, thiếu quyền, chưa có xác nhận máy hoặc phạm vi, chưa có output người dùng dán | Coi là chưa đạt. Đề xuất NO-GO. |
+| `đạt` | Mọi image của mọi service trong scope khớp, so theo digest hoặc theo image ID (ghi rõ "so theo image ID" khi dùng image ID) | Ghi `đạt`. Mục này không tạo lý do NO-GO. |
+| `không đạt` | Ít nhất một image lệch, so theo digest hoặc theo image ID | Ghi service và image lệch. Đề xuất NO-GO. |
+| `chưa đo` | Ở bất kỳ phía nào không lấy được định danh cần để so (digest, hoặc image ID khi so theo image ID): lệnh lỗi, thiếu quyền, chưa có xác nhận máy hoặc phạm vi, chưa có output người dùng dán | Coi là chưa đạt. Đề xuất NO-GO. |
 
 - Mỗi service có thể có nhiều image: so từng image. Service không có image nào trong output thì ghi `chưa đo` cho service đó.
 - Cả hai phía đều có digest: so digest với digest.
 - Một phía không có RepoDigest (ví dụ image build local chưa push registry): so theo image ID. [Unverified] Lấy image ID phía build bằng `docker image inspect --format '{{.Id}}' <image>` trên máy build; phía đang chạy lấy bằng `docker inspect --format '{{.Image}}' <container>` (bước 1 ở trên). So image ID với image ID và ghi rõ "so theo image ID" trong báo cáo.
-- Chỉ ghi `chưa đo` cho image khi không lấy được image ID ở phía nào.
+- Nếu một phía không lấy được định danh cần để so, image đó ghi `chưa đo`, kể cả khi phía kia lấy được.
 - [Inference] `RepoDigests` (digest manifest của registry) và image ID (định danh image cục bộ) là hai loại định danh khác nhau. Chỉ so cùng loại, không so chéo.
 
 ## Báo cáo
