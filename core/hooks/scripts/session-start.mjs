@@ -4,7 +4,7 @@ import { readFileSync, existsSync, statSync, readdirSync, realpathSync } from 'n
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { readGateConfig, resolveGate, gateTracked, modeName } from './gate-config.mjs';
+import { readGateConfig, resolveGate, gateTracked, modeName, showArg } from './gate-config.mjs';
 
 // Claude Code giới hạn additionalContext ở 10.000 ký tự; chừa chỗ cho phần bọc. Bootstrap, ledger và handoff chia chung ngân sách này.
 const MAX_TOTAL = 9000;
@@ -235,7 +235,7 @@ function modeLine(cwd, d, cfg0) {
     const mode = modeName(cfg.mode);
     if (mode === 'guarded') return null;
     if (g.file && d.gateTracked(g.file) !== false) return null;
-    return `aip: mode hiệu lực = ${mode} (nguồn ${g.file ? show(cwd, g.file) : 'cấu hình'}); chỉ áp khi phiên chạy bypassPermissions.`;
+    return `aip: mode hiệu lực = ${mode} (nguồn ${g.file ? showArg(show(cwd, g.file)) : 'cấu hình'}); chỉ áp khi phiên chạy bypassPermissions.`;
   } catch { return null; }
 }
 

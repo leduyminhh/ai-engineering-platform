@@ -1008,15 +1008,15 @@ function pipedIndirectConfigWrite(list) {
 const MODE_NAMES = new Set(['guarded', 'confined', 'open', 'ask', 'full']);
 const AIP_BIN = /^(?:.*[\\/])?(?:aip|ai-engineering-platform)(?:\.(?:cmd|ps1|exe))?$/i;
 const AIP_CLI = /(?:^|[\\/])cli[\\/]index\.mjs$/i;
-// Cờ chèn giữa (`aip -y mode open`, `aip --skill a --skill b mode open`, `aip mode -y open`) vẫn chạy được ở CLI nên không được làm lọt: xét mọi token "mode" sau binary trong cùng đoạn lệnh, tên mode là token không phải cờ đầu tiên sau nó.
+// Một lượt tuyến tính trên đoạn lệnh: sau binary rồi token `mode`, token nào mang tên mode cũng tính là đổi mode, kể cả khi cờ (có hoặc không có giá trị) chen giữa như `aip --skill a mode --provider claude open`; không cần biết cờ nào nhận giá trị.
+// shortcut: `aip install --skill mode open` (tên mode làm giá trị cờ sau `mode`) báo thừa; chấp nhận vì CLI không đoán được cờ nào có giá trị, nâng lên khi có bảng cờ dùng chung với args.mjs.
 function isModeChange(t) {
-  for (let i = 0; i < t.length; i++) {
-    if (!AIP_BIN.test(t[i]) && !AIP_CLI.test(t[i])) continue;
-    for (let j = i + 1; j < t.length; j++) {
-      if (t[j] !== 'mode') continue;
-      const name = t.slice(j + 1).find((x) => !x.startsWith('-'));
-      if (name !== undefined && MODE_NAMES.has(name.replace(/^['"]|['"]$/g, '').toLowerCase())) return true;
-    }
+  let bin = false;
+  let mode = false;
+  for (const x of t) {
+    if (!bin) bin = AIP_BIN.test(x) || AIP_CLI.test(x);
+    else if (!mode) mode = x === 'mode';
+    else if (MODE_NAMES.has(x.replace(/^['"]|['"]$/g, '').toLowerCase())) return true;
   }
   return false;
 }
@@ -1067,7 +1067,7 @@ const CONFIG_DENY_TEXT = 'Ghi vào file cấu hình quyền (`.claude/aip-gate.j
 
 // open không hỏi, không rào: chỉ còn chặn ghi file cấu hình quyền và aip mode (K1, K12, K13). Kiểm rẻ chuỗi trước để lệnh thường không tốn parse.
 const OPEN_CHEAP = /aip-gate|settings(?:\.[\w-]+)?\.json|\bmode\b/i;
-const AIP_MODE_TEXT = /\b(?:aip|ai-engineering-platform|index\.mjs)\b[^\n;&|]*\bmode\b/i;
+const AIP_MODE_TEXT = /\b(?:aip|ai-engineering-platform|index\.mjs)\b[^\n;&|]{0,200}\bmode\b/i;
 function decideOpen(cmd, msys) {
   // Bỏ nháy trước khi kiểm: shell ghép `aip-"gate".json` thành tên thật nên kiểm trên chuỗi thô sẽ để lọt.
   if (!OPEN_CHEAP.test(cmd.replace(/["']/g, ''))) return null;

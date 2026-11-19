@@ -147,7 +147,7 @@ function inspectGate(dir) {
 }
 const isDir = (p) => { try { return statSync(p).isDirectory(); } catch { return false; } };
 
-function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked, reader = readGate, inspect = inspectGate } = {}, ctx) {
+function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = process.platform === 'win32', allowEnv = envFilesAllowed, config, tracked, reader = readGate, inspect = inspectGate, isDirectory = isDir } = {}, ctx) {
   const ti = input?.tool_input;
   const file = ti?.file_path || ti?.notebook_path || (input?.tool_name === 'Grep' ? ti?.path : undefined);
   const cwd = path.resolve(input?.cwd || '.');
@@ -186,7 +186,8 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
   const abs = target.replace(/\\/g, '/');
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
   // Grep trỏ vào một thư mục: thư mục đó là nơi tìm, không phải thư mục cha của nó.
-  const mode = eff(input.tool_name === 'Grep' && isDir(target) ? target : path.dirname(target));
+  // statSync lên đường UNC mở kết nối SMB ngay trong hook, trước hộp xác nhận; phiên không bypass thì mode luôn guarded nên không cần phân biệt thư mục.
+  const mode = eff(input.tool_name === 'Grep' && bypass && !abs.startsWith('//') && isDirectory(target) ? target : path.dirname(target));
   ctx.mode = mode;
   if (mode === 'guarded' && isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target)))) return SECRET_DENY;
   const write = WRITE_TOOLS.has(input.tool_name);
