@@ -44,6 +44,32 @@ export default async function run({ ok, ctx }) {
     }],
   });
 
+  // Coverity/ZAP/SARIF: tên trường theo tài liệu tool, [Unverified] với report thật (AC6.1).
+  const coverity = (issues) => JSON.stringify({
+    issues: issues.map(([file, line, impact, cwe, name = 'CHECKER']) => ({
+      checkerName: name,
+      mainEventFilePathname: file,
+      mainEventLineNumber: line,
+      checkerProperties: { impact, cweCategory: cwe === undefined ? undefined : String(cwe), categoryDescription: name },
+    })),
+  });
+  const zap = (alerts) => JSON.stringify({
+    site: [{ '@name': 'http://app', alerts: alerts.map(([name, risk, cwe = '-1', uri = 'http://app/x']) => ({ alert: name, name, riskcode: risk, cweid: String(cwe), instances: [{ uri }] })) }],
+  });
+  const sarif = (results) => JSON.stringify({
+    version: '2.1.0',
+    runs: [{
+      tool: { driver: { name: 't', rules: results.map((r) => ({ id: r.rule, name: r.name || r.rule, properties: { tags: r.cwe ? [`external/cwe/cwe-${r.cwe}`] : [] } })) } },
+      results: results.map((r) => ({
+        ruleId: r.rule,
+        level: r.level,
+        message: { text: r.text || 'm' },
+        properties: r.score === undefined ? undefined : { 'security-severity': r.score },
+        locations: [{ physicalLocation: { artifactLocation: { uri: r.uri }, region: { startLine: r.line } } }],
+      })),
+    }],
+  });
+
   try {
     let mod;
     try {
@@ -128,6 +154,61 @@ export default async function run({ ok, ctx }) {
     let outGood = {};
     try { outGood = JSON.parse(rGood.stdout); } catch { /* đỏ bên dưới */ }
     ok(rGood.status === 0 && outGood.thresholds?.critHigh?.count === 1, 'AC1.13: đọc được và có Critical → vẫn exit 0, kết luận nằm ở stdout');
+
+    // ---- Task 2: SARIF, ZAP, Coverity, RCE, gộp theo khoá mã nguồn ----
+    const sevOf = (r, prefix) => r.findings.find((f) => f.key.startsWith(prefix))?.severity;
+    const throwsInput = (inputs) => {
+      try { gate(inputs, { now: NOW }); } catch (e) { return e instanceof InputError; }
+      return false;
+    };
+
+    // AC1.3: bảng chuẩn hoá severity
+    const rz = gate({ zap: zap([['ZA', 3], ['ZB', 2], ['ZC', 1], ['ZD', 0]]) }, { now: NOW });
+    ok(['ZA', 'ZB', 'ZC', 'ZD'].map((p) => sevOf(rz, `${p}@`)).join() === 'High,Medium,Low,Info', 'AC1.3: ZAP riskcode 3/2/1/0 → High/Medium/Low/Info');
+    const rs = gate({ sarif: [sarif([
+      { rule: 'r1', uri: 'a.js', line: 1, score: '9.0' }, { rule: 'r2', uri: 'a.js', line: 2, score: '7.0' },
+      { rule: 'r3', uri: 'a.js', line: 3, score: 4 }, { rule: 'r4', uri: 'a.js', line: 4, score: '0.1' },
+      { rule: 'r5', uri: 'a.js', line: 5, level: 'error' }, { rule: 'r6', uri: 'a.js', line: 6, level: 'warning' },
+      { rule: 'r7', uri: 'a.js', line: 7, level: 'note' }, { rule: 'r8', uri: 'a.js', line: 8, level: 'none' },
+    ])] }, { now: NOW });
+    ok([1, 2, 3, 4, 5, 6, 7, 8].map((n) => sevOf(rs, `a.js:${n}`)).join() === 'Critical,High,Medium,Low,High,Medium,Low,Info', 'AC1.3: SARIF security-severity 9.0/7.0/4.0/0.1 rồi level error/warning/note/none');
+    ok(sevOf(gate({ trivy: trivy({ vulns: [['CVE-2026-1', 'UNKNOWN']] }) }, { now: NOW }), 'CVE-2026-1@') === 'Info', 'AC1.3: Trivy UNKNOWN → Info');
+    ok(sevOf(gate({ trivy: trivy({ vulns: [['CVE-2026-2', 'Critical '], ['CVE-2026-3', 'high']] }) }, { now: NOW }), 'CVE-2026-2@') === 'Critical'
+      && sevOf(gate({ trivy: trivy({ vulns: [['CVE-2026-3', 'high']] }) }, { now: NOW }), 'CVE-2026-3@') === 'High', 'AC1.3: Trivy viết khác hoa/thường hoặc có khoảng trắng vẫn chuẩn hoá đúng');
+    const rv = gate({ zap: zap([['ZV', ' 3 ']]) }, { now: NOW });
+    ok(sevOf(rv, 'ZV@') === 'High', 'AC1.3: ZAP riskcode có khoảng trắng vẫn chuẩn hoá đúng');
+    ok([
+      { trivy: trivy({ vulns: [['CVE-2026-4', 'SEVERE']] }) },
+      { zap: zap([['ZX', 9]]) },
+      { sarif: [sarif([{ rule: 'rx', uri: 'a.js', line: 1, score: 'cao' }])] },
+      { sarif: [sarif([{ rule: 'ry', uri: 'a.js', line: 1 }])] },
+      { coverity: coverity([['a.java', 1, 'Catastrophic']]) },
+    ].every(throwsInput), 'AC1.3: severity lạ hoặc không xác định được (Trivy, ZAP, SARIF, Coverity) → InputError');
+    const fz = write({ weirdZap: zap([['ZX', 9]]) });
+    ok(cli(['--zap', fz.weirdZap]).status === 2, 'AC1.3: severity lạ của ZAP qua CLI → exit 2');
+
+    // AC1.10: RCE theo CWE hoặc nhãn, bất kể severity
+    const rceOf = (inputs) => gate(inputs, { now: NOW }).thresholds.rce.count;
+    const rr = gate({
+      coverity: coverity([['a.java', 10, 'High', 78], ['b.java', 20, 'Low', 502]]),
+      sarif: [sarif([{ rule: 'x79', uri: 'c.js', line: 1, score: '9.5', cwe: 79 }])],
+      zap: zap([['Remote Code Execution', 1, 200]]),
+    }, { now: NOW });
+    ok(rr.thresholds.rce.count === 3, 'AC1.10: CWE-78, CWE-502 và nhãn "Remote Code Execution" (CWE-200) → RCE = 3');
+    ok(rr.thresholds.critHigh.count === 2 && rr.findings.find((f) => f.key.startsWith('c.js:1'))?.rce === false, 'AC1.10: CWE-79 Critical vào critHigh nhưng không vào RCE');
+    ok([77, 78, 94, 95, 502, 917, 1336].every((c) => rceOf({ sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, level: 'note', cwe: c }])] }) === 1), 'AC1.10: mỗi CWE trong {77,78,94,95,502,917,1336} đều là RCE, kể cả severity thấp');
+    ok([79, 89, 200].every((c) => rceOf({ sarif: [sarif([{ rule: 'r', uri: 'a.js', line: 1, score: '9.8', cwe: c }])] }) === 0), 'AC1.10: CWE ngoài danh sách không phải RCE kể cả Critical');
+    ok(rceOf({ zap: zap([['REMOTE code EXECUTION via upload', 1]]) }) === 1, 'AC1.10: nhãn RCE không phân biệt hoa thường');
+
+    // AC1.11 (phần mã nguồn): Coverity + SARIF cùng file:line + CWE-89 gộp một, ZAP không gộp
+    const rm = gate({
+      coverity: coverity([['src/Dao.java', 42, 'High', 89]]),
+      sarif: [sarif([{ rule: 'sql', uri: 'src/Dao.java', line: 42, score: '7.5', cwe: 89 }])],
+      zap: zap([['SQL Injection', 3, 89]]),
+    }, { now: NOW });
+    const merged = rm.findings.find((f) => f.key === 'src/Dao.java:42+CWE-89');
+    ok(rm.findings.length === 2 && merged?.sources.length === 2 && merged.sources.includes('coverity') && merged.sources.includes('sarif'), 'AC1.11: Coverity + SARIF cùng file:line và CWE-89 gộp thành một finding có hai nguồn');
+    ok(rm.findings.some((f) => f.key === 'SQL Injection@http://app/x' && f.sources.join() === 'zap'), 'AC1.11: ZAP giữ khoá alert@URL, không gộp với finding có file:line');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
