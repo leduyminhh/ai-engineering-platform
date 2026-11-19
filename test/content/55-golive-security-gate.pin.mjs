@@ -394,7 +394,7 @@ export default async function run({ ok, ctx }) {
     const allNaKev = { kev: 'a', trivy: 'b', nessus: 'c', blackduck: 'd' };
     const rNaAll = gate({ na: allNaKev }, { now: NOW });
     ok(rNaAll.thresholds.kev.status === 'không áp dụng' && rNaAll.overall !== 'đạt', 'AC1.6: mọi nguồn bắt buộc của một chỉ tiêu đều --na → không áp dụng, không tính là đạt');
-    ok(statusOf(gate({ ...EMPTY, na: { nessus: NA_NESSUS } }, { now: NOW })).kev === 'đạt', 'AC1.6: --na và nguồn khác đã cung cấp → vẫn đạt');
+    ok(statusOf(gate({ ...without('nessus'), na: { nessus: NA_NESSUS } }, { now: NOW })).kev === 'đạt', 'AC1.6: --na và nguồn khác đã cung cấp → vẫn đạt');
     ok(throwsInput({ trivy: EMPTY.trivy, nessus: EMPTY.nessus, na: { nessus: 'x' } }) && throwsInput({ trivy: EMPTY.trivy, na: { khongco: 'x' } }), 'AC1.6: --na trùng với nguồn đã cung cấp hoặc tên nguồn lạ → InputError');
     ok([['--na', 'nessus'], ['--na', 'nessus='], ['--na', '=bang-chung'], ['--na']].every((a) => cli([...a, '--trivy', f4.trivy]).status === 2), 'AC1.6: --na thiếu bằng chứng, thiếu tên hoặc thiếu giá trị → exit 2');
     const rNaCli = cli(['--trivy', f4.trivy, '--na', `nessus=${NA_NESSUS}`, '--na', 'blackduck=không dùng Black Duck']);

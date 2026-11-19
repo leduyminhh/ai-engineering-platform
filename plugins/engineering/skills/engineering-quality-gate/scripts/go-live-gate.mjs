@@ -69,9 +69,36 @@ const COVERITY_IMPACT = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
 const NESSUS_RISK = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', NONE: 'Info' };
 const BLACKDUCK_SEVERITY = { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', NONE: 'Info', UNKNOWN: 'Info', INFO: 'Info' };
 const SONAR_SEVERITY = { BLOCKER: 'Critical', CRITICAL: 'High', MAJOR: 'Medium', MINOR: 'Low', INFO: 'Info' };
-// impacts.severity của Sonar MQR có thêm BLOCKER/INFO ngoài HIGH/MEDIUM/LOW; thiếu ánh xạ thì report hợp lệ bị exit 2.
+// [Unverified] impacts.severity của Sonar MQR có thêm BLOCKER/INFO ngoài HIGH/MEDIUM/LOW; thiếu ánh xạ thì report hợp lệ bị exit 2.
 const SONAR_IMPACT = { BLOCKER: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low', INFO: 'Info' };
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const SCAN_SOURCES = ['coverity', 'trivy', 'zap', 'nessus', 'blackduck', 'sonar'];
+const REQUIRED = {
+  secret: ['gitleaks-tree', 'gitleaks-history', 'trivy'],
+  critHigh: SCAN_SOURCES,
+  rce: SCAN_SOURCES,
+  kev: ['kev', 'trivy', 'nessus', 'blackduck'],
+};
+const NA_SOURCES = [...new Set(Object.values(REQUIRED).flat())];
+const KEY_OF_SOURCE = Object.fromEntries(SOURCE_KEYS.map((k) => [sourceName(k), k]));
+
+// Một finding đã đủ để kết luận không đạt; thiếu nguồn chỉ làm "chưa đo" khi chưa có finding.
+function statusOf(count, required, provided, na) {
+  const missing = required.filter((r) => !provided.has(r) && !(r in na));
+  const naUsed = Object.fromEntries(required.filter((r) => r in na).map((r) => [r, na[r]]));
+  let status = 'đạt';
+  if (count > 0) status = 'không đạt';
+  else if (missing.length) status = 'chưa đo';
+  else if (Object.keys(naUsed).length === required.length) status = 'không áp dụng';
+  return { status, missing, na: naUsed };
+}
+
+// "Không áp dụng" không được tính là đạt, nên tổng thể chỉ đạt khi cả bốn chỉ tiêu đạt.
+export function overallOf(statuses) {
+  if (statuses.includes('không đạt')) return 'không đạt';
+  return statuses.every((x) => x === 'đạt') ? 'đạt' : 'chưa đo';
+}
 
 const cweNumbers = (text) => [...String(text).matchAll(/cwe[-_/ ]?0*(\d+)/gi)].map((m) => Number(m[1]));
 const isRce = (cwe, title) => cwe.some((c) => RCE_CWES.has(c)) || RCE_LABEL.test(title);
@@ -188,7 +215,7 @@ function readCoverity(key, text, map) {
     const rawCwe = props.cweCategory;
     if (rawCwe != null && typeof rawCwe !== 'string' && typeof rawCwe !== 'number') throw fail(key, 'cweCategory phải là chuỗi hoặc số');
     if (rawCwe != null && !/^(cwe-)?\d+$/i.test(String(rawCwe).trim())) throw fail(key, 'cweCategory phải là số CWE');
-    const cwe = rawCwe == null ? [] : cweNumbers(`cwe-${String(rawCwe).replace(/^cwe-/i, '')}`);
+    const cwe = rawCwe == null ? [] : cweNumbers(`cwe-${String(rawCwe).trim().replace(/^cwe-/i, '')}`);
     const title = [props.categoryDescription, issue.checkerName].filter((t) => typeof t === 'string').join(' ');
     addFinding(map, codeFinding('coverity', file, line, severity, cwe, title));
   }
@@ -215,7 +242,6 @@ function readZap(key, text, map) {
   }
 }
 
-// CSV tối thiểu: nháy kép, phẩy và xuống dòng trong ô nháy kép, nháy kép đôi.
 function parseCsv(key, text) {
   const src = stripBom(text);
   const rows = [];
@@ -308,7 +334,11 @@ function readSonar(key, text, map) {
     const line = issue.line == null ? 0 : requireField(key, issue, 'line', 'number');
     const lists = [issue.cwe, issue.tags].filter((l) => l != null);
     if (lists.some((l) => !Array.isArray(l) || l.some((x) => typeof x !== 'string' && typeof x !== 'number'))) throw fail(key, 'cwe và tags phải là mảng chuỗi hoặc số');
-    const cwe = [...new Set(lists.flat().flatMap((x) => cweNumbers(/^\s*\d+\s*$/.test(String(x)) ? `cwe-${x}` : String(x))))];
+    // Chỉ issue.cwe được ghi số trần; tag số thuần (vd năm) không phải CWE.
+    const cwe = [...new Set([
+      ...(issue.cwe || []).flatMap((x) => cweNumbers(/^\s*\d+\s*$/.test(String(x)) ? `cwe-${x}` : String(x))),
+      ...(issue.tags || []).flatMap((x) => cweNumbers(String(x))),
+    ])];
     const title = [issue.message, issue.rule].filter((t) => typeof t === 'string').join(' ');
     addFinding(map, codeFinding('sonar', file, line, maxSeverity(levels), cwe, title));
   }
@@ -341,26 +371,30 @@ function guard(key, fn) {
 export function gate(inputs, { now = new Date() } = {}) {
   const map = new Map();
   const warnings = [];
+  const na = inputs.na || {};
+  for (const name of Object.keys(na)) {
+    if (!NA_SOURCES.includes(name)) throw new InputError(`--na: nguồn không hợp lệ (dùng: ${NA_SOURCES.join(', ')})`);
+    if (inputs[KEY_OF_SOURCE[name]] !== undefined) throw new InputError(`--na ${name}: nguồn đã được cung cấp bằng cờ riêng`);
+  }
+  const provided = new Set(SOURCE_KEYS.filter((k) => inputs[k] !== undefined).map(sourceName));
   const kevCves = inputs.kev === undefined ? new Set() : guard('kev', () => readKev('kev', inputs.kev, now, warnings));
   for (const k of SOURCE_KEYS) {
     const text = inputs[k];
     if (text === undefined) continue;
     for (const t of Array.isArray(text) ? text : [text]) guard(k, () => READERS[k]?.(k, t, map));
   }
-  const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => ({ id: `F${String(i + 1).padStart(3, '0')}`, ...f, rce: f.kind !== 'secret' && !!f.rce, kev: f.kind !== 'secret' && (f.cve || []).some((c) => kevCves.has(c)) }));
+  const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => ({ id: `F${String(i + 1).padStart(3, '0')}`, ...f, rce: f.kind !== 'secret' && !!f.rce, kev: f.kind !== 'secret' && (f.cve || []).some((c) => kevCves.has(c.toUpperCase())) }));
   const count = {
     secret: findings.filter((f) => f.kind === 'secret').length,
     critHigh: findings.filter((f) => f.kind !== 'secret' && (f.severity === 'Critical' || f.severity === 'High')).length,
     rce: findings.filter((f) => f.rce).length,
     kev: findings.filter((f) => f.kev).length,
   };
-  const thresholds = Object.fromEntries(Object.entries(count).map(([k, n]) => [k, {
-    status: n > 0 ? 'không đạt' : 'chưa đo',
-    count: n,
-    missing: [],
-    labels: labelsZero(),
-  }]));
-  const overall = Object.values(thresholds).some((t) => t.status === 'không đạt') ? 'không đạt' : 'chưa đo';
+  const thresholds = Object.fromEntries(Object.entries(count).map(([k, n]) => {
+    const { status, missing, na: naUsed } = statusOf(n, REQUIRED[k], provided, na);
+    return [k, { status, count: n, missing, na: naUsed, labels: labelsZero() }];
+  }));
+  const overall = overallOf(Object.values(thresholds).map((t) => t.status));
   return { thresholds, overall, findings, warnings };
 }
 
