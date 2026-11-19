@@ -28,18 +28,33 @@ export function readGateConfig(dir) {
   return readGate(dir)?.config ?? null;
 }
 
-// `full` chỉ hiệu lực khi cả cấu hình lẫn phiên đều đồng ý: bypassPermissions do người dùng bật, không do repo tự quyết.
-export function effectiveMode(config, input) {
-  return input?.permission_mode === 'bypassPermissions' && config && typeof config === 'object' && config.mode === 'full' ? 'full' : 'ask';
+// `switch` thay vì tra bảng theo giá trị: "constructor"/"__proto__" không thể thành kết quả lạ. Giá trị lạ luôn là guarded; nới quyền chỉ qua danh sách dương.
+export function modeName(value) {
+  switch (value) {
+    case 'open': return 'open';
+    case 'confined':
+    case 'full': return 'confined';
+    default: return 'guarded';
+  }
 }
 
-// Repo không đáng tin tự cấp `full`: file cấu hình đã commit đến từ clone nên bị bỏ qua; exit lạ ⇒ không full (hỏi thừa là hướng an toàn).
-// Kiểm rẻ trước để phiên thường và project `ask` không tốn lần spawn git nào. Cấu hình tiêm (không có `file`) coi là đáng tin.
-export function fullEffective(gate, input, { tracked = gateTracked } = {}) {
-  if (input?.permission_mode !== 'bypassPermissions') return false;
-  if (effectiveMode(gate?.config, input) !== 'full') return false;
+// `confined`/`open` chỉ hiệu lực khi cả cấu hình lẫn phiên đều đồng ý: bypassPermissions do người dùng bật, không do repo tự quyết.
+export function effectiveMode(config, input) {
+  if (input?.permission_mode !== 'bypassPermissions' || !config || typeof config !== 'object') return 'guarded';
+  return modeName(config.mode);
+}
+
+// Repo không đáng tin tự cấp quyền: file cấu hình đã commit đến từ clone nên bị bỏ qua; exit lạ ⇒ không hiệu lực (hỏi thừa là hướng an toàn).
+// Kiểm rẻ trước để phiên thường và project `guarded` không tốn lần spawn git nào. Cấu hình tiêm (không có `file`) coi là đáng tin.
+function effectiveAs(want, gate, input, tracked) {
+  if (effectiveMode(gate?.config, input) !== want) return false;
   return gate.file ? tracked(gate.file) === false : true;
 }
+
+// Hiệu lực `confined` (tên cũ `full`); false ở `open` để nhánh rào không chạy nhầm.
+export const fullEffective = (gate, input, { tracked = gateTracked } = {}) => effectiveAs('confined', gate, input, tracked);
+
+export const openEffective = (gate, input, { tracked = gateTracked } = {}) => effectiveAs('open', gate, input, tracked);
 
 export function fullKeep(config) {
   const v = config?.fullKeep;
