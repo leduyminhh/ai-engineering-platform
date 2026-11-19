@@ -1,6 +1,6 @@
 ---
 name: ops-deploy-release
-description: "Hướng dẫn deploy/release service an toàn: chốt scope, checklist tiền deploy, đối chiếu digest image đang chạy trên SIT/UAT với image đã quét, chọn rolling/blue-green/canary, verify hậu deploy; không tự chạy lệnh lên môi trường, chỉ đề xuất và chờ người xác nhận. Dùng khi người dùng muốn \"deploy\", \"release checklist\", \"kiểm digest image\", \"canary\", \"rollback\". Không dùng khi cần tạo version, tag, merge release theo Gitflow → git-release; chỉ viết release notes → engineering-release-notes."
+description: "Hướng dẫn deploy/release service an toàn: chốt scope, checklist tiền deploy, đối chiếu digest image trên SIT/UAT, chọn rolling/blue-green/canary, verify hậu deploy; chỉ đề xuất lệnh, chờ xác nhận. Dùng khi người dùng muốn \"deploy\", \"release checklist\", \"kiểm digest image\", \"canary\", \"rollback\". Không dùng khi cần tạo version, tag, merge release theo Gitflow → git-release; chỉ viết release notes → engineering-release-notes."
 order: 1
 title: "Deploy / Release an toàn — checklist tiền/hậu deploy, chiến lược triển khai, health-check + rollback"
 runsIn: execute
