@@ -26,7 +26,7 @@ export default async function run({ ok, ctx }) {
     need(third, ['git ls-files', 'git rm --cached', '.claude/aip-gate.json', 'bypassPermissions', 'git:'], 'điều kiện không-được-theo-dõi');
     ok(!sec.includes(stale), `P4e2 AC4.1: ${file} đã bỏ đoạn rủi ro I4 cũ`);
     need(confine, ['env -S', 'nice', 'sudo', 'bash -lc', 'env -iS'], 'wrapper được phủ và chưa phát hiện');
-    need(nonBypass, ['kubectl -n x apply', 'helm -n x upgrade', 'xargs', 'bash -c'], 'danh sách ask ngoài bypass');
+    need(nonBypass, ['kubectl -n x apply', 'helm -n x upgrade', 'xargs', 'bash -c'], 'danh sách ask của phiên không bypass (project confined/open)');
     need(worktree, ['aip-gate.json', 'stderr'], 'worktree hỏng');
     need(ps, ['PowerShell', '/e/x', '[Unverified'], 'PowerShell');
     need(readRoots, ['fullReadRoots', 'fullRoots', 'tool-results', 'CLAUDE_CONFIG_DIR', 'session_id', '[Unverified'], 'root chỉ-đọc');

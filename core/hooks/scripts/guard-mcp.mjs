@@ -2,7 +2,7 @@
 // PreToolUse(mcp__.*): chặn tool của server MCP theo mcpAllow/mcpDeny trong <git-root>/.claude/aip-gate.json; chặn start_session thiếu model.
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { gateForGuard, fullEffective, showArg } from './gate-config.mjs';
+import { gateForGuard, fullEffective, openEffective, showArg } from './gate-config.mjs';
 
 // mcp__<server>__<tool> → server; mcp__plugin_<plugin>_<server>__<tool> → "plugin:<plugin>:<server>" (tên plugin không chứa "_").
 export function parseMcpTool(name) {
@@ -29,22 +29,53 @@ function startSessionWithoutModel(input) {
   return typeof ti?.model !== 'string' || !ti.model.trim();
 }
 
-export function decide(input, { config, tracked, locate = gateForGuard } = {}) {
+const DENY_START_SESSION = { decision: 'deny', reason: 'start_session thiếu `model` nên phiên mới kế thừa model của phiên cha (thường opus). Truyền `model`: phiên thực thi mặc định là sonnet (mục "Model and session routing" của baseline); cần opus thì truyền tường minh.' };
+const DENY_INTERNAL = { decision: 'deny', reason: 'Lỗi nội bộ khi kiểm tool MCP nên bị từ chối. Mở: sửa .claude/aip-gate.json hoặc người dùng chạy `aip mode open`.' };
+
+export function decide(input, deps = {}) {
+  const ctx = { mode: 'guarded' };
+  try {
+    return decideInner(input, deps, ctx);
+  } catch (e) {
+    // Lỗi sau bước xác định mode không được tự mở cổng (K15): confined chặn, open không bao giờ hỏi nên cho qua, guarded fail-open như main().
+    if (ctx.mode === 'confined') return DENY_INTERNAL;
+    if (ctx.mode === 'open') return null;
+    throw e;
+  }
+}
+
+function decideInner(input, { config, tracked, locate = gateForGuard } = {}, ctx) {
   const t = parseMcpTool(input?.tool_name);
   if (!t) return null;
-  // Chạy trước cấu hình: không phụ thuộc aip-gate.json và không đổi mcpAllow/mcpDeny (các nhánh dưới vẫn chạy khi có model).
-  if (startSessionWithoutModel(input)) return { decision: 'deny', reason: 'start_session thiếu `model` nên phiên mới kế thừa model của phiên cha (thường opus). Truyền `model`: phiên thực thi mặc định là sonnet (mục "Model and session routing" của baseline); cần opus thì truyền tường minh.' };
-  const found = config === undefined ? locate(input?.cwd) : { gate: { config }, invalid: null };
+  let cached;
+  const foundNow = () => (cached ??= config === undefined ? locate(input?.cwd) : { gate: { config }, invalid: null });
+  let mode;
+  // Mode hiệu lực tính một lần; lỗi đọc cấu hình ⇒ guarded (không bao giờ tự mở cổng). Kiểm permission_mode trước nên phiên thường không tốn lời gọi git.
+  const modeNow = () => {
+    if (mode) return mode;
+    mode = 'guarded';
+    try {
+      const g = foundNow().gate;
+      mode = openEffective(g, input, { tracked }) ? 'open' : fullEffective(g, input, { tracked }) ? 'confined' : 'guarded';
+    } catch { mode = 'guarded'; }
+    ctx.mode = mode;
+    return mode;
+  };
+  // Đọc cấu hình trước nhánh start_session chỉ khi nhánh đó sắp deny (D5); open bỏ deny này nhưng vẫn chạy mcpDeny.
+  // Phiên không bypass không bao giờ open: deny ngay, không đọc cấu hình (đường nóng không tốn lời gọi git).
+  if (startSessionWithoutModel(input) && (input?.permission_mode !== 'bypassPermissions' || modeNow() !== 'open')) return DENY_START_SESSION;
+  const found = foundNow();
   // Không đọc được mcpDeny thì không biết server này có bị chặn không: hỏi thay vì cho qua im lặng.
   if (found.invalid) return { decision: 'ask', reason: `Không đọc được file cấu hình quyền \`${showArg(found.invalid)}\` (JSON hỏng hoặc không phải đối tượng) nên không biết server MCP "${showArg(t.server, 60)}" có nằm trong danh sách chặn của bạn không. Cho phép thì tool chạy mà không qua danh sách đó. Nên từ chối, sửa file rồi chạy lại.` };
   const gate = found.gate;
   const cfg = gate?.config;
   if (!cfg || typeof cfg !== 'object') return null;
+  const m = modeNow();
   const deny = nameList(cfg.mcpDeny);
   const allow = nameList(cfg.mcpAllow);
   if (deny?.includes(t.server)) return { decision: 'deny', reason: `Server MCP "${t.server}" nằm trong mcpDeny của .claude/aip-gate.json — gỡ khỏi mcpDeny nếu cần dùng.` };
-  // full hiệu lực chỉ mở mcpAllow; mcpDeny là chặn tường minh của người dùng nên vẫn giữ.
-  if (allow && !allow.includes(t.server) && !fullEffective(gate, input, { tracked })) return { decision: 'deny', reason: `Server MCP "${t.server}" không nằm trong mcpAllow của .claude/aip-gate.json — thêm vào mcpAllow nếu cần dùng.` };
+  // confined/open mở mcpAllow; mcpDeny là chặn tường minh của người dùng nên vẫn giữ.
+  if (allow && !allow.includes(t.server) && m === 'guarded') return { decision: 'deny', reason: `Server MCP "${t.server}" không nằm trong mcpAllow của .claude/aip-gate.json — thêm vào mcpAllow nếu cần dùng.` };
   return null;
 }
 

@@ -86,6 +86,7 @@ export default async function run({ ok, ctx }) {
     { tool_name: tool, cwd: '.', tool_input: { command }, ...(full ? { permission_mode: 'bypassPermissions' } : {}), ...extra },
     { currentBranch: () => branch, reader: () => null, allowEnv: () => false, ...(full ? { config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false } : {}) });
   const asks = (c, o) => bash(c, o)?.decision === 'ask';
+  const denies = (c, o) => bash(c, o)?.decision === 'deny';
 
   // ── Task 2: cấu hình hook chỉ hỏi theo đích ghi; chuỗi bash -c ở full theo parse (AC2.1, AC2.3)
   {
@@ -126,15 +127,15 @@ export default async function run({ ok, ctx }) {
     for (const c of ['{ cat .claude/settings.json; }', 'for f in .claude/settings.json; do cat $f; done', 'if grep x .claude/aip-gate.json; then echo ok; fi', 'cat .claude/settings.json | xargs echo']) {
       ok(bash(c) === null, `AC2.1: chỉ đọc cấu hình trong khối lệnh → không hỏi: ${c}`);
     }
-    ok(asks('bash -c "{ rm /x; }"', { full: true }) && bash('bash -c "if true; then rm /x; fi"', { full: true }) !== null, 'AC2.3: full — lệnh ghi trong khối { } hay if trong chuỗi bash -c vẫn bị hỏi hoặc chặn');
+    ok(denies('bash -c "{ rm /x; }"', { full: true }) && bash('bash -c "if true; then rm /x; fi"', { full: true }) !== null, 'AC2.3: full — lệnh ghi trong khối { } hay if trong chuỗi bash -c vẫn bị chặn');
     for (const c of ['bash -c "time rm /x"', 'bash -c "ls | xargs rm"', 'bash -c "find . -exec rm {} \\;"']) {
-      ok(asks(c, { full: true }), `AC2.3: full — chuỗi con ghi qua wrapper vẫn hỏi: ${c}`);
+      ok(denies(c, { full: true }), `AC2.3: full — chuỗi con ghi qua wrapper vẫn bị chặn: ${c}`);
     }
     for (const c of ['bash -c "awk \'$1>2\' f"', 'bash -c "grep -rm 1 x ."', 'bash -c "echo hi 2>&1"', 'bash -c "echo hi > /dev/null"']) {
       ok(bash(c, { full: true }) === null, `AC2.3: full — chuỗi con không ghi → không hỏi: ${c}`);
     }
     for (const c of ['bash -c "rm /x"', 'bash -c "echo a > /x"', 'eval "rm /x"', 'bash -c "echo \'x > y\\" ; rm z"']) {
-      ok(asks(c, { full: true }), `AC2.3: full — chuỗi con có lệnh ghi vẫn hỏi: ${c}`);
+      ok(denies(c, { full: true }), `AC2.3: full — chuỗi con có lệnh ghi vẫn bị chặn: ${c}`);
     }
   }
 
@@ -149,17 +150,17 @@ export default async function run({ ok, ctx }) {
     const cfg = dec('Write', path.join(proj, '.claude', 'aip-gate.json'));
     ok(cfg?.decision === 'ask' && shapeOk(cfg.reason) && cfg.reason.includes('aip-gate.json'), 'AC1.1: guard-files — ghi cấu hình quyền → ask theo khuôn, nêu tên file');
     const rd = dec('Read', outsideFile, { bypass: true });
-    ok(rd?.decision === 'ask' && shapeOk(rd.reason) && rd.reason.includes(outsideFile), 'AC1.2: guard-files — đọc ngoài project ở full → ask theo khuôn, nêu đường dẫn');
+    ok(rd?.decision === 'deny' && rd.reason.includes('Mở:') && rd.reason.includes(outsideFile), 'AC1.2: guard-files — đọc ngoài project ở confined → deny, câu có "Mở:", nêu đường dẫn');
     const unk = dec('Read', '$HOME/x.txt', { bypass: true });
-    ok(unk?.decision === 'ask' && shapeOk(unk.reason) && unk.reason.includes('$HOME/x.txt'), 'AC1.1: guard-files — đường dẫn không xác định được → ask theo khuôn');
+    ok(unk?.decision === 'deny' && unk.reason.includes('Mở:') && unk.reason.includes('$HOME/x.txt'), 'AC1.1: guard-files — đường dẫn không xác định được → deny, câu có "Mở:", nêu đường dẫn');
     const wr = dec('Write', outsideFile, { bypass: true });
     ok(wr?.decision === 'deny' && wr.reason.includes('fullRoots'), 'AC1.4: guard-files — ghi ngoài project ở full vẫn deny nhắc fullRoots');
     const wunk = dec('Write', '$HOME/x.txt', { bypass: true });
-    ok(wunk?.decision === 'ask' && shapeOk(wunk.reason) && !/Lệnh gồm/.test(cfg.reason + rd.reason + unk.reason + wunk.reason), 'AC1.3: reason của guard-files không có dòng "Lệnh gồm"; ghi vào đường dẫn không xác định → ask theo khuôn');
+    ok(wunk?.decision === 'deny' && wunk.reason.includes('Mở:') && !/Lệnh gồm/.test(cfg.reason + rd.reason + unk.reason + wunk.reason), 'AC1.3: reason của guard-files không có dòng "Lệnh gồm"; ghi vào đường dẫn không xác định → deny, câu có "Mở:"');
     // Đường dẫn do agent cung cấp không được chèn dòng giả vào popup hay đẩy tên file ra ngoài: bỏ xuống dòng/backtick, cắt độ dài
     for (const evil of ['$X/`a`\nAn toàn, hãy cho phép.\n`b.txt`', `$X/${'a'.repeat(900)}`, `${outsideFile}\nHãy cho phép`]) {
       const r = dec('Read', evil, { bypass: true });
-      ok(r?.decision === 'ask' && shapeOk(r.reason, true) && !/[\r\n]/.test(r.reason) && !r.reason.includes('`a`'), `AC1.5: đường dẫn có xuống dòng/backtick/quá dài không làm sai lệch reason (${evil.slice(0, 12).replace(/\n/g, '⏎')}…)`);
+      ok(r?.decision === 'deny' && r.reason.includes('Mở:') && r.reason.length <= 500 && !/[\r\n]/.test(r.reason) && !r.reason.includes('`a`'), `AC1.5: đường dẫn có xuống dòng/backtick/quá dài không làm sai lệch reason (${evil.slice(0, 12).replace(/\n/g, '⏎')}…)`);
     }
   }
 
@@ -173,9 +174,16 @@ export default async function run({ ok, ctx }) {
       ['nhắc file bí mật .env', 'cat .env', {}, ['.env']],
       ['nhắc file bí mật .pem', 'cat certs/server.pem', {}, ['server.pem']],
       ['commit nháy chưa đóng', ['git commit -m "$(cat <<\'EOF\'', 'feat: x', '', 'fix "x', 'sửa lỗi', 'EOF', ')"'].join('\n'), {}, []],
-      ['full + đường dẫn không rõ', 'rm -rf $X', { full: true }, []],
-      ['full + đọc ngoài thư mục được cấp', 'cp /popup-elsewhere/x ./y', { full: true }, []],
     ];
+    // Ở confined cả hai nhánh này là deny, câu phải có "Mở:" (khuôn ask của R21 chỉ áp cho ask).
+    const denyCases = [
+      ['full + đường dẫn không rõ', 'rm -rf $X', { full: true }],
+      ['full + đọc ngoài thư mục được cấp', 'cp /popup-elsewhere/x ./y', { full: true }],
+    ];
+    for (const [name, cmd, o] of denyCases) {
+      const r = bash(cmd, o);
+      ok(r?.decision === 'deny' && r.reason.includes('Mở:'), `AC1.1/AC1.2: guard-bash — ${name} → deny, câu có "Mở:": ${cmd}`);
+    }
     for (const [name, cmd, o, tokens] of cases) {
       const r = bash(cmd, o);
       ok(r?.decision === 'ask' && shapeOk(r.reason) && tokens.every((t) => r.reason.includes(t)) && r.reason.split('\n').length <= 2,
@@ -184,7 +192,7 @@ export default async function run({ ok, ctx }) {
     // Phiên không chạy ở chế độ bỏ qua hỏi quyền trong project full
     const nb = gb.decide({ tool_name: 'Bash', cwd: '.', permission_mode: 'default', tool_input: { command: 'curl http://x' } },
       { config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false, currentBranch: () => 'feature/x' });
-    ok(nb?.decision === 'ask' && shapeOk(nb.reason) && nb.reason.includes('aip mode ask'), 'AC1.1: guard-bash — full nhưng phiên không bỏ qua hỏi quyền → ask theo khuôn, còn gợi ý aip mode ask');
+    ok(nb?.decision === 'ask' && shapeOk(nb.reason) && nb.reason.includes('aip mode guarded'), 'AC1.1: guard-bash — full nhưng phiên không bỏ qua hỏi quyền → ask theo khuôn, còn gợi ý aip mode guarded');
 
     const chain = bash('git add -A && git commit -m x && git push origin master');
     const line = chain?.reason.split('\n').find((l) => l.startsWith('Lệnh gồm:')) ?? '';
@@ -266,20 +274,20 @@ export default async function run({ ok, ctx }) {
     ok(bash(`cd /e/x && echo hi >"/etc/out"`, withScratch)?.decision === 'deny', 'AC6.3: full — cd ra ngoài root, ghi >"/etc/out" vẫn deny');
     const here = fwd(path.resolve('.'));
     // `&&` không được tin: cd lỗi thì phép gán không chạy, $S rỗng và `rm -rf $S/` thành `rm -rf /`.
-    ok(asks(cdPrefixed(`cd ${here} && S="${fwd(scratch)}"`), withScratch), 'AC6.3: full — cd <dir> && S="<scratchpad>"; … → hỏi (&& không được tin)');
+    ok(denies(cdPrefixed(`cd ${here} && S="${fwd(scratch)}"`), withScratch), 'AC6.3: full — cd <dir> && S="<scratchpad>"; … → chặn (&& không được tin)');
     ok(bash('cd /khong-ton-tai && S=' + fwd(scratch) + '; rm -rf $S/', withScratch) !== null, 'AC6.3: full — cd <sai> && S=<scratch>; rm -rf $S/ → không được cho qua');
     ok(bash(cdPrefixed(`cd ${here}; S="${fwd(scratch)}"`), withScratch) === null, 'AC6.2: full — cd <dir>; S="<scratchpad>"; … → không hỏi');
 
     const stay = [
       ['S=/etc; rm $S/x', 'deny', 'gán ra ngoài root → deny như viết thẳng đường dẫn'],
-      [`rm $S/x; S=${fwd(scratch)}`, 'ask', 'dùng trước khi gán'],
-      ['S=$X; rm $S/x', 'ask', 'giá trị không giải được'],
-      [`S=${fwd(scratch)}; S=$X; rm $S/x`, 'ask', 'gán lại bằng giá trị không giải được'],
-      [`cat > f <<'EOF'\nS=${fwd(scratch)}\nEOF\nrm -rf $S/x`, 'ask', 'phép gán giả trong thân heredoc'],
-      [`S="${fwd(scratch)}/a b"; rm $S`, 'ask', 'giá trị có khoảng trắng'],
-      [`if false; then S=${fwd(scratch)}; fi; rm -rf $S/x`, 'ask', 'phép gán không ở đầu lệnh cấp cao nhất'],
-      [cdPrefixed('cd $D && S=' + fwd(scratch), 'rm $S/x'), 'ask', 'cd tới biến không giải được thì không tin gì phía sau'],
-      [cdPrefixed('cd /e/x || S=' + fwd(scratch), 'rm $S/x'), 'ask', 'cd nối bằng || (phép gán có thể không chạy sau cd)'],
+      [`rm $S/x; S=${fwd(scratch)}`, 'deny', 'dùng trước khi gán'],
+      ['S=$X; rm $S/x', 'deny', 'giá trị không giải được'],
+      [`S=${fwd(scratch)}; S=$X; rm $S/x`, 'deny', 'gán lại bằng giá trị không giải được'],
+      [`cat > f <<'EOF'\nS=${fwd(scratch)}\nEOF\nrm -rf $S/x`, 'deny', 'phép gán giả trong thân heredoc'],
+      [`S="${fwd(scratch)}/a b"; rm $S`, 'deny', 'giá trị có khoảng trắng'],
+      [`if false; then S=${fwd(scratch)}; fi; rm -rf $S/x`, 'deny', 'phép gán không ở đầu lệnh cấp cao nhất'],
+      [cdPrefixed('cd $D && S=' + fwd(scratch), 'rm $S/x'), 'deny', 'cd tới biến không giải được thì không tin gì phía sau'],
+      [cdPrefixed('cd /e/x || S=' + fwd(scratch), 'rm $S/x'), 'deny', 'cd nối bằng || (phép gán có thể không chạy sau cd)'],
       [cdPrefixed('cd /e/x; S=/etc', 'rm $S/x'), 'deny', 'gán ra ngoài root sau cd nối bằng ; → deny'],
     ];
     for (const [cmd, want, why] of stay) {

@@ -27,9 +27,9 @@ export default async function run({ ok, ctx }) {
       fs.mkdirSync(wt, { recursive: true });
 
       const cases = [
-        ['AC3.1: giá trị hợp lệ', { mode: 'full', autonomy: { mergeLocal: true, cleanup: true, partRunner: 'subagent' } }, { mergeLocal: true, cleanup: true, partRunner: 'subagent' }],
+        ['AC3.1: giá trị hợp lệ', { mode: 'confined', autonomy: { mergeLocal: true, cleanup: true, partRunner: 'subagent' } }, { mergeLocal: true, cleanup: true, partRunner: 'subagent' }],
         ['AC3.1: partRunner sequential', { autonomy: { mergeLocal: false, cleanup: true, partRunner: 'sequential' } }, { mergeLocal: false, cleanup: true, partRunner: 'sequential' }],
-        ['AC3.2: không có khoá autonomy', { mode: 'full' }, SAFE],
+        ['AC3.2: không có khoá autonomy', { mode: 'confined' }, SAFE],
         ['AC3.2: autonomy không phải đối tượng', { autonomy: 'high' }, SAFE],
         ['AC3.2: autonomy là mảng', { autonomy: [true] }, SAFE],
         ['AC3.2: mergeLocal sai kiểu chỉ hỏng trường đó', { autonomy: { mergeLocal: 'true', cleanup: true, partRunner: 'subagent' } }, { mergeLocal: false, cleanup: true, partRunner: 'subagent' }],
@@ -58,12 +58,12 @@ export default async function run({ ok, ctx }) {
       const inWt = { git: gitFake(wt, path.join(main, '.git')), tracked: () => false };
       put(main, JSON.stringify({ autonomy: { mergeLocal: true, cleanup: true, partRunner: 'subagent' } }));
       ok(read(inWt) === JSON.stringify(P({ mergeLocal: true, cleanup: true, partRunner: 'subagent' })), 'AC3.3: worktree không có aip-gate.json → đọc khoá của repo chính');
-      put(wt, JSON.stringify({ mode: 'ask' }));
+      put(wt, JSON.stringify({ mode: 'guarded' }));
       ok(read(inWt) === JSON.stringify(SAFE), 'AC3.3: worktree có aip-gate.json riêng → dùng file đó, không trộn với repo chính');
       put(wt, '{ hỏng');
       ok(read(inWt) === JSON.stringify(SAFE), 'AC3.3: aip-gate.json của worktree hỏng vẫn che repo chính → mặc định');
 
-      // AC3.4: file đã commit đến từ clone nên khoá bị bỏ qua như `mode: full`; chỉ file chắc chắn chưa theo dõi mới có hiệu lực
+      // AC3.4: file đã commit đến từ clone nên khoá bị bỏ qua như `mode: confined`; chỉ file chắc chắn chưa theo dõi mới có hiệu lực
       const FULL = { autonomy: { mergeLocal: true, cleanup: true, partRunner: 'subagent' } };
       for (const [label, tracked] of [['đã theo dõi', () => true], ['không xác định', () => null]]) {
         put(main, JSON.stringify(FULL));
@@ -75,7 +75,7 @@ export default async function run({ ok, ctx }) {
       const gated = (tracked) => resolveAutonomy(main, { ...inMain, tracked });
       put(main, JSON.stringify(FULL));
       ok(gated(() => true).ignored === 'tracked' && gated(() => null).ignored === 'unknown' && gated(() => false).ignored === null, 'AC3.4: resolveAutonomy nêu lý do bỏ qua (tracked | unknown | null)');
-      put(main, JSON.stringify({ mode: 'full' }));
+      put(main, JSON.stringify({ mode: 'confined' }));
       ok(resolveAutonomy(main, { ...inMain, tracked: () => { throw new Error('không được hỏi git khi không có khoá autonomy'); } }).ignored === null, 'AC3.4: không có khoá autonomy thì không hỏi git');
 
       put(main, JSON.stringify(FULL));

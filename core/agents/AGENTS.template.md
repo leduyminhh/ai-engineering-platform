@@ -119,11 +119,11 @@ invariants (idempotency, outbox, retention), schema/contract tests, and regressi
   force-push, history rewrite) without explicit confirmation.
 - **Don't read, print, or modify secret files** (`.env`, `*.env`, credentials, `*.jks`/`*.keystore`,
   key material).
-- **`full` permission mode is an owner opt-in.** When `.claude/aip-gate.json` has `mode: "full"` and the
-  session runs in `bypassPermissions`, the project owner allowed unattended access inside that project:
-  the `settings.json` `ask` rules (push, network, deploy), its `deny` rules for secrets (such as `.env`
-  reads) and the hook confirmations for secret files inside the project are dropped, writes stay confined to the project roots (heuristic, not a
-  sandbox), and a push to a protected branch still needs confirmation unless `fullKeep` is changed.
+- **`confined` and `open` permission modes are an owner opt-in** (`full` is the old name of `confined`). They
+  apply when `.claude/aip-gate.json` has that `mode`, the session runs in `bypassPermissions` and git does not
+  track the file. `confined` never asks: project roots and secret files inside them pass, the rest is denied
+  (heuristic, not a sandbox), as is a protected-branch push while `fullKeep` has `push`. `open` never asks and
+  has no fence: secret files pass unless the target directory's own config is `guarded`; permission config files, `writeScope`, `mcpDeny` still block.
 - **Stop for human diff review before integrating.** On a feature branch, commit each task without
   pausing (each task ends with at least one commit; fix rounds may add more); the human reviews the whole branch diff before merge or push. On a
   protected branch, stop before every commit, except that with `autonomy.mergeLocal` in effect (see **Workflow defaults**) approving the whole-branch diff covers the local merge commit.

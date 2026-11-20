@@ -47,11 +47,11 @@ export default async function run({ ok, ctx }) {
   {
     const w = deny('write', [gT, gO, gD], 'ghi vào thư mục');
     ok(rootLine(w).startsWith('Được ghi:') && rootLine(w).includes(gT.path) && rootLine(w).includes(gO.path) && !rootLine(w).includes(gD.path), 'AC2.1: write chỉ liệt kê root có quyền write');
-    ok(/^Chế độ full chỉ cho phép ghi vào thư mục có quyền write;/.test(w) && /fullPaths/.test(w) && /fullRoots/.test(w) && w.includes('"write"'), 'AC2.1: câu deny vẫn nêu quyền thiếu, fullPaths và fullRoots');
+    ok(/^Chế độ confined chỉ cho phép ghi vào thư mục có quyền write;/.test(w) && /fullPaths/.test(w) && /fullRoots/.test(w) && w.includes('"write"'), 'AC2.1: câu deny vẫn nêu quyền thiếu, fullPaths và fullRoots');
     const d = deny('delete', [gT, gO, gD], 'lệnh này ở thư mục');
     ok(rootLine(d).startsWith('Được xoá:') && rootLine(d).includes(gT.path) && !rootLine(d).includes(gO.path) && !rootLine(d).includes(gD.path), 'AC2.1: delete chỉ liệt kê root có quyền delete');
     ok(d.split('\n').length === 3 && d.split('\n').at(-1).includes('"delete"'), 'AC2.1: thứ tự câu quyền → dòng root → câu xin thêm quyền');
-    ok(deny('write', [], 'ghi vào thư mục') === 'Chế độ full chỉ cho phép ghi vào thư mục có quyền write; đường dẫn chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.',
+    ok(deny('write', [], 'ghi vào thư mục') === 'Chế độ confined chỉ cho phép ghi vào thư mục có quyền write; đường dẫn chưa có. Cần mở rộng → thêm vào "fullPaths" (allow có "write") hoặc "fullRoots" trong .claude/aip-gate.json.',
       'AC1.4: không root nào có quyền thì không có dòng root, câu giữ nguyên một dòng');
     ok(rootLine(deny('write', [gD, G('/aip-dt-g', ALL, true)], 'x')) === '' && rootLine(deny('read', [gT], 'x')) === '', 'AC1.4: root chỉ-đọc, root glob và need read không sinh dòng root');
     const many = Array.from({ length: 8 }, (_, i) => G(`/aip-dt-r${i}`, ALL));
@@ -115,13 +115,16 @@ export default async function run({ ok, ctx }) {
       ok(dec(tool, path.join(O, 'a.txt')) === null && dec(tool, path.join(T, 'a.txt')) === null, `AC3.1: ${tool} vào O,T → cho qua`);
     }
     const rw = dec('Read', path.join(W, 'a.txt'));
-    ok(rw?.decision === 'ask' && dec('Write', path.join(W, 'a.txt')) === null, 'AC3.2: mục chỉ ["write"] → Read ask, Write cho qua');
-    ok(dec('Read', path.join(D, '.env'))?.decision === 'ask' && dec('Read', path.join(O, '.env'))?.decision === 'ask' && dec('Read', path.join(T, '.env')) === null, 'AC6.3: Read .env chỉ miễn khi đủ ba quyền');
-    ok(dec('Write', path.join(O, '.env'))?.decision === 'ask' && dec('Write', path.join(T, '.env')) === null
-      && dec('Write', path.join(D, '.env'))?.decision === 'deny' && dec('Write', path.join(P, '.env')) === null, 'AC6.4: Write .env: O ask, T qua, D deny, project qua');
-    const asks = [rw, dec('Read', path.join(D, '.env')), dec('Write', path.join(O, '.env')), dec('Read', path.join(X, 'a.txt'))];
-    ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask theo khuôn (cả ask .env và đọc ngoài mọi mục)');
-    ok(asks[3].reason.includes(path.join(X, 'a.txt')), 'AC3.11: Read ngoài mọi mục → ask nêu đường dẫn');
+    ok(rw?.decision === 'deny' && dec('Write', path.join(W, 'a.txt')) === null, 'AC3.2: mục chỉ ["write"] → Read deny, Write cho qua');
+    ok(dec('Read', path.join(D, '.env'))?.decision === 'deny' && dec('Read', path.join(O, '.env'))?.decision === 'deny' && dec('Read', path.join(T, '.env')) === null, 'AC6.3: Read .env chỉ miễn khi đủ ba quyền');
+    ok(dec('Write', path.join(O, '.env'))?.decision === 'deny' && dec('Write', path.join(T, '.env')) === null
+      && dec('Write', path.join(D, '.env'))?.decision === 'deny' && dec('Write', path.join(P, '.env')) === null, 'AC6.4: Write .env: O deny, T qua, D deny, project qua');
+    const denies = [rw, dec('Read', path.join(D, '.env')), dec('Write', path.join(O, '.env')), dec('Read', path.join(X, 'a.txt'))];
+    ok(denies.every((a) => a?.decision === 'deny' && a.reason.includes('Mở:')), 'AC6.2: reason deny ở confined có "Mở:" (cả .env thiếu quyền và đọc ngoài mọi mục)');
+    // Ca ask còn lại ở guarded (mode ask + bypass): ghi file cấu hình quyền vẫn theo khuôn ask.
+    const askCfg = dec('Write', path.join(P, '.claude', 'aip-gate.json'), { cfg: { mode: 'ask' } });
+    ok(askCfg?.decision === 'ask' && shapeOk(askCfg.reason), 'AC6.2: reason ask của guard-files ở guarded theo khuôn');
+    ok(denies[3].reason.includes(path.join(X, 'a.txt')), 'AC3.11: Read ngoài mọi mục → deny nêu đường dẫn');
 
     const kindF = (tool, file, opt) => dec(tool, file, opt)?.decision ?? null;
     const S = path.join(tmp, 's');
@@ -141,9 +144,9 @@ export default async function run({ ok, ctx }) {
     const star = { mode: 'full', fullReadRoots: [G], fullPaths: [ro(path.join(tmp, 'q', '*'))] };
     for (const [tool, file, want] of [
       ['Read', path.join(tmp, 'g', 'a', 'data', 'f'), null], ['Grep', path.join(tmp, 'g', 'a', 'data', 'f'), null],
-      ['Read', path.join(tmp, 'g', 'a', 'b', 'data', 'f'), 'ask'], ['Read', path.join(tmp, 'g', 'data', 'f'), 'ask'],
+      ['Read', path.join(tmp, 'g', 'a', 'b', 'data', 'f'), 'deny'], ['Read', path.join(tmp, 'g', 'data', 'f'), 'deny'],
       ['Write', path.join(tmp, 'g', 'a', 'data', 'f'), 'deny'],
-      ['Read', path.join(tmp, 'q', 'a', 'f'), 'ask'], ['Read', path.join(tmp, 'q', '*', 'f'), null],
+      ['Read', path.join(tmp, 'q', 'a', 'f'), 'deny'], ['Read', path.join(tmp, 'q', '*', 'f'), null],
     ]) ok(kindF(tool, file, { cfg: star }) === want, `AC5.2: ${tool} ${path.relative(tmp, file)} với * → ${want}`);
 
     // AC5.1: fullRoots: [T] đồng nghĩa mục đủ ba quyền; AC6.1: full không hiệu lực thì fullPaths không đổi kết quả.
@@ -168,7 +171,7 @@ export default async function run({ ok, ctx }) {
     }
     ok(allTools.every((tool) => dec(tool, path.join(CTF, 'p', 'x')) === null), 'AC2.1: mọi công cụ vào dưới <tmpdir>/claude → cho qua');
     const OTHER = path.join(os.tmpdir(), 'aip-pp-khac', 'x');
-    ok(dec('Write', OTHER)?.decision === 'deny' && dec('Read', OTHER)?.decision === 'ask', 'AC2.1: <tmpdir> ngoài thư mục claude → như cũ (Write deny, Read ask)');
+    ok(dec('Write', OTHER)?.decision === 'deny' && dec('Read', OTHER)?.decision === 'deny', 'AC2.1: <tmpdir> ngoài thư mục claude → như cũ (Write deny, Read deny ở confined)');
     ok(allTools.every((tool) => dec(tool, CTF, { cfg: { mode: 'ask' } }) === null && dec(tool, CTF, { extra: { permission_mode: 'default' } }) === null
       && files.decide({ tool_name: tool, tool_input: { file_path: CTF }, cwd: P, permission_mode: 'bypassPermissions' }, { scopes: {}, repoRoot: P, allowEnv: () => false, ...trackedGate({ mode: 'full' }) }) === null),
     'AC2.2: mode ask, phiên không bypass hoặc aip-gate.json bị git theo dõi → gốc <tmpdir>/claude không bị chặn bởi mục này');
@@ -179,8 +182,8 @@ export default async function run({ ok, ctx }) {
       ok(d?.decision === 'deny' && l.startsWith('Được ghi:') && [P, O, T, W].every((p) => l.includes(p)) && !l.includes(D) && /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason) && /"write"/.test(d.reason),
         `AC1.2: ${tool} vào ngoài root → deny, dòng "Được ghi:" liệt kê root có quyền write, vẫn nêu fullPaths và fullRoots`);
     }
-    ok(WRITES.every((tool) => dec(tool, CTF)?.reason === CLAUDE_TMP_BLOCKED_TEXT) && dec('Read', OTHER)?.decision === 'ask' && !/Được (ghi|xoá):/.test(dec('Read', OTHER).reason),
-      'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, ask đọc ngoài root không có dòng root');
+    ok(WRITES.every((tool) => dec(tool, CTF)?.reason === CLAUDE_TMP_BLOCKED_TEXT) && dec('Read', OTHER)?.decision === 'deny' && !/Được (ghi|xoá):/.test(dec('Read', OTHER).reason),
+      'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, deny đọc ngoài root không có dòng root');
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 
   // guard-bash: quyền ghi/xoá theo thư mục (full + bypass).
@@ -199,6 +202,8 @@ export default async function run({ ok, ctx }) {
     const bd = (cmd, { tool = 'Bash', cfg = config, extra = {}, opts = {} } = {}) => bash.decide({ tool_name: tool, tool_input: { command: cmd }, cwd: P, permission_mode: 'bypassPermissions', ...extra },
       { repoRoot: P, config: cfg, allowEnv: () => false, currentBranch: () => 'feature/x', ...opts });
     const kind = (cmd, opt) => bd(cmd, opt)?.decision ?? null;
+    // Cùng một bảng chạy ở guarded (ask) và confined (deny): hàng `ask` đổi thành `deny` khi chạy ở confined + bypass.
+    const toDeny = (rows) => rows.map(([c, w, ac]) => [c, w === 'ask' ? 'deny' : w, ac]);
     const expectAll = (rows, opt) => { for (const [cmd, want, ac] of rows) ok(kind(cmd, opt) === want, `${ac}: \`${cmd.replaceAll(tb.replace(/\\/g, '/'), '~')}\` → ${want}`); };
 
     expectAll([
@@ -217,8 +222,8 @@ export default async function run({ ok, ctx }) {
     expectAll([[`rm ${D}/a`, 'deny', 'AC2.2']], { cfg: star });
     expectAll([[`rm ${O}/*`, 'deny', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`cp x ${D}/*`, 'deny', 'AC4.5']]);
     expectAll([
-      ['rm $X/f', 'ask', 'AC3.11'], ['cat > ~/f', 'ask', 'AC3.11'], ['rm `pwd`/f', 'ask', 'AC3.11'], [`bash -c "rm ${T}/f"`, 'ask', 'AC3.11'],
-      [`cat ${D}/.env`, 'ask', 'AC6.3'], [`cat ${T}/.env`, null, 'AC6.3'],
+      ['rm $X/f', 'deny', 'AC3.11'], ['cat > ~/f', 'deny', 'AC3.11'], ['rm `pwd`/f', 'deny', 'AC3.11'], [`bash -c "rm ${T}/f"`, 'deny', 'AC3.11'],
+      [`cat ${D}/.env`, 'deny', 'AC6.3'], [`cat ${T}/.env`, null, 'AC6.3'],
     ]);
 
     const OUT = u(path.join(tb, 'out'));
@@ -237,7 +242,7 @@ export default async function run({ ok, ctx }) {
       [`Move-Item -LiteralPath:${O}/a -Destination ${T}/b`, 'deny', 'AC3.9'], [`Move-Item -LiteralPath ${O}/a -Destination ${T}/b`, 'deny', 'AC3.9'],
       [`Copy-Item -Path ${D}/a -Destination ${O}/b`, null, 'AC3.10'], [`Copy-Item -Path:${D}/a -Destination:${O}/b`, null, 'AC3.10'], [`Copy-Item -LiteralPath ${D}/a -Destination ${O}/b`, null, 'AC3.10'],
       [`Copy-Item -Path ${O}/a -Destination ${D}/b`, 'deny', 'AC3.10'], [`Copy-Item -Path ${O}/a -Destination:${D}/b`, 'deny', 'AC3.10'],
-      [`Copy-Item -Path ${OUT}/a -Destination ${O}/b`, 'ask', 'AC3.10'], [`Copy-Item -Path:${OUT}/a -Destination ${O}/b`, 'ask', 'AC3.10'],
+      [`Copy-Item -Path ${OUT}/a -Destination ${O}/b`, 'deny', 'AC3.10'], [`Copy-Item -Path:${OUT}/a -Destination ${O}/b`, 'deny', 'AC3.10'],
       [`Set-Content -Path:${D}/f -Value x`, 'deny', 'AC3.4'], [`Out-File -FilePath ${D}/f`, 'deny', 'AC3.4'], [`Out-File -FilePath ${O}/f`, null, 'AC3.4'],
       [`Remove-Item -Path ${O}/f`, 'deny', 'AC3.3'], [`Remove-Item -LiteralPath:${O}/f`, 'deny', 'AC3.3'], [`Remove-Item -Path:${T}/f`, null, 'AC3.3'],
     ], { tool: 'PowerShell' });
@@ -252,8 +257,8 @@ export default async function run({ ok, ctx }) {
     expectAll(['-tosession', '-toSession'].map((f) => [`cp ${f} s x ${OUT}/b`, 'deny', 'AC3.8']));
     // PowerShell nhận tiền tố tham số: `-t` là `-ToSession`, không phải GNU `-t DIR`.
     expectAll([[`cp -t s x ${OUT}/b`, 'deny', 'AC3.8'], [`mv -t s ${T}/a ${OUT}/b`, 'deny', 'AC3.7'], [`cp --target-directory=${O} x ${OUT}/b`, 'deny', 'AC3.8'],
-      ['cp -t s x .claude/aip-gate.json', 'ask', 'AC3.8']], { tool: 'PowerShell' });
-    expectAll([['echo "$(cp -t .claude/aip-gate.json x)"', 'ask', 'AC3.8']]);
+      ['cp -t s x .claude/aip-gate.json', 'deny', 'AC3.8']], { tool: 'PowerShell' });
+    expectAll([['echo "$(cp -t .claude/aip-gate.json x)"', 'deny', 'AC3.8']]);
     // D8: gốc <tmpdir>/claude luôn bị chặn, kể cả khi chỉ cần read.
     const CT = u(path.join(os.tmpdir(), 'claude'));
     expectAll([[`Copy-Item -Path ${CT} -Destination ${O}/b`, 'deny', 'D8'], [`Copy-Item -Path ${CT}/* -Destination ${O}/b`, 'deny', 'D8']], { tool: 'PowerShell' });
@@ -302,7 +307,7 @@ export default async function run({ ok, ctx }) {
     expectAll([[`cp -t ${O} x`, null, 'AC3.8']]);
 
     // R18: cp/mv vào thư mục .claude với nguồn tên file cấu hình hook phải hỏi ở mọi chế độ.
-    const r18 = (rows, opt) => { expectAll(rows, askMode); expectAll(rows, opt); };
+    const r18 = (rows, opt) => { expectAll(rows, askMode); expectAll(toDeny(rows), opt); };
     r18([...['cp settings.json .claude/', 'cp -t .claude settings.json', 'cp -t .claude /s/settings.local.json', 'mv -t .claude settings.json', 'mv settings.json .claude',
       'cp aip-gate.json .claude', 'cp --target-directory=.claude settings.json', 'cp a settings.json .claude/', 'cp Settings.JSON .CLAUDE/',
       'cp settings.json .claude/.', 'cp settings.json .claude/./', 'cp -t .claude/. settings.json', 'cp settings.json .claude/sub/..'].map((c) => [c, 'ask', 'AC1.1']),
@@ -311,7 +316,7 @@ export default async function run({ ok, ctx }) {
     const psRows = ['Copy-Item settings.json .claude\\', 'Copy-Item -Path settings.json -Destination .claude', 'Copy-Item -Path settings.json -Destination .claude\\', 'Move-Item settings.json .claude',
       'Copy-Item -Path:settings.json -Destination .claude', 'Copy-Item -Destination:.claude -Path:settings.json', 'Copy-Item settings.json,aip-gate.json .claude', 'Copy-Item -Path settings.json,x.json -Destination .claude', 'Copy-Item settings.json .claude\\sub\\..'].map((c) => [c, 'ask', 'AC1.2']);
     expectAll(psRows, psAsk);
-    expectAll(psRows, { tool: 'PowerShell' });
+    expectAll(toDeny(psRows), { tool: 'PowerShell' });
     // Nguồn chỉ đọc không phải đích ghi: không hỏi R18 khi .claude/settings.json chỉ là nguồn (AC1.3).
     const readOnlyCfg = [['Copy-Item -Path .claude/settings.json -Destination out\\x', null, 'AC1.3']];
     expectAll(readOnlyCfg, psAsk);
@@ -320,12 +325,12 @@ export default async function run({ ok, ctx }) {
 
     // AC3.1–AC3.3: nguồn vị trí của cp/Copy-Item cần read, Move-Item -Path chỉ đòi write ở đích vị trí.
     expectAll([
-      ...[`cp ${OUT}/a ${O}/b`, `cp ${OUT}/a ${OUT}/b2 ${O}/`, `cp -t ${O} ${OUT}/a`, `cp ${OUT}/* ${O}/`, 'cp $X/a ' + `${O}/b`].map((c) => [c, 'ask', 'AC3.1']),
+      ...[`cp ${OUT}/a ${O}/b`, `cp ${OUT}/a ${OUT}/b2 ${O}/`, `cp -t ${O} ${OUT}/a`, `cp ${OUT}/* ${O}/`, 'cp $X/a ' + `${O}/b`].map((c) => [c, 'deny', 'AC3.1']),
       ...[`cp ${T}/a ${O}/b`, `cp ${D}/a ${O}/b`, `cp -t ${O} ${D}/a`, `cp x ${O}/b`].map((c) => [c, null, 'AC3.1']),
       [`cp ${OUT}/a ${D}/b`, 'deny', 'AC3.1'], [`cp -rt ${O} ${OUT}/a`, 'deny', 'AC3.1'],
     ]);
     expectAll([
-      ...[`Copy-Item ${OUT}/a ${O}/b`, `cp ${OUT}/a ${O}/b`, `copy ${OUT}/a ${O}/b`, `Copy-Item -Destination ${O}/b ${OUT}/a`, `Copy-Item -Path ${OUT}/a ${O}/b`].map((c) => [c, 'ask', 'AC3.2']),
+      ...[`Copy-Item ${OUT}/a ${O}/b`, `cp ${OUT}/a ${O}/b`, `copy ${OUT}/a ${O}/b`, `Copy-Item -Destination ${O}/b ${OUT}/a`, `Copy-Item -Path ${OUT}/a ${O}/b`].map((c) => [c, 'deny', 'AC3.2']),
       ...[`Copy-Item ${D}/a ${O}/b`, `Copy-Item -Destination ${O}/b ${D}/a`, `Copy-Item -Path ${D}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
       [`Copy-Item ${D}/a ${D}/b`, 'deny', 'AC3.2'],
       ...[`Move-Item -Path ${T}/a ${O}/b`, `Move-Item -LiteralPath ${T}/a ${O}/b`, `Move-Item -Destination ${O}/b ${T}/a`, `Move-Item ${T}/a ${O}/b`].map((c) => [c, null, 'AC3.3']),
@@ -333,30 +338,30 @@ export default async function run({ ok, ctx }) {
       // Mảng dấu phẩy của PowerShell: mỗi phần tử là một đích riêng, một phần tử ngoài root là đủ để chặn/hỏi.
       ...[`Move-Item -Path ${T}/a,${OUT}/b ${O}/x`, `Move-Item -Path ${T}/a,${OUT}/b -Destination ${T}/x`, `Remove-Item ${T}/a,${OUT}/b`, `Remove-Item -Path ${T}/a,${OUT}/b`,
         `Set-Content -Path ${O}/a,${OUT}/b -Value x`].map((c) => [c, 'deny', 'AC3.3']),
-      ...[`Copy-Item -Path ${T}/a,${OUT}/b ${O}/x`, `Copy-Item ${D}/a,${OUT}/b ${O}/x`].map((c) => [c, 'ask', 'AC3.2']),
+      ...[`Copy-Item -Path ${T}/a,${OUT}/b ${O}/x`, `Copy-Item ${D}/a,${OUT}/b ${O}/x`].map((c) => [c, 'deny', 'AC3.2']),
       ...[`Remove-Item ${T}/a,${T}/b`, `Move-Item -Path ${T}/a,${T}/b ${O}/x`].map((c) => [c, null, 'AC3.3']),
       // Tham số có giá trị đứng trước đối số vị trí không được làm lệch slot Path/Destination.
       ...[`Copy-Item -Filter *.txt ${D}/a ${O}/b`, `Copy-Item -Include *.txt ${D}/a ${O}/b`, `Copy-Item -Exclude x ${D}/a ${O}/b`, `Copy-Item -Credential c ${D}/a ${O}/b`,
         `Copy-Item -Force -Filter *.txt -Recurse ${D}/a ${O}/b`, `Move-Item -Filter *.txt ${T}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
-      ...[`Copy-Item -Filter *.txt ${OUT}/a ${O}/b`, `Copy-Item -ToSession s ${OUT}/a ${O}/b`].map((c) => [c, 'ask', 'AC3.2']),
+      ...[`Copy-Item -Filter *.txt ${OUT}/a ${O}/b`, `Copy-Item -ToSession s ${OUT}/a ${O}/b`].map((c) => [c, 'deny', 'AC3.2']),
       [`Copy-Item -Filter *.txt ${O}/a ${D}/b`, 'deny', 'AC3.2'],
       // Tham số chung có giá trị (-ErrorAction, -OutVariable…) cũng không được làm lệch slot.
       ...[`Copy-Item -ErrorAction SilentlyContinue ${D}/a ${O}/b`, `Copy-Item -ErrorAction Stop ${D}/a ${O}/b`, `Copy-Item -OutVariable v ${D}/a ${O}/b`].map((c) => [c, null, 'AC3.2']),
-      [`Copy-Item -Recurse -ErrorAction Stop ${OUT}/a ${O}/b`, 'ask', 'AC3.2'],
+      [`Copy-Item -Recurse -ErrorAction Stop ${OUT}/a ${O}/b`, 'deny', 'AC3.2'],
       // Chuỗi trong nháy có dấu phẩy là một đường dẫn literal: vẫn phải xét cả token gốc, không chỉ các phần đã tách (phần sau `..` resolve theo cwd khác).
       ...[`cd ${P}/a/b; Remove-Item '${T}/x,m/../../${path.basename(OUT)}/f'`, `cd ${P}/a/b; Set-Content -Path '${O}/x,m/../../${path.basename(OUT)}/f' -Value y`].map((c) => [c, 'deny', 'AC3.3']),
       // Đường dẫn rỗng là không xác định: không được bị bỏ khi tách dấu phẩy.
-      ...[`Remove-Item ''`, `Remove-Item ${T}/a ''`].map((c) => [c, 'ask', 'AC3.3']),
+      ...[`Remove-Item ''`, `Remove-Item ${T}/a ''`].map((c) => [c, 'deny', 'AC3.3']),
     ], { tool: 'PowerShell' });
 
     // Glob kèm `..` sau đoạn glob đầu có thể thoát ra ngoài thư mục đã phân loại.
-    expectAll([[`rm ${T}/*/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/?/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/[a]/../../d/f`, 'ask', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`rm ${O}/*`, 'deny', 'AC4.5']]);
+    expectAll([[`rm ${T}/*/../../d/f`, 'deny', 'AC4.5'], [`rm ${T}/?/../../d/f`, 'deny', 'AC4.5'], [`rm ${T}/[a]/../../d/f`, 'deny', 'AC4.5'], [`rm ${T}/*`, null, 'AC4.5'], [`rm ${O}/*`, 'deny', 'AC4.5']]);
     // AC4.1: đoạn glob khớp được `..` (bash < 5.2, dash) thoát khỏi thư mục đã phân loại nên phải hỏi; đoạn không khớp được `..` giữ nguyên.
     expectAll([
-      ...[`rm ${T}/.?/d/f`, `rm ${T}/..*/d/f`, `rm ${T}/.[.]/d/f`, `rm ${T}/.*/d/f`, `rm ${T}/.*`, `cp x ${T}/.?/f`].map((c) => [c, 'ask', 'AC4.1']),
+      ...[`rm ${T}/.?/d/f`, `rm ${T}/..*/d/f`, `rm ${T}/.[.]/d/f`, `rm ${T}/.*/d/f`, `rm ${T}/.*`, `cp x ${T}/.?/f`].map((c) => [c, 'deny', 'AC4.1']),
       ...[`rm ${T}/.[!.]*/f`, `rm ${T}/.git*/f`, `rm ${T}/*/d/f`, `rm ${T}/a?/f`, `rm ${T}/.?x/f`].map((c) => [c, null, 'AC4.1']),
       // Lớp ký tự POSIX khớp `..` trên dash; biến trong đoạn glob hoặc sau nó có thể là `.`/`..`.
-      ...[`rm ${T}/.[[:punct:]]/d/f`, `rm ${T}/.[![:alpha:]]/d/f`, `rm ${T}/.[[=.=]]/d/f`, `X=.; rm ${T}/$X?/d/f`, `X=.; rm ${T}/$X*/d/f`, `rm ${T}/*/$X/f`].map((c) => [c, 'ask', 'AC4.1']),
+      ...[`rm ${T}/.[[:punct:]]/d/f`, `rm ${T}/.[![:alpha:]]/d/f`, `rm ${T}/.[[=.=]]/d/f`, `X=.; rm ${T}/$X?/d/f`, `X=.; rm ${T}/$X*/d/f`, `rm ${T}/*/$X/f`].map((c) => [c, 'deny', 'AC4.1']),
       // Thư mục trước đoạn glob đã thiếu quyền thì vẫn deny như trước, không hạ xuống ask.
       ...[`rm ${O}/.*`, `rm ${OUT}/.*`, `rm ${O}/.?/d/f`].map((c) => [c, 'deny', 'AC4.1']),
     ]);
@@ -370,19 +375,21 @@ export default async function run({ ok, ctx }) {
     ok(performance.now() - t0 < 1000, 'AC3.8: token cờ gộp 50k ký tự chạy dưới 1s');
     // Thiếu read hỏi bằng câu riêng và dòng tóm tắt gắn nhãn đúng vai.
     const rd = bd(`Copy-Item -Path ${u(path.join(tb, 'out'))}/a -Destination ${O}/b`, { tool: 'PowerShell' });
-    ok(rd?.decision === 'ask' && shapeOk(rd.reason) && /đọc/.test(rd.reason) && !/\$VAR/.test(rd.reason) && !/ghi vào/.test(rd.reason), 'AC3.10: thiếu read → ask câu riêng, tóm tắt không ghi nhầm "ghi vào"');
+    ok(rd?.decision === 'deny' && rd.reason.includes('Mở:') && /đọc/.test(rd.reason) && !/\$VAR/.test(rd.reason) && !/ghi vào/.test(rd.reason), 'AC3.10: thiếu read → deny câu riêng có "Mở:", không ghi nhầm "ghi vào"');
     const blk = bd(`Copy-Item -Path ${CT} -Destination ${O}/b`, { tool: 'PowerShell' });
     ok(blk?.decision === 'deny' && /luôn/.test(blk.reason) && !/fullRoots/.test(blk.reason), 'AC3.10: gốc <tmpdir>/claude → deny câu riêng, không gợi ý mở bằng cấu hình');
 
     // Dòng "Lệnh gồm" của popup nêu đích ghi (thứ gây ra câu hỏi), không nêu nguồn đọc đứng đầu.
     const sum = bd('cp x $X/b');
-    ok(sum?.decision === 'ask' && /ghi vào \$X\/b/.test(sum.reason) && !/\(đọc x\)/.test(sum.reason), 'AC3.1: dòng "Lệnh gồm" nêu đích ghi, không nêu nguồn đọc');
+    ok(sum?.decision === 'deny' && sum.reason.includes('Mở:') && !/\(đọc x\)/.test(sum.reason), 'AC3.1: confined chặn đích ghi chưa rõ bằng câu có "Mở:", không nêu nguồn đọc');
 
     const denyW = bd(`cp x ${D}/f`);
     const denyD = bd(`rm ${D}/f`);
     ok([denyW, denyD].every((d) => /fullPaths/.test(d.reason) && /fullRoots/.test(d.reason)) && /write/.test(denyW.reason) && /delete/.test(denyD.reason), 'AC6.2: reason deny nêu fullPaths, fullRoots và quyền thiếu');
-    const asks = ['rm $X/f', `cat ${D}/.env`].map((c) => bd(c));
-    ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask của guard-bash theo khuôn');
+    const denies = ['rm $X/f', `cat ${D}/.env`].map((c) => bd(c));
+    ok(denies.every((a) => a?.decision === 'deny' && a.reason.includes('Mở:')), 'AC6.2: reason deny của guard-bash ở confined có "Mở:"');
+    const asks = ['git push origin main', 'cat .env'].map((c) => bd(c, { cfg: { mode: 'ask' } }));
+    ok(asks.every((a) => a?.decision === 'ask' && shapeOk(a.reason)), 'AC6.2: reason ask của guard-bash ở guarded theo khuôn');
 
     // Deny ghi/xoá ngoài root liệt kê root có đúng quyền đang thiếu (kiểu list_roots); đường dẫn Windows đổi về / để so khớp.
     const roots = (cmd) => { const d = bd(cmd); return { d, l: rootLine(d?.reason ?? '').replace(/\\/g, '/') }; };
@@ -399,7 +406,7 @@ export default async function run({ ok, ctx }) {
     const dc = bd('git commit -m "tiếng Việt"', { cfg: { mode: 'ask' } });
     ok(bd(`rm ${CT}`)?.reason === CLAUDE_TMP_BLOCKED_TEXT && dc?.decision === 'deny' && !/Được (ghi|xoá):/.test(dc.reason) && !/Được (ghi|xoá):/.test(bd('rm $X/f')?.reason ?? ''),
       'AC1.5: deny gốc <tmpdir>/claude giữ nguyên chữ, DENY_COMMIT và ask không có dòng root');
-    ok(['guard-bash.mjs', 'guard-files.mjs'].every((f) => !fs.readFileSync(path.join(CORE_DIR, 'hooks', 'scripts', f), 'utf8').includes('Chế độ full chỉ cho phép')),
+    ok(['guard-bash.mjs', 'guard-files.mjs'].every((f) => !fs.readFileSync(path.join(CORE_DIR, 'hooks', 'scripts', f), 'utf8').includes('Chế độ confined chỉ cho phép')),
       'AC2.1: câu deny ngoài root chỉ còn dựng ở gate-config (guard-bash và guard-files gọi denyOutsideText)');
 
     // hook-ps-write-flags: cờ có giá trị đứng trước đường dẫn của Set-Content/Out-File/Add-Content không được làm mất đích thật.
@@ -458,7 +465,7 @@ export default async function run({ ok, ctx }) {
       ...[`cp ${O}/x ${D}/b -S .bak`, `cp ${O}/x ${D}/b --suffix .bak`, `cp -S .bak ${O}/x ${D}/b`, `cp -bS .bak ${O}/x ${D}/b`, `cp ${O}/x ${D}/b --suffix=.bak`,
         `mv ${T}/x ${D}/b -S .bak`, `mv ${O}/x ${T}/b -S .bak`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC4.1']),
       ...[`cp ${T}/x ${O}/b -S .bak`, `cp ${D}/x ${O}/b --suffix .bak`, `mv ${T}/x ${O}/b -S .bak`].map((c) => [c, null, 'hook-copy-alias-brace AC4.1']),
-      ...[`cp ${OUT}/x ${O}/b -S .bak`, `cp -t ${O} ${OUT}/x --suffix .bak`].map((c) => [c, 'ask', 'hook-copy-alias-brace AC4.1']),
+      ...[`cp ${OUT}/x ${O}/b -S .bak`, `cp -t ${O} ${OUT}/x --suffix .bak`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC4.1']),
       // `--suffix` viết tắt (cp/mv chỉ có một tùy chọn dài bắt đầu bằng `--su`).
       ...[`cp ${O}/x ${D}/b --su .bak`, `cp ${O}/x ${D}/b --suf .bak`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC4.1']),
       [`cp ${T}/x ${O}/b --suf .bak`, null, 'hook-copy-alias-brace AC4.1'],
@@ -472,12 +479,12 @@ export default async function run({ ok, ctx }) {
     expectAll([
       ...[`cpi ${T}/a ${D}/b`, `mi ${T}/a ${OUT}/b`, `ri ${OUT}/a`, `mi ${O}/a ${T}/b`, `ri ${O}/a`, `cpi ${D}/a ${D}/b`].map((c) => [c, 'deny', 'hook-copy-alias-brace AC2.1']),
       ...[`cpi ${D}/a ${O}/b`, `mi ${T}/a ${O}/b`, `ri ${T}/a`, `cpi ${T}/a ${T}/b`].map((c) => [c, null, 'hook-copy-alias-brace AC2.1']),
-      [`cpi ${OUT}/a ${O}/b`, 'ask', 'hook-copy-alias-brace AC2.1'],
+      [`cpi ${OUT}/a ${O}/b`, 'deny', 'hook-copy-alias-brace AC2.1'],
     ], { tool: 'PowerShell' });
     const aliasCfg = [...['cpi settings.json .claude', 'mi settings.json .claude\\', 'cpi -Path settings.json -Destination .claude', 'ri .claude\\settings.json'].map((c) => [c, 'ask', 'hook-copy-alias-brace AC2.2']),
       ['cpi .claude\\settings.json out\\x', null, 'hook-copy-alias-brace AC2.2']];
     expectAll(aliasCfg, psAsk);
-    expectAll(aliasCfg, { tool: 'PowerShell' });
+    expectAll(toDeny(aliasCfg), { tool: 'PowerShell' });
 
     // hook-copy-alias-brace: cờ lạ của Copy-Item (viết tắt `-Dest`) không rõ có nhận giá trị hay không, nên mọi đối số vị trí cần cả read lẫn write; switch đã biết thì không.
     expectAll([
@@ -488,13 +495,13 @@ export default async function run({ ok, ctx }) {
     expectAll([
       ...[`Copy-Item -Recurse ${D}/a ${O}/b`, `Copy-Item -Force ${D}/a ${O}/b`, `Copy-Item -Container ${D}/a ${O}/b`, `Copy-Item -PassThru ${D}/a ${O}/b`, `Copy-Item -WhatIf ${D}/a ${O}/b`,
         `Copy-Item -Confirm:$false ${D}/a ${O}/b`, `Copy-Item -recurse -Path ${D}/a -Destination ${O}/b`, `Move-Item -Force ${T}/a ${O}/b`].map((c) => [c, null, 'hook-copy-alias-brace AC1.2']),
-      [`Copy-Item -Recurse ${OUT}/a ${O}/b`, 'ask', 'hook-copy-alias-brace AC1.2'],
+      [`Copy-Item -Recurse ${OUT}/a ${O}/b`, 'deny', 'hook-copy-alias-brace AC1.2'],
       [`Copy-Item -Recurse ${D}/a ${D}/b`, 'deny', 'hook-copy-alias-brace AC1.2'],
     ], { tool: 'PowerShell' });
     const destCfg = [...['Copy-Item -Dest .claude\\settings.json x', 'Copy-Item -Dest .claude settings.json', 'Copy-Item -Dest:.claude\\aip-gate.json x', 'Copy-Item -De .claude\\settings.json x']
       .map((c) => [c, 'ask', 'hook-copy-alias-brace AC1.3'])];
     expectAll(destCfg, psAsk);
-    expectAll(destCfg, { tool: 'PowerShell' });
+    expectAll(toDeny(destCfg), { tool: 'PowerShell' });
     // Dòng "Lệnh gồm" của đích vừa đọc vừa ghi phải nói ghi, không nói đọc.
     const destAsk = bd('Copy-Item -Dest .claude\\settings.json x', psAsk);
     ok(destAsk?.decision === 'ask' && /Lệnh gồm: [^\n]*ghi vào/.test(destAsk.reason) && !/Lệnh gồm: [^\n]*đọc/.test(destAsk.reason) && shapeOk(destAsk.reason), 'hook-copy-alias-brace AC1.4: dòng Lệnh gồm nói ghi vào');
@@ -505,33 +512,33 @@ export default async function run({ ok, ctx }) {
       ...[`rm ${T}/{..,x}/f`, `rm ${T}/.{.,x}/d/f`, `rm ${T}/{a,..}`, `rm {${T},${OUT}}/f`, `rm ${O}/{a,b}`, `cp x ${T}/{..,y}/f`, `rm ${T}/{a,{..,b}}/f`]
         .map((c) => [c, 'deny', 'hook-copy-alias-brace AC3.1']),
       ...[`rm ${T}/{a,b}/f`, `rm ${T}/{a,b}`, `rm ${T}/{1..3}/f`, `rm ${T}/{x}/f`, `rm ${T}/{.git,.x}/f`].map((c) => [c, null, 'hook-copy-alias-brace AC3.1']),
-      [`rm ${T}/{a,$X}/f`, 'ask', 'hook-copy-alias-brace AC3.1'],
+      [`rm ${T}/{a,$X}/f`, 'deny', 'hook-copy-alias-brace AC3.1'],
       // Trên 256 nhánh thì không liệt kê hết mà hỏi; glob trong nhánh được xét như glob ngoài brace.
-      [`rm ${T}/${BR9}/f`, 'ask', 'hook-copy-alias-brace AC3.2'], [`rm ${T}/{.?,x}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
+      [`rm ${T}/${BR9}/f`, 'deny', 'hook-copy-alias-brace AC3.2'], [`rm ${T}/{.?,x}/f`, 'deny', 'hook-copy-alias-brace AC3.2'],
     ]);
     // Đối số có hàng nghìn `{`: không được đệ quy tràn stack (hook fail-open sẽ cho qua cả đường dẫn ngoài root ở đối số khác) hay quét bậc hai.
     const tBig = performance.now();
     expectAll([
-      [`rm ${T}/${'{,}'.repeat(6000)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'], [`rm ${T}/${'{,}'.repeat(6000)}/f ${OUT}/x`, 'deny', 'hook-copy-alias-brace AC3.2'],
-      [`rm ${T}/${'{a,'.repeat(20000)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
+      [`rm ${T}/${'{,}'.repeat(6000)}/f`, 'deny', 'hook-copy-alias-brace AC3.2'], [`rm ${T}/${'{,}'.repeat(6000)}/f ${OUT}/x`, 'deny', 'hook-copy-alias-brace AC3.2'],
+      [`rm ${T}/${'{a,'.repeat(20000)}/f`, 'deny', 'hook-copy-alias-brace AC3.2'],
       // Đường dài: dưới 64 dấu `{` vẫn có thể tốn bậc hai nếu không chặn theo độ dài; đích ngoài root ở đối số khác vẫn phải bị deny.
       [`rm ${T}/${'{'.repeat(55)}${'x'.repeat(100000)}${'{a,b}'.repeat(8)}/f ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.2'],
       // Biên của ngưỡng 64 dấu `{`.
-      [`rm ${T}/${'{x}'.repeat(64)}/f`, null, 'hook-copy-alias-brace AC3.2'], [`rm ${T}/${'{x}'.repeat(65)}/f`, 'ask', 'hook-copy-alias-brace AC3.2'],
+      [`rm ${T}/${'{x}'.repeat(64)}/f`, null, 'hook-copy-alias-brace AC3.2'], [`rm ${T}/${'{x}'.repeat(65)}/f`, 'deny', 'hook-copy-alias-brace AC3.2'],
     ]);
     ok(performance.now() - tBig < 1000, 'hook-copy-alias-brace AC3.2: đầu vào lớn xử lý nhanh');
     // Chi phí brace tính theo cả lệnh: mỗi token dưới trần 4096 ký tự nhưng 24 token (~96KB) cộng lại không được vượt 1 giây; hết ngân sách thì ask, đích ngoài root vẫn deny.
     const heavy = `${T}/${'{'.repeat(56)}${'{a,b}'.repeat(8)}${'x'.repeat(3800)}`;
     const many = Array(24).fill(heavy).join(' ');
     expectAll([
-      [`rm ${many} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${many}`, 'ask', 'hook-copy-alias-brace AC3.4'],
+      [`rm ${many} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${many}`, 'deny', 'hook-copy-alias-brace AC3.4'],
       // Lệnh đời thường và 5 đường dẫn 8 nhóm ngắn nằm trong ngân sách: không đổi.
       [`cp ${T}/x ${T}/{a,b}`, null, 'hook-copy-alias-brace AC3.4'], [`rm ${Array(5).fill(`${T}/${'{a,b}'.repeat(8)}/f`).join(' ')}`, null, 'hook-copy-alias-brace AC3.4'],
     ]);
     // Token ngắn thì độ dài không chặn được: mỗi nhánh phải tốn một khoản cố định, nếu không hàng trăm token 256 nhánh vẫn mất vài giây.
     const shortAll = (n, tok) => Array(n).fill(tok).join(' ');
     expectAll([
-      [`rm ${shortAll(800, '{a,b}'.repeat(8))} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${shortAll(1600, '{,}'.repeat(8))}`, 'ask', 'hook-copy-alias-brace AC3.4'],
+      [`rm ${shortAll(800, '{a,b}'.repeat(8))} ${OUT}/z`, 'deny', 'hook-copy-alias-brace AC3.4'], [`rm ${shortAll(1600, '{,}'.repeat(8))}`, 'deny', 'hook-copy-alias-brace AC3.4'],
     ]);
     // Thời gian đo trong tiến trình con mới: trong cả lượt validate (đã chạy hàng nghìn test) cùng lệnh chậm gấp 3–4 lần, ngưỡng nới sẽ không còn bắt hồi quy.
     const childScript = `
@@ -604,7 +611,7 @@ export default async function run({ ok, ctx }) {
     expectAll([
       [`cd ${P}/docs && node -e '${JS}' | grep x`, null, 'H6-hỏi-oan'], [`node -e 'x=m=>m[1];'`, null, 'H6-hỏi-oan'],
       // Đối chứng: lệnh thật sau chuỗi nháy vẫn bị kiểm.
-      [`node -e '${JS}' && echo x > ${OUT}/f`, 'deny', 'H6-hỏi-oan'], [`node -e '${JS}'; echo x > $X/f`, 'ask', 'H6-hỏi-oan'],
+      [`node -e '${JS}' && echo x > ${OUT}/f`, 'deny', 'H6-hỏi-oan'], [`node -e '${JS}'; echo x > $X/f`, 'deny', 'H6-hỏi-oan'],
       [`echo '${JS}' ; rm ${OUT}/x`, 'deny', 'H6-hỏi-oan'],
     ]);
 
@@ -680,7 +687,7 @@ export default async function run({ ok, ctx }) {
         `S=${T} rm -rf "$S/etc"`, `S=${T} | cat; rm -rf "$S/etc"`, `S=${T} & rm -rf "$S/etc"`, `if false; then S=${T}; fi; rm -rf "$S/x"`,
         `(S=${T}); rm -rf "$S/x"`, `f() { S=${T}; }; rm -rf "$S/x"`, `S=${T}; S+=/../v; rm -rf $S`, `S=${T}; S[0]=/etc; rm -rf $S/x`,
         `S=${T}; unset S; rm -rf $S/etc`, `S=${T}; read X; rm -rf "$S/x"`, `S=${T}; eval S=/etc; rm -rf $S/x`, `S=${T}; cat <<<x; rm -rf $S/y`,
-      ].map((c) => [c, 'ask', 'AC1.5']),
+      ].map((c) => [c, 'deny', 'AC1.5']),
       [`S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
       [`cd ${T}; S=/etc; rm $S/x`, 'deny', 'AC1.6'],
       [`S='${T}'/../../..; rm -rf $S/victim`, 'deny', 'AC1.6'],
@@ -696,28 +703,28 @@ export default async function run({ ok, ctx }) {
     const nested = `echo \`echo \\\`rm -rf ${OUT}/x\\\`\``;
     expectAll([
       // F1: tên lệnh là thế lệnh/backtick (kể cả rỗng).
-      ...[`$(:) rm -rf ${OUT}/x`, `\`:\` rm -rf ${OUT}/x`, `true && $(:) rm -rf ${OUT}/x`, `FOO=1 $(:) rm -rf ${OUT}/x`, `S=${T}; $(:) rm $S/x`, `$(which rm) ${OUT}/x`].map((c) => [c, 'ask', 'AC1.5']),
+      ...[`$(:) rm -rf ${OUT}/x`, `\`:\` rm -rf ${OUT}/x`, `true && $(:) rm -rf ${OUT}/x`, `FOO=1 $(:) rm -rf ${OUT}/x`, `S=${T}; $(:) rm $S/x`, `$(which rm) ${OUT}/x`].map((c) => [c, 'deny', 'AC1.5']),
       // F2: backtick lồng, vượt trần sâu, vượt ngân sách lệnh con.
       [nested, 'deny', 'AC1.6'],
-      [`echo $(echo $(echo $(echo $(rm -rf ${OUT}/x))))`, 'ask', 'AC1.5'],
-      [`echo ${'$(:) '.repeat(250)}$(rm -rf ${OUT}/x)`, 'ask', 'AC1.5'],
+      [`echo $(echo $(echo $(echo $(rm -rf ${OUT}/x))))`, 'deny', 'AC1.5'],
+      [`echo ${'$(:) '.repeat(250)}$(rm -rf ${OUT}/x)`, 'deny', 'AC1.5'],
       // F3: `)` của nhánh case đóng $( ) sớm.
-      [`echo $(case x in x) rm -rf ${OUT}/x;; esac)`, 'ask', 'AC1.5'],
+      [`echo $(case x in x) rm -rf ${OUT}/x;; esac)`, 'deny', 'AC1.5'],
       // F4a: gán tuần tự trong một đoạn (kể cả export) thấy giá trị mới.
       [`A=${T}; A=${OUT} B=$A/x; rm $B`, 'deny', 'AC1.6'],
       [`export A=${OUT} B=$A/x; rm $B`, 'deny', 'AC1.6'],
       // F4b: từ khoá function là cấu trúc phức.
-      [`S=${T}; function f { S=${OUT}; }; f; rm $S/x`, 'ask', 'AC1.5'],
+      [`S=${T}; function f { S=${OUT}; }; f; rm $S/x`, 'deny', 'AC1.5'],
       // F4c: phép gán đứng sau chuyển hướng vẫn là phép gán.
       [`S=${T}; > /dev/null S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
       [`S=${T}; 2>/dev/null S=${OUT}; rm $S/x`, 'deny', 'AC1.6'],
       // F4d: đối số export có nháy hoặc export qua builtin/command.
-      ...[`export "S=${OUT}"`, `export 'S'=${OUT}`, `builtin export S=${OUT}`, `command export S=${OUT}`].map((c) => [`S=${T}; ${c}; rm $S/x`, 'ask', 'AC1.5']),
+      ...[`export "S=${OUT}"`, `export 'S'=${OUT}`, `builtin export S=${OUT}`, `command export S=${OUT}`].map((c) => [`S=${T}; ${c}; rm $S/x`, 'deny', 'AC1.5']),
       // F5: trap đổi biến; gán PWD làm $PWD không khớp thư mục đang theo dõi.
-      [`S=${T}; trap 'S=/etc' DEBUG; rm $S/x`, 'ask', 'AC1.5'],
-      [`cd ${T}; PWD=${OUT}; rm $PWD/x`, 'ask', 'AC1.5'],
+      [`S=${T}; trap 'S=/etc' DEBUG; rm $S/x`, 'deny', 'AC1.5'],
+      [`cd ${T}; PWD=${OUT}; rm $PWD/x`, 'deny', 'AC1.5'],
       // F6: `.` là source ở mọi vị trí lệnh.
-      ...['{ . ./v.sh; }', 'if true; then . ./v.sh; fi', '! . ./v.sh', 'time . ./v.sh', 'builtin . ./v.sh', 'command . ./v.sh'].map((c) => [`S=${T}; ${c}; rm $S/x`, 'ask', 'AC1.5']),
+      ...['{ . ./v.sh; }', 'if true; then . ./v.sh; fi', '! . ./v.sh', 'time . ./v.sh', 'builtin . ./v.sh', 'command . ./v.sh'].map((c) => [`S=${T}; ${c}; rm $S/x`, 'deny', 'AC1.5']),
       // `.` làm đối số (không phải lệnh) không tắt giải biến.
       [`S=${T}; cp x .; rm $S/x`, null, 'AC4.1'],
       // F9: hai hàng D2 cũ của 99-hook-popup.
@@ -733,8 +740,8 @@ export default async function run({ ok, ctx }) {
     ok(at20.length < 20000 && k31[0] === null && k31[1] === 'deny', 'AC3.1: 20 tên gán hợp lệ và 400 đường dẫn dùng biến → giải đúng (null; gán lại ra ngoài root → deny)');
     ok(performance.now() - t31 < 1000, 'AC3.1: lệnh 20 tên gán, 400 đường dẫn dùng biến chạy dưới 1s');
     const big = `echo ${'a'.repeat(20000)}; S=${T}; rm -rf $S/x`;
-    ok(big.length > 20000 && kind(big) === 'ask', 'AC3.2: lệnh dài hơn 20000 ký tự có S=<T>; rm -rf $S/x → ask (không giải biến)');
-    ok(kind(`${nameList(21)}; rm -rf $V20/x`) === 'ask' && kind(`${nameList(20)}; rm -rf $V19/x`) === null, 'AC3.2: 21 tên gán → ask, 20 tên gán vẫn giải (null)');
+    ok(big.length > 20000 && kind(big) === 'deny', 'AC3.2: lệnh dài hơn 20000 ký tự có S=<T>; rm -rf $S/x → deny (không giải biến)');
+    ok(kind(`${nameList(21)}; rm -rf $V20/x`) === 'deny' && kind(`${nameList(20)}; rm -rf $V19/x`) === null, 'AC3.2: 21 tên gán → deny, 20 tên gán vẫn giải (null)');
 
     // PowerShell: biến gán trong cùng lệnh (D13). Dấu \ của "$S\x" là phân cách thư mục của Windows.
     const ps = (assign, use = 'Remove-Item "$S\\x"') => `${assign}; ${use}`;
@@ -742,7 +749,7 @@ export default async function run({ ok, ctx }) {
     const psRowsAc21 = [
       [ps(`$S = '${T}'`), null], [ps(`$s = '${T}'`), null], [ps(`$S = "${T}"`), null], [ps(`$S='${T}'`), null],
       [ps(`$S = '${OUT}'`), 'deny'], [ps(`$S = '${T}/../../..'`), 'deny'],
-      [ps('$S = $env:TEMP'), 'ask'], [ps(`if ($true) { $S = '${T}' }`), 'ask'],
+      [ps('$S = $env:TEMP'), 'deny'], [ps(`if ($true) { $S = '${T}' }`), 'deny'],
     ];
     expectAll(psRowsAc21.map(([c, want]) => [c, want, 'AC2.1']), PS);
     // Set-Variable đổi biến theo cách không đọc được: không được cho qua im lặng.
@@ -758,13 +765,13 @@ export default async function run({ ok, ctx }) {
       [ps(`$S = '${T}'`, 'Remove-Item "$S\\x\`"y"'), null],
       [ps(`$S = '${T}'`, 'Remove-Item $S'), null],
       [ps(`cd '${T}'; $M = $PWD`, 'Remove-Item "$M\\x"'), null],
-      [ps(`$S = '${T}'`, 'Remove-Item $S\\x'), 'ask'],
-      [ps(`$S = '${T}'`, 'Remove-Item "$S:x"'), 'ask'],
-      [ps(`$S = '${T}'; $S += '/..'`), 'ask'],
-      [`$S = '${T}' || Remove-Item "$S\\x"`, 'ask'],
-      [ps(`$S = '${T}'; foreach ($S in '${OUT}') { Remove-Item "$S\\x" }`, '$null'), 'ask'],
-      [ps(`$S = Get-Item x`), 'ask'],
-      [ps(`$S = '${T}'; Start-Job { $S = '${OUT}' }`), 'ask'],
+      [ps(`$S = '${T}'`, 'Remove-Item $S\\x'), 'deny'],
+      [ps(`$S = '${T}'`, 'Remove-Item "$S:x"'), 'deny'],
+      [ps(`$S = '${T}'; $S += '/..'`), 'deny'],
+      [`$S = '${T}' || Remove-Item "$S\\x"`, 'deny'],
+      [ps(`$S = '${T}'; foreach ($S in '${OUT}') { Remove-Item "$S\\x" }`, '$null'), 'deny'],
+      [ps(`$S = Get-Item x`), 'deny'],
+      [ps(`$S = '${T}'; Start-Job { $S = '${OUT}' }`), 'deny'],
     ].map(([c, want]) => [c, want, 'AC2.1']), PS);
 
     // Danh sách trắng PowerShell: lệnh có dấu hiệu đổi biến ngoài phép gán đơn `$name = từ` đứng đầu đoạn thì không giải biến nào (ask), không vá từng dạng.
@@ -789,23 +796,23 @@ export default async function run({ ok, ctx }) {
       `$S='${T}'; $ExecutionContext.SessionState.PSVariable.Set('S','${OUT}'); ${USE}`,
       `$S='${T}'; $S -eq 1 -and ($S='${OUT}'); ${USE}`,
     ];
-    expectAll(psAskRows.map((c) => [c, 'ask', 'AC2.1']), PS);
+    expectAll(psAskRows.map((c) => [c, 'deny', 'AC2.1']), PS);
     // Dùng $S trong khối `{ }` sau khi đã đổi trong khối: không được null, kể cả khi dùng ở ngoài.
     const inBlock = kind(`$S='${T}'; Remove-Item "$S\\x"; if ($true) {$S='${OUT}'; Remove-Item "$S\\y"}`, PS);
     ok(inBlock !== null, 'AC2.1: dùng $S trong khối { } đã đổi $S ra ngoài root → không null');
     // So sánh `-eq` là từ, không phải `=`; phép gán đơn đứng đầu đoạn vẫn giải.
-    expectAll([[`$S='${T}'; if ($S -eq 1) { }; ${USE}`, 'ask', 'AC2.1'], [`$S = '${T}'; $M = $PWD; Remove-Item "$S\\x" -Force`, null, 'AC2.1']], PS);
+    expectAll([[`$S='${T}'; if ($S -eq 1) { }; ${USE}`, 'deny', 'AC2.1'], [`$S = '${T}'; $M = $PWD; Remove-Item "$S\\x" -Force`, null, 'AC2.1']], PS);
 
     // $( ) cùng scope ở PowerShell: lệnh đổi vị trí bên trong làm thư mục của các đoạn sau chưa rõ (không được null); chú thích # và <# #> không phải mã.
     const psCd = ['$(cd \'OUT\')', '$(Push-Location \'OUT\')', '$(chdir \'OUT\')', '$(pushd \'OUT\')', '$(Set-Location -Path \'OUT\')', '"$(cd \'OUT\')"', '$(Set-Location\n\'OUT\')']
       .map((x) => x.replaceAll('OUT', OUT));
-    expectAll(psCd.map((x) => [`Write-Host ${x}; Remove-Item x`, 'ask', 'AC2.1']), PS);
+    expectAll(psCd.map((x) => [`Write-Host ${x}; Remove-Item x`, 'deny', 'AC2.1']), PS);
     // Không bỏ chú thích trước khi quét (bỏ sai thì che lệnh ghi): `{`/`=` trong chú thích làm hỏi thừa, có chủ ý.
     const commentAc = 'AC2.1 (hỏi thừa có chủ ý: { hoặc = trong chú thích tắt giải biến, Ruling vòng 3)';
     expectAll([
-      [`$S = '${T}' # comment {\nRemove-Item "$S\\x"`, 'ask', commentAc],
-      [`$S = '${T}' <# {= #> ; Remove-Item "$S\\x"`, 'ask', commentAc],
-      [`$S = '${T}'; <# \n$S='x' #>\nRemove-Item "$S\\x"`, 'ask', commentAc],
+      [`$S = '${T}' # comment {\nRemove-Item "$S\\x"`, 'deny', commentAc],
+      [`$S = '${T}' <# {= #> ; Remove-Item "$S\\x"`, 'deny', commentAc],
+      [`$S = '${T}'; <# \n$S='x' #>\nRemove-Item "$S\\x"`, 'deny', commentAc],
       [`Write-Host \${#x}; Remove-Item '${OUT}\\x'`, 'deny', 'AC2.1'],
       [`@'\nit's <#\n'@\nRemove-Item '${OUT}\\x'\n#>`, 'deny', 'AC2.1'],
       [`<# x\nRemove-Item '${OUT}\\x'`, 'deny', 'AC2.1'],
@@ -815,7 +822,7 @@ export default async function run({ ok, ctx }) {
       [`if ($true) {Remove-Item '${OUT}\\x'}`, 'deny'],
       [`& {Remove-Item '${OUT}\\x'}`, 'deny'],
       [`1 | ForEach-Object {Remove-Item '${OUT}\\x'}`, 'deny'],
-      [`$S='${OUT}'; if ($true) {Remove-Item "$S\\x"}`, 'ask'],
+      [`$S='${OUT}'; if ($true) {Remove-Item "$S\\x"}`, 'deny'],
     ].map(([c, want]) => [c, want, 'AC2.1']), PS);
     // Đổi biến qua ổ variable: ghép chuỗi (biểu thức `( )`, đối số *-Item không phải literal, splat) → không giải biến.
     expectAll([
@@ -823,7 +830,7 @@ export default async function run({ ok, ctx }) {
       `$S='${T}'; $n='vari'+'able:S'; Set-Item $n '${OUT}'; ${USE}`,
       `$S='${T}'; $n='S'; New-Item ("var"+"iable:$n") -Value '${OUT}' -Force; ${USE}`,
       `$S='${T}'; $p='vari'+'able:S', '${OUT}'; Set-Item @p; ${USE}`,
-    ].map((c) => [c, 'ask', 'AC2.1']), PS);
+    ].map((c) => [c, 'deny', 'AC2.1']), PS);
     // Danh sách cho phép theo tên lệnh: có lệnh ngoài tập (đổi biến qua *-ItemProperty, Invoke-Item, pipe, đổi vị trí, PSDrive, lệnh lạ) thì không giải biến nào.
     const N = `$n='vari'+'able:S'`;
     expectAll([
@@ -849,7 +856,7 @@ export default async function run({ ok, ctx }) {
       `$S='${T}'; "vari{0}" -f 'able:S' | gi | rm; ${USE}`,
       // Tên lệnh có tiền tố đường dẫn là lệnh khác, không phải cmdlet trong tập.
       ...['.\\Remove-Item', 'C:\\x\\Remove-Item', 'Microsoft.PowerShell.Management\\Remove-Item', './Remove-Item'].map((c) => `$S='${T}'; ${c} "$S\\x"`),
-    ].map((c) => [c, 'ask', 'AC2.1']), PS);
+    ].map((c) => [c, 'deny', 'AC2.1']), PS);
     // Lệnh trong tập vẫn giải biến đã gán đơn.
     expectAll([
       `$S = '${T}'; Set-Content "$S\\f" -Value x`,
@@ -868,31 +875,31 @@ export default async function run({ ok, ctx }) {
       `& Out-File -FilePath ${OUT}/f`, `& Move-Item ${T}/a ${OUT}/b`, `Get-ChildItem x & Remove-Item ${OUT}/f`,
     ].map((c) => [c, 'deny', 'AC4.1']), PS);
     // Sau `&` biến không còn được giải (đoạn phức): hỏi, không im lặng cho qua.
-    expectAll([[`$S='${OUT}'; & Remove-Item "$S\\x"`, 'ask', 'AC4.1'], [`& cmd /c del ${OUT}\\f`, 'ask', 'AC4.1'], [`& Remove-Item ${T}/f`, null, 'AC4.1'], [`Remove-Item ${T}/f 2>&1`, null, 'AC4.1'],
-      [`$R='rm'; & $R ${OUT}/x`, 'ask', 'AC1.5']], PS);
+    expectAll([[`$S='${OUT}'; & Remove-Item "$S\\x"`, 'deny', 'AC4.1'], [`& cmd /c del ${OUT}\\f`, 'deny', 'AC4.1'], [`& Remove-Item ${T}/f`, null, 'AC4.1'], [`Remove-Item ${T}/f 2>&1`, null, 'AC4.1'],
+      [`$R='rm'; & $R ${OUT}/x`, 'deny', 'AC1.5']], PS);
 
     // Hồi quy sau review cuối: phép gán số học đổi biến của shell hiện tại mà bộ giải không thấy.
     expectAll([
       `S=${CT}/a/b/c; : $((S=0)); rm -rf $S/../../../x/y`, `S=${T}; echo $((S=0)) >/dev/null; rm -rf $S/x`, `S=${T}; : $[S=0]; rm -rf $S/x`,
       `S=${T}; : \${a[S=0]}; rm -rf $S/x`, `S=${T}; : "$((S=0))"; rm -rf $S/x`, `S=${T}; : $((S=0)); rm -rf $S/x`,
-    ].map((c) => [c, 'ask', 'AC1.5']));
+    ].map((c) => [c, 'deny', 'AC1.5']));
 
     // Hồi quy sau review cuối: cd ở ngữ cảnh không chắc (nền, ||, && ở đầu danh sách trước, ống dẫn) không được tin cho đoạn sau.
     expectAll([
       // `false && cd core; rm ../x` vẫn được tin có chủ ý: cùng hình với lệnh popup `mkdir -p $S/bin && cd $S` (99-hook-popup AC6.2), người dùng chọn không hỏi thêm.
-      ...[`cd core & rm ../x`, `true || cd core; rm ../x`, `echo hi | cd core; rm ../x`, `cd core & rm $PWD/../x`].map((c) => [c, 'ask', 'AC1.5']),
+      ...[`cd core & rm ../x`, `true || cd core; rm ../x`, `echo hi | cd core; rm ../x`, `cd core & rm $PWD/../x`].map((c) => [c, 'deny', 'AC1.5']),
       ...[`cd core; rm ../x`, `cd core && rm ../x`, `true && cd core && rm ../x`].map((c) => [c, null, 'AC1.5']),
     ]);
     expectAll([[`cd ${T}; rm x`, null, 'AC1.5'], [`cd ${T} && rm x`, null, 'AC1.5']]);
 
     // Hồi quy sau review cuối: tên lệnh lấy từ biến không giải được là chưa rõ lệnh nào chạy.
-    expectAll([`R=rm; $R -rf ${OUT}/x`, `R=rm; "$R" -rf ${OUT}/x`, `R=rm; \${R} -rf ${OUT}/x`].map((c) => [c, 'ask', 'AC1.5']));
+    expectAll([`R=rm; $R -rf ${OUT}/x`, `R=rm; "$R" -rf ${OUT}/x`, `R=rm; \${R} -rf ${OUT}/x`].map((c) => [c, 'deny', 'AC1.5']));
 
     // Hồi quy sau review cuối: `$env:TEMP` không được đọc thành `$en` đã gán.
-    expectAll([[`$en='${T}'; Remove-Item "$env:TEMP\\x"`, 'ask', 'AC2.1']], PS);
+    expectAll([[`$en='${T}'; Remove-Item "$env:TEMP\\x"`, 'deny', 'AC2.1']], PS);
 
     // Kiểm bí mật dùng chung kết quả bộ giải: biến trỏ ra ngoài root thì hỏi, trong root thì cho qua.
-    expectAll([[`S=${OUT}; cat $S/.env`, 'ask', 'AC1.6'], [`S=${T}; cat $S/.env`, null, 'AC1.6']]);
+    expectAll([[`S=${OUT}; cat $S/.env`, 'deny', 'AC1.6'], [`S=${T}; cat $S/.env`, null, 'AC1.6']]);
 
     // Lỗ guard-bash đã hoãn ở request full-path-resolver (request guard-bash-deferred-holes). Lỗi ném ra được gom thành 'throw' để một hàng đỏ không dừng cả bảng.
     const holeKind = (cmd, opt) => { try { return kind(cmd, opt); } catch (e) { return 'throw ' + e.constructor.name; } };
@@ -900,11 +907,11 @@ export default async function run({ ok, ctx }) {
     const manyArgs = Array(130000).fill('a').join(' ');
     // 130000 đối số làm `push(...)` tràn stack: decide từng ném RangeError và hook cho qua.
     holeRows([[`rm ${OUT}/x ${manyArgs}`, 'deny', 'AC1.1'], [`rm ${T}/x ${manyArgs}`, null, 'AC1.1']]);
-    // Lỗi nội bộ: ở full + bypass thành ask (câu FULL_PATH_TEXT), ngoài full vẫn ném như trước.
+    // Lỗi nội bộ: ở full + bypass thành deny (câu DENY_INTERNAL_TEXT), ngoài full vẫn ném như trước.
     const boom = { opts: { currentBranch: () => { throw new Error('boom'); } } };
     let crash = null;
     try { crash = bd('git push', boom); } catch { /* chưa vá: lỗi ném ra, assert dưới đỏ */ }
-    ok(crash?.decision === 'ask' && crash.reason.startsWith('Ghi hoặc xoá ở đường dẫn chưa rõ'), 'AC1.2: full + bypass, decide gặp lỗi nội bộ → ask với câu FULL_PATH_TEXT');
+    ok(crash?.decision === 'deny' && crash.reason.includes('Lỗi nội bộ') && crash.reason.includes('Mở:'), 'AC1.2: full + bypass, decide gặp lỗi nội bộ → deny với câu DENY_INTERNAL_TEXT');
     ok(holeKind('git push', { ...boom, cfg: { mode: 'ask' } }) === 'throw Error', 'AC1.2: mode ask, lỗi nội bộ vẫn ném');
     ok(holeKind('git push', { ...boom, extra: { permission_mode: 'default' } }) === 'throw Error', 'AC1.2: full không bypass, lỗi nội bộ vẫn ném');
 
@@ -912,26 +919,26 @@ export default async function run({ ok, ctx }) {
     const timed = (cmd) => { const t0 = Date.now(); const r = holeKind(cmd); return { r, ms: Date.now() - t0 }; };
     for (const [name, cmd] of [['8000 × cd a; rm x', Array(8000).fill('cd a; rm x').join('; ')], ['8000 × cd a', Array(8000).fill('cd a').join('; ')]]) {
       const { r, ms } = timed(cmd);
-      ok(r === 'ask' && ms < 1000, `AC1.3: ${name} → ask dưới 1 s (${r}, ${ms} ms)`);
+      ok(r === 'deny' && ms < 1000, `AC1.3: ${name} → deny dưới 1 s (${r}, ${ms} ms)`);
     }
     ok(holeKind(Array(50).fill('cd a; rm x').join('; ')) === null, 'AC1.3: 50 × cd a; rm x (dưới trần) giữ kết quả cũ');
 
     // `cd` sau từ khoá hoặc lệnh bọc: tên lệnh nằm sau `then`/`time`/`builtin`/`command`, không ở đầu đoạn. Ở `if`/`then` cd không chắc chạy, còn `time` bị coi như từ khoá mở đầu đoạn (không tin) → thư mục chưa rõ (ask); `builtin`/`command` thì cd chắc chạy → deny ở thư mục ngoài root.
     holeRows([
-      [`if true; then cd ${OUT}; fi; rm x`, 'ask', 'AC2.1'], [`time cd ${OUT}; rm x`, 'ask', 'AC2.1'],
+      [`if true; then cd ${OUT}; fi; rm x`, 'deny', 'AC2.1'], [`time cd ${OUT}; rm x`, 'deny', 'AC2.1'],
       [`builtin cd ${OUT}; rm x`, 'deny', 'AC2.1'], [`command cd ${OUT}; rm x`, 'deny', 'AC2.1'],
       [`builtin cd ${T}; rm x`, null, 'AC2.1'], [`command cd ${T}; rm x`, null, 'AC2.1'],
     ]);
 
     // Tên lệnh là biến đứng sau tiền tố bọc: lệnh thật chạy là `$R`, hook không biết nó có ghi hay xoá.
     holeRows([
-      [`R=rm; sudo $R ${OUT}/x`, 'ask', 'AC2.2'], [`R=rm; env $R ${OUT}/x`, 'ask', 'AC2.2'], [`R=rm; nohup $R ${OUT}/x`, 'ask', 'AC2.2'],
+      [`R=rm; sudo $R ${OUT}/x`, 'deny', 'AC2.2'], [`R=rm; env $R ${OUT}/x`, 'deny', 'AC2.2'], [`R=rm; nohup $R ${OUT}/x`, 'deny', 'AC2.2'],
       [`sudo rm ${T}/x`, null, 'AC2.2'],
       [`command -v $x`, null, 'AC2.2'], [`if command -v $x >/dev/null 2>&1; then :; fi`, null, 'AC2.2'],
     ]);
     // Ba chỗ shell gán biến theo cách không đọc được: tên đó chưa rõ ở toàn lệnh, nhưng phép gán thường vẫn được giải.
     holeRows([
-      [`S=${T}; exec {S}>/dev/null; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; wait -p S; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; coproc S { :; }; rm -rf $S/x`, 'ask', 'AC2.3'],
+      [`S=${T}; exec {S}>/dev/null; rm -rf $S/x`, 'deny', 'AC2.3'], [`S=${T}; wait -p S; rm -rf $S/x`, 'deny', 'AC2.3'], [`S=${T}; coproc S { :; }; rm -rf $S/x`, 'deny', 'AC2.3'],
       [`S=${T}; rm -rf $S/x`, null, 'AC2.3'],
     ]);
 
@@ -944,47 +951,47 @@ export default async function run({ ok, ctx }) {
 
     // PowerShell: đường dẫn đưa qua ống không nằm trong đối số của lệnh ghi. Nguồn Get-ChildItem/Get-Item có đường dẫn tường minh thì đường dẫn đó chịu quyền của lệnh ghi; nguồn khác không đoán được.
     holeRows([
-      [`$p = '${OUT}'; $p | Remove-Item`, 'ask', 'AC3.1'], [`Get-ChildItem '${OUT}' | Remove-Item`, 'deny', 'AC3.1'],
-      [`Get-ChildItem $x | Remove-Item`, 'ask', 'AC3.1'], [`Get-Content a | Set-Content`, 'ask', 'AC3.1'],
+      [`$p = '${OUT}'; $p | Remove-Item`, 'deny', 'AC3.1'], [`Get-ChildItem '${OUT}' | Remove-Item`, 'deny', 'AC3.1'],
+      [`Get-ChildItem $x | Remove-Item`, 'deny', 'AC3.1'], [`Get-Content a | Set-Content`, 'deny', 'AC3.1'],
       [`Get-ChildItem -Path '${OUT}' -Filter *.log -Recurse | Remove-Item -Force`, 'deny', 'AC3.1'],
       [`Get-ChildItem '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem -Path '${T}' -Filter *.log -Recurse | Remove-Item -Force`, null, 'AC3.1'],
       [`gci '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem | Remove-Item`, null, 'AC3.1'],
       [`Get-Content a | Out-File '${T}/f'`, null, 'AC3.1'], [`Get-Content a | Out-File '${OUT}/f'`, 'deny', 'AC3.1'],
       // Move-Item/Copy-Item chỉ có -Destination: nguồn vẫn đến từ ống, và Move xoá nguồn.
-      [`Get-ChildItem '${OUT}' | Move-Item -Destination '${T}'`, 'deny', 'AC3.1'], [`$p | Move-Item -Destination '${T}'`, 'ask', 'AC3.1'], [`Get-ChildItem '${OUT}' | Move-Item -Des '${T}'`, 'deny', 'AC3.1'],
-      [`Get-ChildItem '${OUT}' | Copy-Item -Destination '${T}'`, 'ask', 'AC3.1'], [`Get-ChildItem '${T}' | Move-Item -Destination '${O}'`, null, 'AC3.1'],
+      [`Get-ChildItem '${OUT}' | Move-Item -Destination '${T}'`, 'deny', 'AC3.1'], [`$p | Move-Item -Destination '${T}'`, 'deny', 'AC3.1'], [`Get-ChildItem '${OUT}' | Move-Item -Des '${T}'`, 'deny', 'AC3.1'],
+      [`Get-ChildItem '${OUT}' | Copy-Item -Destination '${T}'`, 'deny', 'AC3.1'], [`Get-ChildItem '${T}' | Move-Item -Destination '${O}'`, null, 'AC3.1'],
       [`Get-ChildItem '${T}' | Copy-Item -Destination '${O}'`, null, 'AC3.1'],
     ], { tool: 'PowerShell' });
 
     // PowerShell: `cd` trong khối `{ }` không chắc chạy, và `cd HKCU:`/`Env:` vào ổ provider (không phải thư mục đĩa) bị `path.resolve` nối vào project.
     holeRows([
-      [`& { cd '${OUT}' }; Remove-Item x`, 'ask', 'AC3.4'], [`if ($true) { cd '${OUT}' }; Remove-Item x`, 'ask', 'AC3.4'],
-      [`cd HKCU:; Remove-Item Software/x`, 'ask', 'AC3.4'], [`cd Env:; Remove-Item x`, 'ask', 'AC3.4'], [`cd HKLM:/Software; Remove-Item x`, 'ask', 'AC3.4'],
-      [`Set-Location HKCU:/Software; Remove-Item x`, 'ask', 'AC3.4'], [`pushd Cert:; Remove-Item x`, 'ask', 'AC3.4'], [`cd variable:; Remove-Item x`, 'ask', 'AC3.4'],
+      [`& { cd '${OUT}' }; Remove-Item x`, 'deny', 'AC3.4'], [`if ($true) { cd '${OUT}' }; Remove-Item x`, 'deny', 'AC3.4'],
+      [`cd HKCU:; Remove-Item Software/x`, 'deny', 'AC3.4'], [`cd Env:; Remove-Item x`, 'deny', 'AC3.4'], [`cd HKLM:/Software; Remove-Item x`, 'deny', 'AC3.4'],
+      [`Set-Location HKCU:/Software; Remove-Item x`, 'deny', 'AC3.4'], [`pushd Cert:; Remove-Item x`, 'deny', 'AC3.4'], [`cd variable:; Remove-Item x`, 'deny', 'AC3.4'],
       [`cd '${T}'; Remove-Item x`, null, 'AC3.4'], [`cd C:/Windows; Remove-Item x`, 'deny', 'AC3.4'],
     ], { tool: 'PowerShell' });
 
     // PowerShell: Set-Alias/function:/Alias: đặt lại tên lệnh nên `gd` có thể là Remove-Item mà hook không biết.
     holeRows([
-      [`Set-Alias gd Remove-Item; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`sal gd ri; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`New-Alias gd rm; gd '${OUT}/x'`, 'ask', 'AC3.2'],
-      [`nal gd rm; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`Set-Item Alias:gd Remove-Item; gd '${OUT}/x'`, 'ask', 'AC3.2'],
-      [`\${function:gd} = { Remove-Item $args }; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`Set-Item function:gd { Remove-Item $args }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
-      [`function gd { Remove-Item $args[0] }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`Set-Alias gd Remove-Item; gd '${OUT}/x'`, 'deny', 'AC3.2'], [`sal gd ri; gd '${OUT}/x'`, 'deny', 'AC3.2'], [`New-Alias gd rm; gd '${OUT}/x'`, 'deny', 'AC3.2'],
+      [`nal gd rm; gd '${OUT}/x'`, 'deny', 'AC3.2'], [`Set-Item Alias:gd Remove-Item; gd '${OUT}/x'`, 'deny', 'AC3.2'],
+      [`\${function:gd} = { Remove-Item $args }; gd '${OUT}/x'`, 'deny', 'AC3.2'], [`Set-Item function:gd { Remove-Item $args }; gd '${OUT}/x'`, 'deny', 'AC3.2'],
+      [`function gd { Remove-Item $args[0] }; gd '${OUT}/x'`, 'deny', 'AC3.2'],
       // Dấu hiệu nằm sau nháy hoặc bị escape bằng backtick, và các dạng định nghĩa còn lại.
-      [`pwsh -c "sal gd ri; gd '${OUT}/x'"`, 'ask', 'AC3.2'], [`& 'sal' gd ri; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`iex "sal gd ri"; gd '${OUT}/x'`, 'ask', 'AC3.2'],
-      ["Set-Al`ias gd ri; gd '" + OUT + "/x'", 'ask', 'AC3.2'], ["s`al gd ri; gd '" + OUT + "/x'", 'ask', 'AC3.2'],
-      [`Import-Alias a.csv; gd '${OUT}/x'`, 'ask', 'AC3.2'], [`filter gd { & ('Remove-'+'Item') $_ }; gd '${OUT}/x'`, 'ask', 'AC3.2'],
+      [`pwsh -c "sal gd ri; gd '${OUT}/x'"`, 'deny', 'AC3.2'], [`& 'sal' gd ri; gd '${OUT}/x'`, 'deny', 'AC3.2'], [`iex "sal gd ri"; gd '${OUT}/x'`, 'deny', 'AC3.2'],
+      ["Set-Al`ias gd ri; gd '" + OUT + "/x'", 'deny', 'AC3.2'], ["s`al gd ri; gd '" + OUT + "/x'", 'deny', 'AC3.2'],
+      [`Import-Alias a.csv; gd '${OUT}/x'`, 'deny', 'AC3.2'], [`filter gd { & ('Remove-'+'Item') $_ }; gd '${OUT}/x'`, 'deny', 'AC3.2'],
       [`function f { Remove-Item '${OUT}/x' }; f`, 'deny', 'AC3.2'],
       [`Get-Alias gd`, null, 'AC3.2'], [`Write-Host 'my function foo'`, null, 'AC3.2'], [`Remove-Item '${T}/x'`, null, 'AC3.2'],
     ], { tool: 'PowerShell' });
 
     // PowerShell: đối số là biểu thức trong ngoặc hoặc splat thì giá trị thật không đọc được từ chữ; chữ thô giống một tên tương đối nên từng cho qua.
     holeRows([
-      [`Remove-Item ('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item -Path ('${OUT}/x')`, 'ask', 'AC3.5'],
-      [`$p = @{Path='${OUT}/x'}; Remove-Item @p`, 'ask', 'AC3.5'],
+      [`Remove-Item ('${OUT}/x')`, 'deny', 'AC3.5'], [`Remove-Item -Path ('${OUT}/x')`, 'deny', 'AC3.5'],
+      [`$p = @{Path='${OUT}/x'}; Remove-Item @p`, 'deny', 'AC3.5'],
       [`Remove-Item '${T}/x'`, null, 'AC3.5'],
       // `(` giữa token mở một biểu thức mới (`T/a('OUT/x')` là hai đối số); `@(…)` là mảng. Dấu ngoặc trong nháy là chữ thường nên không hỏi.
-      [`Remove-Item ${T}/a('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item @('${OUT}/x')`, 'ask', 'AC3.5'], [`Remove-Item ${T}/"a"("${OUT}/x")`, 'ask', 'AC3.5'], [`Remove-Item ${T}/'a'(x)`, 'ask', 'AC3.5'],
+      [`Remove-Item ${T}/a('${OUT}/x')`, 'deny', 'AC3.5'], [`Remove-Item @('${OUT}/x')`, 'deny', 'AC3.5'], [`Remove-Item ${T}/"a"("${OUT}/x")`, 'deny', 'AC3.5'], [`Remove-Item ${T}/'a'(x)`, 'deny', 'AC3.5'],
       [`Remove-Item '(1) x.txt'`, null, 'AC3.5'], [`Remove-Item '@backup'`, null, 'AC3.5'],
       [`Remove-Item '${T}/(x)'`, null, 'AC3.5'], [`Remove-Item "${T}/file (1).txt"`, null, 'AC3.5'],
     ], { tool: 'PowerShell' });
@@ -994,20 +1001,20 @@ export default async function run({ ok, ctx }) {
     const nl = holeKind('\n'.repeat(100000) + `Remove-Item '${T}/x'`, { tool: 'PowerShell' });
     const nlMs = performance.now() - tNl;
     ok(nl === null && nlMs < 2000, `AC3.2: 100000 ký tự xuống dòng rồi Remove-Item trong root → null dưới 2 s (${nl}, ${Math.round(nlMs)} ms)`);
-    holeRows([[`function gd { }`, 'ask', 'AC3.2'], [`\nfunction gd { }`, 'ask', 'AC3.2'], [`Write-Host a\n  function gd { }`, 'ask', 'AC3.2']], { tool: 'PowerShell' });
+    holeRows([[`function gd { }`, 'deny', 'AC3.2'], [`\nfunction gd { }`, 'deny', 'AC3.2'], [`Write-Host a\n  function gd { }`, 'deny', 'AC3.2']], { tool: 'PowerShell' });
 
     // Hồi quy sau review cuối: `wait` lặp lại không làm leadInfo quét tới hết đoạn cho mỗi từ.
     const tW = performance.now();
     const wk = holeKind('echo ' + 'wait '.repeat(10000) + `; rm ${OUT}/x`);
     const wMs = performance.now() - tW;
     ok(wk === 'deny' && wMs < 1500, `AC2.3: 10000 từ wait rồi rm ngoài root → deny dưới 1,5 s (${wk}, ${Math.round(wMs)} ms)`);
-    holeRows([[`S=${T}; wait -n -p S; rm -rf $S/x`, 'ask', 'AC2.3'], [`S=${T}; wait -f -n -p S; rm -rf $S/x`, 'ask', 'AC2.3']]);
+    holeRows([[`S=${T}; wait -n -p S; rm -rf $S/x`, 'deny', 'AC2.3'], [`S=${T}; wait -f -n -p S; rm -rf $S/x`, 'deny', 'AC2.3']]);
 
     // Hồi quy sau review cuối: nguồn qua ống có danh sách đường dẫn (dấu phẩy) hoặc biểu thức/splat thì không đoán được → ask.
     holeRows([
-      [`Get-ChildItem '${T}/a','${OUT}/b' | Remove-Item`, 'ask', 'AC3.1'], [`Get-ChildItem -Path ${T}/a,${OUT}/b | Remove-Item`, 'ask', 'AC3.1'],
-      [`gci -LiteralPath ${T}/a,${OUT}/b | ri`, 'ask', 'AC3.1'], [`Get-Item ${T}/a,${OUT}/b | Remove-Item`, 'ask', 'AC3.1'],
-      [`$p=@{Path='${OUT}'}; Get-ChildItem @p | Remove-Item`, 'ask', 'AC3.1'],
+      [`Get-ChildItem '${T}/a','${OUT}/b' | Remove-Item`, 'deny', 'AC3.1'], [`Get-ChildItem -Path ${T}/a,${OUT}/b | Remove-Item`, 'deny', 'AC3.1'],
+      [`gci -LiteralPath ${T}/a,${OUT}/b | ri`, 'deny', 'AC3.1'], [`Get-Item ${T}/a,${OUT}/b | Remove-Item`, 'deny', 'AC3.1'],
+      [`$p=@{Path='${OUT}'}; Get-ChildItem @p | Remove-Item`, 'deny', 'AC3.1'],
       [`Get-ChildItem '${T}' | Remove-Item`, null, 'AC3.1'], [`Get-ChildItem '${OUT}' | Remove-Item`, 'deny', 'AC3.1'],
     ], { tool: 'PowerShell' });
 
@@ -1018,9 +1025,9 @@ export default async function run({ ok, ctx }) {
     // Request guard-bash-cd-wrapper-holes: cd sau cờ của command/builtin/time. `builtin`/`command` chạy chắc → deny ở thư mục ngoài root; `time` là từ khoá không được tin → ask; `command -v` chỉ tra cứu.
     holeRows([
       [`command -- cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'], [`command -p cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'], [`builtin -- cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'],
-      [`time -p cd ${OUT}; rm x`, 'ask', 'cd-wrapper AC1.1'],
+      [`time -p cd ${OUT}; rm x`, 'deny', 'cd-wrapper AC1.1'],
       // `command -pv $x` vốn ask (không phải ngoại lệ lookup của request trước): không đổi.
-      [`command -pv $x`, 'ask', 'cd-wrapper AC1.1'], [`command -v cd; rm x`, null, 'cd-wrapper AC1.1'], [`command -v $x`, null, 'cd-wrapper AC1.1'], [`command -pv cd; rm x`, null, 'cd-wrapper AC1.1'],
+      [`command -pv $x`, 'deny', 'cd-wrapper AC1.1'], [`command -v cd; rm x`, null, 'cd-wrapper AC1.1'], [`command -v $x`, null, 'cd-wrapper AC1.1'], [`command -pv cd; rm x`, null, 'cd-wrapper AC1.1'],
       [`builtin cd ${T}; rm x`, null, 'cd-wrapper AC1.1'], [`command -p cd ${T}; rm x`, null, 'cd-wrapper AC1.1'],
     ]);
     // H1 (push nhánh bảo vệ): `trackDirs` nhận `cd` qua `unwrap` nên cd sau `builtin`/`command`/`then` đổi thư mục tra nhánh. `<P>/repo` đang ở main, mọi thư mục khác ở feature.
@@ -1028,10 +1035,11 @@ export default async function run({ ok, ctx }) {
       const repoDir = path.resolve(P, 'repo');
       const branchOpts = { currentBranch: (d) => (d === repoDir ? 'main' : 'feature/x') };
       for (const [label, o] of [['full', { opts: branchOpts }], ['ask', { cfg: { mode: 'ask' }, opts: branchOpts }]]) {
+        const pushKind = label === 'full' ? 'deny' : 'ask';
         holeRows([
-          [`builtin cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`command cd repo; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`command -- cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`if true; then cd repo; fi; git push`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`cd repo && git push`, 'ask', `cd-wrapper AC1.3 (${label})`], [`builtin cd other && git push`, null, `cd-wrapper AC1.3 (${label})`],
+          [`builtin cd repo && git push`, pushKind, `cd-wrapper AC1.3 (${label})`], [`command cd repo; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`command -- cd repo && git push`, pushKind, `cd-wrapper AC1.3 (${label})`], [`if true; then cd repo; fi; git push`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`cd repo && git push`, pushKind, `cd-wrapper AC1.3 (${label})`], [`builtin cd other && git push`, null, `cd-wrapper AC1.3 (${label})`],
         ], o);
       }
     }
@@ -1040,16 +1048,17 @@ export default async function run({ ok, ctx }) {
       const mainDir = path.resolve(P);
       const mainOpts = { currentBranch: (d) => (path.resolve(d) === mainDir ? 'main' : 'feature/x') };
       for (const [label, o] of [['full', { opts: mainOpts }], ['ask', { cfg: { mode: 'ask' }, opts: mainOpts }]]) {
+        const pushKind = label === 'full' ? 'deny' : 'ask';
         holeRows([
           [`cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`builtin cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
           [`command -p cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
           // cd sau từ khoá điều kiện/`time`/`.{` không chắc chạy: thư mục chưa rõ nên push không refspec rõ vẫn hỏi (cwd ở main, `other` ở feature).
-          [`if false; then cd other; fi; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`time -p cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`while true; do cd other; done; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`.{ cd other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`sudo cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`env cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`nohup cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`timeout 5 cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`exec cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`env -S "cd other"; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`command -v cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`command -pv cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`if false; then cd other; fi; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`], [`time -p cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`while true; do cd other; done; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`], [`.{ cd other }; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`sudo cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`], [`env cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`nohup cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`], [`timeout 5 cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`exec cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`], [`env -S "cd other"; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`command -v cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`], [`command -pv cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
         ], o);
       }
       // `builtin` nay thuộc unwrap nên H6 cũng thấy lệnh ghi sau nó.
@@ -1057,13 +1066,13 @@ export default async function run({ ok, ctx }) {
     }
     // `wait` cờ gộp (`-fp S`) và tên dính liền (`-pS`) vẫn ghi PID vào S; cờ không có `p` thì không. `timeout` nhận thời lượng là biến nhưng chỉ một từ.
     holeRows([
-      [`S=${T}; wait -fp S; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'], [`S=${T}; wait -pS; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'],
-      [`S=${T}; wait -n -fp S; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'], [`S=${T}; wait -fpS; rm -rf $S/x`, 'ask', 'cd-wrapper AC1.4'],
+      [`S=${T}; wait -fp S; rm -rf $S/x`, 'deny', 'cd-wrapper AC1.4'], [`S=${T}; wait -pS; rm -rf $S/x`, 'deny', 'cd-wrapper AC1.4'],
+      [`S=${T}; wait -n -fp S; rm -rf $S/x`, 'deny', 'cd-wrapper AC1.4'], [`S=${T}; wait -fpS; rm -rf $S/x`, 'deny', 'cd-wrapper AC1.4'],
       [`S=${T}; wait -fn; rm -rf $S/x`, null, 'cd-wrapper AC1.4'], [`S=${T}; wait; rm -rf $S/x`, null, 'cd-wrapper AC1.4'],
       // Thời lượng là biến không trích dẫn có thể chứa khoảng trắng (bash tách từ: `T='5 rm'` → `timeout 5 rm -rf …`), nên `$T` không được coi là thời lượng → vẫn ask như trước request.
-      [`timeout $T ls`, 'ask', 'cd-wrapper AC1.5'], [`timeout \${T}s ls ${T}/x`, 'ask', 'cd-wrapper AC1.5'], [`T='5 rm'; timeout $T -rf ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'],
+      [`timeout $T ls`, 'deny', 'cd-wrapper AC1.5'], [`timeout \${T}s ls ${T}/x`, 'deny', 'cd-wrapper AC1.5'], [`T='5 rm'; timeout $T -rf ${OUT}/x`, 'deny', 'cd-wrapper AC1.5'],
       [`timeout 5 ls ${T}/x`, null, 'cd-wrapper AC1.5'],
-      [`R=rm; timeout 5 $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'], [`R=rm; timeout $T $R ${OUT}/x`, 'ask', 'cd-wrapper AC1.5'],
+      [`R=rm; timeout 5 $R ${OUT}/x`, 'deny', 'cd-wrapper AC1.5'], [`R=rm; timeout $T $R ${OUT}/x`, 'deny', 'cd-wrapper AC1.5'],
     ]);
     // Hồi quy sau review cuối: từ `-ppp…p` kèm nháy chứa xuống dòng không được làm regex của nhánh `wait` backtrack bậc hai (50000 ký tự `p` từng mất ~1,8 s).
     {
@@ -1077,15 +1086,16 @@ export default async function run({ ok, ctx }) {
       const mainDir = path.resolve(P);
       const mainOpts = { currentBranch: (d) => (path.resolve(d) === mainDir ? 'main' : 'feature/x') };
       for (const [label, o] of [['full', { opts: mainOpts }], ['ask', { cfg: { mode: 'ask' }, opts: mainOpts }]]) {
+        const pushKind = label === 'full' ? 'deny' : 'ask';
         holeRows([
-          [`{ cd other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`], [`{ cd other; }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`],
-          [`{ Set-Location other }; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`], [`{ cd other } && git push origin HEAD`, 'ask', `cd-wrapper AC1.3 PS (${label})`],
+          [`{ cd other }; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 PS (${label})`], [`{ cd other; }; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 PS (${label})`],
+          [`{ Set-Location other }; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 PS (${label})`], [`{ cd other } && git push origin HEAD`, pushKind, `cd-wrapper AC1.3 PS (${label})`],
         ], { ...o, tool: 'PowerShell' });
         holeRows([
-          [`x=$(builtin cd other); git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`x=$(builtin cd other) git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          ['x=`builtin cd other`; git push origin HEAD', 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`true || builtin cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`], [`echo x | builtin cd other; git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
-          [`builtin cd other & git push origin HEAD`, 'ask', `cd-wrapper AC1.3 (${label})`],
+          [`x=$(builtin cd other); git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`], [`x=$(builtin cd other) git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          ['x=`builtin cd other`; git push origin HEAD', pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`true || builtin cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`], [`echo x | builtin cd other; git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
+          [`builtin cd other & git push origin HEAD`, pushKind, `cd-wrapper AC1.3 (${label})`],
           [`{ cd other; }; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`! cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
           [`VAR=x cd other; git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`], [`builtin cd other && git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
           [`cd other 2>&1 && git push origin HEAD`, null, `cd-wrapper AC1.3 (${label})`],
@@ -1117,35 +1127,35 @@ export default async function run({ ok, ctx }) {
       [`for a in 1 2; do for b in x y; do rm ${OUT}/$a/$b; done; done`, 'deny', `${L} AC1.1`],
       [`for c in .. a; do rm ${T}/$c/x; done`, 'deny', `${L} AC1.2`],
       [`for c in a ..; do rm ${T}/$c/x; done`, 'deny', `${L} AC1.2`],
-      [`for c in $X; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in *.log; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in $(ls); do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in {a,b}; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in a,b; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in "a b"; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in -t; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in ${vals(257)}; do rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`for c in a; do case $x in a) :;; esac; rm ${T}/$c; done`, 'ask', `${L} AC1.3`],
-      [`rm ${T}/$c; for c in a; do :; done`, 'ask', `${L} AC1.4`],
-      [`for c in a; do :; done; rm ${T}/$c`, 'ask', `${L} AC1.4`],
-      [`for c in a; do :; done > ${T}/$c.out`, 'ask', `${L} AC1.4`],
-      [`for c in a; do c=/etc; rm ${T}/$c; done`, 'ask', `${L} AC1.4`],
-      [`for c in a; do rm ${T}/$c; done; for c in b; do rm ${T}/$c; done`, 'ask', `${L} AC1.4`],
-      [`for c in a; do read c; rm ${T}/$c; done`, 'ask', `${L} AC1.4`],
+      [`for c in $X; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in *.log; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in $(ls); do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in {a,b}; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in a,b; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in "a b"; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in -t; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in ${vals(257)}; do rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`for c in a; do case $x in a) :;; esac; rm ${T}/$c; done`, 'deny', `${L} AC1.3`],
+      [`rm ${T}/$c; for c in a; do :; done`, 'deny', `${L} AC1.4`],
+      [`for c in a; do :; done; rm ${T}/$c`, 'deny', `${L} AC1.4`],
+      [`for c in a; do :; done > ${T}/$c.out`, 'deny', `${L} AC1.4`],
+      [`for c in a; do c=/etc; rm ${T}/$c; done`, 'deny', `${L} AC1.4`],
+      [`for c in a; do rm ${T}/$c; done; for c in b; do rm ${T}/$c; done`, 'deny', `${L} AC1.4`],
+      [`for c in a; do read c; rm ${T}/$c; done`, 'deny', `${L} AC1.4`],
       // Lệnh con gán lại tên của vòng: giá trị thừa kế phải bị bỏ, nếu không `$c` vẫn là `a` và `rm /etc/x` lọt.
       [`for c in a; do x=$(c=/etc; rm $c/x); done`, 'deny', `${L} AC1.4`],
-      [`for c in rm ls; do $c ${OUT}/x; done`, 'ask', `${L} AC1.5`],
-      [`for c in rm ls; do $c ${T}/x; done`, 'ask', `${L} AC1.5`],
-      [`for c in rm ls; do sudo $c ${OUT}/x; done`, 'ask', `${L} AC1.5`],
-      [`for c in rm ls; do env $c ${OUT}/x; done`, 'ask', `${L} AC1.5`],
-      [`for c in rm ls; do timeout 5 $c ${OUT}/x; done`, 'ask', `${L} AC1.5`],
+      [`for c in rm ls; do $c ${OUT}/x; done`, 'deny', `${L} AC1.5`],
+      [`for c in rm ls; do $c ${T}/x; done`, 'deny', `${L} AC1.5`],
+      [`for c in rm ls; do sudo $c ${OUT}/x; done`, 'deny', `${L} AC1.5`],
+      [`for c in rm ls; do env $c ${OUT}/x; done`, 'deny', `${L} AC1.5`],
+      [`for c in rm ls; do timeout 5 $c ${OUT}/x; done`, 'deny', `${L} AC1.5`],
       // Một giá trị `rm` thật sự là lệnh rm: ghi ngoài root bị chặn, trong root vẫn hỏi vì tên lệnh là biến.
       [`for c in rm; do $c ${OUT}/x; done`, 'deny', `${L} AC1.5`],
-      [`for c in rm; do $c ${T}/x; done`, 'ask', `${L} AC1.5`],
+      [`for c in rm; do $c ${T}/x; done`, 'deny', `${L} AC1.5`],
       // Tên file bí mật nằm trong danh sách: nhóm giá trị phải được đọc như brace khi dò bí mật ngoài root.
-      [`for c in .env a; do cat ${OUT}/$c; done`, 'ask', `${L} AC1.7`],
+      [`for c in .env a; do cat ${OUT}/$c; done`, 'deny', `${L} AC1.7`],
       [`for c in .env a; do cat ${T}/$c; done`, null, `${L} AC1.7`],
     ]);
     expectAll([
@@ -1161,25 +1171,25 @@ export default async function run({ ok, ctx }) {
       [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${T}/$x/$y" } }`, null, `${L} AC1.6`],
       [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${OUT}/$x/$y" } }`, 'deny', `${L} AC1.6`],
       [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${T}/$x/$y" }; Remove-Item "${OUT}/$x" }`, 'deny', `${L} AC1.6`],
-      [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${T}/$x/$y" }; Remove-Item "${T}/$y" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 'a') { foreach ($x in 'b') { Remove-Item "${T}/$x" } }`, 'ask', `${L} AC1.6`],
-      [`if ($true) { foreach ($y in 'b') { Remove-Item "${T}/$y" } }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in 'a') { foreach ($y in 'b') { Remove-Item "${T}/$x/$y" }; Remove-Item "${T}/$y" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a') { foreach ($x in 'b') { Remove-Item "${T}/$x" } }`, 'deny', `${L} AC1.6`],
+      [`if ($true) { foreach ($y in 'b') { Remove-Item "${T}/$y" } }`, 'deny', `${L} AC1.6`],
       // Từ không nháy trong danh sách là lệnh được chạy (pwd cho thư mục hiện tại), không phải chuỗi 'pwd'.
-      [`foreach ($x in pwd) { Remove-Item "$x\\.." -Recurse }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 'a',pwd) { Remove-Item "$x/../x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in a,b) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in @('a','b')) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 1..3) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in $list) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in (Get-ChildItem)) { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 'a' 'b') { Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 'a','variable:S') { Remove-Item $x }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 'a') { Write-Host hi }; Remove-Item "${T}/$x"`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 'a') { $x = '/etc'; Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 'a','b') { Get-Date; Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`foreach ($x in 'a') { iex 'x'; Remove-Item "${T}/$x" }`, 'ask', `${L} AC1.6`],
-      [`'a','b' | ForEach-Object { Remove-Item "${T}/$_" }`, 'ask', `${L} AC1.6`],
-      [`$SP = '${T}'; if ($true) { Remove-Item "$SP\\a" }`, 'ask', `${L} AC1.6`],
+      [`foreach ($x in pwd) { Remove-Item "$x\\.." -Recurse }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a',pwd) { Remove-Item "$x/../x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in a,b) { Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in @('a','b')) { Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 1..3) { Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in $list) { Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in (Get-ChildItem)) { Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a' 'b') { Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a','variable:S') { Remove-Item $x }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a') { Write-Host hi }; Remove-Item "${T}/$x"`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a') { $x = '/etc'; Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a','b') { Get-Date; Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`foreach ($x in 'a') { iex 'x'; Remove-Item "${T}/$x" }`, 'deny', `${L} AC1.6`],
+      [`'a','b' | ForEach-Object { Remove-Item "${T}/$_" }`, 'deny', `${L} AC1.6`],
+      [`$SP = '${T}'; if ($true) { Remove-Item "$SP\\a" }`, 'deny', `${L} AC1.6`],
     ], { tool: 'PowerShell' });
   } finally { fs.rmSync(tb, { recursive: true, force: true }); }
 

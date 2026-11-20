@@ -27,8 +27,8 @@ export default async function run({ ok, ctx }) {
     {
       // full + bypass vẫn giữ push (fullKeep mặc định) kể cả khi bọc trong shell
       const input = { tool_name: 'Bash', cwd: '.', permission_mode: 'bypassPermissions', tool_input: { command: 'bash -c "git push origin main"' } };
-      ok(gb.decide(input, { currentBranch: () => 'feature/x', config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false })?.decision === 'ask',
-        'AC1.1: full + bypass: bash -c "git push origin main" vẫn ask (fullKeep push)');
+      ok(gb.decide(input, { currentBranch: () => 'feature/x', config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false })?.decision === 'deny',
+        'AC1.1: full + bypass: bash -c "git push origin main" vẫn bị chặn (fullKeep push)');
     }
 
     for (const c of ['git push origin \\\n  master', 'git push origin \\\r\nmain', 'git push origin $BRANCH', 'git push origin HEAD:$BR', 'git push origin "$BRANCH"']) {
@@ -57,8 +57,8 @@ export default async function run({ ok, ctx }) {
         ok(fdec(tool, `${root}/${f}`)?.decision === 'ask', `AC2.1: ${tool} ${f} → ask (chế độ thường)`);
       }
     }
-    ok(fdec('Write', `${root}/.claude/aip-gate.json`, { permission_mode: 'bypassPermissions' }, { config: { mode: 'full' }, tracked: () => false })?.decision === 'ask',
-      'AC2.1: full + bypass vẫn ask khi ghi aip-gate.json');
+    ok(fdec('Write', `${root}/.claude/aip-gate.json`, { permission_mode: 'bypassPermissions' }, { config: { mode: 'full' }, tracked: () => false })?.decision === 'deny',
+      'AC2.1: confined + bypass → deny khi ghi aip-gate.json');
     ok(fdec('Edit', path.resolve('/home/u/.claude/settings.json').replaceAll('\\', '/'))?.decision === 'ask', 'AC2.1: settings.json toàn cục cũng ask');
     ok(fdec('Read', `${root}/.claude/aip-gate.json`) === null && fdec('Write', `${root}/docs/a.md`) === null && fdec('Write', `${root}/.claude/agents/x.md`) === null,
       'AC2.1: đọc cấu hình hay ghi file khác trong .claude không bị hỏi nhầm');

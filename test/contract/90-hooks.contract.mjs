@@ -462,7 +462,7 @@ export default async function run({ ok, ctx }) {
         readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => nowMs,
         // Các ca handoff/ledger kiểm đúng nội dung của chúng nên tắt bootstrap, trừ khi ca đó tự bật lại.
-        loadConfig: () => ({ bootstrapInject: false, ...cfg }),
+        loadConfig: () => ({ bootstrapInject: false, ...cfg }), loadGate: () => null,
         gitRoots: () => null,
       };
     };
@@ -549,7 +549,7 @@ export default async function run({ ok, ctx }) {
         statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
         readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => T0 + HOUR,
-        loadConfig: () => ({ bootstrapInject: false, ...cfg }),
+        loadConfig: () => ({ bootstrapInject: false, ...cfg }), loadGate: () => null,
         gitRoots: () => null,
       };
     };
@@ -612,7 +612,7 @@ export default async function run({ ok, ctx }) {
         statSync: (p) => { statted.push(p); if (m.get(p).statThrows) throw new Error('EIO'); return { mtimeMs: m.get(p).mtime }; },
         readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => T0 + HOUR,
-        loadConfig: () => ({ bootstrapInject: false, ...cfg }),
+        loadConfig: () => ({ bootstrapInject: false, ...cfg }), loadGate: () => null,
         gitRoots: git ?? (() => ({ top: abs('.'), main: abs('.') })),
       };
     };
@@ -750,7 +750,7 @@ export default async function run({ ok, ctx }) {
         statSync: (p) => ({ mtimeMs: m.get(p).mtime }),
         readdirSync: (p) => [...new Set([...m.keys()].filter((k) => k.startsWith(p + path.sep)).map((k) => k.slice(p.length + 1).split(path.sep)[0]))],
         now: () => T0 + HOUR,
-        loadConfig: () => cfg,
+        loadConfig: () => cfg, loadGate: () => null,
         gitRoots: () => null,
       };
     };
@@ -915,7 +915,7 @@ export default async function run({ ok, ctx }) {
         fs.writeFileSync(f, '# Bàn giao\nNhánh: feature/x. Việc đang làm: hoàn thiện hook SessionStart, còn lại bước đăng ký event và test. HANDOFF\n');
         return f;
       };
-      const startAt = (cwd) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd }, { loadConfig: () => ({ bootstrapInject: false, ledgerInject: false }), gitRoots: () => null })?.additionalContext ?? '';
+      const startAt = (cwd) => ss.decide({ hook_event_name: 'SessionStart', source: 'startup', cwd }, { loadConfig: () => ({ bootstrapInject: false, ledgerInject: false }), gitRoots: () => null, loadGate: () => null })?.additionalContext ?? '';
       writeHandoff(T);
       git(T, 'add', 'docs');
       git(T, 'commit', '-q', '-m', 'handoff');
