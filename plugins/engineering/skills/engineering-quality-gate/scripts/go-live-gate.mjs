@@ -331,7 +331,8 @@ function readSonar(key, text, map) {
   if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.issues)) throw fail(key, 'thiếu mảng issues');
   // Export chỉ lấy trang đầu sẽ đếm thiếu: total lớn hơn số issues thì báo lỗi thay vì kết luận.
   const total = doc.paging?.total ?? doc.total;
-  if (total != null && (!Number.isInteger(total) || total > doc.issues.length)) throw fail(key, 'report chưa đủ trang: total lớn hơn số issues');
+  if (total != null && (!Number.isInteger(total) || total < 0)) throw fail(key, 'total phải là số nguyên không âm');
+  if (total != null && total > doc.issues.length) throw fail(key, 'report chưa đủ trang: total lớn hơn số issues');
   for (const issue of doc.issues) {
     const type = requireField(key, issue, 'type', 'string').trim().toUpperCase();
     if (!SONAR_TYPES.includes(type)) throw fail(key, 'giá trị type không hợp lệ');
@@ -380,7 +381,7 @@ function readList(key, text) {
 function readKev(key, text, now, warnings) {
   const doc = parseJson(key, text);
   if (doc === null || typeof doc !== 'object' || !Array.isArray(doc.vulnerabilities)) throw fail(key, 'thiếu mảng vulnerabilities');
-  const cves = new Set(doc.vulnerabilities.map((v) => requireField(key, v, 'cveID', 'string').trim().toUpperCase()));
+  const cves = new Set(doc.vulnerabilities.map((v) => requireField(key, v, 'cveID', 'string').trim().toUpperCase()).filter(Boolean));
   const released = doc.dateReleased;
   const t = typeof released === 'string' ? Date.parse(released) : NaN;
   let stale = false;
@@ -427,13 +428,15 @@ export function gate(inputs, { now = new Date() } = {}) {
   for (const k of Object.keys(lists)) if (inputs[k] !== undefined) lists[k] = guard(k, () => readList(k, inputs[k]));
   const falsePositives = [];
   const matched = new Set();
-  const hit = (list, f) => list.find((e) => e.key === f.key && f.sources.includes(e.source));
+  const hits = (list, f) => list.filter((e) => e.key === f.key && f.sources.includes(e.source));
   const findings = [...map.values()].sort((a, b) => (a.key < b.key ? -1 : 1)).map(({ title, ...f }, i) => {
     const id = `F${String(i + 1).padStart(3, '0')}`;
-    const fpHit = hit(lists.fp, f);
-    const accHit = hit(lists.accepted, f);
+    const fpAll = hits(lists.fp, f);
+    const accAll = hits(lists.accepted, f);
+    const fpHit = fpAll[0];
+    const accHit = accAll[0];
     const labels = [...f.labels, ...(accHit ? [LABEL_ACCEPTED] : []), ...(fpHit ? [LABEL_FP] : [])];
-    for (const e of [fpHit, accHit]) if (e) matched.add(e);
+    for (const e of [...fpAll, ...accAll]) matched.add(e);
     if (fpHit) falsePositives.push({ id, key: f.key, source: fpHit.source, reason: fpHit.reason });
     const reason = (fpHit || accHit)?.reason;
     return { id, ...f, labels, ...(reason ? { reason } : {}), rce: f.kind !== 'secret' && !!f.rce, kev: f.kind !== 'secret' && (f.cve || []).some((c) => kevCves.has(c.toUpperCase())) };

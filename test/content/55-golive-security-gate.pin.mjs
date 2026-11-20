@@ -302,7 +302,7 @@ export default async function run({ ok, ctx }) {
     ok(cnt({ nessus: nessus([['9', 'CVE-2026-0100', 'Low', 'H1', '1', 'x'], ['9', 'CVE-2026-0100', 'Low', 'H2', '1', 'x']]), kev: kevFile(['cve-2026-0100'], '2026-11-18T00:00:00Z') }, 'kev') === 2, 'AC1.9: KEV đếm theo tài sản và không phân biệt hoa/thường của CVE');
     ok(throwsInput({ kev: JSON.stringify({ catalogVersion: '1' }) }) && throwsInput({ kev: JSON.stringify({ vulnerabilities: [{ id: 'x' }] }) }), 'AC1.9: file KEV thiếu vulnerabilities hoặc cveID → InputError');
     const gateSrc = fs.readFileSync(scriptPath, 'utf8');
-    ok(!/node:(http|https|net|dns|dgram|tls)|\bfetch\b|XMLHttpRequest/.test(gateSrc), 'AC1.9: source script không import mô-đun mạng và không dùng fetch');
+    ok(!/node:(http|https|net|dns|dgram|tls)|(from|require\()\s*['"](http|https|net|dns|dgram|tls)['"]|\bfetch\b|XMLHttpRequest/.test(gateSrc), 'AC1.9: source script không import mô-đun mạng và không dùng fetch');
 
     // AC1.18: tuổi file KEV
     const warnsOf = (kev) => gate({ trivy: trivy(), kev }, { now: NOW });
@@ -637,6 +637,31 @@ export default async function run({ ok, ctx }) {
 
     // AC3.3: định danh đã quét lấy từ report, không có lệnh lấy image ID ở máy build
     ok(digestCheck.includes('Metadata.ImageID') && !digestCheck.includes('{{.Id}}'), 'AC3.3: digest-check.md dùng Metadata.ImageID của report và không còn lệnh lấy image ID ở máy build');
+
+    // ---- Sửa các minor đã hoãn (theo yêu cầu sau bước duyệt cuối) ----
+    // KEV: ngày không đọc được, đúng biên 7 ngày, ngày tương lai xa, cveID rỗng
+    ok(kevRun(kevFile(['CVE-2026-0100'], 'not-a-date')).thresholds.kev.status === 'chưa đo', 'AC1.18: dateReleased không đọc được → KEV chưa đo');
+    ok(kevRun(kevFile(['CVE-2026-0100'], '2026-11-12T00:00:00Z')).thresholds.kev.status === 'đạt' && kevRun(kevFile(['CVE-2026-0100'], '2026-11-11T23:59:59Z')).thresholds.kev.status === 'chưa đo', 'AC1.18: đúng 7 ngày chưa cũ, quá 7 ngày dù một giây là cũ');
+    ok(kevRun(kevFile(['CVE-2026-0100'], '2026-12-31T00:00:00Z')).thresholds.kev.status === 'đạt', 'AC1.18: dateReleased ở tương lai xa không bị coi là cũ');
+    ok(kevRun(kevFile(['', '  '], '2026-11-18T00:00:00Z')).thresholds.kev.status === 'chưa đo', 'AC1.18: file KEV chỉ có cveID rỗng được coi là rỗng → chưa đo');
+    // Sonar: type có khoảng trắng; total sai kiểu báo đúng lý do
+    ok(gate({ sonar: sonarRaw([sonarIssue(' VULNERABILITY ')]) }, { now: NOW }).findings.length === 1, 'AC1.20: type có khoảng trắng đầu cuối vẫn được chuẩn hoá');
+    const totalErr = (total) => { try { gate({ sonar: sonarRaw([sonarIssue('BUG')], { total }) }, { now: NOW }); return ''; } catch (e) { return e instanceof InputError ? e.message : 'khác'; } };
+    ok(/số nguyên/.test(totalErr('abc')) && /số nguyên/.test(totalErr(1.5)) && /số nguyên/.test(totalErr(-1)) && /chưa đủ trang/.test(totalErr(3)) && totalErr(1) === '', 'AC1.20: total không phải số nguyên không âm và total lớn hơn số issues có thông báo riêng');
+    // CSV: nháy kép không đóng → exit 2; BOM đầu file vẫn đọc đúng cột
+    ok(throwsInput({ nessus: 'Plugin ID,CVE,Risk,Host\n1,CVE-2026-0001,High,"H' }), 'AC1.19: CSV có nháy kép không đóng → InputError');
+    const bomNessus = String.fromCharCode(0xfeff) + nessus([['1', 'CVE-2026-0001', 'High', 'H', '1', 'x']]);
+    ok(gate({ nessus: bomNessus }, { now: NOW }).findings.length === 1, 'AC1.19: CSV có BOM đầu file vẫn tìm đúng cột Plugin ID');
+    // FP/accepted: mục trùng không sinh warning sai; accepted không khớp có warning; FP thắng accepted
+    const fpKeyA = `CVE-2026-0801@${IMG}`;
+    const rFpDup = gate({ trivy: trivyAB, fp: list([['trivy', fpKeyA, 'lý do 1'], ['trivy', fpKeyA, 'lý do 2']]) }, { now: NOW });
+    ok(rFpDup.warnings.filter((w) => /--fp/.test(w)).length === 0 && rFpDup.thresholds.critHigh.count === 1, 'AC1.7: hai mục --fp trùng khoá cùng khớp finding, không sinh warning không khớp');
+    const rFpBoth = gate({ coverity: coverity([['src/A.java', 10, 'High', 89]]), sarif: [sarif([{ rule: 'sql', uri: 'src/A.java', line: 10, score: '7.5', cwe: 89 }])], fp: list([['coverity', 'src/A.java:10+CWE-89', 'r1'], ['sarif', 'src/A.java:10+CWE-89', 'r2']]) }, { now: NOW });
+    ok(rFpBoth.warnings.filter((w) => /--fp/.test(w)).length === 0 && rFpBoth.thresholds.critHigh.count === 0, 'AC1.7: khai --fp cho cả hai source của finding gộp, không warning sai');
+    const rAccMiss = gate({ trivy: trivyAB, accepted: list([['trivy', 'CVE-9999-0001@khong-co', 'x']]) }, { now: NOW });
+    ok(rAccMiss.warnings.filter((w) => /--accepted/.test(w)).length === 1 && rAccMiss.thresholds.critHigh.count === 2, 'AC1.8: --accepted không khớp finding nào → đúng một warning, số đếm không đổi');
+    const rFpAcc = gate({ trivy: trivyAB, fp: list([['trivy', fpKeyA, 'fp']]), accepted: list([['trivy', fpKeyA, 'acc']]) }, { now: NOW });
+    ok(rFpAcc.thresholds.critHigh.count === 1 && rFpAcc.thresholds.critHigh.labels['chấp nhận rủi ro'] === 0 && rFpAcc.findings.find((f) => f.key === fpKeyA).labels.join() === 'chấp nhận rủi ro,FP đã loại', 'AC1.8: finding vừa --fp vừa --accepted: FP thắng, bị loại khỏi số đếm, nhãn accepted không đếm');
 
     // AC5.2: corpus routing của hai skill có ít nhất 4 + 2 positive (số đo xếp hạng do scripts/routing-score.mjs kiểm trong npm test)
     for (const id of ['engineering-quality-gate', 'ops-deploy-release']) {

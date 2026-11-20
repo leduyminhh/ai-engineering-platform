@@ -10,6 +10,7 @@ chạy trên SIT/UAT phải là image đã quét ở skill `engineering-quality-
 - [Unverified] Report có `Metadata.RepoDigests` không rỗng: lấy `Metadata.RepoDigests[0]`; phần sau `@` là digest, dạng `<tên-repo>@sha256:<digest-đã-quét>`.
 - [Unverified] Report không có `Metadata.RepoDigests` (trường thiếu được coi như mảng rỗng `[]`): lấy `Metadata.ImageID`, dạng `sha256:<image-id-đã-quét>`, rồi so theo image ID với image ID của container đang chạy (bước 1 ở mục dưới). Ghi "so theo image ID" trong report. Tên trường `Metadata.ImageID` chưa kiểm với report Trivy thật.
 - Report không có định danh dùng được (không có `Metadata.RepoDigests` và `Metadata.ImageID` thiếu, rỗng hoặc không phải chuỗi): mục digest của image đó là `chưa đo`, đề xuất NO-GO.
+- [Inference] `Metadata.ImageID` của Trivy chỉ trùng `docker inspect --format '{{.Image}}'` của container khi Docker lưu image theo config digest; với containerd image store, image ID có thể là digest của manifest hoặc index nên so theo image ID có thể ra `không đạt` giả: người xác nhận trên máy SIT/UAT thật.
 - Không chạy `docker image inspect` ở máy build để lấy định danh phía đã quét. Image ID của máy build là của tag tại thời điểm chạy lệnh, có thể không phải image đã quét nếu tag được build lại sau lúc quét.
 
 ## Digest đang chạy trên SIT/UAT

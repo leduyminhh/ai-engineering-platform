@@ -175,7 +175,7 @@ và không có cổng tự động.
 - Đợt nhiều image: `--trivy` chỉ nhận một file mỗi lần chạy, nên chạy script cho từng image.
   - Mỗi image có một dòng trong bảng theo image; image thiếu report Trivy ghi `chưa đo` ở cả bốn chỉ tiêu (cả bốn cần nguồn `trivy`).
   - Trạng thái chung của mỗi chỉ tiêu lấy mức xấu nhất theo thứ tự `không đạt` > `chưa đo` > `không áp dụng` > `đạt`. Trạng thái tổng thể (`overall`) tính từ bốn trạng thái chung đó.
-  - `count` giữ theo từng lần chạy, không cộng giữa các image; finding của nguồn không phải Trivy lặp lại ở mọi lần chạy nếu cùng truyền cờ.
+  - Script không tự gộp nhiều image: người lập report gộp tay. `count` giữ theo từng lần chạy, không cộng giữa các image; finding của nguồn không phải Trivy lặp lại ở mọi lần chạy nếu cùng truyền cờ.
   - Mục digest của `ops-deploy-release` đối chiếu từng image với report Trivy của chính image đó.
 - Residual risk cố định, ghi vào mục Residual risk:
   - Id Black Duck dạng BDSA không tự khớp KEV: script chỉ lấy CVE khi id bắt đầu bằng `CVE-`.
