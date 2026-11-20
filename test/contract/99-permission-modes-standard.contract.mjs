@@ -216,6 +216,27 @@ export default async function run({ ok, ctx }) {
     ok(process.platform !== 'win32' || statCalls({}, '//attacker/share/x') === 0, 'AC2.12: phiên bypass + Grep path UNC → không statSync (Windows)');
     ok(statCalls({ permission_mode: 'default' }, OUT) === 0 && statCalls({}, OUT) === 1, 'AC2.12: Grep path cục bộ: bypass hỏi isDirectory một lần, không bypass thì không');
 
+    // Phiên bypass: mọi seam chạm hệ thống file (reader, inspect, allowEnv, rootOf, isDirectory) không được nhận thư mục UNC. Chỉ Windows, vì POSIX không coi '//h/s' là UNC.
+    if (process.platform === 'win32') {
+      const isUncDir = (d) => String(d).replace(/\\/g, '/').startsWith('//');
+      const touchedUnc = (input, mode) => {
+        let hit = false;
+        const seen = (fn) => (dir, ...r) => { if (isUncDir(dir)) hit = true; return fn(dir, ...r); };
+        fsafe(input, { extra: { agent_type: 'coder' }, opts: { config: undefined, scopes: { coder: ['src/**'] },
+          reader: seen((dir) => (u(dir) === P ? { config: { mode }, roots: [P] } : null)), inspect: seen(() => 'none'), allowEnv: seen(() => false),
+          rootOf: seen(() => P), isDirectory: seen(() => true) } });
+        return hit;
+      };
+      const UNC = '//attacker/share';
+      for (const mode of ['confined', 'open', 'guarded']) {
+        for (const [n, i] of [['Read file', R(`${UNC}/x`)], ['Read .env', R(`${UNC}/.env`)], ['Write file', W(`${UNC}/x`)], ['Grep thư mục', G(UNC, undefined)], ['Grep glob .env*', G(UNC, '.env*')]]) {
+          ok(!touchedUnc(i, mode), `AC2.12: cwd=${mode} phiên bypass ${n} đường UNC → không chạm hệ thống file`);
+        }
+      }
+      ok(fk(R(`${UNC}/.env`), { opts: noGate('open') }) === 'deny', 'AC2.12: Read .env ở UNC trong phiên open vẫn deny (UNC coi như guarded, không đọc được cấu hình)');
+      ok(fk(R('//?/C:/x'), { opts: noGate('open') }) === null, 'AC2.12: đường \\\\?\\C:\\ là ổ đĩa cục bộ, không phải UNC');
+    }
+
     // Gate hỏng hoặc không xác định được repo không phải "không có cấu hình": vẫn guarded, không kế thừa open của cwd.
     frows([['Read .env ở đích có gate hỏng', R(`${OUT}/.env`), 'deny', 'AC2.12'], ['Write ~/.claude/settings.json ở đích có gate hỏng', W(`${HOME}/.claude/settings.json`), 'ask', 'AC2.12']], { opts: { ...noGate('open'), inspect: () => 'invalid' } });
     // Cùng ca với bộ dò thật (locateGate): repo git có .claude/aip-gate.json hỏng.

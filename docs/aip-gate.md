@@ -97,6 +97,10 @@ Back to `guarded` from the other modes: `aip mode guarded` (removes the `mode` k
 
 Never asks: work inside the fence passes, work outside it is denied.
 
+One exception, in the file tools only: if the target file is in a nested repo whose own `aip-gate.json` is `guarded`, the
+stricter mode wins and `guard-files` applies the `guarded` rules there: it asks before a write to a permission config
+file and denies secret files. The cwd's root fence still applies on top.
+
 For a project you trust, so an agent can run unattended without a prompt hanging the session. It needs the three
 conditions above. The fence is the roots and the keys `fullKeep`, `fullRoots`, `fullReadRoots`, `fullPaths`. This is
 the old `full` mode with every `ask` turned into a `deny`.

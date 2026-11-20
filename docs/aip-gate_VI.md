@@ -95,6 +95,10 @@ Quay về `guarded` từ hai chế độ kia: `aip mode guarded` (bỏ khoá `mo
 
 Không bao giờ hỏi: việc trong rào thì cho qua, ngoài rào thì từ chối.
 
+Một ngoại lệ, chỉ ở công cụ file: nếu file đích nằm trong repo lồng có `aip-gate.json` riêng ở `guarded`, mức chặt hơn
+thắng và `guard-files` áp quy tắc `guarded` ở đó: hỏi trước khi ghi file cấu hình quyền, từ chối file bí mật. Rào root
+theo cwd vẫn áp thêm.
+
 Dành cho project bạn tin, để agent chạy không người canh mà không treo phiên ở một popup. Cần đủ ba điều kiện ở trên.
 Rào là các root và các khoá `fullKeep`, `fullRoots`, `fullReadRoots`, `fullPaths`. Đây là chế độ `full` cũ với mọi
 `ask` đổi thành `deny`.
