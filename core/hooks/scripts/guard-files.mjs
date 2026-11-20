@@ -50,11 +50,14 @@ function stripAliases(p) {
   return p.replace(/:[^/]*$/, '').replace(/[. ]+$/, '');
 }
 
+// UNC ("//host/share" sau khi đổi "\" thành "/"); "//?/C:/" và "//./C:/" là ổ đĩa cục bộ. Chạm hệ thống file lên đường UNC mở SMB trước hộp xác nhận.
+const isUnc = (p) => /^\/\/(?![?.]\/[A-Za-z]:)/.test(String(p).replace(/\\/g, '/'));
+
 function isSecretPath(abs, target, re = SECRET) {
   if (re.test(stripAliases(abs))) return true;
   // Symlink/junction tên vô hại nhưng trỏ tới file bí mật: so khớp cả đường dẫn thật (chỉ đọc).
   // Đường UNC bỏ qua realpath để hook không chạm mạng; tên đã được kiểm ở trên.
-  if (abs.startsWith('//')) return false;
+  if (isUnc(abs)) return false;
   try {
     if (existsSync(target)) return re.test(realpathSync.native(target).replace(/\\/g, '/'));
   } catch { /* không resolve được thì dựa vào tên */ }
@@ -155,11 +158,13 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
   // lỗi khi xác định mode ⇒ guarded, không bao giờ tự mở cổng.
   const bypass = input?.permission_mode === 'bypassPermissions';
   const gates = new Map();
+  const allowEnvAt = (dir) => !isUnc(dir) && allowEnv(dir);
   const gateAt = (dir) => { if (!gates.has(dir)) gates.set(dir, reader(dir)); return gates.get(dir); };
   // null = thư mục không có cấu hình để nói gì (ví dụ thư mục plugin, `~/.claude`): kế thừa mode của cwd, không tự thành guarded,
   // nếu không thì open sẽ hỏi/chặn nhầm đúng những file cấu hình mà K13 nhắm tới.
   const modeAt = (dir) => {
-    if (!bypass) return 'guarded';
+    // Đường UNC không đọc được cấu hình mà không chạm mạng: coi như guarded, như khi lỗi xác định mode.
+    if (!bypass || isUnc(dir)) return 'guarded';
     try {
       const g = config === undefined ? gateAt(dir) : { config };
       if (!g?.config) return config === undefined && inspect(dir) === 'invalid' ? 'guarded' : null;
@@ -173,7 +178,7 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
   if (input?.tool_name === 'Grep' && ti?.glob && globNamesSecret(ti.glob)) {
     const dir = path.resolve(cwd, String(ti.path || '.'));
     const m = eff(dir);
-    if (m === 'guarded' && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnv(dir))) return SECRET_DENY;
+    if (m === 'guarded' && (globNamesSecret(ti.glob, KEY_PROBES) || !allowEnvAt(dir))) return SECRET_DENY;
     // confined: glob bí mật chỉ được miễn ở thư mục có đủ ba quyền, như file bí mật cụ thể.
     if (m === 'confined') {
       const hit = confine(input, dir, cwd, { gate: confineGate(), secret: true });
@@ -187,9 +192,9 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
   // Công tắc đọc theo project chứa file đích, không theo cwd: cwd bật cờ không được mở .env của repo khác.
   // Grep trỏ vào một thư mục: thư mục đó là nơi tìm, không phải thư mục cha của nó.
   // statSync lên đường UNC mở kết nối SMB ngay trong hook, trước hộp xác nhận; phiên không bypass thì mode luôn guarded nên không cần phân biệt thư mục.
-  const mode = eff(input.tool_name === 'Grep' && bypass && !abs.startsWith('//') && isDirectory(target) ? target : path.dirname(target));
+  const mode = eff(input.tool_name === 'Grep' && bypass && !isUnc(abs) && isDirectory(target) ? target : path.dirname(target));
   ctx.mode = mode;
-  if (mode === 'guarded' && isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnv(path.dirname(target)))) return SECRET_DENY;
+  if (mode === 'guarded' && isSecretPath(abs, target) && (isSecretPath(abs, target, KEY_SECRET) || !allowEnvAt(path.dirname(target)))) return SECRET_DENY;
   const write = WRITE_TOOLS.has(input.tool_name);
   if (mode === 'open') {
     const cfgFile = configTarget(input, { });
@@ -205,7 +210,7 @@ function decideInner(input, { scopes, repoRoot, rootOf = gitRoot, ignoreCase = p
   const table = scopes || loadScopes();
   const scope = agent && Object.hasOwn(table, agent) ? table[agent] : null;
   if (!Array.isArray(scope) || !scope.length) return null;
-  const root = path.resolve(repoRoot || rootOf(path.dirname(target), cwd));
+  const root = path.resolve(repoRoot || (isUnc(abs) ? cwd : rootOf(path.dirname(target), cwd)));
   const rel = path.relative(root, target).replace(/\\/g, '/');
   const outside = rel === '..' || rel.startsWith('../') || path.isAbsolute(rel);
   if (!outside && scope.some((g) => globToRegExp(g, { ignoreCase }).test(rel))) return null;
