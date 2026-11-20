@@ -1,6 +1,6 @@
 # Thiết kế: chuẩn hoá ba chế độ quyền `guarded`/`confined`/`open`
 - Ngày: 2026-11-19
-- Trạng thái: in-progress — nhánh feature/permission-modes-standard
+- Trạng thái: merged b8e40fb1
 - Requirement: không có
 
 ## Vấn đề và lý do
