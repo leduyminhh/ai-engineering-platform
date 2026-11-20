@@ -1,6 +1,6 @@
 # Thiết kế: cổng quét bảo mật go-live (mở rộng `engineering-quality-gate`, `ops-deploy-release`, `workflow-security-review`)
 - Ngày: 2026-11-19
-- Trạng thái: approved (2026-11-19); brief đã duyệt ở `brief.md` cùng thư mục
+- Trạng thái: merged e3151217; brief đã duyệt ở `brief.md` cùng thư mục
 - Requirement: không có (AC nằm trong file này, như `docs/requests/2026-11-13-codebase-onboarding-skill/design.md`)
 
 ## Vấn đề và lý do
