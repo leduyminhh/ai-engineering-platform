@@ -1,0 +1,107 @@
+# Coverity: đọc report JSON đã xuất
+
+Coverity chỉ đọc report đã xuất. Người dùng chạy Coverity trên máy có license và xuất JSON; agent chỉ đọc file. Agent không chạy Coverity và không gọi Coverity Connect.
+
+Coverity là nguồn bắt buộc của Critical/High và RCE. Không có report thì hai chỉ tiêu này `chưa đo` khi không có finding nào.
+
+## Cách lấy report
+
+[Unverified] Lệnh xuất theo tài liệu Coverity, kiểm theo phiên bản của tổ chức:
+
+```bash
+cov-format-errors --json-output-v7 <file-kết-quả>.json
+```
+
+Người dùng chạy và đưa file cho agent. Không có file thì nêu rõ `chưa đo`, không đoán số.
+
+## Cờ script
+
+| Cờ | Tên nguồn trong `missing` và `--na` | Ghi chú |
+|---|---|---|
+| `--coverity <file>` | `coverity` | Một lần mỗi lần chạy script. |
+| `--sarif <file>` | không có (không nằm trong `missing` hay `--na`) | Lặp được, không bắt buộc. Xem mục SARIF. |
+
+## Trường đọc
+
+Report phải có `issues` là mảng. Không có thì exit 2.
+
+| Trường | Bắt buộc | Dùng để | Ghi chú |
+|---|---|---|---|
+| `issues[].mainEventFilePathname` | có, chuỗi | phần file của khoá | [Unverified] |
+| `issues[].mainEventLineNumber` | có, số | phần dòng của khoá | [Unverified] |
+| `issues[].checkerProperties.impact` | có | mức độ, xem bảng dưới; giá trị khác thì exit 2 | [Unverified] tên trường và tập giá trị |
+| `issues[].checkerProperties.cweCategory` | không | CWE, số hoặc `CWE-n`; sai dạng thì exit 2 | [Unverified] |
+| `issues[].checkerName`, `checkerProperties.categoryDescription` | không | nhãn để xét RCE | [Unverified] |
+| `issues[].stateOnServer.triage.classification` | không | `False Positive` hoặc `Intentional` gắn nhãn `suppress` | [Unverified] |
+
+- Script chỉ đọc các trường trong bảng. Đoạn mã và mô tả sự kiện không được chép vào báo cáo.
+- Coverity và SARIF không lọc theo loại security: mọi defect Coverity có `impact` High và mọi kết quả SARIF có mức chuẩn hoá Critical hoặc High (gồm `level` error khi không có `security-severity`) vào Critical/High, khác Sonar chỉ đếm `VULNERABILITY`. Defect chất lượng cũng được đếm; defect không phải bảo mật chỉ được loại bằng `--fp` kèm `reason`. [Unverified] JSON Coverity có trường phân loại security hay không; script không đọc trường nào như vậy.
+
+## Ánh xạ severity
+
+| Coverity `impact` | Mức chuẩn hoá |
+|---|---|
+| HIGH | High |
+| MEDIUM | Medium |
+| LOW | Low |
+
+Coverity không có mức Critical hay Info trong bảng. Giá trị khác thì exit 2, không đoán. Script không phân biệt hoa thường và bỏ khoảng trắng đầu cuối.
+
+## Khoá finding
+
+- `file:line` khi không có CWE; `file:line+CWE-n` khi có một CWE; `file:line+CWE-a+CWE-b` khi có nhiều CWE, các CWE sắp xếp tăng dần.
+- Coverity và SARIF gộp thành một finding chỉ khi cùng `file:line` và cùng CWE. Một bên có CWE, bên kia không có thì hai finding (script đối chiếu đúng như vậy).
+- Đường dẫn dùng nguyên văn: `mainEventFilePathname` của Coverity và `artifactLocation.uri` của SARIF. [Unverified: cách Coverity và SARIF xuất đường dẫn] Hai nguồn phải xuất cùng gốc (tương đối từ gốc repo). Khác gốc thì không gộp và đếm đôi. Ghi thành residual risk khi gặp.
+
+## Report SARIF (`--sarif <file>`)
+
+- Nguồn cộng thêm cho Critical/High và RCE, không bắt buộc. Cờ lặp được: mỗi file một cờ `--sarif`. Tên nguồn trong `sources` là `sarif`. `--na sarif` không hợp lệ (exit 2).
+- Trường đọc [Unverified] theo chuẩn SARIF: `runs[].results[].ruleId`, `level`, `message.text`, `locations[0].physicalLocation.artifactLocation.uri` (bắt buộc, chuỗi), `region.startLine` (bắt buộc, số), `properties.security-severity`, `suppressions[]`. Rule lấy từ `runs[].tool.driver.rules[]` theo `id`: `shortDescription.text`, `name`, `properties.tags`, `properties.security-severity`, `defaultConfiguration.level`.
+- Mức độ: `security-severity` của result, không có thì của rule. Không có cả hai thì dùng `level` của result, không có thì `defaultConfiguration.level` của rule.
+
+| `security-severity` | Mức chuẩn hoá |
+|---|---|
+| ≥ 9 | Critical |
+| ≥ 7 | High |
+| ≥ 4 | Medium |
+| > 0 | Low |
+| 0 | Info |
+
+| `level` (khi không có `security-severity`) | Mức chuẩn hoá |
+|---|---|
+| error | High |
+| warning | Medium |
+| note | Low |
+| none | Info |
+
+- Thiếu cả hai thì exit 2. `security-severity` không phải số hoặc ngoài 0–10 thì exit 2. Không phân biệt hoa thường với `level`.
+- CWE lấy từ `tags` của rule và của result. Script quét mỗi tag bằng regex `cwe[-_/ ]?0*(\d+)`, không phân biệt hoa thường: `cwe-78`, `cwe_78`, `cwe/78`, `cwe 78`, `cwe78` và số có số 0 đầu đều thành CWE; đoạn đó nằm ở vị trí nào trong tag cũng được [Unverified: tag của tool].
+- RCE: CWE thuộc danh sách, hoặc nhãn ghép từ `shortDescription.text`, `name` của rule và `message.text` chứa "remote code execution".
+- `suppressions[]` có phần tử thì gắn nhãn `suppress`. Mảng rỗng thì không có nhãn.
+- Khoá: `file:line` (+CWE) như Coverity, gộp với Coverity theo quy tắc trên.
+
+## Mask
+
+- Báo cáo chỉ nêu file, dòng, CWE và tên checker.
+- Không dán nội dung report gốc vào chat hay báo cáo.
+
+## File ignore và suppress cần liệt kê
+
+- Triage trên Coverity Connect chỉ có trong file JSON nếu report xuất kèm trạng thái đó. Triage không có trong file thì script không gắn nhãn. Ghi số finding đã triage trên server, nếu người dùng biết, vào dòng "suppress ngoài report".
+- Comment suppress trong mã nguồn [Unverified]: đếm bằng `grep -rn "coverity\[" <đường-dẫn-repo>` và ghi số lượng vào báo cáo.
+
+## Điền --na và --fp
+
+- `--na coverity=<bằng chứng>` chỉ khi repo không có mã nguồn mà Coverity phân tích. Bằng chứng ghi rõ các ngôn ngữ đã kiểm.
+- `--fp` và `--accepted` là JSON mảng; `reason` bắt buộc:
+
+```json
+[{ "source": "coverity", "key": "<file>:<line>+CWE-<n>", "reason": "<lý do>" }]
+```
+
+Finding gộp với SARIF có thể khớp theo `source` là `coverity` hoặc `sarif`.
+
+## Ranh giới
+
+- Không chạy Coverity, không gọi server Coverity, không ghi lên SIT/UAT, không cài tool vào project.
+- Report Coverity và SARIF ghi ra thư mục ngoài repo và không commit.

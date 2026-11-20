@@ -14,7 +14,93 @@ triệt để" — findings phản ánh **thời điểm quét** với dữ li�
 - Chế độ: <chạy scanner | đọc report | fix-từ-report> — Sonar: <...> · SCA: <Black Duck | Trivy | đọc BOM>
 - Quality gate (Sonar): <OK | ERROR> — điều kiện không đạt: <coverage/duplication/new issues nếu có>
 - Tổng findings: <n> (chất lượng <a> · dependency <b> · bảo mật review <c>) — Đã sửa <x> · Hoãn <y>
-- Build gate bảo mật: <PASS | FAIL | ERROR> — điều kiện: CRITICAL>0 hoặc HIGH>0 (hoặc theo --fail-on)
+- Build gate bảo mật: <PASS | FAIL | ERROR> — điều kiện: CRITICAL>0 hoặc HIGH>0.
+  [Unverified] Đây là gate build cũ; repo chưa có mã thực thi cho nó (cờ `--fail-on` không có trong `go-live-gate.mjs`). Ngưỡng go-live ở mục bên dưới chỉ báo, không chặn.
+- Ngưỡng go-live (`overall`): <không đạt | đạt | chưa đo> — chi tiết ở mục Ngưỡng go-live
+
+## Ngưỡng go-live
+Nguồn: stdout JSON của `go-live-gate.mjs` (khoá `thresholds`, `overall`, `findings`, `falsePositives`, `warnings`).
+Script chỉ báo, không chặn. Exit 0 nghĩa là đọc được input, KHÔNG nghĩa là đạt; kết luận nằm ở `overall` và `status`.
+Lấy trạng thái và số đếm từ stdout của script, không đếm tay thay thế.
+
+| Chỉ tiêu | Khoá JSON | Trạng thái | Số đếm (`count`) | Nguồn thiếu (`missing`) | Nguồn `--na` (bằng chứng) | Nhãn: chấp nhận rủi ro / suppress / FP đã loại |
+|---|---|---|---|---|---|---|
+| 0 secret | `secret` | <trạng thái> | <n> | <danh sách hoặc —> | <nguồn: bằng chứng hoặc —> | <a> / <b> / <c> |
+| 0 Critical/High | `critHigh` | <trạng thái> | <n> | <...> | <...> | <a> / <b> / <c> |
+| 0 RCE | `rce` | <trạng thái> | <n> | <...> | <...> | <a> / <b> / <c> |
+| 0 KEV | `kev` | <trạng thái> | <n> | <...> | <...> | <a> / <b> / <c> |
+
+Trạng thái tổng thể (`overall`): <không đạt | đạt | chưa đo>.
+
+Đợt nhiều image (bỏ phần này khi đợt chỉ có một image): mỗi image một lần chạy script với report Trivy của image đó. Bảng trên là trạng thái chung, lấy mức xấu nhất theo từng chỉ tiêu; bảng dưới là trạng thái từng image.
+
+| Image | Report Trivy | `secret` | `critHigh` | `rce` | `kev` |
+|---|---|---|---|---|---|
+| <image> | <có / thiếu> | <trạng thái> | <trạng thái> | <trạng thái> | <trạng thái> |
+
+Bốn trạng thái của một chỉ tiêu (theo hàm `statusOf` trong `go-live-gate.mjs`):
+
+| Trạng thái | Điều kiện |
+|---|---|
+| `không đạt` | có ít nhất một finding được đếm, kể cả khi còn nguồn thiếu |
+| `chưa đo` | không có finding được đếm, và còn nguồn bắt buộc chưa có report hoặc `--na` |
+| `không áp dụng` | mọi nguồn bắt buộc của chỉ tiêu đều có `--na` kèm bằng chứng |
+| `đạt` | không có finding được đếm và mọi nguồn bắt buộc có report hoặc `--na` |
+
+Trạng thái tổng thể: `không đạt` khi có chỉ tiêu `không đạt`; `đạt` khi cả bốn chỉ tiêu đều `đạt`; còn lại
+`chưa đo`. `không áp dụng` không được tính là `đạt`, nên tổng thể không thành `đạt` khi có chỉ tiêu `không áp dụng`.
+
+Số đếm:
+- `count` không gồm finding có nhãn `FP đã loại`. Finding có nhãn `chấp nhận rủi ro` hoặc `suppress` vẫn được đếm.
+- Các `count` không cộng lại được: một finding có thể nằm trong critHigh, rce và kev cùng lúc.
+- Secret không vào critHigh. Mức độ `Secret` là nhãn của finding secret, không ghi là Critical.
+
+### Findings của ngưỡng go-live
+
+| ID | Mức độ | Khoá | Nguồn (`sources`) | Vị trí | CWE / CVE | Chỉ tiêu | Nhãn |
+|---|---|---|---|---|---|---|---|
+| F001 | <Critical…Info, hoặc Secret> | `<khoá>` | <nguồn, ...> | `<file:line hoặc component@version>` | <CWE-n / CVE-n> | <xem quy tắc dưới> | <nhãn> |
+
+- Chỉ tiêu suy ra từ output: `Secret` là secret; Critical hoặc High (không phải secret) là critHigh; `rce: true` là rce;
+  `kev: true` là kev. Một finding có thể thuộc nhiều chỉ tiêu.
+- Secret: chỉ nêu tên luật (`RuleID`), `File:StartLine` hoặc layer. Không ghi giá trị.
+
+### Finding đã loại (FP đã loại)
+
+| ID | Khoá | Nguồn | Lý do (`reason`) |
+|---|---|---|---|
+| F00x | `<khoá>` | <nguồn> | <lý do> |
+
+Liệt kê toàn bộ mục trong `falsePositives`. Không có mục nào thì ghi "không có".
+
+### Chấp nhận rủi ro
+
+| ID | Khoá | Lý do (`reason`) |
+|---|---|---|
+| F00x | `<khoá>` | <lý do> |
+
+Các finding này vẫn nằm trong số đếm và trạng thái chỉ tiêu.
+
+### Cảnh báo (`warnings`)
+- <mỗi dòng trong `warnings`, hoặc "không có">
+
+### Dòng suppress ngoài report
+
+Script không thấy finding đã bị file ignore ẩn khỏi report. Liệt kê từng file có trong repo kèm số mục:
+
+| File ignore hoặc cấu hình | Có trong repo | Số mục | Nguồn bị ảnh hưởng |
+|---|---|---|---|
+| `.gitleaksignore` | có / không | <n> | gitleaks |
+| `.trivyignore` | có / không | <n> | trivy |
+| File VEX `<đường-dẫn>` | có / không | <n> statement | trivy |
+| Cấu hình ignore hoặc `NOSONAR` của SonarQube [Unverified] | có / không | <n> | sonar |
+| Cấu hình exclude URL hoặc rule bị tắt của ZAP | có / không | <n> | zap |
+| Plugin rule hoặc accepted risk của Nessus | có / không | <n> | nessus |
+| Comment `coverity[...]` trong mã nguồn; triage trên Coverity Connect không có trong file | có / không | <n> | coverity |
+
+- [Unverified] Tên file và cách đếm mục theo reference của từng nguồn; chưa kiểm với file thật của tổ chức.
+- Residual risk: các finding bị ẩn bởi mục trên không có trong report nên không được đếm trong `thresholds`.
+- [Inference] Số mục là số dòng hoặc statement trong file, không nhất thiết bằng số finding bị ẩn.
 
 ## Findings theo mức độ
 | Nguồn | Loại | Severity | Vị trí | OWASP | ASVS | CWE | Trạng thái |
@@ -42,8 +128,29 @@ triệt để" — findings phản ánh **thời điểm quét** với dữ li�
 - lint: <lệnh + kết quả>
 - rescan (nếu có): <kết quả>
 
+## ASVS L2
+Nguồn: checklist của tổ chức (csv hoặc md). Chi tiết: [asvs-l2.md](asvs-l2.md).
+Không có checklist thì ghi `ASVS L2: chưa đo`. Agent không soạn yêu cầu ASVS và không sinh biên bản.
+
+| Mã mục | Yêu cầu (nguyên văn từ checklist) | Trạng thái (`đạt` / `không đạt` / `chưa kiểm`) | Evidence (`file:line`) | Ghi chú |
+|---|---|---|---|---|
+| `<mã>` | `<yêu cầu>` | `<trạng thái>` | `<file:line>` | `<lý do nếu chưa kiểm>` |
+
+Tổng: đạt <a> · không đạt <b> · chưa kiểm <c>.
+
+## Pentest và retest
+Nguồn: report pentest của đơn vị ATTT (PDF hoặc md). Report này không đi qua script go-live.
+Chi tiết: [pentest.md](pentest.md). Finding được sửa sau khi người dùng xác nhận: [triage-and-fix.md](triage-and-fix.md).
+
+| ID | Mức độ (chuẩn hoá, mức gốc trong ngoặc) | Mô tả | Vị trí | Xác nhận (giữ / bỏ kèm lý do / hoãn) | Retest |
+|---|---|---|---|---|---|
+| P01 | <Critical…Info> (<mức gốc>) | <mô tả ngắn> | <URL hoặc file:line> | <quyết định> | <kết quả retest> |
+
+Retest theo dõi tới 100% finding Critical, High và Medium. Đây là chỉ tiêu theo dõi, không thuộc bốn chỉ tiêu ngưỡng
+và không có cổng tự động.
+
 ## Cần người quyết
-- <danh sách item Propose/Defer chờ người: hotspot, bảo mật rủi ro cao, breaking-change, bump major, license>
+- <danh sách item Propose/Defer chờ người: hotspot, bảo mật rủi ro cao, breaking-change, bump major, license, finding pentest chưa xác nhận>
 - Con người DUYỆT DIFF trước merge/push (protected branch: mỗi commit).
 ```
 
@@ -59,3 +166,20 @@ triệt để" — findings phản ánh **thời điểm quét** với dữ li�
   bảo mật cần ngữ cảnh), và phạm vi/độ tin cậy của lần quét/review.
 - Nếu bỏ qua kiểm tra nào (không chạy được test/rescan, thiếu token nên bỏ enrichment scanner) → **nói rõ** ở
   "Bước verify đã chạy" (fail-loud), KHÔNG coi phần bỏ qua là đã "sạch".
+- Không có finding đếm được và còn nguồn bắt buộc chưa có report hoặc `--na`: ghi `chưa đo`, không ghi `đạt`. Số đếm lấy từ `count` của script.
+- `--na` chỉ truyền sau khi người dùng xác nhận bề mặt không tồn tại. Report liệt kê mọi `--na` kèm bằng chứng ở ĐẦU mục Ngưỡng go-live.
+  - Nguồn hợp lệ: `gitleaks-tree`, `gitleaks-history`, `trivy`, `coverity`, `zap`, `nessus`, `blackduck`, `sonar`. `--na kev` bị từ chối (exit 2) vì file KEV là danh mục để so, không phải bề mặt hệ thống.
+  - Mỗi `--na` hợp lệ làm `warnings` có đúng một dòng "N/A tự khai, cần người dùng xác nhận bề mặt không tồn tại". Dòng này chỉ nêu tên nguồn; bằng chứng lấy từ `thresholds.<khoá>.na`.
+- File KEV phải là bản mới tải và có `dateReleased`. File có `vulnerabilities` rỗng, `dateReleased` thiếu hoặc không đọc được, hoặc cũ hơn 7 ngày so với ngày chạy: script ghi warning và coi nguồn `kev` như chưa có, nên KEV là `chưa đo` khi không có finding KEV đếm được. Finding khớp KEV vẫn `không đạt`. `dateReleased` ở tương lai không bị coi là cũ. Report chép warning KEV vào mục Cảnh báo.
+- Có `--trivy` thì `warnings` luôn có một dòng: script không xác minh được report đã quét với `--scanners secret`. Report chép dòng đó vào mục Cảnh báo và ghi lệnh quét thực tế người dùng xác nhận.
+- Đợt nhiều image: `--trivy` chỉ nhận một file mỗi lần chạy, nên chạy script cho từng image.
+  - Mỗi image có một dòng trong bảng theo image; image thiếu report Trivy ghi `chưa đo` ở cả bốn chỉ tiêu (cả bốn cần nguồn `trivy`).
+  - Trạng thái chung của mỗi chỉ tiêu lấy mức xấu nhất theo thứ tự `không đạt` > `chưa đo` > `không áp dụng` > `đạt`. Trạng thái tổng thể (`overall`) tính từ bốn trạng thái chung đó.
+  - Script không tự gộp nhiều image: người lập report gộp tay. `count` giữ theo từng lần chạy, không cộng giữa các image; finding của nguồn không phải Trivy lặp lại ở mọi lần chạy nếu cùng truyền cờ.
+  - Mục digest của `ops-deploy-release` đối chiếu từng image với report Trivy của chính image đó.
+- Residual risk cố định, ghi vào mục Residual risk:
+  - Id Black Duck dạng BDSA không tự khớp KEV: script chỉ lấy CVE khi id bắt đầu bằng `CVE-`.
+  - `--fp` khai cho một nguồn của finding đã gộp nhiều nguồn loại cả finding khỏi số đếm.
+- `không áp dụng` chỉ ghi khi có bằng chứng bề mặt không tồn tại (`--na`); không dùng để né nguồn chưa đo.
+- Không ghi giá trị secret, payload, request, response hay Plugin Output vào report. Report ZAP và Nessus chứa
+  URL và tên host nội bộ: ghi ngoài repo và không commit.

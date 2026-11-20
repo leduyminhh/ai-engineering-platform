@@ -1,6 +1,6 @@
 ---
 name: ops-deploy-release
-description: "Hướng dẫn deploy/release service an toàn: chốt scope, checklist tiền deploy, chọn rolling/blue-green/canary, verify hậu deploy; không tự chạy lệnh lên môi trường, chỉ đề xuất và chờ người xác nhận. Dùng khi người dùng muốn \"deploy\", \"release checklist\", \"canary\", \"blue-green\", \"rollback\". Không dùng khi cần tạo version, tag, merge release theo Gitflow → git-release; chỉ viết release notes → engineering-release-notes."
+description: "Hướng dẫn deploy/release service an toàn: chốt scope, checklist tiền deploy, đối chiếu digest image trên SIT/UAT, chọn rolling/blue-green/canary, verify hậu deploy; chỉ đề xuất lệnh, chờ xác nhận. Dùng khi người dùng muốn \"deploy\", \"release checklist\", \"kiểm digest image\", \"canary\", \"rollback\". Không dùng khi cần tạo version, tag, merge release theo Gitflow → git-release; chỉ viết release notes → engineering-release-notes."
 order: 1
 title: "Deploy / Release an toàn — checklist tiền/hậu deploy, chiến lược triển khai, health-check + rollback"
 runsIn: execute
@@ -31,6 +31,13 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
   biến**; **mask** mọi giá trị secret trong log/report.
 - **Scope-bound.** Chỉ triển khai đúng **version/artifact/service + môi trường** người dùng nêu; KHÔNG đụng
   service anh em hay môi trường khác. Không sửa cấu hình CI/hạ tầng ngoài phạm vi.
+- **Đọc SIT/UAT chỉ khi được xác nhận.** Lệnh đọc digest (`docker inspect`, `docker image inspect`,
+  `docker compose images`) chạy trên SIT/UAT chỉ sau khi người dùng xác nhận máy và phạm vi, hoặc khi người dùng
+  dán output. Chỉ dùng cú pháp nêu trong [references/digest-check.md](references/digest-check.md).
+- **Allowlist lệnh Docker trên SIT/UAT:** chỉ ba lệnh đọc nêu trong [references/digest-check.md](references/digest-check.md).
+  Mọi lệnh Docker khác bị cấm, kể cả `docker pull`, `run`, `exec`, `cp`, `stop`, `kill`, `restart`, `rm`, `rmi`,
+  `docker compose up`/`pull`/`down`/`stop`/`restart`. Không đọc giá trị biến môi trường chứa secret; chỉ nêu tên biến.
+  [Inference] `docker inspect` không kèm `--format` có thể in cả biến môi trường của container.
 - Ngôn ngữ **đo được** (ngưỡng health/metric, tiêu chí tiến/lùi kiểm được); LUÔN nêu **residual risk**.
   KHÔNG tuyên bố "đảm bảo / loại bỏ / chặn triệt để" — kế hoạch phản ánh dữ liệu tại thời điểm làm, môi
   trường thật có thể khác; nêu `[giả định]` khi suy luận thiếu dữ liệu.
@@ -49,6 +56,9 @@ Skill này KHÔNG thuộc chuỗi pipeline bắt buộc của plugin nào; gọi
    Chạy [references/release-checklist.md](references/release-checklist.md): build/test/lint xanh, **migration**
    sẵn sàng và đảo được, **backup + điểm rollback** đã có, **thông báo** bên liên quan, **feature flag** cho
    phần rủi ro. Mỗi mục là tiêu chí **đo được** (đạt / chưa đạt), không đánh dấu "xong" khi chưa kiểm.
+   Đối chiếu **digest image** đang chạy trên SIT/UAT với image đã quét theo
+   [references/digest-check.md](references/digest-check.md). Đây là mục chặn: digest `không đạt` hoặc `chưa đo`
+   thì đề xuất NO-GO, như mục chặn chưa đạt ở bước 1.
    Kết thúc bằng **đề xuất GO/NO-GO** cho người duyệt: bảng mục đạt/chưa đạt + **rollback plan** (lệnh hoặc thao tác,
    điểm khôi phục, ngưỡng kích hoạt, người thực thi). Thiếu rollback plan hoặc còn mục chặn chưa đạt → đề xuất NO-GO.
    Người duyệt quyết định GO; agent không tự chuyển sang bước 3.
@@ -103,3 +113,5 @@ Nạp đúng file khi cần, đừng nạp tất cả:
   khi nào dùng, tài nguyên cần, **tiêu chí tiến/lùi**, và cách **rollback** cho từng chiến lược.
 - [references/deploy-safety.md](references/deploy-safety.md): **ranh giới an toàn** — không tự deploy/rollback
   prod, không secret, không lệnh phá huỷ, scope-bound, con người duyệt; mẫu trình bày kế hoạch chờ xác nhận.
+- [references/digest-check.md](references/digest-check.md): **đối chiếu digest** image đang chạy trên SIT/UAT với
+  image đã quét — lệnh chỉ đọc, quy tắc `đạt` / `không đạt` / `chưa đo`, so theo image ID khi thiếu RepoDigest.

@@ -69,3 +69,73 @@ Theo thứ tự ưu tiên: **Critical/High có bản vá** trước.
 Sau khi có findings Black Duck, gộp cùng Sonar ([sonarqube.md](sonarqube.md)) rồi theo vòng chung ở
 [triage-and-fix.md](triage-and-fix.md). Findings phản ánh **thời điểm quét** và dữ liệu BOM sẵn có — có thể
 sót; nêu **residual risk** trong report, không tuyên bố tuyệt đối.
+
+## Đọc cho ngưỡng go-live
+
+Cờ `--blackduck <file.json>` đọc CycloneDX JSON đã xuất, mỗi lần chạy một file. Script chỉ đọc file: không gọi
+server Black Duck, không đọc `BLACKDUCK_URL` hay `BLACKDUCK_API_TOKEN`. Black Duck là nguồn bắt buộc của
+Critical/High, RCE và KEV (`scripts/go-live-gate.mjs`, `SCAN_SOURCES` và `REQUIRED`).
+
+[Unverified] JSON gốc của Black Duck (chưa qua CycloneDX) chưa kiểm cấu trúc; nếu không có `vulnerabilities` thì
+script exit 2. Cách xuất CycloneDX theo phiên bản Black Duck của tổ chức chưa kiểm; người dùng xuất và đưa file.
+
+### Trường đọc
+
+| Trường | Bắt buộc | Script dùng để |
+|---|---|---|
+| `vulnerabilities[]` | có, mảng | Thiếu mảng → exit 2. License không được đọc |
+| `vulnerabilities[].id` | có, chuỗi | Phần đầu của khoá; bắt đầu bằng `CVE-` thì là CVE |
+| `vulnerabilities[].ratings[]` | có, mảng không rỗng | Mức cao nhất trong các `severity` được lấy |
+| `vulnerabilities[].ratings[].severity` | có | Mức theo bảng dưới |
+| `vulnerabilities[].affects[]` | có, mảng không rỗng | Mỗi phần tử thành một finding |
+| `vulnerabilities[].affects[].ref` | có, chuỗi | Tài sản: `component@version`, là phần sau của khoá |
+| `vulnerabilities[].cwes[]` | không | Mảng số nguyên; sai kiểu → exit 2 |
+| `vulnerabilities[].description` | không | Chỉ để xét nhãn "remote code execution" |
+
+[Unverified] Tên trường `cwes` và `description` theo đặc tả CycloneDX; chưa kiểm với report Black Duck thật.
+
+### Mức độ
+
+| `ratings[].severity` | Mức chuẩn hoá |
+|---|---|
+| critical | Critical |
+| high | High |
+| medium | Medium |
+| low | Low |
+| none, unknown, info | Info |
+
+Script không phân biệt hoa thường. Giá trị khác bảng → exit 2.
+
+### Khoá và đếm
+
+- Khoá finding là `id@ref`, ví dụ `CVE-YYYY-NNNN@<tên-component>@<phiên-bản>`.
+- Một vulnerability có nhiều `affects[]` cho nhiều finding, mỗi `ref` một finding.
+- CVE cùng id ở image (Trivy, khoá `CVE@image`) và ở component (BlackDuck, khoá `CVE@component@version`) được
+  đếm hai lần, vì là hai tài sản khác nhau. Điều này làm số Critical/High cao hơn số CVE duy nhất; ghi cạnh số đếm
+  trong report.
+- `affects` thiếu hoặc rỗng → exit 2, không bỏ qua âm thầm.
+
+### Ví dụ đầu vào
+
+```json
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "vulnerabilities": [
+    {
+      "id": "CVE-YYYY-NNNN",
+      "description": "<mô tả>",
+      "cwes": [502],
+      "ratings": [{ "severity": "critical" }, { "severity": "low" }],
+      "affects": [{ "ref": "<tên-component>@<phiên-bản>" }]
+    }
+  ]
+}
+```
+
+### --na
+
+`--na blackduck=<bằng chứng>` chỉ khi bằng chứng cho thấy phạm vi không có BOM hoặc không có dependency quản lý
+bằng manifest. Bằng chứng ghi cụ thể (manifest đã kiểm, lệnh đã chạy).
+
+Không dùng `--na blackduck=...` khi đã có `--blackduck`: script trả exit 2 (`--na` cho nguồn đã có cờ riêng).

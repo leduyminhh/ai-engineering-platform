@@ -1,6 +1,6 @@
 ---
 name: engineering-quality-gate
-description: "Chạy quality gate (SonarQube, Black Duck SCA) và security review source-first theo OWASP/ASVS/CWE; mask secret, người duyệt diff khi tự sửa, report có residual risk. Dùng khi người dùng muốn \"quét sonar\", \"kiểm tra lỗ hổng dependency\", \"security review\", \"quality gate\", \"fix từ report\". Không dùng khi cần quy trình bảo mật đầy đủ → workflow-security-review; review correctness/thiết kế → backend-code-review; review frontend → frontend-code-review."
+description: "Chạy quality gate (SonarQube, Black Duck) và security review source-first theo OWASP/ASVS/CWE; đếm ngưỡng go-live từ report Gitleaks, Trivy, Coverity, ZAP, Nessus. Dùng khi người dùng muốn \"quét sonar\", \"kiểm tra lỗ hổng dependency\", \"security review\", \"ngưỡng go-live\", \"quét Gitleaks\". Không dùng khi cần quy trình bảo mật đầy đủ → workflow-security-review; review correctness/thiết kế → backend-code-review; review frontend → frontend-code-review."
 order: 1
 title: "Quality Gate — SonarQube + Black Duck + review bảo mật source-first, triage, fix, report"
 runsIn: execute
@@ -40,6 +40,15 @@ Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải ch�
   scope của report). KHÔNG lan sang module anh em, thư mục cha, hay cả repo; dependency ngoài scope → cảnh
   báo, không phân tích.
 - Không chạy lệnh phá huỷ; không đổi cấu hình server, quality gate profile, rule pack, hay CI pipeline.
+- **Go-live:** không chạy ZAP active scan, không quét Nessus, không gọi server SonarQube hay Black Duck (chỉ đọc file
+  đã xuất). Không chạy lệnh ghi lên SIT/UAT. Không cài tool vào project: tool thiếu thì nguồn đó `chưa đo`, đề nghị
+  người dùng cài hoặc đưa report đã xuất.
+- **Không đọc và không in giá trị secret.** Gitleaks chạy với `--redact`; script không đọc `Secret`, `Match`, `Code`.
+  Báo cáo chỉ nêu tên luật, `file:line` hoặc layer.
+- **Thiếu report của nguồn bắt buộc → `chưa đo`, không ghi `đạt`** (đã có finding thì `không đạt`); xem `statusOf` trong
+  `scripts/go-live-gate.mjs`. `không áp dụng` chỉ khi mọi nguồn bắt buộc của chỉ tiêu có `--na` kèm bằng chứng.
+- **ASVS L2:** thiếu checklist thì ASVS `chưa đo`. Agent không soạn yêu cầu ASVS và không suy ra yêu cầu từ tên mục.
+- **Pentest:** agent không tự pentest và không gửi payload; chỉ đọc report đã có.
 - **Áp fix** chỉ cho lỗi/vuln **rõ ràng** theo `code-convention`; giữ nguyên hành vi nghiệp vụ. Breaking-change
   thiếu test và các thay đổi bảo mật rủi ro cao (viết lại auth/authorization, vòng đời JWT/session, bump major
   dependency, đổi hành vi API công khai) → **đánh dấu để người quyết**, KHÔNG auto-fix.
@@ -62,6 +71,39 @@ Kiểm quy ước đặt tên và cấu trúc thư mục/file (không phải ch�
    - *Tool gate:* chạy `sonar-scanner` + Black Duck `detect` (hoặc `trivy fs`) nếu có cấu hình + token; hoặc
      đọc report đã xuất. Chi tiết: [references/sonarqube.md](references/sonarqube.md) +
      [references/blackduck.md](references/blackduck.md).
+   - *Đếm ngưỡng go-live (khi đợt có report các nguồn go-live):* chạy script đếm bốn chỉ tiêu (0 secret, 0 Critical/High,
+     0 RCE, 0 KEV) từ file đã có. Script không gọi mạng và không cài tool:
+     ```bash
+     node <thư mục skill>/scripts/go-live-gate.mjs --gitleaks-tree <file> --gitleaks-history <file> --trivy <file> --coverity <file> --zap <file> --nessus <file.csv> --blackduck <file.json> --sonar <file.json> --sarif <file> --kev <file.json> --fp <file.json> --accepted <file.json> --na <nguồn>=<bằng chứng>
+     ```
+     - Truyền cờ của nguồn có report; cần ít nhất một cờ nguồn, không thì exit 2. `--sarif` lặp được, `--na` lặp được
+       cho các nguồn khác nhau; các cờ còn lại chỉ dùng một lần.
+     - Exit 0 nghĩa là đọc được input, KHÔNG nghĩa là đạt. Exit 2 là lỗi đầu vào: không có kết luận; báo tên cờ và
+       tên file rồi dừng. Kết luận nằm ở `overall` và `status` trong stdout JSON.
+     - `--na <nguồn>=<bằng chứng>` chỉ khi bề mặt đó không tồn tại và người dùng đã xác nhận; bằng chứng không được để trống.
+       Tên nguồn hợp lệ: `gitleaks-tree`, `gitleaks-history`, `trivy`, `coverity`, `zap`, `nessus`, `blackduck`, `sonar`.
+       `kev` và `sarif` không dùng được với `--na` (exit 2): file KEV là danh mục để so, không phải bề mặt hệ thống. Nguồn đã có cờ riêng cũng không khai `--na` được (exit 2).
+       Mỗi `--na` hợp lệ làm `warnings` có đúng một dòng "N/A tự khai, cần người dùng xác nhận bề mặt không tồn tại"; dòng này chỉ nêu tên nguồn, bằng chứng nằm ở `thresholds.<khoá>.na`.
+     - `--fp` và `--accepted` là JSON mảng `{source, key, reason}`; quy tắc nhãn ở [references/triage-and-fix.md](references/triage-and-fix.md).
+     - File `--kev` có `vulnerabilities` rỗng, `dateReleased` thiếu hoặc không đọc được, hoặc cũ hơn 7 ngày so với ngày chạy: script ghi warning và coi nguồn `kev` như chưa có. Chỉ tiêu KEV là `chưa đo` khi không có finding KEV đếm được; finding khớp KEV vẫn `không đạt`. `dateReleased` ở tương lai không bị coi là cũ.
+     - Có `--trivy` thì `warnings` luôn có một dòng: script không xác minh được report đã quét với `--scanners secret`. Giữ dòng đó trong report và kiểm lệnh quét thực tế với người dùng.
+     - Đợt có nhiều image: `--trivy` chỉ nhận một file mỗi lần chạy (lặp cờ thì exit 2). Chạy script cho từng image với report Trivy của image đó; trạng thái chung của mỗi chỉ tiêu lấy mức xấu nhất theo thứ tự `không đạt` > `chưa đo` > `không áp dụng` > `đạt`; image thiếu report Trivy là `chưa đo`. Script không tự gộp nhiều image: người lập report gộp tay. Số đếm giữ theo từng lần chạy, không cộng giữa các image. Cách lập report: [references/report-template.md](references/report-template.md); đối chiếu digest từng image: skill `ops-deploy-release`.
+
+     | Nguồn | Cách lấy | Cờ script | Tài liệu |
+     |---|---|---|---|
+     | Gitleaks working tree | chạy tại chỗ, `--redact` | `--gitleaks-tree` | [gitleaks.md](references/gitleaks.md) |
+     | Gitleaks lịch sử git | chạy tại chỗ, `--redact` | `--gitleaks-history` | [gitleaks.md](references/gitleaks.md) |
+     | Trivy image | chạy tại chỗ, `--scanners vuln,secret` | `--trivy` | [trivy-image.md](references/trivy-image.md) |
+     | Coverity | đọc JSON đã xuất | `--coverity` | [coverity.md](references/coverity.md) |
+     | SARIF | đọc file đã xuất, lặp được | `--sarif` | [coverity.md](references/coverity.md) (mục SARIF) |
+     | ZAP | đọc JSON đã xuất; XML đọc tay | `--zap` | [zap-nessus.md](references/zap-nessus.md) |
+     | Nessus | đọc CSV đã xuất; `.nessus` đọc tay | `--nessus` | [zap-nessus.md](references/zap-nessus.md) |
+     | BlackDuck | đọc CycloneDX JSON đã xuất | `--blackduck` | [blackduck.md](references/blackduck.md) (mục Đọc cho ngưỡng go-live) |
+     | SonarQube | đọc issues JSON đã xuất | `--sonar` | [sonarqube.md](references/sonarqube.md) (mục Đọc cho ngưỡng go-live) |
+     | CISA KEV | file JSON người dùng tải về | `--kev` | [Unverified] tên trường `vulnerabilities[].cveID` và `dateReleased` theo file CISA, chưa kiểm với file thật; file rỗng, thiếu ngày hoặc cũ hơn 7 ngày thì KEV `chưa đo` (xem [report-template.md](references/report-template.md)) |
+     | Pentest | PDF hoặc md do đơn vị ATTT cung cấp; không qua script | — | [pentest.md](references/pentest.md) |
+     | ASVS L2 | checklist csv hoặc md của tổ chức; không qua script | — | [asvs-l2.md](references/asvs-l2.md) |
+
    - *Security review source-first:* review thủ công theo **vùng rủi ro** dùng
      [references/security-review-areas.md](references/security-review-areas.md), áp **rule engine**
      [references/security-rule-engine.md](references/security-rule-engine.md), ánh xạ OWASP/ASVS/CWE qua
@@ -129,6 +171,12 @@ Nạp đúng file khi cần, đừng nạp tất cả:
 - [references/triage-and-fix.md](references/triage-and-fix.md): vòng dùng chung (gộp → phân loại → quyết
   fix/propose/defer → áp fix → verify → cập nhật report) + bảng quyết định "tự sửa vs người quyết" (cả chất
   lượng lẫn bảo mật) + luồng **fix-từ-report** (safe-fix policy, scope rule) + nhắc ranh giới an toàn.
+- [references/gitleaks.md](references/gitleaks.md): chạy Gitleaks tại chỗ (working tree và lịch sử git, `--redact`), cờ `--gitleaks-tree` / `--gitleaks-history`, trường đọc, `.gitleaksignore`.
+- [references/trivy-image.md](references/trivy-image.md): chạy Trivy image (`vuln,secret`), cờ `--trivy`, đợt nhiều image, `Metadata.RepoDigests`, `.trivyignore` và VEX.
+- [references/coverity.md](references/coverity.md): đọc JSON Coverity đã xuất (`--coverity`) và SARIF (`--sarif`), ánh xạ mức độ, gộp theo `file:line`.
+- [references/zap-nessus.md](references/zap-nessus.md): đọc ZAP JSON (`--zap`) và Nessus CSV (`--nessus`); ZAP XML và `.nessus` đọc tay; không ZAP active scan, không quét Nessus.
+- [references/pentest.md](references/pentest.md): nhập report pentest, bảng finding để người dùng xác nhận, theo dõi retest.
+- [references/asvs-l2.md](references/asvs-l2.md): điền checklist ASVS L2 của tổ chức, evidence `file:line`, không tự soạn yêu cầu.
 - [references/report-template.md](references/report-template.md): mẫu report (status + bảng findings có cột
   OWASP/ASVS/CWE + Đã sửa / Hoãn / Residual risk + bước verify + mask secret) với ngôn ngữ đo được, không
   tuyên bố tuyệt đối.
