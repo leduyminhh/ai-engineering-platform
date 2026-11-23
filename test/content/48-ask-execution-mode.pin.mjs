@@ -152,6 +152,9 @@ export default async function run({ ok, ctx }) {
     ok(/Câu trả lời `subagent` hoặc `session` cũng là sự đồng ý để tạo worktree và `merge --no-ff`/.test(loop) && /`sequential`: không tạo worktree/.test(loop),
       'AC2.3: câu trả lời subagent/session là đồng ý tạo worktree và merge local; sequential không tạo worktree');
     ok(/không có nhóm Song song[^.]*thẻ Cách thực thi/.test(loop), 'AC2.4: plan có part mà không nhóm Song song vẫn qua thẻ Cách thực thi');
+    // Regression 2026-11-23: plan 3 part tuần tự chỉ được hỏi Subagent/Inline, không có cách chạy mỗi part trong phiên riêng
+    ok(/Phiên riêng mỗi part/.test(flat(read('SKILL.md'))) && /`use_worktree: false`/.test(loop) && /Phiên riêng mỗi part/.test(ask),
+      'Part ngoài nhóm Song song: thẻ Cách thực thi có Phiên riêng mỗi part, chạy không worktree');
     ok(/phiên part và subagent part không hỏi cách chạy/i.test(loop), 'AC1.5: task-loop.md nêu phiên part và subagent part không hỏi cách chạy');
     ok(/không dùng Write\/Edit/i.test(loop), 'AC3.6: task-loop.md không dùng Write/Edit lên aip-gate.json');
     ok(/\| Cách thực thi \| [^|]* \| [^|]* \| Subagent \+ review từng task \/ Inline/.test(ask) && /\| Cách chạy part \| [^|]* \| [^|]* \| Subagent \/ Phiên riêng \/ Tuần tự/.test(ask) && /cách thực thi/.test(ask.slice(0, 600)),

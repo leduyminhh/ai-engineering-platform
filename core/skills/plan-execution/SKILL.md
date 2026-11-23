@@ -33,8 +33,9 @@ Skill chỉ **điều phối**. `kind` của task và chuỗi agent tương ứn
    (a) grep cả ledger `root/` tìm `^Ruling: cách chạy` (hoặc dòng cũ `^Ruling: thực thi inline`, tính là `inline`; hook chỉ chèn phần cuối): có thì dùng giá trị đó, không hỏi, vì cùng một lần thực thi;
    (b) không có tool subagent, hoặc yêu cầu của người dùng đã nói rõ chạy inline hay không dùng subagent: `inline`, không hỏi;
    (c) còn lại hỏi một câu theo `references/ask-user.md` (hàng "Cách thực thi"): "Subagent + review từng task" (`subagent`) hoặc "Inline" (`inline`), lựa chọn theo `planRunner` đứng đầu kèm "(Recommended)" (mặc định Subagent); khoá không bỏ câu hỏi.
-   Ở (b) và (c), ghi `Ruling: cách chạy <subagent|inline> — <người dùng chọn | không có tool subagent | người dùng nói rõ> — <chi phí nếu sai>` bằng `ledger.mjs`, rồi lưu giá trị làm gợi ý lần sau: `node <thư mục skill plan-execution>/scripts/autonomy.mjs --set planRunner=<giá trị>` (không dùng Write/Edit lên `.claude/aip-gate.json`, hook hỏi người dùng khi ghi file đó).
-   `subagent` chạy vòng task bên dưới, `inline` chạy theo `references/inline.md`.
+   Request chia part có part không thuộc nhóm Song song: thẻ thêm lựa chọn "Phiên riêng mỗi part" (`session`), đứng đầu kèm "(Recommended)" khi `partRunner` là `session`.
+   Ở (b) và (c), ghi `Ruling: cách chạy <subagent|inline|session> — <người dùng chọn | không có tool subagent | người dùng nói rõ> — <chi phí nếu sai>` bằng `ledger.mjs`, rồi lưu giá trị làm gợi ý lần sau: `node <thư mục skill plan-execution>/scripts/autonomy.mjs --set planRunner=<giá trị>` (`session` thì `--set partRunner=session`; không dùng Write/Edit lên `.claude/aip-gate.json`, hook hỏi người dùng khi ghi file đó).
+   `subagent` chạy vòng task bên dưới, `inline` chạy theo `references/inline.md`, `session` chạy mỗi part tuần tự trong một phiên riêng theo bước 8 mục "Chế độ part" của `references/task-loop.md`.
 2. **Vòng task**, lần lượt từng task chưa `complete`, theo `references/task-loop.md`. Đọc hết file đó trước task đầu tiên
    (cả cỡ "thay đổi nhỏ"), và giao việc bằng đúng mẫu trong `references/prompts/`, không tự soạn prompt; bước này chỉ tóm
    tắt, luật vòng sửa, xếp finding và dòng ledger nằm ở `task-loop.md`:
