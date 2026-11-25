@@ -83,7 +83,7 @@ Dùng trong vòng task của `plan-execution`; workflow không dùng vòng task 
 - `observations_outside_diff[]`: quan sát ngoài diff của vòng sửa; chỉ ghi nhận, không phải finding.
 - `assumptions` (implementer trong vòng task, cả vòng sửa): giả định thiết kế implementer đã chọn mà brief, AC và Interfaces
   không nói, mỗi mục `{ assumption, basis, if_wrong }`: `assumption` là điều đã giả định, `basis` là nguồn (`file:line`, mục
-  brief) hoặc `không có`, `if_wrong` là hệ quả một vế nếu giả định sai. Được phép rỗng; không chép lại yêu cầu.
+  brief) hoặc `không có`, `if_wrong` là hệ quả một vế nếu giả định sai. Báo cáo vòng sửa chỉ gồm giả định mới của vòng sửa (result-check đếm `assumption_review` của re-review theo số này). Được phép rỗng; không chép lại yêu cầu.
 - `assumption_review[]` (reviewer chế độ task-review và re-review): mỗi giả định của báo cáo một mục `{ assumption, verdict:
   holds | wrong | unverifiable, evidence }`, tức `verdict` ∈ `holds` | `wrong` | `unverifiable` kèm `evidence`. `wrong` đi kèm một finding theo thang thường; `unverifiable` kèm
   điều cần kiểm thêm, session chính xử lý như `cannot_verify`.

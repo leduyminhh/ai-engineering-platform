@@ -255,7 +255,7 @@ export default async function run({ ok, ctx }) {
     const OLD_REPORT = ['một dòng gồm hash, kết quả test và số minor hoãn', 'một dòng nêu lý do'];
     ok(Object.values(refs).every((t) => OLD_REPORT.every((s) => !t.includes(s))),
       'AC2.6: ba file không còn câu báo cáo cũ (hash, kết quả test, số minor hoãn; một dòng nêu lý do)');
-    const at = (t, a, b) => t.slice(t.indexOf(a), t.indexOf(b));
+    const at = (t, a, b) => { const i = t.indexOf(a), j = t.indexOf(b); return i >= 0 && j > i ? t.slice(i, j) : null; };
     const POINTERS = {
       'task-loop Chế độ part bước 6': at(refs['task-loop.md'], '6. Chỉ áp cho `session`', '7. Session gốc đọc dòng'),
       'model-routing quy tắc 9': at(refs['model-routing.md'], '9. One message', '10. Brief'),
@@ -263,7 +263,8 @@ export default async function run({ ok, ctx }) {
       'inline mục Subagent part': at(refs['inline.md'], '## Subagent part', '## Ranh giới'),
     };
     for (const [where, span] of Object.entries(POINTERS)) {
-      ok(span.includes('aip-report') && span.includes('Báo cáo giữa phiên (aip-report)'),
+      ok(span !== null, `AC2.6: ${where} có đủ hai neo trong file (neo thiếu làm pin đỏ)`);
+      ok(span !== null && span.includes('aip-report') && span.includes('Báo cáo giữa phiên (aip-report)'),
         `AC2.6: ${where} trỏ mục "Báo cáo giữa phiên (aip-report)" của contract`);
     }
 

@@ -71,9 +71,8 @@ model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
 
 **Long sessions**
 
-14. A child session writes its long report to a file and sends the parent one line, an `aip-report` line with
-    `status` and `file=<path>` (`note` is required when `blocked` or `failed`). The orchestrating session never reads long diffs or logs itself; a `haiku` subagent reads and
-    returns the summary. Format: `core:principles`, section "Báo cáo giữa phiên (aip-report)".
+14. A child session writes its long report to a file and sends the parent one line, one `aip-report` line (keys and rules in `core:principles`, section "Báo cáo giữa phiên (aip-report)"; `file=` carries the path). The orchestrating session never reads long diffs or logs itself; a `haiku` subagent reads and
+    returns the summary.
 15. Every command in the orchestrating session bounds its output (`--stat`, `head`, column filters); list
     sessions by name or id rather than a full listing; never repeat `get_usage`/`list_events` within one gate.
 16. When the next step depends on a subagent's result, run it in the foreground instead of ending the turn to
