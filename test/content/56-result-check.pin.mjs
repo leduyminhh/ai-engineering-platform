@@ -276,6 +276,13 @@ export default async function run({ ok, ctx }) {
     const step78 = loop.slice(loop.indexOf('7. **Task review**'), loop.indexOf('## Nhận review'));
     ok(step78.includes('task-<n>-review-<vòng>.md') && step78.includes('--role task-review') && step78.includes('--role re-review --findings <k>'),
       'AC4.1: task-loop bước 7–8 nêu task-<n>-review-<vòng>.md, --role task-review và --role re-review --findings <k>');
+    // AC6.1: mục "Kết quả rà biến thể" của design ghi mỗi file biến thể là sửa hoặc không đổi
+    const design = read('docs', 'requests', '2026-11-25-agent-session-result-contract', 'design.md');
+    const variant = design.split(/^### /m).find((h) => h.startsWith('Kết quả rà biến thể')) ?? '';
+    for (const f of ['subagent-prompts.md', 'subagent-prompt.md']) {
+      const line = variant.split('\n').find((l) => l.includes(f)) ?? '';
+      ok(/\*\*(sửa|không đổi)\*\*/.test(line), `AC6.1: mục "Kết quả rà biến thể" ghi ${f} là sửa hoặc không đổi`);
+    }
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }

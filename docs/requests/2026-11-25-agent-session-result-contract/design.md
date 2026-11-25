@@ -99,20 +99,20 @@ Vi phạm: thiếu `v1`, `status` ngoài tập, khoá bắt buộc thiếu, giá
 ### Đo kích thước (D5)
 Trước (đo `wc -c` ngày 2026-11-25, commit đầu nhánh `feature/agent-session-result-contract`):
 
-| File | Byte |
-|---|---|
-| `core/principles/workflow-output-contract.md` | 13 360 |
-| `prompts/final-review.md` | 6 771 |
-| `prompts/task-review.md` | 5 007 |
-| `prompts/implementer.md` | 4 257 |
-| `prompts/re-review.md` | 2 436 |
-| Tổng | 31 831 |
+| File | Trước (byte) | Sau (byte) |
+|---|---|---|
+| `core/principles/workflow-output-contract.md` | 13 360 | 19 283 |
+| `prompts/final-review.md` | 6 771 | 6 908 |
+| `prompts/task-review.md` | 5 007 | 5 078 |
+| `prompts/implementer.md` | 4 257 | 4 538 |
+| `prompts/re-review.md` | 2 436 | 2 589 |
+| Tổng | 31 831 | 38 396 |
 
-Sau: builder đo lại bằng cùng lệnh sau khi sửa, tính cả ba mục mới của contract và cách gọi script, rồi ghi số vào bảng này. Mục tiêu sau ≤ 31 831; vượt thì nêu số ở bản trình G3, không cắt khoá bắt buộc, không thành cổng test. Sau: _chưa đo_.
+Sau (đo `wc -c` ngày 2026-11-25 trên nhánh sau Task 5): tổng 38 396 byte, vượt mục tiêu 31 831 thêm 6 565 byte (+20,6%). Nguyên nhân: contract tăng 5 923 byte do ba mục mới (Khoá bỏ được, Báo cáo giữa phiên (aip-report), Kiểm bằng script) và chú thích khoá bỏ được; bốn prompt tăng ròng 642 byte, vì D5 dự kiến prompt chỉ trỏ tới contract nhưng chưa bớt chữ. Không cắt khoá bắt buộc để đạt mục tiêu; số vượt nêu ở bản trình G3, không là cổng test.
 
-### Kết quả rà biến thể (D6, sơ bộ từ đọc file; builder xác nhận khi làm)
-- `engineering-codebase-onboarding/references/subagent-prompts.md` mục D: khối mẫu bắt buộc "trả đúng khối này" và ghi sẵn `questions: []`, `remaining_risks`, `findings`, `validation`; lệch D1 ở chỗ bắt ghi khoá rỗng. Dự kiến sửa một dòng: khoá rỗng bỏ được theo contract; giữ `read`, `not_read` (khoá riêng của skill, không thuộc contract) và dòng "không đưa giá trị cấu hình vào trường nào". Sửa thì bump `plugins/engineering/.manifest.json`.
-- `engineering-spec-backfill/references/subagent-prompt.md`: khối "định dạng dưới" là mẫu, không bắt ghi khoá rỗng; mục "Kiểm đầu ra ở session chính" chỉ đòi `changes` chỉ có `spec.md`. Dự kiến không đổi, lý do: không lệch D1.
+### Kết quả rà biến thể (D6)
+- `engineering-codebase-onboarding/references/subagent-prompts.md`: **sửa**. Mục D ghi "trả đúng khối này" kèm `questions: []`, tức bắt ghi khoá rỗng, lệch D1. Thêm một dòng trước khối mẫu: khoá rỗng bỏ được theo contract đầu ra, mục Khoá bỏ được; `questions` chỉ bắt buộc khi `status: blocked`. Giữ `read`, `not_read` và dòng cấm đưa giá trị cấu hình vào trường nào. Bump `plugins/engineering/.manifest.json` do Task 7 làm.
+- `engineering-spec-backfill/references/subagent-prompt.md`: **không đổi**. Khối "định dạng dưới" có `findings: []` và `questions: []`, nhưng ghi là "định dạng", không ghi "đúng khối này"; ghi `[]` vẫn hợp lệ theo D1 (bỏ được không có nghĩa là cấm ghi). Mục "Kiểm đầu ra ở session chính" không đòi khoá rỗng. File này cũng nằm ngoài Files của Task 6 trong brief. [Inference] Nếu người duyệt coi "định dạng dưới" là bắt buộc, cần mở Task 6 cho file này và bump `engineering`.
 
 ## Ảnh hưởng spec
 - workflows: đổi R2, đổi R22, thêm R29, thêm R30

@@ -59,6 +59,7 @@ Cổng 1 đã chọn cho mỗi file có sẵn một lựa chọn: giữ | khối
 ```text
 ## Đầu ra
 Ghi các file được phép, rồi trả đúng một khối sau. Không in báo cáo dài. Không đưa giá trị cấu hình vào bất kỳ trường nào.
+Khoá rỗng bỏ được theo contract đầu ra, mục Khoá bỏ được; `questions` chỉ bắt buộc khi `status: blocked`.
 
 agent_result:
   agent: general-purpose
