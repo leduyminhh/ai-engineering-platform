@@ -38,7 +38,7 @@ Cách làm:
    gồm AC ID, các cách hiểu, và hệ quả của từng cách hiểu. Finding ngoài AC mà chỉ sửa được bằng cách đổi hành vi hoặc API (ném lỗi mới, mã lý do mới, tham số mới): cũng không chọn hướng sửa, gắn nhãn `ngoài AC` kèm hệ quả để thẻ G3 hỏi người dùng.
 8. Gắn nhãn `trong AC` hoặc `ngoài AC` cho mỗi finding. Finding kiểm đầu vào cho dữ liệu do code hoặc cấu hình nội bộ khai báo: theo mục "Ranh giới tin cậy" của skill `principles` (bản cài plugin: `core:principles`; nguồn `core/principles/trust-boundary.md`), tối đa `minor`, trừ finding vi phạm AC hay tiêu chí đã duyệt (vẫn `major` trở lên).
 
-Trả khối agent_result: findings[], validation[], ruling_review[], declined_to_judge[], remaining_risks[], questions[].
+Trả khối agent_result: khoá bắt buộc `findings` và `ruling_review[]` (mục "Agent result" và "Khoá bỏ được" của contract); `declined_to_judge[]` ghi điều bỏ qua kèm lý do; `validation[]`, `remaining_risks[]`, `questions[]` khi có.
 ```
 
 `review clean` = không còn blocker/major mở **trong phạm vi**; finding ngoài AC đi theo mục "Nhận review" của `task-loop.md`.

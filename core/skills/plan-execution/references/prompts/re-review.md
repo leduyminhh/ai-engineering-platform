@@ -24,7 +24,6 @@ Cách làm:
 5. Giả định: chỉ xét giả định mới trong `assumptions` của báo cáo vòng sửa (không xét lại giả định đã xét), mỗi giả định một
    mục assumption_review[] như task-review. Giả định `wrong` mức `blocker`/`major` giữ task trong vòng sửa như new_breakage.
 
-Trả khối agent_result gồm: verdicts[] (finding, ADDRESSED | NOT ADDRESSED, evidence), new_breakage[] (theo định dạng
-finding của contract đầu ra), observations_outside_diff[], assumption_review[] khi có giả định mới. Mọi finding NOT ADDRESSED và mọi new_breakage mức blocker/major
+Trả khối agent_result theo mục "Agent result" và "Khoá bỏ được" của contract. Khoá bắt buộc của vai re-review: `verdicts[]` (mỗi finding một mục, `ADDRESSED` hoặc `NOT ADDRESSED`, kèm evidence); `assumption_review[]` khi có giả định mới. `new_breakage[]` và `observations_outside_diff[]` theo định dạng Finding và mục "Re-review có phạm vi". Mọi finding NOT ADDRESSED và mọi new_breakage mức blocker/major
 giữ task trong vòng sửa; còn lại ghi vào ledger.
 ```

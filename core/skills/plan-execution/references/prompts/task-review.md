@@ -39,8 +39,7 @@ Cách làm:
    brief hoặc báo cáo implementer; không có lý do thì là finding `major` (test bị làm yếu để qua).
 7. Gắn nhãn `trong AC` hoặc `ngoài AC` cho mỗi finding (ngoài AC: không vi phạm AC hay tiêu chí đã duyệt trong brief). Finding kiểm đầu vào cho dữ liệu do code hoặc cấu hình nội bộ khai báo: theo mục "Ranh giới tin cậy" của skill `principles` (bản cài plugin: `core:principles`; nguồn `core/principles/trust-boundary.md`), tối đa `minor`.
 
-Trả khối agent_result, gồm cả spec_verdict (kèm Missing/Extra/Misunderstood nếu issues) lẫn findings[]; thiếu một trong
-hai là đầu ra hỏng. Báo cáo có `assumptions` không rỗng thì trả thêm assumption_review[] đủ mỗi giả định một mục.
+Trả khối agent_result theo mục "Agent result" và "Khoá bỏ được" của contract. Khoá bắt buộc của vai task-review: `spec_verdict` (kèm Missing/Extra/Misunderstood nếu `issues`) và `findings` (được `[]`); `assumption_review[]` đủ mỗi giả định một mục khi báo cáo implementer có `assumptions` không rỗng.
 Trường declined_to_judge[]: liệt kê điều bạn bỏ qua và lý do (vd cần chạy hệ thống thật).
 Không khen, không tóm tắt lại diff.
 ```

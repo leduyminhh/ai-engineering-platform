@@ -225,6 +225,26 @@ export default async function run({ ok, ctx }) {
     ok(script.includes('--line "aip-report v1'), 'AC4.3: mục "Kiểm bằng script" có lệnh mẫu --line');
     const aipReport = section('Báo cáo giữa phiên (aip-report)');
     ok(aipReport.includes('không ghi vào ledger') && aipReport.includes('events.jsonl'), 'AC2.7: mục aip-report nêu dòng không ghi vào ledger và events.jsonl');
+
+    // AC5.2: mỗi prompt trỏ contract, có khoá bắt buộc của vai, không có dòng agent_result: YAML
+    const PROMPT_KEYS = {
+      'implementer.md': ['assumptions', 'basis', 'if_wrong'],
+      'task-review.md': ['spec_verdict', 'findings', 'assumption_review[]'],
+      're-review.md': ['verdicts[]', 'assumption_review[]'],
+      'final-review.md': ['findings', 'ruling_review[]'],
+    };
+    for (const [file, keys] of Object.entries(PROMPT_KEYS)) {
+      const text = read('core', 'skills', 'plan-execution', 'references', 'prompts', file);
+      ok(text.includes('"Agent result"') && text.includes('"Khoá bỏ được"'), `AC5.2: ${file} trỏ mục "Agent result" và "Khoá bỏ được" của contract`);
+      ok(keys.every((k) => text.includes(k)), `AC5.2: ${file} nêu khoá bắt buộc của vai (${keys.join(', ')})`);
+      ok(!/^\s*agent_result:/m.test(text), `AC5.2: ${file} không có dòng agent_result: dạng YAML`);
+    }
+
+    // AC4.2: không prompt nào bảo worker hay reviewer ghi file report
+    for (const file of Object.keys(PROMPT_KEYS)) {
+      const text = read('core', 'skills', 'plan-execution', 'references', 'prompts', file);
+      ok(!/report\.md|report_file/.test(text), `AC4.2: ${file} không nhắc ghi file report (report.md, report_file)`);
+    }
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
