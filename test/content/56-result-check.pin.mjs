@@ -283,6 +283,13 @@ export default async function run({ ok, ctx }) {
       const line = variant.split('\n').find((l) => l.includes(f)) ?? '';
       ok(/\*\*(sửa|không đổi)\*\*/.test(line), `AC6.1: mục "Kết quả rà biến thể" ghi ${f} là sửa hoặc không đổi`);
     }
+    // AC8.1: ba pin cũ ghim agent_result không mất assert khi định nghĩa chuyển về contract (số trước request).
+    // AC8.2 là chính module này (chạy trong npm test); AC8.3 phủ bởi `--only versions`, không lặp kiểm.
+    for (const [f, min] of [[['test', 'content', '31-workflow-self-sufficient.pin.mjs'], 249],
+      [['test', 'content', '53-reasoning-review.pin.mjs'], 25], [['test', 'contract', '10-source.contract.mjs'], 70]]) {
+      const n = (read(...f).match(/ok\(/g) || []).length;
+      ok(n >= min, `AC8.1: ${f.at(-1)} còn ${n} lệnh ok( (≥ ${min})`);
+    }
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
