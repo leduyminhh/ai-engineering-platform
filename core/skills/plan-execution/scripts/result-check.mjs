@@ -70,9 +70,9 @@ export function checkReportLine(raw) {
   for (const t of tokens.slice(2)) {
     const [key, val] = t[1] ? [t[1], t[2]] : (t[3].match(/^([a-z]+)=(.*)$/)?.slice(1) ?? [undefined, undefined]);
     if (key === undefined) { add('line-format', `token không phải khoá=giá trị: ${t[0]}`); continue; }
-    if (!(key in LINE_KEYS)) { add('line-format', `khoá lạ: ${key}`); continue; }
+    if (!Object.hasOwn(LINE_KEYS, key)) { add('line-format', `khoá lạ: ${key}`); continue; }
     if (!!t[1] !== (key === 'note')) { add('line-format', `chỉ note, và luôn note, đặt trong nháy kép: ${key}`); continue; }
-    if (key in kv) { add('line-format', `khoá lặp: ${key}`); continue; }
+    if (Object.hasOwn(kv, key)) { add('line-format', `khoá lặp: ${key}`); continue; }
     kv[key] = val;
     if (!LINE_KEYS[key](val)) add('line-bad-value', `giá trị sai cho ${key}: ${val}`);
   }
@@ -83,46 +83,89 @@ export function checkReportLine(raw) {
   return { ok: violations.length === 0, violations, not_run: [] };
 }
 
-// Parser YAML tối thiểu cho khối agent_result: map/list theo thụt lề, flow {…}/[…] một dòng, chuỗi nháy.
+// Parser YAML tối thiểu cho khối agent_result: map/list theo thụt lề, flow {…}/[…] một dòng, chuỗi nháy, chú thích `#`.
 // Không phải YAML đầy đủ: cấu trúc ngoài tập này ném lỗi để khối bị coi là unparseable (worker trả lại).
+// Chạy trên báo cáo do worker viết nên có trần độ sâu, độ dài dòng và khoá cấm; mọi vòng quét đều tuyến tính (không regex lùi).
 class YamlError extends Error {}
+
+const DEPTH_MAX = 64;
+const YAML_LINE_MAX = 10_000;
+const REPORT_MAX = 1_000_000;
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+const newMap = () => Object.create(null);
+function safeKey(k) {
+  if (FORBIDDEN_KEYS.has(k)) throw new YamlError(`khoá bị cấm: ${k}`);
+  return k;
+}
+
+// Chú thích bắt đầu ở `#` đầu tiên đứng sau khoảng trắng, ngoài nháy và ngoài ngoặc; nháy chỉ mở ở đầu token
+// để dấu nháy đơn trong chữ thường (`don't`) không nuốt mất chú thích phía sau.
+function stripComment(s) {
+  let quote = '';
+  let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    const prev = i === 0 ? ' ' : s[i - 1];
+    if (quote) {
+      if (c === '\\' && quote === '"') i++;
+      else if (c === quote) quote = '';
+    } else if ((c === '"' || c === "'") && /[\s[{,:]/.test(prev)) quote = c;
+    else if (c === '[' || c === '{') depth++;
+    else if (c === ']' || c === '}') depth = Math.max(0, depth - 1);
+    else if (c === '#' && depth === 0 && /\s/.test(prev)) return s.slice(0, i).trimEnd();
+  }
+  return s;
+}
 
 function parseFlow(src) {
   let i = 0;
   const ws = () => { while (src[i] === ' ' || src[i] === '\t') i++; };
-  const value = (stops) => {
+  const quoted = () => {
+    const q = src[i++];
+    const start = i;
+    while (i < src.length && src[i] !== q) i += src[i] === '\\' && q === '"' ? 2 : 1;
+    if (i >= src.length) throw new YamlError('chuỗi chưa đóng nháy');
+    return src.slice(start, i++);
+  };
+  const flowKey = () => {
+    ws();
+    let key;
+    if (src[i] === '"' || src[i] === "'") key = quoted();
+    else {
+      const start = i;
+      while (i < src.length && !':,{}[]'.includes(src[i])) i++;
+      key = src.slice(start, i).trim();
+    }
+    ws();
+    if (!key || src[i] !== ':' || !/\s/.test(src[i + 1] ?? '')) throw new YamlError('flow map thiếu khoá');
+    i++;
+    return safeKey(key);
+  };
+  const value = (stops, depth) => {
+    if (depth > DEPTH_MAX) throw new YamlError('flow lồng quá sâu');
     ws();
     if (src[i] === '{' || src[i] === '[') {
       const close = src[i] === '{' ? '}' : ']';
       const isMap = src[i++] === '{';
-      const out = isMap ? {} : [];
+      const out = isMap ? newMap() : [];
       ws();
       if (src[i] === close) { i++; return out; }
       for (;;) {
-        if (isMap) {
-          const m = /^\s*([^:,{}[\]]+?)\s*:\s/.exec(src.slice(i));
-          if (!m) throw new YamlError('flow map thiếu khoá');
-          i += m[0].length;
-          out[m[1].replace(/^["']|["']$/g, '')] = value(',}');
-        } else out.push(value(',]'));
+        if (isMap) out[flowKey()] = value(',}', depth + 1);
+        else out.push(value(',]', depth + 1));
         ws();
         if (src[i] === ',') { i++; continue; }
         if (src[i] === close) { i++; return out; }
         throw new YamlError('flow chưa đóng');
       }
     }
-    if (src[i] === '"' || src[i] === "'") {
-      const q = src[i++];
-      const start = i;
-      while (i < src.length && src[i] !== q) i += src[i] === '\\' && q === '"' ? 2 : 1;
-      if (i >= src.length) throw new YamlError('chuỗi chưa đóng nháy');
-      return src.slice(start, i++);
-    }
+    if (src[i] === '"' || src[i] === "'") return quoted();
     const start = i;
     while (i < src.length && !stops.includes(src[i])) i++;
     return src.slice(start, i).trim();
   };
-  const v = value('');
+  const v = value('', 0);
   ws();
   if (i < src.length) throw new YamlError('thừa ký tự sau flow');
   return v;
@@ -134,22 +177,20 @@ const STRICT_KEYS = new Set(['changes', 'validation', 'findings', 'new_breakage'
   'assumption_review', 'verdicts', 'ruling_review']);
 
 function scalar(raw, key) {
-  const s = raw.trim();
+  const s = stripComment(raw).trim();
   if (s === '' || s === '~' || s === 'null') return null;
   if (/^[{["']/.test(s)) {
-    // Bỏ comment sau giá trị đã đóng, vd `status: "x"  # ghi chú`.
-    const body = /^(["']).*\1\s+#/.test(s) ? s.replace(/(["'])\s+#.*$/, '$1') : s;
     try {
-      return parseFlow(body.replace(/\s+#[^"'\]}]*$/, ''));
+      return parseFlow(s);
     } catch (e) {
       if (!(e instanceof YamlError) || STRICT_KEYS.has(key)) throw e;
       return s;
     }
   }
-  return s.replace(/\s+#.*$/, '');
+  return s;
 }
 
-// Dòng thụt sâu hơn ngay sau một giá trị: gom thành chuỗi (block scalar `|`/`>` hoặc phần nối của giá trị trần).
+// Report thật hay viết giá trị trần kèm ghi chú nhiều dòng thụt sâu hơn; gom thành chuỗi thay vì bắt worker trả lại.
 function deeperText(lines, i, indent) {
   const out = [];
   while (i < lines.length && lines[i].indent > indent) out.push(lines[i++].text);
@@ -158,47 +199,55 @@ function deeperText(lines, i, indent) {
 
 const KEY_LINE = /^([A-Za-z_][\w.-]*):(?:\s+(.*))?$/;
 
-function parseNode(lines, i, indent, key) {
-  return lines[i].text.startsWith('-') ? parseList(lines, i, indent, key) : parseMap(lines, i, indent);
+function parseNode(lines, i, indent, key, depth) {
+  return lines[i].text.startsWith('-') ? parseList(lines, i, indent, key, depth) : parseMap(lines, i, indent, depth);
 }
 
-function childOf(lines, i, indent, key) {
+function childOf(lines, i, indent, key, depth) {
   const next = lines[i + 1];
-  if (next && next.indent > indent) return parseNode(lines, i + 1, next.indent, key);
-  if (next && next.indent === indent && next.text.startsWith('-')) return parseList(lines, i + 1, indent, key);
+  if (next && next.indent > indent) return parseNode(lines, i + 1, next.indent, key, depth + 1);
+  if (next && next.indent === indent && next.text.startsWith('-')) return parseList(lines, i + 1, indent, key, depth + 1);
   return [null, i + 1];
 }
 
-function parseMap(lines, i, indent) {
-  const out = {};
+function parseMap(lines, i, indent, depth) {
+  if (depth > DEPTH_MAX) throw new YamlError('thụt lề lồng quá sâu');
+  const out = newMap();
   while (i < lines.length && lines[i].indent === indent && !lines[i].text.startsWith('-')) {
     const m = KEY_LINE.exec(lines[i].text);
     if (!m) throw new YamlError(`dòng không phải khoá: ${lines[i].text}`);
-    const inline = m[2]?.trim() ?? '';
-    if (/^[|>][-+]?$/.test(inline)) [out[m[1]], i] = deeperText(lines, i + 1, indent);
+    const key = safeKey(m[1]);
+    const inline = stripComment(m[2] ?? '').trim();
+    if (/^[|>][-+]?$/.test(inline)) [out[key], i] = deeperText(lines, i + 1, indent);
     else if (inline !== '') {
-      out[m[1]] = scalar(inline, m[1]);
+      out[key] = scalar(inline, key);
       i++;
       if (i < lines.length && lines[i].indent > indent) {
-        if (STRICT_KEYS.has(m[1]) || typeof out[m[1]] !== 'string') throw new YamlError(`khoá ${m[1]} vừa có giá trị vừa có dòng con`);
+        if (STRICT_KEYS.has(key) || typeof out[key] !== 'string') throw new YamlError(`khoá ${key} vừa có giá trị vừa có dòng con`);
         let tail; [tail, i] = deeperText(lines, i, indent);
-        out[m[1]] = `${out[m[1]]}\n${tail}`;
+        out[key] = `${out[key]}\n${tail}`;
       }
-    } else [out[m[1]], i] = childOf(lines, i, indent, m[1]);
+    } else [out[key], i] = childOf(lines, i, indent, key, depth);
   }
   if (i < lines.length && lines[i].indent > indent) throw new YamlError(`thụt lề sai: ${lines[i].text}`);
   return [out, i];
 }
 
-function parseList(lines, i, indent, key) {
+function parseList(lines, i, indent, key, depth) {
+  if (depth > DEPTH_MAX) throw new YamlError('thụt lề lồng quá sâu');
   const out = [];
   while (i < lines.length && lines[i].indent === indent && lines[i].text.startsWith('-')) {
     const rest = lines[i].text.slice(1).trimStart();
-    if (rest === '') { let v; [v, i] = childOf(lines, i, indent); out.push(v); continue; }
+    if (rest === '') {
+      // Chỉ dòng thụt sâu hơn mới là con của mục `-` rỗng; mục `-` ngang hàng phía sau là mục khác.
+      const next = lines[i + 1];
+      if (next && next.indent > indent) { let v; [v, i] = parseNode(lines, i + 1, next.indent, key, depth + 1); out.push(v); } else { out.push(null); i++; }
+      continue;
+    }
     if (KEY_LINE.test(rest) && !/^[{["']/.test(rest)) {
       const childIndent = indent + (lines[i].text.length - rest.length);
       lines[i] = { indent: childIndent, text: rest };
-      let v; [v, i] = parseMap(lines, i, childIndent); out.push(v); continue;
+      let v; [v, i] = parseMap(lines, i, childIndent, depth + 1); out.push(v); continue;
     }
     // Mục list chỉ hỏng flow khi là map/list thật ({…} hoặc […] có dấu phẩy/hai chấm); `[Unverified] chữ` là chuỗi.
     out.push(scalar(rest, /^\{|^\[[^\]]*[,:]/.test(rest) ? key : undefined));
@@ -207,22 +256,37 @@ function parseList(lines, i, indent, key) {
   return [out, i];
 }
 
+// Header `agent_result:` riêng một dòng (khoá con ở các dòng sau) hoặc flow một dòng `agent_result: { … }`; trả phần sau dấu `:` đã bỏ chú thích.
+function headerRest(l) {
+  const t = l.trimStart();
+  if (l.length > YAML_LINE_MAX || !t.startsWith('agent_result:') || (t.length > 13 && !/\s/.test(t[13]))) return null;
+  const rest = stripComment(t.slice(13)).trim();
+  return rest === '' || rest[0] === '{' ? rest : null;
+}
+
 export function parseAgentResult(text) {
   const all = String(text).replace(/\r\n?/g, '\n').split('\n');
-  const at = all.findIndex((l) => /^\s*agent_result:\s*$/.test(l));
+  const at = all.findIndex((l) => headerRest(l) !== null);
   if (at < 0) return null;
-  const base = all[at].search(/\S/);
-  const lines = [];
-  for (const l of all.slice(at + 1)) {
-    if (/^\s*(```|~~~)/.test(l)) break;
-    if (l.trim() === '') continue;
-    const indent = l.search(/\S/);
-    if (indent <= base) break;
-    lines.push({ indent, text: l.trim() });
-  }
-  if (!lines.length) return null;
+  const rest = headerRest(all[at]);
   try {
-    const [v, end] = parseNode(lines, 0, lines[0].indent);
+    if (rest !== '') {
+      const v = parseFlow(rest);
+      return v && !Array.isArray(v) && typeof v === 'object' ? v : null;
+    }
+    const base = all[at].search(/\S/);
+    const lines = [];
+    for (const l of all.slice(at + 1)) {
+      if (/^\s*(```|~~~)/.test(l)) break;
+      const t = l.trim();
+      if (t === '' || t[0] === '#') continue;
+      const indent = l.search(/\S/);
+      if (indent <= base) break;
+      if (l.length > YAML_LINE_MAX) return null;
+      lines.push({ indent, text: t });
+    }
+    if (!lines.length) return null;
+    const [v, end] = parseNode(lines, 0, lines[0].indent, undefined, 0);
     return end === lines.length && v && !Array.isArray(v) ? v : null;
   } catch (e) {
     if (e instanceof YamlError) return null;
@@ -261,20 +325,23 @@ export function checkAgentResult(parsed, opts = {}) {
     add('completed-no-failed-validation', 'status completed nhưng có validation failed');
   }
 
-  let taskText;
-  if (planText !== undefined && task !== undefined) {
-    taskText = extractTask(planText, task);
-    if (!taskText) throw new UsageError(`--plan không có Task ${task}`);
-    const allowed = new Set(taskFiles(taskText));
-    const outside = changedPaths(parsed.changes).map((p) => String(p).replace(/\\/g, '/')).filter((p) => !allowed.has(p));
-    if (outside.length) add('changes-in-files', `file ngoài **Files:** của Task ${task}: ${outside.join(', ')}`);
-  } else skip('changes-in-files', 'cần --plan và --task');
+  // Reviewer chỉ đọc nên không sửa file và không viết test: hai luật này chỉ áp cho vai ghi code.
+  if (role === 'implementer' || role === 'worker') {
+    let taskText;
+    if (planText !== undefined && task !== undefined) {
+      taskText = extractTask(planText, task);
+      if (!taskText) throw new UsageError(`--plan không có Task ${task}`);
+      const allowed = new Set(taskFiles(taskText));
+      const outside = changedPaths(parsed.changes).map((p) => String(p).replace(/\\/g, '/')).filter((p) => !allowed.has(p));
+      if (outside.length) add('changes-in-files', `file ngoài **Files:** của Task ${task}: ${outside.join(', ')}`);
+    } else skip('changes-in-files', 'cần --plan và --task');
 
-  const needTdd = opts.tdd || (taskText !== undefined && effectiveTdd(taskText).value === 'có');
-  if (needTdd && (!filled(parsed.tdd?.red) || !filled(parsed.tdd?.green))) add('tdd-required', 'task TDD có nhưng thiếu tdd.red hoặc tdd.green');
+    const needTdd = opts.tdd || (taskText !== undefined && effectiveTdd(taskText).value === 'có');
+    if (needTdd && (!filled(parsed.tdd?.red) || !filled(parsed.tdd?.green))) add('tdd-required', 'task TDD có nhưng thiếu tdd.red hoặc tdd.green');
+  }
 
-  if (role === 'implementer' && !('assumptions' in parsed)) add('assumptions-key', 'implementer thiếu khoá assumptions ([] hợp lệ)');
-  if (role === 'task-review' && (!('spec_verdict' in parsed) || !('findings' in parsed))) add('spec-verdict-findings', 'task-review thiếu spec_verdict hoặc findings');
+  if (role === 'implementer' && !Object.hasOwn(parsed, 'assumptions')) add('assumptions-key', 'implementer thiếu khoá assumptions ([] hợp lệ)');
+  if (role === 'task-review' && (!Object.hasOwn(parsed, 'spec_verdict') || !Object.hasOwn(parsed, 'findings'))) add('spec-verdict-findings', 'task-review thiếu spec_verdict hoặc findings');
   if (role === 'task-review' || role === 're-review') {
     if (opts.implementerAssumptions === undefined) skip('assumption-review-count', 'cần --implementer-report');
     else if (list(parsed.assumption_review).length !== opts.implementerAssumptions) {
@@ -285,8 +352,10 @@ export function checkAgentResult(parsed, opts = {}) {
     if (opts.findings === undefined) skip('verdicts-count', 'cần --findings');
     else if (list(parsed.verdicts).length !== opts.findings) add('verdicts-count', `verdicts có ${list(parsed.verdicts).length} mục, cần ${opts.findings}`);
   }
-  if (parsed.status === 'blocked' && !list(parsed.questions).length) add('blocked-questions', 'status blocked nhưng questions rỗng hoặc vắng');
-  if (role === 'final-review' && (!('findings' in parsed) || !('ruling_review' in parsed))) add('final-review-keys', 'final-review thiếu findings hoặc ruling_review');
+  const q = parsed.questions;
+  const hasQuestions = Array.isArray(q) ? q.length > 0 : typeof q === 'string' && q.trim() !== '';
+  if (parsed.status === 'blocked' && !hasQuestions) add('blocked-questions', 'status blocked nhưng questions rỗng hoặc vắng');
+  if (role === 'final-review' && (!Object.hasOwn(parsed, 'findings') || !Object.hasOwn(parsed, 'ruling_review'))) add('final-review-keys', 'final-review thiếu findings hoặc ruling_review');
 
   return { ok: violations.length === 0, violations, not_run: notRun };
 }
@@ -295,6 +364,7 @@ function readText(file, flag) {
   let st;
   try { st = fs.statSync(file); } catch { throw new UsageError(`${flag}: không đọc được ${file}`); }
   if (st.isDirectory()) throw new UsageError(`${flag}: ${file} là thư mục`);
+  if (st.size > REPORT_MAX) throw new UsageError(`${flag}: ${file} lớn hơn ${REPORT_MAX} byte`);
   try { return fs.readFileSync(file, 'utf8'); } catch { throw new UsageError(`${flag}: không đọc được ${file}`); }
 }
 

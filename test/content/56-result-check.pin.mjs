@@ -199,6 +199,55 @@ export default async function run({ ok, ctx }) {
     ok(rules(check('status: completed\nsummary: "x"\nfindings: [{ location: "a:1", evidence: "e"')).includes('unparseable'),
       'AC3.5: flow hỏng ở khoá luật cần (findings) vẫn là unparseable');
 
+    // Luật theo vai: reviewer không bị changes-in-files/tdd-required (không vào cả not_run); implementer và worker vẫn bị
+    const REVIEW = 'status: completed\nsummary: "x"\nchanges: { modified: [core/z.mjs] }\nspec_verdict: compliant\nfindings: []\nverdicts: []\nruling_review: []';
+    for (const role of ['task-review', 're-review', 'final-review']) {
+      for (const [label, extra] of [['có --plan --task --tdd', { planText: PLAN, task: 1, tdd: true }], ['không cờ', {}]]) {
+        const r = check(REVIEW, { role, findings: 0, implementerAssumptions: 0, ...extra });
+        ok(!rules(r).includes('changes-in-files') && !rules(r).includes('tdd-required') && !r.not_run.some((n) => n.rule === 'changes-in-files'),
+          `AC3.2: vai ${role} (${label}) không bị changes-in-files/tdd-required và không vào not_run`);
+      }
+    }
+    ok(rules(check(REVIEW, { role: 'implementer', planText: PLAN, task: 1 })).includes('changes-in-files'), 'AC3.2: vai implementer vẫn bị changes-in-files');
+
+    // Parser: giá trị an toàn với report do worker viết (khoá cấm, độ sâu, độ dài, thời gian)
+    const timed = (fn) => { const t0 = Date.now(); const v = fn(); return [v, Date.now() - t0]; };
+    for (const [name, body, wantNull] of [
+      ['giá trị a + 200000 dấu cách + b', `status: completed\nsummary: "x"\nnote: a${' '.repeat(200000)}b`, true],
+      ['flow [{ + 100000 dấu cách + k', `status: completed\nsummary: "x"\nfindings: [{${' '.repeat(100000)}k`, true],
+      ['giá trị a + 9000 dấu cách + b (dưới trần dòng)', `status: completed\nsummary: "x"\nnote: a${' '.repeat(9000)}b`, false],
+      ['flow [{ + 9000 dấu cách + k (dưới trần dòng)', `status: completed\nsummary: "x"\nfindings: [{${' '.repeat(9000)}k`, true],
+    ]) {
+      const [v, ms] = timed(() => parse(body));
+      ok(ms < 1000 && (v === null) === wantNull, `AC3.7: ${name} chạy dưới 1 giây (${ms} ms) và ${wantNull ? 'là unparseable' : 'parse được'}`);
+    }
+    ok(rules(check('status: completed\nsummary: "x"\nfindings: ' + '['.repeat(5000))).join() === 'unparseable', 'AC3.7: 5000 dấu [ lồng nhau (flow sâu hơn 64) → unparseable, không RangeError');
+    const deepMap = (n) => Array.from({ length: n }, (_, i) => `${'  '.repeat(i)}k${i}:`).join('\n') + ' x';
+    ok(parse(deepMap(30)) !== null && parse(deepMap(100)) === null, 'AC3.7: map thụt lề lồng 30 mức parse được, 100 mức (quá trần 64) → unparseable');
+    for (const key of ['__proto__', 'constructor', 'prototype']) {
+      ok(rules(check(`status: completed\nsummary: "x"\n${key}:\n  assumptions: []`, { role: 'implementer' })).join() === 'unparseable', `AC3.7: khoá ${key} dạng block → unparseable`);
+      ok(rules(check(`status: completed\nsummary: "x"\nchanges: { ${key}: { assumptions: [] } }`, { role: 'implementer' })).join() === 'unparseable', `AC3.7: khoá ${key} dạng flow → unparseable`);
+    }
+    const cliBig = (name, body) => cli([write(name, body), '--role', 'worker']);
+    ok(cliBig('task-9-report.md', `agent_result:\n  status: completed\n  summary: "x"\n  note: ${'a'.repeat(1_000_001)}\n`).code === 2, 'AC3.7: file report lớn hơn 1 MB → exit 2');
+    const deepCli = cliBig('task-9-deep.md', `agent_result:\n  status: completed\n  summary: "x"\n  findings: ${'['.repeat(20000)}\n`);
+    ok(deepCli.code === 1 && deepCli.json?.violations.length === 1 && deepCli.json.violations[0].rule === 'unparseable', 'AC3.7: 20000 dấu [ qua CLI → exit 1, JSON một unparseable');
+
+    // Parser nhận các dạng YAML hợp lệ khác
+    const cm = rc.parseAgentResult(ar('status: completed   # xong\n# dòng chú thích\nsummary: "x # y"  # chú thích có "nháy"\n    # chú thích thụt sâu\nassumptions: []   # [] hợp lệ'));
+    ok(cm?.status === 'completed' && cm.summary === 'x # y' && Array.isArray(cm.assumptions), 'AC3.5: chú thích cuối dòng và dòng chỉ có chú thích được bỏ qua, # trong nháy giữ nguyên');
+    const oneLine = rc.parseAgentResult('agent_result: { status: completed, summary: "x", assumptions: [] }');
+    ok(oneLine?.status === 'completed' && rc.checkAgentResult(oneLine, { role: 'implementer' }).ok === true, 'AC3.5: header flow một dòng agent_result: { … } parse được');
+    ok(rc.parseAgentResult('agent_result:  # chú thích\n  status: completed\n  summary: "x"\n')?.status === 'completed', 'AC3.5: header agent_result: kèm chú thích cuối dòng parse được');
+    ok(rc.parseAgentResult('agent_result: x\n  status: completed\n') === null, 'AC3.5: header agent_result: kèm giá trị không phải flow → unparseable');
+    const seq = parse('status: blocked\nsummary: "x"\nquestions:\n  -\n  - a\n  - b');
+    ok(seq?.questions.length === 3, `AC3.5: mục - rỗng không nuốt các mục - ngang hàng (có ${seq?.questions.length} mục, cần 3)`);
+    ok(!rules(check('status: blocked\nsummary: "x"\nquestions: "chọn A hay B? mặc định A"')).includes('blocked-questions'),
+      'AC3.2: blocked-questions đạt khi questions là chuỗi không rỗng');
+    ok(rules(check('status: blocked\nsummary: "x"\nquestions: ""')).includes('blocked-questions'), 'AC3.2: blocked-questions vi phạm khi questions là chuỗi rỗng');
+    ok(rc.checkReportLine(`${GOOD} constructor=1`).violations.some((v) => v.detail.includes('khoá lạ: constructor')),
+      'AC2.5: khoá constructor là khoá lạ (không nhận qua prototype)');
+
     // AC1.1, AC4.3, AC2.7: mục contract (Task 3) khớp khoá D1, lệnh mẫu và quy tắc aip-report
     const read = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
     const oc = read('core', 'principles', 'workflow-output-contract.md');
@@ -225,6 +274,11 @@ export default async function run({ ok, ctx }) {
     ok(script.includes('--line "aip-report v1'), 'AC4.3: mục "Kiểm bằng script" có lệnh mẫu --line');
     const aipReport = section('Báo cáo giữa phiên (aip-report)');
     ok(aipReport.includes('không ghi vào ledger') && aipReport.includes('events.jsonl'), 'AC2.7: mục aip-report nêu dòng không ghi vào ledger và events.jsonl');
+
+    // Khối mẫu của contract điền giá trị đơn giản, giữ nguyên mọi chú thích (kể cả chú thích có nháy kép) → parse được
+    const sample = rc.parseAgentResult(`agent_result:\n${agentBlock.replace(/<[^>\n]*>/g, 'x')}`);
+    ok(sample !== null && sample.status === 'completed' && sample.summary === 'x' && Array.isArray(sample.validation) && Array.isArray(sample.assumptions),
+      'AC3.5: khối mẫu agent_result của contract (giữ chú thích, thay <…> bằng giá trị) parse được');
 
     // AC5.2: mỗi prompt trỏ contract, có khoá bắt buộc của vai, không có dòng agent_result: YAML
     const PROMPT_KEYS = {

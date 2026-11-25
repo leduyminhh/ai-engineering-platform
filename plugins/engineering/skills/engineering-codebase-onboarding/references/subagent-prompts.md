@@ -58,7 +58,7 @@ Cổng 1 đã chọn cho mỗi file có sẵn một lựa chọn: giữ | khối
 
 ```text
 ## Đầu ra
-Ghi các file được phép, rồi trả một khối agent_result theo mẫu sau; khoá rỗng được bỏ. Không in báo cáo dài. Không đưa giá trị cấu hình vào bất kỳ trường nào.
+Ghi các file được phép, rồi trả một khối agent_result theo mẫu sau. Không in báo cáo dài. Không đưa giá trị cấu hình vào bất kỳ trường nào.
 Khoá rỗng được bỏ; `questions` chỉ bắt buộc khi `status: blocked`.
 
 agent_result:
