@@ -255,8 +255,17 @@ export default async function run({ ok, ctx }) {
     const OLD_REPORT = ['một dòng gồm hash, kết quả test và số minor hoãn', 'một dòng nêu lý do'];
     ok(Object.values(refs).every((t) => OLD_REPORT.every((s) => !t.includes(s))),
       'AC2.6: ba file không còn câu báo cáo cũ (hash, kết quả test, số minor hoãn; một dòng nêu lý do)');
-    ok(Object.values(refs).every((t) => t.includes('aip-report') && t.includes('Báo cáo giữa phiên (aip-report)')),
-      'AC2.6: ba file trỏ mục "Báo cáo giữa phiên (aip-report)" của contract');
+    const at = (t, a, b) => t.slice(t.indexOf(a), t.indexOf(b));
+    const POINTERS = {
+      'task-loop Chế độ part bước 6': at(refs['task-loop.md'], '6. Chỉ áp cho `session`', '7. Session gốc đọc dòng'),
+      'model-routing quy tắc 9': at(refs['model-routing.md'], '9. One message', '10. Brief'),
+      'model-routing quy tắc 14': at(refs['model-routing.md'], '14. A child session', '15. Every'),
+      'inline mục Subagent part': at(refs['inline.md'], '## Subagent part', '## Ranh giới'),
+    };
+    for (const [where, span] of Object.entries(POINTERS)) {
+      ok(span.includes('aip-report') && span.includes('Báo cáo giữa phiên (aip-report)'),
+        `AC2.6: ${where} trỏ mục "Báo cáo giữa phiên (aip-report)" của contract`);
+    }
 
     // AC4.1: bước 3–4 nêu task-<n>-report.md, result-check.mjs, violations là đầu ra hỏng; bước 7–8 nêu file review và --role
     const loop = refs['task-loop.md'];

@@ -156,8 +156,8 @@ Exit `0` khi đạt, `1` khi có vi phạm, `2` khi sai đối số hoặc khôn
 node <thư mục skill plan-execution>/scripts/result-check.mjs <task-n-report.md> --role implementer --plan <plan.md> --task <n>
 # task-review; số giả định lấy từ báo cáo implementer
 node <thư mục skill plan-execution>/scripts/result-check.mjs <task-n-review-vòng.md> --role task-review --plan <plan.md> --task <n> --implementer-report <task-n-report.md>
-# re-review; --findings là số finding của lần review trước
-node <thư mục skill plan-execution>/scripts/result-check.mjs <task-n-review-vòng.md> --role re-review --findings <số> --implementer-report <task-n-report.md>
+# re-review; --findings là số finding của lần review trước; báo cáo là của vòng sửa
+node <thư mục skill plan-execution>/scripts/result-check.mjs <task-n-review-vòng.md> --role re-review --findings <số> --implementer-report <task-n-fix-vòng-report.md>
 # final-review
 node <thư mục skill plan-execution>/scripts/result-check.mjs <final-review.md> --role final-review
 # worker
