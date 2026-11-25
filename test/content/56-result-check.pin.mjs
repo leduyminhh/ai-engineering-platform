@@ -43,6 +43,13 @@ export default async function run({ ok, ctx }) {
       ['AC2.5: giá trị có khoảng trắng ngoài note', 'aip-report v1 from=part 02 status=complete hash=abc1234 tests=pass', false],
       ['note chứa = và khoảng trắng', 'aip-report v1 from=root status=failed note="a=b c  d"', true],
       ['dòng kết thúc \\r', `${GOOD}\r`, true],
+      ['AC2.3: note rỗng', 'aip-report v1 from=root status=blocked note=""', false, 'note'],
+      ['AC2.3: note không nháy kép', 'aip-report v1 from=root status=blocked note=abc', false, 'note'],
+      ['AC2.3: note mở nháy không đóng', 'aip-report v1 from=root status=blocked note="abc', false, 'note'],
+      ['AC2.3: note 121 code point', `aip-report v1 from=root status=blocked note="${'ệ'.repeat(121)}"`, false, 'note'],
+      ['khoá lạ', `${GOOD} extra=1`, false, 'extra'],
+      ['khoá lặp', `${GOOD} minor=3`, false, 'minor'],
+      ['nháy kép ngoài note', 'aip-report v1 from="root" status=blocked note="x"', false, 'from'],
       ['nhiều dòng', `${GOOD}\n${GOOD}`, false],
     ];
     for (const [name, line, good, key] of LINES) {
@@ -73,6 +80,7 @@ export default async function run({ ok, ctx }) {
       ['file không tồn tại', [path.join(dir, 'missing.md'), '--role', 'worker']],
       ['đường dẫn là thư mục', [dir, '--role', 'worker']],
       ['--plan không kèm --task', [report, '--role', 'worker', '--plan', report]],
+      ['--line kèm --role', ['--line', GOOD, '--role', 'worker']],
     ]) ok(cli(args).code === 2, `AC3.1: ${name} → exit 2`);
 
     // AC3.7: script chỉ đọc file và chỉ import node:* và ./task-brief.mjs

@@ -54,7 +54,7 @@ const LINE_KEYS = {
   tests: (v) => ['pass', 'fail', 'not_run'].includes(v),
   minor: (v) => /^\d+$/.test(v),
   file: (v) => v.length > 0,
-  note: (v) => [...v].length <= NOTE_MAX,
+  note: (v) => v.trim().length > 0 && [...v].length <= NOTE_MAX,
 };
 
 export function checkReportLine(raw) {
@@ -70,7 +70,7 @@ export function checkReportLine(raw) {
     const [key, val] = t[1] ? [t[1], t[2]] : (t[3].match(/^([a-z]+)=(.*)$/)?.slice(1) ?? [undefined, undefined]);
     if (key === undefined) { add('line-format', `token không phải khoá=giá trị: ${t[0]}`); continue; }
     if (!(key in LINE_KEYS)) { add('line-format', `khoá lạ: ${key}`); continue; }
-    if (t[1] && key !== 'note') { add('line-format', `chỉ note được đặt trong nháy kép: ${key}`); continue; }
+    if (!!t[1] !== (key === 'note')) { add('line-format', `chỉ note, và luôn note, đặt trong nháy kép: ${key}`); continue; }
     if (key in kv) { add('line-format', `khoá lặp: ${key}`); continue; }
     kv[key] = val;
     if (!LINE_KEYS[key](val)) add('line-bad-value', `giá trị sai cho ${key}: ${val}`);
@@ -95,7 +95,7 @@ function readText(file, flag) {
   let st;
   try { st = fs.statSync(file); } catch { throw new UsageError(`${flag}: không đọc được ${file}`); }
   if (st.isDirectory()) throw new UsageError(`${flag}: ${file} là thư mục`);
-  return fs.readFileSync(file, 'utf8');
+  try { return fs.readFileSync(file, 'utf8'); } catch { throw new UsageError(`${flag}: không đọc được ${file}`); }
 }
 
 export function main(argv) {
