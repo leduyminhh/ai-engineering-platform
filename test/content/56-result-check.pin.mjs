@@ -236,14 +236,17 @@ export default async function run({ ok, ctx }) {
     for (const [file, keys] of Object.entries(PROMPT_KEYS)) {
       const text = read('core', 'skills', 'plan-execution', 'references', 'prompts', file);
       ok(text.includes('"Agent result"') && text.includes('"Khoá bỏ được"'), `AC5.2: ${file} trỏ mục "Agent result" và "Khoá bỏ được" của contract`);
-      ok(keys.every((k) => text.includes(k)), `AC5.2: ${file} nêu khoá bắt buộc của vai (${keys.join(', ')})`);
+      const keySentence = text.match(/[Kk]hoá bắt buộc[^\n]*?\.(?=\s|$)/m)?.[0] ?? '';
+      ok(keySentence !== '' && keys.every((k) => keySentence.includes(k)), `AC5.2: ${file} nêu khoá bắt buộc của vai (${keys.join(', ')}) trong đúng câu khoá bắt buộc`);
       ok(!/^\s*agent_result:/m.test(text), `AC5.2: ${file} không có dòng agent_result: dạng YAML`);
     }
 
-    // AC4.2: không prompt nào bảo worker hay reviewer ghi file report
+    // AC4.2: prompt giao cho worker/reviewer (khối ``` đầu) không bảo ghi, lưu hay xuất file report
+    const WRITE_REPORT = /report\.md|report_file|(ghi|lưu|xuất|viết|tạo)[^.\n]*\.md\b/i;
     for (const file of Object.keys(PROMPT_KEYS)) {
       const text = read('core', 'skills', 'plan-execution', 'references', 'prompts', file);
-      ok(!/report\.md|report_file/.test(text), `AC4.2: ${file} không nhắc ghi file report (report.md, report_file)`);
+      const worker = text.split('```')[1] ?? '';
+      ok(worker.length > 0 && !WRITE_REPORT.test(worker), `AC4.2: ${file} khối giao việc không bảo ghi file report (report.md, report_file, ghi/lưu/xuất/viết/tạo …md)`);
     }
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });

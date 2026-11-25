@@ -34,7 +34,7 @@ Việc cần làm:
 
 Không được: commit, push, gọi agent khác hay reviewer. Session chính sẽ commit và review sau khi bạn báo.
 
-Báo cáo trả về trong tin nhắn cuối, theo khối `agent_result` của mục "Agent result" và "Khoá bỏ được" trong contract đầu ra (`core:principles`, `workflow-output-contract.md`). Khoá bắt buộc của vai implementer: `assumptions` (có thể rỗng `[]`, mỗi mục gồm `assumption`, `basis`, `if_wrong` theo việc 8), kèm `tdd.red` và `tdd.green` khi task TDD `có`, `questions` khi `blocked`. Khoá vắng là rỗng. Điều còn lo ghi vào `remaining_risks`.
+Báo cáo trả về trong tin nhắn cuối, theo khối `agent_result` của mục "Agent result" và "Khoá bỏ được" trong contract đầu ra (`core:principles`, `workflow-output-contract.md`). Báo `changes` (file thêm/sửa/xoá) và `validation` (lệnh, exit code, tóm tắt). Task TDD `có`: `tdd.red` là lệnh + exit code khác 0 + lý do đỏ đúng; `tdd.green` là cùng lệnh, exit 0 (xem "Trường mở rộng" của contract). Khoá bắt buộc của vai implementer: `assumptions` (có thể rỗng `[]`, mỗi mục gồm `assumption`, `basis`, `if_wrong` theo việc 8), `tdd.red` và `tdd.green` khi task TDD `có`, `questions` khi `blocked`. `assumptions` luôn có mặt kể cả khi `[]`; thiếu khoá này là đầu ra hỏng. Khoá khác vắng là rỗng. Completed kèm `remaining_risks` = xong kèm lo ngại: điều còn lo ghi vào `remaining_risks`.
 ```
 
 Khi nhận báo cáo: session chính xử lý theo `references/task-loop.md` (bước 4–6). Vòng sửa dùng cùng prompt này nhưng thay
