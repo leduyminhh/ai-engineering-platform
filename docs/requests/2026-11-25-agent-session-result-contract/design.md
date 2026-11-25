@@ -1,6 +1,6 @@
 # Thiết kế: Chuẩn hoá result giữa session và subagent
 - Ngày: 2026-11-25
-- Trạng thái: draft — chờ người duyệt; brief đã duyệt ở `brief.md` cùng thư mục
+- Trạng thái: merged e9df5e68
 - Requirement: [requirement.md](requirement.md)
 
 ## Vấn đề và lý do
