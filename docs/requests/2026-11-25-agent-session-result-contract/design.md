@@ -33,6 +33,16 @@ Quyết định D1–D7 (người dùng đã chốt):
 - Pin test chuyển chỗ nhưng giữ nguyên ý: schema mẫu `agent_result` trong contract vẫn liệt kê đủ khoá, khoá bỏ được đánh dấu bằng chú thích; nhờ đó `test/content/31-workflow-self-sufficient.pin.mjs` (kiểm `tdd { red, green }`, `report_file`, `commits` trong khối mẫu) và `53-reasoning-review.pin.mjs` (kiểm `assumptions: []`, `assumption_review[]`, câu của mục "Kiểm đầu ra worker") đổi ít nhất.
 - Bộ test mới đặt ở `test/content/56-result-check.pin.mjs` (validate tự nạp, chạy trong `npm test`) thay vì nối thêm một file vào chuỗi `npm test`.
 
+## Quyết định khi thực thi (Ruling)
+Chép từ ledger ở bước kết thúc nhánh, vì ledger nằm trong `.aip/` không vào nhánh:
+- `tdd-required` và `changes-in-files` chỉ áp cho `--role implementer` và `worker`; report của reviewer không có `tdd`/`changes`. Lý do: review cuối tái hiện `tdd-required` oan trên report task-review của task TDD.
+- AC3.4: `tdd-required` chỉ áp cho báo cáo implementer đầu của task; báo cáo vòng sửa (`task-<n>-fix-<vòng>-report.md`) chạy không kèm `--plan --task`. Chi phí nếu sai: vòng sửa đổi file ngoài `**Files:**` chỉ bị re-review bắt.
+- Task `TOOLING` do session chính làm chạy `--role worker` (contract miễn `assumptions` cho task này).
+- Re-review đếm `assumption_review[]` theo báo cáo vòng sửa (chỉ gồm giả định mới), không theo báo cáo gốc; vòng sửa Task 5 sửa thêm mẫu lệnh re-review trong contract (ngoài `**Files:**` của Task 5) cho khớp.
+- Lệnh task-review không kèm `--plan --task` (khớp mục "Luồng ở `plan-execution`" bên dưới).
+- Baseline: test đỏ ở repo chính (P4e, mode `confined`) và trên clone sạch (AC3.4 thời gian) không chặn; chạy lại `node test/validate.mjs --only path-permissions` cho 1229 pass, 0 fail.
+- Đo trên report thật: quét 91–96 `task-*-report.md` trong `.aip/runs/` bằng `result-check.mjs <f> --role worker` (chạy lại: vòng `for` trên các file đó). Trước khi nới parser: 8 report hợp lệ bị `unparseable`; sau khi xong nhánh: 87/96 đạt, còn lại là vi phạm thật (6 `completed-no-failed-validation`, 1 `status-valid`) và 2 header lệch chuẩn.
+
 ## Tiêu chí chấp nhận
 Nằm ở [requirement.md](requirement.md) (AC1.1–AC8.3); không lặp ở đây.
 
