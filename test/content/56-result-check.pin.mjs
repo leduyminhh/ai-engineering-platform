@@ -198,6 +198,27 @@ export default async function run({ ok, ctx }) {
     for (const [name, body] of REAL) ok(check(body).ok === true, `AC7.2: ${name} đạt`);
     ok(rules(check('status: completed\nsummary: "x"\nfindings: [{ location: "a:1", evidence: "e"')).includes('unparseable'),
       'AC3.5: flow hỏng ở khoá luật cần (findings) vẫn là unparseable');
+
+    // AC1.1, AC4.3, AC2.7: mục contract (Task 3) khớp khoá D1, lệnh mẫu và quy tắc aip-report
+    const read = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
+    const oc = read('core', 'principles', 'workflow-output-contract.md');
+    const section = (title) => oc.split(/^## /m).slice(1).find((h) => h.split('\n')[0].trim() === title) ?? '';
+    const agentBlock = (oc.split('agent_result:\n')[1] ?? '').split('```')[0];
+    for (const k of ['changes', 'validation', 'findings', 'questions', 'remaining_risks', 'tdd', 'assumptions', 'report_file', 'commits']) {
+      ok(new RegExp(`^\\s+${k}:.*# bỏ được khi rỗng`, 'm').test(agentBlock), `AC1.1: khối mẫu agent_result: khoá ${k} có chú thích bỏ được`);
+    }
+    const keep = section('Khoá bỏ được');
+    for (const t of ['status', 'summary', 'assumptions', 'tdd.red', 'tdd.green', 'spec_verdict', 'findings', 'assumption_review[]', 'verdicts[]', 'questions', 'ruling_review[]']) {
+      ok(keep.includes(`\`${t}`), `AC1.1: mục "Khoá bỏ được" nêu khoá ${t}`);
+    }
+    ok(keep.includes('khoá vắng là rỗng'), 'AC1.1: mục "Khoá bỏ được" nêu khoá vắng là rỗng');
+    const script = section('Kiểm bằng script');
+    for (const role of ['implementer', 'task-review', 're-review', 'final-review', 'worker']) {
+      ok(script.includes(`--role ${role}`), `AC4.3: mục "Kiểm bằng script" có lệnh mẫu --role ${role}`);
+    }
+    ok(script.includes('--line "aip-report v1'), 'AC4.3: mục "Kiểm bằng script" có lệnh mẫu --line');
+    const aipReport = section('Báo cáo giữa phiên (aip-report)');
+    ok(aipReport.includes('không ghi vào ledger') && aipReport.includes('events.jsonl'), 'AC2.7: mục aip-report nêu dòng không ghi vào ledger và events.jsonl');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
