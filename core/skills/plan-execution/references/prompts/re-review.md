@@ -7,7 +7,7 @@ sửa, nên package là `node <thư mục skill plan-execution>/scripts/review-p
 Re-review Task <n>, vòng sửa <1|2|3>. Bạn chỉ đọc; không sửa file, không commit, không gọi agent khác.
 
 Đầu vào:
-- Danh sách finding của lần review trước (nguyên văn, đánh số): <finding 1…k>
+- Danh sách finding đã giao cho vòng sửa (nguyên văn, đánh số; chỉ finding vào vòng sửa, không gồm minor/nit đã hoãn): <finding 1…k>. `k` là số `--findings` khi session chính chạy `result-check.mjs --role re-review`; trả đúng `k` mục `verdicts[]`.
 - Review package của vòng sửa: <đường dẫn>, khoảng <FIX_BASE>..<head>.
 - Brief của task: <đường dẫn task-<n>-brief.md>.
 - Báo cáo sửa của implementer (kể cả chỗ họ phản biện finding bằng bằng chứng): <đường dẫn hoặc đoạn trích>.
