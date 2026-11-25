@@ -26,9 +26,10 @@ export default async function run({ ok, ctx }) {
   try {
     // AC2.1–AC2.5: dòng aip-report
     const GOOD = 'aip-report v1 from=part-02 status=complete hash=abc1234 tests=pass minor=2 file=.aip/runs/x/02-y/progress.md';
+    // note giữ dưới trần 120 nên phần đệm nằm ở file=; chữ có dấu kiểm cách đếm code point.
     const pad = (n) => {
-      const head = 'aip-report v1 from=part-02 status=blocked note="';
-      return `${head}${'ệ'.repeat(n - [...head].length - 1)}"`;
+      const head = 'aip-report v1 from=part-02 status=blocked note="thiếu quyền ghi" file=';
+      return `${head}${'ệ'.repeat(n - [...head].length)}`;
     };
     const LINES = [
       ['AC2.1: dòng mẫu hợp lệ', GOOD, true],
