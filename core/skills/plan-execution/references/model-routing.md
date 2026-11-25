@@ -53,7 +53,7 @@ model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
 7. Do not send a message only to announce a rule or check in; fold it into the brief of the next task.
 8. A child session reports only when: a queued task is done, it is blocked, or the user must decide. Never send an
    acknowledgement ("received", "rule noted").
-9. One message batches several small results. Long output goes in a file (run-log); the message points to it.
+9. One message batches several small results. Long output goes in a file (run-log); the message points to it. A status line to the parent uses the `aip-report` format (`core:principles`, section "Báo cáo giữa phiên (aip-report)").
 10. Brief a child session with a queue of 2–3 chained tasks so it never idles between them.
 
 **Monitoring**
@@ -71,8 +71,7 @@ model ([sub-agents](https://code.claude.com/docs/en/sub-agents)).
 
 **Long sessions**
 
-14. A child session writes its long report to a file and sends the parent one line with the path and the
-    conclusion. The orchestrating session never reads long diffs or logs itself; a `haiku` subagent reads and
+14. A child session writes its long report to a file and sends the parent one line, one `aip-report` line (keys and rules in `core:principles`, section "Báo cáo giữa phiên (aip-report)"; `file=` carries the path). The orchestrating session never reads long diffs or logs itself; a `haiku` subagent reads and
     returns the summary.
 15. Every command in the orchestrating session bounds its output (`--stat`, `head`, column filters); list
     sessions by name or id rather than a full listing; never repeat `get_usage`/`list_events` within one gate.

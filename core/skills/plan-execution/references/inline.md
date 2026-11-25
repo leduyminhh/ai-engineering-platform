@@ -73,6 +73,7 @@ Khi nhóm Song song chọn Subagent (`task-loop.md`, "Chế độ part" bước 
 - Không sửa `design.md` gốc hay Bảng part. Gặp loại dừng của `task-loop.md` thì ghi `Blocked: <lý do>` vào ledger part rồi trả `blocked` (hoặc `failed` khi không làm tiếp được) kèm `questions[]` thay vì tự quyết; session gốc gỡ theo mục "Part vướng" của `task-loop.md` và ghi `Unblocked:` vào ledger của part này.
 - Xong thì ghi `Part: complete <hash>` vào ledger của part, với `<hash>` là hash đầy đủ của HEAD nhánh part sau commit task
   cuối (`git -C <worktree> rev-parse HEAD`); session gốc merge khi thấy dòng đó.
+- Báo cáo cuối trả về phiên gốc mở bằng một dòng `aip-report` (khoá và luật ở contract, mục "Báo cáo giữa phiên (aip-report)"), đúng `status`: `complete` kèm `hash` và `tests`, hoặc `blocked`/`failed` kèm `note`. Dòng đó không thay `Part: complete` hay `Blocked:` trong ledger.
 
 ## Ranh giới
 

@@ -54,11 +54,12 @@ Cổng 1 đã chọn cho mỗi file có sẵn một lựa chọn: giữ | khối
 - tech-stack.yml chỉ có giữ hoặc bỏ, không dùng marker (nối khối vào YAML có sẵn gây trùng khoá cấp một).
 ```
 
-## Mục D. Khối agent_result (dán nguyên, subagent phải trả đúng khối này)
+## Mục D. Khối agent_result (dán nguyên, subagent trả khối agent_result theo mẫu này)
 
 ```text
 ## Đầu ra
-Ghi các file được phép, rồi trả đúng một khối sau. Không in báo cáo dài. Không đưa giá trị cấu hình vào bất kỳ trường nào.
+Ghi các file được phép, rồi trả một khối agent_result theo mẫu sau. Không in báo cáo dài. Không đưa giá trị cấu hình vào bất kỳ trường nào.
+Khoá rỗng được bỏ; `questions` chỉ bắt buộc khi `status: blocked`.
 
 agent_result:
   agent: general-purpose

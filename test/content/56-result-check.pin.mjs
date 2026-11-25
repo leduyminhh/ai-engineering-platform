@@ -1,0 +1,350 @@
+// Pin: docs/requests/2026-11-25-agent-session-result-contract — result-check.mjs (dòng aip-report, agent_result) và tài liệu đi kèm.
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+
+export default async function run({ ok, ctx }) {
+  const { fs, path, os, pathToFileURL, REPO_ROOT } = ctx;
+  const scriptPath = path.join(REPO_ROOT, 'core', 'skills', 'plan-execution', 'scripts', 'result-check.mjs');
+  if (!fs.existsSync(scriptPath)) { ok(false, 'AC3.1: result-check.mjs tồn tại'); return; }
+  const rc = await import(pathToFileURL(scriptPath).href);
+  const roots = [];
+  const write = (name, body) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'result-check-'));
+    roots.push(root);
+    const abs = path.join(root, name);
+    fs.writeFileSync(abs, body);
+    return abs;
+  };
+  const cli = (args) => {
+    const r = spawnSync(process.execPath, [scriptPath, ...args], { encoding: 'utf8' });
+    let json = null;
+    try { json = JSON.parse(r.stdout); } catch { /* exit 2 không in JSON */ }
+    return { code: r.status, json };
+  };
+  const rules = (res) => res.violations.map((v) => v.rule);
+
+  try {
+    // AC2.1–AC2.5: dòng aip-report
+    const GOOD = 'aip-report v1 from=part-02 status=complete hash=abc1234 tests=pass minor=2 file=.aip/runs/x/02-y/progress.md';
+    // note giữ dưới trần 120 nên phần đệm nằm ở file=; chữ có dấu kiểm cách đếm code point.
+    const pad = (n) => {
+      const head = 'aip-report v1 from=part-02 status=blocked note="thiếu quyền ghi" file=';
+      return `${head}${'ệ'.repeat(n - [...head].length)}`;
+    };
+    const LINES = [
+      ['AC2.1: dòng mẫu hợp lệ', GOOD, true],
+      ['AC2.2: complete thiếu hash', 'aip-report v1 from=part-02 status=complete tests=pass', false, 'hash'],
+      ['AC2.2: complete thiếu tests', 'aip-report v1 from=part-02 status=complete hash=abc1234', false, 'tests'],
+      ['AC2.3: blocked thiếu note', 'aip-report v1 from=root status=blocked', false, 'note'],
+      ['AC2.3: failed thiếu note', 'aip-report v1 from=root status=failed', false, 'note'],
+      ['AC2.3: blocked có note', 'aip-report v1 from=root status=blocked note="thiếu quyền ghi .aip"', true],
+      ['AC2.5: thiếu v1', 'aip-report from=root status=blocked note="x"', false],
+      ['AC2.5: status ngoài tập', 'aip-report v1 from=root status=done hash=abc1234 tests=pass', false],
+      ['AC2.5: giá trị có khoảng trắng ngoài note', 'aip-report v1 from=part 02 status=complete hash=abc1234 tests=pass', false],
+      ['note chứa = và khoảng trắng', 'aip-report v1 from=root status=failed note="a=b c  d"', true],
+      ['dòng kết thúc \\r', `${GOOD}\r`, true],
+      ['AC2.3: note rỗng', 'aip-report v1 from=root status=blocked note=""', false, 'note'],
+      ['AC2.3: note không nháy kép', 'aip-report v1 from=root status=blocked note=abc', false, 'note'],
+      ['AC2.3: note mở nháy không đóng', 'aip-report v1 from=root status=blocked note="abc', false, 'note'],
+      ['AC2.3: note 121 code point', `aip-report v1 from=root status=blocked note="${'ệ'.repeat(121)}"`, false, 'note'],
+      ['khoá lạ', `${GOOD} extra=1`, false, 'extra'],
+      ['khoá lặp', `${GOOD} minor=3`, false, 'minor'],
+      ['nháy kép ngoài note', 'aip-report v1 from="root" status=blocked note="x"', false, 'from'],
+      ['nhiều dòng', `${GOOD}\n${GOOD}`, false],
+    ];
+    for (const [name, line, good, key] of LINES) {
+      const res = rc.checkReportLine(line);
+      ok(res.ok === good && (good ? res.violations.length === 0 : res.violations.length > 0), name);
+      if (key) ok(res.violations.some((v) => v.detail.includes(key)), `${name}: detail nêu ${key}`);
+    }
+    // AC2.4: trần đếm theo code point, note có chữ tiếng Việt có dấu
+    const at400 = pad(400);
+    const at401 = pad(401);
+    ok([...at400].length === 400 && [...at401].length === 401, 'AC2.4: dựng đúng dòng 400 và 401 code point');
+    ok(rc.checkReportLine(at400).ok === true, 'AC2.4: 400 code point đạt');
+    ok(rules(rc.checkReportLine(at401)).includes('line-too-long'), 'AC2.4: 401 code point vi phạm line-too-long');
+
+    // AC3.1: CLI --line và đối số sai
+    const good = cli(['--line', GOOD]);
+    ok(good.code === 0 && good.json?.ok === true && Array.isArray(good.json.violations) && Array.isArray(good.json.not_run),
+      'AC3.1: --line hợp lệ exit 0, JSON { ok, violations, not_run }');
+    const bad = cli(['--line', 'aip-report v1 from=root status=blocked']);
+    ok(bad.code === 1 && bad.json?.ok === false && bad.json.violations.every((v) => v.rule && v.detail),
+      'AC3.1: --line vi phạm exit 1, violations có rule và detail');
+    const report = write('task-1-report.md', 'agent_result:\n  status: completed\n  summary: "x"\n');
+    const dir = path.dirname(report);
+    for (const [name, args] of [
+      ['không đối số', []],
+      ['thiếu --role', [report]],
+      ['--role lạ', [report, '--role', 'foo']],
+      ['file không tồn tại', [path.join(dir, 'missing.md'), '--role', 'worker']],
+      ['đường dẫn là thư mục', [dir, '--role', 'worker']],
+      ['--plan không kèm --task', [report, '--role', 'worker', '--plan', report]],
+      ['--line kèm --role', ['--line', GOOD, '--role', 'worker']],
+    ]) ok(cli(args).code === 2, `AC3.1: ${name} → exit 2`);
+
+    // AC3.7: script chỉ đọc file và chỉ import node:* và ./task-brief.mjs
+    const sha = () => createHash('sha256').update(fs.readFileSync(report)).digest('hex');
+    const before = sha();
+    cli([report, '--role', 'worker']);
+    ok(sha() === before, 'AC3.7: file report không đổi sau khi chạy script');
+    const src = fs.readFileSync(scriptPath, 'utf8');
+    const imports = [...src.matchAll(/^import\s[^'"]*['"]([^'"]+)['"]/gm)].map((m) => m[1]);
+    ok(imports.length > 0 && imports.every((s) => s.startsWith('node:') || s === './task-brief.mjs'),
+      `AC3.7: import chỉ node:* và ./task-brief.mjs (có: ${imports.join(', ')})`);
+
+    // AC3.2: 11 luật, mỗi luật một ca đạt + một ca vi phạm trên hàm thuần
+    const ar = (body) => `agent_result:\n${body.trim().split('\n').map((l) => `  ${l}`).join('\n')}\n`;
+    const parse = (body) => rc.parseAgentResult(ar(body));
+    const check = (body, opts) => rc.checkAgentResult(parse(body), { role: 'worker', ...opts });
+    const PLAN = [
+      '# P', '', '### Task 1: a', '**Kind:** BE', '**Files:**', '- Modify: `core/x.mjs`', '- Test: `test/x.mjs`', '',
+      '### Task 2: b', '**Kind:** TOOLING', '**TDD:** không — chỉ docs', '**Files:**', '- Modify: `docs/y.md`', '',
+    ].join('\n');
+    const TDD = 'tdd:\n  red: { command: "t", exit_code: 1, status: failed, summary: "đỏ" }\n  green: { command: "t", exit_code: 0, status: passed, summary: "xanh" }';
+    const RULES = [
+      ['status-valid', 'status: completed\nsummary: "x"', 'status: done\nsummary: "x"', {}],
+      ['finding-location-evidence',
+        'status: completed\nsummary: "x"\nfindings:\n  - { severity: minor, location: "a.mjs:1", evidence: "e" }',
+        'status: completed\nsummary: "x"\nfindings:\n  - { severity: minor, location: "", evidence: "e" }', {}],
+      ['completed-no-failed-validation',
+        'status: completed\nsummary: "x"\nvalidation:\n  - { command: "t", exit_code: 0, status: passed }',
+        'status: completed\nsummary: "x"\nvalidation:\n  - { command: "t", exit_code: 1, status: failed }', {}],
+      ['changes-in-files',
+        'status: completed\nsummary: "x"\nchanges: { modified: [core\\x.mjs, test/x.mjs] }\n' + TDD,
+        'status: completed\nsummary: "x"\nchanges: { modified: [core/z.mjs] }\n' + TDD, { planText: PLAN, task: 1 }],
+      ['tdd-required', `status: completed\nsummary: "x"\n${TDD}`, 'status: completed\nsummary: "x"', { tdd: true }],
+      ['assumptions-key', 'status: completed\nsummary: "x"\nassumptions: []', 'status: completed\nsummary: "x"', { role: 'implementer' }],
+      ['spec-verdict-findings', 'status: completed\nsummary: "x"\nspec_verdict: compliant\nfindings: []',
+        'status: completed\nsummary: "x"\nspec_verdict: compliant', { role: 'task-review' }],
+      ['assumption-review-count',
+        'status: completed\nsummary: "x"\nspec_verdict: compliant\nfindings: []\nassumption_review:\n  - { assumption: a, verdict: holds, evidence: e }',
+        'status: completed\nsummary: "x"\nspec_verdict: compliant\nfindings: []', { role: 'task-review', implementerAssumptions: 1 }],
+      ['verdicts-count', 'status: completed\nsummary: "x"\nverdicts:\n  - { finding: f1, verdict: ADDRESSED, evidence: e }',
+        'status: completed\nsummary: "x"\nverdicts: []', { role: 're-review', findings: 1 }],
+      ['blocked-questions', 'status: blocked\nsummary: "x"\nquestions:\n  - "chọn A hay B? mặc định A"', 'status: blocked\nsummary: "x"\nquestions: []', {}],
+      ['final-review-keys', 'status: completed\nsummary: "x"\nfindings: []\nruling_review: []',
+        'status: completed\nsummary: "x"\nfindings: []', { role: 'final-review' }],
+    ];
+    for (const [rule, good, bad, opts] of RULES) {
+      const g = check(good, opts);
+      const b = check(bad, opts);
+      ok(g.ok === true && !rules(g).includes(rule), `AC3.2: ${rule} — ca đạt (${JSON.stringify(g.violations)})`);
+      ok(b.ok === false && rules(b).includes(rule), `AC3.2: ${rule} — ca vi phạm (${JSON.stringify(b.violations)})`);
+    }
+    ok(check('status: completed\nsummary: "x"').ok === true, 'AC3.2: --role worker chỉ có status + summary đạt');
+
+    // AC1.2, AC1.3: implementer tối giản đạt; blocked không questions vi phạm
+    ok(check('status: completed\nsummary: "x"\nassumptions: []', { role: 'implementer' }).ok === true,
+      'AC1.2: implementer chỉ status, summary, assumptions: [] đạt');
+    ok(rules(check('status: blocked\nsummary: "x"', { role: 'implementer' })).includes('blocked-questions'),
+      'AC1.3: blocked không có questions → blocked-questions');
+
+    // AC3.3: không có --plan --task → not_run, không tính là đạt luật
+    const nr = check('status: completed\nsummary: "x"\nchanges: { added: [a.mjs] }');
+    ok(nr.not_run.some((n) => n.rule === 'changes-in-files' && n.reason), 'AC3.3: thiếu --plan --task → not_run changes-in-files kèm lý do');
+
+    // AC3.4: TDD suy từ plan
+    ok(rules(check('status: completed\nsummary: "x"\nchanges: { modified: [core/x.mjs] }', { planText: PLAN, task: 1 })).includes('tdd-required'),
+      'AC3.4: task BE không dòng TDD, report không tdd → tdd-required');
+    ok(!rules(check('status: completed\nsummary: "x"\nchanges: { modified: [docs/y.md] }', { planText: PLAN, task: 2 })).includes('tdd-required'),
+      'AC3.4: task **TDD:** không — <lý do> không đòi tdd');
+
+    // AC3.5: block và flow cho cùng kết quả; khối trong ```yaml; giá trị có ": " và "# "
+    const FLOW = 'status: completed\nsummary: "x"\nchanges: { added: [a.mjs], modified: [] }\nvalidation: [{ command: "t", exit_code: 1, status: failed }]\nfindings: [{ location: "", evidence: "e" }]';
+    const BLOCK = 'status: completed\nsummary: "x"\nchanges:\n  added:\n    - a.mjs\n  modified: []\nvalidation:\n  - command: "t"\n    exit_code: 1\n    status: failed\nfindings:\n  - location: ""\n    evidence: "e"';
+    const f = check(FLOW);
+    const bl = check(BLOCK);
+    ok(JSON.stringify(rules(f).sort()) === JSON.stringify(rules(bl).sort()) && rules(f).length === 2,
+      `AC3.5: block và flow cùng kết quả (${rules(f)} | ${rules(bl)})`);
+    const fenced = `Báo cáo:\n\n\`\`\`yaml\n${ar('status: completed\nsummary: "a: b # c"\nassumptions: []')}\`\`\`\n\nHết.`;
+    ok(rc.checkAgentResult(rc.parseAgentResult(fenced), { role: 'implementer' }).ok === true,
+      'AC3.5: khối trong ```yaml có văn bản trước/sau, summary chứa ": " và "# " đạt');
+    for (const [name, text] of [['không có khối', 'status: completed\n'], ['khối hỏng', 'agent_result:\n  [không: phải: map\n']]) {
+      const r = rc.checkAgentResult(rc.parseAgentResult(text), { role: 'worker' });
+      ok(r.ok === false && r.violations.length === 1 && r.violations[0].rule === 'unparseable', `AC3.5: ${name} → chỉ một unparseable`);
+    }
+
+    // AC3.6 qua CLI: --implementer-report và --findings
+    const impl3 = write('task-2-report.md', ar('status: completed\nsummary: "x"\nassumptions:\n  - { assumption: a, basis: b, if_wrong: c }\n  - { assumption: d, basis: e, if_wrong: f }\n  - { assumption: g, basis: h, if_wrong: i }'));
+    const reviewN = (n) => write('task-2-review-1.md', ar(`status: completed\nsummary: "x"\nspec_verdict: compliant\nfindings: []\nassumption_review:\n${Array.from({ length: n }, (_, i) => `  - { assumption: a${i}, verdict: holds, evidence: e }`).join('\n')}`));
+    ok(cli([reviewN(2), '--role', 'task-review', '--implementer-report', impl3]).json?.violations.some((v) => v.rule === 'assumption-review-count'),
+      'AC3.6: task-review 2 mục assumption_review với 3 giả định → assumption-review-count');
+    ok(cli([reviewN(3), '--role', 'task-review', '--implementer-report', impl3]).code === 0, 'AC3.6: đủ 3 mục → exit 0');
+    const rr = (n) => write('task-2-review-2.md', ar(`status: completed\nsummary: "x"\nverdicts:\n${Array.from({ length: n }, (_, i) => `  - { finding: f${i}, verdict: ADDRESSED, evidence: e }`).join('\n')}`));
+    ok(cli([rr(2), '--role', 're-review', '--findings', '3']).code === 1, 'AC3.6: re-review 2 verdicts với --findings 3 → exit 1');
+    ok(cli([rr(3), '--role', 're-review', '--findings', '3']).code === 0, 'AC3.6: đủ 3 verdicts → exit 0');
+    ok(cli([rr(3), '--role', 're-review', '--findings', '3', '--implementer-report', impl3]).json?.violations.some((v) => v.rule === 'assumption-review-count'),
+      'AC3.6: re-review kèm --implementer-report áp assumption-review-count');
+
+    // AC7.2: report dạng cũ (mẫu task-3-report.md của .aip/runs) đủ khoá → kiểm bình thường
+    const legacy = write('task-3-report.md', [
+      'agent_result:', '  status: completed', '  summary: walkSegments nối vào decide; PowerShell rơi về trackDirs cũ.',
+      '  changes:', '    - test (commit 08e4a040, test đỏ): 99-path-permissions AC1.1', '    - code (commit 81984119): guard-bash.mjs walkSegments',
+      '  validation:', '    - node test/validate.mjs --only path-permissions → exit 0, 762 pass',
+      '  tdd:', '    red: node test/validate.mjs --only path-permissions → exit 1, 13 fail', '    green: hai lệnh trên exit 0',
+      '  remaining_risks:', '    - Chưa đo chi phí lệnh nhiều $( ) (trần 200, sâu 3).',
+      '  assumptions:', '    - { assumption: "Seg phụ dùng env hiện tại", basis: "D5", if_wrong: "bỏ base trong inner walk" }', '',
+    ].join('\n'));
+    const lg = cli([legacy, '--role', 'implementer', '--tdd']);
+    ok(lg.code === 0, `AC7.2: report dạng cũ đủ khoá đạt (${JSON.stringify(lg.json)})`);
+    // Dạng gặp trong report thật của .aip/runs (2026-11-11..19): không được coi là unparseable.
+    const REAL = [
+      ['block scalar |', 'status: completed\nsummary: "x"\ndoc_check: |\n  khẳng định -> nguồn -> kết quả\n  a -> b -> khớp'],
+      ['khoá có giá trị kèm dòng thụt sâu hơn', 'status: completed\nsummary: "x"\ndoi_chieu: đối chiếu 35 khẳng định:\n  - chú thích PowerShell `#` bị bỏ\n  - out-null thêm ở Task 8'],
+      ['flow có chữ theo sau', 'status: completed\nsummary: "x"\nremaining_risks: [] (fullEffective vẫn được import)'],
+      ['mục list mở bằng [nhãn]', 'status: completed\nsummary: "x"\nremaining_risks:\n  - [Unverified] chưa đo trên Linux\n  - "[Inference] nhiễu tải"'],
+    ];
+    for (const [name, body] of REAL) ok(check(body).ok === true, `AC7.2: ${name} đạt`);
+    ok(rules(check('status: completed\nsummary: "x"\nfindings: [{ location: "a:1", evidence: "e"')).includes('unparseable'),
+      'AC3.5: flow hỏng ở khoá luật cần (findings) vẫn là unparseable');
+
+    // Luật theo vai: reviewer không bị changes-in-files/tdd-required (không vào cả not_run); implementer và worker vẫn bị
+    const REVIEW = 'status: completed\nsummary: "x"\nchanges: { modified: [core/z.mjs] }\nspec_verdict: compliant\nfindings: []\nverdicts: []\nruling_review: []';
+    for (const role of ['task-review', 're-review', 'final-review']) {
+      for (const [label, extra] of [['có --plan --task --tdd', { planText: PLAN, task: 1, tdd: true }], ['không cờ', {}]]) {
+        const r = check(REVIEW, { role, findings: 0, implementerAssumptions: 0, ...extra });
+        ok(!rules(r).includes('changes-in-files') && !rules(r).includes('tdd-required') && !r.not_run.some((n) => n.rule === 'changes-in-files'),
+          `AC3.2: vai ${role} (${label}) không bị changes-in-files/tdd-required và không vào not_run`);
+      }
+    }
+    ok(rules(check(REVIEW, { role: 'implementer', planText: PLAN, task: 1 })).includes('changes-in-files'), 'AC3.2: vai implementer vẫn bị changes-in-files');
+
+    // Parser: giá trị an toàn với report do worker viết (khoá cấm, độ sâu, độ dài, thời gian)
+    const timed = (fn) => { const t0 = Date.now(); const v = fn(); return [v, Date.now() - t0]; };
+    for (const [name, body, wantNull] of [
+      ['giá trị a + 200000 dấu cách + b', `status: completed\nsummary: "x"\nnote: a${' '.repeat(200000)}b`, true],
+      ['flow [{ + 100000 dấu cách + k', `status: completed\nsummary: "x"\nfindings: [{${' '.repeat(100000)}k`, true],
+      ['giá trị a + 9000 dấu cách + b (dưới trần dòng)', `status: completed\nsummary: "x"\nnote: a${' '.repeat(9000)}b`, false],
+      ['flow [{ + 9000 dấu cách + k (dưới trần dòng)', `status: completed\nsummary: "x"\nfindings: [{${' '.repeat(9000)}k`, true],
+    ]) {
+      const [v, ms] = timed(() => parse(body));
+      ok(ms < 1000 && (v === null) === wantNull, `AC3.7: ${name} chạy dưới 1 giây (${ms} ms) và ${wantNull ? 'là unparseable' : 'parse được'}`);
+    }
+    ok(rules(check('status: completed\nsummary: "x"\nfindings: ' + '['.repeat(5000))).join() === 'unparseable', 'AC3.7: 5000 dấu [ lồng nhau (flow sâu hơn 64) → unparseable, không RangeError');
+    const deepMap = (n) => Array.from({ length: n }, (_, i) => `${'  '.repeat(i)}k${i}:`).join('\n') + ' x';
+    ok(parse(deepMap(30)) !== null && parse(deepMap(100)) === null, 'AC3.7: map thụt lề lồng 30 mức parse được, 100 mức (quá trần 64) → unparseable');
+    for (const key of ['__proto__', 'constructor', 'prototype']) {
+      ok(rules(check(`status: completed\nsummary: "x"\n${key}:\n  assumptions: []`, { role: 'implementer' })).join() === 'unparseable', `AC3.7: khoá ${key} dạng block → unparseable`);
+      ok(rules(check(`status: completed\nsummary: "x"\nchanges: { ${key}: { assumptions: [] } }`, { role: 'implementer' })).join() === 'unparseable', `AC3.7: khoá ${key} dạng flow → unparseable`);
+    }
+    const cliBig = (name, body) => cli([write(name, body), '--role', 'worker']);
+    ok(cliBig('task-9-report.md', `agent_result:\n  status: completed\n  summary: "x"\n  note: ${'a'.repeat(1_000_001)}\n`).code === 2, 'AC3.7: file report lớn hơn 1 MB → exit 2');
+    const deepCli = cliBig('task-9-deep.md', `agent_result:\n  status: completed\n  summary: "x"\n  findings: ${'['.repeat(20000)}\n`);
+    ok(deepCli.code === 1 && deepCli.json?.violations.length === 1 && deepCli.json.violations[0].rule === 'unparseable', 'AC3.7: 20000 dấu [ qua CLI → exit 1, JSON một unparseable');
+
+    // Parser nhận các dạng YAML hợp lệ khác
+    const cm = rc.parseAgentResult(ar('status: completed   # xong\n# dòng chú thích\nsummary: "x # y"  # chú thích có "nháy"\n    # chú thích thụt sâu\nassumptions: []   # [] hợp lệ'));
+    ok(cm?.status === 'completed' && cm.summary === 'x # y' && Array.isArray(cm.assumptions), 'AC3.5: chú thích cuối dòng và dòng chỉ có chú thích được bỏ qua, # trong nháy giữ nguyên');
+    const oneLine = rc.parseAgentResult('agent_result: { status: completed, summary: "x", assumptions: [] }');
+    ok(oneLine?.status === 'completed' && rc.checkAgentResult(oneLine, { role: 'implementer' }).ok === true, 'AC3.5: header flow một dòng agent_result: { … } parse được');
+    ok(rc.parseAgentResult('agent_result:  # chú thích\n  status: completed\n  summary: "x"\n')?.status === 'completed', 'AC3.5: header agent_result: kèm chú thích cuối dòng parse được');
+    ok(rc.parseAgentResult('agent_result: x\n  status: completed\n') === null, 'AC3.5: header agent_result: kèm giá trị không phải flow → unparseable');
+    const seq = parse('status: blocked\nsummary: "x"\nquestions:\n  -\n  - a\n  - b');
+    ok(seq?.questions.length === 3, `AC3.5: mục - rỗng không nuốt các mục - ngang hàng (có ${seq?.questions.length} mục, cần 3)`);
+    ok(!rules(check('status: blocked\nsummary: "x"\nquestions: "chọn A hay B? mặc định A"')).includes('blocked-questions'),
+      'AC3.2: blocked-questions đạt khi questions là chuỗi không rỗng');
+    ok(rules(check('status: blocked\nsummary: "x"\nquestions: ""')).includes('blocked-questions'), 'AC3.2: blocked-questions vi phạm khi questions là chuỗi rỗng');
+    ok(rc.checkReportLine(`${GOOD} constructor=1`).violations.some((v) => v.detail.includes('khoá lạ: constructor')),
+      'AC2.5: khoá constructor là khoá lạ (không nhận qua prototype)');
+
+    // AC1.1, AC4.3, AC2.7: mục contract (Task 3) khớp khoá D1, lệnh mẫu và quy tắc aip-report
+    const read = (...p) => fs.readFileSync(path.join(REPO_ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
+    const oc = read('core', 'principles', 'workflow-output-contract.md');
+    const section = (title) => oc.split(/^## /m).slice(1).find((h) => h.split('\n')[0].trim() === title) ?? '';
+    const agentBlock = (oc.split('agent_result:\n')[1] ?? '').split('```')[0];
+    for (const k of ['changes', 'validation', 'remaining_risks', 'report_file', 'commits']) {
+      ok(new RegExp(`^\\s+${k}:.*# bỏ được khi rỗng`, 'm').test(agentBlock), `AC1.1: khối mẫu agent_result: khoá ${k} có chú thích bỏ được`);
+    }
+    const REQUIRED_NOTE = { assumptions: 'bắt buộc theo vai', findings: 'bắt buộc theo vai', tdd: 'TDD', questions: 'blocked' };
+    for (const [k, phrase] of Object.entries(REQUIRED_NOTE)) {
+      const line = new RegExp(`^\\s+${k}:.*$`, 'm').exec(agentBlock)?.[0] ?? '';
+      ok(line !== '' && !line.includes('# bỏ được khi rỗng') && line.includes(phrase),
+        `AC1.1: khối mẫu agent_result: khoá ${k} ghi điều kiện bắt buộc ("${phrase}"), không mở bằng "bỏ được khi rỗng"`);
+    }
+    const keep = section('Khoá bỏ được');
+    for (const t of ['status', 'summary', 'assumptions', 'tdd.red', 'tdd.green', 'spec_verdict', 'findings', 'assumption_review[]', 'verdicts[]', 'questions', 'ruling_review[]']) {
+      ok(keep.includes(`\`${t}`), `AC1.1: mục "Khoá bỏ được" nêu khoá ${t}`);
+    }
+    ok(keep.includes('khoá vắng là rỗng'), 'AC1.1: mục "Khoá bỏ được" nêu khoá vắng là rỗng');
+    const script = section('Kiểm bằng script');
+    for (const role of ['implementer', 'task-review', 're-review', 'final-review', 'worker']) {
+      ok(script.includes(`--role ${role}`), `AC4.3: mục "Kiểm bằng script" có lệnh mẫu --role ${role}`);
+    }
+    ok(script.includes('--line "aip-report v1'), 'AC4.3: mục "Kiểm bằng script" có lệnh mẫu --line');
+    const aipReport = section('Báo cáo giữa phiên (aip-report)');
+    ok(aipReport.includes('không ghi vào ledger') && aipReport.includes('events.jsonl'), 'AC2.7: mục aip-report nêu dòng không ghi vào ledger và events.jsonl');
+
+    // Khối mẫu của contract điền giá trị đơn giản, giữ nguyên mọi chú thích (kể cả chú thích có nháy kép) → parse được
+    const sample = rc.parseAgentResult(`agent_result:\n${agentBlock.replace(/<[^>\n]*>/g, 'x')}`);
+    ok(sample !== null && sample.status === 'completed' && sample.summary === 'x' && Array.isArray(sample.validation) && Array.isArray(sample.assumptions),
+      'AC3.5: khối mẫu agent_result của contract (giữ chú thích, thay <…> bằng giá trị) parse được');
+
+    // AC5.2: mỗi prompt trỏ contract, có khoá bắt buộc của vai, không có dòng agent_result: YAML
+    const PROMPT_KEYS = {
+      'implementer.md': ['assumptions', 'basis', 'if_wrong'],
+      'task-review.md': ['spec_verdict', 'findings', 'assumption_review[]'],
+      're-review.md': ['verdicts[]', 'assumption_review[]'],
+      'final-review.md': ['findings', 'ruling_review[]'],
+    };
+    for (const [file, keys] of Object.entries(PROMPT_KEYS)) {
+      const text = read('core', 'skills', 'plan-execution', 'references', 'prompts', file);
+      ok(text.includes('"Agent result"') && text.includes('"Khoá bỏ được"'), `AC5.2: ${file} trỏ mục "Agent result" và "Khoá bỏ được" của contract`);
+      const keySentence = text.match(/[Kk]hoá bắt buộc[^\n]*?\.(?=\s|$)/m)?.[0] ?? '';
+      ok(keySentence !== '' && keys.every((k) => keySentence.includes(k)), `AC5.2: ${file} nêu khoá bắt buộc của vai (${keys.join(', ')}) trong đúng câu khoá bắt buộc`);
+      ok(!/^\s*agent_result:/m.test(text), `AC5.2: ${file} không có dòng agent_result: dạng YAML`);
+    }
+
+    // AC4.2: prompt giao cho worker/reviewer (khối ``` đầu) không bảo ghi, lưu hay xuất file report
+    const WRITE_REPORT = /report\.md|report_file|(ghi|lưu|xuất|viết|tạo)[^.\n]*\.md\b/i;
+    for (const file of Object.keys(PROMPT_KEYS)) {
+      const text = read('core', 'skills', 'plan-execution', 'references', 'prompts', file);
+      const worker = text.split('```')[1] ?? '';
+      ok(worker.length > 0 && !WRITE_REPORT.test(worker), `AC4.2: ${file} khối giao việc không bảo ghi file report (report.md, report_file, ghi/lưu/xuất/viết/tạo …md)`);
+    }
+    // AC2.6: câu báo cáo cũ đã bỏ; ba file trỏ mục aip-report của contract
+    const PE_REF = ['core', 'skills', 'plan-execution', 'references'];
+    const readRef = (f) => fs.readFileSync(path.join(REPO_ROOT, ...PE_REF, f), 'utf8').replace(/\r\n/g, '\n');
+    const refs = { 'task-loop.md': readRef('task-loop.md'), 'model-routing.md': readRef('model-routing.md'), 'inline.md': readRef('inline.md') };
+    const OLD_REPORT = ['một dòng gồm hash, kết quả test và số minor hoãn', 'một dòng nêu lý do'];
+    ok(Object.values(refs).every((t) => OLD_REPORT.every((s) => !t.includes(s))),
+      'AC2.6: ba file không còn câu báo cáo cũ (hash, kết quả test, số minor hoãn; một dòng nêu lý do)');
+    const at = (t, a, b) => { const i = t.indexOf(a), j = t.indexOf(b); return i >= 0 && j > i ? t.slice(i, j) : null; };
+    const POINTERS = {
+      'task-loop Chế độ part bước 6': at(refs['task-loop.md'], '6. Chỉ áp cho `session`', '7. Session gốc đọc dòng'),
+      'model-routing quy tắc 9': at(refs['model-routing.md'], '9. One message', '10. Brief'),
+      'model-routing quy tắc 14': at(refs['model-routing.md'], '14. A child session', '15. Every'),
+      'inline mục Subagent part': at(refs['inline.md'], '## Subagent part', '## Ranh giới'),
+    };
+    for (const [where, span] of Object.entries(POINTERS)) {
+      ok(span !== null, `AC2.6: ${where} có đủ hai neo trong file (neo thiếu làm pin đỏ)`);
+      ok(span !== null && span.includes('aip-report') && span.includes('Báo cáo giữa phiên (aip-report)'),
+        `AC2.6: ${where} trỏ mục "Báo cáo giữa phiên (aip-report)" của contract`);
+    }
+
+    // AC4.1: bước 3–4 nêu task-<n>-report.md, result-check.mjs, violations là đầu ra hỏng; bước 7–8 nêu file review và --role
+    const loop = refs['task-loop.md'];
+    const step4 = loop.slice(loop.indexOf('4. **Nhận `agent_result`**'), loop.indexOf('5. **Kiểm chứng'));
+    ok(step4.includes('task-<n>-report.md') && step4.includes('result-check.mjs') && step4.includes('--role implementer') && step4.includes('`violations`'),
+      'AC4.1: task-loop bước 4 nêu task-<n>-report.md, result-check.mjs --role implementer và violations là đầu ra hỏng');
+    const step78 = loop.slice(loop.indexOf('7. **Task review**'), loop.indexOf('## Nhận review'));
+    ok(step78.includes('task-<n>-review-<vòng>.md') && step78.includes('--role task-review') && step78.includes('--role re-review --findings <k>'),
+      'AC4.1: task-loop bước 7–8 nêu task-<n>-review-<vòng>.md, --role task-review và --role re-review --findings <k>');
+    // AC6.1: mục "Kết quả rà biến thể" của design ghi mỗi file biến thể là sửa hoặc không đổi
+    const design = read('docs', 'requests', '2026-11-25-agent-session-result-contract', 'design.md');
+    const variant = design.split(/^### /m).find((h) => h.startsWith('Kết quả rà biến thể')) ?? '';
+    for (const f of ['subagent-prompts.md', 'subagent-prompt.md']) {
+      const line = variant.split('\n').find((l) => l.includes(f)) ?? '';
+      ok(/\*\*(sửa|không đổi)\*\*/.test(line), `AC6.1: mục "Kết quả rà biến thể" ghi ${f} là sửa hoặc không đổi`);
+    }
+    // AC8.1: ba pin cũ ghim agent_result không mất assert khi định nghĩa chuyển về contract (số trước request).
+    // AC8.2 là chính module này (chạy trong npm test); AC8.3 phủ bởi `--only versions`, không lặp kiểm.
+    for (const [f, min] of [[['test', 'content', '31-workflow-self-sufficient.pin.mjs'], 249],
+      [['test', 'content', '53-reasoning-review.pin.mjs'], 25], [['test', 'contract', '10-source.contract.mjs'], 70]]) {
+      const n = (read(...f).match(/ok\(/g) || []).length;
+      ok(n >= min, `AC8.1: ${f.at(-1)} còn ${n} lệnh ok( (≥ ${min})`);
+    }
+  } finally {
+    for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
+  }
+}
