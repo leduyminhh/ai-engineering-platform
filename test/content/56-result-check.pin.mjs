@@ -188,6 +188,16 @@ export default async function run({ ok, ctx }) {
     ].join('\n'));
     const lg = cli([legacy, '--role', 'implementer', '--tdd']);
     ok(lg.code === 0, `AC7.2: report dạng cũ đủ khoá đạt (${JSON.stringify(lg.json)})`);
+    // Dạng gặp trong report thật của .aip/runs (2026-11-11..19): không được coi là unparseable.
+    const REAL = [
+      ['block scalar |', 'status: completed\nsummary: "x"\ndoc_check: |\n  khẳng định -> nguồn -> kết quả\n  a -> b -> khớp'],
+      ['khoá có giá trị kèm dòng thụt sâu hơn', 'status: completed\nsummary: "x"\ndoi_chieu: đối chiếu 35 khẳng định:\n  - chú thích PowerShell `#` bị bỏ\n  - out-null thêm ở Task 8'],
+      ['flow có chữ theo sau', 'status: completed\nsummary: "x"\nremaining_risks: [] (fullEffective vẫn được import)'],
+      ['mục list mở bằng [nhãn]', 'status: completed\nsummary: "x"\nremaining_risks:\n  - [Unverified] chưa đo trên Linux\n  - "[Inference] nhiễu tải"'],
+    ];
+    for (const [name, body] of REAL) ok(check(body).ok === true, `AC7.2: ${name} đạt`);
+    ok(rules(check('status: completed\nsummary: "x"\nfindings: [{ location: "a:1", evidence: "e"')).includes('unparseable'),
+      'AC3.5: flow hỏng ở khoá luật cần (findings) vẫn là unparseable');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
