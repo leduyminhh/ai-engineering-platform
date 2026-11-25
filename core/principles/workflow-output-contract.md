@@ -40,11 +40,11 @@ agent_result:
   summary: "<1–3 câu>"
   changes: { added: [], modified: [], deleted: [] }   # bỏ được khi rỗng
   validation: [ <evidence> ]    # bỏ được khi rỗng
-  findings: [ <finding> ]       # bỏ được khi rỗng
-  questions: []         # bỏ được khi rỗng, trừ status: blocked (bắt buộc không rỗng); câu hỏi cho người dùng/bước gọi
+  findings: [ <finding> ]       # bắt buộc theo vai (bảng Khoá bỏ được), vai khác bỏ được khi rỗng
+  questions: []         # bắt buộc không rỗng khi status: blocked, vai khác bỏ được khi rỗng; câu hỏi cho người dùng/bước gọi
   remaining_risks: []   # bỏ được khi rỗng
-  tdd: { red: <evidence>, green: <evidence> }   # bỏ được khi rỗng; chỉ task TDD `có` (trường **TDD:** của plan); xem "Trường mở rộng"
-  assumptions: []       # bỏ được khi rỗng; implementer trong vòng task; xem "Trường mở rộng"
+  tdd: { red: <evidence>, green: <evidence> }   # bắt buộc theo vai khi task TDD `có` (trường **TDD:** của plan), vai khác bỏ được khi rỗng; xem "Trường mở rộng"
+  assumptions: []       # bắt buộc theo vai (bảng Khoá bỏ được), vai khác bỏ được khi rỗng; xem "Trường mở rộng"
   report_file: ""       # bỏ được khi rỗng; đường dẫn file report nếu có; agent chỉ-đọc để trống
   commits: []           # bỏ được khi rỗng; SHA commit của task; agent không tự commit nên thường rỗng
 ```
@@ -195,7 +195,7 @@ aip-report v1 from=<part-nn|root|<slug>> status=<complete|blocked|failed> [hash=
 | Khoá | Bắt buộc | Giá trị |
 |---|---|---|
 | `v1` (token thứ hai) | luôn | đúng `v1` |
-| `from` | luôn | `part-<nn>`, `root` hoặc slug (chữ, số, `.`, `_`, `-`); không khoảng trắng |
+| `from` | luôn | chữ ASCII, số, `.`, `_`, `-`; không khoảng trắng. Quy ước: `part-<nn>`, `root` hoặc slug; script không kiểm dạng này |
 | `status` | luôn | `complete`, `blocked`, `failed` |
 | `hash` | khi `complete` | SHA 7–40 ký tự hex |
 | `tests` | khi `complete` | `pass`, `fail`, `not_run` |

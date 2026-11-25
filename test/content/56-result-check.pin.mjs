@@ -204,8 +204,13 @@ export default async function run({ ok, ctx }) {
     const oc = read('core', 'principles', 'workflow-output-contract.md');
     const section = (title) => oc.split(/^## /m).slice(1).find((h) => h.split('\n')[0].trim() === title) ?? '';
     const agentBlock = (oc.split('agent_result:\n')[1] ?? '').split('```')[0];
-    for (const k of ['changes', 'validation', 'findings', 'questions', 'remaining_risks', 'tdd', 'assumptions', 'report_file', 'commits']) {
+    for (const k of ['changes', 'validation', 'remaining_risks', 'report_file', 'commits']) {
       ok(new RegExp(`^\\s+${k}:.*# bỏ được khi rỗng`, 'm').test(agentBlock), `AC1.1: khối mẫu agent_result: khoá ${k} có chú thích bỏ được`);
+    }
+    for (const k of ['assumptions', 'findings', 'tdd']) {
+      const line = new RegExp(`^\\s+${k}:.*$`, 'm').exec(agentBlock)?.[0] ?? '';
+      ok(line !== '' && !line.includes('# bỏ được khi rỗng') && line.includes('bắt buộc theo vai'),
+        `AC1.1: khối mẫu agent_result: khoá ${k} ghi bắt buộc theo vai, không ghi bỏ được khi rỗng vô điều kiện`);
     }
     const keep = section('Khoá bỏ được');
     for (const t of ['status', 'summary', 'assumptions', 'tdd.red', 'tdd.green', 'spec_verdict', 'findings', 'assumption_review[]', 'verdicts[]', 'questions', 'ruling_review[]']) {
