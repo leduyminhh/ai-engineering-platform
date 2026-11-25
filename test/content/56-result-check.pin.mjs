@@ -207,10 +207,11 @@ export default async function run({ ok, ctx }) {
     for (const k of ['changes', 'validation', 'remaining_risks', 'report_file', 'commits']) {
       ok(new RegExp(`^\\s+${k}:.*# bỏ được khi rỗng`, 'm').test(agentBlock), `AC1.1: khối mẫu agent_result: khoá ${k} có chú thích bỏ được`);
     }
-    for (const k of ['assumptions', 'findings', 'tdd']) {
+    const REQUIRED_NOTE = { assumptions: 'bắt buộc theo vai', findings: 'bắt buộc theo vai', tdd: 'TDD', questions: 'blocked' };
+    for (const [k, phrase] of Object.entries(REQUIRED_NOTE)) {
       const line = new RegExp(`^\\s+${k}:.*$`, 'm').exec(agentBlock)?.[0] ?? '';
-      ok(line !== '' && !line.includes('# bỏ được khi rỗng') && line.includes('bắt buộc theo vai'),
-        `AC1.1: khối mẫu agent_result: khoá ${k} ghi bắt buộc theo vai, không ghi bỏ được khi rỗng vô điều kiện`);
+      ok(line !== '' && !line.includes('# bỏ được khi rỗng') && line.includes(phrase),
+        `AC1.1: khối mẫu agent_result: khoá ${k} ghi điều kiện bắt buộc ("${phrase}"), không mở bằng "bỏ được khi rỗng"`);
     }
     const keep = section('Khoá bỏ được');
     for (const t of ['status', 'summary', 'assumptions', 'tdd.red', 'tdd.green', 'spec_verdict', 'findings', 'assumption_review[]', 'verdicts[]', 'questions', 'ruling_review[]']) {

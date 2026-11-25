@@ -41,9 +41,9 @@ agent_result:
   changes: { added: [], modified: [], deleted: [] }   # bỏ được khi rỗng
   validation: [ <evidence> ]    # bỏ được khi rỗng
   findings: [ <finding> ]       # bắt buộc theo vai (bảng Khoá bỏ được), vai khác bỏ được khi rỗng
-  questions: []         # bắt buộc không rỗng khi status: blocked, vai khác bỏ được khi rỗng; câu hỏi cho người dùng/bước gọi
+  questions: []         # bắt buộc không rỗng khi status: blocked, trạng thái khác bỏ được khi rỗng; câu hỏi cho người dùng/bước gọi
   remaining_risks: []   # bỏ được khi rỗng
-  tdd: { red: <evidence>, green: <evidence> }   # bắt buộc theo vai khi task TDD `có` (trường **TDD:** của plan), vai khác bỏ được khi rỗng; xem "Trường mở rộng"
+  tdd: { red: <evidence>, green: <evidence> }   # bắt buộc khi task TDD `có` (trường **TDD:** của plan), task khác bỏ được khi rỗng; xem "Trường mở rộng"
   assumptions: []       # bắt buộc theo vai (bảng Khoá bỏ được), vai khác bỏ được khi rỗng; xem "Trường mở rộng"
   report_file: ""       # bỏ được khi rỗng; đường dẫn file report nếu có; agent chỉ-đọc để trống
   commits: []           # bỏ được khi rỗng; SHA commit của task; agent không tự commit nên thường rỗng
