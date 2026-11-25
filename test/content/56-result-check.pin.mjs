@@ -248,6 +248,24 @@ export default async function run({ ok, ctx }) {
       const worker = text.split('```')[1] ?? '';
       ok(worker.length > 0 && !WRITE_REPORT.test(worker), `AC4.2: ${file} khối giao việc không bảo ghi file report (report.md, report_file, ghi/lưu/xuất/viết/tạo …md)`);
     }
+    // AC2.6: câu báo cáo cũ đã bỏ; ba file trỏ mục aip-report của contract
+    const PE_REF = ['core', 'skills', 'plan-execution', 'references'];
+    const readRef = (f) => fs.readFileSync(path.join(REPO_ROOT, ...PE_REF, f), 'utf8').replace(/\r\n/g, '\n');
+    const refs = { 'task-loop.md': readRef('task-loop.md'), 'model-routing.md': readRef('model-routing.md'), 'inline.md': readRef('inline.md') };
+    const OLD_REPORT = ['một dòng gồm hash, kết quả test và số minor hoãn', 'một dòng nêu lý do'];
+    ok(Object.values(refs).every((t) => OLD_REPORT.every((s) => !t.includes(s))),
+      'AC2.6: ba file không còn câu báo cáo cũ (hash, kết quả test, số minor hoãn; một dòng nêu lý do)');
+    ok(Object.values(refs).every((t) => t.includes('aip-report') && t.includes('Báo cáo giữa phiên (aip-report)')),
+      'AC2.6: ba file trỏ mục "Báo cáo giữa phiên (aip-report)" của contract');
+
+    // AC4.1: bước 3–4 nêu task-<n>-report.md, result-check.mjs, violations là đầu ra hỏng; bước 7–8 nêu file review và --role
+    const loop = refs['task-loop.md'];
+    const step4 = loop.slice(loop.indexOf('4. **Nhận `agent_result`**'), loop.indexOf('5. **Kiểm chứng'));
+    ok(step4.includes('task-<n>-report.md') && step4.includes('result-check.mjs') && step4.includes('--role implementer') && step4.includes('`violations`'),
+      'AC4.1: task-loop bước 4 nêu task-<n>-report.md, result-check.mjs --role implementer và violations là đầu ra hỏng');
+    const step78 = loop.slice(loop.indexOf('7. **Task review**'), loop.indexOf('## Nhận review'));
+    ok(step78.includes('task-<n>-review-<vòng>.md') && step78.includes('--role task-review') && step78.includes('--role re-review --findings <k>'),
+      'AC4.1: task-loop bước 7–8 nêu task-<n>-review-<vòng>.md, --role task-review và --role re-review --findings <k>');
   } finally {
     for (const r of roots) fs.rmSync(r, { recursive: true, force: true });
   }
