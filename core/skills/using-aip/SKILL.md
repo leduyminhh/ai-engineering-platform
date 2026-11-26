@@ -14,7 +14,7 @@ Skill của bộ chỉ có tác dụng khi được gọi. Skill này đặt m�
 plugin); cài dạng skills thì `description` của skill này là đường duy nhất.
 
 > **SUBAGENT-STOP** — Agent worker được giao một task cụ thể (theo `plan-execution` hoặc workflow) bỏ qua skill này:
-> việc chọn skill đã làm ở session chính.
+> việc chọn skill đã làm ở session chính. Riêng commit, push, merge thì worker vẫn làm qua skill `git-workflow`.
 
 ## Quy trình — chọn skill trước khi hành động
 
