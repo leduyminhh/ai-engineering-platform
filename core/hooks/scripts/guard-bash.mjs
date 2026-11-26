@@ -328,21 +328,45 @@ function gitCmd(t) {
   return null;
 }
 
-function commitMessages(t, from) {
-  const msgs = [];
+// Giá trị của một cờ git commit: `-m x`, `-amx` (cụm cờ ngắn), `--message x`, `--message=x`; short null = chỉ có dạng dài.
+function optValues(t, from, short, long) {
+  const out = [];
+  const re = short ? new RegExp(`^-([A-Za-z]*?)${short}([\\s\\S]*)$`) : null;
   for (let i = from; i < t.length; i++) {
     const a = t[i];
     if (a === '--') break;
-    if (a === '--message') { if (t[i + 1] !== undefined) msgs.push(t[++i]); continue; }
-    if (a.startsWith('--message=')) { msgs.push(a.slice('--message='.length)); continue; }
-    if (a.startsWith('--')) continue;
-    const m = /^-([A-Za-z]*?)m([\s\S]*)$/.exec(a);
+    if (a === `--${long}`) { if (t[i + 1] !== undefined) out.push(t[++i]); continue; }
+    if (a.startsWith(`--${long}=`)) { out.push(a.slice(long.length + 3)); continue; }
+    if (a.startsWith('--') || !re) continue;
+    const m = re.exec(a);
     if (m) {
-      if (m[2]) msgs.push(m[2]);
-      else if (t[i + 1] !== undefined) msgs.push(t[++i]);
+      if (m[2]) out.push(m[2]);
+      else if (t[i + 1] !== undefined) out.push(t[++i]);
     }
   }
-  return msgs;
+  return out;
+}
+
+const commitMessages = (t, from) => optValues(t, from, 'm', 'message');
+
+const COAUTHOR_LINE = /^[ \t]*co-authored-by[ \t]*:/im;
+const DENY_COAUTHOR = { decision: 'deny', reason: 'Commit message có dòng Co-Authored-By. Quy tắc project (AGENTS.md) cấm dòng này và thắng lời nhắc attribution của harness. Xoá dòng đó (cả `--trailer Co-authored-by=…`) khỏi message hoặc file -F, rồi commit lại.' };
+
+// Heredoc (`-F - <<EOF`, `-m "$(cat <<EOF …)"`) và chuỗi nhiều dòng nằm nguyên trong lệnh nên dò theo dòng trên cả lệnh; `-F <file>` đọc file, không đọc được thì cho qua.
+function coAuthorCommit(cmd, cwd, msys) {
+  if (!/commit/i.test(cmd)) return false;
+  const commits = withDirs(expandShells(parse(cmd).segs), cwd, msys).filter(({ gc }) => gc.sub === 'commit');
+  if (!commits.length) return false;
+  if (COAUTHOR_LINE.test(cmd)) return true;
+  return commits.some(({ u, gc, dir }) => {
+    const from = gc.i + 1;
+    if (commitMessages(u, from).some((m) => COAUTHOR_LINE.test(m))) return true;
+    if (optValues(u, from, null, 'trailer').some((x) => /^[ \t]*co-authored-by[ \t]*[:=]/i.test(x))) return true;
+    return optValues(u, from, 'F', 'file').some((f) => {
+      if (f === '-' || hasUnresolvedRef(f)) return false;
+      try { return COAUTHOR_LINE.test(readFileSync(path.resolve(dir, np(f, msys)), 'utf8')); } catch { return false; }
+    });
+  });
 }
 
 function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true) {
@@ -1781,6 +1805,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
   const cmd = input?.tool_name === 'PowerShell' ? psNormalize(raw) : raw.replace(/\\\r?\n/g, ' ').replace(/>\|/g, '>');
   const cwd = input?.cwd || '.';
   const msys = input?.tool_name !== 'PowerShell';
+  // Áp ở mọi mode: chặn dòng do lời nhắc attribution của harness thêm vào, trái quy tắc project.
+  try { if (coAuthorCommit(cmd, cwd, msys)) return DENY_COAUTHOR; } catch { /* lỗi đọc lệnh: các kiểm sau vẫn chạy */ }
   // Kiểm rẻ (permission_mode) trước; chỉ đọc cấu hình (tốn lời gọi git) khi một nhánh H1–H3 thật sự cần quyết định.
   const bypass = input?.permission_mode === 'bypassPermissions';
   let cfg;
