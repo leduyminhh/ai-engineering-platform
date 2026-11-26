@@ -328,21 +328,76 @@ function gitCmd(t) {
   return null;
 }
 
-function commitMessages(t, from) {
-  const msgs = [];
+// Giá trị của một cờ git commit: `-m x`, `-amx` (cụm cờ ngắn), `--message x`, `--message=x`; short null = chỉ có dạng dài.
+function optValues(t, from, short, long) {
+  const out = [];
+  const re = short ? new RegExp(`^-([A-Za-z]*?)${short}([\\s\\S]*)$`) : null;
   for (let i = from; i < t.length; i++) {
     const a = t[i];
     if (a === '--') break;
-    if (a === '--message') { if (t[i + 1] !== undefined) msgs.push(t[++i]); continue; }
-    if (a.startsWith('--message=')) { msgs.push(a.slice('--message='.length)); continue; }
-    if (a.startsWith('--')) continue;
-    const m = /^-([A-Za-z]*?)m([\s\S]*)$/.exec(a);
+    if (a === `--${long}`) { if (t[i + 1] !== undefined) out.push(t[++i]); continue; }
+    if (a.startsWith(`--${long}=`)) { out.push(a.slice(long.length + 3)); continue; }
+    if (a.startsWith('--') || !re) continue;
+    const m = re.exec(a);
     if (m) {
-      if (m[2]) msgs.push(m[2]);
-      else if (t[i + 1] !== undefined) msgs.push(t[++i]);
+      if (m[2]) out.push(m[2]);
+      else if (t[i + 1] !== undefined) out.push(t[++i]);
     }
   }
-  return msgs;
+  return out;
+}
+
+const commitMessages = (t, from) => optValues(t, from, 'm', 'message');
+
+const COAUTHOR_LINE = /^[ \t]*co-authored-by[ \t]*:/im;
+const DENY_COAUTHOR = { decision: 'deny', reason: 'Commit message có dòng Co-Authored-By. Quy tắc project (AGENTS.md) cấm dòng này và thắng lời nhắc attribution của harness. Xoá dòng đó (cả `--trailer Co-authored-by=…`) khỏi message hoặc file -F, rồi commit lại.' };
+// Chép từ check-commit-message.mjs (git-workflow) vì hook không phụ thuộc bố cục bản build; test 90-hooks đối chiếu hai bên trên cùng bộ mẫu.
+const COMMIT_HEADER = /^[a-z]+(\([^)]+\))?!?: .+$/;
+const HEREDOC = /<<-?[ \t]*(['"]?)([A-Za-z_]\w*)\1[^\n]*\n([\s\S]*?)\n[ \t]*\2[ \t]*(?:\n|\)|$)/;
+
+export function messageErrors(buf) {
+  const errs = [];
+  if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) errs.push('file có BOM');
+  const text = buf.toString('utf8');
+  if (text.includes('\uFFFD')) errs.push('UTF-8 hỏng (có U+FFFD)');
+  const head = text.replace(/^﻿/, '').split(/\r?\n/)[0];
+  // fixup!/squash! do git rebase --autosquash đọc, không phải header của commit cuối.
+  if (!COMMIT_HEADER.test(head.replace(/^((fixup|squash|amend)! )+/, ''))) errs.push(`header không đúng dạng "type(scope): summary": "${head.slice(0, 60)}"`);
+  return errs;
+}
+
+// Message của một lệnh commit, null khi không đọc chắc được (biến, $(…) không phải heredoc, file chưa có): khi đó cho qua.
+function commitText(u, from, cmd, dir, msys) {
+  const f = optValues(u, from, 'F', 'file')[0];
+  if (f !== undefined) {
+    if (f === '-') { const h = HEREDOC.exec(cmd); return h ? Buffer.from(h[3]) : null; }
+    if (hasUnresolvedRef(f)) return null;
+    try { return readFileSync(path.resolve(dir, np(f, msys))); } catch { return null; }
+  }
+  const msgs = commitMessages(u, from);
+  if (!msgs.length) return null;
+  const parts = msgs.map((m) => { const h = HEREDOC.exec(m); return h ? h[3] : /[$`]/.test(m) ? null : m; });
+  return parts.includes(null) ? null : Buffer.from(parts.join('\n\n'));
+}
+
+// Heredoc và chuỗi nhiều dòng nằm nguyên trong lệnh nên Co-Authored-By được dò theo dòng trên cả lệnh.
+function commitDeny(cmd, cwd, msys, header) {
+  if (!/commit/i.test(cmd)) return null;
+  const { segs, unclosed } = parse(cmd);
+  const commits = withDirs(expandShells(segs), cwd, msys).filter(({ gc }) => gc.sub === 'commit');
+  if (!commits.length) return null;
+  if (COAUTHOR_LINE.test(cmd)) return DENY_COAUTHOR;
+  for (const { u, gc, dir } of commits) {
+    const from = gc.i + 1;
+    if (optValues(u, from, null, 'trailer').some((x) => /^[ \t]*co-authored-by[ \t]*[:=]/i.test(x))) return DENY_COAUTHOR;
+    const msg = commitText(u, from, cmd, dir, msys);
+    if (!msg) continue;
+    if (COAUTHOR_LINE.test(msg.toString('utf8'))) return DENY_COAUTHOR;
+    // Nháy lẻ làm parse() tách sai message: không chặn header khi không đọc chắc được.
+    const errs = !header || unclosed ? [] : messageErrors(msg);
+    if (errs.length) return { decision: 'deny', reason: `Commit message chưa đúng quy ước: ${errs.join('; ')}. Commit qua skill core:git-workflow: ghi message ra file UTF-8 không BOM, kiểm bằng check-commit-message.mjs rồi chạy \`git commit -F <file>\`.` };
+  }
+  return null;
 }
 
 function pushReason(t, gc, cwd, currentBranch, cdUnresolved = false, msys = true) {
@@ -1805,6 +1860,8 @@ export function decide(input, { currentBranch = defaultBranch, allowEnv = envFil
     return me;
   };
   const full = () => effMode() === 'confined';
+  // Chặn cả phiên/subagent không gọi skill git-workflow. Co-Authored-By (do lời nhắc attribution của harness) chặn ở mọi mode; header chỉ ngoài open vì open là chủ project bỏ mọi rào.
+  try { const c = commitDeny(cmd, cwd, msys, effMode() !== 'open'); if (c) return c; } catch { /* lỗi đọc lệnh: các kiểm sau vẫn chạy */ }
   if (effMode() === 'open') return decideOpen(cmd, msys);
   const deny = (text) => ({ decision: 'deny', reason: text });
   const ask = (text) => { let line = ''; try { line = summarize(cmd, msys); } catch { /* chỉ mất dòng tóm tắt */ } return { decision: 'ask', reason: line ? `${text}\n${line}` : text }; };

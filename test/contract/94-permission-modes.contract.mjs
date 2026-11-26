@@ -126,7 +126,7 @@ export default async function run({ ok, ctx }) {
   const bdec = (command, config, pm) => bash.decide({ tool_name: 'Bash', tool_input: { command }, cwd: '.', ...(pm ? { permission_mode: pm } : {}) },
     { currentBranch: () => 'main', reader: () => null, allowEnv: () => false, config });
   const fullCfg = { mode: 'full' };
-  for (const c of ['rm -rf x', 'cat .env', 'curl http://x', 'git commit -m "có dấu"']) {
+  for (const c of ['rm -rf x', 'cat .env', 'curl http://x', 'git commit -m "fix: có dấu"']) {
     ok(bdec(c, fullCfg, 'bypassPermissions') === null, `P4e AC1.2: guard-bash full cho qua: ${c}`);
   }
   ok(bdec('git commit -m "có dấu', fullCfg, 'bypassPermissions') === null, 'P4e AC1.2: full bỏ cả ASK_UNPARSABLE');
@@ -136,7 +136,7 @@ export default async function run({ ok, ctx }) {
   }
   for (const pm of ['default', undefined]) {
     ok(bdec('cat .env', fullCfg, pm)?.decision === 'ask', `P4e AC1.5: guard-bash permission_mode=${pm} → .env vẫn ask`);
-    ok(bdec('git commit -m "có dấu"', fullCfg, pm)?.decision === 'deny', `P4e AC1.5: guard-bash permission_mode=${pm} → commit non-ASCII vẫn deny`);
+    ok(bdec('git commit -m "fix: có dấu"', fullCfg, pm)?.decision === 'deny', `P4e AC1.5: guard-bash permission_mode=${pm} → commit non-ASCII vẫn deny`);
     ok(bdec('git push origin main', fullCfg, pm)?.decision === 'ask', `P4e AC1.5: guard-bash permission_mode=${pm} → push main vẫn ask`);
   }
 
@@ -191,7 +191,7 @@ export default async function run({ ok, ctx }) {
       deny: ['echo a>/tmp/x', 'echo a>>/tmp/x', 'cmd 2>/tmp/x', 'echo a>"/tmp/x y"', 'rm -rf ../x', 'rm /etc/x', 'mv a /tmp/b', 'echo x > /tmp/y', 'del C:\\Windows\\x', 'cd /tmp && rm x', 'rm a; rm /etc/b',
         'rm -rf $X; rm /etc/b', 'cp a /tmp/b', 'rm /etc/x "unclosed', 'rm a; rm /etc/b && echo "$(x',
         'rm -rf $X', 'rm -rf ~', 'rm -rf *', 'bash -c "rm /x"', 'cp /etc/hosts here.txt'],
-      pass: ['echo a>out.txt', "awk '$1>2' f", 'echo "a>/tmp/x"', 'git commit -m "a > b"', 'echo "x > y"', 'echo a >&2', 'rm -rf build', 'mv a b', 'echo x > out.txt', 'echo x > /dev/null', 'cmd 2>&1', 'echo x >>out.log',
+      pass: ['echo a>out.txt', "awk '$1>2' f", 'echo "a>/tmp/x"', 'git commit -m "fix: a > b"', 'echo "x > y"', 'echo a >&2', 'rm -rf build', 'mv a b', 'echo x > out.txt', 'echo x > /dev/null', 'cmd 2>&1', 'echo x >>out.log',
         'ls /tmp', 'echo x > "x y"', 'rm -rf src/*.js', 'rd /s /q build', 'touch a 2>/dev/null', `mv a ${scratch}/b`, 'cd sub && rm x'],
     };
     for (const [want, cmds] of Object.entries(table)) {

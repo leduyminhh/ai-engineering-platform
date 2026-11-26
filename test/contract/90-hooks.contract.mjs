@@ -35,7 +35,7 @@ export default async function run({ ok, ctx }) {
     ok(d('git push --force origin feature/x')?.decision === 'ask' && d('git push origin +feature/x')?.decision === 'ask'
       && d('git push origin --delete feature/x')?.decision === 'ask', 'H1: force/+ref/delete → ask');
     ok(d('git push -u origin feature/x') === null && d('git push') === null, 'H1: push nhánh feature → không quyết định');
-    ok(d('git commit -m "sửa lỗi"')?.decision === 'deny' && d('git commit -m "fix bug"') === null && d('git commit -F msg.txt') === null,
+    ok(d('git commit -m "sửa lỗi"')?.decision === 'deny' && d('git commit -m "fix: bug"') === null && d('git commit -F msg.txt') === null,
       'H2: -m có dấu → deny; -m ASCII và -F → cho qua');
     ok(d('cat .env')?.decision === 'ask' && d('source ./.env.local')?.decision === 'ask' && d('cat certs/server.pem')?.decision === 'ask',
       'H3: Bash đụng file bí mật → ask');
@@ -44,8 +44,36 @@ export default async function run({ ok, ctx }) {
     const heredoc = ['git commit -m "$(cat <<\'EOF\'', 'feat: x', '', 'sửa lỗi', 'EOF', ')"'].join('\n');
     ok(['git commit -am "sửa lỗi"', 'git commit -qm "sửa lỗi"', 'git commit -m"sửa lỗi"', 'git commit -m "fix; sửa"', heredoc, 'git commit --message="sửa"', 'git commit --message "sửa"']
       .every((c) => d(c)?.decision === 'deny'), 'H2: -am/-qm/-m"…"/dấu ; trong message/heredoc/--message → deny');
-    ok(d('git commit -m "fix" -- tài-liệu.md') === null && d('git commit -F msg.txt') === null && d('git commit -am "fix"') === null,
+    ok(d('git commit -m "fix: x" -- tài-liệu.md') === null && d('git commit -F msg.txt') === null && d('git commit -am "fix: x"') === null,
       'H2: non-ASCII chỉ ở path sau --, -F, -am ASCII → cho qua');
+    {
+      const tmp = fs.mkdtempSync(path.join((await import('node:os')).tmpdir(), 'coa-'));
+      fs.writeFileSync(path.join(tmp, 'msg.txt'), 'feat(x): y\n\nThân.\n\nCo-authored-by: A <a@b>\n');
+      const msgFile = path.join(tmp, 'msg.txt').replace(/\\/g, '/');
+      const blocked = ['git commit -m "feat: x" -m "Co-Authored-By: Claude <noreply@anthropic.com>"',
+        ['git commit -F - <<\'EOF\'', 'feat: x', '', '  co-authored-by: A <a@b>', 'EOF'].join('\n'),
+        ['git commit -m "$(cat <<\'EOF\'', 'feat: x', '', 'Co-Authored-By: A <a@b>', 'EOF', ')"'].join('\n'),
+        'git commit --trailer "Co-authored-by=A <a@b>" -m "feat: x"', `git commit -F "${msgFile}"`];
+      ok(blocked.every((c) => d(c)?.decision === 'deny')
+        && decide({ ...bash("git commit -F - @'\nfeat: x\n\nCo-Authored-By: A <a@b>\n'@"), tool_name: 'PowerShell' }, on('feature/x'))?.decision === 'deny',
+        'H2b: dòng Co-Authored-By qua -m/heredoc/--trailer/-F file/PowerShell → deny');
+      ok(d('git commit -m "docs: AGENTS.md forbids Co-authored-by: lines"') === null
+        && d(['git commit -F - <<\'EOF\'', 'docs: x', '', '- AGENTS.md forbids Co-Authored-By: lines', 'EOF'].join('\n')) === null,
+        'H2b: cụm Co-authored-by: giữa dòng → cho qua');
+      fs.rmSync(tmp, { recursive: true, force: true });
+      const { checkCommitMessage } = await import(pathToFileURL(path.join(CORE_DIR, 'skills', 'git-workflow', 'scripts', 'check-commit-message.mjs')).href);
+      const { messageErrors } = await import(pathToFileURL(script).href);
+      const vectors = ['feat(x): y', 'fix: y', 'feat!: y', 'Fix bug', 'update', 'feat(x) y', 'FEAT: y', ''];
+      ok(vectors.every((v) => (messageErrors(Buffer.from(v)).length > 0) === checkCommitMessage(Buffer.from(v)).some((e) => e.startsWith('header'))),
+        'H2c: hook và check-commit-message.mjs cùng kết luận header trên một bộ mẫu');
+      ok(d('git commit -m "update stuff"')?.decision === 'deny' && d(['git commit -F - <<\'EOF\'', 'update stuff', 'EOF'].join('\n'))?.decision === 'deny'
+        && d('git commit -m "fixup! feat: x"') === null && d('git commit -m "$MSG"') === null && d('git commit --amend --no-edit') === null,
+        'H2c: header sai qua -m/heredoc → deny; fixup!, message chưa đọc chắc, không có message → cho qua');
+      const inMode = (mode, cmd) => decide({ ...bash(cmd), permission_mode: 'bypassPermissions' }, { ...on('feature/x'), config: { mode }, tracked: () => false });
+      ok(inMode('confined', 'git commit -m "update"')?.decision === 'deny' && inMode('open', 'git commit -m "update"') === null
+        && inMode('open', 'git commit -m "fix: x" -m "Co-Authored-By: A <a@b>"')?.decision === 'deny',
+        'H2c: confined vẫn chặn header; open bỏ header nhưng vẫn chặn Co-Authored-By');
+    }
     ok(['git push origin "main"', "git push origin 'main'", 'git push -fu origin feature/x', 'git push -uf origin feature/x', 'git push -d origin feature/x', 'git push --prune origin']
       .every((c) => d(c)?.decision === 'ask'), 'H1: ref có nháy, cụm cờ -fu/-uf/-d, --prune → ask');
     ok(d('git --git-dir .git push origin main')?.decision === 'ask' && d('git --work-tree . --namespace x push origin main')?.decision === 'ask',

@@ -94,7 +94,7 @@ export default async function run({ ok, ctx }) {
       ok(bash(c) === null, `AC2.1: không ghi vào file cấu hình → không hỏi: ${c}`);
     }
     for (const c of ['bash -c "echo x > .claude/aip-gate.json"', 'sed -i s/a/b/ .claude/settings.json', 'perl -pi -e s/a/b/ .claude/aip-gate.json', 'cp x .claude/settings.json',
-      String.raw`echo x >> .claude\settings.json`, 'echo y | sudo tee .claude/settings.local.json', 'git commit -m x > .claude/aip-gate.json']) {
+      String.raw`echo x >> .claude\settings.json`, 'echo y | sudo tee .claude/settings.local.json', 'git commit -m "fix: x" > .claude/aip-gate.json']) {
       ok(asks(c), `AC2.1: ghi vào file cấu hình vẫn hỏi: ${c}`);
     }
     ok(asks(String.raw`Set-Content .claude\aip-gate.json x`, { tool: 'PowerShell' }), 'AC2.1: PowerShell Set-Content vào aip-gate.json vẫn hỏi');
@@ -194,7 +194,7 @@ export default async function run({ ok, ctx }) {
       { config: { mode: 'full' }, repoRoot: path.resolve('.'), tracked: () => false, currentBranch: () => 'feature/x' });
     ok(nb?.decision === 'ask' && shapeOk(nb.reason) && nb.reason.includes('aip mode guarded'), 'AC1.1: guard-bash — full nhưng phiên không bỏ qua hỏi quyền → ask theo khuôn, còn gợi ý aip mode guarded');
 
-    const chain = bash('git add -A && git commit -m x && git push origin master');
+    const chain = bash('git add -A && git commit -m "fix: x" && git push origin master');
     const line = chain?.reason.split('\n').find((l) => l.startsWith('Lệnh gồm:')) ?? '';
     const order = ['git add', 'git commit', 'git push'].map((w) => line.indexOf(w));
     ok(order.every((i) => i >= 0) && order[0] < order[1] && order[1] < order[2], 'AC1.3: dòng "Lệnh gồm:" liệt kê các bước theo thứ tự');
